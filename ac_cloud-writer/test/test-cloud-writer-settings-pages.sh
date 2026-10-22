@@ -285,8 +285,20 @@ fi
 
 # ── P6  the LanguageTool URL, and the mesh constraint around it ─────────────
 
-if grep -qF "\"$LT_URL\"" <(code "$SRC/WriterPrefs.kt"); then
-    pass "P6 the LanguageTool default is the mesh endpoint $LT_URL"
+# #1093 the default is no longer a literal: WriterPrefs reads BuildConfig.LANGUAGETOOL_URL, which app/build.gradle bakes
+# from the one fleet declaration (fleetUrl('languagetool') + /v2/check). The mesh-only constraint is therefore asserted on the
+# chain: the pref reads the baked field, the build bakes the declared service, and the declaration is the mesh-only host.
+LT_DECL="$APP/../ac_cloud-account/build.json"
+LT_DECLARED=$(python3 - "$LT_DECL" <<'PY' 2>/dev/null
+import json, sys
+s = [x for x in json.load(open(sys.argv[1]))["fleet_endpoints"]["services"] if x["id"] == "languagetool"][0]
+print("%s://%s%s" % (s.get("public_scheme", "https"), s["public_domain"], s.get("public_path", "")) + "/v2/check" if s.get("policy") == "mesh_only" else "")
+PY
+)
+if grep -qE 'DEFAULT_GRAMMAR_REMOTE_URL[^=]*=[[:space:]]*BuildConfig\.LANGUAGETOOL_URL' <(code "$SRC/WriterPrefs.kt") \
+   && grep -qF "fleetUrl('languagetool')}/v2/check" "$APP/app/build.gradle" \
+   && [ "$LT_DECLARED" = "$LT_URL" ]; then
+    pass "P6 the LanguageTool default is the declared mesh endpoint $LT_URL (WriterPrefs <- BuildConfig <- fleet declaration)"
 else
     fail "P6 the LanguageTool default is not $LT_URL — do not point this at a public LanguageTool; that endpoint answers on the WireGuard mesh only, and a public one would be a third party receiving the owner's text"
 fi

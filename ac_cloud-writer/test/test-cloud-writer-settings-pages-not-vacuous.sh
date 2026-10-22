@@ -47,7 +47,7 @@ root = sys.argv[1]
 # Exactly what the tester reads, and nothing else. The tester is own-source-only
 # by design — that is what lets it FAIL a release rather than be downgraded to a
 # warning — so this copy is one directory.
-NEEDED = ["ac_cloud-writer"]
+NEEDED = ["ac_cloud-writer", "ac_cloud-account/build.json"]   # + the fleet declaration the LanguageTool default is baked from (#1093)
 
 APP = "ac_cloud-writer"
 SRC = APP + "/app/src/main/java/com/diegonmarcos/cloudwriter"
@@ -136,8 +136,8 @@ BREAKS = [
 
     # ── LanguageTool and the mesh ───────────────────────────────────────────
     ("the LanguageTool URL is 'fixed' to a public server", SRC + "/WriterPrefs.kt",
-     ('const val DEFAULT_GRAMMAR_REMOTE_URL = "https://languagetool.diegonmarcos.com/v2/check"',
-      'const val DEFAULT_GRAMMAR_REMOTE_URL = "https://api.languagetool.org/v2/check"'),
+     ('val DEFAULT_GRAMMAR_REMOTE_URL: String get() = BuildConfig.LANGUAGETOOL_URL',
+      'val DEFAULT_GRAMMAR_REMOTE_URL: String get() = "https://api.languagetool.org/v2/check"'),
      "P6 the LanguageTool default is not"),
 
     ("Remote mode quietly runs the AI rewrite instead of refusing", SRC + "/WriterTools.kt",
@@ -225,6 +225,9 @@ def build_copy(work):
         # copied tester is later EXECUTED, and without its executable bit the run dies in
         # subprocess instead of reporting on the planted defect.
         origin = os.path.join(root, rel)
+        if os.path.isfile(origin):
+            shutil.copy(origin, dst)
+            continue
         for base, _dirs, files in os.walk(origin):
             target = os.path.join(dst, os.path.relpath(base, origin))
             os.makedirs(target, exist_ok=True)

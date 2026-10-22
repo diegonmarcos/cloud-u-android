@@ -87,7 +87,7 @@ else bad "a RETRY verdict leaves the row or the bar on Installing"; fi
 
 ST="$(strip "$SRC/StoreStages.kt")"
 IC="$(printf '%s' "$ST" | sed -n '/private fun installCachedGated(/,/^    }/p')"
-STG="$(printf '%s' "$ST" | sed -n '/fun stage(ctx: Context, app: Fleet.App/,/^    }/p')"
+STG="$(printf '%s' "$ST" | sed -n '/private fun stageBase(ctx: Context, app: Fleet.App/,/^    }/p')"   # #1121: stage() wraps stageBase(), which holds the row stages
 if printf '%s' "$IC" | grep -q 'StoreInstallWatch.record(' && printf '%s' "$STG" | grep -q 'StoreInstallWatch.sweep('; then
   ok "every handover is recorded, and every row stage resolves it"
 else bad "handovers are not recorded or not resolved when a row is drawn"; fi

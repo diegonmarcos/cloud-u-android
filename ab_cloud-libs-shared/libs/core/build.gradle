@@ -11,7 +11,9 @@ if (project.extensions.findByName('kotlin') == null) {
     apply plugin: 'org.jetbrains.kotlin.android'
 }
 
-apply from: '../fleet-urls.gradle'
+// canonicalFile: a fetched-tree consumer (cloud-office) LINKS this module at android/libs/core, and Gradle joins '..' lexically,
+// which lands on android/libs/ (no fleet-urls.gradle there). The canonical dir is the real ab_cloud-libs-shared/libs/core.
+apply from: new File(projectDir.canonicalFile.parentFile, 'fleet-urls.gradle')
 
 android {
 

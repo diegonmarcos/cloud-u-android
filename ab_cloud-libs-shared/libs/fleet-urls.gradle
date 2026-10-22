@@ -1,9 +1,9 @@
 // #1093 One reader of the fleet declaration for build scripts, so no module types a fleet host:
 //   fleetUrl('authelia')     the PUBLIC base URL of a service declared in ac_cloud-account/build.json::fleet_endpoints
 //   fleetMeshUrl('git-proxy-api')   its MESH base URL (http://<mesh_dns>:<mesh_port>)
-// Consumers: `apply from: '../fleet-urls.gradle'`. Resolved module-relative (like constellation-fleet.json), then from rootDir.
+// Consumers: `apply from: '../fleet-urls.gradle'`. Resolved module-relative (through the canonical dir, so a LINKED module finds it too) (like constellation-fleet.json), then from rootDir.
 def fleetService = { String id ->
-    def f = [new File(projectDir, '../../../ac_cloud-account/build.json'), new File(rootDir, '../ac_cloud-account/build.json'),
+    def f = [new File(projectDir.canonicalFile, '../../../ac_cloud-account/build.json'), new File(projectDir, '../../../ac_cloud-account/build.json'), new File(rootDir, '../ac_cloud-account/build.json'),
              new File(rootDir, 'ac_cloud-account/build.json')].find { it.exists() }
     if (f == null) return null
     new groovy.json.JsonSlurper().parse(f).fleet_endpoints?.services?.find { it.id == id }

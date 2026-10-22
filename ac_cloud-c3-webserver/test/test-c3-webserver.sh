@@ -61,7 +61,7 @@ ui = sorted(os.listdir(os.path.join(app, "server/ui"))) if os.path.isdir(os.path
 if ui != ["diag.html", "shell.html"]:
     bad.append("server/ui holds %r; the only pages this app may carry are diag.html (:8003) and shell.html (/__app__/): the file view at / is the shared Linux UI" % ui)
 src = sorted(os.path.basename(p) for p in glob.glob(os.path.join(app, "server/src/*.rs")))
-want = ["about.rs", "app.rs", "diag.rs", "dns.rs", "engines.rs", "lib.rs", "serving.rs"]
+want = ["about.rs", "app.rs", "crashes.rs", "diag.rs", "dns.rs", "engines.rs", "lib.rs", "serving.rs"]   # crashes.rs: libs:core's local crash sink (#1122), an app route under /__app__/, not a file-view route
 if src != want:
     bad.append("server/src holds %r, want exactly %r (no routes/render/files of the file view: those are the shared server's)" % (src, want))
 cargo = open(os.path.join(app, "server/Cargo.toml")).read()
