@@ -1,5 +1,11 @@
 package com.x8bit.bitwarden.ui.platform.feature.vaultunlockednavbar
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+import com.x8bit.bitwarden.fleet.SyncSignInNeeded
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -44,7 +50,21 @@ fun FleetNavScaffold(
         selectedId = navigationData.selectedNavigationItem?.fleetId(),
         onSelect = { entry -> items.firstOrNull { it.fleetId() == entry.id }?.let(navigationData.onNavigationClick) },
     ) {
-        BitwardenScaffold(contentWindowInsets = contentWindowInsets, content = content)
+        val syncSignInNeeded by SyncSignInNeeded.needed.collectAsState()
+        BitwardenScaffold(contentWindowInsets = contentWindowInsets) {
+            androidx.compose.foundation.layout.Column {
+                // Non-blocking: the vault stays open and usable; only the background sync needs a sign-in.
+                if (syncSignInNeeded) {
+                    androidx.compose.material3.Text(
+                        text = "Sync needs sign-in. Your vault is available offline.",
+                        modifier = androidx.compose.ui.Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                    )
+                }
+                content()
+            }
+        }
     }
 }
 

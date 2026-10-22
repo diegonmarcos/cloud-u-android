@@ -777,20 +777,24 @@ class AuthRepositoryImpl(
                     // next online sync needs a new login. The caller sees a failure and syncs quietly later.
                     is RefreshTokenResponseJson.Error -> {
                         Timber.w("refresh failed (invalid_grant=${refreshTokenResponse.isInvalidGrant}); vault kept")
+                        com.x8bit.bitwarden.fleet.SyncSignInNeeded.set(true)
                         IllegalStateException(refreshTokenResponse.error).asFailure()
                     }
 
                     is RefreshTokenResponseJson.Forbidden -> {
                         Timber.w("refresh forbidden; vault kept")
+                        com.x8bit.bitwarden.fleet.SyncSignInNeeded.set(true)
                         refreshTokenResponse.error.asFailure()
                     }
 
                     is RefreshTokenResponseJson.Unauthorized -> {
                         Timber.w("refresh unauthorized; vault kept")
+                        com.x8bit.bitwarden.fleet.SyncSignInNeeded.set(true)
                         refreshTokenResponse.error.asFailure()
                     }
 
                     is RefreshTokenResponseJson.Success -> {
+                        com.x8bit.bitwarden.fleet.SyncSignInNeeded.set(false)
                         // Store the new token information
                         authDiskSource.storeAccountTokens(
                             userId = userId,

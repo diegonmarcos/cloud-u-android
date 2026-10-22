@@ -1,5 +1,6 @@
 package com.x8bit.bitwarden.ui.platform.feature.vaultunlockednavbar
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,6 +42,8 @@ import com.x8bit.bitwarden.ui.vault.feature.vault.vaultGraph
 /**
  * Top level composable for the Vault Unlocked Screen.
  */
+private var biometricEnrollOffered = false
+
 @Suppress("LongParameterList", "LongMethod")
 @Composable
 fun VaultUnlockedNavBarScreen(
@@ -73,6 +76,25 @@ fun VaultUnlockedNavBarScreen(
     onNavigateToUpgradedToPremium: () -> Unit,
 ) {
     val state by viewModel.stateFlow.collectAsStateWithLifecycle()
+
+    // Offline-first local lock: offer the biometric wrap of the vault key once per process.
+    val enrollViewModel: BiometricEnrollViewModel = hiltViewModel()
+    val biometricsManager = com.x8bit.bitwarden.ui.platform.composition.LocalBiometricsManager.current
+    val enrollScope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (!biometricEnrollOffered && biometricsManager.isBiometricsSupported) {
+            biometricEnrollOffered = true
+            enrollViewModel.cipherIfEnrollmentNeeded()?.let { cipher ->
+                biometricsManager.promptBiometrics(
+                    onSuccess = { enrollScope.launch { enrollViewModel.enroll(it) } },
+                    onCancel = { },
+                    onError = { },
+                    onLockOut = { },
+                    cipher = cipher,
+                )
+            }
+        }
+    }
 
     EventsEffect(viewModel = viewModel) { event ->
         navController.navigateToTabOrRoot(target = event.tab)
