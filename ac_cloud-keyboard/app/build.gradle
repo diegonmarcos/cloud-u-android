@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // keyboard_media config → base64 → BuildConfig (mirrors superapp pattern).
@@ -112,6 +113,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        compose = true   // debug ShotActivity only (the compose ratchet: new UI is Compose)
         aidl true   // generate ITranslateEngine stub for AIDL binding to cloud-keyboard-libs
     }
 
@@ -132,4 +134,8 @@ dependencies {
     implementation project(':libs:media')
     implementation project(':libs:translate')
     implementation project(':libs:voice')
+    // Debug-only screenshot host (ShotActivity), same BOM as the superapp.
+    debugImplementation platform('androidx.compose:compose-bom:2025.11.01')
+    debugImplementation 'androidx.activity:activity-compose:1.9.3'
+    debugImplementation 'androidx.compose.foundation:foundation'
 }

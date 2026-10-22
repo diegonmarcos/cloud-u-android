@@ -1,23 +1,37 @@
 package com.diegonmarcos.cloudkeyboard
 
-import android.app.Activity
 import android.os.Bundle
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** Debug builds only: a text field that has the focus and the keyboard from the start, for the CI screenshot job. */
-class ShotActivity : Activity() {
+class ShotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val pad = (16 * resources.displayMetrics.density).toInt()
-        val field = EditText(this).apply { hint = "Cloud Keyboard screenshot field"; isSingleLine = false }
-        setContentView(LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad * 2, pad, pad)
-            addView(TextView(this@ShotActivity).apply { text = "Cloud Keyboard" ; textSize = 18f })
-            addView(field)
-        })
-        field.requestFocus()
+        setContent {
+            var text by remember { mutableStateOf("") }
+            val focus = remember { FocusRequester() }
+            val keyboard = LocalSoftwareKeyboardController.current
+            LaunchedEffect(Unit) { focus.requestFocus(); keyboard?.show() }
+            Column(Modifier.padding(start = 16.dp, top = 32.dp, end = 16.dp, bottom = 16.dp)) {
+                BasicText("Cloud Keyboard", style = androidx.compose.ui.text.TextStyle(fontSize = 18.sp))
+                BasicTextField(text, { text = it }, Modifier.focusRequester(focus))
+            }
+        }
     }
 }
