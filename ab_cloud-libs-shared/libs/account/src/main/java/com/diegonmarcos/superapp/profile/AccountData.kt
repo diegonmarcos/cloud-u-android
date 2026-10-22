@@ -26,8 +26,8 @@ import org.json.JSONObject
  *
  * [Provider] is the way out: `<package>.accountdata`, exported behind CONSTELLATION_DATA (the
  * fleet's signature permission, as FleetConfigProvider is) and re-checked in call(), because the
- * framework does not permission-check call() by itself. Two methods, [METHOD_EXPORT] and (#874)
- * [METHOD_SECRET]; everything else a ContentProvider can do is refused. It only ever READS: nothing a
+ * framework does not permission-check call() by itself. Three methods, [METHOD_EXPORT], (#874)
+ * [METHOD_SECRET] and (#1090) [METHOD_MAIL_ENDPOINTS]; everything else a ContentProvider can do is refused. It only ever READS: nothing a
  * caller sends is written.
  *
  * Limits, on purpose: the copy is one-way (Cloud Account -> SuperApp) and never overwrites a
@@ -36,12 +36,14 @@ import org.json.JSONObject
  * live). The profile picture/banner URIs are copied as text; the pictures themselves are not.
  */
 object AccountData {
-    const val PKG = "com.diegonmarcos.cloudaccount"
+    const val PKG = com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract.ACCOUNT_PACKAGE
     const val AUTHORITY = "$PKG.accountdata"
     const val METHOD_EXPORT = "export"
     /** #874 one connection value (`arg` = its `section.key` path), only to a package the Secrets section granted it. */
     const val METHOD_SECRET = "secret"
     const val KEY_VALUE = "value"
+    /** #1090 the per-account mail endpoints (mesh + public) and, to a package also granted `fleet.bearer`, the bearer. */
+    const val METHOD_MAIL_ENDPOINTS = com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract.METHOD
     /** #874 the grant that lets another package take [METHOD_EXPORT] (SuperApp's one-shot copy). */
     const val GRANT_EXPORT = "account.export"
 
@@ -220,6 +222,12 @@ object AccountData {
                     else runCatching { export(ctx) }.getOrElse { error("${it.javaClass.simpleName}: ${it.message.orEmpty().take(160)}") }
                 }
                 METHOD_SECRET -> secretFor(ctx, caller(ctx), arg)
+                METHOD_MAIL_ENDPOINTS -> {
+                    val who = caller(ctx)
+                    val vault = AccountVault(ctx)
+                    if (who != ctx.packageName && !vault.grants.allow(who, com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract.GRANT_ENDPOINTS)) error("no grant for $who")
+                    else runCatching { MailEndpointsPublisher.publish(ctx, who, vault) }.getOrElse { error(it.javaClass.simpleName) }
+                }
                 else -> error("unknown method $method")
             }
         }

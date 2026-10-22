@@ -1301,6 +1301,10 @@ private fun AccountsScreen(
     val accounts by viewModel.accounts.collectAsStateWithLifecycle()
     val currentId by viewModel.currentId.collectAsStateWithLifecycle()
     val pending by viewModel.pendingImportAccounts.collectAsStateWithLifecycle()
+    // #1090 the route each fleet account's mail is on follows the router's verdicts live.
+    val routes by app.sterna.core.jmap.FleetTransport.router.status.collectAsStateWithLifecycle()
+    val endpointVersion by viewModel.endpointVersion.collectAsStateWithLifecycle()
+    val endpointStates = remember(accounts, routes, endpointVersion) { accounts.associate { it.id to viewModel.endpointState(it.id, routes) } }
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -1347,6 +1351,7 @@ private fun AccountsScreen(
                     color = accountColorOf(account.color),
                     indented = row.underLogin,
                     gateway = if (account.isShared || account.authType == AuthType.OAUTH) null else viewModel.gatewayStatus(account.id),
+                    endpoint = if (account.isShared || account.authType == AuthType.OAUTH) null else endpointStates[account.id],
                     onClick = {
                         // Never switch to an inert (not-yet-signed-in) account: no credentials,
                         // and it would break the current-account inbox. Still opened, so it can be
@@ -1794,6 +1799,23 @@ private fun AccountDetailScreen(
                         onDismiss = { signInOpen = false },
                         onCaptured = { cookie -> signInOpen = false; viewModel.autheliaSignedIn(accountId, cookie) },
                     )
+                }
+                // #1090 the endpoints Cloud Account synced for this account (mesh, public, bearer masked) and its policy.
+                val endpointVersion by viewModel.endpointVersion.collectAsStateWithLifecycle()
+                val syncing by viewModel.endpointSyncing.collectAsStateWithLifecycle()
+                val syncMessage by viewModel.endpointMessage.collectAsStateWithLifecycle()
+                val routes by app.sterna.core.jmap.FleetTransport.router.status.collectAsStateWithLifecycle()
+                SettingsSection(stringResource(R.string.ep_title)) {
+                    key(endpointVersion, routes) {
+                        AccountEndpointsSection(
+                            endpoint = viewModel.endpointOf(accountId),
+                            state = viewModel.endpointState(accountId, routes) ?: app.sterna.core.jmap.EndpointState.UNKNOWN,
+                            syncing = syncing,
+                            message = syncMessage,
+                            onPolicy = { viewModel.setEndpointPolicy(accountId, it) },
+                            onSync = { viewModel.syncEndpoints() },
+                        )
+                    }
                 }
             }
             SettingsSection(stringResource(R.string.settings_protocol_section)) {

@@ -23,6 +23,8 @@
         <package android:name="org.sufficientlysecure.keychain" />
         <package android:name="org.sufficientlysecure.keychain.debug" />
         <package android:name="com.diegonmarcos.cloudbrowser" />
+        <!-- Cloud Account publishes the fleet mail accounts' mesh + public endpoints over its accountdata provider. -->
+        <package android:name="com.diegonmarcos.cloudaccount" />
         <!-- The cal engine (the task store Assigned mirrors to) and the bottom nav's hand-offs. -->
         <package android:name="${calEnginePackage}" />
         <package android:name="com.diegonmarcos.cloudagenda" />

@@ -58,6 +58,17 @@ class AppContainer(context: Context) {
      *  back on the wire here, before any sync can run. */
     val gatewayAuth: GatewayAuthStore = GatewayAuthStore.of(context.applicationContext)
         .also { g -> runCatching { g.restore(accountStore.accounts()) } }
+    private val appContext: Context = context.applicationContext
+    /** #1090 The fleet accounts' two endpoints (mesh + public) and bearer as Cloud Account published them; put back
+     *  on the transport here, before any sync can run. Nothing about them is built into the app. */
+    val fleetEndpointStore: app.sterna.core.data.account.FleetEndpointStore = app.sterna.core.data.account.FleetEndpointStore.of(appContext)
+    val fleetEndpoints: app.sterna.core.data.account.FleetEndpointWiring = app.sterna.core.data.account.FleetEndpointWiring(
+        fleetEndpointStore, app.sterna.core.jmap.FleetTransport.router, app.sterna.core.jmap.FleetTransport.bearers,
+    ).also { w -> runCatching { w.restore(accountStore.accounts()) } }
+
+    /** Asks Cloud Account for the fleet accounts' endpoints and applies them. BLOCKS: call off the main thread. */
+    fun syncFleetEndpoints(): app.sterna.fleet.MailEndpointSync.Outcome =
+        app.sterna.fleet.MailEndpointSync.pull(appContext, fleetEndpoints, accountStore.accounts())
     /** `core/jmap` is plain Kotlin/JVM and cannot see `android.util.Log`, so the app hands it the
      *  sink. The tag is half of the `adb logcat` filter given to reporters and is pinned by a test;
      *  info/warn only, release stripping debug and verbose. */
@@ -248,6 +259,10 @@ class SternaApplication : Application() {
         // The vault's mail section, when the fleet config contract left it in the account prefs
         // (the migration / Fleet Setup restarted us for it): accounts in, keys out, once.
         VaultMailImport.run(this, container.accountStore)
+        // #1090 the fleet accounts' mesh + public endpoints and bearer, from Cloud Account (the source of truth),
+        // once per start and off the main thread; and the mesh is re-probed whenever the network changes.
+        app.sterna.net.EndpointNetworkWatch.start(this)
+        container.appScope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { container.syncFleetEndpoints() } }
         // The fleet setup contract serves the signatures out of the accounts blob (store mail_signatures).
         app.sterna.fleet.SignaturesSetupHandler.register(container.accountStore)
         // and the settings DataStore (store datastore:settings), through the app's own instance.

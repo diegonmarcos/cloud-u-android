@@ -98,6 +98,12 @@ object AccountHost {
     /** The host re-arms its auto-backup job after Settings changed `backup.auto` (Cloud Account: WorkManager). */
     @Volatile var autoBackupChanged: (Context) -> Unit = {}
 
+    /**
+     * #1090 The mail endpoint declaration (the host's build.json::mail_endpoints as JSON text), from which
+     * [MailEndpointsPublisher] derives each fleet mail account's mesh and public URL. "" publishes nothing.
+     */
+    @Volatile var mailEndpointsDecl: () -> String = { "" }
+
     val DEFAULT_PALETTE: KitPalette = KitPalette.fromArgb(
         surface = 0xFF15161A.toInt(), surfaceSelected = 0xFF23252B.toInt(),
         textPrimary = 0xFFE6E6E6.toInt(), textSecondary = 0xFF9AA0A6.toInt(),

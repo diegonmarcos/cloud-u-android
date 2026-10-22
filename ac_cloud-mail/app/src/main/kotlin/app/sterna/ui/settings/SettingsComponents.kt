@@ -293,6 +293,8 @@ fun AccountRow(
     indented: Boolean = false,
     /** The auth chip (Connected / Token / Signed in / Needs sign-in / Error); null draws none. */
     gateway: app.sterna.core.data.account.GatewayStatus? = null,
+    /** #1090 The route a fleet account's mail is on (Mesh / Public / Checking / Offline); null = not a fleet account. */
+    endpoint: app.sterna.core.jmap.EndpointState? = null,
 ) {
     Row(
         modifier = Modifier
@@ -320,6 +322,10 @@ fun AccountRow(
         if (gateway != null) {
             Spacer(Modifier.width(MailMetrics.s8))
             GatewayChip(gateway)
+        }
+        if (endpoint != null) {
+            Spacer(Modifier.width(MailMetrics.s8))
+            EndpointChip(endpoint)
         }
         if (isCurrent) {
             Spacer(Modifier.width(MailMetrics.s16))

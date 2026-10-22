@@ -29,6 +29,8 @@ class App : Application() {
             // Redesign task 3: the debug API's `tabs` op answers this app's five islands and their pages.
             nav = { navJson() }
             autoBackupChanged = { AutoBackupWorker.schedule(it) }
+            // #1090 the mail endpoint declaration Account publishes to Cloud Mail (build.json::mail_endpoints).
+            mailEndpointsDecl = { String(android.util.Base64.decode(BuildConfig.MAIL_ENDPOINTS_B64, android.util.Base64.DEFAULT)) }
         }
         // #874 the vault's Secrets section is enforced by this app's setup provider (`<package>.fleetsetup`) and by
         // AccountData.Provider: install the grant-aware authorizer and seed the defaults the fleet relied on, once.

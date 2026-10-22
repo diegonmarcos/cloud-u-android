@@ -74,17 +74,22 @@ fun gatewayStatusLabel(s: GatewayStatus): String = stringResource(
 
 /** The per-account status chip: primary when fine, error when it needs attention. */
 @Composable
-fun GatewayChip(status: GatewayStatus, modifier: Modifier = Modifier) {
-    val bad = status == GatewayStatus.NEEDS_SIGN_IN || status == GatewayStatus.ERROR
+fun GatewayChip(status: GatewayStatus, modifier: Modifier = Modifier) =
+    StatusPill(gatewayStatusLabel(status), bad = status == GatewayStatus.NEEDS_SIGN_IN || status == GatewayStatus.ERROR,
+        tag = AccountAuthTags.CHIP, modifier = modifier)
+
+/** The one pill every per-account status wears (auth, endpoint route): primary when fine, error when [bad]. */
+@Composable
+internal fun StatusPill(label: String, bad: Boolean, tag: String, modifier: Modifier = Modifier) {
     val ink = if (bad) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
     Surface(
-        modifier = modifier.testTag(AccountAuthTags.CHIP).semantics(mergeDescendants = true) {},
+        modifier = modifier.testTag(tag).semantics(mergeDescendants = true) {},
         shape = RoundedCornerShape(percent = 50),
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = BorderStroke(MailMetrics.s2, ink),
     ) {
         Text(
-            gatewayStatusLabel(status), style = MaterialTheme.typography.labelMedium, color = ink,
+            label, style = MaterialTheme.typography.labelMedium, color = ink,
             modifier = Modifier.padding(horizontal = MailMetrics.s12, vertical = MailMetrics.s4),
         )
     }
@@ -181,7 +186,7 @@ fun AccountAuthSection(
 }
 
 @Composable
-private fun Hint(res: Int) {
+internal fun Hint(res: Int) {
     Text(stringResource(res), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 

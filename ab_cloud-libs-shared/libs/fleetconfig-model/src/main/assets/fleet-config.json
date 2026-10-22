@@ -1174,7 +1174,7 @@
     "gateway_auth": {
       "kind": "prefs",
       "class": "secret",
-      "doc": "Cloud Mail (ac_cloud-mail) per-account edge-gate sign-in: one Keystore AES-256-GCM sealed JSON blob per account id (key gw_<id>) holding the Authelia flag and the captured authelia_session cookie. A credential: sealed, never logged, replayed only to the account's own domain.",
+      "doc": "Cloud Mail (ac_cloud-mail) per-account edge-gate sign-in: one Keystore AES-256-GCM sealed JSON blob per account id (key gw_<id>) holding the Authelia flag and the captured authelia_session cookie. A credential: sealed, never logged, replayed only to the account's own domain. (#1090) The same file also holds one sealed blob per fleet account under key ep_<id>: the mesh URL and public URL Cloud Account published for it, the owner's endpoint policy (mesh_first / mesh_only / public_only) and the synced fleet bearer. The bearer is a credential: sealed, shown masked, sent only to the exact public host, never to the mesh host.",
       "helper": "ac_cloud-mail/core/data/src/main/kotlin/app/sterna/core/data/account/GatewayAuthStore.kt",
       "used_by": [
         "ac_cloud-mail"

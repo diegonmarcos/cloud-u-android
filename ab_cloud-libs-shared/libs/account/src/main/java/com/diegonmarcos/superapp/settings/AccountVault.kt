@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.settings
 
 import android.content.Context
 import android.util.Base64
+import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
 import com.diegonmarcos.superapp.fleetconfig.SetupStores
 import com.diegonmarcos.superapp.profile.AccountData
 import com.diegonmarcos.superapp.profile.AccountModel
@@ -162,9 +163,12 @@ class AccountVault(context: Context) {
 
     /** Once per install: the grants the fleet relied on before this section existed. Revocable like any other. */
     fun seedDefaults() {
-        if (prefs.text(K_SEEDED).isNotEmpty()) return
-        for ((pkg, keys) in DEFAULT_GRANTS) keys.forEach { grants.grant(pkg, it) }
-        prefs.putText(K_SEEDED, "1")
+        // The marker is the seed VERSION ("1" from before versions existed): a later version seeds only what it
+        // added, so a grant the owner revoked from an earlier one is never put back.
+        val done = prefs.text(K_SEEDED).toIntOrNull() ?: 0
+        if (done >= SEED_VERSION) return
+        for ((v, defaults) in DEFAULT_GRANTS_BY_VERSION) if (v > done) for ((pkg, keys) in defaults) keys.forEach { grants.grant(pkg, it) }
+        prefs.putText(K_SEEDED, SEED_VERSION.toString())
     }
 
     // ── enforcement ──────────────────────────────────────────────────────
@@ -191,10 +195,18 @@ class AccountVault(context: Context) {
         }
 
         /** What was read-through before grants existed, now explicit: SuperApp takes the export, SuperApp and Store the fleet bearer. */
-        val DEFAULT_GRANTS = mapOf(
-            "com.diegonmarcos.superapp" to listOf(AccountData.GRANT_EXPORT, "fleet.bearer", "auth.*"),
-            "com.diegonmarcos.cloudstore" to listOf("fleet.bearer"),
+        val DEFAULT_GRANTS_BY_VERSION: Map<Int, Map<String, List<String>>> = mapOf(
+            1 to mapOf(
+                "com.diegonmarcos.superapp" to listOf(AccountData.GRANT_EXPORT, "fleet.bearer", "auth.*"),
+                "com.diegonmarcos.cloudstore" to listOf("fleet.bearer"),
+            ),
+            // #1090 Cloud Mail reads its accounts' mesh + public endpoints and the fleet bearer from here.
+            2 to mapOf(MAIL_PACKAGE to listOf(MailEndpointsContract.GRANT_ENDPOINTS, MailEndpointsContract.GRANT_BEARER)),
         )
+        const val MAIL_PACKAGE = "com.diegonmarcos.comms.mail"
+        const val SEED_VERSION = 2
+        val DEFAULT_GRANTS: Map<String, List<String>> = DEFAULT_GRANTS_BY_VERSION.values
+            .fold(emptyMap<String, List<String>>()) { acc, m -> acc + m.mapValues { (k, v) -> acc[k].orEmpty() + v } }
 
         fun parse(text: String): JSONObject = runCatching { JSONObject(text.ifBlank { "{}" }) }.getOrDefault(JSONObject())
 

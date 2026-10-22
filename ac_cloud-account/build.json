@@ -300,6 +300,21 @@
       "enabled": true
     }
   },
+  "mail_endpoints": {
+    "_doc": "#1090 THE mail endpoint declaration, declared once. Cloud Account publishes from it, per fleet mail account, the mesh URL (<service>.app, private) and the public URL (reached with the fleet bearer) to Cloud Mail over the accountdata provider; Mail hard-codes neither. Each service is derived from its fleet declaration in cloud-u-containers: mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. An account is a fleet account when the vault's JMAP host equals a service's public_domain; any other account keeps its single endpoint. policy is the default endpoint policy: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. The bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets.",
+    "services": [
+      {
+        "id": "jmap",
+        "source": "cloud-u-containers/user-comm_tools-stalwart/build.json",
+        "mesh_dns": "stalwart.app",
+        "mesh_port": 2443,
+        "mesh_scheme": "https",
+        "public_domain": "jmap.diegonmarcos.com",
+        "public_scheme": "https",
+        "policy": "mesh_first"
+      }
+    ]
+  },
   "ui": {
     "_doc": "Cloud Account's information architecture (#1081, owner request 2026-10-21; supersedes the four islands of 2026-10-14 and #964): five sections Personal Info, Configs, Data, Connect, Activity (libs:bottomnav NavDecl), one place per thing. Configs is PUBLIC (no secret value; test-account-configs-public.sh and PublicConfigTest), Data is PRIVATE (secrets, masked by default). A page's `pages` is a second strip (NavPage.pages). MainActivity maps every leaf (section, page) to one composable; hub/HubNav.LEGACY maps every id of the earlier layouts to its place now, so libs:account links and OPEN intents (extras section/page) keep working.",
     "bottom_nav": [

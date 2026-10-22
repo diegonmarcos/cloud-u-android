@@ -6,7 +6,9 @@ import android.content.Intent
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.sterna.container
+import app.sterna.fleet.MailEndpointSync
 import app.sterna.core.data.account.AccountCredentials
+import app.sterna.core.data.account.AccountEndpoint
 import app.sterna.core.data.account.AuthType
 import app.sterna.core.data.account.ConnectionSecurity
 import app.sterna.core.data.account.GatewayAuth
@@ -14,7 +16,11 @@ import app.sterna.core.data.account.GatewayAuthStore
 import app.sterna.core.data.account.GatewayMode
 import app.sterna.core.data.account.GatewayStatus
 import app.sterna.core.data.account.GatewayStatuses
+import app.sterna.core.jmap.EndpointPolicy
+import app.sterna.core.jmap.EndpointState
+import app.sterna.core.jmap.FleetTransport
 import app.sterna.core.jmap.GatewayCookies
+import app.sterna.core.jmap.RouteStatus
 import app.sterna.core.jmap.GatewayErrors
 import app.sterna.core.data.account.MailEndpoint
 import app.sterna.core.data.account.MailProtocol
@@ -100,6 +106,50 @@ class AccountsViewModel(application: Application) : AndroidViewModel(application
         lastTestFailed = false
         _connTest.value = ConnTest.Idle
         _gatewayVersion.update { it + 1 }
+    }
+
+    // ── #1090 the fleet accounts' endpoints, as Cloud Account published them ──────────────────
+
+    private val endpointStore = application.container.fleetEndpointStore
+    private val endpointWiring = application.container.fleetEndpoints
+    private val _endpointVersion = MutableStateFlow(0)
+    /** Bumped on every sync and policy change so the screens re-read [endpointOf]. */
+    val endpointVersion = _endpointVersion.asStateFlow()
+    private val _endpointSyncing = MutableStateFlow(false)
+    val endpointSyncing = _endpointSyncing.asStateFlow()
+    private val _endpointMessage = MutableStateFlow("")
+    /** The last sync, in words. Never a URL's secret, never the bearer. */
+    val endpointMessage = _endpointMessage.asStateFlow()
+
+    /** The synced endpoints of [id], or null when it is not a fleet account (it keeps its one server address). */
+    fun endpointOf(id: String): AccountEndpoint? = endpointStore.get(id)
+
+    /** Which route [id]'s mail is on right now; null for an account that is not a fleet account. */
+    fun endpointState(id: String, routes: Map<String, RouteStatus> = FleetTransport.router.status.value): EndpointState? {
+        val e = endpointStore.get(id) ?: return null
+        return routes[GatewayAuthStore.hostOf(e.public).lowercase()]?.state() ?: EndpointState.UNKNOWN
+    }
+
+    /** The owner's endpoint policy for [id]; accounts on the same endpoint move together (one host, one route). */
+    fun setEndpointPolicy(id: String, policy: EndpointPolicy) {
+        endpointWiring.setPolicy(store.accounts(), id, policy)
+        _endpointVersion.update { it + 1 }
+    }
+
+    /** Asks Cloud Account again. The answer lands in [endpointMessage]; the transport is re-wired before it returns. */
+    fun syncEndpoints() {
+        if (_endpointSyncing.value) return
+        _endpointSyncing.value = true
+        viewModelScope.launch(Dispatchers.IO) {
+            val ctx = getApplication<Application>()
+            _endpointMessage.value = when (val out = ctx.container.syncFleetEndpoints()) {
+                is MailEndpointSync.Outcome.Synced -> ctx.getString(app.sterna.R.string.ep_sync_done, out.report.applied)
+                MailEndpointSync.Outcome.AccountMissing -> ctx.getString(app.sterna.R.string.ep_sync_missing)
+                is MailEndpointSync.Outcome.Refused -> ctx.getString(app.sterna.R.string.ep_sync_refused)
+            }
+            _endpointSyncing.value = false
+            _endpointVersion.update { it + 1 }
+        }
     }
 
     fun autheliaSignedIn(id: String, cookie: String) {

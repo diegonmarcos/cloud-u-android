@@ -2704,6 +2704,11 @@ class JmapClient internal constructor(
                 // The auth gateway (Authelia) in front of a public endpoint: its session cookie per hop,
                 // and a redirect to its login page surfaced as a 401. Inert when no cookie is set.
             .addInterceptor(GatewayRedirectGuard())
+                // #1090 a fleet account's two endpoints: mesh first, public (+ bearer) as the fallback. A host
+                // that is not a registered fleet endpoint passes through both untouched. The bearer interceptor
+                // runs BEFORE the legacy per-domain one, so a synced token wins and the header is set once.
+            .addInterceptor(EndpointRouteInterceptor(FleetTransport.router))
+            .addNetworkInterceptor(FleetBearerInterceptor(FleetTransport.router, FleetTransport.bearers))
             .addNetworkInterceptor(GatewayCookieInterceptor())
             .build()
     }
