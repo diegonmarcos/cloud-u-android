@@ -44,7 +44,11 @@ import com.diegonmarcos.clouddrive.home.HomeScreen
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
 import com.diegonmarcos.clouddrive.sync.SyncScreen
+import com.diegonmarcos.clouddrive.startup.StartupGate
 import com.diegonmarcos.clouddrive.startup.StartupGuard
+import com.diegonmarcos.clouddrive.startup.StartupState
+import com.diegonmarcos.clouddrive.startup.StoreStartupController
+import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
 import com.diegonmarcos.clouddrive.ui.DriveShell
 import com.diegonmarcos.clouddrive.ui.DriveTheme
 import com.diegonmarcos.clouddrive.ui.EmptyState
@@ -201,17 +205,33 @@ class MainActivity : ComponentActivity(), DriveActions {
         val openPath: (String) -> Unit = { path -> filesController?.reveal(path); jumpPage = Declarations.PAGE_LOCAL; jumpTab = Declarations.SECTION_EXPLORER }
         val syncAll: () -> Unit = { git.repos.value.filter { it.autoSync }.forEach { git.syncNow(it) } }
 
-        DriveShell(select = jumpTab, onSelected = { jumpTab = null }) { tabId, _ ->
-            when (tabId) {
-                "explorer" -> ExplorerScreen(jumpPage, onPageConsumed = { jumpPage = null }, local = { FilesScreen(files, this, hasAccess) }, cloud = { VolumesScreen(rclone, prefs, this, openPath) })
-                "manage" -> ManageScreen(this, prefs, onShowInExplorer = openPath, page = jumpPage, onPageConsumed = { jumpPage = null })
-                "agents" -> AgentsScreen()
-                "ai" -> AiScreen()
-                "home" -> HomeScreen(git, this, onOpenFiles = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_LOCAL) }, onOpenVolumes = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_CLOUD) }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
-                "sync" -> SyncScreen(git, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
-                "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
-                else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)
+        // #1106 the startup sequence: terminal installed -> started -> $HOME ready -> mounted -> the shell.
+        // A failure shows its remedies and "Continue with local files" (degraded mode) instead of a crash.
+        val startup = remember { StoreStartupController(applicationContext, scope, skip = StartupGuard.safeMode) }
+        LaunchedEffect(startup) { startup.start() }
+        val startupState by startup.state.collectAsState()
+        var degraded by remember { mutableStateOf(false) }
+        if (startupState is StartupState.Ready || degraded) {
+            DriveShell(select = jumpTab, onSelected = { jumpTab = null }) { tabId, _ ->
+                when (tabId) {
+                    "explorer" -> ExplorerScreen(jumpPage, onPageConsumed = { jumpPage = null }, local = { FilesScreen(files, this, hasAccess) }, cloud = { VolumesScreen(rclone, prefs, this, openPath) })
+                    "manage" -> ManageScreen(this, prefs, onShowInExplorer = openPath, page = jumpPage, onPageConsumed = { jumpPage = null })
+                    "agents" -> AgentsScreen()
+                    "ai" -> AiScreen()
+                    "home" -> HomeScreen(git, this, onOpenFiles = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_LOCAL) }, onOpenVolumes = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_CLOUD) }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
+                    "sync" -> SyncScreen(git, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
+                    "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
+                    else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)
+                }
             }
+        } else {
+            StartupGate(
+                state = startupState,
+                terminalPackage = StoreAccess.ownerPackage(),
+                onRetry = { startup.retry() },
+                onContinueLocal = { degraded = true },
+                onGrantAccess = { requestStorageAccess() },
+            )
         }
     }
 

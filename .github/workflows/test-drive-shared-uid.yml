@@ -127,6 +127,109 @@ jobs:
           path: out/
           if-no-files-found: warn
 
+  # #1106 the startup sequence (terminal installed -> started -> $HOME -> mounted -> file list) on a real
+  # emulator: with the terminal FORCE-STOPPED before Drive opens (Drive must start it and reach the shell), and
+  # with the terminal ABSENT (Drive must say so, with its remedies, and not crash). Screenshots are uploaded.
+  drive-startup-sequence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Fetch the APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -eu
+          mkdir -p apk
+          gh release download latest -R "$REPO" -p cloud-terminal-x86_64.apk -O apk/terminal.apk
+          if [ -n "$RUN_ID" ]; then
+            gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              --jq '.artifacts[] | select(.name|startswith("Cloud-Drive-x86_64-")) | .name' |
+            while read -r name; do gh run download "$RUN_ID" -R "$REPO" -n "$name" -D "apk/dl-$name"; done
+            find apk -name '*.apk' -path '*dl-*' | head -1 | xargs -I{} cp {} apk/drive.apk
+          else
+            gh release download latest -R "$REPO" -p Cloud-Drive-x86_64.apk -O apk/drive.apk
+          fi
+          ls -l apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Write the probe
+        run: |
+          cat > probe.sh <<'EOF'
+          #!/bin/bash
+          set -u
+          mkdir -p out
+          PKG=com.diegonmarcos.clouddrive
+          TERM_PKG=cld.termux
+          ok=1
+          launch() {
+            local act
+            act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
+            timeout 120 adb shell am start -W -n "$act" > "out/am-start-$1.txt" || { echo "::error::am start hung or failed ($1)"; ok=0; }
+          }
+
+          echo "=== A. terminal ABSENT ==="
+          adb logcat -c || true
+          adb install -r -g apk/drive.apk || { echo "::error::drive install failed"; exit 2; }
+          adb shell pm list packages | grep -q "package:$TERM_PKG" && adb uninstall $TERM_PKG
+          adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
+          launch absent
+          sleep 12
+          adb exec-out screencap -p > out/absent.png || true
+          adb logcat -d -v threadtime > out/logcat-absent.txt
+          adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "::error title=Drive died with the terminal absent::no process"; ok=0; }
+          grep -q "DriveStartup.*TermuxMissing" out/logcat-absent.txt || { echo "::error title=Drive did not report TermuxMissing::see logcat-absent.txt"; ok=0; }
+          grep -q "FATAL EXCEPTION" out/logcat-absent.txt && { echo "::error::FATAL EXCEPTION with the terminal absent"; ok=0; }
+          adb uninstall "$PKG" >/dev/null 2>&1 || true
+
+          echo "=== B. terminal installed but FORCE-STOPPED ==="
+          adb logcat -c || true
+          adb install -r -g apk/terminal.apk || { echo "::error::terminal install failed"; exit 2; }
+          term=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER $TERM_PKG | tr -d '\r' | tail -1)
+          case "$term" in */*) timeout 60 adb shell am start -W -n "$term" || true; sleep 20;; esac
+          adb install -r -g apk/drive.apk || { echo "::error::drive install failed in the shared uid"; exit 2; }
+          adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
+          adb shell am force-stop $TERM_PKG; sleep 3
+          if adb shell pidof $TERM_PKG >/dev/null 2>&1; then echo "::warning::terminal still running after force-stop"; fi
+          adb logcat -c || true
+          launch stopped
+          sleep 25
+          adb exec-out screencap -p > out/stopped.png || true
+          adb logcat -d -v threadtime > out/logcat-stopped.txt
+          adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "::error title=Drive died with the terminal stopped::no process"; ok=0; }
+          adb shell pidof $TERM_PKG >/dev/null 2>&1 || { echo "::error title=Drive did not start the terminal::cld.termux has no process"; ok=0; }
+          grep -q "DriveStartup.*state=Ready" out/logcat-stopped.txt || { echo "::error title=Drive did not reach Ready::see logcat-stopped.txt"; ok=0; }
+          grep -q "FATAL EXCEPTION" out/logcat-stopped.txt && { echo "::error::FATAL EXCEPTION with the terminal stopped"; ok=0; }
+          grep -h "DriveStartup" out/logcat-absent.txt out/logcat-stopped.txt > out/startup-states.txt || true
+          cat out/startup-states.txt
+          [ $ok = 1 ] || exit 1
+          echo "startup sequence ok in both cases."
+          EOF
+          chmod +x probe.sh
+
+      - name: Boot emulator + probe
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./probe.sh
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-startup-sequence
+          path: out/
+          if-no-files-found: warn
+
   drive-migration:
     # The owner's real sequence: cloud-drive runs alone first (it backs its data up), the terminal then joins the uid,
     # and cloud-drive is opened again with the restore notice waiting. Random taps include the notice's buttons.

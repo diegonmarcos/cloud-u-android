@@ -636,4 +636,23 @@
     <string name="crash_share">Share</string>
     <string name="crash_safe_mode">Retry in safe mode</string>
     <string name="crash_close">Close</string>
+    <!-- #1106 the startup sequence (startup/StartupGate) -->
+    <string name="startup_checking">Checking the terminal…</string>
+    <string name="startup_starting_terminal">Starting terminal…</string>
+    <string name="startup_waiting_home">Waiting for the terminal\'s home…</string>
+    <string name="startup_mounting">Mounting…</string>
+    <string name="startup_error_title">Drive could not open its storage</string>
+    <string name="startup_err_missing">The terminal (%1$s) is not installed.</string>
+    <string name="startup_err_not_started">The terminal did not start: %1$s</string>
+    <string name="startup_err_home">The terminal\'s home is not available yet (%1$s).</string>
+    <string name="startup_err_permission">A permission is missing: %1$s</string>
+    <string name="startup_err_mount">The store could not be mounted: %1$s</string>
+    <string name="startup_err_timeout">The %1$s step did not answer in %2$d seconds.</string>
+    <string name="startup_action_install">Install the terminal</string>
+    <string name="startup_action_open">Open the terminal</string>
+    <string name="startup_action_grant">Grant access</string>
+    <string name="startup_action_retry">Retry</string>
+    <string name="startup_action_log">View log</string>
+    <string name="startup_action_local">Continue with local files</string>
+    <string name="startup_log_empty">The log is empty.</string>
 </resources>
