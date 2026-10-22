@@ -59,7 +59,7 @@ ok('"Authorization" to "Bearer' in client, "the call carries the vault bearer as
 svc = {s["id"]: s for s in bj["fleet_endpoints"]["services"]}.get("tokens-api", {})
 ok(svc.get("mesh_dns") == "tokens-api.app" and svc.get("mesh_port") == 4184 and svc.get("public_domain") == "tokens-api.diegonmarcos.com",
    "tokens-api is a declared fleet endpoint", "tokens-api is not (correctly) declared in fleet_endpoints")
-ok("<domain>tokens-api.app</domain>" in rd(f"{A}/app/src/main/res/xml/network_security_config.xml"), "tokens-api.app has its named cleartext entry", "tokens-api.app has no cleartext entry")
+ok('<domain includeSubdomains="false">tokens-api.app</domain>' in rd(f"{A}/app/src/main/res/xml/network_security_config.xml"), "tokens-api.app has its named cleartext entry", "tokens-api.app has no cleartext entry")
 sys.exit(1 if fails else 0)
 PY
 }
@@ -94,7 +94,7 @@ mutate "the client logs" "$H/hub/TokensClient.kt" 'private fun enc(id: String)' 
     private fun enc(id: String)' || M=1
 mutate "the bearer is dropped" "$H/hub/TokensClient.kt" '"Authorization" to "Bearer $token"' '"Accept" to "Bearer $token"' || M=1
 mutate "Tokens declared under Configs" "$A/build.json" '"id": "tokens",' '"id": "tokens-x",' || M=1
-mutate "tokens-api loses its cleartext entry" "$A/app/src/main/res/xml/network_security_config.xml" '<domain>tokens-api.app</domain>' '' || M=1
+mutate "tokens-api loses its cleartext entry" "$A/app/src/main/res/xml/network_security_config.xml" '<domain includeSubdomains="false">tokens-api.app</domain>' '' || M=1
 
 echo "== RESULT: real tree $REAL failure(s), $([ "$M" -eq 0 ] && echo "every mutation caught" || echo "a mutation survived") =="
 [ "$REAL" -eq 0 ] && [ "$M" -eq 0 ]
