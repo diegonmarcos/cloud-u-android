@@ -66,6 +66,8 @@ jobs:
           adb install -r -g apk/drive.apk || { echo "::error::drive install failed (a shared-uid install must be signed with the constellation key)"; adb logcat -d | tail -40; exit 2; }
           adb shell dumpsys package com.diegonmarcos.clouddrive | grep -E "userId=|sharedUser" | tee out/uid.txt
           PKG=com.diegonmarcos.clouddrive
+          # The owner's phone has granted all-files access (the Files tab is a manager over shared storage): so does this run.
+          adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
           act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
           ok=1
           timeout 120 adb shell am start -W -n "$act" > out/am-start.txt; rc=$?
@@ -80,6 +82,13 @@ jobs:
             sleep 1
             if ! adb shell pidof "$PKG" >/dev/null 2>&1; then echo "process $PKG is gone after ${i}s"; ok=0; break; fi
           done
+          if [ $ok = 1 ]; then
+            # Exercise the UI the way a user does (tabs, Files rows): random taps for ~60 s; a crash shows in logcat and as a dead process.
+            timeout 150 adb shell monkey -p "$PKG" --pct-syskeys 0 --pct-appswitch 0 --throttle 250 -s 7 --ignore-timeouts 300 > out/monkey.txt 2>&1 || true
+            sleep 3
+            adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "process $PKG died while exercised"; ok=0; }
+            grep -q "// CRASH: $PKG" out/monkey.txt && ok=0
+          fi
           adb logcat -d -v threadtime > out/logcat.txt
           adb logcat -d -b crash -v threadtime > out/logcat-crash.txt || true
           adb exec-out screencap -p > out/screen.png || true
