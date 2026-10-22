@@ -7,6 +7,7 @@ import android.os.Build
 import android.util.Base64
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.GroupTitle
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
 import com.diegonmarcos.superapp.uikit.KitDensity
@@ -29,6 +31,7 @@ import com.diegonmarcos.superapp.uikit.KitFingerprint
 import com.diegonmarcos.superapp.uikit.KitListRow
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
+import com.diegonmarcos.superapp.uikit.KitSegmented
 import com.diegonmarcos.superapp.uikit.KitState
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import java.security.MessageDigest
@@ -54,6 +57,9 @@ object FleetIdentity {
     const val TAG_ROW = "fleet-identity-row:"
     const val TAG_GROUP = "fleet-identity-group:"
     const val TAG_SUMMARY = "fleet-identity-summary"
+    const val TAG_UID = "fleet-identity-uid:"
+    const val TAG_SHARED = "fleet-identity-shared-uid:"
+    const val TAG_SORT = "fleet-identity-sort"
     const val OWN = "own uid"
 
     /** [migration] = how an installed member reaches this uid ("shared_uid"), [plan] its declared backup paths (SharedUidMigration). */
@@ -143,6 +149,34 @@ object FleetIdentity {
         return null
     }
 
+    /** How the page orders its rows. Declared once: the switch draws [values] and [sorted] reads the same entries. */
+    enum class Sort(val id: String, val label: String) {
+        UID("uid", "By uid"), NAME("name", "By name"), PACKAGE("package", "By package");
+        companion object { fun of(id: String): Sort = values().firstOrNull { it.id == id } ?: UID }
+    }
+
+    /** The rows that run as one Linux user; [uid] null = not installed, so no uid to share. */
+    class UidGroup(val uid: Int?, val sharedUserId: String?, val rows: List<Row>) {
+        /** More than one app in the uid: the groups the page highlights. */
+        val shared: Boolean get() = uid != null && rows.size > 1
+        val key: String get() = uid?.toString() ?: "none"
+        val title: String get() = if (uid == null) "not installed" else
+            "uid $uid" + (sharedUserId?.let { " · $it" } ?: "") + (if (shared) " · ${rows.size} apps" else "")
+    }
+
+    /** [rows] ordered by [sort]; uid order puts the not-installed rows last and keeps A-Z inside a uid. */
+    fun sorted(rows: List<Row>, sort: Sort): List<Row> = when (sort) {
+        Sort.UID -> rows.sortedWith(compareBy<Row>({ it.seen?.uid ?: Int.MAX_VALUE }, { it.member.label.lowercase() }))
+        Sort.NAME -> rows.sortedBy { it.member.label.lowercase() }
+        Sort.PACKAGE -> rows.sortedBy { it.member.pkg }
+    }
+
+    /** The uid groups, in uid order. The name is the live sharedUserId (an app's own package names none), else the declared one. */
+    fun byUid(rows: List<Row>): List<UidGroup> = sorted(rows, Sort.UID).groupBy { it.seen?.uid }.map { (uid, rs) ->
+        val live = rs.firstNotNullOfOrNull { r -> r.seen?.sharedUserId?.takeIf { it != r.member.pkg } }
+        UidGroup(uid, live ?: rs.firstNotNullOfOrNull { it.group?.sharedUserId }, rs)
+    }
+
     fun summary(rows: List<Row>): String {
         val shared = rows.count { it.group != null }
         val installed = rows.count { it.seen != null }
@@ -173,10 +207,16 @@ fun FleetIdentityPage(registry: FleetIdentity.Registry? = null, live: Map<String
     CloudKitTheme(StoreSearchPage.palette(ctx)) { IdentityBody(FleetIdentity.rows(reg, seen), reg) }
 }
 
+/**
+ * The page owns its scroll (#1096): every host gives it a bounded pane (the Store's Access pane, the SuperApp fragment),
+ * so a plain Column here left the rows below the fold unreachable; a host wraps nothing around it.
+ */
 @Composable
 private fun IdentityBody(rows: List<FleetIdentity.Row>, reg: FleetIdentity.Registry) {
     val p = LocalKitPalette.current
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(KitDensity.small)) {
+    var sort by remember { mutableStateOf(FleetIdentity.Sort.UID) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(KitDensity.medium),
+        verticalArrangement = Arrangement.spacedBy(KitDensity.small)) {
         KitSectionHeader("Identity", "Which Linux user each fleet app runs as. Own uid unless declared in a shared group (android:sharedUserId).")
         Text(FleetIdentity.summary(rows), color = p.textSecondary, fontSize = KitDensity.caption,
             modifier = Modifier.testTag(FleetIdentity.TAG_SUMMARY))
@@ -184,24 +224,39 @@ private fun IdentityBody(rows: List<FleetIdentity.Row>, reg: FleetIdentity.Regis
             Text("${g.label} · ${g.sharedUserId ?: "pending: each on its own uid today"}", color = p.textPrimary, fontSize = KitDensity.title)
             Text("shared by " + g.members.joinToString(", "), color = p.textSecondary, fontSize = KitDensity.caption)
         }
-        for (r in rows) {
-            val s = r.seen
-            val secondary = listOfNotNull(
-                r.member.pkg,
-                r.declared,
-                r.sharesWith.takeIf { it.isNotEmpty() }?.let { "shares with " + it.joinToString() },
-                s?.let { "uid ${it.uid}" },
-                r.problem,
-            ).joinToString(" · ")
-            val pill = when {
-                s == null -> "not installed" to KitState.IDLE
-                r.problem != null -> "mismatch" to KitState.BAD
-                else -> "ok" to KitState.OK
+        KitSegmented(FleetIdentity.Sort.values().map { it.id to it.label }, sort.id, { sort = FleetIdentity.Sort.of(it) }, tag = FleetIdentity.TAG_SORT)
+        if (sort == FleetIdentity.Sort.UID) {
+            for (g in FleetIdentity.byUid(rows)) {
+                GroupTitle(g.title, Modifier.testTag(FleetIdentity.TAG_UID + g.key))
+                if (g.shared) {
+                    KitCard(Modifier.testTag(FleetIdentity.TAG_SHARED + g.key)) { for (r in g.rows) IdentityRow(r) }
+                } else {
+                    for (r in g.rows) IdentityRow(r)
+                }
             }
-            val signer: (@Composable () -> Unit)? = s?.signer?.let { fp -> @Composable { KitFingerprint(fp, tag = "${r.member.id}:signer") } }
-            KitListRow(r.member.label, secondary = secondary, pill = pill, tag = r.tag, trailing = signer)
+        } else {
+            for (r in FleetIdentity.sorted(rows, sort)) IdentityRow(r)
         }
     }
+}
+
+@Composable
+private fun IdentityRow(r: FleetIdentity.Row) {
+    val s = r.seen
+    val secondary = listOfNotNull(
+        r.member.pkg,
+        r.declared,
+        r.sharesWith.takeIf { it.isNotEmpty() }?.let { "shares with " + it.joinToString() },
+        s?.let { "uid ${it.uid}" },
+        r.problem,
+    ).joinToString(" · ")
+    val pill = when {
+        s == null -> "not installed" to KitState.IDLE
+        r.problem != null -> "mismatch" to KitState.BAD
+        else -> "ok" to KitState.OK
+    }
+    val signer: (@Composable () -> Unit)? = s?.signer?.let { fp -> @Composable { KitFingerprint(fp, tag = "${r.member.id}:signer") } }
+    KitListRow(r.member.label, secondary = secondary, pill = pill, tag = r.tag, trailing = signer)
 }
 
 /** The host for a fragment-paged app (SuperApp > Configs > Network > Apps Mesh > Identity). */
@@ -210,6 +265,6 @@ class FleetIdentityFragment : KitComposeFragment() {
 
     @Composable
     override fun Content() {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(KitDensity.medium)) { FleetIdentityPage() }
+        FleetIdentityPage()
     }
 }

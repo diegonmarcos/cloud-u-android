@@ -1,7 +1,9 @@
 package com.diegonmarcos.superapp.apps
 
 import android.app.Application
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import com.diegonmarcos.superapp.appstore.FleetIdentity
 import com.diegonmarcos.superapp.appstore.FleetIdentityFragment
 import com.diegonmarcos.superapp.appstore.FleetIdentityPage
@@ -10,7 +12,9 @@ import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import java.io.File
 import org.json.JSONObject
+import com.diegonmarcos.superapp.uikit.KitPartTags
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -27,6 +31,8 @@ import org.robolectric.annotation.Config
  *      in it; pending (own uid each) until its value is declared, then their rows carry it
  *   I3 a live uid that disagrees with the declaration is flagged; one that agrees is not
  *   I4 Identity is the Apps Mesh tab beside IPC and builds its host
+ *   I6/I7 (#1096) rows sort by uid by default: a shared uid sits together under one titled group, a group of
+ *   several apps is highlighted, and the sort switch (uid, name, package) reorders
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -106,5 +112,45 @@ class FleetIdentityPageTest : KitPageHarness() {
         assertTrue("Configs has the Apps Access tile: $ids", "apps-access" in ids)
         show(FleetIdentityFragment())
         compose.onNodeWithTag(FleetIdentity.TAG_SUMMARY, useUnmergedTree = true).assertExists()
+    }
+
+    private val groupReg = FleetIdentity.Registry(
+        listOf(FleetIdentity.Group("terminal", "Terminals", "cld.shared", listOf("a.one", "a.two"))),
+        listOf(FleetIdentity.Member("one", "a.one", "One"), FleetIdentity.Member("two", "a.two", "Two"),
+               FleetIdentity.Member("three", "a.three", "Three"), FleetIdentity.Member("four", "a.four", "Four")))
+    private val groupLive = mapOf("a.one" to FleetIdentity.Seen(10200, "cld.shared", "AB"), "a.two" to FleetIdentity.Seen(10200, "cld.shared", "AB"),
+                                  "a.three" to FleetIdentity.Seen(10100, "a.three", "AB"))
+
+    @Test
+    fun `I6 apps group by uid, a shared uid together, and the sort modes reorder`() {
+        val rows = FleetIdentity.rows(groupReg, groupLive)
+        val groups = FleetIdentity.byUid(rows)
+        assertEquals(listOf<Int?>(10100, 10200, null), groups.map { it.uid })
+        assertEquals(listOf("a.one", "a.two"), groups[1].rows.map { it.member.pkg })
+        assertTrue(groups[1].shared)
+        assertEquals("uid 10200 · cld.shared · 2 apps", groups[1].title)
+        assertFalse(groups[0].shared)
+        assertEquals("a sharedUserId naming the app's own package names no group", "uid 10100", groups[0].title)
+        assertEquals("not installed", groups[2].title)
+        assertFalse(groups[2].shared)
+        assertEquals(listOf("Four", "One", "Three", "Two"), FleetIdentity.sorted(rows, FleetIdentity.Sort.NAME).map { it.member.label })
+        assertEquals(listOf("a.four", "a.one", "a.three", "a.two"), FleetIdentity.sorted(rows, FleetIdentity.Sort.PACKAGE).map { it.member.pkg })
+        assertEquals(FleetIdentity.Sort.UID, FleetIdentity.Sort.of("unknown"))
+        assertEquals(FleetIdentity.Sort.values().toList(), FleetIdentity.Sort.values().map { FleetIdentity.Sort.of(it.id) })
+    }
+
+    @Test
+    fun `I7 the page opens sorted by uid with group titles, highlights a shared uid, and the switch drops the groups`() {
+        showKit { FleetIdentityPage(registry = groupReg, live = groupLive) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(FleetIdentity.TAG_UID + "10200", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(FleetIdentity.TAG_UID + "10100", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(FleetIdentity.TAG_UID + "none", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(FleetIdentity.TAG_SHARED + "10200", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(FleetIdentity.TAG_SHARED + "10100", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithTag(KitPartTags.segment(FleetIdentity.TAG_SORT, "name"), useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(FleetIdentity.TAG_UID + "10200", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithTag("kit:listrow:" + FleetIdentity.TAG_ROW + "one", useUnmergedTree = true).assertExists()
     }
 }

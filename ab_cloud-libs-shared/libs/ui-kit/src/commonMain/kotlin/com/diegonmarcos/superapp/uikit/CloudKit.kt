@@ -179,6 +179,10 @@ fun KitSectionHeader(title: String, subtitle: String, modifier: Modifier = Modif
     }
 }
 
+/** The eyebrow label over a group of rows or tiles: the one group heading the Account pages and the Store's Identity page share. */
+@Composable
+fun GroupTitle(text: String, modifier: Modifier = Modifier) = KitSectionHeader(text, "", modifier, eyebrow = true)
+
 /**
  * A one-tap pick: label, optional subtitle, filled with surfaceSelected when [selected].
  * Announced as a radio button, so TalkBack reads the choice and its state, not a bare label.

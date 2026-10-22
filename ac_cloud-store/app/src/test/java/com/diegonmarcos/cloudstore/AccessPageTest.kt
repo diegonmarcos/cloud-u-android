@@ -6,6 +6,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.fragment.app.FragmentActivity
@@ -27,6 +32,9 @@ import org.robolectric.annotation.Config
  * (LocalKitPalette has no default). The page is opened here exactly as MainActivity hosts it - a bare
  * KitDenseMaterial + Surface, no CloudKitTheme - through AccessPage(PAGE_IDENTITY). Nothing is
  * installed in Robolectric, so every fleet row also proves "not installed" is a row state, not a throw.
+ *
+ * #1096 the page could not be scrolled: it was a plain Column and only the SuperApp's fragment host wrapped it in a
+ * scroll, so in the Store every row below the fold was out of reach. The page now owns its scroll.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -53,5 +61,16 @@ class AccessPageTest {
         compose.onNodeWithTag(FleetIdentity.TAG_SUMMARY, useUnmergedTree = true).assertExists()
         val reg = FleetIdentity.baked()
         for (r in FleetIdentity.rows(reg, emptyMap())) compose.onNodeWithTag("kit:listrow:" + r.tag, useUnmergedTree = true).assertExists()
+    }
+
+    @Test
+    fun `Access Identity scrolls to its last row inside a bounded pane`() {
+        compose.setContent { KitDenseMaterial(darkColorScheme()) { Surface(Modifier.height(300.dp)) { AccessPage(PAGE_IDENTITY) } } }
+        compose.waitForIdle()
+        val last = FleetIdentity.sorted(FleetIdentity.rows(FleetIdentity.baked(), emptyMap()), FleetIdentity.Sort.UID).last()
+        val row = compose.onNodeWithTag("kit:listrow:" + last.tag, useUnmergedTree = true)
+        row.assertIsNotDisplayed()   // the page is taller than its pane, else this proves nothing
+        row.performScrollTo()        // fails when no enclosing scroll container exists (the #1096 bug)
+        row.assertIsDisplayed()
     }
 }
