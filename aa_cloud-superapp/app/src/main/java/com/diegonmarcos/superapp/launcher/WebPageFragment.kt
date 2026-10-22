@@ -92,6 +92,8 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
     /** The page this fragment is for, and the last time a load was started (so a resume right after the first load is no second load). */
     private val declaredUrl: String get() = arguments?.getString(ARG_URL).orEmpty()
     internal var lastLoadAt = 0L
+    /** The reader (not [loadFresh]) started a navigation away from the declared page; cleared whenever the declared page is loaded again. */
+    internal var userNavigated = false
     /** The page that failed, so a pull or a re-entry reloads IT and not the error page that replaced it. */
     private var failed: String? = null
 
@@ -110,6 +112,7 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
      */
     private fun loadFresh(w: WebView, target: String) {
         lastLoadAt = android.os.SystemClock.elapsedRealtime()
+        userNavigated = false
         w.settings.cacheMode = WebSettings.LOAD_DEFAULT
         if (w.url == target) {
             lastEntry = "reload"
@@ -129,9 +132,9 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
         // The reader went deeper into the site (an app page, then a dialog or another app took focus): coming back must not
         // throw that position away and reload the start page under them; Back still walks the history.
         if (w.canGoBack()) return
-        // A navigation is still in flight (a link was just tapped and a dialog paused the page before it committed): reloading the
-        // declared URL now would override it.
-        if (w.progress < 100) return
+        // The reader tapped a link and a dialog paused the page before it committed: reloading the declared URL now would override
+        // it. Keyed on the navigation being the reader's own, NOT on load progress, so a stalled first load still recovers here.
+        if (userNavigated) return
         loadFresh(w, failed ?: declaredUrl.ifBlank { return })
     }
 
@@ -185,6 +188,10 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
                             }
                         }
                         webViewClient = object : WebViewClient() {
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                if (!url.isNullOrBlank() && url != declaredUrl && url != failed) userNavigated = true
+                            }
+
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 backToPreviousPage.isEnabled = view?.canGoBack() == true
                                 refreshing = false
@@ -203,7 +210,7 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
                                 if (!embed || !request.isForMainFrame) return false
                                 val scheme = target.scheme.orEmpty()
                                 if (scheme != "http" && scheme != "https") return true
-                                if (sameSite(url, target.toString())) return false
+                                if (sameSite(url, target.toString())) { if (target.toString() != declaredUrl) userNavigated = true; return false }
                                 (activity as? com.diegonmarcos.superapp.ShellActivity)?.launchUri(target.toString())
                                     ?: runCatching {
                                         startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, target)

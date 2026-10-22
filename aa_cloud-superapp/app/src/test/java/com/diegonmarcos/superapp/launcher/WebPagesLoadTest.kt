@@ -107,4 +107,24 @@ class WebPagesLoadTest : KitPageHarness() {
             compose.runOnUiThread { compose.activity.supportFragmentManager.beginTransaction().remove(page).commitNow() }
         }
     }
+
+    @Test fun `W5 a stalled first load recovers on resume, a reader navigation is not overridden`() {
+        val (page, _) = shown("webapps")
+        fun reenter() = compose.runOnUiThread {
+            page.lastEntry = ""
+            page.lastLoadAt = -2 * WebPageFragment.REENTRY_DEBOUNCE_MS
+            val fm = compose.activity.supportFragmentManager
+            fm.beginTransaction().setMaxLifecycle(page, Lifecycle.State.STARTED).commitNow()
+            fm.beginTransaction().setMaxLifecycle(page, Lifecycle.State.RESUMED).commitNow()
+        }
+        // The first load never finished (no navigation by the reader): coming back must load the declared page again.
+        assertTrue("a first load with no reader navigation is flagged as one", !page.userNavigated)
+        reenter(); compose.waitForIdle()
+        assertTrue("a stalled first load was not reloaded on resume", page.lastEntry.isNotEmpty())
+        // The reader tapped a link and the page paused before it committed: resume must leave it alone.
+        compose.runOnUiThread { page.userNavigated = true }
+        reenter(); compose.waitForIdle()
+        assertEquals("resume overrode the reader's navigation", "", page.lastEntry)
+        compose.runOnUiThread { compose.activity.supportFragmentManager.beginTransaction().remove(page).commitNow() }
+    }
 }
