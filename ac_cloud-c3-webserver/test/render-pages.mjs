@@ -132,7 +132,9 @@ await until(`document.querySelector('#sheet.on button[data-choice]')`);
 const ss = await shot('shell-link-chooser-pages');
 check('L6', A37(ss), `link chooser on the Pages tab, shot ${ss.w}x${ss.h}`);
 await evalJs(`document.querySelector('#sheet button[data-choice=embedded]').click()`);
-const nav = await until(`location.href === ${JSON.stringify(origin + '/')}`, 8000);
+// The file view is a hash-routed page: once it has booted it rewrites the URL to `/#/` itself, so the check is on the
+// document (origin + path), not on the fragment, which the page sets a moment after load (the test raced it).
+const nav = await until(`location.origin + location.pathname === ${JSON.stringify(origin + '/')}`, 8000);
 check('L7', nav, `Open embedded loads the served page in this WebView, private name rewritten to loopback (${await evalJs('location.href')})`);
 
 // ── R: nothing leaves the phone ──
