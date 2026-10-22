@@ -121,8 +121,27 @@ jobs:
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.WeatherCardScreenTest"
+          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.*.Weather*"
         run: bash ./build.sh test
+
+      - name: Weather tests passed BY NAME (4 classes, no failure, none skipped)
+        if: always()
+        working-directory: aa_cloud-superapp
+        run: |
+          set -u
+          out=app/build/configs-screens/weather-unit-xml; mkdir -p "$out"
+          find app/build/test-results -name 'TEST-*Weather*.xml' -exec cp {} "$out"/ \;
+          ls "$out"
+          rc=0
+          for c in notificationcenter.WeatherLocationTest notificationcenter.WeatherFixStoreTest notificationcenter.WeatherFaceTest launcher.WeatherCardScreenTest; do
+            f="$out/TEST-com.diegonmarcos.superapp.$c.xml"
+            if [ ! -f "$f" ]; then echo "::error::no report for $c"; rc=1; continue; fi
+            t=$(grep -o 'tests="[0-9]*"' "$f" | head -1 | tr -dc 0-9)
+            bad=$(grep -o -E '(failures|errors|skipped)="[1-9][0-9]*"' "$f" | head -1 || true)
+            echo "$c tests=$t ${bad:-failures=0 errors=0 skipped=0}"
+            { [ "${t:-0}" -ge 1 ] && [ -z "$bad" ]; } || rc=1
+          done
+          exit $rc
 
       - name: Render + guard the Configs grid fits one A37 screen (grid-fit@*.png)
         if: always()
