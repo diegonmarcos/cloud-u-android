@@ -16,12 +16,17 @@ object ExecListing {
 
     fun script(guestDir: String): String = "find ${q(guestDir)} -mindepth 1 -maxdepth 1 -printf '%y\\t%s\\t%T@\\t%f\\n'"
 
+    /** Host-side twin for the terminal's private dirs outside the guest's /root (the whole data dir): same columns, type spelled by stat. */
+    fun hostScript(dir: String): String =
+        "T=\$(printf '\\t'); cd ${q(dir)} || { echo 'cannot enter the folder' >&2; exit 2; }; [ -r . ] || { echo 'permission denied' >&2; exit 13; }; " +
+            "stat -L -c \"%F\$T%s\$T%Y\$T%n\" -- * .[!.]* ..?* 2>/dev/null; true"
+
     /** One line per child: type, bytes, mtime seconds, name. Unreadable lines are skipped, never fatal. */
     fun parse(dir: String, out: String, mimes: FileOps.MimeResolver, showHidden: Boolean): List<FileOps.Entry> =
         out.lineSequence().mapNotNull { line ->
             val f = line.split('\t', limit = 4)
             if (f.size < 4 || f[3].isEmpty()) return@mapNotNull null
-            val isDir = f[0] == "d"
+            val isDir = f[0] == "d" || f[0] == "directory"
             val name = f[3]
             val ext = FileOps.extensionOf(name)
             FileOps.Entry(
@@ -36,8 +41,10 @@ object ExecListing {
     @Throws(IOException::class)
     fun list(ctx: Context, dir: File, mimes: FileOps.MimeResolver, showHidden: Boolean): List<FileOps.Entry> {
         val guest = StoreAccess.paths.guestPath(dir.absolutePath, StoreAccess.userId())
-            ?: throw IOException("${dir.name} is not inside the terminal store")
-        val r = StoreExec(ctx).run(script(guest), timeoutMs = 30_000)
+        val exec = StoreExec(ctx)
+        val r = if (guest != null) exec.run(script(guest), timeoutMs = 30_000)
+            else if (StoreAccess.paths.inOwnerData(dir.absolutePath, StoreAccess.userId())) exec.runHost(hostScript(dir.absolutePath), timeoutMs = 30_000)
+            else throw IOException("${dir.name} is not inside the terminal's data")
         if (!r.ok) throw IOException("the terminal could not list ${dir.name}: ${r.err.ifBlank { r.out }.take(160)}")
         return parse(dir.absolutePath, r.out, mimes, showHidden)
     }

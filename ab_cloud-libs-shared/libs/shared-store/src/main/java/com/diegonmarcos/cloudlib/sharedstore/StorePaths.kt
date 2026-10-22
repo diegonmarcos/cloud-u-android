@@ -79,6 +79,16 @@ class StorePaths(
         return (p == root || p.startsWith("$root/")) && p.split('/').none { it == ".." }
     }
 
+    /** The owner terminal's whole private data dir on the host (`/data/user/<u>/<owner>`): home, rootfs, everything Drive browses as "Terminal". */
+    fun ownerDataRoot(userId: Int): String = "/data/user/$userId/$ownerPackage"
+
+    /** True when [path] is the owner's data dir or inside it (also its /data/data alias; no `..` escapes). */
+    fun inOwnerData(path: String, userId: Int): Boolean {
+        val p = path.trimEnd('/')
+        val roots = listOf(ownerDataRoot(userId), "/data/data/$ownerPackage")
+        return roots.any { p == it || p.startsWith("$it/") } && p.split('/').none { it == ".." }
+    }
+
     /** The staging twin of a store path (same relative tail, one folder per [tag]), or null outside the store. */
     fun stagePath(path: String, userId: Int, tag: String): String? {
         if (!inStore(path, userId)) return null
@@ -95,6 +105,13 @@ class StorePaths(
          * through cld.termux (CLOUD_EXEC) whenever cld.termux answers at all.
          */
         fun viaOwner(mode: Mode): Boolean = mode != Mode.NONE
+
+        /**
+         * Whether a listing of [path] must be done BY the owner terminal (CLOUD_EXEC): this app cannot open
+         * the folder itself ([openable] false: another uid's private dir) and the terminal can ([viaOwner]).
+         */
+        fun listViaOwner(paths: StorePaths, path: String, userId: Int, openable: Boolean, mode: Mode): Boolean =
+            !openable && paths.inOwnerData(path, userId) && viaOwner(mode)
 
         /**
          * The runtime decision: DIRECT only when the shared uid is really in effect (our uid IS

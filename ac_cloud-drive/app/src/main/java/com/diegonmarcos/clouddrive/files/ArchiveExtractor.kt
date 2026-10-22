@@ -88,7 +88,7 @@ object ArchiveExtractor {
 
         val createdDestination = !destination.exists()
         destination.mkdirs()
-        if (!destination.isDirectory) throw IOException("not a folder: ${destination.name}")
+        if (!destination.isDirectory) throw FileOps.notFolder(destination)
 
         // Pass 2: write.
         val written = ArrayList<File>()

@@ -102,8 +102,7 @@ class FilesController(
                     when (loc) {
                         is Location.Local -> {
                             val dir = File(loc.path)
-                            val viaTerminal = !dir.isDirectory && com.diegonmarcos.cloudlib.sharedstore.StoreAccess.paths.inStore(dir.absolutePath, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.userId()) &&
-                                com.diegonmarcos.cloudlib.sharedstore.StorePaths.viaOwner(com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(ctx))
+                            val viaTerminal = com.diegonmarcos.cloudlib.sharedstore.StorePaths.listViaOwner(com.diegonmarcos.cloudlib.sharedstore.StoreAccess.paths, dir.absolutePath, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.userId(), dir.isDirectory, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(ctx))
                             val entries = if (viaTerminal) ExecListing.list(ctx, dir, mimes, showHidden = true) else FileOps.list(dir, mimes, showHidden = true)
                             val usage = if (viaTerminal) null else usageOf(dir)
                             Listing(entries, loading = false, usage = usage)

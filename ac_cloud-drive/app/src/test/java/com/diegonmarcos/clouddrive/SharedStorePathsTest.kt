@@ -27,6 +27,19 @@ class SharedStorePathsTest {
         assertEquals("/data/user/10/cld.termux/files/home/cloud-shared-store", p.hostRoot(10))
     }
 
+    @Test fun `another uid's private dir is listed through the owner terminal, not reported as not a folder`() {
+        val files = "/data/user/0/cld.termux/files"
+        // the owner's report: the terminal's files dir, outside the store and outside the guest's /root
+        assertNull(p.guestPath(files, 0))
+        assertTrue(p.inOwnerData(files, 0)); assertTrue(p.inOwnerData("$files/usr/bin", 0)); assertTrue(p.inOwnerData("/data/data/cld.termux/files", 0))
+        assertFalse(p.inOwnerData("/data/user/0/cld.termux.nix/files", 0)); assertFalse(p.inOwnerData("$files/../../x", 0))
+        assertTrue(StorePaths.listViaOwner(p, files, 0, openable = false, mode = Mode.EXEC))
+        assertTrue(StorePaths.listViaOwner(p, files, 0, openable = false, mode = Mode.DIRECT))
+        assertFalse(StorePaths.listViaOwner(p, files, 0, openable = true, mode = Mode.DIRECT))
+        assertFalse(StorePaths.listViaOwner(p, files, 0, openable = false, mode = Mode.NONE))
+        assertFalse(StorePaths.listViaOwner(p, "/storage/emulated/0/Download", 0, openable = false, mode = Mode.EXEC))
+    }
+
     @Test fun `DIRECT only when the shared uid is really in effect`() {
         assertEquals(Mode.DIRECT, StorePaths.decide(10123, 10123, storeAccessible = true, execGranted = true))
         assertEquals("same uid but the dir does not answer -> EXEC", Mode.EXEC, StorePaths.decide(10123, 10123, storeAccessible = false, execGranted = true))

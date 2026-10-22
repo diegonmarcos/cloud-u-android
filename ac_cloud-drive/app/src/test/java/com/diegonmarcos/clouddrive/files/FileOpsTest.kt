@@ -26,6 +26,14 @@ class FileOpsTest {
     private val noProgress = FileOps.Progress { _, _, _ -> }
     private fun never() = false
 
+    @Test fun unopenableFolderIsNeverReportedAsNotAFolder() {
+        val d = tmp()
+        val missing = runCatching { FileOps.list(File(d, "files"), mimes, showHidden = true) }.exceptionOrNull()!!
+        assertTrue(missing.message!!, missing.message!!.startsWith("cannot open files"))
+        val f = File(d, "a.txt").apply { writeText("x") }
+        assertEquals("not a folder: a.txt", runCatching { FileOps.list(f, mimes, showHidden = true) }.exceptionOrNull()!!.message)
+    }
+
     @Test fun describeAndSortFoldersFirst() {
         val d = tmp()
         File(d, "b.txt").writeText("bb"); File(d, "a.jpg").writeText("a"); File(d, "zdir").mkdirs(); File(d, ".hidden").writeText("h")

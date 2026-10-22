@@ -77,9 +77,14 @@ object FileOps {
         return entries.sortedWith(compareByDescending<Entry> { it.isDirectory }.then(if (descending) by.reversed() else by))
     }
 
+    /** The honest cause: `isDirectory` is false for a missing path AND for another uid's private dir, so only a real file is "not a folder". */
+    fun notFolder(f: File): IOException =
+        if (f.isFile) IOException("not a folder: ${f.name}")
+        else IOException("cannot open ${f.name}: missing, or private to another app that this one cannot reach")
+
     @Throws(IOException::class)
     fun list(dir: File, mimes: MimeResolver, showHidden: Boolean): List<Entry> {
-        if (!dir.isDirectory) throw IOException("not a folder: ${dir.name}")
+        if (!dir.isDirectory) throw notFolder(dir)
         val children = dir.listFiles() ?: throw IOException("cannot read ${dir.name}")
         return children.filter { showHidden || !it.name.startsWith(".") }.map { describe(it, mimes) }
     }
@@ -169,7 +174,7 @@ object FileOps {
      */
     @Throws(IOException::class)
     fun transfer(sources: List<File>, destination: File, move: Boolean, freeBytes: Long, progress: Progress, cancelled: () -> Boolean): Outcome {
-        if (!destination.isDirectory) throw IOException("not a folder: ${destination.name}")
+        if (!destination.isDirectory) throw notFolder(destination)
         val needed = totalSize(sources)
         if (needed > freeBytes) throw NotEnoughSpace(needed, freeBytes)
         var done = 0L
@@ -298,7 +303,7 @@ object FileOps {
     @Throws(IOException::class)
     fun extract(zipFile: File, destination: File, progress: Progress, cancelled: () -> Boolean, onlyUnder: Set<String> = emptySet()): Int {
         if (!zipFile.isFile) throw IOException("not a zip: ${zipFile.name}")
-        if (!destination.isDirectory) throw IOException("not a folder: ${destination.name}")
+        if (!destination.isDirectory) throw notFolder(destination)
         fun relative(name: String): String? {
             if (onlyUnder.isEmpty()) return name
             val hit = onlyUnder.firstOrNull { p -> name == p || name.startsWith(if (p.endsWith("/")) p else "$p/") } ?: return null
@@ -485,7 +490,7 @@ object FileOps {
      */
     @Throws(IOException::class)
     fun mirror(source: File, destination: File, deleteExtra: Boolean, cancelled: () -> Boolean, onProgress: (MirrorTally, String) -> Unit): MirrorTally {
-        if (!source.isDirectory) throw IOException("not a folder: ${source.name}")
+        if (!source.isDirectory) throw notFolder(source)
         if (destination.path == source.path || destination.path.startsWith(source.path + File.separator)) throw IOException("the destination sits inside the source, so each pass would copy the last one")
         val tally = MirrorTally()
         fun into(src: File, dst: File, depth: Int) {

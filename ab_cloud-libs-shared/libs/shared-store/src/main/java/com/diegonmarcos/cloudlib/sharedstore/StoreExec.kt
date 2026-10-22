@@ -45,6 +45,13 @@ class StoreExec(private val ctx: Context) {
         Result(if (err != null) -1 else b.getInt("exit"), b.getString("stdout").orEmpty(), (b.getString("stderr").orEmpty() + (err?.let { "\n$it" } ?: "")).trim())
     }
 
+    /** [script] on the HOST side of cld.termux (its own uid: its whole data dir is readable), not in the glibc guest. */
+    fun runHost(script: String, timeoutMs: Int = 60_000): Result = bound { exec ->
+        val b = exec.exec("/system/bin/sh", arrayOf("-c", script), null, null, timeoutMs)
+        val err = b.getString("error")
+        Result(if (err != null) -1 else b.getInt("exit"), b.getString("stdout").orEmpty(), (b.getString("stderr").orEmpty() + (err?.let { "\n$it" } ?: "")).trim())
+    }
+
     /** A long-running [script]: detached in the guest, polled until it writes its exit code or [deadlineMs] passes. */
     fun job(script: String, stdin: String? = null, deadlineMs: Long = 30 * 60_000L): Result {
         val id = UUID.randomUUID().toString()
