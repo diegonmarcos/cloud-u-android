@@ -49,8 +49,8 @@
 #     leg, which distributes through GHCR `latest-x86_64` and would fail
 #     gh-release outright because no unsuffixed apk is in dist/. Deselected on a
 #     push and correct — reported, not failed.
-#   * CANCELLED. `cancel-in-progress` is on every ship workflow and agents push
-#     concurrently, so cancellations are routine and are neither a pass nor a
+#   * CANCELLED. `cancel-in-progress` is on for pull requests only (main runs finish; agents push
+#     concurrently and the pending run is replaced), so a cancellation is neither a pass nor a
 #     fail.
 #   * A FOREIGN TESTER DOWNGRADE. Verified, not inherited: a downgraded tester
 #     leaves cloud-android-test-engine.sh exiting 0, the publish step's `if:` is

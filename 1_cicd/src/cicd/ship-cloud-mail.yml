@@ -47,7 +47,7 @@ permissions:
 
 concurrency:
   group: ship-cloud-mail-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   WORK_DIR: ac_cloud-mail

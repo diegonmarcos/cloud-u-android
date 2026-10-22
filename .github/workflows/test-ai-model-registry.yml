@@ -49,7 +49,7 @@ permissions:
 
 concurrency:
   group: test-ai-model-registry-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   registry-drift:

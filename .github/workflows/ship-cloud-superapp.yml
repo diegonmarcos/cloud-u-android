@@ -132,7 +132,7 @@ permissions:
 
 concurrency:
   group: ship-cloud-superapp-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   WORK_DIR: aa_cloud-superapp

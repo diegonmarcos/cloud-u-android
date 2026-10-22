@@ -38,7 +38,7 @@ permissions:
 # is superseded, not a verdict.
 concurrency:
   group: generated-up-to-date-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   regenerate-and-compare:

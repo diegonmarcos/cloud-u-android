@@ -57,7 +57,7 @@ permissions:
 
 concurrency:
   group: ship-garmin-watchface-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   WORK_DIR: c_devices/garmin-watchface
