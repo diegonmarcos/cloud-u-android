@@ -2008,6 +2008,14 @@
       "used_by": [
         "ac_cloud-code"
       ]
+    },
+    "weather_last_fix": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "SuperApp Weather badge: the last location fix (lat/lon/accuracy/time/source) and the last forecast body kept for the offline card; a cache that is re-derived on the new phone, never migrated (#1108).",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
     }
   },
   "bundle": {
