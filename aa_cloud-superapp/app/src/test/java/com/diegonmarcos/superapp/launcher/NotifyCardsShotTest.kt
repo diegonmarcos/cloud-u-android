@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,8 +66,8 @@ class NotifyCardsShotTest : KitPageHarness() {
                 })
             }
         }
-        compose.onNodeWithTag(BadgeCardTags.actions(id)).assertExists()
-        for (a in d.actions) compose.onNodeWithTag(BadgeCardTags.action(id, a.id)).assertExists().assertHasClickAction()
+        compose.onNodeWithTag(BadgeCardTags.actions(id), useUnmergedTree = true).assertExists()
+        for (a in d.actions) compose.onNodeWithTag(BadgeCardTags.action(id, a.id), useUnmergedTree = true).assertExists().assertHasClickAction()
         snap(shot)
     }
 
@@ -78,6 +79,16 @@ class NotifyCardsShotTest : KitPageHarness() {
             qa.actions.map { com.diegonmarcos.superapp.notificationcenter.BadgeModel.idOf(it.title.toString()) })
         KdeConnectManager.init(ctx)
         frame("kde_status", KdeStatusNotifier.build(ctx), "notify-cards-kde.png", listOf("share", "desktop", "ping", "connect", "find"))
+    }
+
+    @Test
+    fun `the Notify page draws the five section subtitles`() {
+        BadgeCardData.override = null
+        val sections = badgeSections(ctx).filter { it.title.isNotBlank() }
+        assertEquals(listOf("Resources", "Infos", "Actions", "Media", "Alerts"), sections.map { it.title })
+        showKit { Column(Modifier.fillMaxSize().background(NotifCard.panel).padding(12.dp)) { BadgeCards() } }
+        for (s in sections) compose.onNodeWithTag(BadgeCardTags.section(s.id), useUnmergedTree = true).assertExists().assertTextEquals(s.title)
+        snap("notify-page-sections.png")
     }
 
     private fun snap(name: String) {

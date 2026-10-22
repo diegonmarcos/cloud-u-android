@@ -18,6 +18,7 @@ object HealthFixtures {
             if (i % 8 != 5) rhr[d] = 54L + (i % 6)               // some days have no reading
             if (i % 9 != 4) sleep[d] = Night(70L + (i % 4) * 10, 95L + (i % 3) * 10, 230L + (i % 5) * 12, 20L + (i % 4) * 6, true)
         }
+        rhr[today] = 56L                                          // today always has a reading: the card shows it
         sleep[today] = Night(84, 102, 241, 26, true)
         return Raw(Status.READY, setOf(HealthBoardReader.STEPS, HealthBoardReader.DISTANCE, HealthBoardReader.RESTING_HR,
             HealthBoardReader.SLEEP, HealthBoardReader.HEIGHT), steps, dist, rhr, sleep, 1.78)
