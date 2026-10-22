@@ -81,14 +81,16 @@ class WebPagesRenderTest {
             // The first same-origin link that leaves the page: it must stay in this WebView (shouldOverrideUrlLoading) and add a history entry.
             // It is TAPPED, not a.click()ed: Chromium marks a history entry that never saw a user gesture as skippable, so a script click
             // leaves the start page unreachable (canGoBack false) exactly as run 39778820062 showed (url moved, canGoBack false). A reader taps.
-            val pick = "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.origin===location.origin&&a.href.split('#')[0]!==location.href.split('#')[0]&&!a.hasAttribute('download'));if(!a)return 'none';a.scrollIntoView({block:'center'});const r=a.getBoundingClientRect();return a.href+'|'+(r.left+r.width/2)+','+(r.top+r.height/2)+','+devicePixelRatio})()"
+            val pick = "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.origin===location.origin&&a.href.split('#')[0]!==location.href.split('#')[0]&&!a.hasAttribute('download'));if(!a)return 'none';a.scrollIntoView({block:'center'});const r=a.getBoundingClientRect();return a.href+'|'+(r.left+r.width/2)+','+(r.top+r.height/2)+','+innerWidth})()"
             val clicked = js(v, pick).trim('"')
             assertTrue("no same-origin app link on the WebApps page", clicked != "none")
             SystemClock.sleep(500)
             val (href, xy) = clicked.split('|').let { it[0] to it.getOrElse(1) { "" } }
             val c = xy.split(',').mapNotNull { it.toDoubleOrNull() }
             val loc = IntArray(2); inst.runOnMainSync { v.getLocationOnScreen(loc) }
-            if (c.size == 3) sh("input tap ${(loc[0] + c[0] * c[2]).toInt()} ${(loc[1] + c[1] * c[2]).toInt()}")
+            // CSS px -> screen px is the WebView's width over the page's innerWidth (devicePixelRatio is 1 here: wide viewport, overview mode).
+            val k = if (c.size == 3 && c[2] > 0) v.width / c[2] else 1.0
+            if (c.size == 3) sh("input tap ${(loc[0] + c[0] * k).toInt()} ${(loc[1] + c[1] * k).toInt()}")
             val t0 = SystemClock.elapsedRealtime()
             while (SystemClock.elapsedRealtime() - t0 < 6_000 && urlOf(v).split('#')[0] == main.split('#')[0]) { clearPrompt(); SystemClock.sleep(500) }
             // The tap missed (scaled viewport, a covering view): fall back to the script click so the rest of the test still runs.
