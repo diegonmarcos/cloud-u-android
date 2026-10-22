@@ -134,6 +134,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 | `wd_keepalive` | prefs | config | yes | Wireless-debugging keepalive switch (`enabled`), the owner's choice in Configs ▸ Controls. |
 | `wd_keepalive_status` | prefs | device | no | Wireless-debugging keepalive worker status (ready, last tick/reconnect/failure times). |
+| `weather_last_fix` | prefs | device | no | SuperApp Weather badge: the last location fix (lat/lon/accuracy/time/source) and the last forecast body kept for the offline card; a cache that is re-derived on the new phone, never migrated (#1108). |
 | `wireguard_prefs` | prefs | config (keys: if_privkey→secret, relay_key→secret) | yes | WireGuard tunnel config: name, address, DNS, port, MTU, peers_json, provider, tunnel_enabled, and the mesh fallback ladder's transport_mode / transport_plan (the path the last connect chose, no key in it); the private key and the TLS-443 relay key are credentials. |
 
 | file | class | doc |
