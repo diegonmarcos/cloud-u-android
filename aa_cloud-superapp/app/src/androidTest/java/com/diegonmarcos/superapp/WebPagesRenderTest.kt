@@ -226,7 +226,13 @@ class WebPagesRenderTest {
                     }
                     for (i in 0 until n.childCount) walk(n.getChild(i))
                 }
-                walk(ua.rootInActiveWindow)
+                // The first test on a fresh emulator can have SystemUI's "Allow wireless debugging?" dialog holding the active window
+                // (the strip is then invisible to the accessibility tree: found 0 of 4); retry while clearing it.
+                for (attempt in 0 until 8) {
+                    walk(ua.rootInActiveWindow)
+                    if (seen.size == wanted.size) break
+                    clearPrompt(); SystemClock.sleep(1000)
+                }
                 stripTabs = seen.size
                 // The band between the top row and the WebView is where the shell draws the strip; its height is the evidence that works
                 // even when the accessibility tree does not expose the tab labels.
