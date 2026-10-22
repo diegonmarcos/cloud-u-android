@@ -53,7 +53,9 @@ if tcp_listening 8002 || udp_bound "$DNS_PORT"; then bad "E1 the servers are sti
 # ── E2 ───────────────────────────────────────────────────────────────────────
 adb shell am start -W -a android.intent.action.VIEW -d http://emulated.app -p "$BPKG" >/dev/null
 wait_for 30 tcp_listening 8002 && ok "E2 opening emulated.app brought the servers back (browser started the service)" || bad "E2 tcp 8002 never came back after the browser opened emulated.app"
-sleep 12; shot e2-emulated-app; dump e2-emulated-app
+sleep 12
+tap_text "Cancel|CANCEL" || true; sleep 1
+shot e2-emulated-app; dump e2-emulated-app
 if grep -q "did not answer\|private name of this phone" "$OUT/e2-emulated-app.xml" 2>/dev/null; then bad "E2 the browser shows its private-name error page"; else ok "E2 no private-name error page"; fi
 if grep -qiE "emulated|storage|File Browser|Index of" "$OUT/e2-emulated-app.xml" 2>/dev/null; then ok "E2 the drive page content is on screen"; else bad "E2 nothing of the drive page is on screen (see e2-emulated-app.png)"; fi
 fg_service && ok "E2 KeepAliveService is a foreground service" || bad "E2 KeepAliveService is not in the foreground"
@@ -66,6 +68,8 @@ udp_bound "$DNS_PORT" && ok "E2 the private DNS (udp $DNS_PORT) is bound again" 
 adb shell am crash "$WPKG" >/dev/null 2>&1
 sleep 2
 if wait_for 40 tcp_listening 8002 && wait_for 10 udp_bound "$DNS_PORT"; then ok "E3 the service restarted itself after its process died"; else bad "E3 the servers did not come back after the process died"; fi
+# Then the boot and update broadcasts reach the receiver (protected broadcasts: only root may send them, so adb root first).
+adb root >/dev/null 2>&1; adb wait-for-device; sleep 3
 # Then the boot and update broadcasts reach the receiver, which starts the service (its log line is the proof).
 for act in android.intent.action.BOOT_COMPLETED android.intent.action.MY_PACKAGE_REPLACED; do
   adb logcat -c || true
@@ -79,13 +83,16 @@ done
 # The servers must be up for the comparison to mean anything (a refused connection renders alike in both).
 wait_for 5 tcp_listening 8002 || { adb shell am start -W -a android.intent.action.VIEW -d http://emulated.app -p "$BPKG" >/dev/null; wait_for 30 tcp_listening 8002 || bad "E4 the servers are not up for the render comparison"; }
 adb shell am start -W -a android.intent.action.VIEW -d 'http://127.0.0.1:8002/#/' -p "$BPKG" >/dev/null
-sleep 12; shot e4-cloud-browser; dump e4-cloud-browser
+sleep 12
+tap_text "Cancel|CANCEL" || true; sleep 1
+shot e4-cloud-browser; dump e4-cloud-browser
 adb logcat -d -v threadtime > "$OUT/logcat.txt"
-BPID=$(adb shell pidof "$BPKG" | tr -d '\r' | awk '{print $1}')
-grep -E "chromium|CONSOLE|Console" "$OUT/logcat.txt" | grep -E " $BPID +[0-9]+ " > "$OUT/console-cloud-browser.txt" || true
-if grep -qE "Uncaught|ReferenceError|SyntaxError|TypeError|Failed to load resource|ERR_" "$OUT/console-cloud-browser.txt"; then
-  bad "E4 Cloud Browser logged page errors for 127.0.0.1:8002 (console-cloud-browser.txt)"; head -20 "$OUT/console-cloud-browser.txt"
+adb logcat -d -s LocalPageConsole:D LocalPageMetrics:D > "$OUT/console-cloud-browser.txt" 2>/dev/null || true
+echo "--- Cloud Browser console and layout metrics for the page:"; cat "$OUT/console-cloud-browser.txt"
+if grep -E "LocalPageConsole" "$OUT/console-cloud-browser.txt" | grep -qE "ERROR|Uncaught|ReferenceError|SyntaxError|TypeError|Failed to load"; then
+  bad "E4 Cloud Browser logged page errors for 127.0.0.1:8002 (console-cloud-browser.txt)"
 else ok "E4 no console errors in Cloud Browser for 127.0.0.1:8002"; fi
+if grep -q "LocalPageMetrics" "$OUT/console-cloud-browser.txt"; then ok "E4 the page reported its layout metrics"; else bad "E4 no layout metrics from the page (it never finished loading?)"; fi
 
 CHROME=com.android.chrome
 if adb shell pm list packages "$CHROME" | grep -q "$CHROME"; then

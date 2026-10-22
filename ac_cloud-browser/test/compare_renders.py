@@ -7,7 +7,9 @@ within MAX_DIFF (0..255), else 1; the number is written to out.txt either way.""
 import sys
 from PIL import Image
 
-MAX_DIFF = 45.0
+MAX_DIFF = 30.0
+MIN_INK_RATIO = 0.5   # the browser must draw at least this much of the reference's bright content (text, icons)
+INK_LUMA = 90
 GRID = (24, 24)
 TOP, BOTTOM = 0.16, 0.86   # fraction of the screen height that is page in both apps
 
@@ -17,7 +19,16 @@ def grid(path):
     im = im.crop((0, int(h * TOP), w, int(h * BOTTOM))).resize(GRID, Image.BILINEAR)
     return list(im.getdata())
 
+def ink(path):
+    im = Image.open(path).convert("L")
+    w, h = im.size
+    px = list(im.crop((0, int(h * TOP), w, int(h * BOTTOM))).getdata())
+    return sum(1 for v in px if v > INK_LUMA) / len(px)
+
 a, b = grid(sys.argv[1]), grid(sys.argv[2])
 d = sum(abs(x - y) for x, y in zip(a, b)) / len(a)
-open(sys.argv[3], "w").write("mean luminance difference %.1f of 255 (limit %.0f)" % (d, MAX_DIFF))
-sys.exit(0 if d <= MAX_DIFF else 1)
+ia, ib = ink(sys.argv[1]), ink(sys.argv[2])
+ratio = (ia / ib) if ib > 0 else 0.0
+msg = "mean luminance difference %.1f of 255 (limit %.0f); bright content browser %.3f vs reference %.3f (ratio %.2f, min %.2f)" % (d, MAX_DIFF, ia, ib, ratio, MIN_INK_RATIO)
+open(sys.argv[3], "w").write(msg)
+sys.exit(0 if (d <= MAX_DIFF and ib > 0.003 and ratio >= MIN_INK_RATIO) else 1)

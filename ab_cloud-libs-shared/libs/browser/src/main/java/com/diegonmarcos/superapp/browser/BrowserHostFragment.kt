@@ -811,6 +811,9 @@ class BrowserHostFragment : Fragment() {
         }.getOrDefault(false)
     }
 
+    /** Is [url] a page of this phone's own loopback servers (127.0.0.1 or localhost)? */
+    private fun isLoopbackPage(url: String?): Boolean = BrowserSitePolicy.hostOf(url).let { it == "127.0.0.1" || it == "localhost" }
+
     /** #886 what the strip draws, as Compose state the host refreshes when a tab's page, title, icon or group changes. */
     private class StripModel(val tabs: List<BrowserTab>, val activeKey: String, val group: String, val color: Int)
     private val strip = androidx.compose.runtime.mutableStateOf(StripModel(emptyList(), "", "", 0))
@@ -974,6 +977,9 @@ class BrowserHostFragment : Fragment() {
                     super.onPageFinished(view, finishedUrl)
                     val u = finishedUrl ?: return
                     if (readerOn) return
+                    // The layout numbers of a loopback page (logcat tag LocalPageMetrics), so a page that renders blank here and
+                    // fine elsewhere says why (viewport, scroll size, text length) in the emulator test's evidence.
+                    if (isLoopbackPage(u)) view?.evaluateJavascript("JSON.stringify({w:innerWidth,h:innerHeight,dpr:devicePixelRatio,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,bw:document.body?document.body.getBoundingClientRect().width:-1,bh:document.body?document.body.getBoundingClientRect().height:-1,text:document.body?document.body.innerText.length:-1,js:true})") { r -> android.util.Log.d("LocalPageMetrics", "$u $r") }
                     probePasskey(view, u)
                     // Tier 2: (re)install the DOM autofill engine; a private tab gets no prompts and never offers to save.
                     view?.let { domAutofill.inject(it, u, tab.isPrivate); ac.inject(it, u, tab.isPrivate) }
@@ -1005,6 +1011,12 @@ class BrowserHostFragment : Fragment() {
                 override fun onCreateWindow(view: WebView?, isDialog: Boolean, isUserGesture: Boolean, resultMsg: android.os.Message?): Boolean {
                     val transport = resultMsg?.obj as? WebView.WebViewTransport ?: return false
                     return openPopup(transport, resultMsg)
+                }
+
+                /** A page of the phone's own loopback servers: its console goes to logcat (tag LocalPageConsole), never any other page's. */
+                override fun onConsoleMessage(m: android.webkit.ConsoleMessage?): Boolean {
+                    if (m != null && isLoopbackPage(webView?.url)) android.util.Log.d("LocalPageConsole", "${m.messageLevel()} ${m.sourceId()}:${m.lineNumber()} ${m.message()}")
+                    return false
                 }
 
                 override fun onReceivedTitle(view: WebView?, title: String?) {
