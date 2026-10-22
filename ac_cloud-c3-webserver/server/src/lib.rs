@@ -17,6 +17,7 @@
 
 pub mod about;
 pub mod app;
+pub mod crashes;
 pub mod diag;
 pub mod dns;
 pub mod engines;

@@ -1,0 +1,7 @@
+{
+  "_doc": "#1122 CRASH-SAFE BY DEFAULT, read by 1_cicd/src/scripts/cloud-android-crash-default-guard.py (crash-default-guard.yml, every push). Every fleet app gets the default crash handler (persist to files/crashes, the phone's local C3 WebServer sink, the remote upload, the crash screen) from libs:core's CoreInitProvider, with no code of its own. The guard fails when: libs:core stops installing CrashReports; an app does not link libs:core; an app's own manifest names CoreInitProvider (tools:node=remove / enabled=false is an opt-out); an app's build.json sets crash_default to false; the C3 WebServer stops serving the sink route. `not_linked` lists the apps that do not link libs:core TODAY, each with its reason: it is a ratchet (an app NOT listed that stops linking core fails, and a listed app that links core now fails as stale until the entry is removed).",
+  "not_linked": {
+    "ac_cloud-media-center": "upstream media-center tree; libs:core not linked yet, tracked in #1122",
+    "ac_cloud-office": "upstream office tree; libs:core not linked yet, tracked in #1122"
+  }
+}

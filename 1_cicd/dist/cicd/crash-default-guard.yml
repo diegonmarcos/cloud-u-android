@@ -1,0 +1,36 @@
+name: "crash default guard — every fleet app gets libs:core's crash handler and none can opt out"
+
+# WHY (#1122). A crash on open used to leave nothing to read on the phone. Every fleet app now gets, from
+# libs:core's CoreInitProvider and with no code of its own: the report persisted to files/crashes, a POST to the
+# phone's local C3 WebServer (offline), the remote upload, and the crash screen. This guard fails when core stops
+# installing it, when an app does not link core, or when an app's manifest / build.json opts out.
+#
+# Its own workflow and every push, for the reason fleet-alerts-guard gives: the commit it has to catch can touch
+# any app's manifest or build.json, so there is no path to filter on.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
+concurrency:
+  group: crash-default-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# ── end MANAGED-GUARD-CONCURRENCY ──
+
+jobs:
+  crash-default:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The guard still fails when an app loses the default handler
+        run: bash 1_cicd/src/scripts/test/crash-default-guard.test.sh
+
+      - name: Every fleet app has the default crash handler
+        run: python3 1_cicd/src/scripts/cloud-android-crash-default-guard.py .

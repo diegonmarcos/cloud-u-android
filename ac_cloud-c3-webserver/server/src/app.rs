@@ -7,7 +7,7 @@
 //! is a walk over that table, so "served" and "declared" are the same list; the Pages and API tabs render
 //! `/__app__/api/routes`, which is this table serialised, and the bottom nav is its `tab` rows.
 
-use crate::{about, engines, serving, Ctx};
+use crate::{about, crashes, engines, serving, Ctx};
 use fleet_webserver::http::{self, Req, Resp};
 use fleet_webserver::render::jstr;
 
@@ -43,6 +43,8 @@ pub const ROUTES: &[Route] = &[
     Route { kind: Kind::Api, path: "/__app__/api/engines", tab: None, post: false, summary: "Every render and feature engine of the web server, read-only", handler: api_engines },
     Route { kind: Kind::Api, path: "/__app__/api/about", tab: None, post: false, summary: "About this phone: macro groups of sections of rows, the Configs > About shape (what the Home tab renders)", handler: api_about },
     Route { kind: Kind::Api, path: "/__app__/api/links", tab: None, post: false, summary: "The link-open declaration: link types, the choices each offers, whether a choice can be remembered", handler: api_links },
+    Route { kind: Kind::Page, path: "/__app__/crashes", tab: None, post: false, summary: "Every fleet app's crashes reported to this phone (libs:core's local sink), grouped by app, newest first", handler: crashes::page },
+    Route { kind: Kind::Api, path: "/__app__/api/crashes", tab: None, post: true, summary: "GET the crash reports as JSON (?app=<package>); POST one {app, time_ms, trace, phase, version, device}: libs:core's local sink, works offline", handler: crashes_api },
     Route { kind: Kind::Api, path: "/__app__/api/open", tab: None, post: true, summary: "POST {url} or {id,via:name|ip}: hand an http(s) link to cloud-browser", handler: api_open },
 ];
 
@@ -255,6 +257,10 @@ pub fn openable(url: &str) -> bool {
 
 /// POST {url} | {id, via}: hand a link to cloud-browser. {id, via} is built from the declaration; {url} must be an
 /// http(s) link (the user's explicit choice in the chooser), anything else is refused.
+fn crashes_api(ctx: &Ctx, req: &Req) -> Resp {
+    if req.method == "POST" { crashes::api_post(ctx, req) } else { crashes::api_get(ctx, req) }
+}
+
 fn api_open(_ctx: &Ctx, req: &Req) -> Resp {
     let body: serde_json::Value = match serde_json::from_slice(&req.body) {
         Ok(v) => v,
