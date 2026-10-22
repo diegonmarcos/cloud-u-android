@@ -164,6 +164,14 @@ class FilesController(
         }
     }
 
+    /** True when [f] sits in the terminal's data and this app cannot write there itself: the change goes through CLOUD_EXEC. */
+    private fun viaOwner(f: File): Boolean {
+        val dir = if (f.isDirectory) f else f.parentFile
+        return com.diegonmarcos.cloudlib.sharedstore.StorePaths.mutateViaOwner(
+            com.diegonmarcos.cloudlib.sharedstore.StoreAccess.paths, f.absolutePath, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.userId(),
+            dir?.canWrite() == true, com.diegonmarcos.cloudlib.sharedstore.StoreAccess.mode(ctx))
+    }
+
     fun cancel(jobId: Long) { jobs.value.firstOrNull { it.id == jobId }?.cancelRequested?.set(true) }
 
     @Suppress("UNUSED_PARAMETER")
@@ -187,6 +195,15 @@ class FilesController(
             return
         }
         val files = entries.mapNotNull { it.localFile }
+        if (viaOwner(dest) || files.any { viaOwner(it) || (!it.canRead() && it.absolutePath.startsWith("/data/")) }) {
+            val t = ctx.getString(if (move) R.string.files_job_move else R.string.files_job_copy, files.size)
+            startJob(t) { _, _ ->
+                val r = runCatching { ExecMutation.transfer(ctx, files, dest, move) }
+                refreshShowing(destination); if (move) refreshShowing(fromLoc)
+                r.isSuccess to (if (r.isSuccess) ctx.getString(R.string.files_job_done, t) else (r.exceptionOrNull()?.message ?: t))
+            }
+            return
+        }
         val title = ctx.getString(if (move) R.string.files_job_move else R.string.files_job_copy, files.size)
         startJob(title) { job, set ->
             val free = runCatching { StatFs(dest.absolutePath).availableBytes }.getOrDefault(0L)
@@ -207,9 +224,12 @@ class FilesController(
         update { FilesReducer.clearSelection(it, id) }
         val title = ctx.getString(R.string.files_job_delete, files.size)
         startJob(title) { job, set ->
-            val outcome = FileOps.delete(files, progressOf(job, set)) { job.cancelRequested.get() }
+            val routed = files.filter { viaOwner(it) }
+            val routedOk = runCatching { ExecMutation.delete(ctx, routed) }.isSuccess
+            val outcome = FileOps.delete(files - routed.toSet(), progressOf(job, set)) { job.cancelRequested.get() }
             refreshShowing(loc)
-            outcome.ok to (if (outcome.ok) ctx.getString(R.string.files_job_done, title) else ctx.getString(R.string.files_job_failed, title, outcome.failed.size))
+            val ok = outcome.ok && routedOk
+            ok to (if (ok) ctx.getString(R.string.files_job_done, title) else ctx.getString(R.string.files_job_failed, title, outcome.failed.size + (if (routedOk) 0 else routed.size)))
         }
     }
 
@@ -279,12 +299,12 @@ class FilesController(
         }
     }
 
-    fun createFolder(id: PaneId, name: String) = mutate(id) { FileOps.createFolder(File(it.path), name) }
-    fun createFile(id: PaneId, name: String) = mutate(id) { FileOps.createFile(File(it.path), name) }
+    fun createFolder(id: PaneId, name: String) = mutate(id) { val p = File(it.path); if (viaOwner(p)) { ExecMutation.mkdir(ctx, p, name); File(p, name) } else FileOps.createFolder(p, name) }
+    fun createFile(id: PaneId, name: String) = mutate(id) { val p = File(it.path); if (viaOwner(p)) { ExecMutation.touch(ctx, p, name); File(p, name) } else FileOps.createFile(p, name) }
     fun rename(entry: FileOps.Entry, name: String) {
         val f = entry.localFile ?: return
         scope.launch {
-            val r = withContext(Dispatchers.IO) { runCatching { FileOps.rename(f, name) } }
+            val r = withContext(Dispatchers.IO) { runCatching { if (viaOwner(f)) ExecMutation.rename(ctx, f, name) else FileOps.rename(f, name) } }
             r.onFailure { _messages.tryEmit(it.message ?: it.toString()) }
             refreshShowing(Location.Local(f.parentFile?.absolutePath ?: return@launch))
         }

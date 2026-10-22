@@ -110,6 +110,9 @@ class StorePaths(
          * Whether a listing of [path] must be done BY the owner terminal (CLOUD_EXEC): this app cannot open
          * the folder itself ([openable] false: another uid's private dir) and the terminal can ([viaOwner]).
          */
+        fun mutateViaOwner(paths: StorePaths, path: String, userId: Int, writable: Boolean, mode: Mode): Boolean =
+            !writable && paths.inOwnerData(path, userId) && viaOwner(mode)
+
         fun listViaOwner(paths: StorePaths, path: String, userId: Int, openable: Boolean, mode: Mode): Boolean =
             !openable && paths.inOwnerData(path, userId) && viaOwner(mode)
 

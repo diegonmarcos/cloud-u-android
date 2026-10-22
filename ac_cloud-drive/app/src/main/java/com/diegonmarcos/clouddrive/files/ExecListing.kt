@@ -10,7 +10,7 @@ import java.io.IOException
 /**
  * Browsing the terminal's filesystem when this app is NOT in its uid (StoreAccess EXEC): the folder is
  * listed by the terminal itself through CLOUD_EXEC, so the Terminal roots stay browsable instead of hidden.
- * Listing only; copy/delete need the shared uid (DIRECT). Pure parse so the JVM suite checks it.
+ * Changes go the same way ([ExecMutation]). Pure parse so the JVM suite checks it.
  */
 object ExecListing {
 
