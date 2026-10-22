@@ -114,6 +114,7 @@ class SignInTest {
         val cf = SignIn.provider("cloudflare")!!
         assertEquals(SignIn.Kind.CLOUDFLARE_ACCESS, cf.kind)
         assertTrue(cf.loginUrl.startsWith("https://diegonmarcos.cloudflareaccess.com"))
+        assertEquals("https://auth.diegonmarcos.com/oauth2/cloudflare/start", cf.startUrl)
         assertTrue(cf.configured)
         SignIn.providers.forEach { assertTrue("${it.id}: probe_url must be https", it.probeUrl.startsWith("https://")) }
     }

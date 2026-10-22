@@ -85,7 +85,7 @@ object SignIn {
          *  needs a client id, and says so instead of failing halfway. */
         val configured: Boolean get() =
             kind == Kind.AUTHELIA_BEARER || kind == Kind.AUTHELIA_WEB || (kind == Kind.DEVICE_FLOW && clientId.isNotBlank()) ||
-                (kind == Kind.CLOUDFLARE_ACCESS && loginUrl.startsWith("https://"))
+                (kind == Kind.CLOUDFLARE_ACCESS && (startUrl.startsWith("https://") || loginUrl.startsWith("https://")))
     }
 
     fun parseProviders(o: JSONObject): List<Provider> {

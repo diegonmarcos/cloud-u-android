@@ -155,7 +155,8 @@ fun AuthProvidersPage() {
                 }
                 "cloudflare" -> {
                     actions += KitAction("Sign in", AuthProvidersTags.action(r.family, "signin"), first.configured) {
-                        said = if (openUrl(ctx, first.loginUrl)) "Cloudflare team login opened in the browser." else "no browser can open the team login"
+                        // The broker's Cloudflare One flow (same as the chooser button); the team login page is the fallback.
+                        said = if (openUrl(ctx, first.startUrl.ifBlank { first.loginUrl })) "Cloudflare One sign-in opened in the browser; finish there, then Refresh." else "no browser can open the sign-in page"
                     }
                     if (first.route.isNotBlank()) actions += KitAction("WARP / One", AuthProvidersTags.action(r.family, "route")) {
                         val a = ctx.activityOrNull()
