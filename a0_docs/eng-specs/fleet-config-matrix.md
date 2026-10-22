@@ -106,6 +106,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `mattermost_prefs` | encrypted | config (keys: token→secret) | yes | Mattermost server_url/user_id are account links; token is a credential. |
 | `mattermost_prefs_fallback` | prefs | config (keys: token→secret) | yes | Plain-prefs fallback of mattermost_prefs. |
 | `mode_prefs` | prefs | config | yes | Admin/apps mode toggle of the shell. |
+| `myhealth_card` | prefs | device | no | SuperApp MyHealth badge: the last face (km with steps, resting HR, sleep, or the named error) and when it was read, shown at once while the card refreshes; a cache re-derived from Health Connect on the new phone, never migrated (#1029). |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `notify_groups` | prefs | config | yes | Per-notification-group enabled flags and group order. |
 | `onehand_prefs` | prefs | config (keys: debug_visible→device, spurious_nones_pruned_v1→device) | yes | One-hand launcher enable, trigger and per-handle slot assignments. |
