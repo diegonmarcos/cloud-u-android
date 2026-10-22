@@ -417,6 +417,16 @@
     <string name="mesh_ctl_excluded_apps">Apps outside the tunnel</string>
     <string name="mesh_ctl_connect">Connected</string>
     <string name="mesh_ctl_reconnect">Reconnect</string>
+    <string name="mesh_ctl_vpn_connect">Connect</string>
+    <string name="mesh_ctl_vpn_disconnect">Disconnect</string>
+    <string name="mesh_ctl_vpn_reconnect">Reconnect</string>
+    <string name="mesh_ctl_vpn_always_on">Always-on VPN</string>
+    <string name="mesh_vpn_wanted">Connected mode: the mesh reconnects by itself after a network change, a dropped tunnel or a reboot, until you tap Disconnect.</string>
+    <string name="mesh_vpn_unwanted">Disconnected by you: nothing reconnects until you tap Connect.</string>
+    <string name="mesh_vpn_auto">Auto-reconnect: %1$s</string>
+    <string name="mesh_ao_on">Android reports Always-on VPN is on for the mesh engine.</string>
+    <string name="mesh_ao_off">Android reports Always-on VPN is off for the mesh engine.</string>
+    <string name="mesh_ao_unknown">Android\'s Always-on VPN status cannot be read.</string>
     <string name="mesh_ctl_auto_boot">Connect on boot</string>
     <string name="mesh_ctl_auto_wifi">Connect on Wi-Fi</string>
     <string name="mesh_ctl_auto_mobile">Connect on mobile data</string>
@@ -442,10 +452,6 @@
     <string name="mesh_opt_subnet">Subnets</string>
     <string name="mesh_opt_host">Hosts</string>
     <string name="mesh_opt_nat64">NAT64</string>
-    <string name="mesh_why_auto_boot">The engine exposes up and down only, and this app has no boot trigger for it; Android\'s Always-on VPN (VPN settings) is the supported way to start a tunnel at boot.</string>
-    <string name="mesh_why_auto_wifi">Neither the engine nor this app watches the network type, so there is nothing to trigger a connect when Wi-Fi comes up.</string>
-    <string name="mesh_why_auto_mobile">Neither the engine nor this app watches the network type, so there is nothing to trigger a connect on mobile data.</string>
-    <string name="mesh_why_kill_switch">Android\'s lockdown is a system setting of the VPN app, set in Settings > VPN; the engine can report it but not change it.</string>
     <string name="mesh_reading">Reading the tunnel…</string>
     <string name="mesh_state_up">CONNECTED</string>
     <string name="mesh_state_up_nohs">CONNECTED - no handshake yet</string>

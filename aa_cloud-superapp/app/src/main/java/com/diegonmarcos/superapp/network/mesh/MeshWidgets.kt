@@ -210,7 +210,8 @@ fun SwitchLine(
     reason: String? = null,
 ) {
     val p = LocalKitPalette.current
-    Column(modifier.fillMaxWidth()) {
+    // One node for the line (label, state, reason): a screen reader and a test read the switch with its reason.
+    Column(modifier.fillMaxWidth().semantics(mergeDescendants = true) {}) {
         Row(
             Modifier.fillMaxWidth()
                 .alpha(if (enabled) 1f else 0.55f)

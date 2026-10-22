@@ -212,6 +212,19 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+        <!-- #1120 after a reboot the mesh comes back (unless Connect on boot is off); the supervisor then
+             reconnects until the owner taps Disconnect. -->
+        <receiver
+            android:name=".network.MeshBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <!-- #1120 the Reconnect button of the mesh-down alert. Our own PendingIntent only. -->
+        <receiver
+            android:name=".notificationcenter.MeshDownAlert$ReconnectReceiver"
+            android:exported="false" />
         <receiver
             android:name=".notificationcenter.KdeQuickActionReceiver"
             android:exported="false" />

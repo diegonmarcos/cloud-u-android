@@ -62,6 +62,7 @@ object AccountMesh : AccountHost.Mesh {
             "✓ $active is the tunnel: ${cfg.peers.size} peers, key " + (if (privateKey != null) "from the vault" else "this phone's"))
         val backend = WgState.backend(ctx)
         if (!backend.isEngineInstalled()) return (lines + "✗ not connected: the WireGuard engine (Cloud-Lib-Net-Wg) is not installed — Store ▸ Cloud Constellation ▸ Libs").joinToString("\n")
+        MeshIntent.setWanted(ctx, true) // #1120 Apply all connects: the owner wants the mesh
         val up = runCatching { backend.setState(WgState.tunnel, Tunnel.State.UP, prefs.toTunnelConfig()) }
         up.onFailure { t ->
             prefs.tunnelEnabled = false

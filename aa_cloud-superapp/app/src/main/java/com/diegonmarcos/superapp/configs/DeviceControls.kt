@@ -333,6 +333,7 @@ object DeviceControls {
                     .getOrNull()
             },
             set = { ctx, on ->
+                com.diegonmarcos.superapp.network.MeshIntent.setWanted(ctx, on) // #1120 the owner's choice sticks
                 val backend = WgState.backend(ctx)
                 val attempt = runCatching {
                     if (on) backend.setState(WgState.tunnel, Tunnel.State.UP,

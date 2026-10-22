@@ -17,6 +17,7 @@
 #   T7  every existing route into the page still resolves to it; the hosting fragment is Compose
 #   T8  the private key never reaches an export, a copy, a QR or a prefilled box
 #   T9  planted mutations of each of the above are caught
+#   T11 (#1120) the Start-up switches act (none declared unsupported), the supervisor is started, Disconnect records the intent
 #   T10 (#1074) three tabs - Status / Profile / Logs - declared in build.json, every section in exactly one,
 #       the profile table before the controls; the guard (previous_controls): no control the page had
 #       before the reorganisation is undeclared or unreachable from a tab
@@ -196,9 +197,18 @@ def check(root):
         if c not in {x["id"] for x in controls}: P.append("T10 control %s was removed (it is in previous_controls)" % c)
         elif c not in reach: P.append("T10 control %s is declared but no tab reaches it" % c)
     for c in controls:
-        if c["id"] not in prev and not c["id"].startswith("cf_"): P.append("T10 control %s is new and not Cloudflare: list it in previous_controls only if it is old" % c["id"])
+        if c["id"] not in prev and not c["id"].startswith(("cf_", "vpn_")): P.append("T10 control %s is new and neither Cloudflare nor the #1120 Status VPN row: list it in previous_controls only if it is old" % c["id"])
     cf = decl.get("cloudflare", {})
     if "waiting_on" not in cf.get("one", {}) or "team" not in cf.get("one", {}): P.append("T10 cloudflare.one lacks team / waiting_on")
+
+    # ── T11 (#1120) the Start-up switches act, and the auto-reconnect is started ──
+    for c in controls:
+        if c.get("group") == "start" and c.get("unsupported"): P.append("T11 start-up control %s is declared unsupported: it would be drawn greyed out for good" % c["id"])
+    engines = {c.get("engine") for c in controls}
+    for h in ("startup.boot", "startup.wifi", "startup.mobile", "lockdown.set", "alwayson.set", "state.connect", "state.disconnect"):
+        if h not in engines: P.append("T11 no control dispatches %s" % h)
+    if "MeshSupervisorRunner.start(this)" not in read(root, "app/src/main/java/com/diegonmarcos/superapp/App.kt"): P.append("T11 App.onCreate does not start the mesh supervisor")
+    if "MeshIntent.setWanted(ctx, false)" not in code(read(root, MESH + "/AndroidMeshPort.kt")): P.append("T11 Disconnect does not record the owner's intent")
     return P
 
 def t8(root):
@@ -280,7 +290,7 @@ mutate("M2 an sp literal in a widget", "T2", sub(M + "/MeshWidgets.kt", "fontSiz
 mutate("M3 a hex colour in a page", "T2", sub(M + "/MeshRoutesPage.kt", "MText(r.cidr,", "MText(androidx.compose.ui.graphics.Color(0xFF00FF00).toString(),"))
 mutate("M4 a declared page loses its branch", "T1", sub(M + "/MeshScreen.kt", '"routes" -> MeshRoutesPage(store, embedded = true)', '"routes" -> Unit'))
 mutate("M5 a control names an engine call nobody dispatches", "T1", bj(lambda m: next(c for p in m["pages"] for c in p["controls"] if c["id"] == "mtu").update(engine="prefs.nope")))
-mutate("M6 an unsupported control loses its reason", "T1", bj(lambda m: next(c for p in m["pages"] for c in p["controls"] if c["id"] == "kill_switch").pop("unsupported")))
+mutate("M6 a control loses its engine call (and declares no unsupported reason)", "T1", bj(lambda m: next(c for p in m["pages"] for c in p["controls"] if c["id"] == "kill_switch").pop("engine")))
 mutate("M7 a declared page has no Spanish label", "T1", sub("app/src/main/res/values-es/strings.xml", 'name="mesh_page_routes"', 'name="mesh_page_routes_x"'))
 mutate("M8 a status row has no drawing", "T1", bj(lambda m: next(p for p in m["pages"] if p["id"] == "status")["rows"].append("jitter")))
 mutate("M9 a dispatch entry no control declares", "T1", sub(M + "/MeshStore.kt", '"log.clear" to', '"log.explode" to'))
@@ -298,6 +308,8 @@ mutate("M21 a control is dropped from the declaration", "T10", bj(lambda m: next
 mutate("M22 a section is left without a tab", "T10", bj(lambda m: next(x for x in m["tabs"] if x["id"] == "logs").update(sections=[])))
 mutate("M23 the controls move above the profile table", "T10", bj(lambda m: next(x for x in m["tabs"] if x["id"] == "profile").update(sections=["controls", "profiles"])))
 mutate("M24 a control is declared but no tab reaches it", "T10", bj(lambda m: next(x for x in m["tabs"] if x["id"] == "status").update(sections=["status", "routes"])))
+mutate("M25 a start-up control is declared unsupported again", "T11", bj(lambda m: next(c for p in m["pages"] for c in p["controls"] if c["id"] == "auto_boot").update(unsupported="no")))
+mutate("M26 Disconnect stops recording the intent", "T11", sub(M + "/AndroidMeshPort.kt", "MeshIntent.setWanted(ctx, false) // #1120 Disconnect", "// #1120 Disconnect"))
 mutate("M20 a secret field is prefilled", "T8", sub(M + "/MeshWidgets.kt", 'if (secret) "" else value', "value", -1))
 
 print("\n== RESULT: %d passed, %d failed ==" % (passes, fails))

@@ -6606,6 +6606,7 @@
         { "id": "profile", "label": "Profile", "icon": "ic_wg", "sections": ["profiles", "controls"] },
         { "id": "logs",    "label": "Logs",    "icon": "ic_wg", "sections": ["log"] }
       ],
+      "_doc_startup": "#1120 ROOT CAUSE of the greyed-out Start-up switches (Profile tab): auto_boot / auto_wifi / auto_mobile / kill_switch were declared with an `unsupported` text and no engine call (kill_switch only a read-only one), so ControlRow drew them disabled for ever - nothing in the app could act on them. They now act: network/MeshIntent.kt keeps the owner's intent (connected until Disconnect, default ON) and the three conditions (all default ON), network/MeshSupervisorRunner.kt reconnects on network change / tunnel drop / process start / reboot while the intent holds, and the kill switch (Android lockdown) and the Status page's Always-on VPN switch are changed through the privileged shell channel (AlwaysOnVpn.kt, `settings put secure always_on_vpn_app|always_on_vpn_lockdown`); with no channel armed the switch says why and opens Android's VPN settings.",
       "_doc_previous_controls": "#1074 THE GUARD: every control id the page had before the three-tab reorganisation. Each must still be declared in `pages` AND be reachable from a tab (MeshDeclTest, test-mesh-page.sh T10), so a control cannot silently disappear in a later reshuffle. A control removed on purpose is removed here in the same commit, with the reason in the commit message. New controls are not listed (they are guarded by their own tests).",
       "previous_controls": ["peer_sort", "topology", "peer_add", "peer_remove", "peer_copy", "provider", "profile_select", "profile_import_clipboard", "profile_import_vault", "profile_diff", "profile_export_text", "profile_export_qr", "profile_export_folder", "conf_import", "conf_export", "route_filter", "excluded_apps", "connect", "reconnect", "auto_boot", "auto_wifi", "auto_mobile", "kill_switch", "vpn_settings", "dns_preset", "mtu", "keepalive", "tunnel_name", "address", "listen_port", "private_key", "generate_key", "transport_mode", "relay_key", "test_fallbacks", "log_copy", "log_clear"],
       "_doc_cloudflare": "#1074 Cloudflare as a Cloud Mesh transport (network/CloudflareWarp.kt). WARP (no Zero Trust): the phone generates a key pair, POSTs its PUBLIC key to the WARP API at api/api_version/reg (the open registration logic the MIT-licensed wgcf documents; written here, nothing vendored) and runs the WireGuard config in the answer on the existing engine; the private key and device token live only in CfKeyStore (EncryptedSharedPreferences). Cloudflare One (Zero Trust tunnel into the mesh, team `one.team`): the team login opens as a Custom Tab on <team>.cloudflareaccess.com<login_path>, the Access token it returns enrols the device, and the answer is the config. `one.enabled` is false while the server side is not applied (#994: Zero Trust routes + device enrolment policy, waiting on owner approval): the page then shows 'waiting on Zero Trust apply' and the enrol button stays disabled. Flip `one.enabled` to true in the commit that follows #994's apply and the option lights up; nothing else changes.",
@@ -6639,6 +6640,7 @@
           "label": "Status",
           "icon": "ic_wg",
           "rows": [
+            "vpn",
             "state",
             "interface",
             "pubkey",
@@ -6651,7 +6653,12 @@
             "profile",
             "cloudflare"
           ],
-          "controls": []
+          "controls": [
+            { "id": "vpn_connect", "kind": "action", "label": "Connect", "engine": "state.connect" },
+            { "id": "vpn_disconnect", "kind": "action", "label": "Disconnect", "engine": "state.disconnect" },
+            { "id": "vpn_reconnect", "kind": "action", "label": "Reconnect", "engine": "state.reconnect" },
+            { "id": "vpn_always_on", "kind": "switch", "label": "Always-on VPN", "default": false, "engine": "alwayson.set" }
+          ]
         },
         {
           "id": "peers",
@@ -6839,24 +6846,24 @@
               "kind": "switch",
               "group": "start",
               "label": "Connect on boot",
-              "default": false,
-              "unsupported": "The engine exposes up and down only, and this app has no boot trigger for it; Android's Always-on VPN (VPN settings) is the supported way to start a tunnel at boot."
+              "default": true,
+              "engine": "startup.boot"
             },
             {
               "id": "auto_wifi",
               "kind": "switch",
               "group": "start",
               "label": "Connect on Wi-Fi",
-              "default": false,
-              "unsupported": "Neither the engine nor this app watches the network type, so there is nothing to trigger a connect when Wi-Fi comes up."
+              "default": true,
+              "engine": "startup.wifi"
             },
             {
               "id": "auto_mobile",
               "kind": "switch",
               "group": "start",
               "label": "Connect on mobile data",
-              "default": false,
-              "unsupported": "Neither the engine nor this app watches the network type, so there is nothing to trigger a connect on mobile data."
+              "default": true,
+              "engine": "startup.mobile"
             },
             {
               "id": "kill_switch",
@@ -6864,8 +6871,7 @@
               "group": "start",
               "label": "Kill switch (block without VPN)",
               "default": false,
-              "engine": "read.lockdown",
-              "unsupported": "Android's lockdown is a system setting of the VPN app, set in Settings > VPN; the engine can report it but not change it."
+              "engine": "lockdown.set"
             },
             {
               "id": "vpn_settings",

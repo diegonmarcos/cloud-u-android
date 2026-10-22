@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.diegonmarcos.superapp.network.AlwaysOnVpn
+import com.diegonmarcos.superapp.network.MeshIntent
 import com.diegonmarcos.superapp.network.WireGuardProfiles
 import java.util.concurrent.Executors
 
@@ -45,6 +47,11 @@ class MeshStore(
     var excluded by mutableStateOf<List<String>>(emptyList())
     var hasKey by mutableStateOf(false)
     var alwaysOn by mutableStateOf<Boolean?>(null)
+    /** #1120 Android's Always-on / lockdown as the privileged channel reads it, and whether it can change them. */
+    var aoView by mutableStateOf(AlwaysOnVpn.View(null, null, false, "", "", null))
+    /** #1120 The owner's intent (connected until Disconnect) and the start-up conditions. */
+    var intent by mutableStateOf(MeshIntent.Policy())
+    var supervisorNote by mutableStateOf("")
     var lockdown by mutableStateOf<Boolean?>(null)
     var apps by mutableStateOf<List<Pair<String, String>>>(emptyList())
     var dnsChoices by mutableStateOf<List<Triple<String, String, String>>>(emptyList())
@@ -93,6 +100,9 @@ class MeshStore(
             excluded = port.excludedApps()
             hasKey = port.hasPrivateKey()
             alwaysOn = port.alwaysOn()
+            aoView = port.alwaysOnView()
+            intent = port.intent()
+            supervisorNote = port.supervisorNote()
             lockdown = port.lockdown()
             transport = port.transport()
             hasRelayKey = port.hasRelayKey()
@@ -149,7 +159,19 @@ class MeshStore(
     private val handlers: Map<String, (String, Int) -> Unit> = mapOf(
         "state.set" to { arg, _ -> if (arg == "on") connectFlow("connect") { port.connect() } else perform("disconnect") { port.disconnect() } },
         "state.reconnect" to { _, _ -> connectFlow("reconnect") { port.reconnect() } },
-        "read.lockdown" to { _, _ -> lockdown = port.lockdown() },
+        "state.connect" to { _, _ -> connectFlow("connect") { port.connect() } },
+        "state.disconnect" to { _, _ -> perform("disconnect") { port.disconnect() } },
+        "alwayson.set" to { arg, _ ->
+            if (!aoView.canChange) { host.openVpnSettings(); notice = "Always-on: " + aoView.reason }
+            else perform("always-on") { port.setAlwaysOn(arg == "on") }
+        },
+        "lockdown.set" to { arg, _ ->
+            if (!aoView.canChange) { host.openVpnSettings(); notice = "Kill switch: " + aoView.reason }
+            else perform("kill switch") { port.setLockdown(arg == "on") }
+        },
+        "startup.boot" to { arg, _ -> perform("start-up") { port.setStartup("boot", arg == "on") } },
+        "startup.wifi" to { arg, _ -> perform("start-up") { port.setStartup("wifi", arg == "on") } },
+        "startup.mobile" to { arg, _ -> perform("start-up") { port.setStartup("mobile", arg == "on") } },
         "nav.vpnSettings" to { _, _ -> host.openVpnSettings(); notice = "VPN settings opened" },
         "nav.account" to { _, _ -> host.openAccount(); notice = "Account opened: Runtime > Apply all re-imports the vault's profiles" },
         "prefs.mtu" to { a, _ -> perform("MTU") { port.setMtu(a) } },
@@ -242,8 +264,8 @@ class MeshStore(
     fun profileText(id: String): String? = WireGuardProfiles.byId(id)?.let { WireGuardProfiles.render(it) }
 
     companion object {
-        private val ENGINE_BOUND = setOf("state.set", "state.reconnect", "fleetdns.preset", "read.lockdown")
-        private val NEEDS_KEY = setOf("state.set", "state.reconnect")
+        private val ENGINE_BOUND = setOf("state.set", "state.connect", "state.disconnect", "state.reconnect", "fleetdns.preset", "alwayson.set", "lockdown.set")
+        private val NEEDS_KEY = setOf("state.set", "state.connect", "state.reconnect")
         val defaultExec: (Runnable) -> Unit = Executors.newSingleThreadExecutor { r -> Thread(r, "mesh-page").apply { isDaemon = true } }::execute
     }
 }

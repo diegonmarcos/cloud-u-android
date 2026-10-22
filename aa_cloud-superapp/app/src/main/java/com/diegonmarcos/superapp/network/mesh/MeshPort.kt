@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.network.mesh
 
 import android.content.Intent
+import com.diegonmarcos.superapp.network.AlwaysOnVpn
+import com.diegonmarcos.superapp.network.MeshIntent
 
 /**
  * #877 Everything the Cloud Mesh page asks of the tunnel, as one interface. [AndroidMeshPort] is the
@@ -25,6 +27,18 @@ interface MeshPort {
     fun lockdown(): Boolean?
     /** The VPN-consent intent, or null when consent is held (or the engine is absent). */
     fun consentIntent(): Intent?
+
+    // ── #1120 intent, start-up, Always-on (Android) ──
+    /** What the owner wants of the mesh (connected until Disconnect) and the three start-up conditions. */
+    fun intent(): MeshIntent.Policy
+    /** [which] boot | wifi | mobile. */
+    fun setStartup(which: String, on: Boolean): String
+    /** Android's Always-on VPN / lockdown as it reads now, and whether the privileged channel can change it. */
+    fun alwaysOnView(): AlwaysOnVpn.View
+    fun setAlwaysOn(on: Boolean): String
+    fun setLockdown(on: Boolean): String
+    /** The supervisor's last sentence: "reconnected", "retrying shortly", "disconnected by you ...". */
+    fun supervisorNote(): String
 
     // ── tunnel state (WgState.backend.setState) ──
     fun connect(): String

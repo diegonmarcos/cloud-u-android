@@ -7,7 +7,10 @@ import com.diegonmarcos.superapp.firewall.FirewallController
 import com.diegonmarcos.superapp.network.AccountMesh
 import com.diegonmarcos.superapp.network.CfKeyStore
 import com.diegonmarcos.superapp.network.CloudflareWarp
+import com.diegonmarcos.superapp.network.AlwaysOnVpn
 import com.diegonmarcos.superapp.network.FleetDns
+import com.diegonmarcos.superapp.network.MeshIntent
+import com.diegonmarcos.superapp.network.MeshSupervisorRunner
 import com.diegonmarcos.superapp.network.MeshTransport
 import com.diegonmarcos.superapp.network.WgState
 import com.diegonmarcos.superapp.network.WireGuardPrefs
@@ -109,6 +112,28 @@ class AndroidMeshPort(context: Context) : MeshPort {
 
     override fun alwaysOn(): Boolean? = if (!engineInstalled()) null else runCatching { backend.isAlwaysOn }.getOrNull()
     override fun lockdown(): Boolean? = if (!engineInstalled()) null else runCatching { backend.isLockdownEnabled }.getOrNull()
+    override fun intent(): MeshIntent.Policy = MeshIntent.policy(ctx)
+    override fun setStartup(which: String, on: Boolean): String {
+        when (which) {
+            "boot" -> MeshIntent.setOnBoot(ctx, on)
+            "wifi" -> MeshIntent.setOnWifi(ctx, on)
+            "mobile" -> MeshIntent.setOnMobile(ctx, on)
+            else -> error("unknown start-up switch $which")
+        }
+        MeshSupervisorRunner.kick(ctx)
+        return "start-up $which ${if (on) "on" else "off"}"
+    }
+    /** Read at most every [AO_TTL_NS]: the page polls every second and the read may go through the shell channel. */
+    private var aoView: AlwaysOnVpn.View? = null
+    private var aoAtNs = 0L
+    @Synchronized override fun alwaysOnView(): AlwaysOnVpn.View {
+        val now = System.nanoTime()
+        aoView?.takeIf { now - aoAtNs < AO_TTL_NS }?.let { return it }
+        return AlwaysOnVpn.view(ctx, alwaysOn()).also { aoView = it; aoAtNs = now }
+    }
+    override fun setAlwaysOn(on: Boolean): String = try { AlwaysOnVpn.write(ctx, on) } finally { aoView = null }
+    override fun setLockdown(on: Boolean): String = try { AlwaysOnVpn.writeLockdown(ctx, on) } finally { aoView = null }
+    override fun supervisorNote(): String = MeshSupervisorRunner.lastNote(ctx)
     override fun consentIntent(): Intent? = runCatching { backend.consentIntent() }.getOrNull()
 
     // ── tunnel state ──
@@ -131,6 +156,7 @@ class AndroidMeshPort(context: Context) : MeshPort {
     /** Up the first way that handshakes (MeshTransport: Direct UDP, then the TLS-443 relay); each try is bringUp(). */
     override fun connect(): String {
         requireEngine()
+        MeshIntent.setWanted(ctx, true) // #1120 Connect re-arms the auto-reconnect
         val path = MeshTransport.connect(ctx) { bringUp() }
         check(lastUp) { "the engine did not bring the tunnel up" }
         return "connected: ${prefs.tunnelName} · $path"
@@ -138,6 +164,7 @@ class AndroidMeshPort(context: Context) : MeshPort {
 
     override fun disconnect(): String {
         requireEngine()
+        MeshIntent.setWanted(ctx, false) // #1120 Disconnect is sticky: nothing reconnects until Connect
         backend.setState(WgState.tunnel, Tunnel.State.DOWN, null)
         MeshTransport.release(ctx)
         prefs.tunnelEnabled = false
@@ -148,6 +175,7 @@ class AndroidMeshPort(context: Context) : MeshPort {
 
     override fun reconnect(): String {
         requireEngine()
+        MeshIntent.setWanted(ctx, true)
         backend.setState(WgState.tunnel, Tunnel.State.DOWN, null)
         val path = MeshTransport.connect(ctx) { bringUp() }
         check(lastUp) { "the engine did not bring the tunnel up after the restart" }
@@ -389,6 +417,7 @@ class AndroidMeshPort(context: Context) : MeshPort {
 
     private companion object {
         const val DNS_TTL_NS = 5_000_000_000L
+        const val AO_TTL_NS = 10_000_000_000L
         val TUNNEL_NAME = Regex("[A-Za-z0-9_=+.-]{1,${Tunnel.NAME_MAX_LENGTH}}")
     }
 }

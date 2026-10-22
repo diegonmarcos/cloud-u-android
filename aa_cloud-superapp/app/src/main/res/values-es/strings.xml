@@ -322,6 +322,16 @@
     <string name="mesh_ctl_excluded_apps">Apps fuera del túnel</string>
     <string name="mesh_ctl_connect">Conectado</string>
     <string name="mesh_ctl_reconnect">Reconectar</string>
+    <string name="mesh_ctl_vpn_connect">Conectar</string>
+    <string name="mesh_ctl_vpn_disconnect">Desconectar</string>
+    <string name="mesh_ctl_vpn_reconnect">Reconectar</string>
+    <string name="mesh_ctl_vpn_always_on">VPN siempre activa</string>
+    <string name="mesh_vpn_wanted">Modo conectado: la malla se reconecta sola tras un cambio de red, un túnel caído o un reinicio, hasta que toques Desconectar.</string>
+    <string name="mesh_vpn_unwanted">Desconectada por ti: nada se reconecta hasta que toques Conectar.</string>
+    <string name="mesh_vpn_auto">Reconexión automática: %1$s</string>
+    <string name="mesh_ao_on">Android informa que la VPN siempre activa está activada para el motor de la malla.</string>
+    <string name="mesh_ao_off">Android informa que la VPN siempre activa está desactivada para el motor de la malla.</string>
+    <string name="mesh_ao_unknown">No se puede leer el estado de la VPN siempre activa de Android.</string>
     <string name="mesh_ctl_auto_boot">Conectar al arrancar</string>
     <string name="mesh_ctl_auto_wifi">Conectar con Wi-Fi</string>
     <string name="mesh_ctl_auto_mobile">Conectar con datos móviles</string>
@@ -347,10 +357,6 @@
     <string name="mesh_opt_subnet">Subredes</string>
     <string name="mesh_opt_host">Hosts</string>
     <string name="mesh_opt_nat64">NAT64</string>
-    <string name="mesh_why_auto_boot">El motor solo expone subir y bajar y esta app no tiene un disparador de arranque; la VPN siempre activa de Android (ajustes VPN) es la forma admitida de iniciar un túnel al arrancar.</string>
-    <string name="mesh_why_auto_wifi">Ni el motor ni esta app vigilan el tipo de red, así que nada dispara una conexión al llegar el Wi-Fi.</string>
-    <string name="mesh_why_auto_mobile">Ni el motor ni esta app vigilan el tipo de red, así que nada dispara una conexión con datos móviles.</string>
-    <string name="mesh_why_kill_switch">El bloqueo de Android es un ajuste del sistema de la app VPN, en Ajustes > VPN; el motor puede informarlo pero no cambiarlo.</string>
     <string name="mesh_reading">Leyendo el túnel…</string>
     <string name="mesh_state_up">CONECTADO</string>
     <string name="mesh_state_up_nohs">CONECTADO - aún sin handshake</string>

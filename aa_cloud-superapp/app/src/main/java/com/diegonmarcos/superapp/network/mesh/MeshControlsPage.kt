@@ -57,13 +57,17 @@ fun ControlRow(store: MeshStore, c: MeshDecl.Control, seeds: Map<String, String>
         "switch" -> {
             val checked = when (c.engine) {
                 "state.set" -> store.connected()
-                "read.lockdown" -> store.lockdown == true
+                "lockdown.set" -> store.aoView.lockdown == true
+                "alwayson.set" -> store.aoView.on == true
+                "startup.boot" -> store.intent.onBoot
+                "startup.wifi" -> store.intent.onWifi
+                "startup.mobile" -> store.intent.onMobile
                 else -> false
             }
-            // A switch whose write the engine cannot honour still reports what it CAN read, beside the reason.
-            val extra = if (c.engine == "read.lockdown") when (store.lockdown) {
+            // #1120 The kill switch reports Android's real lockdown, and says why when the privileged channel cannot change it.
+            val extra = if (c.engine == "lockdown.set") listOfNotNull(when (store.aoView.lockdown) {
                 true -> stringResource(R.string.mesh_lockdown_on); false -> stringResource(R.string.mesh_lockdown_off); null -> stringResource(R.string.mesh_lockdown_unknown)
-            } else null
+            }, store.aoView.reason.ifBlank { null }).joinToString(" ") else null
             SwitchLine(label, checked, { on -> store.run(c.engine, if (on) "on" else "off") }, tag, enabled = usable && c.engine.isNotBlank() && c.honoured, reason = listOfNotNull(why, extra).joinToString(" ").ifBlank { null })
             if (c.engine == "state.set" && store.alwaysOn != null) Reason(stringResource(if (store.alwaysOn == true) R.string.mesh_always_on else R.string.mesh_not_always_on))
         }

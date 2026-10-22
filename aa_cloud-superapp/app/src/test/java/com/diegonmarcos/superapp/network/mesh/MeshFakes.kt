@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.network.mesh
 
 import android.content.Intent
+import com.diegonmarcos.superapp.network.AlwaysOnVpn
+import com.diegonmarcos.superapp.network.MeshIntent
 
 /** A scripted [MeshPort]: the tunnel is a few fields, every write is recorded so a test sees what the page asked for. */
 class FakePort(
@@ -31,9 +33,22 @@ class FakePort(
     override fun alwaysOn(): Boolean? = if (engine) false else null
     override fun lockdown(): Boolean? = if (engine) false else null
     override fun consentIntent() = consent
-    override fun connect() = rec("connect").also { up = true }
-    override fun disconnect() = rec("disconnect").also { up = false }
-    override fun reconnect() = rec("reconnect").also { up = true }
+    // #1120 the intent, the start-up switches and Android's Always-on, scripted like the real port keeps them
+    var intentP = MeshIntent.Policy()
+    var channel = false; var aoOn = false; var lockdownOn = false; var note = ""
+    override fun intent() = intentP
+    override fun setStartup(which: String, on: Boolean) = rec("startup.$which=$on").also {
+        intentP = when (which) { "boot" -> intentP.copy(onBoot = on); "wifi" -> intentP.copy(onWifi = on); else -> intentP.copy(onMobile = on) }
+    }
+    override fun alwaysOnView() = AlwaysOnVpn.View(
+        if (engine) aoOn else null, if (engine) lockdownOn else null, channel,
+        if (channel) "local-server" else "", if (channel) "" else AlwaysOnVpn.NO_CHANNEL, if (aoOn) "engine.pkg" else null)
+    override fun setAlwaysOn(on: Boolean) = rec("alwayson=$on").also { aoOn = on }
+    override fun setLockdown(on: Boolean) = rec("lockdown=$on").also { lockdownOn = on }
+    override fun supervisorNote() = note
+    override fun connect() = rec("connect").also { up = true; intentP = intentP.copy(wanted = true) }
+    override fun disconnect() = rec("disconnect").also { up = false; intentP = intentP.copy(wanted = false) }
+    override fun reconnect() = rec("reconnect").also { up = true; intentP = intentP.copy(wanted = true) }
     override fun mtu() = mtu
     override fun setMtu(v: String) = rec("mtu=$v").also { mtu = v }
     override fun keepalive() = peers.firstOrNull()?.keepalive.orEmpty()

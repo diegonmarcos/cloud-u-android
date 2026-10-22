@@ -73,8 +73,19 @@ class MeshDeclTest {
         assertEquals("engine calls no control names: ${ids - used}", emptySet<String>(), ids - used)
     }
 
-    @Test fun `the unsupported controls are the four the engine cannot honour`() {
-        assertEquals(setOf("auto_boot", "auto_wifi", "auto_mobile", "kill_switch"), d.pages.flatMap { it.controls }.filter { !it.honoured }.map { it.id }.toSet())
+    @Test fun `#1120 the four start-up controls are honoured - each acts through an engine call, none is greyed out for good`() {
+        // They were declared `unsupported` with no engine call (the kill switch a read-only one): drawn disabled for ever.
+        val start = listOf("auto_boot", "auto_wifi", "auto_mobile", "kill_switch")
+        assertEquals(setOf("startup.boot", "startup.wifi", "startup.mobile", "lockdown.set"), start.map { d.control(it)!!.engine }.toSet())
+        assertEquals("no control is declared unsupported any more", emptyList<String>(), d.pages.flatMap { it.controls }.filter { !it.honoured }.map { it.id })
+        for (id in listOf("auto_boot", "auto_wifi", "auto_mobile")) assertEquals("$id defaults on (connected by default)", "true", d.control(id)!!.default)
+    }
+
+    @Test fun `#1120 Status opens with the VPN row - Connect, Disconnect, Reconnect and the Always-on switch`() {
+        assertEquals("vpn", d.page("status")!!.rows.first())
+        assertEquals(listOf("vpn_connect", "vpn_disconnect", "vpn_reconnect", "vpn_always_on"), d.page("status")!!.controls.map { it.id })
+        assertEquals("alwayson.set", d.control("vpn_always_on")!!.engine)
+        assertEquals("switch", d.control("vpn_always_on")!!.kind)
     }
 
     @Test fun `defaults resolve from their seeds and stay in range`() {

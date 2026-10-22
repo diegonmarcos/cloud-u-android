@@ -85,6 +85,7 @@ object WgState {
      *  is best-effort (TUN-down requires the VPN service permission,
      *  which a stock device may not have granted yet). */
     fun requestTunnelDown(ctx: Context) {
+        MeshIntent.setWanted(ctx, false) // #1120 a deliberate down: the supervisor must not undo it
         runCatching {
             backend(ctx).setState(tunnel, Tunnel.State.DOWN, null)
         }

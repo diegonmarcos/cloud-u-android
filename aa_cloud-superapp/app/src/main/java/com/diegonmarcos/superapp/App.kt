@@ -84,6 +84,9 @@ class App : Application(), WorkManagerConfiguration.Provider {
                 this, com.diegonmarcos.superapp.system.WirelessDebugKeepAlive.Trigger.PERIODIC)
         }
 
+        // #1120 The mesh is connected by default and reconnects until the owner taps Disconnect.
+        runCatching { com.diegonmarcos.superapp.network.MeshSupervisorRunner.start(this) }
+
         // Retry any profile edit that never reached the server. The profile is
         // the out-of-band contact channel for exactly the situations where the
         // update chain is broken, so "it failed once and was never sent again"

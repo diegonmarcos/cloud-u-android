@@ -79,6 +79,7 @@ object AlertsNotifier {
                 .setOnlyAlertOnce(true)
                 .setSilent(silent(a.id, fresh, quiet))
                 .apply { contentIntent(ctx, a)?.let { setContentIntent(it) } }
+                .apply { BadgeModel.add(this, MeshDownAlert.actionsFor(ctx, a)) }
                 .setDeleteIntent(dismissIntent(ctx, a.id))
                 .build())
         }

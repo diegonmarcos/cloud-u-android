@@ -15,7 +15,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 47 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 48 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 2 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 2 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 2 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 6 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 6 | 2 | 75% |
-| **fleet** | | **257** | **50** | **83%** |
+| **fleet** | | **258** | **50** | **83%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -105,6 +105,8 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `markets_last_good` | prefs | device | no | Last good Yahoo price per symbol (price\|asOf\|savedAt) for the Markets badge, so a killed process still shows the last rate; refetched on the next poll. |
 | `mattermost_prefs` | encrypted | config (keys: token→secret) | yes | Mattermost server_url/user_id are account links; token is a credential. |
 | `mattermost_prefs_fallback` | prefs | config (keys: token→secret) | yes | Plain-prefs fallback of mattermost_prefs. |
+| `mesh_intent` | prefs | config | yes | #1120 Cloud Mesh connected mode: `wanted` (true until the owner taps Disconnect, true again on Connect: the supervisor reconnects through network changes, tunnel drops, process death and reboot only while it holds) and the three Start-up conditions `on_boot`, `on_wifi`, `on_mobile` (all on by default). The owner's own choices, so they move with the phone. |
+| `mesh_supervisor` | prefs | device | no | #1120 The mesh supervisor's working state on THIS phone: retry count and time of the last attempt, since when the mesh has been down, whether the mesh-down alert is raised, and the last sentence the Status page shows. Never migrates. |
 | `mode_prefs` | prefs | config | yes | Admin/apps mode toggle of the shell. |
 | `myhealth_card` | prefs | device | no | SuperApp MyHealth badge: the last face (km with steps, resting HR, sleep, or the named error) and when it was read, shown at once while the card refreshes; a cache re-derived from Health Connect on the new phone, never migrated (#1029). |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -151,7 +153,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 47 covered, 0 gaps.
+Coverage: 48 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 

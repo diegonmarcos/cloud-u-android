@@ -1880,6 +1880,22 @@
         "mesh_key_stash": "secret"
       }
     },
+    "mesh_intent": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "#1120 Cloud Mesh connected mode: `wanted` (true until the owner taps Disconnect, true again on Connect: the supervisor reconnects through network changes, tunnel drops, process death and reboot only while it holds) and the three Start-up conditions `on_boot`, `on_wifi`, `on_mobile` (all on by default). The owner's own choices, so they move with the phone.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
+    },
+    "mesh_supervisor": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#1120 The mesh supervisor's working state on THIS phone: retry count and time of the last attempt, since when the mesh has been down, whether the mesh-down alert is raised, and the last sentence the Status page shows. Never migrates.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
+    },
     "wireguard_prefs": {
       "kind": "prefs",
       "class": "config",

@@ -194,6 +194,7 @@ class NetworkBadgeService : Service() {
         val prefs = WgState.prefs(this)
         if (!backend.isEngineInstalled()) { note = "Install Cloud-Lib-Net-Wg to connect"; return }
         val up = runCatching { backend.getState(WgState.tunnel) == Tunnel.State.UP }.getOrDefault(false)
+        com.diegonmarcos.superapp.network.MeshIntent.setWanted(this, !up) // #1120 Disconnect is sticky, Connect re-arms the reconnecting
         if (up) {
             runCatching { backend.setState(WgState.tunnel, Tunnel.State.DOWN, null) }
             MeshTransport.release(this)

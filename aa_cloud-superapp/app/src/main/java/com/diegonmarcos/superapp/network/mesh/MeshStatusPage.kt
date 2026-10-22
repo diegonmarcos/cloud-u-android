@@ -37,6 +37,7 @@ private fun StatusRow(id: String, store: MeshStore, s: MeshSnapshot) {
     val cfg = s.cfg
     val tag = MeshTags.row(id)
     when (id) {
+        "vpn" -> VpnControls(store, s, tag)
         "state" -> {
             val word = when {
                 !s.engineInstalled -> stringResource(R.string.mesh_state_unknown)
@@ -147,6 +148,39 @@ private fun StatusRow(id: String, store: MeshStore, s: MeshSnapshot) {
             KvRow(stringResource(R.string.mesh_k_cf_one), oneStateText(store))
         }
         else -> MText(stringResource(R.string.mesh_row_unknown, id), Modifier.testTag(tag), size = MeshDensity.T_META, muted = true)
+    }
+}
+
+/**
+ * #1120 The top of Status: Connect / Disconnect / Reconnect and the Always-on switch. Connect arms the
+ * auto-reconnect (the supervisor reconnects through network changes, drops and reboots), Disconnect stops it
+ * and stays stopped until Connect. Always-on is Android's own setting, read for real and changed through the
+ * privileged channel; with none armed it says why and the switch opens Android's VPN settings.
+ */
+@Composable
+private fun VpnControls(store: MeshStore, s: MeshSnapshot, tag: String) {
+    val page = store.decl.page("status")
+    val up = s.up
+    Column(Modifier.testTag(tag).padding(bottom = MeshDensity.dp(MeshDensity.S6))) {
+        Row(horizontalArrangement = Arrangement.spacedBy(MeshDensity.dp(MeshDensity.S6)), verticalAlignment = Alignment.CenterVertically) {
+            for (id in listOf("vpn_connect", "vpn_disconnect", "vpn_reconnect")) page?.control(id)?.let { c ->
+                val block = store.blockOf(c)
+                val applies = if (id == "vpn_connect") !up else if (id == "vpn_disconnect") up || store.intent.wanted else true
+                val enabled = !store.busy && block == null && applies
+                MButton(declLabel("ctl", c.id, c.label), { store.run(c.engine) }, Modifier.testTag(MeshTags.control(c.id)), enabled = enabled,
+                    emphasised = (id == "vpn_connect" && !up) || (id == "vpn_disconnect" && up))
+            }
+        }
+        Reason(stringResource(if (store.intent.wanted) R.string.mesh_vpn_wanted else R.string.mesh_vpn_unwanted), Modifier.testTag("mesh:vpn:intent"))
+        if (store.supervisorNote.isNotBlank()) Reason(stringResource(R.string.mesh_vpn_auto, store.supervisorNote), Modifier.testTag("mesh:vpn:note"))
+        page?.control("vpn_always_on")?.let { c ->
+            val ao = store.aoView
+            SwitchLine(declLabel("ctl", c.id, c.label), ao.on == true, { on -> store.run(c.engine, if (on) "on" else "off") },
+                Modifier.testTag(MeshTags.control(c.id)), enabled = !store.busy && s.engineInstalled,
+                reason = stringResource(when (ao.on) { true -> R.string.mesh_ao_on; false -> R.string.mesh_ao_off; null -> R.string.mesh_ao_unknown }) +
+                    (if (ao.reason.isNotBlank()) " " + ao.reason else ""))
+            if (!ao.canChange) MButton(stringResource(R.string.mesh_ctl_vpn_settings), { store.run("nav.vpnSettings") }, Modifier.testTag("mesh:vpn:settings"))
+        }
     }
 }
 
