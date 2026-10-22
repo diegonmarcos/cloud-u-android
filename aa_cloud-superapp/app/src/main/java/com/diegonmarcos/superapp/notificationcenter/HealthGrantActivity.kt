@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.notificationcenter
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import com.diegonmarcos.superapp.health.HealthBoardReader
 import com.diegonmarcos.superapp.health.HealthConnectGateway
 
 /**
@@ -21,12 +22,18 @@ class HealthGrantActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState != null) return
-        runCatching { ask.launch(HealthConnectGateway.BADGE_PERMISSIONS) }.onFailure {
+        // EXTRA_BOARD: the My-Health board asks for steps, distance, resting HR, sleep and height in one dialog.
+        val perms = if (intent.getBooleanExtra(EXTRA_BOARD, false)) HealthBoardReader.BOARD_PERMISSIONS else HealthConnectGateway.BADGE_PERMISSIONS
+        runCatching { ask.launch(perms) }.onFailure {
             sequenceOf(
                 Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS"),
                 Intent("android.health.connect.action.HEALTH_HOME_SETTINGS"),
             ).any { i -> runCatching { startActivity(i) }.isSuccess }
             finish()
         }
+    }
+
+    companion object {
+        const val EXTRA_BOARD = "board"
     }
 }

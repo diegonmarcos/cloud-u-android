@@ -14,6 +14,10 @@ import com.diegonmarcos.superapp.boards.InboxItem
 import com.diegonmarcos.superapp.boards.PlaceVisit
 import com.diegonmarcos.superapp.boards.PlacesDay
 import com.diegonmarcos.superapp.boards.Read
+import com.diegonmarcos.superapp.boards.HealthAgg
+import com.diegonmarcos.superapp.boards.HealthBoard
+import com.diegonmarcos.superapp.boards.HealthFixtures
+import com.diegonmarcos.superapp.health.HealthBoardReader
 import com.diegonmarcos.superapp.boards.StepsBoard
 import com.diegonmarcos.superapp.boards.StepsDay
 import com.diegonmarcos.superapp.boards.TaskProject
@@ -47,6 +51,7 @@ class BoardsTest : KitPageHarness() {
         val mail: Read<List<InboxItem>> = Read.Ok(emptyList()),
         val phone: Read<List<InboxItem>> = Read.Ok(emptyList()),
         val steps: Read<StepsBoard> = Read.Unavailable(Why.NOT_INSTALLED, "Cloud Nav is not installed"),
+        val health: Read<HealthBoard> = Read.Unavailable(Why.NOT_INSTALLED, "Health Connect is not available on this phone"),
         val places: Read<List<PlacesDay>> = Read.Ok(emptyList()),
         val projects: Read<List<TaskProject>> = Read.Ok(emptyList()),
     ) : BoardsSource {
@@ -54,6 +59,7 @@ class BoardsTest : KitPageHarness() {
         override fun fleetMail(limit: Int) = mail.also { calls++ }
         override fun phoneNotifications() = phone.also { calls++ }
         override fun steps(days: Int) = steps.also { calls++ }
+        override fun health(days: Int) = health.also { calls++ }
         override fun places(days: Int) = places.also { calls++ }
         override fun taskProjects() = projects.also { calls++ }
     }
@@ -135,21 +141,31 @@ class BoardsTest : KitPageHarness() {
         waitForText("Cloud Tasks is not installed")
     }
 
-    @Test fun `My-health shows cloud-nav's steps, today and seven days`() {
-        val today = LocalDate.of(2026, 10, 17)
-        use(Fake(steps = Read.Ok(StepsBoard(4321, (6 downTo 0).map { StepsDay(today.minusDays(it.toLong()), 1000L * (it + 1)) },
-            "HEALTH_CONNECT", "READY", "Health Connect · granted", null))))
+    @Test fun `My-health shows steps in km, today and the averages`() {
+        val today = LocalDate.now()
+        use(Fake(health = Read.Ok(HealthAgg.board(HealthFixtures.seeded(today), today))))
         showKit { BoardStepsBody(0) { opened += it } }
-        waitForText("4,321")
+        waitFor("steps-chart")
         compose.onNodeWithTag("steps-chart").assertExists()
-        compose.onNodeWithText("Source: Health Connect via Cloud Nav").assertExists()
+        compose.onNodeWithTag("rhr-chart").assertExists()
+        compose.onNodeWithTag("sleep-chart").assertExists()
+        compose.onNodeWithText("Today (11,000 steps)").assertExists()
     }
 
-    @Test fun `My-health without the permission says so instead of a zero`() {
-        use(Fake(steps = Read.Ok(StepsBoard(0, emptyList(), "DEVICE", "NEEDS_PERMISSION",
-            "Health Connect · read permission not granted", null))))
+    @Test fun `My-health without the permissions says so and offers the grant`() {
+        val today = LocalDate.now()
+        val raw = HealthBoardReader.Raw(HealthBoardReader.Status.NEEDS_PERMISSION, emptySet())
+        use(Fake(health = Read.Ok(HealthAgg.board(raw, today))))
         showKit { BoardStepsBody(0) { opened += it } }
-        waitForText("read permission not granted")
+        waitForText("needs read access")
+        compose.onNodeWithText("Grant access").assertExists()
+        compose.onNodeWithTag("health-perm:Sleep").assertExists()
+    }
+
+    @Test fun `My-health unavailable shows the reason`() {
+        use(Fake(health = Read.Unavailable(Why.OUTDATED, "Health Connect needs an update before it can be read")))
+        showKit { BoardStepsBody(0) { opened += it } }
+        waitForText("needs an update")
     }
 
     @Test fun `Nav tracker lists the places per day`() {
