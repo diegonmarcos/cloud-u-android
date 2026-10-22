@@ -3050,6 +3050,7 @@ __metadata:
   dependencies:
     "@capacitor/cli": "npm:^8.4.2"
     "@cloud-notes-tools/cli": "workspace:*"
+    "@cloud-notes/theme": "workspace:*"
     "@faker-js/faker": "npm:^10.1.0"
     "@istanbuljs/schema": "npm:^0.1.3"
     "@playwright/test": "npm:=1.58.2"

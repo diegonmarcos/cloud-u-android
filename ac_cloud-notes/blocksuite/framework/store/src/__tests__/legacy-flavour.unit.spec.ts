@@ -10,6 +10,7 @@ import {
 } from '../utils/legacy-flavour.js';
 import type { YBlock } from '../model/block/types.js';
 import {
+  NoteBlockSchemaExtension,
   ParagraphBlockSchemaExtension,
   RootBlockSchemaExtension,
 } from './test-schema.js';
@@ -68,10 +69,15 @@ describe('a document stored with the old flavour ids', () => {
     const doc = workspace.createDoc('d');
     doc.load();
     const store = doc.getStore({
-      extensions: [RootBlockSchemaExtension, ParagraphBlockSchemaExtension],
+      extensions: [
+        RootBlockSchemaExtension,
+        NoteBlockSchemaExtension,
+        ParagraphBlockSchemaExtension,
+      ],
     });
     const rootId = store.addBlock(`${L}page`);
-    const id = store.addBlock(`${L}paragraph`, {}, rootId);
+    const noteId = store.addBlock(`${L}note`, {}, rootId);
+    const id = store.addBlock(`${L}paragraph`, {}, noteId);
     expect(doc.yBlocks.get(id)?.get('sys:flavour')).toBe(`${N}paragraph`);
     expect(store.getBlock(id)?.flavour).toBe(`${N}paragraph`);
   });

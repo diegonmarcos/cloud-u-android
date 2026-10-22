@@ -95,6 +95,7 @@
   },
   "devDependencies": {
     "@cloud-notes-tools/cli": "workspace:*",
+    "@cloud-notes/theme": "workspace:*",
     "@capacitor/cli": "^8.4.2",
     "@faker-js/faker": "^10.1.0",
     "@istanbuljs/schema": "^0.1.3",
