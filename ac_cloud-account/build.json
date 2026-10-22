@@ -356,8 +356,10 @@
         "mesh_dns": "authelia.app",
         "mesh_port": 9091,
         "mesh_scheme": "http",
+        "_doc": "Only the health probe is routed: a sign-in is a browser or cookie flow bound to the auth host (Authelia refuses a session on another host name), so every other path stays on the public URL.",
         "public_domain": "auth.diegonmarcos.com",
         "public_scheme": "https",
+        "route_paths": ["/api/health"],
         "policy": "mesh_first",
         "health": "/api/health"
       },
@@ -375,6 +377,34 @@
         "route_paths": ["/health", "/ready", "/analytics"],
         "policy": "mesh_first",
         "health": "/health"
+      },
+      {
+        "id": "c3-infra-api",
+        "kind": "api",
+        "source": "cloud-u-containers/infra-api_c3-infra-api/build.json",
+        "_doc": "A PATH of api.diegonmarcos.com (proxy.primary.base_path /c3-infra-api; the edge strips it). Only its declared public paths are routed over the mesh (crash and log events, public logs); the rest answers behind the edge gate only.",
+        "mesh_dns": "c3-infra-api.app",
+        "mesh_port": 8081,
+        "mesh_scheme": "http",
+        "public_domain": "api.diegonmarcos.com",
+        "public_scheme": "https",
+        "public_path": "/c3-infra-api",
+        "route_paths": ["/public/events", "/public/logs"],
+        "policy": "mesh_first",
+        "health": "/health"
+      },
+      {
+        "id": "languagetool",
+        "kind": "tools",
+        "source": "cloud-u-containers/infra-ai_languagetool/build.json",
+        "_doc": "wg_only: languagetool.diegonmarcos.com answers on the mesh alone (a remote_ip gate), so it is no second endpoint and the policy is mesh_only: the Keyboard's grammar check uses the mesh endpoint and fails as unreachable off the mesh.",
+        "mesh_dns": "languagetool.app",
+        "mesh_port": 8010,
+        "mesh_scheme": "http",
+        "public_domain": "languagetool.diegonmarcos.com",
+        "public_scheme": "https",
+        "policy": "mesh_only",
+        "health": "/v2/languages"
       },
       {
         "id": "auth-broker",

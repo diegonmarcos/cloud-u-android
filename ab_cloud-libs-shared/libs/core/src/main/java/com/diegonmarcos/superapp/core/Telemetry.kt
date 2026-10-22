@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.core
 import android.content.Context
 import android.util.Log
 import org.json.JSONObject
+import com.diegonmarcos.superapp.fleetconfig.FleetHttpSeam
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -212,6 +213,11 @@ object Telemetry {
             log?.let { put("log", it) }
             if (meta.isNotEmpty()) put("meta", JSONObject(meta))
         }.toString()
+        // #1093 an app that runs the fleet endpoints sends this over them (mesh first for the declared c3-infra-api pair).
+        FleetHttpSeam.exchange("POST", url, mapOf("Content-Type" to "application/json; charset=utf-8"), payload, connectTimeoutMs, readTimeoutMs)?.let {
+            Log.i(TAG, "POST $url -> ${it.code} (kind=$kind, ${payload.length} bytes, fleet transport)")
+            return
+        }
         val conn = (URL(url).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             doOutput = true

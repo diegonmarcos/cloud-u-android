@@ -1,6 +1,7 @@
 package app.sterna.net
 
 import android.content.Context
+import com.diegonmarcos.superapp.fleetendpoints.android.FleetHttpInstall
 import com.diegonmarcos.superapp.fleetendpoints.android.NetworkChangeWatch
 import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
 
@@ -10,5 +11,8 @@ import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
  * (shared with Cloud Account); this only says what to do with it.
  */
 object EndpointNetworkWatch {
-    fun start(ctx: Context) { NetworkChangeWatch.start(ctx) { FleetTransport.router.onNetworkChanged() } }
+    fun start(ctx: Context) {
+        FleetHttpInstall.install() // libs below the transport (core's Telemetry) ride it through FleetHttpSeam
+        NetworkChangeWatch.start(ctx) { FleetTransport.router.onNetworkChanged() }
+    }
 }

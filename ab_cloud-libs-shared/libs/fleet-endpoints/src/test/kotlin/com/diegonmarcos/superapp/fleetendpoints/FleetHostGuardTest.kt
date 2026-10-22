@@ -104,6 +104,27 @@ class FleetHostGuardTest {
         assertEquals("the public route stays https", "${jmap.publicUrl()}/jmap/session", router.rebase(h, EndpointRoute.PUBLIC, url).toString())
     }
 
+    @Test fun `every fleet URL read from build config is classified, and the classification may only shrink`() {
+        val root = repoRoot()
+        val listed = File(root, "ab_cloud-libs-shared/libs/fleet-endpoints/fleet-url-baseline.txt").readLines()
+            .filter { it.isNotBlank() && !it.startsWith("#") }.map { it.split('\t') }
+        listed.forEach { assertTrue("a baseline line is <file> TAB <path> TAB <class> TAB <reason>: $it", it.size == 4 && it[2] in setOf("link", "routed", "pending") && it[3].length >= 10) }
+        val have = listed.map { it[0] to it[1] }.toSet()
+        val found = mutableSetOf<Pair<String, String>>()
+        val files = root.listFiles().orEmpty().filter { it.isDirectory && (it.name.startsWith("ac_") || it.name.startsWith("aa_")) }.map { File(it, "build.json") } +
+            File(root, "ab_cloud-libs-shared/build.json")
+        for (f in files.filter { it.isFile }) FleetHostScan.configUrls(org.json.JSONObject(f.readText())).forEach { found += f.relativeTo(root).invariantSeparatorsPath to it }
+        assertTrue("these build.json values name a fleet host and are not classified in fleet-url-baseline.txt (route their consumer through libs:fleet-endpoints, or classify them): ${found - have}", (found - have).isEmpty())
+        assertTrue("these baseline lines no longer match a build.json value: remove them: ${have - found}", (have - found).isEmpty())
+        assertTrue("the scan saw the apps' build config", found.size >= 20)
+    }
+
+    @Test fun `the build config scan reads URL values, not prose, and skips the declaration itself`() {
+        val j = org.json.JSONObject("""{"_doc":"see auth.diegonmarcos.com","description":"auth.diegonmarcos.com","fleet_endpoints":{"services":[{"public_domain":"git.diegonmarcos.com"}]},
+            "ui":{"pages":[{"url":"https://git.diegonmarcos.com/x"},{"url":"https://example.org"}],"title":"git.diegonmarcos.com"},"mesh":"http://gitea.app:3002/x"}""")
+        assertEquals(setOf("ui.pages.*.url", "mesh"), FleetHostScan.configUrls(j))
+    }
+
     @Test fun `the scan flags a fleet host in code and ignores comments, emails and package names`() {
         val s = FleetHostScan.analyse("val u = \"https://git.diegonmarcos.com/api\"")
         assertEquals(listOf("git.diegonmarcos.com"), s.hosts); assertFalse(s.usesTransport)
@@ -125,7 +146,26 @@ object FleetHostScan {
     class Analysis(val hosts: List<String>, val usesTransport: Boolean)
 
     private val host = Regex("""[A-Za-z0-9-]+\.diegonmarcos\.com\b|https?://[A-Za-z0-9-]+\.app\b""")
-    private val uses = Regex("""fleetendpoints|FleetHttp|AuthHttp|FleetTransport""")
+    private val uses = Regex("""fleetendpoints|FleetHttp|AuthHttp|FleetTransport|FleetHttpSeam""")
+
+    private val proseKeys = setOf("comment", "description", "subtitle", "title", "label", "website", "source")
+
+    /** Paths (array index = `*`) of the string values of a build.json that name a fleet host; prose keys, `_doc*` and the declaration are skipped. */
+    fun configUrls(o: org.json.JSONObject): Set<String> {
+        val out = mutableSetOf<String>()
+        fun walk(v: Any?, path: List<String>) {
+            when (v) {
+                is org.json.JSONObject -> v.keys().forEach { k ->
+                    if (k.startsWith("_doc") || k in proseKeys || (path.isEmpty() && k == "fleet_endpoints")) return@forEach
+                    walk(v.get(k), path + k)
+                }
+                is org.json.JSONArray -> for (i in 0 until v.length()) walk(v.get(i), path + "*")
+                is String -> if (host.containsMatchIn(v)) out += path.joinToString(".")
+            }
+        }
+        walk(o, emptyList())
+        return out
+    }
 
     fun analyse(source: String): Analysis {
         val code = source.replace(Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL), "")

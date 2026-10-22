@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 /**
  * Data ▸ Secrets ▸ Tokens: the client of the fleet token engine (cloud-u-containers infra-sec_tokens-api,
- * mesh tokens-api.app, public tokens-api.diegonmarcos.com). It lists every fleet bearer token (the `ft_` tokens the
+ * mesh and public endpoints from the fleet declaration). It lists every fleet bearer token (the `ft_` tokens the
  * engine mints and the Authelia JWTs it adopts), generates and revokes them, and returns one full value on request.
  *
  * Rules kept here, not in the page: the engine is owner-only and the call carries the vault's fleet bearer as
@@ -94,7 +94,11 @@ class TokensClient(
     private fun enc(id: String) = java.net.URLEncoder.encode(id, "UTF-8")
 
     companion object {
-        const val BASE = "https://tokens-api.diegonmarcos.com"
+        /**
+         * The engine's public URL, read from the ONE fleet endpoint declaration (build.json::fleet_endpoints, id `tokens-api`),
+         * never typed here: the request rides the fleet transport (mesh `tokens-api.app` first, then this URL with the bearer).
+         */
+        val BASE: String get() = com.diegonmarcos.superapp.profile.FleetEndpointsRuntime.services().firstOrNull { it.id == "tokens-api" }?.publicUrl().orEmpty()
 
         /** The vault key the fleet bearer lives at (FleetEndpointsContract.GRANT_BEARER, same string). */
         const val BEARER_KEY = "fleet.bearer"

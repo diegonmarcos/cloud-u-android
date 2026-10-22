@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.profile
 import android.content.Context
 import com.diegonmarcos.cloudlib.auth.AuthHttp
 import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.android.FleetHttpInstall
 import com.diegonmarcos.superapp.fleetendpoints.android.NetworkChangeWatch
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPair
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
@@ -50,6 +51,7 @@ object FleetEndpointsRuntime {
         val vault = AccountVault(app)
         val n = register(services(), FleetTransport.router, FleetTransport.bearers) { vault.connection(FleetEndpointsContract.GRANT_BEARER)?.toString() }
         NetworkChangeWatch.start(app) { FleetTransport.router.onNetworkChanged() }
+        FleetHttpInstall.install() // libs below the transport (core's Telemetry) ride it through FleetHttpSeam
         // #1093 libs:auth's fleet calls (config artifact, vault bundle, sign-in probes) ride the same transport.
         AuthHttp.transport = AuthHttp.Transport { m, u, h, b, c, r -> FleetHttp.exchange(m, u, h, b, c, r)?.let { AuthHttp.Raw(it.code, it.body, it.location) } }
         return n

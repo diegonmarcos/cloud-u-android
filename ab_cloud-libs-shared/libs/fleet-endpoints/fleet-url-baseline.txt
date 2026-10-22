@@ -1,0 +1,101 @@
+# #1093 fleet-URL guard baseline (FleetHostGuardTest): every URL value in an app's build.json (outside fleet_endpoints and prose keys)
+# that names a fleet host. <build.json> TAB <json path, array index = *> TAB <class> TAB <reason>.
+# link    a link the user opens or a catalog entry; no request is made by the app (allowed for good)
+# routed  its consumer already goes through libs:fleet-endpoints
+# pending a request endpoint whose consumer is not routed yet; the list may only shrink, a new URL fails until classified
+aa_cloud-superapp/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	onehand.circular_menu.actions.*.target	link	a link the user opens in the browser or a WebView page; no request is made by the app
+aa_cloud-superapp/build.json	ui.c3_ops.base_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.import_schema.mail.imap_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.import_schema.mail.jmap_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.import_schema.mail.smtps_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.mail_accounts.*.server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.ntfy.web_base_url	link	web link to the ntfy page
+aa_cloud-superapp/build.json	ui.profile_sync.url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.sections.*.jmap_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.sections.*.pages.*.action	link	a link the user opens in the browser or a WebView page; no request is made by the app
+aa_cloud-superapp/build.json	ui.sections.*.pages.*.dagu_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.sections.*.pages.*.mattermost_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.sections.*.pages.*.url	link	a link the user opens in the browser or a WebView page; no request is made by the app
+aa_cloud-superapp/build.json	ui.sections.*.tile_groups.*.tiles.*.target	link	a link the user opens in the browser or a WebView page; no request is made by the app
+ab_cloud-libs-shared/build.json	auth.config_source.base_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.git_chain.providers.fleet.clone_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.git_chain.providers.fleet.health_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.git_chain.providers.fleet.repos_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.git_chain.providers.fleet.tarball_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.git_chain.providers.gitea.clone_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.git_chain.providers.gitea.health_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.git_chain.providers.gitea.repos_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.sign_in.providers.*.portal_url	link	a sign-in page the user opens in the browser; no request is made by the app
+ab_cloud-libs-shared/build.json	auth.sign_in.providers.*.probe_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	auth.sign_in.providers.*.start_url	link	a sign-in page the user opens in the browser; no request is made by the app
+ab_cloud-libs-shared/build.json	auth.vault_connect.base_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	onehand.circular_menu.actions.*.target	link	a link the user opens in the browser or a WebView page; no request is made by the app
+ab_cloud-libs-shared/build.json	ui.maps_providers.*.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	ui.maps_providers.*.search_endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	ui.sections.*.jmap_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	ui.sections.*.pages.*.dagu_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ab_cloud-libs-shared/build.json	ui.sections.*.pages.*.mattermost_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_c3-morpheus/build.json	surfaces.dagu_url	link	a link the user opens in the browser or a WebView page; no request is made by the app
+ac_c3-morpheus/build.json	surfaces.paca_url	link	a link the user opens in the browser or a WebView page; no request is made by the app
+ac_cloud-account/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-account/build.json	ui.account.forges.*.api	routed	Gitea forge API: ForgeClient rides the fleet transport (declared gitea pair)
+ac_cloud-browser/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-browser/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-browser/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-browser/build.json	ui.browser.default_pinned_tabs.*.url	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
+ac_cloud-browser/build.json	ui.browser.favourites.extra.*.url	link	a link the user opens in the browser or a WebView page; no request is made by the app
+ac_cloud-browser/build.json	ui.browser.local_pinned_tabs.Cloud	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
+ac_cloud-browser/build.json	ui.browser.local_pinned_tabs.Local	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
+ac_cloud-browser/build.json	ui.browser.local_pinned_tabs.Nix	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
+ac_cloud-browser/build.json	ui.browser.local_pinned_tabs.Termux	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
+ac_cloud-c3/build.json	ui.c3_ops.base_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-c3/build.json	ui.carried_c3.pages.*.dagu_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-c3/build.json	ui.ntfy.web_base_url	link	web link to the ntfy page
+ac_cloud-chat/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-chat/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-contacts/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-contacts/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-contacts/build.json	channels.registry.*.actions.*.uri	link	a link the user opens in the browser or a WebView page; no request is made by the app
+ac_cloud-contacts/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-dialer/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-dialer/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-drive/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-drive/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-drive/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-gallery/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-gallery/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-gallery/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-keyboard/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-keyboard/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-mail/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-mail/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-me/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-me/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-me/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-myterminal/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-myterminal/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-myterminal/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-nav/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-nav/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-nav/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-nav/build.json	ui.maps_providers.*.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-nav/build.json	ui.maps_providers.*.search_endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-news/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-news/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-news/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-office/build.json	upstream.online.configure.--with-info-url	link	a link the user opens in the browser or a WebView page; no request is made by the app
+ac_cloud-search/build.json	search.things.price_service.url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-store/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-tasks/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-tasks/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-tasks/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-vault/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-vault/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-vault/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-vault/build.json	ui.vault_url	routed	the self-hosted vault URL: Cloud Vault routes it mesh first (declared vaultwarden pair)
+ac_cloud-wallet/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-wallet/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-wallet/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints

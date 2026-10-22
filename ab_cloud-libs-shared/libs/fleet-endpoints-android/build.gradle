@@ -36,4 +36,5 @@ kotlin {
 
 dependencies {
     api project(':libs:fleet-endpoints')
+    implementation project(':libs:fleetconfig-model') // FleetHttpSeam
 }

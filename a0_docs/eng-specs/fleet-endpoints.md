@@ -69,6 +69,19 @@ host without going through the transport. The files still to migrate are listed 
 transport, forge, libs:auth seam, ProfileSync), Cloud Mail (JMAP), Cloud Vault (the self-hosted vault, `mesh_only` until a
 bearer-protected public host exists, #1100).
 
+## Libraries below the transport, and URLs in build config
+
+`libs:core` (Telemetry) cannot link the transport, so it sends through `FleetHttpSeam` (libs:fleetconfig-model); Cloud Account,
+Cloud Mail and Cloud Vault install the transport behind it (`FleetHttpInstall`), so their crash and log events go mesh first
+over the declared `c3-infra-api` pair (its public events paths only); every other app gets null and posts as before.
+`TokensClient` reads its URL from the declaration. `languagetool` and `c3-infra-api` are declared; the authelia pair routes only
+`/api/health` (a sign-in is a host-bound cookie flow).
+
+`FleetHostGuardTest` also scans every `build.json` for URL values that name a fleet host (prose keys and the declaration itself
+skipped) against `fleet-url-baseline.txt`, classified `link` (the user opens it), `routed` (its consumer goes through the
+transport) or `pending` (a request endpoint whose consumer is not routed yet: analytics sinks, the diagnostics log sink, geo and
+maps providers, git-chain and sign-in bases, default server URLs). The list may only shrink.
+
 ## A service that is a PATH of a shared host
 
 `api.diegonmarcos.com/pub` is `c3-public-api`; the edge strips `/pub` before the service, so the mesh side serves from its

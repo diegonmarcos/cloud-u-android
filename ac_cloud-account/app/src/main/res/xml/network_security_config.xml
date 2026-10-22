@@ -32,10 +32,12 @@
         <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
         <domain>auth-broker.app</domain>
         <domain>authelia.app</domain>
+        <domain>c3-infra-api.app</domain>
         <domain>c3-public-api.app</domain>
         <domain>cloud-me-api.app</domain>
         <domain>git-proxy-api.app</domain>
         <domain>gitea.app</domain>
+        <domain>languagetool.app</domain>
         <domain>stalwart.app</domain>
         <domain>tokens-api.app</domain>
         <domain>vaultwarden.app</domain>

@@ -4,6 +4,7 @@ import android.content.Context
 import com.bitwarden.annotation.OmitFromCoverage
 import com.diegonmarcos.superapp.fleetendpoints.android.FleetEndpointsClient
 import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.android.FleetHttpInstall
 import com.diegonmarcos.superapp.fleetendpoints.android.NetworkChangeWatch
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPair
 import com.diegonmarcos.superapp.fleetendpoints.FleetRegistry
@@ -28,6 +29,7 @@ object VaultFleetEndpoints {
     /** Application start: pull once, and again whenever the network changes (the mesh verdicts are then stale). */
     fun start(context: Context) {
         val app = context.applicationContext
+        FleetHttpInstall.install()
         refresh(app)
         NetworkChangeWatch.start(app) {
             FleetTransport.router.onNetworkChanged()

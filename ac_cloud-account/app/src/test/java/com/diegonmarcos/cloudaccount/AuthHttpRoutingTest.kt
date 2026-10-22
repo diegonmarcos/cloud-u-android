@@ -84,4 +84,14 @@ class AuthHttpRoutingTest {
         assertEquals(listOf("/health", "/ready", "/analytics"), api.routePaths)
         for (id in listOf("auth-broker", "cloud-me-api", "vaultwarden")) assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, services.single { it.id == id }.policy)
     }
+
+    @Test fun aLibraryBelowTheTransportSendsThroughTheSeamAndAnUnclaimedUrlIsLeftToTheCaller() {
+        com.diegonmarcos.superapp.fleetconfig.FleetHttpSeam.transport = null
+        assertEquals("no transport installed: null, the caller makes its plain request", null,
+            com.diegonmarcos.superapp.fleetconfig.FleetHttpSeam.exchange("POST", "https://api.example.org/x", emptyMap(), "{}", 1000, 1000))
+        com.diegonmarcos.superapp.fleetendpoints.android.FleetHttpInstall.install()
+        assertEquals("a host that is not a registered fleet endpoint is not claimed", null,
+            com.diegonmarcos.superapp.fleetconfig.FleetHttpSeam.exchange("POST", "https://not-a-fleet-host.example.org/x", emptyMap(), "{}", 1000, 1000))
+        com.diegonmarcos.superapp.fleetconfig.FleetHttpSeam.transport = null
+    }
 }
