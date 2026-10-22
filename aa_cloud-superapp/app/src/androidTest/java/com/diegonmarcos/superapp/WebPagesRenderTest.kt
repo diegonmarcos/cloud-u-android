@@ -117,8 +117,15 @@ class WebPagesRenderTest {
         assertTrue("Back left the WebApps page instead of stepping back (url $app -> ${urlOf(w!!)})", web() != null)
 
         openApp()
-        tapShellBack()
-        until("the top-right Back arrow returns to the WebApps main page") { urlOf(w!!).split('#')[0] == main.split('#')[0] }
+        // Run 39793662700: the arrow tap left no trace in the log (no navigation back). A tap can be taken by SystemUI's
+        // wireless-debugging dialog or land while the shell re-lays out, so tap again (up to 4 times) while the page has not moved.
+        for (attempt in 1..4) {
+            tapShellBack()
+            val t0 = SystemClock.elapsedRealtime()
+            while (SystemClock.elapsedRealtime() - t0 < 4_000 && urlOf(w!!).split('#')[0] != main.split('#')[0]) SystemClock.sleep(500)
+            if (urlOf(w!!).split('#')[0] == main.split('#')[0]) break
+        }
+        until("the top-right Back arrow returns to the WebApps main page", diag = { "url ${urlOf(w!!)}, canGoBack ${canBack(w!!)}, focus ${sh("dumpsys window").lineSequence().filter { "mCurrentFocus" in it }.joinToString()}" }) { urlOf(w!!).split('#')[0] == main.split('#')[0] }
         assertTrue("the Back arrow left the WebApps page instead of stepping back", web() != null)
     }
 
