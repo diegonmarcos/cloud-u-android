@@ -25,6 +25,17 @@ allprojects {
     }
 }
 
+// #1122 libs:crash brings Compose and the newest androidx.lifecycle into every module that links libs:core; that
+// lifecycle's lint jar (NullSafeMutableLiveData) throws IncompatibleClassChangeError under this fork's AGP 8.7.3 lint
+// and fails lintVitalAnalyzeRelease of every shared lib. Nothing here uses LiveData: the one detector is off, not lint.
+subprojects { sp ->
+    sp.afterEvaluate {
+        if (sp.extensions.findByName('android') != null) {
+            sp.android.lint { disable 'NullSafeMutableLiveData' }
+        }
+    }
+}
+
 // ── versionCode — #789 ONE build stamp for every APK this fork ships ─────────
 // The app AND rootfs-lib read it, so the terminal and its rootfs move together.
 // Same encoding as ab_cloud-libs-shared/lib-apks/app/build.gradle so the whole
