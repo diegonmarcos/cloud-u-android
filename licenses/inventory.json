@@ -1911,6 +1911,15 @@
    "licence_source": "inherits ac_cloud-notes",
    "within_upstream_module": "notes"
   },
+  "asset:ac_cloud-notes/packages/frontend/core/public/fonts/Inter-Italic.woff": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-notes/packages/frontend/core/public/fonts/Inter-Italic.woff"
+   ],
+   "licence": "MIT",
+   "licence_source": "inherits ac_cloud-notes",
+   "within_upstream_module": "notes"
+  },
   "asset:ac_cloud-notes/packages/frontend/core/public/fonts/Inter-Italic.woff2": {
    "kind": "asset",
    "declared_in": [
@@ -1938,6 +1947,15 @@
    "licence_source": "inherits ac_cloud-notes",
    "within_upstream_module": "notes"
   },
+  "asset:ac_cloud-notes/packages/frontend/core/public/fonts/Inter-Regular.woff": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-notes/packages/frontend/core/public/fonts/Inter-Regular.woff"
+   ],
+   "licence": "MIT",
+   "licence_source": "inherits ac_cloud-notes",
+   "within_upstream_module": "notes"
+  },
   "asset:ac_cloud-notes/packages/frontend/core/public/fonts/Inter-Regular.woff2": {
    "kind": "asset",
    "declared_in": [
@@ -1947,10 +1965,28 @@
    "licence_source": "inherits ac_cloud-notes",
    "within_upstream_module": "notes"
   },
+  "asset:ac_cloud-notes/packages/frontend/core/public/fonts/Inter-SemiBold.woff": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-notes/packages/frontend/core/public/fonts/Inter-SemiBold.woff"
+   ],
+   "licence": "MIT",
+   "licence_source": "inherits ac_cloud-notes",
+   "within_upstream_module": "notes"
+  },
   "asset:ac_cloud-notes/packages/frontend/core/public/fonts/Inter-SemiBold.woff2": {
    "kind": "asset",
    "declared_in": [
     "ac_cloud-notes/packages/frontend/core/public/fonts/Inter-SemiBold.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "inherits ac_cloud-notes",
+   "within_upstream_module": "notes"
+  },
+  "asset:ac_cloud-notes/packages/frontend/core/public/fonts/Inter-SemiBoldItalic.woff": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-notes/packages/frontend/core/public/fonts/Inter-SemiBoldItalic.woff"
    ],
    "licence": "MIT",
    "licence_source": "inherits ac_cloud-notes",
