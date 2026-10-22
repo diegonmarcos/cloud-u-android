@@ -64,20 +64,21 @@ jobs:
           # Framework view: the provider must be registered as a documents provider.
           adb shell dumpsys package "$PKG" | grep -i -E "DriveDocumentsProvider|DOCUMENTS_PROVIDER|PickerActivity" | tee out/registered.txt
           adb shell input keyevent KEYCODE_HOME
-          adb shell am start -a android.intent.action.OPEN_DOCUMENT -c android.intent.category.OPENABLE -t '*/*' > out/am.txt 2>&1
+          adb shell am start -a android.intent.action.OPEN_DOCUMENT -c android.intent.category.OPENABLE -t '"*/*"' > out/am.txt 2>&1
+          grep -q 'Error' out/am.txt && { echo "::error::OPEN_DOCUMENT did not start"; cat out/am.txt; exit 1; }
           sleep 8
           dump() { adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb exec-out cat /sdcard/ui.xml > "$1"; }
           dump out/ui-1.xml
           adb exec-out screencap -p > out/picker-1.png
           # The roots drawer: the hamburger ("Show roots") or, on a wide layout, already visible.
-          if ! grep -q "Cloud Drive" out/ui-1.xml; then
+          if ! { grep -q "documentsui" out/ui-1.xml && grep -q "Cloud Drive" out/ui-1.xml; }; then
             adb shell input swipe 5 800 600 800 300; sleep 3
             dump out/ui-2.xml
-            grep -q "Cloud Drive" out/ui-2.xml || { adb shell input tap 60 140; sleep 3; dump out/ui-2.xml; }
+            grep -q "documentsui" out/ui-2.xml && grep -q "Cloud Drive" out/ui-2.xml || { adb shell input tap 60 140; sleep 3; dump out/ui-2.xml; }
           else cp out/ui-1.xml out/ui-2.xml; fi
           adb exec-out screencap -p > out/picker-2.png
           adb logcat -d -v threadtime > out/logcat.txt
-          if grep -q "Cloud Drive" out/ui-2.xml; then echo "Cloud Drive root is listed in the system picker."; exit 0; fi
+          if grep -q "documentsui" out/ui-2.xml && grep -q "Cloud Drive" out/ui-2.xml; then echo "Cloud Drive root is listed in the system picker."; exit 0; fi
           echo "::error title=Cloud Drive missing from the system picker::no Cloud Drive root in the OPEN_DOCUMENT UI"
           grep -o 'text="[^"]*"' out/ui-2.xml | head -40
           exit 1
