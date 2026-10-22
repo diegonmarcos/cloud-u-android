@@ -20,6 +20,16 @@
     "db_engine": null
   },
   {
+    "name": "cloud-me-api",
+    "service": "cloud-me-api",
+    "vm": "oci-E2-f_1",
+    "private_dns": "cloud-me-api.app:8124",
+    "port": 8124,
+    "protocol": "http",
+    "category": "app",
+    "db_engine": null
+  },
+  {
     "name": "cloud-vault-mcp",
     "service": "cloud-vault-mcp",
     "vm": "oci-A1-f_0",
@@ -270,6 +280,26 @@
     "db_engine": null
   },
   {
+    "name": "auth-broker-google",
+    "service": "auth-broker",
+    "vm": "oci-A1-f_0",
+    "private_dns": "auth-broker-google:4180",
+    "port": 4180,
+    "protocol": "http",
+    "category": "sec",
+    "db_engine": null
+  },
+  {
+    "name": "auth-broker-github",
+    "service": "auth-broker",
+    "vm": "oci-A1-f_0",
+    "private_dns": "auth-broker-github:4181",
+    "port": 4181,
+    "protocol": "http",
+    "category": "sec",
+    "db_engine": null
+  },
+  {
     "name": "authelia-redis",
     "service": "authelia",
     "vm": "gcp-E2-f_0",
@@ -325,6 +355,16 @@
     "vm": "gcp-E2-f_0",
     "private_dns": "introspect-proxy.app:4182",
     "port": 4182,
+    "protocol": "http",
+    "category": "sec",
+    "db_engine": null
+  },
+  {
+    "name": "mcp-oauth",
+    "service": "mcp-oauth",
+    "vm": "gcp-E2-f_0",
+    "private_dns": "mcp-oauth.app:4183",
+    "port": 4183,
     "protocol": "http",
     "category": "sec",
     "db_engine": null
