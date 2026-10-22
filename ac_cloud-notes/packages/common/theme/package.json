@@ -4,7 +4,6 @@
   "description": "Cloud Notes design tokens (CSS variables, typography), vendored from a Mozilla Public License 2.0 package; see LICENSE.",
   "license": "MPL-2.0",
   "type": "module",
-  "private": true,
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "./dist/index.d.ts",
