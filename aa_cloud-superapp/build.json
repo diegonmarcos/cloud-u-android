@@ -2601,9 +2601,9 @@
             "target": "section:cloud"
           },
           {
-            "_doc": "Index icon for the tile_groups row that is now called 'Projects Me' — the label was 'Tools Dashboard' and named a group that no longer exists, which makes the Home index point at nothing a user can find on the Cloud page. Every entry in tiles_shared targets section:cloud, so this is a category label rather than per-group navigation. There is deliberately NO sixth entry for the new 'Projects W' row: a second icon leading to the identical destination adds a tap target and no way to get anywhere new, and the owner asked for a row, not an index entry. Add one here if the index is ever wired to open its own group.",
+            "_doc": "Index icon for the tile_groups row that is now called 'Me' — the label was 'Tools Dashboard' and named a group that no longer exists, which makes the Home index point at nothing a user can find on the Cloud page. Every entry in tiles_shared targets section:cloud, so this is a category label rather than per-group navigation. There is deliberately NO sixth entry for the new 'Projects W' row: a second icon leading to the identical destination adds a tap target and no way to get anywhere new, and the owner asked for a row, not an index entry. Add one here if the index is ever wired to open its own group.",
             "id": "suite-dash",
-            "label": "Projects Me",
+            "label": "Me",
             "icon": "ic_p_c3_workflows",
             "target": "section:cloud"
           }
@@ -2650,6 +2650,74 @@
                 "label": "News",
                 "icon": "ic_rss",
                 "target": "extapp:cloud-news"
+              }
+            ]
+          },
+          {
+            "title": "Tools Primary",
+            "tiles": [
+              {
+                "_doc": "Cloud-Wallet — the dedicated cards/passes/tickets app (ac_cloud-wallet). libs:wallet (Compose deck) was MOVED out of the SuperApp into Cloud-Wallet, so this tile no longer routes to an in-app section. target=extapp:cloud-wallet → MainActivity.launchExternalApp opens com.diegonmarcos.cloudwallet if installed, else downloads + installs ui.external_apps[id=cloud-wallet].install_apk_url. For the system Google Wallet launcher use action:app://com.google.android.apps.walletnfcrel from anywhere else.",
+                "id": "wallet",
+                "label": "Wallet",
+                "icon": "ic_wallet",
+                "target": "extapp:cloud-wallet"
+              },
+              {
+                "_doc": "Keyboard — hands off to the standalone Cloud-Keyboard app (ac_cloud-keyboard, com.diegonmarcos.cloudkeyboard). Same target as the Configs ▸ Keyboard entry: extapp:cloud-keyboard → MainActivity.launchExternalApp opens Cloud-Keyboard's SettingsActivity if installed, else downloads + installs ui.external_apps[id=cloud-keyboard].install_apk_url. The keyboard is a first-class Cloud app like Browser/Wallet/Vault, so it belongs in Tools Primary and not only behind Configs.",
+                "id": "keyboard",
+                "label": "Keyboard",
+                "icon": "ic_keyboard",
+                "target": "extapp:cloud-keyboard"
+              },
+              {
+                "_doc": "Calc — hands off to the standalone Cloud Calc app (ac_cloud-calc, com.diegonmarcos.cloudcalc, read from ITS android.application_id and app/build.gradle namespace). #772: the owner asked for it IMMEDIATELY BEFORE Writer in this row, and GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement and test-calc-tile.sh pins it as 'the tile right after calc is writer'. Same shape as Writer: target=extapp:cloud-calc → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-calc].install_apk_url (ABI-resolved through the fleet assets map). icon ic_calc is Cloud Calc's own launcher foreground, cropped to its art like ic_writer.",
+                "id": "calc",
+                "label": "Calc",
+                "icon": "ic_calc",
+                "target": "extapp:cloud-calc"
+              },
+              {
+                "_doc": "Writer — hands off to the standalone Cloud Writer app (ac_cloud-writer, com.diegonmarcos.cloudwriter, read from ITS android.application_id and app/build.gradle namespace, not guessed from the slug). Same shape as the Keyboard tile beside it: target=extapp:cloud-writer → ShellActivity.launchExternalApp opens the package if installed, else downloads + installs ui.external_apps[id=cloud-writer].install_apk_url — no ACTION_VIEW, so there is no seventh ad-hoc startActivity site and no ActivityNotFoundException path. POSITION IS DELIBERATE AND IT IS NOT LAST: GroupedTilesFragment walks group.tiles in declared order with no sort, and the Camera tile below records the owner asking for the camera 'as last' in this row on 2026-09-10, so Writer goes in front of it rather than displacing a placement he named. icon ic_writer is Cloud Writer's own launcher foreground copied into this app's drawables — Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so the file's existence is pinned by test-writer-tile.sh rather than trusted.",
+                "id": "writer",
+                "label": "Writer",
+                "icon": "ic_writer",
+                "target": "extapp:cloud-writer"
+              },
+              {
+                "_doc": "Cloud-Browser — the dedicated WebView browser app (ac_cloud-browser). libs:browser (BrowserHostFragment + BrowserTabPrefs) was MOVED out of the SuperApp into Cloud-Browser, so this tile no longer routes to an in-app section. target=extapp:cloud-browser → MainActivity.launchExternalApp opens com.diegonmarcos.cloudbrowser if installed, else downloads + installs ui.external_apps[id=cloud-browser].install_apk_url. Browser also handles http/https VIEW intents so other apps can open links in it. icon ic_world (globe) stays — visually distinct from the App Tabs tile (ic_mode_apps).",
+                "id": "browser",
+                "label": "Browser",
+                "icon": "ic_world",
+                "target": "extapp:cloud-browser"
+              },
+              {
+                "_doc": "Navigation — hands off to the dedicated Cloud-Nav app (ac_cloud-nav). libs:maps (MapLibre tracker + timeline + MyTrips) was MOVED out of the SuperApp into Cloud-Nav, so this tile no longer routes to an in-app section. target=extapp:cloud-nav → MainActivity.launchExternalApp opens com.diegonmarcos.cloudnav if installed, else downloads + installs ui.external_apps[id=cloud-nav].install_apk_url (Cloud-Nav.apk). icon ic_nav (ic_maps left with libs:maps). For the system Google Maps launcher use action:app://com.google.android.apps.maps from anywhere else.",
+                "id": "maps",
+                "label": "Navigation",
+                "icon": "ic_nav",
+                "target": "extapp:cloud-nav"
+              },
+              {
+                "_doc": "Camera — the fleet's OWN camera (ac_cloud-camera, applicationId cld.camera, our signed build of GrapheneOS Camera), not a third-party one. The owner asked for it 'as last' in this row on 2026-09-10, and LAST HERE IS ARRAY POSITION: GroupedTilesFragment walks group.tiles in declared order and applies no sort of any kind, so appending is what makes it last and reordering this array is the only way to move it. There is no `order` field to set and none is wanted — a second way to express position is a second thing to disagree with the first. target=extapp:cloud-camera → MainActivity.launchExternalApp opens cld.camera if installed, else downloads + installs ui.external_apps[id=cloud-camera].install_apk_url. icon ic_camera is its own drawable rather than ic_photos, which the Gallery tile already carries; Sections.iconResFor falls back to ic_link_tile without complaining when a name resolves to nothing, so a shared or misspelt icon is a silent defect and test-camera-tiles.sh pins the file's existence.",
+                "id": "camera",
+                "label": "Camera",
+                "icon": "ic_camera",
+                "target": "extapp:cloud-camera"
+              },
+              {
+                "_doc": "Cloud-Vault — the dedicated Vaultwarden client app (ac_cloud-vault). libs:vault (KeePassDX stub) was replaced by Cloud-Vault, a standalone constellation APK hosting vault.diegonmarcos.com (self-hosted Vaultwarden). target=extapp:cloud-vault → MainActivity.launchExternalApp opens com.diegonmarcos.cloudvault if installed, else downloads + installs ui.external_apps[id=cloud-vault].install_apk_url. Lives in Tools Primary (moved there from Data Apps by owner order, #1092).",
+                "id": "vault",
+                "label": "Vault",
+                "icon": "ic_vault",
+                "target": "extapp:cloud-vault"
+              },
+              {
+                "_doc": "Cloud Account, repeated in Tools Primary next to Vault (#1092). Same page as the Configs ▸ Account tile (id configs-account), which stays: the duplicate is intentional, so Account is reachable from both the daily tools row and the Configs row. Own id because tile ids are unique.",
+                "id": "tools-account",
+                "label": "Account",
+                "icon": "ic_p_accounts",
+                "target": "page:config/profile"
               }
             ]
           },
@@ -2710,72 +2778,59 @@
                 "label": "Media",
                 "icon": "ic_music",
                 "target": "extapp:cloud-media-center"
-              },
-              {
-                "_doc": "Cloud-Vault — the dedicated Vaultwarden client app (ac_cloud-vault). libs:vault (KeePassDX stub) was replaced by Cloud-Vault, a standalone constellation APK hosting vault.diegonmarcos.com (self-hosted Vaultwarden). target=extapp:cloud-vault → MainActivity.launchExternalApp opens com.diegonmarcos.cloudvault if installed, else downloads + installs ui.external_apps[id=cloud-vault].install_apk_url. Lives in Data Apps rather than Tools Primary: the vault is one of the data stores, alongside Drive and Sheets.",
-                "id": "vault",
-                "label": "Vault",
-                "icon": "ic_vault",
-                "target": "extapp:cloud-vault"
               }
             ]
           },
           {
-            "title": "Tools Primary",
+            "_doc": "Me — the personal-administration row (renamed from 'Projects Me', moved to sit right after Tools Primary and before AGI, #1092). The Me app leads, a rule divides it from the five Cloud-Me/web entries: MySocials (the one web destination), then the Cloud-Me deep links MyBuro, MyHealth, MyStudy, MyTrips. Agenda is no longer a tile of its own here; it stays reachable inside the Me app.",
+            "title": "Me",
             "tiles": [
               {
+                "id": "me",
                 "label": "Me",
                 "icon": "ic_vcard",
                 "target": "extapp:cloud-me"
               },
               {
-                "_doc": "Cloud-Wallet — the dedicated cards/passes/tickets app (ac_cloud-wallet). libs:wallet (Compose deck) was MOVED out of the SuperApp into Cloud-Wallet, so this tile no longer routes to an in-app section. target=extapp:cloud-wallet → MainActivity.launchExternalApp opens com.diegonmarcos.cloudwallet if installed, else downloads + installs ui.external_apps[id=cloud-wallet].install_apk_url. For the system Google Wallet launcher use action:app://com.google.android.apps.walletnfcrel from anywhere else.",
-                "id": "wallet",
-                "label": "Wallet",
-                "icon": "ic_wallet",
-                "target": "extapp:cloud-wallet"
+                "_doc": "Rule between the Me app and its sub-entries. NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|' (same separator item as Data Apps and Configs).",
+                "id": "me-sep-1",
+                "label": "|",
+                "separator": true
               },
               {
-                "_doc": "Keyboard — hands off to the standalone Cloud-Keyboard app (ac_cloud-keyboard, com.diegonmarcos.cloudkeyboard). Same target as the Configs ▸ Keyboard entry: extapp:cloud-keyboard → MainActivity.launchExternalApp opens Cloud-Keyboard's SettingsActivity if installed, else downloads + installs ui.external_apps[id=cloud-keyboard].install_apk_url. The keyboard is a first-class Cloud app like Browser/Wallet/Vault, so it belongs in Tools Primary and not only behind Configs.",
-                "id": "keyboard",
-                "label": "Keyboard",
-                "icon": "ic_keyboard",
-                "target": "extapp:cloud-keyboard"
+                "_doc": "MySocials — a static site on github.io, not a Cloud-Me page and not a mesh service. It TRAILS the row now (task 503) — moved from between Agenda and MyBuro to the very end, after MyTrips, so the owner's one outward-facing link comes last and everything before the rule ahead of it points inward at Cloud-Me. Tapping it opens the in-app browser rather than another app, which is the difference the rule ahead of it marks.",
+                "id": "mysocials",
+                "label": "MySocials",
+                "icon": "ic_p_identities",
+                "target": "https://diegonmarcos.github.io/mySocials/"
               },
               {
-                "_doc": "Calc — hands off to the standalone Cloud Calc app (ac_cloud-calc, com.diegonmarcos.cloudcalc, read from ITS android.application_id and app/build.gradle namespace). #772: the owner asked for it IMMEDIATELY BEFORE Writer in this row, and GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement and test-calc-tile.sh pins it as 'the tile right after calc is writer'. Same shape as Writer: target=extapp:cloud-calc → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-calc].install_apk_url (ABI-resolved through the fleet assets map). icon ic_calc is Cloud Calc's own launcher foreground, cropped to its art like ic_writer.",
-                "id": "calc",
-                "label": "Calc",
-                "icon": "ic_calc",
-                "target": "extapp:cloud-calc"
+                "_doc": "MyBuro — Cloud-Me's Buro section, entered at its Summary tab (ac_cloud-me/build.json::ui.sections[buro].pages[0]), which is the index of Wallet, Docs, Fin and Vault rather than any one of them. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar. The fragment names `buro/summary` and not `buro`, because a bare section target lands on whatever page happens to be first and would silently follow a reorder there. Not installed → the same download-and-install path every other extapp tile uses.",
+                "id": "myburo",
+                "label": "MyBuro",
+                "icon": "ic_p_folder",
+                "target": "extapp:cloud-me#page:buro/summary"
               },
               {
-                "_doc": "Writer — hands off to the standalone Cloud Writer app (ac_cloud-writer, com.diegonmarcos.cloudwriter, read from ITS android.application_id and app/build.gradle namespace, not guessed from the slug). Same shape as the Keyboard tile beside it: target=extapp:cloud-writer → ShellActivity.launchExternalApp opens the package if installed, else downloads + installs ui.external_apps[id=cloud-writer].install_apk_url — no ACTION_VIEW, so there is no seventh ad-hoc startActivity site and no ActivityNotFoundException path. POSITION IS DELIBERATE AND IT IS NOT LAST: GroupedTilesFragment walks group.tiles in declared order with no sort, and the Camera tile below records the owner asking for the camera 'as last' in this row on 2026-09-10, so Writer goes in front of it rather than displacing a placement he named. icon ic_writer is Cloud Writer's own launcher foreground copied into this app's drawables — Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so the file's existence is pinned by test-writer-tile.sh rather than trusted.",
-                "id": "writer",
-                "label": "Writer",
-                "icon": "ic_writer",
-                "target": "extapp:cloud-writer"
+                "_doc": "MyHealth — MIGRATED to Cloud-Me (Projects > Health), which hosts the same libs:health Compose surface and now owns the only copy of it. The SuperApp's `health` section keeps nothing but the metric taxonomy Configs > Permissions still counts against; its pages are gone. Same `extapp:<appId>#<target>` hand-off as the tiles beside it.",
+                "id": "myhealth",
+                "label": "MyHealth",
+                "icon": "ic_heart",
+                "target": "extapp:cloud-me#page:projects/health"
               },
               {
-                "_doc": "Cloud-Browser — the dedicated WebView browser app (ac_cloud-browser). libs:browser (BrowserHostFragment + BrowserTabPrefs) was MOVED out of the SuperApp into Cloud-Browser, so this tile no longer routes to an in-app section. target=extapp:cloud-browser → MainActivity.launchExternalApp opens com.diegonmarcos.cloudbrowser if installed, else downloads + installs ui.external_apps[id=cloud-browser].install_apk_url. Browser also handles http/https VIEW intents so other apps can open links in it. icon ic_world (globe) stays — visually distinct from the App Tabs tile (ic_mode_apps).",
-                "id": "browser",
-                "label": "Browser",
-                "icon": "ic_world",
-                "target": "extapp:cloud-browser"
+                "_doc": "MyStudy — Cloud-Me's Projects > Studying page. The fragment is `projects/studying` and not `projects/study`, because the id the router resolves is the page's own declared id (ac_cloud-me/build.json::ui.sections[projects].pages[id=studying]) and not the label on the tile: Cloud-Me's Section.page() flattens a section's whole strip tree into one id list, so guessing at the id is how a tile lands on the app's front door and looks like it half-worked. test-dashboard-cross-app-deeplink.sh T3 walks that flattened tree and fails if this ever stops resolving.",
+                "id": "mystudy",
+                "label": "MyStudy",
+                "icon": "ic_file_stack",
+                "target": "extapp:cloud-me#page:projects/studying"
               },
               {
-                "_doc": "Navigation — hands off to the dedicated Cloud-Nav app (ac_cloud-nav). libs:maps (MapLibre tracker + timeline + MyTrips) was MOVED out of the SuperApp into Cloud-Nav, so this tile no longer routes to an in-app section. target=extapp:cloud-nav → MainActivity.launchExternalApp opens com.diegonmarcos.cloudnav if installed, else downloads + installs ui.external_apps[id=cloud-nav].install_apk_url (Cloud-Nav.apk). icon ic_nav (ic_maps left with libs:maps). For the system Google Maps launcher use action:app://com.google.android.apps.maps from anywhere else.",
-                "id": "maps",
-                "label": "Navigation",
-                "icon": "ic_nav",
-                "target": "extapp:cloud-nav"
-              },
-              {
-                "_doc": "Camera — the fleet's OWN camera (ac_cloud-camera, applicationId cld.camera, our signed build of GrapheneOS Camera), not a third-party one. The owner asked for it 'as last' in this row on 2026-09-10, and LAST HERE IS ARRAY POSITION: GroupedTilesFragment walks group.tiles in declared order and applies no sort of any kind, so appending is what makes it last and reordering this array is the only way to move it. There is no `order` field to set and none is wanted — a second way to express position is a second thing to disagree with the first. target=extapp:cloud-camera → MainActivity.launchExternalApp opens cld.camera if installed, else downloads + installs ui.external_apps[id=cloud-camera].install_apk_url. icon ic_camera is its own drawable rather than ic_photos, which the Gallery tile already carries; Sections.iconResFor falls back to ic_link_tile without complaining when a name resolves to nothing, so a shared or misspelt icon is a silent defect and test-camera-tiles.sh pins the file's existence.",
-                "id": "camera",
-                "label": "Camera",
-                "icon": "ic_camera",
-                "target": "extapp:cloud-camera"
+                "_doc": "MyTrips — Cloud-Me's Projects > Trips page. Same id-not-label rule as MyStudy: `projects/trips` is the declared page id, proven against ac_cloud-me/build.json by T3. Not to be confused with the MyTrips that libs:maps used to render inside this app — that module moved to Cloud-Nav, and this tile reaches the Cloud-Me page rather than the map timeline.",
+                "id": "mytrips",
+                "label": "MyTrips",
+                "icon": "ic_map_pin",
+                "target": "extapp:cloud-me#page:projects/trips"
               }
             ]
           },
@@ -2824,72 +2879,6 @@
                 "label": "Terminal",
                 "icon": "ic_terminal",
                 "target": "extapp:cloud-terminal-nix"
-              }
-            ]
-          },
-          {
-            "_doc": "Projects Me — the personal half of the two project rows (Projects W is the work half). Renamed from 'Dashboard', which described the widget rather than what the row is FOR: every tile here is one of the owner's own long-running projects, and the name is what tells the next person whether a new tile belongs in this row or the other one. Two rules divide it into three runs: the Cloud-Me entry points, the administration page, and the life projects; MySocials, the one web destination, trails all three as its own run behind a third rule — task 503 moved it here from between Agenda and MyBuro so every tile pointing at Cloud-Me sits together before the row's single browser link. The middle run holds only MyBuro since the owner dropped MyFin; a run of one is still a run, and the rule around it still marks where administration stops and the life projects start. A run never mixes a web link with a cross-app deep link, because those two behave differently on tap — one opens a browser, the other launches or offers to install another app — and a row that interleaves them cannot be read at a glance.",
-            "title": "Projects Me",
-            "tiles": [
-              {
-                "_doc": "Agenda — the owner's own agenda, which is why it LEADS this row and why the rule below it divides it from MyBuro. It was 'My-PM' pointing at the paca project INDEX until 2026-09-13: paca still has no personal board (task 182 owns creating one), and rather than keep a placeholder standing in for a board that does not exist, the owner pointed the tile at the agenda he actually reads. target is a DEEP LINK into Cloud-Me, section agenda, page agenda — the CalEngine 30-day event list, whose sibling tab is the CalDAV VTODO Todo list — so it resolves through the same extapp:cloud-me#page:<section>/<page> route as MyBuro, MyHealth, MyStudy and MyTrips instead of opening a browser. icon is ic_p_cal_agenda, the agenda glyph, in place of the board glyph the paca target had earned.",
-                "id": "agenda",
-                "label": "Agenda",
-                "icon": "ic_p_cal_agenda",
-                "target": "extapp:cloud-me#page:agenda/agenda"
-              },
-              {
-                "_doc": "The leading rule — divides Agenda from MyBuro. It used to divide Agenda from MySocials, back when MySocials sat here; task 503 moved MySocials to the end of the row and this separator stayed put, because Agenda and MyBuro were always the two things it actually separated on screen. NOT a tile: it declares no target and GroupedTilesFragment draws it as a bare '|' that is not clickable, the same separator CHARACTER pattern task 303 established for Data Apps. It is numbered 0 rather than renumbering the other two rules, because those two ids are pinned by name in test-dashboard-cross-app-deeplink.sh and renumbering them would rewrite assertions that are about the rules further down the row, not about this one.",
-                "id": "projects-me-sep-0",
-                "label": "|",
-                "separator": true
-              },
-              {
-                "_doc": "MyBuro — Cloud-Me's Buro section, entered at its Summary tab (ac_cloud-me/build.json::ui.sections[buro].pages[0]), which is the index of Wallet, Docs, Fin and Vault rather than any one of them. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar. The fragment names `buro/summary` and not `buro`, because a bare section target lands on whatever page happens to be first and would silently follow a reorder there. Not installed → the same download-and-install path every other extapp tile uses.",
-                "id": "myburo",
-                "label": "MyBuro",
-                "icon": "ic_p_folder",
-                "target": "extapp:cloud-me#page:buro/summary"
-              },
-              {
-                "_doc": "Second rule — divides Cloud-Me's Buro entry point from its Projects pages. Both runs around it are cross-app deep links, so unlike the third rule it does not separate two kinds of tap; it separates administration from the life projects, which is the owner's own grouping. That is why the tester asserts each run is internally of ONE kind rather than asserting that consecutive runs differ: the weaker rule is the one that is actually true here, and a tester that asserts something false gets deleted the first time it is inconvenient.",
-                "id": "projects-me-sep-2",
-                "label": "|",
-                "separator": true
-              },
-              {
-                "_doc": "MyHealth — MIGRATED to Cloud-Me (Projects > Health), which hosts the same libs:health Compose surface and now owns the only copy of it. The SuperApp's `health` section keeps nothing but the metric taxonomy Configs > Permissions still counts against; its pages are gone. Same `extapp:<appId>#<target>` hand-off as the tiles beside it.",
-                "id": "myhealth",
-                "label": "MyHealth",
-                "icon": "ic_heart",
-                "target": "extapp:cloud-me#page:projects/health"
-              },
-              {
-                "_doc": "MyStudy — Cloud-Me's Projects > Studying page. The fragment is `projects/studying` and not `projects/study`, because the id the router resolves is the page's own declared id (ac_cloud-me/build.json::ui.sections[projects].pages[id=studying]) and not the label on the tile: Cloud-Me's Section.page() flattens a section's whole strip tree into one id list, so guessing at the id is how a tile lands on the app's front door and looks like it half-worked. test-dashboard-cross-app-deeplink.sh T3 walks that flattened tree and fails if this ever stops resolving.",
-                "id": "mystudy",
-                "label": "MyStudy",
-                "icon": "ic_file_stack",
-                "target": "extapp:cloud-me#page:projects/studying"
-              },
-              {
-                "_doc": "MyTrips — Cloud-Me's Projects > Trips page. Same id-not-label rule as MyStudy: `projects/trips` is the declared page id, proven against ac_cloud-me/build.json by T3. Not to be confused with the MyTrips that libs:maps used to render inside this app — that module moved to Cloud-Nav, and this tile reaches the Cloud-Me page rather than the map timeline.",
-                "id": "mytrips",
-                "label": "MyTrips",
-                "icon": "ic_map_pin",
-                "target": "extapp:cloud-me#page:projects/trips"
-              },
-              {
-                "_doc": "Third rule — divides the Cloud-Me deep links from the row's one web destination. This is the same separator tile MySocials used to trail when it opened the row (it carried the id 'projects-me-sep-1' there too); task 503 relocated it along with MySocials rather than deleting it and adding a new one, because it still marks exactly what it always marked — the boundary between tapping into another app and opening a browser. NOT a tile: it declares no target and GroupedTilesFragment draws it as a bare '|' that is not clickable, not focusable and hidden from accessibility, because a cell that looks tappable and does nothing is a defect this app already fixed once in the tab strips. Sections.TileGroup.destinations drops it, so every surface that reads tiles as places to go — the derived Apps page, the flat aggregator fallback, Recently Used — never sees it.",
-                "id": "projects-me-sep-1",
-                "label": "|",
-                "separator": true
-              },
-              {
-                "_doc": "MySocials — a static site on github.io, not a Cloud-Me page and not a mesh service. It TRAILS the row now (task 503) — moved from between Agenda and MyBuro to the very end, after MyTrips, so the owner's one outward-facing link comes last and everything before the rule ahead of it points inward at Cloud-Me. Tapping it opens the in-app browser rather than another app, which is the difference the rule ahead of it marks.",
-                "id": "mysocials",
-                "label": "MySocials",
-                "icon": "ic_p_identities",
-                "target": "https://diegonmarcos.github.io/mySocials/"
               }
             ]
           },

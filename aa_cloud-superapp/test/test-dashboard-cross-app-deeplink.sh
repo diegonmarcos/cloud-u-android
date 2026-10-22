@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tester: Cloud ▸ Projects Me's MyHealth icon is a cross-app deep link into
+# Tester: Cloud ▸ Me's MyHealth icon is a cross-app deep link into
 # Cloud-Me, and nothing of the two deleted SuperApp pages is left behind.
 #
 # MyFin and MyHealth were SuperApp pages (sections `myfin` and `health`). Both
@@ -55,11 +55,11 @@ python3 - "$BJ" <<'PY' && ok "MyHealth tile → extapp:cloud-me#page:..., MyFin 
 import json, sys
 d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
-group = next(g for g in cloud["tile_groups"] if g["title"] == "Projects Me")
+group = next(g for g in cloud["tile_groups"] if g["title"] == "Me")
 tiles = {t.get("id"): t for t in group["tiles"]}
 want = {"myhealth": "extapp:cloud-me#page:projects/health"}
 for tid, target in want.items():
-    assert tid in tiles, f"Projects Me tile {tid} is gone — the icon must remain"
+    assert tid in tiles, f"Me tile {tid} is gone — the icon must remain"
     assert tiles[tid]["target"] == target, (tid, tiles[tid]["target"], "!=", target)
     assert tiles[tid].get("icon"), f"{tid} tile has no icon"
 # MyFin was DROPPED by the owner. Asserting its absence here, not just leaving it
@@ -141,17 +141,13 @@ groups = {g["title"]: g for g in cloud["tile_groups"]}
 
 # The product decision each row exists to express, pinned. Nothing about a JSON
 # array's order fails on its own when someone appends to it, which is exactly
-# why it is written out here. Projects Me is the personal half, Projects W the
+# why it is written out here. Me is the personal row, Projects W the
 # work half; the split is what tells the next editor which row a new tile joins.
 ROWS = {
-    # Agenda leads the row — task 309/316. MySocials TRAILS it now — task 503 moved the owner's one
-    # outward-facing web link from between Agenda and MyBuro to the very end, after MyTrips, so every
-    # tile that points at Cloud-Me sits together before the row's single browser destination. sep-0
-    # and sep-2 keep their names and did not move; sep-1 is the same separator tile MySocials used to
-    # trail, relocated with it so it still divides the web destination from the Cloud-Me deep links.
-    "Projects Me": ["agenda", "projects-me-sep-0", "myburo",
-                    "projects-me-sep-2", "myhealth", "mystudy", "mytrips",
-                    "projects-me-sep-1", "mysocials"],
+    # #1092: the row is "Me" (was "Projects Me"), placed right after Data Apps. The Me app leads, one rule,
+    # then MySocials, MyBuro, MyHealth, MyStudy, MyTrips as the owner ordered. Agenda left the row (it is
+    # reachable inside the Me app); the old rules projects-me-sep-0/1/2 went with the old layout.
+    "Me": ["me", "me-sep-1", "mysocials", "myburo", "myhealth", "mystudy", "mytrips"],
     # Four named boards and no rule — task 311 removed PM Boards, PM C3 and the
     # "|" between them. The rule had marked the board LIST off from the named
     # boards; with the list gone there are no longer two kinds of destination in
@@ -166,12 +162,9 @@ ROWS = {
 # those ids resolve against Cloud-Me's flattened page tree rather than against
 # a filename that happens to look similar.
 TARGETS = {
-    # Agenda is a deep link into Cloud-Me, not a paca URL: task 316 replaced the project-INDEX
-    # placeholder that stood in for the personal board task 182 has yet to create. It is pinned in
-    # the same table as the browser targets because T3 below resolves it against ac_cloud-me's page
-    # tree — agenda/agenda is a real section/page pair there, and this line is what fails if it stops
-    # being one.
-    "agenda":    "extapp:cloud-me#page:agenda/agenda",
+    # The Me app itself: launches Cloud-Me at its front door (no #page fragment). #1092 dropped the Agenda
+    # tile from this row, so its deep link is no longer pinned here.
+    "me":        "extapp:cloud-me",
     "mysocials": "https://diegonmarcos.github.io/mySocials/",
     # A board uuid, baked in at build time because paca's projects table has no
     # slug column and its router only declares /projects/$projectId — there is
@@ -234,11 +227,14 @@ for title, want_order in ROWS.items():
     runs.append(current)
 
     # THE rule the separators actually keep: each run is of ONE kind. Note this
-    # is deliberately weaker than "consecutive runs differ" — Projects Me's
+    # is deliberately weaker than "consecutive runs differ" — the old Projects Me row's
     # second rule divides Buro pages from Projects pages and BOTH are deep
     # links, so the stronger assertion would be false, and a tester that
     # asserts something false is deleted the first time it is inconvenient.
-    for run in runs:
+    # EXCEPTION, owner order #1092: the Me row is declared as `Me | MySocials MyBuro MyHealth MyStudy
+    # MyTrips`, so its second run mixes the web link with the Cloud-Me deep links by design. Only that
+    # row is exempt; every other row keeps the rule.
+    for run in ([] if title == "Me" else runs):
         kinds = {kind(t) for t in run}
         assert len(kinds) == 1, (
             f"{title}: one run mixes {sorted(kinds)} — a browser link and a "
@@ -270,6 +266,24 @@ for title, want_order in ROWS.items():
 placed = {t.get("id") for g in ROWS for t in groups[g]["tiles"]}
 for gone in ("myprojects", "myfin"):
     assert gone not in placed, f"{gone} is back in a project row — the owner removed it"
+PY
+
+echo "== T6 (#1092): Cloud ▸ Apps row order, Vault and Account in Tools Primary =="
+python3 - "$BJ" <<'PY' && ok "rows Inboxes, Tools Primary, Data Apps, Me, AGI, Projects W, Configs; Vault+Account in Tools Primary; Account kept in Configs" || bad "Cloud ▸ Apps row order or the Vault/Account placement drifted"
+import json, sys
+d = json.load(open(sys.argv[1]))
+cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
+titles = [g["title"] for g in cloud["tile_groups"]]
+want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Projects W", "Configs"]
+assert titles == want, (titles, "!=", want)
+g = {x["title"]: [t.get("label") for t in x["tiles"]] for x in cloud["tile_groups"]}
+assert g["Me"] == ["Me", "|", "MySocials", "MyBuro", "MyHealth", "MyStudy", "MyTrips"], g["Me"]
+assert g["Tools Primary"][-2:] == ["Vault", "Account"], g["Tools Primary"]
+assert "Vault" not in g["Data Apps"] and "Me" not in g["Tools Primary"], g
+assert "Account" in g["Configs"], "Account must stay in Configs (intentional duplicate)"
+ids = [t["id"] for x in cloud["tile_groups"] for t in x["tiles"] if t.get("id")]
+assert len(ids) == len(set(ids)), "tile ids must stay unique"
+assert "Me" in [t["label"] for t in cloud["tiles_shared"]], "the Home index label follows the row name"
 PY
 
 echo
