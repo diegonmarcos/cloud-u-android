@@ -59,7 +59,7 @@ class FleetHostGuardTest {
             val m = begin.find(xml)
             assertTrue("$path has no generated block: run 1_cicd/src/scripts/cloud-android-fleet-nsc.py write", m != null)
             val body = xml.substring(m!!.range.last + 1, xml.indexOf(end, m.range.last))
-            val have = Regex("<domain>([^<]+)</domain>").findAll(body).map { it.groupValues[1] }.toSortedSet()
+            val have = Regex("<domain[^>]*>([^<]+)</domain>").findAll(body).map { it.groupValues[1] }.toSortedSet()
             assertEquals("$path: the generated cleartext hosts differ from the declaration (run cloud-android-fleet-nsc.py write)", expected, have)
         }
         // no hand-listed mesh host and no public host in cleartext, in ANY app's config
