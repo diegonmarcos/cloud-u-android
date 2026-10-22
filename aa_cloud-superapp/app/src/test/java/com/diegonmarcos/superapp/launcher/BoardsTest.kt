@@ -168,7 +168,7 @@ class BoardsTest : KitPageHarness() {
         waitForText("needs an update")
     }
 
-    @Test fun `Navigation/Tracker lists the places per day`() {
+    @Test fun `Navigation and Tracker lists the places per day`() {
         val d = LocalDate.of(2026, 10, 16)
         use(Fake(places = Read.Ok(listOf(PlacesDay(d, listOf(
             PlaceVisit("08:00–08:30", "Calle Mayor, Madrid", 40.4168, -3.7038, false),
@@ -180,7 +180,7 @@ class BoardsTest : KitPageHarness() {
         compose.onNodeWithTag("places-map:$d").assertExists()
     }
 
-    @Test fun `Navigation/Tracker with no fixes is honest`() {
+    @Test fun `Navigation and Tracker with no fixes is honest`() {
         use(Fake(places = Read.Ok(listOf(PlacesDay(LocalDate.of(2026, 10, 16), emptyList(), 0)))))
         showKit { BoardPlacesBody(0) { opened += it } }
         waitForText("No places recorded")
