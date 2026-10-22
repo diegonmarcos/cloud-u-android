@@ -20,7 +20,7 @@ class TelemetryRouteTest {
         assertTrue(TelemetryRoute.urls("", "", "x").isEmpty())
     }
 
-    private fun tmp(): File = File.createTempFile("tq", "").let { it.delete(); it.mkdirs(); it }
+    private fun tmp(): File = File.createTempFile("telemetry-queue", "").let { it.delete(); it.mkdirs(); it }
 
     @Test fun aCrashThatCouldNotBeSentIsKeptAndGoesOutOnTheNextStart() {
         val dir = tmp()
