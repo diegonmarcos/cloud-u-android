@@ -1896,6 +1896,14 @@
         "aa_cloud-superapp"
       ]
     },
+    "unpack_after_install": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#1121 What the last explicit unpack of the Termux terminal / Nix-on-Droid said after Cloud Store installed it ('unpacking', 'unpacked', the error): one sentence per package, shown on the row. Never migrates.",
+      "used_by": [
+        "lib-appstore"
+      ]
+    },
     "wireguard_prefs": {
       "kind": "prefs",
       "class": "config",

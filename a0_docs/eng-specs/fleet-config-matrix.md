@@ -131,6 +131,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
 | `store_sources` | prefs | config | yes | Cloud Store > Configs > Sources: the ids of the declared feeds the owner switched off (never urls; the declaration stays the only list of feeds); the owner's choice, so it moves with the phone. |
+| `unpack_after_install` | prefs | device | no | #1121 What the last explicit unpack of the Termux terminal / Nix-on-Droid said after Cloud Store installed it ('unpacking', 'unpacked', the error): one sentence per package, shown on the row. Never migrates. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
@@ -236,6 +237,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
 | `store_sources` | prefs | config | yes | Cloud Store > Configs > Sources: the ids of the declared feeds the owner switched off (never urls; the declaration stays the only list of feeds); the owner's choice, so it moves with the phone. |
+| `unpack_after_install` | prefs | device | no | #1121 What the last explicit unpack of the Termux terminal / Nix-on-Droid said after Cloud Store installed it ('unpacking', 'unpacked', the error): one sentence per package, shown on the row. Never migrates. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
@@ -906,6 +908,7 @@ Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, li
 | `store_phone_view` | prefs | device | no | Store > Phone: how the app list is sorted (shelf, or size largest / smallest first); a view preference of this phone, not state a new phone needs. |
 | `store_play_anon` | prefs | device | no | Cloud Store's cached anonymous Google Play session from the declared dispenser (auth token, gsfId, device tokens, fetch time), reused for token_ttl_minutes. Bound to this device registration and short-lived: never migrated, a new phone asks the dispenser again. |
 | `store_sources` | prefs | config | yes | Cloud Store > Configs > Sources: the ids of the declared feeds the owner switched off (never urls; the declaration stays the only list of feeds); the owner's choice, so it moves with the phone. |
+| `unpack_after_install` | prefs | device | no | #1121 What the last explicit unpack of the Termux terminal / Nix-on-Droid said after Cloud Store installed it ('unpacking', 'unpacked', the error): one sentence per package, shown on the row. Never migrates. |
 | `update_checks` | prefs | device | no | #1078 Cloud Store: whether the one-time battery-optimization prompt has been shown on this phone; a prompt marker, never migrated (the new phone asks once itself). |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
