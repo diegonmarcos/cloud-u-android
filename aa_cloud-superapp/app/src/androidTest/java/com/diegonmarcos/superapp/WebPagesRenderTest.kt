@@ -112,7 +112,15 @@ class WebPagesRenderTest {
 
         openApp()
         val app = urlOf(w!!)
-        sh("input keyevent KEYCODE_BACK")
+        // Run 39799895691: SystemUI's wireless-debugging dialog came up the instant the key was sent and took the Back (logcat:
+        // Autofill onBackKeyPressed, no page change). Clear it first and press again while the page has not moved.
+        for (attempt in 1..4) {
+            clearPrompt()
+            sh("input keyevent KEYCODE_BACK")
+            val t0 = SystemClock.elapsedRealtime()
+            while (SystemClock.elapsedRealtime() - t0 < 4_000 && urlOf(w!!).split('#')[0] != main.split('#')[0]) SystemClock.sleep(500)
+            if (urlOf(w!!).split('#')[0] == main.split('#')[0]) break
+        }
         until("system Back returns to the WebApps main page") { urlOf(w!!).split('#')[0] == main.split('#')[0] }
         assertTrue("Back left the WebApps page instead of stepping back (url $app -> ${urlOf(w!!)})", web() != null)
 
