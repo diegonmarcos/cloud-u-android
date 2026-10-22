@@ -232,10 +232,7 @@
         "git",
         "curl",
         "jq"
-      ],
-    "quarantine": {
-      "test-launch-payload.sh": "#1091 transition only: this tester asserts against the APK that is PUBLISHED, and that APK still carries the native library under its old name; the first publish of version_code 168 replaces it. The entry expires itself: once the tester passes, the engine makes the leftover entry fatal and it must be deleted."
-    }
+      ]
   },
     "root_scope": {
       "_doc": "Read by test/test-root-scope-services.sh (#513). entrypoint is the file whose every render happens on the ROOT framework provider; module_roots are the trees walked to DERIVE which services are registered under a .scope(...) and are therefore unresolvable there. Paths live here, never in the tester.",
