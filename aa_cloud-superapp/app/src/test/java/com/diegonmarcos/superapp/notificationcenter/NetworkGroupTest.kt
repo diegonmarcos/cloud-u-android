@@ -12,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-/** The Mesh, Data and Battery badges: all declared, one shade group "Network", each with its own switches. */
+/** The Mesh, Data and Battery badges: all declared, one shade group "Resources", each with its own switches. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class NetworkGroupTest {
@@ -38,10 +38,10 @@ class NetworkGroupTest {
         assertEquals("Data", badge(DataBadgeService.BADGE_ID)!!.label)
     }
 
-    @Test fun `they share the shade group Network and nothing else is in it`() {
+    @Test fun `they share the shade group Resources and nothing else is in it`() {
         val g = NotifyGroups.groupOf(NetworkBadgeService.BADGE_ID)!!
         assertEquals("network", g.id)
-        assertEquals("Network", g.label)
+        assertEquals("Resources", g.label)
         assertEquals(g, NotifyGroups.groupOf(DataBadgeService.BADGE_ID))
         assertEquals(g, NotifyGroups.groupOf(BatteryBadgeService.BADGE_ID))
         assertEquals(listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID, BatteryBadgeService.BADGE_ID), g.members)

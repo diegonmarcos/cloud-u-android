@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.notificationcenter.BadgeCardData
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
 import com.diegonmarcos.superapp.notificationcenter.BadgeServices
+import com.diegonmarcos.superapp.notificationcenter.NotifyGroups
 import com.diegonmarcos.superapp.ui.Haptics
 
 /**
@@ -46,6 +47,8 @@ import com.diegonmarcos.superapp.ui.Haptics
 internal object BadgeCardTags {
     const val LIST = "badge-cards"
     fun card(id: String) = "badge-card:$id"
+    /** The subtitle of a section (a shade group id). */
+    fun section(groupId: String) = "badge-section:$groupId"
     fun progress(id: String) = "badge-card-progress:$id"
     /** One action button of a card (an icon button); [actionId] is the id the badge's own notification action carries. */
     fun action(id: String, actionId: String) = "badge-card-action:$id:$actionId"
@@ -54,16 +57,44 @@ internal object BadgeCardTags {
     fun subText(id: String) = "badge-card-subtext:$id"
 }
 
-/** The declared badges in display order: `card.rank` from build.json, ties in declaration order (the sort is stable). */
-internal fun orderedBadges(@Suppress("UNUSED_PARAMETER") ctx: android.content.Context): List<BadgeDeclaration.Badge> =
-    BadgeDeclaration.badges(BadgeServices.declared).sortedBy { it.card.rank }
+/** One section of the Notify page: a shade group (build.json `groups`) and its badges, in the group's member order. */
+internal data class BadgeSection(val id: String, val title: String, val badges: List<BadgeDeclaration.Badge>)
+
+/**
+ * The page's sections: the SAME groups the shade bundles badges into ([NotifyGroups.ordered], the owner's order, default =
+ * build.json order), each with its members in declared order. A badge in no group goes last under no title. One list
+ * decides both the shade grouping and the page, so they cannot disagree.
+ */
+internal fun badgeSections(ctx: android.content.Context): List<BadgeSection> {
+    val all = BadgeDeclaration.badges(BadgeServices.declared)
+    val byId = all.associateBy { it.id }
+    val seen = mutableSetOf<String>()
+    val out = mutableListOf<BadgeSection>()
+    for (g in NotifyGroups.ordered(ctx)) {
+        val m = g.members.mapNotNull { byId[it] }.filter { seen.add(it.id) }
+        if (m.isNotEmpty()) out += BadgeSection(g.id, g.label, m)
+    }
+    val rest = all.filter { it.id !in seen }
+    if (rest.isNotEmpty()) out += BadgeSection("", "", rest)
+    return out
+}
+
+/** The declared badges in display order: section by section. */
+internal fun orderedBadges(ctx: android.content.Context): List<BadgeDeclaration.Badge> =
+    badgeSections(ctx).flatMap { it.badges }
 
 @Composable
 internal fun BadgeCards() {
     val ctx = LocalContext.current
-    val cards = remember { orderedBadges(ctx).map { BadgeCardData.read(ctx, it) } }
+    val sections = remember { badgeSections(ctx).map { s -> s to s.badges.map { BadgeCardData.read(ctx, it) } } }
     Column(Modifier.fillMaxWidth().testTag(BadgeCardTags.LIST), verticalArrangement = Arrangement.spacedBy(NotifCard.gap)) {
-        for (d in cards) androidx.compose.runtime.key(d.badge.id) { BadgeCard(d) }
+        for ((s, cards) in sections) androidx.compose.runtime.key(s.id) {
+            // A plain subtitle, not a control: sections do not collapse.
+            if (s.title.isNotBlank()) Text(s.title, color = NotifCard.meta, fontSize = NotifCard.nameSp, fontWeight = FontWeight.Medium,
+                fontFamily = NotifCard.font, maxLines = 1,
+                modifier = Modifier.padding(start = 4.dp, top = 6.dp).testTag(BadgeCardTags.section(s.id)))
+            for (d in cards) androidx.compose.runtime.key(d.badge.id) { BadgeCard(d) }
+        }
         Box(Modifier.height(NotifCard.gap))
     }
 }
