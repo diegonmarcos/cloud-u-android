@@ -208,6 +208,8 @@ object FleetGit {
         val base = config?.optString("repos_url").orEmpty()
         if (base.isBlank()) return Outcome.Unreachable("no fleet repos_url is declared")
         if (session.isBlank()) return Outcome.Unreachable("no fleet session on this phone")
+        // #1106 never a socket on the UI thread (the phone resolves `*.app` on the public internet).
+        if (com.diegonmarcos.clouddrive.startup.StartupGuard.onMainThread()) return Outcome.Unreachable("not asked from the main thread")
         val field = config?.optString("repos_field").orEmpty().ifBlank { "repos" }
         val limit = pageLimit(base)
         val maxPages = config?.optInt("max_pages", 20)?.coerceAtLeast(1) ?: 20

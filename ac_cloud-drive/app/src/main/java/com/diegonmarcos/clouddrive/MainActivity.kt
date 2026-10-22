@@ -44,6 +44,7 @@ import com.diegonmarcos.clouddrive.home.HomeScreen
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
 import com.diegonmarcos.clouddrive.sync.SyncScreen
+import com.diegonmarcos.clouddrive.startup.StartupGuard
 import com.diegonmarcos.clouddrive.ui.DriveShell
 import com.diegonmarcos.clouddrive.ui.DriveTheme
 import com.diegonmarcos.clouddrive.ui.EmptyState
@@ -78,14 +79,49 @@ class MainActivity : ComponentActivity(), DriveActions {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        FleetChrome.apply(this)
+        // #1106 CRASH-SAFE STARTUP: nothing below may take the app down. "Retry in safe mode" (the
+        // report screen) skips the optional initialisers; a report nobody has seen yet is shown
+        // before anything else runs.
+        StartupGuard.safeMode = intent?.getBooleanExtra(StartupGuard.EXTRA_SAFE_MODE, false) == true
+        if (!StartupGuard.safeMode && StartupGuard.unseen(StartupGuard.dir(this)).isNotEmpty()) {
+            StartupGuard.launchReport(this, clearTask = true)
+            finish()
+            return
+        }
+        try {
+            startup()
+        } catch (t: Throwable) {
+            StartupGuard.record(StartupGuard.dir(this), "MainActivity.onCreate", t, "uid ${android.os.Process.myUid()}")
+            StartupGuard.launchReport(this, clearTask = true)
+            finish()
+            return
+        }
+        // #603 the shared store's first-run seed (build.json::storage.seed): the declared PUBLIC
+        // repositories, cloned shallow into the store the first time it does not hold them.
+        // (StoreSeedWorker.schedule guards itself and no-ops in safe mode.)
+        StoreSeedWorker.schedule(this)
+        // A phase failed but the app is up: show the trace over it (Close returns to the app).
+        if (StartupGuard.failureCount() > 0) StartupGuard.launchReport(this, clearTask = false)
+    }
+
+    /** Every initialiser, each behind [guarded]: one failing phase is recorded and the rest still run. */
+    private fun startup() {
+        guarded("FleetChrome") {
+            FleetChrome.apply(this)
+        }
         // cloud-shared-store: saved sync/clone paths move off the old location, once (idempotent).
-        runCatching { JobPathMigration.run(this) }
-        DataMigration.onLaunch(this)
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            // Dark page top and bottom (Theme.CloudDrive, #336/#337) → light system-bar glyphs.
-            isAppearanceLightStatusBars = false
-            isAppearanceLightNavigationBars = false
+        guarded("JobPathMigration", optional = true) {
+            JobPathMigration.run(this)
+        }
+        guarded("DataMigration", optional = true) {
+            DataMigration.onLaunch(this)
+        }
+        guarded("system bars") {
+            WindowCompat.getInsetsController(window, window.decorView).apply {
+                // Dark page top and bottom (Theme.CloudDrive, #336/#337) → light system-bar glyphs.
+                isAppearanceLightStatusBars = false
+                isAppearanceLightNavigationBars = false
+            }
         }
         prefs = DrivePrefs(this)
         // #603 the Files tab is a manager over ALL of shared storage, so all-files access is
@@ -94,17 +130,28 @@ class MainActivity : ComponentActivity(), DriveActions {
         // by Environment.isExternalStorageManager), through this app's own helper so nothing is
         // duplicated. A grant already held asks nothing; below Android 11 there is no such screen.
         hadStorageAccess = Places.hasAllFilesAccess(this)
-        if (!hadStorageAccess) requestStorageAccess()
-        EngineActivity.declareFromBuild(this)
+        guarded("storage access") {
+            if (!hadStorageAccess) requestStorageAccess()
+        }
+        guarded("engines") {
+            EngineActivity.declareFromBuild(this)
+        }
         setContent { DriveTheme { Root(); DataMigration.Dialog() } }
-        Updater.start(this)
+        guarded("Updater", optional = true) {
+            Updater.start(this)
+        }
         // #575 the GitSync scheduler: repositories that opted in sync in the background.
-        GitSyncWorker.schedule(this)
+        guarded("GitSyncWorker", optional = true) {
+            GitSyncWorker.schedule(this)
+        }
         // #1084 the Unison pairs that declare a schedule tick on the same WorkManager.
-        UnisonSyncWorker.schedule(this)
-        // #603 the shared store's first-run seed (build.json::storage.seed): the declared PUBLIC
-        // repositories, cloned shallow into the store the first time it does not hold them.
-        StoreSeedWorker.schedule(this)
+        guarded("UnisonSyncWorker", optional = true) {
+            UnisonSyncWorker.schedule(this)
+        }
+    }
+
+    private fun guarded(phase: String, optional: Boolean = false, block: () -> Unit) {
+        StartupGuard.step(this, phase, optional, block)
     }
 
     /**
@@ -147,7 +194,8 @@ class MainActivity : ComponentActivity(), DriveActions {
         // #603/#609 a screen may ask for another tab (an Apps tile's route, a Home quick action):
         // the request is a tab id and, optionally, a Sync or Configs sub-page id, applied once
         // by the shell and by SyncScreen/ConfigsScreen and then cleared.
-        var jumpTab by remember { mutableStateOf<String?>(null) }
+        // #1106 safe mode opens the file list.
+        var jumpTab by remember { mutableStateOf<String?>(if (StartupGuard.safeMode) Declarations.SECTION_EXPLORER else null) }
         var jumpPage by remember { mutableStateOf<String?>(null) }
         val jump: (String, String) -> Unit = { tab, page -> jumpPage = page.ifBlank { null }; jumpTab = tab }
         val openPath: (String) -> Unit = { path -> filesController?.reveal(path); jumpPage = Declarations.PAGE_LOCAL; jumpTab = Declarations.SECTION_EXPLORER }

@@ -103,9 +103,13 @@ object Places {
         return null
     }
 
-    fun hasAllFilesAccess(ctx: Context): Boolean =
+    fun hasAllFilesAccess(ctx: Context): Boolean = try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Environment.isExternalStorageManager()
         else ctx.checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    } catch (_: Throwable) {
+        // #1106 a vendor storage service that throws is "no grant", never a startup crash.
+        false
+    }
 
     /** The two panes' first locations: the store, and shared storage. */
     fun initialLocations(): Pair<Location.Local, Location.Local> =

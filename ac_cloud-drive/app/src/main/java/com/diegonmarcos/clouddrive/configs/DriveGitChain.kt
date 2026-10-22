@@ -118,6 +118,8 @@ object DriveGitChain {
         // the NEXT STEP, not just the lack: a failure that offers nothing is the
         // dead end the owner spent three days in.
         if (session.isBlank()) return GitAuthChain.Answer.Unreachable("no fleet sign-in on this phone yet — the Authelia sign-in below starts one")
+        // #1106 never a socket on the UI thread: on the owner's phone `*.app` resolves on the public internet.
+        if (com.diegonmarcos.clouddrive.startup.StartupGuard.onMainThread()) return GitAuthChain.Answer.Unreachable("not asked from the main thread")
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
             connection.instanceFollowRedirects = false

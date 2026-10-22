@@ -235,7 +235,12 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
          * identical one would restart a download the user is already waiting on. A pass that
          * ended incomplete is still in RETRY state, so KEEP resumes it rather than dropping it.
          */
-        fun schedule(context: Context) = enqueue(context, ExistingWorkPolicy.KEEP)
+        fun schedule(context: Context) {
+            // #1106 safe mode skips the network work; a throw here must not end MainActivity.onCreate.
+            if (com.diegonmarcos.clouddrive.startup.StartupGuard.safeMode) return
+            runCatching { enqueue(context, ExistingWorkPolicy.KEEP) }
+                .onFailure { com.diegonmarcos.clouddrive.startup.StartupGuard.record(com.diegonmarcos.clouddrive.startup.StartupGuard.dir(context), "StoreSeedWorker.schedule", it, "") }
+        }
 
         /**
          * #730 the all-files grant just arrived: REPLACE the queued pass, because a pass that

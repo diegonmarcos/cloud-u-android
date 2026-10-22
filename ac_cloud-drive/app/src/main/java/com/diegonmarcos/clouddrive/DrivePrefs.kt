@@ -30,14 +30,20 @@ class DrivePrefs(context: Context) {
     private val _snapshot = MutableStateFlow(read())
     val snapshot: StateFlow<Snapshot> get() = _snapshot
 
+    /**
+     * #1106 an older build may have stored a key under another TYPE (a Boolean where this one reads a
+     * String): SharedPreferences then throws ClassCastException on the read. That is "no value", not a crash.
+     */
+    private inline fun <T> safe(default: T, block: () -> T): T = try { block() } catch (_: ClassCastException) { default }
+
     private fun read(): Snapshot = Snapshot(
-        defaultSort = prefs.getString(KEY_SORT, null) ?: Declarations.files.defaultSort,
-        showHidden = prefs.getBoolean(KEY_HIDDEN, false),
-        dualPane = prefs.getBoolean(KEY_DUAL, Declarations.files.defaultDualPane),
-        thumbnails = prefs.getBoolean(KEY_THUMBS, true),
-        bookmarks = (prefs.getString(KEY_BOOKMARKS, "") ?: "").split('\n').filter { it.isNotBlank() },
-        treeGrantUri = grants.getString(KEY_TREE_GRANT_URI, null),
-        treeGrantName = grants.getString(KEY_TREE_GRANT_NAME, null),
+        defaultSort = safe(null) { prefs.getString(KEY_SORT, null) } ?: Declarations.files.defaultSort,
+        showHidden = safe(false) { prefs.getBoolean(KEY_HIDDEN, false) },
+        dualPane = safe(Declarations.files.defaultDualPane) { prefs.getBoolean(KEY_DUAL, Declarations.files.defaultDualPane) },
+        thumbnails = safe(true) { prefs.getBoolean(KEY_THUMBS, true) },
+        bookmarks = (safe("") { prefs.getString(KEY_BOOKMARKS, "") } ?: "").split('\n').filter { it.isNotBlank() },
+        treeGrantUri = safe(null) { grants.getString(KEY_TREE_GRANT_URI, null) },
+        treeGrantName = safe(null) { grants.getString(KEY_TREE_GRANT_NAME, null) },
     )
 
     private fun edit(block: SharedPreferences.Editor.() -> Unit) { prefs.edit().apply(block).apply(); _snapshot.value = read() }

@@ -186,6 +186,8 @@ object GitHubRepos {
     }
 
     private fun get(url: String, token: String): Result<String> {
+        // #1106 never a socket on the UI thread.
+        if (com.diegonmarcos.clouddrive.startup.StartupGuard.onMainThread()) return Result.failure(IllegalStateException("not asked from the main thread"))
         var conn: HttpURLConnection? = null
         return try {
             conn = (URL(url).openConnection() as HttpURLConnection).apply {
