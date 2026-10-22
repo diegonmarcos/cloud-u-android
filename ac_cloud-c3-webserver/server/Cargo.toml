@@ -8,6 +8,8 @@ description = "The phone's local web servers: the emulated drive on :8002 is the
 # THE web server of the fleet, with the verbatim Linux frontend bundled at its build time. :8002 is this crate's
 # `start`, rooted at /storage/emulated/0; no page, route or script of it is written here.
 fleet-webserver = { path = "../../ab_cloud-libs-shared/libs/fleet-webserver" }
+# std does everything here except statvfs (free space on the served root, Home > Storage).
+libc = "0.2"
 # build.json::serving is compiled in and parsed here; the same crate the Tauri build script already uses.
 serde_json = "1"
 
