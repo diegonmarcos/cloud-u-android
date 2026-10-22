@@ -203,8 +203,8 @@ class EndpointRoutingTest {
     }
 
     @Test fun `a request the mesh may have received is not sent again on public`() {
-        mesh.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AFTER_REQUEST))
-        try { get(); fail("a dropped answer is a failure of this request") } catch (e: IOException) { /* expected */ }
+        mesh.enqueue(MockResponse().setSocketPolicy(SocketPolicy.NO_RESPONSE))
+        try { get(); fail("an unanswered request is a failure of this request, not a reason to send it again") } catch (e: IOException) { /* expected */ }
         assertEquals("no second delivery of a request that reached the server", 0, pub.requestCount)
         pub.enqueue(MockResponse().setBody("{}")); assertEquals("but the next one knows the mesh is unreliable", 200, get())
     }
