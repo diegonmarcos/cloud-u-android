@@ -35,7 +35,7 @@ android {
         // The phone's local crash sink: the C3 WebServer's loopback port, read from its own declaration
         // (ac_cloud-c3-webserver/build.json::runtime.port, the number emulated.app stands for). 0 = not found at
         // build time, and the local leg is skipped rather than guessed.
-        def c3ws = [new File(projectDir, '../../../ac_cloud-c3-webserver/build.json'), new File(rootDir, '../ac_cloud-c3-webserver/build.json'),
+        def c3ws = [new File(projectDir.canonicalFile, '../../../ac_cloud-c3-webserver/build.json'), new File(projectDir, '../../../ac_cloud-c3-webserver/build.json'), new File(rootDir, '../ac_cloud-c3-webserver/build.json'),
                     new File(rootDir, 'ac_cloud-c3-webserver/build.json')].find { it.exists() }
         buildConfigField "int", "CRASH_SINK_PORT", "${c3ws ? (new groovy.json.JsonSlurper().parse(c3ws).runtime?.port ?: 0) : 0}"
     }
