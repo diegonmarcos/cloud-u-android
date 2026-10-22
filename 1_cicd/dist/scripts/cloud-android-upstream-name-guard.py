@@ -1,3 +1,4 @@
+# ─── GENERATED: do not edit — edit 1_cicd/src/scripts/cloud-android-upstream-name-guard.py ───
 #!/usr/bin/env python3
 """
 cloud-android-upstream-name-guard — #1091: Cloud Notes is our own app, so the

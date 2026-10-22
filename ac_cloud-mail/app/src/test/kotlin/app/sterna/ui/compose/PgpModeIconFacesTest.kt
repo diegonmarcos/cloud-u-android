@@ -91,7 +91,7 @@ class PgpModeIconFacesTest {
 
     // ── the rasteriser ───────────────────────────────────────────────────────────────────────
 
-    /** An affine map, `[a c e; b d f]`, from icon viewport units to raster pixels. */
+    /** A 2D transform, `[a c e; b d f]`, from icon viewport units to raster pixels. */
     private class Xf(
         val a: Float, val b: Float, val c: Float, val d: Float, val e: Float, val f: Float,
     ) {
