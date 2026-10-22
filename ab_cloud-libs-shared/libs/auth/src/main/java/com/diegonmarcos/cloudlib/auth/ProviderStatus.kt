@@ -77,6 +77,12 @@ object ProviderStatus {
     /** One blocking GET of a declared `probe_url`; never on the main thread. A blank URL is "not reachable". */
     fun probe(url: String, timeoutMs: Int = 4000): Probe {
         if (!url.startsWith("https://")) return Probe(false)
+        // #1093 a declared fleet host rides the app's transport (mesh first, then public); anything else is plain.
+        val routed = runCatching {
+            AuthHttp.transport?.exchange("GET", url, mapOf("Accept" to "application/json", "User-Agent" to "Cloud-Account-ProviderStatus/1"), null, timeoutMs, timeoutMs)
+        }
+        if (routed.isFailure) return Probe(false)
+        routed.getOrNull()?.let { return parseProbe(it.code, it.body.take(4096)) }
         var c: HttpURLConnection? = null
         return try {
             c = (URL(url).openConnection() as HttpURLConnection).apply {

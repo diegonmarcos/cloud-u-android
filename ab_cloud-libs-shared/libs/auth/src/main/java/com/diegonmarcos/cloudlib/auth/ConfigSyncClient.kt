@@ -154,29 +154,37 @@ object ConfigSyncClient {
         val body: String
         val location: String
         try {
-            conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = method
-                connectTimeout = connectTimeoutMs
-                readTimeout = readTimeoutMs
-                // NEVER follow redirects. The Authelia forward-auth gate answers
-                // an unauthenticated request with `302 → auth.diegonmarcos.com/?rd=…`.
-                // Following that fetches an HTML LOGIN PAGE with status 200, which
-                // would surface as "malformed JSON" — or worse, look like success.
-                // The redirect itself is the diagnosis, so we keep it.
-                instanceFollowRedirects = false
-                setRequestProperty("Accept", accept)
-                setRequestProperty("User-Agent", "Cloud-SuperApp-ConfigSync/1")
-                headers.forEach { (k, v) -> setRequestProperty(k, v) }
-                if (jsonBody != null) {
-                    doOutput = true
-                    setRequestProperty("Content-Type", "application/json")
-                    outputStream.use { it.write(jsonBody.toByteArray()) }
+            val routed = AuthHttp.transport?.exchange(
+                method, url,
+                mapOf("Accept" to accept, "User-Agent" to "Cloud-SuperApp-ConfigSync/1") + headers,
+                jsonBody, connectTimeoutMs, readTimeoutMs)
+            if (routed != null) {
+                code = routed.code; location = routed.location; body = routed.body
+            } else {
+                conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = method
+                    connectTimeout = connectTimeoutMs
+                    readTimeout = readTimeoutMs
+                    // NEVER follow redirects. The Authelia forward-auth gate answers
+                    // an unauthenticated request with `302 → auth.diegonmarcos.com/?rd=…`.
+                    // Following that fetches an HTML LOGIN PAGE with status 200, which
+                    // would surface as "malformed JSON" — or worse, look like success.
+                    // The redirect itself is the diagnosis, so we keep it.
+                    instanceFollowRedirects = false
+                    setRequestProperty("Accept", accept)
+                    setRequestProperty("User-Agent", "Cloud-SuperApp-ConfigSync/1")
+                    headers.forEach { (k, v) -> setRequestProperty(k, v) }
+                    if (jsonBody != null) {
+                        doOutput = true
+                        setRequestProperty("Content-Type", "application/json")
+                        outputStream.use { it.write(jsonBody.toByteArray()) }
+                    }
                 }
+                code = conn.responseCode
+                location = conn.getHeaderField("Location").orEmpty()
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             }
-            code = conn.responseCode
-            location = conn.getHeaderField("Location").orEmpty()
-            val stream = if (code in 200..299) conn.inputStream else conn.errorStream
-            body = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
         } catch (t: Throwable) {
             // UnknownHostException / SocketTimeoutException / SSLException /
             // ConnectException all land here — the request never completed.

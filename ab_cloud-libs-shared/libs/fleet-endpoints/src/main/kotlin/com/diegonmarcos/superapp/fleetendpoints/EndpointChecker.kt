@@ -35,10 +35,10 @@ class EndpointChecker(
         return probe.reachable(u.host, u.port, probeTimeoutMs)
     }
 
-    /** The HTTP status the public origin [publicUrl] answers [path] with, or null when it was not reached. */
+    /** The HTTP status the public endpoint [publicUrl] (its base path, if any, then [path]) answers with, or null when it was not reached. */
     fun publicStatus(publicUrl: String, path: String): Int? {
         val base = publicUrl.toHttpUrlOrNull() ?: return null
-        val url = base.newBuilder().encodedPath("/" + path.trimStart('/')).build()
+        val url = base.newBuilder().encodedPath(base.encodedPath.trimEnd('/') + "/" + path.trimStart('/')).build()
         return try {
             publicClient.newCall(Request.Builder().url(url).get().build()).execute().use { it.code }
         } catch (_: IOException) {

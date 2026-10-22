@@ -16,6 +16,7 @@ import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.net.UnknownServiceException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import javax.net.ssl.SSLHandshakeException
 
 /** The one request header the fleet bearer travels in (the edge gate reads it); `Authorization` stays the caller's own login. */
@@ -84,7 +85,15 @@ class EndpointRouter(
     /** The public URL carries the bearer, so production only accepts https there; a JVM test uses a plain MockWebServer. */
     private val requireHttpsPublic: Boolean = true,
 ) {
-    private class Entry(val mesh: HttpUrl, val public: HttpUrl, @Volatile var policy: EndpointPolicy) {
+    /**
+     * One endpoint pair. [mesh] and [public] are origins, optionally with a base path: the public one may be a PATH under
+     * a shared host (`https://api.example.org/pub`) that the mesh service serves from its root (`http://svc.app:8087`).
+     * [only] narrows the pair to those paths (relative to the base): the rest of the host is not this service's.
+     */
+    private class Entry(val mesh: HttpUrl, val public: HttpUrl, @Volatile var policy: EndpointPolicy, val only: List<String>) {
+        val pubPath = prefix(public)
+        val meshPath = prefix(mesh)
+        val key = public.host + pubPath
         @Volatile var meshUp: Boolean? = null
         @Volatile var epoch: Int = -1
         @Volatile var checkedAt: Long = 0L
@@ -95,60 +104,69 @@ class EndpointRouter(
     /** Opaque handle of a registered endpoint, handed to the interceptor and back. */
     class Handle internal constructor(internal val entry: Any)
 
-    private val byPublicHost = ConcurrentHashMap<String, Entry>()
-    private val byMeshHost = ConcurrentHashMap<String, Entry>()
+    private val entries = CopyOnWriteArrayList<Entry>()
     @Volatile private var epoch = 0
     private val _status = MutableStateFlow<Map<String, RouteStatus>>(emptyMap())
 
-    /** Per public host. Collect it to redraw an account row when the route changes. */
+    /** Per endpoint key (the public host, plus its base path when it has one). Collect it to redraw a row when the route changes. */
     val status: StateFlow<Map<String, RouteStatus>> = _status.asStateFlow()
 
-    /** Registers (or replaces) the endpoint pair of [publicUrl]'s host. False, and nothing registered, when a URL is unusable. */
-    fun set(publicUrl: String, meshUrl: String, policy: EndpointPolicy): Boolean {
+    /**
+     * Registers (or replaces) the endpoint pair of [publicUrl]. [only] (paths relative to the base, matched on segment
+     * boundaries) narrows the pair to the part of the host this service serves; empty means all of it. False, and nothing
+     * registered, when a URL is unusable.
+     */
+    fun set(publicUrl: String, meshUrl: String, policy: EndpointPolicy, only: List<String> = emptyList()): Boolean {
         val pub = origin(publicUrl) ?: return false
         val mesh = origin(meshUrl) ?: return false
         if (requireHttpsPublic && !pub.isHttps) return false
         if (pub.host == mesh.host) return false // the same host would rewrite onto itself: not two endpoints
-        val old = byPublicHost[pub.host]
-        if (old != null && old.public == pub && old.mesh == mesh) {
+        val narrowed = only.map { it.trim().let { p -> if (p.startsWith("/")) p.trimEnd('/') else "/" + p.trimEnd('/') } }.filter { it.isNotEmpty() }
+        val key = pub.host + prefix(pub)
+        val old = entries.firstOrNull { it.key == key }
+        if (old != null && old.public == pub && old.mesh == mesh && old.only == narrowed) {
             old.policy = policy
         } else {
-            old?.let { byMeshHost.remove(it.mesh.host) }
-            val e = Entry(mesh, pub, policy)
-            byPublicHost[pub.host] = e
-            byMeshHost[mesh.host] = e
+            old?.let { entries.remove(it) }
+            entries.add(Entry(mesh, pub, policy, narrowed))
         }
         publish()
         return true
     }
 
-    fun setPolicy(publicHost: String, policy: EndpointPolicy) {
-        byPublicHost[publicHost.lowercase()]?.policy = policy
+    fun setPolicy(key: String, policy: EndpointPolicy) {
+        entries.firstOrNull { it.key == key.lowercase() }?.policy = policy
         publish()
     }
 
-    fun remove(publicHost: String) {
-        byPublicHost.remove(publicHost.lowercase())?.let { byMeshHost.remove(it.mesh.host) }
+    fun remove(key: String) {
+        entries.removeAll { it.key == key.lowercase() }
         publish()
     }
 
-    fun clear() { byPublicHost.clear(); byMeshHost.clear(); publish() }
+    fun clear() { entries.clear(); publish() }
 
-    fun isRegistered(publicHost: String): Boolean = byPublicHost.containsKey(publicHost.lowercase())
-    fun policyOf(publicHost: String): EndpointPolicy? = byPublicHost[publicHost.lowercase()]?.policy
+    /** [key] is the public host, plus its base path for a pair that lives under one. */
+    fun isRegistered(key: String): Boolean = entries.any { it.key == key.lowercase() }
+    fun policyOf(key: String): EndpointPolicy? = entries.firstOrNull { it.key == key.lowercase() }?.policy
+
+    /** True when a request to [url] is one of a registered pair's (its public or its mesh form): it will be routed. */
+    fun routes(url: HttpUrl): Boolean = entryFor(url) != null
 
     /** True for the mesh host of a registered endpoint: the bearer must never be sent there. */
-    fun isMeshHost(host: String): Boolean = byMeshHost.containsKey(host.lowercase())
+    fun isMeshHost(host: String): Boolean = entries.any { it.mesh.host == host.lowercase() }
 
-    /** True for the exact public origin (https, host, port) of a registered endpoint. */
-    fun isPublicOrigin(url: HttpUrl): Boolean = byPublicHost[url.host]?.let { it.public.host == url.host && it.public.port == url.port && it.public.scheme == url.scheme } == true
+    /** True for the exact public origin (https, host, port) of a registered endpoint, on a path that is the service's. */
+    fun isPublicOrigin(url: HttpUrl): Boolean = entries.any {
+        it.public.host == url.host && it.public.port == url.port && it.public.scheme == url.scheme && covers(it, url.encodedPath, it.pubPath)
+    }
 
     /** The network changed (Wi-Fi, mobile, VPN up or down): the cached mesh verdicts are stale, probe again on next use. */
     fun onNetworkChanged() { epoch++ }
 
-    /** The routes to try for a request to [host], in order, or null when [host] is not a fleet endpoint. */
-    fun plan(host: String): Pair<Handle, List<EndpointRoute>>? {
-        val e = entryFor(host) ?: return null
+    /** The routes to try for a request to [url], in order, or null when [url] is not a fleet endpoint. */
+    fun plan(url: HttpUrl): Pair<Handle, List<EndpointRoute>>? {
+        val e = entryFor(url) ?: return null
         val routes = when (e.policy) {
             EndpointPolicy.PUBLIC_ONLY -> listOf(EndpointRoute.PUBLIC)
             EndpointPolicy.MESH_ONLY -> listOf(EndpointRoute.MESH)
@@ -157,11 +175,14 @@ class EndpointRouter(
         return Handle(e) to routes
     }
 
-    /** [url] moved onto [route]'s origin; path, query and fragment stay. */
+    /** [url] moved onto [route]'s origin and base path; the rest of the path, the query and the fragment stay. */
     fun rebase(h: Handle, route: EndpointRoute, url: HttpUrl): HttpUrl {
         val e = h.entry as Entry
         val base = if (route == EndpointRoute.MESH) e.mesh else e.public
-        return url.newBuilder().scheme(base.scheme).host(base.host).port(base.port).build()
+        val toPath = if (route == EndpointRoute.MESH) e.meshPath else e.pubPath
+        val fromPath = if (url.host == e.public.host) e.pubPath else e.meshPath
+        val path = toPath + url.encodedPath.removePrefix(fromPath)
+        return url.newBuilder().scheme(base.scheme).host(base.host).port(base.port).encodedPath(path.ifEmpty { "/" }).build()
     }
 
     internal fun succeeded(h: Handle, route: EndpointRoute) {
@@ -179,7 +200,19 @@ class EndpointRouter(
         publish()
     }
 
-    private fun entryFor(host: String): Entry? = byPublicHost[host.lowercase()] ?: byMeshHost[host.lowercase()]
+    private fun entryFor(url: HttpUrl): Entry? {
+        val h = url.host; val p = url.encodedPath
+        return entries.filter { it.public.host == h && covers(it, p, it.pubPath) }.maxByOrNull { it.pubPath.length }
+            ?: entries.filter { it.mesh.host == h && covers(it, p, it.meshPath) }.maxByOrNull { it.meshPath.length }
+    }
+
+    /** [path] is under [base] (on a segment boundary) and, when the pair is narrowed, under one of its allowed paths. */
+    private fun covers(e: Entry, path: String, base: String): Boolean {
+        if (!under(path, base)) return false
+        if (e.only.isEmpty()) return true
+        val rel = path.removePrefix(base).ifEmpty { "/" }
+        return e.only.any { under(rel, it) }
+    }
 
     private fun meshAnswers(e: Entry): Boolean = synchronized(e) {
         val fresh = e.meshUp != null && e.epoch == epoch && clock() - e.checkedAt < recheckAfterMs
@@ -191,16 +224,21 @@ class EndpointRouter(
     }
 
     private fun publish() {
-        _status.value = byPublicHost.mapValues { (_, e) -> RouteStatus(e.last, e.meshUp, e.failed) }
+        _status.value = entries.associate { e -> e.key to RouteStatus(e.last, e.meshUp, e.failed) }
     }
 
     private fun origin(url: String): HttpUrl? {
         val u = url.trim().toHttpUrlOrNull() ?: return null
-        if (u.encodedPath != "/" || u.query != null || u.fragment != null || u.username.isNotEmpty()) return null
+        if (u.query != null || u.fragment != null || u.username.isNotEmpty()) return null
         return u
     }
 
     companion object {
+        /** The base path of an origin: "" for the root, else `/a/b` without a trailing slash. */
+        private fun prefix(u: HttpUrl): String = u.encodedPath.trimEnd('/')
+
+        private fun under(path: String, base: String): Boolean = base.isEmpty() || path == base || path.startsWith("$base/")
+
         /** A failure on which the server cannot have seen the request, so sending it again on the other route is safe. */
         fun neverReached(e: Throwable): Boolean {
             var t: Throwable? = e
@@ -254,7 +292,7 @@ object FleetTransport {
 class EndpointRouteInterceptor(private val router: EndpointRouter) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val req = chain.request()
-        val (handle, routes) = router.plan(req.url.host) ?: return chain.proceed(req)
+        val (handle, routes) = router.plan(req.url) ?: return chain.proceed(req)
         var error: IOException? = null
         for ((i, route) in routes.withIndex()) {
             val last = i == routes.lastIndex

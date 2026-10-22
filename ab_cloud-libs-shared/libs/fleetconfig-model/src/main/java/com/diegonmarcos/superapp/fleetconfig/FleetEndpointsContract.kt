@@ -44,12 +44,18 @@ object FleetEndpointsContract {
         val meshScheme: String, val meshDns: String, val meshPort: Int,
         val publicScheme: String, val publicDomain: String,
         val policy: String, val health: String,
+        /** Base path of the public endpoint under a shared host (`/pub`), "" for the host's root. */
+        val publicPath: String = "",
+        /** Base path of the mesh endpoint, "" when the service serves from its root (the edge strips [publicPath]). */
+        val meshPath: String = "",
+        /** Paths (relative to the base) this service serves; empty = all of them. The rest of a shared host is not its. */
+        val routePaths: List<String> = emptyList(),
     ) {
         val hasPublic: Boolean get() = publicDomain.isNotEmpty()
         /** `https://stalwart.app:2443`: an origin, never a path. */
-        fun meshUrl(): String = "$meshScheme://$meshDns" + if (meshPort > 0 && meshPort != defaultPort(meshScheme)) ":$meshPort" else ""
-        /** `https://jmap.example.org`, or "" for a mesh-only service. */
-        fun publicUrl(): String = if (hasPublic) "$publicScheme://$publicDomain" else ""
+        fun meshUrl(): String = "$meshScheme://$meshDns" + (if (meshPort > 0 && meshPort != defaultPort(meshScheme)) ":$meshPort" else "") + meshPath
+        /** `https://jmap.example.org` (plus the base path, if any), or "" for a mesh-only service. */
+        fun publicUrl(): String = if (hasPublic) "$publicScheme://$publicDomain$publicPath" else ""
     }
 
     private fun defaultPort(scheme: String) = if (scheme == "http") 80 else 443
@@ -58,7 +64,9 @@ object FleetEndpointsContract {
      * The declaration (`{"services":[{id, kind, mesh_dns, mesh_port, mesh_scheme, public_domain, public_scheme, policy,
      * health}]}`). A service that breaks a rule is dropped, not guessed at: the mesh name must be a `.app` name (mesh
      * naming rule), a public URL must be https (the bearer travels on it) and a bare host, the policy one of
-     * [POLICIES], and a service with no public URL can only be mesh-only.
+     * [POLICIES], and a service with no public URL can only be mesh-only. A service that lives under a PATH of a shared
+     * host declares `public_path` (and `mesh_path` when its mesh side differs, usually ""), and `route_paths` when only
+     * part of that path is its to route (the rest answers only behind the edge gate, which a direct mesh call skips).
      */
     fun parseDecl(text: String): List<Service> {
         val arr = runCatching { JSONObject(text).optJSONArray("services") }.getOrNull() ?: return emptyList()
@@ -73,10 +81,16 @@ object FleetEndpointsContract {
             val health = o.optString("health", "/").ifBlank { "/" }
             if (id.isEmpty() || !dns.endsWith(".app") || '/' in domain || ':' in domain || ' ' in domain) return@mapNotNull null
             if (meshScheme !in setOf("http", "https") || policy !in POLICIES || !health.startsWith("/")) return@mapNotNull null
+            val publicPath = o.optString("public_path").trim().trimEnd('/')
+            val meshPath = o.optString("mesh_path").trim().trimEnd('/')
+            val routes = o.optJSONArray("route_paths")?.let { r -> (0 until r.length()).map { r.optString(it).trim() } }.orEmpty()
+            fun badPath(p: String) = p.isNotEmpty() && (!p.startsWith("/") || '?' in p || '#' in p || ' ' in p)
+            if (badPath(publicPath) || badPath(meshPath) || routes.any { it.isEmpty() || badPath(it) }) return@mapNotNull null
+            if (domain.isEmpty() && (publicPath.isNotEmpty() || routes.isNotEmpty())) return@mapNotNull null
             if (domain.isEmpty() && policy != POLICY_MESH_ONLY) return@mapNotNull null
             if (domain.isNotEmpty() && publicScheme != "https") return@mapNotNull null
             Service(id, o.optString("kind").trim().ifEmpty { "service" }, meshScheme, dns, o.optInt("mesh_port", 0),
-                publicScheme, domain, policy, health)
+                publicScheme, domain, policy, health, publicPath, meshPath, routes)
         }.distinctBy { it.id }
     }
 
@@ -93,17 +107,21 @@ object FleetEndpointsContract {
     }
 
     /** One service's pair of endpoints. No secret in here, so it can be logged and compared freely. */
-    data class Entry(val service: String, val kind: String, val mesh: String, val public: String, val policy: String, val health: String)
+    data class Entry(
+        val service: String, val kind: String, val mesh: String, val public: String, val policy: String, val health: String,
+        val only: List<String> = emptyList(),
+    )
 
     fun entries(services: List<Service>): List<Entry> =
-        services.map { Entry(it.id, it.kind, it.meshUrl(), it.publicUrl(), it.policy, it.health) }
+        services.map { Entry(it.id, it.kind, it.meshUrl(), it.publicUrl(), it.policy, it.health, it.routePaths) }
 
     /** The published document; the bearer only when [bearer] is non-blank (the caller was granted it). */
     fun toJson(entries: List<Entry>, bearer: String?): String = JSONObject().also { o ->
         o.put("v", VERSION)
         o.put("services", JSONArray().also { a ->
             for (e in entries) a.put(JSONObject().put("service", e.service).put("kind", e.kind)
-                .put("mesh", e.mesh).put("public", e.public).put("policy", e.policy).put("health", e.health))
+                .put("mesh", e.mesh).put("public", e.public).put("policy", e.policy).put("health", e.health)
+                .put("only", JSONArray(e.only)))
         })
         if (!bearer.isNullOrBlank()) o.put("bearer", bearer.trim())
     }.toString()
@@ -124,7 +142,8 @@ object FleetEndpointsContract {
             if (e.optString("service").isBlank() || !(mesh.startsWith("https://") || mesh.startsWith("http://"))) return@mapNotNull null
             if (pub.isNotEmpty() && !pub.startsWith("https://")) return@mapNotNull null
             Entry(e.optString("service"), e.optString("kind"), mesh, pub,
-                e.optString("policy").takeIf { it in POLICIES } ?: POLICY_MESH_FIRST, e.optString("health").ifBlank { "/" })
+                e.optString("policy").takeIf { it in POLICIES } ?: POLICY_MESH_FIRST, e.optString("health").ifBlank { "/" },
+                e.optJSONArray("only")?.let { r -> (0 until r.length()).map { r.optString(it) } }.orEmpty())
         }
         return Published(list, o.optString("bearer"))
     }

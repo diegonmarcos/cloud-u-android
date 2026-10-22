@@ -98,4 +98,27 @@ class FleetEndpointsContractTest {
         assertEquals("jmap.example.org", FleetEndpointsContract.hostOf("https://Jmap.Example.org:8443/x"))
         assertEquals("jmap.example.org", FleetEndpointsContract.hostOf("jmap.example.org"))
     }
+
+    @Test fun aServiceUnderAPathOfASharedHostCarriesItsBasePathAndTheRoutesItMayTake() {
+        val d = """{"services":[{"id":"api","kind":"api","mesh_dns":"c3-public-api.app","mesh_port":8087,"mesh_scheme":"http",
+            "public_domain":"api.example.org","public_path":"/pub/","route_paths":["/health","/analytics"],"policy":"mesh_first","health":"/health"}]}"""
+        val s = FleetEndpointsContract.parseDecl(d).single()
+        assertEquals("https://api.example.org/pub", s.publicUrl()); assertEquals("http://c3-public-api.app:8087", s.meshUrl())
+        assertEquals(listOf("/health", "/analytics"), s.routePaths)
+        val e = FleetEndpointsContract.entries(listOf(s))
+        assertEquals(e, FleetEndpointsContract.parse(FleetEndpointsContract.toJson(e, null))!!.entries)
+        assertEquals(listOf("/health", "/analytics"), e.single().only)
+    }
+
+    @Test fun aBadPathIsDroppedAndAMeshOnlyServiceHasNoPublicPath() {
+        val d = """{"services":[{"id":"api","mesh_dns":"x.app","public_domain":"a.example.org","PATHS":1,"policy":"mesh_first"}]}"""
+        fun n(extra: String) = FleetEndpointsContract.parseDecl(d.replace("\"PATHS\":1", extra)).size
+        assertEquals(1, n("\"public_path\":\"/pub\""))
+        assertEquals("a path starts with a slash", 0, n("\"public_path\":\"pub\""))
+        assertEquals("no query in a path", 0, n("\"public_path\":\"/pub?x\""))
+        assertEquals("an empty route path", 0, n("\"route_paths\":[\"\"]"))
+        assertEquals("a route path starts with a slash", 0, n("\"route_paths\":[\"health\"]"))
+        val meshOnly = """{"services":[{"id":"m","mesh_dns":"m.app","policy":"mesh_only","public_path":"/pub"}]}"""
+        assertEquals("a path of a public host it does not have", 0, FleetEndpointsContract.parseDecl(meshOnly).size)
+    }
 }

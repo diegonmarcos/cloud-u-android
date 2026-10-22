@@ -46,12 +46,29 @@ mesh-only. Declared now: `jmap` (mail), `gitea` (git), `authelia` and `auth-brok
    as well, and only when some service has a public endpoint) serves the pairs of every service; `mail_endpoints` (grant
    `mail.endpoints`) serves Cloud Mail its per-account view of the `kind: mail` services of the same declaration.
 
+## A service that is a PATH of a shared host
+
+`api.diegonmarcos.com/pub` is `c3-public-api`; the edge strips `/pub` before the service, so the mesh side serves from its
+root. A declaration says so with `public_path` (and `mesh_path` when the mesh side has a base of its own) and the router
+swaps the base path on the way over and back; the bearer goes only to paths under it. `route_paths` narrows the pair to the
+paths a direct mesh call may reach: `/health`, `/ready`, `/analytics` are the service's declared public paths, everything
+else under `/pub` (profile connect, the config artifact) is answered only behind the edge gate and the in-app `X-Auth-User`
+check, which a mesh call would skip, so it stays on the public URL and is never routed. The router keys such a pair as
+`host/path` (`api.diegonmarcos.com/pub`).
+
+## Other callers
+
+- libs:auth reaches the transport through one seam, `AuthHttp.transport` (libs:auth stays free of the dependency, so the
+  other apps that link it are unchanged): `ConfigSyncClient.request` (config artifact, vault bundle) and
+  `ProviderStatus.probe` (sign-in probes, e.g. `auth.diegonmarcos.com/api/health` goes to `authelia.app`). Cloud Account installs
+  it in `FleetEndpointsRuntime.start`.
+- libs:account's `ProfileSyncClient` routes through `FleetHttp.exchange` the same way (no redirect followed, as before).
+
 ## Limits
 
-- Not yet routed: libs:auth's calls to `api.diegonmarcos.com/pub/...` (the public API is a path under a shared host and the
-  mesh service, `c3-public-api.app`, serves it without the `/pub` prefix, which the router does not rewrite) and the other
-  `HttpURLConnection` callers. They keep their single public URL.
+- Left on their own connection: the OAuth device-grant POSTs to Google and GitHub, `GitSshVault` (api.github.com) and the
+  diagnostics log sink in libs:devtools (a lib every app links, which must not take this dependency).
 - `auth-broker`, `cloud-me-api` and `vaultwarden` are shown on Status but not routed: they have no public endpoint to fall
-  back to.
-- The router keys on the public host: two services on one host cannot take different routes.
+  back to, and stay mesh-only.
+- The router keys on the public host and base path: two services on one path cannot take different routes.
 - On-phone check pending: the mesh names resolve and answer only on a phone with the tunnel up.

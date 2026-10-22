@@ -277,4 +277,45 @@ class EndpointRoutingTest {
         assertEquals(marker, bearers.forHost("127.0.0.1"))
         assertFalse(bearers.toString().contains(marker))
     }
+
+    // ── a pair under a PATH of a shared host ─────────────────────────────
+
+    @Test fun `a pair under a path swaps the base path and routes only the paths it names`() {
+        router.clear()
+        assertTrue(router.set("http://127.0.0.1:${pub.port}/pub", "http://localhost:${mesh.port}", EndpointPolicy.MESH_FIRST, listOf("/health", "/analytics")))
+        assertTrue(router.isRegistered("127.0.0.1/pub")); assertFalse(router.isRegistered("127.0.0.1"))
+
+        mesh.enqueue(MockResponse().setBody("{}")); assertEquals(200, get("/pub/health"))
+        assertEquals("the edge strips /pub: the mesh side serves from its root", "/health", mesh.takeRequest().path)
+        mesh.enqueue(MockResponse().setBody("{}")); assertEquals(200, get("/pub/analytics/openobserve?x=1"))
+        assertEquals("/analytics/openobserve?x=1", mesh.takeRequest().path)
+        assertEquals(EndpointState.MESH, router.status.value.getValue("127.0.0.1/pub").state())
+
+        val probes = probed.size
+        pub.enqueue(MockResponse().setBody("{}")); assertEquals(200, get("/pub/profile/connect/start"))
+        val direct = pub.takeRequest()
+        assertEquals("a path the pair does not name stays on the public URL, untouched", "/pub/profile/connect/start", direct.path)
+        assertNull("... and is not given the bearer", direct.getHeader("X-Fleet-Authorization"))
+        assertEquals(probes, probed.size)
+
+        pub.enqueue(MockResponse().setBody("{}")); assertEquals(200, get("/pubx/health"))
+        assertEquals("a sibling path is not the base path", "/pubx/health", pub.takeRequest().path)
+    }
+
+    @Test fun `the fallback of a pair under a path puts the base path back and carries the bearer`() {
+        router.clear()
+        router.set("http://127.0.0.1:${pub.port}/pub", "http://localhost:${mesh.port}", EndpointPolicy.MESH_FIRST, listOf("/health"))
+        meshReachable = false
+        pub.enqueue(MockResponse().setBody("{}")); assertEquals(200, get("/pub/health"))
+        val r = pub.takeRequest()
+        assertEquals("/pub/health", r.path); assertEquals("Bearer $marker", r.getHeader("X-Fleet-Authorization"))
+        assertEquals(0, mesh.requestCount)
+    }
+
+    @Test fun `a pair with no narrowing routes everything under its base path`() {
+        router.clear()
+        router.set("http://127.0.0.1:${pub.port}/pub", "http://localhost:${mesh.port}/base", EndpointPolicy.MESH_FIRST)
+        mesh.enqueue(MockResponse().setBody("{}")); assertEquals(200, get("/pub/a/b"))
+        assertEquals("a mesh side with its own base path gets it", "/base/a/b", mesh.takeRequest().path)
+    }
 }

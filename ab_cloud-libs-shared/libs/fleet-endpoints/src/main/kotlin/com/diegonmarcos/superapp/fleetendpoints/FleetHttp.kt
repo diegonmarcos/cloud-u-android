@@ -31,7 +31,16 @@ object FleetHttp {
 
     /** True when a request to [url] would be routed over a fleet endpoint pair. */
     fun routes(url: String, router: EndpointRouter = FleetTransport.router): Boolean =
-        url.toHttpUrlOrNull()?.let { router.isRegistered(it.host) } == true
+        url.toHttpUrlOrNull()?.let { router.routes(it) } == true
+
+    private fun request(method: String, url: String, headers: Map<String, String>, body: String?): Request {
+        val rb = when {
+            body != null -> body.toRequestBody(JSON)
+            method == "GET" || method == "HEAD" -> null
+            else -> ByteArray(0).toRequestBody(null)
+        }
+        return Request.Builder().url(url).method(method, rb).also { b -> headers.forEach { (k, v) -> b.header(k, v) } }.build()
+    }
 
     /**
      * One exchange: (status, body). Never follows a failure into a message: the caller sees the status and the
@@ -39,13 +48,24 @@ object FleetHttp {
      */
     fun call(
         client: OkHttpClient, method: String, url: String, headers: Map<String, String>, body: String?,
-    ): Pair<Int, String> {
-        val rb = when {
-            body != null -> body.toRequestBody(JSON)
-            method == "GET" || method == "HEAD" -> null
-            else -> ByteArray(0).toRequestBody(null)
-        }
-        val req = Request.Builder().url(url).method(method, rb).also { b -> headers.forEach { (k, v) -> b.header(k, v) } }.build()
-        return client.newCall(req).execute().use { it.code to it.body?.string().orEmpty() }
+    ): Pair<Int, String> = client.newCall(request(method, url, headers, body)).execute().use { it.code to it.body?.string().orEmpty() }
+
+    /** What a server said, redirect left alone: [location] is its `Location` header, "" when absent. */
+    data class Reply(val code: Int, val body: String, val location: String)
+
+    /** A client that never follows a redirect (a login page is not the answer), wearing the fleet interceptors. */
+    val noRedirects: OkHttpClient by lazy { client(base = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)) }
+
+    /**
+     * One exchange for a caller that reads redirects and sets its own timeouts, or null when [url] is not a registered
+     * fleet endpoint (the caller then makes its plain request). An [java.io.IOException] when the request could not be made.
+     */
+    fun exchange(
+        method: String, url: String, headers: Map<String, String>, body: String?, connectMs: Int, readMs: Int,
+        router: EndpointRouter = FleetTransport.router, client: OkHttpClient = noRedirects,
+    ): Reply? {
+        if (!routes(url, router)) return null
+        val c = client.newBuilder().connectTimeout(connectMs.toLong(), TimeUnit.MILLISECONDS).readTimeout(readMs.toLong(), TimeUnit.MILLISECONDS).build()
+        return c.newCall(request(method, url, headers, body)).execute().use { Reply(it.code, it.body?.string().orEmpty(), it.header("Location").orEmpty()) }
     }
 }

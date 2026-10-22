@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import org.json.JSONObject
 import java.io.File
+import com.diegonmarcos.superapp.fleetendpoints.FleetHttp
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -137,6 +138,11 @@ object ProfileSyncClient {
     fun fetch(endpoint: String, installId: String, secret: String): JSONObject? {
         var conn: HttpURLConnection? = null
         return try {
+            // #1093 a declared fleet endpoint rides the fleet transport (mesh first, then public + bearer).
+            routed(endpoint, "GET", installId, secret, null)?.let { r ->
+                if (r.code !in 200..299) { Log.i(TAG, "no profile to restore (HTTP ${r.code})"); return null }
+                return JSONObject(r.body)
+            }
             conn = open(endpoint, "GET", installId, secret)
             val code = conn.responseCode
             if (code !in 200..299) {
@@ -181,6 +187,13 @@ object ProfileSyncClient {
         if (!endpoint.startsWith("https://", ignoreCase = true)) {
             return Result.Rejected(0, "endpoint is not https — refusing to send personal data in clear text")
         }
+        // #1093 a declared fleet endpoint rides the fleet transport (mesh first, then public + bearer).
+        val viaFleet = try { routed(endpoint, method, installId, secret, body) } catch (t: java.io.IOException) { return Result.Retry(t.javaClass.simpleName) }
+        if (viaFleet != null) return when {
+            viaFleet.code in 200..299 -> Result.Delivered(viaFleet.code)
+            viaFleet.code == 429 || viaFleet.code >= 500 -> Result.Retry("HTTP ${viaFleet.code}")
+            else -> Result.Rejected(viaFleet.code, redactBody(viaFleet.body))
+        }
         var conn: HttpURLConnection? = null
         try {
             conn = open(endpoint, method, installId, secret)
@@ -207,6 +220,13 @@ object ProfileSyncClient {
             conn?.disconnect()
         }
     }
+
+    /** The request over the fleet transport, or null when [endpoint] is not a declared fleet endpoint. */
+    private fun routed(endpoint: String, method: String, installId: String, secret: String, body: String?): FleetHttp.Reply? =
+        FleetHttp.exchange(
+            method, endpoint,
+            mapOf("Accept" to "application/json", "User-Agent" to "Cloud-SuperApp-ProfileSync/1", "X-Install-Id" to installId, "Authorization" to "Bearer $secret"),
+            body, CONNECT_TIMEOUT_MS, READ_TIMEOUT_MS)
 
     /**
      * TLS-only by contract. An `http://` endpoint would put names, emails and

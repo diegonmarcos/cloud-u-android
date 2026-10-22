@@ -1,12 +1,14 @@
 package com.diegonmarcos.superapp.profile
 
 import android.content.Context
+import com.diegonmarcos.cloudlib.auth.AuthHttp
 import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
 import com.diegonmarcos.superapp.fleetconfig.NetworkChangeWatch
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
 import com.diegonmarcos.superapp.fleetendpoints.EndpointRouter
 import com.diegonmarcos.superapp.fleetendpoints.EndpointState
 import com.diegonmarcos.superapp.fleetendpoints.FleetBearers
+import com.diegonmarcos.superapp.fleetendpoints.FleetHttp
 import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
 import com.diegonmarcos.superapp.fleetendpoints.RouteStatus
 import com.diegonmarcos.superapp.settings.AccountVault
@@ -36,7 +38,7 @@ object FleetEndpointsRuntime {
     ): Int {
         val publicHosts = services.filter { it.hasPublic }.map { it.publicDomain }.toSet()
         bearers.source = { host -> if (host.lowercase() in publicHosts) bearer() else null }
-        return services.count { it.hasPublic && router.set(it.publicUrl(), it.meshUrl(), EndpointPolicy.parse(it.policy)) }
+        return services.count { it.hasPublic && router.set(it.publicUrl(), it.meshUrl(), EndpointPolicy.parse(it.policy), it.routePaths) }
     }
 
     /** Process start: register the declared pairs on the shared transport, and re-probe the mesh on a network change. */
@@ -45,6 +47,8 @@ object FleetEndpointsRuntime {
         val vault = AccountVault(app)
         val n = register(services(), FleetTransport.router, FleetTransport.bearers) { vault.connection(FleetEndpointsContract.GRANT_BEARER)?.toString() }
         NetworkChangeWatch.start(app) { FleetTransport.router.onNetworkChanged() }
+        // #1093 libs:auth's fleet calls (config artifact, vault bundle, sign-in probes) ride the same transport.
+        AuthHttp.transport = AuthHttp.Transport { m, u, h, b, c, r -> FleetHttp.exchange(m, u, h, b, c, r)?.let { AuthHttp.Raw(it.code, it.body, it.location) } }
         return n
     }
 
@@ -84,7 +88,7 @@ object FleetEndpointRows {
         services.map { s ->
             val c = checks[s.id]
             if (c != null) EndpointRow(s, derive(EndpointPolicy.parse(s.policy), s.hasPublic, c.meshUp, c.publicStatus), c.meshUp, c.publicStatus, true)
-            else EndpointRow(s, if (s.hasPublic) routes[s.publicDomain]?.state() ?: EndpointState.UNKNOWN else EndpointState.UNKNOWN, null, null, false)
+            else EndpointRow(s, if (s.hasPublic) routes[s.publicDomain + s.publicPath]?.state() ?: EndpointState.UNKNOWN else EndpointState.UNKNOWN, null, null, false)
         }
 
     /** `stalwart.app:2443`: the host and the port the mesh probe connects to. Never a path, never a credential. */
