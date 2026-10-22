@@ -235,7 +235,7 @@ class EndpointRoutingTest {
         val strict = newRouter(requireHttps = true)
         assertFalse("a plain-http public endpoint would carry the bearer in clear", strict.set("http://pub.example", "https://svc.app", EndpointPolicy.MESH_FIRST))
         assertFalse("the same host twice is not two endpoints", strict.set("https://pub.example", "https://pub.example:2443", EndpointPolicy.MESH_FIRST))
-        assertFalse("an origin, not a path", strict.set("https://pub.example/jmap", "https://svc.app", EndpointPolicy.MESH_FIRST))
+        assertFalse("a base URL carries no query string", strict.set("https://pub.example/jmap?x=1", "https://svc.app", EndpointPolicy.MESH_FIRST))
         assertFalse(strict.set("not a url", "https://svc.app", EndpointPolicy.MESH_FIRST))
         assertTrue(strict.set("https://pub.example", "https://svc.app:2443", EndpointPolicy.MESH_FIRST))
     }
