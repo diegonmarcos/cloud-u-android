@@ -1,9 +1,9 @@
 import './ask-ai-panel';
 
-import { HoverController } from '@blocksuite/affine/components/hover';
-import { createLitPortal } from '@blocksuite/affine/components/portal';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { type EditorHost } from '@blocksuite/affine/std';
+import { HoverController } from '@blocksuite/cloud-notes/components/hover';
+import { createLitPortal } from '@blocksuite/cloud-notes/components/portal';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { type EditorHost } from '@blocksuite/cloud-notes/std';
 import { flip, offset } from '@floating-ui/dom';
 import { css, html, LitElement, nothing } from 'lit';
 import { property, query } from 'lit/decorators.js';

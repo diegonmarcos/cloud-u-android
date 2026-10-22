@@ -1,6 +1,6 @@
-import { RealtimeLiveQuery } from '@affine/core/modules/cloud/realtime/live-query';
-import type { WorkspaceService } from '@affine/core/modules/workspace';
-import type { RealtimeTopicEventOf } from '@affine/realtime';
+import { RealtimeLiveQuery } from '@cloud-notes/core/modules/cloud/realtime/live-query';
+import type { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import type { RealtimeTopicEventOf } from '@cloud-notes/realtime';
 import { logger } from '@sentry/react';
 import { Entity, LiveData } from '@toeverything/infra';
 

@@ -89,11 +89,11 @@ test('resize note then collapse note', async ({ page }) => {
   });
 
   await page.getByTestId('edgeless-note-collapse-button')!.click();
-  let domRect = await page.locator('affine-edgeless-note').boundingBox();
+  let domRect = await page.locator('cloud-notes-edgeless-note').boundingBox();
   expect(domRect!.height).toBeCloseTo(NOTE_MIN_HEIGHT);
 
   await page.getByTestId('edgeless-note-collapse-button')!.click();
-  domRect = await page.locator('affine-edgeless-note').boundingBox();
+  domRect = await page.locator('cloud-notes-edgeless-note').boundingBox();
   expect(domRect!.height).toBeCloseTo(initRect.h + 100);
 
   await selectNoteInEdgeless(page, noteId);

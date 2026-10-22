@@ -1,17 +1,17 @@
-import type { AffineEditorContainer } from '@affine/core/blocksuite/block-suite-editor';
-import type { DefaultOpenProperty } from '@affine/core/components/properties';
-import { PresentTool } from '@blocksuite/affine/blocks/frame';
-import { DefaultTool } from '@blocksuite/affine/blocks/surface';
-import type { DocTitle } from '@blocksuite/affine/fragments/doc-title';
-import { findCommentedTexts } from '@blocksuite/affine/inlines/comment';
-import type { DocMode, ReferenceParams } from '@blocksuite/affine/model';
-import { HighlightSelection } from '@blocksuite/affine/shared/selection';
+import type { CloudNotesEditorContainer } from '@cloud-notes/core/blocksuite/block-suite-editor';
+import type { DefaultOpenProperty } from '@cloud-notes/core/components/properties';
+import { PresentTool } from '@blocksuite/cloud-notes/blocks/frame';
+import { DefaultTool } from '@blocksuite/cloud-notes/blocks/surface';
+import type { DocTitle } from '@blocksuite/cloud-notes/fragments/doc-title';
+import { findCommentedTexts } from '@blocksuite/cloud-notes/inlines/comment';
+import type { DocMode, ReferenceParams } from '@blocksuite/cloud-notes/model';
+import { HighlightSelection } from '@blocksuite/cloud-notes/shared/selection';
 import {
   DocModeProvider,
   findCommentedBlocks,
   findCommentedElements,
-} from '@blocksuite/affine/shared/services';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
+} from '@blocksuite/cloud-notes/shared/services';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
 import type { InlineEditor } from '@blocksuite/std/inline';
 import { effect } from '@preact/signals-core';
 import { Entity, LiveData } from '@toeverything/infra';
@@ -37,7 +37,7 @@ export class Editor extends Entity {
   readonly doc = this.docService.doc;
   readonly isSharedMode =
     this.workspaceService.workspace.openOptions.isSharedMode;
-  readonly editorContainer$ = new LiveData<AffineEditorContainer | null>(null);
+  readonly editorContainer$ = new LiveData<CloudNotesEditorContainer | null>(null);
   readonly defaultOpenProperty$ = new LiveData<DefaultOpenProperty | undefined>(
     undefined
   );
@@ -269,7 +269,7 @@ export class Editor extends Entity {
   }
 
   bindEditorContainer(
-    editorContainer: AffineEditorContainer,
+    editorContainer: CloudNotesEditorContainer,
     docTitle?: DocTitle | null,
     scrollViewport?: HTMLElement | null
   ) {

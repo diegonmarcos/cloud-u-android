@@ -3,7 +3,7 @@ import {
   deactivateLicenseMutation,
   getLicenseQuery,
   installLicenseMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Store } from '@toeverything/infra';
 
 import type { WorkspaceServerService } from '../services/workspace-server';

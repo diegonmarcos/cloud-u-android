@@ -1,19 +1,19 @@
 {
-  "name": "@affine/web",
+  "name": "@cloud-notes/web",
   "version": "0.27.5",
-  "description": "AFFiNE Desktop Web application",
+  "description": "Cloud Notes Desktop Web application",
   "private": true,
   "browser": "src/index.tsx",
   "scripts": {
-    "build": "affine bundle",
-    "dev": "affine bundle --dev"
+    "build": "cloud-notes bundle",
+    "dev": "cloud-notes bundle --dev"
   },
   "dependencies": {
-    "@affine/component": "workspace:*",
-    "@affine/core": "workspace:*",
-    "@affine/env": "workspace:*",
-    "@affine/nbstore": "workspace:*",
-    "@affine/track": "workspace:*",
+    "@cloud-notes/component": "workspace:*",
+    "@cloud-notes/core": "workspace:*",
+    "@cloud-notes/env": "workspace:*",
+    "@cloud-notes/nbstore": "workspace:*",
+    "@cloud-notes/track": "workspace:*",
     "@emotion/react": "^11.14.0",
     "@toeverything/infra": "workspace:*",
     "react": "^19.2.1",

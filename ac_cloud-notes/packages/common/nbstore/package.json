@@ -1,5 +1,5 @@
 {
-  "name": "@affine/nbstore",
+  "name": "@cloud-notes/nbstore",
   "type": "module",
   "version": "0.27.5",
   "private": true,
@@ -19,8 +19,8 @@
     "./frontend": "./src/frontend/index.ts"
   },
   "dependencies": {
-    "@affine/reader": "workspace:*",
-    "@affine/realtime": "workspace:*",
+    "@cloud-notes/reader": "workspace:*",
+    "@cloud-notes/realtime": "workspace:*",
     "@toeverything/infra": "workspace:*",
     "eventemitter2": "^6.4.9",
     "graphemer": "^1.4.0",
@@ -32,20 +32,20 @@
     "yjs": "^13.6.27"
   },
   "devDependencies": {
-    "@affine/error": "workspace:*",
-    "@affine/graphql": "workspace:*",
-    "@affine/realtime": "workspace:*",
-    "@blocksuite/affine": "workspace:*",
+    "@cloud-notes/error": "workspace:*",
+    "@cloud-notes/graphql": "workspace:*",
+    "@cloud-notes/realtime": "workspace:*",
+    "@blocksuite/cloud-notes": "workspace:*",
     "fake-indexeddb": "^6.0.0",
     "idb": "^8.0.0",
     "socket.io-client": "^4.8.3",
     "vitest": "^4.1.8"
   },
   "peerDependencies": {
-    "@affine/error": "workspace:*",
-    "@affine/graphql": "workspace:*",
-    "@affine/realtime": "workspace:*",
-    "@blocksuite/affine": "workspace:*",
+    "@cloud-notes/error": "workspace:*",
+    "@cloud-notes/graphql": "workspace:*",
+    "@cloud-notes/realtime": "workspace:*",
+    "@blocksuite/cloud-notes": "workspace:*",
     "idb": "^8.0.0",
     "socket.io-client": "^4.8.3"
   }

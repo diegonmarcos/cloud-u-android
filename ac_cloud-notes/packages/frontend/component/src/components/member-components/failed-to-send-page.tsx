@@ -1,9 +1,9 @@
 import {
   AuthPageContainer,
   type User,
-} from '@affine/component/auth-components';
-import type { GetInviteInfoQuery } from '@affine/graphql';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/auth-components';
+import type { GetInviteInfoQuery } from '@cloud-notes/graphql';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 
 import { Avatar } from '../../ui/avatar';
 import * as styles from './styles.css';
@@ -17,11 +17,11 @@ export const FailedToSendPage = ({
   const t = useI18n();
   return (
     <AuthPageContainer
-      title={t['com.affine.failed-to-send-request.title']()}
+      title={t['com.cloud-notes.failed-to-send-request.title']()}
       subtitle={
         <div className={styles.lineHeight}>
           <Trans
-            i18nKey="com.affine.failed-to-send-request.description"
+            i18nKey="com.cloud-notes.failed-to-send-request.description"
             components={{
               1: (
                 <div className={styles.avatarWrapper}>

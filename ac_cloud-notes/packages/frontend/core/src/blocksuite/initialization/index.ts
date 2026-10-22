@@ -1,12 +1,12 @@
-import type { DocCreateOptions } from '@affine/core/modules/doc/types';
+import type { DocCreateOptions } from '@cloud-notes/core/modules/doc/types';
 import {
   NoteDisplayMode,
   type NoteProps,
   type ParagraphProps,
   type RootBlockProps,
-} from '@blocksuite/affine/model';
-import type { SurfaceBlockProps } from '@blocksuite/affine/std/gfx';
-import { type Store, Text } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/model';
+import type { SurfaceBlockProps } from '@blocksuite/cloud-notes/std/gfx';
+import { type Store, Text } from '@blocksuite/cloud-notes/store';
 
 export interface DocProps {
   page?: Partial<RootBlockProps>;

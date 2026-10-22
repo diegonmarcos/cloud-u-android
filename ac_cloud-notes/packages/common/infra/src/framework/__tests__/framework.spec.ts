@@ -261,7 +261,7 @@ describe('framework', () => {
     const framework = new Framework();
 
     class SystemService extends Service {
-      appName = 'affine';
+      appName = 'cloud-notes';
     }
 
     framework.service(SystemService);
@@ -311,14 +311,14 @@ describe('framework', () => {
       .service(EditorService, [PageService]);
 
     const root = framework.provider();
-    expect(root.get(SystemService).appName).toEqual('affine');
+    expect(root.get(SystemService).appName).toEqual('cloud-notes');
     expect(() => root.get(WorkspaceService)).toThrowError(
       ComponentNotFoundError
     );
 
     const workspaceScope = root.createScope(WorkspaceScope);
     const workspaceService = workspaceScope.get(WorkspaceService);
-    expect(workspaceService.system.appName).toEqual('affine');
+    expect(workspaceService.system.appName).toEqual('cloud-notes');
     expect(() => workspaceScope.get(PageService)).toThrowError(
       ComponentNotFoundError
     );
@@ -329,7 +329,7 @@ describe('framework', () => {
     expect(pageScope.props.pageId).toEqual('test-page');
     const pageService = pageScope.get(PageService);
     expect(pageService.workspace).toBe(workspaceService);
-    expect(pageService.system.appName).toEqual('affine');
+    expect(pageService.system.appName).toEqual('cloud-notes');
 
     const editorScope = pageScope.createScope(EditorScope);
     expect(editorScope.pageId).toEqual('test-page');
@@ -376,7 +376,7 @@ describe('framework', () => {
 
     let isSystemDisposed = false;
     class System extends Service {
-      appName = 'affine';
+      appName = 'cloud-notes';
 
       override dispose(): void {
         super.dispose();

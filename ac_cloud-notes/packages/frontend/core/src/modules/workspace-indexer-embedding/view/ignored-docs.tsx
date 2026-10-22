@@ -1,7 +1,7 @@
-import { Loading } from '@affine/component';
-import { DocsService } from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { i18nTime } from '@affine/i18n';
+import { Loading } from '@cloud-notes/component';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { i18nTime } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import type React from 'react';
 

@@ -1,7 +1,7 @@
 // Phase 1 (cloud-notes-hybrid): import a whole Obsidian vault / Markor folder.
 //
 // ExternalFilePlugin lists one folder level and reads one text file at a time;
-// AFFiNE's Obsidian importer resolves [[wikilinks]] only across the files of ONE
+// Cloud Notes's Obsidian importer resolves [[wikilinks]] only across the files of ONE
 // call (it builds a title/path lookup over them). So the folder is walked here,
 // every note is read, and the notes go to the importer together, each File
 // carrying the vault-relative `webkitRelativePath` the importer keys on. The
@@ -176,7 +176,7 @@ function base64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
-/** The Files AFFiNE's importer takes: basename as name, vault-relative path as webkitRelativePath. */
+/** The Files Cloud Notes's importer takes: basename as name, vault-relative path as webkitRelativePath. */
 export function toVaultFiles(
   notes: CollectedNote[],
   vaultName: string,

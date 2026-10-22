@@ -1,10 +1,10 @@
-import { WithDisposable } from '@blocksuite/affine/global/lit';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
 import {
   DocModeProvider,
   ThemeProvider,
-} from '@blocksuite/affine/shared/services';
-import { scrollbarStyle } from '@blocksuite/affine/shared/styles';
-import { type EditorHost } from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/shared/services';
+import { scrollbarStyle } from '@blocksuite/cloud-notes/shared/styles';
+import { type EditorHost } from '@blocksuite/cloud-notes/std';
 import { cssVar } from '@toeverything/theme';
 import { css, html, LitElement, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -23,16 +23,16 @@ export class AskAIPanel extends WithDisposable(LitElement) {
       padding: 8px 4px 8px 8px;
       max-height: 374px;
       overflow-y: auto;
-      background: var(--affine-background-overlay-panel-color);
+      background: var(--cloud-notes-background-overlay-panel-color);
       box-shadow: ${unsafeCSS(cssVar('overlayPanelShadow'))};
       border-radius: 8px;
-      z-index: var(--affine-z-index-popover);
+      z-index: var(--cloud-notes-z-index-popover);
       scrollbar-gutter: stable;
     }
 
     ${scrollbarStyle('.ask-ai-panel')}
     .ask-ai-panel:hover::-webkit-scrollbar-thumb {
-      background-color: var(--affine-black-30);
+      background-color: var(--cloud-notes-black-30);
     }
   `;
 

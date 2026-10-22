@@ -1,0 +1,43 @@
+{
+  "name": "@blocksuite/cloud-notes-block-image",
+  "description": "Image block for BlockSuite.",
+  "type": "module",
+  "scripts": {
+    "build": "yarn run -T tsc"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": "toeverything",
+  "license": "MIT",
+  "dependencies": {
+    "@blocksuite/cloud-notes-block-note": "workspace:*",
+    "@blocksuite/cloud-notes-block-surface": "workspace:*",
+    "@blocksuite/cloud-notes-components": "workspace:*",
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*",
+    "@blocksuite/cloud-notes-gfx-turbo-renderer": "workspace:*",
+    "@blocksuite/cloud-notes-model": "workspace:*",
+    "@blocksuite/cloud-notes-shared": "workspace:*",
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*",
+    "@blocksuite/global": "workspace:*",
+    "@blocksuite/icons": "^2.2.17",
+    "@blocksuite/std": "workspace:*",
+    "@blocksuite/store": "workspace:*",
+    "@preact/signals-core": "^1.8.0",
+    "@toeverything/theme": "^1.1.23",
+    "file-type": "^21.0.0",
+    "lit": "^3.2.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./turbo-painter": "./src/turbo/image-painter.worker.ts",
+    "./store": "./src/store.ts",
+    "./view": "./src/view.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "!src/__tests__",
+    "!dist/__tests__"
+  ],
+  "version": "0.27.5"
+}

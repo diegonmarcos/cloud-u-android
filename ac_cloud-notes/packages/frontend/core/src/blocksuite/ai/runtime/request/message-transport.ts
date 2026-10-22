@@ -1,4 +1,4 @@
-import type { AIToolsConfig } from '@affine/core/modules/ai-button';
+import type { AIToolsConfig } from '@cloud-notes/core/modules/ai-button';
 import { partition } from 'lodash-es';
 
 import { toTextStream } from '../../provider/event-source';

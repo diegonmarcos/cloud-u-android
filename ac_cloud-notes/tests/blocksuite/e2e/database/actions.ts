@@ -1,4 +1,4 @@
-import type { RichTextCell } from '@blocksuite/affine/blocks/database';
+import type { RichTextCell } from '@blocksuite/cloud-notes/blocks/database';
 import { expect, type Locator, type Page } from '@playwright/test';
 
 import {
@@ -20,7 +20,7 @@ export async function press(page: Page, content: string) {
 
 export async function initDatabaseColumn(page: Page, title = '') {
   const editor = getEditorLocator(page);
-  await editor.locator('affine-data-view-table-group').first().hover();
+  await editor.locator('cloud-notes-data-view-table-group').first().hover();
   const columnAddBtn = editor.locator('.header-add-column-button');
   await columnAddBtn.click();
   await waitNextFrame(page, 200);
@@ -36,7 +36,7 @@ export async function initDatabaseColumn(page: Page, title = '') {
 }
 
 export const renameColumn = async (page: Page, name: string) => {
-  const column = page.locator('affine-database-header-column', {
+  const column = page.locator('cloud-notes-database-header-column', {
     hasText: name,
   });
   await column.click();
@@ -49,7 +49,7 @@ export async function performColumnAction(
 ) {
   await renameColumn(page, name);
 
-  const actionMenu = page.locator(`.affine-menu-button`, { hasText: action });
+  const actionMenu = page.locator(`.cloud-notes-menu-button`, { hasText: action });
   await actionMenu.click();
 }
 
@@ -65,14 +65,14 @@ export async function switchColumnType(
 }
 
 export function clickColumnType(page: Page, columnType: string) {
-  const typeMenu = page.locator(`.affine-menu-button`, {
+  const typeMenu = page.locator(`.cloud-notes-menu-button`, {
     hasText: new RegExp(`${columnType}`),
   });
   return typeMenu.click();
 }
 
 export function getDatabaseBodyRows(page: Page) {
-  const rowContainer = page.locator('.affine-database-block-rows');
+  const rowContainer = page.locator('.cloud-notes-database-block-rows');
   return rowContainer.locator('data-view-table-row');
 }
 
@@ -137,7 +137,7 @@ export async function performSelectColumnTagAction(
 ) {
   await clickSelectOption(page, index);
   await page
-    .locator('.affine-menu-button', { hasText: new RegExp(name) })
+    .locator('.cloud-notes-menu-button', { hasText: new RegExp(name) })
     .click();
 }
 
@@ -177,7 +177,7 @@ export async function assertDatabaseCellRichTexts(
     `dv-table-view-cell-container[data-row-index='${rowIndex}'][data-column-index='${columnIndex}']`
   );
 
-  const cell = cellContainer.locator('affine-database-rich-text-cell');
+  const cell = cellContainer.locator('cloud-notes-database-rich-text-cell');
 
   const actualTexts = await cell.evaluate(ele => {
     return (ele as RichTextCell).inlineEditor$.value?.yTextString;
@@ -198,7 +198,7 @@ export async function assertDatabaseCellNumber(
   }
 ) {
   const actualText = await page
-    .locator('.affine-database-block-rows')
+    .locator('.cloud-notes-database-block-rows')
     .locator('.database-row')
     .nth(rowIndex)
     .locator('.database-cell')
@@ -222,7 +222,7 @@ export async function assertDatabaseCellLink(
 ) {
   const actualTexts = await page.evaluate(
     ({ rowIndex, columnIndex }) => {
-      const rows = document.querySelector('.affine-database-block-rows');
+      const rows = document.querySelector('.cloud-notes-database-block-rows');
       const row = rows?.querySelector(
         `.database-row:nth-child(${rowIndex + 1})`
       );
@@ -230,7 +230,7 @@ export async function assertDatabaseCellLink(
         `.database-cell:nth-child(${columnIndex + 1})`
       );
       const richText = cell?.querySelector<RichTextCell>(
-        'affine-database-link-cell'
+        'cloud-notes-database-link-cell'
       );
       if (!richText) throw new Error('Missing database rich text cell');
       return richText.inlineEditor$.value!.yText.toString();
@@ -264,10 +264,10 @@ export async function focusDatabaseSearch(page: Page) {
   const searchExpand = page.locator('.search-container-expand');
   const count = await searchExpand.count();
   if (count === 1) {
-    const input = page.locator('.affine-database-search-input');
+    const input = page.locator('.cloud-notes-database-search-input');
     await input.click();
   } else {
-    const searchIcon = page.locator('.affine-database-search-input-icon');
+    const searchIcon = page.locator('.cloud-notes-database-search-input-icon');
     await searchIcon.click();
     await waitSearchTransitionEnd(page);
   }
@@ -279,7 +279,7 @@ export async function blurDatabaseSearch(page: Page) {
 }
 
 export async function focusDatabaseHeader(page: Page, columnIndex = 0) {
-  const column = page.locator('.affine-database-column').nth(columnIndex);
+  const column = page.locator('.cloud-notes-database-column').nth(columnIndex);
   const box = await getBoundingBox(column);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await waitNextFrame(page);
@@ -300,11 +300,11 @@ export async function getDatabaseMouse(page: Page) {
 }
 
 export async function getDatabaseHeaderColumn(page: Page, index = 0) {
-  const column = page.locator('.affine-database-column').nth(index);
+  const column = page.locator('.cloud-notes-database-column').nth(index);
   const box = await getBoundingBox(column);
-  const textElement = column.locator('.affine-database-column-text-input');
+  const textElement = column.locator('.cloud-notes-database-column-text-input');
   const text = await textElement.innerText();
-  const typeIcon = column.locator('.affine-database-column-type-icon');
+  const typeIcon = column.locator('.cloud-notes-database-column-type-icon');
 
   return {
     column,
@@ -458,13 +458,13 @@ export async function assertKanbanCellSelected(
   const border = await page.evaluate(
     ({ groupIndex, cardIndex, cellIndex }) => {
       const group = document.querySelector(
-        `affine-data-view-kanban-group:nth-child(${groupIndex + 1})`
+        `cloud-notes-data-view-kanban-group:nth-child(${groupIndex + 1})`
       );
       const card = group?.querySelector(
-        `affine-data-view-kanban-card:nth-child(${cardIndex + 1})`
+        `cloud-notes-data-view-kanban-card:nth-child(${cardIndex + 1})`
       );
       const cells = Array.from(
-        card?.querySelectorAll<HTMLElement>(`affine-data-view-kanban-cell`) ??
+        card?.querySelectorAll<HTMLElement>(`cloud-notes-data-view-kanban-cell`) ??
           []
       );
       const cell = cells[cellIndex];
@@ -478,7 +478,7 @@ export async function assertKanbanCellSelected(
     }
   );
 
-  expect(border).toEqual('1px solid var(--affine-primary-color)');
+  expect(border).toEqual('1px solid var(--cloud-notes-primary-color)');
 }
 
 export async function assertKanbanCardSelected(
@@ -494,10 +494,10 @@ export async function assertKanbanCardSelected(
   const border = await page.evaluate(
     ({ groupIndex, cardIndex }) => {
       const group = document.querySelector(
-        `affine-data-view-kanban-group:nth-child(${groupIndex + 1})`
+        `cloud-notes-data-view-kanban-group:nth-child(${groupIndex + 1})`
       );
       const card = group?.querySelector<HTMLElement>(
-        `affine-data-view-kanban-card:nth-child(${cardIndex + 1})`
+        `cloud-notes-data-view-kanban-card:nth-child(${cardIndex + 1})`
       );
       if (!card) throw new Error(`Missing card tag`);
       return card.style.border;
@@ -508,7 +508,7 @@ export async function assertKanbanCardSelected(
     }
   );
 
-  expect(border).toEqual('1px solid var(--affine-primary-color)');
+  expect(border).toEqual('1px solid var(--cloud-notes-primary-color)');
 }
 
 export function getKanbanCard(
@@ -521,8 +521,8 @@ export function getKanbanCard(
     cardIndex: number;
   }
 ) {
-  const group = page.locator('affine-data-view-kanban-group').nth(groupIndex);
-  const card = group.locator('affine-data-view-kanban-card').nth(cardIndex);
+  const group = page.locator('cloud-notes-data-view-kanban-group').nth(groupIndex);
+  const card = group.locator('cloud-notes-data-view-kanban-card').nth(cardIndex);
   return card;
 }
 
@@ -537,7 +537,7 @@ export const changeColumnType = async (
   name: string
 ) => {
   await waitNextFrame(page);
-  await page.locator('affine-database-header-column').nth(column).click();
+  await page.locator('cloud-notes-database-header-column').nth(column).click();
   await waitNextFrame(page, 200);
   await pressKey(page, 'Escape');
   await pressKey(page, 'ArrowDown');

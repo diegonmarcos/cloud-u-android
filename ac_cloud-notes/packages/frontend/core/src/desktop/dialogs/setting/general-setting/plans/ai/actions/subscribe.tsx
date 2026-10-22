@@ -1,9 +1,9 @@
-import { Button, type ButtonProps, Skeleton } from '@affine/component';
-import { generateSubscriptionCallbackLink } from '@affine/core/components/hooks/affine/use-subscription-notify';
-import { AuthService, SubscriptionService } from '@affine/core/modules/cloud';
-import { SubscriptionPlan, SubscriptionRecurring } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { Button, type ButtonProps, Skeleton } from '@cloud-notes/component';
+import { generateSubscriptionCallbackLink } from '@cloud-notes/core/components/hooks/cloud-notes/use-subscription-notify';
+import { AuthService, SubscriptionService } from '@cloud-notes/core/modules/cloud';
+import { SubscriptionPlan, SubscriptionRecurring } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 
@@ -66,8 +66,8 @@ export const AISubscribe = ({
   ).toFixed(2)}`;
   const priceFrequency =
     displayedFrequency === 'yearly'
-      ? t['com.affine.payment.billing-setting.year']()
-      : t['com.affine.payment.billing-setting.month']();
+      ? t['com.cloud-notes.payment.billing-setting.year']()
+      : t['com.cloud-notes.payment.billing-setting.month']();
 
   return (
     <CheckoutSlot
@@ -90,7 +90,7 @@ export const AISubscribe = ({
                 paddingLeft: 4,
               }}
             >
-              {t['com.affine.payment.ai.subscribe.billed-annually']()}
+              {t['com.cloud-notes.payment.ai.subscribe.billed-annually']()}
             </span>
           ) : null}
         </Button>

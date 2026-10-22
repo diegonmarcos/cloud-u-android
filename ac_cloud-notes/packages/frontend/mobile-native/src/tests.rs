@@ -4,7 +4,7 @@ use std::{
   time::{SystemTime, UNIX_EPOCH},
 };
 
-use affine_nbstore::DocUpdate as NbDocUpdate;
+use cloud_notes_nbstore::DocUpdate as NbDocUpdate;
 use chrono::{DateTime, Utc};
 
 use crate::{UniffiError, cache, ffi_types::DocUpdate, storage::new_doc_storage_pool};

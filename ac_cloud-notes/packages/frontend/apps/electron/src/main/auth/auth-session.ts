@@ -7,7 +7,7 @@ import {
   type AuthTokenPair,
   type AuthTokenResponse,
   classifyAuthError,
-} from '@affine/auth';
+} from '@cloud-notes/auth';
 import { app, safeStorage } from 'electron';
 
 import { logger } from '../logger';
@@ -112,8 +112,8 @@ async function refresh(endpoint: string, refreshToken: string) {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-affine-client-kind': 'native',
-        'x-affine-version': BUILD_CONFIG.appVersion,
+        'x-cloud-notes-client-kind': 'native',
+        'x-cloud-notes-version': BUILD_CONFIG.appVersion,
       },
       body: JSON.stringify({ refreshToken }),
       signal: AbortSignal.timeout(AUTH_REQUEST_TIMEOUT),
@@ -209,8 +209,8 @@ export async function revokeAuthSession(endpoint: string) {
           method: 'POST',
           headers: {
             'content-type': 'application/json',
-            'x-affine-client-kind': 'native',
-            'x-affine-version': BUILD_CONFIG.appVersion,
+            'x-cloud-notes-client-kind': 'native',
+            'x-cloud-notes-version': BUILD_CONFIG.appVersion,
           },
           body: JSON.stringify({ refreshToken }),
           signal: AbortSignal.timeout(AUTH_REQUEST_TIMEOUT),

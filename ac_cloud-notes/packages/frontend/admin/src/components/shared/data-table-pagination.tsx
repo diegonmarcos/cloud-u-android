@@ -1,11 +1,11 @@
-import { Button } from '@affine/admin/components/ui/button';
+import { Button } from '@cloud-notes/admin/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@affine/admin/components/ui/select';
+} from '@cloud-notes/admin/components/ui/select';
 import type { Table } from '@tanstack/react-table';
 import {
   ChevronLeftIcon,

@@ -5,14 +5,14 @@ import { describe, expect, test } from 'vitest';
 const css = readFileSync(new URL('./global.css', import.meta.url), 'utf8');
 
 describe('admin global token mapping', () => {
-  test('maps semantic colors to affine tokens', () => {
+  test('maps semantic colors to cloud-notes tokens', () => {
     expect(css).toContain(
-      '--background: var(--affine-v2-layer-background-primary);'
+      '--background: var(--cloud-notes-v2-layer-background-primary);'
     );
-    expect(css).toContain('--foreground: var(--affine-v2-text-primary);');
-    expect(css).toContain('--primary: var(--affine-v2-button-primary);');
-    expect(css).toContain('--ring: var(--affine-v2-input-border-active);');
-    expect(css).toContain('--radius: var(--affine-popover-radius);');
+    expect(css).toContain('--foreground: var(--cloud-notes-v2-text-primary);');
+    expect(css).toContain('--primary: var(--cloud-notes-v2-button-primary);');
+    expect(css).toContain('--ring: var(--cloud-notes-v2-input-border-active);');
+    expect(css).toContain('--radius: var(--cloud-notes-popover-radius);');
   });
 
   test('does not keep hardcoded shadcn light/dark values', () => {

@@ -1,5 +1,5 @@
-import type { SurfaceRefBlockComponent } from '@blocksuite/affine/blocks/surface-ref';
-import { AffineReference } from '@blocksuite/affine/inlines/reference';
+import type { SurfaceRefBlockComponent } from '@blocksuite/cloud-notes/blocks/surface-ref';
+import { CloudNotesReference } from '@blocksuite/cloud-notes/inlines/reference';
 import type {
   AttachmentBlockModel,
   DocMode,
@@ -7,9 +7,9 @@ import type {
   EmbedSyncedDocModel,
   ImageBlockModel,
   SurfaceRefBlockModel,
-} from '@blocksuite/affine/model';
-import type { BlockComponent, EditorHost } from '@blocksuite/affine/std';
-import type { Block, BlockModel } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/model';
+import type { BlockComponent, EditorHost } from '@blocksuite/cloud-notes/std';
+import type { Block, BlockModel } from '@blocksuite/cloud-notes/store';
 import { Entity, LiveData } from '@toeverything/infra';
 import type { TemplateResult } from 'lit';
 import { firstValueFrom, map, race } from 'rxjs';
@@ -36,7 +36,7 @@ export type DocReferenceInfo = {
 export type PeekViewElement =
   | HTMLElement
   | BlockComponent
-  | AffineReference
+  | CloudNotesReference
   | HTMLAnchorElement
   | Block;
 
@@ -138,7 +138,7 @@ function resolvePeekInfoFromPeekTarget(
   const element = peekTarget.element;
 
   if (element) {
-    if (element instanceof AffineReference) {
+    if (element instanceof CloudNotesReference) {
       const referenceInfo = element.referenceInfo;
       if (referenceInfo) {
         const { pageId: docId, params } = referenceInfo;

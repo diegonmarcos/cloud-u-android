@@ -13,21 +13,21 @@ runs:
     - name: Initialize database
       shell: bash
       run: |
-        psql -h localhost -U postgres -c "CREATE DATABASE affine;"
-        psql -h localhost -U postgres -c "CREATE USER affine WITH PASSWORD 'affine';"
-        psql -h localhost -U postgres -c "ALTER USER affine WITH SUPERUSER;"
+        psql -h localhost -U postgres -c "CREATE DATABASE cloud-notes;"
+        psql -h localhost -U postgres -c "CREATE USER cloud-notes WITH PASSWORD 'cloud-notes';"
+        psql -h localhost -U postgres -c "ALTER USER cloud-notes WITH SUPERUSER;"
       env:
-        PGPASSWORD: affine
+        PGPASSWORD: cloud-notes
 
     - name: Run init-db script
       shell: bash
       env:
         NODE_ENV: test
       run: |
-        yarn affine @affine/server prisma generate
-        yarn affine @affine/server data-migration admit-legacy-context-blobs
-        yarn affine @affine/server prisma migrate deploy
-        yarn affine @affine/server data-migration run
+        yarn cloud-notes @cloud-notes/server prisma generate
+        yarn cloud-notes @cloud-notes/server data-migration admit-legacy-context-blobs
+        yarn cloud-notes @cloud-notes/server prisma migrate deploy
+        yarn cloud-notes @cloud-notes/server data-migration run
 
     - name: Import config
       shell: bash

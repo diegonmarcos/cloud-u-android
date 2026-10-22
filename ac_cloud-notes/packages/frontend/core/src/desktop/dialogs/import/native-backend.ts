@@ -1,15 +1,15 @@
 import {
   getNativeImportSessionHandlers,
   type NativeImportSessionHandlers,
-} from '@affine/core/modules/import/runtime-config';
+} from '@cloud-notes/core/modules/import/runtime-config';
 import type {
   NativeImportBrowserSource,
   NativeImportFormat,
-} from '@affine/electron-api';
+} from '@cloud-notes/electron-api';
 import type {
   ImportBatch,
   ImportCommitResult,
-} from '@blocksuite/affine/widgets/linked-doc';
+} from '@blocksuite/cloud-notes/widgets/linked-doc';
 
 import type { ImportCommitService } from './commit-service';
 

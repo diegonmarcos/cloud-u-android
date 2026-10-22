@@ -1,0 +1,70 @@
+import { BlockSelection } from '@blocksuite/cloud-notes-components/block-selection';
+import { BlockZeroWidth } from '@blocksuite/cloud-notes-components/block-zero-width';
+import { effects as componentCaptionEffects } from '@blocksuite/cloud-notes-components/caption';
+import { effects as componentCardStyleDropdownMenuEffects } from '@blocksuite/cloud-notes-components/card-style-dropdown-menu';
+import { effects as componentCitationEffects } from '@blocksuite/cloud-notes-components/citation';
+import { effects as componentColorPickerEffects } from '@blocksuite/cloud-notes-components/color-picker';
+import { effects as componentContextMenuEffects } from '@blocksuite/cloud-notes-components/context-menu';
+import { effects as componentDatePickerEffects } from '@blocksuite/cloud-notes-components/date-picker';
+import { effects as componentDropIndicatorEffects } from '@blocksuite/cloud-notes-components/drop-indicator';
+import { effects as componentEdgelessLineStylesEffects } from '@blocksuite/cloud-notes-components/edgeless-line-styles-panel';
+import { effects as componentEdgelessLineWidthEffects } from '@blocksuite/cloud-notes-components/edgeless-line-width-panel';
+import { effects as componentEdgelessShapeColorPickerEffects } from '@blocksuite/cloud-notes-components/edgeless-shape-color-picker';
+import { effects as componentEmbedCardModalEffects } from '@blocksuite/cloud-notes-components/embed-card-modal';
+import { FilterableListComponent } from '@blocksuite/cloud-notes-components/filterable-list';
+import { effects as componentHighlightDropdownMenuEffects } from '@blocksuite/cloud-notes-components/highlight-dropdown-menu';
+import { IconButton } from '@blocksuite/cloud-notes-components/icon-button';
+import { effects as componentLinkPreviewEffects } from '@blocksuite/cloud-notes-components/link-preview';
+import { effects as componentLinkedDocTitleEffects } from '@blocksuite/cloud-notes-components/linked-doc-title';
+import { effects as componentOpenDocDropdownMenuEffects } from '@blocksuite/cloud-notes-components/open-doc-dropdown-menu';
+import { effects as componentPortalEffects } from '@blocksuite/cloud-notes-components/portal';
+import { effects as componentResourceEffects } from '@blocksuite/cloud-notes-components/resource';
+import { effects as componentSizeDropdownMenuEffects } from '@blocksuite/cloud-notes-components/size-dropdown-menu';
+import { effects as componentSliderEffects } from '@blocksuite/cloud-notes-components/slider';
+import { SmoothCorner } from '@blocksuite/cloud-notes-components/smooth-corner';
+import { effects as componentToggleButtonEffects } from '@blocksuite/cloud-notes-components/toggle-button';
+import { ToggleSwitch } from '@blocksuite/cloud-notes-components/toggle-switch';
+import { effects as componentToolbarEffects } from '@blocksuite/cloud-notes-components/toolbar';
+import { effects as componentTooltipContentWithShortcutEffects } from '@blocksuite/cloud-notes-components/tooltip-content-with-shortcut';
+import { effects as componentViewDropdownMenuEffects } from '@blocksuite/cloud-notes-components/view-dropdown-menu';
+import { effects as richTextEffects } from '@blocksuite/cloud-notes-rich-text/effects';
+import { effects as dataViewEffects } from '@blocksuite/data-view/effects';
+import { effects as stdEffects } from '@blocksuite/std/effects';
+
+export function effects() {
+  stdEffects();
+
+  dataViewEffects();
+  richTextEffects();
+
+  componentCaptionEffects();
+  componentContextMenuEffects();
+  componentDatePickerEffects();
+  componentPortalEffects();
+  componentToolbarEffects();
+  componentDropIndicatorEffects();
+  componentToggleButtonEffects();
+  componentColorPickerEffects();
+  componentEmbedCardModalEffects();
+  componentLinkPreviewEffects();
+  componentLinkedDocTitleEffects();
+  componentCardStyleDropdownMenuEffects();
+  componentCitationEffects();
+  componentHighlightDropdownMenuEffects();
+  componentViewDropdownMenuEffects();
+  componentTooltipContentWithShortcutEffects();
+  componentSizeDropdownMenuEffects();
+  componentSliderEffects();
+  componentEdgelessLineWidthEffects();
+  componentEdgelessLineStylesEffects();
+  componentEdgelessShapeColorPickerEffects();
+  componentOpenDocDropdownMenuEffects();
+  componentResourceEffects();
+
+  customElements.define('icon-button', IconButton);
+  customElements.define('smooth-corner', SmoothCorner);
+  customElements.define('toggle-switch', ToggleSwitch);
+  customElements.define('cloud-notes-filterable-list', FilterableListComponent);
+  customElements.define('block-zero-width', BlockZeroWidth);
+  customElements.define('cloud-notes-block-selection', BlockSelection);
+}

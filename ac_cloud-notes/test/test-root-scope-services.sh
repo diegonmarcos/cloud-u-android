@@ -2,7 +2,7 @@
 # ac_cloud-notes tester (#513): the WebView must be able to BOOT.
 #
 # The white page Diego shipped was not a crash, a missing bundle or a missing
-# .so — the APK carried all 114 JS chunks and a 51 MB libaffine_mobile_native.so.
+# .so — the APK carried all 114 JS chunks and a 51 MB libcloud_notes_mobile_native.so.
 # It was ONE line of TypeScript: ExternalFileOpener, which App() renders on the
 # ROOT framework provider, called `useService(ImportService)`, and ImportService
 # is registered `framework.scope(WorkspaceScope).service(ImportService, …)`. The
@@ -113,7 +113,7 @@ fi
 # silent: the button still draws, still animates, and does nothing — which is
 # indistinguishable from the boot failure above and was misread as one.
 fab_event="$(grep -oE "new Event\('[^']+'\)" \
-  "$ROOT/packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/MainActivity.kt" \
+  "$ROOT/packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/MainActivity.kt" \
   | head -1 | sed "s/new Event('//;s/')//")"
 web_event="$(grep -oE "addEventListener\('[^']+'" \
   "$ROOT/packages/frontend/apps/android/src/app.tsx" \

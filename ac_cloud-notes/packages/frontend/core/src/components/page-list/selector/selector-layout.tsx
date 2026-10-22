@@ -1,5 +1,5 @@
-import { Button, RowInput } from '@affine/component';
-import { useI18n } from '@affine/i18n';
+import { Button, RowInput } from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 import { type PropsWithChildren, type ReactNode, useCallback } from 'react';
 
 import * as styles from './selector-layout.css';
@@ -60,7 +60,7 @@ export const SelectorLayout = ({
       <footer className={styles.footer}>
         <div className={styles.footerInfo}>
           <div className={styles.selectedCount}>
-            <span>{t['com.affine.selectPage.selected']()}</span>
+            <span>{t['com.cloud-notes.selectPage.selected']()}</span>
             <span className={styles.selectedNum}>{selectedCount ?? 0}</span>
           </div>
           <Button
@@ -68,7 +68,7 @@ export const SelectorLayout = ({
             className={styles.clearButton}
             onClick={onClear}
           >
-            {t['com.affine.editCollection.pages.clear']()}
+            {t['com.cloud-notes.editCollection.pages.clear']()}
           </Button>
         </div>
 

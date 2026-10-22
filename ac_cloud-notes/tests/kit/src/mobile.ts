@@ -13,7 +13,7 @@ export const test = baseTest.extend<{
 }>({
   page: async ({ page }, use) => {
     await page.goto('/');
-    const editor = page.locator('.affine-page-viewport[data-mode="page"]');
+    const editor = page.locator('.cloud-notes-page-viewport[data-mode="page"]');
     await expect(editor).toBeVisible({
       timeout: 30 * 1000,
     });

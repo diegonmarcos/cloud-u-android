@@ -1,5 +1,5 @@
-import { UserFriendlyError } from '@affine/error';
-import { useI18n } from '@affine/i18n';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 

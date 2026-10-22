@@ -1,4 +1,4 @@
-import type { Store } from '@blocksuite/affine/store';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { Scope } from '@toeverything/infra';
 
 import type { DocRecord } from '../entities/record';

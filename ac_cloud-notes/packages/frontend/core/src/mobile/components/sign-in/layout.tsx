@@ -1,4 +1,4 @@
-import { IconButton } from '@affine/component';
+import { IconButton } from '@cloud-notes/component';
 import { CloseIcon } from '@blocksuite/icons/rc';
 import type { PropsWithChildren } from 'react';
 

@@ -1,14 +1,14 @@
-import type { DocProps } from '@affine/core/blocksuite/initialization';
-import { DocsService } from '@affine/core/modules/doc';
-import { AudioAttachmentService } from '@affine/core/modules/media/services/audio-attachment';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { DebugLogger } from '@affine/debug';
-import { apis, events } from '@affine/electron-api';
-import { i18nTime } from '@affine/i18n';
-import track from '@affine/track';
-import type { AttachmentBlockModel } from '@blocksuite/affine/model';
-import type { Store } from '@blocksuite/affine/store';
-import type { BlobEngine } from '@blocksuite/affine/sync';
+import type { DocProps } from '@cloud-notes/core/blocksuite/initialization';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { AudioAttachmentService } from '@cloud-notes/core/modules/media/services/audio-attachment';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { DebugLogger } from '@cloud-notes/debug';
+import { apis, events } from '@cloud-notes/electron-api';
+import { i18nTime } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
+import type { AttachmentBlockModel } from '@blocksuite/cloud-notes/model';
+import type { Store } from '@blocksuite/cloud-notes/store';
+import type { BlobEngine } from '@blocksuite/cloud-notes/sync';
 import type { FrameworkProvider } from '@toeverything/infra';
 
 import { getCurrentWorkspace, isAiEnabled } from './utils';

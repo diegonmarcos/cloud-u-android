@@ -8,16 +8,16 @@ import {
   QuickSearchInput,
   SidebarContainer,
   SidebarScrollableContainer,
-} from '@affine/core/modules/app-sidebar/views';
-import { ExternalMenuLinkItem } from '@affine/core/modules/app-sidebar/views/menu-item/external-menu-link-item';
-import { AuthService, ServerService } from '@affine/core/modules/cloud';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { CMDKQuickSearchService } from '@affine/core/modules/quicksearch/services/cmdk';
-import type { Workspace } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
-import type { Store } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/modules/app-sidebar/views';
+import { ExternalMenuLinkItem } from '@cloud-notes/core/modules/app-sidebar/views/menu-item/external-menu-link-item';
+import { AuthService, ServerService } from '@cloud-notes/core/modules/cloud';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { CMDKQuickSearchService } from '@cloud-notes/core/modules/quicksearch/services/cmdk';
+import type { Workspace } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import {
   AiOutlineIcon,
   AllDocsIcon,
@@ -82,7 +82,7 @@ const AllDocsButton = () => {
   return (
     <MenuLinkItem icon={<AllDocsIcon />} active={allPageActive} to={'/all'}>
       <span data-testid="all-pages">
-        {t['com.affine.workspaceSubPath.all']()}
+        {t['com.cloud-notes.workspaceSubPath.all']()}
       </span>
     </MenuLinkItem>
   );
@@ -110,15 +110,15 @@ const AIChatButton = () => {
   return (
     <MenuLinkItem icon={<AiOutlineIcon />} active={aiChatActive} to={'/chat'}>
       <span data-testid="ai-chat">
-        {t['com.affine.workspaceSubPath.chat']()}
+        {t['com.cloud-notes.workspaceSubPath.chat']()}
       </span>
     </MenuLinkItem>
   );
 };
 
 /**
- * This is for the whole affine app sidebar.
- * This component wraps the app sidebar in `@affine/component` with logic and data.
+ * This is for the whole cloud-notes app sidebar.
+ * This component wraps the app sidebar in `@cloud-notes/component` with logic and data.
  *
  */
 export const RootAppSidebar = memo((): ReactElement => {
@@ -221,7 +221,7 @@ export const RootAppSidebar = memo((): ReactElement => {
           onClick={onOpenSettingModal}
         >
           <span data-testid="settings-modal-trigger">
-            {t['com.affine.settingSidebar.title']()}
+            {t['com.cloud-notes.settingSidebar.title']()}
           </span>
         </MenuItem>
       </SidebarContainer>
@@ -233,7 +233,7 @@ export const RootAppSidebar = memo((): ReactElement => {
         <NavigationPanelCollections />
         <CollapsibleSection
           path={['others']}
-          title={t['com.affine.rootAppSidebar.others']()}
+          title={t['com.cloud-notes.rootAppSidebar.others']()}
           contentStyle={{ padding: '6px 8px 0 8px' }}
         >
           <TrashButton />
@@ -247,9 +247,9 @@ export const RootAppSidebar = memo((): ReactElement => {
           <InviteMembersButton />
           <TemplateDocEntrance />
           <ExternalMenuLinkItem
-            href="https://affine.pro/blog?tag=Release+Note"
+            href="https://notes.diegonmarcos.com/blog?tag=Release+Note"
             icon={<JournalIcon />}
-            label={t['com.affine.app-sidebar.learn-more']()}
+            label={t['com.cloud-notes.app-sidebar.learn-more']()}
           />
         </CollapsibleSection>
       </SidebarScrollableContainer>

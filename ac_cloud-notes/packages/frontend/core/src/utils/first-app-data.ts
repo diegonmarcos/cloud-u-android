@@ -1,15 +1,15 @@
 // the following import is used to ensure the block suite editor effects are run
 import '../blocksuite/block-suite-editor';
 
-import { DebugLogger } from '@affine/debug';
-import { DEFAULT_WORKSPACE_NAME } from '@affine/env/constant';
-import onboardingUrl from '@affine/templates/onboarding.zip';
-import { ZipTransformer } from '@blocksuite/affine/widgets/linked-doc';
+import { DebugLogger } from '@cloud-notes/debug';
+import { DEFAULT_WORKSPACE_NAME } from '@cloud-notes/env/constant';
+import onboardingUrl from '@cloud-notes/templates/onboarding.zip';
+import { ZipTransformer } from '@blocksuite/cloud-notes/widgets/linked-doc';
 
 import { DocsService } from '../modules/doc';
 import { OrganizeService } from '../modules/organize';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   type WorkspacesService,
 } from '../modules/workspace';
 
@@ -25,7 +25,7 @@ export async function buildShowcaseWorkspace(
 
     await ZipTransformer.importDocs(
       docCollection,
-      getAFFiNEWorkspaceSchema(),
+      getCloudNotesWorkspaceSchema(),
       blob
     );
   });

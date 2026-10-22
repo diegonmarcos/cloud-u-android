@@ -3,7 +3,7 @@ import {
   type DocMeta,
   type DocsPropertiesMeta,
   type WorkspaceMeta,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import { Subject } from 'rxjs';
 import type * as Y from 'yjs';
 

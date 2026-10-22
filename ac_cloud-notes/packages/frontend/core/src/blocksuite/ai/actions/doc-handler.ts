@@ -1,6 +1,6 @@
-import { AIStarIconWithAnimation } from '@blocksuite/affine/components/icons';
-import { createLitPortal } from '@blocksuite/affine/components/portal';
-import { type EditorHost, TextSelection } from '@blocksuite/affine/std';
+import { AIStarIconWithAnimation } from '@blocksuite/cloud-notes/components/icons';
+import { createLitPortal } from '@blocksuite/cloud-notes/components/portal';
+import { type EditorHost, TextSelection } from '@blocksuite/cloud-notes/std';
 import { flip, offset } from '@floating-ui/dom';
 import { html, type TemplateResult } from 'lit';
 
@@ -24,7 +24,7 @@ import {
   selectAboveBlocks,
 } from '../utils/selection-utils';
 import { mergeStreamObjects } from '../utils/stream-objects';
-import type { AffineAIPanelWidget } from '../widgets/ai-panel/ai-panel';
+import type { CloudNotesAIPanelWidget } from '../widgets/ai-panel/ai-panel';
 import type { AIActionAnswer } from '../widgets/ai-panel/type';
 import { actionToAnswerRenderer } from './answer-renderer';
 
@@ -175,7 +175,7 @@ function actionToGenerateAnswer<T extends keyof BlockSuitePresets.AIActions>(
  * Currently, only support text action
  */
 function updateAIPanelConfig<T extends keyof BlockSuitePresets.AIActions>(
-  aiPanel: AffineAIPanelWidget,
+  aiPanel: CloudNotesAIPanelWidget,
   id: T,
   generatingIcon: TemplateResult<1>,
   variants?: Omit<

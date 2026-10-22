@@ -1,11 +1,11 @@
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import type { ImageSelection } from '@blocksuite/affine/shared/selection';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import type { ImageSelection } from '@blocksuite/cloud-notes/shared/selection';
 import type {
   BlockSelection,
   EditorHost,
   TextSelection,
-} from '@blocksuite/affine/std';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+} from '@blocksuite/cloud-notes/std';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import { css, html, LitElement, nothing } from 'lit';
 import { property } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -38,21 +38,21 @@ export class ChatActionList extends LitElement {
       padding: 4px 18px;
       box-sizing: border-box;
       border-radius: 8px;
-      border: 1px solid var(--affine-border-color);
-      background-color: var(--affine-white-10);
+      border: 1px solid var(--cloud-notes-border-color);
+      background-color: var(--cloud-notes-white-10);
       display: flex;
       flex-direction: row;
       align-items: center;
       gap: 4px;
-      font-size: var(--affine-font-sm);
+      font-size: var(--cloud-notes-font-sm);
       font-weight: 500;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
       cursor: pointer;
       user-select: none;
       line-height: 22px;
     }
     .action svg {
-      color: var(--affine-icon-color);
+      color: var(--cloud-notes-icon-color);
     }
   `;
 

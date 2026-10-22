@@ -1,4 +1,4 @@
-import { apis } from '@affine/electron-api';
+import { apis } from '@cloud-notes/electron-api';
 
 import { capabilitiesFor } from './metadata';
 import {

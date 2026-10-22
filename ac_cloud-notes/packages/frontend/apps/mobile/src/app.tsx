@@ -1,22 +1,22 @@
-import { AffineContext } from '@affine/core/components/context';
-import { AppFallback } from '@affine/core/mobile/components/app-fallback';
-import { configureMobileModules } from '@affine/core/mobile/modules';
-import { HapticProvider } from '@affine/core/mobile/modules/haptics';
-import { VirtualKeyboardProvider } from '@affine/core/mobile/modules/virtual-keyboard';
-import { router } from '@affine/core/mobile/router';
-import { configureCommonModules } from '@affine/core/modules';
-import { I18nProvider } from '@affine/core/modules/i18n';
-import { LifecycleService } from '@affine/core/modules/lifecycle';
+import { CloudNotesContext } from '@cloud-notes/core/components/context';
+import { AppFallback } from '@cloud-notes/core/mobile/components/app-fallback';
+import { configureMobileModules } from '@cloud-notes/core/mobile/modules';
+import { HapticProvider } from '@cloud-notes/core/mobile/modules/haptics';
+import { VirtualKeyboardProvider } from '@cloud-notes/core/mobile/modules/virtual-keyboard';
+import { router } from '@cloud-notes/core/mobile/router';
+import { configureCommonModules } from '@cloud-notes/core/modules';
+import { I18nProvider } from '@cloud-notes/core/modules/i18n';
+import { LifecycleService } from '@cloud-notes/core/modules/lifecycle';
 import {
   configureLocalStorageStateStorageImpls,
   NbstoreProvider,
-} from '@affine/core/modules/storage';
-import { PopupWindowProvider } from '@affine/core/modules/url';
-import { configureBrowserWorkbenchModule } from '@affine/core/modules/workbench';
-import { configureBrowserWorkspaceFlavours } from '@affine/core/modules/workspace-engine';
-import { getWorkerUrl } from '@affine/env/worker';
-import { StoreManagerClient } from '@affine/nbstore/worker/client';
-import { setTelemetryTransport } from '@affine/track';
+} from '@cloud-notes/core/modules/storage';
+import { PopupWindowProvider } from '@cloud-notes/core/modules/url';
+import { configureBrowserWorkbenchModule } from '@cloud-notes/core/modules/workbench';
+import { configureBrowserWorkspaceFlavours } from '@cloud-notes/core/modules/workspace-engine';
+import { getWorkerUrl } from '@cloud-notes/env/worker';
+import { StoreManagerClient } from '@cloud-notes/nbstore/worker/client';
+import { setTelemetryTransport } from '@cloud-notes/track';
 import { Framework, FrameworkRoot, getCurrentStore } from '@toeverything/infra';
 import { OpClient } from '@toeverything/infra/op';
 import { Suspense } from 'react';
@@ -26,7 +26,7 @@ let storeManagerClient: StoreManagerClient;
 
 const workerUrl = getWorkerUrl('nbstore');
 if (window.SharedWorker) {
-  const worker = new SharedWorker(workerUrl, { name: 'affine-shared-worker' });
+  const worker = new SharedWorker(workerUrl, { name: 'cloud-notes-shared-worker' });
   storeManagerClient = new StoreManagerClient(new OpClient(worker.port));
 } else {
   const worker = new Worker(workerUrl);
@@ -151,13 +151,13 @@ export function App() {
     <Suspense>
       <FrameworkRoot framework={frameworkProvider}>
         <I18nProvider>
-          <AffineContext store={getCurrentStore()}>
+          <CloudNotesContext store={getCurrentStore()}>
             <RouterProvider
               fallbackElement={<AppFallback />}
               router={router}
               future={future}
             />
-          </AffineContext>
+          </CloudNotesContext>
         </I18nProvider>
       </FrameworkRoot>
     </Suspense>

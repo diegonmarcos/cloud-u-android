@@ -147,7 +147,7 @@ test.describe('auto-complete', () => {
       await noteButton.click();
       await waitNextFrame(page);
 
-      const edgelessNote = page.locator('affine-edgeless-note');
+      const edgelessNote = page.locator('cloud-notes-edgeless-note');
 
       expect(await edgelessNote.count()).toBe(1);
       const [x, y] = await toViewCoord(page, [240, 20]);
@@ -157,7 +157,7 @@ test.describe('auto-complete', () => {
       await assertRichTexts(page, ['hello']);
 
       const noteId = await page.evaluate(() => {
-        const note = document.body.querySelector('affine-edgeless-note');
+        const note = document.body.querySelector('cloud-notes-edgeless-note');
         return note?.getAttribute('data-block-id');
       });
       if (!noteId) {
@@ -222,7 +222,7 @@ test.describe('auto-complete', () => {
       await waitNextFrame(page);
 
       const noteId2 = await page.evaluate(() => {
-        const note = document.body.querySelectorAll('affine-edgeless-note')[1];
+        const note = document.body.querySelectorAll('cloud-notes-edgeless-note')[1];
         return note?.getAttribute('data-block-id');
       });
       if (!noteId2) {
@@ -245,13 +245,13 @@ test.describe('auto-complete', () => {
       await assertSelectedBound(page, [0, 0, 100, 100]);
       await dragBetweenViewCoords(page, [120, 50], [200, 0]);
 
-      expect(await page.locator('.affine-frame-container').count()).toBe(0);
+      expect(await page.locator('.cloud-notes-frame-container').count()).toBe(0);
 
       const frameButton = getAutoCompletePanelButton(page, 'frame');
       await expect(frameButton).toBeVisible();
       await frameButton.click();
 
-      expect(await page.locator('.affine-frame-container').count()).toBe(1);
+      expect(await page.locator('.cloud-notes-frame-container').count()).toBe(1);
     });
   });
 });

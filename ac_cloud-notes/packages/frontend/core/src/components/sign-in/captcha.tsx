@@ -1,4 +1,4 @@
-import { CaptchaService } from '@affine/core/modules/cloud';
+import { CaptchaService } from '@cloud-notes/core/modules/cloud';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect } from 'react';

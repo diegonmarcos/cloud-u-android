@@ -1,22 +1,22 @@
-import { Button, type ButtonProps } from '@affine/component/ui/button';
-import { Tooltip } from '@affine/component/ui/tooltip';
-import { generateSubscriptionCallbackLink } from '@affine/core/components/hooks/affine/use-subscription-notify';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+import { Button, type ButtonProps } from '@cloud-notes/component/ui/button';
+import { Tooltip } from '@cloud-notes/component/ui/tooltip';
+import { generateSubscriptionCallbackLink } from '@cloud-notes/core/components/hooks/cloud-notes/use-subscription-notify';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import {
   AuthService,
   ServerService,
   SubscriptionService,
-} from '@affine/core/modules/cloud';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
-import { UrlService } from '@affine/core/modules/url';
+} from '@cloud-notes/core/modules/cloud';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
+import { UrlService } from '@cloud-notes/core/modules/url';
 import {
   type CreateCheckoutSessionInput,
   SubscriptionPlan,
   type SubscriptionRecurring,
   SubscriptionStatus,
-} from '@affine/graphql';
-import { Trans, useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/graphql';
+import { Trans, useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { DoneIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
@@ -99,11 +99,11 @@ const getSignUpText = (
 ) => {
   switch (plan) {
     case SubscriptionPlan.Free:
-      return t['com.affine.payment.sign-up-free']();
+      return t['com.cloud-notes.payment.sign-up-free']();
     case SubscriptionPlan.Team:
-      return t['com.affine.payment.upgrade']();
+      return t['com.cloud-notes.payment.upgrade']();
     default:
-      return t['com.affine.payment.buy-pro']();
+      return t['com.cloud-notes.payment.buy-pro']();
   }
 };
 
@@ -155,7 +155,7 @@ const ActionButton = ({ detail, recurring }: PlanCardProps) => {
   if (isBeliever) {
     return (
       <Button className={styles.planAction} disabled>
-        {t['com.affine.payment.cloud.lifetime.included']()}
+        {t['com.cloud-notes.payment.cloud.lifetime.included']()}
       </Button>
     );
   }
@@ -196,7 +196,7 @@ const CurrentPlan = () => {
   const t = useI18n();
   return (
     <Button className={styles.planAction}>
-      {t['com.affine.payment.current-plan']()}
+      {t['com.cloud-notes.payment.current-plan']()}
     </Button>
   );
 };
@@ -206,7 +206,7 @@ const Downgrade = ({ disabled }: { disabled?: boolean }) => {
   const [open, setOpen] = useState(false);
 
   const tooltipContent = disabled
-    ? t['com.affine.payment.downgraded-tooltip']()
+    ? t['com.cloud-notes.payment.downgraded-tooltip']()
     : null;
 
   const handleClick = useCallback(() => {
@@ -223,7 +223,7 @@ const Downgrade = ({ disabled }: { disabled?: boolean }) => {
             onClick={handleClick}
             disabled={disabled}
           >
-            {t['com.affine.payment.downgrade']()}
+            {t['com.cloud-notes.payment.downgrade']()}
           </Button>
         </div>
       </Tooltip>
@@ -254,7 +254,7 @@ const UpgradeToTeam = ({ recurring }: { recurring: SubscriptionRecurring }) => {
         variant="primary"
         data-event-args-url={`${url}${urlParams.toString() ? `&${urlParams.toString()}` : ''}`}
       >
-        {t['com.affine.payment.upgrade']()}
+        {t['com.cloud-notes.payment.upgrade']()}
       </Button>
     </a>
   );
@@ -328,7 +328,7 @@ export const Upgrade = ({
           {...props}
           {...btnProps}
         >
-          {children ?? t['com.affine.payment.upgrade']()}
+          {children ?? t['com.cloud-notes.payment.upgrade']()}
         </Button>
       )}
     />
@@ -390,7 +390,7 @@ const ChangeRecurring = ({
         disabled={disabled || isMutating}
         loading={isMutating}
       >
-        {t['com.affine.payment.change-to']({ to })}
+        {t['com.cloud-notes.payment.change-to']({ to })}
       </Button>
 
       <ConfirmLoadingModal
@@ -446,10 +446,10 @@ const ResumeButton = () => {
     <ResumeAction open={open} onOpenChange={setOpen}>
       <Button className={styles.resumeAction} onClick={handleClick}>
         <span data-show-hover="true" className={clsx(styles.resumeContent)}>
-          {t['com.affine.payment.resume-renewal']()}
+          {t['com.cloud-notes.payment.resume-renewal']()}
         </span>
         <span data-show-hover="false" className={clsx(styles.resumeContent)}>
-          {t['com.affine.payment.current-plan']()}
+          {t['com.cloud-notes.payment.current-plan']()}
         </span>
       </Button>
     </ResumeAction>

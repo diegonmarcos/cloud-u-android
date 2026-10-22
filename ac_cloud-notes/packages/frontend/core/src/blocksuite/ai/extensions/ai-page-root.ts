@@ -1,8 +1,8 @@
-import { LifeCycleWatcher } from '@blocksuite/affine/std';
+import { LifeCycleWatcher } from '@blocksuite/cloud-notes/std';
 
 import { buildAIPanelConfig } from '../ai-panel';
 import { setupSpaceAIEntry } from '../entries/space/setup-space';
-import { AffineAIPanelWidget } from '../widgets/ai-panel/ai-panel';
+import { CloudNotesAIPanelWidget } from '../widgets/ai-panel/ai-panel';
 
 export function getAIPageRootWatcher() {
   class AIPageRootWatcher extends LifeCycleWatcher {
@@ -16,7 +16,7 @@ export function getAIPageRootWatcher() {
           return;
         }
         const component = payload.view;
-        if (component instanceof AffineAIPanelWidget) {
+        if (component instanceof CloudNotesAIPanelWidget) {
           component.style.width = '630px';
           component.config = buildAIPanelConfig(component);
           setupSpaceAIEntry(component);

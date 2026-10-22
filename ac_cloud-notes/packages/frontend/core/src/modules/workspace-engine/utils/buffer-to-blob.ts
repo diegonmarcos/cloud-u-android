@@ -1,4 +1,4 @@
-import { toArrayBuffer } from '@affine/core/utils/array-buffer';
+import { toArrayBuffer } from '@cloud-notes/core/utils/array-buffer';
 import isSvg from 'is-svg';
 
 function fastCheckIsNotSvg(buffer: Uint8Array) {

@@ -1,9 +1,9 @@
-import { noop } from '@blocksuite/affine/global/utils';
-import type { DocMode } from '@blocksuite/affine/model';
+import { noop } from '@blocksuite/cloud-notes/global/utils';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import {
   ActionPlacement,
   type ToolbarModuleConfig,
-} from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/shared/services';
 import { html } from 'lit';
 
 import type { AIItemGroupConfig } from '../../components/ai-item/types';

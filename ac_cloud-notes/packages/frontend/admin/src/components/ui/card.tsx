@@ -1,4 +1,4 @@
-import { cn } from '@affine/admin/utils';
+import { cn } from '@cloud-notes/admin/utils';
 import * as React from 'react';
 
 const Card = React.forwardRef<

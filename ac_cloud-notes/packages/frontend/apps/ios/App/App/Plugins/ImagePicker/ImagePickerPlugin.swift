@@ -1,4 +1,4 @@
-import AffineResources
+import CloudNotesResources
 import Capacitor
 import Foundation
 import PhotosUI
@@ -182,14 +182,14 @@ public class ImagePickerPlugin: CAPPlugin, CAPBridgedPlugin {
 
   private func createStagingDirectory() throws -> URL {
     let directory = FileManager.default.temporaryDirectory
-      .appendingPathComponent("affine-image-picker", isDirectory: true)
+      .appendingPathComponent("cloud-notes-image-picker", isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     return directory
   }
 
   private func clearStagingDirectory() throws {
     let directory = FileManager.default.temporaryDirectory
-      .appendingPathComponent("affine-image-picker", isDirectory: true)
+      .appendingPathComponent("cloud-notes-image-picker", isDirectory: true)
     guard FileManager.default.fileExists(atPath: directory.path) else { return }
     try FileManager.default.removeItem(at: directory)
   }
@@ -274,7 +274,7 @@ private enum ImagePickerSheetTheme {
     UITraitCollection(userInterfaceStyle: userInterfaceStyle)
   }
 
-  private func resolvedColor(_ color: AffineColors) -> UIColor {
+  private func resolvedColor(_ color: CloudNotesColors) -> UIColor {
     color.uiColor.resolvedColor(with: traitCollection)
   }
 
@@ -450,7 +450,7 @@ private final class ImagePickerSourceSheetViewController: UIViewController {
   }
 
   private func animateIn() {
-    contentStackView.transform = CGAffineTransform(translationX: 0, y: 24)
+    contentStackView.transform = CGCloudNotesTransform(translationX: 0, y: 24)
     contentStackView.alpha = 0
 
     UIView.animate(withDuration: 0.24, delay: 0, options: [.curveEaseOut]) {
@@ -467,7 +467,7 @@ private final class ImagePickerSourceSheetViewController: UIViewController {
     UIView.animate(withDuration: 0.2, delay: 0, options: [.curveEaseIn]) {
       self.dimmingView.alpha = 0
       self.contentStackView.alpha = 0
-      self.contentStackView.transform = CGAffineTransform(translationX: 0, y: 24)
+      self.contentStackView.transform = CGCloudNotesTransform(translationX: 0, y: 24)
     } completion: { _ in
       self.dismiss(animated: false) {
         if resolveCancellation, !self.hasResolvedCancellation {

@@ -50,7 +50,7 @@ The `BlockService` class provides some lifecycle hooks for you to override.
 
 Sometimes you may want to set some runtime configurations for some blocks to better fit your needs.
 
-For example, you may want to set an image proxy middleware URL for the image block. By default the image block will use AFFiNE's image proxy to bypass CORS restrictions. In the self-hosted case, you may want to set your own image proxy middleware URL concerning that the default one will not be available:
+For example, you may want to set an image proxy middleware URL for the image block. By default the image block will use Cloud Notes's image proxy to bypass CORS restrictions. In the self-hosted case, you may want to set your own image proxy middleware URL concerning that the default one will not be available:
 
 ```ts
 import type { ImageService } from '@blocksuite/blocks';

@@ -1,5 +1,5 @@
-import type { DocProps } from '@affine/core/blocksuite/initialization';
-import type { DocMode } from '@blocksuite/affine/model';
+import type { DocProps } from '@cloud-notes/core/blocksuite/initialization';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 
 export interface DocCreateOptions {
   id?: string;

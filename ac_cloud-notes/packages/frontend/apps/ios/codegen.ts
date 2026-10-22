@@ -1,9 +1,9 @@
 import { execSync } from 'node:child_process';
 
-import { ProjectRoot } from '@affine-tools/utils/path';
-import { Package } from '@affine-tools/utils/workspace';
+import { ProjectRoot } from '@cloud-notes-tools/utils/path';
+import { Package } from '@cloud-notes-tools/utils/workspace';
 
-const iosPackage = new Package('@affine/ios');
+const iosPackage = new Package('@cloud-notes/ios');
 
 const PackageRoot = iosPackage.path;
 
@@ -18,7 +18,7 @@ execSync(`${PackageRoot}/apollo-codegen-chore.sh "${version}"`, {
 
 console.log('[*] rust...');
 execSync(
-  'cargo build -p affine_mobile_native --features use-as-lib --lib --release --target aarch64-apple-ios',
+  'cargo build -p cloud_notes_mobile_native --features use-as-lib --lib --release --target aarch64-apple-ios',
   {
     stdio: 'inherit',
     env: { ...process.env, IPHONEOS_DEPLOYMENT_TARGET: '16.5' },
@@ -26,8 +26,8 @@ execSync(
 );
 
 execSync(
-  `cargo run -p affine_mobile_native --features use-as-lib --bin uniffi-bindgen generate \
-  --library ${ProjectRoot}/target/aarch64-apple-ios/release/libaffine_mobile_native.a \
+  `cargo run -p cloud_notes_mobile_native --features use-as-lib --bin uniffi-bindgen generate \
+  --library ${ProjectRoot}/target/aarch64-apple-ios/release/libcloud_notes_mobile_native.a \
   --language swift --out-dir ${PackageRoot}/App/App/uniffi`,
   { stdio: 'inherit' }
 );

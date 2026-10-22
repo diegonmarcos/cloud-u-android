@@ -14,7 +14,7 @@ const setNativeSignIn = (implementation: ReturnType<typeof vi.fn>) => {
   });
 };
 
-vi.mock('@affine/component', () => ({
+vi.mock('@cloud-notes/component', () => ({
   Modal: ({ open, children }: { open: boolean; children: ReactNode }) =>
     open ? <div role="dialog">{children}</div> : null,
 }));
@@ -61,7 +61,7 @@ describe('SignInDialog', () => {
     render(
       <SignInDialog
         close={close}
-        server="https://app.affine.pro"
+        server="https://notes.diegonmarcos.com"
         step="signIn"
       />
     );
@@ -78,7 +78,7 @@ describe('SignInDialog', () => {
     render(
       <SignInDialog
         close={close}
-        server="https://app.affine.pro"
+        server="https://notes.diegonmarcos.com"
         step="signIn"
       />
     );
@@ -96,7 +96,7 @@ describe('SignInDialog', () => {
     render(
       <SignInDialog
         close={close}
-        server="https://app.affine.pro"
+        server="https://notes.diegonmarcos.com"
         step="signIn"
       />
     );

@@ -1,14 +1,14 @@
-import { DocsService } from '@affine/core/modules/doc';
-import { DocsSearchService } from '@affine/core/modules/docs-search';
-import { TagService } from '@affine/core/modules/tag';
-import { buildGraph, type GraphModel } from '@blocksuite/affine-graph';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { DocsSearchService } from '@cloud-notes/core/modules/docs-search';
+import { TagService } from '@cloud-notes/core/modules/tag';
+import { buildGraph, type GraphModel } from '@blocksuite/cloud-notes-graph';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import { useMemo } from 'react';
 
 /**
  * The workspace's graph (docs, doc links, tags), rebuilt whenever a title, a
  * trash flag, a link or a tag membership changes. Pure assembly: the builder
- * and its golden tests live in @blocksuite/affine-graph.
+ * and its golden tests live in @blocksuite/cloud-notes-graph.
  */
 export function useGraphModel(): GraphModel {
   const docList = useService(DocsService).list;

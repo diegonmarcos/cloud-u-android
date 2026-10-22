@@ -1,4 +1,4 @@
-import { getInviteInfoQuery } from '@affine/graphql';
+import { getInviteInfoQuery } from '@cloud-notes/graphql';
 import { Store } from '@toeverything/infra';
 
 import type { GraphQLService } from '../services/graphql';

@@ -5,7 +5,7 @@
 //  Created by 秋星桥 on 6/30/25.
 //
 
-import AffineGraphQL
+import CloudNotesGraphQL
 import EventSource
 import Foundation
 import MarkdownParser
@@ -98,7 +98,7 @@ private extension ChatManager {
         if !selectedDocumentIds.isEmpty {
           try await IntelligentContext.shared.waitForSelectedSources(selectedDocumentIds)
         }
-        let messageParameters: AffineGraphQL.JSON = [
+        let messageParameters: CloudNotesGraphQL.JSON = [
           // packages/frontend/core/src/blocksuite/ai/provider/setup-provider.tsx
           "scopeSelectors": editorData.documentAttachments.map { attachment in
             [

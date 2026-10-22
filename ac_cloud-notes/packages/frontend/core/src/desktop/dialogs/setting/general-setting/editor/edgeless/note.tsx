@@ -4,18 +4,18 @@ import {
   RadioGroup,
   type RadioItem,
   Slider,
-} from '@affine/component';
-import { SettingRow } from '@affine/component/setting-components';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   createEnumMap,
   DefaultTheme,
   NoteShadow,
   NoteShadowMap,
   StrokeStyle,
-} from '@blocksuite/affine/model';
-import type { Store } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/model';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useFramework, useLiveData } from '@toeverything/infra';
 import { isEqual } from 'lodash-es';
 import { useCallback, useMemo } from 'react';
@@ -59,17 +59,17 @@ export const NoteSettings = () => {
       {
         value: StrokeStyle.Solid,
         label:
-          t['com.affine.settings.editorSettings.edgeless.note.border.solid'](),
+          t['com.cloud-notes.settings.editorSettings.edgeless.note.border.solid'](),
       },
       {
         value: StrokeStyle.Dash,
         label:
-          t['com.affine.settings.editorSettings.edgeless.note.border.dash'](),
+          t['com.cloud-notes.settings.editorSettings.edgeless.note.border.dash'](),
       },
       {
         value: StrokeStyle.None,
         label:
-          t['com.affine.settings.editorSettings.edgeless.note.border.none'](),
+          t['com.cloud-notes.settings.editorSettings.edgeless.note.border.none'](),
       },
     ],
     [t]
@@ -177,7 +177,7 @@ export const NoteSettings = () => {
   return (
     <>
       <EdgelessSnapshot
-        title={t['com.affine.settings.editorSettings.edgeless.note']()}
+        title={t['com.cloud-notes.settings.editorSettings.edgeless.note']()}
         docName="note"
         keyName="affine:note"
         getElements={getElements}
@@ -185,7 +185,7 @@ export const NoteSettings = () => {
       />
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.note.background'
+          'com.cloud-notes.settings.editorSettings.edgeless.note.background'
         ]()}
         desc={''}
       >
@@ -204,7 +204,7 @@ export const NoteSettings = () => {
         ) : null}
       </SettingRow>
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.note.corners']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.note.corners']()}
         desc={''}
       >
         <DropdownMenu
@@ -222,7 +222,7 @@ export const NoteSettings = () => {
         />
       </SettingRow>
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.note.shadow']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.note.shadow']()}
         desc={''}
       >
         <DropdownMenu
@@ -235,7 +235,7 @@ export const NoteSettings = () => {
         />
       </SettingRow>
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.note.border']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.note.border']()}
         desc={''}
       >
         <RadioGroup
@@ -248,7 +248,7 @@ export const NoteSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.note.border-thickness'
+          'com.cloud-notes.settings.editorSettings.edgeless.note.border-thickness'
         ]()}
         desc={''}
       >

@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { type SpaceType } from '@affine/nbstore';
+import { type SpaceType } from '@cloud-notes/nbstore';
 
 import { normalizeWorkspaceIdForPath } from '../../shared/utils';
 import { mainRPC } from '../main-rpc';

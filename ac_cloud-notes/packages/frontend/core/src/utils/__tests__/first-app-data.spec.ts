@@ -8,12 +8,12 @@ const docsServiceToken = Symbol('DocsService');
 const organizeServiceToken = Symbol('OrganizeService');
 
 vi.mock('../../blocksuite/block-suite-editor', () => ({}));
-vi.mock('@blocksuite/affine/widgets/linked-doc', () => ({
+vi.mock('@blocksuite/cloud-notes/widgets/linked-doc', () => ({
   ZipTransformer: {
     importDocs,
   },
 }));
-vi.mock('@affine/templates/onboarding.zip', () => ({
+vi.mock('@cloud-notes/templates/onboarding.zip', () => ({
   default: '/onboarding.zip',
 }));
 vi.mock('../../modules/doc', () => ({
@@ -23,7 +23,7 @@ vi.mock('../../modules/organize', () => ({
   OrganizeService: organizeServiceToken,
 }));
 vi.mock('../../modules/workspace', () => ({
-  getAFFiNEWorkspaceSchema: () => 'schema',
+  getCloudNotesWorkspaceSchema: () => 'schema',
 }));
 
 const originalBuildConfig = globalThis.BUILD_CONFIG;

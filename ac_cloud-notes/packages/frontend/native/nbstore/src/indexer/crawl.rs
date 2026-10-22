@@ -1,4 +1,4 @@
-use affine_doc_loader::{ParseError, parse_doc_from_binary};
+use cloud_notes_doc_loader::{ParseError, parse_doc_from_binary};
 use y_octo::merge_updates_v1;
 
 use super::{NativeCrawlResult, SqliteDocStorage, error::Result};

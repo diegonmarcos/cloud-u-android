@@ -1,23 +1,23 @@
 /* oxlint-disable typescript/no-non-null-assertion */
-import { DefaultTool } from '@blocksuite/affine/blocks/surface';
-import { IS_MAC } from '@blocksuite/affine/global/env';
+import { DefaultTool } from '@blocksuite/cloud-notes/blocks/surface';
+import { IS_MAC } from '@blocksuite/cloud-notes/global/env';
 import {
   Bound,
   getCommonBoundWithRotation,
-} from '@blocksuite/affine/global/gfx';
-import type { PointerEventState } from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/global/gfx';
+import type { PointerEventState } from '@blocksuite/cloud-notes/std';
 import {
   BaseTool,
   type GfxModel,
   MouseButton,
-} from '@blocksuite/affine/std/gfx';
-import { on } from '@blocksuite/affine-shared/utils';
+} from '@blocksuite/cloud-notes/std/gfx';
+import { on } from '@blocksuite/cloud-notes-shared/utils';
 import { isEqual } from 'lodash-es';
 import { Subject } from 'rxjs';
 
 import {
-  AFFINE_AI_PANEL_WIDGET,
-  type AffineAIPanelWidget,
+  CLOUD_NOTES_AI_PANEL_WIDGET,
+  type CloudNotesAIPanelWidget,
 } from '../widgets/ai-panel/ai-panel.js';
 
 export class CopilotTool extends BaseTool {
@@ -50,9 +50,9 @@ export class CopilotTool extends BaseTool {
   // AI processing
   get processing() {
     const aiPanel = this.gfx.std.view.getWidget(
-      AFFINE_AI_PANEL_WIDGET,
+      CLOUD_NOTES_AI_PANEL_WIDGET,
       this.doc.root!.id
-    ) as AffineAIPanelWidget;
+    ) as CloudNotesAIPanelWidget;
     return aiPanel && aiPanel.state !== 'hidden';
   }
 

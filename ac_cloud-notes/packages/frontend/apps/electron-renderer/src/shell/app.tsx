@@ -1,17 +1,17 @@
-import { useAppSettingHelper } from '@affine/core/components/hooks/affine/use-app-setting-helper';
-import { WindowsAppControls } from '@affine/core/components/pure/header/windows-app-controls';
-import { ThemeProvider } from '@affine/core/components/theme-provider';
-import { configureElectronStateStorageImpls } from '@affine/core/desktop/storage';
-import { configureAppSidebarModule } from '@affine/core/modules/app-sidebar';
-import { ShellAppSidebarFallback } from '@affine/core/modules/app-sidebar/views';
+import { useAppSettingHelper } from '@cloud-notes/core/components/hooks/cloud-notes/use-app-setting-helper';
+import { WindowsAppControls } from '@cloud-notes/core/components/pure/header/windows-app-controls';
+import { ThemeProvider } from '@cloud-notes/core/components/theme-provider';
+import { configureElectronStateStorageImpls } from '@cloud-notes/core/desktop/storage';
+import { configureAppSidebarModule } from '@cloud-notes/core/modules/app-sidebar';
+import { ShellAppSidebarFallback } from '@cloud-notes/core/modules/app-sidebar/views';
 import {
   AppTabsHeader,
   configureAppTabsHeaderModule,
-} from '@affine/core/modules/app-tabs-header';
-import { configureDesktopApiModule } from '@affine/core/modules/desktop-api';
-import { configureI18nModule, I18nProvider } from '@affine/core/modules/i18n';
-import { configureStorageModule } from '@affine/core/modules/storage';
-import { configureAppThemeModule } from '@affine/core/modules/theme';
+} from '@cloud-notes/core/modules/app-tabs-header';
+import { configureDesktopApiModule } from '@cloud-notes/core/modules/desktop-api';
+import { configureI18nModule, I18nProvider } from '@cloud-notes/core/modules/i18n';
+import { configureStorageModule } from '@cloud-notes/core/modules/storage';
+import { configureAppThemeModule } from '@cloud-notes/core/modules/theme';
 import { Framework, FrameworkRoot } from '@toeverything/infra';
 
 import * as styles from './app.css';

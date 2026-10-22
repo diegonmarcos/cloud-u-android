@@ -1,7 +1,7 @@
 import { UaHelper } from './ua-helper.js';
 
 export function setupGlobal() {
-  if (globalThis.$AFFINE_SETUP) {
+  if (globalThis.$CLOUD_NOTES_SETUP) {
     return;
   }
 
@@ -18,7 +18,7 @@ export function setupGlobal() {
     isSelfHosted: false,
     // publicPath is the root of assets files
     publicPath: '/',
-    // subPath is the path to access the affine service
+    // subPath is the path to access the cloud-notes service
     subPath: '',
   };
 
@@ -52,7 +52,7 @@ export function setupGlobal() {
   applyEnvironmentOverrides(environment);
 
   globalThis.environment = environment;
-  globalThis.$AFFINE_SETUP = true;
+  globalThis.$CLOUD_NOTES_SETUP = true;
 }
 
 function applyEnvironmentOverrides(environment: Environment) {

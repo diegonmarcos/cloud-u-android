@@ -4,22 +4,22 @@ import {
   MenuSeparator,
   MenuSub,
   notify,
-} from '@affine/component';
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
+} from '@cloud-notes/component';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
 import type {
   NavigationPanelTreeNodeIcon,
   NodeOperation,
-} from '@affine/core/desktop/components/navigation-panel';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
+} from '@cloud-notes/core/desktop/components/navigation-panel';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
 import {
   type FolderNode,
   OrganizeService,
-} from '@affine/core/modules/organize';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
+} from '@cloud-notes/core/modules/organize';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import {
   DeleteIcon,
   FolderIcon,
@@ -165,10 +165,10 @@ const NavigationPanelFolderMenu = ({
         view: (
           <FolderRenameSubMenu
             text={t[
-              'com.affine.rootAppSidebar.organize.folder.create-subfolder'
+              'com.cloud-notes.rootAppSidebar.organize.folder.create-subfolder'
             ]()}
             title={t[
-              'com.affine.rootAppSidebar.organize.folder.create-subfolder'
+              'com.cloud-notes.rootAppSidebar.organize.folder.create-subfolder'
             ]()}
             onConfirm={handleCreateSubfolder}
             descRenderer={createSubTipRenderer}
@@ -190,26 +190,26 @@ const NavigationPanelFolderMenu = ({
                   prefixIcon={<PageIcon />}
                   onClick={() => handleAddToFolder('doc')}
                 >
-                  {t['com.affine.rootAppSidebar.organize.folder.add-docs']()}
+                  {t['com.cloud-notes.rootAppSidebar.organize.folder.add-docs']()}
                 </MenuItem>
                 <MenuItem
                   prefixIcon={<TagsIcon />}
                   onClick={() => handleAddToFolder('tag')}
                 >
-                  {t['com.affine.rootAppSidebar.organize.folder.add-tags']()}
+                  {t['com.cloud-notes.rootAppSidebar.organize.folder.add-tags']()}
                 </MenuItem>
                 <MenuItem
                   prefixIcon={<LayerIcon />}
                   onClick={() => handleAddToFolder('collection')}
                 >
                   {t[
-                    'com.affine.rootAppSidebar.organize.folder.add-collections'
+                    'com.cloud-notes.rootAppSidebar.organize.folder.add-collections'
                   ]()}
                 </MenuItem>
               </>
             }
           >
-            {t['com.affine.rootAppSidebar.organize.folder.add-others']()}
+            {t['com.cloud-notes.rootAppSidebar.organize.folder.add-others']()}
           </MenuSub>
         ),
       },
@@ -226,7 +226,7 @@ const NavigationPanelFolderMenu = ({
             prefixIcon={<DeleteIcon />}
             onClick={handleDelete}
           >
-            {t['com.affine.rootAppSidebar.organize.delete']()}
+            {t['com.cloud-notes.rootAppSidebar.organize.delete']()}
           </MenuItem>
         ),
       },
@@ -270,10 +270,10 @@ export const NavigationPanelFolderNodeMenu = ({
     node.delete();
     track.$.navigationPanel.organize.deleteOrganizeItem({ type: 'folder' });
     notify.success({
-      title: t['com.affine.rootAppSidebar.organize.delete.notify-title']({
+      title: t['com.cloud-notes.rootAppSidebar.organize.delete.notify-title']({
         name,
       }),
-      message: t['com.affine.rootAppSidebar.organize.delete.notify-message'](),
+      message: t['com.cloud-notes.rootAppSidebar.organize.delete.notify-message'](),
     });
   }, [name, node, t]);
   const handleRename = useCallback(
@@ -421,7 +421,7 @@ const NavigationPanelFolderNodeFolder = ({
                 data-event-args-type={node.type$.value}
                 onClick={() => node.delete()}
               >
-                {t['com.affine.rootAppSidebar.organize.delete-from-folder']()}
+                {t['com.cloud-notes.rootAppSidebar.organize.delete-from-folder']()}
               </MenuItem>
             ),
           },
@@ -464,7 +464,7 @@ const NavigationPanelFolderNodeFolder = ({
         />
       ))}
       <AddItemPlaceholder
-        label={t['com.affine.rootAppSidebar.organize.folder.new-doc']()}
+        label={t['com.cloud-notes.rootAppSidebar.organize.folder.new-doc']()}
         onClick={handleNewDoc}
         data-testid="new-folder-in-folder-button"
       />

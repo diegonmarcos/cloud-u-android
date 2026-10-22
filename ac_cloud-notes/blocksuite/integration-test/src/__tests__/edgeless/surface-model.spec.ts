@@ -1,9 +1,9 @@
-import type { SurfaceBlockModel } from '@blocksuite/affine/blocks/surface';
+import type { SurfaceBlockModel } from '@blocksuite/cloud-notes/blocks/surface';
 import type {
   BrushElementModel,
   ConnectorElementModel,
   GroupElementModel,
-} from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/model';
 import { serializeXYWH } from '@blocksuite/global/gfx';
 import { beforeEach, describe, expect, test } from 'vitest';
 

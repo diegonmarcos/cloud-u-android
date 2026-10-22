@@ -1,4 +1,4 @@
-import type { WorkspaceService } from '@affine/core/modules/workspace';
+import type { WorkspaceService } from '@cloud-notes/core/modules/workspace';
 import { logger } from '@sentry/react';
 import {
   catchErrorInto,

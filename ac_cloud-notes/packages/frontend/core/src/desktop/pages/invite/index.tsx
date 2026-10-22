@@ -1,4 +1,4 @@
-import { notify } from '@affine/component';
+import { notify } from '@cloud-notes/component';
 import {
   AcceptInvitePage,
   ExpiredPage,
@@ -6,11 +6,11 @@ import {
   JoinFailedPage,
   RequestToJoinPage,
   SentRequestPage,
-} from '@affine/component/member-components';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { WorkspacesService } from '@affine/core/modules/workspace';
-import { UserFriendlyError } from '@affine/error';
-import { WorkspaceMemberStatus } from '@affine/graphql';
+} from '@cloud-notes/component/member-components';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { WorkspacesService } from '@cloud-notes/core/modules/workspace';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { WorkspaceMemberStatus } from '@cloud-notes/graphql';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
@@ -49,7 +49,7 @@ const AcceptInvite = ({ inviteId: targetInviteId }: { inviteId: string }) => {
     jumpToPage(inviteInfo.workspace.id, 'all', RouteLogic.REPLACE);
   }, [inviteInfo, workspacesService, jumpToPage]);
 
-  const onOpenAffine = useCallback(() => {
+  const onOpenCloudNotes = useCallback(() => {
     navigateHelper.jumpToIndex();
   }, [navigateHelper]);
 
@@ -114,7 +114,7 @@ const AcceptInvite = ({ inviteId: targetInviteId }: { inviteId: string }) => {
         user={user}
         switchingAccount={switchingAccount}
         onSwitchAccount={onSwitchAccount}
-        onOpenAffine={onOpenAffine}
+        onOpenCloudNotes={onOpenCloudNotes}
       />
     );
   }
@@ -126,7 +126,7 @@ const AcceptInvite = ({ inviteId: targetInviteId }: { inviteId: string }) => {
       invitationError.is('INVALID_INVITATION') ||
       invitationError.is('NOT_FOUND'))
   ) {
-    return <ExpiredPage onOpenAffine={onOpenAffine} />;
+    return <ExpiredPage onOpenCloudNotes={onOpenCloudNotes} />;
   }
 
   if (invitationError || acceptError) {

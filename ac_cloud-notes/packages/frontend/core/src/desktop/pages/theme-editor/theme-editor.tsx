@@ -1,12 +1,12 @@
-import { RadioGroup, Scrollable } from '@affine/component';
-import { ThemeEditorService } from '@affine/core/modules/theme-editor';
+import { RadioGroup, Scrollable } from '@cloud-notes/component';
+import { ThemeEditorService } from '@cloud-notes/core/modules/theme-editor';
 import { useService } from '@toeverything/infra';
 import { useCallback, useEffect, useState } from 'react';
 
 import { ThemeEmpty } from './components/empty';
 import { ThemeTreeNode } from './components/tree-node';
 import { VariableList } from './components/variable-list';
-import { affineThemes, type TreeNode } from './resource';
+import { cloudNotesThemes, type TreeNode } from './resource';
 import * as styles from './theme-editor.css';
 
 export const ThemeEditor = () => {
@@ -14,7 +14,7 @@ export const ThemeEditor = () => {
   const [version, setVersion] = useState<'v1' | 'v2'>('v1');
   const [activeNode, setActiveNode] = useState<TreeNode | null>();
 
-  const { nodeMap, variableMap, tree } = affineThemes[version];
+  const { nodeMap, variableMap, tree } = cloudNotesThemes[version];
 
   const [customizedNodeIds, setCustomizedNodeIds] = useState<Set<string>>(
     new Set()

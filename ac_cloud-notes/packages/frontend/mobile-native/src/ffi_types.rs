@@ -1,4 +1,4 @@
-use affine_nbstore::{
+use cloud_notes_nbstore::{
   Blob as NbBlob, Data, DocClock as NbDocClock, DocIndexedClock as NbDocIndexedClock, DocRecord as NbDocRecord,
   DocUpdate as NbDocUpdate, ListedBlob as NbListedBlob, SetBlob as NbSetBlob,
   indexer::{
@@ -140,7 +140,7 @@ impl TryFrom<DocClock> for NbDocClock {
 pub struct Blob {
   pub key: String,
   // base64 encoded data; on mobile large blobs this is a file-path token prefixed
-  // with "__AFFINE_BLOB_FILE__:"
+  // with "__CLOUD_NOTES_BLOB_FILE__:"
   pub data: String,
   pub mime: String,
   pub size: i64,

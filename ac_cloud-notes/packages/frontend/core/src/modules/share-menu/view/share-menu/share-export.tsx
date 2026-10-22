@@ -1,10 +1,10 @@
-import { useExportPage } from '@affine/core/components/hooks/affine/use-export-page';
+import { useExportPage } from '@cloud-notes/core/components/hooks/cloud-notes/use-export-page';
 import {
   ExportMenuItems,
   PrintMenuItems,
-} from '@affine/core/components/page-list';
-import { EditorService } from '@affine/core/modules/editor';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/components/page-list';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 
 import * as styles from './index.css';
@@ -18,7 +18,7 @@ export const ShareExport = () => {
   return (
     <div className={styles.exportContainerStyle}>
       <div className={styles.descriptionStyle}>
-        {t['com.affine.share-menu.ShareViaExportDescription']()}
+        {t['com.cloud-notes.share-menu.ShareViaExportDescription']()}
       </div>
       <div className={styles.exportContainerStyle}>
         <ExportMenuItems
@@ -30,7 +30,7 @@ export const ShareExport = () => {
       {currentMode === 'page' && (
         <>
           <div className={styles.descriptionStyle}>
-            {t['com.affine.share-menu.ShareViaPrintDescription']()}
+            {t['com.cloud-notes.share-menu.ShareViaPrintDescription']()}
           </div>
           <div>
             <PrintMenuItems

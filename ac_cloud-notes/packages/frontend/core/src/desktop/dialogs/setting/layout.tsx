@@ -1,4 +1,4 @@
-import { IconButton } from '@affine/component';
+import { IconButton } from '@cloud-notes/component';
 import { ArrowUpSmallIcon } from '@blocksuite/icons/rc';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import {

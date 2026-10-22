@@ -56,15 +56,15 @@ jobs:
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
       RELEASE_VERSION: ${{ inputs.app_version }}
-      DEBUG: 'affine:*,napi:*'
-      APP_NAME: affine
+      DEBUG: 'cloud-notes:*,napi:*'
+      APP_NAME: cloud-notes
       MACOSX_DEPLOYMENT_TARGET: '12.0'
       SKIP_GENERATE_ASSETS: 1
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-      SENTRY_PROJECT: 'affine'
+      SENTRY_PROJECT: 'cloud-notes'
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       SENTRY_RELEASE: ${{ inputs.app_version }}
@@ -80,16 +80,16 @@ jobs:
         timeout-minutes: 10
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/electron @affine/monorepo @affine/nbstore @toeverything/infra
+          extra-flags: workspaces focus @cloud-notes/electron @cloud-notes/monorepo @cloud-notes/nbstore @toeverything/infra
           hard-link-nm: false
           nmHoistingLimits: workspaces
           enableScripts: ${{ inputs.enable_scripts }}
 
-      - name: Build AFFiNE native
+      - name: Build Cloud Notes native
         uses: ./.github/actions/build-rust
         with:
           target: ${{ inputs.target }}
-          package: '@affine/native'
+          package: '@cloud-notes/native'
 
       - uses: actions/download-artifact@v4
         with:
@@ -97,7 +97,7 @@ jobs:
           path: packages/frontend/apps/electron/resources/web-static
 
       - name: Build Desktop Layers
-        run: yarn affine @affine/electron build
+        run: yarn cloud-notes @cloud-notes/electron build
 
       - name: Signing By Apple Developer ID
         if: ${{ inputs.platform == 'darwin' && inputs.apple_codesign }}
@@ -130,19 +130,19 @@ jobs:
         # node_modules of nbstore is not needed for building, and it will make the build process out of memory
         run: |
           cargo clean
-          rm -rf packages/frontend/apps/electron/node_modules/@affine/nbstore/node_modules/@blocksuite
-          rm -rf packages/frontend/apps/electron/node_modules/@affine/native/node_modules
+          rm -rf packages/frontend/apps/electron/node_modules/@cloud-notes/nbstore/node_modules/@blocksuite
+          rm -rf packages/frontend/apps/electron/node_modules/@cloud-notes/native/node_modules
 
       - name: Remove nbstore node_modules (windows)
         if: ${{ inputs.platform == 'win32' }}
         shell: bash
         run: |
-          rm -rf packages/frontend/apps/electron/node_modules/@affine/nbstore/node_modules/@blocksuite/affine/node_modules
-          rm -rf packages/frontend/apps/electron/node_modules/@affine/native/node_modules
+          rm -rf packages/frontend/apps/electron/node_modules/@cloud-notes/nbstore/node_modules/@blocksuite/cloud-notes/node_modules
+          rm -rf packages/frontend/apps/electron/node_modules/@cloud-notes/native/node_modules
 
       - name: make
         if: ${{ inputs.platform != 'win32' }}
-        run: yarn affine @affine/electron make --platform=${{ inputs.platform }} --arch=${{ inputs.arch }}
+        run: yarn cloud-notes @cloud-notes/electron make --platform=${{ inputs.platform }} --arch=${{ inputs.arch }}
         env:
           SKIP_WEB_BUILD: 1
           HOIST_NODE_MODULES: 1
@@ -151,7 +151,7 @@ jobs:
       - name: package
         if: ${{ inputs.platform == 'win32' }}
         run: |
-          yarn affine @affine/electron package --platform=${{ inputs.platform }} --arch=${{ inputs.arch }}
+          yarn cloud-notes @cloud-notes/electron package --platform=${{ inputs.platform }} --arch=${{ inputs.arch }}
         env:
           SKIP_WEB_BUILD: 1
           HOIST_NODE_MODULES: 1
@@ -160,45 +160,45 @@ jobs:
       - name: signing DMG
         if: ${{ inputs.platform == 'darwin' && inputs.apple_codesign }}
         run: |
-          codesign --force --sign "Developer ID Application: TOEVERYTHING PTE. LTD." packages/frontend/apps/electron/out/${{ env.BUILD_TYPE }}/make/AFFiNE.dmg
+          codesign --force --sign "Developer ID Application: TOEVERYTHING PTE. LTD." packages/frontend/apps/electron/out/${{ env.BUILD_TYPE }}/make/cloud-notes.dmg
 
       - name: Save artifacts (mac)
         if: ${{ inputs.platform == 'darwin' }}
         run: |
           mkdir -p builds
-          mv packages/frontend/apps/electron/out/*/make/*.dmg ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-macos-${{ inputs.arch }}.dmg
-          mv packages/frontend/apps/electron/out/*/make/zip/darwin/${{ inputs.arch }}/*.zip ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-macos-${{ inputs.arch }}.zip
+          mv packages/frontend/apps/electron/out/*/make/*.dmg ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-macos-${{ inputs.arch }}.dmg
+          mv packages/frontend/apps/electron/out/*/make/zip/darwin/${{ inputs.arch }}/*.zip ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-macos-${{ inputs.arch }}.zip
 
       - name: Save artifacts (linux)
         if: ${{ inputs.platform == 'linux' }}
         run: |
           mkdir -p builds
-          mv packages/frontend/apps/electron/out/*/make/zip/linux/${{ inputs.arch }}/*.zip ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.zip
-          mv packages/frontend/apps/electron/out/*/make/AppImage/${{ inputs.arch }}/*.AppImage ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.appimage
-          mv packages/frontend/apps/electron/out/*/make/deb/${{ inputs.arch }}/*.deb ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.deb
-          mv packages/frontend/apps/electron/out/*/make/flatpak/*/*.flatpak ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.flatpak
+          mv packages/frontend/apps/electron/out/*/make/zip/linux/${{ inputs.arch }}/*.zip ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.zip
+          mv packages/frontend/apps/electron/out/*/make/AppImage/${{ inputs.arch }}/*.AppImage ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.appimage
+          mv packages/frontend/apps/electron/out/*/make/deb/${{ inputs.arch }}/*.deb ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.deb
+          mv packages/frontend/apps/electron/out/*/make/flatpak/*/*.flatpak ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.flatpak
 
       - uses: actions/attest-build-provenance@v4
         if: ${{ inputs.platform == 'darwin' }}
         with:
           subject-path: |
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-macos-${{ inputs.arch }}.zip
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-macos-${{ inputs.arch }}.dmg
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-macos-${{ inputs.arch }}.zip
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-macos-${{ inputs.arch }}.dmg
 
       - uses: actions/attest-build-provenance@v4
         if: ${{ inputs.platform == 'linux' }}
         with:
           subject-path: |
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.zip
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.appimage
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.deb
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.flatpak
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.zip
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.appimage
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.deb
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-linux-${{ inputs.arch }}.flatpak
 
       - name: Upload Artifact
         if: ${{ inputs.platform == 'darwin' || inputs.platform == 'linux' }}
         uses: actions/upload-artifact@v4
         with:
-          name: affine-${{ inputs.platform }}-${{ inputs.arch }}-builds
+          name: cloud-notes-${{ inputs.platform }}-${{ inputs.arch }}-builds
           path: builds
 
       - name: get all files to be signed

@@ -1,12 +1,12 @@
-import { Button, Menu } from '@affine/component';
-import { SettingHeader } from '@affine/component/setting-components';
-import { useWorkspaceInfo } from '@affine/core/components/hooks/use-workspace-info';
-import { WorkspacePropertyManager } from '@affine/core/components/properties/manager';
-import { CreatePropertyMenuItems } from '@affine/core/components/properties/menu/create-doc-property';
-import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { Trans, useI18n } from '@affine/i18n';
-import track from '@affine/track';
+import { Button, Menu } from '@cloud-notes/component';
+import { SettingHeader } from '@cloud-notes/component/setting-components';
+import { useWorkspaceInfo } from '@cloud-notes/core/components/hooks/use-workspace-info';
+import { WorkspacePropertyManager } from '@cloud-notes/core/components/properties/manager';
+import { CreatePropertyMenuItems } from '@cloud-notes/core/components/properties/menu/create-doc-property';
+import type { DocCustomPropertyInfo } from '@cloud-notes/core/modules/db';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { Trans, useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import { FrameworkScope, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
 
@@ -37,7 +37,7 @@ const WorkspaceSettingPropertiesMain = () => {
       <div className={styles.listHeader}>
         <Menu items={<CreatePropertyMenuItems onCreated={onCreated} />}>
           <Button variant="primary">
-            {t['com.affine.settings.workspace.properties.add_property']()}
+            {t['com.cloud-notes.settings.workspace.properties.add_property']()}
           </Button>
         </Menu>
       </div>
@@ -59,13 +59,13 @@ export const WorkspaceSettingProperties = () => {
   return (
     <FrameworkScope scope={workspace.scope}>
       <SettingHeader
-        title={t['com.affine.settings.workspace.properties.header.title']()}
+        title={t['com.cloud-notes.settings.workspace.properties.header.title']()}
         subtitle={
           <Trans
             values={{
               name: title,
             }}
-            i18nKey="com.affine.settings.workspace.properties.header.subtitle"
+            i18nKey="com.cloud-notes.settings.workspace.properties.header.subtitle"
           >
             Manage workspace <strong>name</strong> properties
           </Trans>

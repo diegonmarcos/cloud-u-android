@@ -1,4 +1,4 @@
-use affine_schema::import_validation::{V1_IMPORT_SCHEMA_RULES, validate_import_schema};
+use cloud_notes_schema::import_validation::{V1_IMPORT_SCHEMA_RULES, validate_import_schema};
 use chrono::NaiveDateTime;
 use napi::bindgen_prelude::{Buffer, Uint8Array};
 use napi_derive::napi;
@@ -73,7 +73,7 @@ impl SqliteConnection {
       Sqlite::create_database(&self.path).await.map_err(anyhow::Error::from)?;
     };
     let mut connection = self.pool.acquire().await.map_err(anyhow::Error::from)?;
-    sqlx::query(affine_schema::v1::SCHEMA)
+    sqlx::query(cloud_notes_schema::v1::SCHEMA)
       .execute(connection.as_mut())
       .await
       .map_err(anyhow::Error::from)?;

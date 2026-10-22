@@ -1,6 +1,6 @@
 // oxlint-disable typescript/no-var-requires
 
-// Should not load @affine/native for unsupported platforms
+// Should not load @cloud-notes/native for unsupported platforms
 
 import { shell } from 'electron';
 

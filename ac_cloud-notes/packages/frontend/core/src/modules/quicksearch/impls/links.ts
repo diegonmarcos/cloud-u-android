@@ -1,4 +1,4 @@
-import type { ReferenceParams } from '@blocksuite/affine/model';
+import type { ReferenceParams } from '@blocksuite/cloud-notes/model';
 import { BlockLinkIcon, EdgelessIcon, PageIcon } from '@blocksuite/icons/rc';
 import { Entity, LiveData } from '@toeverything/infra';
 import { omit, truncate } from 'lodash-es';
@@ -64,7 +64,7 @@ export class LinksQuickSearchSession
         group: {
           id: 'docs',
           label: {
-            i18nKey: 'com.affine.quicksearch.group.searchfor',
+            i18nKey: 'com.cloud-notes.quicksearch.group.searchfor',
             options: { query: truncate(query) },
           },
           score: 5,

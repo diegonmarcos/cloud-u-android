@@ -114,7 +114,7 @@ function getApiReferenceItems(): DefaultTheme.NavItem[] {
     return [
       { text: '@blocksuite/store', link: 'api/@blocksuite/store' },
       { text: '@blocksuite/std', link: 'api/@blocksuite/std/index' },
-      { text: '@blocksuite/affine', link: 'api/@blocksuite/affine' },
+      { text: '@blocksuite/cloud-notes', link: 'api/@blocksuite/cloud-notes' },
     ];
   }
 

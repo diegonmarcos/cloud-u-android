@@ -1,24 +1,24 @@
-import { notify } from '@affine/component';
+import { notify } from '@cloud-notes/component';
 import {
   AuthContainer,
   AuthContent,
   AuthFooter,
   AuthHeader,
   AuthInput,
-} from '@affine/component/auth-components';
-import { Button } from '@affine/component/ui/button';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+} from '@cloud-notes/component/auth-components';
+import { Button } from '@cloud-notes/component/ui/button';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import {
   AuthService,
   CaptchaService,
   getSelfHostedServerName,
   ServerService,
-} from '@affine/core/modules/cloud';
-import type { AuthSessionStatus } from '@affine/core/modules/cloud/entities/session';
-import { Unreachable } from '@affine/env/constant';
-import { UserFriendlyError } from '@affine/error';
-import { ServerDeploymentType } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/cloud';
+import type { AuthSessionStatus } from '@cloud-notes/core/modules/cloud/entities/session';
+import { Unreachable } from '@cloud-notes/env/constant';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { ServerDeploymentType } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useState } from 'react';
@@ -73,15 +73,15 @@ export const SignInWithPasswordStep = ({
   useEffect(() => {
     if (loginStatus === 'authenticated') {
       notify.success({
-        title: t['com.affine.auth.toast.title.signed-in'](),
-        message: t['com.affine.auth.toast.message.signed-in'](),
+        title: t['com.cloud-notes.auth.toast.title.signed-in'](),
+        message: t['com.cloud-notes.auth.toast.message.signed-in'](),
       });
     }
     onAuthenticated?.(loginStatus);
   }, [loginStatus, onAuthenticated, t]);
 
   useEffect(() => {
-    setPasswordErrorHint(t['com.affine.auth.password.error']());
+    setPasswordErrorHint(t['com.cloud-notes.auth.password.error']());
   }, [t]);
 
   const onSignIn = useAsyncCallback(async () => {
@@ -104,11 +104,11 @@ export const SignInWithPasswordStep = ({
         error.is('PASSWORD_REQUIRED')
       ) {
         setPasswordError(true);
-        setPasswordErrorHint(t['com.affine.auth.password.error']());
+        setPasswordErrorHint(t['com.cloud-notes.auth.password.error']());
       } else {
         setPasswordError(false);
         notify.error({
-          title: t['com.affine.auth.toast.title.failed'](),
+          title: t['com.cloud-notes.auth.toast.title.failed'](),
           message: error.is('REQUEST_ABORTED')
             ? t['error.NETWORK_ERROR']()
             : t[`error.${error.name}`](error.data),
@@ -137,7 +137,7 @@ export const SignInWithPasswordStep = ({
   return (
     <AuthContainer>
       <AuthHeader
-        title={t['com.affine.auth.sign.in']()}
+        title={t['com.cloud-notes.auth.sign.in']()}
         subTitle={signInServerName}
       />
 
@@ -149,7 +149,7 @@ export const SignInWithPasswordStep = ({
           }}
         >
           <AuthInput
-            label={t['com.affine.settings.email']()}
+            label={t['com.cloud-notes.settings.email']()}
             readOnly={true}
             value={email}
             type="email"
@@ -159,7 +159,7 @@ export const SignInWithPasswordStep = ({
           <AuthInput
             autoFocus
             data-testid="password-input"
-            label={t['com.affine.auth.password']()}
+            label={t['com.cloud-notes.auth.password']()}
             value={password}
             type="password"
             name="password"
@@ -168,7 +168,7 @@ export const SignInWithPasswordStep = ({
               setPassword(value);
               if (passwordError) {
                 setPasswordError(false);
-                setPasswordErrorHint(t['com.affine.auth.password.error']());
+                setPasswordErrorHint(t['com.cloud-notes.auth.password.error']());
               }
             }}
             error={passwordError}
@@ -183,7 +183,7 @@ export const SignInWithPasswordStep = ({
             style={{ width: '100%' }}
             disabled={isLoading || (!verifyToken && needCaptcha)}
           >
-            {t['com.affine.auth.sign.in']()}
+            {t['com.cloud-notes.auth.sign.in']()}
           </Button>
         </form>
         {!isSelfhosted && (
@@ -193,7 +193,7 @@ export const SignInWithPasswordStep = ({
               className={styles.linkButton}
               onClick={sendMagicLink}
             >
-              {t['com.affine.auth.sign.auth.code.send-email.sign-in']()}
+              {t['com.cloud-notes.auth.sign.auth.code.send-email.sign-in']()}
             </a>
           </div>
         )}

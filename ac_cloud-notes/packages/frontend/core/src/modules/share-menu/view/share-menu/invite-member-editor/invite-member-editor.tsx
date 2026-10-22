@@ -6,18 +6,18 @@ import {
   MenuTrigger,
   notify,
   RowInput,
-} from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
+} from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
 import {
   DocGrantedUsersService,
   type Member,
   MemberSearchService,
-} from '@affine/core/modules/permissions';
-import { UserFriendlyError } from '@affine/error';
-import { DocRole, WorkspaceMemberStatus } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/core/modules/permissions';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { DocRole, WorkspaceMemberStatus } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { ArrowLeftBigIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
@@ -41,11 +41,11 @@ import { SelectedMemberItem } from './selected-member-item';
 const getRoleName = (role: DocRole, t: ReturnType<typeof useI18n>) => {
   switch (role) {
     case DocRole.Manager:
-      return t['com.affine.share-menu.option.permission.can-manage']();
+      return t['com.cloud-notes.share-menu.option.permission.can-manage']();
     case DocRole.Editor:
-      return t['com.affine.share-menu.option.permission.can-edit']();
+      return t['com.cloud-notes.share-menu.option.permission.can-edit']();
     case DocRole.Reader:
-      return t['com.affine.share-menu.option.permission.can-read']();
+      return t['com.cloud-notes.share-menu.option.permission.can-read']();
     default:
       return '';
   }
@@ -188,7 +188,7 @@ export const InviteMemberEditor = ({
     <div className={styles.containerStyle}>
       <div className={styles.headerStyle} onClick={onClickCancel}>
         <ArrowLeftBigIcon className={styles.iconStyle} />
-        {t['com.affine.share-menu.invite-editor.header']()}
+        {t['com.cloud-notes.share-menu.invite-editor.header']()}
       </div>
       <div className={styles.memberListStyle}>
         <div
@@ -224,7 +224,7 @@ export const InviteMemberEditor = ({
               placeholder={
                 selectedMembers.length
                   ? ''
-                  : t['com.affine.share-menu.invite-editor.placeholder']()
+                  : t['com.cloud-notes.share-menu.invite-editor.placeholder']()
               }
             />
           </div>
@@ -246,7 +246,7 @@ export const InviteMemberEditor = ({
           className={styles.manageMemberStyle}
           onClick={switchToMemberManagementTab}
         >
-          {t['com.affine.share-menu.invite-editor.manage-members']()}
+          {t['com.cloud-notes.share-menu.invite-editor.manage-members']()}
         </span>
         <div className={styles.buttonsContainer}>
           <Button className={styles.button} onClick={onClickCancel}>
@@ -258,7 +258,7 @@ export const InviteMemberEditor = ({
             disabled={!selectedMembers.length}
             onClick={onInvite}
           >
-            {t['com.affine.share-menu.invite-editor.invite']()}
+            {t['com.cloud-notes.share-menu.invite-editor.invite']()}
           </Button>
         </div>
       </div>
@@ -305,7 +305,7 @@ const Result = ({
     }
     return (
       <div className={styles.noFound}>
-        {t['com.affine.share-menu.invite-editor.no-found']()}
+        {t['com.cloud-notes.share-menu.invite-editor.no-found']()}
       </div>
     );
   }
@@ -375,14 +375,14 @@ const RoleSelector = ({
               onSelect={changeToAdmin}
               selected={inviteDocRoleType === DocRole.Manager}
             >
-              {t['com.affine.share-menu.option.permission.can-manage']()}
+              {t['com.cloud-notes.share-menu.option.permission.can-manage']()}
             </MenuItem>
             <MenuItem
               onSelect={changeToWrite}
               selected={inviteDocRoleType === DocRole.Editor}
             >
               <div className={styles.planTagContainer}>
-                {t['com.affine.share-menu.option.permission.can-edit']()}
+                {t['com.cloud-notes.share-menu.option.permission.can-edit']()}
                 {hittingPaywall ? <PlanTag /> : null}
               </div>
             </MenuItem>
@@ -391,7 +391,7 @@ const RoleSelector = ({
               selected={inviteDocRoleType === DocRole.Reader}
             >
               <div className={styles.planTagContainer}>
-                {t['com.affine.share-menu.option.permission.can-read']()}
+                {t['com.cloud-notes.share-menu.option.permission.can-read']()}
                 {hittingPaywall ? <PlanTag /> : null}
               </div>
             </MenuItem>

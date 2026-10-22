@@ -1,11 +1,11 @@
 import {
   type ViewExtensionContext,
   ViewExtensionProvider,
-} from '@blocksuite/affine/ext-loader';
+} from '@blocksuite/cloud-notes/ext-loader';
 import { FrameworkProvider } from '@toeverything/infra';
 import z from 'zod';
 
-import { AffineCommentProvider } from './comment-provider';
+import { CloudNotesCommentProvider } from './comment-provider';
 
 const optionsSchema = z.object({
   enableComment: z.boolean().optional(),
@@ -26,6 +26,6 @@ export class CommentViewExtension extends ViewExtensionProvider<CommentViewOptio
     const framework = options.framework;
     if (!framework) return;
 
-    context.register([AffineCommentProvider(framework)]);
+    context.register([CloudNotesCommentProvider(framework)]);
   }
 }

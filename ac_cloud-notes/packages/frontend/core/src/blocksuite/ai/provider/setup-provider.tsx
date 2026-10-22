@@ -1,6 +1,6 @@
-import { toggleGeneralAIOnboarding } from '@affine/core/components/affine/ai-onboarding/apis';
-import type { AuthAccountInfo, AuthService } from '@affine/core/modules/cloud';
-import type { GlobalDialogService } from '@affine/core/modules/dialogs';
+import { toggleGeneralAIOnboarding } from '@cloud-notes/core/components/cloud-notes/ai-onboarding/apis';
+import type { AuthAccountInfo, AuthService } from '@cloud-notes/core/modules/cloud';
+import type { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
 
 import type { AIRequestService } from '../runtime/request';
 import { setAIRequestService } from '../runtime/request';

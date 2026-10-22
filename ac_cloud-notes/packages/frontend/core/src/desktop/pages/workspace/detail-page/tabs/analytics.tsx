@@ -5,15 +5,15 @@ import {
   Menu,
   MenuItem,
   toast,
-} from '@affine/component';
-import { useQuery } from '@affine/core/components/hooks/use-query';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
+} from '@cloud-notes/component';
+import { useQuery } from '@cloud-notes/core/components/hooks/use-query';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
 import {
   getDocLastAccessedMembersQuery,
   getDocPageAnalyticsQuery,
-} from '@affine/graphql';
-import { i18nTime, useI18n } from '@affine/i18n';
+} from '@cloud-notes/graphql';
+import { i18nTime, useI18n } from '@cloud-notes/i18n';
 import {
   ArrowDownSmallIcon,
   CalendarPanelIcon,
@@ -87,7 +87,7 @@ function AnalyticsChartTooltip({
           style={{ backgroundColor: totalViewsColor }}
           aria-hidden="true"
         />
-        {t['com.affine.doc.analytics.chart.total-views']()}
+        {t['com.cloud-notes.doc.analytics.chart.total-views']()}
         <span className={styles.tooltipValue}>
           {intFormatter.format(valueByKey.totalViews ?? point.totalViews)}
         </span>
@@ -98,7 +98,7 @@ function AnalyticsChartTooltip({
           style={{ backgroundColor: uniqueViewsColor }}
           aria-hidden="true"
         />
-        {t['com.affine.doc.analytics.chart.unique-views']()}
+        {t['com.cloud-notes.doc.analytics.chart.unique-views']()}
         <span className={styles.tooltipValue}>
           {intFormatter.format(valueByKey.uniqueViews ?? point.uniqueViews)}
         </span>
@@ -225,7 +225,7 @@ export const EditorAnalyticsPanel = ({
     });
   }, [workspaceDialogService]);
   const showTeamPlanToast = useCallback(() => {
-    toast(t['com.affine.doc.analytics.paywall.toast']());
+    toast(t['com.cloud-notes.doc.analytics.paywall.toast']());
   }, [t]);
 
   return (
@@ -233,10 +233,10 @@ export const EditorAnalyticsPanel = ({
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitle}>
-            <span>{t['com.affine.doc.analytics.title']()}</span>
+            <span>{t['com.cloud-notes.doc.analytics.title']()}</span>
             <span className={styles.sectionSubtitle}>
               {summary
-                ? t.t('com.affine.doc.analytics.summary.total', {
+                ? t.t('com.cloud-notes.doc.analytics.summary.total', {
                     count: intFormatter.format(summary.totalViews),
                   })
                 : ''}
@@ -262,7 +262,7 @@ export const EditorAnalyticsPanel = ({
                             type="button"
                             className={styles.lockButton}
                             aria-label={t[
-                              'com.affine.doc.analytics.paywall.open-pricing'
+                              'com.cloud-notes.doc.analytics.paywall.open-pricing'
                             ]()}
                             onClick={event => {
                               event.preventDefault();
@@ -282,11 +282,11 @@ export const EditorAnalyticsPanel = ({
                         setWindowDays(option);
                       }}
                     >
-                      {t.t('com.affine.doc.analytics.window.last-days', {
+                      {t.t('com.cloud-notes.doc.analytics.window.last-days', {
                         days: option,
                       })}
                       {isLocked
-                        ? ` (${t['com.affine.payment.cloud.team-workspace.name']()})`
+                        ? ` (${t['com.cloud-notes.payment.cloud.team-workspace.name']()})`
                         : ''}
                     </MenuItem>
                   );
@@ -301,7 +301,7 @@ export const EditorAnalyticsPanel = ({
               prefix={<CalendarPanelIcon />}
               suffix={<ArrowDownSmallIcon />}
             >
-              {t.t('com.affine.doc.analytics.window.last-days', {
+              {t.t('com.cloud-notes.doc.analytics.window.last-days', {
                 days: effectiveWindowDays,
               })}
             </Button>
@@ -311,7 +311,7 @@ export const EditorAnalyticsPanel = ({
         <div className={styles.metrics}>
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>
-              {t['com.affine.doc.analytics.metric.total']()}
+              {t['com.cloud-notes.doc.analytics.metric.total']()}
             </div>
             <div className={styles.metricValue}>
               {intFormatter.format(summary?.totalViews ?? 0)}
@@ -319,7 +319,7 @@ export const EditorAnalyticsPanel = ({
           </div>
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>
-              {t['com.affine.doc.analytics.metric.unique']()}
+              {t['com.cloud-notes.doc.analytics.metric.unique']()}
             </div>
             <div className={styles.metricValue}>
               {intFormatter.format(summary?.uniqueViews ?? 0)}
@@ -327,7 +327,7 @@ export const EditorAnalyticsPanel = ({
           </div>
           <div className={styles.metricCard}>
             <div className={styles.metricLabel}>
-              {t['com.affine.doc.analytics.metric.guest']()}
+              {t['com.cloud-notes.doc.analytics.metric.guest']()}
             </div>
             <div className={styles.metricValue}>
               {intFormatter.format(summary?.guestViews ?? 0)}
@@ -341,7 +341,7 @@ export const EditorAnalyticsPanel = ({
           </div>
         ) : analyticsError && !analytics ? (
           <div className={styles.emptyState}>
-            {t['com.affine.doc.analytics.error.load-analytics']()}
+            {t['com.cloud-notes.doc.analytics.error.load-analytics']()}
           </div>
         ) : chartPoints.length ? (
           <>
@@ -432,7 +432,7 @@ export const EditorAnalyticsPanel = ({
                   style={{ backgroundColor: totalViewsColor }}
                   aria-hidden="true"
                 />
-                {t['com.affine.doc.analytics.chart.total-views']()}
+                {t['com.cloud-notes.doc.analytics.chart.total-views']()}
               </span>
               <span className={styles.legendItem}>
                 <span
@@ -440,13 +440,13 @@ export const EditorAnalyticsPanel = ({
                   style={{ backgroundColor: uniqueViewsColor }}
                   aria-hidden="true"
                 />
-                {t['com.affine.doc.analytics.chart.unique-views']()}
+                {t['com.cloud-notes.doc.analytics.chart.unique-views']()}
               </span>
             </div>
           </>
         ) : (
           <div className={styles.emptyState}>
-            {t['com.affine.doc.analytics.empty.no-page-views']()}
+            {t['com.cloud-notes.doc.analytics.empty.no-page-views']()}
           </div>
         )}
       </section>
@@ -454,7 +454,7 @@ export const EditorAnalyticsPanel = ({
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitle}>
-            <span>{t['com.affine.doc.analytics.viewers.title']()}</span>
+            <span>{t['com.cloud-notes.doc.analytics.viewers.title']()}</span>
             <span className={styles.sectionSubtitle}>
               ({intFormatter.format(totalMembers)})
             </span>
@@ -467,7 +467,7 @@ export const EditorAnalyticsPanel = ({
           </div>
         ) : membersError && !membersConnection ? (
           <div className={styles.emptyState}>
-            {t['com.affine.doc.analytics.error.load-viewers']()}
+            {t['com.cloud-notes.doc.analytics.error.load-viewers']()}
           </div>
         ) : members.length ? (
           <>
@@ -496,13 +496,13 @@ export const EditorAnalyticsPanel = ({
                 className={styles.loadMoreButton}
                 onClick={() => setMembersPageSize(MAX_MEMBERS_PAGE_SIZE)}
               >
-                {t['com.affine.doc.analytics.viewers.show-all']()}
+                {t['com.cloud-notes.doc.analytics.viewers.show-all']()}
               </Button>
             ) : null}
           </>
         ) : (
           <div className={styles.emptyState}>
-            {t['com.affine.doc.analytics.empty.no-viewers']()}
+            {t['com.cloud-notes.doc.analytics.empty.no-viewers']()}
           </div>
         )}
       </section>

@@ -1,6 +1,6 @@
-import { UserFriendlyError } from '@affine/error';
-import { type OAuthProviderType, ServerDeploymentType } from '@affine/graphql';
-import { track } from '@affine/track';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { type OAuthProviderType, ServerDeploymentType } from '@cloud-notes/graphql';
+import { track } from '@cloud-notes/track';
 import { OnEvent, Service } from '@toeverything/infra';
 import { nanoid } from 'nanoid';
 import { distinctUntilChanged, map, skip, type Subscription } from 'rxjs';
@@ -34,11 +34,11 @@ export interface DeviceAuthSession {
 
 function csrfHeader(): Record<string, string> {
   if (typeof document === 'undefined') return {};
-  const prefix = 'affine_csrf_token=';
+  const prefix = 'cloud_notes_csrf_token=';
   const cookie = document.cookie
     .split('; ')
     .find(value => value.startsWith(prefix));
-  return cookie ? { 'x-affine-csrf-token': cookie.slice(prefix.length) } : {};
+  return cookie ? { 'x-cloud-notes-csrf-token': cookie.slice(prefix.length) } : {};
 }
 
 @OnEvent(ApplicationFocused, e => e.onApplicationFocused)

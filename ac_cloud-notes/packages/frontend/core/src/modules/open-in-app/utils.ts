@@ -1,5 +1,5 @@
-import { channelToScheme } from '@affine/core/utils/channel';
-import { DebugLogger } from '@affine/debug';
+import { channelToScheme } from '@cloud-notes/core/utils/channel';
+import { DebugLogger } from '@cloud-notes/debug';
 
 const logger = new DebugLogger('open-in-app');
 
@@ -79,7 +79,7 @@ export function normalizeOpenAppSignInNextParam(
   return normalized;
 }
 
-// return an AFFiNE app's url to be opened in desktop app
+// return a Cloud Notes app's url to be opened in desktop app
 export const getOpenUrlInDesktopAppLink = (
   url: string,
   newTab = true,

@@ -1,19 +1,19 @@
-import { toArrayBuffer } from '@affine/core/utils/array-buffer';
-import { DebugLogger } from '@affine/debug';
+import { toArrayBuffer } from '@cloud-notes/core/utils/array-buffer';
+import { DebugLogger } from '@cloud-notes/debug';
 import {
   createWorkspaceMutation,
   deleteWorkspaceMutation,
   getWorkspacesQuery,
   ServerDeploymentType,
   ServerFeature,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import type {
   BlobSource,
   BlobStorage,
   DocStorage,
   ListedBlobRecord,
-} from '@affine/nbstore';
-import { CloudBlobStorage, StaticCloudDocStorage } from '@affine/nbstore/cloud';
+} from '@cloud-notes/nbstore';
+import { CloudBlobStorage, StaticCloudDocStorage } from '@cloud-notes/nbstore/cloud';
 import {
   IndexedDBBlobStorage,
   IndexedDBBlobSyncStorage,
@@ -21,11 +21,11 @@ import {
   IndexedDBDocSyncStorage,
   IndexedDBIndexerStorage,
   IndexedDBIndexerSyncStorage,
-} from '@affine/nbstore/idb';
+} from '@cloud-notes/nbstore/idb';
 import {
   IndexedDBV1BlobStorage,
   IndexedDBV1DocStorage,
-} from '@affine/nbstore/idb/v1';
+} from '@cloud-notes/nbstore/idb/v1';
 import {
   SqliteBlobStorage,
   SqliteBlobSyncStorage,
@@ -33,12 +33,12 @@ import {
   SqliteDocSyncStorage,
   SqliteIndexerStorage,
   SqliteIndexerSyncStorage,
-} from '@affine/nbstore/sqlite';
+} from '@cloud-notes/nbstore/sqlite';
 import {
   SqliteV1BlobStorage,
   SqliteV1DocStorage,
-} from '@affine/nbstore/sqlite/v1';
-import type { WorkerInitOptions } from '@affine/nbstore/worker/client';
+} from '@cloud-notes/nbstore/sqlite/v1';
+import type { WorkerInitOptions } from '@cloud-notes/nbstore/worker/client';
 import {
   catchErrorInto,
   effect,
@@ -80,13 +80,13 @@ import { WorkspaceImpl } from '../../workspace/impls/workspace';
 import { getWorkspaceProfileWorker } from './out-worker';
 
 const getCloudWorkspaceCacheKey = (serverId: string) => {
-  if (serverId === 'affine-cloud') {
+  if (serverId === 'cloud-notes-cloud') {
     return 'cloud-workspace:'; // FOR BACKWARD COMPATIBILITY
   }
   return `selfhosted-workspace-${serverId}:`;
 };
 
-const logger = new DebugLogger('affine:cloud-workspace-flavour-provider');
+const logger = new DebugLogger('cloud-notes:cloud-workspace-flavour-provider');
 
 class CloudWorkspaceFlavourProvider implements WorkspaceFlavourProvider {
   private readonly authService: AuthService;
@@ -334,7 +334,7 @@ class CloudWorkspaceFlavourProvider implements WorkspaceFlavourProvider {
   ): Promise<WorkspaceProfileInfo | undefined> {
     // get information from both cloud and local storage
 
-    // we use affine 'static' storage here, which use http protocol, no need to websocket.
+    // we use cloud-notes 'static' storage here, which use http protocol, no need to websocket.
     const cloudStorage = new StaticCloudDocStorage({
       id: id,
       serverBaseUrl: this.server.serverMetadata.baseUrl,
@@ -487,7 +487,7 @@ class CloudWorkspaceFlavourProvider implements WorkspaceFlavourProvider {
   }
 
   onWorkspaceInitialized(workspace: Workspace): void {
-    // bind the workspace to the affine cloud server
+    // bind the workspace to the Cloud Notes server
     workspace.scope.get(WorkspaceServerService).bindServer(this.server);
   }
 

@@ -1,4 +1,4 @@
-import { type MenuRef } from '@affine/component';
+import { type MenuRef } from '@cloud-notes/component';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 type FilterOptionsGroupChildren =

@@ -1,4 +1,4 @@
-import { AfFiNeIcon } from '@blocksuite/icons/rc';
+import { CloudNotesIcon } from '@blocksuite/icons/rc';
 import type { Meta } from '@storybook/react';
 import clsx from 'clsx';
 import { type ReactElement, useCallback, useEffect, useState } from 'react';
@@ -39,7 +39,7 @@ const Groups = ({
             {sizes.map(size => (
               <td key={size}>
                 <IconButton variant={type} size={size} {...props}>
-                  {children ?? <AfFiNeIcon />}
+                  {children ?? <CloudNotesIcon />}
                 </IconButton>
               </td>
             ))}
@@ -137,7 +137,7 @@ export const CustomSize = () => {
                 style={{ padding: size[1] }}
                 variant={type}
               >
-                <AfFiNeIcon />
+                <CloudNotesIcon />
               </IconButton>
 
               <div style={{ marginTop: 8 }}>Size: {size[0]}px</div>

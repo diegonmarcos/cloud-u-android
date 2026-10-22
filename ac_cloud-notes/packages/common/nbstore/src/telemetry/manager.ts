@@ -183,7 +183,7 @@ export class TelemetryManager {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-affine-version': BUILD_CONFIG.appVersion,
+        'x-cloud-notes-version': BUILD_CONFIG.appVersion,
       },
       body: JSON.stringify(batch),
       signal: abortController.signal,

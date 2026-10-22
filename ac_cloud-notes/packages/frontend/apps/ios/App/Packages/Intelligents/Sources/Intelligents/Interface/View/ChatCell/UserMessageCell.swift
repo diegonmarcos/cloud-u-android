@@ -63,7 +63,7 @@ class UserMessageCell: ChatBaseCell {
   class func prepareAttributeText(_ text: String) -> NSAttributedString {
     .init(string: text, attributes: [
       .font: UIFont.preferredFont(forTextStyle: .body),
-      .foregroundColor: UIColor.affineTextPrimary,
+      .foregroundColor: UIColor.cloudNotesTextPrimary,
       .paragraphStyle: NSMutableParagraphStyle().then {
         $0.lineBreakMode = .byWordWrapping
         $0.alignment = .natural

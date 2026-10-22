@@ -1,7 +1,7 @@
 import {
   type GetDocRolePermissionsQuery,
   getDocRolePermissionsQuery,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Store } from '@toeverything/infra';
 
 import type { WorkspaceServerService } from '../../cloud';

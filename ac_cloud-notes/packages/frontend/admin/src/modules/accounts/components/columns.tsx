@@ -2,9 +2,9 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from '@affine/admin/components/ui/avatar';
-import { cn } from '@affine/admin/utils';
-import { FeatureType } from '@affine/graphql';
+} from '@cloud-notes/admin/components/ui/avatar';
+import { cn } from '@cloud-notes/admin/utils';
+import { FeatureType } from '@cloud-notes/graphql';
 import {
   AccountIcon,
   EmailIcon,

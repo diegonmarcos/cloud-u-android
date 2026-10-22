@@ -1,4 +1,4 @@
-import type { UserQuotaStateSnapshot } from '@affine/realtime';
+import type { UserQuotaStateSnapshot } from '@cloud-notes/realtime';
 import { Framework } from '@toeverything/infra';
 import { Subject } from 'rxjs';
 import { describe, expect, test, vi } from 'vitest';

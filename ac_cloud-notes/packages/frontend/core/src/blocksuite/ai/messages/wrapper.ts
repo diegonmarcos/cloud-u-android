@@ -1,10 +1,10 @@
-import type { EditorHost } from '@blocksuite/affine/std';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
 import { css, html, LitElement, nothing } from 'lit';
 import { property } from 'lit/decorators.js';
 
 import { getAIPanelWidget } from '../utils/ai-widgets';
 import { preprocessHtml } from '../utils/html';
-import type { AffineAIPanelWidgetConfig } from '../widgets/ai-panel/type';
+import type { CloudNotesAIPanelWidgetConfig } from '../widgets/ai-panel/type';
 
 type AIAnswerWrapperOptions = {
   height: number;
@@ -17,9 +17,9 @@ export class AIAnswerWrapper extends LitElement {
       width: 100%;
       box-sizing: border-box;
       border-radius: 4px;
-      border: 1px solid var(--affine-border-color);
-      box-shadow: var(--affine-shadow-1);
-      background: var(--affine-background-secondary-color);
+      border: 1px solid var(--cloud-notes-border-color);
+      box-shadow: var(--cloud-notes-shadow-1);
+      background: var(--cloud-notes-background-secondary-color);
       overflow: hidden;
     }
 
@@ -59,7 +59,7 @@ declare global {
 export const createIframeRenderer: (
   host: EditorHost,
   options?: AIAnswerWrapperOptions
-) => AffineAIPanelWidgetConfig['answerRenderer'] = (host, options) => {
+) => CloudNotesAIPanelWidgetConfig['answerRenderer'] = (host, options) => {
   return (answer, state) => {
     if (state === 'generating') {
       const panel = getAIPanelWidget(host);
@@ -87,7 +87,7 @@ export const createIframeRenderer: (
 export const createImageRenderer: (
   host: EditorHost,
   options?: AIAnswerWrapperOptions
-) => AffineAIPanelWidgetConfig['answerRenderer'] = (host, options) => {
+) => CloudNotesAIPanelWidgetConfig['answerRenderer'] = (host, options) => {
   return (answer, state) => {
     if (state === 'generating') {
       const panel = getAIPanelWidget(host);

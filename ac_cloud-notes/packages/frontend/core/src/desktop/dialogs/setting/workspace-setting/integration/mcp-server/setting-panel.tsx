@@ -4,17 +4,17 @@ import {
   notify,
   Skeleton,
   useConfirmModal,
-} from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+} from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import {
   McpCredentialService,
   ServerService,
-} from '@affine/core/modules/cloud';
-import type { McpCredential } from '@affine/core/modules/cloud/services/mcp-credential';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { UserFriendlyError } from '@affine/error';
-import { McpAccessMode } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/cloud';
+import type { McpCredential } from '@cloud-notes/core/modules/cloud/services/mcp-credential';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { McpAccessMode } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -52,15 +52,15 @@ export const McpServerSettingPanel = () => {
     (status: McpCredential['status']) => {
       switch (status) {
         case 'ACTIVE':
-          return t['com.affine.integration.mcp-server.status.active']();
+          return t['com.cloud-notes.integration.mcp-server.status.active']();
         case 'ROTATING':
-          return t['com.affine.integration.mcp-server.status.rotating']();
+          return t['com.cloud-notes.integration.mcp-server.status.rotating']();
         case 'EXPIRING':
-          return t['com.affine.integration.mcp-server.status.expiring']();
+          return t['com.cloud-notes.integration.mcp-server.status.expiring']();
         case 'EXPIRED':
-          return t['com.affine.integration.mcp-server.status.expired']();
+          return t['com.cloud-notes.integration.mcp-server.status.expired']();
         case 'REVOKED':
-          return t['com.affine.integration.mcp-server.status.revoked']();
+          return t['com.cloud-notes.integration.mcp-server.status.revoked']();
         default:
           return status;
       }
@@ -80,7 +80,7 @@ export const McpServerSettingPanel = () => {
     return JSON.stringify(
       {
         mcpServers: {
-          [`affine_workspace_${workspaceId}`]: {
+          [`cloud_notes_workspace_${workspaceId}`]: {
             type: 'streamable-http',
             url: `${serverService.server.baseUrl}/api/workspaces/${workspaceId}/mcp`,
             headers: { Authorization: `Bearer ${revealed.token}` },
@@ -133,10 +133,10 @@ export const McpServerSettingPanel = () => {
   const confirmRotate = useCallback(
     (credential: McpCredential) => {
       openConfirmModal({
-        title: t['com.affine.integration.mcp-server.rotate.title'](),
+        title: t['com.cloud-notes.integration.mcp-server.rotate.title'](),
         description:
-          t['com.affine.integration.mcp-server.rotate.description'](),
-        confirmText: t['com.affine.integration.mcp-server.action.rotate'](),
+          t['com.cloud-notes.integration.mcp-server.rotate.description'](),
+        confirmText: t['com.cloud-notes.integration.mcp-server.action.rotate'](),
         cancelText: t['Cancel'](),
         onConfirm: () => rotate(credential),
       });
@@ -147,12 +147,12 @@ export const McpServerSettingPanel = () => {
   const confirmRevoke = useCallback(
     (credential: McpCredential) => {
       openConfirmModal({
-        title: t['com.affine.integration.mcp-server.revoke.title']({
+        title: t['com.cloud-notes.integration.mcp-server.revoke.title']({
           name: credential.name,
         }),
         description:
-          t['com.affine.integration.mcp-server.revoke.description'](),
-        confirmText: t['com.affine.integration.mcp-server.action.revoke'](),
+          t['com.cloud-notes.integration.mcp-server.revoke.description'](),
+        confirmText: t['com.cloud-notes.integration.mcp-server.action.revoke'](),
         cancelText: t['Cancel'](),
         confirmButtonOptions: { variant: 'error' },
         onConfirm: async () => {
@@ -174,22 +174,22 @@ export const McpServerSettingPanel = () => {
     <div className={styles.stack}>
       <IntegrationSettingHeader
         icon={<img src={MCPIcon} />}
-        name={t['com.affine.integration.mcp-server.name']()}
-        desc={t['com.affine.integration.mcp-server.desc']()}
+        name={t['com.cloud-notes.integration.mcp-server.name']()}
+        desc={t['com.cloud-notes.integration.mcp-server.desc']()}
       />
 
       <section className={styles.panel}>
         <div className={styles.panelHeader}>
           <div>
             <div className={styles.title}>
-              {t['com.affine.integration.mcp-server.credentials.title']()}
+              {t['com.cloud-notes.integration.mcp-server.credentials.title']()}
             </div>
             <div className={styles.description}>
-              {t['com.affine.integration.mcp-server.credentials.description']()}
+              {t['com.cloud-notes.integration.mcp-server.credentials.description']()}
             </div>
           </div>
           <Button variant="primary" onClick={() => setModal('create')}>
-            {t['com.affine.integration.mcp-server.action.create']()}
+            {t['com.cloud-notes.integration.mcp-server.action.create']()}
           </Button>
         </div>
 
@@ -201,7 +201,7 @@ export const McpServerSettingPanel = () => {
         ) : error && credentials === null ? (
           <div className={styles.empty}>
             <ErrorMessage>
-              {t['com.affine.integration.mcp-server.load-error']()}
+              {t['com.cloud-notes.integration.mcp-server.load-error']()}
             </ErrorMessage>
             <Button onClick={revalidate}>{t['Retry']()}</Button>
           </div>
@@ -227,31 +227,31 @@ export const McpServerSettingPanel = () => {
                   <div className={styles.description}>
                     {credential.accessMode === McpAccessMode.READ_WRITE
                       ? t[
-                          'com.affine.integration.mcp-server.access.read-write'
+                          'com.cloud-notes.integration.mcp-server.access.read-write'
                         ]()
                       : t[
-                          'com.affine.integration.mcp-server.access.read-only'
+                          'com.cloud-notes.integration.mcp-server.access.read-only'
                         ]()}{' '}
                     · •••• {credential.fingerprint} ·{' '}
-                    {t['com.affine.integration.mcp-server.meta.expires']({
+                    {t['com.cloud-notes.integration.mcp-server.meta.expires']({
                       date: formatDate(credential.expiresAt),
                     })}
                   </div>
                   <div className={styles.description}>
-                    {t['com.affine.integration.mcp-server.meta.created']({
+                    {t['com.cloud-notes.integration.mcp-server.meta.created']({
                       date: formatDate(credential.createdAt),
                     })}{' '}
                     ·{' '}
                     {credential.lastUsedAt
-                      ? t['com.affine.integration.mcp-server.meta.last-used']({
+                      ? t['com.cloud-notes.integration.mcp-server.meta.last-used']({
                           date: formatDate(credential.lastUsedAt),
                         })
                       : t[
-                          'com.affine.integration.mcp-server.meta.never-used'
+                          'com.cloud-notes.integration.mcp-server.meta.never-used'
                         ]()}
                     {credential.graceEndsAt
                       ? ` · ${t[
-                          'com.affine.integration.mcp-server.meta.grace-until'
+                          'com.cloud-notes.integration.mcp-server.meta.grace-until'
                         ]({ date: formatDate(credential.graceEndsAt) })}`
                       : null}
                   </div>
@@ -264,14 +264,14 @@ export const McpServerSettingPanel = () => {
                         onClick={() => confirmRotate(credential)}
                         disabled={mutatingId === credential.id}
                       >
-                        {t['com.affine.integration.mcp-server.action.rotate']()}
+                        {t['com.cloud-notes.integration.mcp-server.action.rotate']()}
                       </Button>
                       <Button
                         variant="error"
                         onClick={() => confirmRevoke(credential)}
                         disabled={mutatingId === credential.id}
                       >
-                        {t['com.affine.integration.mcp-server.action.revoke']()}
+                        {t['com.cloud-notes.integration.mcp-server.action.revoke']()}
                       </Button>
                     </>
                   ) : null}
@@ -282,10 +282,10 @@ export const McpServerSettingPanel = () => {
         ) : (
           <div className={styles.empty}>
             <div className={styles.title}>
-              {t['com.affine.integration.mcp-server.empty.title']()}
+              {t['com.cloud-notes.integration.mcp-server.empty.title']()}
             </div>
             <div className={styles.description}>
-              {t['com.affine.integration.mcp-server.empty.description']()}
+              {t['com.cloud-notes.integration.mcp-server.empty.description']()}
             </div>
           </div>
         )}
@@ -294,18 +294,18 @@ export const McpServerSettingPanel = () => {
       <section className={styles.panel}>
         <div className={styles.panelHeader}>
           <div className={styles.title}>
-            {t['com.affine.integration.mcp-server.capabilities.title']()}
+            {t['com.cloud-notes.integration.mcp-server.capabilities.title']()}
           </div>
         </div>
         <div className={styles.capabilities}>
           {(['read', 'keyword-search', 'semantic-search'] as const).map(key => (
             <div className={styles.capability} key={key}>
-              {t[`com.affine.integration.mcp-server.capabilities.${key}`]()}
+              {t[`com.cloud-notes.integration.mcp-server.capabilities.${key}`]()}
             </div>
           ))}
           {readWriteAvailable ? (
             <div className={styles.capability}>
-              {t['com.affine.integration.mcp-server.capabilities.write']()}
+              {t['com.cloud-notes.integration.mcp-server.capabilities.write']()}
             </div>
           ) : null}
         </div>

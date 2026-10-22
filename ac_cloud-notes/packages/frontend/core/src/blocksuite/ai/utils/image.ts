@@ -1,6 +1,6 @@
-import { ImageBlockModel } from '@blocksuite/affine/model';
-import { FetchUtils } from '@blocksuite/affine/shared/adapters';
-import type { BlockModel } from '@blocksuite/affine/store';
+import { ImageBlockModel } from '@blocksuite/cloud-notes/model';
+import { FetchUtils } from '@blocksuite/cloud-notes/shared/adapters';
+import type { BlockModel } from '@blocksuite/cloud-notes/store';
 import type { GfxModel } from '@blocksuite/std/gfx';
 
 export async function fetchImageToFile(

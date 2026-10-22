@@ -51,7 +51,7 @@ async function createAndConvertToEmbedLinkedDoc(page: Page) {
   );
 
   await waitNextFrame(page, 200);
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   await expect(toolbar).toBeVisible();
 
   const switchButton = toolbar.getByRole('button', { name: 'Switch view' });
@@ -526,7 +526,7 @@ test.describe('linked page popover', () => {
     await selectAllByKeyboard(page);
     await waitNextFrame(page, 200);
     await cutByKeyboard(page);
-    const note = page.locator('affine-note');
+    const note = page.locator('cloud-notes-note');
     await note.click({ force: true, position: { x: 100, y: 100 } });
     await waitNextFrame(page, 200);
 
@@ -649,7 +649,7 @@ test('add reference node before the other reference node', async ({ page }) => {
   await focusRichText(page);
   await type(page, 'aaa');
 
-  const firstRefNode = page.locator('affine-reference').nth(0);
+  const firstRefNode = page.locator('cloud-notes-reference').nth(0);
 
   await type(page, '@bbb');
   await pressEnter(page);
@@ -692,7 +692,7 @@ test('linked doc can be dragged from note to surface top level block', async ({
   await assertParentBlockFlavour(page, '9', 'affine:surface');
 });
 
-// TODO(@fundon): should move to affine
+// TODO(@fundon): should move to cloud-notes
 // Aliases
 test.describe.skip('Customize linked doc title and description', () => {
   // Inline View
@@ -724,7 +724,7 @@ test.describe.skip('Customize linked doc title and description', () => {
     await page0.hover();
 
     await waitNextFrame(page, 200);
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
     await expect(toolbar).toBeVisible();
 
     const editButton = toolbar.getByRole('button', { name: 'Edit' });
@@ -799,7 +799,7 @@ test.describe.skip('Customize linked doc title and description', () => {
     await page0.hover();
 
     await waitNextFrame(page, 200);
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
 
     let editButton = toolbar.getByRole('button', { name: 'Edit' });
     await editButton.click();
@@ -827,11 +827,11 @@ test.describe.skip('Customize linked doc title and description', () => {
     await toCardButton.click();
 
     await waitNextFrame(page, 200);
-    const linkedDocBlock = page.locator('affine-embed-linked-doc-block');
+    const linkedDocBlock = page.locator('cloud-notes-embed-linked-doc-block');
     await expect(linkedDocBlock).toBeVisible();
 
     const linkedDocBlockTitle = linkedDocBlock.locator(
-      '.affine-embed-linked-doc-content-title-text'
+      '.cloud-notes-embed-linked-doc-content-title-text'
     );
     await expect(linkedDocBlockTitle).toHaveText('page0-title0');
 
@@ -876,7 +876,7 @@ test.describe.skip('Customize linked doc title and description', () => {
     await waitNextFrame(page, 200);
     await expect(linkedDocBlockTitle).toHaveText('page0-title0');
     await expect(
-      page.locator('.affine-embed-linked-doc-content-note.alias')
+      page.locator('.cloud-notes-embed-linked-doc-content-note.alias')
     ).toHaveText('This is a new description');
   });
 
@@ -905,7 +905,7 @@ test.describe.skip('Customize linked doc title and description', () => {
     await page0.hover();
 
     await waitNextFrame(page, 200);
-    const referencePopup = page.locator('.affine-reference-popover-container');
+    const referencePopup = page.locator('.cloud-notes-reference-popover-container');
 
     let editButton = referencePopup.getByRole('button', { name: 'Edit' });
     await editButton.click();
@@ -933,12 +933,12 @@ test.describe.skip('Customize linked doc title and description', () => {
     await toCardButton.click();
 
     await waitNextFrame(page, 200);
-    const linkedDocBlock = page.locator('affine-embed-linked-doc-block');
+    const linkedDocBlock = page.locator('cloud-notes-embed-linked-doc-block');
 
     await linkedDocBlock.click();
 
     await waitNextFrame(page, 200);
-    const cardToolbar = page.locator('affine-embed-card-toolbar');
+    const cardToolbar = page.locator('cloud-notes-embed-card-toolbar');
     switchButton = cardToolbar.getByRole('button', { name: 'Switch view' });
     await switchButton.click();
 
@@ -951,13 +951,13 @@ test.describe.skip('Customize linked doc title and description', () => {
     await toEmbedButton.click();
 
     await waitNextFrame(page, 200);
-    const syncedDocBlock = page.locator('affine-embed-synced-doc-block');
+    const syncedDocBlock = page.locator('cloud-notes-embed-synced-doc-block');
 
     await syncedDocBlock.click();
 
     await waitNextFrame(page, 200);
     const syncedDocBlockTitle = syncedDocBlock.locator(
-      '.affine-embed-synced-doc-title'
+      '.cloud-notes-embed-synced-doc-title'
     );
     await expect(syncedDocBlockTitle).toHaveText('title0');
 
@@ -1001,11 +1001,11 @@ test.describe.skip('Customize linked doc title and description', () => {
 
     await expect(linkedDocBlock).toBeVisible();
     const linkedDocBlockTitle = linkedDocBlock.locator(
-      '.affine-embed-linked-doc-content-title-text'
+      '.cloud-notes-embed-linked-doc-content-title-text'
     );
     await expect(linkedDocBlockTitle).toHaveText('page0-title0');
     await expect(
-      linkedDocBlock.locator('.affine-embed-linked-doc-content-note.alias')
+      linkedDocBlock.locator('.cloud-notes-embed-linked-doc-content-note.alias')
     ).toHaveText('This is a new description');
   });
 
@@ -1049,23 +1049,23 @@ test.describe.skip('Customize linked doc title and description', () => {
     await waitNextFrame(page);
 
     const syncedDocBlock = page.locator(
-      'affine-embed-edgeless-synced-doc-block'
+      'cloud-notes-embed-edgeless-synced-doc-block'
     );
 
     await expect(syncedDocBlock).toBeHidden();
 
     const linkedDocBlock = page.locator(
-      'affine-embed-edgeless-linked-doc-block'
+      'cloud-notes-embed-edgeless-linked-doc-block'
     );
 
     await expect(linkedDocBlock).toBeVisible();
 
     const linkedDocBlockTitle = linkedDocBlock.locator(
-      '.affine-embed-linked-doc-content-title-text'
+      '.cloud-notes-embed-linked-doc-content-title-text'
     );
     await expect(linkedDocBlockTitle).toHaveText('page0-title0');
     await expect(
-      linkedDocBlock.locator('.affine-embed-linked-doc-content-note.alias')
+      linkedDocBlock.locator('.cloud-notes-embed-linked-doc-content-note.alias')
     ).toHaveText('This is a new description');
   });
 });

@@ -2,21 +2,21 @@ import type {
   AIDraftService,
   AIModelService,
   AIToolsConfigService,
-} from '@affine/core/modules/ai-button';
-import type { AIDraftState } from '@affine/core/modules/ai-button/services/ai-draft';
+} from '@cloud-notes/core/modules/ai-button';
+import type { AIDraftState } from '@cloud-notes/core/modules/ai-button/services/ai-draft';
 import type {
   ServerService,
   SubscriptionService,
-} from '@affine/core/modules/cloud';
-import type { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import type { PeekViewService } from '@affine/core/modules/peek-view';
-import type { AppThemeService } from '@affine/core/modules/theme';
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { type EditorHost, ShadowlessElement } from '@blocksuite/affine/std';
-import type { ExtensionType } from '@blocksuite/affine/store';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+} from '@cloud-notes/core/modules/cloud';
+import type { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import type { PeekViewService } from '@cloud-notes/core/modules/peek-view';
+import type { AppThemeService } from '@cloud-notes/core/modules/theme';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { type EditorHost, ShadowlessElement } from '@blocksuite/cloud-notes/std';
+import type { ExtensionType } from '@blocksuite/cloud-notes/store';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import { type Signal } from '@preact/signals-core';
 import { css, html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -150,13 +150,13 @@ export class AIChatContent extends SignalWatcher(
   accessor serverService!: ServerService;
 
   @property({ attribute: false })
-  accessor affineFeatureFlagService!: FeatureFlagService;
+  accessor cloudNotesFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
-  accessor affineWorkspaceDialogService!: WorkspaceDialogService;
+  accessor cloudNotesWorkspaceDialogService!: WorkspaceDialogService;
 
   @property({ attribute: false })
-  accessor affineThemeService!: AppThemeService;
+  accessor cloudNotesThemeService!: AppThemeService;
 
   @property({ attribute: false })
   accessor notificationService!: NotificationService;
@@ -369,8 +369,8 @@ export class AIChatContent extends SignalWatcher(
         .updateContext=${this.updateContext}
         .isHistoryLoading=${this.isHistoryLoading}
         .extensions=${this.extensions}
-        .affineFeatureFlagService=${this.affineFeatureFlagService}
-        .affineThemeService=${this.affineThemeService}
+        .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
+        .cloudNotesThemeService=${this.cloudNotesThemeService}
         .notificationService=${this.notificationService}
         .aiToolsConfigService=${this.aiToolsConfigService}
         .reasoningConfig=${this.reasoningConfig}
@@ -386,7 +386,7 @@ export class AIChatContent extends SignalWatcher(
           [this.onboardingOffsetY > 0 ? 'paddingTop' : 'paddingBottom']:
             `${this.messages.length === 0 ? Math.abs(this.onboardingOffsetY) * 2 : 0}px`,
         })}
-        .affineFeatureFlagService=${this.affineFeatureFlagService}
+        .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
         .independentMode=${this.independentMode}
         .host=${this.host}
         .workspaceId=${this.workspaceId}
@@ -400,7 +400,7 @@ export class AIChatContent extends SignalWatcher(
         .docDisplayConfig=${this.docDisplayConfig}
         .searchMenuConfig=${this.searchMenuConfig}
         .serverService=${this.serverService}
-        .affineWorkspaceDialogService=${this.affineWorkspaceDialogService}
+        .cloudNotesWorkspaceDialogService=${this.cloudNotesWorkspaceDialogService}
         .notificationService=${this.notificationService}
         .aiDraftService=${this.aiDraftService}
         .aiToolsConfigService=${this.aiToolsConfigService}

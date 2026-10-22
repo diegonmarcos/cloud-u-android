@@ -1,10 +1,10 @@
-import type { CreateImportSessionOptions } from '@affine/native';
+import type { CreateImportSessionOptions } from '@cloud-notes/native';
 import {
   cancelImportSession,
   createImportSession,
   disposeImportSession,
   nextImportBatch,
-} from '@affine/native';
+} from '@cloud-notes/native';
 
 export const importHandlers = {
   createImportSession: (

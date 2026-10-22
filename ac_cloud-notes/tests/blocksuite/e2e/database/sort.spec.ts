@@ -38,16 +38,16 @@ test('database sort with multiple rules', async ({ page }) => {
   await sortButton.click();
 
   // Add first sort rule: Name ascending
-  await page.locator('affine-menu').getByText('Name').click();
+  await page.locator('cloud-notes-menu').getByText('Name').click();
   await waitNextFrame(page);
 
   // Add second sort rule: Age ascending
   await page.getByText('Add sort').click();
-  await page.locator('affine-menu').getByText('Age').click();
+  await page.locator('cloud-notes-menu').getByText('Age').click();
   await waitNextFrame(page);
 
   // Get all rows after sorting
-  const rows = await page.locator('affine-database-row').all();
+  const rows = await page.locator('cloud-notes-database-row').all();
   const getCellText = async (row: Locator, index: number) => {
     const cell = row.locator('.cell').nth(index);
     return cell.innerText();
@@ -82,7 +82,7 @@ test('database sort with multiple rules', async ({ page }) => {
     { name: 'Alice', age: '25' },
   ];
 
-  const rowsAfterDesc = await page.locator('affine-database-row').all();
+  const rowsAfterDesc = await page.locator('cloud-notes-database-row').all();
   for (let i = 0; i < rowsAfterDesc.length; i++) {
     const name = await getCellText(rowsAfterDesc[i], 1);
     const age = await getCellText(rowsAfterDesc[i], 2);
@@ -102,7 +102,7 @@ test('database sort with multiple rules', async ({ page }) => {
     { name: 'Bob', age: '30' },
   ];
 
-  const rowsAfterRemove = await page.locator('affine-database-row').all();
+  const rowsAfterRemove = await page.locator('cloud-notes-database-row').all();
   for (let i = 0; i < rowsAfterRemove.length; i++) {
     const name = await getCellText(rowsAfterRemove[i], 1);
     const age = await getCellText(rowsAfterRemove[i], 2);

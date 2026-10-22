@@ -1,5 +1,5 @@
-import { DebugLogger } from '@affine/debug';
-import type { WorkerInitOptions } from '@affine/nbstore/worker/client';
+import { DebugLogger } from '@cloud-notes/debug';
+import type { WorkerInitOptions } from '@cloud-notes/nbstore/worker/client';
 import { ObjectPool, Service } from '@toeverything/infra';
 
 import type { Workspace } from '../entities/workspace';
@@ -12,7 +12,7 @@ import type { WorkspaceListService } from './list';
 import type { WorkspaceProfileService } from './profile';
 import { WorkspaceService } from './workspace';
 
-const logger = new DebugLogger('affine:workspace-repository');
+const logger = new DebugLogger('cloud-notes:workspace-repository');
 
 export class WorkspaceRepositoryService extends Service {
   constructor(

@@ -1,5 +1,5 @@
-import { Button } from '@affine/component';
-import { useI18n } from '@affine/i18n';
+import { Button } from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 
 import * as styles from './tag-list-header.css';
 
@@ -13,7 +13,7 @@ export const TagListHeader = ({ onOpen }: { onOpen: () => void }) => {
         onClick={onOpen}
         data-testid="all-tags-new-button"
       >
-        {t['com.affine.tags.empty.new-tag-button']()}
+        {t['com.cloud-notes.tags.empty.new-tag-button']()}
       </Button>
     </div>
   );

@@ -8,7 +8,7 @@ import type {
   RealtimeTopicEventOf,
   RealtimeTopicInputOf,
   RealtimeTopicName,
-} from '@affine/realtime';
+} from '@cloud-notes/realtime';
 import { OpClient, transfer } from '@toeverything/infra/op';
 import type { Observable } from 'rxjs';
 import { v4 as uuid } from 'uuid';

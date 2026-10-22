@@ -1,9 +1,9 @@
 import type {
   GroupByParams,
   OrderByParams,
-} from '@affine/core/modules/collection-rules/types';
-import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
-import type { DocRecord } from '@affine/core/modules/doc';
+} from '@cloud-notes/core/modules/collection-rules/types';
+import type { DocCustomPropertyInfo } from '@cloud-notes/core/modules/db';
+import type { DocRecord } from '@cloud-notes/core/modules/doc';
 
 import type { DocListItemView } from './docs-view/doc-list-item';
 

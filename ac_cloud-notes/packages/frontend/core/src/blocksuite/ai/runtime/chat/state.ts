@@ -1,5 +1,5 @@
-import type { AIToolsConfig } from '@affine/core/modules/ai-button';
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
+import type { AIToolsConfig } from '@cloud-notes/core/modules/ai-button';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
 
 export type AIChatScope =
   | {

@@ -1,20 +1,20 @@
-import { Badge } from '@affine/admin/components/ui/badge';
-import { Button } from '@affine/admin/components/ui/button';
+import { Badge } from '@cloud-notes/admin/components/ui/badge';
+import { Button } from '@cloud-notes/admin/components/ui/button';
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from '@affine/admin/components/ui/card';
-import { useMutation } from '@affine/admin/use-mutation';
-import { useQuery } from '@affine/admin/use-query';
-import { notify } from '@affine/component';
-import type { UserFriendlyError } from '@affine/error';
+} from '@cloud-notes/admin/components/ui/card';
+import { useMutation } from '@cloud-notes/admin/use-mutation';
+import { useQuery } from '@cloud-notes/admin/use-query';
+import { notify } from '@cloud-notes/component';
+import type { UserFriendlyError } from '@cloud-notes/error';
 import {
   authSigningKeysQuery,
   deleteAuthSigningKeyMutation,
   rotateAuthSigningKeyMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { useMemo, useState } from 'react';
 
 import { ConfirmDialog } from '../../../components/shared/confirm-dialog';

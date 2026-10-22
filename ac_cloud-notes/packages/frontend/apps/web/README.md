@@ -1,3 +1,3 @@
 # web
 
-AFFiNE Desktop Edition Web app.
+Cloud Notes Desktop Edition Web app.

@@ -43,7 +43,7 @@ test.describe('select multiple connectors', () => {
 
     expect(
       await page
-        .locator('.affine-edgeless-selected-rect')
+        .locator('.cloud-notes-edgeless-selected-rect')
         .locator('.element-handle')
         .count()
     ).toBe(0);
@@ -83,7 +83,7 @@ test.describe('select multiple connectors', () => {
     await dragBetweenCoords(page, { x: 500, y: 20 }, { x: 400, y: 290 });
     await waitNextFrame(page);
 
-    const selectedRectLocalor = page.locator('.affine-edgeless-selected-rect');
+    const selectedRectLocalor = page.locator('.cloud-notes-edgeless-selected-rect');
     expect(await selectedRectLocalor.locator('.element-handle').count()).toBe(
       0
     );

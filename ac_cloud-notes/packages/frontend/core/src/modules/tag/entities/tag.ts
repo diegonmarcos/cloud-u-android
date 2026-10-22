@@ -2,7 +2,7 @@ import { Entity, LiveData } from '@toeverything/infra';
 
 import type { DocsService } from '../../doc';
 import type { TagStore } from '../stores/tag';
-import { databaseTagColorToAffineLabel } from './utils';
+import { databaseTagColorToCloudNotesLabel } from './utils';
 
 export class Tag extends Entity<{ id: string }> {
   id = this.props.id;
@@ -21,7 +21,7 @@ export class Tag extends Entity<{ id: string }> {
   value$ = this.tagOption$.map(tag => tag?.value || '');
 
   color$ = this.tagOption$.map(
-    tag => databaseTagColorToAffineLabel(tag?.color ?? '') || ''
+    tag => databaseTagColorToCloudNotesLabel(tag?.color ?? '') || ''
   );
 
   createDate$ = this.tagOption$.map(tag => tag?.createDate || Date.now());

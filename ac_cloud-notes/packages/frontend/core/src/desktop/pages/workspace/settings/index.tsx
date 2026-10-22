@@ -1,6 +1,6 @@
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import type { SettingTab } from '@affine/core/modules/dialogs/constant';
-import { WorkbenchService } from '@affine/core/modules/workbench';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { SettingTab } from '@cloud-notes/core/modules/dialogs/constant';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { useService } from '@toeverything/infra';
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';

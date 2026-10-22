@@ -1,4 +1,4 @@
-import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
+import type { DocCustomPropertyInfo } from '@cloud-notes/core/modules/db';
 
 export interface PropertyValueProps {
   propertyInfo?: DocCustomPropertyInfo;

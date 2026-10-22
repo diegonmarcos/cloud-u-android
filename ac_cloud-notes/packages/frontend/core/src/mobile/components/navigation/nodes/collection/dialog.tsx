@@ -1,4 +1,4 @@
-import { useI18n } from '@affine/i18n';
+import { useI18n } from '@cloud-notes/i18n';
 
 import {
   RenameDialog,
@@ -15,8 +15,8 @@ export const CollectionRenameSubMenu = ({
   const t = useI18n();
   return (
     <RenameSubMenu
-      title={title || t['com.affine.m.explorer.collection.rename-menu-title']()}
-      text={text || t['com.affine.m.explorer.collection.rename']()}
+      title={title || t['com.cloud-notes.m.explorer.collection.rename-menu-title']()}
+      text={text || t['com.cloud-notes.m.explorer.collection.rename']()}
       {...props}
     />
   );
@@ -24,7 +24,7 @@ export const CollectionRenameSubMenu = ({
 
 const CollectionDesc = () => {
   const t = useI18n();
-  return t['com.affine.collection.emptyCollectionDescription']();
+  return t['com.cloud-notes.collection.emptyCollectionDescription']();
 };
 
 export const CollectionRenameDialog = ({

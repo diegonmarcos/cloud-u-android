@@ -3,7 +3,7 @@ import type {
   NoteBlockModel,
   ParagraphProps,
   RootBlockProps,
-} from '@blocksuite/affine-model';
+} from '@blocksuite/cloud-notes-model';
 import type { Store } from '@blocksuite/store';
 import type { Page } from '@playwright/test';
 /**
@@ -78,7 +78,7 @@ export async function initEmbedSyncedDocState(
       );
 
       const { NoteBlockModel, NoteDisplayMode } =
-        window.$blocksuite.affineModel;
+        window.$blocksuite.cloudNotesModel;
 
       let prevId = window.doc.id;
       for (let index = 1; index < docIds.length; index++) {

@@ -4,14 +4,14 @@ import {
   type IconButtonProps,
   toast,
   useConfirmModal,
-} from '@affine/component';
-import type { DocRecord } from '@affine/core/modules/doc';
-import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
-import { GuardService } from '@affine/core/modules/permissions';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { UserFriendlyError } from '@affine/error';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
+} from '@cloud-notes/component';
+import type { DocRecord } from '@cloud-notes/core/modules/doc';
+import { CompatibleFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
+import { GuardService } from '@cloud-notes/core/modules/permissions';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import {
   DeleteIcon,
   OpenInNewIcon,
@@ -21,7 +21,7 @@ import {
 import { useLiveData, useService } from '@toeverything/infra';
 import { memo, useCallback, useContext } from 'react';
 
-import { useBlockSuiteMetaHelper } from '../../hooks/affine/use-block-suite-meta-helper';
+import { useBlockSuiteMetaHelper } from '../../hooks/cloud-notes/use-block-suite-meta-helper';
 import { IsFavoriteIcon } from '../../pure/icons';
 import { DocExplorerContext } from '../context';
 
@@ -154,11 +154,11 @@ export const QuickDelete = memo(function QuickDelete({
 
       track.allDocs.list.docMenu.deleteDoc();
       openConfirmModal({
-        title: t['com.affine.moveToTrash.confirmModal.title'](),
-        description: t['com.affine.moveToTrash.confirmModal.description']({
+        title: t['com.cloud-notes.moveToTrash.confirmModal.title'](),
+        description: t['com.cloud-notes.moveToTrash.confirmModal.description']({
           title: doc.title$.value || t['Untitled'](),
         }),
-        cancelText: t['com.affine.confirmModal.button.cancel'](),
+        cancelText: t['com.cloud-notes.confirmModal.button.cancel'](),
         confirmText: t.Delete(),
         confirmButtonOptions: {
           variant: 'error',
@@ -167,7 +167,7 @@ export const QuickDelete = memo(function QuickDelete({
           try {
             const canTrash = await guardService.can('Doc_Trash', doc.id);
             if (!canTrash) {
-              toast(t['com.affine.no-permission']());
+              toast(t['com.cloud-notes.no-permission']());
               return;
             }
             await doc.moveToTrash();
@@ -256,9 +256,9 @@ export const QuickDeletePermanently = memo(function QuickDeletePermanently({
       const canDelete = await guardService.can('Doc_Delete', doc.id);
       if (canDelete) {
         await permanentlyDeletePage(doc.id);
-        toast(t['com.affine.toastMessage.permanentlyDeleted']());
+        toast(t['com.cloud-notes.toastMessage.permanentlyDeleted']());
       } else {
-        toast(t['com.affine.no-permission']());
+        toast(t['com.cloud-notes.no-permission']());
       }
     } catch (error) {
       console.error(error);
@@ -271,10 +271,10 @@ export const QuickDeletePermanently = memo(function QuickDeletePermanently({
       e.stopPropagation();
       e.preventDefault();
       openConfirmModal({
-        title: `${t['com.affine.trashOperation.deletePermanently']()}?`,
-        description: t['com.affine.trashOperation.deleteDescription'](),
+        title: `${t['com.cloud-notes.trashOperation.deletePermanently']()}?`,
+        description: t['com.cloud-notes.trashOperation.deleteDescription'](),
         cancelText: t['Cancel'](),
-        confirmText: t['com.affine.trashOperation.delete'](),
+        confirmText: t['com.cloud-notes.trashOperation.delete'](),
         confirmButtonOptions: {
           variant: 'error',
         },
@@ -321,12 +321,12 @@ export const QuickRestore = memo(function QuickRestore({
           if (can) {
             await restoreFromTrash(doc.id);
             toast(
-              t['com.affine.toastMessage.restored']({
+              t['com.cloud-notes.toastMessage.restored']({
                 title: doc.title$.value || 'Untitled',
               })
             );
           } else {
-            toast(t['com.affine.no-permission']());
+            toast(t['com.cloud-notes.no-permission']());
           }
         })
         .catch(error => {

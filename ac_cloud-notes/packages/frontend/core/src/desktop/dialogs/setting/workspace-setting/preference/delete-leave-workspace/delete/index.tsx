@@ -1,10 +1,10 @@
-import { Input } from '@affine/component';
-import type { ConfirmModalProps } from '@affine/component/ui/modal';
-import { ConfirmModal } from '@affine/component/ui/modal';
-import { useWorkspaceInfo } from '@affine/core/components/hooks/use-workspace-info';
-import type { WorkspaceMetadata } from '@affine/core/modules/workspace';
-import { UNTITLED_WORKSPACE_NAME } from '@affine/env/constant';
-import { Trans, useI18n } from '@affine/i18n';
+import { Input } from '@cloud-notes/component';
+import type { ConfirmModalProps } from '@cloud-notes/component/ui/modal';
+import { ConfirmModal } from '@cloud-notes/component/ui/modal';
+import { useWorkspaceInfo } from '@cloud-notes/core/components/hooks/use-workspace-info';
+import type { WorkspaceMetadata } from '@cloud-notes/core/modules/workspace';
+import { UNTITLED_WORKSPACE_NAME } from '@cloud-notes/env/constant';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import { useCallback, useState } from 'react';
 
 import * as styles from './style.css';
@@ -33,9 +33,9 @@ export const WorkspaceDeleteModal = ({
 
   return (
     <ConfirmModal
-      title={`${t['com.affine.workspaceDelete.title']()}?`}
-      cancelText={t['com.affine.workspaceDelete.button.cancel']()}
-      confirmText={t['com.affine.workspaceDelete.button.delete']()}
+      title={`${t['com.cloud-notes.workspaceDelete.title']()}?`}
+      cancelText={t['com.cloud-notes.workspaceDelete.button.cancel']()}
+      confirmText={t['com.cloud-notes.workspaceDelete.button.delete']()}
       confirmButtonOptions={{
         variant: 'error',
         disabled: !allowDelete,
@@ -44,7 +44,7 @@ export const WorkspaceDeleteModal = ({
       {...props}
     >
       {workspaceMetadata.flavour === 'local' ? (
-        <Trans i18nKey="com.affine.workspaceDelete.description">
+        <Trans i18nKey="com.cloud-notes.workspaceDelete.description">
           Deleting (
           <span className={styles.workspaceName}>
             {{ workspace: workspaceName } as any}
@@ -53,7 +53,7 @@ export const WorkspaceDeleteModal = ({
           lost.
         </Trans>
       ) : (
-        <Trans i18nKey="com.affine.workspaceDelete.description2">
+        <Trans i18nKey="com.cloud-notes.workspaceDelete.description2">
           Deleting (
           <span className={styles.workspaceName}>
             {{ workspace: workspaceName } as any}
@@ -68,7 +68,7 @@ export const WorkspaceDeleteModal = ({
           onChange={setDeleteStr}
           data-testid="delete-workspace-input"
           onEnter={handleOnEnter}
-          placeholder={t['com.affine.workspaceDelete.placeholder']()}
+          placeholder={t['com.cloud-notes.workspaceDelete.placeholder']()}
           size="large"
         />
       </div>

@@ -4,10 +4,10 @@ import {
   MenuItem,
   type MenuProps,
   Scrollable,
-} from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { inferOpenMode } from '@affine/core/utils';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { inferOpenMode } from '@cloud-notes/core/utils';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   DualLinkIcon,
   InformationIcon,
@@ -61,11 +61,11 @@ const Empty = () => {
     <div className={styles.empty}>
       <InformationIcon className={styles.emptyIcon} />
       <span className={styles.emptyText}>
-        {t['com.affine.template-list.empty']()}
+        {t['com.cloud-notes.template-list.empty']()}
       </span>
       <div className={styles.space} />
       <a
-        href="https://affine.pro/blog/how-to-use-template"
+        href="https://notes.diegonmarcos.com/blog/how-to-use-template"
         target="_blank"
         rel="noopener noreferrer"
         className={styles.link}
@@ -168,7 +168,7 @@ export const TemplateListMenuAdd = () => {
       onClick={createNewTemplate}
       onAuxClick={createNewTemplate}
     >
-      {t['com.affine.template-list.create-new']()}
+      {t['com.cloud-notes.template-list.create-new']()}
     </MenuItem>
   );
 };

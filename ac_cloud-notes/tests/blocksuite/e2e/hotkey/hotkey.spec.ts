@@ -375,13 +375,13 @@ test('should support ctrl/cmd+shift+l convert to linked doc', async ({
   await waitNextFrame(page);
   await page.keyboard.press(`${SHORT_KEY}+${SHIFT_KEY}+l`);
 
-  const linkedDocCard = page.locator('affine-embed-linked-doc-block');
+  const linkedDocCard = page.locator('cloud-notes-embed-linked-doc-block');
   await expect(linkedDocCard).toBeVisible();
 
-  const title = page.locator('.affine-embed-linked-doc-content-title-text');
+  const title = page.locator('.cloud-notes-embed-linked-doc-content-title-text');
   expect(await title.innerText()).toBe('Untitled');
 
-  const noteContent = page.locator('.affine-embed-linked-doc-content-note');
+  const noteContent = page.locator('.cloud-notes-embed-linked-doc-content-note');
   expect(await noteContent.innerText()).toBe('123');
 });
 

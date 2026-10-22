@@ -1,7 +1,7 @@
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { toArrayBuffer } from '@affine/core/utils/array-buffer';
-import { DebugLogger } from '@affine/debug';
-import type { Workspace as WorkspaceInterface } from '@blocksuite/affine/store';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { toArrayBuffer } from '@cloud-notes/core/utils/array-buffer';
+import { DebugLogger } from '@cloud-notes/debug';
+import type { Workspace as WorkspaceInterface } from '@blocksuite/cloud-notes/store';
 import { Entity, LiveData, yjsGetPath } from '@toeverything/infra';
 import type { Observable } from 'rxjs';
 import { Doc as YDoc, transact } from 'yjs';
@@ -12,7 +12,7 @@ import type { WorkspaceScope } from '../scopes/workspace';
 import { WorkspaceEngineService } from '../services/engine';
 
 const BLOB_SOURCE_REFRESH_DELAY = 250;
-const logger = new DebugLogger('affine:workspace-blob-source');
+const logger = new DebugLogger('cloud-notes:workspace-blob-source');
 
 export class Workspace extends Entity {
   constructor(

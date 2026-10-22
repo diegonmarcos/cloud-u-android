@@ -1,13 +1,13 @@
 import { html } from 'lit';
 
-export { AIStarIconWithAnimation } from '@blocksuite/affine/components/icons';
+export { AIStarIconWithAnimation } from '@blocksuite/cloud-notes/components/icons';
 
 // dotlottie-wc can only be used in the browser
 if (typeof window !== 'undefined') {
   import('@lottiefiles/dotlottie-wc').catch(console.error);
 }
 
-export const AffineIcon = (color: string) =>
+export const CloudNotesIcon = (color: string) =>
   html`<svg
     width="63"
     height="62"
@@ -22,7 +22,7 @@ export const AffineIcon = (color: string) =>
         width="44"
         height="44"
         rx="8"
-        fill="var(--affine-white)"
+        fill="var(--cloud-notes-white)"
       />
       <rect
         x="10"
@@ -30,7 +30,7 @@ export const AffineIcon = (color: string) =>
         width="43"
         height="43"
         rx="7.5"
-        stroke="var(--affine-border-color)"
+        stroke="var(--cloud-notes-border-color)"
       />
       <g clip-path="url(#clip0_5885_200419)">
         <path

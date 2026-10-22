@@ -20,5 +20,5 @@ pub use ffi_types::{
 pub use preview::{render_mermaid_preview_svg, render_typst_preview_svg};
 pub use storage::{DocStoragePool, new_doc_storage_pool};
 
-uniffi::setup_scaffolding!("affine_mobile_native");
+uniffi::setup_scaffolding!("cloud_notes_mobile_native");
 

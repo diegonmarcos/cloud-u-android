@@ -4,12 +4,12 @@ import { GeneralTokenizer } from '../tokenizer';
 
 test('tokenizer', () => {
   {
-    const tokens = new GeneralTokenizer().tokenize('hello  world,\n AFFiNE');
+    const tokens = new GeneralTokenizer().tokenize('hello  world,\n Cloud Notes');
 
     expect(tokens).toEqual([
       { term: 'hello', start: 0, end: 5 },
       { term: 'world', start: 7, end: 12 },
-      { term: 'affine', start: 15, end: 21 },
+      { term: 'cloud-notes', start: 15, end: 21 },
     ]);
   }
 

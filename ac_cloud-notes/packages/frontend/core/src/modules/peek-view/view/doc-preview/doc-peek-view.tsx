@@ -1,17 +1,17 @@
-import { Scrollable } from '@affine/component';
-import { PageDetailLoading } from '@affine/component/page-detail-skeleton';
-import { AIAppEvents, type AIChatParams } from '@affine/core/blocksuite/ai';
-import type { AffineEditorContainer } from '@affine/core/blocksuite/block-suite-editor';
-import { EditorOutlineViewer } from '@affine/core/blocksuite/outline-viewer';
-import { AffineErrorBoundary } from '@affine/core/components/affine/affine-error-boundary';
-import { useGuard } from '@affine/core/components/guard';
-import { PageNotFound } from '@affine/core/desktop/pages/404';
-import { EditorService } from '@affine/core/modules/editor';
-import { DebugLogger } from '@affine/debug';
-import { DisposableGroup } from '@blocksuite/affine/global/disposable';
-import { Bound } from '@blocksuite/affine/global/gfx';
-import { RefNodeSlotsProvider } from '@blocksuite/affine/inlines/reference';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
+import { Scrollable } from '@cloud-notes/component';
+import { PageDetailLoading } from '@cloud-notes/component/page-detail-skeleton';
+import { AIAppEvents, type AIChatParams } from '@cloud-notes/core/blocksuite/ai';
+import type { CloudNotesEditorContainer } from '@cloud-notes/core/blocksuite/block-suite-editor';
+import { EditorOutlineViewer } from '@cloud-notes/core/blocksuite/outline-viewer';
+import { CloudNotesErrorBoundary } from '@cloud-notes/core/components/cloud-notes/cloud-notes-error-boundary';
+import { useGuard } from '@cloud-notes/core/components/guard';
+import { PageNotFound } from '@cloud-notes/core/desktop/pages/404';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import { DebugLogger } from '@cloud-notes/debug';
+import { DisposableGroup } from '@blocksuite/cloud-notes/global/disposable';
+import { Bound } from '@blocksuite/cloud-notes/global/gfx';
+import { RefNodeSlotsProvider } from '@blocksuite/cloud-notes/inlines/reference';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
 import {
   FrameworkScope,
   useLiveData,
@@ -32,13 +32,13 @@ const logger = new DebugLogger('doc-peek-view');
 
 // Lazy load BlockSuiteEditor to break circular dependency
 const BlockSuiteEditor = lazy(() =>
-  import('@affine/core/blocksuite/block-suite-editor').then(module => ({
+  import('@cloud-notes/core/blocksuite/block-suite-editor').then(module => ({
     default: module.BlockSuiteEditor,
   }))
 );
 
 function fitViewport(
-  editor: AffineEditorContainer,
+  editor: CloudNotesEditorContainer,
   xywh?: `[${number},${number},${number},${number}]`
 ) {
   try {
@@ -90,7 +90,7 @@ function DocPeekPreviewEditor({
   const isInTrash = useLiveData(doc.record.trash$);
 
   const handleOnEditorReady = useCallback(
-    (editorContainer: AffineEditorContainer) => {
+    (editorContainer: CloudNotesEditorContainer) => {
       const disposableGroup = new DisposableGroup();
       const refNodeSlots =
         editorContainer.std.getOptional(RefNodeSlotsProvider);
@@ -154,10 +154,10 @@ function DocPeekPreviewEditor({
   const readonly = !canEdit || isInTrash;
 
   return (
-    <AffineErrorBoundary>
+    <CloudNotesErrorBoundary>
       <Scrollable.Root>
         <Scrollable.Viewport
-          className={clsx('affine-page-viewport', styles.affineDocViewport)}
+          className={clsx('cloud-notes-page-viewport', styles.cloudNotesDocViewport)}
         >
           <Suspense fallback={<PageDetailLoading />}>
             <BlockSuiteEditor
@@ -179,7 +179,7 @@ function DocPeekPreviewEditor({
           openOutlinePanel={openOutlinePanel}
         />
       ) : null}
-    </AffineErrorBoundary>
+    </CloudNotesErrorBoundary>
   );
 }
 

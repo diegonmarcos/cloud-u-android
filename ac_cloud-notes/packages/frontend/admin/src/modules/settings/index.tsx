@@ -3,9 +3,9 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@affine/admin/components/ui/accordion';
-import { Button } from '@affine/admin/components/ui/button';
-import { ScrollArea } from '@affine/admin/components/ui/scroll-area';
+} from '@cloud-notes/admin/components/ui/accordion';
+import { Button } from '@cloud-notes/admin/components/ui/button';
+import { ScrollArea } from '@cloud-notes/admin/components/ui/scroll-area';
 import { get } from 'lodash-es';
 import { useCallback, useState } from 'react';
 

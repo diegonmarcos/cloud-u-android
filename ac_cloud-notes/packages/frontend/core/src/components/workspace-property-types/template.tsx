@@ -1,7 +1,7 @@
-import { Checkbox, MenuItem, PropertyValue } from '@affine/component';
-import type { FilterParams } from '@affine/core/modules/collection-rules';
-import { type DocRecord, DocService } from '@affine/core/modules/doc';
-import { useI18n } from '@affine/i18n';
+import { Checkbox, MenuItem, PropertyValue } from '@cloud-notes/component';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
+import { type DocRecord, DocService } from '@cloud-notes/core/modules/doc';
+import { useI18n } from '@cloud-notes/i18n';
 import { TemplateIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { type ChangeEvent, useCallback } from 'react';
@@ -67,9 +67,9 @@ export const TemplateGroupHeader = ({
   const t = useI18n();
   const text =
     groupId === 'true'
-      ? t['com.affine.all-docs.group.is-template']()
+      ? t['com.cloud-notes.all-docs.group.is-template']()
       : groupId === 'false'
-        ? t['com.affine.all-docs.group.is-not-template']()
+        ? t['com.cloud-notes.all-docs.group.is-not-template']()
         : 'Default';
 
   return (

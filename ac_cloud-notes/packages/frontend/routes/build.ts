@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { join } from 'node:path/posix';
 
-import { formatCode, Path } from '@affine-tools/utils';
+import { formatCode, Path } from '@cloud-notes-tools/utils';
 import { parse } from 'path-to-regexp';
 
 const curdir = Path.dir(import.meta.url);

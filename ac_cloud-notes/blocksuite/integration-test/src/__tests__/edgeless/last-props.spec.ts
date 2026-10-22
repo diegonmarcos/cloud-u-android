@@ -1,5 +1,5 @@
-import type { EdgelessRootBlockComponent } from '@blocksuite/affine/blocks/root';
-import { getSurfaceBlock } from '@blocksuite/affine/blocks/surface';
+import type { EdgelessRootBlockComponent } from '@blocksuite/cloud-notes/blocks/root';
+import { getSurfaceBlock } from '@blocksuite/cloud-notes/blocks/surface';
 import {
   type BrushElementModel,
   type ConnectorElementModel,
@@ -16,8 +16,8 @@ import {
   type ShapeElementModel,
   ShapeType,
   type TextElementModel,
-} from '@blocksuite/affine/model';
-import { EditPropsStore } from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/model';
+import { EditPropsStore } from '@blocksuite/cloud-notes/shared/services';
 import type { BlockStdScope } from '@blocksuite/std';
 import { beforeEach, describe, expect, test } from 'vitest';
 

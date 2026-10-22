@@ -3,10 +3,10 @@ import {
   MenuTrigger,
   RadioGroup,
   type RadioItem,
-} from '@affine/component';
-import { SettingRow } from '@affine/component/setting-components';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   DefaultTheme,
   FontFamily,
@@ -14,8 +14,8 @@ import {
   FontStyle,
   FontWeightMap,
   TextAlign,
-} from '@blocksuite/affine/model';
-import type { Store } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/model';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useFramework, useLiveData } from '@toeverything/infra';
 import { isEqual } from 'lodash-es';
 import { useCallback, useMemo } from 'react';
@@ -42,21 +42,21 @@ export const TextSettings = () => {
         value: TextAlign.Left,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.text.alignment.left'
+            'com.cloud-notes.settings.editorSettings.edgeless.text.alignment.left'
           ](),
       },
       {
         value: TextAlign.Center,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.text.alignment.center'
+            'com.cloud-notes.settings.editorSettings.edgeless.text.alignment.center'
           ](),
       },
       {
         value: TextAlign.Right,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.text.alignment.right'
+            'com.cloud-notes.settings.editorSettings.edgeless.text.alignment.right'
           ](),
       },
     ],
@@ -150,13 +150,13 @@ export const TextSettings = () => {
   return (
     <>
       <EdgelessSnapshot
-        title={t['com.affine.settings.editorSettings.edgeless.text']()}
+        title={t['com.cloud-notes.settings.editorSettings.edgeless.text']()}
         docName="text"
         keyName="affine:edgeless-text"
         getElements={getElements}
       />
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.text.color']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.text.color']()}
         desc={''}
       >
         {currentColor ? (
@@ -175,7 +175,7 @@ export const TextSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.text.font-family'
+          'com.cloud-notes.settings.editorSettings.edgeless.text.font-family'
         ]()}
         desc={''}
       >
@@ -190,7 +190,7 @@ export const TextSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.text.font-style'
+          'com.cloud-notes.settings.editorSettings.edgeless.text.font-style'
         ]()}
         desc={''}
       >
@@ -205,7 +205,7 @@ export const TextSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.text.font-weight'
+          'com.cloud-notes.settings.editorSettings.edgeless.text.font-weight'
         ]()}
         desc={''}
       >
@@ -219,7 +219,7 @@ export const TextSettings = () => {
         />
       </SettingRow>
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.text.alignment']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.text.alignment']()}
         desc={''}
       >
         <RadioGroup

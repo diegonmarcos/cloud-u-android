@@ -10,7 +10,7 @@ import MarkdownView
 
 extension IntelligentContext {
   @MainActor func prepareMarkdownViewThemes() {
-    MarkdownTheme.default.colors.body = .affineTextPrimary
-    MarkdownTheme.default.colors.highlight = .affineTextLink
+    MarkdownTheme.default.colors.body = .cloudNotesTextPrimary
+    MarkdownTheme.default.colors.highlight = .cloudNotesTextLink
   }
 }

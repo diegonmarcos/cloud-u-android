@@ -40,28 +40,28 @@
 
   /* Selfhost sidebar tokens */
   --color-sidebar-bg: var(
-    --affine-v2-selfhost-layer-background-sidebarBg-sidebarBg
+    --cloud-notes-v2-selfhost-layer-background-sidebarBg-sidebarBg
   );
-  --color-sidebar-foreground: var(--affine-v2-selfhost-text-sidebar-primary);
+  --color-sidebar-foreground: var(--cloud-notes-v2-selfhost-text-sidebar-primary);
   --color-sidebar-foreground-secondary: var(
-    --affine-v2-selfhost-text-sidebar-secondary
+    --cloud-notes-v2-selfhost-text-sidebar-secondary
   );
   --color-sidebar-hover: var(
-    --affine-v2-selfhost-button-sidebarButton-bg-hover
+    --cloud-notes-v2-selfhost-button-sidebarButton-bg-hover
   );
   --color-sidebar-active: var(
-    --affine-v2-selfhost-button-sidebarButton-bg-select
+    --cloud-notes-v2-selfhost-button-sidebarButton-bg-select
   );
 
   /* Chip / badge tokens */
-  --color-chip-blue: var(--affine-v2-chip-label-blue);
-  --color-chip-white: var(--affine-v2-chip-label-white);
-  --color-chip-text: var(--affine-v2-chip-label-text);
+  --color-chip-blue: var(--cloud-notes-v2-chip-label-blue);
+  --color-chip-white: var(--cloud-notes-v2-chip-label-white);
+  --color-chip-text: var(--cloud-notes-v2-chip-label-text);
 
   /* Toggle tokens */
-  --color-toggle-on: var(--affine-v2-selfhost-toggle-backgroundOn);
-  --color-toggle-off: var(--affine-v2-selfhost-toggle-backgroundOff);
-  --color-toggle-thumb: var(--affine-v2-selfhost-toggle-foreground);
+  --color-toggle-on: var(--cloud-notes-v2-selfhost-toggle-backgroundOn);
+  --color-toggle-off: var(--cloud-notes-v2-selfhost-toggle-backgroundOff);
+  --color-toggle-thumb: var(--cloud-notes-v2-selfhost-toggle-foreground);
 
   /* Custom font size */
   --text-xxs: 11px;
@@ -122,34 +122,34 @@
 
 @layer base {
   :root {
-    --background: var(--affine-v2-layer-background-primary);
-    --foreground: var(--affine-v2-text-primary);
+    --background: var(--cloud-notes-v2-layer-background-primary);
+    --foreground: var(--cloud-notes-v2-text-primary);
 
-    --card: var(--affine-v2-layer-background-secondary);
-    --card-foreground: var(--affine-v2-text-primary);
+    --card: var(--cloud-notes-v2-layer-background-secondary);
+    --card-foreground: var(--cloud-notes-v2-text-primary);
 
-    --popover: var(--affine-v2-layer-background-overlayPanel);
-    --popover-foreground: var(--affine-v2-text-primary);
+    --popover: var(--cloud-notes-v2-layer-background-overlayPanel);
+    --popover-foreground: var(--cloud-notes-v2-text-primary);
 
-    --primary: var(--affine-v2-button-primary);
-    --primary-foreground: var(--affine-v2-button-pureWhiteText);
+    --primary: var(--cloud-notes-v2-button-primary);
+    --primary-foreground: var(--cloud-notes-v2-button-pureWhiteText);
 
-    --secondary: var(--affine-v2-layer-background-secondary);
-    --secondary-foreground: var(--affine-v2-text-primary);
+    --secondary: var(--cloud-notes-v2-layer-background-secondary);
+    --secondary-foreground: var(--cloud-notes-v2-text-primary);
 
-    --muted: var(--affine-v2-layer-background-tertiary);
-    --muted-foreground: var(--affine-v2-text-secondary);
+    --muted: var(--cloud-notes-v2-layer-background-tertiary);
+    --muted-foreground: var(--cloud-notes-v2-text-secondary);
 
-    --accent: var(--affine-v2-layer-background-hoverOverlay);
-    --accent-foreground: var(--affine-v2-text-primary);
+    --accent: var(--cloud-notes-v2-layer-background-hoverOverlay);
+    --accent-foreground: var(--cloud-notes-v2-text-primary);
 
-    --destructive: var(--affine-v2-button-error);
-    --destructive-foreground: var(--affine-v2-button-pureWhiteText);
+    --destructive: var(--cloud-notes-v2-button-error);
+    --destructive-foreground: var(--cloud-notes-v2-button-pureWhiteText);
 
-    --border: var(--affine-v2-layer-insideBorder-border);
-    --input: var(--affine-v2-input-border-default);
-    --ring: var(--affine-v2-input-border-active);
-    --radius: var(--affine-popover-radius);
+    --border: var(--cloud-notes-v2-layer-insideBorder-border);
+    --input: var(--cloud-notes-v2-input-border-default);
+    --ring: var(--cloud-notes-v2-input-border-active);
+    --radius: var(--cloud-notes-popover-radius);
   }
 }
 
@@ -160,7 +160,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: var(--affine-font-family);
+    font-family: var(--cloud-notes-font-family);
   }
 
   /* Smooth scrollbars */

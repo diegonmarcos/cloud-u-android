@@ -18,7 +18,7 @@ def capacitor_pods
   pod 'CapacitorPluginAppTrackingTransparency', :path => '../../../../../node_modules/capacitor-plugin-app-tracking-transparency'
 end
 
-target 'AFFiNE' do
+target 'Cloud Notes' do
   capacitor_pods
   # Add your Pods here
   pod 'CryptoSwift', '~> 1.8.3'

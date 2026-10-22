@@ -1,29 +1,29 @@
-import { notify } from '@affine/component';
-import { configureElectronStateStorageImpls } from '@affine/core/desktop/storage';
-import { configureCommonModules } from '@affine/core/modules';
-import { configureAppTabsHeaderModule } from '@affine/core/modules/app-tabs-header';
-import { configureDesktopBackupModule } from '@affine/core/modules/backup';
+import { notify } from '@cloud-notes/component';
+import { configureElectronStateStorageImpls } from '@cloud-notes/core/desktop/storage';
+import { configureCommonModules } from '@cloud-notes/core/modules';
+import { configureAppTabsHeaderModule } from '@cloud-notes/core/modules/app-tabs-header';
+import { configureDesktopBackupModule } from '@cloud-notes/core/modules/backup';
 import {
   AuthProvider,
   ServerScope,
   ServerService,
   ValidatorProvider,
-} from '@affine/core/modules/cloud';
+} from '@cloud-notes/core/modules/cloud';
 import {
   configureDesktopApiModule,
   DesktopApiService,
-} from '@affine/core/modules/desktop-api';
+} from '@cloud-notes/core/modules/desktop-api';
 import {
   configureSpellCheckSettingModule,
   configureTraySettingModule,
-} from '@affine/core/modules/editor-setting';
-import { configureFindInPageModule } from '@affine/core/modules/find-in-page';
+} from '@cloud-notes/core/modules/editor-setting';
+import { configureFindInPageModule } from '@cloud-notes/core/modules/find-in-page';
 import {
   ClientSchemeProvider,
   PopupWindowProvider,
-} from '@affine/core/modules/url';
-import { configureDesktopWorkbenchModule } from '@affine/core/modules/workbench';
-import { configureBrowserWorkspaceFlavours } from '@affine/core/modules/workspace-engine';
+} from '@cloud-notes/core/modules/url';
+import { configureDesktopWorkbenchModule } from '@cloud-notes/core/modules/workbench';
+import { configureBrowserWorkspaceFlavours } from '@cloud-notes/core/modules/workspace-engine';
 import { Framework } from '@toeverything/infra';
 
 function notifySessionOnlySignIn(sessionOnly?: boolean) {
@@ -32,7 +32,7 @@ function notifySessionOnlySignIn(sessionOnly?: boolean) {
   notify.warning({
     title: 'Sign-in is only valid for this session',
     message:
-      'Encrypted storage is unavailable, so you will need to sign in again after restarting AFFiNE.',
+      'Encrypted storage is unavailable, so you will need to sign in again after restarting Cloud Notes.',
   });
 }
 

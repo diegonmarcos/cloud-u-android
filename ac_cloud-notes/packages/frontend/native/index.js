@@ -70,13 +70,13 @@ function requireNative() {
   } else if (process.platform === 'android') {
     if (process.arch === 'arm64') {
       try {
-        return require('./affine.android-arm64.node')
+        return require('./cloud-notes.android-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-android-arm64')
-        const bindingPackageVersion = require('@affine/native-android-arm64/package.json').version
+        const binding = require('@cloud-notes/native-android-arm64')
+        const bindingPackageVersion = require('@cloud-notes/native-android-arm64/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -86,13 +86,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm') {
       try {
-        return require('./affine.android-arm-eabi.node')
+        return require('./cloud-notes.android-arm-eabi.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-android-arm-eabi')
-        const bindingPackageVersion = require('@affine/native-android-arm-eabi/package.json').version
+        const binding = require('@cloud-notes/native-android-arm-eabi')
+        const bindingPackageVersion = require('@cloud-notes/native-android-arm-eabi/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -107,13 +107,13 @@ function requireNative() {
     if (process.arch === 'x64') {
       if (process.config?.variables?.shlib_suffix === 'dll.a' || process.config?.variables?.node_target_type === 'shared_library') {
         try {
-        return require('./affine.win32-x64-gnu.node')
+        return require('./cloud-notes.win32-x64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-win32-x64-gnu')
-        const bindingPackageVersion = require('@affine/native-win32-x64-gnu/package.json').version
+        const binding = require('@cloud-notes/native-win32-x64-gnu')
+        const bindingPackageVersion = require('@cloud-notes/native-win32-x64-gnu/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -123,13 +123,13 @@ function requireNative() {
       }
       } else {
         try {
-        return require('./affine.win32-x64-msvc.node')
+        return require('./cloud-notes.win32-x64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-win32-x64-msvc')
-        const bindingPackageVersion = require('@affine/native-win32-x64-msvc/package.json').version
+        const binding = require('@cloud-notes/native-win32-x64-msvc')
+        const bindingPackageVersion = require('@cloud-notes/native-win32-x64-msvc/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -140,13 +140,13 @@ function requireNative() {
       }
     } else if (process.arch === 'ia32') {
       try {
-        return require('./affine.win32-ia32-msvc.node')
+        return require('./cloud-notes.win32-ia32-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-win32-ia32-msvc')
-        const bindingPackageVersion = require('@affine/native-win32-ia32-msvc/package.json').version
+        const binding = require('@cloud-notes/native-win32-ia32-msvc')
+        const bindingPackageVersion = require('@cloud-notes/native-win32-ia32-msvc/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -156,13 +156,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./affine.win32-arm64-msvc.node')
+        return require('./cloud-notes.win32-arm64-msvc.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-win32-arm64-msvc')
-        const bindingPackageVersion = require('@affine/native-win32-arm64-msvc/package.json').version
+        const binding = require('@cloud-notes/native-win32-arm64-msvc')
+        const bindingPackageVersion = require('@cloud-notes/native-win32-arm64-msvc/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -175,13 +175,13 @@ function requireNative() {
     }
   } else if (process.platform === 'darwin') {
     try {
-      return require('./affine.darwin-universal.node')
+      return require('./cloud-notes.darwin-universal.node')
     } catch (e) {
       loadErrors.push(e)
     }
     try {
-      const binding = require('@affine/native-darwin-universal')
-      const bindingPackageVersion = require('@affine/native-darwin-universal/package.json').version
+      const binding = require('@cloud-notes/native-darwin-universal')
+      const bindingPackageVersion = require('@cloud-notes/native-darwin-universal/package.json').version
       if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
         throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
       }
@@ -191,13 +191,13 @@ function requireNative() {
     }
     if (process.arch === 'x64') {
       try {
-        return require('./affine.darwin-x64.node')
+        return require('./cloud-notes.darwin-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-darwin-x64')
-        const bindingPackageVersion = require('@affine/native-darwin-x64/package.json').version
+        const binding = require('@cloud-notes/native-darwin-x64')
+        const bindingPackageVersion = require('@cloud-notes/native-darwin-x64/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -207,13 +207,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./affine.darwin-arm64.node')
+        return require('./cloud-notes.darwin-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-darwin-arm64')
-        const bindingPackageVersion = require('@affine/native-darwin-arm64/package.json').version
+        const binding = require('@cloud-notes/native-darwin-arm64')
+        const bindingPackageVersion = require('@cloud-notes/native-darwin-arm64/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -227,13 +227,13 @@ function requireNative() {
   } else if (process.platform === 'freebsd') {
     if (process.arch === 'x64') {
       try {
-        return require('./affine.freebsd-x64.node')
+        return require('./cloud-notes.freebsd-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-freebsd-x64')
-        const bindingPackageVersion = require('@affine/native-freebsd-x64/package.json').version
+        const binding = require('@cloud-notes/native-freebsd-x64')
+        const bindingPackageVersion = require('@cloud-notes/native-freebsd-x64/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -243,13 +243,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm64') {
       try {
-        return require('./affine.freebsd-arm64.node')
+        return require('./cloud-notes.freebsd-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-freebsd-arm64')
-        const bindingPackageVersion = require('@affine/native-freebsd-arm64/package.json').version
+        const binding = require('@cloud-notes/native-freebsd-arm64')
+        const bindingPackageVersion = require('@cloud-notes/native-freebsd-arm64/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -264,13 +264,13 @@ function requireNative() {
     if (process.arch === 'x64') {
       if (isMusl()) {
         try {
-          return require('./affine.linux-x64-musl.node')
+          return require('./cloud-notes.linux-x64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-x64-musl')
-          const bindingPackageVersion = require('@affine/native-linux-x64-musl/package.json').version
+          const binding = require('@cloud-notes/native-linux-x64-musl')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-x64-musl/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -280,13 +280,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./affine.linux-x64-gnu.node')
+          return require('./cloud-notes.linux-x64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-x64-gnu')
-          const bindingPackageVersion = require('@affine/native-linux-x64-gnu/package.json').version
+          const binding = require('@cloud-notes/native-linux-x64-gnu')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-x64-gnu/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -298,13 +298,13 @@ function requireNative() {
     } else if (process.arch === 'arm64') {
       if (isMusl()) {
         try {
-          return require('./affine.linux-arm64-musl.node')
+          return require('./cloud-notes.linux-arm64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-arm64-musl')
-          const bindingPackageVersion = require('@affine/native-linux-arm64-musl/package.json').version
+          const binding = require('@cloud-notes/native-linux-arm64-musl')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-arm64-musl/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -314,13 +314,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./affine.linux-arm64-gnu.node')
+          return require('./cloud-notes.linux-arm64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-arm64-gnu')
-          const bindingPackageVersion = require('@affine/native-linux-arm64-gnu/package.json').version
+          const binding = require('@cloud-notes/native-linux-arm64-gnu')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-arm64-gnu/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -332,13 +332,13 @@ function requireNative() {
     } else if (process.arch === 'arm') {
       if (isMusl()) {
         try {
-          return require('./affine.linux-arm-musleabihf.node')
+          return require('./cloud-notes.linux-arm-musleabihf.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-arm-musleabihf')
-          const bindingPackageVersion = require('@affine/native-linux-arm-musleabihf/package.json').version
+          const binding = require('@cloud-notes/native-linux-arm-musleabihf')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-arm-musleabihf/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -348,13 +348,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./affine.linux-arm-gnueabihf.node')
+          return require('./cloud-notes.linux-arm-gnueabihf.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-arm-gnueabihf')
-          const bindingPackageVersion = require('@affine/native-linux-arm-gnueabihf/package.json').version
+          const binding = require('@cloud-notes/native-linux-arm-gnueabihf')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-arm-gnueabihf/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -366,13 +366,13 @@ function requireNative() {
     } else if (process.arch === 'loong64') {
       if (isMusl()) {
         try {
-          return require('./affine.linux-loong64-musl.node')
+          return require('./cloud-notes.linux-loong64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-loong64-musl')
-          const bindingPackageVersion = require('@affine/native-linux-loong64-musl/package.json').version
+          const binding = require('@cloud-notes/native-linux-loong64-musl')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-loong64-musl/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -382,13 +382,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./affine.linux-loong64-gnu.node')
+          return require('./cloud-notes.linux-loong64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-loong64-gnu')
-          const bindingPackageVersion = require('@affine/native-linux-loong64-gnu/package.json').version
+          const binding = require('@cloud-notes/native-linux-loong64-gnu')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-loong64-gnu/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -400,13 +400,13 @@ function requireNative() {
     } else if (process.arch === 'riscv64') {
       if (isMusl()) {
         try {
-          return require('./affine.linux-riscv64-musl.node')
+          return require('./cloud-notes.linux-riscv64-musl.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-riscv64-musl')
-          const bindingPackageVersion = require('@affine/native-linux-riscv64-musl/package.json').version
+          const binding = require('@cloud-notes/native-linux-riscv64-musl')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-riscv64-musl/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -416,13 +416,13 @@ function requireNative() {
         }
       } else {
         try {
-          return require('./affine.linux-riscv64-gnu.node')
+          return require('./cloud-notes.linux-riscv64-gnu.node')
         } catch (e) {
           loadErrors.push(e)
         }
         try {
-          const binding = require('@affine/native-linux-riscv64-gnu')
-          const bindingPackageVersion = require('@affine/native-linux-riscv64-gnu/package.json').version
+          const binding = require('@cloud-notes/native-linux-riscv64-gnu')
+          const bindingPackageVersion = require('@cloud-notes/native-linux-riscv64-gnu/package.json').version
           if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
             throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
           }
@@ -433,13 +433,13 @@ function requireNative() {
       }
     } else if (process.arch === 'ppc64') {
       try {
-        return require('./affine.linux-ppc64-gnu.node')
+        return require('./cloud-notes.linux-ppc64-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-linux-ppc64-gnu')
-        const bindingPackageVersion = require('@affine/native-linux-ppc64-gnu/package.json').version
+        const binding = require('@cloud-notes/native-linux-ppc64-gnu')
+        const bindingPackageVersion = require('@cloud-notes/native-linux-ppc64-gnu/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -449,13 +449,13 @@ function requireNative() {
       }
     } else if (process.arch === 's390x') {
       try {
-        return require('./affine.linux-s390x-gnu.node')
+        return require('./cloud-notes.linux-s390x-gnu.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-linux-s390x-gnu')
-        const bindingPackageVersion = require('@affine/native-linux-s390x-gnu/package.json').version
+        const binding = require('@cloud-notes/native-linux-s390x-gnu')
+        const bindingPackageVersion = require('@cloud-notes/native-linux-s390x-gnu/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -469,13 +469,13 @@ function requireNative() {
   } else if (process.platform === 'openharmony') {
     if (process.arch === 'arm64') {
       try {
-        return require('./affine.openharmony-arm64.node')
+        return require('./cloud-notes.openharmony-arm64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-openharmony-arm64')
-        const bindingPackageVersion = require('@affine/native-openharmony-arm64/package.json').version
+        const binding = require('@cloud-notes/native-openharmony-arm64')
+        const bindingPackageVersion = require('@cloud-notes/native-openharmony-arm64/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -485,13 +485,13 @@ function requireNative() {
       }
     } else if (process.arch === 'x64') {
       try {
-        return require('./affine.openharmony-x64.node')
+        return require('./cloud-notes.openharmony-x64.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-openharmony-x64')
-        const bindingPackageVersion = require('@affine/native-openharmony-x64/package.json').version
+        const binding = require('@cloud-notes/native-openharmony-x64')
+        const bindingPackageVersion = require('@cloud-notes/native-openharmony-x64/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -501,13 +501,13 @@ function requireNative() {
       }
     } else if (process.arch === 'arm') {
       try {
-        return require('./affine.openharmony-arm.node')
+        return require('./cloud-notes.openharmony-arm.node')
       } catch (e) {
         loadErrors.push(e)
       }
       try {
-        const binding = require('@affine/native-openharmony-arm')
-        const bindingPackageVersion = require('@affine/native-openharmony-arm/package.json').version
+        const binding = require('@cloud-notes/native-openharmony-arm')
+        const bindingPackageVersion = require('@cloud-notes/native-openharmony-arm/package.json').version
         if (bindingPackageVersion !== '0.27.5' && process.env.NAPI_RS_ENFORCE_VERSION_CHECK && process.env.NAPI_RS_ENFORCE_VERSION_CHECK !== '0') {
           throw new Error(`Native binding package version mismatch, expected 0.27.5 but got ${bindingPackageVersion}. You can reinstall dependencies to fix this issue.`)
         }
@@ -529,7 +529,7 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
   let wasiBinding = null
   let wasiBindingError = null
   try {
-    wasiBinding = require('./affine.wasi.cjs')
+    wasiBinding = require('./cloud-notes.wasi.cjs')
     nativeBinding = wasiBinding
   } catch (err) {
     if (process.env.NAPI_RS_FORCE_WASI) {
@@ -538,7 +538,7 @@ if (!nativeBinding || process.env.NAPI_RS_FORCE_WASI) {
   }
   if (!nativeBinding) {
     try {
-      wasiBinding = require('@affine/native-wasm32-wasi')
+      wasiBinding = require('@cloud-notes/native-wasm32-wasi')
       nativeBinding = wasiBinding
     } catch (err) {
       if (process.env.NAPI_RS_FORCE_WASI) {

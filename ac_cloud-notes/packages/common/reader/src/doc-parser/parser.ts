@@ -1,4 +1,4 @@
-import type { ColumnDataType } from '@blocksuite/affine/model';
+import type { ColumnDataType } from '@blocksuite/cloud-notes/model';
 import { Array as YArray, type Map as YMap, type Text as YText } from 'yjs';
 
 import { deltaToMd, getConverters } from './delta-to-md';
@@ -247,7 +247,7 @@ export function parseBlock(
         ).toJSON() as SerializedCells;
 
         const optionToTagHtml = (option: any) => {
-          return `<span data-affine-option data-value="${option.id}" data-option-color="${option.color}">${option.value}</span>`;
+          return `<span data-cloud-notes-option data-value="${option.id}" data-option-color="${option.color}">${option.value}</span>`;
         };
 
         const dbRows: string[][] = childrenIds

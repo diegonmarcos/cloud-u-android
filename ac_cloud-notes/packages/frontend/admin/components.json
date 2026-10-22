@@ -11,7 +11,7 @@
     "prefix": ""
   },
   "aliases": {
-    "components": "@affine/admin/components",
-    "utils": "@affine/admin/utils"
+    "components": "@cloud-notes/admin/components",
+    "utils": "@cloud-notes/admin/utils"
   }
 }

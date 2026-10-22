@@ -1,20 +1,20 @@
 import {
   BlockSuiteError,
   ErrorCode,
-} from '@blocksuite/affine/global/exceptions';
-import { NoopLogger } from '@blocksuite/affine/global/utils';
+} from '@blocksuite/cloud-notes/global/exceptions';
+import { NoopLogger } from '@blocksuite/cloud-notes/global/utils';
 import {
   type Doc,
   type IdGenerator,
   nanoid,
   type Workspace,
   type WorkspaceMeta,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import {
   BlobEngine,
   type BlobSource,
   MemoryBlobSource,
-} from '@blocksuite/affine/sync';
+} from '@blocksuite/cloud-notes/sync';
 import { Subject } from 'rxjs';
 import type { Awareness } from 'y-protocols/awareness.js';
 import type { Doc as YDoc } from 'yjs';

@@ -202,7 +202,7 @@ test.describe('pan tool in readonly mode', () => {
     await page.mouse.click(50, 100);
 
     const edgelessNote = page.locator(
-      `affine-edgeless-note[data-block-id="${noteId}"]`
+      `cloud-notes-edgeless-note[data-block-id="${noteId}"]`
     );
     const originalBoundingBox = await edgelessNote.boundingBox();
     expect(originalBoundingBox).not.toBeNull();

@@ -1,9 +1,9 @@
-import { Button } from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { appIconMap } from '@affine/core/utils';
-import { apis, events } from '@affine/electron-api';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
+import { Button } from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { appIconMap } from '@cloud-notes/core/utils';
+import { apis, events } from '@cloud-notes/electron-api';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import * as styles from './styles.css';
@@ -64,32 +64,32 @@ export function Recording() {
       return null;
     }
     if (status.status === 'new') {
-      return t['com.affine.recording.new']();
+      return t['com.cloud-notes.recording.new']();
     } else if (status.status === 'imported') {
-      return t['com.affine.recording.success.prompt']();
+      return t['com.cloud-notes.recording.success.prompt']();
     } else if (
       status.status === 'import_failed' ||
       status.status === 'start_failed' ||
       status.status === 'finalize_failed'
     ) {
-      return t['com.affine.recording.failed.prompt']();
+      return t['com.cloud-notes.recording.failed.prompt']();
     } else if (
       status.status === 'starting' ||
       status.status === 'recording' ||
       status.status === 'finalizing'
     ) {
       if (status.appName) {
-        return t['com.affine.recording.recording']({
+        return t['com.cloud-notes.recording.recording']({
           appName: status.appName,
         });
       } else {
-        return t['com.affine.recording.recording.unnamed']();
+        return t['com.cloud-notes.recording.recording.unnamed']();
       }
     } else if (
       status.status === 'pending_import' ||
       status.status === 'importing'
     ) {
-      return t['com.affine.recording.importing.prompt']();
+      return t['com.cloud-notes.recording.importing.prompt']();
     }
     return null;
   }, [status, t]);
@@ -153,21 +153,21 @@ export function Recording() {
       return (
         <>
           <Button variant="plain" onClick={handleDismiss}>
-            {t['com.affine.recording.dismiss']()}
+            {t['com.cloud-notes.recording.dismiss']()}
           </Button>
           <Button
             onClick={handleStartRecording}
             variant="primary"
             prefix={<div className={styles.recordingIcon} />}
           >
-            {t['com.affine.recording.start']()}
+            {t['com.cloud-notes.recording.start']()}
           </Button>
         </>
       );
     } else if (status.status === 'recording') {
       return (
         <Button variant="error" onClick={handleStopRecording}>
-          {t['com.affine.recording.stop']()}
+          {t['com.cloud-notes.recording.stop']()}
         </Button>
       );
     } else if (
@@ -187,13 +187,13 @@ export function Recording() {
     } else if (status.status === 'imported') {
       return (
         <Button variant="primary" onClick={handleDismiss}>
-          {t['com.affine.recording.success.button']()}
+          {t['com.cloud-notes.recording.success.button']()}
         </Button>
       );
     } else if (status.status === 'start_failed') {
       return (
         <Button variant="plain" onClick={handleDismiss}>
-          {t['com.affine.recording.dismiss']()}
+          {t['com.cloud-notes.recording.dismiss']()}
         </Button>
       );
     } else if (
@@ -203,10 +203,10 @@ export function Recording() {
       return (
         <>
           <Button variant="plain" onClick={handleDismiss}>
-            {t['com.affine.recording.dismiss']()}
+            {t['com.cloud-notes.recording.dismiss']()}
           </Button>
           <Button variant="error" onClick={handleOpenFile}>
-            {t['com.affine.recording.failed.button']()}
+            {t['com.cloud-notes.recording.failed.button']()}
           </Button>
         </>
       );
@@ -227,7 +227,7 @@ export function Recording() {
 
   return (
     <div className={styles.root}>
-      <img className={styles.affineIcon} src={appIcon} alt="AFFiNE" />
+      <img className={styles.cloudNotesIcon} src={appIcon} alt="Cloud Notes" />
       <div className={styles.text}>{textElement}</div>
       <div className={styles.controls}>{controlsElement}</div>
     </div>

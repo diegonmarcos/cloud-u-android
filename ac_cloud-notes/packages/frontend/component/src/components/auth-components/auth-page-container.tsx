@@ -1,9 +1,9 @@
 import type { FC, PropsWithChildren, ReactNode } from 'react';
 
 import { ThemedImg } from '../../ui/themed-img';
-import { AffineOtherPageLayout } from '../affine-other-page-layout';
-import illustrationDark from '../affine-other-page-layout/assets/other-page.dark.png';
-import illustrationLight from '../affine-other-page-layout/assets/other-page.light.png';
+import { CloudNotesOtherPageLayout } from '../cloud-notes-other-page-layout';
+import illustrationDark from '../cloud-notes-other-page-layout/assets/other-page.dark.png';
+import illustrationLight from '../cloud-notes-other-page-layout/assets/other-page.light.png';
 import {
   authPageContainer,
   hideInSmallScreen,
@@ -17,7 +17,7 @@ export const AuthPageContainer: FC<
   }>
 > = ({ children, title, subtitle }) => {
   return (
-    <AffineOtherPageLayout>
+    <CloudNotesOtherPageLayout>
       <div className={authPageContainer}>
         <div className="wrapper">
           <div className="content">
@@ -35,6 +35,6 @@ export const AuthPageContainer: FC<
           </div>
         </div>
       </div>
-    </AffineOtherPageLayout>
+    </CloudNotesOtherPageLayout>
   );
 };

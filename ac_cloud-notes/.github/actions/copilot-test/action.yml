@@ -3,7 +3,7 @@ description: 'Run Copilot E2E Test'
 inputs:
   script:
     description: 'Script to run'
-    default: 'yarn affine @affine-test/affine-cloud-copilot e2e --forbid-only'
+    default: 'yarn cloud-notes @cloud-notes-test/cloud-notes-cloud-copilot e2e --forbid-only'
     required: false
 
 runs:

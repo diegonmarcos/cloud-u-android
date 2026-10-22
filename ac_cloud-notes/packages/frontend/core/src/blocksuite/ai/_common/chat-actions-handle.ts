@@ -1,36 +1,36 @@
-import { EdgelessCRUDIdentifier } from '@blocksuite/affine/blocks/surface';
+import { EdgelessCRUDIdentifier } from '@blocksuite/cloud-notes/blocks/surface';
 import {
   Bound,
   getCommonBoundWithRotation,
   type SerializedXYWH,
-} from '@blocksuite/affine/global/gfx';
-import { RefNodeSlotsProvider } from '@blocksuite/affine/inlines/reference';
+} from '@blocksuite/cloud-notes/global/gfx';
+import { RefNodeSlotsProvider } from '@blocksuite/cloud-notes/inlines/reference';
 import {
   type DocMode,
   NoteBlockModel,
   NoteDisplayMode,
-} from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/model';
 import {
   getFirstBlockCommand,
   getLastBlockCommand,
   getSelectedBlocksCommand,
-} from '@blocksuite/affine/shared/commands';
-import type { ImageSelection } from '@blocksuite/affine/shared/selection';
+} from '@blocksuite/cloud-notes/shared/commands';
+import type { ImageSelection } from '@blocksuite/cloud-notes/shared/selection';
 import {
   DocModeProvider,
   EditPropsStore,
   NotificationProvider,
   TelemetryProvider,
-} from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/shared/services';
 import {
   type BlockComponent,
   type BlockSelection,
   type BlockStdScope,
   type EditorHost,
   type TextSelection,
-} from '@blocksuite/affine/std';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
-import type { Store } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/std';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import {
   BlockIcon,
   EdgelessIcon,

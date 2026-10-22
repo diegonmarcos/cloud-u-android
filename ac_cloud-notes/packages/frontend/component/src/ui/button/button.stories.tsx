@@ -1,5 +1,5 @@
 import {
-  AfFiNeIcon,
+  CloudNotesIcon,
   ArrowRightBigIcon,
   FolderIcon,
 } from '@blocksuite/icons/rc';
@@ -170,7 +170,7 @@ export const FixedWidth = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {widths.map(width => (
-        <Button prefix={<AfFiNeIcon />} key={width} style={{ width }}>
+        <Button prefix={<CloudNotesIcon />} key={width} style={{ width }}>
           This is a width fixed button
         </Button>
       ))}

@@ -1,5 +1,5 @@
-import type { WorkspaceService } from '@affine/core/modules/workspace';
-import type { PaginationInput } from '@affine/graphql';
+import type { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import type { PaginationInput } from '@cloud-notes/graphql';
 import {
   catchErrorInto,
   effect,

@@ -1,5 +1,5 @@
-import { RootBlockSchema } from '@blocksuite/affine/model';
-import { BlockService } from '@blocksuite/affine/std';
+import { RootBlockSchema } from '@blocksuite/cloud-notes/model';
+import { BlockService } from '@blocksuite/cloud-notes/std';
 import { Subject } from 'rxjs';
 
 export class MindmapService extends BlockService {

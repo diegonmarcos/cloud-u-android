@@ -1,4 +1,4 @@
-import type { NbstoreService } from '@affine/core/modules/storage';
+import type { NbstoreService } from '@cloud-notes/core/modules/storage';
 import {
   type CopilotChatHistoryFragment,
   type getCopilotHistoriesQuery,
@@ -8,7 +8,7 @@ import {
   type QueryResponse,
   type RequestOptions,
   type UpdateChatSessionInput,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Subject } from 'rxjs';
 
 import type { ActionEventType } from '../../provider';

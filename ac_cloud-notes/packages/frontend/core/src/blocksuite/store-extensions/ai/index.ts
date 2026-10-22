@@ -1,12 +1,12 @@
-import { AIChatBlockSchemaExtension } from '@affine/core/blocksuite/ai/blocks';
-import { TranscriptionBlockSchemaExtension } from '@affine/core/blocksuite/ai/blocks/transcription-block/model';
+import { AIChatBlockSchemaExtension } from '@cloud-notes/core/blocksuite/ai/blocks';
+import { TranscriptionBlockSchemaExtension } from '@cloud-notes/core/blocksuite/ai/blocks/transcription-block/model';
 import {
   type StoreExtensionContext,
   StoreExtensionProvider,
-} from '@blocksuite/affine/ext-loader';
+} from '@blocksuite/cloud-notes/ext-loader';
 
 export class AIStoreExtension extends StoreExtensionProvider {
-  override name = 'affine-store-extensions';
+  override name = 'cloud-notes-store-extensions';
 
   override setup(context: StoreExtensionContext) {
     super.setup(context);

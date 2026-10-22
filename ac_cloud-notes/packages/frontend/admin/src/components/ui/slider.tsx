@@ -1,4 +1,4 @@
-import { cn } from '@affine/admin/utils';
+import { cn } from '@cloud-notes/admin/utils';
 import * as SliderPrimitive from '@radix-ui/react-slider';
 import * as React from 'react';
 

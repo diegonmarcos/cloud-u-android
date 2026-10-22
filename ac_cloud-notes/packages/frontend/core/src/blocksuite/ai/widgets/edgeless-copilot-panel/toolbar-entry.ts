@@ -1,11 +1,11 @@
-import { sortEdgelessElements } from '@blocksuite/affine/blocks/root';
-import { AIStarIcon } from '@blocksuite/affine/components/icons';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import type { EditorHost } from '@blocksuite/affine/std';
+import { sortEdgelessElements } from '@blocksuite/cloud-notes/blocks/root';
+import { AIStarIcon } from '@blocksuite/cloud-notes/components/icons';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
 import {
   GfxControllerIdentifier,
   isGfxGroupCompatibleModel,
-} from '@blocksuite/affine/std/gfx';
+} from '@blocksuite/cloud-notes/std/gfx';
 import { css, html, LitElement } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -18,7 +18,7 @@ export class EdgelessCopilotToolbarEntry extends WithDisposable(LitElement) {
       line-height: 20px;
 
       .label.medium {
-        color: var(--affine-brand-color);
+        color: var(--cloud-notes-brand-color);
       }
     }
   `;

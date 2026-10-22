@@ -1,9 +1,9 @@
 import {
   SubscriptionService,
   UserCopilotQuotaService,
-} from '@affine/core/modules/cloud';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/cloud';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVar } from '@toeverything/theme';
 import { assignInlineVars } from '@vanilla-extract/dynamic';
@@ -64,11 +64,11 @@ export const AIUsage = () => {
       >
         <div className={styles.usageLabel}>
           <div className={styles.usageLabelTitle}>
-            {t['com.affine.user-info.usage.ai']()}
+            {t['com.cloud-notes.user-info.usage.ai']()}
           </div>
         </div>
         <div className={styles.usageLabel}>
-          {t['com.affine.payment.ai.usage-description-purchased']()}
+          {t['com.cloud-notes.payment.ai.usage-description-purchased']()}
         </div>
       </div>
     );
@@ -95,7 +95,7 @@ export const AIUsage = () => {
       <div className={styles.usageLabel}>
         <div>
           <span className={styles.usageLabelTitle}>
-            {t['com.affine.user-info.usage.ai']()}
+            {t['com.cloud-notes.user-info.usage.ai']()}
           </span>
           <span>{copilotActionUsed}</span>
           <span>&nbsp;/&nbsp;</span>

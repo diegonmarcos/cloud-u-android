@@ -1,4 +1,4 @@
-import { PropertyValue } from '@affine/component';
+import { PropertyValue } from '@cloud-notes/component';
 import { DualLinkIcon } from '@blocksuite/icons/rc';
 
 import { IntegrationTypeIcon } from '../icon';

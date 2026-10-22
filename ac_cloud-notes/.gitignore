@@ -81,7 +81,7 @@ target
 *.node
 tsconfig.node.tsbuildinfo
 lib
-affine.db
+cloud-notes.db
 apps/web/next-routes.conf
 .nx
 

@@ -10,7 +10,7 @@ export const emptyContainer = style({
   height: '100%',
   ...displayFlex('center', 'center'),
   flexDirection: 'column',
-  color: 'var(--affine-text-secondary-color)',
+  color: 'var(--cloud-notes-text-secondary-color)',
 });
 export const emptySvg = style({
   vars: {

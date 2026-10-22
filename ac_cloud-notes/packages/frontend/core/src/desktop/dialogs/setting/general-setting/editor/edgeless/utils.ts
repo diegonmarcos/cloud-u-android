@@ -1,5 +1,5 @@
-import type { FrameBlockModel } from '@blocksuite/affine/model';
-import type { Store } from '@blocksuite/affine/store';
+import type { FrameBlockModel } from '@blocksuite/cloud-notes/model';
+import type { Store } from '@blocksuite/cloud-notes/store';
 
 export function getFrameBlock(doc: Store) {
   const blocks = doc.getBlocksByFlavour('affine:frame');

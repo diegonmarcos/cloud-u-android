@@ -2,7 +2,7 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from '@affine/admin/components/ui/avatar';
+} from '@cloud-notes/admin/components/ui/avatar';
 import { AccountIcon, LinkIcon } from '@blocksuite/icons/rc';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useMemo } from 'react';

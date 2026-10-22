@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import type { JSX, ReactNode } from 'react';
 
 /**
- * @deprecated use `import type { Notification } from '@affine/component'` instead
+ * @deprecated use `import type { Notification } from '@cloud-notes/component'` instead
  */
 export type Notification = {
   key?: string;
@@ -24,7 +24,7 @@ const notificationsBaseAtom = atom<Notification[]>([]);
 const expandNotificationCenterBaseAtom = atom(false);
 const cleanupQueueAtom = atom<(() => unknown)[]>([]);
 /**
- * @deprecated use `import { notify } from '@affine/component'` instead
+ * @deprecated use `import { notify } from '@cloud-notes/component'` instead
  */
 export const expandNotificationCenterAtom = atom<boolean, [boolean], void>(
   get => get(expandNotificationCenterBaseAtom),
@@ -37,13 +37,13 @@ export const expandNotificationCenterAtom = atom<boolean, [boolean], void>(
   }
 );
 /**
- * @deprecated use `import { notify } from '@affine/component'` instead
+ * @deprecated use `import { notify } from '@cloud-notes/component'` instead
  */
 export const notificationsAtom = atom<Notification[]>(get =>
   get(notificationsBaseAtom)
 );
 /**
- * @deprecated use `import { notify } from '@affine/component'` instead
+ * @deprecated use `import { notify } from '@cloud-notes/component'` instead
  */
 export const removeNotificationAtom = atom(null, (_, set, key: string) => {
   set(notificationsBaseAtom, notifications =>
@@ -52,7 +52,7 @@ export const removeNotificationAtom = atom(null, (_, set, key: string) => {
 });
 
 /**
- * @deprecated use `import { notify } from '@affine/component'` instead
+ * @deprecated use `import { notify } from '@cloud-notes/component'` instead
  */
 export const pushNotificationAtom = atom<null, [Notification], void>(
   null,

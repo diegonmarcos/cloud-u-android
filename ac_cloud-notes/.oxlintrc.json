@@ -452,7 +452,7 @@
           "error",
           {
             "includeInternal": true,
-            "whitelist": ["@affine/admin"]
+            "whitelist": ["@cloud-notes/admin"]
           }
         ]
       }
@@ -464,7 +464,7 @@
           "error",
           {
             "includeInternal": true,
-            "whitelist": ["@affine/core"]
+            "whitelist": ["@cloud-notes/core"]
           }
         ]
       }
@@ -476,7 +476,7 @@
           "error",
           {
             "includeInternal": true,
-            "whitelist": ["@affine/component"]
+            "whitelist": ["@cloud-notes/component"]
           }
         ]
       }

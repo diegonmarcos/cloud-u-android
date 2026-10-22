@@ -8,7 +8,7 @@
   "license": "MPL-2.0",
   "type": "module",
   "scripts": {
-    "build:deps": "yarn run -T tsc -b ../affine/all",
+    "build:deps": "yarn run -T tsc -b ../cloud-notes/all",
     "typedoc": "yarn run build:deps && typedoc --options ./typedoc.json",
     "dev": "yarn run typedoc && yarn exec vitepress dev --port 5200",
     "dev:nobuild": "yarn exec vitepress dev --port 5200",
@@ -16,7 +16,7 @@
     "preview": "yarn exec vitepress preview"
   },
   "dependencies": {
-    "@blocksuite/affine": "workspace:*",
+    "@blocksuite/cloud-notes": "workspace:*",
     "date-fns": "^4.4.0",
     "markdown-it-container": "^4.0.0",
     "vitepress-plugin-sandpack": "^1.1.4"

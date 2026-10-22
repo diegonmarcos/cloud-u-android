@@ -1,18 +1,18 @@
-import { Button, notify } from '@affine/component';
+import { Button, notify } from '@cloud-notes/component';
 import {
   SettingHeader,
   SettingWrapper,
-} from '@affine/component/setting-components';
-import { WorkspaceServerService } from '@affine/core/modules/cloud';
-import { WorkspaceService } from '@affine/core/modules/workspace';
+} from '@cloud-notes/component/setting-components';
+import { WorkspaceServerService } from '@cloud-notes/core/modules/cloud';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
 import {
   deleteWorkspaceByokProfileMutation,
   type GraphQLQuery,
   probeWorkspaceByokProfileMutation,
   reorderWorkspaceByokProfilesMutation,
   workspaceByokSettingsQuery as byokSettingsQuery,
-} from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 

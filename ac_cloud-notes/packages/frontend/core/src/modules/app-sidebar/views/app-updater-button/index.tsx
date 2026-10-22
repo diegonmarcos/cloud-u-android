@@ -1,8 +1,8 @@
-import { Tooltip } from '@affine/component';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { UrlService } from '@affine/core/modules/url';
-import { Unreachable } from '@affine/env/constant';
-import { useI18n } from '@affine/i18n';
+import { Tooltip } from '@cloud-notes/component';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { Unreachable } from '@cloud-notes/env/constant';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   CloseIcon,
   DownloadIcon,
@@ -53,7 +53,7 @@ function DownloadUpdate({ updateAvailable }: ButtonContentProps) {
       <div className={styles.installLabelNormal}>
         <DownloadIcon className={styles.icon} />
         <span className={styles.ellipsisTextOverflow}>
-          {t['com.affine.appUpdater.downloadUpdate']()}
+          {t['com.cloud-notes.appUpdater.downloadUpdate']()}
         </span>
         <span className={styles.versionLabel}>{updateAvailable?.version}</span>
       </div>
@@ -61,7 +61,7 @@ function DownloadUpdate({ updateAvailable }: ButtonContentProps) {
       <div className={styles.installLabelHover}>
         <DownloadIcon className={styles.icon} />
         <span className={styles.ellipsisTextOverflow}>
-          {t['com.affine.appUpdater.downloadUpdate']()}
+          {t['com.cloud-notes.appUpdater.downloadUpdate']()}
         </span>
       </div>
     </div>
@@ -75,7 +75,7 @@ function UpdateReady({ updateAvailable, appQuitting }: ButtonContentProps) {
       <div className={styles.installLabelNormal}>
         <ResetIcon className={styles.icon} />
         <span className={styles.ellipsisTextOverflow}>
-          {t['com.affine.appUpdater.updateAvailable']()}
+          {t['com.cloud-notes.appUpdater.updateAvailable']()}
         </span>
         <span className={styles.versionLabel}>{updateAvailable?.version}</span>
       </div>
@@ -83,7 +83,7 @@ function UpdateReady({ updateAvailable, appQuitting }: ButtonContentProps) {
       <div className={styles.installLabelHover}>
         <ResetIcon className={styles.icon} />
         <span className={styles.ellipsisTextOverflow}>
-          {t[appQuitting ? 'Loading' : 'com.affine.appUpdater.installUpdate']()}
+          {t[appQuitting ? 'Loading' : 'com.cloud-notes.appUpdater.installUpdate']()}
         </span>
       </div>
     </div>
@@ -99,7 +99,7 @@ function DownloadingUpdate({
     <div className={clsx([styles.updateAvailableWrapper])}>
       <div className={clsx([styles.installLabelNormal])}>
         <span className={styles.ellipsisTextOverflow}>
-          {t['com.affine.appUpdater.downloading']()}
+          {t['com.cloud-notes.appUpdater.downloading']()}
         </span>
         <span className={styles.versionLabel}>{updateAvailable?.version}</span>
       </div>
@@ -121,7 +121,7 @@ function OpenDownloadPage({ updateAvailable }: ButtonContentProps) {
       <div className={styles.installLabelNormal}>
         <DownloadIcon className={styles.icon} />
         <span className={styles.ellipsisTextOverflow}>
-          {t['com.affine.appUpdater.updateAvailable']()}
+          {t['com.cloud-notes.appUpdater.updateAvailable']()}
         </span>
         <span className={styles.versionLabel}>{updateAvailable?.version}</span>
       </div>
@@ -129,7 +129,7 @@ function OpenDownloadPage({ updateAvailable }: ButtonContentProps) {
       <div className={styles.installLabelHover}>
         <DownloadIcon className={styles.icon} />
         <span className={styles.ellipsisTextOverflow}>
-          {t['com.affine.appUpdater.openDownloadPage']()}
+          {t['com.cloud-notes.appUpdater.openDownloadPage']()}
         </span>
       </div>
     </>
@@ -146,7 +146,7 @@ function WhatsNew({ onDismissChangelog }: ButtonContentProps) {
       <div className={clsx([styles.whatsNewLabel])}>
         <NewIcon className={styles.icon} />
         <span className={styles.ellipsisTextOverflow}>
-          {t['com.affine.appUpdater.whatsNew']()}
+          {t['com.cloud-notes.appUpdater.whatsNew']()}
         </span>
       </div>
       <div className={styles.closeIcon} onClick={onClickClose}>
@@ -200,7 +200,7 @@ export function AppUpdaterButton({
         }
       } else {
         urlService.openPopupWindow(
-          `https://github.com/toeverything/AFFiNE/releases/tag/v${updateAvailable.version}`
+          `https://github.com/diegonmarcos/cloud-u-android/releases/tag/v${updateAvailable.version}`
         );
       }
     } else if (changelogUnread) {

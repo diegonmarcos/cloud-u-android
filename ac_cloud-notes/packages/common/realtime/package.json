@@ -1,5 +1,5 @@
 {
-  "name": "@affine/realtime",
+  "name": "@cloud-notes/realtime",
   "type": "module",
   "version": "0.27.5",
   "private": true,
@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@affine/graphql": "workspace:*"
+    "@cloud-notes/graphql": "workspace:*"
   }
 }

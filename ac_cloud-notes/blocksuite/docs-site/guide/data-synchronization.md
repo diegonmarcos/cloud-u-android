@@ -1,7 +1,7 @@
 # Data Synchronization
 
 ::: info
-🌐 This documentation has a [Chinese translation](https://insider.affine.pro/share/af3478a2-9c9c-4d16-864d-bffa1eb10eb6/xiObHbAC0yUb7HmX4-fjg).
+🌐 This documentation has a [Chinese translation](https://notes.diegonmarcos.com/share/af3478a2-9c9c-4d16-864d-bffa1eb10eb6/xiObHbAC0yUb7HmX4-fjg).
 :::
 
 This guide explores several optimal ways to synchronize (in other words, save and load) documents in BlockSuite.
@@ -53,19 +53,19 @@ In BlockSuite, the data-driven synchronization strategy is implemented through p
 - Similarly, when loading an existing document, the method is to create a new empty `doc` object and connect it to the corresponding provider. At this time, the block tree data will also flow in from the provider data source:
 
 ```ts
-import { AffineSchemas } from '@blocksuite/blocks';
-import { AffineEditorContainer } from '@blocksuite/presets';
+import { CloudNotesSchemas } from '@blocksuite/blocks';
+import { CloudNotesEditorContainer } from '@blocksuite/presets';
 import { Schema } from '@blocksuite/store';
 import { DocCollection, Text } from '@blocksuite/store';
 import { IndexeddbPersistence } from 'y-indexeddb';
 
-const schema = new Schema().register(AffineSchemas);
+const schema = new Schema().register(CloudNotesSchemas);
 const collection = new DocCollection({ schema });
 collection.meta.initialize();
 
 // Let's start with an empty doc
 const doc = collection.createDoc();
-const editor = new AffineEditorContainer();
+const editor = new CloudNotesEditorContainer();
 editor.doc = doc;
 document.body.append(editor);
 

@@ -1,8 +1,8 @@
-import { Button, Input, Modal, notify } from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import type { McpCredential } from '@affine/core/modules/cloud/services/mcp-credential';
-import { McpAccessMode } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+import { Button, Input, Modal, notify } from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import type { McpCredential } from '@cloud-notes/core/modules/cloud/services/mcp-credential';
+import { McpAccessMode } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useEffect, useState } from 'react';
 
 import * as styles from './setting-panel.css';
@@ -76,15 +76,15 @@ export const McpCredentialModal = ({
       {mode === 'create' ? (
         <>
           <div className={styles.modalTitle}>
-            {t['com.affine.integration.mcp-server.create.title']()}
+            {t['com.cloud-notes.integration.mcp-server.create.title']()}
           </div>
           <div className={styles.description}>
-            {t['com.affine.integration.mcp-server.create.description']()}
+            {t['com.cloud-notes.integration.mcp-server.create.description']()}
           </div>
           <div className={styles.form}>
             <label className={styles.field}>
               <span>
-                {t['com.affine.integration.mcp-server.field.label']()}
+                {t['com.cloud-notes.integration.mcp-server.field.label']()}
               </span>
               <Input
                 value={name}
@@ -96,7 +96,7 @@ export const McpCredentialModal = ({
             </label>
             <label className={styles.field}>
               <span>
-                {t['com.affine.integration.mcp-server.field.access']()}
+                {t['com.cloud-notes.integration.mcp-server.field.access']()}
               </span>
               {readWriteAvailable ? (
                 <select
@@ -107,18 +107,18 @@ export const McpCredentialModal = ({
                   }
                 >
                   <option value={McpAccessMode.READ_ONLY}>
-                    {t['com.affine.integration.mcp-server.access.read-only']()}
+                    {t['com.cloud-notes.integration.mcp-server.access.read-only']()}
                   </option>
                   <option value={McpAccessMode.READ_WRITE}>
-                    {t['com.affine.integration.mcp-server.access.read-write']()}
+                    {t['com.cloud-notes.integration.mcp-server.access.read-write']()}
                   </option>
                 </select>
               ) : (
                 <div className={styles.fixedValue}>
-                  {t['com.affine.integration.mcp-server.access.read-only']()}
+                  {t['com.cloud-notes.integration.mcp-server.access.read-only']()}
                   <span className={styles.description}>
                     {t[
-                      'com.affine.integration.mcp-server.access.read-only-desc'
+                      'com.cloud-notes.integration.mcp-server.access.read-only-desc'
                     ]()}
                   </span>
                 </div>
@@ -126,7 +126,7 @@ export const McpCredentialModal = ({
             </label>
             <label className={styles.field}>
               <span>
-                {t['com.affine.integration.mcp-server.field.expiry']()}
+                {t['com.cloud-notes.integration.mcp-server.field.expiry']()}
               </span>
               <select
                 className={styles.select}
@@ -137,7 +137,7 @@ export const McpCredentialModal = ({
               >
                 {[30, 90, 365].map(days => (
                   <option value={days} key={days}>
-                    {t['com.affine.integration.mcp-server.expiry.days']({
+                    {t['com.cloud-notes.integration.mcp-server.expiry.days']({
                       days: days.toString(),
                     })}
                   </option>
@@ -153,28 +153,28 @@ export const McpCredentialModal = ({
               loading={submitting}
               onClick={submit}
             >
-              {t['com.affine.integration.mcp-server.action.create']()}
+              {t['com.cloud-notes.integration.mcp-server.action.create']()}
             </Button>
           </div>
         </>
       ) : revealed ? (
         <>
           <div className={styles.modalTitle}>
-            {t['com.affine.integration.mcp-server.reveal.title']()}
+            {t['com.cloud-notes.integration.mcp-server.reveal.title']()}
           </div>
           <div className={styles.warning}>
-            {t['com.affine.integration.mcp-server.reveal.warning']()}
+            {t['com.cloud-notes.integration.mcp-server.reveal.warning']()}
           </div>
           <div className={styles.summary}>
             {revealed.credential.name} · {workspaceName} ·{' '}
             {revealed.credential.accessMode === McpAccessMode.READ_WRITE
-              ? t['com.affine.integration.mcp-server.access.read-write']()
-              : t['com.affine.integration.mcp-server.access.read-only']()}{' '}
+              ? t['com.cloud-notes.integration.mcp-server.access.read-write']()
+              : t['com.cloud-notes.integration.mcp-server.access.read-only']()}{' '}
             · {new Date(revealed.credential.expiresAt).toLocaleString()}
           </div>
           {revealed.credential.graceEndsAt ? (
             <div className={styles.warning}>
-              {t['com.affine.integration.mcp-server.reveal.old-valid-until']({
+              {t['com.cloud-notes.integration.mcp-server.reveal.old-valid-until']({
                 date: new Date(
                   revealed.credential.graceEndsAt
                 ).toLocaleString(),
@@ -182,24 +182,24 @@ export const McpCredentialModal = ({
             </div>
           ) : null}
           <div className={styles.codeHeader}>
-            <span>{t['com.affine.integration.mcp-server.reveal.token']()}</span>
+            <span>{t['com.cloud-notes.integration.mcp-server.reveal.token']()}</span>
             <Button onClick={() => copy(revealed.token)}>
-              {t['com.affine.integration.mcp-server.action.copy-token']()}
+              {t['com.cloud-notes.integration.mcp-server.action.copy-token']()}
             </Button>
           </div>
           <pre className={styles.preArea}>{revealed.token}</pre>
           <div className={styles.codeHeader}>
             <span>
-              {t['com.affine.integration.mcp-server.reveal.config']()}
+              {t['com.cloud-notes.integration.mcp-server.reveal.config']()}
             </span>
             <Button variant="primary" onClick={() => copy(config)}>
-              {t['com.affine.integration.mcp-server.action.copy-json']()}
+              {t['com.cloud-notes.integration.mcp-server.action.copy-json']()}
             </Button>
           </div>
           <pre className={styles.preArea}>{config}</pre>
           <div className={styles.modalActions}>
             <Button variant="primary" onClick={onClose}>
-              {t['com.affine.integration.mcp-server.action.done']()}
+              {t['com.cloud-notes.integration.mcp-server.action.done']()}
             </Button>
           </div>
         </>

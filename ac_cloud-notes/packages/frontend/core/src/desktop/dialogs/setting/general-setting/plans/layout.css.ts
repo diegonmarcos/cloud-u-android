@@ -44,7 +44,7 @@ export const allPlansLink = style({
   fontSize: cssVar('fontXs'),
 });
 
-export const affineCloudHeader = style({
+export const cloudNotesCloudHeader = style({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',

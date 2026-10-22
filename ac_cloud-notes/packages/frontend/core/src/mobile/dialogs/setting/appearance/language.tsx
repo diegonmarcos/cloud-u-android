@@ -1,5 +1,5 @@
-import { I18nService } from '@affine/core/modules/i18n';
-import { useI18n } from '@affine/i18n';
+import { I18nService } from '@cloud-notes/core/modules/i18n';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useMemo } from 'react';
 
@@ -21,7 +21,7 @@ export const LanguageSetting = () => {
   );
 
   return (
-    <RowLayout label={t['com.affine.mobile.setting.appearance.language']()}>
+    <RowLayout label={t['com.cloud-notes.mobile.setting.appearance.language']()}>
       <SettingDropdownSelect
         options={languageOptions}
         value={currentLanguage.key}

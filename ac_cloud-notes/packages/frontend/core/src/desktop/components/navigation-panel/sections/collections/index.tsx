@@ -1,9 +1,9 @@
-import { IconButton, usePromptModal } from '@affine/component';
-import { CollectionService } from '@affine/core/modules/collection';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { IconButton, usePromptModal } from '@cloud-notes/component';
+import { CollectionService } from '@cloud-notes/core/modules/collection';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { AddCollectionIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
@@ -27,18 +27,18 @@ export const NavigationPanelCollections = () => {
   const path = useMemo(() => ['collections'], []);
   const handleCreateCollection = useCallback(() => {
     openPromptModal({
-      title: t['com.affine.editCollection.saveCollection'](),
-      label: t['com.affine.editCollectionName.name'](),
+      title: t['com.cloud-notes.editCollection.saveCollection'](),
+      label: t['com.cloud-notes.editCollectionName.name'](),
       inputOptions: {
-        placeholder: t['com.affine.editCollectionName.name.placeholder'](),
+        placeholder: t['com.cloud-notes.editCollectionName.name.placeholder'](),
       },
       children: (
         <div className={styles.createTips}>
-          {t['com.affine.editCollectionName.createTips']()}
+          {t['com.cloud-notes.editCollectionName.createTips']()}
         </div>
       ),
-      confirmText: t['com.affine.editCollection.save'](),
-      cancelText: t['com.affine.editCollection.button.cancel'](),
+      confirmText: t['com.cloud-notes.editCollection.save'](),
+      cancelText: t['com.cloud-notes.editCollection.button.cancel'](),
       confirmButtonOptions: {
         variant: 'primary',
       },
@@ -64,14 +64,14 @@ export const NavigationPanelCollections = () => {
     <CollapsibleSection
       path={path}
       testId="navigation-panel-collections"
-      title={t['com.affine.rootAppSidebar.collections']()}
+      title={t['com.cloud-notes.rootAppSidebar.collections']()}
       actions={
         <IconButton
           data-testid="navigation-panel-bar-add-collection-button"
           onClick={handleCreateCollection}
           size="16"
           tooltip={t[
-            'com.affine.rootAppSidebar.explorer.collection-section-add-tooltip'
+            'com.cloud-notes.rootAppSidebar.explorer.collection-section-add-tooltip'
           ]()}
         >
           <AddCollectionIcon />

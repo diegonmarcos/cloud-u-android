@@ -1,7 +1,7 @@
-import { CALENDAR_INTEGRATION_SCROLL_ANCHOR } from '@affine/core/desktop/dialogs/setting/navigation-constants';
-import { WorkspaceServerService } from '@affine/core/modules/cloud';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { IntegrationService } from '@affine/core/modules/integration';
+import { CALENDAR_INTEGRATION_SCROLL_ANCHOR } from '@cloud-notes/core/desktop/dialogs/setting/navigation-constants';
+import { WorkspaceServerService } from '@cloud-notes/core/modules/cloud';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { IntegrationService } from '@cloud-notes/core/modules/integration';
 import type {
   CalendarEntryRange,
   CalendarExternalEntry,

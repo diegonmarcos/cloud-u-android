@@ -90,7 +90,7 @@ class TrayState implements Disposable {
     .resize({ width: 18, height: 18 });
 
   // tray's tooltip
-  tooltip: string = 'AFFiNE';
+  tooltip: string = 'Cloud Notes';
 
   constructor() {
     this.icon.setTemplateImage(true);
@@ -252,9 +252,9 @@ class TrayState implements Disposable {
       key: 'secondary',
       getConfig: () => [
         {
-          label: 'Open AFFiNE',
+          label: 'Open Cloud Notes',
           click: () => {
-            logger.info('User action: Open AFFiNE');
+            logger.info('User action: Open Cloud Notes');
             activateMainWindow();
           },
         },
@@ -279,9 +279,9 @@ class TrayState implements Disposable {
         },
         'separator',
         {
-          label: 'Quit AFFiNE Completely...',
+          label: 'Quit Cloud Notes Completely...',
           click: () => {
-            logger.info('User action: Quit AFFiNE Completely');
+            logger.info('User action: Quit Cloud Notes Completely');
             app.quit();
           },
         },

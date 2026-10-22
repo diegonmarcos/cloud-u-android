@@ -1,5 +1,5 @@
 # Cloud Notes sync server (Phase 2, cloud-notes-hybrid): Hocuspocus (MIT) over Yjs,
-# SQLite persistence in /data, Bearer-authenticated. Our own code; never AFFiNE's
+# SQLite persistence in /data, Bearer-authenticated. Our own code; never Cloud Notes's
 # EE server. Reached only through the edge gate; refuses to start without a
 # configured verifier (SYNC_INTROSPECT_URL or, for development, SYNC_STATIC_TOKENS).
 FROM node:22-bookworm-slim

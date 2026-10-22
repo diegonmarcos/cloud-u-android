@@ -1,21 +1,21 @@
 {
-  "name": "@affine/electron-renderer",
+  "name": "@cloud-notes/electron-renderer",
   "private": true,
   "version": "0.27.5",
   "type": "module",
   "scripts": {
-    "build": "affine bundle",
-    "dev": "affine bundle --dev"
+    "build": "cloud-notes bundle",
+    "dev": "cloud-notes bundle --dev"
   },
   "dependencies": {
-    "@affine/component": "workspace:*",
-    "@affine/core": "workspace:*",
-    "@affine/debug": "workspace:*",
-    "@affine/electron-api": "workspace:*",
-    "@affine/i18n": "workspace:*",
-    "@affine/nbstore": "workspace:*",
-    "@affine/track": "workspace:*",
-    "@blocksuite/affine": "workspace:*",
+    "@cloud-notes/component": "workspace:*",
+    "@cloud-notes/core": "workspace:*",
+    "@cloud-notes/debug": "workspace:*",
+    "@cloud-notes/electron-api": "workspace:*",
+    "@cloud-notes/i18n": "workspace:*",
+    "@cloud-notes/nbstore": "workspace:*",
+    "@cloud-notes/track": "workspace:*",
+    "@blocksuite/cloud-notes": "workspace:*",
     "@emotion/react": "^11.14.0",
     "@toeverything/infra": "workspace:*",
     "@toeverything/theme": "^1.1.23",

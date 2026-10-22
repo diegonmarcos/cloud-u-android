@@ -1,7 +1,7 @@
-import { track, tracker } from '@affine/track';
-import type { EditorHost } from '@blocksuite/affine/std';
-import type { GfxPrimitiveElementModel } from '@blocksuite/affine/std/gfx';
-import type { BlockModel } from '@blocksuite/affine/store';
+import { track, tracker } from '@cloud-notes/track';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import type { GfxPrimitiveElementModel } from '@blocksuite/cloud-notes/std/gfx';
+import type { BlockModel } from '@blocksuite/cloud-notes/store';
 import { lowerCase, omit } from 'lodash-es';
 
 import type {
@@ -76,7 +76,7 @@ const trackAction = ({
 };
 
 const inferPageMode = (host: EditorHost) => {
-  return host.querySelector('affine-page-root') ? 'doc' : 'edgeless';
+  return host.querySelector('cloud-notes-page-root') ? 'doc' : 'edgeless';
 };
 
 const defaultActionOptions = [

@@ -1,10 +1,10 @@
-import type { CreateMcpCredentialMutationVariables } from '@affine/graphql';
+import type { CreateMcpCredentialMutationVariables } from '@cloud-notes/graphql';
 import {
   createMcpCredentialMutation,
   mcpCredentialsQuery,
   revokeMcpCredentialMutation,
   rotateMcpCredentialMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Store } from '@toeverything/infra';
 
 import type { GraphQLService } from '../services/graphql';

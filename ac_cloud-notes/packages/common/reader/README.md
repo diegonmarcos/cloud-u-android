@@ -1,11 +1,11 @@
-# Affine Blocksuite format YDoc reader
+# Cloud Notes Blocksuite format YDoc reader
 
 ## Usage
 
 ### read rootYDoc
 
 ```ts
-import { readAllDocsFromRootDoc } from '@affine/reader';
+import { readAllDocsFromRootDoc } from '@cloud-notes/reader';
 
 const docs = readAllDocsFromRootDoc(rootDoc);
 console.log(Array.from(docsWithTrash.entries()));
@@ -19,7 +19,7 @@ console.log(Array.from(docsWithTrash.entries()));
 ### read YDoc
 
 ```ts
-import { readAllBlocksFromDoc } from '@affine/reader';
+import { readAllBlocksFromDoc } from '@cloud-notes/reader';
 
 const blocks = readAllBlocksFromDoc(doc);
 ```

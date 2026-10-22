@@ -1,14 +1,14 @@
 import '../declare-test-window.js';
 
-import type { DatabaseBlockModel, ListType } from '@blocksuite/affine/model';
-import type { RichText } from '@blocksuite/affine/rich-text';
+import type { DatabaseBlockModel, ListType } from '@blocksuite/cloud-notes/model';
+import type { RichText } from '@blocksuite/cloud-notes/rich-text';
 import type {
   InlineRange,
   InlineRootElement,
-} from '@blocksuite/affine/std/inline';
-import type { BlockModel } from '@blocksuite/affine/store';
-import { uuidv4 } from '@blocksuite/affine/store';
-import type { TestAffineEditorContainer } from '@blocksuite/integration-test';
+} from '@blocksuite/cloud-notes/std/inline';
+import type { BlockModel } from '@blocksuite/cloud-notes/store';
+import { uuidv4 } from '@blocksuite/cloud-notes/store';
+import type { TestCloudNotesEditorContainer } from '@blocksuite/integration-test';
 import type { ConsoleMessage, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import stringify from 'json-stable-stringify';
@@ -50,7 +50,7 @@ export const getSelectionRect = async (page: Page): Promise<DOMRect> => {
 };
 
 export const getEditorLocator = (page: Page) => {
-  return page.locator('affine-editor-container').nth(currentEditorIndex);
+  return page.locator('cloud-notes-editor-container').nth(currentEditorIndex);
 };
 
 export const getEditorHostLocator = (page: Page) => {
@@ -173,11 +173,11 @@ export async function enterPlaygroundRoom(
     throw new Error(`Uncaught exception: "${exception}"\n${exception.stack}`);
   });
 
-  const locator = page.locator('affine-editor-container');
+  const locator = page.locator('cloud-notes-editor-container');
   await locator.isVisible();
   await page.evaluate(async () => {
-    const dom = document.querySelector<TestAffineEditorContainer>(
-      'affine-editor-container'
+    const dom = document.querySelector<TestCloudNotesEditorContainer>(
+      'cloud-notes-editor-container'
     );
     if (dom) {
       await dom.updateComplete;
@@ -193,7 +193,7 @@ export async function enterPlaygroundRoom(
 }
 
 export async function waitDefaultPageLoaded(page: Page) {
-  await page.waitForSelector('affine-page-root[data-block-id="0"]');
+  await page.waitForSelector('cloud-notes-page-root[data-block-id="0"]');
 }
 
 export async function waitEmbedLoaded(page: Page) {
@@ -479,7 +479,7 @@ export async function initDatabaseDynamicRowWithData(
     await waitNextFrame(page, 100);
     await pressEscape(page);
   }
-  const lastRow = editorHost.locator('.affine-database-block-row').last();
+  const lastRow = editorHost.locator('.cloud-notes-database-block-row').last();
   const cell = lastRow.locator('.database-cell').nth(index + 1);
   await cell.click();
   await waitNextFrame(page);
@@ -496,7 +496,7 @@ export async function focusDatabaseTitle(page: Page) {
 
   await page.evaluate(() => {
     const dbTitle = document.querySelector(
-      'affine-database-title textarea'
+      'cloud-notes-database-title textarea'
     ) as HTMLTextAreaElement | null;
     if (!dbTitle) {
       throw new Error('Cannot find database title');
@@ -511,8 +511,8 @@ export async function focusDatabaseTitle(page: Page) {
 
 export async function assertDatabaseColumnOrder(page: Page, order: string[]) {
   const columns = await page
-    .locator('affine-database-column-header')
-    .locator('affine-database-header-column')
+    .locator('cloud-notes-database-column-header')
+    .locator('cloud-notes-database-header-column')
     .all();
   expect(await Promise.all(columns.slice(1).map(v => v.innerText()))).toEqual(
     order
@@ -550,7 +550,7 @@ export async function focusRichText(
   const editor = getEditorHostLocator(page);
   const locator = editor.locator(RICH_TEXT_SELECTOR).nth(i);
   await expect(locator).toBeVisible();
-  // need to set `force` to true when clicking on `affine-selected-blocks`
+  // need to set `force` to true when clicking on `cloud-notes-selected-blocks`
   await locator.click({ force: true, position: options?.clickPosition });
   await expect
     .poll(() =>
@@ -1207,7 +1207,7 @@ export async function initImageState(page: Page, prependParagraph = false) {
 
     await new Promise(res => setTimeout(res, 200));
 
-    const pageRoot = document.querySelector('affine-page-root');
+    const pageRoot = document.querySelector('cloud-notes-page-root');
     if (!pageRoot) throw new Error('Cannot find doc page');
     const imageBlob = await fetch(`${location.origin}/test-card-1.png`).then(
       response => response.blob()
@@ -1236,8 +1236,8 @@ export async function initImageState(page: Page, prependParagraph = false) {
 
 export async function getCurrentEditorDocId(page: Page) {
   return page.evaluate(index => {
-    const editor = document.querySelectorAll('affine-editor-container')[index];
-    if (!editor) throw new Error("Can't find affine-editor-container");
+    const editor = document.querySelectorAll('cloud-notes-editor-container')[index];
+    if (!editor) throw new Error("Can't find cloud-notes-editor-container");
     const docId = editor.doc.id;
     return docId;
   }, currentEditorIndex);
@@ -1251,12 +1251,12 @@ export async function getCurrentHTMLTheme(page: Page) {
 
 export async function getCurrentEditorTheme(page: Page) {
   const mode = await page
-    .locator('affine-editor-container')
+    .locator('cloud-notes-editor-container')
     .first()
     .evaluate(() =>
       window
         .getComputedStyle(document.documentElement)
-        .getPropertyValue('--affine-theme-mode')
+        .getPropertyValue('--cloud-notes-theme-mode')
         .trim()
     );
   return mode;
@@ -1267,7 +1267,7 @@ export async function getCurrentThemeCSSPropertyValue(
   property: string
 ) {
   const value = await page
-    .locator('affine-editor-container')
+    .locator('cloud-notes-editor-container')
     .evaluate(
       (_, property) =>
         window
@@ -1280,7 +1280,7 @@ export async function getCurrentThemeCSSPropertyValue(
 }
 
 export async function scrollToTop(page: Page) {
-  const scrollContainer = page.locator('.affine-page-viewport');
+  const scrollContainer = page.locator('.cloud-notes-page-viewport');
   await expect(scrollContainer).toBeVisible();
   await scrollContainer.evaluate(node => {
     (node as HTMLElement).scrollTop = 0;
@@ -1295,7 +1295,7 @@ export async function scrollToTop(page: Page) {
 }
 
 export async function scrollToBottom(page: Page) {
-  const scrollContainer = page.locator('.affine-page-viewport');
+  const scrollContainer = page.locator('.cloud-notes-page-viewport');
   await expect(scrollContainer).toBeVisible();
   await scrollContainer.evaluate(node => {
     const viewport = node as HTMLElement;

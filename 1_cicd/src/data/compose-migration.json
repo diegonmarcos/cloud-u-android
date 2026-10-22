@@ -928,7 +928,7 @@
     {
       "id": "ac_cloud-notes",
       "scope": "out",
-      "reason": "Vendored AFFiNE (Capacitor WebView); native additions have no UI."
+      "reason": "Vendored tree (Capacitor WebView); native additions have no UI."
     },
     {
       "id": "ac_cloud-termux",

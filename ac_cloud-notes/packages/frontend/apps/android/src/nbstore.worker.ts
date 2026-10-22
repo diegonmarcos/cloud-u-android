@@ -1,26 +1,26 @@
 import './setup-worker';
 
-import { MessagePortAuthProvider } from '@affine/mobile-shared/auth/channel';
-import { installAuthRequestProxy } from '@affine/mobile-shared/auth/request';
-import { broadcastChannelStorages } from '@affine/nbstore/broadcast-channel';
+import { MessagePortAuthProvider } from '@cloud-notes/mobile-shared/auth/channel';
+import { installAuthRequestProxy } from '@cloud-notes/mobile-shared/auth/request';
+import { broadcastChannelStorages } from '@cloud-notes/nbstore/broadcast-channel';
 import {
   cloudStorages,
   configureSocketAuthMethod,
-} from '@affine/nbstore/cloud';
-import { idbStoragesIndexerOnly } from '@affine/nbstore/idb';
+} from '@cloud-notes/nbstore/cloud';
+import { idbStoragesIndexerOnly } from '@cloud-notes/nbstore/idb';
 import {
   configureNotesSyncToken,
   notesSyncStorages,
-} from '@affine/nbstore/notes-sync';
+} from '@cloud-notes/nbstore/notes-sync';
 import {
   bindNativeDBApis,
   type NativeDBApis,
   sqliteStorages,
-} from '@affine/nbstore/sqlite';
+} from '@cloud-notes/nbstore/sqlite';
 import {
   StoreManagerConsumer,
   type WorkerManagerOps,
-} from '@affine/nbstore/worker/consumer';
+} from '@cloud-notes/nbstore/worker/consumer';
 import { type MessageCommunicapable, OpConsumer } from '@toeverything/infra/op';
 import { AsyncCall } from 'async-call-rpc';
 

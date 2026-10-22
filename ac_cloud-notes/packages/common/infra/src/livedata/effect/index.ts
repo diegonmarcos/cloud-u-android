@@ -1,5 +1,5 @@
-import { DebugLogger } from '@affine/debug';
-import { Unreachable } from '@affine/env/constant';
+import { DebugLogger } from '@cloud-notes/debug';
+import { Unreachable } from '@cloud-notes/env/constant';
 import { type OperatorFunction, Subject, type Subscription } from 'rxjs';
 
 const logger = new DebugLogger('effect');

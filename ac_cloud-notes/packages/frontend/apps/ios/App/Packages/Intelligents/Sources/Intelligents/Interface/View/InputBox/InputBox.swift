@@ -9,7 +9,7 @@ class InputBox: UIView {
   var cancellables = Set<AnyCancellable>()
 
   lazy var containerView = UIView().then {
-    $0.backgroundColor = UIColor.affineLayerBackgroundPrimary
+    $0.backgroundColor = UIColor.cloudNotesLayerBackgroundPrimary
     $0.layer.cornerRadius = 16
     $0.layer.cornerCurve = .continuous
     $0.layer.borderWidth = 1
@@ -23,7 +23,7 @@ class InputBox: UIView {
   lazy var textView = UITextView().then {
     $0.backgroundColor = .clear
     $0.font = .systemFont(ofSize: 16)
-    $0.textColor = UIColor.affineTextPrimary
+    $0.textColor = UIColor.cloudNotesTextPrimary
     $0.isScrollEnabled = false
     $0.textContainer.lineFragmentPadding = 0
     $0.textContainerInset = .zero
@@ -35,7 +35,7 @@ class InputBox: UIView {
   lazy var placeholderLabel = UILabel().then {
     $0.text = "Write your message..."
     $0.font = .systemFont(ofSize: 16)
-    $0.textColor = UIColor.affineTextPlaceholder
+    $0.textColor = UIColor.cloudNotesTextPlaceholder
     $0.isHidden = true
   }
 
@@ -251,7 +251,7 @@ class InputBox: UIView {
   }
 
   func updateColors() {
-    containerView.layer.borderColor = UIColor.affineLayerBorder.cgColor
+    containerView.layer.borderColor = UIColor.cloudNotesLayerBorder.cgColor
   }
 
   // MARK: - Public Methods

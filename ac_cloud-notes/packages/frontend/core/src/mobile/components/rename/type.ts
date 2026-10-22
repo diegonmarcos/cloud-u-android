@@ -2,7 +2,7 @@ import type {
   ButtonProps,
   MenuSubProps,
   RowInputProps,
-} from '@affine/component';
+} from '@cloud-notes/component';
 import type { PropsWithChildren, ReactNode } from 'react';
 
 export interface RenameBaseProps {

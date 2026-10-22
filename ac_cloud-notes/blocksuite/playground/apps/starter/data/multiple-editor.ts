@@ -1,4 +1,4 @@
-import { Text, type Workspace } from '@blocksuite/affine/store';
+import { Text, type Workspace } from '@blocksuite/cloud-notes/store';
 
 import { createTestEditor } from '../utils/extensions.js';
 import type { InitFn } from './utils.js';
@@ -24,7 +24,7 @@ export const multiEditor: InitFn = (collection: Workspace, id: string) => {
   const app = document.getElementById('app');
   if (app) {
     const editor = createTestEditor(doc, collection);
-    editor.style.borderRight = '1px solid var(--affine-border-color)';
+    editor.style.borderRight = '1px solid var(--cloud-notes-border-color)';
 
     app.append(editor);
     app.style.display = 'flex';
@@ -59,7 +59,7 @@ export const multiEditorVertical: InitFn = (
   const app = document.getElementById('app');
   if (app) {
     const editor = createTestEditor(doc, collection);
-    editor.style.borderBottom = '1px solid var(--affine-border-color)';
+    editor.style.borderBottom = '1px solid var(--cloud-notes-border-color)';
 
     app.append(editor);
     app.style.display = 'flex';

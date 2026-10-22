@@ -1,10 +1,10 @@
-import { RadioGroup, type RadioItem, Switch } from '@affine/component';
+import { RadioGroup, type RadioItem, Switch } from '@cloud-notes/component';
 import {
   SettingRow,
   SettingWrapper,
-} from '@affine/component/setting-components';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/setting-components';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 
@@ -21,7 +21,7 @@ export const Page = () => {
         value: 'standard',
         label:
           t[
-            'com.affine.settings.editorSettings.page.default-page-width.standard'
+            'com.cloud-notes.settings.editorSettings.page.default-page-width.standard'
           ](),
         testId: 'standard-width-trigger',
       },
@@ -29,7 +29,7 @@ export const Page = () => {
         value: 'fullWidth',
         label:
           t[
-            'com.affine.settings.editorSettings.page.default-page-width.full-width'
+            'com.cloud-notes.settings.editorSettings.page.default-page-width.full-width'
           ](),
         testId: 'full-width-trigger',
       },
@@ -58,13 +58,13 @@ export const Page = () => {
   );
 
   return (
-    <SettingWrapper title={t['com.affine.settings.editorSettings.page']()}>
+    <SettingWrapper title={t['com.cloud-notes.settings.editorSettings.page']()}>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.page.default-page-width.title'
+          'com.cloud-notes.settings.editorSettings.page.default-page-width.title'
         ]()}
         desc={t[
-          'com.affine.settings.editorSettings.page.default-page-width.description'
+          'com.cloud-notes.settings.editorSettings.page.default-page-width.description'
         ]()}
       >
         <RadioGroup
@@ -77,10 +77,10 @@ export const Page = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.page.display-doc-info.title'
+          'com.cloud-notes.settings.editorSettings.page.display-doc-info.title'
         ]()}
         desc={t[
-          'com.affine.settings.editorSettings.page.display-doc-info.description'
+          'com.cloud-notes.settings.editorSettings.page.display-doc-info.description'
         ]()}
       >
         <Switch
@@ -91,10 +91,10 @@ export const Page = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.page.display-bi-link.title'
+          'com.cloud-notes.settings.editorSettings.page.display-bi-link.title'
         ]()}
         desc={t[
-          'com.affine.settings.editorSettings.page.display-bi-link.description'
+          'com.cloud-notes.settings.editorSettings.page.display-bi-link.description'
         ]()}
       >
         <Switch

@@ -4,17 +4,17 @@ import {
   type DropTargetOptions,
   MenuItem,
   toast,
-} from '@affine/component';
+} from '@cloud-notes/component';
 import {
   type Collection,
   CollectionService,
-} from '@affine/core/modules/collection';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/core/modules/collection';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { FilterMinusIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService, useServices } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -89,7 +89,7 @@ export const NavigationPanelCollectionNode = ({
       dropTarget: {
         at: 'navigation-panel:doc',
       },
-    } satisfies AffineDNDData;
+    } satisfies CloudNotesDNDData;
   }, [collectionId, location]);
 
   const handleRename = useCallback(
@@ -102,7 +102,7 @@ export const NavigationPanelCollectionNode = ({
         track.$.navigationPanel.organize.renameOrganizeItem({
           type: 'collection',
         });
-        toast(t['com.affine.toastMessage.rename']());
+        toast(t['com.cloud-notes.toastMessage.rename']());
       }
     },
     [collection, collectionId, collectionService, t]
@@ -114,7 +114,7 @@ export const NavigationPanelCollectionNode = ({
         return;
       }
       if (collection.allowList$.value.includes(docId)) {
-        toast(t['com.affine.collection.addPage.alreadyExists']());
+        toast(t['com.cloud-notes.collection.addPage.alreadyExists']());
       } else {
         collectionService.addDocToCollection(collection.id, docId);
       }
@@ -123,7 +123,7 @@ export const NavigationPanelCollectionNode = ({
   );
 
   const handleDropOnCollection = useCallback(
-    (data: DropTargetDropEvent<AffineDNDData>) => {
+    (data: DropTargetDropEvent<CloudNotesDNDData>) => {
       if (collection && data.treeInstruction?.type === 'make-child') {
         if (data.source.data.entity?.type === 'doc') {
           handleAddDocToCollection(data.source.data.entity.id);
@@ -159,7 +159,7 @@ export const NavigationPanelCollectionNode = ({
     );
 
   const handleDropOnPlaceholder = useCallback(
-    (data: DropTargetDropEvent<AffineDNDData>) => {
+    (data: DropTargetDropEvent<CloudNotesDNDData>) => {
       if (collection && data.source.data.entity?.type === 'doc') {
         handleAddDocToCollection(data.source.data.entity.id);
         track.$.navigationPanel.organize.createOrganizeItem({
@@ -197,7 +197,7 @@ export const NavigationPanelCollectionNode = ({
     return collectionOperations;
   }, [collectionOperations, additionalOperations]);
 
-  const handleCanDrop = useMemo<DropTargetOptions<AffineDNDData>['canDrop']>(
+  const handleCanDrop = useMemo<DropTargetOptions<CloudNotesDNDData>['canDrop']>(
     () => args => {
       const entityType = args.source.data.entity?.type;
       return args.treeInstruction?.type !== 'make-child'
@@ -262,7 +262,7 @@ const NavigationPanelCollectionNodeChildren = ({
     (id: string) => {
       track.$.navigationPanel.collections.removeOrganizeItem({ type: 'doc' });
       collectionService.removeDocFromCollection(collection.id, id);
-      toast(t['com.affine.collection.removePage.success']());
+      toast(t['com.cloud-notes.collection.removePage.success']());
     },
     [collection.id, collectionService, t]
   );

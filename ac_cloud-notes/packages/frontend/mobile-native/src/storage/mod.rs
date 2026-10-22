@@ -7,7 +7,7 @@ mod peers;
 #[cfg(any(target_os = "android", target_os = "ios", test))]
 use std::sync::Arc;
 
-use affine_nbstore::{
+use cloud_notes_nbstore::{
   Data, DocRecord as NbDocRecord, SetBlob as NbSetBlob, pool::SqliteDocStoragePool, storage::SqliteDocStorage,
 };
 use chrono::{DateTime, NaiveDateTime, Utc};

@@ -1,5 +1,5 @@
 {
-  "name": "@affine/commitlint-config",
+  "name": "@cloud-notes/commitlint-config",
   "version": "0.27.5",
   "private": true,
   "devDependencies": {

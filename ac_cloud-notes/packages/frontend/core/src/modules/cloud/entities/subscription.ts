@@ -2,7 +2,7 @@ import {
   SubscriptionPlan,
   type SubscriptionQuery,
   SubscriptionRecurring,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import {
   catchErrorInto,
   effect,

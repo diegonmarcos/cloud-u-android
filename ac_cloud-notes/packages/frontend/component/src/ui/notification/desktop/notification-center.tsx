@@ -31,7 +31,7 @@ export function DesktopNotificationCenter({
 
   return (
     <Toaster
-      className="affine-notification-center"
+      className="cloud-notes-notification-center"
       style={style}
       toastOptions={toastOptions}
       theme={resolvedTheme}

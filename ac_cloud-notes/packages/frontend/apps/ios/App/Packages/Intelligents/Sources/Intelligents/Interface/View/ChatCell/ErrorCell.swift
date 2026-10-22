@@ -45,7 +45,7 @@ class ErrorCell: ChatBaseCell {
   static func attributeText(for text: String) -> NSAttributedString {
     .init(string: text, attributes: [
       .font: UIFont.preferredFont(forTextStyle: .footnote),
-      .foregroundColor: UIColor.affineTextSecondary,
+      .foregroundColor: UIColor.cloudNotesTextSecondary,
       .paragraphStyle: NSMutableParagraphStyle().then {
         $0.lineBreakMode = .byWordWrapping
         $0.alignment = .center

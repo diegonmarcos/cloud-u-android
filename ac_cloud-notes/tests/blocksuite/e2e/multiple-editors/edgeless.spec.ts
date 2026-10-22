@@ -25,7 +25,7 @@ test('the shift pressing status should effect all editors', async ({
 
   const getShiftPressedStatus = async () => {
     return page.evaluate(() => {
-      const edgelessBlocks = document.querySelectorAll('affine-edgeless-root');
+      const edgelessBlocks = document.querySelectorAll('cloud-notes-edgeless-root');
 
       return Array.from(edgelessBlocks).map(edgelessRoot => {
         return edgelessRoot.gfx.keyboard.shiftKey$.peek();

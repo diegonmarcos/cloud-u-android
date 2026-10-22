@@ -1,5 +1,5 @@
-import { PageHeader } from '@affine/core/mobile/components';
-import type { Tag } from '@affine/core/modules/tag';
+import { PageHeader } from '@cloud-notes/core/mobile/components';
+import type { Tag } from '@cloud-notes/core/modules/tag';
 import { useLiveData } from '@toeverything/infra';
 
 import * as styles from './detail.css';

@@ -1,10 +1,10 @@
-import { AffineErrorBoundary } from '@affine/core/components/affine/affine-error-boundary';
-import { AffineErrorComponent } from '@affine/core/components/affine/affine-error-boundary/affine-error-fallback';
-import { PageNotFound } from '@affine/core/desktop/pages/404';
-import { SharePage } from '@affine/core/desktop/pages/workspace/share/share-page';
-import { workbenchRoutes } from '@affine/core/mobile/workbench-router';
-import { ServersService } from '@affine/core/modules/cloud';
-import { WorkspacesService } from '@affine/core/modules/workspace';
+import { CloudNotesErrorBoundary } from '@cloud-notes/core/components/cloud-notes/cloud-notes-error-boundary';
+import { CloudNotesErrorComponent } from '@cloud-notes/core/components/cloud-notes/cloud-notes-error-boundary/cloud-notes-error-fallback';
+import { PageNotFound } from '@cloud-notes/core/desktop/pages/404';
+import { SharePage } from '@cloud-notes/core/desktop/pages/workspace/share/share-page';
+import { workbenchRoutes } from '@cloud-notes/core/mobile/workbench-router';
+import { ServersService } from '@cloud-notes/core/modules/cloud';
+import { WorkspacesService } from '@cloud-notes/core/modules/workspace';
 import { FrameworkScope, useLiveData, useServices } from '@toeverything/infra';
 import {
   lazy as reactLazy,
@@ -31,11 +31,11 @@ type Route = { Component: React.ComponentType };
  **/
 const MobileRouteContainer = ({ route }: { route: Route }) => {
   return (
-    <AffineErrorBoundary>
+    <CloudNotesErrorBoundary>
       <Suspense>
         <route.Component />
       </Suspense>
-    </AffineErrorBoundary>
+    </CloudNotesErrorBoundary>
   );
 };
 
@@ -60,7 +60,7 @@ const warpedRoutes = workbenchRoutes.map((originalRoute: RouteObject) => {
     Component: () => {
       return <MobileRouteContainer route={route} />;
     },
-    errorElement: <AffineErrorComponent />,
+    errorElement: <CloudNotesErrorComponent />,
   };
 });
 

@@ -1,19 +1,19 @@
-import { SurfaceBlockSchema } from '@blocksuite/affine/blocks/surface';
-import { ConnectorElementRendererExtension } from '@blocksuite/affine/gfx/connector';
+import { SurfaceBlockSchema } from '@blocksuite/cloud-notes/blocks/surface';
+import { ConnectorElementRendererExtension } from '@blocksuite/cloud-notes/gfx/connector';
 import {
   MindmapElementRendererExtension,
   MindMapView,
-} from '@blocksuite/affine/gfx/mindmap';
-import { ShapeElementRendererExtension } from '@blocksuite/affine/gfx/shape';
-import { TextElementRendererExtension } from '@blocksuite/affine/gfx/text';
-import { RootBlockSchema } from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/gfx/mindmap';
+import { ShapeElementRendererExtension } from '@blocksuite/cloud-notes/gfx/shape';
+import { TextElementRendererExtension } from '@blocksuite/cloud-notes/gfx/text';
+import { RootBlockSchema } from '@blocksuite/cloud-notes/model';
 import {
   DocModeService,
   ThemeService,
-} from '@blocksuite/affine/shared/services';
-import { BlockViewExtension, FlavourExtension } from '@blocksuite/affine/std';
-import { ToolController } from '@blocksuite/affine/std/gfx';
-import type { BlockSchema, ExtensionType } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/shared/services';
+import { BlockViewExtension, FlavourExtension } from '@blocksuite/cloud-notes/std';
+import { ToolController } from '@blocksuite/cloud-notes/std/gfx';
+import type { BlockSchema, ExtensionType } from '@blocksuite/cloud-notes/store';
 import { literal } from 'lit/static-html.js';
 import type { z } from 'zod';
 

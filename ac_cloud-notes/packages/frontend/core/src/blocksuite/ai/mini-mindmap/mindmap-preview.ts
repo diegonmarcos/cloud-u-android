@@ -1,20 +1,20 @@
-import { WorkspaceImpl } from '@affine/core/modules/workspace/impls/workspace.js';
-import type { SurfaceBlockModel } from '@blocksuite/affine/blocks/surface';
+import { WorkspaceImpl } from '@cloud-notes/core/modules/workspace/impls/workspace.js';
+import type { SurfaceBlockModel } from '@blocksuite/cloud-notes/blocks/surface';
 import {
   MindmapStyleFour,
   MindmapStyleOne,
   MindmapStyleThree,
   MindmapStyleTwo,
-} from '@blocksuite/affine/gfx/mindmap';
-import type { ServiceProvider } from '@blocksuite/affine/global/di';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
+} from '@blocksuite/cloud-notes/gfx/mindmap';
+import type { ServiceProvider } from '@blocksuite/cloud-notes/global/di';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
 import {
   type MindmapElementModel,
   MindmapStyle,
-} from '@blocksuite/affine/model';
-import { MarkdownAdapter } from '@blocksuite/affine/shared/adapters';
-import { BlockStdScope, type EditorHost } from '@blocksuite/affine/std';
-import { Schema, type Store } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/model';
+import { MarkdownAdapter } from '@blocksuite/cloud-notes/shared/adapters';
+import { BlockStdScope, type EditorHost } from '@blocksuite/cloud-notes/std';
+import { Schema, type Store } from '@blocksuite/cloud-notes/store';
 import { css, html, LitElement, nothing } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -67,14 +67,14 @@ export class MiniMindmapPreview extends WithDisposable(LitElement) {
 
     .template-item {
       box-sizing: border-box;
-      border: 2px solid var(--affine-border-color);
+      border: 2px solid var(--cloud-notes-border-color);
       border-radius: 4px;
       padding: 4px 6px;
     }
 
     .template-item.active,
     .template-item:hover {
-      border-color: var(--affine-brand-color);
+      border-color: var(--cloud-notes-brand-color);
     }
 
     .template-item > svg {
@@ -174,7 +174,7 @@ export class MiniMindmapPreview extends WithDisposable(LitElement) {
       <div
         style=${styleMap({
           height: this.height + 'px',
-          border: '1px solid var(--affine-border-color)',
+          border: '1px solid var(--cloud-notes-border-color)',
           borderRadius: '4px',
         })}
       >

@@ -5,12 +5,12 @@ export function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export type AffineTextEvent = {
+export type CloudNotesTextEvent = {
   type: 'attachment' | 'message';
   data: string;
 };
 
-type AffineTextStream = AsyncIterable<AffineTextEvent>;
+type CloudNotesTextStream = AsyncIterable<CloudNotesTextEvent>;
 
 type toTextStreamOptions = {
   timeout?: number;
@@ -31,10 +31,10 @@ const safeParseError = (data: string): { status: number } => {
 export function toTextStream(
   eventSource: EventSource,
   { timeout, signal }: toTextStreamOptions = {}
-): AffineTextStream {
+): CloudNotesTextStream {
   return {
     [Symbol.asyncIterator]: async function* () {
-      const messageQueue: AffineTextEvent[] = [];
+      const messageQueue: CloudNotesTextEvent[] = [];
       let resolveMessagePromise: () => void;
       let rejectMessagePromise: (err: Error) => void;
 

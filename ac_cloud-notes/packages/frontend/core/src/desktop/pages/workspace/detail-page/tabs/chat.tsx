@@ -1,4 +1,4 @@
-import { useConfirmModal } from '@affine/component';
+import { useConfirmModal } from '@cloud-notes/component';
 import {
   AIAppEvents,
   AIChatRuntime,
@@ -7,45 +7,45 @@ import {
   DocAIChatSessionStrategy,
   useAIChatElement,
   useAIChatRuntime,
-} from '@affine/core/blocksuite/ai';
-import type { AppSidebarConfig } from '@affine/core/blocksuite/ai/chat-panel/chat-config';
-import { AIChatContent } from '@affine/core/blocksuite/ai/components/ai-chat-content';
+} from '@cloud-notes/core/blocksuite/ai';
+import type { AppSidebarConfig } from '@cloud-notes/core/blocksuite/ai/chat-panel/chat-config';
+import { AIChatContent } from '@cloud-notes/core/blocksuite/ai/components/ai-chat-content';
 import {
   AIChatTabs,
   AIChatToolbar,
   configureAIChatToolbar,
-} from '@affine/core/blocksuite/ai/components/ai-chat-toolbar';
-import { createPlaygroundModal } from '@affine/core/blocksuite/ai/components/playground/modal';
-import { registerAIAppEffects } from '@affine/core/blocksuite/ai/effects/app';
-import type { AffineEditorContainer } from '@affine/core/blocksuite/block-suite-editor';
-import { NotificationServiceImpl } from '@affine/core/blocksuite/view-extensions/editor-view/notification-service';
-import { useAIChatConfig } from '@affine/core/components/hooks/affine/use-ai-chat-config';
-import { useAISpecs } from '@affine/core/components/hooks/affine/use-ai-specs';
-import { useAISubscribe } from '@affine/core/components/hooks/affine/use-ai-subscribe';
+} from '@cloud-notes/core/blocksuite/ai/components/ai-chat-toolbar';
+import { createPlaygroundModal } from '@cloud-notes/core/blocksuite/ai/components/playground/modal';
+import { registerAIAppEffects } from '@cloud-notes/core/blocksuite/ai/effects/app';
+import type { CloudNotesEditorContainer } from '@cloud-notes/core/blocksuite/block-suite-editor';
+import { NotificationServiceImpl } from '@cloud-notes/core/blocksuite/view-extensions/editor-view/notification-service';
+import { useAIChatConfig } from '@cloud-notes/core/components/hooks/cloud-notes/use-ai-chat-config';
+import { useAISpecs } from '@cloud-notes/core/components/hooks/cloud-notes/use-ai-specs';
+import { useAISubscribe } from '@cloud-notes/core/components/hooks/cloud-notes/use-ai-subscribe';
 import {
   AIDraftService,
   AIModelService,
   AIToolsConfigService,
-} from '@affine/core/modules/ai-button';
+} from '@cloud-notes/core/modules/ai-button';
 import {
   EventSourceService,
   GraphQLService,
   ServerService,
   SubscriptionService,
-} from '@affine/core/modules/cloud';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { useSignalValue } from '@affine/core/modules/doc-info/utils';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { PeekViewService } from '@affine/core/modules/peek-view';
-import { NbstoreService } from '@affine/core/modules/storage';
-import { AppThemeService } from '@affine/core/modules/theme';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import { RefNodeSlotsProvider } from '@blocksuite/affine/inlines/reference';
-import { DocModeProvider } from '@blocksuite/affine/shared/services';
-import { createSignalFromObservable } from '@blocksuite/affine/shared/utils';
-import type { Store } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/modules/cloud';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { useSignalValue } from '@cloud-notes/core/modules/doc-info/utils';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { PeekViewService } from '@cloud-notes/core/modules/peek-view';
+import { NbstoreService } from '@cloud-notes/core/modules/storage';
+import { AppThemeService } from '@cloud-notes/core/modules/theme';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import { RefNodeSlotsProvider } from '@blocksuite/cloud-notes/inlines/reference';
+import { DocModeProvider } from '@blocksuite/cloud-notes/shared/services';
+import { createSignalFromObservable } from '@blocksuite/cloud-notes/shared/utils';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { CenterPeekIcon, Logo1Icon } from '@blocksuite/icons/rc';
 import type { Signal } from '@preact/signals-core';
 import { useFramework, useService } from '@toeverything/infra';
@@ -65,7 +65,7 @@ const shouldResetChatPanelOnUserInfoChange = ({
 }) => previousUserId !== undefined && previousUserId !== nextUserId;
 
 export interface SidebarTabProps {
-  editor: AffineEditorContainer | null;
+  editor: CloudNotesEditorContainer | null;
   doc: Store;
   onLoad?: ((component: HTMLElement) => void) | null;
 }
@@ -261,8 +261,8 @@ export const EditorChatPanel = ({
     async (sessionToDelete: BlockSuitePresets.AIRecentSession) => {
       if (!runtime) return;
       const confirm = await notificationService.confirm({
-        title: t['com.affine.ai.chat-panel.session.delete.confirm.title'](),
-        message: t['com.affine.ai.chat-panel.session.delete.confirm.message'](),
+        title: t['com.cloud-notes.ai.chat-panel.session.delete.confirm.title'](),
+        message: t['com.cloud-notes.ai.chat-panel.session.delete.confirm.message'](),
         confirmText: t['Delete'](),
         cancelText: t['Cancel'](),
       });
@@ -272,7 +272,7 @@ export const EditorChatPanel = ({
         sessionId: sessionToDelete.sessionId,
       });
       notificationService.toast(
-        t['com.affine.ai.chat-panel.session.delete.toast.success'](),
+        t['com.cloud-notes.ai.chat-panel.session.delete.toast.success'](),
         {}
       );
     },
@@ -316,11 +316,11 @@ export const EditorChatPanel = ({
       content.docDisplayConfig = docDisplayConfig;
       content.extensions = specs;
       content.serverService = framework.get(ServerService);
-      content.affineFeatureFlagService = framework.get(FeatureFlagService);
-      content.affineWorkspaceDialogService = framework.get(
+      content.cloudNotesFeatureFlagService = framework.get(FeatureFlagService);
+      content.cloudNotesWorkspaceDialogService = framework.get(
         WorkspaceDialogService
       );
-      content.affineThemeService = framework.get(AppThemeService);
+      content.cloudNotesThemeService = framework.get(AppThemeService);
       content.notificationService = notificationService;
       content.aiDraftService = framework.get(AIDraftService);
       content.aiToolsConfigService = framework.get(AIToolsConfigService);
@@ -435,10 +435,10 @@ export const EditorChatPanel = ({
         .docDisplayConfig=${docDisplayConfig}
         .extensions=${specs}
         .serverService=${framework.get(ServerService)}
-        .affineFeatureFlagService=${framework.get(FeatureFlagService)}
-        .affineThemeService=${framework.get(AppThemeService)}
+        .cloudNotesFeatureFlagService=${framework.get(FeatureFlagService)}
+        .cloudNotesThemeService=${framework.get(AppThemeService)}
         .notificationService=${notificationService}
-        .affineWorkspaceDialogService=${framework.get(WorkspaceDialogService)}
+        .cloudNotesWorkspaceDialogService=${framework.get(WorkspaceDialogService)}
         .aiToolsConfigService=${framework.get(AIToolsConfigService)}
         .aiModelService=${framework.get(AIModelService)}
         .subscriptionService=${framework.get(SubscriptionService)}
@@ -489,7 +489,7 @@ export const EditorChatPanel = ({
           <div className={styles.loading}>
             <Logo1Icon className={styles.loadingIcon} />
             <div className={styles.loadingTitle}>
-              {t['com.affine.ai.chat-panel.loading-history']()}
+              {t['com.cloud-notes.ai.chat-panel.loading-history']()}
             </div>
           </div>
         </div>
@@ -502,7 +502,7 @@ export const EditorChatPanel = ({
                   Synchronizing sources
                 </span>
               ) : (
-                t['com.affine.ai.chat-panel.title']()
+                t['com.cloud-notes.ai.chat-panel.title']()
               )}
             </div>
             {playgroundVisible ? (

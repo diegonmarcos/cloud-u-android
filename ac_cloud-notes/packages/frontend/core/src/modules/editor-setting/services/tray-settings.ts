@@ -1,7 +1,7 @@
 import type {
   MenubarStateKey,
   MenubarStateSchema,
-} from '@affine/electron/main/shared-state-schema';
+} from '@cloud-notes/electron/main/shared-state-schema';
 import { LiveData, Service } from '@toeverything/infra';
 import { defaults } from 'lodash-es';
 

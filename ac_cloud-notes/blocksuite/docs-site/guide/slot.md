@@ -39,4 +39,4 @@ model.propsUpdated.on(() => updateMyComponent());
 model.childrenUpdated.on(() => updateMyComponent());
 ```
 
-In the prebuilt AFFiNE editor, which is based on the [lit](https://lit.dev/) framework, the UI component of each block subscribes to its model updates using this pattern.
+In the prebuilt Cloud Notes editor, which is based on the [lit](https://lit.dev/) framework, the UI component of each block subscribes to its model updates using this pattern.

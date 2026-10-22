@@ -2,8 +2,8 @@
  * @vitest-environment happy-dom
  */
 
-import { JOURNAL_DATE_FORMAT } from '@affine/core/modules/journal';
-import { I18n } from '@affine/i18n';
+import { JOURNAL_DATE_FORMAT } from '@cloud-notes/core/modules/journal';
+import { I18n } from '@cloud-notes/i18n';
 import dayjs from 'dayjs';
 import { describe, expect, test, vi } from 'vitest';
 
@@ -19,21 +19,21 @@ describe('suggestJournalDate', () => {
   test('today', () => {
     expect(suggestJournalDate('t')).toEqual({
       dateString: dayjs().format(JOURNAL_DATE_FORMAT),
-      alias: I18n.t('com.affine.today'),
+      alias: I18n.t('com.cloud-notes.today'),
     });
   });
 
   test('yesterday', () => {
     expect(suggestJournalDate('y')).toEqual({
       dateString: dayjs().subtract(1, 'day').format(JOURNAL_DATE_FORMAT),
-      alias: I18n.t('com.affine.yesterday'),
+      alias: I18n.t('com.cloud-notes.yesterday'),
     });
   });
 
   test('tomorrow', () => {
     expect(suggestJournalDate('tm')).toEqual({
       dateString: dayjs().add(1, 'day').format(JOURNAL_DATE_FORMAT),
-      alias: I18n.t('com.affine.tomorrow'),
+      alias: I18n.t('com.cloud-notes.tomorrow'),
     });
   });
 

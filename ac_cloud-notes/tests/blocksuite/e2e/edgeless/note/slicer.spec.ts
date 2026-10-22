@@ -36,7 +36,7 @@ test.describe('note slicer', () => {
     await initSixParagraphs(page);
 
     await switchEditorMode(page);
-    await expect(page.locator('affine-edgeless-note')).toHaveCount(1);
+    await expect(page.locator('cloud-notes-edgeless-note')).toHaveCount(1);
 
     await selectNoteInEdgeless(page, noteId);
     await triggerComponentToolbarAction(page, 'changeNoteSlicerSetting');
@@ -44,7 +44,7 @@ test.describe('note slicer', () => {
 
     await page.locator('.note-slicer-button').click();
 
-    await expect(page.locator('affine-edgeless-note')).toHaveCount(2);
+    await expect(page.locator('cloud-notes-edgeless-note')).toHaveCount(2);
   });
 
   test('note slicer button should appears at right position', async ({

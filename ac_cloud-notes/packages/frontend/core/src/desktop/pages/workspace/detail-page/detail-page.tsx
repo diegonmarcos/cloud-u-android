@@ -1,29 +1,29 @@
-import { Scrollable } from '@affine/component';
-import { PageDetailLoading } from '@affine/component/page-detail-skeleton';
-import { AIAppEvents, type AIChatParams } from '@affine/core/blocksuite/ai';
-import type { AffineEditorContainer } from '@affine/core/blocksuite/block-suite-editor';
-import { EditorOutlineViewer } from '@affine/core/blocksuite/outline-viewer';
-import { AffineErrorBoundary } from '@affine/core/components/affine/affine-error-boundary';
-// import { PageAIOnboarding } from '@affine/core/components/affine/ai-onboarding';
-import { GlobalPageHistoryModal } from '@affine/core/components/affine/page-history-modal';
-import { CommentSidebar } from '@affine/core/components/comment/sidebar';
-import { useGuard } from '@affine/core/components/guard';
-import { useAppSettingHelper } from '@affine/core/components/hooks/affine/use-app-setting-helper';
-import { useEnableAI } from '@affine/core/components/hooks/affine/use-enable-ai';
-import { useRegisterBlocksuiteEditorCommands } from '@affine/core/components/hooks/affine/use-register-blocksuite-editor-commands';
-import { useActiveBlocksuiteEditor } from '@affine/core/components/hooks/use-block-suite-editor';
-import { PageDetailEditor } from '@affine/core/components/page-detail-editor';
-import { WorkspacePropertySidebar } from '@affine/core/components/properties/sidebar';
-import { TrashPageFooter } from '@affine/core/components/pure/trash-page-footer';
-import { TopTip } from '@affine/core/components/top-tip';
-import { ServerService } from '@affine/core/modules/cloud';
-import { DocService } from '@affine/core/modules/doc';
-import { EditorService } from '@affine/core/modules/editor';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { JournalService } from '@affine/core/modules/journal';
-import { PeekViewService } from '@affine/core/modules/peek-view';
-import { RecentDocsService } from '@affine/core/modules/quicksearch';
+import { Scrollable } from '@cloud-notes/component';
+import { PageDetailLoading } from '@cloud-notes/component/page-detail-skeleton';
+import { AIAppEvents, type AIChatParams } from '@cloud-notes/core/blocksuite/ai';
+import type { CloudNotesEditorContainer } from '@cloud-notes/core/blocksuite/block-suite-editor';
+import { EditorOutlineViewer } from '@cloud-notes/core/blocksuite/outline-viewer';
+import { CloudNotesErrorBoundary } from '@cloud-notes/core/components/cloud-notes/cloud-notes-error-boundary';
+// import { PageAIOnboarding } from '@cloud-notes/core/components/cloud-notes/ai-onboarding';
+import { GlobalPageHistoryModal } from '@cloud-notes/core/components/cloud-notes/page-history-modal';
+import { CommentSidebar } from '@cloud-notes/core/components/comment/sidebar';
+import { useGuard } from '@cloud-notes/core/components/guard';
+import { useAppSettingHelper } from '@cloud-notes/core/components/hooks/cloud-notes/use-app-setting-helper';
+import { useEnableAI } from '@cloud-notes/core/components/hooks/cloud-notes/use-enable-ai';
+import { useRegisterBlocksuiteEditorCommands } from '@cloud-notes/core/components/hooks/cloud-notes/use-register-blocksuite-editor-commands';
+import { useActiveBlocksuiteEditor } from '@cloud-notes/core/components/hooks/use-block-suite-editor';
+import { PageDetailEditor } from '@cloud-notes/core/components/page-detail-editor';
+import { WorkspacePropertySidebar } from '@cloud-notes/core/components/properties/sidebar';
+import { TrashPageFooter } from '@cloud-notes/core/components/pure/trash-page-footer';
+import { TopTip } from '@cloud-notes/core/components/top-tip';
+import { ServerService } from '@cloud-notes/core/modules/cloud';
+import { DocService } from '@cloud-notes/core/modules/doc';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { PeekViewService } from '@cloud-notes/core/modules/peek-view';
+import { RecentDocsService } from '@cloud-notes/core/modules/quicksearch';
 import {
   useIsActiveView,
   ViewBody,
@@ -31,15 +31,15 @@ import {
   ViewService,
   ViewSidebarTab,
   WorkbenchService,
-} from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { isNewTabTrigger } from '@affine/core/utils';
-import { ServerFeature } from '@affine/graphql';
-import track from '@affine/track';
-import { DisposableGroup } from '@blocksuite/affine/global/disposable';
-import { RefNodeSlotsProvider } from '@blocksuite/affine/inlines/reference';
-import { focusBlockEnd } from '@blocksuite/affine/shared/commands';
-import { getLastNoteBlock } from '@blocksuite/affine/shared/utils';
+} from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { isNewTabTrigger } from '@cloud-notes/core/utils';
+import { ServerFeature } from '@cloud-notes/graphql';
+import track from '@cloud-notes/track';
+import { DisposableGroup } from '@blocksuite/cloud-notes/global/disposable';
+import { RefNodeSlotsProvider } from '@blocksuite/cloud-notes/inlines/reference';
+import { focusBlockEnd } from '@blocksuite/cloud-notes/shared/commands';
+import { getLastNoteBlock } from '@blocksuite/cloud-notes/shared/utils';
 import {
   AiIcon,
   ChartPanelIcon,
@@ -190,7 +190,7 @@ const DetailPageImpl = memo(function DetailPageImpl() {
   const isJournal = !!useLiveData(journalService.journalDate$(doc.id));
 
   const onLoad = useCallback(
-    (editorContainer: AffineEditorContainer) => {
+    (editorContainer: CloudNotesEditorContainer) => {
       const std = editorContainer.std;
       const disposable = new DisposableGroup();
 
@@ -221,7 +221,7 @@ const DetailPageImpl = memo(function DetailPageImpl() {
         const refNodeSlots = std.getOptional(RefNodeSlotsProvider);
         if (refNodeSlots) {
           disposable.add(
-            // the event should not be emitted by AffineReference
+            // the event should not be emitted by CloudNotesReference
             refNodeSlots.docLinkClicked.subscribe(
               ({ pageId, params, openMode, event, host }) => {
                 if (host !== editorContainer.host) {
@@ -335,7 +335,7 @@ const DetailPageImpl = memo(function DetailPageImpl() {
           data-has-scroll-top={hasScrollTop}
         >
           {/* Add a key to force rerender when page changed, to avoid error boundary persisting. */}
-          <AffineErrorBoundary key={doc.id}>
+          <CloudNotesErrorBoundary key={doc.id}>
             <TopTip pageId={doc.id} workspace={workspace} />
             <Scrollable.Root>
               <Scrollable.Viewport
@@ -343,8 +343,8 @@ const DetailPageImpl = memo(function DetailPageImpl() {
                 ref={scrollViewportRef}
                 data-dragging={dragging}
                 className={clsx(
-                  'affine-page-viewport',
-                  styles.affineDocViewport,
+                  'cloud-notes-page-viewport',
+                  styles.cloudNotesDocViewport,
                   styles.editorContainer,
                   { [styles.pageModeViewportContentBox]: mode === 'page' }
                 )}
@@ -362,7 +362,7 @@ const DetailPageImpl = memo(function DetailPageImpl() {
               show={mode === 'page' && !isSideBarOpen}
               openOutlinePanel={openOutlinePanel}
             />
-          </AffineErrorBoundary>
+          </CloudNotesErrorBoundary>
           {isInTrash ? <TrashPageFooter /> : null}
         </div>
       </ViewBody>
@@ -434,7 +434,7 @@ const DetailPageImpl = memo(function DetailPageImpl() {
         </ViewSidebarTab>
       )}
 
-      {workspace.flavour === 'affine-cloud' && enableViewAnalyticsPanel && (
+      {workspace.flavour === 'cloud-notes-cloud' && enableViewAnalyticsPanel && (
         <ViewSidebarTab tabId="analytics" icon={<ChartPanelIcon />}>
           <Scrollable.Root className={styles.sidebarScrollArea}>
             <Scrollable.Viewport>

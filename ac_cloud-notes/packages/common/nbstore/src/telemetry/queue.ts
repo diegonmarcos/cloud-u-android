@@ -22,7 +22,7 @@ export type TelemetryQueueItem = {
 };
 
 export class TelemetryQueue {
-  private readonly dbPromise = openDB<TelemetryQueueDB>('affine-telemetry', 1, {
+  private readonly dbPromise = openDB<TelemetryQueueDB>('cloud-notes-telemetry', 1, {
     upgrade(db) {
       if (!db.objectStoreNames.contains('events')) {
         db.createObjectStore('events', { keyPath: 'id', autoIncrement: true });

@@ -1,9 +1,9 @@
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import { createLitPortal } from '@blocksuite/affine/components/portal';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import type { NotificationService } from '@blocksuite/affine/shared/services';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import { createLitPortal } from '@blocksuite/cloud-notes/components/portal';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { NotificationService } from '@blocksuite/cloud-notes/shared/services';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import {
   HistoryIcon,
   PinedIcon,
@@ -101,7 +101,7 @@ export class AIChatToolbar extends WithDisposable(ShadowlessElement) {
                 data-testid="ai-panel-new-chat"
               >
                 ${PlusIcon()}
-                <affine-tooltip>New Chat</affine-tooltip>
+                <cloud-notes-tooltip>New Chat</cloud-notes-tooltip>
               </div>`
             : null
         }
@@ -113,9 +113,9 @@ export class AIChatToolbar extends WithDisposable(ShadowlessElement) {
           data-testid="ai-panel-pin-chat"
         >
           ${pinned ? PinedIcon() : PinIcon()}
-          <affine-tooltip>
+          <cloud-notes-tooltip>
             ${pinned ? 'Unpin this Chat' : 'Pin this Chat'}
-          </affine-tooltip>
+          </cloud-notes-tooltip>
         </div>
         <div
           class="chat-toolbar-icon history-button"
@@ -123,7 +123,7 @@ export class AIChatToolbar extends WithDisposable(ShadowlessElement) {
           data-testid="ai-panel-chat-history"
         >
           ${HistoryIcon()}
-          <affine-tooltip>Chat History</affine-tooltip>
+          <cloud-notes-tooltip>Chat History</cloud-notes-tooltip>
         </div>
       </div>
     `;
@@ -226,7 +226,7 @@ export class AIChatToolbar extends WithDisposable(ShadowlessElement) {
         ></ai-session-history>
       `,
       portalStyles: {
-        zIndex: 'var(--affine-z-index-popover)',
+        zIndex: 'var(--cloud-notes-z-index-popover)',
       },
       container: document.body,
       computePosition: {

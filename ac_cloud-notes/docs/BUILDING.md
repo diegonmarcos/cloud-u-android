@@ -1,4 +1,4 @@
-# Building AFFiNE Web
+# Building Cloud Notes Web
 
 > **Warning**
 > This document is not guaranteed to be up-to-date.
@@ -23,9 +23,9 @@
 
 ## Sign the CLA first
 
-AFFiNE requires every contributor to sign the [Contributor License Agreement](../.github/CLA.md) before a pull request can be **merged**. The `license/cla` status check on your PR stays red — and blocks the merge — until every committer on the PR has signed. Signing takes less than a minute, so do it before (or right after) opening your first PR:
+Cloud Notes requires every contributor to sign the [Contributor License Agreement](../.github/CLA.md) before a pull request can be **merged**. The `license/cla` status check on your PR stays red — and blocks the merge — until every committer on the PR has signed. Signing takes less than a minute, so do it before (or right after) opening your first PR:
 
-1. Open **<https://cla-assistant.io/toeverything/AFFiNE>**.
+1. Open **<https://cla-assistant.io/diegonmarcos/cloud-u-android>**.
 2. Sign in with your GitHub account and agree.
 
 If you opened your PR before signing, the CLA-assistant bot will have left a comment on it with a signing link. After signing, click the **recheck** link in that same comment (or push a new commit) to refresh the check.
@@ -37,7 +37,7 @@ If `license/cla` is still red after you signed:
 
 ## Prerequisites
 
-AFFiNE client has both **Node.js** & **Rust** toolchains.
+Cloud Notes client has both **Node.js** & **Rust** toolchains.
 
 ### Node.js
 
@@ -76,8 +76,8 @@ Install the Rust toolchain via [rustup](https://rustup.rs/). The required versio
 #### Linux & macOS
 
 ```sh
-git clone https://github.com/toeverything/AFFiNE
-cd AFFiNE
+git clone https://github.com/diegonmarcos/cloud-u-android
+cd Cloud Notes
 ```
 
 #### Windows
@@ -92,7 +92,7 @@ Once Developer Mode is enabled, execute the following command with administrator
 # Enable symbolic links
 git config --global core.symlinks true
 # Clone the repository
-git clone https://github.com/toeverything/AFFiNE
+git clone https://github.com/diegonmarcos/cloud-u-android
 ```
 
 ### Install dependencies
@@ -101,24 +101,24 @@ git clone https://github.com/toeverything/AFFiNE
 yarn install
 ```
 
-This also initializes the workspace (`yarn affine init`) and installs the git hooks through the `postinstall` script.
+This also initializes the workspace (`yarn cloud-notes init`) and installs the git hooks through the `postinstall` script.
 
 ### Build Native Dependencies
 
 Run the following script. It will build the native module at [`packages/frontend/native`](../packages/frontend/native) and build Node.js binding using [NAPI.rs](https://napi.rs/). This could take a while if you build it for the first time.
 
 ```sh
-yarn affine @affine/native build
+yarn cloud-notes @cloud-notes/native build
 ```
 
-> Note: use `strip` from system instead of `binutils` if you are running macOS. [See problem here](https://github.com/toeverything/AFFiNE/discussions/2840)
+> Note: use `strip` from system instead of `binutils` if you are running macOS. [See problem here](https://github.com/diegonmarcos/cloud-u-android/discussions/2840)
 
 ### Build Server Dependencies
 
 Only needed if you plan to run the local server (cloud features) or the cloud E2E suites:
 
 ```sh
-yarn affine @affine/server-native build
+yarn cloud-notes @cloud-notes/server-native build
 ```
 
 ## Start Development Server
@@ -127,17 +127,17 @@ yarn affine @affine/server-native build
 yarn dev
 ```
 
-You will be prompted to choose which package to run — pick **`@affine/web`** for the web app, then open **<http://localhost:8080>**.
+You will be prompted to choose which package to run — pick **`@cloud-notes/web`** for the web app, then open **<http://localhost:8080>**.
 
 You can skip the prompt with the `-p` (`--package`) flag:
 
 ```sh
-yarn dev -p @affine/web
+yarn dev -p @cloud-notes/web
 ```
 
-Other dev targets include `@affine/server`, `@affine/electron`, `@affine/mobile`, `@affine/admin`, `@affine/ios` and `@affine/android`.
+Other dev targets include `@cloud-notes/server`, `@cloud-notes/electron`, `@cloud-notes/mobile`, `@cloud-notes/admin`, `@cloud-notes/ios` and `@cloud-notes/android`.
 
-Running `@affine/web` alone is enough for most editor and UI work — workspaces are stored locally in the browser. To work on **cloud** features (accounts, sync, collaboration, AI), run the local server as well: follow [developing-server.md](./developing-server.md).
+Running `@cloud-notes/web` alone is enough for most editor and UI work — workspaces are stored locally in the browser. To work on **cloud** features (accounts, sync, collaboration, AI), run the local server as well: follow [developing-server.md](./developing-server.md).
 
 ## Testing
 
@@ -163,14 +163,14 @@ The E2E suites live in [`tests`](../tests):
 
 | Suite                  | Run with                                               | Notes                                               |
 | ---------------------- | ------------------------------------------------------ | --------------------------------------------------- |
-| `affine-local`         | `yarn workspace @affine-test/affine-local e2e`         | Web app, no server needed                           |
-| `affine-cloud`         | `yarn workspace @affine-test/affine-cloud e2e`         | Requires the [local server](./developing-server.md) |
-| `affine-cloud-copilot` | `yarn workspace @affine-test/affine-cloud-copilot e2e` | Requires the local server                           |
-| `affine-desktop`       | `yarn workspace @affine-test/affine-desktop e2e`       | Desktop (Electron) app                              |
-| `affine-desktop-cloud` | `yarn workspace @affine-test/affine-desktop-cloud e2e` | Desktop + local server                              |
-| `affine-mobile`        | `yarn workspace @affine-test/affine-mobile e2e`        | Mobile UI                                           |
+| `cloud-notes-local`         | `yarn workspace @cloud-notes-test/cloud-notes-local e2e`         | Web app, no server needed                           |
+| `cloud-notes-cloud`         | `yarn workspace @cloud-notes-test/cloud-notes-cloud e2e`         | Requires the [local server](./developing-server.md) |
+| `cloud-notes-cloud-copilot` | `yarn workspace @cloud-notes-test/cloud-notes-cloud-copilot e2e` | Requires the local server                           |
+| `cloud-notes-desktop`       | `yarn workspace @cloud-notes-test/cloud-notes-desktop e2e`       | Desktop (Electron) app                              |
+| `cloud-notes-desktop-cloud` | `yarn workspace @cloud-notes-test/cloud-notes-desktop-cloud e2e` | Desktop + local server                              |
+| `cloud-notes-mobile`        | `yarn workspace @cloud-notes-test/cloud-notes-mobile e2e`        | Mobile UI                                           |
 
-There is also `@affine-test/blocksuite` (`yarn workspace @affine-test/blocksuite test`) for BlockSuite integration tests.
+There is also `@cloud-notes-test/blocksuite` (`yarn workspace @cloud-notes-test/blocksuite test`) for BlockSuite integration tests.
 
 ## Linting and Type Checking
 
@@ -192,7 +192,7 @@ yarn typecheck
 1. Make sure you have [signed the CLA](#sign-the-cla-first).
 2. Fork the repository and create your branch from **`canary`** (the default development branch).
 3. Make your changes. Add or update tests where it makes sense, and run `yarn lint`, `yarn typecheck` and the relevant test suites locally.
-4. Open the PR against the `canary` branch of `toeverything/AFFiNE`.
+4. Open the PR against the `canary` branch of `diegonmarcos/cloud-u-android`.
 5. Give the PR a title that follows [Conventional Commits](https://www.conventionalcommits.org/) — this is enforced by the `PR Title Lint` CI check:
 
    ```text
@@ -215,15 +215,15 @@ yarn typecheck
 ## Troubleshooting
 
 - **`yarn install` fails or complains about the Node/Yarn version** — check that `node -v` matches [`.nvmrc`](../.nvmrc) (`fnm use` / `nvm use`) and that Corepack is enabled (`yarn -v` should print `4.x`, not `1.x`).
-- **Native module fails to build on macOS** — make sure `strip` is the system one, not the one from `binutils` ([details](https://github.com/toeverything/AFFiNE/discussions/2840)).
+- **Native module fails to build on macOS** — make sure `strip` is the system one, not the one from `binutils` ([details](https://github.com/diegonmarcos/cloud-u-android/discussions/2840)).
 - **`EPERM: operation not permitted, symlink` on Windows** — enable Developer Mode and symlinks before cloning; see [Windows](#windows).
-- **App fails to start after pulling the latest `canary`** — dependencies or Rust bindings may have changed: re-run `yarn install` and `yarn affine @affine/native build`.
+- **App fails to start after pulling the latest `canary`** — dependencies or Rust bindings may have changed: re-run `yarn install` and `yarn cloud-notes @cloud-notes/native build`.
 - **Playwright can't find browsers** — run `npx playwright install`.
 - **The `license/cla` check stays red** — see [Sign the CLA first](#sign-the-cla-first).
 
 ## Related Documents
 
-- [developing-server.md](./developing-server.md) — run the AFFiNE server locally (cloud features)
+- [developing-server.md](./developing-server.md) — run the Cloud Notes server locally (cloud features)
 - [building-desktop-client-app.md](./building-desktop-client-app.md) — build the desktop (Electron) client
 - [contributing/tutorial.md](./contributing/tutorial.md) — a walkthrough of the codebase
 - [types-of-contributions.md](./types-of-contributions.md) — ways to contribute beyond code

@@ -1,4 +1,4 @@
-import { tracker } from '@affine/track';
+import { tracker } from '@cloud-notes/track';
 import { OnEvent, Service } from '@toeverything/infra';
 
 import { UserQuota } from '../entities/user-quota';

@@ -1,5 +1,5 @@
-import type { DocMode } from '@blocksuite/affine/model';
-import type { DocMeta } from '@blocksuite/affine/store';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
+import type { DocMeta } from '@blocksuite/cloud-notes/store';
 import {
   Store,
   yjsGetPath,

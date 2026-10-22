@@ -1,9 +1,9 @@
 import {
   AuthPageContainer,
   type User,
-} from '@affine/component/auth-components';
-import type { GetInviteInfoQuery } from '@affine/graphql';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/auth-components';
+import type { GetInviteInfoQuery } from '@cloud-notes/graphql';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 
 import { Avatar } from '../../ui/avatar';
 import * as styles from './styles.css';
@@ -17,11 +17,11 @@ export const SentRequestPage = ({
   const t = useI18n();
   return (
     <AuthPageContainer
-      title={t['com.affine.sent-request-to-join-workspace.title']()}
+      title={t['com.cloud-notes.sent-request-to-join-workspace.title']()}
       subtitle={
         <div className={styles.lineHeight}>
           <Trans
-            i18nKey="com.affine.sent-request-to-join-workspace.description"
+            i18nKey="com.cloud-notes.sent-request-to-join-workspace.description"
             components={{
               1: (
                 <div className={styles.avatarWrapper}>

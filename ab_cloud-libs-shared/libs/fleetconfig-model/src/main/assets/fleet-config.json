@@ -712,10 +712,10 @@
         "lib-datamanager"
       ]
     },
-    "datastore:affine": {
+    "datastore:cloud-notes": {
       "kind": "datastore",
       "class": "device",
-      "doc": "AFFiNE generic key/value DataStore written by the web layer via a plugin (caches/state, no Kotlin-defined settings); not a curated config.",
+      "doc": "Cloud Notes generic key/value DataStore written by the web layer via a plugin (caches/state, no Kotlin-defined settings); not a curated config.",
       "used_by": [
         "ac_cloud-notes"
       ]
@@ -723,7 +723,7 @@
     "datastore:auth-sessions": {
       "kind": "datastore",
       "class": "secret",
-      "doc": "AFFiNE per-server auth session cookies/tokens.",
+      "doc": "Cloud Notes per-server auth session cookies/tokens.",
       "used_by": [
         "ac_cloud-notes"
       ]
@@ -3226,13 +3226,13 @@
       ],
       "items": [
         {
-          "id": "affine-nbstore",
+          "id": "cloud-notes-nbstore",
           "path": "filesDir/ (NbStorePlugin appStoragePath, per-workspace sqlite)",
           "class": "content",
-          "doc": "AFFiNE local workspace docs; server is source of truth."
+          "doc": "Cloud Notes local workspace docs; server is source of truth."
         },
         {
-          "id": "affine-logs",
+          "id": "cloud-notes-logs",
           "path": "filesDir/logs/<date>.log",
           "class": "device",
           "doc": "Rotating logs."

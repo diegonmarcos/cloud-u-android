@@ -820,8 +820,8 @@ Module `ac_cloud-notes`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, li
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
-| `datastore:affine` | datastore | device | no | AFFiNE generic key/value DataStore written by the web layer via a plugin (caches/state, no Kotlin-defined settings); not a curated config. |
-| `datastore:auth-sessions` | datastore | secret | GAP | AFFiNE per-server auth session cookies/tokens. |
+| `datastore:cloud-notes` | datastore | device | no | Cloud Notes generic key/value DataStore written by the web layer via a plugin (caches/state, no Kotlin-defined settings); not a curated config. |
+| `datastore:auth-sessions` | datastore | secret | GAP | Cloud Notes per-server auth session cookies/tokens. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -829,7 +829,7 @@ Module `ac_cloud-notes`; libs: lib-ai, lib-bottomnav, lib-core, lib-devtools, li
 
 | file | class | doc |
 |---|---|---|
-| `filesDir/ (NbStorePlugin appStoragePath, per-workspace sqlite)` | content | AFFiNE local workspace docs; server is source of truth. |
+| `filesDir/ (NbStorePlugin appStoragePath, per-workspace sqlite)` | content | Cloud Notes local workspace docs; server is source of truth. |
 | `filesDir/logs/<date>.log` | device | Rotating logs. |
 
 Coverage: 2 covered, 1 gaps — datastore:auth-sessions.

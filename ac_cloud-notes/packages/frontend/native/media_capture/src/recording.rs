@@ -484,7 +484,7 @@ fn write_opus_headers(
     .write_packet(opus_head, stream_serial, PacketWriteEndInfo::EndPage, 0)
     .map_err(|e| RecordingError::Encoding(format!("failed to write OpusHead: {e}")))?;
 
-  let vendor = b"AFFiNE Native";
+  let vendor = b"Cloud Notes Native";
   let mut opus_tags = Vec::new();
   opus_tags.extend_from_slice(b"OpusTags");
   opus_tags.extend_from_slice(&(vendor.len() as u32).to_le_bytes());
@@ -982,7 +982,7 @@ mod tests {
   }
 
   fn temp_recording_path() -> PathBuf {
-    env::temp_dir().join(format!("affine-recording-test-{}.opus", rand::random::<u64>()))
+    env::temp_dir().join(format!("cloud-notes-recording-test-{}.opus", rand::random::<u64>()))
   }
 
   #[test]

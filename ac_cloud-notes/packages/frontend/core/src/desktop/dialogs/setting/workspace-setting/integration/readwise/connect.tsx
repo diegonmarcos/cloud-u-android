@@ -4,10 +4,10 @@ import {
   Input,
   Modal,
   notify,
-} from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { IntegrationService } from '@affine/core/modules/integration';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { IntegrationService } from '@cloud-notes/core/modules/integration';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import { ReadwiseLogoDuotoneIcon } from '@blocksuite/icons/rc';
 import { useService } from '@toeverything/infra';
 import clsx from 'clsx';
@@ -73,9 +73,9 @@ const ConnectDialog = ({
         setStatus('error');
         notify.error({
           title:
-            t['com.affine.integration.readwise.connect.error-notify-title'](),
+            t['com.cloud-notes.integration.readwise.connect.error-notify-title'](),
           message:
-            t['com.affine.integration.readwise.connect.error-notify-desc'](),
+            t['com.cloud-notes.integration.readwise.connect.error-notify-desc'](),
         });
       }
     },
@@ -115,11 +115,11 @@ const ConnectDialog = ({
         <IntegrationCardIcon>
           <ReadwiseLogoDuotoneIcon />
         </IntegrationCardIcon>
-        {t['com.affine.integration.readwise.connect.title']()}
+        {t['com.cloud-notes.integration.readwise.connect.title']()}
       </header>
       <div className={connectDesc}>
         <Trans
-          i18nKey={'com.affine.integration.readwise.connect.desc'}
+          i18nKey={'com.cloud-notes.integration.readwise.connect.desc'}
           components={{
             a: (
               <a
@@ -137,7 +137,7 @@ const ConnectDialog = ({
         ref={inputRef}
         value={token}
         onInput={handleInput}
-        placeholder={t['com.affine.integration.readwise.connect.placeholder']()}
+        placeholder={t['com.cloud-notes.integration.readwise.connect.placeholder']()}
         type="password"
         className={connectInput}
         status={status === 'error' ? 'error' : 'default'}
@@ -145,7 +145,7 @@ const ConnectDialog = ({
         autoFocus
       />
       <div className={inputErrorMsg} data-show={status === 'error'}>
-        {t['com.affine.integration.readwise.connect.input-error']()}
+        {t['com.cloud-notes.integration.readwise.connect.input-error']()}
       </div>
       <footer className={connectFooter}>
         <Button disabled={status === 'verifying'} onClick={handleCancel}>
@@ -157,7 +157,7 @@ const ConnectDialog = ({
           loading={status === 'verifying'}
           onClick={() => handleConnect(token)}
         >
-          {t['com.affine.integration.readwise.connect']()}
+          {t['com.cloud-notes.integration.readwise.connect']()}
         </Button>
       </footer>
     </Modal>
@@ -195,7 +195,7 @@ export const ReadwiseConnectButton = ({
         onClick={handleOpen}
         {...buttonProps}
       >
-        {t['com.affine.integration.readwise.connect']()}
+        {t['com.cloud-notes.integration.readwise.connect']()}
       </Button>
     </>
   );

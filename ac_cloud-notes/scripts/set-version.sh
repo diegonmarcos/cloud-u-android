@@ -49,7 +49,7 @@ update_app_stream_version() {
   # version is at
   # <releases>
   #   <release version="0.21.0" date="yyyy-MM-dd">
-  #     <url>https://github.com/toeverything/AFFiNE/releases/tag/v0.21.0</url>
+  #     <url>https://github.com/diegonmarcos/cloud-u-android/releases/tag/v0.21.0</url>
   #   </release>
   # </releases>
   # We need to update the version and the url
@@ -57,7 +57,7 @@ update_app_stream_version() {
 
   # Use sed to update the version, date, and URL in the releases section
   sed -i.bak -E "s|<release version=\"[^\"]*\" date=\"[^\"]*\">|<release version=\"$new_version\" date=\"$current_date\">|" "$file_path" &&
-  sed -i.bak -E "s|<url>https://github.com/toeverything/AFFiNE/releases/tag/v[^<]*</url>|<url>https://github.com/toeverything/AFFiNE/releases/tag/v$new_version</url>|" "$file_path" || {
+  sed -i.bak -E "s|<url>https://github.com/diegonmarcos/cloud-u-android/releases/tag/v[^<]*</url>|<url>https://github.com/diegonmarcos/cloud-u-android/releases/tag/v$new_version</url>|" "$file_path" || {
     # If the sed command fails, print an error message and exit with a non-zero status
     echo "Error: Failed to update the appVersion."
     return 1
@@ -144,10 +144,10 @@ fi
 
 echo "iOS MARKETING_VERSION: $ios_new_version (app version: $new_version)"
 
-update_app_version_in_helm_charts ".github/helm/affine/Chart.yaml" "$new_version"
-update_app_version_in_helm_charts ".github/helm/affine/charts/graphql/Chart.yaml" "$new_version"
-update_app_version_in_helm_charts ".github/helm/affine/charts/front/Chart.yaml" "$new_version"
+update_app_version_in_helm_charts ".github/helm/cloud-notes/Chart.yaml" "$new_version"
+update_app_version_in_helm_charts ".github/helm/cloud-notes/charts/graphql/Chart.yaml" "$new_version"
+update_app_version_in_helm_charts ".github/helm/cloud-notes/charts/front/Chart.yaml" "$new_version"
 
-update_app_stream_version "packages/frontend/apps/electron/resources/affine.metainfo.xml" "$new_version"
+update_app_stream_version "packages/frontend/apps/electron/resources/cloud-notes.metainfo.xml" "$new_version"
 
 update_ios_marketing_version "packages/frontend/apps/ios/App/App.xcodeproj/project.pbxproj" "$ios_new_version"

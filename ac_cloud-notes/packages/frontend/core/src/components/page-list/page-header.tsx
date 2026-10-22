@@ -1,7 +1,7 @@
-import type { CheckboxProps } from '@affine/component';
-import { Checkbox } from '@affine/component';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { useI18n } from '@affine/i18n';
+import type { CheckboxProps } from '@cloud-notes/component';
+import { Checkbox } from '@cloud-notes/component';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import { useI18n } from '@cloud-notes/i18n';
 import { MultiSelectIcon } from '@blocksuite/icons/rc';
 import clsx from 'clsx';
 import { selectAtom } from 'jotai/utils';

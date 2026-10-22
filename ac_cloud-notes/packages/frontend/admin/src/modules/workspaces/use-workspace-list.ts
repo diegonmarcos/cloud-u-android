@@ -1,9 +1,9 @@
-import { useQuery } from '@affine/admin/use-query';
-import type { AdminWorkspaceSort } from '@affine/graphql';
+import { useQuery } from '@cloud-notes/admin/use-query';
+import type { AdminWorkspaceSort } from '@cloud-notes/graphql';
 import {
   adminWorkspacesCountQuery,
   adminWorkspacesQuery,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { useEffect, useMemo, useState } from 'react';
 
 import type { WorkspaceFlagFilter } from './schema';

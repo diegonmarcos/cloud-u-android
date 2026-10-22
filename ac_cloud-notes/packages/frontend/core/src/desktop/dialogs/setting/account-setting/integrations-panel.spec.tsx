@@ -64,7 +64,7 @@ const linkCalDavAccountMutation = vi.hoisted(() =>
   Symbol('linkCalDavAccountMutation')
 );
 
-vi.mock('@affine/component', () => ({
+vi.mock('@cloud-notes/component', () => ({
   Button: ({
     children,
     onClick,
@@ -100,7 +100,7 @@ vi.mock('@affine/component', () => ({
   },
 }));
 
-vi.mock('@affine/core/components/hooks/use-query', () => ({
+vi.mock('@cloud-notes/core/components/hooks/use-query', () => ({
   useQuery: ({ query }: { query: symbol }) => {
     if (query === calendarAccountsQuery) {
       return {
@@ -127,19 +127,19 @@ vi.mock('@affine/core/components/hooks/use-query', () => ({
   },
 }));
 
-vi.mock('@affine/core/modules/cloud', () => ({
+vi.mock('@cloud-notes/core/modules/cloud', () => ({
   GraphQLService: GraphQLServiceToken,
 }));
 
-vi.mock('@affine/core/modules/url', () => ({
+vi.mock('@cloud-notes/core/modules/url', () => ({
   UrlService: UrlServiceToken,
 }));
 
-vi.mock('@affine/core/modules/workspace', () => ({
+vi.mock('@cloud-notes/core/modules/workspace', () => ({
   WorkspaceService: WorkspaceServiceToken,
 }));
 
-vi.mock('@affine/graphql', () => ({
+vi.mock('@cloud-notes/graphql', () => ({
   calendarAccountsQuery,
   calendarProvidersQuery,
   CalendarProviderType,
@@ -148,13 +148,13 @@ vi.mock('@affine/graphql', () => ({
   linkCalDavAccountMutation,
 }));
 
-vi.mock('@affine/i18n', () => ({
+vi.mock('@cloud-notes/i18n', () => ({
   useI18n: () =>
     new Proxy(
       {},
       {
         get: (_, key: string) => (args?: Record<string, string>) => {
-          if (key === 'com.affine.integration.calendar.account.count') {
+          if (key === 'com.cloud-notes.integration.calendar.account.count') {
             return `${args?.count ?? '0'} calendars`;
           }
           return key;

@@ -1,31 +1,31 @@
-import { useThemeColorV2 } from '@affine/component';
-import { PageDetailLoading } from '@affine/component/page-detail-skeleton';
-import type { AffineEditorContainer } from '@affine/core/blocksuite/block-suite-editor';
-import { AffineErrorBoundary } from '@affine/core/components/affine/affine-error-boundary';
-import { useGuard } from '@affine/core/components/guard';
-import { useActiveBlocksuiteEditor } from '@affine/core/components/hooks/use-block-suite-editor';
-import { useNavigateHelper } from '@affine/core/components/hooks/use-navigate-helper';
-import { PageDetailEditor } from '@affine/core/components/page-detail-editor';
-import { DetailPageWrapper } from '@affine/core/desktop/pages/workspace/detail-page/detail-page-wrapper';
-import { PageHeader } from '@affine/core/mobile/components';
-import { AIButtonService } from '@affine/core/modules/ai-button';
-import { ServerService } from '@affine/core/modules/cloud';
-import { DocService } from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { EditorService } from '@affine/core/modules/editor';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { JournalService } from '@affine/core/modules/journal';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { ViewService } from '@affine/core/modules/workbench/services/view';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { i18nTime } from '@affine/i18n';
-import { DisposableGroup } from '@blocksuite/affine/global/disposable';
-import { RefNodeSlotsProvider } from '@blocksuite/affine/inlines/reference';
+import { useThemeColorV2 } from '@cloud-notes/component';
+import { PageDetailLoading } from '@cloud-notes/component/page-detail-skeleton';
+import type { CloudNotesEditorContainer } from '@cloud-notes/core/blocksuite/block-suite-editor';
+import { CloudNotesErrorBoundary } from '@cloud-notes/core/components/cloud-notes/cloud-notes-error-boundary';
+import { useGuard } from '@cloud-notes/core/components/guard';
+import { useActiveBlocksuiteEditor } from '@cloud-notes/core/components/hooks/use-block-suite-editor';
+import { useNavigateHelper } from '@cloud-notes/core/components/hooks/use-navigate-helper';
+import { PageDetailEditor } from '@cloud-notes/core/components/page-detail-editor';
+import { DetailPageWrapper } from '@cloud-notes/core/desktop/pages/workspace/detail-page/detail-page-wrapper';
+import { PageHeader } from '@cloud-notes/core/mobile/components';
+import { AIButtonService } from '@cloud-notes/core/modules/ai-button';
+import { ServerService } from '@cloud-notes/core/modules/cloud';
+import { DocService } from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { ViewService } from '@cloud-notes/core/modules/workbench/services/view';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { i18nTime } from '@cloud-notes/i18n';
+import { DisposableGroup } from '@blocksuite/cloud-notes/global/disposable';
+import { RefNodeSlotsProvider } from '@blocksuite/cloud-notes/inlines/reference';
 import {
   customImageProxyMiddleware,
   ImageProxyService,
-} from '@blocksuite/affine/shared/adapters';
+} from '@blocksuite/cloud-notes/shared/adapters';
 import {
   FrameworkScope,
   useLiveData,
@@ -157,7 +157,7 @@ const DetailPageImpl = ({
   const server = useService(ServerService).server;
 
   const onLoad = useCallback(
-    (editorContainer: AffineEditorContainer) => {
+    (editorContainer: CloudNotesEditorContainer) => {
       // provide image proxy endpoint to blocksuite
       const imageProxyUrl = new URL(
         BUILD_CONFIG.imageProxyUrl,
@@ -224,7 +224,7 @@ const DetailPageImpl = ({
 
   const immersiveViewportStyle = immersiveZoomToolbarBottom
     ? ({
-        '--affine-edgeless-zoom-toolbar-bottom': immersiveZoomToolbarBottom,
+        '--cloud-notes-edgeless-zoom-toolbar-bottom': immersiveZoomToolbarBottom,
       } as CSSProperties)
     : undefined;
 
@@ -237,17 +237,17 @@ const DetailPageImpl = ({
           ref={scrollViewportRef}
           style={immersiveViewportStyle}
           className={clsx(
-            'affine-page-viewport',
-            styles.affineDocViewport,
+            'cloud-notes-page-viewport',
+            styles.cloudNotesDocViewport,
             styles.editorContainer
           )}
           onPointerDown={immersiveTapHandlers?.onPointerDown}
           onPointerUp={immersiveTapHandlers?.onPointerUp}
           onPointerCancel={immersiveTapHandlers?.onPointerCancel}
         >
-          <AffineErrorBoundary key={doc.id} className={styles.errorBoundary}>
+          <CloudNotesErrorBoundary key={doc.id} className={styles.errorBoundary}>
             <PageDetailEditor onLoad={onLoad} readonly={readonly} />
-          </AffineErrorBoundary>
+          </CloudNotesErrorBoundary>
         </div>
       </div>
     </FrameworkScope>

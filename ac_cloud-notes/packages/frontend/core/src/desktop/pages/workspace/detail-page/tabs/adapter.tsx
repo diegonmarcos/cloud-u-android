@@ -1,13 +1,13 @@
-import { ServerService } from '@affine/core/modules/cloud';
-import { AdapterPanel } from '@blocksuite/affine/fragments/adapter-panel';
+import { ServerService } from '@cloud-notes/core/modules/cloud';
+import { AdapterPanel } from '@blocksuite/cloud-notes/fragments/adapter-panel';
 import {
   customImageProxyMiddleware,
   docLinkBaseURLMiddlewareBuilder,
   embedSyncedDocMiddleware,
   titleMiddleware,
-} from '@blocksuite/affine/shared/adapters';
-import type { EditorHost } from '@blocksuite/affine/std';
-import type { TransformerMiddleware } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/shared/adapters';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import type { TransformerMiddleware } from '@blocksuite/cloud-notes/store';
 import { useService } from '@toeverything/infra';
 import { useCallback, useEffect, useRef } from 'react';
 

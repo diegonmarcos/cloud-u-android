@@ -68,8 +68,8 @@ afterEach(() => {
 
 describe('canonicalAuthEndpoint', () => {
   test.each([
-    ['https://AFFINE.PRO/path?query=1', 'https://affine.pro'],
-    ['https://affine.pro:443', 'https://affine.pro'],
+    ['https://notes.diegonmarcos.com/path?query=1', 'https://notes.diegonmarcos.com'],
+    ['https://notes.diegonmarcos.com:443', 'https://notes.diegonmarcos.com'],
     ['http://localhost:80/path', 'http://localhost'],
     ['http://localhost:8080/path', 'http://localhost:8080'],
     ['capacitor://localhost/path', 'capacitor://localhost/path'],

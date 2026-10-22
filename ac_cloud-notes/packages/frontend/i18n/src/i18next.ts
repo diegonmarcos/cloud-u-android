@@ -1,9 +1,9 @@
-import { DebugLogger } from '@affine/debug';
+import { DebugLogger } from '@cloud-notes/debug';
 import type { BackendModule, i18n } from 'i18next';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import type { useAFFiNEI18N } from './i18n.gen';
+import type { useCloudNotesI18N } from './i18n.gen';
 import type { Language } from './resources';
 import { SUPPORTED_LANGUAGES } from './resources';
 
@@ -91,7 +91,7 @@ declare module 'i18next' {
   }
 }
 
-export type I18nFuncs = ReturnType<typeof useAFFiNEI18N>;
+export type I18nFuncs = ReturnType<typeof useCloudNotesI18N>;
 type KnownI18nKey = keyof I18nFuncs;
 
 export type I18nString =
@@ -161,11 +161,11 @@ export function createI18nWrapper(getI18nFn: () => i18n) {
       return false;
     },
   }) as typeof I18nMethod &
-    ReturnType<typeof useAFFiNEI18N> & { [unknownKey: string]: () => string };
+    ReturnType<typeof useCloudNotesI18N> & { [unknownKey: string]: () => string };
 }
 
 /**
- * I18n['com.affine.xxx']({ arg1: 'hello' }) -> '中文 hello'
+ * I18n['com.cloud-notes.xxx']({ arg1: 'hello' }) -> '中文 hello'
  */
 export const I18n = createI18nWrapper(getOrCreateI18n);
 export type I18nInstance = typeof I18n;

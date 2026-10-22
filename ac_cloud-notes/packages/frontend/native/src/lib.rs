@@ -8,7 +8,7 @@ pub mod preview;
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[allow(unused_imports)]
-pub use affine_media_capture::*;
-pub use affine_nbstore::*;
-pub use affine_sqlite_v1::*;
+pub use cloud_notes_media_capture::*;
+pub use cloud_notes_nbstore::*;
+pub use cloud_notes_sqlite_v1::*;
 pub use import::*;

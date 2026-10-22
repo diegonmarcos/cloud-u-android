@@ -1,18 +1,18 @@
-import { notify } from '@affine/component';
+import { notify } from '@cloud-notes/component';
 import {
   generateUrl,
   type UseSharingUrl,
-} from '@affine/core/components/hooks/affine/use-share-url';
-import { ServerService } from '@affine/core/modules/cloud';
-import { EditorService } from '@affine/core/modules/editor';
-import { copyLinkToBlockStdScopeClipboard } from '@affine/core/utils/clipboard';
-import { I18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/core/components/hooks/cloud-notes/use-share-url';
+import { ServerService } from '@cloud-notes/core/modules/cloud';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import { copyLinkToBlockStdScopeClipboard } from '@cloud-notes/core/utils/clipboard';
+import { I18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import {
   menu,
   type MenuOptions,
-} from '@blocksuite/affine/components/context-menu';
-import type { DatabaseBlockModel } from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/components/context-menu';
+import type { DatabaseBlockModel } from '@blocksuite/cloud-notes/model';
 import { LinkIcon } from '@blocksuite/icons/lit';
 import type { FrameworkProvider } from '@toeverything/infra';
 

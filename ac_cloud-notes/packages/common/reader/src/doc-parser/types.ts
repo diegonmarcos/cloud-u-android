@@ -1,4 +1,4 @@
-import { type CellDataType } from '@blocksuite/affine/model';
+import { type CellDataType } from '@blocksuite/cloud-notes/model';
 import { type Doc as YDoc, type Map as YMap } from 'yjs';
 
 export interface WorkspacePage {

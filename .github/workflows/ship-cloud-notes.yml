@@ -1,13 +1,13 @@
 name: "Ship → Cloud Notes APK (build + publish to GHCR)"
 
-# Independent per-app workflow for Cloud Notes (a full vendored clone of
-# toeverything/AFFiNE at cfda4858d550c46ec1cd0b574801d7becdd6625b, de-clouded).
+# Independent per-app workflow for Cloud Notes (owned code, de-clouded; the base
+# revision it was cloned from is pinned in ac_cloud-notes/build.json).
 # ENGINE: 1_cicd/src/scripts/cloud-notes-engine.sh (vendored byte-identical as
 # ac_cloud-notes/build.sh; parity enforced by the workflow generator).
 #
 # Modelled on ship-cloud-chat.yml (the fleet's Node-webapp → Android-APK
 # route: setup-node@v4, JDK, Android SDK+NDK, oras, vault checkout). The
-# version numbers are AFFiNE's own pinned toolchain, NOT chat's (chat is
+# version numbers are the upstream's own pinned toolchain, NOT chat's (chat is
 # React Native, this is rspack + Capacitor + Rust + Gradle):
 #   node 22.23.2  (.nvmrc; engines >=22.12.0 <23.0.0 — node 20 would fail
 #                  yarn install, which is why this deviates from chat's 20)
@@ -23,8 +23,8 @@ name: "Ship → Cloud Notes APK (build + publish to GHCR)"
 # gates the whole repo on every push.
 #
 # Single universal APK, arm64-v8a (the owner's phone; Markor was also a single
-# APK). No ABI matrix — AFFiNE's rust plugin builds one target via
-# AFFINE_ANDROID_NATIVE_TARGET and duplicating it doubles a 40+ min build.
+# APK). No ABI matrix — Cloud Notes's rust plugin builds one target via
+# CLOUD_NOTES_ANDROID_NATIVE_TARGET and duplicating it doubles a 40+ min build.
 
 on:
   workflow_dispatch: {}
@@ -112,7 +112,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node 22.23.2 (AFFiNE engines >=22.12.0 <23.0.0)
+      - name: Set up Node 22.23.2 (engines >=22.12.0 <23.0.0)
         uses: actions/setup-node@v4
         with:
           node-version: "22.23.2"
@@ -124,7 +124,7 @@ jobs:
       - name: Web bundle (rspack)
         working-directory: ac_cloud-notes
         run: |
-          yarn affine @affine/web build
+          yarn cloud-notes @cloud-notes/web build
           test -s packages/frontend/apps/web/dist/index.html || { echo "::error::the web build produced no index.html"; exit 1; }
           du -sh packages/frontend/apps/web/dist
 
@@ -247,7 +247,7 @@ jobs:
         run: yarn install --immutable
 
       - name: data-view unit specs
-        working-directory: ac_cloud-notes/blocksuite/affine/data-view
+        working-directory: ac_cloud-notes/blocksuite/cloud-notes/data-view
         run: |
           NO_COLOR=1 yarn vitest run 2>&1 | tee /tmp/dv.log
           sed 's/\x1b\[[0-9;]*m//g' /tmp/dv.log > /tmp/dv.plain
@@ -255,7 +255,7 @@ jobs:
           grep -q "gallery.unit.spec" /tmp/dv.plain || { echo "::error::the gallery spec did not run"; exit 1; }
 
       - name: database relations, rollups and synced blocks over real blocks
-        working-directory: ac_cloud-notes/blocksuite/affine/all
+        working-directory: ac_cloud-notes/blocksuite/cloud-notes/all
         run: |
           NO_COLOR=1 yarn vitest run src/__tests__/database src/__tests__/synced-block src/__tests__/connector-anchors src/__tests__/portal src/__tests__/synced-actions 2>&1 | tee /tmp/rel.log
           sed 's/\x1b\[[0-9;]*m//g' /tmp/rel.log > /tmp/rel.plain
@@ -267,7 +267,7 @@ jobs:
           grep -q "synced-actions.unit.spec" /tmp/rel.plain || { echo "::error::the synced-actions spec did not run"; exit 1; }
 
       - name: surface unit specs (frames to PDF deck)
-        working-directory: ac_cloud-notes/blocksuite/affine/blocks/surface
+        working-directory: ac_cloud-notes/blocksuite/cloud-notes/blocks/surface
         run: |
           NO_COLOR=1 yarn vitest run 2>&1 | tee /tmp/surface.log
           sed 's/\x1b\[[0-9;]*m//g' /tmp/surface.log > /tmp/surface.plain
@@ -283,7 +283,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
-      AFFINE_ANDROID_NATIVE_TARGET: arm64
+      CLOUD_NOTES_ANDROID_NATIVE_TARGET: arm64
 
     steps:
       - name: Checkout
@@ -310,7 +310,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "arm64-v8a"
 
-      - name: Set up JDK 21 (AFFiNE Gradle 8.14 / Kotlin 2.2 / Java-21 target)
+      - name: Set up JDK 21 (Gradle 8.14 / Kotlin 2.2 / Java-21 target)
         if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
@@ -318,7 +318,7 @@ jobs:
           java-version: "21"
           cache: gradle
 
-      - name: Set up Node 22.23.2 (AFFiNE engines >=22.12.0 <23.0.0)
+      - name: Set up Node 22.23.2 (engines >=22.12.0 <23.0.0)
         if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-node@v4
         with:
@@ -358,7 +358,7 @@ jobs:
 
       # The vendored tree IS the fork: materialize is a no-op (the engine says
       # so, loudly, instead of cloning upstream into a fresh directory).
-      - name: Build AFFiNE APK (yarn bundle → cap sync → gradle + rust → shared-key sign)
+      - name: Build Cloud Notes APK (yarn bundle → cap sync → gradle + rust → shared-key sign)
         id: build
         if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ env.WORK_DIR }}

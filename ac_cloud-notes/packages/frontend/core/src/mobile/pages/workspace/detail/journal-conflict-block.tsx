@@ -1,9 +1,9 @@
-import { IconButton, Menu } from '@affine/component';
-import { type DocRecord, DocsService } from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { JournalService } from '@affine/core/modules/journal';
-import { WorkbenchLink } from '@affine/core/modules/workbench';
-import { useI18n } from '@affine/i18n';
+import { IconButton, Menu } from '@cloud-notes/component';
+import { type DocRecord, DocsService } from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { WorkbenchLink } from '@cloud-notes/core/modules/workbench';
+import { useI18n } from '@cloud-notes/i18n';
 import { EditIcon, TodayIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useMemo } from 'react';
@@ -40,7 +40,7 @@ const JournalConflictList = ({ docRecords }: { docRecords: DocRecord[] }) => {
     <>
       <div className={styles.body}>
         <div className={styles.header}>
-          {t['com.affine.editor.journal-conflict.title']()}
+          {t['com.cloud-notes.editor.journal-conflict.title']()}
         </div>
         {docRecords.map(docRecord => (
           <ConflictItem docRecord={docRecord} key={docRecord.id} />
@@ -63,7 +63,7 @@ const ConflictItem = ({ docRecord }: { docRecord: DocRecord }) => {
       <div className={styles.content}>
         <div className={styles.title}>{title}</div>
         <div className={styles.duplicatedTag}>
-          {i18n['com.affine.page-properties.property.journal-duplicated']()}
+          {i18n['com.cloud-notes.page-properties.property.journal-duplicated']()}
         </div>
       </div>
       <Menu items={<ResolveConflictOperations docRecord={docRecord} />}>

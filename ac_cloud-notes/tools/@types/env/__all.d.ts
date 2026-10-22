@@ -1,7 +1,7 @@
-import '@affine/env/constant';
-import '@blocksuite/affine/global/types'
+import '@cloud-notes/env/constant';
+import '@blocksuite/cloud-notes/global/types'
 
-declare module '@blocksuite/affine/store' {
+declare module '@blocksuite/cloud-notes/store' {
   interface DocMeta {
     /**
      * @deprecated
@@ -44,7 +44,7 @@ declare type Environment = {
     env: Record<string, string>;
   };
   var environment: Environment;
-  var $AFFINE_SETUP: boolean | undefined;
+  var $CLOUD_NOTES_SETUP: boolean | undefined;
   /**
    * Inject by https://www.npmjs.com/package/@sentry/webpack-plugin
    */

@@ -27,7 +27,7 @@ const contentOptions: Dialog.DialogContentProps = {
     if (
       el.closest('[data-peek-view-wrapper]') ||
       // workaround for slash menu click outside issue
-      el.closest('affine-slash-menu')
+      el.closest('cloud-notes-slash-menu')
     ) {
       e.preventDefault();
     }

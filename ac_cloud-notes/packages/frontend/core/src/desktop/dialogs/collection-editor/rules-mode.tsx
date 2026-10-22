@@ -4,19 +4,19 @@ import {
   Masonry,
   type MasonryGroup,
   Tooltip,
-} from '@affine/component';
+} from '@cloud-notes/component';
 import {
   createDocExplorerContext,
   DocExplorerContext,
-} from '@affine/core/components/explorer/context';
-import { DocListItemComponent } from '@affine/core/components/explorer/docs-view/docs-list';
-import { Filters } from '@affine/core/components/filter';
-import { AffineShapeIcon } from '@affine/core/components/page-list';
-import type { CollectionInfo } from '@affine/core/modules/collection';
-import { CollectionRulesService } from '@affine/core/modules/collection-rules';
-import { DocsService } from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/components/explorer/context';
+import { DocListItemComponent } from '@cloud-notes/core/components/explorer/docs-view/docs-list';
+import { Filters } from '@cloud-notes/core/components/filter';
+import { CloudNotesShapeIcon } from '@cloud-notes/core/components/page-list';
+import type { CollectionInfo } from '@cloud-notes/core/modules/collection';
+import { CollectionRulesService } from '@cloud-notes/core/modules/collection-rules';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import {
   CloseIcon,
   EdgelessIcon,
@@ -125,7 +125,7 @@ export const RulesMode = ({
           height: 30,
           children: (
             <div className={styles.includeListTitle}>
-              {t['com.affine.editCollection.rules.include.title']()}
+              {t['com.cloud-notes.editCollection.rules.include.title']()}
             </div>
           ),
           className: styles.includeListGroup,
@@ -148,9 +148,9 @@ export const RulesMode = ({
   const tips = useMemo(
     () => (
       <Trans
-        i18nKey="com.affine.editCollection.rules.tips"
+        i18nKey="com.cloud-notes.editCollection.rules.tips"
         values={{
-          highlight: t['com.affine.editCollection.rules.tips.highlight'](),
+          highlight: t['com.cloud-notes.editCollection.rules.tips.highlight'](),
         }}
         components={{
           2: <span className={styles.rulesTitleHighlight} />,
@@ -202,7 +202,7 @@ export const RulesMode = ({
                       icon={<ToggleRightIcon />}
                     />
                     <div style={{ color: cssVar('textSecondaryColor') }}>
-                      {t['com.affine.editCollection.rules.include.title']()}
+                      {t['com.cloud-notes.editCollection.rules.include.title']()}
                     </div>
                   </div>
                 ) : null}
@@ -231,11 +231,11 @@ export const RulesMode = ({
                               <PageIcon style={{ width: 16, height: 16 }} />
                             )}
                             {t[
-                              'com.affine.editCollection.rules.include.page'
+                              'com.cloud-notes.editCollection.rules.include.page'
                             ]()}
                           </div>
                           <div className={styles.includeItemContentIs}>
-                            {t['com.affine.editCollection.rules.include.is']()}
+                            {t['com.cloud-notes.editCollection.rules.include.is']()}
                           </div>
                           <DocTitle id={id} />
                         </div>
@@ -280,14 +280,14 @@ export const RulesMode = ({
               setShowPreview(!showPreview);
             }}
           >
-            {t['com.affine.editCollection.rules.preview']()}
+            {t['com.cloud-notes.editCollection.rules.preview']()}
           </Button>
           <Button variant="plain" onClick={reset}>
-            {t['com.affine.editCollection.rules.reset']()}
+            {t['com.cloud-notes.editCollection.rules.reset']()}
           </Button>
           <div className={styles.previewCountTips}>
             <Trans
-              i18nKey="com.affine.editCollection.rules.countTips"
+              i18nKey="com.cloud-notes.editCollection.rules.countTips"
               values={{
                 selectedCount: collection.allowList.length,
                 filteredCount: rulesPageIds.length,
@@ -327,11 +327,11 @@ const RulesEmpty = ({
         padding: '48px 0',
       }}
     >
-      <AffineShapeIcon />
+      <CloudNotesShapeIcon />
       <strong style={{ fontSize: 20, lineHeight: '28px' }}>
         {noRules
-          ? t['com.affine.editCollection.rules.empty.noRules']()
-          : t['com.affine.editCollection.rules.empty.noResults']()}
+          ? t['com.cloud-notes.editCollection.rules.empty.noRules']()
+          : t['com.cloud-notes.editCollection.rules.empty.noResults']()}
       </strong>
       <div
         style={{
@@ -342,12 +342,12 @@ const RulesEmpty = ({
         }}
       >
         {noRules ? (
-          <Trans i18nKey="com.affine.editCollection.rules.empty.noRules.tips">
+          <Trans i18nKey="com.cloud-notes.editCollection.rules.empty.noRules.tips">
             Please <strong>add rules</strong> to save this collection or switch
             to <strong>Pages</strong>, use manual selection mode
           </Trans>
         ) : (
-          t['com.affine.editCollection.rules.empty.noResults.tips']()
+          t['com.cloud-notes.editCollection.rules.empty.noResults.tips']()
         )}
       </div>
     </div>

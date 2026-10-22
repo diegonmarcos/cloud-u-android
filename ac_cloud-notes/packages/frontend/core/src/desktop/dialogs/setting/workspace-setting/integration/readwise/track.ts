@@ -1,4 +1,4 @@
-import track from '@affine/track';
+import track from '@cloud-notes/track';
 
 /**
  * Wrap the track function to add default properties to the first argument

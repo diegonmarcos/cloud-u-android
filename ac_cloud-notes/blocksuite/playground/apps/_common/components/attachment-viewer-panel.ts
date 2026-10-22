@@ -1,7 +1,7 @@
-import { getAttachmentFileIcon } from '@blocksuite/affine/components/icons';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import type { AttachmentBlockModel } from '@blocksuite/affine-model';
-import { formatSize } from '@blocksuite/affine-shared/utils';
+import { getAttachmentFileIcon } from '@blocksuite/cloud-notes/components/icons';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { AttachmentBlockModel } from '@blocksuite/cloud-notes-model';
+import { formatSize } from '@blocksuite/cloud-notes-shared/utils';
 import {
   ArrowDownBigIcon,
   ArrowUpBigIcon,
@@ -32,10 +32,10 @@ export class AttachmentViewerPanel extends SignalWatcher(
       dialog {
         padding: 0;
         top: 50px;
-        border: 1px solid var(--affine-border-color);
+        border: 1px solid var(--cloud-notes-border-color);
         border-radius: 8px;
-        background: var(--affine-v2-dialog-background-primary);
-        box-shadow: var(--affine-overlay-shadow);
+        background: var(--cloud-notes-v2-dialog-background-primary);
+        box-shadow: var(--cloud-notes-overlay-shadow);
         outline: none;
       }
 
@@ -70,7 +70,7 @@ export class AttachmentViewerPanel extends SignalWatcher(
           justify-content: space-between;
           align-items: center;
           font-size: 12px;
-          color: var(--affine-text-secondary-color);
+          color: var(--cloud-notes-text-secondary-color);
         }
 
         h5 {

@@ -1,8 +1,8 @@
-import { type Doc, DocsService } from '@affine/core/modules/doc';
-import type { Editor } from '@affine/core/modules/editor';
-import { EditorsService } from '@affine/core/modules/editor';
-import { ViewService } from '@affine/core/modules/workbench/services/view';
-import { WorkspaceService } from '@affine/core/modules/workspace';
+import { type Doc, DocsService } from '@cloud-notes/core/modules/doc';
+import type { Editor } from '@cloud-notes/core/modules/editor';
+import { EditorsService } from '@cloud-notes/core/modules/editor';
+import { ViewService } from '@cloud-notes/core/modules/workbench/services/view';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
 import { FrameworkScope, useLiveData, useService } from '@toeverything/infra';
 import {
   type PropsWithChildren,

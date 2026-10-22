@@ -27,7 +27,7 @@ web = rd('packages/frontend/apps/web/package.json')
 
 check('COPY packages/frontend/apps/web/dist/' in docker, 'the image copies the web app\'s dist')
 check('COPY deploy/web/nginx.conf' in docker, 'the image copies its nginx.conf')
-check('"build": "affine bundle"' in web, 'the web app builds with `affine bundle` (what the workflow runs)')
+check('"build": "cloud-notes bundle"' in web, 'the web app builds with `cloud-notes bundle` (what the workflow runs)')
 check('try_files $uri $uri/ /index.html' in conf, 'nginx falls back to the app shell for router paths')
 check('location = /healthz' in conf and 'return 200' in conf, 'nginx answers a healthcheck path')
 check(re.search(r'location = /index\.html \{[^}]*no-store', conf) is not None, 'the app shell is never cached')
@@ -36,7 +36,7 @@ check('immutable' in conf, 'hashed assets are cached')
 job = wf[wf.index('  web_image:'):] if '  web_image:' in wf else ''
 job = job.split('\n  build_and_publish:')[0] if '\n  build_and_publish:' in job else job
 check(bool(job), 'ship-cloud-notes.yml declares the web_image job')
-check('yarn affine @affine/web build' in job, 'the job builds the web bundle')
+check('yarn cloud-notes @cloud-notes/web build' in job, 'the job builds the web bundle')
 check('docker build' in job and 'deploy/web/Dockerfile' in job, 'the job builds the image from deploy/web/Dockerfile')
 i_smoke = job.find('/healthz'); i_push = job.find('uses: ./.github/actions/publish-ghcr')
 check(i_smoke != -1 and i_push != -1 and i_smoke < i_push, 'the smoke test (healthz) runs BEFORE the push')

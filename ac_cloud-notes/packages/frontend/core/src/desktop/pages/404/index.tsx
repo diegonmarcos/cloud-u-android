@@ -1,9 +1,9 @@
 import {
   NoPermissionOrNotFound,
   NotFoundPage,
-} from '@affine/component/not-found-page';
-import { useSignOut } from '@affine/core/components/hooks/affine/use-sign-out';
-import { DesktopApiService } from '@affine/core/modules/desktop-api';
+} from '@cloud-notes/component/not-found-page';
+import { useSignOut } from '@cloud-notes/core/components/hooks/cloud-notes/use-sign-out';
+import { DesktopApiService } from '@cloud-notes/core/modules/desktop-api';
 import {
   FrameworkScope,
   useLiveData,

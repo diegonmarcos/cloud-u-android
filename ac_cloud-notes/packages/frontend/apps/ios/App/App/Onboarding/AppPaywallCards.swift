@@ -1,5 +1,5 @@
-import AffinePaywall
-import AffineResources
+import CloudNotesPaywall
+import CloudNotesResources
 import SwiftUI
 
 struct AppPaywallCard: View {
@@ -33,7 +33,7 @@ struct AppPaywallCard: View {
         .fixedSize(horizontal: false, vertical: true)
 
       Divider()
-        .overlay(AffineColors.layerBorder.color)
+        .overlay(CloudNotesColors.layerBorder.color)
 
       VStack(alignment: .leading, spacing: layout.featureSpacing) {
         ForEach(plan.features, id: \.self) { feature in
@@ -65,7 +65,7 @@ private struct AppPaywallFeatureRow: View {
     HStack(alignment: .top, spacing: 10) {
       Image(systemName: "checkmark.circle.fill")
         .font(.system(size: fontSize, weight: .semibold))
-        .foregroundStyle(AffineColors.buttonPrimary.color)
+        .foregroundStyle(CloudNotesColors.buttonPrimary.color)
         .padding(.top, 1)
 
       Text(LocalizedStringKey(text))

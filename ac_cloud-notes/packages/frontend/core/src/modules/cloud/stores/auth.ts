@@ -5,8 +5,8 @@ import {
   ServerDeploymentType,
   updateUserProfileMutation,
   uploadAvatarMutation,
-} from '@affine/graphql';
-import type { CurrentUserProfileSnapshot } from '@affine/realtime';
+} from '@cloud-notes/graphql';
+import type { CurrentUserProfileSnapshot } from '@cloud-notes/realtime';
 import { Store } from '@toeverything/infra';
 import { z } from 'zod';
 

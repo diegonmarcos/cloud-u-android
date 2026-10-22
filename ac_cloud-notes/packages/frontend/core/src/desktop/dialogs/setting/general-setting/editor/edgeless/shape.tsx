@@ -4,15 +4,15 @@ import {
   RadioGroup,
   type RadioItem,
   Slider,
-} from '@affine/component';
-import { SettingRow } from '@affine/component/setting-components';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   EdgelessCRUDIdentifier,
   getSurfaceBlock,
-} from '@blocksuite/affine/blocks/surface';
-import type { ShapeElementModel, ShapeName } from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/blocks/surface';
+import type { ShapeElementModel, ShapeName } from '@blocksuite/cloud-notes/model';
 import {
   DefaultTheme,
   FontFamily,
@@ -24,9 +24,9 @@ import {
   ShapeType,
   StrokeStyle,
   TextAlign,
-} from '@blocksuite/affine/model';
-import type { EditorHost } from '@blocksuite/affine/std';
-import type { Store } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/model';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useFramework, useLiveData } from '@toeverything/infra';
 import { isEqual } from 'lodash-es';
 import { useCallback, useMemo, useState } from 'react';
@@ -82,12 +82,12 @@ export const ShapeSettings = () => {
     () => [
       {
         value: ShapeStyle.General,
-        label: t['com.affine.settings.editorSettings.edgeless.style.general'](),
+        label: t['com.cloud-notes.settings.editorSettings.edgeless.style.general'](),
       },
       {
         value: ShapeStyle.Scribbled,
         label:
-          t['com.affine.settings.editorSettings.edgeless.style.scribbled'](),
+          t['com.cloud-notes.settings.editorSettings.edgeless.style.scribbled'](),
       },
     ],
     [t]
@@ -108,17 +108,17 @@ export const ShapeSettings = () => {
       {
         value: StrokeStyle.Solid,
         label:
-          t['com.affine.settings.editorSettings.edgeless.note.border.solid'](),
+          t['com.cloud-notes.settings.editorSettings.edgeless.note.border.solid'](),
       },
       {
         value: StrokeStyle.Dash,
         label:
-          t['com.affine.settings.editorSettings.edgeless.note.border.dash'](),
+          t['com.cloud-notes.settings.editorSettings.edgeless.note.border.dash'](),
       },
       {
         value: StrokeStyle.None,
         label:
-          t['com.affine.settings.editorSettings.edgeless.note.border.none'](),
+          t['com.cloud-notes.settings.editorSettings.edgeless.note.border.none'](),
       },
     ],
     [t]
@@ -140,21 +140,21 @@ export const ShapeSettings = () => {
         value: TextAlign.Left,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.text.alignment.left'
+            'com.cloud-notes.settings.editorSettings.edgeless.text.alignment.left'
           ](),
       },
       {
         value: TextAlign.Center,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.text.alignment.center'
+            'com.cloud-notes.settings.editorSettings.edgeless.text.alignment.center'
           ](),
       },
       {
         value: TextAlign.Right,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.text.alignment.right'
+            'com.cloud-notes.settings.editorSettings.edgeless.text.alignment.right'
           ](),
       },
     ],
@@ -175,26 +175,26 @@ export const ShapeSettings = () => {
     () => [
       {
         value: ShapeType.Rect,
-        label: t['com.affine.settings.editorSettings.edgeless.shape.square'](),
+        label: t['com.cloud-notes.settings.editorSettings.edgeless.shape.square'](),
       },
       {
         value: ShapeType.Ellipse,
-        label: t['com.affine.settings.editorSettings.edgeless.shape.ellipse'](),
+        label: t['com.cloud-notes.settings.editorSettings.edgeless.shape.ellipse'](),
       },
       {
         value: ShapeType.Diamond,
-        label: t['com.affine.settings.editorSettings.edgeless.shape.diamond'](),
+        label: t['com.cloud-notes.settings.editorSettings.edgeless.shape.diamond'](),
       },
       {
         value: ShapeType.Triangle,
         label:
-          t['com.affine.settings.editorSettings.edgeless.shape.triangle'](),
+          t['com.cloud-notes.settings.editorSettings.edgeless.shape.triangle'](),
       },
       {
         value: 'roundedRect',
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.shape.rounded-rectangle'
+            'com.cloud-notes.settings.editorSettings.edgeless.shape.rounded-rectangle'
           ](),
       },
     ],
@@ -205,11 +205,11 @@ export const ShapeSettings = () => {
     () => [
       {
         value: 'shape',
-        label: t['com.affine.settings.editorSettings.edgeless.shape.list'](),
+        label: t['com.cloud-notes.settings.editorSettings.edgeless.shape.list'](),
       },
       {
         value: 'flow',
-        label: t['com.affine.settings.editorSettings.edgeless.shape.flow'](),
+        label: t['com.cloud-notes.settings.editorSettings.edgeless.shape.flow'](),
       },
     ],
     [t]
@@ -398,7 +398,7 @@ export const ShapeSettings = () => {
     <>
       <EdgelessSnapshot
         key={currentDoc}
-        title={t['com.affine.settings.editorSettings.edgeless.shape']()}
+        title={t['com.cloud-notes.settings.editorSettings.edgeless.shape']()}
         docName={currentDoc}
         keyName={`shape:${currentShape}`}
         height={height}
@@ -430,7 +430,7 @@ export const ShapeSettings = () => {
         indicatorClassName={shapeIndicator}
       />
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.style']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.style']()}
         desc={''}
       >
         <RadioGroup
@@ -443,7 +443,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.shape.fill-color'
+          'com.cloud-notes.settings.editorSettings.edgeless.shape.fill-color'
         ]()}
         desc={''}
       >
@@ -463,7 +463,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.shape.border-color'
+          'com.cloud-notes.settings.editorSettings.edgeless.shape.border-color'
         ]()}
         desc={''}
       >
@@ -483,7 +483,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.shape.border-style'
+          'com.cloud-notes.settings.editorSettings.edgeless.shape.border-style'
         ]()}
         desc={''}
       >
@@ -497,7 +497,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.shape.border-thickness'
+          'com.cloud-notes.settings.editorSettings.edgeless.shape.border-thickness'
         ]()}
         desc={''}
       >
@@ -513,7 +513,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.shape.text-color'
+          'com.cloud-notes.settings.editorSettings.edgeless.shape.text-color'
         ]()}
         desc={''}
       >
@@ -533,7 +533,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.text.font-family'
+          'com.cloud-notes.settings.editorSettings.edgeless.text.font-family'
         ]()}
         desc={''}
       >
@@ -548,7 +548,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.shape.font-size'
+          'com.cloud-notes.settings.editorSettings.edgeless.shape.font-size'
         ]()}
         desc={''}
       >
@@ -563,7 +563,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.text.font-style'
+          'com.cloud-notes.settings.editorSettings.edgeless.text.font-style'
         ]()}
         desc={''}
       >
@@ -578,7 +578,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.text.font-weight'
+          'com.cloud-notes.settings.editorSettings.edgeless.text.font-weight'
         ]()}
         desc={''}
       >
@@ -593,7 +593,7 @@ export const ShapeSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.shape.text-alignment'
+          'com.cloud-notes.settings.editorSettings.edgeless.shape.text-alignment'
         ]()}
         desc={''}
       >

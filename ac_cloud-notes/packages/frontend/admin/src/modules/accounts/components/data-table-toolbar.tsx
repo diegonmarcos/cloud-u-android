@@ -1,6 +1,6 @@
-import { Button } from '@affine/admin/components/ui/button';
-import { Input } from '@affine/admin/components/ui/input';
-import type { FeatureType } from '@affine/graphql';
+import { Button } from '@cloud-notes/admin/components/ui/button';
+import { Input } from '@cloud-notes/admin/components/ui/input';
+import type { FeatureType } from '@cloud-notes/graphql';
 import { ExportIcon, ImportIcon, PlusIcon } from '@blocksuite/icons/rc';
 import type { Table } from '@tanstack/react-table';
 import {

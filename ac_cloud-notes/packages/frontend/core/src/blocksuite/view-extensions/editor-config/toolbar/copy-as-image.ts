@@ -1,23 +1,23 @@
-import { notify } from '@affine/component';
-import { isMindmapChild, isMindMapRoot } from '@affine/core/blocksuite/ai';
-import { EditorService } from '@affine/core/modules/editor';
-import { apis } from '@affine/electron-api';
-import { I18n } from '@affine/i18n';
-import type { MenuContext } from '@blocksuite/affine/components/toolbar';
-import { Bound, getCommonBound } from '@blocksuite/affine/global/gfx';
-import type { BlockStdScope } from '@blocksuite/affine/std';
+import { notify } from '@cloud-notes/component';
+import { isMindmapChild, isMindMapRoot } from '@cloud-notes/core/blocksuite/ai';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import { apis } from '@cloud-notes/electron-api';
+import { I18n } from '@cloud-notes/i18n';
+import type { MenuContext } from '@blocksuite/cloud-notes/components/toolbar';
+import { Bound, getCommonBound } from '@blocksuite/cloud-notes/global/gfx';
+import type { BlockStdScope } from '@blocksuite/cloud-notes/std';
 import {
   type GfxBlockElementModel,
   GfxControllerIdentifier,
   type GfxModel,
   GfxPrimitiveElementModel,
   isGfxGroupCompatibleModel,
-} from '@blocksuite/affine/std/gfx';
+} from '@blocksuite/cloud-notes/std/gfx';
 import { CopyAsImgaeIcon } from '@blocksuite/icons/lit';
 import type { FrameworkProvider } from '@toeverything/infra';
 
 const snapshotStyle = `
-  affine-edgeless-root .widgets-container,
+  cloud-notes-edgeless-root .widgets-container,
   .copy-as-image-transparent {
     opacity: 0;
   }
@@ -29,7 +29,7 @@ const snapshotStyle = `
 function getSelectedRect() {
   const selected = document
     .querySelector('edgeless-selected-rect')
-    ?.shadowRoot?.querySelector('.affine-edgeless-selected-rect');
+    ?.shadowRoot?.querySelector('.cloud-notes-edgeless-selected-rect');
   if (!selected) {
     throw new Error('Missing edgeless selected rect');
   }
@@ -107,14 +107,14 @@ const MARGIN = 20;
 export function copyAsImage(std: BlockStdScope) {
   if (!apis) {
     notify.error({
-      title: I18n.t('com.affine.copy.asImage.notAvailable.title'),
-      message: I18n.t('com.affine.copy.asImage.notAvailable.message'),
+      title: I18n.t('com.cloud-notes.copy.asImage.notAvailable.title'),
+      message: I18n.t('com.cloud-notes.copy.asImage.notAvailable.message'),
       actions: [
         {
           key: 'download',
-          label: I18n.t('com.affine.copy.asImage.notAvailable.action'),
+          label: I18n.t('com.cloud-notes.copy.asImage.notAvailable.action'),
           onClick: () => {
-            window.open('https://affine.pro/download');
+            window.open('https://notes.diegonmarcos.com/download');
           },
         },
       ],
@@ -192,12 +192,12 @@ export function copyAsImage(std: BlockStdScope) {
         })
         .then(() => {
           notify.success({
-            title: I18n.t('com.affine.copy.asImage.success'),
+            title: I18n.t('com.cloud-notes.copy.asImage.success'),
           });
         })
         .catch(e => {
           notify.error({
-            title: I18n.t('com.affine.copy.asImage.failed'),
+            title: I18n.t('com.cloud-notes.copy.asImage.failed'),
             message: String(e),
           });
         })
@@ -209,7 +209,7 @@ export function copyAsImage(std: BlockStdScope) {
       styleEle.remove();
       showEdgelessElements(overlapElements, std);
       notify.error({
-        title: I18n.t('com.affine.copy.asImage.failed'),
+        title: I18n.t('com.cloud-notes.copy.asImage.failed'),
         message: String(e),
       });
     }

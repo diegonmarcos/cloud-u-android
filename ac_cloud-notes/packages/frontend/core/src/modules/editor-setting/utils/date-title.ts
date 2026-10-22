@@ -1,4 +1,4 @@
-import { i18nTime } from '@affine/i18n';
+import { i18nTime } from '@cloud-notes/i18n';
 import dayjs from 'dayjs';
 
 import type { NewDocDateTitleFormat } from '../schema';

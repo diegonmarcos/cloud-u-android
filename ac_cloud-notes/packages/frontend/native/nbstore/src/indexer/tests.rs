@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use affine_doc_loader::ParseError;
+use cloud_notes_doc_loader::ParseError;
 use assert_json_diff::assert_json_eq;
 use chrono::Utc;
 use serde_json::Value;
@@ -14,7 +14,7 @@ use super::{
 
 
 fn temp_workspace_dir() -> PathBuf {
-  std::env::temp_dir().join(format!("affine-native-{}", Uuid::new_v4()))
+  std::env::temp_dir().join(format!("cloud-notes-native-{}", Uuid::new_v4()))
 }
 
 async fn init_db(path: &Path) -> SqliteDocStorage {

@@ -1,12 +1,12 @@
-import type { TagMeta } from '@affine/core/components/page-list';
-import type { CollectionMeta } from '@affine/core/modules/collection';
-import track, { type EventArgs } from '@affine/track';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { scrollbarStyle } from '@blocksuite/affine/shared/styles';
-import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { openFilesWith } from '@blocksuite/affine/shared/utils';
-import { ShadowlessElement } from '@blocksuite/affine/std';
-import type { DocMeta } from '@blocksuite/affine/store';
+import type { TagMeta } from '@cloud-notes/core/components/page-list';
+import type { CollectionMeta } from '@cloud-notes/core/modules/collection';
+import track, { type EventArgs } from '@cloud-notes/track';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { scrollbarStyle } from '@blocksuite/cloud-notes/shared/styles';
+import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { openFilesWith } from '@blocksuite/cloud-notes/shared/utils';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
+import type { DocMeta } from '@blocksuite/cloud-notes/store';
 import {
   CollectionsIcon,
   ImageIcon,
@@ -90,7 +90,7 @@ export class ChatPanelAddPopover extends SignalWatcher(
       border: none;
       line-height: 20px;
       height: 20px;
-      font-size: var(--affine-font-sm);
+      font-size: var(--cloud-notes-font-sm);
       color: ${unsafeCSSVarV2('text/primary')};
       flex-grow: 1;
       background-color: transparent;
@@ -108,7 +108,7 @@ export class ChatPanelAddPopover extends SignalWatcher(
     }
     .no-result {
       padding: 4px;
-      font-size: var(--affine-font-sm);
+      font-size: var(--cloud-notes-font-sm);
       color: ${unsafeCSSVarV2('text/secondary')};
     }
     .menu-items icon-button {

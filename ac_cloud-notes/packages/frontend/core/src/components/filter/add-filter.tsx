@@ -4,10 +4,10 @@ import {
   Menu,
   MenuItem,
   MenuSeparator,
-} from '@affine/component';
-import type { FilterParams } from '@affine/core/modules/collection-rules';
-import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
+import { WorkspacePropertyService } from '@cloud-notes/core/modules/workspace-property';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   ArrowLeftBigIcon,
   CloudWorkspaceIcon,
@@ -48,7 +48,7 @@ export const AddFilterMenu = ({
           </IconButton>
         )}
         <div className={styles.variableSelectTitleStyle}>
-          {t['com.affine.filter']()}
+          {t['com.cloud-notes.filter']()}
         </div>
       </div>
 
@@ -82,7 +82,7 @@ export const AddFilterMenu = ({
         }}
       >
         <span className={styles.filterTypeItemName}>
-          {t['com.affine.filter.is-public']()}
+          {t['com.cloud-notes.filter.is-public']()}
         </span>
       </MenuItem>
       {explorerPropertyList.map(({ systemProperty, workspaceProperty }) => {
@@ -167,7 +167,7 @@ export const AddFilter = ({
         </IconButton>
       ) : (
         <Button prefix={<PlusIcon />} className={styles.addFilterButton}>
-          {t['com.affine.filter.add-filter']()}
+          {t['com.cloud-notes.filter.add-filter']()}
         </Button>
       )}
     </Menu>

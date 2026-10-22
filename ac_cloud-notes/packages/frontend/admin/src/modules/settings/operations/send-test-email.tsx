@@ -1,8 +1,8 @@
-import { Button } from '@affine/admin/components/ui/button';
-import { useMutation } from '@affine/admin/use-mutation';
-import { notify } from '@affine/component';
-import type { UserFriendlyError } from '@affine/error';
-import { sendTestEmailMutation } from '@affine/graphql';
+import { Button } from '@cloud-notes/admin/components/ui/button';
+import { useMutation } from '@cloud-notes/admin/use-mutation';
+import { notify } from '@cloud-notes/component';
+import type { UserFriendlyError } from '@cloud-notes/error';
+import { sendTestEmailMutation } from '@cloud-notes/graphql';
 import { useCallback } from 'react';
 
 import type { AppConfig } from '../config';

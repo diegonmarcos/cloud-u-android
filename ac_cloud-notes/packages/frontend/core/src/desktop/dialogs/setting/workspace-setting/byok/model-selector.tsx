@@ -5,8 +5,8 @@ import {
   Menu,
   MenuItem,
   Switch,
-} from '@affine/component';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 import { MoreHorizontalIcon } from '@blocksuite/icons/rc';
 import { useState } from 'react';
 

@@ -1,5 +1,5 @@
-import { AttachmentBlockModel } from '@blocksuite/affine/model';
-import type { BlockModel } from '@blocksuite/affine/store';
+import { AttachmentBlockModel } from '@blocksuite/cloud-notes/model';
+import type { BlockModel } from '@blocksuite/cloud-notes/store';
 import type { GfxModel } from '@blocksuite/std/gfx';
 
 export function isAttachment(

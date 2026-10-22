@@ -1,20 +1,20 @@
 import type {
   AIModelService,
   AIToolsConfigService,
-} from '@affine/core/modules/ai-button';
+} from '@cloud-notes/core/modules/ai-button';
 import type {
   ServerService,
   SubscriptionService,
-} from '@affine/core/modules/cloud';
-import type { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import type { AppThemeService } from '@affine/core/modules/theme';
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import type { EditorHost } from '@blocksuite/affine/std';
-import { ShadowlessElement } from '@blocksuite/affine/std';
-import type { ExtensionType, Store } from '@blocksuite/affine/store';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+} from '@cloud-notes/core/modules/cloud';
+import type { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import type { AppThemeService } from '@cloud-notes/core/modules/theme';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
+import type { ExtensionType, Store } from '@blocksuite/cloud-notes/store';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import { css, html } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -47,9 +47,9 @@ export class PlaygroundContent extends SignalWatcher(
       .playground-chat-item {
         flex: 1;
         min-width: 0;
-        border: 1px solid var(--affine-border-color);
+        border: 1px solid var(--cloud-notes-border-color);
         border-radius: 8px;
-        background: var(--affine-background-primary-color);
+        background: var(--cloud-notes-background-primary-color);
         overflow: hidden;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         transition: box-shadow 0.2s ease;
@@ -94,10 +94,10 @@ export class PlaygroundContent extends SignalWatcher(
   accessor serverService!: ServerService;
 
   @property({ attribute: false })
-  accessor affineFeatureFlagService!: FeatureFlagService;
+  accessor cloudNotesFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
-  accessor affineThemeService!: AppThemeService;
+  accessor cloudNotesThemeService!: AppThemeService;
 
   @property({ attribute: false })
   accessor notificationService!: NotificationService;
@@ -109,7 +109,7 @@ export class PlaygroundContent extends SignalWatcher(
   accessor aiModelService!: AIModelService;
 
   @property({ attribute: false })
-  accessor affineWorkspaceDialogService!: WorkspaceDialogService;
+  accessor cloudNotesWorkspaceDialogService!: WorkspaceDialogService;
 
   @property({ attribute: false })
   accessor subscriptionService!: SubscriptionService;
@@ -378,13 +378,13 @@ export class PlaygroundContent extends SignalWatcher(
                 .docDisplayConfig=${this.docDisplayConfig}
                 .extensions=${this.extensions}
                 .serverService=${this.serverService}
-                .affineFeatureFlagService=${this.affineFeatureFlagService}
-                .affineThemeService=${this.affineThemeService}
+                .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
+                .cloudNotesThemeService=${this.cloudNotesThemeService}
                 .notificationService=${this.notificationService}
                 .aiToolsConfigService=${this.aiToolsConfigService}
                 .aiModelService=${this.aiModelService}
-                .affineWorkspaceDialogService=${
-                  this.affineWorkspaceDialogService
+                .cloudNotesWorkspaceDialogService=${
+                  this.cloudNotesWorkspaceDialogService
                 }
                 .subscriptionService=${this.subscriptionService}
                 .addChat=${this.addChat}

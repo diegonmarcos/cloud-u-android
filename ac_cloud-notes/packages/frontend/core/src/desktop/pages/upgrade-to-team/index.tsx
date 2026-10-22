@@ -10,22 +10,22 @@ import {
   Modal,
   notify,
   Scrollable,
-} from '@affine/component';
-import { AuthPageContainer } from '@affine/component/auth-components';
-import { useSignOut } from '@affine/core/components/hooks/affine/use-sign-out';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { useNavigateHelper } from '@affine/core/components/hooks/use-navigate-helper';
-import { useWorkspaceInfo } from '@affine/core/components/hooks/use-workspace-info';
-import { PureWorkspaceCard } from '@affine/core/components/workspace-selector/workspace-card';
-import { AuthService } from '@affine/core/modules/cloud';
+} from '@cloud-notes/component';
+import { AuthPageContainer } from '@cloud-notes/component/auth-components';
+import { useSignOut } from '@cloud-notes/core/components/hooks/cloud-notes/use-sign-out';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { useNavigateHelper } from '@cloud-notes/core/components/hooks/use-navigate-helper';
+import { useWorkspaceInfo } from '@cloud-notes/core/components/hooks/use-workspace-info';
+import { PureWorkspaceCard } from '@cloud-notes/core/components/workspace-selector/workspace-card';
+import { AuthService } from '@cloud-notes/core/modules/cloud';
 import {
   type WorkspaceMetadata,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
-import { buildShowcaseWorkspace } from '@affine/core/utils/first-app-data';
-import { UNTITLED_WORKSPACE_NAME } from '@affine/env/constant';
-import { SubscriptionPlan, SubscriptionRecurring } from '@affine/graphql';
-import { type I18nString, Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/workspace';
+import { buildShowcaseWorkspace } from '@cloud-notes/core/utils/first-app-data';
+import { UNTITLED_WORKSPACE_NAME } from '@cloud-notes/env/constant';
+import { SubscriptionPlan, SubscriptionRecurring } from '@cloud-notes/graphql';
+import { type I18nString, Trans, useI18n } from '@cloud-notes/i18n';
 import { DoneIcon, NewPageIcon, SignOutIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -36,10 +36,10 @@ import { PageNotFound } from '../404';
 import * as styles from './styles.css';
 
 const benefitList: I18nString[] = [
-  'com.affine.upgrade-to-team-page.benefit.g1',
-  'com.affine.upgrade-to-team-page.benefit.g2',
-  'com.affine.upgrade-to-team-page.benefit.g3',
-  'com.affine.upgrade-to-team-page.benefit.g4',
+  'com.cloud-notes.upgrade-to-team-page.benefit.g1',
+  'com.cloud-notes.upgrade-to-team-page.benefit.g2',
+  'com.cloud-notes.upgrade-to-team-page.benefit.g3',
+  'com.cloud-notes.upgrade-to-team-page.benefit.g4',
 ];
 
 export const Component = () => {
@@ -83,7 +83,7 @@ export const UpgradeToTeam = ({ recurring }: { recurring: string | null }) => {
       return name;
     }
     return t[
-      'com.affine.upgrade-to-team-page.workspace-selector.placeholder'
+      'com.cloud-notes.upgrade-to-team-page.workspace-selector.placeholder'
     ]();
   }, [name, selectedWorkspace, t]);
 
@@ -103,7 +103,7 @@ export const UpgradeToTeam = ({ recurring }: { recurring: string | null }) => {
   const [params] = useSearchParams();
   const isTeam = workspaceInfo?.isTeam;
 
-  const openAFFiNE = useCallback(() => {
+  const openCloudNotes = useCallback(() => {
     if (params.get('client')) {
       jumpToOpenInApp(`/workspace/${selectedWorkspace?.id}/all`);
     } else if (selectedWorkspace) {
@@ -124,12 +124,12 @@ export const UpgradeToTeam = ({ recurring }: { recurring: string | null }) => {
 
   useEffect(() => {
     if (isTeam && selectedWorkspace) {
-      return openAFFiNE();
+      return openCloudNotes();
     }
-  }, [isTeam, jumpToPage, openAFFiNE, selectedWorkspace]);
+  }, [isTeam, jumpToPage, openCloudNotes, selectedWorkspace]);
 
   return (
-    <AuthPageContainer title={t['com.affine.upgrade-to-team-page.title']()}>
+    <AuthPageContainer title={t['com.cloud-notes.upgrade-to-team-page.title']()}>
       <div className={styles.root}>
         <Menu
           items={
@@ -159,11 +159,11 @@ export const UpgradeToTeam = ({ recurring }: { recurring: string | null }) => {
             onClick={onUpgradeButtonClick}
             disabled={!selectedWorkspace}
           >
-            {t['com.affine.upgrade-to-team-page.upgrade-button']()}
+            {t['com.cloud-notes.upgrade-to-team-page.upgrade-button']()}
           </Button>
         </div>
         <div className={styles.contentContainer}>
-          <div>{t['com.affine.upgrade-to-team-page.benefit.title']()}</div>
+          <div>{t['com.cloud-notes.upgrade-to-team-page.benefit.title']()}</div>
           <ul>
             {benefitList.map((benefit, index) => (
               <li key={`${benefit}:${index}`} className={styles.liStyle}>
@@ -173,7 +173,7 @@ export const UpgradeToTeam = ({ recurring }: { recurring: string | null }) => {
             ))}
           </ul>
           <div>
-            {t['com.affine.upgrade-to-team-page.benefit.description']()}
+            {t['com.cloud-notes.upgrade-to-team-page.benefit.description']()}
           </div>
           {selectedWorkspace && (
             <UpgradeDialog
@@ -236,11 +236,11 @@ const UpgradeDialog = ({
   return (
     <Modal width={480} open={open} onOpenChange={onOpenChange}>
       <div className={styles.dialogTitle}>
-        {t['com.affine.upgrade-to-team-page.upgrade-confirm.title']()}
+        {t['com.cloud-notes.upgrade-to-team-page.upgrade-confirm.title']()}
       </div>
       <div className={styles.dialogMessage}>
         <Trans
-          i18nKey="com.affine.upgrade-to-team-page.upgrade-confirm.description"
+          i18nKey="com.cloud-notes.upgrade-to-team-page.upgrade-confirm.description"
           components={{
             1: <span style={{ fontWeight: 600 }} />,
           }}
@@ -264,7 +264,7 @@ const UpgradeDialog = ({
             },
           }}
         >
-          {t['com.affine.payment.upgrade']()}
+          {t['com.cloud-notes.payment.upgrade']()}
         </Upgrade>
       </div>
     </Modal>
@@ -284,7 +284,7 @@ const WorkspaceSelector = ({
   const cloudWorkspaces = useMemo(
     () =>
       metas.filter(
-        ({ flavour }) => flavour === 'affine-cloud'
+        ({ flavour }) => flavour === 'cloud-notes-cloud'
       ) as WorkspaceMetadata[],
     [metas]
   );
@@ -313,7 +313,7 @@ const WorkspaceSelector = ({
         </Scrollable.Root>
       ) : (
         <div className={styles.noWorkspaceItem}>
-          {t['com.affine.upgrade-to-team-page.no-workspace-available']()}
+          {t['com.cloud-notes.upgrade-to-team-page.no-workspace-available']()}
         </div>
       )}
       <Divider size="thinner" />
@@ -325,7 +325,7 @@ const WorkspaceSelector = ({
       >
         <div className={styles.itemContent}>
           {t[
-            'com.affine.upgrade-to-team-page.workspace-selector.create-workspace'
+            'com.cloud-notes.upgrade-to-team-page.workspace-selector.create-workspace'
           ]()}
         </div>
       </MenuItem>
@@ -379,7 +379,7 @@ const CreateWorkspaceDialog = ({
   const onCreate = useCallback(async () => {
     const newWorkspace = await buildShowcaseWorkspace(
       workspacesService,
-      'affine-cloud',
+      'cloud-notes-cloud',
       name
     );
     notify.success({
@@ -397,19 +397,19 @@ const CreateWorkspaceDialog = ({
     <Modal width={480} open={open} onOpenChange={onOpenChange}>
       <div className={styles.dialogTitle}>
         {t[
-          'com.affine.upgrade-to-team-page.create-and-upgrade-confirm.title'
+          'com.cloud-notes.upgrade-to-team-page.create-and-upgrade-confirm.title'
         ]()}
       </div>
 
       <div className={styles.createConfirmContent}>
         <div>
           {t[
-            'com.affine.upgrade-to-team-page.create-and-upgrade-confirm.description'
+            'com.cloud-notes.upgrade-to-team-page.create-and-upgrade-confirm.description'
           ]()}
         </div>
         <Input
           placeholder={t[
-            'com.affine.upgrade-to-team-page.create-and-upgrade-confirm.placeholder'
+            'com.cloud-notes.upgrade-to-team-page.create-and-upgrade-confirm.placeholder'
           ]()}
           value={name}
           onChange={setName}
@@ -424,7 +424,7 @@ const CreateWorkspaceDialog = ({
           onClick={onBeforeCheckout}
         >
           {t[
-            'com.affine.upgrade-to-team-page.create-and-upgrade-confirm.confirm'
+            'com.cloud-notes.upgrade-to-team-page.create-and-upgrade-confirm.confirm'
           ]()}
         </Button>
       </div>

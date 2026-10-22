@@ -1,14 +1,14 @@
 import type { Configuration as RspackDevServerConfiguration } from '@rspack/dev-server';
 
 export const RSPACK_SUPPORTED_PACKAGES = [
-  '@affine/admin',
-  '@affine/web',
-  '@affine/mobile',
-  '@affine/ios',
-  '@affine/android',
-  '@affine/electron-renderer',
-  '@affine/server',
-  '@affine/reader',
+  '@cloud-notes/admin',
+  '@cloud-notes/web',
+  '@cloud-notes/mobile',
+  '@cloud-notes/ios',
+  '@cloud-notes/android',
+  '@cloud-notes/electron-renderer',
+  '@cloud-notes/server',
+  '@cloud-notes/reader',
 ] as const;
 
 const rspackSupportedPackageSet = new Set<string>(RSPACK_SUPPORTED_PACKAGES);

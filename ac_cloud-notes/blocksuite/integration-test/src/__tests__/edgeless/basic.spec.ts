@@ -1,4 +1,4 @@
-import { LocalShapeElementModel } from '@blocksuite/affine-model';
+import { LocalShapeElementModel } from '@blocksuite/cloud-notes-model';
 import { Text } from '@blocksuite/store';
 import { beforeEach, describe, expect, test } from 'vitest';
 

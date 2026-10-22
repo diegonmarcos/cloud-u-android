@@ -1,15 +1,15 @@
-import { Button, Loading } from '@affine/component';
-import { UrlService } from '@affine/core/modules/url';
-import { UserFriendlyError } from '@affine/error';
-import { SubscriptionPlan, SubscriptionRecurring } from '@affine/graphql';
-import { track } from '@affine/track';
+import { Button, Loading } from '@cloud-notes/component';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { SubscriptionPlan, SubscriptionRecurring } from '@cloud-notes/graphql';
+import { track } from '@cloud-notes/track';
 import { effect, fromPromise, useServices } from '@toeverything/infra';
 import { nanoid } from 'nanoid';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { switchMap } from 'rxjs';
 
-import { generateSubscriptionCallbackLink } from '../../../components/hooks/affine/use-subscription-notify';
+import { generateSubscriptionCallbackLink } from '../../../components/hooks/cloud-notes/use-subscription-notify';
 import {
   RouteLogic,
   useNavigateHelper,

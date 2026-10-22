@@ -1,5 +1,5 @@
-import { InsideModalContext, Scrollable } from '@affine/component';
-import { PageHeader } from '@affine/core/mobile/components';
+import { InsideModalContext, Scrollable } from '@cloud-notes/component';
+import { PageHeader } from '@cloud-notes/core/mobile/components';
 import { ArrowLeftSmallIcon } from '@blocksuite/icons/rc';
 import { assignInlineVars } from '@vanilla-extract/dynamic';
 import { animate } from 'animejs';

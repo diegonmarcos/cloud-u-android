@@ -1,0 +1,6 @@
+apiVersion: v2
+name: cloud-notes
+description: Cloud Notes chart
+type: application
+version: 0.0.0
+appVersion: "0.27.5"

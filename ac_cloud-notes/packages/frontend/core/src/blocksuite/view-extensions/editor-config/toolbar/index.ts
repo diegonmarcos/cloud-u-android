@@ -1,15 +1,15 @@
-import { notify } from '@affine/component';
+import { notify } from '@cloud-notes/component';
 import {
   generateUrl,
   type UseSharingUrl,
-} from '@affine/core/components/hooks/affine/use-share-url';
-import { WorkspaceServerService } from '@affine/core/modules/cloud';
-import { EditorService } from '@affine/core/modules/editor';
-import type { EditorSettingExt } from '@affine/core/modules/editor-setting/entities/editor-setting';
-import { copyLinkToBlockStdScopeClipboard } from '@affine/core/utils/clipboard';
-import { I18n, i18nTime } from '@affine/i18n';
-import { track } from '@affine/track';
-import { BookmarkBlockComponent } from '@blocksuite/affine/blocks/bookmark';
+} from '@cloud-notes/core/components/hooks/cloud-notes/use-share-url';
+import { WorkspaceServerService } from '@cloud-notes/core/modules/cloud';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import type { EditorSettingExt } from '@cloud-notes/core/modules/editor-setting/entities/editor-setting';
+import { copyLinkToBlockStdScopeClipboard } from '@cloud-notes/core/utils/clipboard';
+import { I18n, i18nTime } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
+import { BookmarkBlockComponent } from '@blocksuite/cloud-notes/blocks/bookmark';
 import {
   EmbedFigmaBlockComponent,
   EmbedGithubBlockComponent,
@@ -17,38 +17,38 @@ import {
   EmbedLoomBlockComponent,
   EmbedYoutubeBlockComponent,
   getDocContentWithMaxLength,
-} from '@blocksuite/affine/blocks/embed';
+} from '@blocksuite/cloud-notes/blocks/embed';
 import {
   EmbedLinkedDocBlockComponent,
   EmbedSyncedDocBlockComponent,
-} from '@blocksuite/affine/blocks/embed-doc';
-import { SurfaceRefBlockComponent } from '@blocksuite/affine/blocks/surface-ref';
-import { toggleEmbedCardEditModal } from '@blocksuite/affine/components/embed-card-modal';
-import { notifyLinkedDocClearedAliases } from '@blocksuite/affine/components/notification';
-import { isPeekable, peek } from '@blocksuite/affine/components/peek';
-import { toast } from '@blocksuite/affine/components/toast';
+} from '@blocksuite/cloud-notes/blocks/embed-doc';
+import { SurfaceRefBlockComponent } from '@blocksuite/cloud-notes/blocks/surface-ref';
+import { toggleEmbedCardEditModal } from '@blocksuite/cloud-notes/components/embed-card-modal';
+import { notifyLinkedDocClearedAliases } from '@blocksuite/cloud-notes/components/notification';
+import { isPeekable, peek } from '@blocksuite/cloud-notes/components/peek';
+import { toast } from '@blocksuite/cloud-notes/components/toast';
 import {
   EditorChevronDown,
   type MenuContext,
   type MenuItemGroup,
-} from '@blocksuite/affine/components/toolbar';
-import { watch } from '@blocksuite/affine/global/lit';
+} from '@blocksuite/cloud-notes/components/toolbar';
+import { watch } from '@blocksuite/cloud-notes/global/lit';
 import {
-  AffineReference,
+  CloudNotesReference,
   toggleReferencePopup,
-} from '@blocksuite/affine/inlines/reference';
+} from '@blocksuite/cloud-notes/inlines/reference';
 import {
   BookmarkBlockModel,
   EmbedIframeBlockModel,
   EmbedLinkedDocModel,
   EmbedSyncedDocModel,
   SurfaceRefBlockSchema,
-} from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/model';
 import {
   draftSelectedModelsCommand,
   getSelectedModelsCommand,
-} from '@blocksuite/affine/shared/commands';
-import { ImageSelection } from '@blocksuite/affine/shared/selection';
+} from '@blocksuite/cloud-notes/shared/commands';
+import { ImageSelection } from '@blocksuite/cloud-notes/shared/selection';
 import {
   ActionPlacement,
   CitationProvider,
@@ -63,18 +63,18 @@ import {
   type ToolbarModuleConfig,
   ToolbarModuleExtension,
   UserProvider,
-} from '@blocksuite/affine/shared/services';
-import { matchModels } from '@blocksuite/affine/shared/utils';
+} from '@blocksuite/cloud-notes/shared/services';
+import { matchModels } from '@blocksuite/cloud-notes/shared/utils';
 import {
   BlockFlavourIdentifier,
   BlockSelection,
   TextSelection,
-} from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/std';
 import {
   GfxBlockElementModel,
   GfxPrimitiveElementModel,
-} from '@blocksuite/affine/std/gfx';
-import { type ExtensionType, Slice } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/std/gfx';
+import { type ExtensionType, Slice } from '@blocksuite/cloud-notes/store';
 import {
   CopyAsImgaeIcon,
   CopyIcon,
@@ -224,7 +224,7 @@ function createCopyAsMarkdownMenuItem(
   _framework: FrameworkProvider,
   item = {
     icon: ExportToMarkdownIcon({ width: '20', height: '20' }),
-    label: I18n['com.affine.export.copy-markdown'](),
+    label: I18n['com.cloud-notes.export.copy-markdown'](),
     type: 'copy-as-markdown',
     when: (ctx: MenuContext) => {
       if (ctx.isEmpty()) return false;
@@ -257,7 +257,7 @@ function createCopyAsMarkdownMenuItem(
           );
           if (markdown) {
             await navigator.clipboard.writeText(markdown);
-            toast(std.host, I18n['com.affine.export.copied-as-markdown']());
+            toast(std.host, I18n['com.cloud-notes.export.copied-as-markdown']());
           }
         }
       })()
@@ -290,7 +290,7 @@ function createToolbarMoreMenuConfigV2(baseUrl?: string) {
           },
           {
             id: 'copy-as-markdown',
-            label: I18n['com.affine.export.copy-markdown'](),
+            label: I18n['com.cloud-notes.export.copy-markdown'](),
             icon: ExportToMarkdownIcon(),
             when: ({ gfx, flags, isPageMode }) => {
               if (flags.isHovering()) return false;
@@ -321,7 +321,7 @@ function createToolbarMoreMenuConfigV2(baseUrl?: string) {
                     await navigator.clipboard.writeText(markdown);
                     toast(
                       std.host,
-                      I18n['com.affine.export.copied-as-markdown']()
+                      I18n['com.cloud-notes.export.copied-as-markdown']()
                     );
                   }
                 }
@@ -474,7 +474,7 @@ function createToolbarMoreMenuConfigV2(baseUrl?: string) {
                 return value.name;
               });
               const user = computed(() => {
-                return I18n.t('com.affine.page.toolbar.created_by', {
+                return I18n.t('com.cloud-notes.page.toolbar.created_by', {
                   name: name.value,
                 });
               });
@@ -588,7 +588,7 @@ function createOpenDocActions(
   target:
     | EmbedLinkedDocBlockComponent
     | EmbedSyncedDocBlockComponent
-    | AffineReference
+    | CloudNotesReference
     | SurfaceRefBlockComponent,
   isSameDoc: boolean,
   actions = openDocActions.map(
@@ -701,7 +701,7 @@ function createSurfaceRefToolbarConfig(baseUrl?: string): ToolbarModuleConfig {
             .map(action => {
               if (action.id.endsWith('open-in-active-view')) {
                 action.label =
-                  I18n['com.affine.peek-view-controls.open-doc-in-edgeless']();
+                  I18n['com.cloud-notes.peek-view-controls.open-doc-in-edgeless']();
               }
               return action;
             });
@@ -813,7 +813,7 @@ function renderOpenDocMenu(
   target:
     | EmbedLinkedDocBlockComponent
     | EmbedSyncedDocBlockComponent
-    | AffineReference,
+    | CloudNotesReference,
   isSameDoc: boolean
 ) {
   const actions = createOpenDocActions(ctx, target, isSameDoc).map(action => ({
@@ -831,13 +831,13 @@ function renderOpenDocMenu(
   return html`${keyed(
     target,
     html`
-      <affine-open-doc-dropdown-menu
+      <cloud-notes-open-doc-dropdown-menu
         .actions=${actions}
         .context=${ctx}
         .openDocModeSignal=${openDocMode}
         .updateOpenDocMode=${updateOpenDocMode}
       >
-      </affine-open-doc-dropdown-menu>
+      </cloud-notes-open-doc-dropdown-menu>
     `
   )}`;
 }
@@ -975,7 +975,7 @@ const inlineReferenceToolbarConfig = {
           icon: CopyIcon(),
           run(ctx) {
             const target = ctx.message$.peek()?.element;
-            if (!(target instanceof AffineReference)) return;
+            if (!(target instanceof CloudNotesReference)) return;
 
             const { pageId, params } = target.referenceInfo;
 
@@ -1004,7 +1004,7 @@ const inlineReferenceToolbarConfig = {
           icon: EditIcon(),
           run(ctx) {
             const target = ctx.message$.peek()?.element;
-            if (!(target instanceof AffineReference)) return;
+            if (!(target instanceof CloudNotesReference)) return;
 
             // Clears
             ctx.reset();
@@ -1082,7 +1082,7 @@ export const createCustomToolbarExtension = (
 ): ExtensionType[] => {
   return [
     ToolbarModuleExtension({
-      id: BlockFlavourIdentifier('custom:affine:*'),
+      id: BlockFlavourIdentifier('custom:cloud-notes:*'),
       config: createToolbarMoreMenuConfigV2(baseUrl),
     }),
 
@@ -1191,7 +1191,7 @@ export const createCustomToolbarExtension = (
             id: 'A.open-doc',
             content(ctx) {
               const target = ctx.message$.peek()?.element;
-              if (!(target instanceof AffineReference)) return null;
+              if (!(target instanceof CloudNotesReference)) return null;
 
               return renderOpenDocMenu(
                 settings,

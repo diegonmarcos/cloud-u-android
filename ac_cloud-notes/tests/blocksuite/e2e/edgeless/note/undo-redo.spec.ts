@@ -34,21 +34,21 @@ test('undo/redo should work correctly after clipping', async ({ page }) => {
   await initSixParagraphs(page);
 
   await switchEditorMode(page);
-  await expect(page.locator('affine-edgeless-note')).toHaveCount(1);
+  await expect(page.locator('cloud-notes-edgeless-note')).toHaveCount(1);
 
   await selectNoteInEdgeless(page, noteId);
   await triggerComponentToolbarAction(page, 'changeNoteSlicerSetting');
 
   const button = page.locator('.note-slicer-button');
   await button.click();
-  await expect(page.locator('affine-edgeless-note')).toHaveCount(2);
+  await expect(page.locator('cloud-notes-edgeless-note')).toHaveCount(2);
 
   await undoByKeyboard(page);
   await waitNextFrame(page);
-  await expect(page.locator('affine-edgeless-note')).toHaveCount(1);
+  await expect(page.locator('cloud-notes-edgeless-note')).toHaveCount(1);
   await redoByKeyboard(page);
   await waitNextFrame(page);
-  await expect(page.locator('affine-edgeless-note')).toHaveCount(2);
+  await expect(page.locator('cloud-notes-edgeless-note')).toHaveCount(2);
 });
 
 test('undo/redo should work correctly after resizing', async ({ page }) => {
@@ -104,7 +104,7 @@ test('continuous undo and redo (note block add operation) should work', async ({
   await click(page, { x: 260, y: 450 });
   await copyByKeyboard(page);
 
-  let count = await countBlock(page, 'affine-edgeless-note');
+  let count = await countBlock(page, 'cloud-notes-edgeless-note');
   expect(count).toBe(1);
 
   await page.mouse.move(100, 100);
@@ -119,23 +119,23 @@ test('continuous undo and redo (note block add operation) should work', async ({
   await pasteByKeyboard(page, false);
   await waitNextFrame(page, 1000);
 
-  count = await countBlock(page, 'affine-edgeless-note');
+  count = await countBlock(page, 'cloud-notes-edgeless-note');
   expect(count).toBe(4);
 
   await undoByClick(page);
-  count = await countBlock(page, 'affine-edgeless-note');
+  count = await countBlock(page, 'cloud-notes-edgeless-note');
   expect(count).toBe(3);
 
   await undoByClick(page);
-  count = await countBlock(page, 'affine-edgeless-note');
+  count = await countBlock(page, 'cloud-notes-edgeless-note');
   expect(count).toBe(2);
 
   await redoByClick(page);
-  count = await countBlock(page, 'affine-edgeless-note');
+  count = await countBlock(page, 'cloud-notes-edgeless-note');
   expect(count).toBe(3);
 
   await redoByClick(page);
-  count = await countBlock(page, 'affine-edgeless-note');
+  count = await countBlock(page, 'cloud-notes-edgeless-note');
   expect(count).toBe(4);
 });
 

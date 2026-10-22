@@ -8,7 +8,7 @@ async fn main() -> Result<(), std::io::Error> {
 
   // always start with a fresh database to have latest db schema
   let cwd = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-  let db_path = format!("{cwd}/affine.db");
+  let db_path = format!("{cwd}/cloud-notes.db");
 
   if fs::metadata(&db_path).is_ok() {
     fs::remove_file(&db_path)?;
@@ -25,7 +25,7 @@ async fn main() -> Result<(), std::io::Error> {
     .await
     .unwrap();
 
-  sqlx::query(affine_schema::v1::SCHEMA).execute(&pool).await.unwrap();
+  sqlx::query(cloud_notes_schema::v1::SCHEMA).execute(&pool).await.unwrap();
 
   println!("cargo::rustc-env=DATABASE_URL=sqlite://{db_path}");
 

@@ -1,5 +1,5 @@
-import AffinePaywall
-import AffineResources
+import CloudNotesPaywall
+import CloudNotesResources
 import SwiftUI
 import UIKit
 import WebKit
@@ -16,7 +16,7 @@ final class AppPaywallViewController: UIViewController {
   private var actionTask: Task<Void, Never>?
 
   private static var cachedUserInterfaceStyle: UIUserInterfaceStyle {
-    switch UserDefaults.standard.string(forKey: AffineThemeStorage.modeKey) {
+    switch UserDefaults.standard.string(forKey: CloudNotesThemeStorage.modeKey) {
     case "dark":
       return .dark
     case "light":
@@ -185,7 +185,7 @@ enum AppPaywallPlan: String, CaseIterable {
     switch self {
     case .pro: "Pro"
     case .lite: "LITE"
-    case .ai: "AFFINE AI"
+    case .ai: "Cloud Notes AI"
     }
   }
 
@@ -218,7 +218,7 @@ enum AppPaywallPlan: String, CaseIterable {
     case .lite:
       [
         "Sync docs and boards across all devices",
-        "Access AFFiNE on Mac, Windows, Linux, Web, iPhone, and Android",
+        "Access Cloud Notes on Mac, Windows, Linux, Web, iPhone, and Android",
         "Upload files larger than 10 MB",
         "Secure cloud backup for your content",
         "Pick up where you left off, anytime",

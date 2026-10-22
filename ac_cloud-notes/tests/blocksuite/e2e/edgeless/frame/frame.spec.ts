@@ -71,7 +71,7 @@ test.describe('add a frame', () => {
     await createThreeShapesAndSelectTowShape(page);
     await page.keyboard.press('f');
 
-    await expect(page.locator('affine-frame')).toHaveCount(1);
+    await expect(page.locator('cloud-notes-frame')).toHaveCount(1);
     await assertSelectedBound(page, [-40, -40, 280, 180]);
 
     const frameId = await getFirstContainerId(page);
@@ -82,7 +82,7 @@ test.describe('add a frame', () => {
     await createThreeShapesAndSelectTowShape(page);
     await triggerComponentToolbarAction(page, 'addFrame');
 
-    await expect(page.locator('affine-frame')).toHaveCount(1);
+    await expect(page.locator('cloud-notes-frame')).toHaveCount(1);
     await assertSelectedBound(page, [-40, -40, 280, 180]);
 
     const frameId = await getFirstContainerId(page);
@@ -95,7 +95,7 @@ test.describe('add a frame', () => {
     await createThreeShapesAndSelectTowShape(page);
     await triggerComponentToolbarAction(page, 'createFrameOnMoreOption');
 
-    await expect(page.locator('affine-frame')).toHaveCount(1);
+    await expect(page.locator('cloud-notes-frame')).toHaveCount(1);
     await assertSelectedBound(page, [-40, -40, 280, 180]);
 
     const frameId = await getFirstContainerId(page);
@@ -124,7 +124,7 @@ test.describe('add a frame', () => {
     await page.keyboard.press('f');
     await dragBetweenViewCoords(page, [-10, -10], [210, 110]);
 
-    await expect(page.locator('affine-frame')).toHaveCount(1);
+    await expect(page.locator('cloud-notes-frame')).toHaveCount(1);
     await assertSelectedBound(page, [-10, -10, 220, 120]);
 
     const frameId = await getFirstContainerId(page);
@@ -161,7 +161,7 @@ test.describe('add element to frame and then move frame', () => {
       const noteCoord = await toViewCoord(page, [200, 200]);
       const noteId = await addNote(page, '', noteCoord[0], noteCoord[1]);
 
-      const frameTitle = page.locator('affine-frame-title');
+      const frameTitle = page.locator('cloud-notes-frame-title');
 
       await pressEscape(page);
 
@@ -190,7 +190,7 @@ test.describe('add element to frame and then move frame', () => {
       );
       await pressEscape(page);
 
-      const frameTitle = page.locator('affine-frame-title');
+      const frameTitle = page.locator('cloud-notes-frame-title');
 
       await frameTitle.click();
       await dragBetweenViewCoords(page, [60, 60], [110, 110]);
@@ -218,7 +218,7 @@ test.describe('add element to frame and then move frame', () => {
       ];
       await pressEscape(page);
 
-      const frameTitle = page.locator('affine-frame-title');
+      const frameTitle = page.locator('cloud-notes-frame-title');
 
       await shiftClickView(page, [110, 110]);
       await shiftClickView(page, [160, 160]);
@@ -245,7 +245,7 @@ test.describe('add element to frame and then move frame', () => {
       ];
       await pressEscape(page);
 
-      const frameTitle = page.locator('affine-frame-title');
+      const frameTitle = page.locator('cloud-notes-frame-title');
 
       await shiftClickView(page, [460, 460]);
       await shiftClickView(page, [510, 510]);
@@ -274,7 +274,7 @@ test.describe('add element to frame and then move frame', () => {
       ];
       await pressEscape(page);
 
-      const frameTitles = page.locator('affine-frame-title');
+      const frameTitles = page.locator('cloud-notes-frame-title');
 
       await frameTitles.nth(0).click();
       await dragBetweenViewCoords(page, [60, 60], [110, 110]);
@@ -294,7 +294,7 @@ test.describe('add element to frame and then move frame', () => {
       ];
       await pressEscape(page);
 
-      const frameTitles = page.locator('affine-frame-title');
+      const frameTitles = page.locator('cloud-notes-frame-title');
 
       await frameTitles.nth(0).click();
       await dragBetweenViewCoords(page, [60, 60], [110, 110]);
@@ -313,7 +313,7 @@ test.describe('add element to frame and then move frame', () => {
         await createShapeElement(page, [550, 550], [600, 600], Shape.Square),
       ];
 
-      const frameTitles = page.locator('affine-frame-title');
+      const frameTitles = page.locator('cloud-notes-frame-title');
 
       await frameTitles.nth(0).click();
       await dragBetweenViewCoords(page, [60, 60], [110, 110]);
@@ -333,7 +333,7 @@ test.describe('resize frame then move ', () => {
     ];
     await pressEscape(page);
 
-    const frameTitle = page.locator('affine-frame-title');
+    const frameTitle = page.locator('cloud-notes-frame-title');
 
     await frameTitle.click();
     await dragBetweenViewCoords(page, [150, 150], [450, 450]);
@@ -351,7 +351,7 @@ test.describe('resize frame then move ', () => {
     ];
     await pressEscape(page);
 
-    const frameTitle = page.locator('affine-frame-title');
+    const frameTitle = page.locator('cloud-notes-frame-title');
 
     await frameTitle.click();
     await dragBetweenViewCoords(page, [450, 450], [150, 150]);
@@ -368,11 +368,11 @@ test('delete frame should also delete its children', async ({ page }) => {
   await createShapeElement(page, [200, 200], [300, 300], Shape.Square);
   await pressEscape(page);
 
-  const frameTitle = page.locator('affine-frame-title');
+  const frameTitle = page.locator('cloud-notes-frame-title');
 
   await frameTitle.click();
   await pressBackspace(page);
-  await expect(page.locator('affine-frame')).toHaveCount(0);
+  await expect(page.locator('cloud-notes-frame')).toHaveCount(0);
 
   await assertCanvasElementsCount(page, 0);
 });
@@ -389,9 +389,9 @@ test('delete frame by click ungroup should not delete its children', async ({
   );
   await pressEscape(page);
 
-  const frameTitle = page.locator('affine-frame-title');
+  const frameTitle = page.locator('cloud-notes-frame-title');
   await frameTitle.click();
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   const ungroupButton = toolbar.getByLabel('Ungroup');
   await ungroupButton.click();
 
@@ -420,18 +420,18 @@ test('undo should work when create a frame by dragging', async ({ page }) => {
   await page.keyboard.press('f');
   await dragBetweenViewCoords(page, [0, 0], [100, 100], { steps: 50 });
   await undoByKeyboard(page);
-  await expect(page.locator('affine-frame')).toHaveCount(0);
+  await expect(page.locator('cloud-notes-frame')).toHaveCount(0);
 });
 
 test('undo/redo should work when change frame background', async ({ page }) => {
   await createFrame(page, [50, 50], [450, 450]);
   await pressEscape(page);
 
-  const frameTitle = page.locator('affine-frame-title');
+  const frameTitle = page.locator('cloud-notes-frame-title');
   await frameTitle.click();
 
   const getFrameBackground = async () => {
-    return page.locator('affine-frame .affine-frame-container').evaluate(el => {
+    return page.locator('cloud-notes-frame .cloud-notes-frame-container').evaluate(el => {
       return getComputedStyle(el).backgroundColor;
     });
   };
@@ -510,7 +510,7 @@ test('connector and shape created simultaneously with edgeless-auto-complete sho
   await assertContainerChildCount(page, frameId, 3);
 
   // Verify by moving the frame - all elements should move together
-  const frameTitle = page.locator('affine-frame-title');
+  const frameTitle = page.locator('cloud-notes-frame-title');
   await frameTitle.click();
   await dragBetweenViewCoords(page, [60, 60], [110, 110]);
 

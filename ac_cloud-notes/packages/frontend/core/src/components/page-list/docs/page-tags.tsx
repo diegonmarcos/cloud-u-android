@@ -1,5 +1,5 @@
-import { TagItem as TagItemComponent } from '@affine/core/components/tags';
-import type { Tag } from '@affine/core/modules/tag';
+import { TagItem as TagItemComponent } from '@cloud-notes/core/components/tags';
+import type { Tag } from '@cloud-notes/core/modules/tag';
 import { useLiveData } from '@toeverything/infra';
 
 export interface PageTagsProps {

@@ -42,8 +42,8 @@ export async function getCanvasRendererPerfSnapshot(
       resetDebugMetrics?: () => void;
     };
 
-    const root = container.querySelector('affine-edgeless-root');
-    const surface = container.querySelector('affine-surface');
+    const root = container.querySelector('cloud-notes-edgeless-root');
+    const surface = container.querySelector('cloud-notes-surface');
 
     if (!root) {
       throw new Error('Edgeless root not found');
@@ -93,7 +93,7 @@ export async function resetCanvasRendererPerfMetrics(
     type PerfRenderer = {
       resetDebugMetrics?: () => void;
     };
-    const surface = container.querySelector('affine-surface');
+    const surface = container.querySelector('cloud-notes-surface');
 
     if (!surface) {
       throw new Error('Surface block not found');
@@ -115,7 +115,7 @@ export async function seedEdgelessPerfScene(
 ) {
   const container = locateEditorContainer(page, editorIndex);
   return container.evaluate((container, options) => {
-    const root = container.querySelector('affine-edgeless-root');
+    const root = container.querySelector('cloud-notes-edgeless-root');
 
     if (!root) {
       throw new Error('Edgeless root not found');
@@ -208,7 +208,7 @@ export async function deleteEdgelessElements(
 ) {
   const container = locateEditorContainer(page, editorIndex);
   await container.evaluate((container, ids) => {
-    const root = container.querySelector('affine-edgeless-root');
+    const root = container.querySelector('cloud-notes-edgeless-root');
 
     if (!root) {
       throw new Error('Edgeless root not found');

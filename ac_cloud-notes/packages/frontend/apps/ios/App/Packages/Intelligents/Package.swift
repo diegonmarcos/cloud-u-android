@@ -14,8 +14,8 @@ let package = Package(
     .library(name: "Intelligents", type: .static, targets: ["Intelligents"]),
   ],
   dependencies: [
-    .package(path: "../AffineGraphQL"),
-    .package(path: "../AffineResources"),
+    .package(path: "../CloudNotesGraphQL"),
+    .package(path: "../CloudNotesResources"),
     .package(url: "https://github.com/apollographql/apollo-ios.git", from: "1.25.7"),
     .package(url: "https://github.com/apple/swift-collections.git", from: "1.6.0"),
     .package(url: "https://github.com/SnapKit/SnapKit.git", from: "5.7.1"),
@@ -26,8 +26,8 @@ let package = Package(
   ],
   targets: [
     .target(name: "Intelligents", dependencies: [
-      "AffineGraphQL",
-      "AffineResources",
+      "CloudNotesGraphQL",
+      "CloudNotesResources",
       "SnapKit",
       "SwifterSwift",
       .product(name: "Apollo", package: "apollo-ios"),

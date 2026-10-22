@@ -1,8 +1,8 @@
-import { MenuItem, PropertyValue, type RadioItem } from '@affine/component';
-import type { FilterParams } from '@affine/core/modules/collection-rules';
-import { type DocRecord, DocService } from '@affine/core/modules/doc';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
+import { MenuItem, PropertyValue, type RadioItem } from '@cloud-notes/component';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
+import { type DocRecord, DocService } from '@cloud-notes/core/modules/doc';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
 import { LongerIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
@@ -31,7 +31,7 @@ export const PageWidthValue = ({ readonly }: PropertyValueProps) => {
         value: 'standard',
         label:
           t[
-            'com.affine.settings.editorSettings.page.default-page-width.standard'
+            'com.cloud-notes.settings.editorSettings.page.default-page-width.standard'
           ](),
         testId: 'standard-width-trigger',
       },
@@ -39,7 +39,7 @@ export const PageWidthValue = ({ readonly }: PropertyValueProps) => {
         value: 'fullWidth',
         label:
           t[
-            'com.affine.settings.editorSettings.page.default-page-width.full-width'
+            'com.cloud-notes.settings.editorSettings.page.default-page-width.full-width'
           ](),
         testId: 'full-width-trigger',
       },
@@ -73,10 +73,10 @@ export const PageWidthDocListProperty = ({ doc }: { doc: DocRecord }) => {
     <StackProperty icon={<LongerIcon />}>
       {pageWidth === 'standard' || !pageWidth
         ? t[
-            'com.affine.settings.editorSettings.page.default-page-width.standard'
+            'com.cloud-notes.settings.editorSettings.page.default-page-width.standard'
           ]()
         : t[
-            'com.affine.settings.editorSettings.page.default-page-width.full-width'
+            'com.cloud-notes.settings.editorSettings.page.default-page-width.full-width'
           ]()}
     </StackProperty>
   );
@@ -111,7 +111,7 @@ export const PageWidthFilterValue = ({
             selected={filter.value === 'fullWidth'}
           >
             {t[
-              'com.affine.settings.editorSettings.page.default-page-width.full-width'
+              'com.cloud-notes.settings.editorSettings.page.default-page-width.full-width'
             ]()}
           </MenuItem>
           <MenuItem
@@ -124,7 +124,7 @@ export const PageWidthFilterValue = ({
             selected={filter.value !== 'fullWidth'}
           >
             {t[
-              'com.affine.settings.editorSettings.page.default-page-width.standard'
+              'com.cloud-notes.settings.editorSettings.page.default-page-width.standard'
             ]()}
           </MenuItem>
         </>
@@ -133,10 +133,10 @@ export const PageWidthFilterValue = ({
       <span>
         {filter.value === 'fullWidth'
           ? t[
-              'com.affine.settings.editorSettings.page.default-page-width.full-width'
+              'com.cloud-notes.settings.editorSettings.page.default-page-width.full-width'
             ]()
           : t[
-              'com.affine.settings.editorSettings.page.default-page-width.standard'
+              'com.cloud-notes.settings.editorSettings.page.default-page-width.standard'
             ]()}
       </span>
     </FilterValueMenu>
@@ -151,11 +151,11 @@ export const PageWidthGroupHeader = ({
   const text =
     groupId === 'fullWidth'
       ? t[
-          'com.affine.settings.editorSettings.page.default-page-width.full-width'
+          'com.cloud-notes.settings.editorSettings.page.default-page-width.full-width'
         ]()
       : groupId === 'standard'
         ? t[
-            'com.affine.settings.editorSettings.page.default-page-width.standard'
+            'com.cloud-notes.settings.editorSettings.page.default-page-width.standard'
           ]()
         : 'Default';
 

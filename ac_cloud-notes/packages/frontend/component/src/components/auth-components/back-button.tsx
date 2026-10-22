@@ -1,4 +1,4 @@
-import { useI18n } from '@affine/i18n';
+import { useI18n } from '@cloud-notes/i18n';
 import { ArrowLeftSmallIcon } from '@blocksuite/icons/rc';
 import type { FC } from 'react';
 
@@ -16,7 +16,7 @@ export const BackButton: FC<ButtonProps> = props => {
       prefix={<ArrowLeftSmallIcon />}
       {...props}
     >
-      {t['com.affine.backButton']()}
+      {t['com.cloud-notes.backButton']()}
     </Button>
   );
 };

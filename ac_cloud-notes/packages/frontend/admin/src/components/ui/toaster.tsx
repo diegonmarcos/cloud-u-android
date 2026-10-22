@@ -5,7 +5,7 @@ import {
   ToastProvider,
   ToastTitle,
   ToastViewport,
-} from '@affine/admin/components/ui/toast';
+} from '@cloud-notes/admin/components/ui/toast';
 
 import { useToast } from './use-toast';
 

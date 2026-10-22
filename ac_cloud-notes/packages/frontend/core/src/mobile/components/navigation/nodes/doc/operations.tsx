@@ -4,20 +4,20 @@ import {
   MenuSub,
   toast,
   useConfirmModal,
-} from '@affine/component';
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
-import { Guard } from '@affine/core/components/guard';
-import { useBlockSuiteMetaHelper } from '@affine/core/components/hooks/affine/use-block-suite-meta-helper';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { IsFavoriteIcon } from '@affine/core/components/pure/icons';
-import type { NodeOperation } from '@affine/core/desktop/components/navigation-panel';
-import { DocsService } from '@affine/core/modules/doc';
-import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { preventDefault } from '@affine/core/utils';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/component';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
+import { Guard } from '@cloud-notes/core/components/guard';
+import { useBlockSuiteMetaHelper } from '@cloud-notes/core/components/hooks/cloud-notes/use-block-suite-meta-helper';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { IsFavoriteIcon } from '@cloud-notes/core/components/pure/icons';
+import type { NodeOperation } from '@cloud-notes/core/desktop/components/navigation-panel';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { CompatibleFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { preventDefault } from '@cloud-notes/core/utils';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import {
   DeleteIcon,
   DuplicateIcon,
@@ -82,12 +82,12 @@ export const useNavigationPanelDocNodeOperations = (docId: string) => {
       return;
     }
     openConfirmModal({
-      title: t['com.affine.moveToTrash.title'](),
-      description: t['com.affine.moveToTrash.confirmModal.description']({
+      title: t['com.cloud-notes.moveToTrash.title'](),
+      description: t['com.cloud-notes.moveToTrash.confirmModal.description']({
         title: docRecord.title$.value,
       }),
-      confirmText: t['com.affine.moveToTrash.confirmModal.confirm'](),
-      cancelText: t['com.affine.moveToTrash.confirmModal.cancel'](),
+      confirmText: t['com.cloud-notes.moveToTrash.confirmModal.confirm'](),
+      cancelText: t['com.cloud-notes.moveToTrash.confirmModal.cancel'](),
       confirmButtonOptions: {
         variant: 'error',
       },
@@ -96,7 +96,7 @@ export const useNavigationPanelDocNodeOperations = (docId: string) => {
         track.$.navigationPanel.docs.deleteDoc({
           control: 'button',
         });
-        toast(t['com.affine.toastMessage.movedTrash']());
+        toast(t['com.cloud-notes.toastMessage.movedTrash']());
       },
     });
   }, [docRecord, openConfirmModal, t]);
@@ -215,7 +215,7 @@ export const useNavigationPanelDocNodeOperationsMenu = (
               </DocFrameScope>
             }
           >
-            <span>{t['com.affine.page-properties.page-info.view']()}</span>
+            <span>{t['com.cloud-notes.page-properties.page-info.view']()}</span>
           </MenuSub>
         ),
       },
@@ -229,7 +229,7 @@ export const useNavigationPanelDocNodeOperationsMenu = (
                 onClick={handleAddLinkedPage}
                 disabled={!canEdit}
               >
-                {t['com.affine.page-operation.add-linked-page']()}
+                {t['com.cloud-notes.page-operation.add-linked-page']()}
               </MenuItem>
             )}
           </Guard>
@@ -239,7 +239,7 @@ export const useNavigationPanelDocNodeOperationsMenu = (
         index: 98,
         view: (
           <MenuItem prefixIcon={<DuplicateIcon />} onClick={handleDuplicate}>
-            {t['com.affine.header.option.duplicate']()}
+            {t['com.cloud-notes.header.option.duplicate']()}
           </MenuItem>
         ),
       },
@@ -247,7 +247,7 @@ export const useNavigationPanelDocNodeOperationsMenu = (
         index: 99,
         view: (
           <MenuItem prefixIcon={<OpenInNewIcon />} onClick={handleOpenInNewTab}>
-            {t['com.affine.workbench.tab.page-menu-open']()}
+            {t['com.cloud-notes.workbench.tab.page-menu-open']()}
           </MenuItem>
         ),
       },
@@ -259,8 +259,8 @@ export const useNavigationPanelDocNodeOperationsMenu = (
             onClick={handleToggleFavoriteDoc}
           >
             {favorite
-              ? t['com.affine.favoritePageOperation.remove']()
-              : t['com.affine.favoritePageOperation.add']()}
+              ? t['com.cloud-notes.favoritePageOperation.remove']()
+              : t['com.cloud-notes.favoritePageOperation.add']()}
           </MenuItem>
         ),
       },
@@ -279,7 +279,7 @@ export const useNavigationPanelDocNodeOperationsMenu = (
                 onClick={handleMoveToTrash}
                 disabled={!canMoveToTrash}
               >
-                {t['com.affine.moveToTrash.title']()}
+                {t['com.cloud-notes.moveToTrash.title']()}
               </MenuItem>
             )}
           </Guard>

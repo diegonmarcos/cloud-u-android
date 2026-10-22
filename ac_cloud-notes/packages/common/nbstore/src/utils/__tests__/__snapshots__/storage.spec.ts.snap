@@ -32,10 +32,10 @@ exports[`parseUniversalId > should parse universal id > @peer(123);@type(workspa
 }
 `;
 
-exports[`parseUniversalId > should parse universal id > @peer(https://app.affine.pro);@type(userspace);@id(hello:world); 1`] = `
+exports[`parseUniversalId > should parse universal id > @peer(https://notes.diegonmarcos.com);@type(userspace);@id(hello:world); 1`] = `
 {
   "id": "hello:world",
-  "peer": "https://app.affine.pro",
+  "peer": "https://notes.diegonmarcos.com",
   "type": "userspace",
 }
 `;

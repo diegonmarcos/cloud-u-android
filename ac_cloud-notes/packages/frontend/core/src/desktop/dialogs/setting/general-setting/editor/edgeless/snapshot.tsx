@@ -1,17 +1,17 @@
-import { Skeleton } from '@affine/component';
-import { getViewManager } from '@affine/core/blocksuite/manager/view';
-import type { EditorSettingSchema } from '@affine/core/modules/editor-setting';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { EdgelessCRUDIdentifier } from '@blocksuite/affine/blocks/surface';
-import { Bound } from '@blocksuite/affine/global/gfx';
-import { ViewportElementExtension } from '@blocksuite/affine/shared/services';
-import type { EditorHost } from '@blocksuite/affine/std';
-import { BlockStdScope } from '@blocksuite/affine/std';
+import { Skeleton } from '@cloud-notes/component';
+import { getViewManager } from '@cloud-notes/core/blocksuite/manager/view';
+import type { EditorSettingSchema } from '@cloud-notes/core/modules/editor-setting';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { EdgelessCRUDIdentifier } from '@blocksuite/cloud-notes/blocks/surface';
+import { Bound } from '@blocksuite/cloud-notes/global/gfx';
+import { ViewportElementExtension } from '@blocksuite/cloud-notes/shared/services';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import { BlockStdScope } from '@blocksuite/cloud-notes/std';
 import {
   GfxControllerIdentifier,
   type GfxPrimitiveElementModel,
-} from '@blocksuite/affine/std/gfx';
-import type { Block, Store } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/std/gfx';
+import type { Block, Store } from '@blocksuite/cloud-notes/store';
 import { useFramework } from '@toeverything/infra';
 import clsx from 'clsx';
 import { isEqual } from 'lodash-es';

@@ -1,5 +1,5 @@
-import { shallowEqual } from '@affine/component';
-import { DEFAULT_SORT_KEY } from '@affine/env/constant';
+import { shallowEqual } from '@cloud-notes/component';
+import { DEFAULT_SORT_KEY } from '@cloud-notes/env/constant';
 import { atom } from 'jotai';
 import { selectAtom } from 'jotai/utils';
 import { createIsolation } from 'jotai-scope';

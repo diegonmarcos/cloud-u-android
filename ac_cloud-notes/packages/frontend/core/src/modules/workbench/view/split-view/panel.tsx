@@ -4,10 +4,10 @@ import {
   shallowUpdater,
   useDraggable,
   useDropTarget,
-} from '@affine/component';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
+} from '@cloud-notes/component';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import {
   CloseIcon,
   ExpandFullIcon,
@@ -135,8 +135,8 @@ export const SplitViewPanel = memo(function SplitViewPanel({
     };
   }, [size, order]);
 
-  const { dropTargetRef } = useDropTarget<AffineDNDData>(() => {
-    const handleDrag = (data: DropTargetDragEvent<AffineDNDData>) => {
+  const { dropTargetRef } = useDropTarget<CloudNotesDNDData>(() => {
+    const handleDrag = (data: DropTargetDragEvent<CloudNotesDNDData>) => {
       // only the first view has left edge
       const edge = data.closestEdge as 'left' | 'right';
       const switchEdge = edge === 'left' && !isFirst;
@@ -169,7 +169,7 @@ export const SplitViewPanel = memo(function SplitViewPanel({
     };
   }, [index, isFirst, order, setDraggingOverView, view, views]);
 
-  const { dragRef } = useDraggable<AffineDNDData>(() => {
+  const { dragRef } = useDraggable<CloudNotesDNDData>(() => {
     return {
       data: () => {
         return {
@@ -330,28 +330,28 @@ const SplitViewMenu = ({
   const CloseItem =
     views.length > 1 ? (
       <MenuItem prefixIcon={<CloseIcon />} onClick={handleClose}>
-        {t['com.affine.workbench.split-view-menu.close']()}
+        {t['com.cloud-notes.workbench.split-view-menu.close']()}
       </MenuItem>
     ) : null;
 
   const MoveLeftItem =
     viewIndex > 0 && views.length > 1 ? (
       <MenuItem onClick={handleMoveLeft} prefixIcon={<InsertRightIcon />}>
-        {t['com.affine.workbench.split-view-menu.move-left']()}
+        {t['com.cloud-notes.workbench.split-view-menu.move-left']()}
       </MenuItem>
     ) : null;
 
   const FullScreenItem =
     views.length > 1 ? (
       <MenuItem onClick={handleCloseOthers} prefixIcon={<ExpandFullIcon />}>
-        {t['com.affine.workbench.split-view-menu.keep-this-one']()}
+        {t['com.cloud-notes.workbench.split-view-menu.keep-this-one']()}
       </MenuItem>
     ) : null;
 
   const MoveRightItem =
     viewIndex < views.length - 1 ? (
       <MenuItem onClick={handleMoveRight} prefixIcon={<InsertLeftIcon />}>
-        {t['com.affine.workbench.split-view-menu.move-right']()}
+        {t['com.cloud-notes.workbench.split-view-menu.move-right']()}
       </MenuItem>
     ) : null;
   return (

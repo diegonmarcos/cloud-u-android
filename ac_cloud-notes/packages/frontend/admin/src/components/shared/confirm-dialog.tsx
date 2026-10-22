@@ -1,4 +1,4 @@
-import { Button, type ButtonProps } from '@affine/admin/components/ui/button';
+import { Button, type ButtonProps } from '@cloud-notes/admin/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -6,7 +6,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@affine/admin/components/ui/dialog';
+} from '@cloud-notes/admin/components/ui/dialog';
 import type { ReactNode } from 'react';
 
 interface ConfirmDialogProps {

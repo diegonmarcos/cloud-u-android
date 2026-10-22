@@ -1,4 +1,4 @@
-import type { DatabaseBlockDataSource } from '@blocksuite/affine/blocks/database';
+import type { DatabaseBlockDataSource } from '@blocksuite/cloud-notes/blocks/database';
 import type { LiveData } from '@toeverything/infra';
 
 import type { Doc } from '../doc';

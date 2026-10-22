@@ -110,7 +110,7 @@ export const useDraggable = <D extends DNDData = DNDData>(
       },
     };
 
-    element.dataset.affineDraggable = 'true';
+    element.dataset.cloudNotesDraggable = 'true';
 
     const cleanupDraggable = draggable({
       element,

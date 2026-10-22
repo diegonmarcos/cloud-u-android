@@ -37,7 +37,7 @@ test('add inline latex at the start of line', async ({ page }, testInfo) => {
 
   const latexEditorLine = page.locator('latex-editor-menu v-line div');
   const latexElement = page.locator(
-    'affine-paragraph rich-text affine-latex-node'
+    'cloud-notes-paragraph rich-text cloud-notes-latex-node'
   );
 
   expect(await latexEditorLine.isVisible()).not.toBeTruthy();
@@ -65,7 +65,7 @@ test('add inline latex in the middle of text', async ({ page }, testInfo) => {
 
   const latexEditorLine = page.locator('latex-editor-menu v-line div');
   const latexElement = page.locator(
-    'affine-paragraph rich-text affine-latex-node'
+    'cloud-notes-paragraph rich-text cloud-notes-latex-node'
   );
 
   expect(await latexEditorLine.isVisible()).not.toBeTruthy();
@@ -96,7 +96,7 @@ test('update inline latex by clicking the node', async ({ page }, testInfo) => {
 
   const latexEditorLine = page.locator('latex-editor-menu v-line div');
   const latexElement = page.locator(
-    'affine-paragraph rich-text affine-latex-node'
+    'cloud-notes-paragraph rich-text cloud-notes-latex-node'
   );
 
   expect(await latexEditorLine.isVisible()).not.toBeTruthy();
@@ -126,7 +126,7 @@ test('update inline latex by clicking the node', async ({ page }, testInfo) => {
   expect(innerHTML).toMatchSnapshot(`${testInfo.title}.html`);
 
   // click outside to hide the editor
-  await page.click('affine-editor-container');
+  await page.click('cloud-notes-editor-container');
   expect(await latexEditorLine.isVisible()).not.toBeTruthy();
 });
 
@@ -137,7 +137,7 @@ test('latex editor', async ({ page }) => {
 
   const latexEditorLine = page.locator('latex-editor-menu v-line div');
   const latexElement = page.locator(
-    'affine-paragraph rich-text affine-latex-node'
+    'cloud-notes-paragraph rich-text cloud-notes-latex-node'
   );
 
   expect(await latexEditorLine.isVisible()).not.toBeTruthy();
@@ -222,7 +222,7 @@ test('add inline latex using slash menu', async ({ page }, testInfo) => {
 
   const latexEditorLine = page.locator('latex-editor-menu v-line div');
   const latexElement = page.locator(
-    'affine-paragraph rich-text affine-latex-node'
+    'cloud-notes-paragraph rich-text cloud-notes-latex-node'
   );
 
   expect(await latexEditorLine.isVisible()).not.toBeTruthy();

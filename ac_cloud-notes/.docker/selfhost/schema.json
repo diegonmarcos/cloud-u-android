@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "AFFiNE Application Configuration",
+  "title": "Cloud Notes Application Configuration",
   "type": "object",
   "properties": {
     "metrics": {
@@ -20,7 +20,7 @@
       "properties": {
         "privateKey": {
           "type": "string",
-          "description": "The private key for used by the crypto module to create signed tokens or encrypt data.\n@default \"\"\n@environment `AFFINE_PRIVATE_KEY`",
+          "description": "The private key for used by the crypto module to create signed tokens or encrypt data.\n@default \"\"\n@environment `CLOUD_NOTES_PRIVATE_KEY`",
           "default": ""
         }
       }
@@ -179,8 +179,8 @@
         },
         "SMTP.sender": {
           "type": "string",
-          "description": "Sender of all the emails (e.g. \"AFFiNE Self Hosted &lt;noreply@example.com&gt;\")\n@default \"AFFiNE Self Hosted <noreply@example.com>\"\n@environment `MAILER_SENDER`",
-          "default": "AFFiNE Self Hosted <noreply@example.com>"
+          "description": "Sender of all the emails (e.g. \"Cloud Notes Self Hosted &lt;noreply@example.com&gt;\")\n@default \"Cloud Notes Self Hosted <noreply@example.com>\"\n@environment `MAILER_SENDER`",
+          "default": "Cloud Notes Self Hosted <noreply@example.com>"
         },
         "SMTP.ignoreTLS": {
           "type": "boolean",
@@ -234,7 +234,7 @@
         },
         "fallbackSMTP.sender": {
           "type": "string",
-          "description": "Sender of all the emails (e.g. \"AFFiNE Self Hosted &lt;noreply@example.com&gt;\")\n@default \"\"",
+          "description": "Sender of all the emails (e.g. \"Cloud Notes Self Hosted &lt;noreply@example.com&gt;\")\n@default \"\"",
           "default": ""
         },
         "fallbackSMTP.ignoreTLS": {
@@ -271,7 +271,7 @@
         },
         "avatar.storage": {
           "type": "object",
-          "description": "The config of storage for user avatars.\n@default {\"provider\":\"fs\",\"bucket\":\"avatars\",\"config\":{\"path\":\"~/.affine/storage\"}}",
+          "description": "The config of storage for user avatars.\n@default {\"provider\":\"fs\",\"bucket\":\"avatars\",\"config\":{\"path\":\"~/.cloud-notes/storage\"}}",
           "oneOf": [
             {
               "type": "object",
@@ -512,13 +512,13 @@
             "provider": "fs",
             "bucket": "avatars",
             "config": {
-              "path": "~/.affine/storage"
+              "path": "~/.cloud-notes/storage"
             }
           }
         },
         "blob.storage": {
           "type": "object",
-          "description": "The config of storage for all uploaded blobs(images, videos, etc.).\n@default {\"provider\":\"fs\",\"bucket\":\"blobs\",\"config\":{\"path\":\"~/.affine/storage\"}}",
+          "description": "The config of storage for all uploaded blobs(images, videos, etc.).\n@default {\"provider\":\"fs\",\"bucket\":\"blobs\",\"config\":{\"path\":\"~/.cloud-notes/storage\"}}",
           "oneOf": [
             {
               "type": "object",
@@ -759,7 +759,7 @@
             "provider": "fs",
             "bucket": "blobs",
             "config": {
-              "path": "~/.affine/storage"
+              "path": "~/.cloud-notes/storage"
             }
           }
         }
@@ -797,21 +797,21 @@
       "properties": {
         "name": {
           "type": "string",
-          "description": "A recognizable name for the server. Will be shown when connected with AFFiNE Desktop.\n@default undefined"
+          "description": "A recognizable name for the server. Will be shown when connected with Cloud Notes Desktop.\n@default undefined"
         },
         "externalUrl": {
           "type": "string",
-          "description": "Base url of AFFiNE server, used for generating external urls.\nDefault to be `[server.protocol]://[server.host][:server.port]` if not specified.\n    \n@default \"\"\n@environment `AFFINE_SERVER_EXTERNAL_URL`",
+          "description": "Base url of Cloud Notes server, used for generating external urls.\nDefault to be `[server.protocol]://[server.host][:server.port]` if not specified.\n    \n@default \"\"\n@environment `CLOUD_NOTES_SERVER_EXTERNAL_URL`",
           "default": ""
         },
         "https": {
           "type": "boolean",
-          "description": "Whether the server is hosted on a ssl enabled domain (https://).\n@default false\n@environment `AFFINE_SERVER_HTTPS`",
+          "description": "Whether the server is hosted on a ssl enabled domain (https://).\n@default false\n@environment `CLOUD_NOTES_SERVER_HTTPS`",
           "default": false
         },
         "host": {
           "type": "string",
-          "description": "Where the server get deployed(FQDN).\n@default \"localhost\"\n@environment `AFFINE_SERVER_HOST`",
+          "description": "Where the server get deployed(FQDN).\n@default \"localhost\"\n@environment `CLOUD_NOTES_SERVER_HOST`",
           "default": "localhost"
         },
         "hosts": {
@@ -826,12 +826,12 @@
         },
         "port": {
           "type": "number",
-          "description": "Which port the server will listen on.\n@default 3010\n@environment `AFFINE_SERVER_PORT`",
+          "description": "Which port the server will listen on.\n@default 3010\n@environment `CLOUD_NOTES_SERVER_PORT`",
           "default": 3010
         },
         "path": {
           "type": "string",
-          "description": "Subpath where the server get deployed if there is one.(e.g. /affine)\n@default \"\"\n@environment `AFFINE_SERVER_SUB_PATH`",
+          "description": "Subpath where the server get deployed if there is one.(e.g. /cloud-notes)\n@default \"\"\n@environment `CLOUD_NOTES_SERVER_SUB_PATH`",
           "default": ""
         }
       }
@@ -1060,7 +1060,7 @@
         },
         "storage": {
           "type": "object",
-          "description": "The config for the storage provider.\n@default {\"provider\":\"fs\",\"bucket\":\"copilot\",\"config\":{\"path\":\"~/.affine/storage\"}}",
+          "description": "The config for the storage provider.\n@default {\"provider\":\"fs\",\"bucket\":\"copilot\",\"config\":{\"path\":\"~/.cloud-notes/storage\"}}",
           "oneOf": [
             {
               "type": "object",
@@ -1301,7 +1301,7 @@
             "provider": "fs",
             "bucket": "copilot",
             "config": {
-              "path": "~/.affine/storage"
+              "path": "~/.cloud-notes/storage"
             }
           }
         },

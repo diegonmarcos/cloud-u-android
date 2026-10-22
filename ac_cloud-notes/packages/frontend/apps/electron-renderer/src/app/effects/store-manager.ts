@@ -1,7 +1,7 @@
-import { NbstoreProvider } from '@affine/core/modules/storage';
-import { apis } from '@affine/electron-api';
-import { StoreManagerClient } from '@affine/nbstore/worker/client';
-import { setTelemetryTransport } from '@affine/track';
+import { NbstoreProvider } from '@cloud-notes/core/modules/storage';
+import { apis } from '@cloud-notes/electron-api';
+import { StoreManagerClient } from '@cloud-notes/nbstore/worker/client';
+import { setTelemetryTransport } from '@cloud-notes/track';
 import type { Framework } from '@toeverything/infra';
 import { OpClient } from '@toeverything/infra/op';
 import { v4 as uuid } from 'uuid';
@@ -33,7 +33,7 @@ function createStoreManagerClient() {
   window.addEventListener('message', handleMessage);
 
   // oxlint-disable-next-line no-non-null-assertion
-  apis!.worker.connectWorker('affine-shared-worker', portId).catch(err => {
+  apis!.worker.connectWorker('cloud-notes-shared-worker', portId).catch(err => {
     console.error('failed to connect worker', err);
   });
 

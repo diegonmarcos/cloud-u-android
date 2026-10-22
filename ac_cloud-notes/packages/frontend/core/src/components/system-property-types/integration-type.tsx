@@ -1,10 +1,10 @@
-import { MenuItem } from '@affine/component';
-import type { FilterParams } from '@affine/core/modules/collection-rules';
-import type { DocRecord } from '@affine/core/modules/doc';
-import { IntegrationTypeIcon } from '@affine/core/modules/integration';
-import { INTEGRATION_TYPE_NAME_MAP } from '@affine/core/modules/integration/constant';
-import type { IntegrationType } from '@affine/core/modules/integration/type';
-import { useI18n } from '@affine/i18n';
+import { MenuItem } from '@cloud-notes/component';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
+import type { DocRecord } from '@cloud-notes/core/modules/doc';
+import { IntegrationTypeIcon } from '@cloud-notes/core/modules/integration';
+import { INTEGRATION_TYPE_NAME_MAP } from '@cloud-notes/core/modules/integration/constant';
+import type { IntegrationType } from '@cloud-notes/core/modules/integration/type';
+import { useI18n } from '@cloud-notes/i18n';
 import { IntegrationsIcon, ReadwiseIcon } from '@blocksuite/icons/rc';
 import { useLiveData } from '@toeverything/infra';
 
@@ -84,7 +84,7 @@ export const IntegrationTypeGroupHeader = ({
   const t = useI18n();
   const text =
     groupId === 'readwise'
-      ? t['com.affine.integration.readwise.name']()
+      ? t['com.cloud-notes.integration.readwise.name']()
       : groupId
         ? groupId
         : 'No integrations';

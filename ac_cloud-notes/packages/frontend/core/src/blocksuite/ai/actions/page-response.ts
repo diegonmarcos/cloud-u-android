@@ -1,32 +1,32 @@
-import { CodeBlockPreviewIdentifier } from '@blocksuite/affine/blocks/code';
-import { addSiblingImageBlocks } from '@blocksuite/affine/blocks/image';
+import { CodeBlockPreviewIdentifier } from '@blocksuite/cloud-notes/blocks/code';
+import { addSiblingImageBlocks } from '@blocksuite/cloud-notes/blocks/image';
 import {
   getSurfaceBlock,
   SurfaceBlockModel,
-} from '@blocksuite/affine/blocks/surface';
-import { fitContent } from '@blocksuite/affine/gfx/shape';
-import { createTemplateJob } from '@blocksuite/affine/gfx/template';
+} from '@blocksuite/cloud-notes/blocks/surface';
+import { fitContent } from '@blocksuite/cloud-notes/gfx/shape';
+import { createTemplateJob } from '@blocksuite/cloud-notes/gfx/template';
 import {
   Bound,
   getCommonBound,
   type XYWH,
-} from '@blocksuite/affine/global/gfx';
+} from '@blocksuite/cloud-notes/global/gfx';
 import type {
   MindmapElementModel,
   ShapeElementModel,
-} from '@blocksuite/affine/model';
-import { TelemetryProvider } from '@blocksuite/affine/shared/services';
-import { type EditorHost, TextSelection } from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/model';
+import { TelemetryProvider } from '@blocksuite/cloud-notes/shared/services';
+import { type EditorHost, TextSelection } from '@blocksuite/cloud-notes/std';
 import {
   GfxBlockElementModel,
   type GfxModel,
   LayerManager,
-} from '@blocksuite/affine/std/gfx';
-import { type BlockProps, Text } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/std/gfx';
+import { type BlockProps, Text } from '@blocksuite/cloud-notes/store';
 import * as Y from 'yjs';
 
 import { getAIPanelWidget } from '../utils/ai-widgets';
-import type { AffineNode, AIContext } from '../utils/context';
+import type { CloudNotesNode, AIContext } from '../utils/context';
 import { insertAbove, insertBelow, replace } from '../utils/editor-actions';
 import { preprocessHtml } from '../utils/html';
 import { fetchImageToFile } from '../utils/image';
@@ -320,7 +320,7 @@ function addSiblingBlocks(
   return host.store.addSiblingBlocks(targetModel, props, place);
 }
 
-function findFrameObject(obj: AffineNode): AffineNode | null {
+function findFrameObject(obj: CloudNotesNode): CloudNotesNode | null {
   if (obj.flavour === 'affine:frame') {
     return obj;
   }

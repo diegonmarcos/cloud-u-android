@@ -1,40 +1,40 @@
-import { notify, toast } from '@affine/component';
+import { notify, toast } from '@cloud-notes/component';
 import {
   pushGlobalLoadingEventAtom,
   resolveGlobalLoadingEventAtom,
-} from '@affine/component/global-loading';
+} from '@cloud-notes/component/global-loading';
 import {
   AIAppEvents,
   createAIRequestService,
   setupAIProvider,
-} from '@affine/core/blocksuite/ai';
-import { useRegisterFindInPageCommands } from '@affine/core/components/hooks/affine/use-register-find-in-page-commands';
-import { useRegisterWorkspaceCommands } from '@affine/core/components/hooks/use-register-workspace-commands';
-import { OverCapacityNotification } from '@affine/core/components/over-capacity';
+} from '@cloud-notes/core/blocksuite/ai';
+import { useRegisterFindInPageCommands } from '@cloud-notes/core/components/hooks/cloud-notes/use-register-find-in-page-commands';
+import { useRegisterWorkspaceCommands } from '@cloud-notes/core/components/hooks/use-register-workspace-commands';
+import { OverCapacityNotification } from '@cloud-notes/core/components/over-capacity';
 import {
   AuthService,
   EventSourceService,
   GraphQLService,
   RealtimeService,
-} from '@affine/core/modules/cloud';
+} from '@cloud-notes/core/modules/cloud';
 import {
   GlobalDialogService,
   WorkspaceDialogService,
-} from '@affine/core/modules/dialogs';
-import { DocsService } from '@affine/core/modules/doc';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useRegisterNavigationCommands } from '@affine/core/modules/navigation/view/use-register-navigation-commands';
-import { QuickSearchContainer } from '@affine/core/modules/quicksearch';
-import { NbstoreService } from '@affine/core/modules/storage';
-import { WorkbenchService } from '@affine/core/modules/workbench';
+} from '@cloud-notes/core/modules/dialogs';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useRegisterNavigationCommands } from '@cloud-notes/core/modules/navigation/view/use-register-navigation-commands';
+import { QuickSearchContainer } from '@cloud-notes/core/modules/quicksearch';
+import { NbstoreService } from '@cloud-notes/core/modules/storage';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   WorkspaceService,
-} from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
-import type { DocMode } from '@blocksuite/affine/model';
-import { ZipTransformer } from '@blocksuite/affine/widgets/linked-doc';
+} from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
+import { ZipTransformer } from '@blocksuite/cloud-notes/widgets/linked-doc';
 import {
   effect,
   fromPromise,
@@ -73,7 +73,7 @@ export const WorkspaceSideEffects = () => {
           throwIfAborted(abort);
           const [doc] = await ZipTransformer.importDocs(
             currentWorkspace.docCollection,
-            getAFFiNEWorkspaceSchema(),
+            getCloudNotesWorkspaceSchema(),
             templateBlob
           );
           if (doc) {
@@ -96,7 +96,7 @@ export const WorkspaceSideEffects = () => {
           }),
           catchError(err => {
             console.error(err);
-            toast(t['com.affine.ai.template-insert.failed']());
+            toast(t['com.cloud-notes.ai.template-insert.failed']());
             return EMPTY;
           }),
           finalize(() => {
@@ -152,14 +152,14 @@ export const WorkspaceSideEffects = () => {
     if (!realtimeConnectionError) return;
     const message = {
       authentication:
-        t['com.affine.realtime.connection-error.authentication'](),
-      network: t['com.affine.realtime.connection-error.network'](),
-      server: t['com.affine.realtime.connection-error.server'](),
-      timeout: t['com.affine.realtime.connection-error.timeout'](),
+        t['com.cloud-notes.realtime.connection-error.authentication'](),
+      network: t['com.cloud-notes.realtime.connection-error.network'](),
+      server: t['com.cloud-notes.realtime.connection-error.server'](),
+      timeout: t['com.cloud-notes.realtime.connection-error.timeout'](),
     }[realtimeConnectionError.type];
     const id = notify.warning(
       {
-        title: t['com.affine.realtime.connection-error.title'](),
+        title: t['com.cloud-notes.realtime.connection-error.title'](),
         message,
       },
       { id: `realtime-connection-error:${realtimeConnectionError.endpoint}` }

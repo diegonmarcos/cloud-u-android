@@ -2,7 +2,7 @@ use std::{collections::HashSet, io::Read};
 
 mod rich_text;
 
-use affine_importer::{ImportWarning, ImportedAsset};
+use cloud_notes_importer::{ImportWarning, ImportedAsset};
 use onenote_parser::{
   contents::{Content, EmbeddedFile, Image, Outline, OutlineElement, OutlineGroup, OutlineItem, Table},
   page::Page,

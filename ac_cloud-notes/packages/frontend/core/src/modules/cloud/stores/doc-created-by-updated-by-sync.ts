@@ -1,4 +1,4 @@
-import { getDocCreatedByUpdatedByListQuery } from '@affine/graphql';
+import { getDocCreatedByUpdatedByListQuery } from '@cloud-notes/graphql';
 import { Store, yjsGetPath } from '@toeverything/infra';
 import type { Observable } from 'rxjs';
 
@@ -33,7 +33,7 @@ export class DocCreatedByUpdatedBySyncStore extends Store {
   watchDocCreatedByUpdatedBySynced() {
     const rootYDoc = this.workspaceService.workspace.rootYDoc;
     return yjsGetPath(
-      rootYDoc.getMap('affine:workspace-properties'),
+      rootYDoc.getMap('cloud-notes:workspace-properties'),
       'docCreatedByUpdatedBySynced'
     ) as Observable<boolean>;
   }
@@ -41,7 +41,7 @@ export class DocCreatedByUpdatedBySyncStore extends Store {
   setDocCreatedByUpdatedBySynced(synced: boolean) {
     const rootYDoc = this.workspaceService.workspace.rootYDoc;
     rootYDoc
-      .getMap('affine:workspace-properties')
+      .getMap('cloud-notes:workspace-properties')
       .set('docCreatedByUpdatedBySynced', synced);
   }
 }

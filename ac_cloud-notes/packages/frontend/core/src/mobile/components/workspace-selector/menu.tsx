@@ -1,24 +1,24 @@
-import { Divider, IconButton, Menu, MenuItem } from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+import { Divider, IconButton, Menu, MenuItem } from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import {
   RouteLogic,
   useNavigateHelper,
-} from '@affine/core/components/hooks/use-navigate-helper';
-import { useWorkspaceInfo } from '@affine/core/components/hooks/use-workspace-info';
-import { WorkspaceAvatar } from '@affine/core/components/workspace-avatar';
+} from '@cloud-notes/core/components/hooks/use-navigate-helper';
+import { useWorkspaceInfo } from '@cloud-notes/core/components/hooks/use-workspace-info';
+import { WorkspaceAvatar } from '@cloud-notes/core/components/workspace-avatar';
 import {
   type AuthAccountInfo,
   AuthService,
   type Server,
   ServersService,
-} from '@affine/core/modules/cloud';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
-import { GlobalContextService } from '@affine/core/modules/global-context';
+} from '@cloud-notes/core/modules/cloud';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
 import {
   type WorkspaceMetadata,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   AccountIcon,
   CloseIcon,
@@ -115,14 +115,14 @@ const WorkspaceServerInfo = ({
   const menuItems = useMemo(
     () =>
       [
-        server !== 'affine-cloud' && server !== 'local' && (
+        server !== 'cloud-notes-cloud' && server !== 'local' && (
           <MenuItem
             prefixIcon={<DeleteIcon />}
             type="danger"
             key="delete-server"
             onClick={onDeleteServer}
           >
-            {t['com.affine.server.delete']()}
+            {t['com.cloud-notes.server.delete']()}
           </MenuItem>
         ),
         accountStatus === 'authenticated' && (
@@ -176,7 +176,7 @@ const LocalWorkspaces = ({
     <>
       <WorkspaceServerInfo
         server="local"
-        name={t['com.affine.workspaceList.workspaceListType.local']()}
+        name={t['com.cloud-notes.workspaceList.workspaceListType.local']()}
       />
       <WorkspaceList
         items={workspaces}
@@ -291,12 +291,12 @@ export const SelectorMenu = ({ onClose }: { onClose?: () => void }) => {
     globalContextService.globalContext.workspaceFlavour.$
   );
   const servers = useLiveData(serversService.servers$);
-  const affineCloudServer = useMemo(
-    () => servers.find(s => s.id === 'affine-cloud') as Server,
+  const cloudNotesCloudServer = useMemo(
+    () => servers.find(s => s.id === 'cloud-notes-cloud') as Server,
     [servers]
   );
   const selfhostServers = useMemo(
-    () => servers.filter(s => s.id !== 'affine-cloud'),
+    () => servers.filter(s => s.id !== 'cloud-notes-cloud'),
     [servers]
   );
 
@@ -355,15 +355,15 @@ export const SelectorMenu = ({ onClose }: { onClose?: () => void }) => {
       </header>
       <div className={styles.divider} />
       <main className={styles.body}>
-        {/* 1. affine-cloud  */}
+        {/* 1. cloud-notes-cloud  */}
         <FrameworkScope
-          key={affineCloudServer.id}
-          scope={affineCloudServer.scope}
+          key={cloudNotesCloudServer.id}
+          scope={cloudNotesCloudServer.scope}
         >
           <CloudWorkSpaceList
-            server={affineCloudServer}
+            server={cloudNotesCloudServer}
             workspaces={cloudWorkspaces.filter(
-              ({ flavour }) => flavour === affineCloudServer.id
+              ({ flavour }) => flavour === cloudNotesCloudServer.id
             )}
             onClickWorkspace={handleClickWorkspace}
           />

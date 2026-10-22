@@ -21,6 +21,6 @@ rustflags = [
 rustflags = ["-C", "link-args=-Wl,-z,nodelete"]
 
 # Temporary local llm_adapter override.
-# Uncomment when verifying AFFiNE against the sibling llm_adapter workspace.
+# Uncomment when verifying Cloud Notes against the sibling llm_adapter workspace.
 # [patch.crates-io]
 # llm_adapter = { path = "../llm_adapter" }

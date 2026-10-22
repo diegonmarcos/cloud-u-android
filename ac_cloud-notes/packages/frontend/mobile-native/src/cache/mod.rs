@@ -6,14 +6,14 @@ use std::{
   sync::{Mutex, RwLock},
 };
 
-use affine_nbstore::Blob as NbBlob;
+use cloud_notes_nbstore::Blob as NbBlob;
 use lru::LruCache;
 
 pub(crate) const MOBILE_PAYLOAD_INLINE_THRESHOLD_BYTES: usize = 1024 * 1024;
 const MOBILE_BLOB_MAX_READ_BYTES: u64 = 64 * 1024 * 1024;
 const MOBILE_BLOB_CACHE_CAPACITY: usize = 32;
 const MOBILE_BLOB_CACHE_DIR: &str = "nbstore-blob-cache";
-pub(crate) const MOBILE_BLOB_FILE_PREFIX: &str = "__AFFINE_BLOB_FILE__:";
+pub(crate) const MOBILE_BLOB_FILE_PREFIX: &str = "__CLOUD_NOTES_BLOB_FILE__:";
 
 pub(crate) fn should_cache_payload_as_file(payload_len: usize) -> bool {
   payload_len >= MOBILE_PAYLOAD_INLINE_THRESHOLD_BYTES

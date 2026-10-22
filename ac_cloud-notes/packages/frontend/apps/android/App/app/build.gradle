@@ -12,7 +12,7 @@ plugins {
     alias libs.plugins.hilt
 }
 
-def nativeTarget = System.getenv('AFFINE_ANDROID_NATIVE_TARGET') ?: 'arm64'
+def nativeTarget = System.getenv('CLOUD_NOTES_ANDROID_NATIVE_TARGET') ?: 'arm64'
 def nativeAbi = nativeTarget == 'x86_64' ? 'x86_64' : 'arm64-v8a'
 
 apply from: 'capacitor.build.gradle'
@@ -29,7 +29,7 @@ apply from: 'capacitor.build.gradle'
 // test-app-names-pattern.sh T6 detects (ac_cloud-browser, ac_cloud-news,
 // aa_cloud-superapp all read `new groovy.json.JsonSlurper().parse(file(...))`
 // into `buildJson`). Spelling it `buildMeta` + `rootProject.file(` made this
-// app invisible to T6 — which is why a launcher tile reading "AFFiNE" shipped
+// app invisible to T6 — which is why a launcher tile with the wrong label shipped
 // behind 18 green checks.
 def buildJson = new groovy.json.JsonSlurper().parse(file('../../../../../../build.json'))
 def androidMeta = buildJson.android
@@ -60,7 +60,7 @@ def shortSha = (System.getenv('GITHUB_SHA')
                 .take(8)
 
 android {
-    namespace = "app.affine.pro"
+    namespace = "app.cloudnotes.pro"
     compileSdk = rootProject.ext.compileSdkVersion
     // PINNED (#469): upstream resolves "whatever NDK happens to be installed"
     // (listFiles().sort().last()) — a floating version from the runner image.
@@ -84,7 +84,7 @@ android {
         buildConfigField "String", "UI_TOP_BAR_B64", "\"${uiTopBarB64}\""
         buildConfigField "String", "AI_GATEWAY_URL", "\"${aiGatewayUrl}\""
         // #522: the LAUNCHER LABEL. It lived in res/values/strings.xml as the
-        // literal "AFFiNE" — the upstream project's name rendered as this
+        // literal copy of the label, rendered as this
         // product's identity on the owner's home screen, the #380/#381/#390/#424
         // defect family exactly. The name is DECLARED ONCE in build.json::name
         // and derived here; strings.xml no longer states it at all.
@@ -210,7 +210,7 @@ dependencies {
 
 cargo {
     module = "../../../../mobile-native"
-    libname = "affine_mobile_native"
+    libname = "cloud_notes_mobile_native"
     features {
         defaultAnd("use-as-lib")
     }
@@ -218,7 +218,7 @@ cargo {
     pythonCommand = "python3"
     targetDirectory = "../../../../../../target"
     apiLevel = 28
-    targetIncludes = ["libaffine_mobile_native.so"]
+    targetIncludes = ["libcloud_notes_mobile_native.so"]
     profile = "release"
 }
 
@@ -258,7 +258,7 @@ android.applicationVariants.configureEach { variant ->
     def t = tasks.register("generate${variantName}UniFFIBindings", Exec) {
         workingDir "${project.projectDir}"
         // Runs the bindings generation, note that you must have uniffi-bindgen installed and in your PATH environment variable
-        commandLine "${cargoPath}", 'run', '--bin', 'uniffi-bindgen', 'generate', '--library', "${buildDir}/rustJniLibs/android/${nativeAbi}/libaffine_mobile_native.so", '--language', 'kotlin', '--out-dir', "${project.projectDir}/src/main/java"
+        commandLine "${cargoPath}", 'run', '--bin', 'uniffi-bindgen', 'generate', '--library', "${buildDir}/rustJniLibs/android/${nativeAbi}/libcloud_notes_mobile_native.so", '--language', 'kotlin', '--out-dir', "${project.projectDir}/src/main/java"
         dependsOn("cargoBuild")
     }
     variant.javaCompileProvider.get().dependsOn(t)

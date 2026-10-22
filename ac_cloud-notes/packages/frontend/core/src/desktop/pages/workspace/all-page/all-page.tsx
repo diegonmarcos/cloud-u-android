@@ -1,19 +1,19 @@
-import { Button, usePromptModal } from '@affine/component';
+import { Button, usePromptModal } from '@cloud-notes/component';
 import {
   createDocExplorerContext,
   DocExplorerContext,
-} from '@affine/core/components/explorer/context';
-import { DocsExplorer } from '@affine/core/components/explorer/docs-view/docs-list';
-import type { ExplorerDisplayPreference } from '@affine/core/components/explorer/types';
-import { Filters } from '@affine/core/components/filter';
+} from '@cloud-notes/core/components/explorer/context';
+import { DocsExplorer } from '@cloud-notes/core/components/explorer/docs-view/docs-list';
+import type { ExplorerDisplayPreference } from '@cloud-notes/core/components/explorer/types';
+import { Filters } from '@cloud-notes/core/components/filter';
 import {
   CollectionService,
   PinnedCollectionService,
-} from '@affine/core/modules/collection';
-import { CollectionRulesService } from '@affine/core/modules/collection-rules';
-import type { FilterParams } from '@affine/core/modules/collection-rules/types';
-import { WorkspaceLocalState } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/collection';
+import { CollectionRulesService } from '@cloud-notes/core/modules/collection-rules';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules/types';
+import { WorkspaceLocalState } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -298,14 +298,14 @@ export const AllPage = () => {
       setTempFilters(null);
     } else {
       openPromptModal({
-        title: t['com.affine.editCollection.saveCollection'](),
-        label: t['com.affine.editCollectionName.name'](),
+        title: t['com.cloud-notes.editCollection.saveCollection'](),
+        label: t['com.cloud-notes.editCollectionName.name'](),
         inputOptions: {
-          placeholder: t['com.affine.editCollectionName.name.placeholder'](),
+          placeholder: t['com.cloud-notes.editCollectionName.name.placeholder'](),
         },
-        children: t['com.affine.editCollectionName.createTips'](),
-        confirmText: t['com.affine.editCollection.save'](),
-        cancelText: t['com.affine.editCollection.button.cancel'](),
+        children: t['com.cloud-notes.editCollectionName.createTips'](),
+        confirmText: t['com.cloud-notes.editCollection.save'](),
+        cancelText: t['com.cloud-notes.editCollection.button.cancel'](),
         confirmButtonOptions: {
           variant: 'primary',
         },

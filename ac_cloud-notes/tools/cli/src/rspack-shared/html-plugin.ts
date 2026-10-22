@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-import { Path, ProjectRoot } from '@affine-tools/utils/path';
+import { Path, ProjectRoot } from '@cloud-notes-tools/utils/path';
 import { Repository } from '@napi-rs/simple-git';
 import { HtmlRspackPlugin, type HtmlRspackPluginOptions } from '@rspack/core';
 import { once } from 'lodash-es';
@@ -53,15 +53,15 @@ export const getPublicPath = (BUILD_CONFIG: BUILD_CONFIG_TYPE) => {
 
   switch (BUILD_TYPE) {
     case 'stable':
-      return 'https://prod.affineassets.com/';
+      return 'https://prod.cloudnotesassets.com/';
     case 'beta':
-      return 'https://beta.affineassets.com/';
+      return 'https://beta.cloudnotesassets.com/';
     default:
-      return 'https://dev.affineassets.com/';
+      return 'https://dev.cloudnotesassets.com/';
   }
 };
 
-const DESCRIPTION = `There can be more than Notion and Miro. AFFiNE is a next-gen knowledge base that brings planning, sorting and creating all together.`;
+const DESCRIPTION = `There can be more than Notion and Miro. Cloud Notes is a next-gen knowledge base that brings planning, sorting and creating all together.`;
 
 const gitShortHash = once(() => {
   const { GITHUB_SHA } = process.env;

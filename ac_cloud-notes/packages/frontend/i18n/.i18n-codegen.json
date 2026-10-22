@@ -12,7 +12,7 @@
       },
       "generator": {
         "type": "i18next/react-hooks",
-        "hooks": "useAFFiNEI18N",
+        "hooks": "useCloudNotesI18N",
         "emitTS": true,
         "shouldUnescape": true
       }

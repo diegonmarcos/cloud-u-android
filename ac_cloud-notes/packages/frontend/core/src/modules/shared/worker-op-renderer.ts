@@ -1,4 +1,4 @@
-import { getWorkerUrl } from '@affine/env/worker';
+import { getWorkerUrl } from '@cloud-notes/env/worker';
 import { OpClient, type OpSchema } from '@toeverything/infra/op';
 
 type InitTask = () => Promise<unknown>;

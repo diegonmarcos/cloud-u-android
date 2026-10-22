@@ -139,7 +139,7 @@ export class WorkspacePropertyStore extends Store {
 
   private getLegacyWorkspacePropertyInfoList() {
     return this.workspaceService.workspace.rootYDoc
-      .getMap<any>('affine:workspace-properties')
+      .getMap<any>('cloud-notes:workspace-properties')
       .get('schema')
       ?.get('pageProperties')
       ?.get('custom')
@@ -149,7 +149,7 @@ export class WorkspacePropertyStore extends Store {
   private watchLegacyWorkspacePropertyInfoList() {
     return yjsGetPath(
       this.workspaceService.workspace.rootYDoc.getMap<any>(
-        'affine:workspace-properties'
+        'cloud-notes:workspace-properties'
       ),
       'schema.pageProperties.custom'
     ).pipe(
@@ -165,7 +165,7 @@ export class WorkspacePropertyStore extends Store {
 
   private getLegacyWorkspacePropertyInfo(id: string) {
     return this.workspaceService.workspace.rootYDoc
-      .getMap<any>('affine:workspace-properties')
+      .getMap<any>('cloud-notes:workspace-properties')
       .get('schema')
       ?.get('pageProperties')
       ?.get('custom')

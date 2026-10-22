@@ -1,4 +1,4 @@
-import type { DocMode } from '@blocksuite/affine/model';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import { Entity, LiveData, MemoryMemento } from '@toeverything/infra';
 
 export class GlobalContext extends Entity {
@@ -7,7 +7,7 @@ export class GlobalContext extends Entity {
   workspaceId = this.define<string>('workspaceId');
   workspaceFlavour = this.define<string>('workspaceFlavour');
 
-  serverId = this.define<string>('serverId', 'affine-cloud');
+  serverId = this.define<string>('serverId', 'cloud-notes-cloud');
 
   /**
    * is in doc page

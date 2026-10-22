@@ -1,16 +1,16 @@
-import { Bound } from '@blocksuite/affine/global/gfx';
+import { Bound } from '@blocksuite/cloud-notes/global/gfx';
 import {
   ImageBlockModel,
   NoteBlockModel,
   NoteDisplayMode,
-} from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/model';
 import {
   isInsideEdgelessEditor,
   matchModels,
-} from '@blocksuite/affine/shared/utils';
-import type { EditorHost } from '@blocksuite/affine/std';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
-import { ThemeProvider } from '@blocksuite/affine-shared/services';
+} from '@blocksuite/cloud-notes/shared/utils';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
+import { ThemeProvider } from '@blocksuite/cloud-notes-shared/services';
 import {
   ChatWithAiIcon,
   DeleteIcon,
@@ -42,8 +42,8 @@ import { AIContext } from './utils/context';
 import { findNoteBlockModel } from './utils/edgeless';
 import { copyTextAnswer } from './utils/editor-actions';
 import { getSelections } from './utils/selection-utils';
-import type { AffineAIPanelWidget } from './widgets/ai-panel/ai-panel';
-import type { AffineAIPanelWidgetConfig } from './widgets/ai-panel/type';
+import type { CloudNotesAIPanelWidget } from './widgets/ai-panel/ai-panel';
+import type { CloudNotesAIPanelWidgetConfig } from './widgets/ai-panel/type';
 
 function asCaption<T extends keyof BlockSuitePresets.AIActions>(
   host: EditorHost,
@@ -139,7 +139,7 @@ function createNewNote(host: EditorHost): AIItemConfig {
 }
 
 function buildPageResponseConfig<T extends keyof BlockSuitePresets.AIActions>(
-  panel: AffineAIPanelWidget,
+  panel: CloudNotesAIPanelWidget,
   id: T,
   ctx: AIContext
 ) {
@@ -226,7 +226,7 @@ function buildPageResponseConfig<T extends keyof BlockSuitePresets.AIActions>(
   ];
 }
 
-export function buildErrorResponseConfig(panel: AffineAIPanelWidget) {
+export function buildErrorResponseConfig(panel: CloudNotesAIPanelWidget) {
   return [
     {
       name: '',
@@ -256,7 +256,7 @@ export function buildErrorResponseConfig(panel: AffineAIPanelWidget) {
 }
 
 export function buildFinishConfig<T extends keyof BlockSuitePresets.AIActions>(
-  panel: AffineAIPanelWidget,
+  panel: CloudNotesAIPanelWidget,
   id: T,
   ctx: AIContext
 ) {
@@ -266,7 +266,7 @@ export function buildFinishConfig<T extends keyof BlockSuitePresets.AIActions>(
   };
 }
 
-export function buildErrorConfig(panel: AffineAIPanelWidget) {
+export function buildErrorConfig(panel: CloudNotesAIPanelWidget) {
   return {
     upgrade: () => {
       AIAppEvents.requestUpgradePlan.next({ host: panel.host });
@@ -289,7 +289,7 @@ export function buildGeneratingConfig(generatingIcon?: TemplateResult<1>) {
   };
 }
 
-export function buildCopyConfig(panel: AffineAIPanelWidget) {
+export function buildCopyConfig(panel: CloudNotesAIPanelWidget) {
   return {
     allowed: true,
     onCopy: () => {
@@ -299,8 +299,8 @@ export function buildCopyConfig(panel: AffineAIPanelWidget) {
 }
 
 export function buildAIPanelConfig(
-  panel: AffineAIPanelWidget
-): AffineAIPanelWidgetConfig {
+  panel: CloudNotesAIPanelWidget
+): CloudNotesAIPanelWidgetConfig {
   const ctx = new AIContext();
   return {
     answerRenderer: createAIScrollableTextRenderer(

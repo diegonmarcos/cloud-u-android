@@ -9,7 +9,7 @@
 #                UI_TOP_BAR_B64 / AI_GATEWAY_URL and links :libs:ai
 #   wiring       MainActivity builds the bar from the baked declaration; NativeTopBar
 #                calls AppTopBarScaffold with the Account launcher, the AI panel and a
-#                Configs handler that asks the web half to open AFFiNE's settings
+#                Configs handler that asks the web half to open Cloud Notes's settings
 #   bridge       the Kotlin event names / host object == the TypeScript ones
 #   insets       the double top gap (strip height + WebView margin + web status-bar
 #                padding) cannot come back: ONE Kotlin writer of the WebView's top
@@ -30,7 +30,7 @@ def check(ok, msg):
 rd = lambda *p: open(os.path.join(root, *p), encoding='utf-8').read()
 
 APP = 'packages/frontend/apps/android/App/app'
-KT = APP + '/src/main/java/app/affine/pro'
+KT = APP + '/src/main/java/app/cloudnotes/pro'
 WEB = 'packages/frontend/core/src/mobile/components'
 build = json.loads(rd('build.json'))
 ui = build.get('ui') or {}
@@ -59,7 +59,7 @@ check('TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)' in main, 'MainAct
 check('addJavascriptInterface(' in main and '"CloudNotesHost"' in main, 'MainActivity registers the CloudNotesHost bridge object')
 check('AppTopBarScaffold(' in top and 'rememberAccountLauncher()' in top, 'NativeTopBar draws AppTopBarScaffold with the Account launcher')
 check('AiFleetChatPanel(' in top, 'the AI panel is libs:ai\'s shared chat')
-check('onConfigs = { run(NativeNavScript.openSettings()) }' in top, 'Configs asks the web half to open AFFiNE settings')
+check('onConfigs = { run(NativeNavScript.openSettings()) }' in top, 'Configs asks the web half to open Cloud Notes settings')
 check('TopBarDrawer {' in top, 'the drawer is filled through TopBarDrawer')
 
 # bridge

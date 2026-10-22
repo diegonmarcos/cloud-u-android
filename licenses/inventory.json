@@ -7897,50 +7897,50 @@
   "npm:@blocksuite/icons": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/attachment/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/callout/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/code/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/frame/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/image/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/list/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/root/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface-ref/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/table/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/adapter-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/frame-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/outline/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/connector/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/group/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/mindmap/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/pointer/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/shape/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/text/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/link/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/reference/package.json",
-    "ac_cloud-notes/blocksuite/affine/rich-text/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/drag-handle/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-auto-connect/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-selected-rect/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-zoom-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/keyboard-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/note-slicer/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/remote-selection/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/slash-menu/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/attachment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/callout/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/code/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/frame/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/image/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/list/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/root/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface-ref/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/table/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/adapter-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/frame-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/outline/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/connector/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/group/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/mindmap/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/pointer/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/shape/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/link/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/reference/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/rich-text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/drag-handle/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-auto-connect/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-selected-rect/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/keyboard-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/note-slicer/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/remote-selection/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/slash-menu/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/toolbar/package.json",
     "ac_cloud-notes/blocksuite/playground/package.json",
     "ac_cloud-notes/packages/frontend/admin/package.json",
     "ac_cloud-notes/packages/frontend/component/package.json",
@@ -8496,7 +8496,7 @@
   "npm:@ctrl/tinycolor": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/inlines/preset/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/preset/package.json"
    ],
    "version": "^4.1.0",
    "scope": "shipped",
@@ -8664,10 +8664,10 @@
   "npm:@emotion/css": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/callout/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/table/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/callout/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/table/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
    "version": "^11.13.5",
@@ -8680,7 +8680,7 @@
   "npm:@emotion/hash": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json"
    ],
    "version": "^0.9.2",
    "scope": "shipped",
@@ -8730,24 +8730,24 @@
   "npm:@floating-ui/dom": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/attachment/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/code/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/table/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/adapter-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/template/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/link/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/reference/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-zoom-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/slash-menu/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/attachment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/code/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/table/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/adapter-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/template/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/link/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/reference/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/slash-menu/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/toolbar/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
    "version": "^1.6.13",
@@ -9049,19 +9049,19 @@
   "npm:@lit/context": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/adapter-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/outline/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/connector/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/group/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/mindmap/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/shape/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/text/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/comment/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-selected-rect/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/frame-title/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/adapter-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/outline/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/connector/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/group/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/mindmap/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/shape/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/comment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-selected-rect/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/frame-title/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json"
    ],
    "version": "^1.1.2",
@@ -9074,7 +9074,7 @@
   "npm:@lottiefiles/dotlottie-wc": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
    "version": "^0.9.4",
@@ -9306,12 +9306,12 @@
    "declared_in": [
     "ac_cloud-notes/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json",
-    "ac_cloud-notes/tests/affine-cloud-copilot/package.json",
-    "ac_cloud-notes/tests/affine-cloud/package.json",
-    "ac_cloud-notes/tests/affine-desktop-cloud/package.json",
-    "ac_cloud-notes/tests/affine-desktop/package.json",
-    "ac_cloud-notes/tests/affine-local/package.json",
-    "ac_cloud-notes/tests/affine-mobile/package.json",
+    "ac_cloud-notes/tests/cloud-notes-cloud-copilot/package.json",
+    "ac_cloud-notes/tests/cloud-notes-cloud/package.json",
+    "ac_cloud-notes/tests/cloud-notes-desktop-cloud/package.json",
+    "ac_cloud-notes/tests/cloud-notes-desktop/package.json",
+    "ac_cloud-notes/tests/cloud-notes-local/package.json",
+    "ac_cloud-notes/tests/cloud-notes-mobile/package.json",
     "ac_cloud-notes/tests/blocksuite/package.json",
     "ac_cloud-notes/tests/kit/package.json"
    ],
@@ -9325,52 +9325,52 @@
   "npm:@preact/signals-core": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/attachment/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/callout/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/code/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/edgeless-text/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/frame/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/image/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/list/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/paragraph/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/root/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface-ref/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/table/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/adapter-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/doc-title/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/outline/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/brush/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/connector/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/mindmap/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/pointer/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/shape/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/text/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/comment/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/link/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/reference/package.json",
-    "ac_cloud-notes/blocksuite/affine/rich-text/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/drag-handle/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-zoom-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/keyboard-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/remote-selection/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/scroll-anchoring/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/attachment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/callout/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/code/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/edgeless-text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/frame/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/image/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/list/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/paragraph/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/root/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface-ref/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/table/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/adapter-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/doc-title/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/outline/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/brush/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/connector/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/mindmap/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/pointer/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/shape/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/comment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/link/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/reference/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/rich-text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/drag-handle/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/keyboard-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/remote-selection/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/scroll-anchoring/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/toolbar/package.json",
     "ac_cloud-notes/blocksuite/framework/global/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/framework/store/package.json",
@@ -10319,33 +10319,33 @@
   "npm:@toeverything/theme": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/callout/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/frame/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/image/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/paragraph/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/adapter-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/frame-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/outline/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/template/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/preset/package.json",
-    "ac_cloud-notes/blocksuite/affine/model/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-dragging-area/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-selected-rect/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-zoom-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/frame-title/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/keyboard-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/scroll-anchoring/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/slash-menu/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/callout/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/frame/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/image/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/paragraph/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/adapter-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/frame-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/outline/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/template/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/preset/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/model/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-dragging-area/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-selected-rect/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/frame-title/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/keyboard-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/scroll-anchoring/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/slash-menu/package.json",
     "ac_cloud-notes/blocksuite/integration-test/package.json",
     "ac_cloud-notes/packages/frontend/admin/package.json",
     "ac_cloud-notes/packages/frontend/apps/electron-renderer/package.json",
@@ -10411,7 +10411,7 @@
   "npm:@types/bytes": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
     "ac_cloud-notes/packages/frontend/component/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
@@ -10486,7 +10486,7 @@
   "npm:@types/fs-extra": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/tests/affine-desktop/package.json"
+    "ac_cloud-notes/tests/cloud-notes-desktop/package.json"
    ],
    "version": "^11.0.4",
    "scope": "dev",
@@ -10498,8 +10498,8 @@
   "npm:@types/hast": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/inlines/preset/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/preset/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json"
    ],
    "version": "^3.0.4",
@@ -10537,7 +10537,7 @@
   "npm:@types/js-yaml": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json"
    ],
    "version": "^4.0.9",
    "scope": "dev",
@@ -10561,26 +10561,26 @@
   "npm:@types/lodash-es": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/embed-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/root/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/frame-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/connector/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/mindmap/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/shape/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/comment/package.json",
-    "ac_cloud-notes/blocksuite/affine/model/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/drag-handle/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-zoom-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/remote-selection/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/slash-menu/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/root/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/frame-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/connector/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/mindmap/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/shape/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/comment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/model/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/drag-handle/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/remote-selection/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/slash-menu/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/toolbar/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/framework/sync/package.json",
     "ac_cloud-notes/packages/common/graphql/package.json",
@@ -10623,13 +10623,13 @@
   "npm:@types/mdast": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/code/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/divider/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/list/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/paragraph/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/code/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/divider/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/list/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/paragraph/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^4.0.4",
    "scope": "shipped",
@@ -10710,7 +10710,7 @@
   "npm:@types/pdfmake": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^0.2.12",
    "scope": "dev",
@@ -10931,8 +10931,8 @@
   "npm:@vanilla-extract/css": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/outline/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/outline/package.json",
     "ac_cloud-notes/packages/frontend/apps/electron-renderer/package.json",
     "ac_cloud-notes/packages/frontend/component/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
@@ -10960,7 +10960,7 @@
   "npm:@vanilla-extract/vite-plugin": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/all/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/all/package.json",
     "ac_cloud-notes/blocksuite/integration-test/package.json",
     "ac_cloud-notes/blocksuite/playground/package.json",
     "ac_cloud-notes/package.json"
@@ -10999,8 +10999,8 @@
   "npm:@vitest/browser-playwright": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/integration-test/package.json"
    ],
@@ -11380,7 +11380,7 @@
   "npm:bytes": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
     "ac_cloud-notes/packages/frontend/component/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
@@ -11502,7 +11502,7 @@
   "npm:clsx": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
     "ac_cloud-notes/packages/frontend/admin/package.json",
     "ac_cloud-notes/packages/frontend/component/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
@@ -11542,7 +11542,7 @@
   "npm:collapse-white-space": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/inlines/preset/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/preset/package.json"
    ],
    "version": "^2.1.0",
    "scope": "shipped",
@@ -11713,9 +11713,9 @@
   "npm:date-fns": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
     "ac_cloud-notes/blocksuite/docs-site/package.json"
    ],
    "version": "^4.4.0",
@@ -11794,8 +11794,8 @@
    "kind": "npm",
    "declared_in": [
     "ac_cloud-code/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/root/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/root/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
@@ -12252,7 +12252,7 @@
    "kind": "npm",
    "declared_in": [
     "ac_cloud-chat/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json"
    ],
    "version": "0.8.2",
    "scope": "shipped",
@@ -12264,8 +12264,8 @@
   "npm:file-type": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/attachment/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/image/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/attachment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/image/package.json",
     "ac_cloud-notes/blocksuite/framework/store/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
@@ -12317,10 +12317,10 @@
   "npm:fractional-indexing": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/group/package.json",
-    "ac_cloud-notes/blocksuite/affine/model/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/group/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/model/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/packages/common/infra/package.json"
    ],
@@ -12335,7 +12335,7 @@
    "kind": "npm",
    "declared_in": [
     "ac_cloud-notes/packages/frontend/apps/electron/package.json",
-    "ac_cloud-notes/tests/affine-desktop/package.json"
+    "ac_cloud-notes/tests/cloud-notes-desktop/package.json"
    ],
    "version": "^11.2.0",
    "scope": "dev",
@@ -12462,8 +12462,8 @@
   "npm:html2canvas": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/root/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/root/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json"
    ],
    "version": "^1.4.1",
    "scope": "shipped",
@@ -12748,7 +12748,7 @@
   "npm:js-yaml": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json"
    ],
    "version": "^5.0.0",
    "scope": "shipped",
@@ -12810,7 +12810,7 @@
    "kind": "npm",
    "declared_in": [
     "ac_cloud-code/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json",
     "ac_cloud-notes/packages/frontend/templates/package.json"
    ],
    "version": "^3.10.1",
@@ -12836,8 +12836,8 @@
    "kind": "npm",
    "declared_in": [
     "ac_cloud-code/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/latex/package.json",
     "ac_cloud-notes/blocksuite/playground/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
@@ -12889,67 +12889,67 @@
   "npm:lit": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/attachment/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/callout/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/code/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/divider/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/edgeless-text/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/frame/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/image/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/list/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/paragraph/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/root/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface-ref/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/table/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/adapter-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/doc-title/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/frame-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/outline/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/brush/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/connector/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/group/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/link/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/mindmap/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/pointer/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/shape/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/template/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/text/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/comment/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/link/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/mention/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/preset/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/reference/package.json",
-    "ac_cloud-notes/blocksuite/affine/rich-text/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/drag-handle/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-auto-connect/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-dragging-area/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-selected-rect/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-zoom-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/frame-title/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/keyboard-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/note-slicer/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/page-dragging-area/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/remote-selection/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/scroll-anchoring/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/slash-menu/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/viewport-overlay/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/attachment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/callout/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/code/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/divider/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/edgeless-text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/frame/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/image/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/list/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/paragraph/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/root/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface-ref/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/table/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/adapter-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/doc-title/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/frame-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/outline/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/brush/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/connector/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/group/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/link/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/mindmap/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/pointer/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/shape/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/template/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/comment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/link/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/mention/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/preset/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/reference/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/rich-text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/drag-handle/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-auto-connect/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-dragging-area/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-selected-rect/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/frame-title/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/keyboard-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/note-slicer/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/page-dragging-area/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/remote-selection/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/scroll-anchoring/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/slash-menu/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/viewport-overlay/package.json",
     "ac_cloud-notes/blocksuite/framework/global/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/integration-test/package.json",
@@ -12967,11 +12967,11 @@
   "npm:lit-html": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/comment/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/link/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/reference/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/comment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/link/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/reference/package.json"
    ],
    "version": "^3.2.1",
    "scope": "shipped",
@@ -12995,26 +12995,26 @@
   "npm:lodash-es": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/embed-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/root/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/fragments/frame-panel/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/connector/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/mindmap/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/shape/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/comment/package.json",
-    "ac_cloud-notes/blocksuite/affine/model/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/drag-handle/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-zoom-toolbar/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/remote-selection/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/slash-menu/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/root/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/fragments/frame-panel/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/connector/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/mindmap/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/shape/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/comment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/model/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/drag-handle/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/remote-selection/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/slash-menu/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/toolbar/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/framework/sync/package.json",
     "ac_cloud-notes/packages/common/graphql/package.json",
@@ -13112,7 +13112,7 @@
   "npm:mammoth": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json"
    ],
    "version": "^1.11.0",
    "scope": "shipped",
@@ -13234,7 +13234,7 @@
   "npm:mdast-util-gfm-autolink-literal": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.0.1",
    "scope": "shipped",
@@ -13246,7 +13246,7 @@
   "npm:mdast-util-gfm-footnote": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.1.0",
    "scope": "shipped",
@@ -13258,7 +13258,7 @@
   "npm:mdast-util-gfm-strikethrough": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.0.0",
    "scope": "shipped",
@@ -13270,7 +13270,7 @@
   "npm:mdast-util-gfm-table": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.0.0",
    "scope": "shipped",
@@ -13282,7 +13282,7 @@
   "npm:mdast-util-gfm-task-list-item": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.0.0",
    "scope": "shipped",
@@ -13307,7 +13307,7 @@
   "npm:micromark-extension-gfm-autolink-literal": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.1.0",
    "scope": "shipped",
@@ -13319,7 +13319,7 @@
   "npm:micromark-extension-gfm-footnote": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.1.0",
    "scope": "shipped",
@@ -13331,7 +13331,7 @@
   "npm:micromark-extension-gfm-strikethrough": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.1.0",
    "scope": "shipped",
@@ -13343,7 +13343,7 @@
   "npm:micromark-extension-gfm-table": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.1.0",
    "scope": "shipped",
@@ -13355,7 +13355,7 @@
   "npm:micromark-extension-gfm-task-list-item": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.1.0",
    "scope": "shipped",
@@ -13367,7 +13367,7 @@
   "npm:micromark-util-combine-extensions": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^2.0.0",
    "scope": "shipped",
@@ -13489,7 +13489,7 @@
   "npm:msw": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/all/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/all/package.json",
     "ac_cloud-notes/package.json",
     "ac_cloud-notes/packages/frontend/apps/electron/package.json"
    ],
@@ -13515,7 +13515,7 @@
   "npm:nanoid": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
     "ac_cloud-notes/blocksuite/framework/store/package.json",
     "ac_cloud-notes/packages/common/infra/package.json",
     "ac_cloud-notes/packages/common/nbstore/package.json",
@@ -13663,7 +13663,7 @@
   "npm:pdf-lib": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json"
    ],
    "version": "^1.17.1",
    "scope": "shipped",
@@ -13675,7 +13675,7 @@
   "npm:pdfmake": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^0.2.20",
    "scope": "shipped",
@@ -13699,11 +13699,11 @@
   "npm:playwright": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/integration-test/package.json",
-    "ac_cloud-notes/tests/affine-desktop/package.json"
+    "ac_cloud-notes/tests/cloud-notes-desktop/package.json"
    ],
    "version": "=1.58.2",
    "scope": "dev",
@@ -13800,7 +13800,7 @@
   "npm:quick-lru": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^7.3.0",
    "scope": "shipped",
@@ -14442,7 +14442,7 @@
   "npm:rehype-parse": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json"
    ],
    "version": "^9.0.0",
@@ -14455,7 +14455,7 @@
   "npm:rehype-stringify": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^10.0.0",
    "scope": "shipped",
@@ -14467,9 +14467,9 @@
   "npm:remark-math": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^6.0.0",
    "scope": "shipped",
@@ -14481,7 +14481,7 @@
   "npm:remark-parse": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^11.0.0",
    "scope": "shipped",
@@ -14493,7 +14493,7 @@
   "npm:remark-stringify": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^11.0.0",
    "scope": "shipped",
@@ -14517,19 +14517,19 @@
   "npm:rxjs": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/attachment/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/shape/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/template/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/turbo-renderer/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/reference/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-toolbar/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/attachment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/shape/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/template/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/turbo-renderer/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/reference/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-toolbar/package.json",
     "ac_cloud-notes/blocksuite/framework/global/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/framework/store/package.json",
@@ -14651,8 +14651,8 @@
   "npm:shiki": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/code/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/code/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/latex/package.json",
     "ac_cloud-notes/packages/frontend/core/package.json"
    ],
    "version": "^3.19.0",
@@ -14665,7 +14665,7 @@
   "npm:simple-xml-to-json": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/gfx/mindmap/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/mindmap/package.json"
    ],
    "version": "^1.2.2",
    "scope": "shipped",
@@ -14851,7 +14851,7 @@
   "npm:tldts": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^7.0.19",
    "scope": "shipped",
@@ -14913,7 +14913,7 @@
   "npm:ts-pattern": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^5.1.0",
    "scope": "shipped",
@@ -15058,7 +15058,7 @@
   "npm:unified": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json"
    ],
    "version": "^11.0.5",
@@ -15071,7 +15071,7 @@
   "npm:unist-util-visit": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/shared/package.json"
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json"
    ],
    "version": "^5.0.0",
    "scope": "shipped",
@@ -15228,15 +15228,15 @@
    "kind": "npm",
    "declared_in": [
     "ac_cloud-code/package.json",
-    "ac_cloud-notes/blocksuite/affine/all/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/ext-loader/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/group/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/pointer/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/all/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/ext-loader/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/group/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/pointer/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
     "ac_cloud-notes/blocksuite/framework/global/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/framework/store/package.json",
@@ -15422,25 +15422,25 @@
   "npm:yjs": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/bookmark/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed-doc/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/embed/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/frame/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/root/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/surface/package.json",
-    "ac_cloud-notes/blocksuite/affine/components/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/connector/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/mindmap/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/shape/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/template/package.json",
-    "ac_cloud-notes/blocksuite/affine/gfx/text/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/model/package.json",
-    "ac_cloud-notes/blocksuite/affine/rich-text/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/edgeless-selected-rect/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/bookmark/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/embed/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/frame/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/root/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/surface/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/components/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/connector/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/mindmap/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/shape/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/template/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/gfx/text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/model/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/rich-text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/edgeless-selected-rect/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/framework/store/package.json",
     "ac_cloud-notes/blocksuite/framework/sync/package.json",
@@ -15465,25 +15465,25 @@
   "npm:zod": {
    "kind": "npm",
    "declared_in": [
-    "ac_cloud-notes/blocksuite/affine/blocks/code/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/database/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/note/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/paragraph/package.json",
-    "ac_cloud-notes/blocksuite/affine/blocks/table/package.json",
-    "ac_cloud-notes/blocksuite/affine/data-view/package.json",
-    "ac_cloud-notes/blocksuite/affine/ext-loader/package.json",
-    "ac_cloud-notes/blocksuite/affine/foundation/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/comment/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/footnote/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/latex/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/link/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/mention/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/preset/package.json",
-    "ac_cloud-notes/blocksuite/affine/inlines/reference/package.json",
-    "ac_cloud-notes/blocksuite/affine/model/package.json",
-    "ac_cloud-notes/blocksuite/affine/rich-text/package.json",
-    "ac_cloud-notes/blocksuite/affine/shared/package.json",
-    "ac_cloud-notes/blocksuite/affine/widgets/linked-doc/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/code/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/database/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/note/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/paragraph/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/blocks/table/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/data-view/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/ext-loader/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/foundation/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/comment/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/footnote/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/latex/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/link/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/mention/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/preset/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/inlines/reference/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/model/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/rich-text/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/shared/package.json",
+    "ac_cloud-notes/blocksuite/cloud-notes/widgets/linked-doc/package.json",
     "ac_cloud-notes/blocksuite/framework/std/package.json",
     "ac_cloud-notes/blocksuite/framework/store/package.json",
     "ac_cloud-notes/blocksuite/playground/package.json",

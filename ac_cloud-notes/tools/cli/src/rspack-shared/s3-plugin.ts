@@ -1,7 +1,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 
-import { createS3CompatClient } from '@affine/s3-compat';
+import { createS3CompatClient } from '@cloud-notes/s3-compat';
 import { lookup } from 'mime-types';
 
 export const R2_BUCKET =
@@ -9,9 +9,9 @@ export const R2_BUCKET =
   (process.env.BUILD_TYPE === 'canary' ? 'assets-dev' : 'assets-prod');
 
 const S3_UPLOAD_PACKAGE_NAMES = new Set([
-  '@affine/web',
-  '@affine/mobile',
-  '@affine/admin',
+  '@cloud-notes/web',
+  '@cloud-notes/mobile',
+  '@cloud-notes/admin',
 ]);
 const MAX_UPLOAD_RETRIES = 3;
 const UPLOAD_RETRY_BASE_DELAY_MS = 500;

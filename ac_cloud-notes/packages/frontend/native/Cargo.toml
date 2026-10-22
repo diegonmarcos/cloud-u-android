@@ -1,6 +1,6 @@
 [package]
 edition = "2024"
-name    = "affine_native"
+name    = "cloud_notes_native"
 publish = false
 version = "0.0.0"
 
@@ -8,12 +8,12 @@ version = "0.0.0"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-affine_common = { workspace = true, features = ["hashcash"] }
-affine_doc_loader = { workspace = true }
-affine_importer = { workspace = true }
-affine_media_capture = { path = "./media_capture" }
-affine_nbstore = { workspace = true, features = ["napi"] }
-affine_sqlite_v1 = { path = "./sqlite_v1" }
+cloud_notes_common = { workspace = true, features = ["hashcash"] }
+cloud_notes_doc_loader = { workspace = true }
+cloud_notes_importer = { workspace = true }
+cloud_notes_media_capture = { path = "./media_capture" }
+cloud_notes_nbstore = { workspace = true, features = ["napi"] }
+cloud_notes_sqlite_v1 = { path = "./sqlite_v1" }
 hex = { workspace = true }
 infer = { workspace = true }
 napi = { workspace = true }
@@ -34,7 +34,7 @@ tokio = { workspace = true, features = ["full"] }
 typed-path = { workspace = true }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-affine_preview = { workspace = true, features = ["mermaid", "typst"] }
+cloud_notes_preview = { workspace = true, features = ["mermaid", "typst"] }
 
 [target.'cfg(windows)'.dependencies]
 bytes = { workspace = true }

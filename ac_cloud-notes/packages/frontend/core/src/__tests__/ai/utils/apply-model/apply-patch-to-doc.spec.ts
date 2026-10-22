@@ -2,9 +2,9 @@
  * @vitest-environment happy-dom
  */
 
-import { getInternalStoreExtensions } from '@blocksuite/affine/extensions/store';
-import { StoreExtensionManager } from '@blocksuite/affine-ext-loader';
-import { createAffineTemplate } from '@blocksuite/affine-shared/test-utils';
+import { getInternalStoreExtensions } from '@blocksuite/cloud-notes/extensions/store';
+import { StoreExtensionManager } from '@blocksuite/cloud-notes-ext-loader';
+import { createCloudNotesTemplate } from '@blocksuite/cloud-notes-shared/test-utils';
 import type { Store } from '@blocksuite/store';
 import { describe, expect, it } from 'vitest';
 
@@ -18,28 +18,28 @@ declare module 'vitest' {
 }
 
 const manager = new StoreExtensionManager(getInternalStoreExtensions());
-const { affine } = createAffineTemplate(manager.get('store'));
+const { cloudNotes } = createCloudNotesTemplate(manager.get('store'));
 
 describe('applyPatchToDoc', () => {
   it('should delete a block', async () => {
-    const host = affine`
-    <affine-page id="page">
-      <affine-note id="note">
-        <affine-paragraph id="paragraph-1">Hello</affine-paragraph>
-        <affine-paragraph id="paragraph-2">World</affine-paragraph>
-      </affine-note>
-    </affine-page>
+    const host = cloudNotes`
+    <cloud-notes-page id="page">
+      <cloud-notes-note id="note">
+        <cloud-notes-paragraph id="paragraph-1">Hello</cloud-notes-paragraph>
+        <cloud-notes-paragraph id="paragraph-2">World</cloud-notes-paragraph>
+      </cloud-notes-note>
+    </cloud-notes-page>
   `;
 
     const patch: PatchOp[] = [{ op: 'delete', id: 'paragraph-1' }];
     await applyPatchToDoc(host.store, patch);
 
-    const expected = affine`
-      <affine-page id="page">
-        <affine-note id="note">
-          <affine-paragraph id="paragraph-2">World</affine-paragraph>
-        </affine-note>
-      </affine-page>
+    const expected = cloudNotes`
+      <cloud-notes-page id="page">
+        <cloud-notes-note id="note">
+          <cloud-notes-paragraph id="paragraph-2">World</cloud-notes-paragraph>
+        </cloud-notes-note>
+      </cloud-notes-page>
     `;
 
     expect(host.store).toEqualDoc(expected.store, {
@@ -49,13 +49,13 @@ describe('applyPatchToDoc', () => {
 
   // FIXME: markdown parse error in test mode
   it.skip('should replace a block', async () => {
-    const host = affine`
-    <affine-page id="page">
-      <affine-note id="note">
-        <affine-paragraph id="paragraph-1">Hello</affine-paragraph>
-        <affine-paragraph id="paragraph-2">World</affine-paragraph>
-      </affine-note>
-    </affine-page>
+    const host = cloudNotes`
+    <cloud-notes-page id="page">
+      <cloud-notes-note id="note">
+        <cloud-notes-paragraph id="paragraph-1">Hello</cloud-notes-paragraph>
+        <cloud-notes-paragraph id="paragraph-2">World</cloud-notes-paragraph>
+      </cloud-notes-note>
+    </cloud-notes-page>
   `;
 
     const patch: PatchOp[] = [
@@ -68,13 +68,13 @@ describe('applyPatchToDoc', () => {
 
     await applyPatchToDoc(host.store, patch);
 
-    const expected = affine`
-      <affine-page id="page">
-        <affine-note id="note">
-          <affine-paragraph id="paragraph-1">New content</affine-paragraph>
-          <affine-paragraph id="paragraph-2">World</affine-paragraph>
-        </affine-note>
-      </affine-page>
+    const expected = cloudNotes`
+      <cloud-notes-page id="page">
+        <cloud-notes-note id="note">
+          <cloud-notes-paragraph id="paragraph-1">New content</cloud-notes-paragraph>
+          <cloud-notes-paragraph id="paragraph-2">World</cloud-notes-paragraph>
+        </cloud-notes-note>
+      </cloud-notes-page>
     `;
 
     expect(host.store).toEqualDoc(expected.store, {
@@ -84,13 +84,13 @@ describe('applyPatchToDoc', () => {
 
   // FIXME: markdown parse error in test mode
   it.skip('should insert a block at index', async () => {
-    const host = affine`
-    <affine-page id="page">
-      <affine-note id="note">
-        <affine-paragraph id="paragraph-1">Hello</affine-paragraph>
-        <affine-paragraph id="paragraph-2">World</affine-paragraph>
-      </affine-note>
-    </affine-page>
+    const host = cloudNotes`
+    <cloud-notes-page id="page">
+      <cloud-notes-note id="note">
+        <cloud-notes-paragraph id="paragraph-1">Hello</cloud-notes-paragraph>
+        <cloud-notes-paragraph id="paragraph-2">World</cloud-notes-paragraph>
+      </cloud-notes-note>
+    </cloud-notes-page>
   `;
 
     const patch: PatchOp[] = [
@@ -108,14 +108,14 @@ describe('applyPatchToDoc', () => {
 
     await applyPatchToDoc(host.store, patch);
 
-    const expected = affine`
-      <affine-page id="page">
-        <affine-note id="note">
-          <affine-paragraph id="paragraph-1">Hello</affine-paragraph>
-          <affine-paragraph id="paragraph-2">World</affine-paragraph>
-          <affine-paragraph id="paragraph-3">Inserted</affine-paragraph>
-        </affine-note>
-      </affine-page>
+    const expected = cloudNotes`
+      <cloud-notes-page id="page">
+        <cloud-notes-note id="note">
+          <cloud-notes-paragraph id="paragraph-1">Hello</cloud-notes-paragraph>
+          <cloud-notes-paragraph id="paragraph-2">World</cloud-notes-paragraph>
+          <cloud-notes-paragraph id="paragraph-3">Inserted</cloud-notes-paragraph>
+        </cloud-notes-note>
+      </cloud-notes-page>
     `;
 
     expect(host.store).toEqualDoc(expected.store, {

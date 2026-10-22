@@ -1,9 +1,9 @@
-import { ConfirmModal, Input, notify } from '@affine/component';
-import { AuthService, ServerService } from '@affine/core/modules/cloud';
-import { WorkspacesService } from '@affine/core/modules/workspace';
-import { UserFriendlyError } from '@affine/error';
-import { Trans, useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { ConfirmModal, Input, notify } from '@cloud-notes/component';
+import { AuthService, ServerService } from '@cloud-notes/core/modules/cloud';
+import { WorkspacesService } from '@cloud-notes/core/modules/workspace';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { Trans, useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { combineLatest, map, of, switchMap } from 'rxjs';
@@ -75,7 +75,7 @@ export const DeleteAccount = ({
       <RowLayout
         label={
           <span className={styles.deleteAccountLabel}>
-            {t['com.affine.mobile.setting.others.delete-account']()}
+            {t['com.cloud-notes.mobile.setting.others.delete-account']()}
           </span>
         }
         onClick={handleOpen}
@@ -109,9 +109,9 @@ const TeamOwnerWarningModal = ({
     <ConfirmModal
       open={open}
       onOpenChange={onOpenChange}
-      title={t['com.affine.setting.account.delete.team-warning-title']()}
+      title={t['com.cloud-notes.setting.account.delete.team-warning-title']()}
       description={t[
-        'com.affine.setting.account.delete.team-warning-description'
+        'com.cloud-notes.setting.account.delete.team-warning-description'
       ]()}
       confirmText={t['Confirm']()}
       confirmButtonOptions={{
@@ -184,17 +184,17 @@ const DeleteAccountModal = ({
             onOpenChange(false);
           }
         }}
-        title={t['com.affine.setting.account.delete.confirm-title']()}
+        title={t['com.cloud-notes.setting.account.delete.confirm-title']()}
         description={
           <>
             <Trans
-              i18nKey="com.affine.setting.account.delete.confirm-delete-description-1"
+              i18nKey="com.cloud-notes.setting.account.delete.confirm-delete-description-1"
               components={{
                 1: <strong />,
               }}
               values={{
                 server:
-                  serverService.server.id !== 'affine-cloud'
+                  serverService.server.id !== 'cloud-notes-cloud'
                     ? `${serverService.server.config$.value.serverName} (${serverService.server.baseUrl})`
                     : serverService.server.config$.value.serverName,
               }}
@@ -202,7 +202,7 @@ const DeleteAccountModal = ({
             <br />
             <br />
             <Trans
-              i18nKey="com.affine.setting.account.delete.confirm-delete-description-2"
+              i18nKey="com.cloud-notes.setting.account.delete.confirm-delete-description-2"
               components={{
                 1: <strong />,
               }}
@@ -230,10 +230,10 @@ const DeleteAccountModal = ({
             onOpenChange(false);
           }
         }}
-        title={t['com.affine.setting.account.delete.email-confirm-title']()}
+        title={t['com.cloud-notes.setting.account.delete.email-confirm-title']()}
         description={
           <Trans
-            i18nKey="com.affine.setting.account.delete.email-confirm-description"
+            i18nKey="com.cloud-notes.setting.account.delete.email-confirm-description"
             components={{
               1: <strong />,
             }}
@@ -243,7 +243,7 @@ const DeleteAccountModal = ({
           />
         }
         descriptionClassName={styles.description}
-        confirmText={t['com.affine.setting.account.delete.confirm-button']()}
+        confirmText={t['com.cloud-notes.setting.account.delete.confirm-button']()}
         confirmButtonOptions={{
           variant: 'error',
           disabled:
@@ -265,7 +265,7 @@ const DeleteAccountModal = ({
         <Input
           type="email"
           placeholder={t[
-            'com.affine.setting.account.delete.input-placeholder'
+            'com.cloud-notes.setting.account.delete.input-placeholder'
           ]()}
           value={email}
           onChange={setEmail}

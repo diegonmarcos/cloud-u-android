@@ -1,6 +1,6 @@
-import type { DNDData } from '@affine/component';
+import type { DNDData } from '@cloud-notes/component';
 
-export type AffineDNDEntity =
+export type CloudNotesDNDEntity =
   | {
       type: 'doc';
       id: string;
@@ -22,9 +22,9 @@ export type AffineDNDEntity =
       id: string;
     };
 
-export interface AffineDNDData extends DNDData {
+export interface CloudNotesDNDData extends DNDData {
   draggable: {
-    entity?: AffineDNDEntity;
+    entity?: CloudNotesDNDEntity;
     from?:
       | {
           at: 'navigation-panel:organize:folder-node';

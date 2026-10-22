@@ -57,7 +57,7 @@ test.describe('pasting blocks', () => {
     expect(noteIds[0]).toBe(noteId);
     const newNoteId = noteIds[1];
     const newNote = page.locator(
-      `affine-edgeless-note[data-block-id="${newNoteId}"]`
+      `cloud-notes-edgeless-note[data-block-id="${newNoteId}"]`
     );
     await expect(newNote).toBeVisible();
     const blocks = newNote.locator('[data-block-id]');
@@ -84,7 +84,7 @@ test.describe('pasting blocks', () => {
     expect(textIds.length).toBe(2);
     const newTextId = textIds[1];
     const newText = page.locator(
-      `affine-edgeless-text[data-block-id="${newTextId}"]`
+      `cloud-notes-edgeless-text[data-block-id="${newTextId}"]`
     );
     await expect(newText).toBeVisible();
     const blocks = newText.locator('[data-block-id]');
@@ -116,7 +116,7 @@ test.describe('pasting blocks', () => {
 
     const newNoteId = noteIds[1];
     const newNote = page.locator(
-      `affine-edgeless-note[data-block-id="${newNoteId}"]`
+      `cloud-notes-edgeless-note[data-block-id="${newNoteId}"]`
     );
     await expect(newNote).toBeVisible();
     const blocks = newNote.locator('[data-block-id]');

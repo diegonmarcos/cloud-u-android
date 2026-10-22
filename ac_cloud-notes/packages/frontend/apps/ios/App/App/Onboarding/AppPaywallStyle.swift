@@ -1,4 +1,4 @@
-import AffineResources
+import CloudNotesResources
 import SwiftUI
 
 struct AppPaywallPalette {
@@ -13,19 +13,19 @@ struct AppPaywallPalette {
   }
 
   var primaryText: Color {
-    AffineColors.textPrimary.color
+    CloudNotesColors.textPrimary.color
   }
 
   var secondaryText: Color {
-    AffineColors.textSecondary.color
+    CloudNotesColors.textSecondary.color
   }
 
   var cardBackground: Color {
-    AffineColors.layerBackgroundPrimary.color.opacity(isDark ? 0.92 : 1)
+    CloudNotesColors.layerBackgroundPrimary.color.opacity(isDark ? 0.92 : 1)
   }
 
   var cardBorder: Color {
-    AffineColors.layerBorder.color
+    CloudNotesColors.layerBorder.color
   }
 }
 

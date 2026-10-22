@@ -1,8 +1,8 @@
-import { DebugLogger } from '@affine/debug';
+import { DebugLogger } from '@cloud-notes/debug';
 import type {
   RealtimeTopicEventOf,
   WorkspaceQuotaStateSnapshot,
-} from '@affine/realtime';
+} from '@cloud-notes/realtime';
 import { Entity, LiveData } from '@toeverything/infra';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import bytes from 'bytes';
@@ -31,7 +31,7 @@ type QuotaType = {
   };
 };
 
-const logger = new DebugLogger('affine:workspace-permission');
+const logger = new DebugLogger('cloud-notes:workspace-permission');
 const DAY_SECONDS = 24 * 60 * 60;
 
 function formatSize(size: number) {

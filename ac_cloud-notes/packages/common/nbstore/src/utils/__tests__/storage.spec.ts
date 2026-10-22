@@ -13,7 +13,7 @@ describe('parseUniversalId', () => {
     const testcases = [
       '@peer(123);@type(userspace);@id(456);',
       '@peer(123);@type(workspace);@id(456);',
-      '@peer(https://app.affine.pro);@type(userspace);@id(hello:world);',
+      '@peer(https://notes.diegonmarcos.com);@type(userspace);@id(hello:world);',
       '@peer(@name);@type(userspace);@id(@id);',
       '@peer(@peer(name);@type(userspace);@id(@id);',
     ];

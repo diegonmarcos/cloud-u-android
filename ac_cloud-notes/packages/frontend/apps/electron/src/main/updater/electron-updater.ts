@@ -3,7 +3,7 @@ import { autoUpdater as defaultAutoUpdater } from 'electron-updater';
 
 import { buildType } from '../config';
 import { logger } from '../logger';
-import { AFFiNEUpdateProvider } from './affine-update-provider';
+import { CloudNotesUpdateProvider } from './cloud-notes-update-provider';
 import { updaterSubjects } from './event';
 import { WindowsUpdater } from './windows-updater';
 
@@ -93,7 +93,7 @@ export const registerUpdater = async () => {
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.autoRunAppAfterInstall = true;
 
-  const feedUrl = AFFiNEUpdateProvider.configFeed({
+  const feedUrl = CloudNotesUpdateProvider.configFeed({
     channel: buildType,
   });
 

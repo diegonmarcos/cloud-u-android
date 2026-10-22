@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from 'vitest';
 
 // mock context-menu utilities
 const popFilterableSimpleMenu = vi.fn();
-vi.mock('@blocksuite/affine-components/context-menu', () => ({
+vi.mock('@blocksuite/cloud-notes-components/context-menu', () => ({
   menu: {
     action: (opts: any) => opts,
     group: (opts: any) => opts,
@@ -14,10 +14,10 @@ vi.mock('@blocksuite/affine-components/context-menu', () => ({
   popupTargetFromElement: (el: any) => el,
 }));
 
-import { SingleViewBase } from '../../../../../blocksuite/affine/data-view/src/core/view-manager/single-view.js';
-import { MobileKanbanViewUILogic } from '../../../../../blocksuite/affine/data-view/src/view-presets/kanban/mobile/kanban-view-ui-logic.js';
-import { popCardMenu } from '../../../../../blocksuite/affine/data-view/src/view-presets/kanban/mobile/menu.js';
-import { popMobileRowMenu } from '../../../../../blocksuite/affine/data-view/src/view-presets/table/mobile/menu.js';
+import { SingleViewBase } from '../../../../../blocksuite/cloud-notes/data-view/src/core/view-manager/single-view.js';
+import { MobileKanbanViewUILogic } from '../../../../../blocksuite/cloud-notes/data-view/src/view-presets/kanban/mobile/kanban-view-ui-logic.js';
+import { popCardMenu } from '../../../../../blocksuite/cloud-notes/data-view/src/view-presets/kanban/mobile/menu.js';
+import { popMobileRowMenu } from '../../../../../blocksuite/cloud-notes/data-view/src/view-presets/table/mobile/menu.js';
 
 class TestView extends SingleViewBase {
   detailProperties$ = computed(() => []);

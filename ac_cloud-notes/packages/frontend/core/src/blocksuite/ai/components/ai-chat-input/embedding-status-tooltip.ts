@@ -1,6 +1,6 @@
-import type { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { SignalWatcher } from '@blocksuite/affine/global/lit';
-import { unsafeCSSVar } from '@blocksuite/affine/shared/theme';
+import type { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { SignalWatcher } from '@blocksuite/cloud-notes/global/lit';
+import { unsafeCSSVar } from '@blocksuite/cloud-notes/shared/theme';
 import { css, html, LitElement } from 'lit';
 import { property } from 'lit/decorators.js';
 import { debounce } from 'lodash-es';
@@ -31,12 +31,12 @@ export class AIChatEmbeddingStatusTooltip extends SignalWatcher(LitElement) {
       border-radius: 4px;
     }
     .check-status:hover {
-      background-color: ${unsafeCSSVar('--affine-hover-color')};
+      background-color: ${unsafeCSSVar('--cloud-notes-hover-color')};
     }
   `;
 
   @property({ attribute: false })
-  accessor affineWorkspaceDialogService!: WorkspaceDialogService;
+  accessor cloudNotesWorkspaceDialogService!: WorkspaceDialogService;
 
   override connectedCallback() {
     super.connectedCallback();
@@ -44,7 +44,7 @@ export class AIChatEmbeddingStatusTooltip extends SignalWatcher(LitElement) {
 
   private readonly _handleCheckStatusClick = debounce(
     () => {
-      this.affineWorkspaceDialogService.open('setting', {
+      this.cloudNotesWorkspaceDialogService.open('setting', {
         activeTab: 'workspace:embedding',
       });
     },

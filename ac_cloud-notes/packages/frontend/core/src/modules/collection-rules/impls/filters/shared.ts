@@ -1,5 +1,5 @@
-import type { DocsService } from '@affine/core/modules/doc';
-import type { ShareDocsListService } from '@affine/core/modules/share-doc';
+import type { DocsService } from '@cloud-notes/core/modules/doc';
+import type { ShareDocsListService } from '@cloud-notes/core/modules/share-doc';
 import { onStart, Service } from '@toeverything/infra';
 import { combineLatest, map, type Observable, of } from 'rxjs';
 

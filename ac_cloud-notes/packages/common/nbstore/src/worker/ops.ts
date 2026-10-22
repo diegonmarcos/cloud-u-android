@@ -8,7 +8,7 @@ import type {
   RealtimeTopicEventOf,
   RealtimeTopicInputOf,
   RealtimeTopicName,
-} from '@affine/realtime';
+} from '@cloud-notes/realtime';
 
 import type { AvailableStorageImplementations } from '../impls';
 import type {

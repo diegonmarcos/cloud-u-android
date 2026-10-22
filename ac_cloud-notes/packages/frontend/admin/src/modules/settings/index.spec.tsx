@@ -120,7 +120,7 @@ describe('SettingsPage', () => {
     useAppConfigMock.mockReturnValue({
       appConfig: {
         server: {
-          name: 'AFFiNE',
+          name: 'Cloud Notes',
         },
         auth: {
           allowSignup: true,
@@ -135,7 +135,7 @@ describe('SettingsPage', () => {
       },
       patchedAppConfig: {
         server: {
-          name: 'AFFiNE',
+          name: 'Cloud Notes',
         },
         auth: {
           allowSignup: true,
@@ -238,7 +238,7 @@ describe('SettingsPage', () => {
     useAppConfigMock.mockReturnValue({
       appConfig: {
         server: {
-          name: 'AFFiNE',
+          name: 'Cloud Notes',
         },
         auth: {
           allowSignup: true,
@@ -246,7 +246,7 @@ describe('SettingsPage', () => {
       },
       patchedAppConfig: {
         server: {
-          name: 'AFFiNE',
+          name: 'Cloud Notes',
         },
         auth: {
           allowSignup: true,

@@ -4,12 +4,12 @@ import {
   Menu,
   type MenuProps,
   MenuSub,
-} from '@affine/component';
+} from '@cloud-notes/component';
 import type {
   GroupByParams,
   OrderByParams,
-} from '@affine/core/modules/collection-rules/types';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/collection-rules/types';
+import { useI18n } from '@cloud-notes/i18n';
 import type React from 'react';
 import { useCallback } from 'react';
 
@@ -56,7 +56,7 @@ const ExplorerDisplayMenu = ({
         }
       >
         <div className={styles.subMenuSelectorContainer}>
-          <span>{t['com.affine.explorer.display-menu.grouping']()}</span>
+          <span>{t['com.cloud-notes.explorer.display-menu.grouping']()}</span>
           <span className={styles.subMenuSelectorSelected}>
             {displayPreference.groupBy ? (
               <GroupByName groupBy={displayPreference.groupBy} />
@@ -73,7 +73,7 @@ const ExplorerDisplayMenu = ({
         }
       >
         <div className={styles.subMenuSelectorContainer}>
-          <span>{t['com.affine.explorer.display-menu.ordering']()}</span>
+          <span>{t['com.cloud-notes.explorer.display-menu.ordering']()}</span>
           <span className={styles.subMenuSelectorSelected}>
             {displayPreference.orderBy ? (
               <OrderByName orderBy={displayPreference.orderBy} />
@@ -123,7 +123,7 @@ export const ExplorerDisplayMenuButton = ({
       {...menuProps}
     >
       <Button className={className} style={style}>
-        {t['com.affine.explorer.display-menu.button']()}
+        {t['com.cloud-notes.explorer.display-menu.button']()}
       </Button>
     </Menu>
   );

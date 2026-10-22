@@ -96,7 +96,7 @@ test.describe('basic functions', () => {
 
     await customButton.click();
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
     const colorPickerPanel = getColorPickerPanel(toolbar);
 
     await expect(colorPickerPanel).toBeVisible();
@@ -123,7 +123,7 @@ test.describe('basic functions', () => {
 
     await customButton.click();
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
     const colorPickerPanel = getColorPickerPanel(toolbar);
 
     await expect(colorPickerPanel).toBeVisible();
@@ -145,7 +145,7 @@ test.describe('basic functions', () => {
     const end0 = { x: 150, y: 200 };
     await addBasicShapeElement(page, start0, end0, Shape.Square);
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
 
     await triggerComponentToolbarAction(page, 'changeShapeFillColor');
 
@@ -178,7 +178,7 @@ test.describe('basic functions', () => {
     const end0 = { x: 150, y: 200 };
     await addBasicShapeElement(page, start0, end0, Shape.Square);
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
 
     await triggerComponentToolbarAction(page, 'changeShapeFillColor');
 
@@ -209,7 +209,7 @@ test.describe('basic functions', () => {
     const end0 = { x: 150, y: 200 };
     await addBasicShapeElement(page, start0, end0, Shape.Square);
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
 
     await triggerComponentToolbarAction(page, 'changeShapeFillColor');
 
@@ -238,7 +238,7 @@ test.describe('basic functions', () => {
     const end0 = { x: 150, y: 200 };
     await addBasicShapeElement(page, start0, end0, Shape.Square);
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
 
     await triggerComponentToolbarAction(page, 'changeShapeFillColor');
 
@@ -276,7 +276,7 @@ test.describe('basic functions', () => {
     const end0 = { x: 150, y: 200 };
     await addBasicShapeElement(page, start0, end0, Shape.Square);
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
 
     await triggerComponentToolbarAction(page, 'changeShapeFillColor');
 
@@ -307,7 +307,7 @@ test.describe('basic functions', () => {
     const end0 = { x: 150, y: 200 };
     await addBasicShapeElement(page, start0, end0, Shape.Square);
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
 
     await triggerComponentToolbarAction(page, 'changeShapeFillColor');
 
@@ -371,7 +371,7 @@ test.describe('basic functions', () => {
     rgba = parseStringToRgba('--blocksuite-transparent');
     expect(rgba).toEqual({ r: 1, g: 1, b: 1, a: 0 });
 
-    rgba = parseStringToRgba('--affine-palette-transparent');
+    rgba = parseStringToRgba('--cloud-notes-palette-transparent');
     expect(rgba).toEqual({ r: 1, g: 1, b: 1, a: 0 });
 
     rgba = parseStringToRgba('#ff0');

@@ -4,7 +4,7 @@ import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import { useEffect } from 'react';
 
-import type { AffineEditorContainer } from '../blocksuite/block-suite-editor';
+import type { CloudNotesEditorContainer } from '../blocksuite/block-suite-editor';
 import { BlockSuiteEditor } from '../blocksuite/block-suite-editor';
 import { DocService } from '../modules/doc';
 import { EditorService } from '../modules/editor';
@@ -13,11 +13,11 @@ import * as styles from './page-detail-editor.css';
 
 declare global {
   // oxlint-disable-next-line no-var
-  var currentEditor: AffineEditorContainer | undefined;
+  var currentEditor: CloudNotesEditorContainer | undefined;
 }
 
 export type OnLoadEditor = (
-  editor: AffineEditorContainer
+  editor: CloudNotesEditorContainer
 ) => (() => void) | void;
 
 export interface PageDetailEditorProps {

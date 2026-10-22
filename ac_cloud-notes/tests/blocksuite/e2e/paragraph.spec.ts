@@ -609,7 +609,7 @@ test('switch between paragraph types', async ({ page }) => {
   await focusRichText(page);
   await type(page, 'hello');
 
-  const selector = '.affine-paragraph-rich-text-wrapper';
+  const selector = '.cloud-notes-paragraph-rich-text-wrapper';
 
   await updateBlockType(page, 'affine:paragraph', 'h1');
   await assertClassName(page, selector, /h1/);
@@ -1008,7 +1008,7 @@ test('should placeholder works', async ({ page }) => {
   await enterPlaygroundRoom(page);
   await initEmptyParagraphState(page);
   await focusRichText(page);
-  const placeholder = page.locator('.affine-paragraph-placeholder.visible');
+  const placeholder = page.locator('.cloud-notes-paragraph-placeholder.visible');
   await expect(placeholder).toBeVisible();
   await expect(placeholder).toHaveCount(1);
   await expect(placeholder).toContainText("Type '/' for commands");
@@ -1047,7 +1047,7 @@ test('should placeholder not show when multiple blocks are selected', async ({
   // ←
   await page.mouse.move(coord.x + 20, coord.y + 50, { steps: 20 });
   await page.mouse.up();
-  const placeholder = page.locator('.affine-paragraph-placeholder.visible');
+  const placeholder = page.locator('.cloud-notes-paragraph-placeholder.visible');
   await expect(placeholder).toBeHidden();
 });
 
@@ -1345,7 +1345,7 @@ test.describe('readonly mode', () => {
     await pressEnter(page);
     await type(page, 'Shared content');
 
-    const content = page.locator('affine-paragraph').nth(1);
+    const content = page.locator('cloud-notes-paragraph').nth(1);
     await page.getByRole('button', { name: 'Collapse content' }).click();
     await switchReadonly(page);
     await page.getByRole('button', { name: 'Expand content' }).click();
@@ -1372,7 +1372,7 @@ test.describe('readonly mode', () => {
     await pressEnter(page);
     await type(page, 'Shared content');
 
-    const content = page.locator('affine-paragraph').nth(1);
+    const content = page.locator('cloud-notes-paragraph').nth(1);
     await page.getByRole('button', { name: 'Collapse content' }).click();
     await expect(content).not.toBeVisible();
 
@@ -1410,7 +1410,7 @@ test.describe('readonly mode', () => {
     await pressEnter(page);
     await updateBlockType(page, 'affine:paragraph', 'h1');
 
-    const placeholder = page.locator('.affine-paragraph-placeholder.visible');
+    const placeholder = page.locator('.cloud-notes-paragraph-placeholder.visible');
 
     await switchReadonly(page);
     await focusRichText(page, 0);

@@ -112,8 +112,8 @@ final class ShareInboxSafetyTests: XCTestCase {
 
   func testPreviewRouteMatrixAndAllowlistBypasses() {
     let publicURLs = [
-      "https://x.com/affine/status/123",
-      "https://www.twitter.com/affine/status/123",
+      "https://x.com/cloud-notes/status/123",
+      "https://www.twitter.com/cloud-notes/status/123",
       "https://youtu.be/video-id",
       "https://www.youtube.com/watch?v=video-id",
       "https://m.youtube.com/shorts/video-id",
@@ -131,9 +131,9 @@ final class ShareInboxSafetyTests: XCTestCase {
     XCTAssertEqual(ShareInboxSafety.previewRoute(mode: .signedOut, url: genericURL), .official)
 
     for bypass in [
-      "https://evil.x.com/affine/status/123",
-      "https://x.com/affine/status/not-a-number",
-      "https://x.com/affine/status/123/extra",
+      "https://evil.x.com/cloud-notes/status/123",
+      "https://x.com/cloud-notes/status/not-a-number",
+      "https://x.com/cloud-notes/status/123/extra",
       "https://youtube.com.evil.example/watch?v=video-id",
       "https://www.youtube.com/channel/video-id",
       "https://youtu.be/video-id/extra",
@@ -220,8 +220,8 @@ final class ShareInboxSafetyTests: XCTestCase {
     let started = expectation(description: "request started")
     let stopped = expectation(description: "request cancelled")
     SharePreviewURLProtocol.onStart = { _, request in
-      XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "AFFiNE/0.27.0")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "x-affine-version"), "0.27.0")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "cloud-notes/0.27.0")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "x-cloud-notes-version"), "0.27.0")
       started.fulfill()
     }
     SharePreviewURLProtocol.onStop = { stopped.fulfill() }
@@ -253,9 +253,9 @@ final class ShareInboxSafetyTests: XCTestCase {
     let imageLoaded = expectation(description: "image loaded")
     SharePreviewURLProtocol.onStart = { protocolInstance, request in
       XCTAssertEqual(request.httpMethod, "GET")
-      XCTAssertEqual(request.url?.absoluteString, "https://app.affine.pro/api/worker/image-proxy")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "AFFiNE/0.27.0")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "x-affine-version"), "0.27.0")
+      XCTAssertEqual(request.url?.absoluteString, "https://notes.diegonmarcos.com/api/worker/image-proxy")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "cloud-notes/0.27.0")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "x-cloud-notes-version"), "0.27.0")
       let response = HTTPURLResponse(
         url: request.url!, statusCode: 200, httpVersion: nil,
         headerFields: ["Content-Type": "image/png"]
@@ -287,8 +287,8 @@ final class ShareInboxSafetyTests: XCTestCase {
     let imageStarted = expectation(description: "image request started")
     let imageStopped = expectation(description: "image request cancelled")
     SharePreviewURLProtocol.onStart = { _, request in
-      XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "AFFiNE/0.27.0")
-      XCTAssertEqual(request.value(forHTTPHeaderField: "x-affine-version"), "0.27.0")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "User-Agent"), "cloud-notes/0.27.0")
+      XCTAssertEqual(request.value(forHTTPHeaderField: "x-cloud-notes-version"), "0.27.0")
       imageStarted.fulfill()
     }
     SharePreviewURLProtocol.onStop = { imageStopped.fulfill() }

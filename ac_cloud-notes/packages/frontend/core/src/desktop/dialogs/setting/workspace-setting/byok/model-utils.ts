@@ -6,7 +6,7 @@ import {
   ByokModelOutput,
   ByokProbeOperation,
   type ByokProvider,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 
 import type { ByokDefinition, ByokSettings } from './types';
 

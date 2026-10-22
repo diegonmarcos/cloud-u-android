@@ -1,10 +1,10 @@
 import path from 'node:path';
 
-import { DocStorage, ValidationResult } from '@affine/native';
+import { DocStorage, ValidationResult } from '@cloud-notes/native';
 import {
   parseUniversalId,
   universalId as generateUniversalId,
-} from '@affine/nbstore';
+} from '@cloud-notes/nbstore';
 import fs from 'fs-extra';
 import { nanoid } from 'nanoid';
 import { applyUpdate, Doc as YDoc } from 'yjs';
@@ -268,7 +268,7 @@ async function importLegacyWorkspaceDb(
   originalPath: string,
   workspaceId: string
 ) {
-  const { SqliteConnection } = await import('@affine/native');
+  const { SqliteConnection } = await import('@cloud-notes/native');
 
   const validationResult = await SqliteConnection.validate(originalPath);
   if (validationResult !== ValidationResult.Valid) {

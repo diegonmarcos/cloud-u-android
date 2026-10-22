@@ -18,9 +18,9 @@ import {
 } from 'vitest';
 
 import {
-  AFFiNEUpdateProvider,
+  CloudNotesUpdateProvider,
   availableForMyPlatformAndInstaller,
-} from '../../src/main/updater/affine-update-provider';
+} from '../../src/main/updater/cloud-notes-update-provider';
 import { MockedAppAdapter, MockedUpdater } from './mocks';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -39,7 +39,7 @@ describe('testing for client update', () => {
   ];
 
   const basicRequestHandlers = [
-    http.get('https://affine.pro/api/worker/releases', async ({ request }) => {
+    http.get('https://notes.diegonmarcos.com/api/worker/releases', async ({ request }) => {
       const url = new URL(request.url);
       const buffer = await fs.readFile(
         path.join(
@@ -56,7 +56,7 @@ describe('testing for client update', () => {
       expectReleaseList.map(({ version }) => {
         return [
           http.get(
-            `https://github.com/toeverything/AFFiNE/releases/download/v${version}/latest.yml`,
+            `https://github.com/diegonmarcos/cloud-u-android/releases/download/v${version}/latest.yml`,
             async req => {
               const buffer = await fs.readFile(
                 path.join(
@@ -88,7 +88,7 @@ describe('testing for client update', () => {
         const updater = new MockedUpdater(null, app);
 
         updater.setFeedURL(
-          AFFiNEUpdateProvider.configFeed({
+          CloudNotesUpdateProvider.configFeed({
             channel: buildType as any,
           })
         );
@@ -120,7 +120,7 @@ describe('testing for client update', () => {
         const files = parseUpdateInfo(
           data,
           '',
-          new URL('https://affine.pro')
+          new URL('https://notes.diegonmarcos.com')
         ).files.map(file => file.url);
 
         it(`filter for platform [${platform}] arch [${arch}]`, () => {

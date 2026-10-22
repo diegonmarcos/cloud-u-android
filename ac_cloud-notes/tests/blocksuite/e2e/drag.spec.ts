@@ -47,13 +47,13 @@ test('only have one drag handle in screen', async ({ page }) => {
 
   await page.mouse.move(topLeft.x, topLeft.y);
   const length1 = await page.evaluate(() => {
-    const handles = document.querySelectorAll('affine-drag-handle-widget');
+    const handles = document.querySelectorAll('cloud-notes-drag-handle-widget');
     return handles.length;
   }, []);
   expect(length1).toBe(1);
   await page.mouse.move(bottomRight.x, bottomRight.y);
   const length2 = await page.evaluate(() => {
-    const handles = document.querySelectorAll('affine-drag-handle-widget');
+    const handles = document.querySelectorAll('cloud-notes-drag-handle-widget');
     return handles.length;
   }, []);
   expect(length2).toBe(1);
@@ -65,7 +65,7 @@ test('move drag handle in paragraphs', async ({ page }) => {
   await initThreeParagraphs(page);
   await assertRichTexts(page, ['123', '456', '789']);
   await dragHandleFromBlockToBlockBottomById(page, '2', '4');
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
   await assertRichTexts(page, ['456', '789', '123']);
 });
 
@@ -75,7 +75,7 @@ test('move drag handle in list', async ({ page }) => {
   await initThreeLists(page);
   await assertRichTexts(page, ['123', '456', '789']);
   await dragHandleFromBlockToBlockBottomById(page, '5', '3', false);
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
   await assertRichTexts(page, ['123', '789', '456']);
 });
 
@@ -105,11 +105,11 @@ test('move drag handle in nested block', async ({ page }) => {
   await assertRichTexts(page, ['1', '2', '21', '22', '23', '3']);
 
   await dragHandleFromBlockToBlockBottomById(page, '5', '7');
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
   await assertRichTexts(page, ['1', '2', '22', '23', '21', '3']);
 
   await dragHandleFromBlockToBlockBottomById(page, '3', '8');
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
   await assertRichTexts(page, ['2', '22', '23', '21', '3', '1']);
 });
 
@@ -145,7 +145,7 @@ test('move drag handle into another block', async ({ page }) => {
     true,
     2 * BLOCK_CHILDREN_CONTAINER_PADDING_LEFT
   );
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
   await assertRichTexts(page, ['1', '2', '22', '23', '21', '3']);
   // FIXME(DND)
   // await assertBlockChildrenIds(page, '7', ['5']);
@@ -157,7 +157,7 @@ test('move drag handle into another block', async ({ page }) => {
   //   true,
   //   2 * BLOCK_CHILDREN_CONTAINER_PADDING_LEFT
   // );
-  // await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  // await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
   // await assertRichTexts(page, ['2', '22', '23', '21', '3', '1']);
   // await assertBlockChildrenIds(page, '8', ['3']);
 });
@@ -192,7 +192,7 @@ test('move to the last block of each level in multi-level nesting', async ({
   );
 
   await dragHandleFromBlockToBlockBottomById(page, '3', '9');
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
 
   expect(await getPageSnapshot(page, true)).toMatchSnapshot(
     `${testInfo.title}_drag_3_9.json`
@@ -205,7 +205,7 @@ test('move to the last block of each level in multi-level nesting', async ({
     true,
     -(1 * BLOCK_CHILDREN_CONTAINER_PADDING_LEFT)
   );
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
 
   expect(await getPageSnapshot(page, true)).toMatchSnapshot(
     `${testInfo.title}_drag_4_3.json`
@@ -219,7 +219,7 @@ test('move to the last block of each level in multi-level nesting', async ({
     true,
     -(2 * BLOCK_CHILDREN_CONTAINER_PADDING_LEFT)
   );
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
 
   // FIXME(DND)
   // expect(await getPageSnapshot(page, true)).toMatchSnapshot(
@@ -244,7 +244,7 @@ test('should sync selected-blocks to session-manager when clicking drag handle',
   }
   await page.mouse.move(rect.x + 10, rect.y + 10, { steps: 2 });
 
-  const handle = page.locator('.affine-drag-handle-container');
+  const handle = page.locator('.cloud-notes-drag-handle-container');
   await handle.click();
 
   await page.keyboard.press('Backspace');
@@ -271,12 +271,12 @@ test.fixme('should be able to drag & drop multiple blocks', async ({
   );
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(2);
 
   await dragHandleFromBlockToBlockBottomById(page, '2', '4', true);
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
 
   await assertRichTexts(page, ['789', '123', '456']);
 
@@ -325,7 +325,7 @@ test.fixme('should be able to drag & drop multiple blocks to nested block', asyn
   );
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(2);
 
@@ -347,7 +347,7 @@ test('should blur rich-text first on starting block selection', async ({
   await expect(page.locator('[contenteditable="true"]:focus')).toHaveCount(1);
 
   await dragHandleFromBlockToBlockBottomById(page, '2', '4');
-  await expect(page.locator('.affine-drop-indicator')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drop-indicator')).toBeHidden();
   await assertRichTexts(page, ['456', '789', '123']);
 
   await expect(page.locator('[contenteditable="true"]:focus')).toHaveCount(0);
@@ -360,11 +360,11 @@ test('hide drag handle when mouse is hovering over the title', async ({
   await initEmptyParagraphState(page);
   await initThreeParagraphs(page);
 
-  const rect = await page.locator('.affine-note-block-container').boundingBox();
+  const rect = await page.locator('.cloud-notes-note-block-container').boundingBox();
   if (!rect) {
     throw new Error();
   }
-  const dragHandle = page.locator('.affine-drag-handle-container');
+  const dragHandle = page.locator('.cloud-notes-drag-handle-container');
   // When there is a gap between paragraph blocks, it is the correct behavior for the drag handle to appear
   // when the mouse is over the gap. Therefore, we use rect.y - 20 to make the Y offset greater than the gap between the
   // paragraph blocks.
@@ -382,7 +382,7 @@ test.fixme('should create preview when dragging', async ({ page }) => {
   await initThreeParagraphs(page);
   await assertRichTexts(page, ['123', '456', '789']);
 
-  const dragPreview = page.locator('affine-drag-preview');
+  const dragPreview = page.locator('cloud-notes-drag-preview');
 
   await dragBetweenIndices(
     page,
@@ -396,7 +396,7 @@ test.fixme('should create preview when dragging', async ({ page }) => {
   );
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(2);
 
@@ -433,7 +433,7 @@ test.fixme('should drag and drop blocks under block-level selection', async ({
   );
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(2);
 
@@ -484,7 +484,7 @@ test('should trigger click event on editor container when clicking on blocks und
   );
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(2);
   await expect(page.locator('[contenteditable="true"]:focus')).toHaveCount(0);
@@ -531,7 +531,7 @@ test('should get to selected block when dragging unselected block', async ({
   await page.mouse.up();
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(1);
 
@@ -585,7 +585,7 @@ test.fixme('should clear the currently selected block when clicked again', async
   await page.mouse.up();
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(1);
 
@@ -653,7 +653,7 @@ test.fixme('should support moving blocks from multiple notes', async ({
   );
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(2);
 
@@ -736,7 +736,7 @@ test('drag handle should show on right block when scroll viewport', async ({
   }
 
   await page.mouse.move(blockRect28.x + 10, blockRect28.y + 10);
-  const dragHandle = page.locator('.affine-drag-handle-container');
+  const dragHandle = page.locator('.cloud-notes-drag-handle-container');
   await expect(dragHandle).toBeVisible();
 
   await page.mouse.move(
@@ -747,7 +747,7 @@ test('drag handle should show on right block when scroll viewport', async ({
   await page.mouse.up();
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(1);
 

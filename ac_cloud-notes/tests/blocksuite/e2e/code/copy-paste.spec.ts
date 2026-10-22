@@ -59,7 +59,7 @@ use fern::{
   await focusRichText(page);
   await pasteByKeyboard(page);
 
-  const locator = page.locator('affine-paragraph');
+  const locator = page.locator('cloud-notes-paragraph');
   await expect(locator).toBeHidden();
 });
 

@@ -1,5 +1,5 @@
 {
-  "name": "@affine/s3-compat",
+  "name": "@cloud-notes/s3-compat",
   "private": true,
   "type": "module",
   "exports": {

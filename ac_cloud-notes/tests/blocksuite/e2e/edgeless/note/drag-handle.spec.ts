@@ -34,31 +34,31 @@ test('drag handle should be shown when a note is activated in default mode or hi
   await assertRichTexts(page, ['hello']);
 
   await switchEditorMode(page);
-  const noteBox = await page.locator('affine-edgeless-note').boundingBox();
+  const noteBox = await page.locator('cloud-notes-edgeless-note').boundingBox();
   if (!noteBox) {
-    throw new Error('Missing edgeless affine-note');
+    throw new Error('Missing edgeless cloud-notes-note');
   }
 
   const [x, y] = [noteBox.x + 26, noteBox.y + noteBox.height / 2];
 
   await page.mouse.move(x, y);
-  await expect(page.locator('.affine-drag-handle-container')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drag-handle-container')).toBeHidden();
   await page.mouse.dblclick(x, y);
   await waitNextFrame(page);
   await page.mouse.move(x, y);
 
-  await expect(page.locator('.affine-drag-handle-container')).toBeVisible();
+  await expect(page.locator('.cloud-notes-drag-handle-container')).toBeVisible();
 
   await page.mouse.move(0, 0);
   await setEdgelessTool(page, 'shape');
   await page.mouse.move(x, y);
-  await expect(page.locator('.affine-drag-handle-container')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drag-handle-container')).toBeHidden();
 
   await page.mouse.move(0, 0);
   await setEdgelessTool(page, 'default');
   await page.mouse.move(x, y);
   await page.mouse.click(x, y);
-  await expect(page.locator('.affine-drag-handle-container')).toBeVisible();
+  await expect(page.locator('.cloud-notes-drag-handle-container')).toBeVisible();
 });
 
 test('drag handle can drag note into another note', async ({ page }) => {
@@ -91,7 +91,7 @@ test('drag handle can drag note into another note', async ({ page }) => {
     await page.mouse.click(x, y);
 
     const handlerRect = await page
-      .locator('.affine-drag-handle-container')
+      .locator('.cloud-notes-drag-handle-container')
       .boundingBox();
     assertRectExist(handlerRect);
 
@@ -122,7 +122,7 @@ test('drag handle should work inside one note', async ({ page }) => {
   await page.mouse.dblclick(CENTER_X, CENTER_Y);
   await dragHandleFromBlockToBlockBottomById(page, '3', '5');
   await waitNextFrame(page);
-  await expect(page.locator('affine-drag-handle-container')).toBeHidden();
+  await expect(page.locator('cloud-notes-drag-handle-container')).toBeHidden();
   await assertRichTexts(page, ['456', '789', '123']);
 });
 
@@ -145,14 +145,14 @@ test('drag handle should work across multiple notes', async ({ page }) => {
 
   await page.mouse.dblclick(CENTER_X, CENTER_Y - 20);
   await dragHandleFromBlockToBlockBottomById(page, '3', '7');
-  await expect(page.locator('.affine-drag-handle-container')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drag-handle-container')).toBeHidden();
   await waitNextFrame(page);
   await assertRichTexts(page, ['456', '789', '000', '123']);
 
   const rect = await page
-    .locator('affine-edgeless-note')
+    .locator('cloud-notes-edgeless-note')
     .nth(1)
-    .locator('affine-paragraph')
+    .locator('cloud-notes-paragraph')
     .nth(1)
     .boundingBox();
 
@@ -165,7 +165,7 @@ test('drag handle should work across multiple notes', async ({ page }) => {
   });
   await dragHandleFromBlockToBlockBottomById(page, '3', '4');
   await waitNextFrame(page);
-  await expect(page.locator('.affine-drag-handle-container')).toBeHidden();
+  await expect(page.locator('.cloud-notes-drag-handle-container')).toBeHidden();
   await assertRichTexts(page, ['456', '123', '789', '000']);
 
   await expect(page.locator('selected > *')).toHaveCount(0);
@@ -204,7 +204,7 @@ test('should keep relative order of new note when a block is dragged from note t
 
   await assertRichTexts(page, ['3', '5', '6', '7', '9']);
 
-  const notes = page.locator('affine-edgeless-note');
+  const notes = page.locator('cloud-notes-edgeless-note');
 
   await notes.nth(1).dblclick();
   await dragBlockToPoint(page, '5', { x: 50, y: 100 });
@@ -229,7 +229,7 @@ test('drag handle should work when hover on the background of a selected edgeles
   // wait for the note animation
   await waitNextFrame(page, 400);
 
-  const noteRect = await page.locator('affine-edgeless-note').boundingBox();
+  const noteRect = await page.locator('cloud-notes-edgeless-note').boundingBox();
   assertRectExist(noteRect);
 
   const noteBackgroundRect = await page
@@ -237,12 +237,12 @@ test('drag handle should work when hover on the background of a selected edgeles
     .boundingBox();
   assertRectExist(noteBackgroundRect);
 
-  const paragraphRect = await page.locator('affine-paragraph').boundingBox();
+  const paragraphRect = await page.locator('cloud-notes-paragraph').boundingBox();
   assertRectExist(paragraphRect);
 
   // move to the area between note background and note block and before the paragraph
   const x = (noteRect.x + noteBackgroundRect.x) / 2;
   const y = paragraphRect.y + paragraphRect.height / 2;
   await page.mouse.move(x, y, { steps: 2 });
-  await expect(page.locator('.affine-drag-handle-container')).toBeVisible();
+  await expect(page.locator('.cloud-notes-drag-handle-container')).toBeVisible();
 });

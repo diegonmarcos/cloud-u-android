@@ -171,10 +171,10 @@ export async function cutByKeyboard(page: Page) {
 export async function pasteByKeyboard(page: Page, forceFocus = true) {
   if (forceFocus) {
     const isEditorActive = await page.evaluate(() =>
-      document.activeElement?.closest('affine-editor-container')
+      document.activeElement?.closest('cloud-notes-editor-container')
     );
     if (!isEditorActive) {
-      await page.click('affine-editor-container');
+      await page.click('cloud-notes-editor-container');
     }
   }
 

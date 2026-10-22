@@ -1,9 +1,9 @@
-import { getBaseFontStyleOptions } from '@affine/core/desktop/dialogs/setting/general-setting/editor/general';
+import { getBaseFontStyleOptions } from '@cloud-notes/core/desktop/dialogs/setting/general-setting/editor/general';
 import {
   EditorSettingService,
   type FontFamily,
-} from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 
@@ -26,7 +26,7 @@ export const FontStyleSetting = () => {
   );
 
   return (
-    <RowLayout label={t['com.affine.mobile.setting.appearance.font']()}>
+    <RowLayout label={t['com.cloud-notes.mobile.setting.appearance.font']()}>
       <SettingDropdownSelect<FontFamily>
         options={options}
         value={fontFamily}

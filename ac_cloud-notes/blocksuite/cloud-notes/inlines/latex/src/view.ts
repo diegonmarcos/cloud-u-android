@@ -1,0 +1,29 @@
+import {
+  type ViewExtensionContext,
+  ViewExtensionProvider,
+} from '@blocksuite/cloud-notes-ext-loader';
+
+import { effects } from './effects';
+import {
+  LatexEditorUnitSpecExtension,
+  LatexInlineSpecExtension,
+} from './inline-spec';
+import { LatexEditorInlineManagerExtension } from './latex-node/latex-editor-menu';
+
+export class LatexViewExtension extends ViewExtensionProvider {
+  override name = 'cloud-notes-latex-inline';
+
+  override effect(): void {
+    super.effect();
+    effects();
+  }
+
+  override setup(context: ViewExtensionContext) {
+    super.setup(context);
+    context.register([
+      LatexInlineSpecExtension,
+      LatexEditorUnitSpecExtension,
+      LatexEditorInlineManagerExtension,
+    ]);
+  }
+}

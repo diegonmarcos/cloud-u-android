@@ -1,7 +1,7 @@
-import { CodeBlockPreviewExtension } from '@blocksuite/affine/blocks/code';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import type { CodeBlockModel } from '@blocksuite/affine/model';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
+import { CodeBlockPreviewExtension } from '@blocksuite/cloud-notes/blocks/code';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { CodeBlockModel } from '@blocksuite/cloud-notes/model';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
 import { ShadowlessElement } from '@blocksuite/std';
 import { css, html, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -12,7 +12,7 @@ import { linkIframe } from './iframe-container';
 
 export const CodeBlockHtmlPreview = CodeBlockPreviewExtension(
   'html',
-  model => html`<affine-html-preview .model=${model}></affine-html-preview>`
+  model => html`<cloud-notes-html-preview .model=${model}></cloud-notes-html-preview>`
 );
 
 export class HTMLPreview extends SignalWatcher(
@@ -136,7 +136,7 @@ export class HTMLPreview extends SignalWatcher(
             () =>
               html`<div class="html-preview-fallback">
                 This feature is not supported in your browser. Please download
-                the AFFiNE Desktop App to use it.
+                the Cloud Notes Desktop App to use it.
               </div>`,
           ],
         ])}
@@ -153,11 +153,11 @@ export class HTMLPreview extends SignalWatcher(
 }
 
 export function effects() {
-  customElements.define('affine-html-preview', HTMLPreview);
+  customElements.define('cloud-notes-html-preview', HTMLPreview);
 }
 
 declare global {
   interface HTMLElementTagNameMap {
-    'affine-html-preview': HTMLPreview;
+    'cloud-notes-html-preview': HTMLPreview;
   }
 }

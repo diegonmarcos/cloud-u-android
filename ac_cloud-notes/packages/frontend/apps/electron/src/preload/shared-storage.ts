@@ -2,15 +2,15 @@ import { MemoryMemento } from '@toeverything/infra';
 import { ipcRenderer } from 'electron';
 
 import {
-  AFFINE_API_CHANNEL_NAME,
-  AFFINE_EVENT_CHANNEL_NAME,
+  CLOUD_NOTES_API_CHANNEL_NAME,
+  CLOUD_NOTES_EVENT_CHANNEL_NAME,
 } from '../shared/type';
 
 // Unique id for this renderer instance, used to ignore self-originated broadcasts
 const CLIENT_ID: string = Math.random().toString(36).slice(2);
 
 function invokeWithCatch(key: string, ...args: any[]) {
-  ipcRenderer.invoke(AFFINE_API_CHANNEL_NAME, key, ...args).catch(err => {
+  ipcRenderer.invoke(CLOUD_NOTES_API_CHANNEL_NAME, key, ...args).catch(err => {
     console.error(`Failed to invoke ${key}`, err);
   });
 }
@@ -72,7 +72,7 @@ function createSharedStorageApi(
     }
   };
 
-  ipcRenderer.on(AFFINE_EVENT_CHANNEL_NAME, (_event, channel, updates) => {
+  ipcRenderer.on(CLOUD_NOTES_EVENT_CHANNEL_NAME, (_event, channel, updates) => {
     if (channel === `sharedStorage:${event}`) {
       if (loaded) {
         applyUpdates(updates);
@@ -86,7 +86,7 @@ function createSharedStorageApi(
     try {
       memory.setAll(init);
       const latest = await ipcRenderer.invoke(
-        AFFINE_API_CHANNEL_NAME,
+        CLOUD_NOTES_API_CHANNEL_NAME,
         event === 'onGlobalStateChanged'
           ? 'sharedStorage:getAllGlobalState'
           : 'sharedStorage:getAllGlobalCache'

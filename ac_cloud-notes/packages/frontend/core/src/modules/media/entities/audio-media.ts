@@ -1,5 +1,5 @@
-import { toArrayBuffer } from '@affine/core/utils/array-buffer';
-import { DebugLogger } from '@affine/debug';
+import { toArrayBuffer } from '@cloud-notes/core/utils/array-buffer';
+import { DebugLogger } from '@cloud-notes/debug';
 import {
   catchErrorInto,
   effect,

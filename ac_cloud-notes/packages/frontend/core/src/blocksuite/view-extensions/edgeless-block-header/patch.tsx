@@ -1,14 +1,14 @@
-import type { ReactToLit } from '@affine/component';
-import { JournalService } from '@affine/core/modules/journal';
-import { EmbedSyncedDocConfigExtension } from '@blocksuite/affine/blocks/embed-doc';
-import { NoteConfigExtension } from '@blocksuite/affine/blocks/note';
-import { EDGELESS_BLOCK_CHILD_PADDING } from '@blocksuite/affine/blocks/root';
-import { Bound, Vec } from '@blocksuite/affine/global/gfx';
+import type { ReactToLit } from '@cloud-notes/component';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { EmbedSyncedDocConfigExtension } from '@blocksuite/cloud-notes/blocks/embed-doc';
+import { NoteConfigExtension } from '@blocksuite/cloud-notes/blocks/note';
+import { EDGELESS_BLOCK_CHILD_PADDING } from '@blocksuite/cloud-notes/blocks/root';
+import { Bound, Vec } from '@blocksuite/cloud-notes/global/gfx';
 import {
   DocModeProvider,
   EditPropsStore,
-} from '@blocksuite/affine/shared/services';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
+} from '@blocksuite/cloud-notes/shared/services';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
 import type { FrameworkProvider } from '@toeverything/infra';
 import { html } from 'lit';
 
@@ -59,7 +59,7 @@ export function patchForEdgelessNoteConfig(
           const leftPadding = parseInt(
             window
               .getComputedStyle(rootView)
-              .getPropertyValue('--affine-editor-side-padding')
+              .getPropertyValue('--cloud-notes-editor-side-padding')
               .replace('px', '')
           );
           if (isNaN(leftPadding)) {
@@ -69,7 +69,7 @@ export function patchForEdgelessNoteConfig(
           let editorWidth = parseInt(
             window
               .getComputedStyle(rootView)
-              .getPropertyValue('--affine-editor-width')
+              .getPropertyValue('--cloud-notes-editor-width')
               .replace('px', '')
           );
           if (isNaN(editorWidth)) {

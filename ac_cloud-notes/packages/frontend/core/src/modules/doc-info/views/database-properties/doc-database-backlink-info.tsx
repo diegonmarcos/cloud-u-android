@@ -3,12 +3,12 @@ import {
   PropertyCollapsibleContent,
   PropertyCollapsibleSection,
   PropertyName,
-} from '@affine/component';
-import { AffinePageReference } from '@affine/core/components/affine/reference-link';
-import { DocService } from '@affine/core/modules/doc';
-import { TemplateDocService } from '@affine/core/modules/template-doc';
-import { useI18n } from '@affine/i18n';
-import type { DatabaseBlockDataSource } from '@blocksuite/affine/blocks/database';
+} from '@cloud-notes/component';
+import { CloudNotesPageReference } from '@cloud-notes/core/components/cloud-notes/reference-link';
+import { DocService } from '@cloud-notes/core/modules/doc';
+import { TemplateDocService } from '@cloud-notes/core/modules/template-doc';
+import { useI18n } from '@cloud-notes/i18n';
+import type { DatabaseBlockDataSource } from '@blocksuite/cloud-notes/blocks/database';
 import { DatabaseTableViewIcon, PageIcon } from '@blocksuite/icons/rc';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import { useMemo } from 'react';
@@ -142,7 +142,7 @@ const DatabaseBacklinkRow = ({
         defaultCollapsed={!defaultOpen}
         icon={<DatabaseTableViewIcon />}
         suffix={
-          <AffinePageReference
+          <CloudNotesPageReference
             className={
               BUILD_CONFIG.isMobileEdition
                 ? styles.mobileDocRefLink

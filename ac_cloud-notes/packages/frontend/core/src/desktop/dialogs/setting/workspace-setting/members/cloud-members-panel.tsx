@@ -1,30 +1,30 @@
-import { Button, notify, useConfirmModal } from '@affine/component';
+import { Button, notify, useConfirmModal } from '@cloud-notes/component';
 import {
   InviteTeamMemberModal,
   type InviteTeamMemberModalProps,
   MemberLimitModal,
-} from '@affine/component/member-components';
-import { SettingRow } from '@affine/component/setting-components';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { Upload } from '@affine/core/components/pure/file-upload';
+} from '@cloud-notes/component/member-components';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { Upload } from '@cloud-notes/core/components/pure/file-upload';
 import {
   ServerService,
   SubscriptionService,
   WorkspaceSubscriptionService,
-} from '@affine/core/modules/cloud';
+} from '@cloud-notes/core/modules/cloud';
 import {
   WorkspaceMembersService,
   WorkspacePermissionService,
-} from '@affine/core/modules/permissions';
-import { WorkspaceQuotaService } from '@affine/core/modules/quota';
-import { WorkspaceShareSettingService } from '@affine/core/modules/share-setting';
-import { copyTextToClipboard } from '@affine/core/utils/clipboard';
-import { emailRegex } from '@affine/core/utils/email-regex';
-import { UserFriendlyError } from '@affine/error';
-import type { WorkspaceInviteLinkExpireTime } from '@affine/graphql';
-import { ServerDeploymentType, SubscriptionPlan } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/core/modules/permissions';
+import { WorkspaceQuotaService } from '@cloud-notes/core/modules/quota';
+import { WorkspaceShareSettingService } from '@cloud-notes/core/modules/share-setting';
+import { copyTextToClipboard } from '@cloud-notes/core/utils/clipboard';
+import { emailRegex } from '@cloud-notes/core/utils/email-regex';
+import { UserFriendlyError } from '@cloud-notes/error';
+import type { WorkspaceInviteLinkExpireTime } from '@cloud-notes/graphql';
+import { ServerDeploymentType, SubscriptionPlan } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { ExportIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { nanoid } from 'nanoid';
@@ -128,8 +128,8 @@ export const CloudWorkspaceMembersPanel = ({
       setIdempotencyKey(nanoid());
       closeConfirmModal();
       notify.success({
-        title: t['com.affine.payment.resume.success.title'](),
-        message: t['com.affine.payment.resume.success.team.message'](),
+        title: t['com.cloud-notes.payment.resume.success.title'](),
+        message: t['com.cloud-notes.payment.resume.success.team.message'](),
       });
     } catch (err) {
       const error = UserFriendlyError.fromAny(err);
@@ -144,15 +144,15 @@ export const CloudWorkspaceMembersPanel = ({
   const openInviteModal = useCallback(() => {
     if (isTeam && workspaceSubscription?.canceledAt) {
       openConfirmModal({
-        title: t['com.affine.payment.member.team.retry-payment.title'](),
+        title: t['com.cloud-notes.payment.member.team.retry-payment.title'](),
         description:
           t[
-            `com.affine.payment.member.team.disabled-subscription.${isOwner ? 'owner' : 'admin'}.description`
+            `com.cloud-notes.payment.member.team.disabled-subscription.${isOwner ? 'owner' : 'admin'}.description`
           ](),
         confirmText:
           t[
             isOwner
-              ? 'com.affine.payment.member.team.disabled-subscription.resume-subscription'
+              ? 'com.cloud-notes.payment.member.team.disabled-subscription.resume-subscription'
               : 'Got it'
           ](),
         cancelText: t['Cancel'](),
@@ -215,7 +215,7 @@ export const CloudWorkspaceMembersPanel = ({
       const results = await membersService.inviteMembers(uniqueEmails);
       if (results) {
         notify({
-          title: t['com.affine.payment.member.team.invite.notify.title']({
+          title: t['com.cloud-notes.payment.member.team.invite.notify.title']({
             count: results.length.toString(),
           }),
           message: t['Invitation sent hint'](),
@@ -253,18 +253,18 @@ export const CloudWorkspaceMembersPanel = ({
     if (!workspaceQuota) return null;
 
     if (isTeam) {
-      return <span>{t['com.affine.payment.member.team.description']()}</span>;
+      return <span>{t['com.cloud-notes.payment.member.team.description']()}</span>;
     }
     return (
       <span>
-        {t['com.affine.payment.member.description2']()}
+        {t['com.cloud-notes.payment.member.description2']()}
         {hasPaymentFeature && isOwner ? (
           <div
             className={styles.goUpgradeWrapper}
             onClick={handleUpgradeConfirm}
           >
             <span className={styles.goUpgrade}>
-              {t['com.affine.payment.member.description.choose-plan']()}
+              {t['com.cloud-notes.payment.member.description.choose-plan']()}
             </span>
           </div>
         ) : null}
@@ -343,7 +343,7 @@ export const MembersPanelFallback = () => {
     <>
       <SettingRow
         name={t['Members']()}
-        desc={t['com.affine.payment.member.description2']()}
+        desc={t['com.cloud-notes.payment.member.description2']()}
       />
       <div className={styles.membersPanel}>
         <MemberListFallback memberCount={1} />
@@ -362,7 +362,7 @@ const ImportCSV = ({ onImport }: { onImport: (file: File) => void }) => {
         prefix={<ExportIcon />}
         variant="secondary"
       >
-        {t['com.affine.payment.member.team.invite.import-csv']()}
+        {t['com.cloud-notes.payment.member.team.invite.import-csv']()}
       </Button>
     </Upload>
   );

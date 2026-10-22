@@ -1,4 +1,4 @@
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
 import { ToggleRightIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';

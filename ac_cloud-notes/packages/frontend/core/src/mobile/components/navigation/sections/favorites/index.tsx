@@ -1,10 +1,10 @@
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
-import { NavigationPanelTreeRoot } from '@affine/core/desktop/components/navigation-panel';
-import type { FavoriteSupportTypeUnion } from '@affine/core/modules/favorite';
-import { FavoriteService } from '@affine/core/modules/favorite';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
+import { NavigationPanelTreeRoot } from '@cloud-notes/core/desktop/components/navigation-panel';
+import type { FavoriteSupportTypeUnion } from '@cloud-notes/core/modules/favorite';
+import { FavoriteService } from '@cloud-notes/core/modules/favorite';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 
@@ -44,7 +44,7 @@ export const NavigationPanelFavorites = () => {
   return (
     <CollapsibleSection
       path={path}
-      title={t['com.affine.rootAppSidebar.favorites']()}
+      title={t['com.cloud-notes.rootAppSidebar.favorites']()}
       testId="navigation-panel-favorites"
       headerTestId="navigation-panel-favorite-category-divider"
     >

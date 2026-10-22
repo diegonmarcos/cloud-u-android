@@ -1,5 +1,5 @@
-import { WorkspaceImpl } from '@affine/core/modules/workspace/impls/workspace';
-import { getSurfaceBlock } from '@blocksuite/affine/blocks/surface';
+import { WorkspaceImpl } from '@cloud-notes/core/modules/workspace/impls/workspace';
+import { getSurfaceBlock } from '@blocksuite/cloud-notes/blocks/surface';
 import {
   DatabaseBlockModel,
   EmbedLinkedDocModel,
@@ -7,30 +7,30 @@ import {
   ImageBlockModel,
   NoteBlockModel,
   NoteDisplayMode,
-} from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/model';
 import {
   embedSyncedDocMiddleware,
   MarkdownAdapter,
   titleMiddleware,
-} from '@blocksuite/affine/shared/adapters';
+} from '@blocksuite/cloud-notes/shared/adapters';
 import {
   getImageSelectionsCommand,
   getSelectedBlocksCommand,
-} from '@blocksuite/affine/shared/commands';
-import { DocModeProvider } from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/shared/commands';
+import { DocModeProvider } from '@blocksuite/cloud-notes/shared/services';
 import {
   getBlockProps,
   isInsideEdgelessEditor,
   matchModels,
-} from '@blocksuite/affine/shared/utils';
-import { BlockStdScope, type EditorHost } from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/shared/utils';
+import { BlockStdScope, type EditorHost } from '@blocksuite/cloud-notes/std';
 import {
   GfxControllerIdentifier,
   GfxPrimitiveElementModel,
-} from '@blocksuite/affine/std/gfx';
-import type { BlockModel, DocSnapshot, Store } from '@blocksuite/affine/store';
-import { Slice, toDraftModel } from '@blocksuite/affine/store';
-import { getElementProps } from '@blocksuite/affine-block-root';
+} from '@blocksuite/cloud-notes/std/gfx';
+import type { BlockModel, DocSnapshot, Store } from '@blocksuite/cloud-notes/store';
+import { Slice, toDraftModel } from '@blocksuite/cloud-notes/store';
+import { getElementProps } from '@blocksuite/cloud-notes-block-root';
 import { Doc as YDoc } from 'yjs';
 
 import { getStoreManager } from '../../manager/store';

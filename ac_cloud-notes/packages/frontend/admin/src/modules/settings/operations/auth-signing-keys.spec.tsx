@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   rotate: vi.fn(),
 }));
 
-vi.mock('@affine/admin/use-query', () => ({
+vi.mock('@cloud-notes/admin/use-query', () => ({
   useQuery: () => ({
     data: {
       authSigningKeys: [
@@ -38,7 +38,7 @@ vi.mock('@affine/admin/use-query', () => ({
   }),
 }));
 
-vi.mock('@affine/admin/use-mutation', () => ({
+vi.mock('@cloud-notes/admin/use-mutation', () => ({
   useMutation: ({ mutation }: { mutation: { id: string } }) => ({
     trigger:
       mutation.id === 'rotateAuthSigningKeyMutation'
@@ -58,7 +58,7 @@ vi.mock('../../../components/shared/confirm-dialog', () => ({
   }) => (open ? <button onClick={onConfirm}>confirm-action</button> : null),
 }));
 
-vi.mock('@affine/component', () => ({
+vi.mock('@cloud-notes/component', () => ({
   notify: { error: vi.fn(), success: vi.fn() },
 }));
 

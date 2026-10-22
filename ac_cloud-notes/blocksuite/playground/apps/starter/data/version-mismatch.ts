@@ -1,4 +1,4 @@
-import type { Workspace } from '@blocksuite/affine/store';
+import type { Workspace } from '@blocksuite/cloud-notes/store';
 import * as Y from 'yjs';
 
 import type { InitFn } from './utils.js';

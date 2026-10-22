@@ -1,0 +1,7 @@
+module cloud_notes_mobile_nativeFFI {
+    header "cloud_notes_mobile_nativeFFI.h"
+    export *
+    use "Darwin"
+    use "_Builtin_stdbool"
+    use "_Builtin_stdint"
+}

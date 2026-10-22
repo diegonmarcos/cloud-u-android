@@ -1,4 +1,4 @@
-import type { FilterParams } from '@affine/core/modules/collection-rules';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
 import clsx from 'clsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 

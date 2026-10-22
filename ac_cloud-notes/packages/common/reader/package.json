@@ -1,5 +1,5 @@
 {
-  "name": "@affine/reader",
+  "name": "@cloud-notes/reader",
   "type": "module",
   "version": "0.27.5",
   "private": true,
@@ -10,18 +10,18 @@
     "./dist": "./dist/index.js"
   },
   "scripts": {
-    "build": "affine bundle -p @affine/reader",
-    "bundle": "affine bundle -p @affine/reader"
+    "build": "cloud-notes bundle -p @cloud-notes/reader",
+    "bundle": "cloud-notes bundle -p @cloud-notes/reader"
   },
   "dependencies": {
     "lodash-es": "^4.17.23",
     "yjs": "^13.6.27"
   },
   "devDependencies": {
-    "@blocksuite/affine": "workspace:*",
+    "@blocksuite/cloud-notes": "workspace:*",
     "vitest": "^4.1.8"
   },
   "peerDependencies": {
-    "@blocksuite/affine": "workspace:*"
+    "@blocksuite/cloud-notes": "workspace:*"
   }
 }

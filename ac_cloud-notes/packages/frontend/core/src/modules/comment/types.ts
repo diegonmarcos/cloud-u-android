@@ -1,10 +1,10 @@
-import type { CommentChangeAction, PublicUserType } from '@affine/graphql';
-import type { DocMode } from '@blocksuite/affine/model';
+import type { CommentChangeAction, PublicUserType } from '@cloud-notes/graphql';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import type {
   BaseSelection,
   DocSnapshot,
   Store,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 
 export type CommentId = string;
 

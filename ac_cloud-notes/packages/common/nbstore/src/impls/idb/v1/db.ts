@@ -17,13 +17,13 @@ export interface DocDBSchema extends DBSchema {
 
 export class DocIDBConnection extends AutoReconnectConnection<IDBPDatabase<DocDBSchema> | null> {
   override get shareId() {
-    return 'idb(old):affine-local';
+    return 'idb(old):cloud-notes-local';
   }
 
   override async doConnect() {
     const dbs = await indexedDB.databases();
-    if (dbs.some(d => d.name === 'affine-local')) {
-      return openDB<DocDBSchema>('affine-local', 1, {
+    if (dbs.some(d => d.name === 'cloud-notes-local')) {
+      return openDB<DocDBSchema>('cloud-notes-local', 1, {
         upgrade: db => {
           db.createObjectStore('workspace', { keyPath: 'id' });
         },

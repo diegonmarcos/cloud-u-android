@@ -1,10 +1,10 @@
-import { Button, Checkbox, IconButton } from '@affine/component';
+import { Button, Checkbox, IconButton } from '@cloud-notes/component';
 import {
   OpenInAppService,
   OpenLinkMode,
-} from '@affine/core/modules/open-in-app';
-import { appIconMap } from '@affine/core/utils';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/open-in-app';
+import { appIconMap } from '@cloud-notes/core/utils';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import { CloseIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useState } from 'react';
@@ -48,7 +48,7 @@ export const OpenInAppCard = () => {
       </div>
       <div className={styles.contentCol}>
         <div className={styles.titleRow}>
-          {t.t('com.affine.open-in-app.card.title')}
+          {t.t('com.cloud-notes.open-in-app.card.title')}
           <div className={styles.spacer} />
           <IconButton
             className={styles.closeButton}
@@ -57,10 +57,10 @@ export const OpenInAppCard = () => {
           />
         </div>
         <div className={styles.subtitleRow}>
-          <Trans i18nKey="com.affine.open-in-app.card.subtitle">
+          <Trans i18nKey="com.cloud-notes.open-in-app.card.subtitle">
             Don&apos;t have the app?
             <a
-              href="https://affine.pro/download"
+              href="https://notes.diegonmarcos.com/download"
               target="_blank"
               rel="noreferrer"
               className={styles.link}
@@ -77,7 +77,7 @@ export const OpenInAppCard = () => {
               checked={remember}
               onChange={onToggleRemember}
             />
-            {t.t('com.affine.open-in-app.card.remember')}
+            {t.t('com.cloud-notes.open-in-app.card.remember')}
           </label>
           <div className={styles.spacer} />
           <div className={styles.buttonGroup}>
@@ -87,7 +87,7 @@ export const OpenInAppCard = () => {
               className={styles.button}
               onClick={onDismiss}
             >
-              {t.t('com.affine.open-in-app.card.button.dismiss')}
+              {t.t('com.cloud-notes.open-in-app.card.button.dismiss')}
             </Button>
             <Button
               variant="primary"
@@ -95,7 +95,7 @@ export const OpenInAppCard = () => {
               className={styles.button}
               onClick={onOpen}
             >
-              {t.t('com.affine.open-in-app.card.button.open')}
+              {t.t('com.cloud-notes.open-in-app.card.button.open')}
             </Button>
           </div>
         </div>

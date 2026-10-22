@@ -1,9 +1,9 @@
-import { MenuItem, MenuTrigger } from '@affine/component';
-import { SettingRow } from '@affine/component/setting-components';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
-import { DefaultTheme } from '@blocksuite/affine/model';
-import type { Store } from '@blocksuite/affine/store';
+import { MenuItem, MenuTrigger } from '@cloud-notes/component';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
+import { DefaultTheme } from '@blocksuite/cloud-notes/model';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useFramework, useLiveData } from '@toeverything/infra';
 import { isEqual } from 'lodash-es';
 import { useCallback, useMemo } from 'react';
@@ -58,14 +58,14 @@ export const FrameSettings = () => {
   return (
     <>
       <EdgelessSnapshot
-        title={t['com.affine.settings.editorSettings.edgeless.frame']()}
+        title={t['com.cloud-notes.settings.editorSettings.edgeless.frame']()}
         docName="frame"
         keyName="affine:frame"
         getElements={getElements}
       />
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.frame.background'
+          'com.cloud-notes.settings.editorSettings.edgeless.frame.background'
         ]()}
         desc={''}
       >

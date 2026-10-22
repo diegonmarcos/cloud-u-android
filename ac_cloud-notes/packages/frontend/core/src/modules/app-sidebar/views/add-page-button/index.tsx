@@ -1,16 +1,16 @@
-import { Button, IconButton, Menu, MenuItem, MenuSub } from '@affine/component';
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { DocsService } from '@affine/core/modules/doc';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { TemplateDocService } from '@affine/core/modules/template-doc';
-import { TemplateListMenuContentScrollable } from '@affine/core/modules/template-doc/view/template-list-menu';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { inferOpenMode } from '@affine/core/utils';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
-import type { DocMode } from '@blocksuite/affine/model';
+import { Button, IconButton, Menu, MenuItem, MenuSub } from '@cloud-notes/component';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { TemplateDocService } from '@cloud-notes/core/modules/template-doc';
+import { TemplateListMenuContentScrollable } from '@cloud-notes/core/modules/template-doc/view/template-list-menu';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { inferOpenMode } from '@cloud-notes/core/utils';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import {
   ArrowDownSmallIcon,
   EdgelessIcon,

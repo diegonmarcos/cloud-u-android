@@ -1,8 +1,8 @@
-import { IconButton } from '@affine/component';
-import { IsFavoriteIcon } from '@affine/core/components/pure/icons';
-import type { CollectionMeta } from '@affine/core/modules/collection';
-import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
-import { WorkbenchLink } from '@affine/core/modules/workbench';
+import { IconButton } from '@cloud-notes/component';
+import { IsFavoriteIcon } from '@cloud-notes/core/components/pure/icons';
+import type { CollectionMeta } from '@cloud-notes/core/modules/collection';
+import { CompatibleFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
+import { WorkbenchLink } from '@cloud-notes/core/modules/workbench';
 import { ViewLayersIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { type MouseEvent, useCallback } from 'react';

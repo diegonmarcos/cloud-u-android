@@ -2,16 +2,16 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from '@affine/admin/components/ui/avatar';
-import { Input } from '@affine/admin/components/ui/input';
-import { Label } from '@affine/admin/components/ui/label';
-import { Separator } from '@affine/admin/components/ui/separator';
-import { Switch } from '@affine/admin/components/ui/switch';
+} from '@cloud-notes/admin/components/ui/avatar';
+import { Input } from '@cloud-notes/admin/components/ui/input';
+import { Label } from '@cloud-notes/admin/components/ui/label';
+import { Separator } from '@cloud-notes/admin/components/ui/separator';
+import { Switch } from '@cloud-notes/admin/components/ui/switch';
 import {
   adminUpdateWorkspaceMutation,
   adminWorkspaceQuery,
   adminWorkspacesQuery,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { AccountIcon } from '@blocksuite/icons/rc';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';

@@ -1,18 +1,18 @@
-import { ScrollableContainer } from '@affine/component';
-import { MenuItem } from '@affine/component/ui/menu';
-import { AuthService, DefaultServerService } from '@affine/core/modules/cloud';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
-import { type WorkspaceMetadata } from '@affine/core/modules/workspace';
-import { ServerFeature } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { ScrollableContainer } from '@cloud-notes/component';
+import { MenuItem } from '@cloud-notes/component/ui/menu';
+import { AuthService, DefaultServerService } from '@cloud-notes/core/modules/cloud';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
+import { type WorkspaceMetadata } from '@cloud-notes/core/modules/workspace';
+import { ServerFeature } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { Logo1Icon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
 
 import { AddWorkspace } from './add-workspace';
 import * as styles from './index.css';
-import { AFFiNEWorkspaceList } from './workspace-list';
+import { CloudNotesWorkspaceList } from './workspace-list';
 
 export const SignInItem = () => {
   const globalDialogService = useService(GlobalDialogService);
@@ -37,10 +37,10 @@ export const SignInItem = () => {
 
         <div className={styles.signInTextContainer}>
           <div className={styles.signInTextPrimary}>
-            {t['com.affine.workspace.cloud.auth']()}
+            {t['com.cloud-notes.workspace.cloud.auth']()}
           </div>
           <div className={styles.signInTextSecondary}>
-            {t['com.affine.workspace.cloud.description']()}
+            {t['com.cloud-notes.workspace.cloud.description']()}
           </div>
         </div>
       </div>
@@ -119,7 +119,7 @@ export const UserWithWorkspaceList = ({
         scrollBarClassName={styles.scrollbar}
         scrollThumbClassName={styles.scrollbarThumb}
       >
-        <AFFiNEWorkspaceList
+        <CloudNotesWorkspaceList
           onEventEnd={onEventEnd}
           onClickWorkspace={onClickWorkspace}
           showEnableCloudButton={showEnableCloudButton}

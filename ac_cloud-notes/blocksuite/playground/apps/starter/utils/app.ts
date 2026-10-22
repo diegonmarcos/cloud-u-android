@@ -1,10 +1,10 @@
-import type { Store, Workspace } from '@blocksuite/affine/store';
+import type { Store, Workspace } from '@blocksuite/cloud-notes/store';
 import {
   defaultImageProxyMiddleware,
   docLinkBaseURLMiddlewareBuilder,
   embedSyncedDocMiddleware,
   titleMiddleware,
-} from '@blocksuite/affine-shared/adapters';
+} from '@blocksuite/cloud-notes-shared/adapters';
 
 import { AttachmentViewerPanel } from '../../_common/components/attachment-viewer-panel';
 import { CustomAdapterPanel } from '../../_common/components/custom-adapter-panel';

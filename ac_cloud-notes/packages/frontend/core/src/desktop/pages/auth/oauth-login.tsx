@@ -1,5 +1,5 @@
-import { AuthService } from '@affine/core/modules/cloud';
-import { OAuthProviderType } from '@affine/graphql';
+import { AuthService } from '@cloud-notes/core/modules/cloud';
+import { OAuthProviderType } from '@cloud-notes/graphql';
 import { useService } from '@toeverything/infra';
 import { useEffect } from 'react';
 import {
@@ -15,7 +15,7 @@ import { supportedClient } from './common';
 import { attachOAuthFlowToAuthUrl, resolveOAuthFlowMode } from './oauth-flow';
 
 const supportedProvider = z.nativeEnum(OAuthProviderType);
-const CSRF_COOKIE_NAME = 'affine_csrf_token';
+const CSRF_COOKIE_NAME = 'cloud_notes_csrf_token';
 
 function getCookieValue(name: string) {
   if (typeof document === 'undefined') {
@@ -60,7 +60,7 @@ export const loader: LoaderFunction = async ({ request }) => {
     const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
     await fetch('/api/auth/sign-out', {
       method: 'POST',
-      headers: csrfToken ? { 'x-affine-csrf-token': csrfToken } : undefined,
+      headers: csrfToken ? { 'x-cloud-notes-csrf-token': csrfToken } : undefined,
     });
   }
 

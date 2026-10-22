@@ -1,7 +1,7 @@
 import {
   type EdgelessRootBlockComponent,
   EdgelessRootService,
-} from '@blocksuite/affine/blocks/root';
+} from '@blocksuite/cloud-notes/blocks/root';
 import type { DocSnapshot } from '@blocksuite/store';
 import { beforeEach, describe, expect, test } from 'vitest';
 
@@ -68,7 +68,7 @@ describe('basic', () => {
 
     expect(
       document.querySelector(
-        `affine-surface-ref[data-block-id="${surfaceRefId}"]`
+        `cloud-notes-surface-ref[data-block-id="${surfaceRefId}"]`
       )
     ).instanceOf(Element);
   });
@@ -87,10 +87,10 @@ describe('basic', () => {
     await wait();
 
     const surfaceRef = document.querySelector(
-      `affine-surface-ref[data-block-id="${surfaceRefId}"]`
+      `cloud-notes-surface-ref[data-block-id="${surfaceRefId}"]`
     ) as HTMLElement;
     const refBlocks = Array.from(
-      surfaceRef.querySelectorAll('affine-edgeless-note')
+      surfaceRef.querySelectorAll('cloud-notes-edgeless-note')
     ) as HTMLElement[];
     const stackingCanvas = Array.from(
       surfaceRef.querySelectorAll('.indexable-canvas')!
@@ -125,10 +125,10 @@ describe('basic', () => {
     await wait();
 
     const surfaceRef = document.querySelector(
-      `affine-surface-ref[data-block-id="${surfaceRefId}"]`
+      `cloud-notes-surface-ref[data-block-id="${surfaceRefId}"]`
     ) as HTMLElement;
     const refBlocks = Array.from(
-      surfaceRef.querySelectorAll('affine-edgeless-note')
+      surfaceRef.querySelectorAll('cloud-notes-edgeless-note')
     ) as HTMLElement[];
     const stackingCanvas = Array.from(
       surfaceRef.querySelectorAll('.indexable-canvas')
@@ -155,13 +155,13 @@ describe('basic', () => {
     await wait();
 
     const surfaceRef = document.querySelector(
-      `affine-surface-ref[data-block-id="${surfaceRefId}"]`
+      `cloud-notes-surface-ref[data-block-id="${surfaceRefId}"]`
     ) as SurfaceRefBlockComponent;
 
     const edgeless = surfaceRef.previewEditor!.std.get(EdgelessRootService);
 
     const frame = surfaceRef.querySelector(
-      'affine-frame'
+      'cloud-notes-frame'
     ) as FrameBlockComponent;
 
     expect(
@@ -191,7 +191,7 @@ describe('basic', () => {
     await wait();
 
     const surfaceRef = document.querySelector(
-      `affine-surface-ref[data-block-id="${surfaceRefId}"]`
+      `cloud-notes-surface-ref[data-block-id="${surfaceRefId}"]`
     ) as SurfaceRefBlockComponent;
 
     const edgeless = surfaceRef.previewEditor!.std.get(EdgelessRootService);
@@ -215,13 +215,13 @@ describe('basic', () => {
     await wait();
 
     const surfaceRef = document.querySelector(
-      `affine-surface-ref[data-block-id="${surfaceRefId}"]`
+      `cloud-notes-surface-ref[data-block-id="${surfaceRefId}"]`
     ) as SurfaceRefBlockComponent;
 
     const edgeless = surfaceRef.previewEditor!.std.get(EdgelessRootService);
 
     const frame = surfaceRef.querySelector(
-      'affine-frame'
+      'cloud-notes-frame'
     ) as FrameBlockComponent;
 
     const oldViewport = edgeless.viewport.viewportBounds;
@@ -254,7 +254,7 @@ describe('basic', () => {
     await wait();
 
     const surfaceRef = document.querySelector(
-      `affine-surface-ref[data-block-id="${surfaceRefId}"]`
+      `cloud-notes-surface-ref[data-block-id="${surfaceRefId}"]`
     ) as HTMLElement;
 
     expect(surfaceRef).instanceOf(Element);
@@ -263,8 +263,8 @@ describe('basic', () => {
   });
 });
 
-import type { FrameBlockComponent } from '@blocksuite/affine/blocks/frame';
-import type { SurfaceRefBlockComponent } from '@blocksuite/affine/blocks/surface-ref';
+import type { FrameBlockComponent } from '@blocksuite/cloud-notes/blocks/frame';
+import type { SurfaceRefBlockComponent } from '@blocksuite/cloud-notes/blocks/surface-ref';
 
 import snapshot from '../snapshots/edgeless/surface-ref.spec.ts/surface-ref.json' with { type: 'json' };
 

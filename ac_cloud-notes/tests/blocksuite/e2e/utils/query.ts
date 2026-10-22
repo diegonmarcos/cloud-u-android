@@ -4,7 +4,7 @@ import { waitNextFrame } from './actions/misc.js';
 import { assertAlmostEqual } from './asserts.js';
 
 export function getFormatBar(page: Page) {
-  const formatBar = page.locator('affine-toolbar-widget editor-toolbar');
+  const formatBar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   const boldBtn = formatBar.getByTestId('bold');
   const italicBtn = formatBar.getByTestId('italic');
   const underlineBtn = formatBar.getByTestId('underline');
@@ -79,7 +79,7 @@ export function getFormatBar(page: Page) {
 }
 
 export function getEmbedCardToolbar(page: Page) {
-  const embedCardToolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const embedCardToolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   function createButtonLocator(name: string) {
     return embedCardToolbar.getByRole('button', { name });
   }

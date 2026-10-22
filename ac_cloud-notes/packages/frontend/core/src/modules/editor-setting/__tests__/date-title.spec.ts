@@ -1,4 +1,4 @@
-import { getOrCreateI18n } from '@affine/i18n';
+import { getOrCreateI18n } from '@cloud-notes/i18n';
 import { describe, expect, test } from 'vitest';
 
 import {

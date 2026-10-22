@@ -1,5 +1,5 @@
-import { UserFriendlyError } from '@affine/error';
-import { type DocMode, DocModes } from '@blocksuite/affine/model';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { type DocMode, DocModes } from '@blocksuite/cloud-notes/model';
 import { TimeoutError } from 'rxjs';
 
 export const getResolvedPublishMode = (
@@ -42,7 +42,7 @@ export const fetchSharedPublishMode = async ({
   );
   const headers = {
     Accept: 'application/octet-stream',
-    'x-affine-version': BUILD_CONFIG.appVersion,
+    'x-cloud-notes-version': BUILD_CONFIG.appVersion,
   };
   const headResponse = await globalThis.fetch(url, {
     method: 'HEAD',

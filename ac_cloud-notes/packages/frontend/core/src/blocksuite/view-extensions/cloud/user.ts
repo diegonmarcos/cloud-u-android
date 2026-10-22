@@ -1,12 +1,12 @@
 import type {
   AuthService,
   PublicUserService,
-} from '@affine/core/modules/cloud';
-import { UserFriendlyError } from '@affine/error';
+} from '@cloud-notes/core/modules/cloud';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
-  type AffineUserInfo,
+  type CloudNotesUserInfo,
   UserServiceExtension,
-} from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/shared/services';
 
 export function patchUserExtensions(
   publicUserService: PublicUserService,
@@ -22,7 +22,7 @@ export function patchUserExtensions(
         name: account.label,
         avatar: account.avatar,
         removed: false,
-      } as AffineUserInfo;
+      } as CloudNotesUserInfo;
     }).signal,
     userInfo$(id) {
       return publicUserService.publicUser$(id).signal;

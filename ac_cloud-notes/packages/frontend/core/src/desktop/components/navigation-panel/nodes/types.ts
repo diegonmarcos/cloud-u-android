@@ -1,5 +1,5 @@
-import type { DropTargetDropEvent, DropTargetOptions } from '@affine/component';
-import type { AffineDNDData } from '@affine/core/types/dnd';
+import type { DropTargetDropEvent, DropTargetOptions } from '@cloud-notes/component';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
 
 import type { NavigationPanelTreeNodeDropEffect } from '../tree';
 import type { NodeOperation } from '../tree/types';
@@ -25,7 +25,7 @@ export interface GenericNavigationPanelNode {
   /**
    * Tell the node and dropTarget where the node is located in the tree
    */
-  location?: AffineDNDData['draggable']['from'];
+  location?: CloudNotesDNDData['draggable']['from'];
   /**
    * Whether the node is allowed to reorder with its sibling nodes
    */
@@ -37,11 +37,11 @@ export interface GenericNavigationPanelNode {
   /**
    * Control whether drop is allowed, the callback will be called when dragging.
    */
-  canDrop?: DropTargetOptions<AffineDNDData>['canDrop'];
+  canDrop?: DropTargetOptions<CloudNotesDNDData>['canDrop'];
   /**
    * Called when an element is dropped over the node.
    */
-  onDrop?: (data: DropTargetDropEvent<AffineDNDData>) => void;
+  onDrop?: (data: DropTargetDropEvent<CloudNotesDNDData>) => void;
   /**
    * The drop effect to be used when an element is dropped over the node.
    */

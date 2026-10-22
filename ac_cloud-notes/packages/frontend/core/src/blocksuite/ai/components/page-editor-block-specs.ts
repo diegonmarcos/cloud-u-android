@@ -1,7 +1,7 @@
-import { ViewExtensionManager } from '@blocksuite/affine/ext-loader';
-import { getInternalViewExtensions } from '@blocksuite/affine/extensions/view';
-import { BlockViewIdentifier } from '@blocksuite/affine/std';
-import type { ExtensionType } from '@blocksuite/affine/store';
+import { ViewExtensionManager } from '@blocksuite/cloud-notes/ext-loader';
+import { getInternalViewExtensions } from '@blocksuite/cloud-notes/extensions/view';
+import { BlockViewIdentifier } from '@blocksuite/cloud-notes/std';
+import type { ExtensionType } from '@blocksuite/cloud-notes/store';
 import { literal } from 'lit/static-html.js';
 
 const manager = new ViewExtensionManager([...getInternalViewExtensions()]);
@@ -11,7 +11,7 @@ const customPageEditorBlockSpecs: ExtensionType[] = [
     setup: di => {
       di.override(
         BlockViewIdentifier('affine:page'),
-        () => literal`affine-page-root`
+        () => literal`cloud-notes-page-root`
       );
     },
   },

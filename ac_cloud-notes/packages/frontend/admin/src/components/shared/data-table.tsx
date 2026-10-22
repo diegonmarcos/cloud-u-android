@@ -5,7 +5,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@affine/admin/components/ui/table';
+} from '@cloud-notes/admin/components/ui/table';
 import {
   type ColumnDef,
   type ColumnFiltersState,

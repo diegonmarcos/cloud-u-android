@@ -1,6 +1,6 @@
 [package]
 edition = "2024"
-name    = "affine_nbstore"
+name    = "cloud_notes_nbstore"
 publish = false
 version = "0.0.0"
 
@@ -13,8 +13,8 @@ napi       = []  # de-clouded (#469): the EE Rust helper crate was pruned; nothi
 use-as-lib = ["napi-derive/noop", "napi/noop"]
 
 [dependencies]
-affine_doc_loader = { workspace = true }
-affine_schema = { path = "../schema" }
+cloud_notes_doc_loader = { workspace = true }
+cloud_notes_schema = { path = "../schema" }
 anyhow = { workspace = true }
 bincode = { version = "2.0.1", features = ["serde"] }
 chrono = { workspace = true }
@@ -38,7 +38,7 @@ zstd = "0.13"
 uniffi = { workspace = true }
 
 [build-dependencies]
-affine_schema = { path = "../schema" }
+cloud_notes_schema = { path = "../schema" }
 dotenvy = { workspace = true }
 napi-build = { workspace = true }
 sqlx = { workspace = true, default-features = false, features = [

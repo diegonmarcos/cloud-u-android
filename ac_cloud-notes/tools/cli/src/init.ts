@@ -1,11 +1,11 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
-import type { Path } from '@affine-tools/utils/path';
+import type { Path } from '@cloud-notes-tools/utils/path';
 import {
   type Package,
   Workspace,
   yarnList,
-} from '@affine-tools/utils/workspace';
+} from '@cloud-notes-tools/utils/workspace';
 import { applyEdits, modify } from 'jsonc-parser';
 import { format, type FormatConfig } from 'oxfmt';
 
@@ -26,7 +26,7 @@ export class InitCommand extends Command {
       [this.workspace.join('tsconfig.json'), this.genProjectTsConfig],
       [
         this.workspace
-          .getPackage('@affine-tools/utils')
+          .getPackage('@cloud-notes-tools/utils')
           .join('src/workspace.gen.ts'),
         this.genWorkspaceInfo,
       ],
@@ -115,7 +115,7 @@ export class InitCommand extends Command {
     //   currently electron-api => electron => nbstore => electron-api
     //   this is a circular dependency, we need to fix it
     //   basically, the electron app don't need to use nbstore for exposing js bridge apis
-    if (pkg.name === '@affine/electron-api') {
+    if (pkg.name === '@cloud-notes/electron-api') {
       return prev;
     }
 

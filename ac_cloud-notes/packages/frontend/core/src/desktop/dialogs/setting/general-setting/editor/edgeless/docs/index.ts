@@ -1,7 +1,7 @@
-import { getAFFiNEWorkspaceSchema } from '@affine/core/modules/workspace';
-import { WorkspaceImpl } from '@affine/core/modules/workspace/impls/workspace';
-import type { DocSnapshot, Store } from '@blocksuite/affine/store';
-import { Transformer } from '@blocksuite/affine/store';
+import { getCloudNotesWorkspaceSchema } from '@cloud-notes/core/modules/workspace';
+import { WorkspaceImpl } from '@cloud-notes/core/modules/workspace/impls/workspace';
+import type { DocSnapshot, Store } from '@blocksuite/cloud-notes/store';
+import { Transformer } from '@blocksuite/cloud-notes/store';
 import { Doc as YDoc } from 'yjs';
 export const getCollection = (() => {
   let collection: WorkspaceImpl | null = null;
@@ -87,7 +87,7 @@ async function initDoc(name: DocName) {
   const snapshot = (await loaders[name]()) as DocSnapshot;
   const collection = getCollection();
   const transformer = new Transformer({
-    schema: getAFFiNEWorkspaceSchema(),
+    schema: getCloudNotesWorkspaceSchema(),
     blobCRUD: collection.blobSync,
     docCRUD: {
       create: (id: string) => collection.createDoc(id).getStore({ id }),

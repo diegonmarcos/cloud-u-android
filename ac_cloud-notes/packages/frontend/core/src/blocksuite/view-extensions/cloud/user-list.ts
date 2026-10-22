@@ -1,5 +1,5 @@
-import type { MemberSearchService } from '@affine/core/modules/permissions';
-import { UserListServiceExtension } from '@blocksuite/affine/shared/services';
+import type { MemberSearchService } from '@cloud-notes/core/modules/permissions';
+import { UserListServiceExtension } from '@blocksuite/cloud-notes/shared/services';
 
 export function patchUserListExtensions(memberSearch: MemberSearchService) {
   return UserListServiceExtension({

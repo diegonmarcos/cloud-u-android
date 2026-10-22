@@ -1,6 +1,6 @@
-import { IconButton } from '@affine/component';
-import { NotificationCountService } from '@affine/core/modules/notification';
-import { track } from '@affine/track';
+import { IconButton } from '@cloud-notes/component';
+import { NotificationCountService } from '@cloud-notes/core/modules/notification';
+import { track } from '@cloud-notes/track';
 import { SidebarIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';

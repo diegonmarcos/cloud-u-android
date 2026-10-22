@@ -8,7 +8,7 @@
   "include": ["e2e"],
   "references": [
     { "path": "../kit" },
-    { "path": "../../blocksuite/affine/all" },
+    { "path": "../../blocksuite/cloud-notes/all" },
     { "path": "../../blocksuite/integration-test" }
   ]
 }

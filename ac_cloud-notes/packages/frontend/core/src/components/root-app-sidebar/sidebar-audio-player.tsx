@@ -1,7 +1,7 @@
-import { MiniAudioPlayer } from '@affine/component/ui/audio-player';
-import { AudioMediaManagerService } from '@affine/core/modules/media';
-import type { AudioAttachmentBlock } from '@affine/core/modules/media/entities/audio-attachment-block';
-import { AudioAttachmentService } from '@affine/core/modules/media/services/audio-attachment';
+import { MiniAudioPlayer } from '@cloud-notes/component/ui/audio-player';
+import { AudioMediaManagerService } from '@cloud-notes/core/modules/media';
+import type { AudioAttachmentBlock } from '@cloud-notes/core/modules/media/entities/audio-attachment-block';
+import { AudioAttachmentService } from '@cloud-notes/core/modules/media/services/audio-attachment';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { combineLatest, debounceTime, map, of } from 'rxjs';

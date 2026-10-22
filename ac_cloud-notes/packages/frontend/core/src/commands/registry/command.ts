@@ -15,18 +15,18 @@ export type CommandCategory =
   | 'editor:insert-object'
   | 'editor:page'
   | 'editor:edgeless'
-  | 'affine:recent'
-  | 'affine:pages'
-  | 'affine:edgeless'
-  | 'affine:collections'
-  | 'affine:navigation'
-  | 'affine:creation'
-  | 'affine:settings'
-  | 'affine:layout'
-  | 'affine:updates'
-  | 'affine:help'
-  | 'affine:general'
-  | 'affine:results';
+  | 'cloud-notes:recent'
+  | 'cloud-notes:pages'
+  | 'cloud-notes:edgeless'
+  | 'cloud-notes:collections'
+  | 'cloud-notes:navigation'
+  | 'cloud-notes:creation'
+  | 'cloud-notes:settings'
+  | 'cloud-notes:layout'
+  | 'cloud-notes:updates'
+  | 'cloud-notes:help'
+  | 'cloud-notes:general'
+  | 'cloud-notes:results';
 
 export interface KeybindingOptions {
   binding: string;
@@ -36,7 +36,7 @@ export interface KeybindingOptions {
   skipRegister?: boolean;
 }
 
-export interface AffineCommandOptions {
+export interface CloudNotesCommandOptions {
   id: string;
   // a set of predefined precondition strategies, but also allow user to customize their own
   // note: this only controls the visibility of the command, not the availability (e.g., shortcut keybinding still works)
@@ -62,7 +62,7 @@ export interface AffineCommandOptions {
   run: () => void | Promise<void>;
 }
 
-export interface AffineCommand {
+export interface CloudNotesCommand {
   readonly id: string;
   readonly preconditionStrategy: PreconditionStrategy | (() => boolean);
   readonly label: {
@@ -75,16 +75,16 @@ export interface AffineCommand {
   run(): void | Promise<void>;
 }
 
-export function createAffineCommand(
-  options: AffineCommandOptions
-): AffineCommand {
+export function createCloudNotesCommand(
+  options: CloudNotesCommandOptions
+): CloudNotesCommand {
   return {
     id: options.id,
     run: options.run,
     icon: options.icon,
     preconditionStrategy:
       options.preconditionStrategy ?? PreconditionStrategy.Always,
-    category: options.category ?? 'affine:general',
+    category: options.category ?? 'cloud-notes:general',
     get label() {
       let label = options.label;
       label = typeof label === 'function' ? label?.() : label;

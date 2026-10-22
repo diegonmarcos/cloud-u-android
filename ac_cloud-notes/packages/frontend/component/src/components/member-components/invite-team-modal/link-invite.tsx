@@ -1,8 +1,8 @@
 import {
   type InviteLink,
   WorkspaceInviteLinkExpireTime,
-} from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { CloseIcon } from '@blocksuite/icons/rc';
 import { cssVar } from '@toeverything/theme';
 import { cssVarV2 } from '@toeverything/theme/v2';
@@ -16,25 +16,25 @@ import * as styles from './styles.css';
 
 const getMenuItems = (t: ReturnType<typeof useI18n>) => [
   {
-    label: t['com.affine.payment.member.team.invite.expiration-date']({
+    label: t['com.cloud-notes.payment.member.team.invite.expiration-date']({
       number: '1',
     }),
     value: WorkspaceInviteLinkExpireTime.OneDay,
   },
   {
-    label: t['com.affine.payment.member.team.invite.expiration-date']({
+    label: t['com.cloud-notes.payment.member.team.invite.expiration-date']({
       number: '3',
     }),
     value: WorkspaceInviteLinkExpireTime.ThreeDays,
   },
   {
-    label: t['com.affine.payment.member.team.invite.expiration-date']({
+    label: t['com.cloud-notes.payment.member.team.invite.expiration-date']({
       number: '7',
     }),
     value: WorkspaceInviteLinkExpireTime.OneWeek,
   },
   {
-    label: t['com.affine.payment.member.team.invite.expiration-date']({
+    label: t['com.cloud-notes.payment.member.team.invite.expiration-date']({
       number: '30',
     }),
     value: WorkspaceInviteLinkExpireTime.OneMonth,
@@ -112,7 +112,7 @@ export const LinkInvite = ({
   }, [revokeInvitationLink]);
 
   const expireTime = useMemo(() => {
-    return t['com.affine.payment.member.team.invite.expire-at']({
+    return t['com.cloud-notes.payment.member.team.invite.expire-at']({
       expireTime: invitationLink?.expireTime
         ? new Date(invitationLink.expireTime).toLocaleString()
         : '',
@@ -123,7 +123,7 @@ export const LinkInvite = ({
     <>
       <div className={styles.invitationLinkContainer}>
         <div className={styles.modalSubTitle}>
-          {t['com.affine.payment.member.team.invite.link-expiration']()}
+          {t['com.cloud-notes.payment.member.team.invite.link-expiration']()}
         </div>
         {invitationLink ? (
           <Input
@@ -150,7 +150,7 @@ export const LinkInvite = ({
       </div>
       <div className={styles.invitationLinkContainer}>
         <div className={styles.modalSubTitle}>
-          {t['com.affine.payment.member.team.invite.invitation-link']()}
+          {t['com.cloud-notes.payment.member.team.invite.invitation-link']()}
         </div>
         <div className={styles.invitationLinkContent}>
           <Input
@@ -172,19 +172,19 @@ export const LinkInvite = ({
           {invitationLink ? (
             <>
               <Button onClick={onCopy} variant="secondary">
-                {t['com.affine.payment.member.team.invite.copy']()}
+                {t['com.cloud-notes.payment.member.team.invite.copy']()}
               </Button>
               <IconButton icon={<CloseIcon />} onClick={onReset} />
             </>
           ) : (
             <Button onClick={onGenerate} variant="secondary">
-              {t['com.affine.payment.member.team.invite.generate']()}
+              {t['com.cloud-notes.payment.member.team.invite.generate']()}
             </Button>
           )}
         </div>
         <p className={styles.invitationLinkDescription}>
           {t[
-            'com.affine.payment.member.team.invite.invitation-link.description'
+            'com.cloud-notes.payment.member.team.invite.invitation-link.description'
           ]()}
         </p>
       </div>

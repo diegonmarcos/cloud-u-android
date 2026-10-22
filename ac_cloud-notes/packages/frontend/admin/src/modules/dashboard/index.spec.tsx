@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 const useQueryMock = vi.fn();
 const mutateQueryResourceMock = vi.fn();
 
-vi.mock('@affine/admin/use-query', () => ({
+vi.mock('@cloud-notes/admin/use-query', () => ({
   useQuery: (...args: unknown[]) => useQueryMock(...args),
 }));
 
@@ -174,7 +174,7 @@ const topSharedLinksData = {
         workspaceId: 'workspace-1',
         docId: 'doc-1',
         title: 'Public doc',
-        shareUrl: 'https://app.affine.pro/workspace/workspace-1/doc-1',
+        shareUrl: 'https://notes.diegonmarcos.com/workspace/workspace-1/doc-1',
         publishedAt: '2026-02-16T10:00:00.000Z',
         views: 12,
         uniqueViews: 8,
@@ -228,7 +228,7 @@ describe('DashboardPage', () => {
     expect(classes).not.toContain('min-[1024px]');
   });
 
-  test('uses affine token color variables for trend chart lines', () => {
+  test('uses cloud-notes token color variables for trend chart lines', () => {
     render(<DashboardPage />);
     const styles = Array.from(document.querySelectorAll('style'))
       .map(node => node.textContent ?? '')

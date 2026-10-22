@@ -314,7 +314,7 @@ test('drag node out of mind map should detach the node and create a new mind map
   );
 
   const { count, mindmap: lastMindmapId } = await page.evaluate(() => {
-    const edgelessBlock = document.querySelector('affine-edgeless-root');
+    const edgelessBlock = document.querySelector('cloud-notes-edgeless-root');
     if (!edgelessBlock) {
       throw new Error('edgeless block not found');
     }

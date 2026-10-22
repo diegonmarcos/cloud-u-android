@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-        Check out this [link](https://github.com/toeverything/AFFiNE/blob/canary/docs/issue-triaging.md)
+        Check out this [link](https://github.com/diegonmarcos/cloud-u-android/blob/canary/docs/issue-triaging.md)
         to learn how we manage issues and when your issue will be processed.
   - type: textarea
     id: what-happened
@@ -21,23 +21,23 @@ body:
     id: distribution
     attributes:
       label: Distribution version
-      description: What distribution of AFFiNE are you using?
+      description: What distribution of Cloud Notes are you using?
       options:
         - macOS x64 (Intel)
         - macOS ARM 64 (Apple Silicon)
         - Windows x64
         - Linux
-        - Web (https://app.affine.pro)
-        - Beta Web (https://insider.affine.pro)
-        - Canary Web (https://affine.fail)
+        - Web (https://notes.diegonmarcos.com)
+        - Beta Web (https://notes.diegonmarcos.com)
+        - Canary Web (https://notes.diegonmarcos.com)
     validations:
       required: true
   - type: input
     id: version
     attributes:
       label: App Version
-      description: What version of AFFiNE are you using?
-      placeholder: (You can find AFFiNE version in [About AFFiNE] setting panel)
+      description: What version of Cloud Notes are you using?
+      placeholder: (You can find Cloud Notes version in [About Cloud Notes] setting panel)
   - type: dropdown
     id: browsers
     attributes:
@@ -61,7 +61,7 @@ body:
     id: selfhost-version
     attributes:
       label: Self-hosting Version
-      description: What version of AFFiNE are you selfhosting?
+      description: What version of Cloud Notes are you selfhosting?
   - type: textarea
     id: logs
     attributes:

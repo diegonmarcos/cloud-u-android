@@ -416,17 +416,17 @@ test('when no note block, click editing area auto add a new note block', async (
   await initEmptyEdgelessState(page);
 
   await switchEditorMode(page);
-  await page.locator('affine-edgeless-note').click({ force: true });
+  await page.locator('cloud-notes-edgeless-note').click({ force: true });
   await pressBackspace(page);
   await switchEditorMode(page);
   const edgelessNote = await page.evaluate(() => {
-    return document.querySelector('affine-edgeless-note');
+    return document.querySelector('cloud-notes-edgeless-note');
   });
   expect(edgelessNote).toBeNull();
   await click(page, { x: 200, y: 280 });
 
   const pageNote = await page.evaluate(() => {
-    return document.querySelector('affine-note');
+    return document.querySelector('cloud-notes-note');
   });
   expect(pageNote).not.toBeNull();
 });

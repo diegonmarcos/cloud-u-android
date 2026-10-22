@@ -9,7 +9,7 @@ set -e  # Exit immediately if a command exits with a non-zero status
 TARGET_IDENTITY="Apple Distribution: TOEVERYTHING PTE. LTD. (73YMMDVT2M)"
 TARGET_SIGN_STYLE="Manual"
 TARGET_TEAM="73YMMDVT2M"
-TARGET_PROVISIONING_PROFILE="AppStore app.affine.pro"
+TARGET_PROVISIONING_PROFILE="AppStore app.cloudnotes.pro"
 
 # Get script directory and build absolute path to project file
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

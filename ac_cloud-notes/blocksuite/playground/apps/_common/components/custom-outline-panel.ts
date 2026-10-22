@@ -1,6 +1,6 @@
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { ShadowlessElement } from '@blocksuite/affine/std';
-import type { TestAffineEditorContainer } from '@blocksuite/integration-test';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
+import type { TestCloudNotesEditorContainer } from '@blocksuite/integration-test';
 import { css, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
@@ -11,8 +11,8 @@ export class CustomOutlinePanel extends WithDisposable(ShadowlessElement) {
       position: absolute;
       top: 0;
       right: 16px;
-      border: 1px solid var(--affine-border-color, #e3e2e4);
-      background: var(--affine-background-overlay-panel-color);
+      border: 1px solid var(--cloud-notes-border-color, #e3e2e4);
+      background: var(--cloud-notes-background-overlay-panel-color);
       height: 100vh;
       width: 320px;
       box-sizing: border-box;
@@ -21,10 +21,10 @@ export class CustomOutlinePanel extends WithDisposable(ShadowlessElement) {
   `;
 
   private _renderPanel() {
-    return html`<affine-outline-panel
+    return html`<cloud-notes-outline-panel
       .editor=${this.editor.host}
       .fitPadding=${[50, 360, 50, 50]}
-    ></affine-outline-panel>`;
+    ></cloud-notes-outline-panel>`;
   }
 
   override render() {
@@ -47,7 +47,7 @@ export class CustomOutlinePanel extends WithDisposable(ShadowlessElement) {
   private accessor _show = false;
 
   @property({ attribute: false })
-  accessor editor!: TestAffineEditorContainer;
+  accessor editor!: TestCloudNotesEditorContainer;
 }
 
 declare global {

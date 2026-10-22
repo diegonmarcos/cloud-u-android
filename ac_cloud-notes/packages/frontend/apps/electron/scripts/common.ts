@@ -1,8 +1,8 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { getBuildConfig } from '@affine-tools/utils/build-config';
-import { Package } from '@affine-tools/utils/workspace';
+import { getBuildConfig } from '@cloud-notes-tools/utils/build-config';
+import { Package } from '@cloud-notes-tools/utils/workspace';
 import { sentryEsbuildPlugin } from '@sentry/esbuild-plugin';
 import type { BuildOptions, Plugin } from 'esbuild';
 
@@ -24,7 +24,7 @@ export const config = (): BuildOptions => {
     'process.env.NODE_ENV': process.env.NODE_ENV,
     REPLACE_ME_BUILD_ENV: process.env.BUILD_TYPE ?? 'stable',
     ...Object.entries(
-      getBuildConfig(new Package('@affine/electron'), {
+      getBuildConfig(new Package('@cloud-notes/electron'), {
         mode:
           process.env.NODE_ENV === 'production' ? 'production' : 'development',
         channel: (process.env.BUILD_TYPE as any) ?? 'canary',

@@ -1,5 +1,5 @@
-import { toggleVariants } from '@affine/admin/components/ui/toggle';
-import { cn } from '@affine/admin/utils';
+import { toggleVariants } from '@cloud-notes/admin/components/ui/toggle';
+import { cn } from '@cloud-notes/admin/utils';
 import * as ToggleGroupPrimitive from '@radix-ui/react-toggle-group';
 import type { VariantProps } from 'class-variance-authority';
 import { createContext, forwardRef, useContext, useMemo } from 'react';

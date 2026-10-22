@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { AffineIconRenderer } from './renderer/affine-icon';
+import { CloudNotesIconRenderer } from './renderer/cloud-notes-icon';
 import { type IconData, IconType } from './type';
 
 export const IconRenderer = ({
@@ -18,9 +18,9 @@ export const IconRenderer = ({
   if (data.type === IconType.Emoji && data.unicode) {
     return data.unicode;
   }
-  if (data.type === IconType.AffineIcon && data.name) {
+  if (data.type === IconType.CloudNotesIcon && data.name) {
     return (
-      <AffineIconRenderer name={data.name} color={data.color} {...props} />
+      <CloudNotesIconRenderer name={data.name} color={data.color} {...props} />
     );
   }
   if (data.type === IconType.Blob) {

@@ -1,7 +1,7 @@
 import {
   ViewBody,
   ViewHeader,
-} from '@affine/core/modules/workbench/view/view-islands';
+} from '@cloud-notes/core/modules/workbench/view/view-islands';
 
 import { AttachmentFallback, AttachmentPreviewErrorBoundary } from './error';
 import { PDFViewer } from './pdf/pdf-viewer';

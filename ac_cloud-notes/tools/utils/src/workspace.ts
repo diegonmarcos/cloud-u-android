@@ -30,7 +30,7 @@ export class Workspace {
 
   readonly packageJson: CommonPackageJsonContent;
 
-  private readonly logger = new Logger('AFFiNE');
+  private readonly logger = new Logger('Cloud Notes');
 
   readonly path = ProjectRoot;
 

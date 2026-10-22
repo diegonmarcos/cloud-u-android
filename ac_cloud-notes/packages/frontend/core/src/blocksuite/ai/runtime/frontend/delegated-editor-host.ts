@@ -1,11 +1,11 @@
-import type { NbstoreService } from '@affine/core/modules/storage';
+import type { NbstoreService } from '@cloud-notes/core/modules/storage';
 import type {
   DelegatedToolCancel,
   DelegatedToolName,
   DelegatedToolRequest,
-} from '@affine/realtime';
-import type { EditorHost } from '@blocksuite/affine/std';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
+} from '@cloud-notes/realtime';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
 import type { Subscription } from 'rxjs';
 
 import {

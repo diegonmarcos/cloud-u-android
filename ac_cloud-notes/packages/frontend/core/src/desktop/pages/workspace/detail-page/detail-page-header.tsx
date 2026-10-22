@@ -4,29 +4,29 @@ import {
   type InlineEditHandle,
   observeResize,
   useDraggable,
-} from '@affine/component';
-import { FavoriteButton } from '@affine/core/blocksuite/block-suite-header/favorite';
-import { InfoButton } from '@affine/core/blocksuite/block-suite-header/info';
-import { JournalWeekDatePicker } from '@affine/core/blocksuite/block-suite-header/journal/date-picker';
-import { JournalTodayButton } from '@affine/core/blocksuite/block-suite-header/journal/today-button';
-import { PageHeaderMenuButton } from '@affine/core/blocksuite/block-suite-header/menu';
-import { DetailPageHeaderPresentButton } from '@affine/core/blocksuite/block-suite-header/present/detail-header-present-button';
-import { BlocksuiteHeaderTitle } from '@affine/core/blocksuite/block-suite-header/title';
-import { EditorModeSwitch } from '@affine/core/blocksuite/block-suite-mode-switch';
-import { useRegisterCopyLinkCommands } from '@affine/core/components/hooks/affine/use-register-copy-link-commands';
-import { HeaderDivider } from '@affine/core/components/pure/header';
-import { DocService } from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { EditorService } from '@affine/core/modules/editor';
-import { JournalService } from '@affine/core/modules/journal';
-import { SharePageButton } from '@affine/core/modules/share-menu';
-import { TemplateDocService } from '@affine/core/modules/template-doc';
-import { ViewIcon, ViewTitle } from '@affine/core/modules/workbench';
-import type { Workspace } from '@affine/core/modules/workspace';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
-import type { Store } from '@blocksuite/affine/store';
+} from '@cloud-notes/component';
+import { FavoriteButton } from '@cloud-notes/core/blocksuite/block-suite-header/favorite';
+import { InfoButton } from '@cloud-notes/core/blocksuite/block-suite-header/info';
+import { JournalWeekDatePicker } from '@cloud-notes/core/blocksuite/block-suite-header/journal/date-picker';
+import { JournalTodayButton } from '@cloud-notes/core/blocksuite/block-suite-header/journal/today-button';
+import { PageHeaderMenuButton } from '@cloud-notes/core/blocksuite/block-suite-header/menu';
+import { DetailPageHeaderPresentButton } from '@cloud-notes/core/blocksuite/block-suite-header/present/detail-header-present-button';
+import { BlocksuiteHeaderTitle } from '@cloud-notes/core/blocksuite/block-suite-header/title';
+import { EditorModeSwitch } from '@cloud-notes/core/blocksuite/block-suite-mode-switch';
+import { useRegisterCopyLinkCommands } from '@cloud-notes/core/components/hooks/cloud-notes/use-register-copy-link-commands';
+import { HeaderDivider } from '@cloud-notes/core/components/pure/header';
+import { DocService } from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { SharePageButton } from '@cloud-notes/core/modules/share-menu';
+import { TemplateDocService } from '@cloud-notes/core/modules/template-doc';
+import { ViewIcon, ViewTitle } from '@cloud-notes/core/modules/workbench';
+import type { Workspace } from '@cloud-notes/core/modules/workspace';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import {
@@ -203,7 +203,7 @@ export function DetailPageHeader(
   });
 
   const { dragRef, dragging, CustomDragPreview } =
-    useDraggable<AffineDNDData>(() => {
+    useDraggable<CloudNotesDNDData>(() => {
       return {
         data: {
           from: {

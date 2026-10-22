@@ -1,6 +1,6 @@
 // the adapter is to bridge the workspace rootdoc & native js bindings
-import type { WorkspaceService } from '@affine/core/modules/workspace';
-import { createYProxy } from '@blocksuite/affine/store';
+import type { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { createYProxy } from '@blocksuite/cloud-notes/store';
 import { LiveData, Service } from '@toeverything/infra';
 import { defaultsDeep } from 'lodash-es';
 import { Observable } from 'rxjs';
@@ -11,10 +11,10 @@ import type { FavoriteService } from '../favorite';
 import {
   PagePropertyType,
   PageSystemPropertyId,
-  type WorkspaceAffineProperties,
+  type WorkspaceCloudNotesProperties,
 } from './schema';
 
-const AFFINE_PROPERTIES_ID = 'affine:workspace-properties';
+const CLOUD_NOTES_PROPERTIES_ID = 'cloud-notes:workspace-properties';
 
 /**
  * WorkspacePropertiesAdapter is a wrapper for workspace properties.
@@ -29,9 +29,9 @@ const AFFINE_PROPERTIES_ID = 'affine:workspace-properties';
  */
 class WorkspacePropertiesAdapter {
   // provides a easy-to-use interface for workspace properties
-  public readonly proxy: WorkspaceAffineProperties;
+  public readonly proxy: WorkspaceCloudNotesProperties;
   public readonly properties: Y.Map<any>;
-  public readonly properties$: LiveData<WorkspaceAffineProperties>;
+  public readonly properties$: LiveData<WorkspaceCloudNotesProperties>;
 
   private ensuredRoot = false;
   private ensuredPages = {} as Record<string, boolean>;
@@ -43,7 +43,7 @@ class WorkspacePropertiesAdapter {
   constructor(public readonly workspaceService: WorkspaceService) {
     // check if properties exists, if not, create one
     const rootDoc = workspaceService.workspace.docCollection.doc;
-    this.properties = rootDoc.getMap(AFFINE_PROPERTIES_ID);
+    this.properties = rootDoc.getMap(CLOUD_NOTES_PROPERTIES_ID);
     this.proxy = createYProxy(this.properties);
 
     this.properties$ = LiveData.from(

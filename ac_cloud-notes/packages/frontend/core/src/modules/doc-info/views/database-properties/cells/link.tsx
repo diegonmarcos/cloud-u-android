@@ -1,8 +1,8 @@
-import { PropertyValue } from '@affine/component';
-import { AffinePageReference } from '@affine/core/components/affine/reference-link';
-import { ConfigModal } from '@affine/core/components/mobile';
-import { resolveLinkToDoc } from '@affine/core/modules/navigation';
-import { useI18n } from '@affine/i18n';
+import { PropertyValue } from '@cloud-notes/component';
+import { CloudNotesPageReference } from '@cloud-notes/core/components/cloud-notes/reference-link';
+import { ConfigModal } from '@cloud-notes/core/components/mobile';
+import { resolveLinkToDoc } from '@cloud-notes/core/modules/navigation';
+import { useI18n } from '@cloud-notes/i18n';
 import { LinkIcon } from '@blocksuite/icons/rc';
 import type { LiveData } from '@toeverything/infra';
 import { useLiveData } from '@toeverything/infra';
@@ -116,7 +116,7 @@ export const LinkCell = ({
         onChange={handleOnChange}
         data-empty={!tempValue}
         placeholder={t[
-          'com.affine.page-properties.property-value-placeholder'
+          'com.cloud-notes.page-properties.property-value-placeholder'
         ]()}
       />
       <div
@@ -143,7 +143,7 @@ export const LinkCell = ({
       >
         {!editing ? (
           resolvedDocLink ? (
-            <AffinePageReference
+            <CloudNotesPageReference
               pageId={resolvedDocLink.docId}
               params={resolvedDocLink.params}
             />

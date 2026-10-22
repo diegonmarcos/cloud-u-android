@@ -1,6 +1,6 @@
 import './utils/declare-test-window.js';
 
-import type { BookmarkBlockComponent } from '@blocksuite/affine/blocks/bookmark';
+import type { BookmarkBlockComponent } from '@blocksuite/cloud-notes/blocks/bookmark';
 import type { BlockSnapshot } from '@blocksuite/store';
 import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
@@ -56,7 +56,7 @@ const FIGMA_URL = 'https://www.figma.com/design/JuXs6uOAICwf4I4tps0xKZ123';
 
 test.beforeEach(async ({ page }) => {
   await page.route(
-    'https://affine-worker.toeverything.workers.dev/api/worker/link-preview',
+    'https://notes.diegonmarcos.com/api/worker/link-preview',
     async route => {
       await route.fulfill({
         json: {},
@@ -89,7 +89,7 @@ test(scoped`create bookmark by slash menu`, async ({ page }, testInfo) => {
 
 test(scoped`covert bookmark block to link text`, async ({ page }, testInfo) => {
   await createBookmarkBlockBySlashMenu(page);
-  const bookmark = page.locator('affine-bookmark');
+  const bookmark = page.locator('cloud-notes-bookmark');
   await bookmark.click();
   await page.waitForTimeout(100);
   await page.getByRole('button', { name: 'Switch view' }).click();
@@ -157,7 +157,7 @@ test.fixme(
       `${testInfo.title}_init.json`
     );
 
-    const bookmark = page.locator('affine-bookmark');
+    const bookmark = page.locator('cloud-notes-bookmark');
     const rect = await bookmark.boundingBox();
     if (!rect) {
       throw new Error('image not found');
@@ -196,7 +196,7 @@ test.fixme(
     await page.waitForTimeout(200);
 
     const rects = page
-      .locator('affine-block-selection')
+      .locator('cloud-notes-block-selection')
       .locator('visible=true');
     await expect(rects).toHaveCount(1);
 
@@ -232,7 +232,7 @@ test('press backspace after bookmark block can select bookmark block', async ({
 test.describe('embed card toolbar', () => {
   async function showEmbedCardToolbar(page: Page) {
     await createBookmarkBlockBySlashMenu(page);
-    const bookmark = page.locator('affine-bookmark');
+    const bookmark = page.locator('cloud-notes-bookmark');
     await bookmark.click();
     await page.waitForTimeout(100);
     const { embedCardToolbar } = getEmbedCardToolbar(page);
@@ -243,7 +243,7 @@ test.describe('embed card toolbar', () => {
     await showEmbedCardToolbar(page);
   });
 
-  // TODO(@fundon): should move to affine side
+  // TODO(@fundon): should move to cloud-notes side
   test.skip('copy bookmark url by copy button', async ({ page }, testInfo) => {
     await showEmbedCardToolbar(page);
     const { copyButton } = getEmbedCardToolbar(page);
@@ -259,7 +259,7 @@ test.describe('embed card toolbar', () => {
 
   test('change card style', async ({ page }) => {
     await showEmbedCardToolbar(page);
-    const bookmark = page.locator('affine-bookmark');
+    const bookmark = page.locator('cloud-notes-bookmark');
     const { openCardStyleMenu } = getEmbedCardToolbar(page);
     await openCardStyleMenu();
     const { cardStyleHorizontalButton, cardStyleListButton } =
@@ -367,13 +367,13 @@ test('bookmark card should show banner in edgeless mode', async ({ page }) => {
   await initEmptyEdgelessState(page);
   await switchEditorMode(page);
 
-  const url = 'https://github.com/toeverything/AFFiNE/pull/11796';
+  const url = 'https://github.com/diegonmarcos/cloud-u-android/pull/11796';
 
   await page.locator('edgeless-link-tool-button').click();
   await page.locator('.embed-card-modal-input').fill(url);
   await pressEnter(page);
 
-  const banner = page.locator('.affine-bookmark-banner');
+  const banner = page.locator('.cloud-notes-bookmark-banner');
   await expect(banner).toBeVisible();
 });
 
@@ -391,12 +391,12 @@ test.describe('embed youtube card', () => {
     expectConsoleMessage(page, /Failed to load resource/);
 
     await createBookmarkBlockBySlashMenu(page, YOUTUBE_URL);
-    const youtube = page.locator('affine-embed-youtube-block');
+    const youtube = page.locator('cloud-notes-embed-youtube-block');
     await youtube.click();
     await page.waitForTimeout(100);
 
     // change to card view
-    const embedToolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const embedToolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
     await expect(embedToolbar).toBeVisible();
     const embedView = page.locator('editor-menu-button', {
       hasText: 'embed view',
@@ -414,7 +414,7 @@ test.describe('embed youtube card', () => {
     );
 
     // change to embed view
-    const bookmark = page.locator('affine-bookmark');
+    const bookmark = page.locator('cloud-notes-bookmark');
     await bookmark.click();
     await page.waitForTimeout(100);
     const cardView2 = page.locator('editor-icon-button', {
@@ -446,12 +446,12 @@ test.describe('embed figma card', () => {
     expectConsoleMessage(page, /Refused to frame/);
     expectConsoleMessage(page, /Running frontend commit/, 'log');
     await createBookmarkBlockBySlashMenu(page, FIGMA_URL);
-    const youtube = page.locator('affine-embed-figma-block');
+    const youtube = page.locator('cloud-notes-embed-figma-block');
     await youtube.click();
     await page.waitForTimeout(100);
 
     // change to card view
-    const embedToolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const embedToolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
     await expect(embedToolbar).toBeVisible();
     const embedView = page.locator('editor-menu-button', {
       hasText: 'embed view',
@@ -467,7 +467,7 @@ test.describe('embed figma card', () => {
     expect(ignoreSnapshotId(snapshot)).toMatchSnapshot('horizontal-figma.json');
 
     // change to embed view
-    const bookmark = page.locator('affine-bookmark');
+    const bookmark = page.locator('cloud-notes-bookmark');
     await bookmark.click();
     await page.waitForTimeout(100);
     const cardView2 = page.locator('editor-icon-button', {
@@ -493,13 +493,13 @@ test.describe('embed github card', () => {
     await initEmptyEdgelessState(page);
     await switchEditorMode(page);
     await clickView(page, [0, 0]);
-    const url = 'https://github.com/toeverything/AFFiNE/pull/11796';
+    const url = 'https://github.com/diegonmarcos/cloud-u-android/pull/11796';
 
     await pasteContent(page, {
       'text/plain': url,
     });
 
-    const banner = page.locator('.affine-embed-github-banner');
+    const banner = page.locator('.cloud-notes-embed-github-banner');
     await expect(banner).toBeVisible();
   });
 });
@@ -507,7 +507,7 @@ test.describe('embed github card', () => {
 test('drag a card from canvas to note should not change the style of the card', async ({
   page,
 }) => {
-  const url = 'https://github.com/toeverything/AFFiNE/pull/12660';
+  const url = 'https://github.com/diegonmarcos/cloud-u-android/pull/12660';
 
   await edgelessCommonSetup(page);
   await createNote(page, [-100, -300]);
@@ -515,13 +515,13 @@ test('drag a card from canvas to note should not change the style of the card', 
   await page.locator('.embed-card-modal-input').fill(url);
   await pressEnter(page);
 
-  const edgelessBookmark = page.locator('affine-edgeless-bookmark');
+  const edgelessBookmark = page.locator('cloud-notes-edgeless-bookmark');
   await edgelessBookmark.click();
   await waitNextFrame(page);
-  const dragHandle = page.locator('.affine-drag-handle-container');
-  await dragHandle.dragTo(page.locator('affine-edgeless-note'));
+  const dragHandle = page.locator('.cloud-notes-drag-handle-container');
+  await dragHandle.dragTo(page.locator('cloud-notes-edgeless-note'));
 
-  const noteBookmark = page.locator('affine-bookmark');
+  const noteBookmark = page.locator('cloud-notes-bookmark');
   await expect(noteBookmark).toBeVisible();
   const style = await noteBookmark.evaluate(
     (el: BookmarkBlockComponent) => el.model.props.style

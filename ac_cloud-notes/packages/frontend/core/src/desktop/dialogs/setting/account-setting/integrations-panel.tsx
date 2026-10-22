@@ -6,15 +6,15 @@ import {
   MenuItem,
   Modal,
   notify,
-} from '@affine/component';
-import { buildWorkspaceSettingsRedirectUri } from '@affine/core/components/hooks/use-navigate-helper';
+} from '@cloud-notes/component';
+import { buildWorkspaceSettingsRedirectUri } from '@cloud-notes/core/components/hooks/use-navigate-helper';
 import {
   useQuery,
   type UseQueryConfig,
-} from '@affine/core/components/hooks/use-query';
-import { GraphQLService } from '@affine/core/modules/cloud';
-import { UrlService } from '@affine/core/modules/url';
-import { UserFriendlyError } from '@affine/error';
+} from '@cloud-notes/core/components/hooks/use-query';
+import { GraphQLService } from '@cloud-notes/core/modules/cloud';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   type CalendarAccountsQuery,
   calendarAccountsQuery,
@@ -25,8 +25,8 @@ import {
   linkCalDavAccountMutation,
   linkCalendarAccountMutation,
   unlinkCalendarAccountMutation,
-} from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { GoogleIcon, LinkIcon, TodayIcon } from '@blocksuite/icons/rc';
 import { useService } from '@toeverything/infra';
 import {
@@ -148,15 +148,15 @@ const CalDAVLinkDialog = ({
     } = {};
     if (!selectedProvider) {
       nextErrors.provider =
-        t['com.affine.integration.calendar.caldav.field.provider.error']();
+        t['com.cloud-notes.integration.calendar.caldav.field.provider.error']();
     }
     if (!username.trim()) {
       nextErrors.username =
-        t['com.affine.integration.calendar.caldav.field.username.error']();
+        t['com.cloud-notes.integration.calendar.caldav.field.username.error']();
     }
     if (!password) {
       nextErrors.password =
-        t['com.affine.integration.calendar.caldav.field.password.error']();
+        t['com.cloud-notes.integration.calendar.caldav.field.password.error']();
     }
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -181,7 +181,7 @@ const CalDAVLinkDialog = ({
       const message =
         error instanceof UserFriendlyError ? error.message : String(error);
       notify.error({
-        title: t['com.affine.integration.calendar.caldav.link.failed'](),
+        title: t['com.cloud-notes.integration.calendar.caldav.link.failed'](),
         message: message || undefined,
       });
     } finally {
@@ -202,7 +202,7 @@ const CalDAVLinkDialog = ({
     <Modal
       open={open}
       width={480}
-      title={t['com.affine.integration.calendar.caldav.link.title']()}
+      title={t['com.cloud-notes.integration.calendar.caldav.link.title']()}
       onOpenChange={nextOpen => {
         if (!nextOpen) onClose();
       }}
@@ -210,7 +210,7 @@ const CalDAVLinkDialog = ({
     >
       <div className={styles.caldavField}>
         <div className={styles.caldavLabel}>
-          {t['com.affine.integration.calendar.caldav.field.provider']()}
+          {t['com.cloud-notes.integration.calendar.caldav.field.provider']()}
         </div>
         <Menu
           items={providers.map(provider => (
@@ -229,7 +229,7 @@ const CalDAVLinkDialog = ({
           >
             {selectedProvider?.label ??
               t[
-                'com.affine.integration.calendar.caldav.field.provider.placeholder'
+                'com.cloud-notes.integration.calendar.caldav.field.provider.placeholder'
               ]()}
           </Button>
         </Menu>
@@ -238,7 +238,7 @@ const CalDAVLinkDialog = ({
         ) : null}
         {selectedProvider?.requiresAppPassword ? (
           <div className={styles.caldavHint}>
-            {t['com.affine.integration.calendar.caldav.hint.app-password']()}
+            {t['com.cloud-notes.integration.calendar.caldav.hint.app-password']()}
             {selectedProvider.docsUrl ? (
               <a
                 className={styles.caldavLink}
@@ -246,7 +246,7 @@ const CalDAVLinkDialog = ({
                 target="_blank"
                 rel="noreferrer noopener"
               >
-                {t['com.affine.integration.calendar.caldav.hint.learn-more']()}
+                {t['com.cloud-notes.integration.calendar.caldav.hint.learn-more']()}
               </a>
             ) : null}
           </div>
@@ -258,20 +258,20 @@ const CalDAVLinkDialog = ({
               target="_blank"
               rel="noreferrer noopener"
             >
-              {t['com.affine.integration.calendar.caldav.hint.guide']()}
+              {t['com.cloud-notes.integration.calendar.caldav.hint.guide']()}
             </a>
           </div>
         ) : null}
       </div>
       <div className={styles.caldavField}>
         <div className={styles.caldavLabel}>
-          {t['com.affine.integration.calendar.caldav.field.username']()}
+          {t['com.cloud-notes.integration.calendar.caldav.field.username']()}
         </div>
         <Input
           value={username}
           onInput={handleUsernameInput}
           placeholder={t[
-            'com.affine.integration.calendar.caldav.field.username.placeholder'
+            'com.cloud-notes.integration.calendar.caldav.field.username.placeholder'
           ]()}
           status={errors.username ? 'error' : 'default'}
           disabled={submitting}
@@ -282,13 +282,13 @@ const CalDAVLinkDialog = ({
       </div>
       <div className={styles.caldavField}>
         <div className={styles.caldavLabel}>
-          {t['com.affine.integration.calendar.caldav.field.password']()}
+          {t['com.cloud-notes.integration.calendar.caldav.field.password']()}
         </div>
         <Input
           value={password}
           onInput={handlePasswordInput}
           placeholder={t[
-            'com.affine.integration.calendar.caldav.field.password.placeholder'
+            'com.cloud-notes.integration.calendar.caldav.field.password.placeholder'
           ]()}
           type="password"
           status={errors.password ? 'error' : 'default'}
@@ -300,13 +300,13 @@ const CalDAVLinkDialog = ({
       </div>
       <div className={styles.caldavField}>
         <div className={styles.caldavLabel}>
-          {t['com.affine.integration.calendar.caldav.field.displayName']()}
+          {t['com.cloud-notes.integration.calendar.caldav.field.displayName']()}
         </div>
         <Input
           value={displayName}
           onInput={handleDisplayNameInput}
           placeholder={t[
-            'com.affine.integration.calendar.caldav.field.displayName.placeholder'
+            'com.cloud-notes.integration.calendar.caldav.field.displayName.placeholder'
           ]()}
           disabled={submitting}
         />
@@ -321,7 +321,7 @@ const CalDAVLinkDialog = ({
           disabled={submitting || !providers.length}
           onClick={() => void handleSubmit()}
         >
-          {t['com.affine.integration.calendar.account.link']()}
+          {t['com.cloud-notes.integration.calendar.account.link']()}
         </Button>
       </div>
     </Modal>
@@ -365,7 +365,7 @@ export const IntegrationsPanel = ({
     { query: calendarAccountsQuery },
     useMemo(
       () =>
-        makeConfig(t['com.affine.integration.calendar.account.load-error']()),
+        makeConfig(t['com.cloud-notes.integration.calendar.account.load-error']()),
       [makeConfig, t]
     )
   );
@@ -379,7 +379,7 @@ export const IntegrationsPanel = ({
 
     useMemo(
       () =>
-        makeConfig(t['com.affine.integration.calendar.provider.load-error']()),
+        makeConfig(t['com.cloud-notes.integration.calendar.provider.load-error']()),
       [makeConfig, t]
     )
   );
@@ -454,7 +454,7 @@ export const IntegrationsPanel = ({
       } catch (error) {
         console.error('Failed to link calendar account', error);
         notify.error({
-          title: t['com.affine.integration.calendar.auth.start-error'](),
+          title: t['com.cloud-notes.integration.calendar.auth.start-error'](),
         });
       } finally {
         setLinking(false);
@@ -495,7 +495,7 @@ export const IntegrationsPanel = ({
       } catch (error) {
         console.error('Failed to unlink calendar account', error);
         notify.error({
-          title: t['com.affine.integration.calendar.account.unlink-error'](),
+          title: t['com.cloud-notes.integration.calendar.account.unlink-error'](),
         });
       } finally {
         setUnlinkingAccountId(null);
@@ -517,14 +517,14 @@ export const IntegrationsPanel = ({
         }}
       />
       <CollapsibleWrapper
-        title={t['com.affine.integration.integrations']()}
-        caption={t['com.affine.integration.setting.description']()}
+        title={t['com.cloud-notes.integration.integrations']()}
+        caption={t['com.cloud-notes.integration.setting.description']()}
       >
         <div className={styles.panel}>
           <div className={styles.panelHeader}>
             <div className={styles.panelTitle}>
               <TodayIcon />
-              <span>{t['com.affine.integration.calendar.name']()}</span>
+              <span>{t['com.cloud-notes.integration.calendar.name']()}</span>
             </div>
             {providerOptions.length ? (
               <Menu
@@ -540,12 +540,12 @@ export const IntegrationsPanel = ({
                 contentOptions={{ align: 'end' }}
               >
                 <Button variant="primary" loading={linking}>
-                  {t['com.affine.integration.calendar.account.link']()}
+                  {t['com.cloud-notes.integration.calendar.account.link']()}
                 </Button>
               </Menu>
             ) : (
               <Button variant="primary" disabled>
-                {t['com.affine.integration.calendar.account.link']()}
+                {t['com.cloud-notes.integration.calendar.account.link']()}
               </Button>
             )}
           </div>
@@ -564,11 +564,11 @@ export const IntegrationsPanel = ({
                 const showStatus =
                   account.status !== 'active' || Boolean(account.lastError);
                 const statusMessage = account.lastError
-                  ? t['com.affine.integration.calendar.account.status.failed']({
+                  ? t['com.cloud-notes.integration.calendar.account.status.failed']({
                       error: account.lastError,
                     })
                   : t[
-                      'com.affine.integration.calendar.account.status.failed-reconnect'
+                      'com.cloud-notes.integration.calendar.account.status.failed-reconnect'
                     ]();
 
                 return (
@@ -594,7 +594,7 @@ export const IntegrationsPanel = ({
                         <div className={styles.accountMeta}>
                           {subtitle ? <span>{subtitle}</span> : null}
                           <span>
-                            {t['com.affine.integration.calendar.account.count'](
+                            {t['com.cloud-notes.integration.calendar.account.count'](
                               { count: String(account.calendarsCount) }
                             )}
                           </span>
@@ -616,7 +616,7 @@ export const IntegrationsPanel = ({
                           handleUnlink(account.id).catch(() => undefined);
                         }}
                       >
-                        {t['com.affine.integration.calendar.account.unlink']()}
+                        {t['com.cloud-notes.integration.calendar.account.unlink']()}
                       </Button>
                     </div>
                   </div>
@@ -625,7 +625,7 @@ export const IntegrationsPanel = ({
             </div>
           ) : (
             <div className={styles.empty}>
-              {t['com.affine.integration.calendar.account.linked-empty']()}
+              {t['com.cloud-notes.integration.calendar.account.linked-empty']()}
             </div>
           )}
         </div>

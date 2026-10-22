@@ -1,4 +1,4 @@
-import { TagService } from '@affine/core/modules/tag';
+import { TagService } from '@cloud-notes/core/modules/tag';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useState } from 'react';
 

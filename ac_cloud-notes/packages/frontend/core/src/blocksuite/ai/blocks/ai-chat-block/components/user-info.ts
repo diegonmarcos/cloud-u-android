@@ -6,7 +6,7 @@ import type {
   MessageRole,
   MessageUserInfo,
 } from '../../../components/ai-chat-messages';
-import { AffineAIIcon } from './icon';
+import { CloudNotesAIIcon } from './icon';
 
 export class UserInfo extends LitElement {
   static override styles = css`
@@ -21,7 +21,7 @@ export class UserInfo extends LitElement {
       .user-avatar-container {
         width: 24px;
         height: 24px;
-        color: var(--affine-brand-color);
+        color: var(--cloud-notes-brand-color);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -40,14 +40,14 @@ export class UserInfo extends LitElement {
 
       .default-avatar,
       .avatar-image {
-        background-color: var(--affine-primary-color);
+        background-color: var(--cloud-notes-primary-color);
       }
 
       .user-name {
-        color: var(--affine-text-primary-color);
+        color: var(--cloud-notes-text-primary-color);
         text-align: justify;
         font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-        font-size: var(--affine-font-sm);
+        font-size: var(--cloud-notes-font-sm);
         font-style: normal;
         font-weight: 500;
         line-height: 22px;
@@ -111,8 +111,8 @@ export function UserInfoTemplate(
         .avatarUrl=${userInfo.avatarUrl}
       ></user-info>`
     : html`<user-info
-        .userName=${'AFFiNE AI'}
-        .avatarIcon=${AffineAIIcon}
+        .userName=${'Cloud Notes AI'}
+        .avatarIcon=${CloudNotesAIIcon}
       ></user-info>`;
 
   return userInfoTemplate;

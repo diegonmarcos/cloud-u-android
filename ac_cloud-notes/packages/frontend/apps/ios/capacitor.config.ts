@@ -9,18 +9,18 @@ const packageJson = JSON.parse(
 );
 
 interface AppConfig {
-  affineVersion: string;
+  cloudNotesVersion: string;
 }
 
 const config: CapacitorConfig & AppConfig = {
-  appId: 'app.affine.pro',
-  appName: 'AFFiNE',
+  appId: 'app.cloudnotes.pro',
+  appName: 'Cloud Notes',
   webDir: 'dist',
-  affineVersion: packageJson.version,
+  cloudNotesVersion: packageJson.version,
   ios: {
-    scheme: 'AFFiNE',
+    scheme: 'Cloud Notes',
     path: '.',
-    appendUserAgent: `iOS AFFiNE/${packageJson.version}`,
+    appendUserAgent: `iOS cloud-notes/${packageJson.version}`,
     webContentsDebuggingEnabled: true,
     // Silence Capacitor's bridge logging (⚡️ TO JS / ⚡️ To Native -> / ⚡️ [log]).
     loggingBehavior: 'none',

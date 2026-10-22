@@ -1,0 +1,34 @@
+{
+  "name": "@blocksuite/cloud-notes-widget-edgeless-auto-connect",
+  "description": "Cloud Notes edgeless auto connect widget.",
+  "type": "module",
+  "scripts": {
+    "build": "yarn run -T tsc"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": "toeverything",
+  "license": "MIT",
+  "dependencies": {
+    "@blocksuite/cloud-notes-block-surface": "workspace:*",
+    "@blocksuite/cloud-notes-components": "workspace:*",
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*",
+    "@blocksuite/cloud-notes-model": "workspace:*",
+    "@blocksuite/cloud-notes-shared": "workspace:*",
+    "@blocksuite/global": "workspace:*",
+    "@blocksuite/icons": "^2.2.17",
+    "@blocksuite/std": "workspace:*",
+    "lit": "^3.2.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./view": "./src/view.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "!src/__tests__",
+    "!dist/__tests__"
+  ],
+  "version": "0.27.5"
+}

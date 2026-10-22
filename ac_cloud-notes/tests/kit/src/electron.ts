@@ -2,7 +2,7 @@ import type { ChildProcess } from 'node:child_process';
 import crypto from 'node:crypto';
 import { setTimeout } from 'node:timers/promises';
 
-import { Package } from '@affine-tools/utils/workspace';
+import { Package } from '@cloud-notes-tools/utils/workspace';
 import type { Page } from '@playwright/test';
 import fs from 'fs-extra';
 import type { ElectronApplication } from 'playwright';
@@ -12,7 +12,7 @@ import treeKill from 'tree-kill';
 import { test as base } from './playwright';
 import { removeWithRetry } from './utils/utils';
 
-const electronRoot = new Package('@affine/electron').path;
+const electronRoot = new Package('@cloud-notes/electron').path;
 const initialActivePages = new WeakMap<ElectronApplication, Page>();
 
 const treeKillAsync = (pid: number, signal: NodeJS.Signals) =>
@@ -361,8 +361,8 @@ export const test = base.extend<{
       const packageJson = await fs.readJSON(
         electronRoot.join('package.json').value
       );
-      packageJson.name = '@affine/electron-test-' + id;
-      packageJson.productName = 'AFFiNE Test ' + id;
+      packageJson.name = '@cloud-notes/electron-test-' + id;
+      packageJson.productName = 'Cloud Notes Test ' + id;
       packageJson.main = './main.js';
       await fs.writeJSON(clonedDist + '/package.json', packageJson);
 

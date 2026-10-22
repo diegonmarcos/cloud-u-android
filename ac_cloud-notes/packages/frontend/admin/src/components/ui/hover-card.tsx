@@ -1,4 +1,4 @@
-import { cn } from '@affine/admin/utils';
+import { cn } from '@cloud-notes/admin/utils';
 import * as HoverCardPrimitive from '@radix-ui/react-hover-card';
 import * as React from 'react';
 

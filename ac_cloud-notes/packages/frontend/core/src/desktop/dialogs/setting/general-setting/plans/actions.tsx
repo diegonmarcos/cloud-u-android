@@ -1,10 +1,10 @@
-import { notify } from '@affine/component';
-import { useDowngradeNotify } from '@affine/core/components/affine/subscription-landing/notify';
-import { getDowngradeQuestionnaireLink } from '@affine/core/components/hooks/affine/use-subscription-notify';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { SubscriptionPlan } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { notify } from '@cloud-notes/component';
+import { useDowngradeNotify } from '@cloud-notes/core/components/cloud-notes/subscription-landing/notify';
+import { getDowngradeQuestionnaireLink } from '@cloud-notes/core/components/hooks/cloud-notes/use-subscription-notify';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { SubscriptionPlan } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { useLiveData, useService } from '@toeverything/infra';
 import { nanoid } from 'nanoid';
 import type { PropsWithChildren } from 'react';
@@ -247,8 +247,8 @@ export const TeamResumeAction = ({
       setIdempotencyKey(nanoid());
       onOpenChange(false);
       notify.success({
-        title: t['com.affine.payment.resume.success.title'](),
-        message: t['com.affine.payment.resume.success.team.message'](),
+        title: t['com.cloud-notes.payment.resume.success.title'](),
+        message: t['com.cloud-notes.payment.resume.success.team.message'](),
       });
     } finally {
       setIsMutating(false);

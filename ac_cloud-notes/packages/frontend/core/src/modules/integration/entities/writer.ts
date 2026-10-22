@@ -1,10 +1,10 @@
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { MarkdownTransformer } from '@blocksuite/affine/widgets/linked-doc';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { MarkdownTransformer } from '@blocksuite/cloud-notes/widgets/linked-doc';
 import { Entity } from '@toeverything/infra';
 
 import type { TagService } from '../../tag';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   type WorkspaceService,
 } from '../../workspace';
 
@@ -58,7 +58,7 @@ export class IntegrationWriter extends Entity {
     if (!docId) {
       const newDocId = await MarkdownTransformer.importMarkdownToDoc({
         collection: workspace.docCollection,
-        schema: getAFFiNEWorkspaceSchema(),
+        schema: getCloudNotesWorkspaceSchema(),
         markdown,
         fileName: title,
         extensions: getStoreManager().config.init().value.get('store'),

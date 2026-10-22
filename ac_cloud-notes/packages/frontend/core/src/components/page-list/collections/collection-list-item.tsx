@@ -1,8 +1,8 @@
-import { Checkbox, useDraggable } from '@affine/component';
-import { WorkbenchLink } from '@affine/core/modules/workbench';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { stopPropagation } from '@affine/core/utils';
-import { useI18n } from '@affine/i18n';
+import { Checkbox, useDraggable } from '@cloud-notes/component';
+import { WorkbenchLink } from '@cloud-notes/core/modules/workbench';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { stopPropagation } from '@cloud-notes/core/utils';
+import { useI18n } from '@cloud-notes/i18n';
 import type { ForwardedRef, PropsWithChildren } from 'react';
 import { forwardRef, useCallback, useMemo } from 'react';
 
@@ -105,7 +105,7 @@ export const CollectionListItem = (props: CollectionListItemProps) => {
     props.title,
   ]);
 
-  const { dragRef, dragging, CustomDragPreview } = useDraggable<AffineDNDData>(
+  const { dragRef, dragging, CustomDragPreview } = useDraggable<CloudNotesDNDData>(
     () => ({
       data: {
         entity: {

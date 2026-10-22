@@ -1,9 +1,9 @@
-import { DocsService } from '@affine/core/modules/doc';
-import type { DocMeta, Workspace } from '@blocksuite/affine/store';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import type { DocMeta, Workspace } from '@blocksuite/cloud-notes/store';
 import { useService } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 
-import { useAsyncCallback } from './affine-async-hooks';
+import { useAsyncCallback } from './cloud-notes-async-hooks';
 import { useAllBlockSuiteDocMeta } from './use-all-block-suite-page-meta';
 import { useJournalInfoHelper } from './use-journal';
 

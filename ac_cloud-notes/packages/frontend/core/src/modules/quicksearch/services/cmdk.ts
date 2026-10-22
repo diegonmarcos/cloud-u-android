@@ -1,4 +1,4 @@
-import { track } from '@affine/track';
+import { track } from '@cloud-notes/track';
 import { Service } from '@toeverything/infra';
 
 import type { DocsService } from '../../doc';
@@ -116,7 +116,7 @@ export class CMDKQuickSearchService extends Service {
         },
         {
           placeholder: {
-            i18nKey: 'com.affine.cmdk.docs.placeholder',
+            i18nKey: 'com.cloud-notes.cmdk.docs.placeholder',
           },
         }
       );

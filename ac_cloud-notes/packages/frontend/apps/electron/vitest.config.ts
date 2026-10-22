@@ -1,4 +1,4 @@
-// TODO(@forehalo): reuse '@affine-tools/utils' once it's ready to switch to esm module
+// TODO(@forehalo): reuse '@cloud-notes-tools/utils' once it's ready to switch to esm module
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +11,7 @@ export default defineConfig({
     alias: {
       // prevent tests using two different sources of yjs
       yjs: resolve(rootDir, 'node_modules/yjs'),
-      '@affine/electron': resolve(
+      '@cloud-notes/electron': resolve(
         rootDir,
         'packages/frontend/apps/electron/src'
       ),

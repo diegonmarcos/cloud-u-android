@@ -1,7 +1,7 @@
-import type { FrameBlockComponent } from '@blocksuite/affine/blocks/frame';
-import type { EdgelessRootBlockComponent } from '@blocksuite/affine/blocks/root';
-import type { FrameBlockModel } from '@blocksuite/affine/model';
-import type { AffineFrameTitleWidget } from '@blocksuite/affine/widgets/frame-title';
+import type { FrameBlockComponent } from '@blocksuite/cloud-notes/blocks/frame';
+import type { EdgelessRootBlockComponent } from '@blocksuite/cloud-notes/blocks/root';
+import type { FrameBlockModel } from '@blocksuite/cloud-notes/model';
+import type { CloudNotesFrameTitleWidget } from '@blocksuite/cloud-notes/widgets/frame-title';
 import { assertType } from '@blocksuite/global/utils';
 import { Text } from '@blocksuite/store';
 import { beforeEach, describe, expect, test } from 'vitest';
@@ -33,10 +33,10 @@ describe('frame', () => {
 
     const getFrameTitle = (frameId: string) => {
       const frameTitleWidget = service.std.view.getWidget(
-        'affine-frame-title-widget',
+        'cloud-notes-frame-title-widget',
         frameId
-      ) as AffineFrameTitleWidget | null;
-      return frameTitleWidget?.shadowRoot?.querySelector('affine-frame-title');
+      ) as CloudNotesFrameTitleWidget | null;
+      return frameTitleWidget?.shadowRoot?.querySelector('cloud-notes-frame-title');
     };
 
     const frameTitle = getFrameTitle(frame);

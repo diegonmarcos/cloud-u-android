@@ -1,10 +1,10 @@
 {
-  "name": "@affine/native",
+  "name": "@cloud-notes/native",
   "private": true,
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "binaryName": "affine",
+    "binaryName": "cloud-notes",
     "targets": [
       "x86_64-apple-darwin",
       "x86_64-unknown-linux-gnu",
@@ -37,8 +37,8 @@
   },
   "scripts": {
     "artifacts": "napi artifacts",
-    "build": "napi build -p affine_native --platform --release --strip",
-    "build:debug": "napi build -p affine_native --platform",
+    "build": "napi build -p cloud_notes_native --platform --release --strip",
+    "build:debug": "napi build -p cloud_notes_native --platform",
     "universal": "napi universal",
     "test": "ava --no-worker-threads --concurrency=2",
     "version": "napi version"

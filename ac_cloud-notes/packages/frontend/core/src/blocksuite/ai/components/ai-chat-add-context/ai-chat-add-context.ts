@@ -1,7 +1,7 @@
-import { I18n } from '@affine/i18n';
-import { createLitPortal } from '@blocksuite/affine/components/portal';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import { I18n } from '@cloud-notes/i18n';
+import { createLitPortal } from '@blocksuite/cloud-notes/components/portal';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { PlusIcon } from '@blocksuite/icons/lit';
 import { flip, offset } from '@floating-ui/dom';
 import { css, html } from 'lit';
@@ -66,11 +66,11 @@ export class AIChatAddContext extends SignalWatcher(
         ${PlusIcon()}
         ${
           disabled
-            ? html`<affine-tooltip>
+            ? html`<cloud-notes-tooltip>
                 ${I18n[
-                  'com.affine.ai.chat-panel.local-workspace-context-unavailable'
+                  'com.cloud-notes.ai.chat-panel.local-workspace-context-unavailable'
                 ]()}
-              </affine-tooltip>`
+              </cloud-notes-tooltip>`
             : null
         }
       </div>
@@ -105,7 +105,7 @@ export class AIChatAddContext extends SignalWatcher(
         ></chat-panel-add-popover>
       `,
       portalStyles: {
-        zIndex: 'var(--affine-z-index-popover)',
+        zIndex: 'var(--cloud-notes-z-index-popover)',
       },
       container: this.portalContainer ?? document.body,
       computePosition: {

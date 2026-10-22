@@ -1,15 +1,15 @@
-import { CodeBlockHighlighter } from '@blocksuite/affine/blocks/code';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { ColorScheme } from '@blocksuite/affine/model';
-import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { type BlockStdScope } from '@blocksuite/affine/std';
+import { CodeBlockHighlighter } from '@blocksuite/cloud-notes/blocks/code';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { ColorScheme } from '@blocksuite/cloud-notes/model';
+import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { type BlockStdScope } from '@blocksuite/cloud-notes/std';
 import {
   type BlockSnapshot,
   nanoid,
   type SliceSnapshot,
   Text,
-} from '@blocksuite/affine/store';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+} from '@blocksuite/cloud-notes/store';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import {
   CodeBlockIcon,
   CopyIcon,
@@ -376,7 +376,7 @@ export class CodeArtifactTool extends ArtifactTool<
       flex-direction: column;
     }
 
-    .code-artifact-preview > affine-html-preview {
+    .code-artifact-preview > cloud-notes-html-preview {
       height: 100%;
     }
 
@@ -488,9 +488,9 @@ export class CodeArtifactTool extends ArtifactTool<
     return html`<div class="code-artifact-preview">
       ${
         this.mode === 'preview'
-          ? html`<affine-html-preview
+          ? html`<cloud-notes-html-preview
               .html=${htmlContent}
-            ></affine-html-preview>`
+            ></cloud-notes-html-preview>`
           : html`<code-highlighter
               .std=${this.std}
               .code=${htmlContent}

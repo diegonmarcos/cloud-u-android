@@ -2,7 +2,7 @@ import {
   IconButton,
   type IconButtonProps,
   useIsInsideModal,
-} from '@affine/component';
+} from '@cloud-notes/component';
 import { ArrowLeftSmallIcon, CloseIcon } from '@blocksuite/icons/rc';
 import { useService } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';

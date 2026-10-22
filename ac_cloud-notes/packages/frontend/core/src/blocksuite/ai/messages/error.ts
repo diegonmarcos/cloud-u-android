@@ -1,8 +1,8 @@
-import { I18n } from '@affine/i18n';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { scrollbarStyle } from '@blocksuite/affine/shared/styles';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { type EditorHost } from '@blocksuite/affine/std';
+import { I18n } from '@cloud-notes/i18n';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { scrollbarStyle } from '@blocksuite/cloud-notes/shared/styles';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { type EditorHost } from '@blocksuite/cloud-notes/std';
 import { InformationIcon, ToggleDownIcon } from '@blocksuite/icons/lit';
 import { signal } from '@preact/signals-core';
 import { baseTheme } from '@toeverything/theme';
@@ -44,7 +44,7 @@ export class AIErrorWrapper extends SignalWatcher(WithDisposable(LitElement)) {
           'clig' off,
           'liga' off;
         /* light/sm */
-        font-size: var(--affine-font-sm);
+        font-size: var(--cloud-notes-font-sm);
         font-style: normal;
         font-weight: 400;
         line-height: 22px; /* 157.143% */
@@ -105,7 +105,7 @@ export class AIErrorWrapper extends SignalWatcher(WithDisposable(LitElement)) {
         border-radius: 8px;
         border: 1px solid ${unsafeCSSVarV2('button/innerBlackBorder')};
         padding: 4px 12px;
-        font-size: var(--affine-font-xs);
+        font-size: var(--cloud-notes-font-xs);
         font-style: normal;
         font-weight: 500;
         line-height: 20px;
@@ -169,9 +169,9 @@ export class AIErrorWrapper extends SignalWatcher(WithDisposable(LitElement)) {
                 ${this.actionText}
                 ${
                   this.actionTooltip
-                    ? html`<affine-tooltip tip-position="top">
+                    ? html`<cloud-notes-tooltip tip-position="top">
                         ${this.actionTooltip}
-                      </affine-tooltip>`
+                      </cloud-notes-tooltip>`
                     : nothing
                 }
               </span>
@@ -208,7 +208,7 @@ export class AIErrorWrapper extends SignalWatcher(WithDisposable(LitElement)) {
 
 const PaymentRequiredErrorRenderer = (host?: EditorHost | null) => html`
   <ai-error-wrapper
-    .text=${"You've reached the current usage cap for AFFiNE AI. You can subscribe to AFFiNE AI(with free 7-day-trial) to continue the AI experience!"}
+    .text=${"You've reached the current usage cap for Cloud Notes AI. You can subscribe to Cloud Notes AI(with free 7-day-trial) to continue the AI experience!"}
     .actionText=${'Upgrade'}
     .onClick=${() => AIAppEvents.requestUpgradePlan.next({ host })}
   ></ai-error-wrapper>
@@ -216,7 +216,7 @@ const PaymentRequiredErrorRenderer = (host?: EditorHost | null) => html`
 
 const LoginRequiredErrorRenderer = (host?: EditorHost | null) => html`
   <ai-error-wrapper
-    .text=${'You need to login to AFFiNE Cloud to continue using AFFiNE AI.'}
+    .text=${'You need to login to Cloud Notes to continue using Cloud Notes AI.'}
     .actionText=${'Login'}
     .onClick=${() => AIAppEvents.requestLogin.next({ host })}
   ></ai-error-wrapper>
@@ -261,31 +261,31 @@ export function AIChatErrorRenderer(
     return LoginRequiredErrorRenderer(host);
   } else if (error instanceof SelectedSourcesProcessingError) {
     return GeneralErrorRenderer({
-      text: I18n['com.affine.ai.error.selectedSourcesProcessing'](),
-      actionText: I18n['com.affine.ai.error.retry'](),
+      text: I18n['com.cloud-notes.ai.error.selectedSourcesProcessing'](),
+      actionText: I18n['com.cloud-notes.ai.error.retry'](),
       actionTooltip: '',
       onClick: retry,
       showAction: !!retry,
     });
   } else if (error instanceof SelectedSourcesFailedError) {
     return GeneralErrorRenderer({
-      text: I18n['com.affine.ai.error.selectedSourcesFailed'](),
-      actionText: I18n['com.affine.ai.error.retry'](),
+      text: I18n['com.cloud-notes.ai.error.selectedSourcesFailed'](),
+      actionText: I18n['com.cloud-notes.ai.error.retry'](),
       actionTooltip: '',
       onClick: retry,
       showAction: !!retry,
     });
   } else if (error instanceof SelectedSourcesUnavailableError) {
     return GeneralErrorRenderer({
-      text: I18n['com.affine.ai.error.selectedSourcesUnavailable'](),
-      actionText: I18n['com.affine.ai.error.retry'](),
+      text: I18n['com.cloud-notes.ai.error.selectedSourcesUnavailable'](),
+      actionText: I18n['com.cloud-notes.ai.error.retry'](),
       actionTooltip: '',
       onClick: retry,
       showAction: !!retry,
     });
   } else if (error instanceof SelectedSourcesLimitExceededError) {
     return GeneralErrorRenderer({
-      text: I18n['com.affine.ai.error.selectedSourcesLimitExceeded'](),
+      text: I18n['com.cloud-notes.ai.error.selectedSourcesLimitExceeded'](),
       showAction: false,
     });
   } else {

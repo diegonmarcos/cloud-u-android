@@ -4,14 +4,14 @@ import {
   MenuTrigger,
   notify,
   Tooltip,
-} from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { DocGrantedUsersService } from '@affine/core/modules/permissions';
-import { ShareInfoService } from '@affine/core/modules/share-doc';
-import { UserFriendlyError } from '@affine/error';
-import { DocRole } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { DocGrantedUsersService } from '@cloud-notes/core/modules/permissions';
+import { ShareInfoService } from '@cloud-notes/core/modules/share-doc';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { DocRole } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { InformationIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
@@ -23,13 +23,13 @@ import * as styles from './styles.css';
 const getRoleName = (t: ReturnType<typeof useI18n>, role?: DocRole) => {
   switch (role) {
     case DocRole.Manager:
-      return t['com.affine.share-menu.option.permission.can-manage']();
+      return t['com.cloud-notes.share-menu.option.permission.can-manage']();
     case DocRole.Editor:
-      return t['com.affine.share-menu.option.permission.can-edit']();
+      return t['com.cloud-notes.share-menu.option.permission.can-edit']();
     case DocRole.Reader:
-      return t['com.affine.share-menu.option.permission.can-read']();
+      return t['com.cloud-notes.share-menu.option.permission.can-read']();
     case DocRole.None:
-      return t['com.affine.share-menu.option.permission.no-access']();
+      return t['com.cloud-notes.share-menu.option.permission.no-access']();
     default:
       return '';
   }
@@ -108,7 +108,7 @@ export const MembersPermission = ({
   return (
     <div className={styles.rowContainerStyle}>
       <div className={styles.labelStyle}>
-        {t['com.affine.share-menu.option.permission.label']()}
+        {t['com.cloud-notes.share-menu.option.permission.label']()}
       </div>
       {disabled ? (
         <div className={clsx(styles.menuTriggerStyle, 'disable')}>
@@ -128,7 +128,7 @@ export const MembersPermission = ({
                 selected={docDefaultRole === DocRole.Manager}
               >
                 <div className={styles.publicItemRowStyle}>
-                  {t['com.affine.share-menu.option.permission.can-manage']()}
+                  {t['com.cloud-notes.share-menu.option.permission.can-manage']()}
                 </div>
               </MenuItem>
               <MenuItem
@@ -137,7 +137,7 @@ export const MembersPermission = ({
               >
                 <div className={styles.publicItemRowStyle}>
                   <div className={styles.tagContainerStyle}>
-                    {t['com.affine.share-menu.option.permission.can-edit']()}
+                    {t['com.cloud-notes.share-menu.option.permission.can-edit']()}
                     {hittingPaywall ? <PlanTag /> : null}
                   </div>
                 </div>
@@ -148,7 +148,7 @@ export const MembersPermission = ({
               >
                 <div className={styles.publicItemRowStyle}>
                   <div className={styles.tagContainerStyle}>
-                    {t['com.affine.share-menu.option.permission.can-read']()}
+                    {t['com.cloud-notes.share-menu.option.permission.can-read']()}
                     {hittingPaywall ? <PlanTag /> : null}
                   </div>
                 </div>
@@ -159,7 +159,7 @@ export const MembersPermission = ({
               >
                 <div className={styles.publicItemRowStyle}>
                   <div className={styles.tagContainerStyle}>
-                    {t['com.affine.share-menu.option.permission.no-access']()}
+                    {t['com.cloud-notes.share-menu.option.permission.no-access']()}
                     {hittingPaywall ? <PlanTag /> : null}
                   </div>
                 </div>
@@ -188,7 +188,7 @@ export const Tips = ({ disable }: { disable?: boolean }) => {
   const t = useI18n();
 
   return (
-    <Tooltip content={t['com.affine.share-menu.option.permission.tips']()}>
+    <Tooltip content={t['com.cloud-notes.share-menu.option.permission.tips']()}>
       <InformationIcon
         className={clsx(styles.informationIcon, {
           disable: disable,

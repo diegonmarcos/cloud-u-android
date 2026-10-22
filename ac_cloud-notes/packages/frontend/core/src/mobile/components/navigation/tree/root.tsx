@@ -1,7 +1,7 @@
 import {
   NavigationPanelTreeContext,
   type NodeOperation,
-} from '@affine/core/desktop/components/navigation-panel';
+} from '@cloud-notes/core/desktop/components/navigation-panel';
 import { useMemo, useState } from 'react';
 
 import * as styles from './root.css';

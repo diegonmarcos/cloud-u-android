@@ -1,7 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
 import { describe, expect, test, vi } from 'vitest';
 
 import { SelectedSourcesProcessingError } from '../../provider/error';
@@ -33,7 +33,7 @@ function session(
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     parentSessionId: null,
-    promptName: 'Chat With AFFiNE AI',
+    promptName: 'Chat With Cloud Notes AI',
     action: null,
     ...overrides,
   } as CopilotChatHistoryFragment;

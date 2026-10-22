@@ -48,7 +48,7 @@ test.describe('frame panel', () => {
   test('should display empty placeholder when no frames', async ({ page }) => {
     await edgelessCommonSetup(page);
     await toggleFramePanel(page);
-    const frameCards = page.locator('affine-frame-card');
+    const frameCards = page.locator('cloud-notes-frame-card');
     expect(await frameCards.count()).toBe(0);
 
     const placeholder = page.locator('.no-frame-placeholder');
@@ -76,9 +76,9 @@ test.describe('frame panel', () => {
     await setEdgelessTool(page, 'frame');
     await dragBetweenCoords(page, { x: 100, y: 440 }, { x: 600, y: 600 });
 
-    const frames = page.locator('affine-frame');
+    const frames = page.locator('cloud-notes-frame');
     expect(await frames.count()).toBe(2);
-    const frameCards = page.locator('affine-frame-card');
+    const frameCards = page.locator('cloud-notes-frame-card');
     expect(await frameCards.count()).toBe(2);
   });
 
@@ -96,18 +96,18 @@ test.describe('frame panel', () => {
     await dragBetweenCoords(page, { x: 100, y: 440 }, { x: 600, y: 600 });
     await waitNextFrame(page, 100);
 
-    const frames = page.locator('affine-frame');
+    const frames = page.locator('cloud-notes-frame');
     expect(await frames.count()).toBe(1);
-    const frameCards = page.locator('affine-frame-card');
+    const frameCards = page.locator('cloud-notes-frame-card');
     expect(await frameCards.count()).toBe(1);
-    const edgelessNote = page.locator('affine-frame-card affine-edgeless-note');
+    const edgelessNote = page.locator('cloud-notes-frame-card cloud-notes-edgeless-note');
     expect(await edgelessNote.count()).toBe(1);
   });
 
   test('should update panel when frames change', async ({ page }) => {
     await edgelessCommonSetup(page);
     await toggleFramePanel(page);
-    const frameCards = page.locator('affine-frame-card');
+    const frameCards = page.locator('cloud-notes-frame-card');
     expect(await frameCards.count()).toBe(0);
 
     await addNote(page, 'hello', 150, 500);
@@ -121,7 +121,7 @@ test.describe('frame panel', () => {
     await dragBetweenCoords(page, { x: 50, y: 300 }, { x: 120, y: 400 });
     await waitNextFrame(page);
 
-    const frames = page.locator('affine-frame');
+    const frames = page.locator('cloud-notes-frame');
     expect(await frames.count()).toBe(2);
     expect(await frameCards.count()).toBe(2);
 
@@ -152,7 +152,7 @@ test.describe('frame panel', () => {
       await waitNextFrame(page, 100);
 
       const edgelessNote = page.locator(
-        'affine-frame-card affine-edgeless-note'
+        'cloud-notes-frame-card cloud-notes-edgeless-note'
       );
       expect(await edgelessNote.count()).toBe(1);
 
@@ -258,8 +258,8 @@ test.describe('frame panel', () => {
       await dragBetweenCoords(page, { x: 100, y: 440 }, { x: 640, y: 600 });
       await waitNextFrame(page);
 
-      const frames = page.locator('affine-frame');
-      const frameCards = page.locator('affine-frame-card');
+      const frames = page.locator('cloud-notes-frame');
+      const frameCards = page.locator('cloud-notes-frame-card');
       expect(await frames.count()).toBe(1);
       expect(await frameCards.count()).toBe(1);
 
@@ -308,7 +308,7 @@ test.describe('frame panel', () => {
     await dragBetweenCoords(page, { x: 100, y: 440 }, { x: 600, y: 600 });
     await waitNextFrame(page);
 
-    const frameCards = page.locator('affine-frame-card');
+    const frameCards = page.locator('cloud-notes-frame-card');
     await frameCards.nth(0).dblclick();
 
     const zoomLevel = await getZoomLevel(page);
@@ -331,11 +331,11 @@ test.describe('frame panel', () => {
     await setEdgelessTool(page, 'frame');
     await dragBetweenViewCoords(page, [240, 0], [800, 200]);
 
-    expect(await page.locator('affine-frame').count()).toBe(2);
+    expect(await page.locator('cloud-notes-frame').count()).toBe(2);
 
     await toggleFramePanel(page);
 
-    const frameCards = page.locator('affine-frame-card');
+    const frameCards = page.locator('cloud-notes-frame-card');
     expect(await frameCards.count()).toBe(2);
 
     // Drag the first frame card to the second
@@ -346,7 +346,7 @@ test.describe('frame panel', () => {
 
     // Check if frame contains note now is the first
     const edgelessNote = page.locator(
-      'affine-edgeless-root affine-edgeless-note'
+      'cloud-notes-edgeless-root cloud-notes-edgeless-note'
     );
     await expect(edgelessNote).toBeVisible();
   });

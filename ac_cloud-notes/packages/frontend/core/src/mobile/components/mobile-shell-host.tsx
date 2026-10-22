@@ -1,4 +1,4 @@
-import { WorkbenchService } from '@affine/core/modules/workbench';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import {

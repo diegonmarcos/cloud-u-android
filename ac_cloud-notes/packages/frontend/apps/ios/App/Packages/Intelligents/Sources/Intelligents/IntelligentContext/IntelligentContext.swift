@@ -189,7 +189,7 @@ public class IntelligentContext {
   userIdentifierKey: 82a5a6f0-xxxx-xxxx-xxxx-0de4be320696
   userNameKey: Dev User
   userEmailKey: xxx@xxxxx.xxx
-  userAvatarKey: https://avatar.affineassets.com/82a5a6f0-xxxx-xxxx-xxxx-0de4be320696-avatar-1733191099480
+  userAvatarKey: https://avatar.cloudnotesassets.com/82a5a6f0-xxxx-xxxx-xxxx-0de4be320696-avatar-1733191099480
   userSettingsKey: {
       "__typename" = UserSettingsType;
       receiveInvitationEmail = 1;
@@ -197,15 +197,15 @@ public class IntelligentContext {
   }
   workspacesCountKey: 8
   workspacesKey: [["id": "a0d781bf-xxxx-xxxx-xxxx-19394bad7f24", "team": false], ["id": "b00d1110-xxxx-xxxx-xxxx-4bc39685af7c", "team": false], ["id": "5559196a-xxxx-xxxx-xxxx-fc9ee6e2dbf9", "team": false], ["team": true, "id": "0f58ea6f-xxxx-xxxx-xxxx-30c4b01a346a"], ["id": "c4e72530-xxxx-xxxx-xxxx-888a166c8155", "team": true], ["id": "c924e653-xxxx-xxxx-xxxx-ed4be3a7d7c8", "team": false], ["id": "ac772e5a-xxxx-xxxx-xxxx-4e2049259408", "team": true], ["id": "4dc9c0ca-xxxx-xxxx-xxxx-7b84184f7e1d", "team": true]]
-  subscriptionStatusKey: case(AffineGraphQL.SubscriptionStatus.active)
-  subscriptionPlanKey: case(AffineGraphQL.SubscriptionPlan.pro)
+  subscriptionStatusKey: case(CloudNotesGraphQL.SubscriptionStatus.active)
+  subscriptionPlanKey: case(CloudNotesGraphQL.SubscriptionPlan.pro)
   storageQuotaKey: 10737418240
   storageUsedKey: <nil>
 
   -- WebView Metadata --
   currentDocId: <null>
   currentWorkspaceId: <null>
-  currentServerBaseUrl: https://affine.fail
+  currentServerBaseUrl: https://notes.diegonmarcos.com
   currentI18nLocale: en
   ===============================================
 

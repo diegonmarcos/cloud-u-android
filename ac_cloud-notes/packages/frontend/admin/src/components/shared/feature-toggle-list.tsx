@@ -1,8 +1,8 @@
-import { Checkbox } from '@affine/admin/components/ui/checkbox';
-import { Label } from '@affine/admin/components/ui/label';
-import { Separator } from '@affine/admin/components/ui/separator';
-import { Switch } from '@affine/admin/components/ui/switch';
-import type { FeatureType } from '@affine/graphql';
+import { Checkbox } from '@cloud-notes/admin/components/ui/checkbox';
+import { Label } from '@cloud-notes/admin/components/ui/label';
+import { Separator } from '@cloud-notes/admin/components/ui/separator';
+import { Switch } from '@cloud-notes/admin/components/ui/switch';
+import type { FeatureType } from '@cloud-notes/graphql';
 import { useCallback } from 'react';
 
 import { cn } from '../../utils';

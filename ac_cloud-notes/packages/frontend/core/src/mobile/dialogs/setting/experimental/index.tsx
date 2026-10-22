@@ -1,10 +1,10 @@
-import { Switch } from '@affine/component';
+import { Switch } from '@cloud-notes/component';
 import {
-  AFFINE_FLAGS,
+  CLOUD_NOTES_FLAGS,
   FeatureFlagService,
   type Flag,
-} from '@affine/core/modules/feature-flag';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/feature-flag';
+import { useI18n } from '@cloud-notes/i18n';
 import { ArrowRightSmallIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useState } from 'react';
@@ -17,11 +17,11 @@ import * as styles from './styles.css';
 export const ExperimentalFeatureSetting = () => {
   const [open, setOpen] = useState(false);
   const t = useI18n();
-  const title = t['com.affine.mobile.setting.experimental.features']();
+  const title = t['com.cloud-notes.mobile.setting.experimental.features']();
 
   return (
     <>
-      <SettingGroup title={t['com.affine.mobile.setting.experimental.title']()}>
+      <SettingGroup title={t['com.cloud-notes.mobile.setting.experimental.title']()}>
         <RowLayout label={title} onClick={() => setOpen(true)}>
           <ArrowRightSmallIcon fontSize={22} />
         </RowLayout>
@@ -38,11 +38,11 @@ const ExperimentalFeatureList = () => {
 
   return (
     <ul className={styles.content}>
-      {Object.keys(AFFINE_FLAGS).map(key => (
+      {Object.keys(CLOUD_NOTES_FLAGS).map(key => (
         <ExperimentalFeaturesItem
           key={key}
           flagKey={key}
-          flag={featureFlagService.flags[key as keyof AFFINE_FLAGS]}
+          flag={featureFlagService.flags[key as keyof CLOUD_NOTES_FLAGS]}
         />
       ))}
     </ul>

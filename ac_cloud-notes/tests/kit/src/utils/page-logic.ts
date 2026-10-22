@@ -216,7 +216,7 @@ export const dragTo = async (
 export const focusInlineEditor = async (page: Page) => {
   await page
     .locator(
-      `.affine-paragraph-rich-text-wrapper:has(.visible):has-text("Type '/' for commands")`
+      `.cloud-notes-paragraph-rich-text-wrapper:has(.visible):has-text("Type '/' for commands")`
     )
     .locator('.inline-editor')
     .focus();
@@ -224,20 +224,20 @@ export const focusInlineEditor = async (page: Page) => {
 
 export const addDatabase = async (page: Page, title?: string) => {
   await page.keyboard.press('/');
-  await expect(page.locator('affine-slash-menu .slash-menu')).toBeVisible();
+  await expect(page.locator('cloud-notes-slash-menu .slash-menu')).toBeVisible();
   await page.keyboard.type('database');
   await page.getByTestId('Table View').click();
 
   if (title) {
-    await page.locator('affine-database-title').click();
+    await page.locator('cloud-notes-database-title').click();
     await page
       .locator(
-        'affine-database-title textarea[data-block-is-database-title="true"]'
+        'cloud-notes-database-title textarea[data-block-is-database-title="true"]'
       )
       .fill(title);
     await page
       .locator(
-        'affine-database-title textarea[data-block-is-database-title="true"]'
+        'cloud-notes-database-title textarea[data-block-is-database-title="true"]'
       )
       .blur();
   }
@@ -245,7 +245,7 @@ export const addDatabase = async (page: Page, title?: string) => {
 
 export const addCodeBlock = async (page: Page) => {
   await page.keyboard.press('/');
-  await expect(page.locator('affine-slash-menu .slash-menu')).toBeVisible();
+  await expect(page.locator('cloud-notes-slash-menu .slash-menu')).toBeVisible();
   await page.keyboard.type('code');
   await page.getByTestId('Code Block').click();
 };

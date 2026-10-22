@@ -1,7 +1,7 @@
-import { useNavigateHelper } from '@affine/core/components/hooks/use-navigate-helper';
-import { CollectionService } from '@affine/core/modules/collection';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+import { useNavigateHelper } from '@cloud-notes/core/components/hooks/use-navigate-helper';
+import { CollectionService } from '@cloud-notes/core/modules/collection';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useState } from 'react';
 
@@ -37,12 +37,12 @@ export const CollectionList = () => {
           open={showNewCollectionDialog}
           onOpenChange={setShowNewCollectionDialog}
           onConfirm={handleCreateCollection}
-          title={t['com.affine.m.explorer.collection.new-dialog-title']()}
-          confirmText={t['com.affine.editCollection.save']()}
+          title={t['com.cloud-notes.m.explorer.collection.new-dialog-title']()}
+          confirmText={t['com.cloud-notes.editCollection.save']()}
           inputProps={{
-            placeholder: t['com.affine.editCollectionName.name.placeholder'](),
+            placeholder: t['com.cloud-notes.editCollectionName.name.placeholder'](),
           }}
-          descRenderer={() => t['com.affine.editCollectionName.createTips']()}
+          descRenderer={() => t['com.cloud-notes.editCollectionName.createTips']()}
         />
       </>
     );

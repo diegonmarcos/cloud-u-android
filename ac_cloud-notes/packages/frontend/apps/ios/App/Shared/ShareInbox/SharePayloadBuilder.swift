@@ -101,7 +101,7 @@ enum SharePayloadBuilder {
     guard let content else {
       return failure(
         title: title,
-        message: "AFFiNE can currently save links, text, or one image."
+        message: "Cloud Notes can currently save links, text, or one image."
       )
     }
 

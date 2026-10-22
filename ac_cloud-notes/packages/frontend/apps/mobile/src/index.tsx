@@ -1,6 +1,6 @@
 import './setup';
 
-import { Telemetry } from '@affine/core/components/telemetry';
+import { Telemetry } from '@cloud-notes/core/components/telemetry';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 

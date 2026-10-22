@@ -1,4 +1,4 @@
-import type { DateCell } from '@affine/component';
+import type { DateCell } from '@cloud-notes/component';
 import {
   DatePicker,
   IconButton,
@@ -7,24 +7,24 @@ import {
   MenuSeparator,
   Scrollable,
   useConfirmModal,
-} from '@affine/component';
-import { Guard } from '@affine/core/components/guard';
-import { MoveToTrash } from '@affine/core/components/page-list';
-import { WorkspaceServerService } from '@affine/core/modules/cloud';
+} from '@cloud-notes/component';
+import { Guard } from '@cloud-notes/core/components/guard';
+import { MoveToTrash } from '@cloud-notes/core/components/page-list';
+import { WorkspaceServerService } from '@cloud-notes/core/modules/cloud';
 import {
   type DocRecord,
   DocService,
   DocsService,
-} from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { IntegrationService } from '@affine/core/modules/integration';
-import { JournalService } from '@affine/core/modules/journal';
+} from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { IntegrationService } from '@cloud-notes/core/modules/integration';
+import { JournalService } from '@cloud-notes/core/modules/journal';
 import {
   ViewService,
   WorkbenchLink,
   WorkbenchService,
-} from '@affine/core/modules/workbench';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/workbench';
+import { useI18n } from '@cloud-notes/i18n';
 import { CalendarXmarkIcon, EditIcon } from '@blocksuite/icons/rc';
 import {
   useLiveData,
@@ -87,7 +87,7 @@ const PageItem = ({
         {title}
         {duplicate ? (
           <div className={styles.duplicateTag}>
-            {i18n['com.affine.page-properties.property.journal-duplicated']()}
+            {i18n['com.cloud-notes.page-properties.property.journal-duplicated']()}
           </div>
         ) : null}
       </div>
@@ -284,9 +284,9 @@ export const EditorJournalPanel = () => {
     >
       <div data-mobile={mobile} className={styles.calendar}>
         <DatePicker
-          weekDays={t['com.affine.calendar-date-picker.week-days']()}
-          monthNames={t['com.affine.calendar-date-picker.month-names']()}
-          todayLabel={t['com.affine.calendar-date-picker.today']()}
+          weekDays={t['com.cloud-notes.calendar-date-picker.week-days']()}
+          monthNames={t['com.cloud-notes.calendar-date-picker.month-names']()}
+          todayLabel={t['com.cloud-notes.calendar-date-picker.today']()}
           customDayRenderer={customDayRenderer}
           value={selectedDate.format('YYYY-MM-DD')}
           onChange={onDateSelect}
@@ -322,8 +322,8 @@ const DailyCountEmptyFallback = ({ name }: { name: NavItemName }) => {
   return (
     <div className={styles.dailyCountEmpty}>
       {name === 'createdToday'
-        ? t['com.affine.journal.daily-count-created-empty-tips']()
-        : t['com.affine.journal.daily-count-updated-empty-tips']()}
+        ? t['com.cloud-notes.journal.daily-count-created-empty-tips']()
+        : t['com.cloud-notes.journal.daily-count-updated-empty-tips']()}
     </div>
   );
 };
@@ -360,12 +360,12 @@ const JournalDailyCountBlock = ({ date }: JournalBlockProps) => {
     () => [
       {
         name: 'createdToday',
-        label: t['com.affine.journal.created-today'](),
+        label: t['com.cloud-notes.journal.created-today'](),
         count: createdToday.length,
       },
       {
         name: 'updatedToday',
-        label: t['com.affine.journal.updated-today'](),
+        label: t['com.cloud-notes.journal.updated-today'](),
         count: updatedToday.length,
       },
     ],
@@ -449,11 +449,11 @@ const ConflictList = ({
   const handleOpenTrashModal = useCallback(
     (docRecord: DocRecord) => {
       openConfirmModal({
-        title: t['com.affine.moveToTrash.confirmModal.title'](),
-        description: t['com.affine.moveToTrash.confirmModal.description']({
+        title: t['com.cloud-notes.moveToTrash.confirmModal.title'](),
+        description: t['com.cloud-notes.moveToTrash.confirmModal.description']({
           title: docRecord.title$.value || t['Untitled'](),
         }),
-        cancelText: t['com.affine.confirmModal.button.cancel'](),
+        cancelText: t['com.cloud-notes.confirmModal.button.cancel'](),
         confirmButtonOptions: {
           variant: 'error',
         },
@@ -508,7 +508,7 @@ const ConflictList = ({
                           disabled={!canEdit}
                         >
                           {t[
-                            'com.affine.page-properties.property.journal-remove'
+                            'com.cloud-notes.page-properties.property.journal-remove'
                           ]()}
                         </MenuItem>
                       )}
@@ -571,7 +571,7 @@ const JournalConflictBlock = ({ date }: JournalBlockProps) => {
           }
         >
           <div className={styles.journalConflictMoreTrigger}>
-            {t['com.affine.journal.conflict-show-more']({
+            {t['com.cloud-notes.journal.conflict-show-more']({
               count: (docRecords.length - MAX_CONFLICT_COUNT).toFixed(0),
             })}
           </div>

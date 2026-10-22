@@ -23,7 +23,7 @@ export const workspaceNameWrapper = style({
   gap: '8px',
   padding: '12px 0',
 });
-export const affineCloudWrapper = style({
+export const cloudNotesCloudWrapper = style({
   display: 'flex',
   flexDirection: 'column',
   gap: '6px',

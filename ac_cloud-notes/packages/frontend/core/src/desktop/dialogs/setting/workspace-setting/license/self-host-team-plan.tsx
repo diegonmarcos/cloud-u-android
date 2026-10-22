@@ -1,6 +1,6 @@
-import { Button } from '@affine/component';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
-import { useI18n } from '@affine/i18n';
+import { Button } from '@cloud-notes/component';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
+import { useI18n } from '@cloud-notes/i18n';
 import { DoneIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
@@ -29,48 +29,48 @@ export const SelfHostTeamPlan = () => {
     <div className={styles.pricingPlan}>
       <div className={styles.planCardHeader}>
         <div className={styles.planCardTitle}>
-          {t['com.affine.settings.workspace.license.benefit.team.title']()}
+          {t['com.cloud-notes.settings.workspace.license.benefit.team.title']()}
         </div>
         <div className={styles.planCardSubtitle}>
-          {t['com.affine.settings.workspace.license.benefit.team.subtitle']()}
+          {t['com.cloud-notes.settings.workspace.license.benefit.team.subtitle']()}
         </div>
       </div>
 
       <div className={styles.benefitItems}>
         <div className={styles.benefitItem}>
           <DoneIcon className={styles.doneIconStyle} />
-          {t['com.affine.settings.workspace.license.benefit.team.g1']()}
+          {t['com.cloud-notes.settings.workspace.license.benefit.team.g1']()}
         </div>
         <div className={styles.benefitItem}>
           <DoneIcon className={styles.doneIconStyle} />
-          {t['com.affine.settings.workspace.license.benefit.team.g2']({
+          {t['com.cloud-notes.settings.workspace.license.benefit.team.g2']({
             initialQuota,
             quotaPerSeat,
           })}
         </div>
         <div className={styles.benefitItem}>
           <DoneIcon className={styles.doneIconStyle} />
-          {t['com.affine.settings.workspace.license.benefit.team.g3']({
+          {t['com.cloud-notes.settings.workspace.license.benefit.team.g3']({
             quota: maxFileSize,
           })}
         </div>
         <div className={styles.benefitItem}>
           <DoneIcon className={styles.doneIconStyle} />
-          {t['com.affine.settings.workspace.license.benefit.team.g4']()}
+          {t['com.cloud-notes.settings.workspace.license.benefit.team.g4']()}
         </div>
         <div className={styles.benefitItem}>
           <DoneIcon className={styles.doneIconStyle} />
-          {t['com.affine.settings.workspace.license.benefit.team.g5']()}
+          {t['com.cloud-notes.settings.workspace.license.benefit.team.g5']()}
         </div>
         <div className={styles.benefitItem}>
           <DoneIcon className={styles.doneIconStyle} />
-          {t['com.affine.settings.workspace.license.benefit.team.g6']()}
+          {t['com.cloud-notes.settings.workspace.license.benefit.team.g6']()}
         </div>
       </div>
 
       <div className={styles.leanMoreButtonContainer}>
         <Button onClick={handleClick}>
-          {t['com.affine.settings.workspace.license.learn-more']()}
+          {t['com.cloud-notes.settings.workspace.license.learn-more']()}
         </Button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { apis } from '@affine/electron-api';
+import { apis } from '@cloud-notes/electron-api';
 import type { AppConfigSchema } from '@toeverything/infra';
 import { AppConfigStorage, defaultAppConfig } from '@toeverything/infra';
 import type { Dispatch } from 'react';

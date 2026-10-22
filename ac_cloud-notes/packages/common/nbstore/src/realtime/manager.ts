@@ -9,8 +9,8 @@ import type {
   RealtimeTopicEventOf,
   RealtimeTopicInputOf,
   RealtimeTopicName,
-} from '@affine/realtime';
-import { getRealtimeInputKey } from '@affine/realtime';
+} from '@cloud-notes/realtime';
+import { getRealtimeInputKey } from '@cloud-notes/realtime';
 import { Observable, Subject } from 'rxjs';
 
 import { SocketConnection } from '../impls/cloud/socket';

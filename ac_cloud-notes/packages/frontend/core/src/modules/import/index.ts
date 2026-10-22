@@ -16,7 +16,7 @@ export type { ImportRunContext } from './services/service';
 export type {
   NativeImportBrowserSource,
   NativeImportFormat,
-} from '@affine/electron-api';
+} from '@cloud-notes/electron-api';
 
 export function configureImportModule(framework: Framework) {
   framework

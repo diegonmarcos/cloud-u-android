@@ -1,4 +1,4 @@
-import type { I18nString } from '@affine/i18n';
+import type { I18nString } from '@cloud-notes/i18n';
 import type { Dayjs } from 'dayjs';
 import type { ComponentType, SVGProps } from 'react';
 

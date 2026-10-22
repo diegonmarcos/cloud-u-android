@@ -1,6 +1,6 @@
-import { buttonVariants } from '@affine/admin/components/ui/button';
-import { Separator } from '@affine/admin/components/ui/separator';
-import { cn } from '@affine/admin/utils';
+import { buttonVariants } from '@cloud-notes/admin/components/ui/button';
+import { Separator } from '@cloud-notes/admin/components/ui/separator';
+import { cn } from '@cloud-notes/admin/utils';
 import {
   AlbumIcon,
   ChevronRightIcon,
@@ -12,10 +12,10 @@ import {
 type Channel = 'stable' | 'canary' | 'beta' | 'internal';
 
 const appNames = {
-  stable: 'AFFiNE',
-  canary: 'AFFiNE Canary',
-  beta: 'AFFiNE Beta',
-  internal: 'AFFiNE Internal',
+  stable: 'Cloud Notes',
+  canary: 'Cloud Notes Canary',
+  beta: 'Cloud Notes Beta',
+  internal: 'Cloud Notes Internal',
 } satisfies Record<Channel, string>;
 const appName = appNames[BUILD_CONFIG.appBuildType];
 
@@ -23,7 +23,7 @@ const links = [
   {
     href: BUILD_CONFIG.githubUrl,
     icon: <GithubIcon size={20} />,
-    label: 'Star AFFiNE on GitHub',
+    label: 'Star Cloud Notes on GitHub',
   },
   {
     href: BUILD_CONFIG.githubUrl,
@@ -31,22 +31,22 @@ const links = [
     label: 'Report an Issue',
   },
   {
-    href: 'https://docs.affine.pro/docs/self-host-affine',
+    href: 'https://notes.diegonmarcos.com/docs/self-host-cloud-notes',
     icon: <AlbumIcon size={20} />,
     label: 'Self-host Document',
   },
   {
-    href: 'https://affine.pro/pricing/?type=selfhost#table',
+    href: 'https://notes.diegonmarcos.com/pricing/?type=selfhost#table',
     icon: <UploadCloudIcon size={20} />,
     label: 'Upgrade to Team',
   },
 ];
 
-export function AboutAFFiNE() {
+export function AboutCloudNotes() {
   return (
     <div className="flex flex-col h-full gap-3 py-5 px-6 w-full">
       <div className="flex items-center">
-        <span className="text-xl font-semibold">About AFFiNE</span>
+        <span className="text-xl font-semibold">About Cloud Notes</span>
       </div>
       <div className="overflow-y-auto space-y-[10px]">
         <div className="flex flex-col rounded-md border">

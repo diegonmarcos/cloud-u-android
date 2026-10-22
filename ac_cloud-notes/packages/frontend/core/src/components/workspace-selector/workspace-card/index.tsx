@@ -1,20 +1,20 @@
-import { Button, notify, Skeleton, Tooltip } from '@affine/component';
-import { Loading } from '@affine/component/ui/loading';
-import { useSystemOnline } from '@affine/core/components/hooks/use-system-online';
-import { useWorkspace } from '@affine/core/components/hooks/use-workspace';
-import { useWorkspaceInfo } from '@affine/core/components/hooks/use-workspace-info';
+import { Button, notify, Skeleton, Tooltip } from '@cloud-notes/component';
+import { Loading } from '@cloud-notes/component/ui/loading';
+import { useSystemOnline } from '@cloud-notes/core/components/hooks/use-system-online';
+import { useWorkspace } from '@cloud-notes/core/components/hooks/use-workspace';
+import { useWorkspaceInfo } from '@cloud-notes/core/components/hooks/use-workspace-info';
 import {
   getSelfHostedServerName,
   ServersService,
-} from '@affine/core/modules/cloud';
+} from '@cloud-notes/core/modules/cloud';
 import {
   type WorkspaceMetadata,
   type WorkspaceProfileInfo,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
-import { UNTITLED_WORKSPACE_NAME } from '@affine/env/constant';
-import { ServerDeploymentType } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/workspace';
+import { UNTITLED_WORKSPACE_NAME } from '@cloud-notes/env/constant';
+import { ServerDeploymentType } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   ArrowDownSmallIcon,
   CloudWorkspaceIcon,
@@ -34,7 +34,7 @@ import clsx from 'clsx';
 import type { HTMLAttributes } from 'react';
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useAsyncCallback } from '../../hooks/affine-async-hooks';
+import { useAsyncCallback } from '../../hooks/cloud-notes-async-hooks';
 import { useCatchEventCallback } from '../../hooks/use-catch-event-hook';
 import { useNavigateHelper } from '../../hooks/use-navigate-helper';
 import { WorkspaceAvatar } from '../../workspace-avatar';
@@ -46,7 +46,7 @@ const RemoteWorkspaceStatus = ({ selfHosted }: { selfHosted?: boolean }) => {
   return (
     <>
       <Icon />
-      {selfHosted ? 'AFFiNE' : 'Cloud'}
+      {selfHosted ? 'Cloud Notes' : 'Cloud'}
     </>
   );
 };
@@ -106,7 +106,7 @@ const useSyncEngineSyncProgress = (meta: WorkspaceMetadata) => {
     serverConfig?.type === ServerDeploymentType.Selfhosted;
   const syncTarget = isSelfHostedServer
     ? getSelfHostedServerName(serverConfig.serverName)
-    : 'AFFiNE Cloud';
+    : 'Cloud Notes';
 
   const engineState = useLiveData(
     useMemo(() => {
@@ -415,13 +415,13 @@ export const WorkspaceCard = forwardRef<
         <div className={styles.suffixIcons}>
           {hideCollaborationIcon || information?.isOwner ? null : (
             <Tooltip
-              content={t['com.affine.settings.workspace.state.joined']()}
+              content={t['com.cloud-notes.settings.workspace.state.joined']()}
             >
               <CollaborationIcon className={styles.collaborationIcon} />
             </Tooltip>
           )}
           {hideTeamWorkspaceIcon || !information?.isTeam ? null : (
-            <Tooltip content={t['com.affine.settings.workspace.state.team']()}>
+            <Tooltip content={t['com.cloud-notes.settings.workspace.state.team']()}>
               <TeamWorkspaceIcon className={styles.collaborationIcon} />
             </Tooltip>
           )}

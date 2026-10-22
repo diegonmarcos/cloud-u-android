@@ -5,20 +5,20 @@ import {
   PropertyCollapsibleContent,
   PropertyCollapsibleSection,
   Scrollable,
-} from '@affine/component';
-import { useGuard } from '@affine/core/components/guard';
+} from '@cloud-notes/component';
+import { useGuard } from '@cloud-notes/core/components/guard';
 import {
   type DefaultOpenProperty,
   WorkspacePropertyRow,
-} from '@affine/core/components/properties';
-import { CreatePropertyMenuItems } from '@affine/core/components/properties/menu/create-doc-property';
-import { LinksRow } from '@affine/core/desktop/dialogs/doc-info/links-row';
-import { TimeRow } from '@affine/core/desktop/dialogs/doc-info/time-row';
-import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
-import { DocDatabaseBacklinkInfo } from '@affine/core/modules/doc-info';
-import { DocLinksService } from '@affine/core/modules/doc-link';
-import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/components/properties';
+import { CreatePropertyMenuItems } from '@cloud-notes/core/components/properties/menu/create-doc-property';
+import { LinksRow } from '@cloud-notes/core/desktop/dialogs/doc-info/links-row';
+import { TimeRow } from '@cloud-notes/core/desktop/dialogs/doc-info/time-row';
+import type { DocCustomPropertyInfo } from '@cloud-notes/core/modules/db';
+import { DocDatabaseBacklinkInfo } from '@cloud-notes/core/modules/doc-info';
+import { DocLinksService } from '@cloud-notes/core/modules/doc-link';
+import { WorkspacePropertyService } from '@cloud-notes/core/modules/workspace-property';
+import { useI18n } from '@cloud-notes/i18n';
 import { PlusIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { Suspense, useCallback, useEffect, useState } from 'react';
@@ -61,24 +61,24 @@ export const DocInfoSheet = ({
           <TimeRow docId={docId} className={styles.timeRow} />
           <Divider size="thinner" />
           <PropertyCollapsibleSection
-            title={t.t('com.affine.workspace.properties')}
+            title={t.t('com.cloud-notes.workspace.properties')}
           >
             <PropertyCollapsibleContent
               className={styles.tableBodyRoot}
               collapseButtonText={({ hide, isCollapsed }) =>
                 isCollapsed
                   ? hide === 1
-                    ? t['com.affine.page-properties.more-property.one']({
+                    ? t['com.cloud-notes.page-properties.more-property.one']({
                         count: hide.toString(),
                       })
-                    : t['com.affine.page-properties.more-property.more']({
+                    : t['com.cloud-notes.page-properties.more-property.more']({
                         count: hide.toString(),
                       })
                   : hide === 1
-                    ? t['com.affine.page-properties.hide-property.one']({
+                    ? t['com.cloud-notes.page-properties.hide-property.one']({
                         count: hide.toString(),
                       })
-                    : t['com.affine.page-properties.hide-property.more']({
+                    : t['com.cloud-notes.page-properties.hide-property.more']({
                         count: hide.toString(),
                       })
               }
@@ -98,7 +98,7 @@ export const DocInfoSheet = ({
                   prefix={<PlusIcon />}
                   className={styles.addPropertyButton}
                 >
-                  {t['com.affine.page-properties.add-property']()}
+                  {t['com.cloud-notes.page-properties.add-property']()}
                 </Button>
               ) : (
                 <Menu
@@ -116,7 +116,7 @@ export const DocInfoSheet = ({
                     prefix={<PlusIcon />}
                     className={styles.addPropertyButton}
                   >
-                    {t['com.affine.page-properties.add-property']()}
+                    {t['com.cloud-notes.page-properties.add-property']()}
                   </Button>
                 </Menu>
               )}
@@ -132,7 +132,7 @@ export const DocInfoSheet = ({
                 className={styles.linksRow}
                 references={backlinks}
                 count={backlinks.length}
-                label={t['com.affine.page-properties.backlinks']()}
+                label={t['com.cloud-notes.page-properties.backlinks']()}
               />
               <Divider size="thinner" />
             </>
@@ -143,7 +143,7 @@ export const DocInfoSheet = ({
                 className={styles.linksRow}
                 references={links}
                 count={links.length}
-                label={t['com.affine.page-properties.outgoing-links']()}
+                label={t['com.cloud-notes.page-properties.outgoing-links']()}
               />
               <Divider size="thinner" />
             </>

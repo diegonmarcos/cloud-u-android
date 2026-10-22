@@ -1,4 +1,4 @@
-import type { PackageName } from '@affine-tools/utils/workspace';
+import type { PackageName } from '@cloud-notes-tools/utils/workspace';
 
 import { Option, PackageSelectorCommand } from './command';
 
@@ -6,14 +6,14 @@ export class DevCommand extends PackageSelectorCommand {
   static override paths = [['dev'], ['d']];
 
   protected override availablePackages: PackageName[] = [
-    '@affine/web',
-    '@affine/server',
-    '@affine/electron',
-    '@affine/electron-renderer',
-    '@affine/mobile',
-    '@affine/ios',
-    '@affine/android',
-    '@affine/admin',
+    '@cloud-notes/web',
+    '@cloud-notes/server',
+    '@cloud-notes/electron',
+    '@cloud-notes/electron-renderer',
+    '@cloud-notes/mobile',
+    '@cloud-notes/ios',
+    '@cloud-notes/android',
+    '@cloud-notes/admin',
   ];
 
   protected deps = Option.Boolean('--deps', {

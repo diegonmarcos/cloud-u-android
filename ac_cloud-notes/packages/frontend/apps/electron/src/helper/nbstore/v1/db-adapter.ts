@@ -1,5 +1,5 @@
-import type { InsertRow } from '@affine/native';
-import { SqliteConnection } from '@affine/native';
+import type { InsertRow } from '@cloud-notes/native';
+import { SqliteConnection } from '@cloud-notes/native';
 import type { ByteKVBehavior } from '@toeverything/infra/storage';
 
 import { logger } from '../../logger';

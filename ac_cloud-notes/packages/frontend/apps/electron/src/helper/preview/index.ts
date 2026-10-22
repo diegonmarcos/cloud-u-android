@@ -8,9 +8,9 @@ import {
   renderTypstSvg,
   type TypstRenderRequest,
   type TypstRenderResult,
-} from '@affine/native';
+} from '@cloud-notes/native';
 
-const TYPST_FONT_DIRS_ENV = 'AFFINE_TYPST_FONT_DIRS';
+const TYPST_FONT_DIRS_ENV = 'CLOUD_NOTES_TYPST_FONT_DIRS';
 
 function parseTypstFontDirsFromEnv() {
   const value = process.env[TYPST_FONT_DIRS_ENV];

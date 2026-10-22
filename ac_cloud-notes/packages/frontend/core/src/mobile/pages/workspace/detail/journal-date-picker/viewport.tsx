@@ -1,5 +1,5 @@
-import { useGlobalEvent } from '@affine/core/mobile/hooks/use-global-events';
-import { SwipeHelper } from '@affine/core/mobile/utils';
+import { useGlobalEvent } from '@cloud-notes/core/mobile/hooks/use-global-events';
+import { SwipeHelper } from '@cloud-notes/core/mobile/utils';
 import { animate, eases } from 'animejs';
 import clsx from 'clsx';
 import dayjs from 'dayjs';

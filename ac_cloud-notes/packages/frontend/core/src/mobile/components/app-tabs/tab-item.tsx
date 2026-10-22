@@ -1,4 +1,4 @@
-import { GlobalCacheService } from '@affine/core/modules/storage';
+import { GlobalCacheService } from '@cloud-notes/core/modules/storage';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import { type PropsWithChildren, useCallback, useMemo } from 'react';
 

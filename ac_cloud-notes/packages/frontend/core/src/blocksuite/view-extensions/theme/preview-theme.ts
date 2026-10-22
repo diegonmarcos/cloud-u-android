@@ -1,28 +1,28 @@
-import { AppThemeService } from '@affine/core/modules/theme';
-import { ColorScheme } from '@blocksuite/affine/model';
+import { AppThemeService } from '@cloud-notes/core/modules/theme';
+import { ColorScheme } from '@blocksuite/cloud-notes/model';
 import {
   type ThemeExtension,
   ThemeExtensionIdentifier,
-} from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/shared/services';
 import {
   createSignalFromObservable,
   type Signal,
-} from '@blocksuite/affine/shared/utils';
+} from '@blocksuite/cloud-notes/shared/utils';
 import {
   type BlockStdScope,
   LifeCycleWatcher,
   StdIdentifier,
-} from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/std';
 import type { Container } from '@blocksuite/global/di';
 import type { FrameworkProvider } from '@toeverything/infra';
 import type { Observable } from 'rxjs';
 
 export function getPreviewThemeExtension(framework: FrameworkProvider) {
-  class AffinePagePreviewThemeExtension
+  class CloudNotesPagePreviewThemeExtension
     extends LifeCycleWatcher
     implements ThemeExtension
   {
-    static override readonly key = 'affine-page-preview-theme';
+    static override readonly key = 'cloud-notes-page-preview-theme';
 
     readonly theme: Signal<ColorScheme>;
 
@@ -30,7 +30,7 @@ export function getPreviewThemeExtension(framework: FrameworkProvider) {
 
     static override setup(di: Container) {
       super.setup(di);
-      di.override(ThemeExtensionIdentifier, AffinePagePreviewThemeExtension, [
+      di.override(ThemeExtensionIdentifier, CloudNotesPagePreviewThemeExtension, [
         StdIdentifier,
       ]);
     }
@@ -69,5 +69,5 @@ export function getPreviewThemeExtension(framework: FrameworkProvider) {
     }
   }
 
-  return AffinePagePreviewThemeExtension;
+  return CloudNotesPagePreviewThemeExtension;
 }

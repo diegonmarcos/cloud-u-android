@@ -1,4 +1,4 @@
-import { DebugLogger } from '@affine/debug';
+import { DebugLogger } from '@cloud-notes/debug';
 import {
   effect,
   Entity,
@@ -16,7 +16,7 @@ import type { WorkspaceFlavoursService } from '../services/flavours';
 import type { WorkspaceProfileCacheStore } from '../stores/profile-cache';
 import type { Workspace } from './workspace';
 
-const logger = new DebugLogger('affine:workspace-profile');
+const logger = new DebugLogger('cloud-notes:workspace-profile');
 
 export interface WorkspaceProfileInfo {
   avatar?: string;

@@ -1,5 +1,5 @@
-import { Scrollable } from '@affine/component';
-import { ThemeEditorService } from '@affine/core/modules/theme-editor';
+import { Scrollable } from '@cloud-notes/component';
+import { ThemeEditorService } from '@cloud-notes/core/modules/theme-editor';
 import { useLiveData, useService } from '@toeverything/infra';
 
 import type { TreeNode } from '../resource';

@@ -1,5 +1,5 @@
-import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
-import { useI18n } from '@affine/i18n';
+import type { DocCustomPropertyInfo } from '@cloud-notes/core/modules/db';
+import { useI18n } from '@cloud-notes/i18n';
 
 import { WorkspacePropertyTypes } from '../workspace-property-types';
 

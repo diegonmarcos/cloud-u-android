@@ -1,12 +1,12 @@
-import { useMutation } from '@affine/admin/use-mutation';
-import { useQuery } from '@affine/admin/use-query';
-import { notify } from '@affine/component';
-import { UserFriendlyError } from '@affine/error';
+import { useMutation } from '@cloud-notes/admin/use-mutation';
+import { useQuery } from '@cloud-notes/admin/use-query';
+import { notify } from '@cloud-notes/component';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   appConfigQuery,
   type UpdateAppConfigInput,
   updateAppConfigMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { cloneDeep, get, merge, set } from 'lodash-es';
 import { useCallback, useEffect, useState } from 'react';
 

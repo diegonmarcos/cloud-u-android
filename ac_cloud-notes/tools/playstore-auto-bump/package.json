@@ -1,5 +1,5 @@
 {
-  "name": "@affine/playstore-auto-bump",
+  "name": "@cloud-notes/playstore-auto-bump",
   "version": "0.27.5",
   "private": true,
   "type": "module",
@@ -9,8 +9,8 @@
     "bump": "r ./index.ts"
   },
   "dependencies": {
-    "@affine-tools/cli": "workspace:*",
-    "@affine-tools/utils": "workspace:*",
+    "@cloud-notes-tools/cli": "workspace:*",
+    "@cloud-notes-tools/utils": "workspace:*",
     "@googleapis/androidpublisher": "^36.0.0",
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },

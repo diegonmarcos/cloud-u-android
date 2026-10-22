@@ -1,23 +1,23 @@
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import type { DocMode } from '@blocksuite/affine/model';
-import { ThemeProvider } from '@blocksuite/affine/shared/services';
-import { BlockStdScope, ShadowlessElement } from '@blocksuite/affine/std';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
+import { ThemeProvider } from '@blocksuite/cloud-notes/shared/services';
+import { BlockStdScope, ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import {
   type BlockModel,
   type ExtensionType,
   type Store,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import { computed, signal } from '@preact/signals-core';
 import { css, html } from 'lit';
 import { property } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { when } from 'lit/directives/when.js';
 
-export class TestAffineEditorContainer extends SignalWatcher(
+export class TestCloudNotesEditorContainer extends SignalWatcher(
   WithDisposable(ShadowlessElement)
 ) {
   static override styles = css`
-    .affine-page-viewport {
+    .cloud-notes-page-viewport {
       position: relative;
       display: flex;
       flex-direction: column;
@@ -25,21 +25,21 @@ export class TestAffineEditorContainer extends SignalWatcher(
       overflow-y: auto;
       container-name: viewport;
       container-type: inline-size;
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
     }
-    .affine-page-viewport * {
+    .cloud-notes-page-viewport * {
       box-sizing: border-box;
     }
 
     @media print {
-      .affine-page-viewport {
+      .cloud-notes-page-viewport {
         height: auto;
       }
     }
 
     .playground-page-editor-container {
       flex-grow: 1;
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
       display: block;
     }
 
@@ -54,8 +54,8 @@ export class TestAffineEditorContainer extends SignalWatcher(
     }
 
     .edgeless-editor-container {
-      font-family: var(--affine-font-family);
-      background: var(--affine-background-primary-color);
+      font-family: var(--cloud-notes-font-family);
+      background: var(--cloud-notes-background-primary-color);
       display: block;
       height: 100%;
       position: relative;
@@ -72,7 +72,7 @@ export class TestAffineEditorContainer extends SignalWatcher(
       }
     }
 
-    .affine-edgeless-viewport {
+    .cloud-notes-edgeless-viewport {
       display: block;
       height: 100%;
       position: relative;
@@ -188,8 +188,8 @@ export class TestAffineEditorContainer extends SignalWatcher(
           data-theme=${mode === 'page' ? appTheme : edgelessTheme}
           class=${
             mode === 'page'
-              ? 'affine-page-viewport'
-              : 'affine-edgeless-viewport'
+              ? 'cloud-notes-page-viewport'
+              : 'cloud-notes-edgeless-viewport'
           }
         >
           ${when(
@@ -220,6 +220,6 @@ export class TestAffineEditorContainer extends SignalWatcher(
 
 declare global {
   interface HTMLElementTagNameMap {
-    'affine-editor-container': TestAffineEditorContainer;
+    'cloud-notes-editor-container': TestCloudNotesEditorContainer;
   }
 }

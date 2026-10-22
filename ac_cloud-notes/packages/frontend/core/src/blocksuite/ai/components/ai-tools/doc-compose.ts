@@ -1,11 +1,11 @@
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { getAFFiNEWorkspaceSchema } from '@affine/core/modules/workspace';
-import { getEmbedLinkedDocIcons } from '@blocksuite/affine/blocks/embed-doc';
-import { RefNodeSlotsProvider } from '@blocksuite/affine/inlines/reference';
-import type { ColorScheme } from '@blocksuite/affine/model';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { MarkdownTransformer } from '@blocksuite/affine/widgets/linked-doc';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { getCloudNotesWorkspaceSchema } from '@cloud-notes/core/modules/workspace';
+import { getEmbedLinkedDocIcons } from '@blocksuite/cloud-notes/blocks/embed-doc';
+import { RefNodeSlotsProvider } from '@blocksuite/cloud-notes/inlines/reference';
+import type { ColorScheme } from '@blocksuite/cloud-notes/model';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { MarkdownTransformer } from '@blocksuite/cloud-notes/widgets/linked-doc';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import { CopyIcon, PageIcon, ToolIcon } from '@blocksuite/icons/lit';
 import type { BlockStdScope } from '@blocksuite/std';
 import { css, html } from 'lit';
@@ -163,7 +163,7 @@ export class DocComposeTool extends ArtifactTool<
         const refNodeSlots = std.getOptional(RefNodeSlotsProvider);
         const docId = await MarkdownTransformer.importMarkdownToDoc({
           collection: workspace,
-          schema: getAFFiNEWorkspaceSchema(),
+          schema: getCloudNotesWorkspaceSchema(),
           markdown: successResult.markdown,
           fileName: title,
           extensions: getStoreManager().config.init().value.get('store'),

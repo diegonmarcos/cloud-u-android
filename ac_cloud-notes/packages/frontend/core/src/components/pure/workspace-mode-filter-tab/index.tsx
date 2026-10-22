@@ -1,8 +1,8 @@
-import { RadioGroup, type RadioItem } from '@affine/component';
-import type { AllPageFilterOption } from '@affine/core/components/atoms';
-import { allPageFilterSelectAtom } from '@affine/core/components/atoms';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { useI18n } from '@affine/i18n';
+import { RadioGroup, type RadioItem } from '@cloud-notes/component';
+import type { AllPageFilterOption } from '@cloud-notes/core/components/atoms';
+import { allPageFilterSelectAtom } from '@cloud-notes/core/components/atoms';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { useI18n } from '@cloud-notes/i18n';
 import { useService } from '@toeverything/infra';
 import { useAtom } from 'jotai';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -51,13 +51,13 @@ export const WorkspaceModeFilterTab = ({
         () => [
           {
             value: 'docs',
-            label: t['com.affine.docs.header'](),
+            label: t['com.cloud-notes.docs.header'](),
             testId: 'workspace-docs-button',
             className: styles.filterTab,
           },
           {
             value: 'collections',
-            label: t['com.affine.collections.header'](),
+            label: t['com.cloud-notes.collections.header'](),
             testId: 'workspace-collections-button',
             className: styles.filterTab,
           },

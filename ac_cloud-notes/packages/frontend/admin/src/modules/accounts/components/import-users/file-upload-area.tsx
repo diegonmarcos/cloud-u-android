@@ -1,4 +1,4 @@
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import { UploadIcon } from '@blocksuite/icons/rc';
 import {
   type ChangeEvent,

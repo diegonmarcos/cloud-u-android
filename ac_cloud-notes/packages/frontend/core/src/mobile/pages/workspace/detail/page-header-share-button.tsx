@@ -1,8 +1,8 @@
-import { IconButton, MobileMenu } from '@affine/component';
-import { useEnableCloud } from '@affine/core/components/hooks/affine/use-enable-cloud';
-import { DocService } from '@affine/core/modules/doc';
-import { ShareMenuContent } from '@affine/core/modules/share-menu';
-import { WorkspaceService } from '@affine/core/modules/workspace';
+import { IconButton, MobileMenu } from '@cloud-notes/component';
+import { useEnableCloud } from '@cloud-notes/core/components/hooks/cloud-notes/use-enable-cloud';
+import { DocService } from '@cloud-notes/core/modules/doc';
+import { ShareMenuContent } from '@cloud-notes/core/modules/share-menu';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
 import { ShareiOsIcon } from '@blocksuite/icons/rc';
 import { useServices } from '@toeverything/infra';
 
@@ -28,7 +28,7 @@ export const PageHeaderShareButton = () => {
           <ShareMenuContent
             workspaceMetadata={workspace.meta}
             currentPage={doc}
-            onEnableAffineCloud={() =>
+            onEnableCloudNotesCloud={() =>
               confirmEnableCloud(workspace, {
                 openPageId: doc.id,
               })

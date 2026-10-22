@@ -151,7 +151,7 @@ Default.args = {
 };
 
 const selectList = [
-  { name: 'AFFiNE', value: '1' },
+  { name: 'Cloud Notes', value: '1' },
   { name: 'blocksuite', value: '2' },
   { name: 'octobase', value: '3' },
   { name: 'virgo', value: '4' },

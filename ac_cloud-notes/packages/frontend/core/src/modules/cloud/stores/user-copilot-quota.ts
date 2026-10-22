@@ -1,4 +1,4 @@
-import { copilotQuotaQuery } from '@affine/graphql';
+import { copilotQuotaQuery } from '@cloud-notes/graphql';
 import { Store } from '@toeverything/infra';
 
 import type { GraphQLService } from '../services/graphql';

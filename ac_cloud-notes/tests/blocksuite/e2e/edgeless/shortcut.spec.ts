@@ -243,7 +243,7 @@ test.describe('zooming', () => {
 
     await zoomFitByKeyboard(page);
     const shapeContained = await page.evaluate(() => {
-      const edgelessBlock = document.querySelector('affine-edgeless-root');
+      const edgelessBlock = document.querySelector('cloud-notes-edgeless-root');
       if (!edgelessBlock) {
         throw new Error('edgeless block not found');
       }

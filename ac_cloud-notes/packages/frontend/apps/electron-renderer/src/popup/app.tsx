@@ -1,10 +1,10 @@
-import { ThemeProvider } from '@affine/core/components/theme-provider';
-import { configureElectronStateStorageImpls } from '@affine/core/desktop/storage';
-import { configureDesktopApiModule } from '@affine/core/modules/desktop-api';
-import { configureI18nModule, I18nProvider } from '@affine/core/modules/i18n';
-import { configureStorageModule } from '@affine/core/modules/storage';
-import { configureEssentialThemeModule } from '@affine/core/modules/theme';
-import { appInfo } from '@affine/electron-api';
+import { ThemeProvider } from '@cloud-notes/core/components/theme-provider';
+import { configureElectronStateStorageImpls } from '@cloud-notes/core/desktop/storage';
+import { configureDesktopApiModule } from '@cloud-notes/core/modules/desktop-api';
+import { configureI18nModule, I18nProvider } from '@cloud-notes/core/modules/i18n';
+import { configureStorageModule } from '@cloud-notes/core/modules/storage';
+import { configureEssentialThemeModule } from '@cloud-notes/core/modules/theme';
+import { appInfo } from '@cloud-notes/electron-api';
 import { Framework, FrameworkRoot } from '@toeverything/infra';
 
 import * as styles from './app.css';

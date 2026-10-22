@@ -1,4 +1,4 @@
-import type { Collection as LegacyCollectionInfo } from '@affine/env/filter';
+import type { Collection as LegacyCollectionInfo } from '@cloud-notes/env/filter';
 import {
   Store,
   yjsGetPath,

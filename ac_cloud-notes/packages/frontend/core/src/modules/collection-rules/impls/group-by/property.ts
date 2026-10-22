@@ -1,4 +1,4 @@
-import type { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
+import type { WorkspacePropertyService } from '@cloud-notes/core/modules/workspace-property';
 import { Service } from '@toeverything/infra';
 import type { Observable } from 'rxjs';
 import { switchMap } from 'rxjs';

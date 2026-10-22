@@ -1,15 +1,15 @@
 // todo(@pengx17): remove jotai
-import { UrlService } from '@affine/core/modules/url';
-import type { UpdateMeta } from '@affine/electron-api';
-import { apis, events } from '@affine/electron-api';
-import { track } from '@affine/track';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import type { UpdateMeta } from '@cloud-notes/electron-api';
+import { apis, events } from '@cloud-notes/electron-api';
+import { track } from '@cloud-notes/track';
 import { appSettingAtom, useService } from '@toeverything/infra';
 import { atom, useAtom, useAtomValue } from 'jotai';
 import { atomWithObservable, atomWithStorage } from 'jotai/utils';
 import { useCallback, useState } from 'react';
 import { Observable } from 'rxjs';
 
-import { useAsyncCallback } from './affine-async-hooks';
+import { useAsyncCallback } from './cloud-notes-async-hooks';
 
 function rpcToObservable<
   T,
@@ -69,7 +69,7 @@ export const downloadProgressAtom = atomWithObservable(() => {
 });
 
 export const changelogCheckedAtom = atomWithStorage<Record<string, boolean>>(
-  'affine:client-changelog-checked',
+  'cloud-notes:client-changelog-checked',
   {}
 );
 

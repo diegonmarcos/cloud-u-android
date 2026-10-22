@@ -1,7 +1,7 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 
-import { Package } from '@affine-tools/utils/workspace';
+import { Package } from '@cloud-notes-tools/utils/workspace';
 import {
   androidpublisher_v3,
   auth as google_auth,
@@ -55,7 +55,7 @@ export async function fetchVersionCode(applicationId: string): Promise<number> {
 
 const versionCodeRegexPattern = /(versionCode(?:\s|=)*)(.*)/;
 
-const gradlePath = new Package('@affine/android').join(
+const gradlePath = new Package('@cloud-notes/android').join(
   'App/app/build.gradle'
 ).value;
 
@@ -64,7 +64,7 @@ let gradleVersionCode = 0;
 const gradleFile = fs.readFileSync(gradlePath, 'utf8');
 const matched = gradleFile.match(versionCodeRegexPattern);
 
-const remoteVersion = await fetchVersionCode('app.affine.pro');
+const remoteVersion = await fetchVersionCode('app.cloudnotes.pro');
 
 gradleVersionCode = parseInt(matched?.[2] || '0');
 gradleVersionCode = isNaN(gradleVersionCode) ? 0 : gradleVersionCode;

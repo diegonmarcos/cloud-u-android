@@ -1,5 +1,5 @@
-import { DebugLogger } from '@affine/debug';
-import { GraphQLError } from '@affine/error';
+import { DebugLogger } from '@cloud-notes/debug';
+import { GraphQLError } from '@cloud-notes/error';
 import type { ExecutionResult } from 'graphql';
 import { isNil, isObject, merge } from 'lodash-es';
 

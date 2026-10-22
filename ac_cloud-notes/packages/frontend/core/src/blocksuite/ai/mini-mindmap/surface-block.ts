@@ -2,13 +2,13 @@
 import {
   CanvasRenderer,
   type SurfaceBlockModel,
-} from '@blocksuite/affine/blocks/surface';
-import { fitContent } from '@blocksuite/affine/gfx/shape';
-import type { Bound } from '@blocksuite/affine/global/gfx';
-import type { Color, ShapeElementModel } from '@blocksuite/affine/model';
-import { ThemeProvider } from '@blocksuite/affine/shared/services';
-import { BlockComponent } from '@blocksuite/affine/std';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
+} from '@blocksuite/cloud-notes/blocks/surface';
+import { fitContent } from '@blocksuite/cloud-notes/gfx/shape';
+import type { Bound } from '@blocksuite/cloud-notes/global/gfx';
+import type { Color, ShapeElementModel } from '@blocksuite/cloud-notes/model';
+import { ThemeProvider } from '@blocksuite/cloud-notes/shared/services';
+import { BlockComponent } from '@blocksuite/cloud-notes/std';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
 import { html } from 'lit';
 import { query } from 'lit/decorators.js';
 
@@ -142,17 +142,17 @@ export class MindmapSurfaceBlock extends BlockComponent<SurfaceBlockModel> {
   override render() {
     return html`
       <style>
-        .affine-mini-mindmap-surface {
+        .cloud-notes-mini-mindmap-surface {
           width: 100%;
           height: 100%;
         }
       </style>
-      <div class="affine-mini-mindmap-surface">
+      <div class="cloud-notes-mini-mindmap-surface">
         <!-- attach cavnas later in renderer -->
       </div>
     `;
   }
 
-  @query('.affine-mini-mindmap-surface')
+  @query('.cloud-notes-mini-mindmap-surface')
   accessor editorContainer!: HTMLDivElement;
 }

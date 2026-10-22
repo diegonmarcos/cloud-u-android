@@ -1,4 +1,4 @@
-name: 'AFFiNE Node.js Setup'
+name: 'Cloud Notes Node.js Setup'
 description: 'Node.js setup for CI, including cache configuration'
 inputs:
   extra-flags:

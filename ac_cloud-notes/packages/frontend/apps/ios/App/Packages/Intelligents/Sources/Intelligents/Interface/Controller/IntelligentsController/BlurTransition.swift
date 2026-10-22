@@ -87,14 +87,14 @@ class BlurTransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
 
     toView.frame = containerView.bounds
     toView.alpha = 0
-    toView.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
+    toView.transform = CGCloudNotesTransform(scaleX: 1.05, y: 1.05)
     containerView.addSubview(toView)
 
     toView.layoutIfNeeded()
 
     performWithAnimation(animations: {
       blurEffectView.effect = UIBlurEffect(style: .systemMaterial)
-      fromViewSnapshot.transform = CGAffineTransform(scaleX: 0.95, y: 0.95)
+      fromViewSnapshot.transform = CGCloudNotesTransform(scaleX: 0.95, y: 0.95)
       toView.alpha = 1
       toView.transform = .identity
       fromView.layoutIfNeeded()
@@ -137,7 +137,7 @@ class BlurTransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     performWithAnimation(animations: {
       fromViewSnapshot.transform = .identity
       blurEffectView.effect = nil
-      fromView.transform = CGAffineTransform(scaleX: 1.05, y: 1.05)
+      fromView.transform = CGCloudNotesTransform(scaleX: 1.05, y: 1.05)
       fromView.alpha = 0
     }) { _ in
       let success = !transitionContext.transitionWasCancelled

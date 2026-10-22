@@ -1,4 +1,4 @@
-import type { DocMode } from '@blocksuite/affine/model';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import { NewXxxEdgelessIcon, NewXxxPageIcon } from '@blocksuite/icons/rc';
 import { Entity, LiveData } from '@toeverything/infra';
 
@@ -8,7 +8,7 @@ import type { QuickSearchItem } from '../types/item';
 
 const group = {
   id: 'creation',
-  label: { i18nKey: 'com.affine.quicksearch.group.creation' },
+  label: { i18nKey: 'com.cloud-notes.quicksearch.group.creation' },
   score: 0,
 } as QuickSearchGroup;
 
@@ -30,7 +30,7 @@ export class CreationQuickSearchSession
         id: 'creation:create-page',
         source: 'creation',
         label: {
-          i18nKey: 'com.affine.cmdk.affine.create-new-page-as',
+          i18nKey: 'com.cloud-notes.cmdk.cloud-notes.create-new-page-as',
           options: { keyWord: query },
         },
         group,
@@ -41,7 +41,7 @@ export class CreationQuickSearchSession
         id: 'creation:create-edgeless',
         source: 'creation',
         label: {
-          i18nKey: 'com.affine.cmdk.affine.create-new-edgeless-as',
+          i18nKey: 'com.cloud-notes.cmdk.cloud-notes.create-new-edgeless-as',
           options: { keyWord: query },
         },
         group,

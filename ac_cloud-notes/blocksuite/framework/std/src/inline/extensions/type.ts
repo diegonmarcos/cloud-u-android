@@ -25,10 +25,10 @@ export type InlineSpecs<
 };
 
 export type InlineMarkdownMatchAction<
-  // @ts-expect-error We allow to covariance for AffineTextAttributes
-  in AffineTextAttributes extends BaseTextAttributes = BaseTextAttributes,
+  // @ts-expect-error We allow to covariance for CloudNotesTextAttributes
+  in CloudNotesTextAttributes extends BaseTextAttributes = BaseTextAttributes,
 > = (props: {
-  inlineEditor: InlineEditor<AffineTextAttributes>;
+  inlineEditor: InlineEditor<CloudNotesTextAttributes>;
   prefixText: string;
   inlineRange: InlineRange;
   pattern: RegExp;
@@ -36,9 +36,9 @@ export type InlineMarkdownMatchAction<
 }) => void;
 
 export type InlineMarkdownMatch<
-  AffineTextAttributes extends BaseTextAttributes = BaseTextAttributes,
+  CloudNotesTextAttributes extends BaseTextAttributes = BaseTextAttributes,
 > = {
   name: string;
   pattern: RegExp;
-  action: InlineMarkdownMatchAction<AffineTextAttributes>;
+  action: InlineMarkdownMatchAction<CloudNotesTextAttributes>;
 };

@@ -1,5 +1,5 @@
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { track } from '@affine/track';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import { track } from '@cloud-notes/track';
 import { CloseIcon, DownloadIcon } from '@blocksuite/icons/rc';
 import clsx from 'clsx';
 import { useCallback, useState } from 'react';
@@ -22,7 +22,7 @@ export function AppDownloadButton({
   // TODO(@JimmFly): unify this type of literal value.
   const handleClick = useCallback(() => {
     track.$.navigationPanel.bottomButtons.downloadApp();
-    const url = `https://affine.pro/download?channel=stable`;
+    const url = `https://notes.diegonmarcos.com/download?channel=stable`;
     open(url, '_blank');
   }, []);
 

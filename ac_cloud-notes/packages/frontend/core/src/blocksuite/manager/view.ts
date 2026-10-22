@@ -1,44 +1,44 @@
-import type { ReactToLit } from '@affine/component';
-import { AIViewExtension } from '@affine/core/blocksuite/view-extensions/ai';
-import { CloudViewExtension } from '@affine/core/blocksuite/view-extensions/cloud';
-import { CodeBlockPreviewViewExtension } from '@affine/core/blocksuite/view-extensions/code-block-preview';
-import { CommentViewExtension } from '@affine/core/blocksuite/view-extensions/comment';
-import { AffineDatabaseViewExtension } from '@affine/core/blocksuite/view-extensions/database';
+import type { ReactToLit } from '@cloud-notes/component';
+import { AIViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/ai';
+import { CloudViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/cloud';
+import { CodeBlockPreviewViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/code-block-preview';
+import { CommentViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/comment';
+import { CloudNotesDatabaseViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/database';
 import {
   EdgelessBlockHeaderConfigViewExtension,
   type EdgelessBlockHeaderViewOptions,
-} from '@affine/core/blocksuite/view-extensions/edgeless-block-header';
-import { AffineEditorConfigViewExtension } from '@affine/core/blocksuite/view-extensions/editor-config';
-import { createDatabaseOptionsConfig } from '@affine/core/blocksuite/view-extensions/editor-config/database';
-import { createLinkedWidgetConfig } from '@affine/core/blocksuite/view-extensions/editor-config/linked';
+} from '@cloud-notes/core/blocksuite/view-extensions/edgeless-block-header';
+import { CloudNotesEditorConfigViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/editor-config';
+import { createDatabaseOptionsConfig } from '@cloud-notes/core/blocksuite/view-extensions/editor-config/database';
+import { createLinkedWidgetConfig } from '@cloud-notes/core/blocksuite/view-extensions/editor-config/linked';
 import {
-  AffineEditorViewExtension,
-  type AffineEditorViewOptions,
-} from '@affine/core/blocksuite/view-extensions/editor-view/editor-view';
-import { ElectronViewExtension } from '@affine/core/blocksuite/view-extensions/electron';
-import { AffineIconPickerExtension } from '@affine/core/blocksuite/view-extensions/icon-picker';
-import { AffineLinkPreviewExtension } from '@affine/core/blocksuite/view-extensions/link-preview-service';
-import { MobileViewExtension } from '@affine/core/blocksuite/view-extensions/mobile';
-import { PdfViewExtension } from '@affine/core/blocksuite/view-extensions/pdf';
-import { AffineThemeViewExtension } from '@affine/core/blocksuite/view-extensions/theme';
-import { TurboRendererViewExtension } from '@affine/core/blocksuite/view-extensions/turbo-renderer';
-import { PeekViewService } from '@affine/core/modules/peek-view';
-import { DebugLogger } from '@affine/debug';
-import { tracker } from '@affine/track';
-import { DatabaseViewExtension } from '@blocksuite/affine/blocks/database/view';
-import { ParagraphViewExtension } from '@blocksuite/affine/blocks/paragraph/view';
+  CloudNotesEditorViewExtension,
+  type CloudNotesEditorViewOptions,
+} from '@cloud-notes/core/blocksuite/view-extensions/editor-view/editor-view';
+import { ElectronViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/electron';
+import { CloudNotesIconPickerExtension } from '@cloud-notes/core/blocksuite/view-extensions/icon-picker';
+import { CloudNotesLinkPreviewExtension } from '@cloud-notes/core/blocksuite/view-extensions/link-preview-service';
+import { MobileViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/mobile';
+import { PdfViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/pdf';
+import { CloudNotesThemeViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/theme';
+import { TurboRendererViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/turbo-renderer';
+import { PeekViewService } from '@cloud-notes/core/modules/peek-view';
+import { DebugLogger } from '@cloud-notes/debug';
+import { tracker } from '@cloud-notes/track';
+import { DatabaseViewExtension } from '@blocksuite/cloud-notes/blocks/database/view';
+import { ParagraphViewExtension } from '@blocksuite/cloud-notes/blocks/paragraph/view';
 import type {
   PeekOptions,
   PeekViewService as BSPeekViewService,
-} from '@blocksuite/affine/components/peek';
-import { ViewExtensionManager } from '@blocksuite/affine/ext-loader';
-import { getInternalViewExtensions } from '@blocksuite/affine/extensions/view';
-import { FoundationViewExtension } from '@blocksuite/affine/foundation/view';
-import { InlineCommentViewExtension } from '@blocksuite/affine/inlines/comment';
-import { AffineCanvasTextFonts } from '@blocksuite/affine/shared/services';
-import { BlockStdScope } from '@blocksuite/affine/std';
-import type { Store } from '@blocksuite/affine/store';
-import { LinkedDocViewExtension } from '@blocksuite/affine/widgets/linked-doc/view';
+} from '@blocksuite/cloud-notes/components/peek';
+import { ViewExtensionManager } from '@blocksuite/cloud-notes/ext-loader';
+import { getInternalViewExtensions } from '@blocksuite/cloud-notes/extensions/view';
+import { FoundationViewExtension } from '@blocksuite/cloud-notes/foundation/view';
+import { InlineCommentViewExtension } from '@blocksuite/cloud-notes/inlines/comment';
+import { CloudNotesCanvasTextFonts } from '@blocksuite/cloud-notes/shared/services';
+import { BlockStdScope } from '@blocksuite/cloud-notes/std';
+import type { Store } from '@blocksuite/cloud-notes/store';
+import { LinkedDocViewExtension } from '@blocksuite/cloud-notes/widgets/linked-doc/view';
 import type { FrameworkProvider } from '@toeverything/infra';
 import type { TemplateResult } from 'lit';
 
@@ -46,7 +46,7 @@ type Configure = {
   init: () => Configure;
 
   foundation: (framework?: FrameworkProvider) => Configure;
-  editorView: (options?: AffineEditorViewOptions) => Configure;
+  editorView: (options?: CloudNotesEditorViewOptions) => Configure;
   theme: (framework?: FrameworkProvider) => Configure;
   editorConfig: (framework?: FrameworkProvider) => Configure;
   edgelessBlockHeader: (options?: EdgelessBlockHeaderViewOptions) => Configure;
@@ -70,7 +70,7 @@ type Configure = {
   value: ViewExtensionManager;
 };
 
-const peekViewLogger = new DebugLogger('affine::patch-peek-view-service');
+const peekViewLogger = new DebugLogger('cloud-notes::patch-peek-view-service');
 
 class ViewProvider {
   static instance: ViewProvider | null = null;
@@ -87,10 +87,10 @@ class ViewProvider {
     this._manager = new ViewExtensionManager([
       ...getInternalViewExtensions(),
 
-      AffineThemeViewExtension,
-      AffineEditorViewExtension,
-      AffineEditorConfigViewExtension,
-      AffineIconPickerExtension,
+      CloudNotesThemeViewExtension,
+      CloudNotesEditorViewExtension,
+      CloudNotesEditorConfigViewExtension,
+      CloudNotesIconPickerExtension,
       CodeBlockPreviewViewExtension,
       EdgelessBlockHeaderConfigViewExtension,
       TurboRendererViewExtension,
@@ -99,8 +99,8 @@ class ViewProvider {
       MobileViewExtension,
       AIViewExtension,
       ElectronViewExtension,
-      AffineLinkPreviewExtension,
-      AffineDatabaseViewExtension,
+      CloudNotesLinkPreviewExtension,
+      CloudNotesDatabaseViewExtension,
       CommentViewExtension,
     ]);
   }
@@ -167,7 +167,7 @@ class ViewProvider {
           tracker.track(eventName, props);
         },
       },
-      fontConfig: AffineCanvasTextFonts.map(font => ({
+      fontConfig: CloudNotesCanvasTextFonts.map(font => ({
         ...font,
         url: environment.publicPath + 'fonts/' + font.url.split('/').pop(),
       })),
@@ -202,19 +202,19 @@ class ViewProvider {
   };
 
   private readonly _configureEditorView = (
-    options?: AffineEditorViewOptions
+    options?: CloudNotesEditorViewOptions
   ) => {
-    this._manager.configure(AffineEditorViewExtension, options);
+    this._manager.configure(CloudNotesEditorViewExtension, options);
     return this.config;
   };
 
   private readonly _configureTheme = (framework?: FrameworkProvider) => {
-    this._manager.configure(AffineThemeViewExtension, { framework });
+    this._manager.configure(CloudNotesThemeViewExtension, { framework });
     return this.config;
   };
 
   private readonly _configureEditorConfig = (framework?: FrameworkProvider) => {
-    this._manager.configure(AffineEditorConfigViewExtension, { framework });
+    this._manager.configure(CloudNotesEditorConfigViewExtension, { framework });
     return this.config;
   };
 
@@ -226,7 +226,7 @@ class ViewProvider {
   };
 
   private readonly _configureDatabase = (framework?: FrameworkProvider) => {
-    this._manager.configure(AffineDatabaseViewExtension, { framework });
+    this._manager.configure(CloudNotesDatabaseViewExtension, { framework });
     if (framework) {
       this._manager.configure(
         DatabaseViewExtension,
@@ -330,7 +330,7 @@ class ViewProvider {
   };
 
   private readonly _configureLinkPreview = (framework?: FrameworkProvider) => {
-    this._manager.configure(AffineLinkPreviewExtension, { framework });
+    this._manager.configure(CloudNotesLinkPreviewExtension, { framework });
     return this.config;
   };
 
@@ -342,7 +342,7 @@ class ViewProvider {
   };
 
   private readonly _configureIconPicker = (framework?: FrameworkProvider) => {
-    this._manager.configure(AffineIconPickerExtension, { framework });
+    this._manager.configure(CloudNotesIconPickerExtension, { framework });
     return this.config;
   };
 

@@ -1,11 +1,11 @@
-import { MenuItem, MenuSeparator } from '@affine/component';
-import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
+import { MenuItem, MenuSeparator } from '@cloud-notes/component';
+import type { DocCustomPropertyInfo } from '@cloud-notes/core/modules/db';
 import {
   WorkspacePropertyService,
   type WorkspacePropertyType,
-} from '@affine/core/modules/workspace-property';
-import { generateUniqueNameInSequence } from '@affine/core/utils/unique-name';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/workspace-property';
+import { generateUniqueNameInSequence } from '@cloud-notes/core/utils/unique-name';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
 
@@ -55,7 +55,7 @@ export const CreatePropertyMenuItems = ({
   return (
     <>
       <div role="heading" className={styles.menuHeader}>
-        {t['com.affine.page-properties.create-property.menu.header']()}
+        {t['com.cloud-notes.page-properties.create-property.menu.header']()}
       </div>
       <MenuSeparator />
       {Object.entries(WorkspacePropertyTypes).map(([type, info]) => {
@@ -81,7 +81,7 @@ export const CreatePropertyMenuItems = ({
               {name}
               {isUniqueExist && (
                 <span>
-                  {t['com.affine.page-properties.create-property.added']()}
+                  {t['com.cloud-notes.page-properties.create-property.added']()}
                 </span>
               )}
             </div>

@@ -7,7 +7,7 @@ export const TRUSTED_REDIRECT_DOMAINS = [
   'youtube.com',
   't.me',
   'reddit.com',
-  'affine.pro',
+  'notes.diegonmarcos.com',
 ].map(d => d.toLowerCase());
 
 export const ALLOWED_REDIRECT_PROTOCOLS = new Set(['http:', 'https:']);

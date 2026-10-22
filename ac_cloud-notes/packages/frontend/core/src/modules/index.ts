@@ -1,4 +1,4 @@
-import { configureQuotaModule } from '@affine/core/modules/quota';
+import { configureQuotaModule } from '@cloud-notes/core/modules/quota';
 import { type Framework } from '@toeverything/infra';
 
 import {

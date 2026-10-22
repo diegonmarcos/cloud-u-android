@@ -1,4 +1,4 @@
-import { SwipeHelper } from '@affine/core/mobile/utils';
+import { SwipeHelper } from '@cloud-notes/core/mobile/utils';
 import { animate, eases } from 'animejs';
 import clsx from 'clsx';
 import dayjs from 'dayjs';

@@ -1,17 +1,17 @@
-import { Button } from '@affine/admin/components/ui/button';
+import { Button } from '@cloud-notes/admin/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@affine/admin/components/ui/card';
+} from '@cloud-notes/admin/components/ui/card';
 import {
   type ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from '@affine/admin/components/ui/chart';
+} from '@cloud-notes/admin/components/ui/chart';
 import {
   Dialog,
   DialogContent,
@@ -19,22 +19,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@affine/admin/components/ui/dialog';
+} from '@cloud-notes/admin/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@affine/admin/components/ui/dropdown-menu';
+} from '@cloud-notes/admin/components/ui/dropdown-menu';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@affine/admin/components/ui/select';
-import { Separator } from '@affine/admin/components/ui/separator';
-import { Skeleton } from '@affine/admin/components/ui/skeleton';
+} from '@cloud-notes/admin/components/ui/select';
+import { Separator } from '@cloud-notes/admin/components/ui/separator';
+import { Skeleton } from '@cloud-notes/admin/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -42,15 +42,15 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@affine/admin/components/ui/table';
-import { useMutation } from '@affine/admin/use-mutation';
-import { useQuery } from '@affine/admin/use-query';
+} from '@cloud-notes/admin/components/ui/table';
+import { useMutation } from '@cloud-notes/admin/use-mutation';
+import { useQuery } from '@cloud-notes/admin/use-query';
 import {
   adminDashboardQuery,
   adminMailDeliveriesQuery,
   previewLicenseMutation,
-} from '@affine/graphql';
-import { ROUTES } from '@affine/routes';
+} from '@cloud-notes/graphql';
+import { ROUTES } from '@cloud-notes/routes';
 import {
   ChevronDownIcon,
   DatabaseIcon,

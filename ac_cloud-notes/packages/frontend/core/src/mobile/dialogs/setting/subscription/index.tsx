@@ -1,8 +1,8 @@
-import { AuthService, ServerService } from '@affine/core/modules/cloud';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
-import { NativePaywallService } from '@affine/core/modules/paywall';
-import { UrlService } from '@affine/core/modules/url';
-import { useI18n } from '@affine/i18n';
+import { AuthService, ServerService } from '@cloud-notes/core/modules/cloud';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
+import { NativePaywallService } from '@cloud-notes/core/modules/paywall';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { useI18n } from '@cloud-notes/i18n';
 import { DiamondIcon, MultiPeopleIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
@@ -11,7 +11,7 @@ import { SettingGroup } from '../group';
 import { RowLayout } from '../row.layout';
 import * as styles from './styles.css';
 
-const AFFINE_TEAM_URL = 'https://affine.pro/teamhub';
+const CLOUD_NOTES_TEAM_URL = 'https://notes.diegonmarcos.com/teamhub';
 
 export const PlansGroup = () => {
   const serverService = useService(ServerService);
@@ -37,15 +37,15 @@ export const PlansGroup = () => {
   }, [globalDialogService, loggedIn, nativePaywallProvider]);
 
   return (
-    <SettingGroup title={t['com.affine.mobile.setting.plans.title']()}>
+    <SettingGroup title={t['com.cloud-notes.mobile.setting.plans.title']()}>
       {nativePaywallProvider && supported !== false ? (
         <RowLayout
           className={styles.planRow}
           emphasized
           prefix={<DiamondIcon />}
-          label={t['com.affine.mobile.setting.subscription.title']()}
+          label={t['com.cloud-notes.mobile.setting.subscription.title']()}
           description={t[
-            'com.affine.mobile.setting.subscription.description'
+            'com.cloud-notes.mobile.setting.subscription.description'
           ]()}
           onClick={handleOpen}
         />
@@ -54,9 +54,9 @@ export const PlansGroup = () => {
         className={styles.planRow}
         emphasized
         prefix={<MultiPeopleIcon />}
-        label={t['com.affine.mobile.setting.promo.title']()}
-        description={t['com.affine.mobile.setting.promo.description']()}
-        onClick={() => urlService.openExternal(AFFINE_TEAM_URL)}
+        label={t['com.cloud-notes.mobile.setting.promo.title']()}
+        description={t['com.cloud-notes.mobile.setting.promo.description']()}
+        onClick={() => urlService.openExternal(CLOUD_NOTES_TEAM_URL)}
       />
     </SettingGroup>
   );

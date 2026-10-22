@@ -1,8 +1,8 @@
-import { IconButton, useConfirmModal } from '@affine/component';
-import { DocsService } from '@affine/core/modules/doc';
-import { MigrationFavoriteItemsAdapter } from '@affine/core/modules/favorite';
-import { Trans, useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { IconButton, useConfirmModal } from '@cloud-notes/component';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { MigrationFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
+import { Trans, useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { BroomIcon, HelpIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
@@ -43,22 +43,22 @@ export const NavigationPanelMigrationFavorites = () => {
 
   const handleClickClear = useCallback(() => {
     openConfirmModal({
-      title: t['com.affine.rootAppSidebar.migration-data.clean-all'](),
+      title: t['com.cloud-notes.rootAppSidebar.migration-data.clean-all'](),
       description: (
         <Trans
-          i18nKey="com.affine.rootAppSidebar.migration-data.clean-all.description"
+          i18nKey="com.cloud-notes.rootAppSidebar.migration-data.clean-all.description"
           components={{
             b: <b className={styles.descriptionHighlight} />,
           }}
         />
       ),
       confirmText:
-        t['com.affine.rootAppSidebar.migration-data.clean-all.confirm'](),
+        t['com.cloud-notes.rootAppSidebar.migration-data.clean-all.confirm'](),
       confirmButtonOptions: {
         variant: 'primary',
       },
       cancelText:
-        t['com.affine.rootAppSidebar.migration-data.clean-all.cancel'](),
+        t['com.cloud-notes.rootAppSidebar.migration-data.clean-all.cancel'](),
       onConfirm() {
         migrationFavoriteItemsAdapter.markFavoritesMigrated();
       },
@@ -67,21 +67,21 @@ export const NavigationPanelMigrationFavorites = () => {
 
   const handleClickHelp = useCallback(() => {
     openConfirmModal({
-      title: t['com.affine.rootAppSidebar.migration-data.help'](),
+      title: t['com.cloud-notes.rootAppSidebar.migration-data.help'](),
       description: (
         <Trans
-          i18nKey="com.affine.rootAppSidebar.migration-data.help.description"
+          i18nKey="com.cloud-notes.rootAppSidebar.migration-data.help.description"
           components={{
             b: <b className={styles.descriptionHighlight} />,
           }}
         />
       ),
-      confirmText: t['com.affine.rootAppSidebar.migration-data.help.confirm'](),
+      confirmText: t['com.cloud-notes.rootAppSidebar.migration-data.help.confirm'](),
       confirmButtonOptions: {
         variant: 'primary',
       },
       cancelText:
-        t['com.affine.rootAppSidebar.migration-data.help.clean-all'](),
+        t['com.cloud-notes.rootAppSidebar.migration-data.help.clean-all'](),
       cancelButtonOptions: {
         prefix: <BroomIcon />,
         onClick: () => {
@@ -102,7 +102,7 @@ export const NavigationPanelMigrationFavorites = () => {
     <CollapsibleSection
       path={path}
       className={styles.container}
-      title={t['com.affine.rootAppSidebar.migration-data']()}
+      title={t['com.cloud-notes.rootAppSidebar.migration-data']()}
       actions={
         <>
           <IconButton

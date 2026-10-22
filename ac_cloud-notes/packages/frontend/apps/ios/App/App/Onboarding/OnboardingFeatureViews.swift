@@ -1,4 +1,4 @@
-import AffineResources
+import CloudNotesResources
 import SwiftUI
 
 struct RolePage: View {
@@ -16,7 +16,7 @@ struct RolePage: View {
           .multilineTextAlignment(.center)
         Text("We'll use this to improve your experience and prioritize relevant features.")
           .font(.system(size: 17, weight: .medium))
-          .foregroundStyle(AffineColors.textSecondary.color)
+          .foregroundStyle(CloudNotesColors.textSecondary.color)
           .multilineTextAlignment(.center)
       }
       VStack(spacing: 12) {
@@ -44,7 +44,7 @@ struct FeaturePage: View {
         featureTitle
         Text(LocalizedStringKey(feature.subtitle))
           .font(.system(size: 16, weight: .medium))
-          .foregroundStyle(AffineColors.textSecondary.color)
+          .foregroundStyle(CloudNotesColors.textSecondary.color)
           .multilineTextAlignment(.center)
           .lineSpacing(3)
           .padding(.horizontal, 12)
@@ -64,7 +64,7 @@ struct FeaturePage: View {
     feature.titleSegments.reduce(Text("")) { partial, segment in
       partial
         + Text(LocalizedStringKey(segment.text))
-        .foregroundColor(segment.isHighlighted ? AffineColors.buttonPrimary.color : AffineColors.textPrimary.color)
+        .foregroundColor(segment.isHighlighted ? CloudNotesColors.buttonPrimary.color : CloudNotesColors.textPrimary.color)
     }
     .font(.system(size: 30, weight: .bold))
     .multilineTextAlignment(.center)
@@ -86,20 +86,20 @@ private struct RoleOption: View {
           .resizable()
           .scaledToFit()
           .frame(width: 38, height: 38)
-          .foregroundStyle(AffineColors.textPrimary.color)
+          .foregroundStyle(CloudNotesColors.textPrimary.color)
         Text(LocalizedStringKey(role.title))
           .font(.system(size: 18, weight: .semibold))
-          .foregroundStyle(AffineColors.textPrimary.color)
+          .foregroundStyle(CloudNotesColors.textPrimary.color)
         Spacer()
       }
       .padding(.horizontal, 20)
       .frame(height: 84)
-      .background(isSelected ? AffineColors.buttonPrimary.color.opacity(0.12) : AffineColors.layerPureWhite.color)
+      .background(isSelected ? CloudNotesColors.buttonPrimary.color.opacity(0.12) : CloudNotesColors.layerPureWhite.color)
       .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
       .overlay {
         RoundedRectangle(cornerRadius: 22, style: .continuous)
           .stroke(
-            isSelected ? AffineColors.buttonPrimary.color : AffineColors.layerBorder.color.opacity(0.7),
+            isSelected ? CloudNotesColors.buttonPrimary.color : CloudNotesColors.layerBorder.color.opacity(0.7),
             lineWidth: isSelected ? 2 : 1
           )
       }
@@ -135,15 +135,15 @@ struct PrimaryButton: View {
       HStack(spacing: 10) {
         if isLoading {
           ProgressView()
-            .tint(AffineColors.layerPureWhite.color)
+            .tint(CloudNotesColors.layerPureWhite.color)
         }
         Text(LocalizedStringKey(title))
           .font(.system(size: fontSize, weight: .bold))
       }
-      .foregroundStyle(AffineColors.layerPureWhite.color)
+      .foregroundStyle(CloudNotesColors.layerPureWhite.color)
       .frame(maxWidth: .infinity)
       .frame(height: height)
-      .background(isEnabled ? AffineColors.buttonPrimary.color : AffineColors.textPlaceholder.color)
+      .background(isEnabled ? CloudNotesColors.buttonPrimary.color : CloudNotesColors.textPlaceholder.color)
       .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
     }
     .buttonStyle(.plain)
@@ -163,7 +163,7 @@ struct PageDots: View {
     HStack(spacing: dotSpacing) {
       ForEach(0..<count, id: \.self) { index in
         Capsule()
-          .fill(index == selectedIndex ? AffineColors.buttonPrimary.color : AffineColors.buttonPrimary.color.opacity(0.18))
+          .fill(index == selectedIndex ? CloudNotesColors.buttonPrimary.color : CloudNotesColors.buttonPrimary.color.opacity(0.18))
           .frame(height: dotHeight)
           .frame(maxWidth: .infinity)
       }

@@ -3,9 +3,9 @@
  */
 import 'fake-indexeddb/auto';
 
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { type Store, Text } from '@blocksuite/affine/store';
-import { TestWorkspace } from '@blocksuite/affine/store/test';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { type Store, Text } from '@blocksuite/cloud-notes/store';
+import { TestWorkspace } from '@blocksuite/cloud-notes/store/test';
 import { renderHook } from '@testing-library/react';
 import { useAtomValue } from 'jotai';
 import { beforeEach, describe, expect, test, vi } from 'vitest';

@@ -3,9 +3,9 @@ export const EDGELESS_IMMERSIVE_TAP_SLOP = 8;
 const IMMERSIVE_TAP_EXCLUDE_SELECTORS = [
   'edgeless-toolbar-widget',
   '.edgeless-toolbar-container',
-  'affine-edgeless-zoom-toolbar-widget',
+  'cloud-notes-edgeless-zoom-toolbar-widget',
   '.edgeless-zoom-toolbar-container',
-  '.affine-edgeless-selected-rect',
+  '.cloud-notes-edgeless-selected-rect',
 ].join(', ');
 
 export function getLandscapeWindowMeasurement({

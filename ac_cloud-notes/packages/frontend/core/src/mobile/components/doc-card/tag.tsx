@@ -1,5 +1,5 @@
-import type { Tag } from '@affine/core/modules/tag';
-import { TagService } from '@affine/core/modules/tag';
+import type { Tag } from '@cloud-notes/core/modules/tag';
+import { TagService } from '@cloud-notes/core/modules/tag';
 import { MoreHorizontalIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { assignInlineVars } from '@vanilla-extract/dynamic';

@@ -1,4 +1,4 @@
-import type { Workspace } from '@affine-tools/utils/workspace';
+import type { Workspace } from '@cloud-notes-tools/utils/workspace';
 import type { BaseContext } from 'clipanion';
 
 export interface CliContext extends BaseContext {

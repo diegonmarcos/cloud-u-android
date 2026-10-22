@@ -1,9 +1,9 @@
-import { Loading } from '@affine/component';
-import type { NodeOperation } from '@affine/core/desktop/components/navigation-panel';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import { useI18n } from '@affine/i18n';
+import { Loading } from '@cloud-notes/component';
+import type { NodeOperation } from '@cloud-notes/core/desktop/components/navigation-panel';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService, useServices } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo } from 'react';
 
@@ -127,7 +127,7 @@ export const NavigationPanelDocNode = ({
         : null}
       {entry.canUpdate ? (
         <AddItemPlaceholder
-          label={t['com.affine.rootAppSidebar.explorer.doc-add-tooltip']()}
+          label={t['com.cloud-notes.rootAppSidebar.explorer.doc-add-tooltip']()}
           onClick={handleAddLinkedPage}
         />
       ) : null}

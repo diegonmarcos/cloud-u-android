@@ -1,6 +1,6 @@
 [package]
 edition = "2024"
-name    = "affine_media_capture"
+name    = "cloud_notes_media_capture"
 publish = false
 version = "0.0.0"
 

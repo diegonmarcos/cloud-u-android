@@ -1,10 +1,10 @@
 import {
-  type AffineCommand,
-  AffineCommandRegistry,
+  type CloudNotesCommand,
+  CloudNotesCommandRegistry,
   type CommandCategory,
   PreconditionStrategy,
-} from '@affine/core/commands';
-import type { DocMode } from '@blocksuite/affine/model';
+} from '@cloud-notes/core/commands';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import { Entity, LiveData } from '@toeverything/infra';
 import Fuse from 'fuse.js';
 
@@ -15,83 +15,83 @@ import type { QuickSearchItem } from '../types/item';
 import { highlighter } from '../utils/highlighter';
 
 const categories = {
-  'affine:recent': {
-    id: 'command:affine:recent',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.recent' },
+  'cloud-notes:recent': {
+    id: 'command:cloud-notes:recent',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.recent' },
     score: 10,
   },
-  'affine:navigation': {
-    id: 'command:affine:navigation',
+  'cloud-notes:navigation': {
+    id: 'command:cloud-notes:navigation',
     label: {
-      i18nKey: 'com.affine.cmdk.affine.category.affine.navigation',
+      i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.navigation',
     },
     score: 10,
   },
-  'affine:creation': {
-    id: 'command:affine:creation',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.creation' },
+  'cloud-notes:creation': {
+    id: 'command:cloud-notes:creation',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.creation' },
     score: 10,
   },
-  'affine:general': {
-    id: 'command:affine:general',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.general' },
+  'cloud-notes:general': {
+    id: 'command:cloud-notes:general',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.general' },
     score: 10,
   },
-  'affine:layout': {
-    id: 'command:affine:layout',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.layout' },
+  'cloud-notes:layout': {
+    id: 'command:cloud-notes:layout',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.layout' },
     score: 10,
   },
-  'affine:pages': {
-    id: 'command:affine:pages',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.pages' },
+  'cloud-notes:pages': {
+    id: 'command:cloud-notes:pages',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.pages' },
     score: 10,
   },
-  'affine:edgeless': {
-    id: 'command:affine:edgeless',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.edgeless' },
+  'cloud-notes:edgeless': {
+    id: 'command:cloud-notes:edgeless',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.edgeless' },
     score: 10,
   },
-  'affine:collections': {
-    id: 'command:affine:collections',
+  'cloud-notes:collections': {
+    id: 'command:cloud-notes:collections',
     label: {
-      i18nKey: 'com.affine.cmdk.affine.category.affine.collections',
+      i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.collections',
     },
     score: 10,
   },
-  'affine:settings': {
-    id: 'command:affine:settings',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.settings' },
+  'cloud-notes:settings': {
+    id: 'command:cloud-notes:settings',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.settings' },
     score: 10,
   },
-  'affine:updates': {
-    id: 'command:affine:updates',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.updates' },
+  'cloud-notes:updates': {
+    id: 'command:cloud-notes:updates',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.updates' },
     score: 10,
   },
-  'affine:help': {
-    id: 'command:affine:help',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.affine.help' },
+  'cloud-notes:help': {
+    id: 'command:cloud-notes:help',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.help' },
     score: 10,
   },
   'editor:edgeless': {
     id: 'command:editor:edgeless',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.editor.edgeless' },
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.editor.edgeless' },
     score: 10,
   },
   'editor:insert-object': {
     id: 'command:editor:insert-object',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.editor.insert-object' },
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.editor.insert-object' },
     score: 10,
   },
   'editor:page': {
     id: 'command:editor:page',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.editor.page' },
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.editor.page' },
     score: 10,
   },
-  'affine:results': {
-    id: 'command:affine:results',
-    label: { i18nKey: 'com.affine.cmdk.affine.category.results' },
+  'cloud-notes:results': {
+    id: 'command:cloud-notes:results',
+    label: { i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.results' },
     score: 10,
   },
 } satisfies Required<{
@@ -99,7 +99,7 @@ const categories = {
 }>;
 
 function filterCommandByContext(
-  command: AffineCommand,
+  command: CloudNotesCommand,
   context: {
     docMode: DocMode | undefined;
   }
@@ -126,7 +126,7 @@ function filterCommandByContext(
 }
 
 function getAllCommand(context: { docMode: DocMode | undefined }) {
-  const commands = AffineCommandRegistry.getAll();
+  const commands = CloudNotesCommandRegistry.getAll();
   return commands.filter(command => {
     return filterCommandByContext(command, context);
   });
@@ -134,7 +134,7 @@ function getAllCommand(context: { docMode: DocMode | undefined }) {
 
 export class CommandsQuickSearchSession
   extends Entity
-  implements QuickSearchSession<'commands', AffineCommand>
+  implements QuickSearchSession<'commands', CloudNotesCommand>
 {
   constructor(private readonly contextService: GlobalContextService) {
     super();
@@ -160,7 +160,7 @@ export class CommandsQuickSearchSession
       ? fuse.search(query)
       : commands.map(item => ({ item, matches: [], score: 0 }));
 
-    return result.map<QuickSearchItem<'commands', AffineCommand>>(
+    return result.map<QuickSearchItem<'commands', CloudNotesCommand>>(
       ({ item, matches, score = 1 }) => {
         const normalizedRange = ([start, end]: [number, number]) =>
           [

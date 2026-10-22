@@ -1,5 +1,5 @@
-import type { DefaultOpenProperty } from '@affine/core/components/properties';
-import type { DocMode } from '@blocksuite/affine/model';
+import type { DefaultOpenProperty } from '@cloud-notes/core/components/properties';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 

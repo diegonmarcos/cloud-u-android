@@ -1,15 +1,15 @@
-import { IconButton, observeIntersection } from '@affine/component';
+import { IconButton, observeIntersection } from '@cloud-notes/component';
 import {
   type PDF,
   type PDFPage,
   PDFService,
   PDFStatus,
-} from '@affine/core/modules/pdf';
-import type { PDFMeta } from '@affine/core/modules/pdf/renderer';
-import type { PageSize } from '@affine/core/modules/pdf/renderer/types';
-import { LoadingSvg, PDFPageCanvas } from '@affine/core/modules/pdf/views';
-import { PeekViewService } from '@affine/core/modules/peek-view/services/peek-view';
-import { stopPropagation } from '@affine/core/utils';
+} from '@cloud-notes/core/modules/pdf';
+import type { PDFMeta } from '@cloud-notes/core/modules/pdf/renderer';
+import type { PageSize } from '@cloud-notes/core/modules/pdf/renderer/types';
+import { LoadingSvg, PDFPageCanvas } from '@cloud-notes/core/modules/pdf/views';
+import { PeekViewService } from '@cloud-notes/core/modules/peek-view/services/peek-view';
+import { stopPropagation } from '@cloud-notes/core/utils';
 import {
   ArrowDownSmallIcon,
   ArrowUpSmallIcon,

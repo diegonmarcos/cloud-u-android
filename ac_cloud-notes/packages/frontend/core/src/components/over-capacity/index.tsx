@@ -1,9 +1,9 @@
-import { notify } from '@affine/component';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import type { BlobSyncState } from '@affine/nbstore';
+import { notify } from '@cloud-notes/component';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import type { BlobSyncState } from '@cloud-notes/nbstore';
 import { useLiveData, useService } from '@toeverything/infra';
 import { debounce } from 'lodash-es';
 import { useCallback, useEffect } from 'react';
@@ -40,22 +40,22 @@ export const OverCapacityNotification = () => {
           }
           if (isOwner) {
             notify.warning({
-              title: t['com.affine.payment.storage-limit.new-title'](),
+              title: t['com.cloud-notes.payment.storage-limit.new-title'](),
               message:
-                t['com.affine.payment.storage-limit.new-description.owner'](),
+                t['com.cloud-notes.payment.storage-limit.new-description.owner'](),
               actions: [
                 {
                   key: 'upgrade',
-                  label: t['com.affine.payment.upgrade'](),
+                  label: t['com.cloud-notes.payment.upgrade'](),
                   onClick: jumpToPricePlan,
                 },
               ],
             });
           } else {
             notify.warning({
-              title: t['com.affine.payment.storage-limit.new-title'](),
+              title: t['com.cloud-notes.payment.storage-limit.new-title'](),
               message:
-                t['com.affine.payment.storage-limit.description.member'](),
+                t['com.cloud-notes.payment.storage-limit.description.member'](),
             });
           }
         })

@@ -1,8 +1,8 @@
-import { getEditorConfigExtension } from '@affine/core/blocksuite/view-extensions/editor-config/get-config';
+import { getEditorConfigExtension } from '@cloud-notes/core/blocksuite/view-extensions/editor-config/get-config';
 import {
   type ViewExtensionContext,
   ViewExtensionProvider,
-} from '@blocksuite/affine/ext-loader';
+} from '@blocksuite/cloud-notes/ext-loader';
 import { FrameworkProvider } from '@toeverything/infra';
 import { z } from 'zod';
 
@@ -10,16 +10,16 @@ const optionsSchema = z.object({
   framework: z.instanceof(FrameworkProvider).optional(),
 });
 
-type AffineEditorConfigViewOptions = z.infer<typeof optionsSchema>;
+type CloudNotesEditorConfigViewOptions = z.infer<typeof optionsSchema>;
 
-export class AffineEditorConfigViewExtension extends ViewExtensionProvider<AffineEditorConfigViewOptions> {
-  override name = 'affine-view-editor-config';
+export class CloudNotesEditorConfigViewExtension extends ViewExtensionProvider<CloudNotesEditorConfigViewOptions> {
+  override name = 'cloud-notes-view-editor-config';
 
   override schema = optionsSchema;
 
   override setup(
     context: ViewExtensionContext,
-    options?: AffineEditorConfigViewOptions
+    options?: CloudNotesEditorConfigViewOptions
   ) {
     super.setup(context, options);
     const framework = options?.framework;

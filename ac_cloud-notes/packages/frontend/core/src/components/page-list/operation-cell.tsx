@@ -5,20 +5,20 @@ import {
   toast,
   useConfirmModal,
   usePromptModal,
-} from '@affine/component';
-import { useBlockSuiteMetaHelper } from '@affine/core/components/hooks/affine/use-block-suite-meta-helper';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { DocsService } from '@affine/core/modules/doc';
+} from '@cloud-notes/component';
+import { useBlockSuiteMetaHelper } from '@cloud-notes/core/components/hooks/cloud-notes/use-block-suite-meta-helper';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { DocsService } from '@cloud-notes/core/modules/doc';
 import {
   CompatibleFavoriteItemsAdapter,
   FavoriteService,
-} from '@affine/core/modules/favorite';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
-import type { DocMeta } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/modules/favorite';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
+import type { DocMeta } from '@blocksuite/cloud-notes/store';
 import {
   DeleteIcon,
   DeletePermanentlyIcon,
@@ -108,11 +108,11 @@ const PageOperationCellMenuItem = ({
     track.allDocs.list.docMenu.deleteDoc();
 
     openConfirmModal({
-      title: t['com.affine.moveToTrash.confirmModal.title'](),
-      description: t['com.affine.moveToTrash.confirmModal.description']({
+      title: t['com.cloud-notes.moveToTrash.confirmModal.title'](),
+      description: t['com.cloud-notes.moveToTrash.confirmModal.description']({
         title: docRecord.title$.value || t['Untitled'](),
       }),
-      cancelText: t['com.affine.confirmModal.button.cancel'](),
+      cancelText: t['com.cloud-notes.confirmModal.button.cancel'](),
       confirmText: t.Delete(),
       confirmButtonOptions: {
         variant: 'error',
@@ -138,8 +138,8 @@ const PageOperationCellMenuItem = ({
     favAdapter.toggle(page.id, 'doc');
     toast(
       status
-        ? t['com.affine.toastMessage.removedFavorites']()
-        : t['com.affine.toastMessage.addedFavorites']()
+        ? t['com.cloud-notes.toastMessage.removedFavorites']()
+        : t['com.cloud-notes.toastMessage.addedFavorites']()
     );
   }, [page.id, favAdapter, t]);
 
@@ -184,23 +184,23 @@ const PageOperationCellMenuItem = ({
         prefixIcon={<IsFavoriteIcon favorite={favourite} />}
       >
         {favourite
-          ? t['com.affine.favoritePageOperation.remove']()
-          : t['com.affine.favoritePageOperation.add']()}
+          ? t['com.cloud-notes.favoritePageOperation.remove']()
+          : t['com.cloud-notes.favoritePageOperation.add']()}
       </MenuItem>
       <MenuItem onClick={onOpenInfoModal} prefixIcon={<InformationIcon />}>
-        {t['com.affine.page-properties.page-info.view']()}
+        {t['com.cloud-notes.page-properties.page-info.view']()}
       </MenuItem>
       <MenuItem onClick={onOpenInNewTab} prefixIcon={<OpenInNewIcon />}>
-        {t['com.affine.workbench.tab.page-menu-open']()}
+        {t['com.cloud-notes.workbench.tab.page-menu-open']()}
       </MenuItem>
       {BUILD_CONFIG.isElectron ? (
         <MenuItem onClick={onOpenInSplitView} prefixIcon={<SplitViewIcon />}>
-          {t['com.affine.workbench.split-view.page-menu-open']()}
+          {t['com.cloud-notes.workbench.split-view.page-menu-open']()}
         </MenuItem>
       ) : null}
 
       <MenuItem prefixIcon={<DuplicateIcon />} onSelect={onDuplicate}>
-        {t['com.affine.header.option.duplicate']()}
+        {t['com.cloud-notes.header.option.duplicate']()}
       </MenuItem>
 
       <MoveToTrash
@@ -229,8 +229,8 @@ export const PageOperationCell = ({
     favAdapter.toggle(page.id, 'doc');
     toast(
       status
-        ? t['com.affine.toastMessage.removedFavorites']()
-        : t['com.affine.toastMessage.addedFavorites']()
+        ? t['com.cloud-notes.toastMessage.removedFavorites']()
+        : t['com.cloud-notes.toastMessage.addedFavorites']()
     );
   }, [page.id, favAdapter, t]);
   return (
@@ -281,10 +281,10 @@ export const TrashOperationCell = ({
     e => {
       e.preventDefault();
       openConfirmModal({
-        title: `${t['com.affine.trashOperation.deletePermanently']()}?`,
-        description: t['com.affine.trashOperation.deleteDescription'](),
+        title: `${t['com.cloud-notes.trashOperation.deletePermanently']()}?`,
+        description: t['com.cloud-notes.trashOperation.deleteDescription'](),
         cancelText: t['Cancel'](),
-        confirmText: t['com.affine.trashOperation.delete'](),
+        confirmText: t['com.cloud-notes.trashOperation.delete'](),
         confirmButtonOptions: {
           variant: 'error',
         },
@@ -305,7 +305,7 @@ export const TrashOperationCell = ({
   return (
     <ColWrapper flex={1}>
       <IconButton
-        tooltip={t['com.affine.trashOperation.restoreIt']()}
+        tooltip={t['com.cloud-notes.trashOperation.restoreIt']()}
         tooltipOptions={tooltipSideTop}
         data-testid="restore-page-button"
         style={{ marginRight: '12px' }}
@@ -315,7 +315,7 @@ export const TrashOperationCell = ({
         <ResetIcon />
       </IconButton>
       <IconButton
-        tooltip={t['com.affine.trashOperation.deletePermanently']()}
+        tooltip={t['com.cloud-notes.trashOperation.deletePermanently']()}
         tooltipOptions={tooltipSideTopAlignEnd}
         data-testid="delete-page-button"
         onClick={onConfirmPermanentlyDelete}
@@ -368,13 +368,13 @@ export const CollectionOperationCell = ({
     (event: MouseEvent) => {
       handlePropagation(event);
       openPromptModal({
-        title: t['com.affine.editCollection.renameCollection'](),
-        label: t['com.affine.editCollectionName.name'](),
+        title: t['com.cloud-notes.editCollection.renameCollection'](),
+        label: t['com.cloud-notes.editCollectionName.name'](),
         inputOptions: {
-          placeholder: t['com.affine.editCollectionName.name.placeholder'](),
+          placeholder: t['com.cloud-notes.editCollectionName.name.placeholder'](),
         },
-        confirmText: t['com.affine.editCollection.save'](),
-        cancelText: t['com.affine.editCollection.button.cancel'](),
+        confirmText: t['com.cloud-notes.editCollection.save'](),
+        cancelText: t['com.cloud-notes.editCollection.button.cancel'](),
         confirmButtonOptions: {
           variant: 'primary',
         },
@@ -407,8 +407,8 @@ export const CollectionOperationCell = ({
     favAdapter.toggle(collectionId, 'collection');
     toast(
       status
-        ? t['com.affine.toastMessage.removedFavorites']()
-        : t['com.affine.toastMessage.addedFavorites']()
+        ? t['com.cloud-notes.toastMessage.removedFavorites']()
+        : t['com.cloud-notes.toastMessage.addedFavorites']()
     );
   }, [favAdapter, collectionId, t]);
 
@@ -419,8 +419,8 @@ export const CollectionOperationCell = ({
 
   const onConfirmAddDocToCollection = useCallback(() => {
     openConfirmModal({
-      title: t['com.affine.collection.add-doc.confirm.title'](),
-      description: t['com.affine.collection.add-doc.confirm.description'](),
+      title: t['com.cloud-notes.collection.add-doc.confirm.title'](),
+      description: t['com.cloud-notes.collection.add-doc.confirm.description'](),
       cancelText: t['Cancel'](),
       confirmText: t['Confirm'](),
       confirmButtonOptions: {
@@ -442,14 +442,14 @@ export const CollectionOperationCell = ({
       </ColWrapper>
       <IconButton
         onClick={handleEditName}
-        tooltip={t['com.affine.collection.menu.rename']()}
+        tooltip={t['com.cloud-notes.collection.menu.rename']()}
         tooltipOptions={tooltipSideTop}
       >
         <EditIcon />
       </IconButton>
       <IconButton
         onClick={handleEdit}
-        tooltip={t['com.affine.collection.menu.edit']()}
+        tooltip={t['com.cloud-notes.collection.menu.edit']()}
         tooltipOptions={tooltipSideTop}
       >
         <FilterIcon />
@@ -463,8 +463,8 @@ export const CollectionOperationCell = ({
                 prefixIcon={<IsFavoriteIcon favorite={favourite} />}
               >
                 {favourite
-                  ? t['com.affine.favoritePageOperation.remove']()
-                  : t['com.affine.favoritePageOperation.add']()}
+                  ? t['com.cloud-notes.favoritePageOperation.remove']()
+                  : t['com.cloud-notes.favoritePageOperation.add']()}
               </MenuItem>
               <MenuItem
                 onClick={onConfirmAddDocToCollection}

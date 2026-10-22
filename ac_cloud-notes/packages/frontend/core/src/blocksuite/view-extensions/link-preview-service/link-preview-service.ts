@@ -3,8 +3,8 @@ import {
   type LinkPreviewCacheProvider,
   LinkPreviewService,
   LinkPreviewServiceIdentifier,
-} from '@blocksuite/affine/shared/services';
-import { type ExtensionType } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/shared/services';
+import { type ExtensionType } from '@blocksuite/cloud-notes/store';
 import type { Container } from '@blocksuite/global/di';
 import type { FrameworkProvider } from '@toeverything/infra';
 
@@ -18,20 +18,20 @@ export function resolveLinkPreviewEndpoint(value: string, baseUrl: string) {
   return endpoint.pathname === LINK_PREVIEW_PATH ? endpoint.toString() : null;
 }
 
-class AffineLinkPreviewService extends LinkPreviewService {
+class CloudNotesLinkPreviewService extends LinkPreviewService {
   constructor(endpoint: string | null, cache: LinkPreviewCacheProvider) {
-    super(cache, createAffineLinkPreviewFetch(BUILD_CONFIG.appVersion));
+    super(cache, createCloudNotesLinkPreviewFetch(BUILD_CONFIG.appVersion));
     this.setEndpoint(endpoint);
   }
 }
 
-export function createAffineLinkPreviewFetch(
+export function createCloudNotesLinkPreviewFetch(
   version: string,
   fetcher: typeof globalThis.fetch = globalThis.fetch
 ): typeof globalThis.fetch {
   return (input, init) => {
     const headers = new Headers(init?.headers);
-    if (version) headers.set('x-affine-version', version);
+    if (version) headers.set('x-cloud-notes-version', version);
     return fetcher(input, { ...init, headers });
   };
 }
@@ -53,7 +53,7 @@ export function patchLinkPreviewService(
   return {
     setup: (di: Container) => {
       di.override(LinkPreviewServiceIdentifier, provider => {
-        return new AffineLinkPreviewService(
+        return new CloudNotesLinkPreviewService(
           linkPreviewUrl,
           provider.get(LinkPreviewCacheIdentifier)
         );

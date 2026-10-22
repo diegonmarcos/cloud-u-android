@@ -45,7 +45,7 @@ const AuthServiceToken = vi.hoisted(() => class AuthService {});
 const ServerServiceToken = vi.hoisted(() => class ServerService {});
 const WorkspacesServiceToken = vi.hoisted(() => class WorkspacesService {});
 
-vi.mock('@affine/component', () => ({
+vi.mock('@cloud-notes/component', () => ({
   ConfirmModal: ({
     open,
     title,
@@ -111,22 +111,22 @@ vi.mock('@affine/component', () => ({
   },
 }));
 
-vi.mock('@affine/core/modules/cloud', () => ({
+vi.mock('@cloud-notes/core/modules/cloud', () => ({
   AuthService: AuthServiceToken,
   ServerService: ServerServiceToken,
 }));
 
-vi.mock('@affine/core/modules/workspace', () => ({
+vi.mock('@cloud-notes/core/modules/workspace', () => ({
   WorkspacesService: WorkspacesServiceToken,
 }));
 
-vi.mock('@affine/error', () => ({
+vi.mock('@cloud-notes/error', () => ({
   UserFriendlyError: {
     fromAny: (error: unknown) => error,
   },
 }));
 
-vi.mock('@affine/i18n', () => ({
+vi.mock('@cloud-notes/i18n', () => ({
   Trans: ({ i18nKey }: { i18nKey: string }) => <span>{i18nKey}</span>,
   useI18n: () =>
     new Proxy(
@@ -137,7 +137,7 @@ vi.mock('@affine/i18n', () => ({
     ),
 }));
 
-vi.mock('@affine/track', () => ({
+vi.mock('@cloud-notes/track', () => ({
   track: {
     ['$']: {
       ['$']: {
@@ -177,11 +177,11 @@ vi.mock('@toeverything/infra', async () => {
   };
   const serverService = {
     server: {
-      id: 'affine-cloud',
-      baseUrl: 'https://affine.pro',
+      id: 'cloud-notes-cloud',
+      baseUrl: 'https://notes.diegonmarcos.com',
       ['config$']: {
         value: {
-          serverName: 'AFFiNE Cloud',
+          serverName: 'Cloud Notes',
         },
       },
     },
@@ -265,12 +265,12 @@ describe('DeleteAccount mobile flow', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'com.affine.mobile.setting.others.delete-account',
+        name: 'com.cloud-notes.mobile.setting.others.delete-account',
       })
     );
     await waitFor(() => {
       expect(
-        screen.getByText('com.affine.setting.account.delete.confirm-title')
+        screen.getByText('com.cloud-notes.setting.account.delete.confirm-title')
       ).toBeTruthy();
     });
 
@@ -278,7 +278,7 @@ describe('DeleteAccount mobile flow', () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          'com.affine.setting.account.delete.email-confirm-title'
+          'com.cloud-notes.setting.account.delete.email-confirm-title'
         )
       ).toBeTruthy();
     });
@@ -287,12 +287,12 @@ describe('DeleteAccount mobile flow', () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText('com.affine.setting.account.delete.confirm-title')
+        screen.getByText('com.cloud-notes.setting.account.delete.confirm-title')
       ).toBeTruthy();
     });
     expect(
       screen.queryByText(
-        'com.affine.setting.account.delete.email-confirm-title'
+        'com.cloud-notes.setting.account.delete.email-confirm-title'
       )
     ).toBeNull();
   });
@@ -304,7 +304,7 @@ describe('DeleteAccount mobile flow', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'com.affine.mobile.setting.others.delete-account',
+        name: 'com.cloud-notes.mobile.setting.others.delete-account',
       })
     );
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -313,7 +313,7 @@ describe('DeleteAccount mobile flow', () => {
     });
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'com.affine.setting.account.delete.confirm-button',
+        name: 'com.cloud-notes.setting.account.delete.confirm-button',
       })
     );
 
@@ -332,7 +332,7 @@ describe('DeleteAccount mobile flow', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'com.affine.mobile.setting.others.delete-account',
+        name: 'com.cloud-notes.mobile.setting.others.delete-account',
       })
     );
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -341,7 +341,7 @@ describe('DeleteAccount mobile flow', () => {
     });
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'com.affine.setting.account.delete.confirm-button',
+        name: 'com.cloud-notes.setting.account.delete.confirm-button',
       })
     );
 
@@ -352,7 +352,7 @@ describe('DeleteAccount mobile flow', () => {
     await waitFor(() => {
       expect(
         screen.getByRole('button', {
-          name: 'com.affine.setting.account.delete.confirm-button',
+          name: 'com.cloud-notes.setting.account.delete.confirm-button',
         })
       ).not.toHaveProperty('disabled', true);
     });
@@ -366,16 +366,16 @@ describe('DeleteAccount mobile flow', () => {
 
     fireEvent.click(
       screen.getByRole('button', {
-        name: 'com.affine.mobile.setting.others.delete-account',
+        name: 'com.cloud-notes.mobile.setting.others.delete-account',
       })
     );
 
     expect(
-      screen.getByText('com.affine.setting.account.delete.team-warning-title')
+      screen.getByText('com.cloud-notes.setting.account.delete.team-warning-title')
     ).toBeTruthy();
     expect(
       screen.queryByText(
-        'com.affine.setting.account.delete.email-confirm-title'
+        'com.cloud-notes.setting.account.delete.email-confirm-title'
       )
     ).toBeNull();
     expect(workspaceState.revalidate).toHaveBeenCalled();
@@ -389,7 +389,7 @@ describe('DeleteAccount mobile flow', () => {
 
     expect(
       screen.queryByRole('button', {
-        name: 'com.affine.mobile.setting.others.delete-account',
+        name: 'com.cloud-notes.mobile.setting.others.delete-account',
       })
     ).toBeNull();
   });
@@ -401,7 +401,7 @@ describe('DeleteAccount mobile flow', () => {
 
     expect(
       screen.getByRole('button', {
-        name: 'com.affine.mobile.setting.others.delete-account',
+        name: 'com.cloud-notes.mobile.setting.others.delete-account',
       })
     ).toBeTruthy();
   });

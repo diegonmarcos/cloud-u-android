@@ -61,7 +61,7 @@ export class ReadwiseIntegration extends Entity<{ writer: IntegrationWriter }> {
       }));
   }
 
-  async highlightsToAffineDocs(
+  async highlightsToCloudNotesDocs(
     highlights: ReadwiseHighlight[],
     books: ReadwiseBookMap,
     options: {
@@ -117,7 +117,7 @@ export class ReadwiseIntegration extends Entity<{ writer: IntegrationWriter }> {
             });
             // write if not matched
             if (action !== 'skip' && !signal?.aborted) {
-              await this.highlightToAffineDoc(highlight, book, localDocId, {
+              await this.highlightToCloudNotesDoc(highlight, book, localDocId, {
                 updateStrategy,
                 integrationId,
                 userId,
@@ -138,7 +138,7 @@ export class ReadwiseIntegration extends Entity<{ writer: IntegrationWriter }> {
     }
   }
 
-  async highlightToAffineDoc(
+  async highlightToCloudNotesDoc(
     highlight: ReadwiseHighlight,
     book: Omit<ReadwiseBook, 'highlights'>,
     docId: string | undefined,

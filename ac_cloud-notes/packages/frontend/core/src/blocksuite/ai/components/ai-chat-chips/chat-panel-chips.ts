@@ -1,8 +1,8 @@
-import type { TagMeta } from '@affine/core/components/page-list';
-import { createLitPortal } from '@blocksuite/affine/components/portal';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import type { TagMeta } from '@cloud-notes/core/components/page-list';
+import { createLitPortal } from '@blocksuite/cloud-notes/components/portal';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { MoreVerticalIcon } from '@blocksuite/icons/lit';
 import { flip, offset } from '@floating-ui/dom';
 import { computed, type Signal, signal } from '@preact/signals-core';
@@ -261,7 +261,7 @@ export class ChatPanelChips extends SignalWatcher(
         ></chat-panel-candidates-popover>
       `,
       portalStyles: {
-        zIndex: 'var(--affine-z-index-popover)',
+        zIndex: 'var(--cloud-notes-z-index-popover)',
       },
       container: this.portalContainer ?? document.body,
       computePosition: {

@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 
-import type { TranscriptionBlockProps } from '@affine/core/blocksuite/ai/blocks/transcription-block/model';
-import { AiJobStatus } from '@affine/graphql';
+import type { TranscriptionBlockProps } from '@cloud-notes/core/blocksuite/ai/blocks/transcription-block/model';
+import { AiJobStatus } from '@cloud-notes/graphql';
 import { Framework } from '@toeverything/infra';
 import { describe, expect, test, vi } from 'vitest';
 

@@ -3,7 +3,7 @@ import type {
   ClientEvents,
   ClientHandler,
   SharedStorage,
-} from '@affine/electron-api';
+} from '@cloud-notes/electron-api';
 import { createIdentifier } from '@toeverything/infra';
 
 // for now desktop api's type are all inferred from electron-api

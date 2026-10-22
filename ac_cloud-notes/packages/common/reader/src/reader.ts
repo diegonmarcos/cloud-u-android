@@ -1,14 +1,14 @@
-import { Container } from '@blocksuite/affine/global/di';
+import { Container } from '@blocksuite/cloud-notes/global/di';
 import type {
   AttachmentBlockModel,
   BookmarkBlockModel,
   EmbedBlockModel,
   ImageBlockModel,
   TableBlockModel,
-} from '@blocksuite/affine/model';
-import { AffineSchemas } from '@blocksuite/affine/schemas';
-import { MarkdownAdapter } from '@blocksuite/affine/shared/adapters';
-import type { AffineTextAttributes } from '@blocksuite/affine/shared/types';
+} from '@blocksuite/cloud-notes/model';
+import { CloudNotesSchemas } from '@blocksuite/cloud-notes/schemas';
+import { MarkdownAdapter } from '@blocksuite/cloud-notes/shared/adapters';
+import type { CloudNotesTextAttributes } from '@blocksuite/cloud-notes/shared/types';
 import {
   createYProxy,
   type DeltaInsert,
@@ -17,7 +17,7 @@ import {
   Transformer,
   type TransformerMiddleware,
   type YBlock,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import { uniqBy } from 'lodash-es';
 import {
   Array as YArray,
@@ -29,7 +29,7 @@ import {
 import { getStoreManager } from './bs-store';
 
 const blocksuiteSchema = new Schema();
-blocksuiteSchema.register([...AffineSchemas]);
+blocksuiteSchema.register([...CloudNotesSchemas]);
 
 export interface BlockDocumentInfo {
   docId: string;
@@ -59,7 +59,7 @@ const bookmarkFlavours = new Set([
 ]);
 
 const collectInlineReferences = (
-  deltas: DeltaInsert<AffineTextAttributes>[]
+  deltas: DeltaInsert<CloudNotesTextAttributes>[]
 ): { refDocId: string; ref: string }[] =>
   uniqBy(
     deltas
@@ -83,19 +83,19 @@ const collectInlineReferences = (
 
 const getTextDeltasFromCellValue = (
   value: unknown
-): DeltaInsert<AffineTextAttributes>[] | null => {
+): DeltaInsert<CloudNotesTextAttributes>[] | null => {
   if (!value) {
     return null;
   }
 
   if (value instanceof YText) {
-    return value.toDelta() as DeltaInsert<AffineTextAttributes>[];
+    return value.toDelta() as DeltaInsert<CloudNotesTextAttributes>[];
   }
 
   if (typeof value === 'object' && value !== null) {
     const maybeText = value as { yText?: unknown };
     if (maybeText.yText instanceof YText) {
-      return maybeText.yText.toDelta() as DeltaInsert<AffineTextAttributes>[];
+      return maybeText.yText.toDelta() as DeltaInsert<CloudNotesTextAttributes>[];
     }
   }
 
@@ -107,11 +107,11 @@ const getTextDeltasFromCellValue = (
         return delta
           .toArray()
           .map(entry => (entry instanceof YMap ? entry.toJSON() : entry)) as
-          | DeltaInsert<AffineTextAttributes>[]
+          | DeltaInsert<CloudNotesTextAttributes>[]
           | null;
       }
       if (Array.isArray(delta)) {
-        return delta as DeltaInsert<AffineTextAttributes>[];
+        return delta as DeltaInsert<CloudNotesTextAttributes>[];
       }
     }
   }
@@ -123,10 +123,10 @@ const getTextDeltasFromCellValue = (
   ) {
     const delta = (value as { delta?: unknown }).delta;
     if (delta instanceof YArray) {
-      return delta.toArray() as DeltaInsert<AffineTextAttributes>[];
+      return delta.toArray() as DeltaInsert<CloudNotesTextAttributes>[];
     }
     if (Array.isArray(delta)) {
-      return delta as DeltaInsert<AffineTextAttributes>[];
+      return delta as DeltaInsert<CloudNotesTextAttributes>[];
     }
   }
 
@@ -661,7 +661,7 @@ export async function readAllBlocksFromDoc({
         continue;
       }
 
-      const deltas: DeltaInsert<AffineTextAttributes>[] = text.toDelta();
+      const deltas: DeltaInsert<CloudNotesTextAttributes>[] = text.toDelta();
       const refs = collectInlineReferences(deltas);
 
       const databaseName =

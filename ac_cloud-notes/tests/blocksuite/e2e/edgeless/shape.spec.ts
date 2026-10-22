@@ -222,7 +222,7 @@ test('the tooltip of shape tool button should be hidden when the shape menu is s
 
   const shapeTool = await locatorEdgelessToolButton(page, 'shape');
   const shapeToolBox = await shapeTool.boundingBox();
-  const tooltip = page.locator('.affine-tooltip');
+  const tooltip = page.locator('.cloud-notes-tooltip');
 
   if (!shapeToolBox) {
     throw new Error('shapeToolBox is not found');
@@ -310,7 +310,7 @@ test('hovering on shape should not have effect on underlying block', async ({
 
   await switchEditorMode(page);
 
-  const block = page.locator('affine-edgeless-note');
+  const block = page.locator('cloud-notes-edgeless-note');
   const blockBox = await block.boundingBox();
   if (blockBox === null) throw new Error('Unexpected box value: box is null');
 

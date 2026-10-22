@@ -1,5 +1,5 @@
-import { cn } from '@affine/admin/utils';
-import { ROUTES } from '@affine/routes';
+import { cn } from '@cloud-notes/admin/utils';
+import { ROUTES } from '@cloud-notes/routes';
 import { AccountIcon, SelfhostIcon } from '@blocksuite/icons/rc';
 import { BarChart3Icon, LayoutDashboardIcon } from 'lucide-react';
 

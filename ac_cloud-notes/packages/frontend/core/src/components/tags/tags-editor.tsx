@@ -6,9 +6,9 @@ import {
   type MenuRef,
   RowInput,
   Scrollable,
-} from '@affine/component';
-import { TagService, useDeleteTagConfirmModal } from '@affine/core/modules/tag';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { TagService, useDeleteTagConfirmModal } from '@cloud-notes/core/modules/tag';
+import { useI18n } from '@cloud-notes/i18n';
 import { DoneIcon, MoreHorizontalIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
@@ -23,7 +23,7 @@ import {
   useState,
 } from 'react';
 
-import { useAsyncCallback } from '../hooks/affine-async-hooks';
+import { useAsyncCallback } from '../hooks/cloud-notes-async-hooks';
 import { ConfigModal } from '../mobile';
 import { InlineTagList } from './inline-tag-list';
 import * as styles from './styles.css';
@@ -294,7 +294,7 @@ export const TagsEditor = ({
       )}
       <div className={styles.tagsEditorTagsSelector}>
         <div className={styles.tagsEditorTagsSelectorHeader}>
-          {t['com.affine.page-properties.tags.selector-header-title']()}
+          {t['com.cloud-notes.page-properties.tags.selector-header-title']()}
         </div>
         <Scrollable.Root>
           <Scrollable.Viewport

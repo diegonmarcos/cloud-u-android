@@ -1,4 +1,4 @@
-import { DebugLogger } from '@affine/debug';
+import { DebugLogger } from '@cloud-notes/debug';
 import { nanoid } from 'nanoid';
 
 import { type Middleware, trackerState, type TrackProperties } from './state';
@@ -9,10 +9,10 @@ const logger = new DebugLogger('telemetry');
 
 type RawTrackProperties = Record<string, unknown> | object | undefined;
 
-const SESSION_ID_KEY = 'affine_telemetry_session_id';
-const SESSION_NUMBER_KEY = 'affine_telemetry_session_number';
-const SESSION_NUMBER_CURRENT_KEY = 'affine_telemetry_session_number_current';
-const LAST_ACTIVITY_KEY = 'affine_telemetry_last_activity_ms';
+const SESSION_ID_KEY = 'cloud_notes_telemetry_session_id';
+const SESSION_NUMBER_KEY = 'cloud_notes_telemetry_session_number';
+const SESSION_NUMBER_CURRENT_KEY = 'cloud_notes_telemetry_session_number_current';
+const LAST_ACTIVITY_KEY = 'cloud_notes_telemetry_last_activity_ms';
 const SESSION_TIMEOUT_MS = 30 * 60 * 1000;
 
 export const tracker = {

@@ -1,4 +1,4 @@
-import AffineResources
+import CloudNotesResources
 import SwiftUI
 
 struct OnboardingBackground: View {
@@ -25,7 +25,7 @@ struct IntroPage: View {
           titleView
           Text("Write, organize, and connect ideas with docs, whiteboards, and AI.")
             .font(.system(size: 17, weight: .medium))
-            .foregroundStyle(AffineColors.textSecondary.color)
+            .foregroundStyle(CloudNotesColors.textSecondary.color)
             .multilineTextAlignment(.center)
             .lineSpacing(4)
             .padding(.horizontal, 22)
@@ -42,10 +42,10 @@ struct IntroPage: View {
   private var titleView: some View {
     (
       Text("Everything,")
-        .foregroundColor(AffineColors.buttonPrimary.color)
+        .foregroundColor(CloudNotesColors.buttonPrimary.color)
         .italic()
       + Text(" in One\nWorkspace")
-        .foregroundColor(AffineColors.textPrimary.color)
+        .foregroundColor(CloudNotesColors.textPrimary.color)
     )
     .font(.system(size: 31, weight: .bold))
     .multilineTextAlignment(.center)
@@ -64,10 +64,10 @@ struct IntroFooter: View {
           Image(systemName: "arrow.right")
             .font(.system(size: 16, weight: .bold))
         }
-        .foregroundStyle(AffineColors.layerPureWhite.color)
+        .foregroundStyle(CloudNotesColors.layerPureWhite.color)
         .frame(maxWidth: .infinity)
         .frame(height: 54)
-        .background(AffineColors.buttonPrimary.color)
+        .background(CloudNotesColors.buttonPrimary.color)
         .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
       }
       .buttonStyle(.plain)

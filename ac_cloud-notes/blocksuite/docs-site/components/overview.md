@@ -23,8 +23,8 @@ All BlockSuite components only need to be attached to the BlockSuite document mo
 
 ## Integration
 
-Regarding how BlockSuite components can be used in AFFiNE and other applications, here are some quick takeaways:
+Regarding how BlockSuite components can be used in Cloud Notes and other applications, here are some quick takeaways:
 
-- The BlockSuite editor consists of various block specs, each of which can optionally include some widgets. Therefore, **when you are reusing an existing first-party BlockSuite editor, you are actually reusing a preset of blocks and widgets**. Default editors are fine-tuned presets for AFFiNE, but you are free to compose you own presets.
+- The BlockSuite editor consists of various block specs, each of which can optionally include some widgets. Therefore, **when you are reusing an existing first-party BlockSuite editor, you are actually reusing a preset of blocks and widgets**. Default editors are fine-tuned presets for Cloud Notes, but you are free to compose you own presets.
 - Currently, all BlockSuite components are native web components, but we plan to provide official support for multiple frameworks.
-- BlockSuite does not have special variants for AFFiNE, [we eat our own dogfood](https://gist.github.com/chitchcock/1281611).
+- BlockSuite does not have special variants for Cloud Notes, [we eat our own dogfood](https://gist.github.com/chitchcock/1281611).

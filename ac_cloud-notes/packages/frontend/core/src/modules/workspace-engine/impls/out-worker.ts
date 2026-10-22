@@ -1,4 +1,4 @@
-import { getWorkerUrl } from '@affine/env/worker';
+import { getWorkerUrl } from '@cloud-notes/env/worker';
 import { OpClient } from '@toeverything/infra/op';
 
 import type { WorkerOps } from './worker-ops';

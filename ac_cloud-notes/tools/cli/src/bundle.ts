@@ -1,8 +1,8 @@
 import { rmSync } from 'node:fs';
 import { cpus } from 'node:os';
 
-import { Logger } from '@affine-tools/utils/logger';
-import { Package } from '@affine-tools/utils/workspace';
+import { Logger } from '@cloud-notes-tools/utils/logger';
+import { Package } from '@cloud-notes-tools/utils/workspace';
 import rspack, { type MultiRspackOptions } from '@rspack/core';
 import {
   type Configuration as RspackDevServerConfiguration,
@@ -55,7 +55,7 @@ function getBaseWorkerConfigs(
   createWorkerTargetConfig: CreateWorkerTargetConfig,
   options: BaseWorkerOptions = {}
 ) {
-  const core = new Package('@affine/core');
+  const core = new Package('@cloud-notes/core');
   const includeMermaidAndTypst = options.includeMermaidAndTypst ?? true;
 
   const workerConfigs = [
@@ -97,15 +97,15 @@ function getRspackBundleConfigs(pkg: Package): MultiRspackOptions {
   assertRspackSupportedPackage(pkg);
 
   switch (pkg.name) {
-    case '@affine/admin': {
+    case '@cloud-notes/admin': {
       return [
         createRspackHTMLTargetConfig(pkg, pkg.srcPath.join('index.tsx').value, {
           selfhostPublicPath: '/admin/',
         }),
       ] as MultiRspackOptions;
     }
-    case '@affine/web':
-    case '@affine/mobile': {
+    case '@cloud-notes/web':
+    case '@cloud-notes/mobile': {
       const workerConfigs = getBaseWorkerConfigs(
         pkg,
         createRspackWorkerTargetConfig
@@ -127,8 +127,8 @@ function getRspackBundleConfigs(pkg: Package): MultiRspackOptions {
         ...workerConfigs,
       ] as MultiRspackOptions;
     }
-    case '@affine/ios':
-    case '@affine/android': {
+    case '@cloud-notes/ios':
+    case '@cloud-notes/android': {
       const workerConfigs = getBaseWorkerConfigs(
         pkg,
         createRspackWorkerTargetConfig,
@@ -151,7 +151,7 @@ function getRspackBundleConfigs(pkg: Package): MultiRspackOptions {
         ...workerConfigs,
       ] as MultiRspackOptions;
     }
-    case '@affine/electron-renderer': {
+    case '@cloud-notes/electron-renderer': {
       const workerConfigs = getBaseWorkerConfigs(
         pkg,
         createRspackWorkerTargetConfig,
@@ -178,12 +178,12 @@ function getRspackBundleConfigs(pkg: Package): MultiRspackOptions {
         ...workerConfigs,
       ] as MultiRspackOptions;
     }
-    case '@affine/server': {
+    case '@cloud-notes/server': {
       return [
         createRspackNodeTargetConfig(pkg, pkg.srcPath.join('index.ts').value),
       ] as MultiRspackOptions;
     }
-    case '@affine/reader': {
+    case '@cloud-notes/reader': {
       return [
         createRspackNodeTargetConfig(pkg, pkg.srcPath.join('index.ts').value, {
           outputFilename: 'index.js',

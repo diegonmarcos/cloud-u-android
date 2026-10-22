@@ -1,16 +1,16 @@
-import { notify } from '@affine/component';
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { AffineContext } from '@affine/core/components/context';
-import { AppFallback } from '@affine/core/mobile/components/app-fallback';
-import { MobileModalConfigProvider } from '@affine/core/mobile/components/mobile-modal-config-provider';
-import { ShareImportController } from '@affine/core/mobile/components/share-import-controller';
-import { configureMobileModules } from '@affine/core/mobile/modules';
-import { MobileBackCoordinator } from '@affine/core/mobile/modules/back-coordinator';
-import { HapticProvider } from '@affine/core/mobile/modules/haptics';
-import { VirtualKeyboardProvider } from '@affine/core/mobile/modules/virtual-keyboard';
-import { router } from '@affine/core/mobile/router';
-import { getCurrentNativeUserIdentifier } from '@affine/core/mobile/utils/native-user-identifier';
-import { configureCommonModules } from '@affine/core/modules';
+import { notify } from '@cloud-notes/component';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { CloudNotesContext } from '@cloud-notes/core/components/context';
+import { AppFallback } from '@cloud-notes/core/mobile/components/app-fallback';
+import { MobileModalConfigProvider } from '@cloud-notes/core/mobile/components/mobile-modal-config-provider';
+import { ShareImportController } from '@cloud-notes/core/mobile/components/share-import-controller';
+import { configureMobileModules } from '@cloud-notes/core/mobile/modules';
+import { MobileBackCoordinator } from '@cloud-notes/core/mobile/modules/back-coordinator';
+import { HapticProvider } from '@cloud-notes/core/mobile/modules/haptics';
+import { VirtualKeyboardProvider } from '@cloud-notes/core/mobile/modules/virtual-keyboard';
+import { router } from '@cloud-notes/core/mobile/router';
+import { getCurrentNativeUserIdentifier } from '@cloud-notes/core/mobile/utils/native-user-identifier';
+import { configureCommonModules } from '@cloud-notes/core/modules';
 import {
   AuthProvider,
   AuthService,
@@ -20,48 +20,48 @@ import {
   ServersService,
   SubscriptionService,
   ValidatorProvider,
-} from '@affine/core/modules/cloud';
-import { registerNativePreviewHandlers } from '@affine/core/modules/code-block-preview-renderer';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
-import { DocsService } from '@affine/core/modules/doc';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { I18nProvider } from '@affine/core/modules/i18n';
-import { LifecycleService } from '@affine/core/modules/lifecycle';
-import { NativePaywallProvider } from '@affine/core/modules/paywall';
+} from '@cloud-notes/core/modules/cloud';
+import { registerNativePreviewHandlers } from '@cloud-notes/core/modules/code-block-preview-renderer';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { I18nProvider } from '@cloud-notes/core/modules/i18n';
+import { LifecycleService } from '@cloud-notes/core/modules/lifecycle';
+import { NativePaywallProvider } from '@cloud-notes/core/modules/paywall';
 import {
   configureLocalStorageStateStorageImpls,
   NbstoreProvider,
-} from '@affine/core/modules/storage';
-import { PopupWindowProvider, UrlService } from '@affine/core/modules/url';
-import { ClientSchemeProvider } from '@affine/core/modules/url/providers/client-schema';
+} from '@cloud-notes/core/modules/storage';
+import { PopupWindowProvider, UrlService } from '@cloud-notes/core/modules/url';
+import { ClientSchemeProvider } from '@cloud-notes/core/modules/url/providers/client-schema';
 import {
   configureBrowserWorkbenchModule,
   WorkbenchService,
-} from '@affine/core/modules/workbench';
+} from '@cloud-notes/core/modules/workbench';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
-import { configureBrowserWorkspaceFlavours } from '@affine/core/modules/workspace-engine';
-import { getWorkerUrl } from '@affine/env/worker';
+} from '@cloud-notes/core/modules/workspace';
+import { configureBrowserWorkspaceFlavours } from '@cloud-notes/core/modules/workspace-engine';
+import { getWorkerUrl } from '@cloud-notes/env/worker';
 import {
   OAuthProviderType,
   refreshSubscriptionMutation,
   requestApplySubscriptionMutation,
-} from '@affine/graphql';
-import { I18n } from '@affine/i18n';
-import { serveAuthRequests } from '@affine/mobile-shared/auth/channel';
-import { StoreManagerClient } from '@affine/nbstore/worker/client';
-import { setTelemetryTransport } from '@affine/track';
-import { Container } from '@blocksuite/affine/global/di';
+} from '@cloud-notes/graphql';
+import { I18n } from '@cloud-notes/i18n';
+import { serveAuthRequests } from '@cloud-notes/mobile-shared/auth/channel';
+import { StoreManagerClient } from '@cloud-notes/nbstore/worker/client';
+import { setTelemetryTransport } from '@cloud-notes/track';
+import { Container } from '@blocksuite/cloud-notes/global/di';
 import {
   docLinkBaseURLMiddleware,
   MarkdownAdapter,
   titleMiddleware,
-} from '@blocksuite/affine/shared/adapters';
-import { registerNativeImageFilesPicker } from '@blocksuite/affine/shared/utils';
-import { MarkdownTransformer } from '@blocksuite/affine/widgets/linked-doc';
+} from '@blocksuite/cloud-notes/shared/adapters';
+import { registerNativeImageFilesPicker } from '@blocksuite/cloud-notes/shared/utils';
+import { MarkdownTransformer } from '@blocksuite/cloud-notes/widgets/linked-doc';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
@@ -82,7 +82,7 @@ import { Suspense, useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 
 import { BlocksuiteMenuConfigProvider } from './bs-menu-config';
-import { AffineTheme } from './plugins/affine-theme';
+import { CloudNotesTheme } from './plugins/cloud-notes-theme';
 import { Auth } from './plugins/auth';
 import { Hashcash } from './plugins/hashcash';
 import { ImagePicker } from './plugins/image-picker';
@@ -148,7 +148,7 @@ framework.impl(PopupWindowProvider, {
 });
 framework.impl(ClientSchemeProvider, {
   getClientScheme() {
-    return 'affine';
+    return 'cloud-notes';
   },
 });
 framework.impl(ValidatorProvider, {
@@ -632,7 +632,7 @@ const showNativeSignIn = async () => {
     await workspace.engine.doc.waitForDocReady(workspace.id);
     const docId = await MarkdownTransformer.importMarkdownToDoc({
       collection: workspace.docCollection,
-      schema: getAFFiNEWorkspaceSchema(),
+      schema: getCloudNotesWorkspaceSchema(),
       markdown,
       extensions: getStoreManager().config.init().value.get('store'),
     });
@@ -728,7 +728,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 const notifyAuthenticationError = (error: unknown, fallback: string) => {
   console.error(fallback, error);
   notify.error({
-    title: I18n['com.affine.auth.toast.title.failed'](),
+    title: I18n['com.cloud-notes.auth.toast.title.failed'](),
     message: getErrorMessage(error, fallback),
   });
 };
@@ -825,7 +825,7 @@ const KeyboardThemeProvider = () => {
     (window as any).getCurrentThemeMode = () => {
       return themeMode;
     };
-    AffineTheme.onThemeChanged({
+    CloudNotesTheme.onThemeChanged({
       themeMode,
     }).catch(e => {
       console.error(`Failed to sync app theme: ${e}`);
@@ -875,7 +875,7 @@ export function App() {
       <FrameworkRoot framework={frameworkProvider}>
         <I18nProvider>
           <MobileModalConfigProvider>
-            <AffineContext store={getCurrentStore()}>
+            <CloudNotesContext store={getCurrentStore()}>
               <KeyboardThemeProvider />
               <IOSBackAdapter />
               <ShareImportController provider={shareInboxProvider} />
@@ -886,7 +886,7 @@ export function App() {
                   future={future}
                 />
               </BlocksuiteMenuConfigProvider>
-            </AffineContext>
+            </CloudNotesContext>
           </MobileModalConfigProvider>
         </I18nProvider>
       </FrameworkRoot>

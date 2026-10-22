@@ -1,11 +1,11 @@
-import type { Server } from '@affine/core/modules/cloud';
-import type { WorkspaceMetadata } from '@affine/core/modules/workspace';
-import { ServerDeploymentType } from '@affine/graphql';
+import type { Server } from '@cloud-notes/core/modules/cloud';
+import type { WorkspaceMetadata } from '@cloud-notes/core/modules/workspace';
+import { ServerDeploymentType } from '@cloud-notes/graphql';
 
 import type { PendingShareItem, ShareLinkPreview } from './types';
 
 const LINK_PREVIEW_PATH = '/api/worker/link-preview';
-const OFFICIAL_LINK_PREVIEW_ENDPOINT = `https://app.affine.pro${LINK_PREVIEW_PATH}`;
+const OFFICIAL_LINK_PREVIEW_ENDPOINT = `https://notes.diegonmarcos.com${LINK_PREVIEW_PATH}`;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -128,7 +128,7 @@ export class SharePreviewRouteOwner {
     const endpoint =
       server && type === ServerDeploymentType.Selfhosted
         ? new URL(LINK_PREVIEW_PATH, server.baseUrl).toString()
-        : type === ServerDeploymentType.Affine
+        : type === ServerDeploymentType.CloudNotes
           ? OFFICIAL_LINK_PREVIEW_ENDPOINT
           : undefined;
     this.setEndpoint(endpoint, workspaceKey);
@@ -155,7 +155,7 @@ export class SharePreviewRouteOwner {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-affine-version': BUILD_CONFIG.appVersion,
+        'x-cloud-notes-version': BUILD_CONFIG.appVersion,
       },
       body: JSON.stringify({ url, include: ['transcript'] }),
       signal: controller.signal,

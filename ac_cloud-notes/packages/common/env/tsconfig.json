@@ -1,7 +1,7 @@
 {
   "extends": "../../../tsconfig.web.json",
   "compilerOptions": {
-    "types": ["build-config", "affine__env"],
+    "types": ["build-config", "cloud-notes__env"],
     "rootDir": "./src",
     "outDir": "./dist",
     "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"

@@ -1,0 +1,16 @@
+import { QuickToolExtension } from '@blocksuite/cloud-notes-widget-edgeless-toolbar';
+import { html } from 'lit';
+
+import { buildFrameDenseMenu } from './frame-dense-menu';
+
+export const frameQuickTool = QuickToolExtension('frame', ({ block, gfx }) => {
+  return {
+    type: 'frame',
+    content: html`<edgeless-frame-tool-button
+      .edgeless=${block}
+    ></edgeless-frame-tool-button>`,
+    menu: buildFrameDenseMenu(block, gfx),
+    enable: !block.store.readonly,
+    priority: 90,
+  };
+});

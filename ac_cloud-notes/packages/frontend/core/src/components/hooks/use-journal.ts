@@ -1,13 +1,13 @@
-import { DocsService } from '@affine/core/modules/doc';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
 import {
   JOURNAL_DATE_FORMAT,
   JournalService,
   type MaybeDate,
-} from '@affine/core/modules/journal';
-import type { WorkbenchOpenOptions } from '@affine/core/modules/workbench/entities/workbench';
-import { i18nTime } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/core/modules/journal';
+import type { WorkbenchOpenOptions } from '@cloud-notes/core/modules/workbench/entities/workbench';
+import { i18nTime } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { useService, useServices } from '@toeverything/infra';
 import dayjs from 'dayjs';
 import { useCallback, useMemo } from 'react';

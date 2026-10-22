@@ -2,7 +2,7 @@ import type {
   AdminUpdateWorkspaceMutation,
   AdminWorkspaceQuery,
   AdminWorkspacesQuery,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 
 export type WorkspaceListItem = AdminWorkspacesQuery['adminWorkspaces'][0];
 export type WorkspaceDetail = NonNullable<

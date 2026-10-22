@@ -1,11 +1,11 @@
 {
-  "name": "@types/affine__env",
+  "name": "@types/cloud-notes__env",
   "private": true,
   "types": "./__all.d.ts",
   "type": "module",
   "dependencies": {
-    "@affine/env": "workspace:*",
-    "@blocksuite/affine": "workspace:*"
+    "@cloud-notes/env": "workspace:*",
+    "@blocksuite/cloud-notes": "workspace:*"
   },
   "version": "0.27.5"
 }

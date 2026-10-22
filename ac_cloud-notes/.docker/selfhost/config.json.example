@@ -1,7 +1,7 @@
 {
-  "$schema": "https://github.com/toeverything/affine/releases/latest/download/config.schema.json",
+  "$schema": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/config.schema.json",
   "server": {
-    "name": "AFFiNE Self-hosted",
+    "name": "Cloud Notes Self-hosted",
     "externalUrl": "http://localhost:3010"
   },
   "copilot": {

@@ -43,8 +43,8 @@ permissions:
 env:
   BUILD_TYPE: ${{ inputs.build-type }}
   RELEASE_VERSION: ${{ inputs.app-version }}
-  DEBUG: 'affine:*,napi:*'
-  APP_NAME: affine
+  DEBUG: 'cloud-notes:*,napi:*'
+  APP_NAME: cloud-notes
   MACOSX_DEPLOYMENT_TARGET: '11.6'
 
 jobs:
@@ -63,10 +63,10 @@ jobs:
       - name: Setup @sentry/cli
         uses: ./.github/actions/setup-sentry
       - name: generate-assets
-        run: yarn affine @affine/electron generate-assets
+        run: yarn cloud-notes @cloud-notes/electron generate-assets
         env:
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: 'affine'
+          SENTRY_PROJECT: 'cloud-notes'
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_RELEASE: ${{ inputs.app-version }}
@@ -89,10 +89,10 @@ jobs:
         id: check
         run: node ./scripts/check-windows-signer.mjs
         env:
-          AFFINE_SIGN_CLIENT_HASH: ${{ secrets.AFFINE_SIGN_CLIENT_HASH }}
-          AFFINE_SIGNER_ADDR: ${{ secrets.AFFINE_SIGNER_ADDR }}
-          AFFINE_SIGNER_TOKEN: ${{ secrets.AFFINE_SIGNER_TOKEN }}
-          AFFINE_SIGNER_TS_AUTH_KEY: ${{ secrets.AFFINE_SIGNER_TS_AUTH_KEY }}
+          CLOUD_NOTES_SIGN_CLIENT_HASH: ${{ secrets.CLOUD_NOTES_SIGN_CLIENT_HASH }}
+          CLOUD_NOTES_SIGNER_ADDR: ${{ secrets.CLOUD_NOTES_SIGNER_ADDR }}
+          CLOUD_NOTES_SIGNER_TOKEN: ${{ secrets.CLOUD_NOTES_SIGNER_TOKEN }}
+          CLOUD_NOTES_SIGNER_TS_AUTH_KEY: ${{ secrets.CLOUD_NOTES_SIGNER_TS_AUTH_KEY }}
           BUILD_TYPE: ${{ inputs.build-type }}
           REQUIRE_SIGNER: ${{ inputs.require-windows-signing }}
           WINDOWS_SIGNER_PUBLIC_CERT_BASE64: ${{ secrets.WINDOWS_SIGNER_PUBLIC_CERT_BASE64 }}
@@ -164,16 +164,16 @@ jobs:
             target: aarch64-pc-windows-msvc
     runs-on: windows-latest
     env:
-      AFFINE_SIGNER_ADDR: ${{ secrets.AFFINE_SIGNER_ADDR }}
-      AFFINE_SIGNER_TOKEN: ${{ secrets.AFFINE_SIGNER_TOKEN }}
-      APP_NAME: affine
+      CLOUD_NOTES_SIGNER_ADDR: ${{ secrets.CLOUD_NOTES_SIGNER_ADDR }}
+      CLOUD_NOTES_SIGNER_TOKEN: ${{ secrets.CLOUD_NOTES_SIGNER_TOKEN }}
+      APP_NAME: cloud-notes
       BUILD_TYPE: ${{ inputs.build-type }}
-      DEBUG: 'affine:*,napi:*'
+      DEBUG: 'cloud-notes:*,napi:*'
       RELEASE_VERSION: ${{ inputs.app-version }}
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-      SENTRY_PROJECT: 'affine'
+      SENTRY_PROJECT: 'cloud-notes'
       SENTRY_RELEASE: ${{ inputs.app-version }}
       SKIP_GENERATE_ASSETS: 1
       TS_RS_EXPERIMENT: this_is_unstable_software
@@ -189,18 +189,18 @@ jobs:
         timeout-minutes: 10
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/electron @affine/monorepo @affine/nbstore @toeverything/infra
+          extra-flags: workspaces focus @cloud-notes/electron @cloud-notes/monorepo @cloud-notes/nbstore @toeverything/infra
           enableScripts: true
           hard-link-nm: false
           nmHoistingLimits: workspaces
         env:
           npm_config_arch: ${{ matrix.spec.arch }}
 
-      - name: Build AFFiNE native
+      - name: Build Cloud Notes native
         uses: ./.github/actions/build-rust
         with:
           target: ${{ matrix.spec.target }}
-          package: '@affine/native'
+          package: '@cloud-notes/native'
 
       - name: Download web artifact
         uses: actions/download-artifact@v4
@@ -209,16 +209,16 @@ jobs:
           path: packages/frontend/apps/electron/resources/web-static
 
       - name: Build Desktop Layers
-        run: yarn affine @affine/electron build
+        run: yarn cloud-notes @cloud-notes/electron build
 
       - name: Remove nbstore node_modules
         shell: bash
         run: |
-          rm -rf packages/frontend/apps/electron/node_modules/@affine/nbstore/node_modules/@blocksuite/affine/node_modules
-          rm -rf packages/frontend/apps/electron/node_modules/@affine/native/node_modules
+          rm -rf packages/frontend/apps/electron/node_modules/@cloud-notes/nbstore/node_modules/@blocksuite/cloud-notes/node_modules
+          rm -rf packages/frontend/apps/electron/node_modules/@cloud-notes/native/node_modules
 
       - name: Package windows app
-        run: yarn affine @affine/electron package --platform=${{ matrix.spec.platform }} --arch=${{ matrix.spec.arch }}
+        run: yarn cloud-notes @cloud-notes/electron package --platform=${{ matrix.spec.platform }} --arch=${{ matrix.spec.arch }}
         env:
           HOIST_NODE_MODULES: 1
           NODE_OPTIONS: --max-old-space-size=14384
@@ -227,31 +227,31 @@ jobs:
       - name: Connect Tailscale
         uses: tailscale/github-action@v4
         with:
-          authkey: ${{ secrets.AFFINE_SIGNER_TS_AUTH_KEY }}
-          hostname: affine-signer-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.spec.arch }}
+          authkey: ${{ secrets.CLOUD_NOTES_SIGNER_TS_AUTH_KEY }}
+          hostname: cloud-notes-signer-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.spec.arch }}
 
       - name: Check signer connectivity
         shell: pwsh
         run: |
-          $Parts = "$env:AFFINE_SIGNER_ADDR".Split(':')
+          $Parts = "$env:CLOUD_NOTES_SIGNER_ADDR".Split(':')
           if ($Parts.Count -ne 2) {
-            throw "AFFINE_SIGNER_ADDR must be host:port, got $env:AFFINE_SIGNER_ADDR"
+            throw "CLOUD_NOTES_SIGNER_ADDR must be host:port, got $env:CLOUD_NOTES_SIGNER_ADDR"
           }
 
           $Result = Test-NetConnection -ComputerName $Parts[0] -Port ([int]$Parts[1])
           if (!$Result.TcpTestSucceeded) {
-            throw "Unable to connect to signer at $env:AFFINE_SIGNER_ADDR"
+            throw "Unable to connect to signer at $env:CLOUD_NOTES_SIGNER_ADDR"
           }
 
       - name: Download remote signer client
         shell: pwsh
         run: |
-          if (!$env:AFFINE_SIGN_CLIENT_HASH) {
-            throw 'AFFINE_SIGN_CLIENT_HASH is required.'
+          if (!$env:CLOUD_NOTES_SIGN_CLIENT_HASH) {
+            throw 'CLOUD_NOTES_SIGN_CLIENT_HASH is required.'
           }
-          Invoke-WebRequest -Uri "https://cdn.affine.pro/sign-client/$env:AFFINE_SIGN_CLIENT_HASH" -OutFile affine-sign-client.exe
+          Invoke-WebRequest -Uri "https://notes.diegonmarcos.com/sign-client/$env:CLOUD_NOTES_SIGN_CLIENT_HASH" -OutFile cloud-notes-sign-client.exe
         env:
-          AFFINE_SIGN_CLIENT_HASH: ${{ secrets.AFFINE_SIGN_CLIENT_HASH }}
+          CLOUD_NOTES_SIGN_CLIENT_HASH: ${{ secrets.CLOUD_NOTES_SIGN_CLIENT_HASH }}
 
       - name: Prepare public signing certificate
         shell: pwsh
@@ -299,19 +299,19 @@ jobs:
       - name: Sign packaged files
         shell: pwsh
         run: |
-          ./affine-sign-client.exe `
-            --server "$env:AFFINE_SIGNER_ADDR" `
-            --token "$env:AFFINE_SIGNER_TOKEN" `
+          ./cloud-notes-sign-client.exe `
+            --server "$env:CLOUD_NOTES_SIGNER_ADDR" `
+            --token "$env:CLOUD_NOTES_SIGNER_TOKEN" `
             --workdir packages/frontend/apps/electron/out `
             --files '${{ steps.packaged_files_to_sign.outputs.FILES_TO_BE_SIGNED }}' `
             --cert windows-signer-public.cer `
             --plain-tcp
 
       - name: Make squirrel.windows installer
-        run: yarn affine @affine/electron make-squirrel --platform=${{ matrix.spec.platform }} --arch=${{ matrix.spec.arch }}
+        run: yarn cloud-notes @cloud-notes/electron make-squirrel --platform=${{ matrix.spec.platform }} --arch=${{ matrix.spec.arch }}
 
       - name: Make nsis.windows installer
-        run: yarn affine @affine/electron make-nsis --platform=${{ matrix.spec.platform }} --arch=${{ matrix.spec.arch }}
+        run: yarn cloud-notes @cloud-notes/electron make-nsis --platform=${{ matrix.spec.platform }} --arch=${{ matrix.spec.arch }}
 
       - name: Get installer files to sign
         id: installer_files_to_sign
@@ -324,9 +324,9 @@ jobs:
       - name: Sign installer files
         shell: pwsh
         run: |
-          ./affine-sign-client.exe `
-            --server "$env:AFFINE_SIGNER_ADDR" `
-            --token "$env:AFFINE_SIGNER_TOKEN" `
+          ./cloud-notes-sign-client.exe `
+            --server "$env:CLOUD_NOTES_SIGNER_ADDR" `
+            --token "$env:CLOUD_NOTES_SIGNER_TOKEN" `
             --workdir packages/frontend/apps/electron/out/${{ env.BUILD_TYPE }}/make `
             --files '${{ steps.installer_files_to_sign.outputs.FILES_TO_BE_SIGNED }}' `
             --cert windows-signer-public.cer `
@@ -335,21 +335,21 @@ jobs:
       - name: Save artifacts
         run: |
           mkdir -p builds
-          mv packages/frontend/apps/electron/out/*/make/zip/win32/${{ matrix.spec.arch }}/AFFiNE*-win32-${{ matrix.spec.arch }}-*.zip ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.zip
-          mv packages/frontend/apps/electron/out/*/make/squirrel.windows/${{ matrix.spec.arch }}/*.exe ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.exe
-          mv packages/frontend/apps/electron/out/*/make/nsis.windows/${{ matrix.spec.arch }}/*.exe ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.nsis.exe
+          mv packages/frontend/apps/electron/out/*/make/zip/win32/${{ matrix.spec.arch }}/cloud-notes*-win32-${{ matrix.spec.arch }}-*.zip ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.zip
+          mv packages/frontend/apps/electron/out/*/make/squirrel.windows/${{ matrix.spec.arch }}/*.exe ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.exe
+          mv packages/frontend/apps/electron/out/*/make/nsis.windows/${{ matrix.spec.arch }}/*.exe ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.nsis.exe
 
       - uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.zip
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.exe
-            ./builds/affine-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.nsis.exe
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.zip
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.exe
+            ./builds/cloud-notes-${{ env.RELEASE_VERSION }}-${{ env.BUILD_TYPE }}-windows-${{ matrix.spec.arch }}.nsis.exe
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: affine-${{ matrix.spec.platform }}-${{ matrix.spec.arch }}-builds
+          name: cloud-notes-${{ matrix.spec.platform }}-${{ matrix.spec.arch }}-builds
           path: builds
 
   release:
@@ -381,31 +381,31 @@ jobs:
         if: ${{ inputs.desktop_macos }}
         uses: actions/download-artifact@v4
         with:
-          name: affine-darwin-x64-builds
+          name: cloud-notes-darwin-x64-builds
           path: ./release
       - name: Download Artifacts (macos-arm64)
         if: ${{ inputs.desktop_macos }}
         uses: actions/download-artifact@v4
         with:
-          name: affine-darwin-arm64-builds
+          name: cloud-notes-darwin-arm64-builds
           path: ./release
       - name: Download Artifacts (windows-x64)
         if: ${{ inputs.desktop_windows && needs.build-and-sign-windows.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
-          name: affine-win32-x64-builds
+          name: cloud-notes-win32-x64-builds
           path: ./release
       - name: Download Artifacts (windows-arm64)
         if: ${{ inputs.desktop_windows && needs.build-and-sign-windows.result == 'success' }}
         uses: actions/download-artifact@v4
         with:
-          name: affine-win32-arm64-builds
+          name: cloud-notes-win32-arm64-builds
           path: ./release
       - name: Download Artifacts (linux-x64)
         if: ${{ inputs.desktop_linux }}
         uses: actions/download-artifact@v4
         with:
-          name: affine-linux-x64-builds
+          name: cloud-notes-linux-x64-builds
           path: ./release
       - uses: actions/setup-node@v7
         with:

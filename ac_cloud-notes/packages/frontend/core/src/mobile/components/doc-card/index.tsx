@@ -1,14 +1,14 @@
-import { IconButton, Skeleton } from '@affine/component';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { PagePreview } from '@affine/core/components/page-list/page-content-preview';
-import { IsFavoriteIcon } from '@affine/core/components/pure/icons';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
+import { IconButton, Skeleton } from '@cloud-notes/component';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import { PagePreview } from '@cloud-notes/core/components/page-list/page-content-preview';
+import { IsFavoriteIcon } from '@cloud-notes/core/components/pure/icons';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { CompatibleFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
 import {
   WorkbenchLink,
   type WorkbenchLinkProps,
-} from '@affine/core/modules/workbench';
-import type { DocMeta } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/modules/workbench';
+import type { DocMeta } from '@blocksuite/cloud-notes/store';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import { forwardRef, type ReactNode, useMemo, useRef } from 'react';

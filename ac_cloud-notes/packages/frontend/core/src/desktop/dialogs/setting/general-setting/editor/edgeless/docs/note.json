@@ -75,7 +75,7 @@
               "borderRadius": 0,
               "borderSize": 4,
               "borderStyle": "none",
-              "shadowType": "--affine-note-shadow-sticker"
+              "shadowType": "--cloud-notes-note-shadow-sticker"
             }
           }
         },
@@ -109,7 +109,7 @@
                 "$blocksuite:internal:text$": true,
                 "delta": [
                   {
-                    "insert": "AFFiNE is a workspace with fully merged docs,"
+                    "insert": "Cloud Notes is a workspace with fully merged docs,"
                   }
                 ]
               }

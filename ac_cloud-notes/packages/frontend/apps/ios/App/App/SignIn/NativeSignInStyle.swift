@@ -22,7 +22,7 @@ struct NativeSignInAppearanceSnapshot {
   }
 
   init(cachedSystemInterfaceStyle systemInterfaceStyle: UIUserInterfaceStyle) {
-    let cachedSetting = NativeSignInAppearanceSetting(rawValue: UserDefaults.standard.string(forKey: AffineThemeStorage.modeKey) ?? "") ?? .system
+    let cachedSetting = NativeSignInAppearanceSetting(rawValue: UserDefaults.standard.string(forKey: CloudNotesThemeStorage.modeKey) ?? "") ?? .system
     setting = cachedSetting
     switch cachedSetting {
     case .dark:

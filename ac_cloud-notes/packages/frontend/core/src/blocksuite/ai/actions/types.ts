@@ -1,4 +1,4 @@
-import type { AIToolsConfig } from '@affine/core/modules/ai-button';
+import type { AIToolsConfig } from '@cloud-notes/core/modules/ai-button';
 import type {
   CopilotChatHistoryFragment,
   CopilotHistories,
@@ -7,10 +7,10 @@ import type {
   RequestOptions,
   StreamObject,
   UpdateChatSessionInput,
-} from '@affine/graphql';
-import type { EditorHost } from '@blocksuite/affine/std';
-import type { GfxModel } from '@blocksuite/affine/std/gfx';
-import type { BlockModel } from '@blocksuite/affine/store';
+} from '@cloud-notes/graphql';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import type { GfxModel } from '@blocksuite/cloud-notes/std/gfx';
+import type { BlockModel } from '@blocksuite/cloud-notes/store';
 
 import type { AIEmbeddingStatus } from '../provider';
 import type { PromptKey } from '../provider/prompt';

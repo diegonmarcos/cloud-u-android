@@ -1,6 +1,6 @@
 import os from 'node:os';
 
-import type { AuthTokenResponse } from '@affine/auth';
+import type { AuthTokenResponse } from '@cloud-notes/auth';
 import { session } from 'electron';
 
 import { logger } from '../logger';
@@ -36,9 +36,9 @@ export interface PasswordSignInResponse extends SignInResponse {
 }
 
 const authCookieNames = [
-  'affine_session',
-  'affine_user_id',
-  'affine_csrf_token',
+  'cloud_notes_session',
+  'cloud_notes_user_id',
+  'cloud_notes_csrf_token',
 ];
 
 function authUrl(endpoint: string, path: string) {
@@ -66,8 +66,8 @@ async function fetchAuth(endpoint: string, path: string, body?: unknown) {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-affine-client-kind': 'native',
-      'x-affine-version': BUILD_CONFIG.appVersion,
+      'x-cloud-notes-client-kind': 'native',
+      'x-cloud-notes-version': BUILD_CONFIG.appVersion,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -163,8 +163,8 @@ export const authHandlers = {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-affine-client-kind': 'native',
-        'x-affine-version': BUILD_CONFIG.appVersion,
+        'x-cloud-notes-client-kind': 'native',
+        'x-cloud-notes-version': BUILD_CONFIG.appVersion,
         ...(credential.verifyToken
           ? { 'x-captcha-token': credential.verifyToken }
           : {}),

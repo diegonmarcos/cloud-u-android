@@ -1,5 +1,5 @@
-import { Label } from '@affine/admin/components/ui/label';
-import { cn } from '@affine/admin/utils';
+import { Label } from '@cloud-notes/admin/components/ui/label';
+import { cn } from '@cloud-notes/admin/utils';
 import type * as LabelPrimitive from '@radix-ui/react-label';
 import { Slot } from '@radix-ui/react-slot';
 import { createContext, forwardRef, useContext, useId, useMemo } from 'react';

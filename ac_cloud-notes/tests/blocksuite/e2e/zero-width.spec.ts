@@ -12,7 +12,7 @@ const embedUrl = 'https://github.com/toeverything/blocksuite/pull/7217';
 
 test.beforeEach(async ({ page }) => {
   await page.route(
-    'https://affine-worker.toeverything.workers.dev/api/worker/link-preview',
+    'https://notes.diegonmarcos.com/api/worker/link-preview',
     async route => {
       await route.fulfill({
         json: {},
@@ -26,7 +26,7 @@ test(
   async ({ page }) => {
     await enterPlaygroundRoom(page);
     await initEmptyCodeBlockState(page);
-    const codeComponent = page.locator('affine-code');
+    const codeComponent = page.locator('cloud-notes-code');
     const rect = await codeComponent.boundingBox();
     if (!rect) {
       throw new Error('code-block not found');
@@ -50,7 +50,7 @@ test(
       doc.addBlock('affine:code', {}, note);
       doc.addBlock('affine:paragraph', {}, note);
     });
-    const codeComponent = page.locator('affine-code');
+    const codeComponent = page.locator('cloud-notes-code');
     const codeComponentrect = await codeComponent.boundingBox();
     if (!codeComponentrect) {
       throw new Error('code-block not found');
@@ -78,7 +78,7 @@ test(
         doc.addBlock('affine:divider', {}, note);
         doc.addBlock('affine:bookmark', { url: bookMarkUrl }, note);
         await new Promise(res => setTimeout(res, 200));
-        const pageRoot = document.querySelector('affine-page-root');
+        const pageRoot = document.querySelector('cloud-notes-page-root');
         if (!pageRoot) throw new Error('Cannot find doc page');
         const imageBlob = await fetch(
           `${location.origin}/test-card-1.png`
@@ -90,7 +90,7 @@ test(
       },
       { bookMarkUrl, embedUrl }
     );
-    const codeComponent = page.locator('affine-code');
+    const codeComponent = page.locator('cloud-notes-code');
     const codeComponentrect = await codeComponent.boundingBox();
     if (!codeComponentrect) {
       throw new Error('code-block not found');
@@ -101,7 +101,7 @@ test(
     );
     await assertBlockFlavour(page, '7', 'affine:paragraph');
 
-    const dividerComponent = page.locator('affine-divider');
+    const dividerComponent = page.locator('cloud-notes-divider');
     const dividerComponentRect = await dividerComponent.boundingBox();
     if (!dividerComponentRect) {
       throw new Error('divider-block not found');
@@ -112,7 +112,7 @@ test(
     );
     await assertBlockFlavour(page, '8', 'affine:paragraph');
 
-    const bookmarkComponent = page.locator('affine-bookmark');
+    const bookmarkComponent = page.locator('cloud-notes-bookmark');
     const bookmarkComponentRect = await bookmarkComponent.boundingBox();
     if (!bookmarkComponentRect) {
       throw new Error('bookmark-block not found');
@@ -124,14 +124,14 @@ test(
     await assertBlockFlavour(page, '9', 'affine:paragraph');
 
     await page.evaluate(() => {
-      const viewport = document.querySelector('.affine-page-viewport');
+      const viewport = document.querySelector('.cloud-notes-page-viewport');
       if (!viewport) {
         throw new Error();
       }
       viewport.scrollTo(0, 600);
     });
 
-    const imageComponent = page.locator('affine-image');
+    const imageComponent = page.locator('cloud-notes-image');
     const imageComponentRect = await imageComponent.boundingBox();
     if (!imageComponentRect) {
       throw new Error('image-block not found');

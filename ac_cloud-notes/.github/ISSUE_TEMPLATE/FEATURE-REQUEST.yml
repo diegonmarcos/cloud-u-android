@@ -11,7 +11,7 @@ body:
     id: description
     attributes:
       label: Description
-      description: What would you like to see added to AFFiNE?
+      description: What would you like to see added to Cloud Notes?
       placeholder: Please explain in details the feature and improvements you'd like to see.
     validations:
       required: true
@@ -30,8 +30,8 @@ body:
     attributes:
       label: Are you willing to submit a PR?
       description: >
-        (Optional) We encourage you to submit a [Pull Request](https://github.com/toeverything/affine/pulls) (PR) to help improve AFFiNE for everyone, especially if you have a good understanding of how to implement a fix or feature.
-        See the AFFiNE [Contributing Guide](https://github.com/toeverything/affine/blob/canary/CONTRIBUTING.md) to get started.
+        (Optional) We encourage you to submit a [Pull Request](https://github.com/diegonmarcos/cloud-u-android/pulls) (PR) to help improve Cloud Notes for everyone, especially if you have a good understanding of how to implement a fix or feature.
+        See the Cloud Notes [Contributing Guide](https://github.com/diegonmarcos/cloud-u-android/blob/canary/CONTRIBUTING.md) to get started.
       options:
         - label: Yes I'd like to help by submitting a PR!
   - type: checkboxes

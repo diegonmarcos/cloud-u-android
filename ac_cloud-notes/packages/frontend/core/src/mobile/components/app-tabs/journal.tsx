@@ -1,6 +1,6 @@
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { JournalService } from '@affine/core/modules/journal';
-import { WorkbenchService } from '@affine/core/modules/workbench';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { TodayIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';

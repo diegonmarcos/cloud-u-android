@@ -1,11 +1,11 @@
-import { toArrayBuffer } from '@affine/core/utils/array-buffer';
-import type { DocMode } from '@blocksuite/affine/model';
-import { ZipTransformer } from '@blocksuite/affine/widgets/linked-doc';
+import { toArrayBuffer } from '@cloud-notes/core/utils/array-buffer';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
+import { ZipTransformer } from '@blocksuite/cloud-notes/widgets/linked-doc';
 import { Service } from '@toeverything/infra';
 
 import { DocsService } from '../../doc';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   type WorkspaceMetadata,
   type WorkspacesService,
 } from '../../workspace';
@@ -27,7 +27,7 @@ export class ImportTemplateService extends Service {
     await workspace.engine.doc.waitForDocReady(workspace.id); // wait for root doc ready
     const [importedDoc] = await ZipTransformer.importDocs(
       workspace.docCollection,
-      getAFFiNEWorkspaceSchema(),
+      getCloudNotesWorkspaceSchema(),
       new Blob([toArrayBuffer(docBinary)], {
         type: 'application/zip',
       })

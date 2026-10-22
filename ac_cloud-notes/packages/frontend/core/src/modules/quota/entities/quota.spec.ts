@@ -1,5 +1,5 @@
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import type { WorkspaceQuotaStateSnapshot } from '@affine/realtime';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import type { WorkspaceQuotaStateSnapshot } from '@cloud-notes/realtime';
 import { Framework } from '@toeverything/infra';
 import { Subject } from 'rxjs';
 import { describe, expect, test, vi } from 'vitest';

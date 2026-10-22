@@ -1,5 +1,5 @@
-import { ViewExtensionManager } from '@blocksuite/affine/ext-loader';
-import { getInternalViewExtensions } from '@blocksuite/affine/extensions/view';
+import { ViewExtensionManager } from '@blocksuite/cloud-notes/ext-loader';
+import { getInternalViewExtensions } from '@blocksuite/cloud-notes/extensions/view';
 
 const manager = new ViewExtensionManager(getInternalViewExtensions());
 

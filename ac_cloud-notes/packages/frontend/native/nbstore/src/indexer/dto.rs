@@ -1,4 +1,4 @@
-use affine_doc_loader::{BlockInfo, CrawlResult};
+use cloud_notes_doc_loader::{BlockInfo, CrawlResult};
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
 

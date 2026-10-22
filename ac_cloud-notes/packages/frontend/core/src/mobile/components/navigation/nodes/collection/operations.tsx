@@ -4,16 +4,16 @@ import {
   MenuSeparator,
   notify,
   useConfirmModal,
-} from '@affine/component';
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
-import { IsFavoriteIcon } from '@affine/core/components/pure/icons';
-import type { NodeOperation } from '@affine/core/desktop/components/navigation-panel';
-import { CollectionService } from '@affine/core/modules/collection';
-import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/component';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
+import { IsFavoriteIcon } from '@cloud-notes/core/components/pure/icons';
+import type { NodeOperation } from '@cloud-notes/core/desktop/components/navigation-panel';
+import { CollectionService } from '@cloud-notes/core/modules/collection';
+import { CompatibleFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import {
   DeleteIcon,
   FilterIcon,
@@ -51,8 +51,8 @@ export const useNavigationPanelCollectionAddDoc = (
   }, [collectionId, collectionService, createPage, onOpenCollapsed]);
   return useCallback(() => {
     openConfirmModal({
-      title: t['com.affine.collection.add-doc.confirm.title'](),
-      description: t['com.affine.collection.add-doc.confirm.description'](),
+      title: t['com.cloud-notes.collection.add-doc.confirm.title'](),
+      description: t['com.cloud-notes.collection.add-doc.confirm.description'](),
       cancelText: t['Cancel'](),
       confirmText: t['Confirm'](),
       confirmButtonOptions: { variant: 'primary' },
@@ -125,7 +125,7 @@ export const useNavigationPanelCollectionNodeOperations = (
         track.$.navigationPanel.organize.renameOrganizeItem({
           type: 'collection',
         });
-        notify.success({ message: t['com.affine.toastMessage.rename']() });
+        notify.success({ message: t['com.cloud-notes.toastMessage.rename']() });
       }
     },
     [collectionId, collectionService, t]
@@ -187,7 +187,7 @@ export const useNavigationPanelCollectionNodeOperationsMenu = (
             size="16"
             onClick={addDocToCollection}
             tooltip={t[
-              'com.affine.rootAppSidebar.explorer.collection-add-tooltip'
+              'com.cloud-notes.rootAppSidebar.explorer.collection-add-tooltip'
             ]()}
           >
             <PlusIcon />
@@ -206,7 +206,7 @@ export const useNavigationPanelCollectionNodeOperationsMenu = (
         index: 99,
         view: (
           <MenuItem prefixIcon={<FilterIcon />} onClick={handleShowEdit}>
-            {t['com.affine.collection.menu.edit']()}
+            {t['com.cloud-notes.collection.menu.edit']()}
           </MenuItem>
         ),
       },
@@ -226,8 +226,8 @@ export const useNavigationPanelCollectionNodeOperationsMenu = (
             onClick={handleToggleFavoriteCollection}
           >
             {favorite
-              ? t['com.affine.favoritePageOperation.remove']()
-              : t['com.affine.favoritePageOperation.add']()}
+              ? t['com.cloud-notes.favoritePageOperation.remove']()
+              : t['com.cloud-notes.favoritePageOperation.add']()}
           </MenuItem>
         ),
       },
@@ -235,7 +235,7 @@ export const useNavigationPanelCollectionNodeOperationsMenu = (
         index: 99,
         view: (
           <MenuItem prefixIcon={<OpenInNewIcon />} onClick={handleOpenInNewTab}>
-            {t['com.affine.workbench.tab.page-menu-open']()}
+            {t['com.cloud-notes.workbench.tab.page-menu-open']()}
           </MenuItem>
         ),
       },
@@ -248,7 +248,7 @@ export const useNavigationPanelCollectionNodeOperationsMenu = (
                   prefixIcon={<SplitViewIcon />}
                   onClick={handleOpenInSplitView}
                 >
-                  {t['com.affine.workbench.split-view.page-menu-open']()}
+                  {t['com.cloud-notes.workbench.split-view.page-menu-open']()}
                 </MenuItem>
               ),
             },

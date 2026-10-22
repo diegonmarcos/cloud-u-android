@@ -1,5 +1,5 @@
-import { type PasswordLimitsFragment } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+import { type PasswordLimitsFragment } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { type Options, passwordStrength } from 'check-password-strength';
 import { type FC, useCallback, useEffect, useMemo, useState } from 'react';
 import { z, type ZodCustomIssue, ZodIssueCode } from 'zod';
@@ -151,7 +151,7 @@ export const PasswordInput: FC<
         type="password"
         size="extraLarge"
         style={{ marginBottom: 20 }}
-        placeholder={t['com.affine.auth.set.password.placeholder']({
+        placeholder={t['com.cloud-notes.auth.set.password.placeholder']({
           min: String(passwordLimits.minLength),
         })}
         onChange={onPasswordChange}
@@ -160,10 +160,10 @@ export const PasswordInput: FC<
             {status ? (
               <Tag
                 status={status}
-                minimum={t['com.affine.auth.set.password.message.minlength']({
+                minimum={t['com.cloud-notes.auth.set.password.message.minlength']({
                   min: String(passwordLimits.minLength),
                 })}
-                maximum={t['com.affine.auth.set.password.message.maxlength']({
+                maximum={t['com.cloud-notes.auth.set.password.message.maxlength']({
                   max: String(passwordLimits.maxLength),
                 })}
               />
@@ -177,7 +177,7 @@ export const PasswordInput: FC<
         className={styles.input}
         type="password"
         size="extraLarge"
-        placeholder={t['com.affine.auth.set.password.placeholder.confirm']()}
+        placeholder={t['com.cloud-notes.auth.set.password.placeholder.confirm']()}
         onChange={onConfirmPasswordChange}
         endFix={
           <div className={statusWrapper}>

@@ -1,14 +1,14 @@
 # Working with Block Tree
 
 ::: info
-🌐 This documentation has a [Chinese translation](https://insider.affine.pro/share/af3478a2-9c9c-4d16-864d-bffa1eb10eb6/-3bEQPBoOEkNH13ULW9Ed).
+🌐 This documentation has a [Chinese translation](https://notes.diegonmarcos.com/share/af3478a2-9c9c-4d16-864d-bffa1eb10eb6/-3bEQPBoOEkNH13ULW9Ed).
 :::
 
 In previous examples, we demonstrated how a `doc` collaborates with an `editor`. In this document, we will introduce the basic structure of the block tree within the `doc` and the common methods for controlling it in an editor environment.
 
 ## Block Tree Basics
 
-In BlockSuite, each `doc` object manages an independent block tree composed of various types of blocks. These blocks can be defined through the [`BlockSchema`](./block-schema.md), which specifies their fields and permissible nesting relationships among different block types. Each block type has a unique `block.flavour`, following a `namespace:name` naming structure. Since the preset editors in BlockSuite are derived from the [AFFiNE](https://github.com/toeverything/AFFiNE) project, the default editable blocks use the `affine` prefix.
+In BlockSuite, each `doc` object manages an independent block tree composed of various types of blocks. These blocks can be defined through the [`BlockSchema`](./block-schema.md), which specifies their fields and permissible nesting relationships among different block types. Each block type has a unique `block.flavour`, following a `namespace:name` naming structure. Since the preset editors in BlockSuite are derived from the [Cloud Notes](https://github.com/diegonmarcos/cloud-u-android) project, the default editable blocks use the `cloud-notes` prefix.
 
 To manipulate blocks, you can utilize several primary APIs under `doc`:
 
@@ -47,7 +47,7 @@ This example creates a subset of the block tree hierarchy defaultly used in `@bl
 In BlockSuite, you need to initialize a valid document structure before attaching it to editors, which is also why it requires `init()` after `createEmptyDoc()`.
 
 ::: info
-The block tree hierarchy is specific to the preset editors. At the framework level, `@blocksuite/store` does **NOT** treat the "first-party" `affine:*` blocks with any special way. Feel free to add blocks from different namespaces for the block tree!
+The block tree hierarchy is specific to the preset editors. At the framework level, `@blocksuite/store` does **NOT** treat the "first-party" `cloud-notes:*` blocks with any special way. Feel free to add blocks from different namespaces for the block tree!
 :::
 
 All block operations on `doc` are automatically recorded and can be reversed using [`doc.undo()`](/api/@blocksuite/store/classes/Doc.html#undo) and [`doc.redo()`](/api/@blocksuite/store/classes/Doc.html#redo). By default, operations within a certain period are automatically merged into a single record. However, you can explicitly add a history record during operations by inserting [`doc.captureSync()`](/api/@blocksuite/store/classes/Doc.html#capturesync) between block operations:
@@ -290,14 +290,14 @@ import type { EmbedGithubBlockModel } from './embed-github-model.js';
 import { html } from 'lit';
 import { customElement } from 'lit/decorators.js';
 
-@customElement('affine-embed-github-block')
+@customElement('cloud-notes-embed-github-block')
 export class EmbedGithubBlock extends EmbedBlockComponent<EmbedGithubModel> {
   // styles...
 
   override render() {
     return this.renderEmbed(() => {
       return html`
-        <div class="affine-embed-github-block">
+        <div class="cloud-notes-embed-github-block">
           <h3>GitHub Card</h3>
           <div>${this.model.owner}/${this.model.repo}</div>
         </div>
@@ -324,7 +324,7 @@ export const EmbedGithubBlockSpec = createEmbedBlock({
     }),
   },
   view: {
-    component: literal`affine-embed-github-block`,
+    component: literal`cloud-notes-embed-github-block`,
   },
 });
 ```
@@ -345,11 +345,11 @@ After completing the above steps, you can insert the new block type into the blo
 
 ```ts
 const props = {
-  owner: 'toeverything', // The company behind BlockSuite and AFFiNE 🤫
+  owner: 'toeverything', // The company behind BlockSuite and Cloud Notes 🤫
   repo: 'https://github.com/toeverything/blocksuite',
 };
 
-// The 'affine' prefix is kept by default, but you can also override it.
+// The 'cloud-notes' prefix is kept by default, but you can also override it.
 doc.addBlock('affine:embed-github', props, parentId);
 ```
 

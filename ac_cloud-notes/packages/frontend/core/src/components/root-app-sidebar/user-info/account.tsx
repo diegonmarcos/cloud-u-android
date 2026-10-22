@@ -1,5 +1,5 @@
-import { Avatar } from '@affine/component';
-import { AuthService } from '@affine/core/modules/cloud';
+import { Avatar } from '@cloud-notes/component';
+import { AuthService } from '@cloud-notes/core/modules/cloud';
 import { useLiveData, useService } from '@toeverything/infra';
 
 import * as styles from './index.css';

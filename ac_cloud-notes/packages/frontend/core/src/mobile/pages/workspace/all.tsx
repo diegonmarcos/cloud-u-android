@@ -1,13 +1,13 @@
-import { useThemeColorV2 } from '@affine/component';
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
+import { useThemeColorV2 } from '@cloud-notes/component';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
 import {
   createDocExplorerContext,
   DocExplorerContext,
-} from '@affine/core/components/explorer/context';
-import { DocsExplorer } from '@affine/core/components/explorer/docs-view/docs-list';
-import { CollectionRulesService } from '@affine/core/modules/collection-rules';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { inferOpenMode } from '@affine/core/utils';
+} from '@cloud-notes/core/components/explorer/context';
+import { DocsExplorer } from '@cloud-notes/core/components/explorer/docs-view/docs-list';
+import { CollectionRulesService } from '@cloud-notes/core/modules/collection-rules';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { inferOpenMode } from '@cloud-notes/core/utils';
 import { useLiveData, useService } from '@toeverything/infra';
 import { type MouseEvent, useCallback, useEffect, useState } from 'react';
 

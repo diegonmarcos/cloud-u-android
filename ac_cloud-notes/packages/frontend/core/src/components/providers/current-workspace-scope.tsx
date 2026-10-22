@@ -1,6 +1,6 @@
-import { useWorkspace } from '@affine/core/components/hooks/use-workspace';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { WorkspacesService } from '@affine/core/modules/workspace';
+import { useWorkspace } from '@cloud-notes/core/components/hooks/use-workspace';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { WorkspacesService } from '@cloud-notes/core/modules/workspace';
 import { FrameworkScope, useLiveData, useService } from '@toeverything/infra';
 
 export const CurrentWorkspaceScopeProvider = ({

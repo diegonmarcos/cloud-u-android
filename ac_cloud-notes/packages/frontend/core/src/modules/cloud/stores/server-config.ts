@@ -1,4 +1,4 @@
-import { UserFriendlyError } from '@affine/error';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   gqlFetcherFactory,
   type OauthProvidersQuery,
@@ -6,7 +6,7 @@ import {
   type ServerConfigQuery,
   serverConfigQuery,
   ServerFeature,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Store } from '@toeverything/infra';
 import semver from 'semver';
 
@@ -124,7 +124,7 @@ export class ServerConfigStore extends Store {
         context: {
           signal: abortSignal,
           headers: {
-            'x-affine-version': BUILD_CONFIG.appVersion,
+            'x-cloud-notes-version': BUILD_CONFIG.appVersion,
           },
         },
       });
@@ -137,7 +137,7 @@ export class ServerConfigStore extends Store {
           context: {
             signal: abortSignal,
             headers: {
-              'x-affine-version': BUILD_CONFIG.appVersion,
+              'x-cloud-notes-version': BUILD_CONFIG.appVersion,
             },
           },
         });

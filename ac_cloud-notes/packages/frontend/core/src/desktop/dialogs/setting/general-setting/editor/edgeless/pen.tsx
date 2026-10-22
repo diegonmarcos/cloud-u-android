@@ -1,10 +1,10 @@
-import { MenuItem, MenuTrigger, Slider } from '@affine/component';
-import { SettingRow } from '@affine/component/setting-components';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
-import { getSurfaceBlock } from '@blocksuite/affine/blocks/surface';
-import { DefaultTheme } from '@blocksuite/affine/model';
-import type { Store } from '@blocksuite/affine/store';
+import { MenuItem, MenuTrigger, Slider } from '@cloud-notes/component';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
+import { getSurfaceBlock } from '@blocksuite/cloud-notes/blocks/surface';
+import { DefaultTheme } from '@blocksuite/cloud-notes/model';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useFramework, useLiveData } from '@toeverything/infra';
 import { isEqual } from 'lodash-es';
 import { useCallback, useMemo } from 'react';
@@ -67,13 +67,13 @@ export const PenSettings = () => {
   return (
     <>
       <EdgelessSnapshot
-        title={t['com.affine.settings.editorSettings.edgeless.pen']()}
+        title={t['com.cloud-notes.settings.editorSettings.edgeless.pen']()}
         docName="pen"
         keyName="brush"
         getElements={getElements}
       />
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.pen.color']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.pen.color']()}
         desc={''}
       >
         {currentColor ? (
@@ -91,7 +91,7 @@ export const PenSettings = () => {
         ) : null}
       </SettingRow>
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.pen.thickness']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.pen.thickness']()}
         desc={''}
       >
         <Slider

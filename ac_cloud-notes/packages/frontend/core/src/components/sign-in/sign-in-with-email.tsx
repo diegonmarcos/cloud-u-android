@@ -1,18 +1,18 @@
-import { notify } from '@affine/component';
+import { notify } from '@cloud-notes/component';
 import {
   AuthContainer,
   AuthContent,
   AuthFooter,
   AuthHeader,
   AuthInput,
-} from '@affine/component/auth-components';
-import { Button } from '@affine/component/ui/button';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { AuthService, CaptchaService } from '@affine/core/modules/cloud';
-import type { AuthSessionStatus } from '@affine/core/modules/cloud/entities/session';
-import { Unreachable } from '@affine/env/constant';
-import { UserFriendlyError } from '@affine/error';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/auth-components';
+import { Button } from '@cloud-notes/component/ui/button';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { AuthService, CaptchaService } from '@cloud-notes/core/modules/cloud';
+import type { AuthSessionStatus } from '@cloud-notes/core/modules/cloud/entities/session';
+import { Unreachable } from '@cloud-notes/env/constant';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import {
   type Dispatch,
@@ -74,8 +74,8 @@ export const SignInWithEmailStep = ({
   useEffect(() => {
     if (loginStatus === 'authenticated') {
       notify.success({
-        title: t['com.affine.auth.toast.title.signed-in'](),
-        message: t['com.affine.auth.toast.message.signed-in'](),
+        title: t['com.cloud-notes.auth.toast.title.signed-in'](),
+        message: t['com.cloud-notes.auth.toast.message.signed-in'](),
       });
     }
     onAuthenticated?.(loginStatus);
@@ -134,7 +134,7 @@ export const SignInWithEmailStep = ({
     if (isVerifying) return;
 
     if (otp.length !== 6 || !/[0-9]{6}/.test(otp)) {
-      setOtpError(t['com.affine.auth.sign.auth.code.invalid']());
+      setOtpError(t['com.cloud-notes.auth.sign.auth.code.invalid']());
       return;
     }
 
@@ -146,7 +146,7 @@ export const SignInWithEmailStep = ({
       notify.error({
         title: (e as UserFriendlyError).message,
       });
-      setOtpError(t['com.affine.auth.sign.auth.code.invalid']());
+      setOtpError(t['com.cloud-notes.auth.sign.auth.code.invalid']());
     } finally {
       setIsVerifying(false);
     }
@@ -154,7 +154,7 @@ export const SignInWithEmailStep = ({
 
   return !verifyToken && needCaptcha ? (
     <>
-      <AuthHeader title={t['com.affine.auth.sign.in']()} />
+      <AuthHeader title={t['com.cloud-notes.auth.sign.in']()} />
       <AuthContent style={{ height: 100 }}>
         <Captcha />
       </AuthContent>
@@ -163,20 +163,20 @@ export const SignInWithEmailStep = ({
   ) : (
     <AuthContainer>
       <AuthHeader
-        title={t['com.affine.auth.sign.in']()}
-        subTitle={t['com.affine.auth.sign.in.sent.email.subtitle']()}
+        title={t['com.cloud-notes.auth.sign.in']()}
+        subTitle={t['com.cloud-notes.auth.sign.in.sent.email.subtitle']()}
       />
       <AuthContent>
         <p>
           <Trans
-            i18nKey="com.affine.auth.sign.auth.code.hint"
+            i18nKey="com.cloud-notes.auth.sign.auth.code.hint"
             values={{ email }}
             components={{ a: <a href={`mailto:${email}`} /> }}
           />
         </p>
 
         <AuthInput
-          placeholder={t['com.affine.auth.sign.auth.code']()}
+          placeholder={t['com.cloud-notes.auth.sign.auth.code']()}
           onChange={onOtpChanged}
           error={!!otpError}
           errorHint={otpError}
@@ -196,7 +196,7 @@ export const SignInWithEmailStep = ({
           disabled={!!otpError || isVerifying}
           loading={isVerifying}
         >
-          {t['com.affine.auth.sign.auth.code.continue']()}
+          {t['com.cloud-notes.auth.sign.auth.code.continue']()}
         </Button>
 
         <Button
@@ -206,10 +206,10 @@ export const SignInWithEmailStep = ({
           style={{ padding: '4px' }}
         >
           {resendCountDown <= 0 ? (
-            t['com.affine.auth.sign.auth.code.resend']()
+            t['com.cloud-notes.auth.sign.auth.code.resend']()
           ) : (
             <Trans
-              i18nKey="com.affine.auth.sign.auth.code.resend.hint"
+              i18nKey="com.cloud-notes.auth.sign.auth.code.resend.hint"
               values={{ second: resendCountDown }}
             />
           )}
@@ -218,11 +218,11 @@ export const SignInWithEmailStep = ({
 
       <AuthFooter>
         <div className={style.authMessage} style={{ marginTop: 20 }}>
-          {t['com.affine.auth.sign.auth.code.message']()}
+          {t['com.cloud-notes.auth.sign.auth.code.message']()}
           &nbsp;
           {state.hasPassword && (
             <Trans
-              i18nKey="com.affine.auth.sign.auth.code.message.password"
+              i18nKey="com.cloud-notes.auth.sign.auth.code.message.password"
               components={{
                 1: (
                   <span

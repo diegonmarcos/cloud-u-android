@@ -1,7 +1,7 @@
 import {
   createSignalFromObservable,
   type Signal,
-} from '@blocksuite/affine/shared/utils';
+} from '@blocksuite/cloud-notes/shared/utils';
 import { LiveData, Service } from '@toeverything/infra';
 import { map } from 'rxjs';
 

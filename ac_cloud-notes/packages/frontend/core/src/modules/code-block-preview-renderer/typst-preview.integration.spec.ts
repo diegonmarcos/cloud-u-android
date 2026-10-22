@@ -37,7 +37,7 @@ const typstRuntimeUrl = `/@fs/${resolve(
   'packages/frontend/core/src/modules/typst/renderer/runtime.ts'
 )}`;
 const svgUtilsUrl = `/@fs/${resolve(
-  'blocksuite/affine/shared/src/utils/svg.ts'
+  'blocksuite/cloud-notes/shared/src/utils/svg.ts'
 )}`;
 
 beforeAll(async () => {

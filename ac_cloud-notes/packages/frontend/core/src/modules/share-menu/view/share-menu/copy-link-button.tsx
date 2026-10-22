@@ -1,12 +1,12 @@
-import { Button, Menu, MenuItem, MenuTrigger } from '@affine/component';
+import { Button, Menu, MenuItem, MenuTrigger } from '@cloud-notes/component';
 import {
   getSelectedNodes,
   useSharingUrl,
-} from '@affine/core/components/hooks/affine/use-share-url';
-import { getDefaultShareMode } from '@affine/core/components/hooks/affine/use-share-url.utils';
-import { EditorService } from '@affine/core/modules/editor';
-import { useI18n } from '@affine/i18n';
-import type { DocMode } from '@blocksuite/affine/model';
+} from '@cloud-notes/core/components/hooks/cloud-notes/use-share-url';
+import { getDefaultShareMode } from '@cloud-notes/core/components/hooks/cloud-notes/use-share-url.utils';
+import { EditorService } from '@cloud-notes/core/modules/editor';
+import { useI18n } from '@cloud-notes/i18n';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import { BlockIcon, EdgelessIcon, PageIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
@@ -65,7 +65,7 @@ export const CopyLinkButton = ({
             secondary: secondary,
           })}
         >
-          {t['com.affine.share-menu.copy']()}
+          {t['com.cloud-notes.share-menu.copy']()}
         </span>
         {BUILD_CONFIG.isDesktopEdition && (
           <span
@@ -88,21 +88,21 @@ export const CopyLinkButton = ({
               onSelect={onCopyPageLink}
               data-testid="share-link-menu-copy-page"
             >
-              {t['com.affine.share-menu.copy.page']()}
+              {t['com.cloud-notes.share-menu.copy.page']()}
             </MenuItem>
             <MenuItem
               prefixIcon={<EdgelessIcon />}
               onSelect={onCopyEdgelessLink}
               data-testid="share-link-menu-copy-edgeless"
             >
-              {t['com.affine.share-menu.copy.edgeless']()}
+              {t['com.cloud-notes.share-menu.copy.edgeless']()}
             </MenuItem>
             <MenuItem
               prefixIcon={<BlockIcon />}
               onSelect={onCopyBlockLink}
               disabled={blockIds.length + elementIds.length === 0}
             >
-              {t['com.affine.share-menu.copy.block']()}
+              {t['com.cloud-notes.share-menu.copy.block']()}
             </MenuItem>
           </>
         }

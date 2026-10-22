@@ -1,8 +1,8 @@
-import { setupGlobal } from '@affine/env/global';
-import { getBuildConfig } from '@affine-tools/utils/build-config';
-import { Package } from '@affine-tools/utils/workspace';
+import { setupGlobal } from '@cloud-notes/env/global';
+import { getBuildConfig } from '@cloud-notes-tools/utils/build-config';
+import { Package } from '@cloud-notes-tools/utils/workspace';
 
-globalThis.BUILD_CONFIG = getBuildConfig(new Package('@affine/web'), {
+globalThis.BUILD_CONFIG = getBuildConfig(new Package('@cloud-notes/web'), {
   mode: 'development',
   channel: 'canary',
 });

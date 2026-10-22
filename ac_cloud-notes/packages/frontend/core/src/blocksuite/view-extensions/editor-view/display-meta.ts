@@ -1,15 +1,15 @@
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import type { Container } from '@blocksuite/affine/global/di';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import type { Container } from '@blocksuite/cloud-notes/global/di';
 import type {
   DocDisplayMetaExtension,
   DocDisplayMetaParams,
-} from '@blocksuite/affine/shared/services';
-import { DocDisplayMetaProvider } from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/shared/services';
+import { DocDisplayMetaProvider } from '@blocksuite/cloud-notes/shared/services';
 import {
   createSignalFromObservable,
   referenceToNode,
-} from '@blocksuite/affine/shared/utils';
-import { LifeCycleWatcher, StdIdentifier } from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/shared/utils';
+import { LifeCycleWatcher, StdIdentifier } from '@blocksuite/cloud-notes/std';
 import { LinkedPageIcon, PageIcon } from '@blocksuite/icons/lit';
 import { computed, type ReadonlySignal } from '@preact/signals-core';
 import { type FrameworkProvider } from '@toeverything/infra';
@@ -30,7 +30,7 @@ export function buildDocDisplayMetaExtension(framework: FrameworkProvider) {
     });
   }
 
-  class AffineDocDisplayMetaService
+  class CloudNotesDocDisplayMetaService
     extends LifeCycleWatcher
     implements DocDisplayMetaExtension
   {
@@ -94,5 +94,5 @@ export function buildDocDisplayMetaExtension(framework: FrameworkProvider) {
     }
   }
 
-  return AffineDocDisplayMetaService;
+  return CloudNotesDocDisplayMetaService;
 }

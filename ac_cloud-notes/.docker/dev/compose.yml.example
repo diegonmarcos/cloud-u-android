@@ -1,4 +1,4 @@
-name: affine_dev_services
+name: cloud_notes_dev_services
 services:
   postgres:
     env_file:
@@ -43,7 +43,7 @@ services:
   #     - ${ES_PORT:-9200}:9200
   #   environment:
   #     - node.name=es01
-  #     - cluster.name=affine-dev
+  #     - cluster.name=cloud-notes-dev
   #     - discovery.type=single-node
   #     - bootstrap.memory_lock=true
   #     - xpack.security.enabled=false
@@ -59,7 +59,7 @@ services:
   #     test:
   #       [
   #         "CMD-SHELL",
-  #         "curl -s http://localhost:9200 | grep -q 'affine-dev'",
+  #         "curl -s http://localhost:9200 | grep -q 'cloud-notes-dev'",
   #       ]
   #     interval: 10s
   #     timeout: 10s

@@ -8,10 +8,10 @@
   },
   "include": ["./apps", "./examples"],
   "references": [
-    { "path": "../affine/all" },
-    { "path": "../affine/model" },
-    { "path": "../affine/shared" },
-    { "path": "../affine/data-view" },
+    { "path": "../cloud-notes/all" },
+    { "path": "../cloud-notes/model" },
+    { "path": "../cloud-notes/shared" },
+    { "path": "../cloud-notes/data-view" },
     { "path": "../integration-test" }
   ]
 }

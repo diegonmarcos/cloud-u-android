@@ -1,6 +1,6 @@
-import { shallowEqual } from '@affine/component';
-import type { CollectionMeta } from '@affine/core/modules/collection';
-import { useI18n } from '@affine/i18n';
+import { shallowEqual } from '@cloud-notes/component';
+import type { CollectionMeta } from '@cloud-notes/core/modules/collection';
+import { useI18n } from '@cloud-notes/i18n';
 import { ToggleRightIcon, ViewLayersIcon } from '@blocksuite/icons/rc';
 import { selectAtom } from 'jotai/utils';
 import type { MouseEventHandler } from 'react';
@@ -94,8 +94,8 @@ export const ItemGroupHeader = memo(function ItemGroupHeader<
       <button className={styles.selectAllButton} onClick={onSelectAll}>
         {t[
           allSelected
-            ? 'com.affine.page.group-header.clear'
-            : 'com.affine.page.group-header.select-all'
+            ? 'com.cloud-notes.page.group-header.clear'
+            : 'com.cloud-notes.page.group-header.select-all'
         ]()}
       </button>
     </div>

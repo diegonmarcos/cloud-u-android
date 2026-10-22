@@ -1,4 +1,4 @@
-import AffineGraphQL
+import CloudNotesGraphQL
 import Apollo
 import Foundation
 
@@ -10,7 +10,7 @@ public final class QLService {
 
   private init() {
     let store = ApolloStore()
-    endpointURL = URL(string: "https://app.affine.pro/graphql")!
+    endpointURL = URL(string: "https://notes.diegonmarcos.com/graphql")!
     urlSessionClient = URLSessionCookieClient()
     let networkTransport = RequestChainNetworkTransport(
       interceptorProvider: DefaultInterceptorProvider(client: urlSessionClient, store: store),

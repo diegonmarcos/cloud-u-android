@@ -1,4 +1,4 @@
-import { WorkbenchLink } from '@affine/core/modules/workbench';
+import { WorkbenchLink } from '@cloud-notes/core/modules/workbench';
 import { ArrowDownSmallIcon } from '@blocksuite/icons/rc';
 import clsx from 'clsx';
 import React, { type SVGAttributes } from 'react';

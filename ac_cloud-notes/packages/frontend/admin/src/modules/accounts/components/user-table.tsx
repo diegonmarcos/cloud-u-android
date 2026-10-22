@@ -33,8 +33,8 @@ export const UserTable: React.FC<UserTableProps> = ({ users }) => {
               key={`${user.email}-${index}`}
               className={`${user.valid === false ? 'bg-destructive/10' : ''}
                 ${user.importStatus === ImportStatus.Failed ? 'bg-destructive/10' : ''}
-                ${user.importStatus === ImportStatus.Success ? 'bg-[var(--affine-v2-layer-background-success)]' : ''}
-                ${user.importStatus === ImportStatus.Processing ? 'bg-[var(--affine-v2-layer-background-warning)]' : ''}`}
+                ${user.importStatus === ImportStatus.Success ? 'bg-[var(--cloud-notes-v2-layer-background-success)]' : ''}
+                ${user.importStatus === ImportStatus.Processing ? 'bg-[var(--cloud-notes-v2-layer-background-warning)]' : ''}`}
             >
               <td className="max-w-[150px] truncate px-4 py-2 text-sm text-foreground">
                 {user.name || '-'}
@@ -63,7 +63,7 @@ export const UserTable: React.FC<UserTableProps> = ({ users }) => {
               <td className="py-2 px-4 text-sm">
                 {user.importStatus === ImportStatus.Success ? (
                   <span className="text-foreground">
-                    <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[var(--affine-v2-status-success)]" />
+                    <span className="mr-2 inline-block h-2 w-2 rounded-full bg-[var(--cloud-notes-v2-status-success)]" />
                     Success
                   </span>
                 ) : user.importStatus === ImportStatus.Failed ? (

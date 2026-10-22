@@ -1,8 +1,8 @@
 import 'fake-indexeddb/auto';
 
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { Text } from '@blocksuite/affine/store';
-import { TestWorkspace } from '@blocksuite/affine/store/test';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { Text } from '@blocksuite/cloud-notes/store';
+import { TestWorkspace } from '@blocksuite/cloud-notes/store/test';
 import { describe, expect, test } from 'vitest';
 
 import { insertFromMarkdown } from './markdown-utils';

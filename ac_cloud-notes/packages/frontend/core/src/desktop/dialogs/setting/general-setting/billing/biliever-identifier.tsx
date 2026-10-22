@@ -1,5 +1,5 @@
-import { SubscriptionService } from '@affine/core/modules/cloud';
-import { Trans, useI18n } from '@affine/i18n';
+import { SubscriptionService } from '@cloud-notes/core/modules/cloud';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 
 import { BelieverCard } from '../plans/lifetime/believer-card';
@@ -24,12 +24,12 @@ export const BelieverIdentifier = ({
       <header className={styles.believerHeader}>
         <div>
           <div className={styles.believerTitle}>
-            {t['com.affine.payment.billing-setting.believer.title']()}
+            {t['com.cloud-notes.payment.billing-setting.believer.title']()}
           </div>
           <div className={styles.believerSubtitle}>
             <Trans
               i18nKey={
-                'com.affine.payment.billing-setting.believer.description'
+                'com.cloud-notes.payment.billing-setting.believer.description'
               }
               components={{
                 a: <a href="#" onClick={onOpenPlans} />,
@@ -40,7 +40,7 @@ export const BelieverIdentifier = ({
         <div className={styles.believerPriceWrapper}>
           <div className={styles.believerPrice}>{readableLifetimePrice}</div>
           <div className={styles.believerPriceCaption}>
-            {t['com.affine.payment.billing-setting.believer.price-caption']()}
+            {t['com.cloud-notes.payment.billing-setting.believer.price-caption']()}
           </div>
         </div>
       </header>

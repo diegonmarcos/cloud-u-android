@@ -1,11 +1,11 @@
-import { type CommentChangeAction, DocMode } from '@affine/graphql';
-import { track } from '@affine/track';
-import { InlineCommentManager } from '@blocksuite/affine/inlines/comment';
+import { type CommentChangeAction, DocMode } from '@cloud-notes/graphql';
+import { track } from '@cloud-notes/track';
+import { InlineCommentManager } from '@blocksuite/cloud-notes/inlines/comment';
 import type {
   BaseSelection,
   DocSnapshot,
   Store,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import type { BlockStdScope } from '@blocksuite/std';
 import {
   effect,

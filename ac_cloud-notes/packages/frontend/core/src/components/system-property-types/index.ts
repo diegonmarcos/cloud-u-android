@@ -1,6 +1,6 @@
-import type { FilterParams } from '@affine/core/modules/collection-rules';
-import type { DocRecord } from '@affine/core/modules/doc';
-import type { I18nString } from '@affine/i18n';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
+import type { DocRecord } from '@cloud-notes/core/modules/doc';
+import type { I18nString } from '@cloud-notes/i18n';
 import {
   CloudWorkspaceIcon,
   DateTimeIcon,
@@ -65,12 +65,12 @@ export const SystemPropertyTypes = {
     icon: TagIcon,
     name: 'Tags',
     filterMethod: {
-      'include-all': 'com.affine.filter.contains all',
-      'include-any-of': 'com.affine.filter.contains one of',
-      'not-include-all': 'com.affine.filter.does not contains all',
-      'not-include-any-of': 'com.affine.filter.does not contains one of',
-      'is-not-empty': 'com.affine.filter.is not empty',
-      'is-empty': 'com.affine.filter.is empty',
+      'include-all': 'com.cloud-notes.filter.contains all',
+      'include-any-of': 'com.cloud-notes.filter.contains one of',
+      'not-include-all': 'com.cloud-notes.filter.does not contains all',
+      'not-include-any-of': 'com.cloud-notes.filter.does not contains one of',
+      'is-not-empty': 'com.cloud-notes.filter.is not empty',
+      'is-empty': 'com.cloud-notes.filter.is empty',
     },
     filterValue: TagsFilterValue,
     allowInGroupBy: true,
@@ -82,11 +82,11 @@ export const SystemPropertyTypes = {
   },
   createdBy: {
     icon: MemberIcon,
-    name: 'com.affine.page-properties.property.createdBy',
+    name: 'com.cloud-notes.page-properties.property.createdBy',
     allowInGroupBy: true,
     allowInOrderBy: true,
     filterMethod: {
-      include: 'com.affine.filter.contains all',
+      include: 'com.cloud-notes.filter.contains all',
     },
     filterValue: CreatedByUpdatedByFilterValue,
     defaultFilter: { method: 'include', value: '' },
@@ -96,11 +96,11 @@ export const SystemPropertyTypes = {
   },
   updatedBy: {
     icon: MemberIcon,
-    name: 'com.affine.page-properties.property.updatedBy',
+    name: 'com.cloud-notes.page-properties.property.updatedBy',
     allowInGroupBy: true,
     allowInOrderBy: true,
     filterMethod: {
-      include: 'com.affine.filter.contains all',
+      include: 'com.cloud-notes.filter.contains all',
     },
     filterValue: CreatedByUpdatedByFilterValue,
     defaultFilter: { method: 'include', value: '' },
@@ -110,7 +110,7 @@ export const SystemPropertyTypes = {
   },
   updatedAt: {
     icon: DateTimeIcon,
-    name: 'com.affine.page-properties.property.updatedAt',
+    name: 'com.cloud-notes.page-properties.property.updatedAt',
     allowInGroupBy: true,
     allowInOrderBy: true,
     filterMethod: {
@@ -124,7 +124,7 @@ export const SystemPropertyTypes = {
   },
   createdAt: {
     icon: HistoryIcon,
-    name: 'com.affine.page-properties.property.createdAt',
+    name: 'com.cloud-notes.page-properties.property.createdAt',
     allowInGroupBy: true,
     allowInOrderBy: true,
     filterMethod: {
@@ -140,7 +140,7 @@ export const SystemPropertyTypes = {
     icon: FavoriteIcon,
     name: 'Favorited',
     filterMethod: {
-      is: 'com.affine.filter.is',
+      is: 'com.cloud-notes.filter.is',
     },
     filterValue: FavoriteFilterValue,
   },
@@ -148,66 +148,66 @@ export const SystemPropertyTypes = {
     icon: CloudWorkspaceIcon,
     name: 'Shared',
     filterMethod: {
-      is: 'com.affine.filter.is',
+      is: 'com.cloud-notes.filter.is',
     },
     filterValue: SharedFilterValue,
   },
   edgelessTheme: {
     icon: EdgelessIcon,
-    name: 'com.affine.page-properties.property.edgelessTheme',
+    name: 'com.cloud-notes.page-properties.property.edgelessTheme',
     showInDocList: 'stack',
     allowInGroupBy: true,
     allowInOrderBy: true,
     docListProperty: EdgelessThemeDocListProperty,
     groupHeader: EdgelessThemeGroupHeader,
     filterMethod: {
-      is: 'com.affine.editCollection.rules.include.is',
-      'is-not': 'com.affine.editCollection.rules.include.is-not',
+      is: 'com.cloud-notes.editCollection.rules.include.is',
+      'is-not': 'com.cloud-notes.editCollection.rules.include.is-not',
     },
     filterValue: EdgelessThemeFilterValue,
     defaultFilter: { method: 'is', value: 'system' },
   },
   pageWidth: {
     icon: LongerIcon,
-    name: 'com.affine.page-properties.property.pageWidth',
+    name: 'com.cloud-notes.page-properties.property.pageWidth',
     showInDocList: 'stack',
     allowInGroupBy: true,
     allowInOrderBy: true,
     docListProperty: PageWidthDocListProperty,
     groupHeader: PageWidthGroupHeader,
     filterMethod: {
-      is: 'com.affine.editCollection.rules.include.is',
-      'is-not': 'com.affine.editCollection.rules.include.is-not',
+      is: 'com.cloud-notes.editCollection.rules.include.is',
+      'is-not': 'com.cloud-notes.editCollection.rules.include.is-not',
     },
     filterValue: PageWidthFilterValue,
     defaultFilter: { method: 'is', value: 'fullWidth' },
   },
   template: {
     icon: TemplateIcon,
-    name: 'com.affine.page-properties.property.template',
+    name: 'com.cloud-notes.page-properties.property.template',
     showInDocList: 'stack',
     allowInGroupBy: true,
     allowInOrderBy: true,
     docListProperty: TemplateDocListProperty,
     groupHeader: TemplateGroupHeader,
     filterMethod: {
-      is: 'com.affine.editCollection.rules.include.is',
-      'is-not': 'com.affine.editCollection.rules.include.is-not',
+      is: 'com.cloud-notes.editCollection.rules.include.is',
+      'is-not': 'com.cloud-notes.editCollection.rules.include.is-not',
     },
     filterValue: TemplateFilterValue,
     defaultFilter: { method: 'is', value: 'true' },
   },
   integrationType: {
     icon: IntegrationsIcon,
-    name: 'com.affine.integration.integrations',
+    name: 'com.cloud-notes.integration.integrations',
     showInDocList: 'stack',
     allowInGroupBy: true,
     allowInOrderBy: true,
     docListProperty: IntegrationTypeDocListProperty,
     groupHeader: IntegrationTypeGroupHeader,
     filterMethod: {
-      is: 'com.affine.editCollection.rules.include.is',
-      'is-not': 'com.affine.editCollection.rules.include.is-not',
+      is: 'com.cloud-notes.editCollection.rules.include.is',
+      'is-not': 'com.cloud-notes.editCollection.rules.include.is-not',
     },
     filterValue: IntegrationTypeFilterValue,
     defaultFilter: { method: 'is', value: 'readwise' },

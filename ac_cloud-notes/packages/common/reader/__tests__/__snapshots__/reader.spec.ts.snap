@@ -54,7 +54,7 @@ exports[`should get all docs from root doc work 2`] = `
 
 exports[`should parse page doc work 1`] = `
 {
-  "md": "AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro.
+  "md": "Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro.
 
 
 
@@ -62,9 +62,9 @@ exports[`should parse page doc work 1`] = `
 
 ## Local-first & Real-time collaborative
 
-We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.
+We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.
 
-AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.
+Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.
 
 
 
@@ -72,11 +72,11 @@ AFFiNE is a local-first application upon CRDTs with real-time collaboration supp
 
 There is a large overlap of their atomic "building blocks" between these apps. They are neither open source nor have a plugin system like VS Code for contributors to customize. We want to have something that contains all the features we love and goes one step further.
 
-We are building AFFiNE to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.
+We are building Cloud Notes to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.
 
-If you want to learn more about the product design of AFFiNE, here goes the concepts:
+If you want to learn more about the product design of Cloud Notes, here goes the concepts:
 
-To Shape, not to adapt. AFFiNE is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.
+To Shape, not to adapt. Cloud Notes is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.
 
 ## A true canvas for blocks in any form
 
@@ -91,25 +91,25 @@ To Shape, not to adapt. AFFiNE is built for individuals & teams who care about t
 * Airtable & Miro with their no-code programable datasheets
 * Miro & Whimiscal with their edgeless visual whiteboard
 * Remnote & Capacities with their object-based tag system
-For more details, please refer to our [RoadMap](https://docs.affine.pro/docs/core-concepts/roadmap)
+For more details, please refer to our [RoadMap](https://notes.diegonmarcos.com/docs/core-concepts/roadmap)
 
 ## Self Host
 
-Self host AFFiNE
+Self host Cloud Notes
 
 ||Title|Tag|
 |---|---|---|
-|Affine Development|Affine Development|<span data-affine-option data-value="AxSe-53xjX" data-option-color="var(--affine-tag-pink)">AFFiNE</span>|
-|For developers or installations guides, please go to AFFiNE Doc|For developers or installations guides, please go to AFFiNE Doc|<span data-affine-option data-value="0jh9gNw4Yl" data-option-color="var(--affine-tag-orange)">Developers</span>|
-|Quip & Notion with their great concept of "everything is a block"|Quip & Notion with their great concept of "everything is a block"|<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Trello with their Kanban|Trello with their Kanban|<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Airtable & Miro with their no-code programable datasheets|Airtable & Miro with their no-code programable datasheets|<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Miro & Whimiscal with their edgeless visual whiteboard|Miro & Whimiscal with their edgeless visual whiteboard|<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
+|Cloud Notes Development|Cloud Notes Development|<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--cloud-notes-tag-pink)">Cloud Notes</span>|
+|For developers or installations guides, please go to Cloud Notes Doc|For developers or installations guides, please go to Cloud Notes Doc|<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--cloud-notes-tag-orange)">Developers</span>|
+|Quip & Notion with their great concept of "everything is a block"|Quip & Notion with their great concept of "everything is a block"|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Trello with their Kanban|Trello with their Kanban|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Airtable & Miro with their no-code programable datasheets|Airtable & Miro with their no-code programable datasheets|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Miro & Whimiscal with their edgeless visual whiteboard|Miro & Whimiscal with their edgeless visual whiteboard|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
 |Remnote & Capacities with their object-based tag system|Remnote & Capacities with their object-based tag system||
 
-## Affine Development
+## Cloud Notes Development
 
-For developer or installation guides, please go to [AFFiNE Development](https://docs.affine.pro/docs/development/quick-start)
+For developer or installation guides, please go to [Cloud Notes Development](https://notes.diegonmarcos.com/docs/development/quick-start)
 
 
 
@@ -120,7 +120,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
         "children": [
           {
             "children": [],
-            "content": "AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro.
+            "content": "Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro.
 
 ",
             "flavour": "affine:paragraph",
@@ -156,7 +156,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
           },
           {
             "children": [],
-            "content": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.
+            "content": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.
 
 ",
             "flavour": "affine:paragraph",
@@ -165,7 +165,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
           },
           {
             "children": [],
-            "content": "AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.
+            "content": "Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.
 
 ",
             "flavour": "affine:paragraph",
@@ -217,7 +217,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
           },
           {
             "children": [],
-            "content": "We are building AFFiNE to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.
+            "content": "We are building Cloud Notes to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.
 
 ",
             "flavour": "affine:paragraph",
@@ -226,7 +226,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
           },
           {
             "children": [],
-            "content": "If you want to learn more about the product design of AFFiNE, here goes the concepts:
+            "content": "If you want to learn more about the product design of Cloud Notes, here goes the concepts:
 
 ",
             "flavour": "affine:paragraph",
@@ -235,7 +235,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
           },
           {
             "children": [],
-            "content": "To Shape, not to adapt. AFFiNE is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.
+            "content": "To Shape, not to adapt. Cloud Notes is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.
 
 ",
             "flavour": "affine:paragraph",
@@ -336,7 +336,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
         "children": [
           {
             "children": [],
-            "content": "For more details, please refer to our [RoadMap](https://docs.affine.pro/docs/core-concepts/roadmap)
+            "content": "For more details, please refer to our [RoadMap](https://notes.diegonmarcos.com/docs/core-concepts/roadmap)
 
 ",
             "flavour": "affine:paragraph",
@@ -354,7 +354,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
           },
           {
             "children": [],
-            "content": "Self host AFFiNE
+            "content": "Self host Cloud Notes
 
 ",
             "flavour": "affine:paragraph",
@@ -373,12 +373,12 @@ For developer or installation guides, please go to [AFFiNE Development](https://
             "children": [],
             "content": "||Title|Tag|
 |---|---|---|
-|Affine Development|Affine Development|<span data-affine-option data-value="AxSe-53xjX" data-option-color="var(--affine-tag-pink)">AFFiNE</span>|
-|For developers or installations guides, please go to AFFiNE Doc|For developers or installations guides, please go to AFFiNE Doc|<span data-affine-option data-value="0jh9gNw4Yl" data-option-color="var(--affine-tag-orange)">Developers</span>|
-|Quip & Notion with their great concept of "everything is a block"|Quip & Notion with their great concept of "everything is a block"|<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Trello with their Kanban|Trello with their Kanban|<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Airtable & Miro with their no-code programable datasheets|Airtable & Miro with their no-code programable datasheets|<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Miro & Whimiscal with their edgeless visual whiteboard|Miro & Whimiscal with their edgeless visual whiteboard|<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
+|Cloud Notes Development|Cloud Notes Development|<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--cloud-notes-tag-pink)">Cloud Notes</span>|
+|For developers or installations guides, please go to Cloud Notes Doc|For developers or installations guides, please go to Cloud Notes Doc|<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--cloud-notes-tag-orange)">Developers</span>|
+|Quip & Notion with their great concept of "everything is a block"|Quip & Notion with their great concept of "everything is a block"|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Trello with their Kanban|Trello with their Kanban|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Airtable & Miro with their no-code programable datasheets|Airtable & Miro with their no-code programable datasheets|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Miro & Whimiscal with their edgeless visual whiteboard|Miro & Whimiscal with their edgeless visual whiteboard|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
 |Remnote & Capacities with their object-based tag system|Remnote & Capacities with their object-based tag system||
 
 ",
@@ -386,25 +386,25 @@ For developer or installation guides, please go to [AFFiNE Development](https://
             "id": "U_GoHFD9At",
             "rows": [
               {
-                "Tag": "<span data-affine-option data-value="AxSe-53xjX" data-option-color="var(--affine-tag-pink)">AFFiNE</span>",
-                "Title": "Affine Development
+                "Tag": "<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--cloud-notes-tag-pink)">Cloud Notes</span>",
+                "Title": "Cloud Notes Development
 
 ",
-                "undefined": "Affine Development
-
-",
-              },
-              {
-                "Tag": "<span data-affine-option data-value="0jh9gNw4Yl" data-option-color="var(--affine-tag-orange)">Developers</span>",
-                "Title": "For developers or installations guides, please go to AFFiNE Doc
-
-",
-                "undefined": "For developers or installations guides, please go to AFFiNE Doc
+                "undefined": "Cloud Notes Development
 
 ",
               },
               {
-                "Tag": "<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>",
+                "Tag": "<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--cloud-notes-tag-orange)">Developers</span>",
+                "Title": "For developers or installations guides, please go to Cloud Notes Doc
+
+",
+                "undefined": "For developers or installations guides, please go to Cloud Notes Doc
+
+",
+              },
+              {
+                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>",
                 "Title": "Quip & Notion with their great concept of "everything is a block"
 
 ",
@@ -413,7 +413,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
 ",
               },
               {
-                "Tag": "<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>",
+                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>",
                 "Title": "Trello with their Kanban
 
 ",
@@ -422,7 +422,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
 ",
               },
               {
-                "Tag": "<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>",
+                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>",
                 "Title": "Airtable & Miro with their no-code programable datasheets
 
 ",
@@ -431,7 +431,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
 ",
               },
               {
-                "Tag": "<span data-affine-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>",
+                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>",
                 "Title": "Miro & Whimiscal with their edgeless visual whiteboard
 
 ",
@@ -462,7 +462,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
         "children": [
           {
             "children": [],
-            "content": "## Affine Development
+            "content": "## Cloud Notes Development
 
 ",
             "flavour": "affine:paragraph",
@@ -471,7 +471,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
           },
           {
             "children": [],
-            "content": "For developer or installation guides, please go to [AFFiNE Development](https://docs.affine.pro/docs/development/quick-start)
+            "content": "For developer or installation guides, please go to [Cloud Notes Development](https://notes.diegonmarcos.com/docs/development/quick-start)
 
 ",
             "flavour": "affine:paragraph",
@@ -505,7 +505,7 @@ For developer or installation guides, please go to [AFFiNE Development](https://
 
 exports[`should parse page doc work with ai editable 1`] = `
 "<!-- block_id=FoPQcAyV_m flavour=affine:paragraph -->
-AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro.
+Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro.
 
 <!-- block_id=oz48nn_zp8 flavour=affine:paragraph -->
 
@@ -517,10 +517,10 @@ AFFiNE is an open source all in one workspace, an operating system for all the b
 ## Local-first & Real-time collaborative
 
 <!-- block_id=xCuWdM0VLz flavour=affine:paragraph -->
-We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.
+We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.
 
 <!-- block_id=zElMi0tViK flavour=affine:paragraph -->
-AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.
+Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.
 
 <!-- block_id=Z4rK0OF9Wk flavour=affine:paragraph -->
 
@@ -532,13 +532,13 @@ AFFiNE is a local-first application upon CRDTs with real-time collaboration supp
 There is a large overlap of their atomic "building blocks" between these apps. They are neither open source nor have a plugin system like VS Code for contributors to customize. We want to have something that contains all the features we love and goes one step further.
 
 <!-- block_id=0H87ypiuv8 flavour=affine:paragraph -->
-We are building AFFiNE to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.
+We are building Cloud Notes to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.
 
 <!-- block_id=Sp4G1KD0Wn flavour=affine:paragraph -->
-If you want to learn more about the product design of AFFiNE, here goes the concepts:
+If you want to learn more about the product design of Cloud Notes, here goes the concepts:
 
 <!-- block_id=RsUhDuEqXa flavour=affine:paragraph -->
-To Shape, not to adapt. AFFiNE is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.
+To Shape, not to adapt. Cloud Notes is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.
 
 <!-- block_id=Z2HibKzAr- flavour=affine:paragraph -->
 ## A true canvas for blocks in any form
@@ -563,20 +563,20 @@ To Shape, not to adapt. AFFiNE is built for individuals & teams who care about t
 <!-- block_id=FFVmit6u1T flavour=affine:list -->
 * Remnote & Capacities with their object-based tag system
 <!-- block_id=YqnG5O6AE6 flavour=affine:paragraph -->
-For more details, please refer to our [RoadMap](https://docs.affine.pro/docs/core-concepts/roadmap)
+For more details, please refer to our [RoadMap](https://notes.diegonmarcos.com/docs/core-concepts/roadmap)
 
 <!-- block_id=sbDTmZMZcq flavour=affine:paragraph -->
 ## Self Host
 
 <!-- block_id=QVvitesfbj flavour=affine:paragraph -->
-Self host AFFiNE
+Self host Cloud Notes
 
 <!-- block_id=U_GoHFD9At flavour=affine:database placeholder -->
 <!-- block_id=NyHXrMX3R1 flavour=affine:paragraph -->
-## Affine Development
+## Cloud Notes Development
 
 <!-- block_id=9-K49otbCv flavour=affine:paragraph -->
-For developer or installation guides, please go to [AFFiNE Development](https://docs.affine.pro/docs/development/quick-start)
+For developer or installation guides, please go to [Cloud Notes Development](https://notes.diegonmarcos.com/docs/development/quick-start)
 
 <!-- block_id=faFteK9eG- flavour=affine:paragraph -->
 
@@ -867,7 +867,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "RX4CG2zsBk",
       },
       "blockId": "FoPQcAyV_m",
-      "content": "AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. ",
+      "content": "Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. ",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "RX4CG2zsBk",
@@ -876,7 +876,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. ",
+        "prop:text": "Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. ",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -963,7 +963,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "RX4CG2zsBk",
       },
       "blockId": "xCuWdM0VLz",
-      "content": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.",
+      "content": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "RX4CG2zsBk",
@@ -972,7 +972,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.",
+        "prop:text": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -987,7 +987,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "RX4CG2zsBk",
       },
       "blockId": "zElMi0tViK",
-      "content": "AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.",
+      "content": "Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "RX4CG2zsBk",
@@ -996,7 +996,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.",
+        "prop:text": "Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1083,7 +1083,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "yGlBdshAqN",
       },
       "blockId": "0H87ypiuv8",
-      "content": "We are building AFFiNE to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.",
+      "content": "We are building Cloud Notes to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "yGlBdshAqN",
@@ -1092,7 +1092,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "We are building AFFiNE to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.",
+        "prop:text": "We are building Cloud Notes to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1107,7 +1107,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "yGlBdshAqN",
       },
       "blockId": "Sp4G1KD0Wn",
-      "content": "If you want to learn more about the product design of AFFiNE, here goes the concepts:",
+      "content": "If you want to learn more about the product design of Cloud Notes, here goes the concepts:",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "yGlBdshAqN",
@@ -1116,7 +1116,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "If you want to learn more about the product design of AFFiNE, here goes the concepts:",
+        "prop:text": "If you want to learn more about the product design of Cloud Notes, here goes the concepts:",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1131,7 +1131,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "yGlBdshAqN",
       },
       "blockId": "RsUhDuEqXa",
-      "content": "To Shape, not to adapt. AFFiNE is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.",
+      "content": "To Shape, not to adapt. Cloud Notes is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "yGlBdshAqN",
@@ -1140,7 +1140,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "To Shape, not to adapt. AFFiNE is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.",
+        "prop:text": "To Shape, not to adapt. Cloud Notes is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1429,7 +1429,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "cauvaHOQmh",
       },
       "blockId": "QVvitesfbj",
-      "content": "Self host AFFiNE",
+      "content": "Self host Cloud Notes",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "cauvaHOQmh",
@@ -1438,7 +1438,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "Self host AFFiNE",
+        "prop:text": "Self host Cloud Notes",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1459,7 +1459,7 @@ exports[`should read doc blocks work 1`] = `
         "Tag",
         "Reference",
         "Developers",
-        "AFFiNE",
+        "Cloud Notes",
       ],
       "docId": "test-doc",
       "flavour": "affine:database",
@@ -1530,19 +1530,19 @@ exports[`should read doc blocks work 1`] = `
             "data": {
               "options": [
                 {
-                  "color": "var(--affine-tag-blue)",
+                  "color": "var(--cloud-notes-tag-blue)",
                   "id": "HgHsKOUINZ",
                   "value": "Reference",
                 },
                 {
-                  "color": "var(--affine-tag-orange)",
+                  "color": "var(--cloud-notes-tag-orange)",
                   "id": "0jh9gNw4Yl",
                   "value": "Developers",
                 },
                 {
-                  "color": "var(--affine-tag-pink)",
+                  "color": "var(--cloud-notes-tag-pink)",
                   "id": "AxSe-53xjX",
-                  "value": "AFFiNE",
+                  "value": "Cloud Notes",
                 },
               ],
             },
@@ -1624,7 +1624,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "2jwCeO8Yot",
       },
       "blockId": "tpyOZbPc1P",
-      "content": "Affine Development",
+      "content": "Cloud Notes Development",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "U_GoHFD9At",
@@ -1633,7 +1633,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "Affine Development",
+        "prop:text": "Cloud Notes Development",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1648,7 +1648,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "2jwCeO8Yot",
       },
       "blockId": "VMx9lHw3TR",
-      "content": "For developers or installations guides, please go to AFFiNE Doc",
+      "content": "For developers or installations guides, please go to Cloud Notes Doc",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "U_GoHFD9At",
@@ -1657,7 +1657,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "For developers or installations guides, please go to AFFiNE Doc",
+        "prop:text": "For developers or installations guides, please go to Cloud Notes Doc",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1792,7 +1792,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "c9MF_JiRgx",
       },
       "blockId": "NyHXrMX3R1",
-      "content": "Affine Development",
+      "content": "Cloud Notes Development",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "c9MF_JiRgx",
@@ -1801,7 +1801,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "Affine Development",
+        "prop:text": "Cloud Notes Development",
         "prop:type": "h2",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1816,7 +1816,7 @@ exports[`should read doc blocks work 1`] = `
         "noteBlockId": "c9MF_JiRgx",
       },
       "blockId": "9-K49otbCv",
-      "content": "For developer or installation guides, please go to AFFiNE Development",
+      "content": "For developer or installation guides, please go to Cloud Notes Development",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "c9MF_JiRgx",
@@ -1825,7 +1825,7 @@ exports[`should read doc blocks work 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "For developer or installation guides, please go to AFFiNE Development",
+        "prop:text": "For developer or installation guides, please go to Cloud Notes Development",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -1864,14 +1864,14 @@ exports[`should read doc blocks work 1`] = `
       },
       "blockId": "6x7ALjUDjj",
       "content": [
-        "What is AFFiNE",
+        "What is Cloud Notes",
         "Related Articles",
         " ",
         "Self-host",
         "",
-        "AFFiNE ",
+        "Cloud Notes ",
         "Development",
-        "You can check these URLs to learn about AFFiNE",
+        "You can check these URLs to learn about Cloud Notes",
         "Database Reference",
       ],
       "docId": "test-doc",
@@ -1883,7 +1883,7 @@ exports[`should read doc blocks work 1`] = `
           "type": "$blocksuite:internal:native$",
           "value": {
             "EkqQL1MU5m": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 120,
               "fontStyle": "normal",
@@ -1899,7 +1899,7 @@ exports[`should read doc blocks work 1`] = `
               "xywh": "[988.4153663986212,-181.71961053807448,563,168.75]",
             },
             "F-GXtb8ubm": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:Lora",
               "fontSize": 72,
               "fontStyle": "normal",
@@ -1957,7 +1957,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -1970,7 +1970,7 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "Nb_9OXyIT3": {
-              "fillColor": "--affine-palette-shape-yellow",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "id": "Nb_9OXyIT3",
               "index": "a0",
@@ -1980,15 +1980,15 @@ exports[`should read doc blocks work 1`] = `
               "seed": 97408177,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
               "xywh": "[2403.9004515323168,57.24116579067933,955.1393577008388,542.1082071559455]",
             },
             "R2MK4ZzUb3": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-white",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-white",
               "filled": true,
               "id": "R2MK4ZzUb3",
               "index": "a0",
@@ -1998,7 +1998,7 @@ exports[`should read doc blocks work 1`] = `
               "seed": 1558899337,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "type": "shape",
@@ -2017,7 +2017,7 @@ exports[`should read doc blocks work 1`] = `
               "xywh": "[-1043.6169874048903,-641.7901035486665,622.6248931928226,667.0980998494529]",
             },
             "UloPoCxt6P": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -2056,7 +2056,7 @@ exports[`should read doc blocks work 1`] = `
               "type": "group",
             },
             "Z7D3qrSurD": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 120,
               "fontStyle": "normal",
@@ -2072,7 +2072,7 @@ exports[`should read doc blocks work 1`] = `
               "xywh": "[2478.972284676839,-1231.0379248118952,879.4798583984375,168.75]",
             },
             "_nC65-wkSP": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -2082,7 +2082,7 @@ exports[`should read doc blocks work 1`] = `
               "index": "aa",
               "rotate": 0,
               "seed": 994394416,
-              "text": "AFFiNE ",
+              "text": "Cloud Notes ",
               "textAlign": "left",
               "type": "text",
               "xywh": "[2459.953125798208,88.108859492537,779,147]",
@@ -2104,7 +2104,7 @@ exports[`should read doc blocks work 1`] = `
                   1.0000000000000002,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2117,7 +2117,7 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "gPvT0nfbcw": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -2133,8 +2133,8 @@ exports[`should read doc blocks work 1`] = `
               "xywh": "[2459.953125798208,208.4260321250699,779,147]",
             },
             "hLAqby4WpD": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-white",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-white",
               "filled": true,
               "id": "hLAqby4WpD",
               "index": "Zz",
@@ -2144,15 +2144,15 @@ exports[`should read doc blocks work 1`] = `
               "seed": 2025695507,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "type": "shape",
               "xywh": "[-259.87318248973133,-371.99627945163166,948.0569720935435,876.3267415022492]",
             },
             "istDk5DOMO": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-blue",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-blue",
               "filled": true,
               "id": "istDk5DOMO",
               "index": "aI",
@@ -2162,7 +2162,7 @@ exports[`should read doc blocks work 1`] = `
               "seed": 858601929,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
@@ -2198,7 +2198,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2207,8 +2207,8 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "qRCk-vrGXw": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-magenta",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-magenta",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "id": "qRCk-vrGXw",
@@ -2219,7 +2219,7 @@ exports[`should read doc blocks work 1`] = `
               "seed": 2015167989,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "text": "",
@@ -2243,7 +2243,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2252,7 +2252,7 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "saGXC7nPOk": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -2262,7 +2262,7 @@ exports[`should read doc blocks work 1`] = `
               "index": "aJ",
               "rotate": 0,
               "seed": 93054478,
-              "text": "What is AFFiNE",
+              "text": "What is Cloud Notes",
               "textAlign": "left",
               "type": "text",
               "xywh": "[438.73809335123497,-1467.165331669401,913.75,128]",
@@ -2284,7 +2284,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2309,7 +2309,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2318,8 +2318,8 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "uzfdAcEDxu": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-purple",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-purple",
               "filled": true,
               "id": "uzfdAcEDxu",
               "index": "aTG",
@@ -2329,15 +2329,15 @@ exports[`should read doc blocks work 1`] = `
               "seed": 462401908,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
               "xywh": "[2421.751354148884,-1283.6175127158676,1085.7995880501803,519.0294552479265]",
             },
             "w86OKmzMtn": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-tangerine",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-tangerine",
               "filled": true,
               "fontFamily": "blocksuite:surface:Poppins",
               "fontSize": 36,
@@ -2351,10 +2351,10 @@ exports[`should read doc blocks work 1`] = `
               "seed": 1298533711,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
-              "text": "You can check these URLs to learn about AFFiNE",
+              "text": "You can check these URLs to learn about Cloud Notes",
               "textAlign": "left",
               "type": "shape",
               "xywh": "[-1055.7017064945487,-981.0008617000956,702.1470991695091,295.7649942194072]",
@@ -2385,13 +2385,13 @@ exports[`should read doc blocks work 1`] = `
         "prop:caption": null,
         "prop:description": "The universal editor that lets you work, play, present or create just about anything.",
         "prop:icon": "/favicon-96.png",
-        "prop:image": "https://affine.pro/og.png",
+        "prop:image": "https://notes.diegonmarcos.com/og.png",
         "prop:index": "a1",
         "prop:lockedBySelf": false,
         "prop:rotate": 0,
         "prop:style": "vertical",
-        "prop:title": "AFFiNE - All In One KnowledgeOS",
-        "prop:url": "https://affine.pro/",
+        "prop:title": "Cloud Notes - All In One KnowledgeOS",
+        "prop:url": "https://notes.diegonmarcos.com/",
         "prop:xywh": "[-605.1053721621553,-1497.696057920688,606.4771127476911,649.7969065153833]",
         "sys:children": [],
         "sys:flavour": "affine:bookmark",
@@ -2409,7 +2409,7 @@ exports[`should read doc blocks work 1`] = `
       "flavour": "affine:bookmark",
       "yblock": {
         "prop:caption": null,
-        "prop:description": "AFFiNE is the all-in-one workspace where you can write, draw and plan just about anything - Blend the power of Notion and Miro to enable dynamic note-taking, wikis, tasks, visualized mindmaps and presentations. All you need for productivity and creativity is here!
+        "prop:description": "Cloud Notes is the all-in-one workspace where you can write, draw and plan just about anything - Blend the power of Notion and Miro to enable dynamic note-taking, wikis, tasks, visualized mindmaps and presentations. All you need for productivity and creativity is here!
 ",
         "prop:icon": "https://www.youtube.com/s/desktop/8b6c1f4c/img/favicon_32x32.png",
         "prop:image": "https://yt3.googleusercontent.com/H9-Rol_TUq4UmR8cdy-LhxFmWdmz5LIm_KTYoVP2D81I-w9T12ttJHfME6kWUnEresNVo4c8dA=s900-c-k-c0x00ffffff-no-rj",
@@ -2417,8 +2417,8 @@ exports[`should read doc blocks work 1`] = `
         "prop:lockedBySelf": false,
         "prop:rotate": 0,
         "prop:style": "vertical",
-        "prop:title": "AFFiNE",
-        "prop:url": "https://www.youtube.com/@affinepro",
+        "prop:title": "Cloud Notes",
+        "prop:url": "https://www.youtube.com/@cloudnotespro",
         "prop:xywh": "[-1043.6169874048903,-641.7901035486665,622.6248931928226,667.0980998494529]",
         "sys:children": [],
         "sys:flavour": "affine:bookmark",
@@ -2517,7 +2517,7 @@ exports[`should read doc blocks work 1`] = `
       },
     },
   ],
-  "summary": "AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. You own your data, with no compromisesLocal-first & Real-time collaborativeWe love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.Blocks that assemble your next docs, tasks kanban or whiteboardThere is a large overlap of their atomic "building blocks" between these apps. They are neither open source nor have a plugin system like VS Code for contributors to customize. We want to have something that contains all the features we love and goes one step further. ",
+  "summary": "Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. You own your data, with no compromisesLocal-first & Real-time collaborativeWe love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.Blocks that assemble your next docs, tasks kanban or whiteboardThere is a large overlap of their atomic "building blocks" between these apps. They are neither open source nor have a plugin system like VS Code for contributors to customize. We want to have something that contains all the features we love and goes one step further. ",
   "title": "Write, Draw, Plan all at Once.",
 }
 `;
@@ -2558,7 +2558,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "RX4CG2zsBk",
       },
       "blockId": "FoPQcAyV_m",
-      "content": "AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. ",
+      "content": "Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. ",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "RX4CG2zsBk",
@@ -2567,7 +2567,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. ",
+        "prop:text": "Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. ",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -2654,7 +2654,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "RX4CG2zsBk",
       },
       "blockId": "xCuWdM0VLz",
-      "content": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.",
+      "content": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "RX4CG2zsBk",
@@ -2663,7 +2663,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.",
+        "prop:text": "We love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -2678,7 +2678,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "RX4CG2zsBk",
       },
       "blockId": "zElMi0tViK",
-      "content": "AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.",
+      "content": "Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "RX4CG2zsBk",
@@ -2687,7 +2687,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.",
+        "prop:text": "Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -2774,7 +2774,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "yGlBdshAqN",
       },
       "blockId": "0H87ypiuv8",
-      "content": "We are building AFFiNE to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.",
+      "content": "We are building Cloud Notes to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "yGlBdshAqN",
@@ -2783,7 +2783,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "We are building AFFiNE to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.",
+        "prop:text": "We are building Cloud Notes to be a fundamental open source platform that contains all the building blocks for docs, task management and visual collaboration, hoping you can shape your next workflow with us that can make your life better and also connect others, too.",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -2798,7 +2798,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "yGlBdshAqN",
       },
       "blockId": "Sp4G1KD0Wn",
-      "content": "If you want to learn more about the product design of AFFiNE, here goes the concepts:",
+      "content": "If you want to learn more about the product design of Cloud Notes, here goes the concepts:",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "yGlBdshAqN",
@@ -2807,7 +2807,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "If you want to learn more about the product design of AFFiNE, here goes the concepts:",
+        "prop:text": "If you want to learn more about the product design of Cloud Notes, here goes the concepts:",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -2822,7 +2822,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "yGlBdshAqN",
       },
       "blockId": "RsUhDuEqXa",
-      "content": "To Shape, not to adapt. AFFiNE is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.",
+      "content": "To Shape, not to adapt. Cloud Notes is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "yGlBdshAqN",
@@ -2831,7 +2831,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "To Shape, not to adapt. AFFiNE is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.",
+        "prop:text": "To Shape, not to adapt. Cloud Notes is built for individuals & teams who care about their data, who refuse vendor lock-in, and who want to have control over their essential tools.",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -3120,7 +3120,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "cauvaHOQmh",
       },
       "blockId": "QVvitesfbj",
-      "content": "Self host AFFiNE",
+      "content": "Self host Cloud Notes",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "cauvaHOQmh",
@@ -3129,7 +3129,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "Self host AFFiNE",
+        "prop:text": "Self host Cloud Notes",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -3150,7 +3150,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "Tag",
         "Reference",
         "Developers",
-        "AFFiNE",
+        "Cloud Notes",
       ],
       "docId": "test-doc",
       "flavour": "affine:database",
@@ -3221,19 +3221,19 @@ exports[`should read doc blocks work without root doc 1`] = `
             "data": {
               "options": [
                 {
-                  "color": "var(--affine-tag-blue)",
+                  "color": "var(--cloud-notes-tag-blue)",
                   "id": "HgHsKOUINZ",
                   "value": "Reference",
                 },
                 {
-                  "color": "var(--affine-tag-orange)",
+                  "color": "var(--cloud-notes-tag-orange)",
                   "id": "0jh9gNw4Yl",
                   "value": "Developers",
                 },
                 {
-                  "color": "var(--affine-tag-pink)",
+                  "color": "var(--cloud-notes-tag-pink)",
                   "id": "AxSe-53xjX",
-                  "value": "AFFiNE",
+                  "value": "Cloud Notes",
                 },
               ],
             },
@@ -3315,7 +3315,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "2jwCeO8Yot",
       },
       "blockId": "tpyOZbPc1P",
-      "content": "Affine Development",
+      "content": "Cloud Notes Development",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "U_GoHFD9At",
@@ -3324,7 +3324,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "Affine Development",
+        "prop:text": "Cloud Notes Development",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -3339,7 +3339,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "2jwCeO8Yot",
       },
       "blockId": "VMx9lHw3TR",
-      "content": "For developers or installations guides, please go to AFFiNE Doc",
+      "content": "For developers or installations guides, please go to Cloud Notes Doc",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "U_GoHFD9At",
@@ -3348,7 +3348,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "For developers or installations guides, please go to AFFiNE Doc",
+        "prop:text": "For developers or installations guides, please go to Cloud Notes Doc",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -3483,7 +3483,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "c9MF_JiRgx",
       },
       "blockId": "NyHXrMX3R1",
-      "content": "Affine Development",
+      "content": "Cloud Notes Development",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "c9MF_JiRgx",
@@ -3492,7 +3492,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "Affine Development",
+        "prop:text": "Cloud Notes Development",
         "prop:type": "h2",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -3507,7 +3507,7 @@ exports[`should read doc blocks work without root doc 1`] = `
         "noteBlockId": "c9MF_JiRgx",
       },
       "blockId": "9-K49otbCv",
-      "content": "For developer or installation guides, please go to AFFiNE Development",
+      "content": "For developer or installation guides, please go to Cloud Notes Development",
       "docId": "test-doc",
       "flavour": "affine:paragraph",
       "parentBlockId": "c9MF_JiRgx",
@@ -3516,7 +3516,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "refDocId": [],
       "yblock": {
         "prop:collapsed": false,
-        "prop:text": "For developer or installation guides, please go to AFFiNE Development",
+        "prop:text": "For developer or installation guides, please go to Cloud Notes Development",
         "prop:type": "text",
         "sys:children": [],
         "sys:flavour": "affine:paragraph",
@@ -3555,14 +3555,14 @@ exports[`should read doc blocks work without root doc 1`] = `
       },
       "blockId": "6x7ALjUDjj",
       "content": [
-        "What is AFFiNE",
+        "What is Cloud Notes",
         "Related Articles",
         " ",
         "Self-host",
         "",
-        "AFFiNE ",
+        "Cloud Notes ",
         "Development",
-        "You can check these URLs to learn about AFFiNE",
+        "You can check these URLs to learn about Cloud Notes",
         "Database Reference",
       ],
       "docId": "test-doc",
@@ -3574,7 +3574,7 @@ exports[`should read doc blocks work without root doc 1`] = `
           "type": "$blocksuite:internal:native$",
           "value": {
             "EkqQL1MU5m": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 120,
               "fontStyle": "normal",
@@ -3590,7 +3590,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "xywh": "[988.4153663986212,-181.71961053807448,563,168.75]",
             },
             "F-GXtb8ubm": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:Lora",
               "fontSize": 72,
               "fontStyle": "normal",
@@ -3648,7 +3648,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -3661,7 +3661,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "Nb_9OXyIT3": {
-              "fillColor": "--affine-palette-shape-yellow",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "id": "Nb_9OXyIT3",
               "index": "a0",
@@ -3671,15 +3671,15 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 97408177,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
               "xywh": "[2403.9004515323168,57.24116579067933,955.1393577008388,542.1082071559455]",
             },
             "R2MK4ZzUb3": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-white",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-white",
               "filled": true,
               "id": "R2MK4ZzUb3",
               "index": "a0",
@@ -3689,7 +3689,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 1558899337,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "type": "shape",
@@ -3708,7 +3708,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "xywh": "[-1043.6169874048903,-641.7901035486665,622.6248931928226,667.0980998494529]",
             },
             "UloPoCxt6P": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -3747,7 +3747,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "group",
             },
             "Z7D3qrSurD": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 120,
               "fontStyle": "normal",
@@ -3763,7 +3763,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "xywh": "[2478.972284676839,-1231.0379248118952,879.4798583984375,168.75]",
             },
             "_nC65-wkSP": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -3773,7 +3773,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "index": "aa",
               "rotate": 0,
               "seed": 994394416,
-              "text": "AFFiNE ",
+              "text": "Cloud Notes ",
               "textAlign": "left",
               "type": "text",
               "xywh": "[2459.953125798208,88.108859492537,779,147]",
@@ -3795,7 +3795,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   1.0000000000000002,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -3808,7 +3808,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "gPvT0nfbcw": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -3824,8 +3824,8 @@ exports[`should read doc blocks work without root doc 1`] = `
               "xywh": "[2459.953125798208,208.4260321250699,779,147]",
             },
             "hLAqby4WpD": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-white",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-white",
               "filled": true,
               "id": "hLAqby4WpD",
               "index": "Zz",
@@ -3835,15 +3835,15 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 2025695507,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "type": "shape",
               "xywh": "[-259.87318248973133,-371.99627945163166,948.0569720935435,876.3267415022492]",
             },
             "istDk5DOMO": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-blue",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-blue",
               "filled": true,
               "id": "istDk5DOMO",
               "index": "aI",
@@ -3853,7 +3853,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 858601929,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
@@ -3889,7 +3889,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -3898,8 +3898,8 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "qRCk-vrGXw": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-magenta",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-magenta",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "id": "qRCk-vrGXw",
@@ -3910,7 +3910,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 2015167989,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "text": "",
@@ -3934,7 +3934,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -3943,7 +3943,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "saGXC7nPOk": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -3953,7 +3953,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "index": "aJ",
               "rotate": 0,
               "seed": 93054478,
-              "text": "What is AFFiNE",
+              "text": "What is Cloud Notes",
               "textAlign": "left",
               "type": "text",
               "xywh": "[438.73809335123497,-1467.165331669401,913.75,128]",
@@ -3975,7 +3975,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -4000,7 +4000,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -4009,8 +4009,8 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "uzfdAcEDxu": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-purple",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-purple",
               "filled": true,
               "id": "uzfdAcEDxu",
               "index": "aTG",
@@ -4020,15 +4020,15 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 462401908,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
               "xywh": "[2421.751354148884,-1283.6175127158676,1085.7995880501803,519.0294552479265]",
             },
             "w86OKmzMtn": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-tangerine",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-tangerine",
               "filled": true,
               "fontFamily": "blocksuite:surface:Poppins",
               "fontSize": 36,
@@ -4042,10 +4042,10 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 1298533711,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
-              "text": "You can check these URLs to learn about AFFiNE",
+              "text": "You can check these URLs to learn about Cloud Notes",
               "textAlign": "left",
               "type": "shape",
               "xywh": "[-1055.7017064945487,-981.0008617000956,702.1470991695091,295.7649942194072]",
@@ -4076,13 +4076,13 @@ exports[`should read doc blocks work without root doc 1`] = `
         "prop:caption": null,
         "prop:description": "The universal editor that lets you work, play, present or create just about anything.",
         "prop:icon": "/favicon-96.png",
-        "prop:image": "https://affine.pro/og.png",
+        "prop:image": "https://notes.diegonmarcos.com/og.png",
         "prop:index": "a1",
         "prop:lockedBySelf": false,
         "prop:rotate": 0,
         "prop:style": "vertical",
-        "prop:title": "AFFiNE - All In One KnowledgeOS",
-        "prop:url": "https://affine.pro/",
+        "prop:title": "Cloud Notes - All In One KnowledgeOS",
+        "prop:url": "https://notes.diegonmarcos.com/",
         "prop:xywh": "[-605.1053721621553,-1497.696057920688,606.4771127476911,649.7969065153833]",
         "sys:children": [],
         "sys:flavour": "affine:bookmark",
@@ -4100,7 +4100,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       "flavour": "affine:bookmark",
       "yblock": {
         "prop:caption": null,
-        "prop:description": "AFFiNE is the all-in-one workspace where you can write, draw and plan just about anything - Blend the power of Notion and Miro to enable dynamic note-taking, wikis, tasks, visualized mindmaps and presentations. All you need for productivity and creativity is here!
+        "prop:description": "Cloud Notes is the all-in-one workspace where you can write, draw and plan just about anything - Blend the power of Notion and Miro to enable dynamic note-taking, wikis, tasks, visualized mindmaps and presentations. All you need for productivity and creativity is here!
 ",
         "prop:icon": "https://www.youtube.com/s/desktop/8b6c1f4c/img/favicon_32x32.png",
         "prop:image": "https://yt3.googleusercontent.com/H9-Rol_TUq4UmR8cdy-LhxFmWdmz5LIm_KTYoVP2D81I-w9T12ttJHfME6kWUnEresNVo4c8dA=s900-c-k-c0x00ffffff-no-rj",
@@ -4108,8 +4108,8 @@ exports[`should read doc blocks work without root doc 1`] = `
         "prop:lockedBySelf": false,
         "prop:rotate": 0,
         "prop:style": "vertical",
-        "prop:title": "AFFiNE",
-        "prop:url": "https://www.youtube.com/@affinepro",
+        "prop:title": "Cloud Notes",
+        "prop:url": "https://www.youtube.com/@cloudnotespro",
         "prop:xywh": "[-1043.6169874048903,-641.7901035486665,622.6248931928226,667.0980998494529]",
         "sys:children": [],
         "sys:flavour": "affine:bookmark",
@@ -4208,7 +4208,7 @@ exports[`should read doc blocks work without root doc 1`] = `
       },
     },
   ],
-  "summary": "AFFiNE is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. You own your data, with no compromisesLocal-first & Real-time collaborativeWe love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, AFFiNE is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.AFFiNE is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.Blocks that assemble your next docs, tasks kanban or whiteboardThere is a large overlap of their atomic "building blocks" between these apps. They are neither open source nor have a plugin system like VS Code for contributors to customize. We want to have something that contains all the features we love and goes one step further. ",
+  "summary": "Cloud Notes is an open source all in one workspace, an operating system for all the building blocks of your team wiki, knowledge management and digital assets and a better alternative to Notion and Miro. You own your data, with no compromisesLocal-first & Real-time collaborativeWe love the idea proposed by Ink & Switch in the famous article about you owning your data, despite the cloud. Furthermore, Cloud Notes is the first all-in-one workspace that keeps your data ownership with no compromises on real-time collaboration and editing experience.Cloud Notes is a local-first application upon CRDTs with real-time collaboration support. Your data is always stored locally while multiple nodes remain synced in real-time.Blocks that assemble your next docs, tasks kanban or whiteboardThere is a large overlap of their atomic "building blocks" between these apps. They are neither open source nor have a plugin system like VS Code for contributors to customize. We want to have something that contains all the features we love and goes one step further. ",
   "title": "Write, Draw, Plan all at Once.",
 }
 `;

@@ -1,6 +1,6 @@
-import { DocModeProvider } from '@blocksuite/affine/shared/services';
-import type { Workspace } from '@blocksuite/affine/store';
-import { TestAffineEditorContainer } from '@blocksuite/integration-test';
+import { DocModeProvider } from '@blocksuite/cloud-notes/shared/services';
+import type { Workspace } from '@blocksuite/cloud-notes/store';
+import { TestCloudNotesEditorContainer } from '@blocksuite/integration-test';
 
 import {
   getDocFromUrlParams,
@@ -27,7 +27,7 @@ export async function mountDefaultDocEditor(collection: Workspace) {
   const init = params.get('init');
   if (init && init.startsWith('multiple-editor')) {
     app.childNodes.forEach(node => {
-      if (node instanceof TestAffineEditorContainer) {
+      if (node instanceof TestCloudNotesEditorContainer) {
         node.style.flex = '1';
         if (init === 'multiple-editor-vertical') {
           node.style.overflow = 'auto';

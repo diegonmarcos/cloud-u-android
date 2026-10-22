@@ -1,14 +1,14 @@
-import { DebugLogger } from '@affine/debug';
-import { Unreachable } from '@affine/env/constant';
-import { replaceIdMiddleware } from '@blocksuite/affine/shared/adapters';
-import type { AffineTextAttributes } from '@blocksuite/affine/shared/types';
-import type { DeltaInsert } from '@blocksuite/affine/store';
-import { Slice, Text, Transformer } from '@blocksuite/affine/store';
+import { DebugLogger } from '@cloud-notes/debug';
+import { Unreachable } from '@cloud-notes/env/constant';
+import { replaceIdMiddleware } from '@blocksuite/cloud-notes/shared/adapters';
+import type { CloudNotesTextAttributes } from '@blocksuite/cloud-notes/shared/types';
+import type { DeltaInsert } from '@blocksuite/cloud-notes/store';
+import { Slice, Text, Transformer } from '@blocksuite/cloud-notes/store';
 import { ObjectPool, Service } from '@toeverything/infra';
 import { combineLatest, map } from 'rxjs';
 
 import { initDocFromProps } from '../../../blocksuite/initialization';
-import { getAFFiNEWorkspaceSchema } from '../../workspace/global-schema';
+import { getCloudNotesWorkspaceSchema } from '../../workspace/global-schema';
 import type { Doc } from '../entities/doc';
 import { DocRecordList } from '../entities/record-list';
 import { DocCreated, DocInitialized } from '../events';
@@ -192,7 +192,7 @@ export class DocsService extends Service {
           },
         },
       },
-    ] as DeltaInsert<AffineTextAttributes>[]);
+    ] as DeltaInsert<CloudNotesTextAttributes>[]);
     const [frame] = doc.blockSuiteDoc.getBlocksByFlavour('affine:note');
     frame &&
       doc.blockSuiteDoc.addBlock(
@@ -241,7 +241,7 @@ export class DocsService extends Service {
 
       const collection = this.store.getBlocksuiteCollection();
       const transformer = new Transformer({
-        schema: getAFFiNEWorkspaceSchema(),
+        schema: getCloudNotesWorkspaceSchema(),
         blobCRUD: collection.blobSync,
         docCRUD: {
           create: (id: string) => {
@@ -335,7 +335,7 @@ export class DocsService extends Service {
 
       const collection = this.store.getBlocksuiteCollection();
       const transformer = new Transformer({
-        schema: getAFFiNEWorkspaceSchema(),
+        schema: getCloudNotesWorkspaceSchema(),
         blobCRUD: collection.blobSync,
         docCRUD: {
           create: (id: string) => {

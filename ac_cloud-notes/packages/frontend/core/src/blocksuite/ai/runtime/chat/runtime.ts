@@ -1,4 +1,4 @@
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
 
 import type { AIRequestService } from '../request';
 import type { AIChatAction, AIChatSendOptions } from './actions';

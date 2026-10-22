@@ -1,11 +1,11 @@
-import type { DocService, DocsService } from '@affine/core/modules/doc';
-import type { EditorService } from '@affine/core/modules/editor';
-import type { DocMode } from '@blocksuite/affine/model';
+import type { DocService, DocsService } from '@cloud-notes/core/modules/doc';
+import type { EditorService } from '@cloud-notes/core/modules/editor';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import {
   DocModeExtension,
   type DocModeProvider,
-} from '@blocksuite/affine/shared/services';
-import type { ExtensionType } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/shared/services';
+import type { ExtensionType } from '@blocksuite/cloud-notes/store';
 
 export function patchDocModeService(
   docService: DocService,
@@ -13,7 +13,7 @@ export function patchDocModeService(
   editorService: EditorService
 ): ExtensionType {
   const DEFAULT_MODE = 'page';
-  class AffineDocModeService implements DocModeProvider {
+  class CloudNotesDocModeService implements DocModeProvider {
     setEditorMode = (mode: DocMode) => {
       editorService.editor.setMode(mode);
     };
@@ -48,7 +48,7 @@ export function patchDocModeService(
     };
   }
 
-  const docModeExtension = DocModeExtension(new AffineDocModeService());
+  const docModeExtension = DocModeExtension(new CloudNotesDocModeService());
 
   return docModeExtension;
 }

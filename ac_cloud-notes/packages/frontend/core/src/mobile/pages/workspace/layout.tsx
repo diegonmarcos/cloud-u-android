@@ -1,19 +1,19 @@
-import { uniReactRoot } from '@affine/component';
-import { AffineErrorBoundary } from '@affine/core/components/affine/affine-error-boundary';
-import { AiLoginRequiredModal } from '@affine/core/components/affine/auth/ai-login-required';
-import { SWRConfigProvider } from '@affine/core/components/providers/swr-config-provider';
-import { WorkspaceSideEffects } from '@affine/core/components/providers/workspace-side-effects';
+import { uniReactRoot } from '@cloud-notes/component';
+import { CloudNotesErrorBoundary } from '@cloud-notes/core/components/cloud-notes/cloud-notes-error-boundary';
+import { AiLoginRequiredModal } from '@cloud-notes/core/components/cloud-notes/auth/ai-login-required';
+import { SWRConfigProvider } from '@cloud-notes/core/components/providers/swr-config-provider';
+import { WorkspaceSideEffects } from '@cloud-notes/core/components/providers/workspace-side-effects';
 import {
   DefaultServerService,
   WorkspaceServerService,
-} from '@affine/core/modules/cloud';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { PeekViewManagerModal } from '@affine/core/modules/peek-view';
+} from '@cloud-notes/core/modules/cloud';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { PeekViewManagerModal } from '@cloud-notes/core/modules/peek-view';
 import type {
   Workspace,
   WorkspaceMetadata,
-} from '@affine/core/modules/workspace';
-import { WorkspacesService } from '@affine/core/modules/workspace';
+} from '@cloud-notes/core/modules/workspace';
+import { WorkspacesService } from '@cloud-notes/core/modules/workspace';
 import {
   FrameworkScope,
   LiveData,
@@ -47,7 +47,7 @@ declare global {
   // oxlint-disable-next-line no-var
   var importWorkspaceSnapshot: () => Promise<void>;
   interface WindowEventMap {
-    'affine:workspace:change': CustomEvent<{ id: string }>;
+    'cloud-notes:workspace:change': CustomEvent<{ id: string }>;
   }
 }
 
@@ -79,7 +79,7 @@ export const WorkspaceLayout = ({
       // for debug purpose
       window.currentWorkspace = workspace ?? undefined;
       window.dispatchEvent(
-        new CustomEvent('affine:workspace:change', {
+        new CustomEvent('cloud-notes:workspace:change', {
           detail: {
             id: workspace.id,
           },
@@ -139,7 +139,7 @@ export const WorkspaceLayout = ({
     <FrameworkScope scope={workspaceServer?.scope}>
       <FrameworkScope scope={workspace.scope}>
         <WorkspaceBackReset workspaceId={workspace.id} />
-        <AffineErrorBoundary height="100dvh">
+        <CloudNotesErrorBoundary height="100dvh">
           <SWRConfigProvider>
             <MobileShellHost>
               <WorkspaceDialogs />
@@ -152,7 +152,7 @@ export const WorkspaceLayout = ({
               {children}
             </MobileShellHost>
           </SWRConfigProvider>
-        </AffineErrorBoundary>
+        </CloudNotesErrorBoundary>
       </FrameworkScope>
     </FrameworkScope>
   );

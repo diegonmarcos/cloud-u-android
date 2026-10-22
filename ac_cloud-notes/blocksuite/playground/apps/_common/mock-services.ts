@@ -1,9 +1,9 @@
-import { toast } from '@blocksuite/affine/components/toast';
+import { toast } from '@blocksuite/cloud-notes/components/toast';
 import {
   ColorScheme,
   type DocMode,
   type ReferenceParams,
-} from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/model';
 import {
   type CommentId,
   type CommentProvider,
@@ -14,9 +14,9 @@ import {
   type NotificationService,
   type ParseDocUrlService,
   type ThemeExtension,
-} from '@blocksuite/affine/shared/services';
-import type { BaseSelection, Workspace } from '@blocksuite/affine/store';
-import type { TestAffineEditorContainer } from '@blocksuite/integration-test';
+} from '@blocksuite/cloud-notes/shared/services';
+import type { BaseSelection, Workspace } from '@blocksuite/cloud-notes/store';
+import type { TestCloudNotesEditorContainer } from '@blocksuite/integration-test';
 import { Signal, signal } from '@preact/signals-core';
 import { Subject } from 'rxjs';
 
@@ -41,7 +41,7 @@ export function removeModeFromStorage(docId: string) {
 const DEFAULT_MODE: DocMode = 'page';
 const slotMap = new Map<string, Subject<DocMode>>();
 
-export function mockDocModeService(editor: TestAffineEditorContainer) {
+export function mockDocModeService(editor: TestCloudNotesEditorContainer) {
   const getEditorModeCallback: () => DocMode = () => editor.mode;
   const setEditorModeCallback: (mode: DocMode) => void = mode =>
     editor.switchEditor(mode);
@@ -82,7 +82,7 @@ export function mockDocModeService(editor: TestAffineEditorContainer) {
   return docModeService;
 }
 
-export function mockNotificationService(editor: TestAffineEditorContainer) {
+export function mockNotificationService(editor: TestCloudNotesEditorContainer) {
   const notificationService: NotificationService = {
     toast: (message, options) => {
       toast(editor.host!, message, options?.duration);

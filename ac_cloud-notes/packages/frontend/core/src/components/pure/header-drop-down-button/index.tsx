@@ -1,5 +1,5 @@
-import type { IconButtonProps } from '@affine/component/ui/button';
-import { IconButton } from '@affine/component/ui/button';
+import type { IconButtonProps } from '@cloud-notes/component/ui/button';
+import { IconButton } from '@cloud-notes/component/ui/button';
 import { MoreHorizontalIcon } from '@blocksuite/icons/rc';
 import { forwardRef } from 'react';
 

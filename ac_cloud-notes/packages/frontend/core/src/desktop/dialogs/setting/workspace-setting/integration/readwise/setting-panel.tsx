@@ -1,12 +1,12 @@
-import { Button } from '@affine/component';
-import { WorkspaceTagsInlineEditor } from '@affine/core/components/tags';
+import { Button } from '@cloud-notes/component';
+import { WorkspaceTagsInlineEditor } from '@cloud-notes/core/components/tags';
 import {
   IntegrationService,
   IntegrationTypeIcon,
-} from '@affine/core/modules/integration';
-import type { ReadwiseConfig } from '@affine/core/modules/integration/type';
-import { TagService } from '@affine/core/modules/tag';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/integration';
+import type { ReadwiseConfig } from '@cloud-notes/core/modules/integration/type';
+import { TagService } from '@cloud-notes/core/modules/tag';
+import { useI18n } from '@cloud-notes/i18n';
 import { PlusIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
@@ -38,8 +38,8 @@ const ReadwiseSettingHeader = ({ action }: { action?: ReactNode }) => {
   return (
     <IntegrationSettingHeader
       icon={<IntegrationTypeIcon type="readwise" />}
-      name={t['com.affine.integration.readwise.name']()}
-      desc={t['com.affine.integration.readwise.desc']()}
+      name={t['com.cloud-notes.integration.readwise.name']()}
+      desc={t['com.cloud-notes.integration.readwise.desc']()}
       action={action}
     />
   );
@@ -130,8 +130,8 @@ const NewHighlightSetting = () => {
     <li>
       <IntegrationSettingToggle
         checked={!!syncNewHighlights}
-        name={t['com.affine.integration.readwise.setting.sync-new-name']()}
-        desc={t['com.affine.integration.readwise.setting.sync-new-desc']()}
+        name={t['com.cloud-notes.integration.readwise.setting.sync-new-name']()}
+        desc={t['com.cloud-notes.integration.readwise.setting.sync-new-desc']()}
         onChange={toggle}
       />
     </li>
@@ -167,19 +167,19 @@ const UpdateStrategySetting = () => {
       [
         {
           name: t[
-            'com.affine.integration.readwise.setting.update-append-name'
+            'com.cloud-notes.integration.readwise.setting.update-append-name'
           ](),
           desc: t[
-            'com.affine.integration.readwise.setting.update-append-desc'
+            'com.cloud-notes.integration.readwise.setting.update-append-desc'
           ](),
           value: 'append',
         },
         {
           name: t[
-            'com.affine.integration.readwise.setting.update-override-name'
+            'com.cloud-notes.integration.readwise.setting.update-override-name'
           ](),
           desc: t[
-            'com.affine.integration.readwise.setting.update-override-desc'
+            'com.cloud-notes.integration.readwise.setting.update-override-desc'
           ](),
           value: 'override',
         },
@@ -192,8 +192,8 @@ const UpdateStrategySetting = () => {
       <li>
         <IntegrationSettingToggle
           checked={!!updateStrategy}
-          name={t['com.affine.integration.readwise.setting.update-name']()}
-          desc={t['com.affine.integration.readwise.setting.update-desc']()}
+          name={t['com.cloud-notes.integration.readwise.setting.update-name']()}
+          desc={t['com.cloud-notes.integration.readwise.setting.update-desc']()}
           onChange={toggle}
         />
       </li>
@@ -203,7 +203,7 @@ const UpdateStrategySetting = () => {
       >
         <div className={styles.updateStrategyGroupContent}>
           <h6 className={styles.updateStrategyLabel}>
-            {t['com.affine.integration.readwise.setting.update-strategy']()}
+            {t['com.cloud-notes.integration.readwise.setting.update-strategy']()}
           </h6>
           <IntegrationSettingTextRadioGroup
             items={strategies}
@@ -231,11 +231,11 @@ const StartImport = ({ onImport }: { onImport: () => void }) => {
 
   return (
     <IntegrationSettingItem
-      name={t['com.affine.integration.readwise.setting.start-import-name']()}
-      desc={t['com.affine.integration.readwise.setting.start-import-desc']()}
+      name={t['com.cloud-notes.integration.readwise.setting.start-import-name']()}
+      desc={t['com.cloud-notes.integration.readwise.setting.start-import-desc']()}
     >
       <Button onClick={handleImport}>
-        {t['com.affine.integration.readwise.setting.start-import-button']()}
+        {t['com.cloud-notes.integration.readwise.setting.start-import-button']()}
       </Button>
     </IntegrationSettingItem>
   );
@@ -277,12 +277,12 @@ const TagsSetting = () => {
   return (
     <li>
       <h6 className={styles.tagsLabel}>
-        {t['com.affine.integration.readwise.setting.tags-label']()}
+        {t['com.cloud-notes.integration.readwise.setting.tags-label']()}
       </h6>
       <WorkspaceTagsInlineEditor
         placeholder={
           <span className={styles.tagsPlaceholder}>
-            {t['com.affine.integration.readwise.setting.tags-placeholder']()}
+            {t['com.cloud-notes.integration.readwise.setting.tags-placeholder']()}
           </span>
         }
         className={styles.tagsEditor}

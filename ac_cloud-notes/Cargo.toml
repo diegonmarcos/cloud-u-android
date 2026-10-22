@@ -1,9 +1,9 @@
 [workspace]
 # DE-CLOUDED (ticket #469): packages/backend and packages/common/native are
-# pruned from the vendored tree (AFFiNE Enterprise Edition licence forbids
+# pruned from the vendored tree (the upstream's Enterprise Edition licence forbids
 # copying/distributing them). packages/frontend/native (the desktop napi
-# crate affine_native) stays on disk as vendored source but is NOT a member:
-# it is never linked into the Android APK, and its affine_common dependency
+# crate cloud_notes_native) stays on disk as vendored source but is NOT a member:
+# it is never linked into the Android APK, and its cloud_notes_common dependency
 # no longer exists. The remaining members are exactly the crates the APK
 # links, and none of them can reach an EE directory.
 members = [
@@ -19,10 +19,10 @@ resolver = "3"
 
   [workspace.dependencies]
   aes-gcm = "0.10"
-  affine_doc_loader = "0.1.8"
-  affine_importer = "0.1.2"
-  affine_nbstore = { path = "./packages/frontend/native/nbstore" }
-  affine_preview = { version = "0.1.0", default-features = false }
+  cloud_notes_doc_loader = { package = "affine_doc_loader", version = "0.1.8" }
+  cloud_notes_importer = { package = "affine_importer", version = "0.1.2" }
+  cloud_notes_nbstore = { path = "./packages/frontend/native/nbstore" }
+  cloud_notes_preview = { package = "affine_preview", version = "0.1.0", default-features = false }
   anyhow = "1"
   assert-json-diff = "2.0"
   base64 = "0.22.1"
@@ -134,7 +134,7 @@ opt-level     = 3
 strip         = "symbols"
 
   # android uniffi bindgen requires symbols
-  [profile.release.package.affine_mobile_native]
+  [profile.release.package.cloud_notes_mobile_native]
   strip = "none"
 
   # [patch.crates-io]

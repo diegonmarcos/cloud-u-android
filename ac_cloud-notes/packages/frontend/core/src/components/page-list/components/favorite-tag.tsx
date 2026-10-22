@@ -1,6 +1,6 @@
-import type { IconButtonProps } from '@affine/component';
-import { IconButton } from '@affine/component';
-import { useI18n } from '@affine/i18n';
+import type { IconButtonProps } from '@cloud-notes/component';
+import { IconButton } from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 import { FavoritedIcon, FavoriteIcon } from '@blocksuite/icons/rc';
 import { cssVar } from '@toeverything/theme';
 import Lottie from 'lottie-react';

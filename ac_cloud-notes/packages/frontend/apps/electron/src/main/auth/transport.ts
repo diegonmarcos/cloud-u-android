@@ -1,6 +1,6 @@
 import { session } from 'electron';
 
-const AUTH_TRANSPORT_PARTITION = 'affine-auth-transport';
+const AUTH_TRANSPORT_PARTITION = 'cloud-notes-auth-transport';
 
 export function getAuthTransportSession() {
   return session.fromPartition(AUTH_TRANSPORT_PARTITION, { cache: false });

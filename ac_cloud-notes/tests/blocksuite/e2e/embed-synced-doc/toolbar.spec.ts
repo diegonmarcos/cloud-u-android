@@ -23,7 +23,7 @@ test.describe('embed-synced-doc toolbar', () => {
     const linkedDoc = await createLinkedDoc('page1');
     await linkedDoc.hover();
 
-    const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+    const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
     await expect(toolbar).toBeVisible();
 
     const switchButton = toolbar.getByRole('button', { name: 'Switch view' });
@@ -37,7 +37,7 @@ test.describe('embed-synced-doc toolbar', () => {
     await embedSyncedDocBtn.click();
     await waitNextFrame(page, 200);
 
-    const embedSyncedBlock = page.locator('affine-embed-synced-doc-block');
+    const embedSyncedBlock = page.locator('cloud-notes-embed-synced-doc-block');
     expect(await embedSyncedBlock.count()).toBe(1);
   });
 
@@ -47,13 +47,13 @@ test.describe('embed-synced-doc toolbar', () => {
       { title: 'Doc 2', content: 'Hello from Doc 2' },
     ]);
 
-    const syncedDoc = page.locator('affine-embed-synced-doc-block');
+    const syncedDoc = page.locator('cloud-notes-embed-synced-doc-block');
     await syncedDoc.click();
 
     await waitNextFrame(page, 500);
     const toolbar = page.locator(
       // TODO(@L-Sun): simplify this selector after that toolbar widget are disabled in preview rendering is ready
-      'affine-page-root > div > affine-toolbar-widget editor-toolbar'
+      'cloud-notes-page-root > div > cloud-notes-toolbar-widget editor-toolbar'
     );
     await expect(toolbar).toBeVisible();
 
@@ -67,7 +67,7 @@ test.describe('embed-synced-doc toolbar', () => {
     await cardBtn.click();
     await waitNextFrame(page, 200);
 
-    const embedSyncedBlock = page.locator('affine-embed-linked-doc-block');
+    const embedSyncedBlock = page.locator('cloud-notes-embed-linked-doc-block');
     expect(await embedSyncedBlock.count()).toBe(1);
   });
 });

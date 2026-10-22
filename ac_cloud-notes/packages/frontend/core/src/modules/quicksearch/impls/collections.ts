@@ -11,7 +11,7 @@ import { highlighter } from '../utils/highlighter';
 const group = {
   id: 'collections',
   label: {
-    i18nKey: 'com.affine.cmdk.affine.category.affine.collections',
+    i18nKey: 'com.cloud-notes.cmdk.cloud-notes.category.cloud-notes.collections',
   },
   score: 10,
 } as QuickSearchGroup;

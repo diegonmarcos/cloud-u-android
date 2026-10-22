@@ -1,5 +1,5 @@
-import type { DocsService } from '@affine/core/modules/doc';
-import type { TagService } from '@affine/core/modules/tag';
+import type { DocsService } from '@cloud-notes/core/modules/doc';
+import type { TagService } from '@cloud-notes/core/modules/tag';
 import { Service } from '@toeverything/infra';
 import { combineLatest, map, type Observable } from 'rxjs';
 

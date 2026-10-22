@@ -1,7 +1,7 @@
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { CloseIcon } from '@blocksuite/icons/lit';
 import { css, html, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';

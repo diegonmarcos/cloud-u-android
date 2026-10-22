@@ -1,16 +1,16 @@
-import { CopilotTool } from '@affine/core/blocksuite/ai/tool/copilot-tool';
-import { EdgelessLegacySlotIdentifier } from '@blocksuite/affine/blocks/surface';
+import { CopilotTool } from '@cloud-notes/core/blocksuite/ai/tool/copilot-tool';
+import { EdgelessLegacySlotIdentifier } from '@blocksuite/cloud-notes/blocks/surface';
 import {
   Bound,
   getCommonBoundWithRotation,
-} from '@blocksuite/affine/global/gfx';
-import type { RootBlockModel } from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/global/gfx';
+import type { RootBlockModel } from '@blocksuite/cloud-notes/model';
 import {
   MOUSE_BUTTON,
   requestConnectedFrame,
-} from '@blocksuite/affine/shared/utils';
-import { WidgetComponent, WidgetViewExtension } from '@blocksuite/affine/std';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
+} from '@blocksuite/cloud-notes/shared/utils';
+import { WidgetComponent, WidgetViewExtension } from '@blocksuite/cloud-notes/std';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
 import {
   autoPlacement,
   autoUpdate,
@@ -30,11 +30,11 @@ import type { AIItemGroupConfig } from '../../components/ai-item/types.js';
 import { AIAppEvents } from '../../provider/index.js';
 import { extractSelectedContent } from '../../utils/extract.js';
 import {
-  AFFINE_AI_PANEL_WIDGET,
-  AffineAIPanelWidget,
+  CLOUD_NOTES_AI_PANEL_WIDGET,
+  CloudNotesAIPanelWidget,
 } from '../ai-panel/ai-panel.js';
 import { EdgelessCopilotPanel } from '../edgeless-copilot-panel/index.js';
-import { AFFINE_EDGELESS_COPILOT_WIDGET } from './constant.js';
+import { CLOUD_NOTES_EDGELESS_COPILOT_WIDGET } from './constant.js';
 
 export class EdgelessCopilotWidget extends WidgetComponent<RootBlockModel> {
   static override styles = css`
@@ -42,7 +42,7 @@ export class EdgelessCopilotWidget extends WidgetComponent<RootBlockModel> {
       position: absolute;
       box-sizing: border-box;
       border-radius: 4px;
-      border: 2px dashed var(--affine-brand-color, #1e96eb);
+      border: 2px dashed var(--cloud-notes-brand-color, #1e96eb);
     }
   `;
 
@@ -92,11 +92,11 @@ export class EdgelessCopilotWidget extends WidgetComponent<RootBlockModel> {
       if (!rootBlockId) return;
 
       const input = this.host.view.getWidget(
-        AFFINE_AI_PANEL_WIDGET,
+        CLOUD_NOTES_AI_PANEL_WIDGET,
         rootBlockId
       );
 
-      if (input instanceof AffineAIPanelWidget) {
+      if (input instanceof CloudNotesAIPanelWidget) {
         input.setState('input', referenceElement);
         const aiPanel = input;
         // TODO: @xiaojun refactor these scattered config overrides
@@ -306,7 +306,7 @@ export class EdgelessCopilotWidget extends WidgetComponent<RootBlockModel> {
 
     const rect = this._selectionRect;
 
-    return html`<div class="affine-edgeless-ai">
+    return html`<div class="cloud-notes-edgeless-ai">
       <div
         class="copilot-selection-rect"
         style=${styleMap({
@@ -336,13 +336,13 @@ export class EdgelessCopilotWidget extends WidgetComponent<RootBlockModel> {
 
 export const edgelessCopilotWidget = WidgetViewExtension(
   'affine:page',
-  AFFINE_EDGELESS_COPILOT_WIDGET,
-  literal`${unsafeStatic(AFFINE_EDGELESS_COPILOT_WIDGET)}`
+  CLOUD_NOTES_EDGELESS_COPILOT_WIDGET,
+  literal`${unsafeStatic(CLOUD_NOTES_EDGELESS_COPILOT_WIDGET)}`
 );
 
 declare global {
   interface HTMLElementTagNameMap {
-    [AFFINE_EDGELESS_COPILOT_WIDGET]: EdgelessCopilotWidget;
+    [CLOUD_NOTES_EDGELESS_COPILOT_WIDGET]: EdgelessCopilotWidget;
   }
 }
 

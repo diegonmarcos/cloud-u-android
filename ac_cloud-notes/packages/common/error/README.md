@@ -1,3 +1,3 @@
-# @affine/error
+# @cloud-notes/error
 
-AFFiNE error handler utilities
+Cloud Notes error handler utilities

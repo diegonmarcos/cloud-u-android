@@ -1,20 +1,20 @@
-import { VirtualKeyboardProvider } from '@affine/core/mobile/modules/virtual-keyboard';
-import { globalVars } from '@affine/core/mobile/styles/variables.css';
-import type { Container } from '@blocksuite/affine/global/di';
-import { DisposableGroup } from '@blocksuite/affine/global/disposable';
+import { VirtualKeyboardProvider } from '@cloud-notes/core/mobile/modules/virtual-keyboard';
+import { globalVars } from '@cloud-notes/core/mobile/styles/variables.css';
+import type { Container } from '@blocksuite/cloud-notes/global/di';
+import { DisposableGroup } from '@blocksuite/cloud-notes/global/disposable';
 import {
   VirtualKeyboardProvider as BSVirtualKeyboardProvider,
   type VirtualKeyboardProviderWithAction,
-} from '@blocksuite/affine/shared/services';
-import { LifeCycleWatcher } from '@blocksuite/affine/std';
-import type { ExtensionType } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/shared/services';
+import { LifeCycleWatcher } from '@blocksuite/cloud-notes/std';
+import type { ExtensionType } from '@blocksuite/cloud-notes/store';
 import { batch, signal } from '@preact/signals-core';
 import type { FrameworkProvider } from '@toeverything/infra';
 
 export function KeyboardToolbarExtension(
   framework: FrameworkProvider
 ): ExtensionType {
-  const affineVirtualKeyboardProvider = framework.get(VirtualKeyboardProvider);
+  const cloudNotesVirtualKeyboardProvider = framework.get(VirtualKeyboardProvider);
 
   class BSVirtualKeyboardService
     extends LifeCycleWatcher
@@ -41,7 +41,7 @@ export function KeyboardToolbarExtension(
 
     override mounted() {
       this._disposables.add(
-        affineVirtualKeyboardProvider.onChange(
+        cloudNotesVirtualKeyboardProvider.onChange(
           ({ visible, height, overlaysContent }) => {
             const layoutHeight = overlaysContent === false ? 0 : height;
 
@@ -62,8 +62,8 @@ export function KeyboardToolbarExtension(
     }
   }
 
-  if ('show' in affineVirtualKeyboardProvider) {
-    const providerWithAction = affineVirtualKeyboardProvider;
+  if ('show' in cloudNotesVirtualKeyboardProvider) {
+    const providerWithAction = cloudNotesVirtualKeyboardProvider;
 
     class BSVirtualKeyboardServiceWithShowAndHide
       extends BSVirtualKeyboardService

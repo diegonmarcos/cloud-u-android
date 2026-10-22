@@ -1,12 +1,12 @@
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { ImportCommitService } from '@affine/core/desktop/dialogs/import/commit-service';
-import { commitNativeImport } from '@affine/core/desktop/dialogs/import/native-backend';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { ImportCommitService } from '@cloud-notes/core/desktop/dialogs/import/commit-service';
+import { commitNativeImport } from '@cloud-notes/core/desktop/dialogs/import/native-backend';
 import {
   preflightWebFilesImport,
   preflightWebZipImport,
-} from '@affine/core/desktop/dialogs/import/web-limits';
-import { DebugLogger } from '@affine/debug';
-import { snapshotFile } from '@blocksuite/affine/shared/utils';
+} from '@cloud-notes/core/desktop/dialogs/import/web-limits';
+import { DebugLogger } from '@cloud-notes/debug';
+import { snapshotFile } from '@blocksuite/cloud-notes/shared/utils';
 import {
   BearTransformer,
   type ImportWarning,
@@ -14,14 +14,14 @@ import {
   NotionHtmlTransformer,
   ObsidianTransformer,
   Unzip,
-} from '@blocksuite/affine/widgets/linked-doc';
+} from '@blocksuite/cloud-notes/widgets/linked-doc';
 import { Service } from '@toeverything/infra';
 
 import type { ExplorerIconService } from '../../explorer-icon/services/explorer-icon';
 import type { OrganizeService } from '../../organize';
 import type { TagService } from '../../tag';
 import type { WorkspaceService } from '../../workspace';
-import { getAFFiNEWorkspaceSchema } from '../../workspace';
+import { getCloudNotesWorkspaceSchema } from '../../workspace';
 
 const logger = new DebugLogger('import');
 
@@ -51,7 +51,7 @@ export class ImportService extends Service {
     const snapshot = await snapshotFile(file);
     const { batch } = await MarkdownTransformer.planMarkdownZip({
       collection,
-      schema: getAFFiNEWorkspaceSchema(),
+      schema: getCloudNotesWorkspaceSchema(),
       imported: snapshot,
       extensions: getStoreManager().config.init().value.get('store'),
     });
@@ -74,7 +74,7 @@ export class ImportService extends Service {
     if (format === 'markdown') {
       const { batch } = await MarkdownTransformer.planNotionMarkdownZip({
         collection,
-        schema: getAFFiNEWorkspaceSchema(),
+        schema: getCloudNotesWorkspaceSchema(),
         imported: snapshot,
         extensions: getStoreManager().config.init().value.get('store'),
       });
@@ -82,7 +82,7 @@ export class ImportService extends Service {
     }
     const { batch } = await NotionHtmlTransformer.planNotionHtmlZip({
       collection,
-      schema: getAFFiNEWorkspaceSchema(),
+      schema: getCloudNotesWorkspaceSchema(),
       imported: snapshot,
       extensions: getStoreManager().config.init().value.get('store'),
     });
@@ -108,7 +108,7 @@ export class ImportService extends Service {
 
     const { batch } = await ObsidianTransformer.planObsidianVault({
       collection,
-      schema: getAFFiNEWorkspaceSchema(),
+      schema: getCloudNotesWorkspaceSchema(),
       importedFiles: snapshots,
       extensions: getStoreManager().config.init().value.get('store'),
     });
@@ -130,7 +130,7 @@ export class ImportService extends Service {
     const snapshot = await snapshotFile(file);
     const { batch } = await BearTransformer.planBearBackup({
       collection,
-      schema: getAFFiNEWorkspaceSchema(),
+      schema: getCloudNotesWorkspaceSchema(),
       imported: snapshot,
       extensions: getStoreManager().config.init().value.get('store'),
     });
@@ -154,7 +154,7 @@ export class ImportService extends Service {
   }) {
     return new ImportCommitService({
       collection: this.workspaceService.workspace.docCollection,
-      schema: getAFFiNEWorkspaceSchema(),
+      schema: getCloudNotesWorkspaceSchema(),
       extensions: getStoreManager().config.init().value.get('store'),
       organizeService: options.organize ? this.organizeService : undefined,
       explorerIconService: options.explorerIcon

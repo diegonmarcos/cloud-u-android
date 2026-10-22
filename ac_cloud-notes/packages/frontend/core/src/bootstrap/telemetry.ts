@@ -1,4 +1,4 @@
-import { sentry, tracker } from '@affine/track';
+import { sentry, tracker } from '@cloud-notes/track';
 import { APP_SETTINGS_STORAGE_KEY } from '@toeverything/infra/atom';
 
 tracker.init();

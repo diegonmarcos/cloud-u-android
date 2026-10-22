@@ -1,8 +1,8 @@
-import '@affine/core/bootstrap/browser';
-import '@affine/core/bootstrap/cleanup';
+import '@cloud-notes/core/bootstrap/browser';
+import '@cloud-notes/core/bootstrap/cleanup';
 import './proxy';
 
-import { viewportRuntimeConfig } from '@blocksuite/affine/std/gfx';
+import { viewportRuntimeConfig } from '@blocksuite/cloud-notes/std/gfx';
 
 // iOS WKWebView terminates the web content process when edgeless compositing
 // memory (GPU-side IOSurface tiles) spikes. Two distinct triggers exist:

@@ -1,11 +1,11 @@
-import { DocModeProvider } from '@blocksuite/affine/shared/services';
-import type { EditorHost } from '@blocksuite/affine/std';
+import { DocModeProvider } from '@blocksuite/cloud-notes/shared/services';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
 import {
   GfxControllerIdentifier,
   type GfxModel,
   isPrimitiveModel,
-} from '@blocksuite/affine/std/gfx';
-import type { BlockModel } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/std/gfx';
+import type { BlockModel } from '@blocksuite/cloud-notes/store';
 import { Bound } from '@blocksuite/global/gfx';
 
 import {

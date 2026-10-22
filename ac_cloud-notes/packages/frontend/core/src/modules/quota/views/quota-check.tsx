@@ -1,6 +1,6 @@
-import { useConfirmModal } from '@affine/component';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { type I18nString, useI18n } from '@affine/i18n';
+import { useConfirmModal } from '@cloud-notes/component';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { type I18nString, useI18n } from '@cloud-notes/i18n';
 import { InformationFillDuotoneIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect } from 'react';
@@ -116,51 +116,51 @@ const messages: Record<
 > = {
   owner: {
     both: {
-      title: 'com.affine.payment.sync-paused.title',
-      description: 'com.affine.payment.sync-paused.owner.both.description',
+      title: 'com.cloud-notes.payment.sync-paused.title',
+      description: 'com.cloud-notes.payment.sync-paused.owner.both.description',
       tips: [
-        'com.affine.payment.sync-paused.owner.both.tips-1',
-        'com.affine.payment.sync-paused.owner.both.tips-2',
+        'com.cloud-notes.payment.sync-paused.owner.both.tips-1',
+        'com.cloud-notes.payment.sync-paused.owner.both.tips-2',
       ],
       cancelText: 'Cancel',
-      confirmText: 'com.affine.payment.upgrade',
+      confirmText: 'com.cloud-notes.payment.upgrade',
     },
     storage: {
-      title: 'com.affine.payment.sync-paused.title',
-      description: 'com.affine.payment.sync-paused.owner.storage.description',
+      title: 'com.cloud-notes.payment.sync-paused.title',
+      description: 'com.cloud-notes.payment.sync-paused.owner.storage.description',
       tips: [
-        'com.affine.payment.sync-paused.owner.storage.tips-1',
-        'com.affine.payment.sync-paused.owner.storage.tips-2',
+        'com.cloud-notes.payment.sync-paused.owner.storage.tips-1',
+        'com.cloud-notes.payment.sync-paused.owner.storage.tips-2',
       ],
       cancelText: 'Cancel',
-      confirmText: 'com.affine.payment.upgrade',
+      confirmText: 'com.cloud-notes.payment.upgrade',
     },
     member: {
-      title: 'com.affine.payment.sync-paused.title',
-      description: 'com.affine.payment.sync-paused.owner.member.description',
+      title: 'com.cloud-notes.payment.sync-paused.title',
+      description: 'com.cloud-notes.payment.sync-paused.owner.member.description',
       tips: [
-        'com.affine.payment.sync-paused.owner.member.tips-1',
-        'com.affine.payment.sync-paused.owner.member.tips-2',
+        'com.cloud-notes.payment.sync-paused.owner.member.tips-1',
+        'com.cloud-notes.payment.sync-paused.owner.member.tips-2',
       ],
       cancelText: 'Cancel',
-      confirmText: 'com.affine.payment.upgrade',
+      confirmText: 'com.cloud-notes.payment.upgrade',
     },
   },
   member: {
     both: {
-      title: 'com.affine.payment.sync-paused.title',
-      description: 'com.affine.payment.sync-paused.member.both.description',
-      confirmText: 'com.affine.payment.sync-paused.member.member.confirm',
+      title: 'com.cloud-notes.payment.sync-paused.title',
+      description: 'com.cloud-notes.payment.sync-paused.member.both.description',
+      confirmText: 'com.cloud-notes.payment.sync-paused.member.member.confirm',
     },
     storage: {
-      title: 'com.affine.payment.sync-paused.title',
-      description: 'com.affine.payment.sync-paused.member.storage.description',
-      confirmText: 'com.affine.payment.sync-paused.member.member.confirm',
+      title: 'com.cloud-notes.payment.sync-paused.title',
+      description: 'com.cloud-notes.payment.sync-paused.member.storage.description',
+      confirmText: 'com.cloud-notes.payment.sync-paused.member.member.confirm',
     },
     member: {
-      title: 'com.affine.payment.sync-paused.title',
-      description: 'com.affine.payment.sync-paused.member.member.description',
-      confirmText: 'com.affine.payment.sync-paused.member.member.confirm',
+      title: 'com.cloud-notes.payment.sync-paused.title',
+      description: 'com.cloud-notes.payment.sync-paused.member.member.description',
+      confirmText: 'com.cloud-notes.payment.sync-paused.member.member.confirm',
     },
   },
 };

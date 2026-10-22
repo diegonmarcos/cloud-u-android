@@ -1,15 +1,15 @@
-import { MenuItem, notify } from '@affine/component';
-import type { NodeOperation } from '@affine/core/desktop/components/navigation-panel';
+import { MenuItem, notify } from '@cloud-notes/component';
+import type { NodeOperation } from '@cloud-notes/core/desktop/components/navigation-panel';
 import {
   type Collection,
   CollectionService,
-} from '@affine/core/modules/collection';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import { ShareDocsListService } from '@affine/core/modules/share-doc';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
+} from '@cloud-notes/core/modules/collection';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import { ShareDocsListService } from '@cloud-notes/core/modules/share-doc';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import { FilterMinusIcon, ViewLayersIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService, useServices } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -144,7 +144,7 @@ const NavigationPanelCollectionNodeChildren = ({
       track.$.navigationPanel.collections.removeOrganizeItem({ type: 'doc' });
       collectionService.removeDocFromCollection(collection.id, id);
       notify.success({
-        message: t['com.affine.collection.removePage.success'](),
+        message: t['com.cloud-notes.collection.removePage.success'](),
       });
     },
     [collection.id, collectionService, t]

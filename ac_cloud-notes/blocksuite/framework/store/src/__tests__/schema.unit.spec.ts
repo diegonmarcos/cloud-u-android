@@ -28,7 +28,7 @@ const TestCustomNoteBlockSchema = defineBlockSchema({
   metadata: {
     version: 1,
     role: 'content',
-    tag: literal`affine-note-block-video`,
+    tag: literal`cloud-notes-note-block-video`,
     parent: ['affine:note'],
   },
 });
@@ -45,7 +45,7 @@ const TestInvalidNoteBlockSchema = defineBlockSchema({
   metadata: {
     version: 1,
     role: 'content',
-    tag: literal`affine-invalid-note-block-video`,
+    tag: literal`cloud-notes-invalid-note-block-video`,
     parent: ['affine:note'],
   },
 });

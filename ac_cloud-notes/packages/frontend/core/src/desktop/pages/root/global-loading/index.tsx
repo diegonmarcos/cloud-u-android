@@ -1,5 +1,5 @@
-import { Loading } from '@affine/component';
-import { globalLoadingEventsAtom } from '@affine/component/global-loading';
+import { Loading } from '@cloud-notes/component';
+import { globalLoadingEventsAtom } from '@cloud-notes/component/global-loading';
 import { useAtomValue } from 'jotai';
 import { type ReactNode, useEffect, useState } from 'react';
 

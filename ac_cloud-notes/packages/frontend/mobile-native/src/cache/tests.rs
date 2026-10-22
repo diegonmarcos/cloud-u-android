@@ -12,7 +12,7 @@ use std::{
   time::{SystemTime, UNIX_EPOCH},
 };
 
-use affine_nbstore::Blob as NbBlob;
+use cloud_notes_nbstore::Blob as NbBlob;
 use chrono::{DateTime, Utc};
 
 use super::*;
@@ -61,7 +61,7 @@ fn setup_cache(prefix: &str) -> (MobileBlobCache, String, PathBuf) {
   let cache = MobileBlobCache::new();
   let universal_id = unique_id(prefix);
   let db_path = std::env::temp_dir()
-    .join("affine-mobile-cache-tests")
+    .join("cloud-notes-mobile-cache-tests")
     .join(unique_id("db"))
     .join("workspace.sqlite");
   if let Some(parent) = db_path.parent() {

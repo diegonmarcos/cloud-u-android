@@ -1,4 +1,4 @@
-# Building AFFiNE Desktop Client App
+# Building Cloud Notes Desktop Client App
 
 > **Warning**:
 >
@@ -31,13 +31,13 @@ We will explain the steps in the following sections.
 
 ## Prerequisites
 
-Before you start building AFFiNE Desktop Client Application, please following the same steps in [BUILDING#Prerequisites](./BUILDING.md#prerequisites) to install Node.js and Rust.
+Before you start building Cloud Notes Desktop Client Application, please following the same steps in [BUILDING#Prerequisites](./BUILDING.md#prerequisites) to install Node.js and Rust.
 
 On Windows, you must enable symbolic links this code repo. See [#### Windows](./BUILDING.md#Windows).
 
 ## Build, package & make the desktop client app
 
-> repos/AFFiNE/.github/workflows/release-desktop.yml contains real order to build the desktop client app, but here we will explain the steps in a more detailed way. Up-to date.
+> repos/cloud-notes/.github/workflows/release-desktop.yml contains real order to build the desktop client app, but here we will explain the steps in a more detailed way. Up-to date.
 
 ### 0. Build the native modules
 
@@ -48,9 +48,9 @@ Please refer to `Build Native Dependencies` section in [BUILDING.md](./BUILDING.
 On Mac & Linux
 
 ```shell
-BUILD_TYPE=canary yarn affine @affine/electron build
+BUILD_TYPE=canary yarn cloud-notes @cloud-notes/electron build
 
-BUILD_TYPE=canary yarn affine @affine/electron generate-assets
+BUILD_TYPE=canary yarn cloud-notes @cloud-notes/electron generate-assets
 ```
 
 On Windows (powershell)
@@ -94,7 +94,7 @@ yarn install
 Note: you need to comment out `osxSign` and `osxNotarize` in `forge.config.mjs` to skip signing and notarizing the app.
 
 ```shell
-BUILD_TYPE=canary SKIP_WEB_BUILD=1 HOIST_NODE_MODULES=1 yarn affine @affine/electron make
+BUILD_TYPE=canary SKIP_WEB_BUILD=1 HOIST_NODE_MODULES=1 yarn cloud-notes @cloud-notes/electron make
 ```
 
 #### Windows
@@ -105,16 +105,16 @@ Making the windows installer is a bit different. Right now we provide two instal
 $env:BUILD_TYPE="canary"
 $env:SKIP_WEB_BUILD=1
 $env:HOIST_NODE_MODULES=1
-yarn affine @affine/electron package
-yarn affine @affine/electron make-squirrel
-yarn affine @affine/electron make-nsis
+yarn cloud-notes @cloud-notes/electron package
+yarn cloud-notes @cloud-notes/electron make-squirrel
+yarn cloud-notes @cloud-notes/electron make-nsis
 ```
 
 Once the build is complete, you can find the paths to the binaries in the terminal output.
 
 ```
 Finished 2 bundles at:
-  › Artifacts available at: <affine-repo>/packages/frontend/apps/electron/out/canary/make
+  › Artifacts available at: <cloud-notes-repo>/packages/frontend/apps/electron/out/canary/make
 ```
 
 ## CI

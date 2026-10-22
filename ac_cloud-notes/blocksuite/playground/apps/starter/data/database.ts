@@ -1,13 +1,13 @@
 import {
   DatabaseBlockDataSource,
   databaseBlockProperties,
-} from '@blocksuite/affine/blocks/database';
+} from '@blocksuite/cloud-notes/blocks/database';
 import {
   type DatabaseBlockModel,
   type ListType,
   type ParagraphType,
-} from '@blocksuite/affine/model';
-import { Text, type Workspace } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/model';
+import { Text, type Workspace } from '@blocksuite/cloud-notes/store';
 import { groupTraitKey } from '@blocksuite/data-view';
 import { propertyPresets } from '@blocksuite/data-view/property-presets';
 import { viewPresets } from '@blocksuite/data-view/view-presets';

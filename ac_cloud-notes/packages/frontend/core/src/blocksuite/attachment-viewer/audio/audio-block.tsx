@@ -3,19 +3,19 @@ import {
   Button,
   Tooltip,
   useConfirmModal,
-} from '@affine/component';
-import { AudioPlayer } from '@affine/component/ui/audio-player';
-import { useEnableAI } from '@affine/core/components/hooks/affine/use-enable-ai';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { useSeekTime } from '@affine/core/components/hooks/use-seek-time';
-import { CurrentServerScopeProvider } from '@affine/core/components/providers/current-server-scope';
-import { PublicUserLabel } from '@affine/core/modules/cloud/views/public-user';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
-import type { AudioAttachmentBlock } from '@affine/core/modules/media/entities/audio-attachment-block';
-import { AudioAttachmentService } from '@affine/core/modules/media/services/audio-attachment';
-import { Trans, useI18n } from '@affine/i18n';
-import track from '@affine/track';
-import type { AttachmentBlockModel } from '@blocksuite/affine/model';
+} from '@cloud-notes/component';
+import { AudioPlayer } from '@cloud-notes/component/ui/audio-player';
+import { useEnableAI } from '@cloud-notes/core/components/hooks/cloud-notes/use-enable-ai';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { useSeekTime } from '@cloud-notes/core/components/hooks/use-seek-time';
+import { CurrentServerScopeProvider } from '@cloud-notes/core/components/providers/current-server-scope';
+import { PublicUserLabel } from '@cloud-notes/core/modules/cloud/views/public-user';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { AudioAttachmentBlock } from '@cloud-notes/core/modules/media/entities/audio-attachment-block';
+import { AudioAttachmentService } from '@cloud-notes/core/modules/media/services/audio-attachment';
+import { Trans, useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
+import type { AttachmentBlockModel } from '@blocksuite/cloud-notes/model';
 import { ResetIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import bytes from 'bytes';
@@ -96,13 +96,13 @@ const AttachmentAudioPlayer = ({ block }: { block: AudioAttachmentBlock }) => {
 
     if (!block.transcriptionJob.currentUserId) {
       confirmModal.openConfirmModal({
-        title: t['com.affine.ai.login-required.dialog-title'](),
-        description: t['com.affine.ai.login-required.dialog-content'](),
-        confirmText: t['com.affine.ai.login-required.dialog-confirm'](),
+        title: t['com.cloud-notes.ai.login-required.dialog-title'](),
+        description: t['com.cloud-notes.ai.login-required.dialog-content'](),
+        confirmText: t['com.cloud-notes.ai.login-required.dialog-confirm'](),
         confirmButtonOptions: {
           variant: 'primary',
         },
-        cancelText: t['com.affine.ai.login-required.dialog-cancel'](),
+        cancelText: t['com.cloud-notes.ai.login-required.dialog-cancel'](),
         onConfirm: () => {
           globalDialogService.open('sign-in', {});
         },
@@ -120,9 +120,9 @@ const AttachmentAudioPlayer = ({ block }: { block: AudioAttachmentBlock }) => {
     });
     if (result?.status === 'blocked') {
       confirmModal.openConfirmModal({
-        title: t['com.affine.audio.transcribe.non-owner.confirm.title'](),
+        title: t['com.cloud-notes.audio.transcribe.non-owner.confirm.title'](),
         description: (
-          <Trans i18nKey="com.affine.audio.transcribe.non-owner.confirm.message">
+          <Trans i18nKey="com.cloud-notes.audio.transcribe.non-owner.confirm.message">
             Please contact <PublicUserLabel id={result.userId} /> to upgrade AI
             rights or resend the attachment.
           </Trans>
@@ -173,13 +173,13 @@ const AttachmentAudioPlayer = ({ block }: { block: AudioAttachmentBlock }) => {
         onClick={handleNotesClick}
       >
         {transcribing
-          ? t['com.affine.audio.transcribing']()
-          : t['com.affine.audio.notes']()}
+          ? t['com.cloud-notes.audio.transcribing']()
+          : t['com.cloud-notes.audio.notes']()}
       </Button>
     );
     if (transcribing) {
       return (
-        <Tooltip content={t['com.affine.audio.transcribing']()}>
+        <Tooltip content={t['com.cloud-notes.audio.transcribing']()}>
           {inner}
         </Tooltip>
       );

@@ -1,1 +1,1 @@
-import '@affine/core/bootstrap/browser';
+import '@cloud-notes/core/bootstrap/browser';

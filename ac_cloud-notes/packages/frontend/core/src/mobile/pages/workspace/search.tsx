@@ -3,16 +3,16 @@ import {
   SafeArea,
   startScopedViewTransition,
   useThemeColorV2,
-} from '@affine/component';
-import { CollectionService } from '@affine/core/modules/collection';
+} from '@cloud-notes/component';
+import { CollectionService } from '@cloud-notes/core/modules/collection';
 import {
   type QuickSearchItem,
   QuickSearchTagIcon,
-} from '@affine/core/modules/quicksearch';
-import { TagService } from '@affine/core/modules/tag';
-import { UserFriendlyError } from '@affine/error';
-import { useI18n } from '@affine/i18n';
-import { sleep } from '@blocksuite/affine/global/utils';
+} from '@cloud-notes/core/modules/quicksearch';
+import { TagService } from '@cloud-notes/core/modules/tag';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { useI18n } from '@cloud-notes/i18n';
+import { sleep } from '@blocksuite/cloud-notes/global/utils';
 import { ViewLayersIcon } from '@blocksuite/icons/rc';
 import {
   LiveData,

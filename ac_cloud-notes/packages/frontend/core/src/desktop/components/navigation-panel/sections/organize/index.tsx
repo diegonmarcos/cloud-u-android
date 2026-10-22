@@ -3,15 +3,15 @@ import {
   type DropTargetOptions,
   IconButton,
   toast,
-} from '@affine/component';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
+} from '@cloud-notes/component';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
 import {
   type FolderNode,
   OrganizeService,
-} from '@affine/core/modules/organize';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/core/modules/organize';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { AddOrganizeIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -50,7 +50,7 @@ export const NavigationPanelOrganize = () => {
   }, [navigationPanelService, path, rootFolder]);
 
   const handleOnChildrenDrop = useCallback(
-    (data: DropTargetDropEvent<AffineDNDData>, node?: FolderNode) => {
+    (data: DropTargetDropEvent<CloudNotesDNDData>, node?: FolderNode) => {
       if (!node || !node.id) {
         return; // never happens
       }
@@ -67,7 +67,7 @@ export const NavigationPanelOrganize = () => {
           );
           track.$.navigationPanel.organize.moveOrganizeItem({ type: 'folder' });
         } else {
-          toast(t['com.affine.rootAppSidebar.organize.root-folder-only']());
+          toast(t['com.cloud-notes.rootAppSidebar.organize.root-folder-only']());
         }
       } else {
         return; // not supported
@@ -77,7 +77,7 @@ export const NavigationPanelOrganize = () => {
   );
 
   const createFolderAndDrop = useCallback(
-    (data: DropTargetDropEvent<AffineDNDData>) => {
+    (data: DropTargetDropEvent<CloudNotesDNDData>) => {
       const newFolderId = handleCreateFolder();
       setNewFolderId(null);
       const newFolder$ = folderTree.folderNode$(newFolderId);
@@ -95,7 +95,7 @@ export const NavigationPanelOrganize = () => {
   );
 
   const handleChildrenCanDrop = useMemo<
-    DropTargetOptions<AffineDNDData>['canDrop']
+    DropTargetOptions<CloudNotesDNDData>['canDrop']
   >(() => args => args.source.data.entity?.type === 'folder', []);
 
   useEffect(() => {
@@ -105,14 +105,14 @@ export const NavigationPanelOrganize = () => {
   return (
     <CollapsibleSection
       path={path}
-      title={t['com.affine.rootAppSidebar.organize']()}
+      title={t['com.cloud-notes.rootAppSidebar.organize']()}
       actions={
         <IconButton
           data-testid="navigation-panel-bar-add-organize-button"
           onClick={handleCreateFolder}
           size="16"
           tooltip={t[
-            'com.affine.rootAppSidebar.explorer.organize-section-add-tooltip'
+            'com.cloud-notes.rootAppSidebar.explorer.organize-section-add-tooltip'
           ]()}
         >
           <AddOrganizeIcon />

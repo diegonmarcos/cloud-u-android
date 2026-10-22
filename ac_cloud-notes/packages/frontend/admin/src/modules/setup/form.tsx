@@ -1,17 +1,17 @@
-import { Button } from '@affine/admin/components/ui/button';
-import type { CarouselApi } from '@affine/admin/components/ui/carousel';
+import { Button } from '@cloud-notes/admin/components/ui/button';
+import type { CarouselApi } from '@cloud-notes/admin/components/ui/carousel';
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
-} from '@affine/admin/components/ui/carousel';
-import { validateEmailAndPassword } from '@affine/admin/utils';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+} from '@cloud-notes/admin/components/ui/carousel';
+import { validateEmailAndPassword } from '@cloud-notes/admin/utils';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { affineFetch } from '../../fetch-utils';
+import { cloudNotesFetch } from '../../fetch-utils';
 import { useRevalidateServerConfig, useServerConfig } from '../common';
 import { CreateAdmin } from './create-admin';
 
@@ -28,10 +28,10 @@ const Welcome = () => {
       style={{ minHeight: '300px' }}
     >
       <h1 className="text-5xl font-extrabold max-lg:text-3xl max-lg:font-bold">
-        Welcome to AFFiNE
+        Welcome to Cloud Notes
       </h1>
       <p className="mt-5 font-semibold text-xl max-lg:px-4 max-lg:text-lg">
-        Configure your Self Host AFFiNE with a few simple settings.
+        Configure your Self Host Cloud Notes with a few simple settings.
       </p>
     </div>
   );
@@ -47,7 +47,7 @@ const SettingsDone = () => {
         All Settings Done
       </h1>
       <p className="mt-5 font-semibold text-xl max-lg:px-4 max-lg:text-lg">
-        AFFiNE is ready to use.
+        Cloud Notes is ready to use.
       </p>
     </div>
   );
@@ -96,7 +96,7 @@ export const Form = () => {
 
   const createAdmin = useCallback(async () => {
     try {
-      const createResponse = await affineFetch('/api/setup/create-admin-user', {
+      const createResponse = await cloudNotesFetch('/api/setup/create-admin-user', {
         method: 'POST',
         body: JSON.stringify({
           name: nameValue,
@@ -209,7 +209,7 @@ export const Form = () => {
           </Button>
         )}
         <Button onClick={onNext} disabled={disableContinue}>
-          {current === count ? 'Open AFFiNE' : 'Continue'}
+          {current === count ? 'Open Cloud Notes' : 'Continue'}
         </Button>
       </div>
 

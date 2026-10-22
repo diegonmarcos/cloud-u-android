@@ -1,5 +1,5 @@
-import { OutlinePanel } from '@blocksuite/affine/fragments/outline';
-import type { EditorHost } from '@blocksuite/affine/std';
+import { OutlinePanel } from '@blocksuite/cloud-notes/fragments/outline';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
 import { useCallback, useEffect, useRef } from 'react';
 
 import * as styles from './outline.css';

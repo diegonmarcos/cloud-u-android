@@ -1,9 +1,9 @@
-import { renderMermaidSvg } from '@affine/core/modules/code-block-preview-renderer/bridge';
-import type { MermaidRenderTheme } from '@affine/core/modules/mermaid/renderer';
-import { CodeBlockPreviewExtension } from '@blocksuite/affine/blocks/code';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import type { CodeBlockModel } from '@blocksuite/affine/model';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
+import { renderMermaidSvg } from '@cloud-notes/core/modules/code-block-preview-renderer/bridge';
+import type { MermaidRenderTheme } from '@cloud-notes/core/modules/mermaid/renderer';
+import { CodeBlockPreviewExtension } from '@blocksuite/cloud-notes/blocks/code';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { CodeBlockModel } from '@blocksuite/cloud-notes/model';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
 import { ShadowlessElement } from '@blocksuite/std';
 import { css, html, nothing, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';

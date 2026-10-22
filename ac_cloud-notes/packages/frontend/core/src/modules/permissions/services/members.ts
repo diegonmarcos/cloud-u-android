@@ -1,7 +1,7 @@
 import type {
   Permission,
   WorkspaceInviteLinkExpireTime,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Service } from '@toeverything/infra';
 
 import type { WorkspaceService } from '../../workspace';

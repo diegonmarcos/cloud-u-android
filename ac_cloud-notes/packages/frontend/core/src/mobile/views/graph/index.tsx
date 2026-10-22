@@ -1,5 +1,5 @@
-import { useThemeColorV2 } from '@affine/component';
-import { WorkbenchService } from '@affine/core/modules/workbench';
+import { useThemeColorV2 } from '@cloud-notes/component';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import {
   backlinks,
   filterGraph,
@@ -7,7 +7,7 @@ import {
   type GraphNode,
   localGraph,
   orphans,
-} from '@blocksuite/affine-graph';
+} from '@blocksuite/cloud-notes-graph';
 import { useService } from '@toeverything/infra';
 import { type CSSProperties, useCallback, useMemo, useState } from 'react';
 

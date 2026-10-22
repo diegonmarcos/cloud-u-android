@@ -2952,7 +2952,7 @@ export interface ServerConfigType {
 }
 
 export enum ServerDeploymentType {
-  Affine = 'Affine',
+  CloudNotes = 'Cloud Notes',
   Selfhosted = 'Selfhosted',
 }
 

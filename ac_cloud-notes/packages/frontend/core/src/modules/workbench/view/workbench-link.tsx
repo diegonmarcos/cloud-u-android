@@ -1,7 +1,7 @@
-import { useDraggable } from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import type { AffineDNDData, AffineDNDEntity } from '@affine/core/types/dnd';
-import { inferOpenMode as inferOpenAt } from '@affine/core/utils';
+import { useDraggable } from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import type { CloudNotesDNDData, CloudNotesDNDEntity } from '@cloud-notes/core/types/dnd';
+import { inferOpenMode as inferOpenAt } from '@cloud-notes/core/utils';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { type To } from 'history';
 import { forwardRef, type MouseEvent } from 'react';
@@ -20,7 +20,7 @@ export type WorkbenchLinkProps = React.PropsWithChildren<
 function resolveToEntity(
   to: To,
   basename: string
-): AffineDNDEntity | undefined {
+): CloudNotesDNDEntity | undefined {
   const link =
     basename +
     (typeof to === 'string' ? to : `${to.pathname}${to.search}${to.hash}`);
@@ -81,7 +81,7 @@ export const WorkbenchLink = forwardRef<HTMLAnchorElement, WorkbenchLinkProps>(
       [onClick, replaceHistory, to, workbench]
     );
 
-    const { dragRef } = useDraggable<AffineDNDData>(() => {
+    const { dragRef } = useDraggable<CloudNotesDNDData>(() => {
       return {
         data: {
           entity: resolveToEntity(to, basename),

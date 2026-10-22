@@ -1,3 +1,3 @@
-import '@affine/core/bootstrap/electron';
-import '@affine/component/theme';
+import '@cloud-notes/core/bootstrap/electron';
+import '@cloud-notes/component/theme';
 import '../app/global.css';

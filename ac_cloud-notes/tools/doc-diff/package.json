@@ -1,9 +1,9 @@
 {
-  "name": "@affine/doc-diff",
+  "name": "@cloud-notes/doc-diff",
   "version": "0.27.5",
   "private": true,
   "type": "module",
-  "description": "Diff AFFiNE Yjs snapshot docs (rootdoc/folder/favorite)",
+  "description": "Diff Cloud Notes Yjs snapshot docs (rootdoc/folder/favorite)",
   "main": "index.ts",
   "scripts": {
     "diff": "r ./src/index.ts",
@@ -12,7 +12,7 @@
     "diff:favorite": "r ./src/index.ts favorite"
   },
   "dependencies": {
-    "@affine-tools/cli": "workspace:*",
+    "@cloud-notes-tools/cli": "workspace:*",
     "yjs": "^13.6.27"
   },
   "devDependencies": {

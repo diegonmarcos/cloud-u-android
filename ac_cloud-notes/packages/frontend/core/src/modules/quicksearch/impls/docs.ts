@@ -1,4 +1,4 @@
-import { ServerFeature } from '@affine/graphql';
+import { ServerFeature } from '@cloud-notes/graphql';
 import { SearchIcon } from '@blocksuite/icons/rc';
 import {
   effect,
@@ -64,7 +64,7 @@ export class DocsQuickSearchSession
     source: 'docs',
     label: {
       title: {
-        i18nKey: 'com.affine.quicksearch.search-locally',
+        i18nKey: 'com.cloud-notes.quicksearch.search-locally',
       },
     },
     score: 1000,
@@ -162,8 +162,8 @@ export class DocsQuickSearchSession
                     id: 'docs',
                     label: {
                       i18nKey: useLocalLabel
-                        ? 'com.affine.quicksearch.group.searchfor-locally'
-                        : 'com.affine.quicksearch.group.searchfor',
+                        ? 'com.cloud-notes.quicksearch.group.searchfor-locally'
+                        : 'com.cloud-notes.quicksearch.group.searchfor',
                       options: { query: truncate(query) },
                     },
                     score: 5,

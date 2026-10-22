@@ -1,14 +1,14 @@
 import type {
   events as helperEvents,
   handlers as helperHandlers,
-} from '@affine/electron/helper/exposed';
+} from '@cloud-notes/electron/helper/exposed';
 import type {
   events as mainEvents,
   handlers as mainHandlers,
-} from '@affine/electron/main/exposed';
-import type { AppInfo } from '@affine/electron/preload/electron-api';
-import type { SharedStorage } from '@affine/electron/preload/shared-storage';
-import type { CreateImportSessionFromSourceOptions } from '@affine/electron/shared/import';
+} from '@cloud-notes/electron/main/exposed';
+import type { AppInfo } from '@cloud-notes/electron/preload/electron-api';
+import type { SharedStorage } from '@cloud-notes/electron/preload/shared-storage';
+import type { CreateImportSessionFromSourceOptions } from '@cloud-notes/electron/shared/import';
 
 type MainHandlers = typeof mainHandlers;
 type HelperHandlers = typeof helperHandlers;
@@ -57,15 +57,15 @@ export {
   type WorkbenchMeta,
   type WorkbenchViewMeta,
   type WorkbenchViewModule,
-} from '@affine/electron/main/shared-state-schema';
-export type { UpdateMeta } from '@affine/electron/main/updater/event';
+} from '@cloud-notes/electron/main/shared-state-schema';
+export type { UpdateMeta } from '@cloud-notes/electron/main/updater/event';
 export type {
   AddTabOption,
   TabAction,
-} from '@affine/electron/main/windows-manager';
+} from '@cloud-notes/electron/main/windows-manager';
 export type {
   CreateImportSessionFromSourceOptions,
   NativeImportBrowserSource,
   NativeImportFormat,
   NativeImportSessionHandlers,
-} from '@affine/electron/shared/import';
+} from '@cloud-notes/electron/shared/import';

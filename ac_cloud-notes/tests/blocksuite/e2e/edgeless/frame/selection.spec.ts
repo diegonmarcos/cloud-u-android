@@ -78,7 +78,7 @@ test.describe('frame selection', () => {
     await frameTitle.click();
 
     const getButtons = (page: Page) => {
-      const toolbar = page.locator('affine-toolbar-widget');
+      const toolbar = page.locator('cloud-notes-toolbar-widget');
       return {
         lock: toolbar.getByTestId('lock'),
         unlock: toolbar.getByTestId('unlock'),
@@ -98,7 +98,7 @@ test.describe('frame selection', () => {
     await unlock.click();
     // set frame background to non-transparent value
     await page.evaluate(() => {
-      const edgelessRoot = document.querySelector('affine-edgeless-root');
+      const edgelessRoot = document.querySelector('cloud-notes-edgeless-root');
 
       if (!edgelessRoot) {
         throw new Error('Not edgeless root found');
@@ -165,7 +165,7 @@ test.describe('frame selection', () => {
     await frameTitle.click();
     // set frame background to non-transparent value
     await page.evaluate(() => {
-      const edgelessRoot = document.querySelector('affine-edgeless-root');
+      const edgelessRoot = document.querySelector('cloud-notes-edgeless-root');
 
       if (!edgelessRoot) {
         throw new Error('Not edgeless root found');

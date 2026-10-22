@@ -1,4 +1,4 @@
-import type { PageSize } from '@affine/core/modules/pdf/renderer/types';
+import type { PageSize } from '@cloud-notes/core/modules/pdf/renderer/types';
 
 export function fitToPage(
   viewportInfo: PageSize,

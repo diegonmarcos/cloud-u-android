@@ -1,15 +1,15 @@
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import type { PeekViewService } from '@affine/core/modules/peek-view';
-import { I18n } from '@affine/i18n';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import type { ColorScheme } from '@blocksuite/affine/model';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import type { PeekViewService } from '@cloud-notes/core/modules/peek-view';
+import { I18n } from '@cloud-notes/i18n';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { ColorScheme } from '@blocksuite/cloud-notes/model';
 import {
   type BlockStdScope,
   type EditorHost,
   ShadowlessElement,
-} from '@blocksuite/affine/std';
-import type { ExtensionType } from '@blocksuite/affine/store';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+} from '@blocksuite/cloud-notes/std';
+import type { ExtensionType } from '@blocksuite/cloud-notes/store';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import {
   EdgelessIcon,
   PageIcon,
@@ -22,7 +22,7 @@ import { css, html, nothing } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
 
-import type { AffineAIPanelState } from '../../widgets/ai-panel/type';
+import type { CloudNotesAIPanelState } from '../../widgets/ai-panel/type';
 import type { DocDisplayConfig } from '../ai-chat-chips';
 import type { StreamObject } from '../ai-chat-messages';
 
@@ -72,18 +72,18 @@ function frontendReadPreview(result: unknown) {
     .join('\n');
   if (preview) return preview;
   return typeof value.mode === 'string'
-    ? I18n['com.affine.ai.chat-panel.tool.live.mode']({ mode: value.mode })
+    ? I18n['com.cloud-notes.ai.chat-panel.tool.live.mode']({ mode: value.mode })
     : undefined;
 }
 
 function frontendReadError(result: Record<string, unknown>) {
   const error = object(result.error);
   if (error?.code === 'VIEW_NOT_AVAILABLE') {
-    return I18n['com.affine.ai.chat-panel.tool.live.view-unavailable']();
+    return I18n['com.cloud-notes.ai.chat-panel.tool.live.view-unavailable']();
   }
   if (typeof error?.message === 'string') return error.message;
   if (typeof result.message === 'string') return result.message;
-  return I18n['com.affine.ai.chat-panel.tool.live.failed']();
+  return I18n['com.cloud-notes.ai.chat-panel.tool.live.failed']();
 }
 
 function canvasReadPreview(result: Record<string, unknown>) {
@@ -93,14 +93,14 @@ function canvasReadPreview(result: Record<string, unknown>) {
   const parts: string[] = [];
   if (typeof counts?.blocks === 'number') {
     parts.push(
-      I18n['com.affine.ai.chat-panel.tool.live.blocks']({
+      I18n['com.cloud-notes.ai.chat-panel.tool.live.blocks']({
         count: String(counts.blocks),
       })
     );
   }
   if (typeof counts?.elements === 'number') {
     parts.push(
-      I18n['com.affine.ai.chat-panel.tool.live.elements']({
+      I18n['com.cloud-notes.ai.chat-panel.tool.live.elements']({
         count: String(counts.elements),
       })
     );
@@ -165,7 +165,7 @@ export class ChatContentStreamObjects extends WithDisposable(
 
     .tool-group {
       margin: 8px 0;
-      border: 0.5px solid var(--affine-border-color);
+      border: 0.5px solid var(--cloud-notes-border-color);
       border-radius: 8px;
       overflow: hidden;
     }
@@ -175,7 +175,7 @@ export class ChatContentStreamObjects extends WithDisposable(
       align-items: center;
       gap: 8px;
       padding: 12px;
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       cursor: pointer;
       list-style: none;
       user-select: none;
@@ -226,7 +226,7 @@ export class ChatContentStreamObjects extends WithDisposable(
     }
 
     .tool-group-content {
-      border-top: 0.5px solid var(--affine-border-color);
+      border-top: 0.5px solid var(--cloud-notes-border-color);
     }
 
     .tool-group-content .ai-tool-call-wrapper,
@@ -234,7 +234,7 @@ export class ChatContentStreamObjects extends WithDisposable(
     .tool-group-content .ai-tool-failed-wrapper {
       margin: 0;
       border: 0;
-      border-bottom: 0.5px solid var(--affine-border-color);
+      border-bottom: 0.5px solid var(--cloud-notes-border-color);
       border-radius: 0;
     }
 
@@ -245,7 +245,7 @@ export class ChatContentStreamObjects extends WithDisposable(
     }
 
     .tool-group.failed > .tool-group-summary {
-      color: var(--affine-error-color);
+      color: var(--cloud-notes-error-color);
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -265,7 +265,7 @@ export class ChatContentStreamObjects extends WithDisposable(
   accessor std: BlockStdScope | null | undefined;
 
   @property({ attribute: false })
-  accessor state: AffineAIPanelState = 'finished';
+  accessor state: CloudNotesAIPanelState = 'finished';
 
   @property({ attribute: false })
   accessor width: Signal<number | undefined> | undefined;
@@ -274,7 +274,7 @@ export class ChatContentStreamObjects extends WithDisposable(
   accessor extensions!: ExtensionType[];
 
   @property({ attribute: false })
-  accessor affineFeatureFlagService!: FeatureFlagService;
+  accessor cloudNotesFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
   accessor theme!: Signal<ColorScheme>;
@@ -307,7 +307,7 @@ export class ChatContentStreamObjects extends WithDisposable(
     }
     const title =
       this.host?.std.store.meta?.title ||
-      I18n['com.affine.ai.chat-panel.tool.live.current-document']();
+      I18n['com.cloud-notes.ai.chat-panel.tool.live.current-document']();
     const result =
       streamObject.type === 'tool-result'
         ? object(streamObject.result)
@@ -318,26 +318,26 @@ export class ChatContentStreamObjects extends WithDisposable(
         object(streamObject.args)?.view === 'viewport');
     const labels = {
       frontend_get_editor_state: [
-        I18n['com.affine.ai.chat-panel.tool.live.state-checking'](),
-        I18n['com.affine.ai.chat-panel.tool.live.state-checked'](),
+        I18n['com.cloud-notes.ai.chat-panel.tool.live.state-checking'](),
+        I18n['com.cloud-notes.ai.chat-panel.tool.live.state-checked'](),
       ],
       frontend_read_selection: [
-        I18n['com.affine.ai.chat-panel.tool.live.selection-reading'](),
-        I18n['com.affine.ai.chat-panel.tool.live.selection-read'](),
+        I18n['com.cloud-notes.ai.chat-panel.tool.live.selection-reading'](),
+        I18n['com.cloud-notes.ai.chat-panel.tool.live.selection-read'](),
       ],
       frontend_read_nodes: [
-        I18n['com.affine.ai.chat-panel.tool.live.content-reading'](),
-        I18n['com.affine.ai.chat-panel.tool.live.content-read'](),
+        I18n['com.cloud-notes.ai.chat-panel.tool.live.content-reading'](),
+        I18n['com.cloud-notes.ai.chat-panel.tool.live.content-read'](),
       ],
       frontend_snapshot_document: [
         isCanvasSnapshot
-          ? I18n['com.affine.ai.chat-panel.tool.live.canvas-reading']({ title })
-          : I18n['com.affine.ai.chat-panel.tool.live.outline-reading']({
+          ? I18n['com.cloud-notes.ai.chat-panel.tool.live.canvas-reading']({ title })
+          : I18n['com.cloud-notes.ai.chat-panel.tool.live.outline-reading']({
               title,
             }),
         isCanvasSnapshot
-          ? I18n['com.affine.ai.chat-panel.tool.live.canvas-read']({ title })
-          : I18n['com.affine.ai.chat-panel.tool.live.outline-read']({ title }),
+          ? I18n['com.cloud-notes.ai.chat-panel.tool.live.canvas-read']({ title })
+          : I18n['com.cloud-notes.ai.chat-panel.tool.live.outline-read']({ title }),
       ],
     } as const;
     const [callLabel, resultLabel] =
@@ -354,7 +354,7 @@ export class ChatContentStreamObjects extends WithDisposable(
         .name=${
           result
             ? frontendReadError(result)
-            : I18n['com.affine.ai.chat-panel.tool.live.failed']()
+            : I18n['com.cloud-notes.ai.chat-panel.tool.live.failed']()
         }
         .icon=${ViewIcon()}
       ></tool-call-failed>`;
@@ -386,7 +386,7 @@ export class ChatContentStreamObjects extends WithDisposable(
     }
     if (streamObject.type === 'tool-call') {
       return html`<tool-call-card
-        .name=${I18n['com.affine.ai.chat-panel.tool.canvas.reading']()}
+        .name=${I18n['com.cloud-notes.ai.chat-panel.tool.canvas.reading']()}
         .icon=${ViewIcon()}
         .width=${this.width}
       ></tool-call-card>`;
@@ -397,7 +397,7 @@ export class ChatContentStreamObjects extends WithDisposable(
         .name=${
           result
             ? frontendReadError(result)
-            : I18n['com.affine.ai.chat-panel.tool.canvas.failed']()
+            : I18n['com.cloud-notes.ai.chat-panel.tool.canvas.failed']()
         }
         .icon=${ViewIcon()}
       ></tool-call-failed>`;
@@ -405,8 +405,8 @@ export class ChatContentStreamObjects extends WithDisposable(
     const title = object(result.source)?.title;
     const name =
       typeof title === 'string'
-        ? I18n['com.affine.ai.chat-panel.tool.canvas.read']({ title })
-        : I18n['com.affine.ai.chat-panel.tool.canvas.read-untitled']();
+        ? I18n['com.cloud-notes.ai.chat-panel.tool.canvas.read']({ title })
+        : I18n['com.cloud-notes.ai.chat-panel.tool.canvas.read-untitled']();
     return html`<tool-result-card
       .name=${name}
       .icon=${ViewIcon()}
@@ -416,7 +416,7 @@ export class ChatContentStreamObjects extends WithDisposable(
           title:
             typeof title === 'string'
               ? title
-              : I18n['com.affine.ai.chat-panel.tool.canvas.content'](),
+              : I18n['com.cloud-notes.ai.chat-panel.tool.canvas.content'](),
           icon: EdgelessIcon(),
           content: canvasReadPreview(result),
         },
@@ -510,7 +510,7 @@ export class ChatContentStreamObjects extends WithDisposable(
           <section-edit-tool
             .data=${streamObject}
             .extensions=${this.extensions}
-            .affineFeatureFlagService=${this.affineFeatureFlagService}
+            .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
             .notificationService=${this.notificationService}
             .theme=${this.theme}
             .host=${this.host}
@@ -620,7 +620,7 @@ export class ChatContentStreamObjects extends WithDisposable(
           <section-edit-tool
             .data=${streamObject}
             .extensions=${this.extensions}
-            .affineFeatureFlagService=${this.affineFeatureFlagService}
+            .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
             .notificationService=${this.notificationService}
             .theme=${this.theme}
             .host=${this.host}
@@ -644,7 +644,7 @@ export class ChatContentStreamObjects extends WithDisposable(
       .text=${text}
       .state=${this.state}
       .extensions=${this.extensions}
-      .affineFeatureFlagService=${this.affineFeatureFlagService}
+      .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
       .theme=${this.theme}
     ></chat-content-rich-text>`;
   }
@@ -674,15 +674,15 @@ export class ChatContentStreamObjects extends WithDisposable(
     const defaultOpen = this.state !== 'finished' || failedCount > 0;
     const open = this.toolGroupOverrides.get(group.key) ?? defaultOpen;
     const title = failedCount
-      ? I18n['com.affine.ai.chat-panel.tool-group.failed']({
+      ? I18n['com.cloud-notes.ai.chat-panel.tool-group.failed']({
           count: String(callCount),
           failed: String(failedCount),
         })
       : this.state === 'finished'
-        ? I18n['com.affine.ai.chat-panel.tool-group.completed']({
+        ? I18n['com.cloud-notes.ai.chat-panel.tool-group.completed']({
             count: String(callCount),
           })
-        : I18n['com.affine.ai.chat-panel.tool-group.running']({
+        : I18n['com.cloud-notes.ai.chat-panel.tool-group.running']({
             count: String(callCount),
           });
     return html`<details

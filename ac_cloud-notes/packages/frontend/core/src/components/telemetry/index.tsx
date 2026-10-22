@@ -1,4 +1,4 @@
-import { enableAutoTrack, sentry, tracker } from '@affine/track';
+import { enableAutoTrack, sentry, tracker } from '@cloud-notes/track';
 import { appSettingAtom } from '@toeverything/infra';
 import { useAtomValue } from 'jotai/react';
 import { useEffect } from 'react';

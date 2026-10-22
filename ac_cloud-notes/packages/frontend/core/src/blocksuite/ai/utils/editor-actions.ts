@@ -1,8 +1,8 @@
-import { WorkspaceImpl } from '@affine/core/modules/workspace/impls/workspace';
-import { clipboardConfigs } from '@blocksuite/affine/foundation/clipboard';
-import { defaultImageProxyMiddleware } from '@blocksuite/affine/shared/adapters';
-import { replaceSelectedTextWithBlocksCommand } from '@blocksuite/affine/shared/commands';
-import { isInsideEdgelessEditor } from '@blocksuite/affine/shared/utils';
+import { WorkspaceImpl } from '@cloud-notes/core/modules/workspace/impls/workspace';
+import { clipboardConfigs } from '@blocksuite/cloud-notes/foundation/clipboard';
+import { defaultImageProxyMiddleware } from '@blocksuite/cloud-notes/shared/adapters';
+import { replaceSelectedTextWithBlocksCommand } from '@blocksuite/cloud-notes/shared/commands';
+import { isInsideEdgelessEditor } from '@blocksuite/cloud-notes/shared/utils';
 import {
   type BlockComponent,
   BlockSelection,
@@ -11,12 +11,12 @@ import {
   type EditorHost,
   SurfaceSelection,
   type TextSelection,
-} from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/std';
 import {
   type BlockModel,
   type BlockSnapshot,
   Slice,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import { Doc as YDoc } from 'yjs';
 
 import {
@@ -24,7 +24,7 @@ import {
   markDownToDoc,
   markdownToSnapshot,
 } from '../../utils';
-import type { AffineAIPanelWidget } from '../widgets/ai-panel/ai-panel';
+import type { CloudNotesAIPanelWidget } from '../widgets/ai-panel/ai-panel';
 
 const getNoteId = (blockElement: BlockComponent) => {
   let element = blockElement;
@@ -187,7 +187,7 @@ export const replace = async (
   }
 };
 
-export const copyTextAnswer = async (panel: AffineAIPanelWidget) => {
+export const copyTextAnswer = async (panel: CloudNotesAIPanelWidget) => {
   if (!panel.answer) {
     return false;
   }

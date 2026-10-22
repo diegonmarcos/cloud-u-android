@@ -8,7 +8,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "AFFiNE"
+            "value" : "Cloud Notes"
           }
         }
       }
@@ -20,7 +20,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "AFFiNE"
+            "value" : "Cloud Notes"
           }
         }
       }
@@ -32,7 +32,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "AFFiNE requires access to the camera to capture images and insert them into your documents"
+            "value" : "Cloud Notes requires access to the camera to capture images and insert them into your documents"
           }
         }
       }
@@ -44,7 +44,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "AFFiNE needs local network access to connect to your self-hosted workspace on this device's Wi-Fi network."
+            "value" : "Cloud Notes needs local network access to connect to your self-hosted workspace on this device's Wi-Fi network."
           }
         }
       }
@@ -56,7 +56,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "AFFiNE requires access to select photos from your photo library and insert them into your documents"
+            "value" : "Cloud Notes requires access to select photos from your photo library and insert them into your documents"
           }
         }
       }

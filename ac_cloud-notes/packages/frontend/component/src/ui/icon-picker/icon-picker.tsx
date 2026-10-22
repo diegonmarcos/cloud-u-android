@@ -5,7 +5,7 @@ import { type HTMLAttributes, useState } from 'react';
 import { Button } from '../button';
 import { RadioGroup, type RadioItem } from '../radio';
 import * as styles from './icon-picker.css';
-import { AffineIconPicker } from './picker/affine-icon/affine-icon-picker';
+import { CloudNotesIconPicker } from './picker/cloud-notes-icon/cloud-notes-icon-picker';
 import { EmojiPicker } from './picker/emoji/emoji-picker';
 import { type IconData, IconType } from './type';
 
@@ -62,9 +62,9 @@ export const IconPicker = ({
             }}
           />
         ) : activePanel === 'Icons' ? (
-          <AffineIconPicker
+          <CloudNotesIconPicker
             onSelect={(icon, color) => {
-              onSelect?.({ type: IconType.AffineIcon, name: icon, color });
+              onSelect?.({ type: IconType.CloudNotesIcon, name: icon, color });
             }}
           />
         ) : null}

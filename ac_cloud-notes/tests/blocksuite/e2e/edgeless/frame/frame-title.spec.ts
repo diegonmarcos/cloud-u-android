@@ -38,7 +38,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 const enterFrameTitleEditor = async (page: Page) => {
-  const frameTitle = page.locator('affine-frame-title');
+  const frameTitle = page.locator('cloud-notes-frame-title');
   await frameTitle.dblclick();
 
   const frameTitleEditor = page.locator('edgeless-frame-title-editor');

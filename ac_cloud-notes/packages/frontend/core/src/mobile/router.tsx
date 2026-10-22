@@ -1,4 +1,4 @@
-import { NavigateContext } from '@affine/core/components/hooks/use-navigate-helper';
+import { NavigateContext } from '@cloud-notes/core/components/hooks/use-navigate-helper';
 import { wrapCreateBrowserRouterV6 } from '@sentry/react';
 import { useEffect, useState } from 'react';
 import type { RouteObject } from 'react-router-dom';
@@ -61,30 +61,30 @@ export const topLevelRoutes = [
         path: '/magic-link',
         lazy: () =>
           import(
-            /* webpackChunkName: "auth" */ '@affine/core/desktop/pages/auth/magic-link'
+            /* webpackChunkName: "auth" */ '@cloud-notes/core/desktop/pages/auth/magic-link'
           ),
       },
       {
         path: '/oauth/login',
         lazy: () =>
           import(
-            /* webpackChunkName: "auth" */ '@affine/core/desktop/pages/auth/oauth-login'
+            /* webpackChunkName: "auth" */ '@cloud-notes/core/desktop/pages/auth/oauth-login'
           ),
       },
       {
         path: '/oauth/callback',
         lazy: () =>
           import(
-            /* webpackChunkName: "auth" */ '@affine/core/desktop/pages/auth/oauth-callback'
+            /* webpackChunkName: "auth" */ '@cloud-notes/core/desktop/pages/auth/oauth-callback'
           ),
       },
       {
         path: '/redirect-proxy',
-        lazy: () => import('@affine/core/desktop/pages/redirect'),
+        lazy: () => import('@cloud-notes/core/desktop/pages/redirect'),
       },
       {
         path: '/open-app/:action',
-        lazy: () => import('@affine/core/desktop/pages/open-app'),
+        lazy: () => import('@cloud-notes/core/desktop/pages/open-app'),
       },
       {
         path: '*',

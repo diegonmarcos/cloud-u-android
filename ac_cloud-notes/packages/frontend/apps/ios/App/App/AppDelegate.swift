@@ -27,28 +27,28 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   func applicationDidBecomeActive(_: UIApplication) {
     // Restart any tasks that were paused (or not yet started) while the application was inactive. If the application was previously in the background, optionally refresh the user interface.
     if let root = window?.rootViewController {
-      findAffineViewController(from: root)?.processShareInboxIfNeeded()
+      findCloudNotesViewController(from: root)?.processShareInboxIfNeeded()
     }
   }
 
-  private func findAffineViewController(from root: UIViewController) -> AFFiNEViewController? {
-    if let affine = root as? AFFiNEViewController {
-      return affine
+  private func findCloudNotesViewController(from root: UIViewController) -> CloudNotesViewController? {
+    if let cloudNotes = root as? CloudNotesViewController {
+      return cloudNotes
     }
     if let navigation = root as? UINavigationController {
       for controller in navigation.viewControllers {
-        if let found = findAffineViewController(from: controller) {
+        if let found = findCloudNotesViewController(from: controller) {
           return found
         }
       }
     }
     for child in root.children {
-      if let found = findAffineViewController(from: child) {
+      if let found = findCloudNotesViewController(from: child) {
         return found
       }
     }
     if let presented = root.presentedViewController {
-      return findAffineViewController(from: presented)
+      return findCloudNotesViewController(from: presented)
     }
     return nil
   }
@@ -61,11 +61,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Called when the app was launched with a url. Feel free to add additional processing here,
     // but if you want the App API to support tracking app url opens, make sure to keep this call
     let handled = ApplicationDelegateProxy.shared.application(app, open: url, options: options)
-    let isShareInboxURL = url.scheme == "affine" && url.host == "share-inbox"
+    let isShareInboxURL = url.scheme == "cloud-notes" && url.host == "share-inbox"
     if isShareInboxURL {
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
         guard let self, let root = self.window?.rootViewController else { return }
-        self.findAffineViewController(from: root)?.processShareInboxIfNeeded()
+        self.findCloudNotesViewController(from: root)?.processShareInboxIfNeeded()
       }
     }
     return handled || isShareInboxURL

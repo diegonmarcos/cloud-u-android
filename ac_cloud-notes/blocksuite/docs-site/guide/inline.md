@@ -85,11 +85,11 @@ Attributes Renderer is a function that takes a delta and returns `TemplateResult
 `InlineEditor` use this function to render text with custom format and it is also the way to customize the text render.
 
 ```ts
-type AffineTextAttributes = {
+type CloudNotesTextAttributes = {
   // Your custom attributes
 };
 
-const attributeRenderer: AttributeRenderer<AffineTextAttributes> = (
+const attributeRenderer: AttributeRenderer<CloudNotesTextAttributes> = (
   delta,
   // You can use `selected` to check if the text node is selected
   selected

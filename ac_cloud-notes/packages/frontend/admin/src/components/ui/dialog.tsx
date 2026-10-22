@@ -1,4 +1,4 @@
-import { cn } from '@affine/admin/utils';
+import { cn } from '@cloud-notes/admin/utils';
 import { CloseIcon } from '@blocksuite/icons/rc';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { cssVarV2 } from '@toeverything/theme/v2';

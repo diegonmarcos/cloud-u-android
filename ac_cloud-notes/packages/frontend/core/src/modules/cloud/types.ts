@@ -3,7 +3,7 @@ import type {
   OAuthProviderType,
   ServerDeploymentType,
   ServerFeature,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 
 export interface ServerMetadata {
   id: string;

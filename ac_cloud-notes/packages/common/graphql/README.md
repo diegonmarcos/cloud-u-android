@@ -1,3 +1,3 @@
 # `GraphQL` client
 
-Auto generated `GraphQL` client for affine.pro
+Auto generated `GraphQL` client for notes.diegonmarcos.com

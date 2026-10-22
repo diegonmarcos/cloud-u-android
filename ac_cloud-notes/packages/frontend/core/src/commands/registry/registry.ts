@@ -1,9 +1,9 @@
-import { DebugLogger } from '@affine/debug';
+import { DebugLogger } from '@cloud-notes/debug';
 // @ts-expect-error upstream type is wrong
 import { createKeybindingsHandler } from 'tinykeys';
 
-import type { AffineCommand, AffineCommandOptions } from './command';
-import { createAffineCommand } from './command';
+import type { CloudNotesCommand, CloudNotesCommandOptions } from './command';
+import { createCloudNotesCommand } from './command';
 
 const commandLogger = new DebugLogger('command:registry');
 
@@ -45,15 +45,15 @@ const bindKeys = (
   };
 };
 
-export const AffineCommandRegistry = new (class {
-  readonly commands: Map<string, AffineCommand> = new Map();
+export const CloudNotesCommandRegistry = new (class {
+  readonly commands: Map<string, CloudNotesCommand> = new Map();
 
-  register(options: AffineCommandOptions) {
+  register(options: CloudNotesCommandOptions) {
     if (this.commands.has(options.id)) {
       commandLogger.warn(`Command ${options.id} already registered.`);
       return () => {};
     }
-    const command = createAffineCommand(options);
+    const command = createCloudNotesCommand(options);
     this.commands.set(command.id, command);
 
     let unsubKb: (() => void) | undefined;
@@ -102,7 +102,7 @@ export const AffineCommandRegistry = new (class {
     };
   }
 
-  get(id: string): AffineCommand | undefined {
+  get(id: string): CloudNotesCommand | undefined {
     if (!this.commands.has(id)) {
       commandLogger.warn(`Command ${id} not registered.`);
       return undefined;
@@ -110,11 +110,11 @@ export const AffineCommandRegistry = new (class {
     return this.commands.get(id);
   }
 
-  getAll(): AffineCommand[] {
+  getAll(): CloudNotesCommand[] {
     return Array.from(this.commands.values());
   }
 })();
 
-export function registerAffineCommand(options: AffineCommandOptions) {
-  return AffineCommandRegistry.register(options);
+export function registerCloudNotesCommand(options: CloudNotesCommandOptions) {
+  return CloudNotesCommandRegistry.register(options);
 }

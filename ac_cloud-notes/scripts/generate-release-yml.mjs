@@ -52,7 +52,7 @@ const generateYml = platform => {
   // NOTE(@forehalo): make sure old windows x64 won't fetch windows arm64 by default
   // maybe we need to separate arm64 builds to separated yml file `latest-arm64.yml`, `latest-linux-arm64.yml`
   // check https://github.com/electron-userland/electron-builder/blob/master/packages/electron-updater/src/providers/Provider.ts#L30
-  // and packages/frontend/apps/electron/src/main/updater/affine-update-provider.ts#L100
+  // and packages/frontend/apps/electron/src/main/updater/cloud-notes-update-provider.ts#L100
   yml.files.sort(a => (a.url.includes('windows-arm64') ? 1 : -1));
 
   const ymlStr =

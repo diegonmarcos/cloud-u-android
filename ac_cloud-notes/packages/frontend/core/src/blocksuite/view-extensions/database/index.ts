@@ -1,7 +1,7 @@
 import {
   type ViewExtensionContext,
   ViewExtensionProvider,
-} from '@blocksuite/affine/ext-loader';
+} from '@blocksuite/cloud-notes/ext-loader';
 import { FrameworkProvider } from '@toeverything/infra';
 import { z } from 'zod';
 
@@ -11,16 +11,16 @@ const optionsSchema = z.object({
   framework: z.instanceof(FrameworkProvider).optional(),
 });
 
-export type AffineDatabaseViewOptions = z.infer<typeof optionsSchema>;
+export type CloudNotesDatabaseViewOptions = z.infer<typeof optionsSchema>;
 
-export class AffineDatabaseViewExtension extends ViewExtensionProvider<AffineDatabaseViewOptions> {
-  override name = 'affine-database-view';
+export class CloudNotesDatabaseViewExtension extends ViewExtensionProvider<CloudNotesDatabaseViewOptions> {
+  override name = 'cloud-notes-database-view';
 
   override schema = optionsSchema;
 
   override setup(
     context: ViewExtensionContext,
-    options?: AffineDatabaseViewOptions
+    options?: CloudNotesDatabaseViewOptions
   ) {
     super.setup(context, options);
 

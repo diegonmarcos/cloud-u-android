@@ -1,6 +1,6 @@
 export enum IconType {
   Emoji = 'emoji',
-  AffineIcon = 'affine-icon',
+  CloudNotesIcon = 'cloud-notes-icon',
   Blob = 'blob',
 }
 
@@ -10,7 +10,7 @@ export type IconData =
       unicode: string;
     }
   | {
-      type: IconType.AffineIcon;
+      type: IconType.CloudNotesIcon;
       name: string;
       color: string;
     }

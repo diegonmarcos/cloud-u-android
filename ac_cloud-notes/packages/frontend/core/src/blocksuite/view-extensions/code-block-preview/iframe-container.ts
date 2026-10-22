@@ -1,7 +1,7 @@
 export function linkIframe(iframe: HTMLIFrameElement, html: string) {
   // force reload iframe
   iframe.src = '';
-  iframe.src = 'https://affine.run/static/container.html';
+  iframe.src = 'https://cloud-notes.run/static/container.html';
   iframe.sandbox.add(
     'allow-pointer-lock',
     'allow-popups',
@@ -12,6 +12,6 @@ export function linkIframe(iframe: HTMLIFrameElement, html: string) {
     'allow-same-origin'
   );
   iframe.onload = () => {
-    iframe.contentWindow?.postMessage(html, 'https://affine.run');
+    iframe.contentWindow?.postMessage(html, 'https://cloud-notes.run');
   };
 }

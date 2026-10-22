@@ -1,10 +1,10 @@
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import type { SettingTab } from '@affine/core/modules/dialogs/constant';
-import { DocsService } from '@affine/core/modules/doc';
-import { JournalService } from '@affine/core/modules/journal';
-import { LifecycleService } from '@affine/core/modules/lifecycle';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { apis, events } from '@affine/electron-api';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { SettingTab } from '@cloud-notes/core/modules/dialogs/constant';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { LifecycleService } from '@cloud-notes/core/modules/lifecycle';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { apis, events } from '@cloud-notes/electron-api';
 import type { FrameworkProvider } from '@toeverything/infra';
 
 import { setupRecordingEvents } from './recording';

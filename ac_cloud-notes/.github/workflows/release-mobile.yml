@@ -36,11 +36,11 @@ jobs:
       - name: Setup @sentry/cli
         uses: ./.github/actions/setup-sentry
       - name: Build Mobile
-        run: yarn affine @affine/ios build
+        run: yarn cloud-notes @cloud-notes/ios build
         env:
           PUBLIC_PATH: '/'
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: 'affine'
+          SENTRY_PROJECT: 'cloud-notes'
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_RELEASE: ${{ inputs.app-version }}
@@ -64,11 +64,11 @@ jobs:
       - name: Setup @sentry/cli
         uses: ./.github/actions/setup-sentry
       - name: Build Mobile
-        run: yarn affine @affine/android build
+        run: yarn cloud-notes @cloud-notes/android build
         env:
           PUBLIC_PATH: '/'
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: 'affine'
+          SENTRY_PROJECT: 'cloud-notes'
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           SENTRY_RELEASE: ${{ inputs.app-version }}
@@ -101,7 +101,7 @@ jobs:
         uses: ./.github/actions/setup-node
         timeout-minutes: 10
         with:
-          extra-flags: workspaces focus @affine/ios
+          extra-flags: workspaces focus @cloud-notes/ios
           playwright-install: false
           electron-install: false
           hard-link-nm: false
@@ -115,7 +115,7 @@ jobs:
       - name: Install Swiftformat
         run: brew install swiftformat
       - name: Cap sync
-        run: yarn workspace @affine/ios sync
+        run: yarn workspace @cloud-notes/ios sync
       - name: Signing By Apple Developer ID
         uses: apple-actions/import-codesign-certs@v7
         id: import-codesign-certs
@@ -126,7 +126,7 @@ jobs:
         uses: ./.github/actions/build-rust
         with:
           target: 'aarch64-apple-ios'
-          package: 'affine_mobile_native'
+          package: 'cloud_notes_mobile_native'
           no-build: 'true'
       - name: Testflight
         working-directory: packages/frontend/apps/ios/App
@@ -172,7 +172,7 @@ jobs:
         uses: ./.github/actions/setup-node
         timeout-minutes: 10
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-tools/cli @affine/android @affine/playstore-auto-bump
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-tools/cli @cloud-notes/android @cloud-notes/playstore-auto-bump
           playwright-install: false
           electron-install: false
           hard-link-nm: false
@@ -181,10 +181,10 @@ jobs:
         uses: ./.github/actions/build-rust
         with:
           target: 'aarch64-linux-android'
-          package: 'affine_mobile_native'
+          package: 'cloud_notes_mobile_native'
           no-build: 'true'
       - name: Cap sync
-        run: yarn workspace @affine/android cap sync
+        run: yarn workspace @cloud-notes/android cap sync
       - uses: actions/setup-python@v7
         with:
           python-version: '3.13'
@@ -204,23 +204,23 @@ jobs:
           cache: 'gradle'
       - name: Auto increment version code
         id: bump
-        run: yarn affine @affine/playstore-auto-bump bump
+        run: yarn cloud-notes @cloud-notes/playstore-auto-bump bump
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ steps.auth.outputs.credentials_file_path }}
       - name: Build
         run: |
-          echo -n "${{ env.AFFINE_ANDROID_SIGN_KEYSTORE }}" | base64 --decode > packages/frontend/apps/android/affine.keystore
-          yarn workspace @affine/android cap build android --flavor ${{ env.BUILD_TYPE }} --androidreleasetype AAB
+          echo -n "${{ env.CLOUD_NOTES_ANDROID_SIGN_KEYSTORE }}" | base64 --decode > packages/frontend/apps/android/cloud-notes.keystore
+          yarn workspace @cloud-notes/android cap build android --flavor ${{ env.BUILD_TYPE }} --androidreleasetype AAB
         env:
-          AFFINE_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.AFFINE_ANDROID_KEYSTORE_PASSWORD }}
-          AFFINE_ANDROID_KEYSTORE_ALIAS_PASSWORD: ${{ secrets.AFFINE_ANDROID_KEYSTORE_ALIAS_PASSWORD }}
-          AFFINE_ANDROID_SIGN_KEYSTORE: ${{ secrets.AFFINE_ANDROID_SIGN_KEYSTORE }}
+          CLOUD_NOTES_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.CLOUD_NOTES_ANDROID_KEYSTORE_PASSWORD }}
+          CLOUD_NOTES_ANDROID_KEYSTORE_ALIAS_PASSWORD: ${{ secrets.CLOUD_NOTES_ANDROID_KEYSTORE_ALIAS_PASSWORD }}
+          CLOUD_NOTES_ANDROID_SIGN_KEYSTORE: ${{ secrets.CLOUD_NOTES_ANDROID_SIGN_KEYSTORE }}
           VERSION_NAME: ${{ inputs.app-version }}
       - name: Upload to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: ${{ steps.auth.outputs.credentials_file_path }}
-          packageName: app.affine.pro
+          packageName: app.cloudnotes.pro
           releaseName: ${{ inputs.app-version }}
           releaseFiles: packages/frontend/apps/android/App/app/build/outputs/bundle/${{ env.BUILD_TYPE }}Release/app-${{ env.BUILD_TYPE }}-release-signed.aab
           track: internal

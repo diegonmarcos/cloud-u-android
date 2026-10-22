@@ -84,7 +84,7 @@ final class NativeSignInViewController: UIViewController {
 
   private func updateBackgroundImageOffset() {
     let isLandscape = view.bounds.width > view.bounds.height
-    backgroundImageView.transform = CGAffineTransform(translationX: 0, y: isLandscape ? 14 : 34)
+    backgroundImageView.transform = CGCloudNotesTransform(translationX: 0, y: isLandscape ? 14 : 34)
   }
 
   private func updateBackground(for appearance: NativeSignInAppearanceSnapshot) {

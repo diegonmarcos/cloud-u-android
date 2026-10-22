@@ -1,7 +1,7 @@
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { ShadowlessElement } from '@blocksuite/affine/std';
-import type { TransformerMiddleware } from '@blocksuite/affine/store';
-import type { TestAffineEditorContainer } from '@blocksuite/integration-test';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
+import type { TransformerMiddleware } from '@blocksuite/cloud-notes/store';
+import type { TestCloudNotesEditorContainer } from '@blocksuite/integration-test';
 import { css, html, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
@@ -14,8 +14,8 @@ export class CustomAdapterPanel extends SignalWatcher(
       position: absolute;
       top: 0;
       right: 16px;
-      border: 1px solid var(--affine-border-color, #e3e2e4);
-      background: var(--affine-background-overlay-panel-color);
+      border: 1px solid var(--cloud-notes-border-color, #e3e2e4);
+      background: var(--cloud-notes-background-overlay-panel-color);
       height: 100vh;
       width: 30vw;
       box-sizing: border-box;
@@ -24,10 +24,10 @@ export class CustomAdapterPanel extends SignalWatcher(
   `;
 
   private _renderPanel() {
-    return html`<affine-adapter-panel
+    return html`<cloud-notes-adapter-panel
       .store=${this.editor.doc}
       .transformerMiddlewares=${this.transformerMiddlewares}
-    ></affine-adapter-panel>`;
+    ></cloud-notes-adapter-panel>`;
   }
 
   override render() {
@@ -50,7 +50,7 @@ export class CustomAdapterPanel extends SignalWatcher(
   private accessor _show = false;
 
   @property({ attribute: false })
-  accessor editor!: TestAffineEditorContainer;
+  accessor editor!: TestCloudNotesEditorContainer;
 
   @property({ attribute: false })
   accessor transformerMiddlewares: TransformerMiddleware[] = [];

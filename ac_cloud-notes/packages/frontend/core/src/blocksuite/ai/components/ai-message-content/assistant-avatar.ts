@@ -1,15 +1,15 @@
-import { AIStarIconWithAnimation } from '@blocksuite/affine/components/icons';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import { AIStarIconWithAnimation } from '@blocksuite/cloud-notes/components/icons';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { AiIcon } from '@blocksuite/icons/lit';
 import { css, html } from 'lit';
 import { property } from 'lit/decorators.js';
 
 import type { ChatStatus } from '../ai-chat-messages';
 
-const AffineAvatarIcon = AiIcon({
+const CloudNotesAvatarIcon = AiIcon({
   width: '20px',
   height: '20px',
-  style: 'color: var(--affine-primary-color)',
+  style: 'color: var(--cloud-notes-primary-color)',
 });
 
 export class AssistantAvatar extends ShadowlessElement {
@@ -28,9 +28,9 @@ export class AssistantAvatar extends ShadowlessElement {
     return html`${
       this.status === 'transmitting'
         ? AIStarIconWithAnimation
-        : AffineAvatarIcon
+        : CloudNotesAvatarIcon
     }
-    AFFiNE AI`;
+    Cloud Notes AI`;
   }
 }
 

@@ -1,4 +1,4 @@
-import { Modal, toast } from '@affine/component';
+import { Modal, toast } from '@cloud-notes/component';
 import {
   collectionHeaderColsDef,
   CollectionListItemRenderer,
@@ -6,17 +6,17 @@ import {
   type ListItem,
   ListTableHeader,
   VirtualizedList,
-} from '@affine/core/components/page-list';
-import { SelectorLayout } from '@affine/core/components/page-list/selector/selector-layout';
+} from '@cloud-notes/core/components/page-list';
+import { SelectorLayout } from '@cloud-notes/core/components/page-list/selector/selector-layout';
 import {
   type CollectionMeta,
   CollectionService,
-} from '@affine/core/modules/collection';
-import type { DialogComponentProps } from '@affine/core/modules/dialogs';
-import type { WORKSPACE_DIALOG_SCHEMA } from '@affine/core/modules/dialogs/constant';
-import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/collection';
+import type { DialogComponentProps } from '@cloud-notes/core/modules/dialogs';
+import type { WORKSPACE_DIALOG_SCHEMA } from '@cloud-notes/core/modules/dialogs/constant';
+import { CompatibleFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVar } from '@toeverything/theme';
 import { useCallback, useMemo, useState } from 'react';
@@ -32,8 +32,8 @@ const FavoriteOperation = ({ collection }: { collection: ListItem }) => {
     favAdapter.toggle(collection.id, 'collection');
     toast(
       isFavorite
-        ? t['com.affine.toastMessage.removedFavorites']()
-        : t['com.affine.toastMessage.addedFavorites']()
+        ? t['com.cloud-notes.toastMessage.removedFavorites']()
+        : t['com.cloud-notes.toastMessage.addedFavorites']()
     );
   }, [collection.id, favAdapter, isFavorite, t]);
 
@@ -95,7 +95,7 @@ export const CollectionSelectorDialog = ({
     >
       <SelectorLayout
         searchPlaceholder={t[
-          'com.affine.selector-collection.search.placeholder'
+          'com.cloud-notes.selector-collection.search.placeholder'
         ]()}
         selectedCount={selection.length}
         onSearch={setKeyword}

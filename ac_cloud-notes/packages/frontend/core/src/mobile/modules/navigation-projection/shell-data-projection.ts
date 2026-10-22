@@ -1,18 +1,18 @@
-import type { CollectionService } from '@affine/core/modules/collection';
-import type { DocsService } from '@affine/core/modules/doc';
+import type { CollectionService } from '@cloud-notes/core/modules/collection';
+import type { DocsService } from '@cloud-notes/core/modules/doc';
 import type {
   DocsSearchService,
   IndexedDocReference,
-} from '@affine/core/modules/docs-search';
-import type { FavoriteService } from '@affine/core/modules/favorite';
-import type { GlobalContextService } from '@affine/core/modules/global-context';
+} from '@cloud-notes/core/modules/docs-search';
+import type { FavoriteService } from '@cloud-notes/core/modules/favorite';
+import type { GlobalContextService } from '@cloud-notes/core/modules/global-context';
 import type {
   FolderNode,
   OrganizeService,
-} from '@affine/core/modules/organize';
-import type { GuardService } from '@affine/core/modules/permissions';
-import type { TagService } from '@affine/core/modules/tag';
-import type { WorkspaceService } from '@affine/core/modules/workspace';
+} from '@cloud-notes/core/modules/organize';
+import type { GuardService } from '@cloud-notes/core/modules/permissions';
+import type { TagService } from '@cloud-notes/core/modules/tag';
+import type { WorkspaceService } from '@cloud-notes/core/modules/workspace';
 import { LiveData, MANUALLY_STOP, Service } from '@toeverything/infra';
 import { combineLatest, map, Observable, of, switchMap } from 'rxjs';
 

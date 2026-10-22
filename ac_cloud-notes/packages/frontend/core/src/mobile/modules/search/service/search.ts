@@ -3,7 +3,7 @@ import {
   DocsQuickSearchSession,
   RecentDocsQuickSearchSession,
   TagsQuickSearchSession,
-} from '@affine/core/modules/quicksearch';
+} from '@cloud-notes/core/modules/quicksearch';
 import { LiveData, Service } from '@toeverything/infra';
 
 export class MobileSearchService extends Service {

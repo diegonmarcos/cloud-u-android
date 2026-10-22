@@ -1,21 +1,21 @@
 import type {
   AIModelService,
   AIToolsConfigService,
-} from '@affine/core/modules/ai-button';
+} from '@cloud-notes/core/modules/ai-button';
 import type {
   ServerService,
   SubscriptionService,
-} from '@affine/core/modules/cloud';
-import type { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import type { AppThemeService } from '@affine/core/modules/theme';
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { type NotificationService } from '@blocksuite/affine/shared/services';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import type { EditorHost } from '@blocksuite/affine/std';
-import { ShadowlessElement } from '@blocksuite/affine/std';
-import type { ExtensionType, Store } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/modules/cloud';
+import type { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import type { AppThemeService } from '@cloud-notes/core/modules/theme';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { type NotificationService } from '@blocksuite/cloud-notes/shared/services';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
+import type { ExtensionType, Store } from '@blocksuite/cloud-notes/store';
 import { DeleteIcon, NewPageIcon } from '@blocksuite/icons/lit';
 import { css, html, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -69,7 +69,7 @@ export class PlaygroundChat extends SignalWatcher(
       }
 
       .chat-panel-title {
-        background: var(--affine-background-primary-color);
+        background: var(--cloud-notes-background-primary-color);
         position: relative;
         padding: 8px 0px;
         width: 100%;
@@ -82,13 +82,13 @@ export class PlaygroundChat extends SignalWatcher(
         .chat-panel-title-text {
           font-size: 14px;
           font-weight: 500;
-          color: var(--affine-text-secondary-color);
+          color: var(--cloud-notes-text-secondary-color);
         }
 
         svg {
           width: 18px;
           height: 18px;
-          color: var(--affine-text-secondary-color);
+          color: var(--cloud-notes-text-secondary-color);
         }
       }
 
@@ -101,18 +101,18 @@ export class PlaygroundChat extends SignalWatcher(
         margin: 0 4px;
         padding: 8px 12px;
         border-radius: 8px;
-        border: 1px solid var(--affine-border-color);
+        border: 1px solid var(--cloud-notes-border-color);
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
       }
 
       .chat-panel-hints :first-child {
-        color: var(--affine-text-primary-color);
+        color: var(--cloud-notes-text-primary-color);
       }
 
       .chat-panel-hints :nth-child(2) {
-        color: var(--affine-text-secondary-color);
+        color: var(--cloud-notes-text-secondary-color);
       }
 
       .chat-panel-add,
@@ -172,13 +172,13 @@ export class PlaygroundChat extends SignalWatcher(
   accessor serverService!: ServerService;
 
   @property({ attribute: false })
-  accessor affineFeatureFlagService!: FeatureFlagService;
+  accessor cloudNotesFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
-  accessor affineThemeService!: AppThemeService;
+  accessor cloudNotesThemeService!: AppThemeService;
 
   @property({ attribute: false })
-  accessor affineWorkspaceDialogService!: WorkspaceDialogService;
+  accessor cloudNotesWorkspaceDialogService!: WorkspaceDialogService;
 
   @property({ attribute: false })
   accessor notificationService!: NotificationService;
@@ -336,12 +336,12 @@ export class PlaygroundChat extends SignalWatcher(
               ? html`<span data-testid="chat-panel-embedding-progress"
                   >Synchronizing sources</span
                 >`
-              : 'AFFiNE AI'
+              : 'Cloud Notes AI'
           }
         </div>
         <div class="chat-panel-add" @click=${this.addChat}>
           ${NewPageIcon()}
-          <affine-tooltip>Add chat</affine-tooltip>
+          <cloud-notes-tooltip>Add chat</cloud-notes-tooltip>
         </div>
         <ai-history-clear
           .doc=${this.doc}
@@ -380,8 +380,8 @@ export class PlaygroundChat extends SignalWatcher(
         .runtimeSnapshot=${this.runtimeSnapshot}
         .updateContext=${this.updateContext}
         .extensions=${this.extensions}
-        .affineFeatureFlagService=${this.affineFeatureFlagService}
-        .affineThemeService=${this.affineThemeService}
+        .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
+        .cloudNotesThemeService=${this.cloudNotesThemeService}
         .notificationService=${this.notificationService}
         .aiToolsConfigService=${this.aiToolsConfigService}
         .reasoningConfig=${this.reasoningConfig}
@@ -403,8 +403,8 @@ export class PlaygroundChat extends SignalWatcher(
         .serverService=${this.serverService}
         .notificationService=${this.notificationService}
         .aiToolsConfigService=${this.aiToolsConfigService}
-        .affineWorkspaceDialogService=${this.affineWorkspaceDialogService}
-        .affineFeatureFlagService=${this.affineFeatureFlagService}
+        .cloudNotesWorkspaceDialogService=${this.cloudNotesWorkspaceDialogService}
+        .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
         .subscriptionService=${this.subscriptionService}
         .aiModelService=${this.aiModelService}
         .onAISubscribe=${this.onAISubscribe}

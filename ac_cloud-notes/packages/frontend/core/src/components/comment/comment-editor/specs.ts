@@ -1,30 +1,30 @@
-import { CloudViewExtension } from '@affine/core/blocksuite/view-extensions/cloud';
-import { AffineEditorViewExtension } from '@affine/core/blocksuite/view-extensions/editor-view/editor-view';
-import { AffineThemeViewExtension } from '@affine/core/blocksuite/view-extensions/theme';
-import { I18n } from '@affine/i18n';
-import { CodeBlockViewExtension } from '@blocksuite/affine/blocks/code/view';
-import { DividerViewExtension } from '@blocksuite/affine/blocks/divider/view';
-import { LatexViewExtension as LatexBlockViewExtension } from '@blocksuite/affine/blocks/latex/view';
-import { ListViewExtension } from '@blocksuite/affine/blocks/list/view';
-import { NoteViewExtension } from '@blocksuite/affine/blocks/note/view';
-import { ParagraphViewExtension } from '@blocksuite/affine/blocks/paragraph/view';
-import { RootViewExtension } from '@blocksuite/affine/blocks/root/view';
+import { CloudViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/cloud';
+import { CloudNotesEditorViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/editor-view/editor-view';
+import { CloudNotesThemeViewExtension } from '@cloud-notes/core/blocksuite/view-extensions/theme';
+import { I18n } from '@cloud-notes/i18n';
+import { CodeBlockViewExtension } from '@blocksuite/cloud-notes/blocks/code/view';
+import { DividerViewExtension } from '@blocksuite/cloud-notes/blocks/divider/view';
+import { LatexViewExtension as LatexBlockViewExtension } from '@blocksuite/cloud-notes/blocks/latex/view';
+import { ListViewExtension } from '@blocksuite/cloud-notes/blocks/list/view';
+import { NoteViewExtension } from '@blocksuite/cloud-notes/blocks/note/view';
+import { ParagraphViewExtension } from '@blocksuite/cloud-notes/blocks/paragraph/view';
+import { RootViewExtension } from '@blocksuite/cloud-notes/blocks/root/view';
 import {
   PeekViewExtension,
   type PeekViewService,
-} from '@blocksuite/affine/components/peek';
+} from '@blocksuite/cloud-notes/components/peek';
 import {
   type ViewExtensionContext,
   ViewExtensionManager,
   ViewExtensionProvider,
-} from '@blocksuite/affine/ext-loader';
-import { PlainTextClipboardConfig } from '@blocksuite/affine/foundation/clipboard';
-import { LatexInlineSpecExtension } from '@blocksuite/affine/inlines/latex';
-import { LatexViewExtension as LatexInlineViewExtension } from '@blocksuite/affine/inlines/latex/view';
-import { LinkInlineSpecExtension } from '@blocksuite/affine/inlines/link';
-import { LinkViewExtension } from '@blocksuite/affine/inlines/link/view';
-import { MentionInlineSpecExtension } from '@blocksuite/affine/inlines/mention';
-import { MentionViewExtension } from '@blocksuite/affine/inlines/mention/view';
+} from '@blocksuite/cloud-notes/ext-loader';
+import { PlainTextClipboardConfig } from '@blocksuite/cloud-notes/foundation/clipboard';
+import { LatexInlineSpecExtension } from '@blocksuite/cloud-notes/inlines/latex';
+import { LatexViewExtension as LatexInlineViewExtension } from '@blocksuite/cloud-notes/inlines/latex/view';
+import { LinkInlineSpecExtension } from '@blocksuite/cloud-notes/inlines/link';
+import { LinkViewExtension } from '@blocksuite/cloud-notes/inlines/link/view';
+import { MentionInlineSpecExtension } from '@blocksuite/cloud-notes/inlines/mention';
+import { MentionViewExtension } from '@blocksuite/cloud-notes/inlines/mention/view';
 import {
   BackgroundInlineSpecExtension,
   BoldInlineSpecExtension,
@@ -34,9 +34,9 @@ import {
   ItalicInlineSpecExtension,
   StrikeInlineSpecExtension,
   UnderlineInlineSpecExtension,
-} from '@blocksuite/affine/inlines/preset';
-import { ReferenceInlineSpecExtension } from '@blocksuite/affine/inlines/reference';
-import { ReferenceViewExtension } from '@blocksuite/affine/inlines/reference/view';
+} from '@blocksuite/cloud-notes/inlines/preset';
+import { ReferenceInlineSpecExtension } from '@blocksuite/cloud-notes/inlines/reference';
+import { ReferenceViewExtension } from '@blocksuite/cloud-notes/inlines/reference/view';
 import {
   DefaultOpenDocExtension,
   DocDisplayMetaService,
@@ -48,12 +48,12 @@ import {
   PageViewportServiceExtension,
   ThemeService,
   ToolbarRegistryExtension,
-} from '@blocksuite/affine/shared/services';
-import type { AffineTextAttributes } from '@blocksuite/affine/shared/types';
-import { InlineManagerExtension } from '@blocksuite/affine/std/inline';
-import { LinkedDocViewExtension } from '@blocksuite/affine/widgets/linked-doc/view';
-import { ToolbarViewExtension } from '@blocksuite/affine/widgets/toolbar/view';
-import { ViewportOverlayViewExtension } from '@blocksuite/affine/widgets/viewport-overlay/view';
+} from '@blocksuite/cloud-notes/shared/services';
+import type { CloudNotesTextAttributes } from '@blocksuite/cloud-notes/shared/types';
+import { InlineManagerExtension } from '@blocksuite/cloud-notes/std/inline';
+import { LinkedDocViewExtension } from '@blocksuite/cloud-notes/widgets/linked-doc/view';
+import { ToolbarViewExtension } from '@blocksuite/cloud-notes/widgets/toolbar/view';
+import { ViewportOverlayViewExtension } from '@blocksuite/cloud-notes/widgets/viewport-overlay/view';
 import type { FrameworkProvider } from '@toeverything/infra';
 import { z } from 'zod';
 
@@ -89,7 +89,7 @@ class CommentEditorViewExtensionProvider extends ViewExtensionProvider<CommentEd
       FileSizeLimitService,
 
       ...InlineSpecExtensions,
-      InlineManagerExtension<AffineTextAttributes>({
+      InlineManagerExtension<CloudNotesTextAttributes>({
         id: 'DefaultInlineManager',
         specs: [
           BoldInlineSpecExtension.identifier,
@@ -145,9 +145,9 @@ export function getCommentEditorViewManager(framework: FrameworkProvider) {
       ViewportOverlayViewExtension,
       LinkedDocViewExtension,
 
-      // Affine side
-      AffineThemeViewExtension,
-      AffineEditorViewExtension,
+      // Cloud Notes side
+      CloudNotesThemeViewExtension,
+      CloudNotesEditorViewExtension,
 
       // for rendering mentions
       CloudViewExtension,
@@ -155,7 +155,7 @@ export function getCommentEditorViewManager(framework: FrameworkProvider) {
 
     manager.configure(ParagraphViewExtension, {
       getPlaceholder: () => {
-        return I18n.t('com.affine.notification.comment-prompt');
+        return I18n.t('com.cloud-notes.notification.comment-prompt');
       },
     });
 

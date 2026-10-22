@@ -4,20 +4,20 @@ import { pressEnter, type } from './keyboard.js';
 
 export function getLinkedDocPopover(page: Page) {
   const REFERENCE_NODE = ' ' as const;
-  const refNode = page.locator('affine-reference');
+  const refNode = page.locator('cloud-notes-reference');
   const linkedDocPopover = page.locator('.linked-doc-popover');
   const pageBtn = linkedDocPopover.locator('.group > icon-button');
 
   const findRefNode = async (title: string) => {
-    const refNode = page.locator(`affine-reference`, {
-      has: page.locator(`.affine-reference-title[data-title="${title}"]`),
+    const refNode = page.locator(`cloud-notes-reference`, {
+      has: page.locator(`.cloud-notes-reference-title[data-title="${title}"]`),
     });
     await expect(refNode).toBeVisible();
     return refNode;
   };
   const assertExistRefText = async (text: string) => {
     await expect(refNode).toBeVisible();
-    const refTitleNode = refNode.locator('.affine-reference-title');
+    const refTitleNode = refNode.locator('.cloud-notes-reference-title');
     // Since the text is in the pseudo element
     // we need to use `toHaveAttribute` to assert it.
     // And it's not a good strict way to assert the text.

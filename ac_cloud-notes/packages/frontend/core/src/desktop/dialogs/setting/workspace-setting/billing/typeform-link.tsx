@@ -1,12 +1,12 @@
-import { Button } from '@affine/component';
-import { SettingRow } from '@affine/component/setting-components';
-import { getUpgradeQuestionnaireLink } from '@affine/core/components/hooks/affine/use-subscription-notify';
+import { Button } from '@cloud-notes/component';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { getUpgradeQuestionnaireLink } from '@cloud-notes/core/components/hooks/cloud-notes/use-subscription-notify';
 import {
   AuthService,
   WorkspaceSubscriptionService,
-} from '@affine/core/modules/cloud';
-import { SubscriptionPlan, SubscriptionRecurring } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/cloud';
+import { SubscriptionPlan, SubscriptionRecurring } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 
 import * as styles from './styles.css';
@@ -34,11 +34,11 @@ export const TypeformLink = () => {
   return (
     <SettingRow
       className={styles.paymentMethod}
-      name={t['com.affine.payment.billing-type-form.title']()}
-      desc={t['com.affine.payment.billing-type-form.description']()}
+      name={t['com.cloud-notes.payment.billing-type-form.title']()}
+      desc={t['com.cloud-notes.payment.billing-type-form.description']()}
     >
       <a target="_blank" href={link} rel="noreferrer">
-        <Button>{t['com.affine.payment.billing-type-form.go']()}</Button>
+        <Button>{t['com.cloud-notes.payment.billing-type-form.go']()}</Button>
       </a>
     </SettingRow>
   );

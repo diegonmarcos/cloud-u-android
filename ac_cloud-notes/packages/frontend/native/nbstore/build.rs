@@ -1,6 +1,6 @@
 use std::fs;
 
-use affine_schema::get_migrator;
+use cloud_notes_schema::get_migrator;
 use sqlx::sqlite::SqliteConnectOptions;
 
 #[tokio::main]
@@ -9,7 +9,7 @@ async fn main() -> Result<(), std::io::Error> {
 
   // always start with a fresh database to have latest db schema
   let cwd = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-  let db_path = format!("{cwd}/affine.db");
+  let db_path = format!("{cwd}/cloud-notes.db");
 
   if fs::metadata(&db_path).is_ok() {
     fs::remove_file(&db_path)?;

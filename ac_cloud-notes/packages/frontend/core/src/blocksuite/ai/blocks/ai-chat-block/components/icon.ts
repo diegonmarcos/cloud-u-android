@@ -14,7 +14,7 @@ export const ChatWithAIIcon = html`<svg
   />
 </svg>`;
 
-export const AffineAIIcon = html`<svg
+export const CloudNotesAIIcon = html`<svg
   width="24"
   height="24"
   viewBox="0 0 24 24"

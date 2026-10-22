@@ -1,6 +1,6 @@
-import { Button, Input, Menu, toast } from '@affine/component';
-import { TagService } from '@affine/core/modules/tag';
-import { useI18n } from '@affine/i18n';
+import { Button, Input, Menu, toast } from '@cloud-notes/component';
+import { TagService } from '@cloud-notes/core/modules/tag';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import type { MouseEvent } from 'react';
@@ -92,18 +92,18 @@ export const CreateOrEditTag = ({
         tag => tag.name === tagName.trim() && tag.id !== tagMeta?.id
       )
     ) {
-      return toast(t['com.affine.tags.create-tag.toast.exist']());
+      return toast(t['com.cloud-notes.tags.create-tag.toast.exist']());
     }
     if (!tagMeta) {
       tagList.createTag(tagName.trim(), tagIcon);
-      toast(t['com.affine.tags.create-tag.toast.success']());
+      toast(t['com.cloud-notes.tags.create-tag.toast.success']());
       onClose();
       return;
     }
     tag?.rename(tagName.trim());
     tag?.changeColor(tagIcon);
 
-    toast(t['com.affine.tags.edit-tag.toast.success']());
+    toast(t['com.cloud-notes.tags.edit-tag.toast.success']());
     onClose();
     return;
   }, [onClose, t, tag, tagIcon, tagMeta, tagName, tagOptions, tagList]);
@@ -159,8 +159,8 @@ export const CreateOrEditTag = ({
       </Menu>
 
       <Input
-        placeholder={t['com.affine.tags.create-tag.placeholder']()}
-        inputStyle={{ fontSize: 'var(--affine-font-xs)' }}
+        placeholder={t['com.cloud-notes.tags.create-tag.placeholder']()}
+        inputStyle={{ fontSize: 'var(--cloud-notes-font-xs)' }}
         onEnter={onConfirm}
         value={tagName}
         onChange={handleChangeName}

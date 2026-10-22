@@ -1,7 +1,7 @@
-import { Skeleton } from '@affine/component';
-import { useWorkspaceInfo } from '@affine/core/components/hooks/use-workspace-info';
-import type { WorkspaceMetadata } from '@affine/core/modules/workspace';
-import { UNTITLED_WORKSPACE_NAME } from '@affine/env/constant';
+import { Skeleton } from '@cloud-notes/component';
+import { useWorkspaceInfo } from '@cloud-notes/core/components/hooks/use-workspace-info';
+import type { WorkspaceMetadata } from '@cloud-notes/core/modules/workspace';
+import { UNTITLED_WORKSPACE_NAME } from '@cloud-notes/env/constant';
 import { DoneIcon } from '@blocksuite/icons/rc';
 import clsx from 'clsx';
 import type { HTMLAttributes } from 'react';

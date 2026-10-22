@@ -1,9 +1,9 @@
-import '@affine/core/bootstrap/browser';
-import '@affine/component/theme';
-import '@affine/core/mobile/styles/mobile.css';
+import '@cloud-notes/core/bootstrap/browser';
+import '@cloud-notes/component/theme';
+import '@cloud-notes/core/mobile/styles/mobile.css';
 import './proxy';
 
-import { viewportRuntimeConfig } from '@blocksuite/affine/std/gfx';
+import { viewportRuntimeConfig } from '@blocksuite/cloud-notes/std/gfx';
 
 // The Compose shell draws the bottom nav (libs:bottomnav); the web's own tabs hide.
 (window as unknown as { cloudNotesNativeNav?: boolean }).cloudNotesNativeNav =

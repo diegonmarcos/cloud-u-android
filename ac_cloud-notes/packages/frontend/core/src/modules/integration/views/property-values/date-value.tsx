@@ -1,5 +1,5 @@
-import { PropertyValue, Tooltip } from '@affine/component';
-import { i18nTime } from '@affine/i18n';
+import { PropertyValue, Tooltip } from '@cloud-notes/component';
+import { i18nTime } from '@cloud-notes/i18n';
 import { useMemo } from 'react';
 
 import * as styles from './styles.css';

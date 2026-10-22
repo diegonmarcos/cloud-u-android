@@ -1,5 +1,5 @@
 {
-  "name": "@affine/changelog",
+  "name": "@cloud-notes/changelog",
   "version": "0.27.5",
   "type": "module",
   "main": "index.js",

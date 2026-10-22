@@ -1,4 +1,4 @@
-import { type AffineThemeKeyV2, cssVarV2 } from '@toeverything/theme/v2';
+import { type CloudNotesThemeKeyV2, cssVarV2 } from '@toeverything/theme/v2';
 import { clamp } from 'lodash-es';
 import { useCallback, useEffect, useRef } from 'react';
 
@@ -6,7 +6,7 @@ import { Skeleton } from '../skeleton';
 import * as styles from './audio-waveform.css';
 
 // Helper function to get computed CSS variable value
-const getCSSVarValue = (element: HTMLElement, varName: AffineThemeKeyV2) => {
+const getCSSVarValue = (element: HTMLElement, varName: CloudNotesThemeKeyV2) => {
   const style = getComputedStyle(element);
   const varRef = cssVarV2(varName);
   const varKey = varRef.match(/var\((.*?)\)/)?.[1];

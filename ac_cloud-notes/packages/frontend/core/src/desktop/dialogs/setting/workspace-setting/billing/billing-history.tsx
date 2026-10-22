@@ -1,10 +1,10 @@
-import { Button, Loading } from '@affine/component';
-import { Pagination, SettingRow } from '@affine/component/setting-components';
-import { WorkspaceInvoicesService } from '@affine/core/modules/cloud';
-import { UrlService } from '@affine/core/modules/url';
-import { UserFriendlyError } from '@affine/error';
-import { type InvoicesQuery, InvoiceStatus } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+import { Button, Loading } from '@cloud-notes/component';
+import { Pagination, SettingRow } from '@cloud-notes/component/setting-components';
+import { WorkspaceInvoicesService } from '@cloud-notes/core/modules/cloud';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { type InvoicesQuery, InvoiceStatus } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVar } from '@toeverything/theme';
 import { useCallback, useEffect } from 'react';
@@ -52,7 +52,7 @@ export const BillingHistory = () => {
       <div className={styles.historyContent}>
         {invoiceCount === 0 ? (
           <p className={styles.noInvoice}>
-            {t['com.affine.payment.billing-setting.no-invoice']()}
+            {t['com.cloud-notes.payment.billing-setting.no-invoice']()}
           </p>
         ) : (
           pageInvoices?.map((invoice, index) => (
@@ -95,12 +95,12 @@ const InvoiceLine = ({
       name={new Date(invoice.createdAt).toLocaleDateString()}
       desc={`${
         invoice.status === InvoiceStatus.Paid
-          ? t['com.affine.payment.billing-setting.paid']()
+          ? t['com.cloud-notes.payment.billing-setting.paid']()
           : ''
       } $${invoice.amount / 100}`}
     >
       <Button onClick={open}>
-        {t['com.affine.payment.billing-setting.view-invoice']()}
+        {t['com.cloud-notes.payment.billing-setting.view-invoice']()}
       </Button>
     </SettingRow>
   );

@@ -1,10 +1,10 @@
-import { ConfirmModal } from '@affine/component';
-import { useNavigateHelper } from '@affine/core/components/hooks/use-navigate-helper';
+import { ConfirmModal } from '@cloud-notes/component';
+import { useNavigateHelper } from '@cloud-notes/core/components/hooks/use-navigate-helper';
 import type {
   DialogComponentProps,
   GLOBAL_DIALOG_SCHEMA,
-} from '@affine/core/modules/dialogs';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/dialogs';
+import { useI18n } from '@cloud-notes/i18n';
 import { useCallback } from 'react';
 
 import * as styles from './index.css';
@@ -25,12 +25,12 @@ export const DeletedAccountDialog = ({
     <ConfirmModal
       open
       persistent
-      title={t['com.affine.setting.account.delete.success-title']()}
+      title={t['com.cloud-notes.setting.account.delete.success-title']()}
       description={
         <span className={styles.successDeleteAccountContainer}>
-          {t['com.affine.setting.account.delete.success-description-1']()}
+          {t['com.cloud-notes.setting.account.delete.success-description-1']()}
           <span>
-            {t['com.affine.setting.account.delete.success-description-2']()}
+            {t['com.cloud-notes.setting.account.delete.success-description-2']()}
           </span>
         </span>
       }

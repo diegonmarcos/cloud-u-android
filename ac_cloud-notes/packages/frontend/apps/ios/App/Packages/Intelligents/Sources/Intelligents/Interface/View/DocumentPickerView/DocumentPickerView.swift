@@ -5,7 +5,7 @@
 //  Created by 秋星桥 on 6/24/25.
 //
 
-import AffineGraphQL
+import CloudNotesGraphQL
 import SnapKit
 import UIKit
 
@@ -16,7 +16,7 @@ class DocumentPickerView: UIView {
 
   private var documents: [DocumentItem] = []
   private var selectedDocumentIds: Set<String> = []
-  private let updateQueue = DispatchQueue(label: "com.affine.documentpicker.update", qos: .userInitiated)
+  private let updateQueue = DispatchQueue(label: "com.cloud-notes.documentpicker.update", qos: .userInitiated)
   private var lastSearchKeyword: String = ""
 
   // MARK: - DiffableDataSource
@@ -49,21 +49,21 @@ class DocumentPickerView: UIView {
 
   lazy var searchIconImageView = UIImageView().then {
     $0.image = UIImage(systemName: "magnifyingglass")
-    $0.tintColor = .affineIconPrimary
+    $0.tintColor = .cloudNotesIconPrimary
     $0.contentMode = .scaleAspectFit
   }
 
   lazy var searchTextField = UITextField().then {
     $0.placeholder = "Search documents..."
     $0.font = .systemFont(ofSize: 17, weight: .regular)
-    $0.textColor = .affineTextPrimary
+    $0.textColor = .cloudNotesTextPrimary
     $0.backgroundColor = .clear
     $0.addTarget(self, action: #selector(searchTextChanged), for: .editingChanged)
   }
 
   lazy var activityIndicator = UIActivityIndicatorView(style: .medium).then {
     $0.hidesWhenStopped = true
-    $0.color = .affineIconPrimary
+    $0.color = .cloudNotesIconPrimary
   }
 
   private lazy var tableView = UITableView().then {

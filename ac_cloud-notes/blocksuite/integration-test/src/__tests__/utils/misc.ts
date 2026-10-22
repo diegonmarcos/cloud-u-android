@@ -1,5 +1,5 @@
-import { AffineSchemas } from '@blocksuite/affine/schemas';
-import { replaceIdMiddleware } from '@blocksuite/affine/shared/adapters';
+import { CloudNotesSchemas } from '@blocksuite/cloud-notes/schemas';
+import { replaceIdMiddleware } from '@blocksuite/cloud-notes/shared/adapters';
 import {
   type DocSnapshot,
   Schema,
@@ -12,7 +12,7 @@ export async function importFromSnapshot(
   snapshot: DocSnapshot
 ) {
   const job = new Transformer({
-    schema: new Schema().register(AffineSchemas),
+    schema: new Schema().register(CloudNotesSchemas),
     blobCRUD: collection.blobSync,
     docCRUD: {
       create: (id: string) => collection.createDoc(id).getStore({ id }),

@@ -83,12 +83,12 @@ test('add new todo list', async ({ page }) => {
   await type(page, 'aa');
   await assertRichTexts(page, ['aa']);
 
-  const checkBox = page.locator('.affine-list-block__prefix');
-  await expect(page.locator('.affine-list--checked')).toHaveCount(0);
+  const checkBox = page.locator('.cloud-notes-list-block__prefix');
+  await expect(page.locator('.cloud-notes-list--checked')).toHaveCount(0);
   await checkBox.click();
-  await expect(page.locator('.affine-list--checked')).toHaveCount(1);
+  await expect(page.locator('.cloud-notes-list--checked')).toHaveCount(1);
   await checkBox.click();
-  await expect(page.locator('.affine-list--checked')).toHaveCount(0);
+  await expect(page.locator('.cloud-notes-list--checked')).toHaveCount(0);
 });
 
 test('add new toggle list', async ({ page }) => {
@@ -140,7 +140,7 @@ test('convert to numbered list block', async ({ page }) => {
   await updateBlockType(page, 'affine:list', 'numbered');
   await focusRichText(page, 0);
 
-  const listSelector = '.affine-list-rich-text-wrapper';
+  const listSelector = '.cloud-notes-list-rich-text-wrapper';
   const bulletIconSelector = `${listSelector} > div`;
   await assertTextContent(page, bulletIconSelector, /1\./);
 
@@ -673,9 +673,9 @@ test.describe('toggle list', () => {
     await initEmptyParagraphState(page);
     await initThreeLists(page);
     const toggleIcon = page.locator('.toggle-icon');
-    const prefixes = page.locator('.affine-list-block__prefix');
+    const prefixes = page.locator('.cloud-notes-list-block__prefix');
     const listChildren = page
-      .locator('[data-block-id="4"] .affine-block-children-container')
+      .locator('[data-block-id="4"] .cloud-notes-block-children-container')
       .nth(0);
     const parentPrefix = prefixes.nth(1);
 
@@ -721,7 +721,7 @@ test.describe('toggle list', () => {
 
     const toggleIcon = page.locator('.toggle-icon');
     const listChildren = page
-      .locator('[data-block-id="4"] .affine-block-children-container')
+      .locator('[data-block-id="4"] .cloud-notes-block-children-container')
       .nth(0);
 
     expect(await getPageSnapshot(page, true)).toMatchSnapshot(
@@ -752,7 +752,7 @@ test.describe('toggle list', () => {
     await initThreeLists(page);
     const toggleIcon = page.locator('.toggle-icon');
 
-    const prefixes = page.locator('.affine-list-block__prefix');
+    const prefixes = page.locator('.cloud-notes-list-block__prefix');
     const parentPrefix = prefixes.nth(1);
 
     expect(await isToggleIconVisible(toggleIcon)).toBe(false);
@@ -772,9 +772,9 @@ test.describe('readonly', () => {
     await initEmptyParagraphState(page);
     await initThreeLists(page);
     const toggleIcon = page.locator('.toggle-icon');
-    const prefixes = page.locator('.affine-list-block__prefix');
+    const prefixes = page.locator('.cloud-notes-list-block__prefix');
     const listChildren = page
-      .locator('[data-block-id="4"] .affine-block-children-container')
+      .locator('[data-block-id="4"] .cloud-notes-block-children-container')
       .nth(0);
     const parentPrefix = prefixes.nth(1);
 
@@ -817,23 +817,23 @@ test.describe('readonly', () => {
     await initEmptyParagraphState(page);
     await focusRichText(page);
 
-    const checkBox = page.locator('.affine-list-block__prefix');
+    const checkBox = page.locator('.cloud-notes-list-block__prefix');
 
     {
       await type(page, '[] todo');
       await switchReadonly(page);
-      await expect(page.locator('.affine-list--checked')).toHaveCount(0);
+      await expect(page.locator('.cloud-notes-list--checked')).toHaveCount(0);
       await checkBox.click();
-      await expect(page.locator('.affine-list--checked')).toHaveCount(0);
+      await expect(page.locator('.cloud-notes-list--checked')).toHaveCount(0);
     }
 
     {
       await switchReadonly(page, false);
       await checkBox.click();
       await switchReadonly(page);
-      await expect(page.locator('.affine-list--checked')).toHaveCount(1);
+      await expect(page.locator('.cloud-notes-list--checked')).toHaveCount(1);
       await checkBox.click();
-      await expect(page.locator('.affine-list--checked')).toHaveCount(1);
+      await expect(page.locator('.cloud-notes-list--checked')).toHaveCount(1);
     }
   });
 
@@ -845,7 +845,7 @@ test.describe('readonly', () => {
 
     const toggleIcon = page.locator('.toggle-icon');
     const listChildren = page
-      .locator('[data-block-id="5"] .affine-block-children-container')
+      .locator('[data-block-id="5"] .cloud-notes-block-children-container')
       .nth(0);
 
     await expect(listChildren).toBeVisible();

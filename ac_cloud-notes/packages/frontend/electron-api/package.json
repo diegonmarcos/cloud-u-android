@@ -1,5 +1,5 @@
 {
-  "name": "@affine/electron-api",
+  "name": "@cloud-notes/electron-api",
   "version": "0.27.5",
   "type": "module",
   "private": true,
@@ -9,6 +9,6 @@
     "./web-worker": "./src/web-worker.ts"
   },
   "devDependencies": {
-    "@affine/electron": "workspace:*"
+    "@cloud-notes/electron": "workspace:*"
   }
 }

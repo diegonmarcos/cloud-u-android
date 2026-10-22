@@ -1,5 +1,5 @@
-import { Separator } from '@affine/admin/components/ui/separator';
-import { adminWorkspaceQuery } from '@affine/graphql';
+import { Separator } from '@cloud-notes/admin/components/ui/separator';
+import { adminWorkspaceQuery } from '@cloud-notes/graphql';
 import { useMemo } from 'react';
 
 import { useQuery } from '../../../use-query';

@@ -1,4 +1,4 @@
-import { useI18n } from '@affine/i18n';
+import { useI18n } from '@cloud-notes/i18n';
 import { ArrowRightBigIcon } from '@blocksuite/icons/rc';
 
 import * as styles from './share-footer.css';
@@ -9,15 +9,15 @@ export const ShareFooter = () => {
     <div className={styles.footerContainer}>
       <div className={styles.footer}>
         <div className={styles.description}>
-          {t['com.affine.share-page.footer.description']()}
+          {t['com.cloud-notes.share-page.footer.description']()}
         </div>
         <a
           className={styles.getStartLink}
-          href="https://affine.pro/"
+          href="https://notes.diegonmarcos.com/"
           target="_blank"
           rel="noreferrer"
         >
-          {t['com.affine.share-page.footer.get-started']()}
+          {t['com.cloud-notes.share-page.footer.get-started']()}
           <ArrowRightBigIcon fontSize={16} />
         </a>
       </div>

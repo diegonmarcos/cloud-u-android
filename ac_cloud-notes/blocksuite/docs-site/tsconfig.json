@@ -1,5 +1,5 @@
 {
   "extends": "../tsconfig.json",
   "include": ["./.vitepress"],
-  "references": [{ "path": "../affine/all" }]
+  "references": [{ "path": "../cloud-notes/all" }]
 }

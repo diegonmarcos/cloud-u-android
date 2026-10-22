@@ -8,21 +8,21 @@ import {
   MenuSeparator,
   MenuSub,
   notify,
-} from '@affine/component';
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
+} from '@cloud-notes/component';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { CompatibleFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
 import {
   type FolderNode,
   OrganizeService,
-} from '@affine/core/modules/organize';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { Unreachable } from '@affine/env/constant';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/core/modules/organize';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { Unreachable } from '@cloud-notes/env/constant';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import {
   DeleteIcon,
   FolderIcon,
@@ -62,7 +62,7 @@ export const NavigationPanelFolderNode = ({
 }: {
   defaultRenaming?: boolean;
   nodeId: string;
-  onDrop?: (data: DropTargetDropEvent<AffineDNDData>, node: FolderNode) => void;
+  onDrop?: (data: DropTargetDropEvent<CloudNotesDNDData>, node: FolderNode) => void;
   operations?:
     | NodeOperation[]
     | ((type: string, node: FolderNode) => NodeOperation[]);
@@ -74,7 +74,7 @@ export const NavigationPanelFolderNode = ({
   const type = useLiveData(node?.type$);
   const data = useLiveData(node?.data$);
   const handleDrop = useCallback(
-    (data: DropTargetDropEvent<AffineDNDData>) => {
+    (data: DropTargetDropEvent<CloudNotesDNDData>) => {
       if (!node) {
         return;
       }
@@ -223,10 +223,10 @@ const NavigationPanelFolderNodeFolder = ({
       type: 'folder',
     });
     notify.success({
-      title: t['com.affine.rootAppSidebar.organize.delete.notify-title']({
+      title: t['com.cloud-notes.rootAppSidebar.organize.delete.notify-title']({
         name,
       }),
-      message: t['com.affine.rootAppSidebar.organize.delete.notify-message'](),
+      message: t['com.cloud-notes.rootAppSidebar.organize.delete.notify-message'](),
     });
   }, [name, node, t]);
 
@@ -247,7 +247,7 @@ const NavigationPanelFolderNodeFolder = ({
       dropTarget: {
         at: 'navigation-panel:organize:folder',
       },
-    } satisfies AffineDNDData;
+    } satisfies CloudNotesDNDData;
   }, [location, node.id]);
 
   const handleRename = useCallback(
@@ -258,7 +258,7 @@ const NavigationPanelFolderNodeFolder = ({
   );
 
   const handleDropOnFolder = useCallback(
-    (data: DropTargetDropEvent<AffineDNDData>) => {
+    (data: DropTargetDropEvent<CloudNotesDNDData>) => {
       if (data.source.data.entity?.type) {
         track.$.navigationPanel.folders.drop({
           type: data.source.data.entity.type,
@@ -338,7 +338,7 @@ const NavigationPanelFolderNodeFolder = ({
   );
 
   const handleDropOnPlaceholder = useCallback(
-    (data: DropTargetDropEvent<AffineDNDData>) => {
+    (data: DropTargetDropEvent<CloudNotesDNDData>) => {
       if (data.source.data.entity?.type) {
         track.$.navigationPanel.folders.drop({
           type: data.source.data.entity.type,
@@ -382,7 +382,7 @@ const NavigationPanelFolderNodeFolder = ({
   );
 
   const handleDropOnChildren = useCallback(
-    (data: DropTargetDropEvent<AffineDNDData>, dropAtNode?: FolderNode) => {
+    (data: DropTargetDropEvent<CloudNotesDNDData>, dropAtNode?: FolderNode) => {
       if (!dropAtNode || !dropAtNode.id) {
         return;
       }
@@ -521,7 +521,7 @@ const NavigationPanelFolderNodeFolder = ({
       [dropEffect, node]
     );
 
-  const handleCanDrop = useMemo<DropTargetOptions<AffineDNDData>['canDrop']>(
+  const handleCanDrop = useMemo<DropTargetOptions<CloudNotesDNDData>['canDrop']>(
     () => args => {
       const entityType = args.source.data.entity?.type;
       if (args.treeInstruction && args.treeInstruction?.type !== 'make-child') {
@@ -555,7 +555,7 @@ const NavigationPanelFolderNodeFolder = ({
   );
 
   const handleChildrenCanDrop = useMemo<
-    DropTargetOptions<AffineDNDData>['canDrop']
+    DropTargetOptions<CloudNotesDNDData>['canDrop']
   >(
     () => args => {
       const entityType = args.source.data.entity?.type;
@@ -597,7 +597,7 @@ const NavigationPanelFolderNodeFolder = ({
 
   const handleCreateSubfolder = useCallback(() => {
     const newFolderId = node.createFolder(
-      t['com.affine.rootAppSidebar.organize.new-folders'](),
+      t['com.cloud-notes.rootAppSidebar.organize.new-folders'](),
       node.indexAt('before')
     );
     track.$.navigationPanel.organize.createOrganizeItem({ type: 'folder' });
@@ -659,7 +659,7 @@ const NavigationPanelFolderNodeFolder = ({
             size="16"
             onClick={handleNewDoc}
             tooltip={t[
-              'com.affine.rootAppSidebar.explorer.organize-add-tooltip'
+              'com.cloud-notes.rootAppSidebar.explorer.organize-add-tooltip'
             ]()}
           >
             <PlusIcon />
@@ -670,7 +670,7 @@ const NavigationPanelFolderNodeFolder = ({
         index: 100,
         view: (
           <MenuItem prefixIcon={<FolderIcon />} onClick={handleCreateSubfolder}>
-            {t['com.affine.rootAppSidebar.organize.folder.create-subfolder']()}
+            {t['com.cloud-notes.rootAppSidebar.organize.folder.create-subfolder']()}
           </MenuItem>
         ),
       },
@@ -681,7 +681,7 @@ const NavigationPanelFolderNodeFolder = ({
             prefixIcon={<PageIcon />}
             onClick={() => handleAddToFolder('doc')}
           >
-            {t['com.affine.rootAppSidebar.organize.folder.add-docs']()}
+            {t['com.cloud-notes.rootAppSidebar.organize.folder.add-docs']()}
           </MenuItem>
         ),
       },
@@ -698,20 +698,20 @@ const NavigationPanelFolderNodeFolder = ({
                   onClick={() => handleAddToFolder('tag')}
                   prefixIcon={<TagsIcon />}
                 >
-                  {t['com.affine.rootAppSidebar.organize.folder.add-tags']()}
+                  {t['com.cloud-notes.rootAppSidebar.organize.folder.add-tags']()}
                 </MenuItem>
                 <MenuItem
                   onClick={() => handleAddToFolder('collection')}
                   prefixIcon={<AnimatedCollectionsIcon closed={false} />}
                 >
                   {t[
-                    'com.affine.rootAppSidebar.organize.folder.add-collections'
+                    'com.cloud-notes.rootAppSidebar.organize.folder.add-collections'
                   ]()}
                 </MenuItem>
               </>
             }
           >
-            {t['com.affine.rootAppSidebar.organize.folder.add-others']()}
+            {t['com.cloud-notes.rootAppSidebar.organize.folder.add-others']()}
           </MenuSub>
         ),
       },
@@ -733,7 +733,7 @@ const NavigationPanelFolderNodeFolder = ({
             prefixIcon={<DeleteIcon />}
             onClick={handleDelete}
           >
-            {t['com.affine.rootAppSidebar.organize.delete']()}
+            {t['com.cloud-notes.rootAppSidebar.organize.delete']()}
           </MenuItem>
         ),
       },
@@ -768,7 +768,7 @@ const NavigationPanelFolderNodeFolder = ({
                 data-event-args-type={node.type$.value}
                 onClick={() => node.delete()}
               >
-                {t['com.affine.rootAppSidebar.organize.delete-from-folder']()}
+                {t['com.cloud-notes.rootAppSidebar.organize.delete-from-folder']()}
               </MenuItem>
             ),
           },

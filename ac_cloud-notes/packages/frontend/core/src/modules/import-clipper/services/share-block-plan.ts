@@ -1,4 +1,4 @@
-import type { EmbedCardStyle } from '@blocksuite/affine/model';
+import type { EmbedCardStyle } from '@blocksuite/cloud-notes/model';
 
 import type { ShareImportInput } from './import';
 

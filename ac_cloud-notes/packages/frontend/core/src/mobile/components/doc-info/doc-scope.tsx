@@ -1,4 +1,4 @@
-import { type Doc, DocsService } from '@affine/core/modules/doc';
+import { type Doc, DocsService } from '@cloud-notes/core/modules/doc';
 import { FrameworkScope, useService } from '@toeverything/infra';
 import { type PropsWithChildren, useEffect, useState } from 'react';
 

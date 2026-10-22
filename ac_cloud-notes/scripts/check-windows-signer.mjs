@@ -7,10 +7,10 @@ const requireSigner =
 const outputPath = process.env.GITHUB_OUTPUT;
 
 const missing = [
-  'AFFINE_SIGN_CLIENT_HASH',
-  'AFFINE_SIGNER_ADDR',
-  'AFFINE_SIGNER_TOKEN',
-  'AFFINE_SIGNER_TS_AUTH_KEY',
+  'CLOUD_NOTES_SIGN_CLIENT_HASH',
+  'CLOUD_NOTES_SIGNER_ADDR',
+  'CLOUD_NOTES_SIGNER_TOKEN',
+  'CLOUD_NOTES_SIGNER_TS_AUTH_KEY',
   'WINDOWS_SIGNER_PUBLIC_CERT_BASE64',
 ].filter(name => !process.env[name]);
 

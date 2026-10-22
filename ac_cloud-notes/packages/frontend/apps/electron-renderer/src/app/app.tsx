@@ -1,9 +1,9 @@
-import { AffineContext } from '@affine/core/components/context';
-import { WindowsAppControls } from '@affine/core/components/pure/header/windows-app-controls';
-import { AppContainer } from '@affine/core/desktop/components/app-container';
-import { router } from '@affine/core/desktop/router';
-import { I18nProvider } from '@affine/core/modules/i18n';
-import createEmotionCache from '@affine/core/utils/create-emotion-cache';
+import { CloudNotesContext } from '@cloud-notes/core/components/context';
+import { WindowsAppControls } from '@cloud-notes/core/components/pure/header/windows-app-controls';
+import { AppContainer } from '@cloud-notes/core/desktop/components/app-container';
+import { router } from '@cloud-notes/core/desktop/router';
+import { I18nProvider } from '@cloud-notes/core/modules/i18n';
+import createEmotionCache from '@cloud-notes/core/utils/create-emotion-cache';
 import { CacheProvider } from '@emotion/react';
 import { FrameworkRoot, getCurrentStore } from '@toeverything/infra';
 import { Suspense, useEffect } from 'react';
@@ -54,7 +54,7 @@ export function App() {
       <FrameworkRoot framework={frameworkProvider}>
         <CacheProvider value={cache}>
           <I18nProvider>
-            <AffineContext store={getCurrentStore()}>
+            <CloudNotesContext store={getCurrentStore()}>
               <DesktopThemeSync />
               <DesktopLanguageSync />
               <RouterProvider
@@ -67,7 +67,7 @@ export function App() {
                   <WindowsAppControls />
                 </div>
               )}
-            </AffineContext>
+            </CloudNotesContext>
           </I18nProvider>
         </CacheProvider>
       </FrameworkRoot>

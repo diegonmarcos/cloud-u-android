@@ -1,4 +1,4 @@
-import type { DocFrontendDocState } from '@affine/nbstore';
+import type { DocFrontendDocState } from '@cloud-notes/nbstore';
 import type {
   Table as OrmTable,
   TableSchemaBuilder,

@@ -31,7 +31,7 @@ vi.doMock('nanoid', () => ({
   nanoid: () => 'workspace-1',
 }));
 
-vi.doMock('@affine/native', () => {
+vi.doMock('@cloud-notes/native', () => {
   const ValidationResult = {
     MissingTables: 'MissingTables',
     MissingDocIdColumn: 'MissingDocIdColumn',
@@ -83,7 +83,7 @@ vi.doMock('@affine/native', () => {
   };
 });
 
-vi.doMock('@affine/electron/helper/nbstore', () => ({
+vi.doMock('@cloud-notes/electron/helper/nbstore', () => ({
   getDocStoragePool: () => ({
     connect,
     checkpoint,
@@ -91,7 +91,7 @@ vi.doMock('@affine/electron/helper/nbstore', () => ({
   }),
 }));
 
-vi.doMock('@affine/electron/helper/main-rpc', () => ({
+vi.doMock('@cloud-notes/electron/helper/main-rpc', () => ({
   mainRPC: {
     getPath,
     showItemInFolder,
@@ -100,13 +100,13 @@ vi.doMock('@affine/electron/helper/main-rpc', () => ({
   },
 }));
 
-vi.doMock('@affine/electron/helper/workspace/meta', () => ({
+vi.doMock('@cloud-notes/electron/helper/workspace/meta', () => ({
   getSpaceDBPath,
   getWorkspaceDBPath,
   getWorkspacesBasePath,
 }));
 
-vi.doMock('@affine/electron/helper/workspace', () => ({
+vi.doMock('@cloud-notes/electron/helper/workspace', () => ({
   storeWorkspaceMeta,
 }));
 
@@ -130,8 +130,8 @@ afterEach(() => {
 describe('dialog export', () => {
   test('saveDBFileAs exports a vacuumed backup instead of copying the live db', async () => {
     const dbPath = '/tmp/workspace/storage.db';
-    const exportPath = '/tmp/export.affine';
-    const tempExportPath = '/tmp/export.affine.workspace-1.tmp';
+    const exportPath = '/tmp/export.cloud-notes';
+    const tempExportPath = '/tmp/export.cloud-notes.workspace-1.tmp';
     const id = '@peer(local);@type(workspace);@id(workspace-1);';
 
     pathExists.mockImplementation(async path => path === dbPath);
@@ -141,7 +141,7 @@ describe('dialog export', () => {
     showSaveDialog.mockResolvedValue({ canceled: false, filePath: exportPath });
 
     const { saveDBFileAs } =
-      await import('@affine/electron/helper/dialog/dialog');
+      await import('@cloud-notes/electron/helper/dialog/dialog');
 
     const result = await saveDBFileAs(id, 'My Space');
 
@@ -165,7 +165,7 @@ describe('dialog export', () => {
     showSaveDialog.mockResolvedValue({ canceled: false, filePath: dbPath });
 
     const { saveDBFileAs } =
-      await import('@affine/electron/helper/dialog/dialog');
+      await import('@cloud-notes/electron/helper/dialog/dialog');
 
     const result = await saveDBFileAs(id, 'My Space');
 
@@ -176,7 +176,7 @@ describe('dialog export', () => {
 
   test('saveDBFileAs rejects exporting to a symlink alias of the live database', async () => {
     const dbPath = '/tmp/workspace/storage.db';
-    const exportPath = '/tmp/alias.affine';
+    const exportPath = '/tmp/alias.cloud-notes';
     const id = '@peer(local);@type(workspace);@id(workspace-1);';
 
     pathExists.mockResolvedValue(true);
@@ -187,7 +187,7 @@ describe('dialog export', () => {
     showSaveDialog.mockResolvedValue({ canceled: false, filePath: exportPath });
 
     const { saveDBFileAs } =
-      await import('@affine/electron/helper/dialog/dialog');
+      await import('@cloud-notes/electron/helper/dialog/dialog');
 
     const result = await saveDBFileAs(id, 'My Space');
 
@@ -199,7 +199,7 @@ describe('dialog export', () => {
 
 describe('dialog import', () => {
   test('loadDBFile validates schema and vacuums v2 imports into internal storage', async () => {
-    const originalPath = '/tmp/import.affine';
+    const originalPath = '/tmp/import.cloud-notes';
     const internalPath = '/app/workspaces/local/workspace-1/storage.db';
 
     pathExists.mockResolvedValue(true);
@@ -217,7 +217,7 @@ describe('dialog import', () => {
     ensureDir.mockResolvedValue(undefined);
 
     const { loadDBFile } =
-      await import('@affine/electron/helper/dialog/dialog');
+      await import('@cloud-notes/electron/helper/dialog/dialog');
 
     const result = await loadDBFile();
 
@@ -230,7 +230,7 @@ describe('dialog import', () => {
   });
 
   test('loadDBFile rejects v2 imports with unexpected schema objects', async () => {
-    const originalPath = '/tmp/import.affine';
+    const originalPath = '/tmp/import.cloud-notes';
 
     pathExists.mockResolvedValue(true);
     realpath.mockImplementation(async path => path);
@@ -243,7 +243,7 @@ describe('dialog import', () => {
     docValidateImportSchema.mockResolvedValue(false);
 
     const { loadDBFile } =
-      await import('@affine/electron/helper/dialog/dialog');
+      await import('@cloud-notes/electron/helper/dialog/dialog');
 
     const result = await loadDBFile();
 
@@ -253,7 +253,7 @@ describe('dialog import', () => {
   });
 
   test('loadDBFile validates schema and vacuums v1 imports into internal storage', async () => {
-    const originalPath = '/tmp/import-v1.affine';
+    const originalPath = '/tmp/import-v1.cloud-notes';
     const internalPath = '/app/workspaces/workspace-1/storage.db';
 
     pathExists.mockResolvedValue(true);
@@ -271,7 +271,7 @@ describe('dialog import', () => {
     ensureDir.mockResolvedValue(undefined);
 
     const { loadDBFile } =
-      await import('@affine/electron/helper/dialog/dialog');
+      await import('@cloud-notes/electron/helper/dialog/dialog');
 
     const result = await loadDBFile();
 
@@ -289,7 +289,7 @@ describe('dialog import', () => {
   });
 
   test('loadDBFile closes v1 connection when schema validation fails', async () => {
-    const originalPath = '/tmp/import-v1-invalid.affine';
+    const originalPath = '/tmp/import-v1-invalid.cloud-notes';
 
     pathExists.mockResolvedValue(true);
     realpath.mockImplementation(async path => path);
@@ -303,7 +303,7 @@ describe('dialog import', () => {
     sqliteValidateImportSchema.mockResolvedValue(false);
 
     const { loadDBFile } =
-      await import('@affine/electron/helper/dialog/dialog');
+      await import('@cloud-notes/electron/helper/dialog/dialog');
 
     const result = await loadDBFile();
 
@@ -313,7 +313,7 @@ describe('dialog import', () => {
   });
 
   test('loadDBFile rejects normalized paths inside app data', async () => {
-    const selectedPath = '/tmp/import.affine';
+    const selectedPath = '/tmp/import.cloud-notes';
     const normalizedPath = '/app/workspaces/local/existing/storage.db';
 
     pathExists.mockResolvedValue(true);
@@ -330,7 +330,7 @@ describe('dialog import', () => {
     getWorkspacesBasePath.mockResolvedValue('/app/workspaces');
 
     const { loadDBFile } =
-      await import('@affine/electron/helper/dialog/dialog');
+      await import('@cloud-notes/electron/helper/dialog/dialog');
 
     const result = await loadDBFile();
 

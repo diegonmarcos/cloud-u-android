@@ -1,0 +1,35 @@
+{
+  "name": "@blocksuite/cloud-notes-block-divider",
+  "description": "Divider block for BlockSuite.",
+  "type": "module",
+  "scripts": {
+    "build": "yarn run -T tsc"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": "toeverything",
+  "license": "MIT",
+  "dependencies": {
+    "@blocksuite/cloud-notes-components": "workspace:*",
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*",
+    "@blocksuite/cloud-notes-model": "workspace:*",
+    "@blocksuite/cloud-notes-rich-text": "workspace:*",
+    "@blocksuite/cloud-notes-shared": "workspace:*",
+    "@blocksuite/std": "workspace:*",
+    "@blocksuite/store": "workspace:*",
+    "@types/mdast": "^4.0.4",
+    "lit": "^3.2.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./view": "./src/view.ts",
+    "./store": "./src/store.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "!src/__tests__",
+    "!dist/__tests__"
+  ],
+  "version": "0.27.5"
+}

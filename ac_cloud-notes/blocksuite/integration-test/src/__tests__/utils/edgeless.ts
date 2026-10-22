@@ -1,13 +1,13 @@
 import type {
   EdgelessRootBlockComponent,
   PageRootBlockComponent,
-} from '@blocksuite/affine/blocks/root';
-import type { SurfaceBlockComponent } from '@blocksuite/affine/blocks/surface';
+} from '@blocksuite/cloud-notes/blocks/root';
+import type { SurfaceBlockComponent } from '@blocksuite/cloud-notes/blocks/surface';
 import type { Store } from '@blocksuite/store';
 
-import type { TestAffineEditorContainer } from '../../index.js';
+import type { TestCloudNotesEditorContainer } from '../../index.js';
 
-export function getSurface(doc: Store, editor: TestAffineEditorContainer) {
+export function getSurface(doc: Store, editor: TestCloudNotesEditorContainer) {
   const surfaceModel = doc.getModelsByFlavour('affine:surface');
 
   return editor.host!.view.getBlock(
@@ -17,17 +17,17 @@ export function getSurface(doc: Store, editor: TestAffineEditorContainer) {
 
 export function getDocRootBlock(
   doc: Store,
-  editor: TestAffineEditorContainer,
+  editor: TestCloudNotesEditorContainer,
   mode: 'page'
 ): PageRootBlockComponent;
 export function getDocRootBlock(
   doc: Store,
-  editor: TestAffineEditorContainer,
+  editor: TestCloudNotesEditorContainer,
   mode: 'edgeless'
 ): EdgelessRootBlockComponent;
 export function getDocRootBlock(
   doc: Store,
-  editor: TestAffineEditorContainer,
+  editor: TestCloudNotesEditorContainer,
   _?: 'edgeless' | 'page'
 ) {
   return editor.host!.view.getBlock(doc.root!.id) as

@@ -1,14 +1,14 @@
-import { AppSidebarService } from '@affine/core/modules/app-sidebar';
-import { DesktopApiService } from '@affine/core/modules/desktop-api';
+import { AppSidebarService } from '@cloud-notes/core/modules/app-sidebar';
+import { DesktopApiService } from '@cloud-notes/core/modules/desktop-api';
 import {
   GlobalDialogService,
   WorkspaceDialogService,
-} from '@affine/core/modules/dialogs';
-import { I18nService } from '@affine/core/modules/i18n';
-import { UrlService } from '@affine/core/modules/url';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/dialogs';
+import { I18nService } from '@cloud-notes/core/modules/i18n';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   useService,
   useServiceOptional,
@@ -21,24 +21,24 @@ import { useEffect } from 'react';
 import { usePageHelper } from '../../blocksuite/block-suite-page-list/utils';
 import {
   PreconditionStrategy,
-  registerAffineCommand,
-  registerAffineCreationCommands,
-  registerAffineHelpCommands,
-  registerAffineLanguageCommands,
-  registerAffineLayoutCommands,
-  registerAffineNavigationCommands,
-  registerAffineSettingsCommands,
-  registerAffineUpdatesCommands,
+  registerCloudNotesCommand,
+  registerCloudNotesCreationCommands,
+  registerCloudNotesHelpCommands,
+  registerCloudNotesLanguageCommands,
+  registerCloudNotesLayoutCommands,
+  registerCloudNotesNavigationCommands,
+  registerCloudNotesSettingsCommands,
+  registerCloudNotesUpdatesCommands,
 } from '../../commands';
 import { EditorSettingService } from '../../modules/editor-setting';
 import { CMDKQuickSearchService } from '../../modules/quicksearch/services/cmdk';
 import { useNavigateHelper } from './use-navigate-helper';
 
 function registerCMDKCommand(service: CMDKQuickSearchService) {
-  return registerAffineCommand({
-    id: 'affine:show-quick-search',
+  return registerCloudNotesCommand({
+    id: 'cloud-notes:show-quick-search',
     preconditionStrategy: PreconditionStrategy.Never,
-    category: 'affine:general',
+    category: 'cloud-notes:general',
     keyBinding: {
       binding: '$mod+K',
     },
@@ -89,13 +89,13 @@ export function useRegisterWorkspaceCommands() {
     };
   }, [cMDKQuickSearchService]);
 
-  // register AffineUpdatesCommands
+  // register CloudNotesUpdatesCommands
   useEffect(() => {
     if (!quitAndInstall) {
       return;
     }
 
-    const unsub = registerAffineUpdatesCommands({
+    const unsub = registerCloudNotesUpdatesCommands({
       store,
       t,
       quitAndInstall,
@@ -106,9 +106,9 @@ export function useRegisterWorkspaceCommands() {
     };
   }, [quitAndInstall, store, t]);
 
-  // register AffineNavigationCommands
+  // register CloudNotesNavigationCommands
   useEffect(() => {
-    const unsub = registerAffineNavigationCommands({
+    const unsub = registerCloudNotesNavigationCommands({
       t,
       docCollection: currentWorkspace.docCollection,
       navigationHelper,
@@ -129,9 +129,9 @@ export function useRegisterWorkspaceCommands() {
     workbenchService,
   ]);
 
-  // register AffineSettingsCommands
+  // register CloudNotesSettingsCommands
   useEffect(() => {
-    const unsub = registerAffineSettingsCommands({
+    const unsub = registerCloudNotesSettingsCommands({
       store,
       t,
       theme,
@@ -144,7 +144,7 @@ export function useRegisterWorkspaceCommands() {
   }, [editorSettingService, store, t, theme]);
 
   useEffect(() => {
-    const unsub = registerAffineLanguageCommands({
+    const unsub = registerCloudNotesLanguageCommands({
       i18n,
       t,
     });
@@ -154,18 +154,18 @@ export function useRegisterWorkspaceCommands() {
     };
   }, [i18n, t]);
 
-  // register AffineLayoutCommands
+  // register CloudNotesLayoutCommands
   useEffect(() => {
-    const unsub = registerAffineLayoutCommands({ t, appSidebarService });
+    const unsub = registerCloudNotesLayoutCommands({ t, appSidebarService });
 
     return () => {
       unsub();
     };
   }, [appSidebarService, store, t]);
 
-  // register AffineCreationCommands
+  // register CloudNotesCreationCommands
   useEffect(() => {
-    const unsub = registerAffineCreationCommands({
+    const unsub = registerCloudNotesCreationCommands({
       globalDialogService,
       pageHelper: pageHelper,
       t,
@@ -176,9 +176,9 @@ export function useRegisterWorkspaceCommands() {
     };
   }, [store, pageHelper, t, globalDialogService]);
 
-  // register AffineHelpCommands
+  // register CloudNotesHelpCommands
   useEffect(() => {
-    const unsub = registerAffineHelpCommands({
+    const unsub = registerCloudNotesHelpCommands({
       t,
       urlService,
       workspaceDialogService,

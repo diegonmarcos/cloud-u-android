@@ -6,7 +6,7 @@
 //
 
 import Apollo
-import AffineGraphQL
+import CloudNotesGraphQL
 import Foundation
 
 extension QLService {

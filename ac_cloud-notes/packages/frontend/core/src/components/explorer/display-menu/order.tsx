@@ -1,8 +1,8 @@
-import { MenuItem } from '@affine/component';
-import type { OrderByParams } from '@affine/core/modules/collection-rules/types';
-import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
+import { MenuItem } from '@cloud-notes/component';
+import type { OrderByParams } from '@cloud-notes/core/modules/collection-rules/types';
+import { WorkspacePropertyService } from '@cloud-notes/core/modules/workspace-property';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import { SortDownIcon, SortUpIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVarV2 } from '@toeverything/theme/v2';

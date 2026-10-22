@@ -1,4 +1,4 @@
-import { UserFriendlyError } from '@affine/error';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   abortBlobUploadMutation,
   BlobUploadMethod,
@@ -10,7 +10,7 @@ import {
   releaseDeletedBlobsMutation,
   setBlobMutation,
   workspaceBlobQuotaQuery,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 
 import {
   type BlobRecord,

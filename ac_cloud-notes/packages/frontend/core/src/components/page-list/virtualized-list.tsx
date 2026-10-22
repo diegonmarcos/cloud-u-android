@@ -1,4 +1,4 @@
-import { Scrollable } from '@affine/component';
+import { Scrollable } from '@cloud-notes/component';
 import clsx from 'clsx';
 import { selectAtom } from 'jotai/utils';
 import type { HTMLAttributes, PropsWithChildren } from 'react';

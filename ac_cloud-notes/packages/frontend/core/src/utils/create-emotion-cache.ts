@@ -6,5 +6,5 @@ export default function createEmotionCache() {
   );
   const insertionPoint = emotionInsertionPoint ?? undefined;
 
-  return createCache({ key: 'affine', insertionPoint });
+  return createCache({ key: 'cloud-notes', insertionPoint });
 }

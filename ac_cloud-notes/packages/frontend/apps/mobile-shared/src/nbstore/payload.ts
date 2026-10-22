@@ -1,7 +1,7 @@
-import { base64ToUint8Array } from '@affine/core/modules/workspace-engine';
+import { base64ToUint8Array } from '@cloud-notes/core/modules/workspace-engine';
 import { Capacitor } from '@capacitor/core';
 
-export const MOBILE_BLOB_FILE_PREFIX = '__AFFINE_BLOB_FILE__:';
+export const MOBILE_BLOB_FILE_PREFIX = '__CLOUD_NOTES_BLOB_FILE__:';
 export const MOBILE_PAYLOAD_INLINE_THRESHOLD_BYTES = 1024 * 1024;
 const MOBILE_PAYLOAD_CACHE_DIR = 'nbstore-blob-cache';
 const MOBILE_PAYLOAD_BUCKET_PATTERN = /^[0-9a-f]{16}$/;

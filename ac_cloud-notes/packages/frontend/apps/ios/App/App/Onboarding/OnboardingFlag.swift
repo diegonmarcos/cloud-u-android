@@ -1,7 +1,7 @@
 import Foundation
 
 enum OnboardingFlag {
-  private static let completedKey = "com.affine.onboarding.completed"
+  private static let completedKey = "com.cloud-notes.onboarding.completed"
 
   static var isCompleted: Bool {
     UserDefaults.standard.bool(forKey: completedKey)

@@ -3,13 +3,13 @@ import {
   MenuTrigger,
   RadioGroup,
   type RadioItem,
-} from '@affine/component';
-import { SettingRow } from '@affine/component/setting-components';
-import { EditorSettingService } from '@affine/core/modules/editor-setting';
-import { useI18n } from '@affine/i18n';
-import { getSurfaceBlock } from '@blocksuite/affine/blocks/surface';
-import { LayoutType, MindmapStyle } from '@blocksuite/affine/model';
-import type { Store } from '@blocksuite/affine/store';
+} from '@cloud-notes/component';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { EditorSettingService } from '@cloud-notes/core/modules/editor-setting';
+import { useI18n } from '@cloud-notes/i18n';
+import { getSurfaceBlock } from '@blocksuite/cloud-notes/blocks/surface';
+import { LayoutType, MindmapStyle } from '@blocksuite/cloud-notes/model';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useFramework, useLiveData } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 
@@ -57,21 +57,21 @@ export const MindMapSettings = () => {
         value: LayoutType.LEFT as any,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.mind-map.layout.left'
+            'com.cloud-notes.settings.editorSettings.edgeless.mind-map.layout.left'
           ](),
       },
       {
         value: LayoutType.BALANCE as any,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.mind-map.layout.radial'
+            'com.cloud-notes.settings.editorSettings.edgeless.mind-map.layout.radial'
           ](),
       },
       {
         value: LayoutType.RIGHT as any,
         label:
           t[
-            'com.affine.settings.editorSettings.edgeless.mind-map.layout.right'
+            'com.cloud-notes.settings.editorSettings.edgeless.mind-map.layout.right'
           ](),
       },
     ],
@@ -101,14 +101,14 @@ export const MindMapSettings = () => {
   return (
     <>
       <EdgelessSnapshot
-        title={t['com.affine.settings.editorSettings.edgeless.mind-map']()}
+        title={t['com.cloud-notes.settings.editorSettings.edgeless.mind-map']()}
         docName="mindmap"
         keyName={'mindmap' as any}
         getElements={getElements}
         height={320}
       />
       <SettingRow
-        name={t['com.affine.settings.editorSettings.edgeless.style']()}
+        name={t['com.cloud-notes.settings.editorSettings.edgeless.style']()}
         desc={''}
       >
         <DropdownMenu
@@ -122,7 +122,7 @@ export const MindMapSettings = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.editorSettings.edgeless.mind-map.layout'
+          'com.cloud-notes.settings.editorSettings.edgeless.mind-map.layout'
         ]()}
         desc={''}
       >

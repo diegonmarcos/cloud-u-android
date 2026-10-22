@@ -1,7 +1,7 @@
-import '@blocksuite/affine/effects';
+import '@blocksuite/cloud-notes/effects';
 
-import { TestAffineEditorContainer } from './editors/index.js';
+import { TestCloudNotesEditorContainer } from './editors/index.js';
 
 export function effects() {
-  customElements.define('affine-editor-container', TestAffineEditorContainer);
+  customElements.define('cloud-notes-editor-container', TestCloudNotesEditorContainer);
 }

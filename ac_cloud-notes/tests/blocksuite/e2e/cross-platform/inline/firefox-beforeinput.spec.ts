@@ -26,9 +26,9 @@ test('should not crash when deleting with selection dragged outside note (firefo
   await assertRichTexts(page, ['123', '456', '789']);
 
   const outside = await page.evaluate(() => {
-    const note = document.querySelector('affine-note');
+    const note = document.querySelector('cloud-notes-note');
     if (!note) {
-      throw new Error('affine-note not found');
+      throw new Error('cloud-notes-note not found');
     }
     const rect = note.getBoundingClientRect();
     return { x: rect.left + rect.width / 2, y: rect.bottom + 50 };

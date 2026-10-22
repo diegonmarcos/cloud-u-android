@@ -1,4 +1,4 @@
-use affine_nbstore::error::Error as NbStoreError;
+use cloud_notes_nbstore::error::Error as NbStoreError;
 
 #[derive(uniffi::Error, thiserror::Error, Debug)]
 pub enum UniffiError {

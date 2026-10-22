@@ -12,7 +12,7 @@ export const item = style({
   fontSize: cssVar('fontBase'),
   color: cssVarV2('text/secondary'),
   borderRadius: 4,
-  backgroundColor: 'var(--affine-background-primary-color)',
+  backgroundColor: 'var(--cloud-notes-background-primary-color)',
   cursor: 'pointer',
   userSelect: 'none',
   ':hover': {

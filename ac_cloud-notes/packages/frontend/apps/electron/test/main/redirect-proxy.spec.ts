@@ -44,11 +44,11 @@ describe('redirect proxy allowlist', () => {
       await import('../../src/main/security/redirect-proxy');
     expect(
       validateRedirectProxyUrl(
-        'assets://./redirect-proxy?redirect_uri=https%3A%2F%2Fgithub.com%2Ftoeverything%2FAFFiNE'
+        'assets://./redirect-proxy?redirect_uri=https%3A%2F%2Fgithub.com%2Ftoeverything%2FCloudNotes'
       )
     ).toEqual({
       allow: true,
-      redirectTarget: 'https://github.com/toeverything/AFFiNE',
+      redirectTarget: 'https://github.com/diegonmarcos/cloud-u-android',
     });
   });
 
@@ -62,11 +62,11 @@ describe('redirect proxy allowlist', () => {
       await import('../../src/main/security/redirect-proxy');
     expect(
       validateRedirectProxyUrl(
-        'assets://./redirect-proxy?redirect_uri=https%3A%2F%2Faffine.fail%2Fpricing'
+        'assets://./redirect-proxy?redirect_uri=https%3A%2F%2Fnotes.diegonmarcos.com%2Fpricing'
       )
     ).toEqual({
       allow: true,
-      redirectTarget: 'https://affine.fail/pricing',
+      redirectTarget: 'https://notes.diegonmarcos.com/pricing',
     });
   });
 

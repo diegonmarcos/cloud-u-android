@@ -2,33 +2,33 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch AFFiNE Cloud",
+      "name": "Launch Cloud Notes",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "yarn",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": [
-        "affine",
-        "@affine/server",
+        "cloud-notes",
+        "@cloud-notes/server",
         "dev"
       ]
     },
     {
-      "name": "Lanuch AFFiNE Web",
+      "name": "Lanuch Cloud Notes Web",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "yarn",
       "cwd": "${workspaceFolder}",
       "runtimeArgs": [
-        "affine",
-        "@affine/web",
+        "cloud-notes",
+        "@cloud-notes/web",
         "dev"
       ]
     },
     {
       "type": "chrome",
       "request": "launch",
-      "name": "Debug AFFiNE Web",
+      "name": "Debug Cloud Notes Web",
       "url": "http://localhost:8080"
     }
   ]

@@ -16,13 +16,13 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/server-native
+          extra-flags: workspaces focus @cloud-notes/server-native
           electron-install: false
       - name: Build Rust
         uses: ./.github/actions/build-rust
         with:
           target: 'x86_64-unknown-linux-gnu'
-          package: '@affine/server-native'
+          package: '@cloud-notes/server-native'
       - name: Upload server-native.node
         uses: actions/upload-artifact@v4
         with:
@@ -38,13 +38,13 @@ jobs:
     env:
       NODE_ENV: test
       DISTRIBUTION: web
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -83,7 +83,7 @@ jobs:
         uses: ./.github/actions/server-test-env
 
       - name: Run server tests
-        run: yarn affine @affine/server test:copilot:coverage --forbid-only
+        run: yarn cloud-notes @cloud-notes/server test:copilot:coverage --forbid-only
         env:
           CARGO_TARGET_DIR: '${{ github.workspace }}/target'
 
@@ -93,7 +93,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/backend/server/.coverage/lcov.info
           flags: server-test
-          name: affine
+          name: cloud-notes
           fail_ci_if_error: false
 
   copilot-e2e-test:
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DISTRIBUTION: web
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
       IN_CI_TEST: true
     strategy:
@@ -115,7 +115,7 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -151,7 +151,7 @@ jobs:
       - name: Run Copilot E2E Test ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
         uses: ./.github/actions/copilot-test
         with:
-          script: yarn affine @affine-test/affine-cloud-copilot e2e --forbid-only --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+          script: yarn cloud-notes @cloud-notes-test/cloud-notes-cloud-copilot e2e --forbid-only --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
 
   test-done:
     needs:
@@ -167,7 +167,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: 'workspaces focus @affine/copilot-result'
+          extra-flags: 'workspaces focus @cloud-notes/copilot-result'
           electron-install: false
       - name: Post Success event to a Slack channel
         if: ${{ always() && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}

@@ -1,15 +1,15 @@
-import type { AIToolsConfigService } from '@affine/core/modules/ai-button';
-import type { PeekViewService } from '@affine/core/modules/peek-view';
-import type { AppThemeService } from '@affine/core/modules/theme';
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
+import type { AIToolsConfigService } from '@cloud-notes/core/modules/ai-button';
+import type { PeekViewService } from '@cloud-notes/core/modules/peek-view';
+import type { AppThemeService } from '@cloud-notes/core/modules/theme';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
 import {
   DocModeProvider,
   type FeatureFlagService,
   type NotificationService,
-} from '@blocksuite/affine/shared/services';
-import { type EditorHost, ShadowlessElement } from '@blocksuite/affine/std';
-import type { BaseSelection, ExtensionType } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/shared/services';
+import { type EditorHost, ShadowlessElement } from '@blocksuite/cloud-notes/std';
+import type { BaseSelection, ExtensionType } from '@blocksuite/cloud-notes/store';
 import { ArrowDownBigIcon as ArrowDownIcon } from '@blocksuite/icons/lit';
 import type { Signal } from '@preact/signals-core';
 import { css, html, nothing, type PropertyValues } from 'lit';
@@ -18,7 +18,7 @@ import { classMap } from 'lit/directives/class-map.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { debounce, throttle } from 'lodash-es';
 
-import { AffineIcon } from '../../_common/icons';
+import { CloudNotesIcon } from '../../_common/icons';
 import {
   AIAppEvents,
   type AIError,
@@ -61,8 +61,8 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
       align-items: center;
       gap: 10px;
       margin-bottom: 4px;
-      color: var(--affine-text-primary-color);
-      font-size: var(--affine-font-sm);
+      color: var(--cloud-notes-text-primary-color);
+      font-size: var(--cloud-notes-font-sm);
       font-weight: 500;
       user-select: none;
     }
@@ -87,12 +87,12 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
     .messages-placeholder-title {
       font-size: 18px;
       font-weight: 600;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
     }
 
     .messages-placeholder-title[data-loading='true'] {
-      font-size: var(--affine-font-sm);
-      color: var(--affine-text-secondary-color);
+      font-size: var(--cloud-notes-font-sm);
+      color: var(--cloud-notes-text-secondary-color);
     }
 
     .onboarding-wrapper {
@@ -116,13 +116,13 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
     }
 
     .onboarding-item-text {
-      font-size: var(--affine-font-xs);
+      font-size: var(--cloud-notes-font-xs);
       font-weight: 400;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
       white-space: nowrap;
     }
 
@@ -135,9 +135,9 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
       border-radius: 50%;
       width: 32px;
       height: 32px;
-      border: 0.5px solid var(--affine-border-color);
-      background-color: var(--affine-background-primary-color);
-      box-shadow: var(--affine-shadow-2);
+      border: 0.5px solid var(--cloud-notes-border-color);
+      background-color: var(--cloud-notes-background-primary-color);
+      box-shadow: var(--cloud-notes-shadow-2);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -191,10 +191,10 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
   accessor extensions!: ExtensionType[];
 
   @property({ attribute: false })
-  accessor affineFeatureFlagService!: FeatureFlagService;
+  accessor cloudNotesFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
-  accessor affineThemeService!: AppThemeService;
+  accessor cloudNotesThemeService!: AppThemeService;
 
   @property({ attribute: false })
   accessor notificationService!: NotificationService;
@@ -343,10 +343,10 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
                 class="messages-placeholder"
                 data-testid="chat-panel-messages-placeholder"
               >
-                ${AffineIcon(
+                ${CloudNotesIcon(
                   isHistoryLoading
-                    ? 'var(--affine-icon-secondary)'
-                    : 'var(--affine-primary-color)'
+                    ? 'var(--cloud-notes-icon-secondary)'
+                    : 'var(--cloud-notes-primary-color)'
                 )}
                 <div
                   class="messages-placeholder-title"
@@ -355,7 +355,7 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
                   ${
                     this.isHistoryLoading
                       ? html`<span data-testid="chat-panel-loading-state"
-                          >AFFiNE AI is loading history...</span
+                          >Cloud Notes AI is loading history...</span
                         >`
                       : html`<span data-testid="chat-panel-empty-state"
                           >What can I help you with?</span
@@ -382,8 +382,8 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
                       .status=${isLast ? status : 'idle'}
                       .error=${isLast ? error : null}
                       .extensions=${this.extensions}
-                      .affineFeatureFlagService=${this.affineFeatureFlagService}
-                      .affineThemeService=${this.affineThemeService}
+                      .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
+                      .cloudNotesThemeService=${this.cloudNotesThemeService}
                       .notificationService=${this.notificationService}
                       .retry=${() => this.retry()}
                       .width=${this.width}

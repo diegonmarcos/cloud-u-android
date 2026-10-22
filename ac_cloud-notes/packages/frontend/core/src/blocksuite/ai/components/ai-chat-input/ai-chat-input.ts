@@ -2,21 +2,21 @@ import type {
   AIDraftService,
   AIModelService,
   AIToolsConfigService,
-} from '@affine/core/modules/ai-button';
+} from '@cloud-notes/core/modules/ai-button';
 import type {
   ServerService,
   SubscriptionService,
-} from '@affine/core/modules/cloud';
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import track, { type EventArgs } from '@affine/track';
+} from '@cloud-notes/core/modules/cloud';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import track, { type EventArgs } from '@cloud-notes/track';
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine';
 import { dropTargetForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import type { EditorHost } from '@blocksuite/affine/std';
-import { ShadowlessElement } from '@blocksuite/affine/std';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import { ArrowUpBigIcon, CloseIcon } from '@blocksuite/icons/lit';
 import { css, html, nothing, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -75,7 +75,7 @@ export class AIChatInput extends SignalWatcher(
 
     .chat-panel-input {
       --input-border-width: 0.5px;
-      --input-border-color: var(--affine-v2-layer-insideBorder-border);
+      --input-border-color: var(--cloud-notes-v2-layer-insideBorder-border);
       --border-shadow: 0px 0px 0px var(--input-border-width)
         var(--input-border-color);
       display: flex;
@@ -88,7 +88,7 @@ export class AIChatInput extends SignalWatcher(
       min-height: 94px;
       box-sizing: border-box;
       transition: box-shadow 0.23s ease;
-      background-color: var(--affine-v2-input-background);
+      background-color: var(--cloud-notes-v2-input-background);
 
       &[data-independent-mode='true'] {
         padding: 12px;
@@ -102,7 +102,7 @@ export class AIChatInput extends SignalWatcher(
         font-size: 14px;
         font-weight: 400;
         line-height: 22px;
-        color: var(--affine-text-secondary-color);
+        color: var(--cloud-notes-text-secondary-color);
         position: relative;
 
         div {
@@ -120,8 +120,8 @@ export class AIChatInput extends SignalWatcher(
           width: 16px;
           height: 16px;
           border-radius: 4px;
-          border: 1px solid var(--affine-border-color);
-          background-color: var(--affine-white);
+          border: 1px solid var(--cloud-notes-border-color);
+          background-color: var(--cloud-notes-white);
         }
       }
 
@@ -139,7 +139,7 @@ export class AIChatInput extends SignalWatcher(
         position: absolute;
         left: 0;
         top: 0;
-        background: var(--affine-quote-color);
+        background: var(--cloud-notes-quote-color);
         border-radius: 18px;
       }
     }
@@ -212,10 +212,10 @@ export class AIChatInput extends SignalWatcher(
         margin: 0;
         border: none;
         line-height: 22px;
-        font-size: var(--affine-font-sm);
+        font-size: var(--cloud-notes-font-sm);
         font-weight: 400;
-        font-family: var(--affine-font-family);
-        color: var(--affine-text-primary-color);
+        font-family: var(--cloud-notes-font-family);
+        color: var(--cloud-notes-text-primary-color);
         box-sizing: border-box;
         resize: none;
         overflow-y: scroll;
@@ -245,8 +245,8 @@ export class AIChatInput extends SignalWatcher(
       textarea::placeholder {
         font-size: 14px;
         font-weight: 400;
-        font-family: var(--affine-font-family);
-        color: var(--affine-v2-text-placeholder);
+        font-family: var(--cloud-notes-font-family);
+        color: var(--cloud-notes-v2-text-placeholder);
       }
 
       textarea:focus {
@@ -256,13 +256,13 @@ export class AIChatInput extends SignalWatcher(
 
     .chat-panel-input[data-if-focused='true'] {
       --input-border-width: 1px;
-      --input-border-color: var(--affine-v2-layer-insideBorder-primaryBorder);
+      --input-border-color: var(--cloud-notes-v2-layer-insideBorder-primaryBorder);
       user-select: none;
     }
 
     .chat-panel-input[data-drag-over='true'] {
       --input-border-width: 1px;
-      --input-border-color: var(--affine-v2-layer-insideBorder-primaryBorder);
+      --input-border-color: var(--cloud-notes-v2-layer-insideBorder-primaryBorder);
       background-color: ${unsafeCSSVarV2('layer/background/hoverOverlay')};
     }
 
@@ -279,7 +279,7 @@ export class AIChatInput extends SignalWatcher(
       color: ${unsafeCSSVarV2('icon/activated')};
       background-color: color-mix(
         in srgb,
-        var(--affine-v2-layer-background-primary) 92%,
+        var(--cloud-notes-v2-layer-background-primary) 92%,
         transparent
       );
       z-index: 1;
@@ -294,15 +294,15 @@ export class AIChatInput extends SignalWatcher(
       flex-shrink: 0;
       border-radius: 50%;
       font-size: 20px;
-      background: var(--affine-v2-icon-activated);
-      color: var(--affine-v2-layer-pureWhite);
+      background: var(--cloud-notes-v2-icon-activated);
+      color: var(--cloud-notes-v2-layer-pureWhite);
       border: none;
       padding: 0;
       cursor: pointer;
     }
     .chat-panel-send[aria-disabled='true'] {
       cursor: not-allowed;
-      background: var(--affine-v2-button-disable);
+      background: var(--cloud-notes-v2-button-disable);
     }
     .chat-panel-stop {
       cursor: pointer;
@@ -314,7 +314,7 @@ export class AIChatInput extends SignalWatcher(
       align-items: center;
       border-radius: 50%;
       font-size: 24px;
-      color: var(--affine-v2-icon-activated);
+      color: var(--cloud-notes-v2-icon-activated);
       border: none;
       padding: 0;
       background: transparent;
@@ -404,7 +404,7 @@ export class AIChatInput extends SignalWatcher(
   accessor aiModelService!: AIModelService;
 
   @property({ attribute: false })
-  accessor affineFeatureFlagService!: FeatureFlagService;
+  accessor cloudNotesFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
   accessor notificationService!: NotificationService;
@@ -486,7 +486,7 @@ export class AIChatInput extends SignalWatcher(
 
   protected override updated(changedProperties: PropertyValues<this>) {
     if (changedProperties.has('workspaceId')) {
-      this.aiModelService.setScope(this.workspaceId, 'Chat With AFFiNE AI');
+      this.aiModelService.setScope(this.workspaceId, 'Chat With Cloud Notes AI');
     }
   }
 

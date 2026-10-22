@@ -1,9 +1,9 @@
-import { NavigationPanelTreeRoot } from '@affine/core/desktop/components/navigation-panel';
-import { CollectionService } from '@affine/core/modules/collection';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { NavigationPanelTreeRoot } from '@cloud-notes/core/desktop/components/navigation-panel';
+import { CollectionService } from '@cloud-notes/core/modules/collection';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { AddCollectionIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { useCallback, useMemo, useState } from 'react';
@@ -47,7 +47,7 @@ export const NavigationPanelCollections = () => {
     <CollapsibleSection
       path={path}
       testId="navigation-panel-collections"
-      title={t['com.affine.rootAppSidebar.collections']()}
+      title={t['com.cloud-notes.rootAppSidebar.collections']()}
     >
       <NavigationPanelTreeRoot>
         {collectionMetas.map(collection => (
@@ -60,21 +60,21 @@ export const NavigationPanelCollections = () => {
         <AddItemPlaceholder
           icon={<AddCollectionIcon />}
           data-testid="navigation-panel-bar-add-collection-button"
-          label={t['com.affine.rootAppSidebar.collection.new']()}
+          label={t['com.cloud-notes.rootAppSidebar.collection.new']()}
           onClick={() => setShowNewCollectionDialog(true)}
         />
         <CollectionRenameDialog
           open={showNewCollectionDialog}
           onOpenChange={setShowNewCollectionDialog}
           onConfirm={handleCreateCollection}
-          title={t['com.affine.m.explorer.collection.new-dialog-title']()}
-          confirmText={t['com.affine.editCollection.save']()}
+          title={t['com.cloud-notes.m.explorer.collection.new-dialog-title']()}
+          confirmText={t['com.cloud-notes.editCollection.save']()}
           inputProps={{
-            placeholder: t['com.affine.editCollectionName.name.placeholder'](),
+            placeholder: t['com.cloud-notes.editCollectionName.name.placeholder'](),
           }}
           descRenderer={() => (
             <div className={styles.createTips}>
-              {t['com.affine.editCollectionName.createTips']()}
+              {t['com.cloud-notes.editCollectionName.createTips']()}
             </div>
           )}
         />

@@ -1,12 +1,12 @@
 import {
   type GfxCommonBlockProps,
   GfxCompatible,
-} from '@blocksuite/affine/std/gfx';
+} from '@blocksuite/cloud-notes/std/gfx';
 import {
   BlockModel,
   BlockSchemaExtension,
   defineBlockSchema,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 
 type AIChatProps = {
   messages: string; // JSON string of ChatMessage[]

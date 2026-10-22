@@ -1,0 +1,41 @@
+{
+  "name": "@blocksuite/cloud-notes-widget-edgeless-selected-rect",
+  "description": "Cloud Notes edgeless selected-rect widget.",
+  "type": "module",
+  "scripts": {
+    "build": "yarn run -T tsc"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": "toeverything",
+  "license": "MIT",
+  "dependencies": {
+    "@blocksuite/cloud-notes-block-frame": "workspace:*",
+    "@blocksuite/cloud-notes-block-surface": "workspace:*",
+    "@blocksuite/cloud-notes-components": "workspace:*",
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*",
+    "@blocksuite/cloud-notes-gfx-connector": "workspace:*",
+    "@blocksuite/cloud-notes-gfx-shape": "workspace:*",
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*",
+    "@blocksuite/cloud-notes-model": "workspace:*",
+    "@blocksuite/cloud-notes-shared": "workspace:*",
+    "@blocksuite/global": "workspace:*",
+    "@blocksuite/icons": "^2.2.17",
+    "@blocksuite/std": "workspace:*",
+    "@lit/context": "^1.1.2",
+    "@toeverything/theme": "^1.1.23",
+    "lit": "^3.2.0",
+    "yjs": "^13.6.27"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./view": "./src/view.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "!src/__tests__",
+    "!dist/__tests__"
+  ],
+  "version": "0.27.5"
+}

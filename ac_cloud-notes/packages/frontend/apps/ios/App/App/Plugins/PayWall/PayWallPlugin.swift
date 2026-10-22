@@ -1,4 +1,4 @@
-import AffinePaywall
+import CloudNotesPaywall
 import Capacitor
 import Foundation
 import SwiftUI
@@ -31,7 +31,7 @@ public class PayWallPlugin: CAPPlugin, CAPBridgedPlugin {
       do {
         let type = try call.getStringEnsure("type")
         let presentingController = try controller.get()
-        let webView = try self.webView.get("AFFiNE is still loading. Please try again in a moment.")
+        let webView = try self.webView.get("Cloud Notes is still loading. Please try again in a moment.")
         let initialPlan = paywallPlan(for: type)
 
         let isSignedIn = try await PaywallAuthGuard.ensureSignedIn(using: webView)

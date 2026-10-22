@@ -42,7 +42,7 @@ import { test } from '../utils/playwright.js';
 
 test.describe('lock', () => {
   const getButtons = (page: Page) => {
-    const toolbar = page.locator('affine-toolbar-widget');
+    const toolbar = page.locator('cloud-notes-toolbar-widget');
     return {
       lock: toolbar.getByTestId('lock'),
       unlock: toolbar.getByTestId('unlock'),
@@ -373,7 +373,7 @@ test.describe('lock', () => {
       await createEdgelessText(page, [100, 100], 'text');
       await selectAllByKeyboard(page);
       await lock.click();
-      const text = page.locator('affine-edgeless-text');
+      const text = page.locator('cloud-notes-edgeless-text');
       await text.dblclick();
       await type(page, '111');
       await expect(text).toHaveText('text');
@@ -389,7 +389,7 @@ test.describe('lock', () => {
       await createNote(page, [100, 100], 'note');
       await selectAllByKeyboard(page);
       await lock.click();
-      const note = page.locator('affine-edgeless-note');
+      const note = page.locator('cloud-notes-edgeless-note');
       await note.dblclick();
       await page.keyboard.press('End');
       await type(page, '111');
@@ -453,7 +453,7 @@ test.describe('lock', () => {
     await edgelessCommonSetup(page);
     const frame = await createFrame(page, [50, 50], [250, 250]);
     await selectAllByKeyboard(page);
-    const frameTitle = page.locator('affine-frame-title');
+    const frameTitle = page.locator('cloud-notes-frame-title');
     const { lock, unlock } = getButtons(page);
 
     await lock.click();
@@ -546,7 +546,7 @@ test.describe('lock', () => {
 
     await clickView(page, [175, 175]);
     await lock.click();
-    await page.locator('affine-frame-title').click();
+    await page.locator('cloud-notes-frame-title').click();
     await lock.click();
     await unlock.click();
     await clickView(page, [175, 175]);

@@ -1,4 +1,4 @@
-import { toArrayBuffer } from '@affine/core/utils/array-buffer';
+import { toArrayBuffer } from '@cloud-notes/core/utils/array-buffer';
 import { Entity, LiveData, ObjectPool } from '@toeverything/infra';
 import { catchError, from, map, of, startWith, switchMap } from 'rxjs';
 

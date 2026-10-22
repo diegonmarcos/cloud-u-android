@@ -1,10 +1,10 @@
-import { UserFriendlyError } from '@affine/error';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   gqlFetcherFactory,
   type GraphQLQuery,
   type QueryOptions,
   type QueryResponse,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { fromPromise, Service } from '@toeverything/infra';
 import type { Observable } from 'rxjs';
 

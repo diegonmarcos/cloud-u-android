@@ -1,4 +1,4 @@
-import { readAllBlocksFromDoc } from '@affine/reader';
+import { readAllBlocksFromDoc } from '@cloud-notes/reader';
 import { type Doc as YDoc } from 'yjs';
 
 import { IndexerDocument } from '../../storage';

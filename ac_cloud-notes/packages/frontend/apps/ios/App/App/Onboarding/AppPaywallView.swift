@@ -1,5 +1,5 @@
-import AffinePaywall
-import AffineResources
+import CloudNotesPaywall
+import CloudNotesResources
 import SwiftUI
 
 struct AppPaywallRootView: View {
@@ -138,9 +138,9 @@ private struct AppPaywallPage: View {
 
       AppPaywallLegalLinks(
         palette: palette,
-        onOpenTerms: { openLegalURL("https://affine.pro/terms") },
-        onOpenPrivacy: { openLegalURL("https://affine.pro/privacy") },
-        onOpenSubscriptionTerms: { openLegalURL("https://affine.pro/terms/#subscription") },
+        onOpenTerms: { openLegalURL("https://notes.diegonmarcos.com/terms") },
+        onOpenPrivacy: { openLegalURL("https://notes.diegonmarcos.com/privacy") },
+        onOpenSubscriptionTerms: { openLegalURL("https://notes.diegonmarcos.com/terms/#subscription") },
         onRestore: onRestorePurchases
       )
     }

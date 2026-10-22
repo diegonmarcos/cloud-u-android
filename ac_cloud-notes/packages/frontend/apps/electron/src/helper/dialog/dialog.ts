@@ -1,7 +1,7 @@
 import { parse, resolve } from 'node:path';
 
-import { DocStorage, ValidationResult } from '@affine/native';
-import { parseUniversalId } from '@affine/nbstore';
+import { DocStorage, ValidationResult } from '@cloud-notes/native';
+import { parseUniversalId } from '@cloud-notes/nbstore';
 import fs from 'fs-extra';
 import { nanoid } from 'nanoid';
 
@@ -39,7 +39,7 @@ export interface SelectDBFileLocationResult {
   canceled?: boolean;
 }
 
-const extension = 'affine';
+const extension = 'cloud-notes';
 
 function getDefaultDBFileName(name: string, id: string) {
   const fileName = `${name}_${id}.${extension}`;
@@ -214,10 +214,10 @@ export async function loadDBFile(): Promise<LoadDBFileResult> {
         {
           name: 'SQLite Database',
           // do we want to support other file format?
-          extensions: ['db', 'affine'],
+          extensions: ['db', 'cloud-notes'],
         },
       ],
-      message: 'Load Workspace from a AFFiNE file',
+      message: 'Load Workspace from a Cloud Notes file',
     });
     const selectedPath = ret.filePaths?.[0];
     if (ret.canceled || !selectedPath) {
@@ -270,7 +270,7 @@ async function cpV1DBFile(
   originalPath: string,
   workspaceId: string
 ): Promise<LoadDBFileResult> {
-  const { SqliteConnection } = await import('@affine/native');
+  const { SqliteConnection } = await import('@cloud-notes/native');
 
   const validationResult = await SqliteConnection.validate(originalPath);
 

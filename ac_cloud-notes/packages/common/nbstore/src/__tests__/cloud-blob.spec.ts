@@ -1,6 +1,6 @@
 import { getEventListeners } from 'node:events';
 
-import { UserFriendlyError } from '@affine/error';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   abortBlobUploadMutation,
   BlobUploadMethod,
@@ -10,7 +10,7 @@ import {
   listBlobsQuery,
   setBlobMutation,
   workspaceBlobQuotaQuery,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { afterEach, expect, test, vi } from 'vitest';
 
 import { CloudBlobStorage } from '../impls/cloud/blob';

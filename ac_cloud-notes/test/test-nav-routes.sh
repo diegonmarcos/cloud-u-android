@@ -29,7 +29,7 @@ rd = lambda *p: open(os.path.join(root, *p), encoding='utf-8').read()
 ui = json.loads(rd('build.json')).get('ui') or {}
 ts = rd('packages/frontend/core/src/mobile/components/native-nav-routes.ts')
 router = rd('packages/frontend/core/src/mobile/workbench-router.ts')
-kt = rd('packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/NativeNav.kt')
+kt = rd('packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/NativeNav.kt')
 
 sections = ui.get('sections') or []
 declared = {f"{s['id']}/{p['id']}": p for s in sections for p in s.get('pages', [])}

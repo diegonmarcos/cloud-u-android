@@ -1,5 +1,5 @@
-import { ServersService } from '@affine/core/modules/cloud';
-import { GlobalContextService } from '@affine/core/modules/global-context';
+import { ServersService } from '@cloud-notes/core/modules/cloud';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
 import { FrameworkScope, useLiveData, useService } from '@toeverything/infra';
 import { useMemo } from 'react';
 

@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import { Path, ProjectRoot } from '@affine-tools/utils/path';
+import { Path, ProjectRoot } from '@cloud-notes-tools/utils/path';
 import type { BrowserContext } from '@playwright/test';
 import { test as baseTest } from '@playwright/test';
 
@@ -44,7 +44,7 @@ export const test = baseTest.extend<{
           if (!(globalThis as any).currentWorkspace) {
             await new Promise<void>((resolve, reject) => {
               globalThis.addEventListener(
-                'affine:workspace:change',
+                'cloud-notes:workspace:change',
                 () => resolve(),
                 {
                   once: true,

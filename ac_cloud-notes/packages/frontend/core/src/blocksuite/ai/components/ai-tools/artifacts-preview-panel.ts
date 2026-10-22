@@ -1,6 +1,6 @@
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { EmptyIcon } from '@blocksuite/icons/lit';
 import { css, html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';

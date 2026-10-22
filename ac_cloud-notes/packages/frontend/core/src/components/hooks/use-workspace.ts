@@ -2,7 +2,7 @@ import {
   type Workspace,
   type WorkspaceMetadata,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
+} from '@cloud-notes/core/modules/workspace';
 import { useService } from '@toeverything/infra';
 import { useEffect, useState } from 'react';
 

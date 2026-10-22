@@ -1,0 +1,72 @@
+replicaCount: 1
+image:
+  repository: ghcr.io/diegonmarcos/cloud-u-android
+  pullPolicy: IfNotPresent
+  tag: ''
+
+imagePullSecrets: []
+nameOverride: ''
+fullnameOverride: ''
+# map to NODE_ENV environment variable
+env: 'production'
+nodeOptions: '--max-old-space-size=3072'
+app:
+  # CLOUD_NOTES_SERVER_PORT
+  port: 3010
+  # CLOUD_NOTES_SERVER_SUB_PATH
+  path: ''
+  # CLOUD_NOTES_SERVER_HOST
+  host: '0.0.0.0'
+  https: true
+serviceAccount:
+  create: true
+  annotations: {}
+  name: 'cloud-notes-front'
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 2000
+
+resources:
+  limits:
+    cpu: '1'
+    memory: 6Gi
+  requests:
+    cpu: '1'
+    memory: 4Gi
+
+probe:
+  initialDelaySeconds: 20
+  timeoutSeconds: 5
+  periodSeconds: 10
+  failureThreshold: 6
+  successThreshold: 1
+  liveness:
+    initialDelaySeconds: 60
+    failureThreshold: 12
+  readiness: {}
+
+services:
+  sync:
+    name: cloud-notes-sync
+    type: ClusterIP
+    port: 3010
+    backendConfig:
+      name: cloud-notes-sync-backendconfig
+      timeoutSec: 10800
+    annotations: {}
+  renderer:
+    name: cloud-notes-renderer
+    type: ClusterIP
+    port: 3000
+    annotations:
+      cloud.google.com/backend-config: '{"default": "cloud-notes-api-backendconfig"}'
+  web:
+    name: cloud-notes-web
+    type: ClusterIP
+    port: 8080
+    annotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

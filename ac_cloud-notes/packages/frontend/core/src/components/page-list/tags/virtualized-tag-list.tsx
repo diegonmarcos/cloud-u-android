@@ -1,6 +1,6 @@
-import type { Tag } from '@affine/core/modules/tag';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { Trans } from '@affine/i18n';
+import type { Tag } from '@cloud-notes/core/modules/tag';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { Trans } from '@cloud-notes/i18n';
 import { useService } from '@toeverything/infra';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
@@ -104,10 +104,10 @@ export const VirtualizedTagList = ({
         open={showFloatingToolbar}
         content={
           <Trans
-            i18nKey="com.affine.tag.toolbar.selected"
+            i18nKey="com.cloud-notes.tag.toolbar.selected"
             count={selectedTagIds.length}
           >
-            <div style={{ color: 'var(--affine-text-secondary-color)' }}>
+            <div style={{ color: 'var(--cloud-notes-text-secondary-color)' }}>
               {{ count: selectedTagIds.length } as any}
             </div>
             selected

@@ -1,7 +1,7 @@
 // Cloud Notes (hybrid roadmap, Phase 0b): the web half of the native bottom
 // nav. libs:bottomnav's island + page strips live in the Compose shell and are
 // declared in build.json::ui; they know only section/page IDS. This table is
-// the one place those ids become AFFiNE workbench routes or actions, so the
+// the one place those ids become Cloud Notes workbench routes or actions, so the
 // native shell never learns a URL. A `native` target is a page the Compose
 // shell draws itself (Search > Ask is libs:ai's chat): the shell handles the
 // tap and this half does nothing. There is no toast left: every row is a route,
@@ -9,7 +9,7 @@
 
 export const NATIVE_NAV_EVENT = 'cloud-notes:nav';
 
-/** Top bar > Settings > Configs: open AFFiNE's own settings dialog. */
+/** Top bar > Settings > Configs: open Cloud Notes's own settings dialog. */
 export const NATIVE_OPEN_SETTINGS_EVENT = 'cloud-notes:open-settings';
 
 /** A page picked in the top bar's drawer; detail is `{ id }`. */

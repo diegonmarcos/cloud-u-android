@@ -1,13 +1,13 @@
-import { Switch } from '@affine/component';
+import { Switch } from '@cloud-notes/component';
 import {
   SettingRow,
   SettingWrapper,
-} from '@affine/component/setting-components';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
-import { WorkspaceShareSettingService } from '@affine/core/modules/share-setting';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/setting-components';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
+import { WorkspaceShareSettingService } from '@cloud-notes/core/modules/share-setting';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 
 export const SharingPanel = () => {
@@ -46,11 +46,11 @@ export const Sharing = () => {
   }
 
   return (
-    <SettingWrapper title={t['com.affine.settings.workspace.sharing.title']()}>
+    <SettingWrapper title={t['com.cloud-notes.settings.workspace.sharing.title']()}>
       <SettingRow
-        name={t['com.affine.settings.workspace.sharing.url-preview.title']()}
+        name={t['com.cloud-notes.settings.workspace.sharing.url-preview.title']()}
         desc={t[
-          'com.affine.settings.workspace.sharing.url-preview.description'
+          'com.cloud-notes.settings.workspace.sharing.url-preview.description'
         ]()}
       >
         <Switch
@@ -61,10 +61,10 @@ export const Sharing = () => {
       </SettingRow>
       <SettingRow
         name={t[
-          'com.affine.settings.workspace.sharing.workspace-sharing.title'
+          'com.cloud-notes.settings.workspace.sharing.workspace-sharing.title'
         ]()}
         desc={t[
-          'com.affine.settings.workspace.sharing.workspace-sharing.description'
+          'com.cloud-notes.settings.workspace.sharing.workspace-sharing.description'
         ]()}
       >
         <Switch

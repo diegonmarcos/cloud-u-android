@@ -1,20 +1,20 @@
 /** @vitest-environment happy-dom */
 
-import { type Server, ServersService } from '@affine/core/modules/cloud';
+import { type Server, ServersService } from '@cloud-notes/core/modules/cloud';
 import {
   ImportClipperService,
   type ShareImportInput,
-} from '@affine/core/modules/import-clipper';
+} from '@cloud-notes/core/modules/import-clipper';
 import {
   type WorkspaceMetadata,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
-import { ServerDeploymentType } from '@affine/graphql';
-import { ToggleButton } from '@blocksuite/affine/components/toggle-button';
+} from '@cloud-notes/core/modules/workspace';
+import { ServerDeploymentType } from '@cloud-notes/graphql';
+import { ToggleButton } from '@blocksuite/cloud-notes/components/toggle-button';
 import {
   type LinkPreviewCacheProvider,
   LinkPreviewService,
-} from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/shared/services';
 import {
   cleanup,
   fireEvent,
@@ -26,7 +26,7 @@ import type * as Infra from '@toeverything/infra';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import {
-  createAffineLinkPreviewFetch,
+  createCloudNotesLinkPreviewFetch,
   resolveLinkPreviewEndpoint,
 } from '../../../blocksuite/view-extensions/link-preview-service/link-preview-service';
 import { createShareMarkdown } from '../../../modules/import-clipper/services/import';
@@ -88,7 +88,7 @@ afterEach(() => {
 });
 
 describe('link preview transport and route ownership', () => {
-  test('adds the app version only in the AFFiNE transport', async () => {
+  test('adds the app version only in the Cloud Notes transport', async () => {
     const fetch = vi
       .fn()
       .mockResolvedValue(
@@ -96,7 +96,7 @@ describe('link preview transport and route ownership', () => {
       );
     const service = new LinkPreviewService(
       cache,
-      createAffineLinkPreviewFetch('0.27.0', fetch)
+      createCloudNotesLinkPreviewFetch('0.27.0', fetch)
     );
     service.setEndpoint('https://self.example/api/worker/link-preview');
 
@@ -104,7 +104,7 @@ describe('link preview transport and route ownership', () => {
 
     const headers = new Headers(fetch.mock.calls[0]?.[1]?.headers);
     expect(headers.get('Content-Type')).toBe('application/json');
-    expect(headers.get('x-affine-version')).toBe('0.27.0');
+    expect(headers.get('x-cloud-notes-version')).toBe('0.27.0');
   });
 
   test.each([
@@ -159,7 +159,7 @@ describe('link preview transport and route ownership', () => {
       'official' as const,
       workspace('local'),
       [] as Server[],
-      'https://app.affine.pro/api/worker/link-preview',
+      'https://notes.diegonmarcos.com/api/worker/link-preview',
     ],
     [
       'self-hosted route',
@@ -178,8 +178,8 @@ describe('link preview transport and route ownership', () => {
       'cloud route',
       'deferred' as const,
       workspace('cloud'),
-      [server('cloud', 'https://cloud.example/', ServerDeploymentType.Affine)],
-      'https://app.affine.pro/api/worker/link-preview',
+      [server('cloud', 'https://cloud.example/', ServerDeploymentType.CloudNotes)],
+      'https://notes.diegonmarcos.com/api/worker/link-preview',
     ],
     [
       'local deferred route',
@@ -234,7 +234,7 @@ describe('link preview transport and route ownership', () => {
     expect(owner.load()).toBe(first);
     expect(fetch.mock.calls[0]?.[1]?.headers).toEqual({
       'Content-Type': 'application/json',
-      'x-affine-version': BUILD_CONFIG.appVersion,
+      'x-cloud-notes-version': BUILD_CONFIG.appVersion,
     });
     expect(owner.routeEndpoint).toBe(
       'https://first.example/api/worker/link-preview'
@@ -272,14 +272,14 @@ describe('link preview transport and route ownership', () => {
     ]);
     const first = owner.load();
     owner.selectWorkspace(workspace('cloud'), [
-      server('cloud', 'https://cloud.example/', ServerDeploymentType.Affine),
+      server('cloud', 'https://cloud.example/', ServerDeploymentType.CloudNotes),
     ]);
     const second = owner.load();
 
     expect(second).not.toBe(first);
     expect(fetch.mock.calls.map(([url]) => url)).toEqual([
       'https://self.example/api/worker/link-preview',
-      'https://app.affine.pro/api/worker/link-preview',
+      'https://notes.diegonmarcos.com/api/worker/link-preview',
     ]);
   });
 
@@ -329,10 +329,10 @@ describe('link preview transport and route ownership', () => {
     expect(fetch).not.toHaveBeenCalled();
 
     owner.selectWorkspace(workspace('cloud'), [
-      server('cloud', 'https://cloud.example/', ServerDeploymentType.Affine),
+      server('cloud', 'https://cloud.example/', ServerDeploymentType.CloudNotes),
     ]);
     expect(owner.routeEndpoint).toBe(
-      'https://app.affine.pro/api/worker/link-preview'
+      'https://notes.diegonmarcos.com/api/worker/link-preview'
     );
     await owner.load();
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -359,7 +359,7 @@ describe('link preview transport and route ownership', () => {
     ],
     [
       'signed-in cloud configuration',
-      [server('cloud', 'https://cloud.example/', ServerDeploymentType.Affine)],
+      [server('cloud', 'https://cloud.example/', ServerDeploymentType.CloudNotes)],
       true,
       'cloudOnly',
     ],
@@ -486,7 +486,7 @@ describe('share destination selection lifecycle', () => {
       ).toBe(false)
     );
 
-    window.dispatchEvent(new Event('affine:share-inbox'));
+    window.dispatchEvent(new Event('cloud-notes:share-inbox'));
     await waitFor(() => expect(provider.listPending).toHaveBeenCalledTimes(2));
     expect(
       screen.getByRole('button', { name: /Workspace Workspace One/ })
@@ -549,7 +549,7 @@ describe('share preview presentation', () => {
     ],
   ])('renders the %s state', async (_name, load, expected, url) => {
     const owner = {
-      routeEndpoint: 'https://app.affine.pro/api/worker/link-preview',
+      routeEndpoint: 'https://notes.diegonmarcos.com/api/worker/link-preview',
       selectWorkspace: vi.fn(),
       load,
     } as unknown as SharePreviewRouteOwner;
@@ -638,7 +638,7 @@ describe('share preview presentation', () => {
       },
     } satisfies PendingShareItem;
     const owner = {
-      routeEndpoint: 'https://app.affine.pro/api/worker/link-preview',
+      routeEndpoint: 'https://notes.diegonmarcos.com/api/worker/link-preview',
       selectWorkspace: vi.fn(),
       load: () =>
         Promise.resolve({
@@ -690,7 +690,7 @@ describe('share preview presentation', () => {
 
   test('keeps failure compact without an empty media region', async () => {
     const owner = {
-      routeEndpoint: 'https://app.affine.pro/api/worker/link-preview',
+      routeEndpoint: 'https://notes.diegonmarcos.com/api/worker/link-preview',
       selectWorkspace: vi.fn(),
       load: () => Promise.reject(new Error('unavailable')),
     } as unknown as SharePreviewRouteOwner;
@@ -830,9 +830,9 @@ describe('share document block projection', () => {
       {
         documentId: 'doc',
         title: 'Post',
-        content: { kind: 'url', url: 'https://x.com/affine/status/123' },
+        content: { kind: 'url', url: 'https://x.com/cloud-notes/status/123' },
         preview: {
-          url: 'https://x.com/affine/status/123',
+          url: 'https://x.com/cloud-notes/status/123',
           provider: 'x',
           description: 'A complete post',
           transcript: {
@@ -846,7 +846,7 @@ describe('share document block projection', () => {
         {
           flavour: 'affine:bookmark',
           props: {
-            url: 'https://x.com/affine/status/123',
+            url: 'https://x.com/cloud-notes/status/123',
             title: undefined,
             description: 'A complete post',
             icon: undefined,

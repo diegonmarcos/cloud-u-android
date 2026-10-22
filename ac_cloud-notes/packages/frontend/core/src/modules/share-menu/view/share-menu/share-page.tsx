@@ -1,10 +1,10 @@
-import { Divider, Skeleton } from '@affine/component';
-import { Button } from '@affine/component/ui/button';
-import { useGuard } from '@affine/core/components/guard';
-import { ServerService } from '@affine/core/modules/cloud';
-import { DocService } from '@affine/core/modules/doc';
-import { ShareInfoService } from '@affine/core/modules/share-doc';
-import { useI18n } from '@affine/i18n';
+import { Divider, Skeleton } from '@cloud-notes/component';
+import { Button } from '@cloud-notes/component/ui/button';
+import { useGuard } from '@cloud-notes/core/components/guard';
+import { ServerService } from '@cloud-notes/core/modules/cloud';
+import { DocService } from '@cloud-notes/core/modules/doc';
+import { ShareInfoService } from '@cloud-notes/core/modules/share-doc';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { Suspense, useEffect } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
@@ -30,15 +30,15 @@ export const LocalSharePage = (props: ShareMenuProps) => {
             className={styles.descriptionStyle}
             style={{ maxWidth: '230px' }}
           >
-            {t['com.affine.share-menu.EnableCloudDescription']()}
+            {t['com.cloud-notes.share-menu.EnableCloudDescription']()}
           </div>
           <div>
             <Button
-              onClick={props.onEnableAffineCloud}
+              onClick={props.onEnableCloudNotesCloud}
               variant="primary"
-              data-testid="share-menu-enable-affine-cloud-button"
+              data-testid="share-menu-enable-cloud-notes-cloud-button"
             >
-              {t['Enable AFFiNE Cloud']()}
+              {t['Enable Cloud Notes']()}
             </Button>
           </div>
         </div>
@@ -51,7 +51,7 @@ export const LocalSharePage = (props: ShareMenuProps) => {
   );
 };
 
-export const AFFiNESharePage = (
+export const CloudNotesSharePage = (
   props: ShareMenuProps & {
     onClickInvite: () => void;
     onClickMembers: () => void;
@@ -98,7 +98,7 @@ export const AFFiNESharePage = (
         </div>
 
         <div className={styles.generalAccessStyle}>
-          {t['com.affine.share-menu.generalAccess']()}
+          {t['com.cloud-notes.share-menu.generalAccess']()}
         </div>
         <MembersPermission
           openPaywallModal={props.openPaywallModal}
@@ -126,7 +126,7 @@ export const SharePage = (
       // TODO(@eyhn): refactor this part
       <ErrorBoundary fallback={null}>
         <Suspense>
-          <AFFiNESharePage {...props} />
+          <CloudNotesSharePage {...props} />
         </Suspense>
       </ErrorBoundary>
     );

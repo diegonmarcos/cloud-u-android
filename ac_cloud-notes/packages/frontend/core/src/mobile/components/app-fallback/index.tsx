@@ -1,5 +1,5 @@
-import { Button, SafeArea, Skeleton } from '@affine/component';
-import { useI18n } from '@affine/i18n';
+import { Button, SafeArea, Skeleton } from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 import { cssVarV2 } from '@toeverything/theme/v2';
 
 const SectionTitleFallback = () => {

@@ -1,12 +1,12 @@
-import { notify } from '@affine/component';
-import { AuthService } from '@affine/core/modules/cloud';
+import { notify } from '@cloud-notes/component';
+import { AuthService } from '@cloud-notes/core/modules/cloud';
 import type {
   DialogComponentProps,
   WORKSPACE_DIALOG_SCHEMA,
-} from '@affine/core/modules/dialogs';
-import { UrlService } from '@affine/core/modules/url';
-import { copyTextToClipboard } from '@affine/core/utils/clipboard';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/dialogs';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { copyTextToClipboard } from '@cloud-notes/core/utils/clipboard';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect } from 'react';
 
@@ -24,12 +24,12 @@ import { SwipeDialog } from './swipe-dialog';
 import { UserProfile } from './user-profile';
 import { UserUsage } from './user-usage';
 
-const AFFINE_MOBILE_STORE_URL = BUILD_CONFIG.isIOS
-  ? 'https://apps.apple.com/app/notes-whiteboard-ai-affine/id6736937980'
+const CLOUD_NOTES_MOBILE_STORE_URL = BUILD_CONFIG.isIOS
+  ? 'https://apps.apple.com/app/notes-whiteboard-ai-cloud-notes/id6736937980'
   : BUILD_CONFIG.isAndroid
-    ? 'https://play.google.com/store/apps/details?id=app.affine.pro'
+    ? 'https://play.google.com/store/apps/details?id=app.cloudnotes.pro'
     : undefined;
-const AFFINE_DOWNLOAD_URL = 'https://affine.pro/download';
+const CLOUD_NOTES_DOWNLOAD_URL = 'https://notes.diegonmarcos.com/download';
 
 const SupportGroup = () => {
   const t = useI18n();
@@ -37,9 +37,9 @@ const SupportGroup = () => {
 
   const shareApp = useCallback(async () => {
     const shareData = {
-      title: 'AFFiNE',
-      text: t['com.affine.mobile.setting.support.invite-message'](),
-      url: AFFINE_DOWNLOAD_URL,
+      title: 'Cloud Notes',
+      text: t['com.cloud-notes.mobile.setting.support.invite-message'](),
+      url: CLOUD_NOTES_DOWNLOAD_URL,
     };
 
     if ('share' in navigator && typeof navigator.share === 'function') {
@@ -53,25 +53,25 @@ const SupportGroup = () => {
       }
     }
 
-    const copied = await copyTextToClipboard(AFFINE_DOWNLOAD_URL);
+    const copied = await copyTextToClipboard(CLOUD_NOTES_DOWNLOAD_URL);
     if (copied) {
       notify.success({ title: t['Copied link to clipboard']() });
       return;
     }
 
-    urlService.openExternal(AFFINE_DOWNLOAD_URL);
+    urlService.openExternal(CLOUD_NOTES_DOWNLOAD_URL);
   }, [t, urlService]);
 
   return (
-    <SettingGroup title={t['com.affine.mobile.setting.support.title']()}>
-      {AFFINE_MOBILE_STORE_URL ? (
+    <SettingGroup title={t['com.cloud-notes.mobile.setting.support.title']()}>
+      {CLOUD_NOTES_MOBILE_STORE_URL ? (
         <RowLayout
-          label={t['com.affine.mobile.setting.support.rate']()}
-          onClick={() => urlService.openExternal(AFFINE_MOBILE_STORE_URL)}
+          label={t['com.cloud-notes.mobile.setting.support.rate']()}
+          onClick={() => urlService.openExternal(CLOUD_NOTES_MOBILE_STORE_URL)}
         />
       ) : null}
       <RowLayout
-        label={t['com.affine.mobile.setting.support.invite']()}
+        label={t['com.cloud-notes.mobile.setting.support.invite']()}
         onClick={() => void shareApp()}
       />
     </SettingGroup>
@@ -95,7 +95,7 @@ const DangerZoneGroup = ({
     <SettingGroup
       title={
         <span className={styles.dangerZoneTitle}>
-          {t['com.affine.mobile.setting.danger-zone.title']()}
+          {t['com.cloud-notes.mobile.setting.danger-zone.title']()}
         </span>
       }
     >
@@ -139,7 +139,7 @@ export const SettingDialog = ({
 
   return (
     <SwipeDialog
-      title={t['com.affine.mobile.setting.header-title']()}
+      title={t['com.cloud-notes.mobile.setting.header-title']()}
       open
       onOpenChange={() => close()}
     >

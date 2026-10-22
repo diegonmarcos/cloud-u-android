@@ -1,4 +1,4 @@
-import type { GetDocPageAnalyticsQuery } from '@affine/graphql';
+import type { GetDocPageAnalyticsQuery } from '@cloud-notes/graphql';
 
 export const ANALYTICS_WINDOW_OPTIONS = [7, 14, 28, 60, 90] as const;
 export const DEFAULT_ANALYTICS_WINDOW_DAYS = 28;

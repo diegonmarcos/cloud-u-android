@@ -12,942 +12,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@affine-test/affine-cloud-copilot@workspace:tests/affine-cloud-copilot":
-  version: 0.0.0-use.local
-  resolution: "@affine-test/affine-cloud-copilot@workspace:tests/affine-cloud-copilot"
-  dependencies:
-    "@affine-test/kit": "workspace:*"
-    "@playwright/test": "npm:=1.58.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine-test/affine-cloud@workspace:tests/affine-cloud":
-  version: 0.0.0-use.local
-  resolution: "@affine-test/affine-cloud@workspace:tests/affine-cloud"
-  dependencies:
-    "@affine-test/kit": "workspace:*"
-    "@playwright/test": "npm:=1.58.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine-test/affine-desktop-cloud@workspace:tests/affine-desktop-cloud":
-  version: 0.0.0-use.local
-  resolution: "@affine-test/affine-desktop-cloud@workspace:tests/affine-desktop-cloud"
-  dependencies:
-    "@affine-test/kit": "workspace:*"
-    "@playwright/test": "npm:=1.58.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine-test/affine-desktop@workspace:tests/affine-desktop":
-  version: 0.0.0-use.local
-  resolution: "@affine-test/affine-desktop@workspace:tests/affine-desktop"
-  dependencies:
-    "@affine-test/kit": "workspace:*"
-    "@affine/electron-api": "workspace:*"
-    "@playwright/test": "npm:=1.58.2"
-    "@types/fs-extra": "npm:^11.0.4"
-    fs-extra: "npm:^11.2.0"
-    playwright: "npm:=1.58.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine-test/affine-local@workspace:tests/affine-local":
-  version: 0.0.0-use.local
-  resolution: "@affine-test/affine-local@workspace:tests/affine-local"
-  dependencies:
-    "@affine-test/kit": "workspace:*"
-    "@playwright/test": "npm:=1.58.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine-test/affine-mobile@workspace:tests/affine-mobile":
-  version: 0.0.0-use.local
-  resolution: "@affine-test/affine-mobile@workspace:tests/affine-mobile"
-  dependencies:
-    "@affine-test/kit": "workspace:*"
-    "@playwright/test": "npm:=1.58.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine-test/blocksuite@workspace:tests/blocksuite":
-  version: 0.0.0-use.local
-  resolution: "@affine-test/blocksuite@workspace:tests/blocksuite"
-  dependencies:
-    "@affine-test/kit": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-    "@blocksuite/integration-test": "workspace:*"
-    "@playwright/test": "npm:=1.58.2"
-    "@toeverything/theme": "npm:^1.1.23"
-    json-stable-stringify: "npm:^1.2.1"
-  languageName: unknown
-  linkType: soft
-
-"@affine-test/kit@workspace:*, @affine-test/kit@workspace:tests/kit":
-  version: 0.0.0-use.local
-  resolution: "@affine-test/kit@workspace:tests/kit"
-  dependencies:
-    "@affine-tools/utils": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-    "@node-rs/argon2": "npm:^2.0.2"
-    "@playwright/test": "npm:=1.58.2"
-    "@toeverything/infra": "workspace:*"
-    express: "npm:^5.1.0"
-    http-proxy-middleware: "npm:^3.0.5"
-  peerDependencies:
-    "@playwright/test": "*"
-    express: "*"
-    http-proxy-middleware: "*"
-  languageName: unknown
-  linkType: soft
-
-"@affine-tools/cli@workspace:*, @affine-tools/cli@workspace:tools/cli":
-  version: 0.0.0-use.local
-  resolution: "@affine-tools/cli@workspace:tools/cli"
-  dependencies:
-    "@affine-tools/utils": "workspace:*"
-    "@affine/s3-compat": "workspace:*"
-    "@napi-rs/simple-git": "npm:^1.0.0"
-    "@rspack/core": "npm:^2.0.8"
-    "@rspack/dev-server": "npm:^2.1.0"
-    "@sentry/webpack-plugin": "npm:^5.3.0"
-    "@swc/core": "npm:^1.10.1"
-    "@tailwindcss/postcss": "npm:^4.3.0"
-    "@types/lodash-es": "npm:^4.17.12"
-    "@types/mime-types": "npm:^3.0.0"
-    "@types/node": "npm:^22.0.0"
-    "@vanilla-extract/webpack-plugin": "npm:^2.3.15"
-    autoprefixer: "npm:^10.4.20"
-    clipanion: "npm:^3.2.1"
-    css-loader: "npm:^7.1.4"
-    cssnano: "npm:^7.0.6"
-    inquirer: "npm:^12.3.0"
-    jsonc-parser: "npm:^3.3.1"
-    lodash-es: "npm:^4.17.23"
-    mime-types: "npm:^3.0.0"
-    oxfmt: "npm:0.63.0"
-    postcss: "npm:^8.5.18"
-    postcss-loader: "npm:^8.2.1"
-    postcss-selector-parser: "npm:^7.1.0"
-    source-map-loader: "npm:^5.0.0"
-    style-loader: "npm:^4.0.0"
-    swc-loader: "npm:^0.2.6"
-    tailwindcss: "npm:^4.1.17"
-    tsx: "npm:^4.21.0"
-    typanion: "npm:^3.14.0"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  bin:
-    affine: ./bin/cli.js
-    r: ./bin/runner.js
-  languageName: unknown
-  linkType: soft
-
-"@affine-tools/utils@workspace:*, @affine-tools/utils@workspace:tools/utils":
-  version: 0.0.0-use.local
-  resolution: "@affine-tools/utils@workspace:tools/utils"
-  dependencies:
-    "@types/lodash-es": "npm:^4.17.12"
-    "@types/node": "npm:^22.0.0"
-    chalk: "npm:^5.3.0"
-    lodash-es: "npm:^4.17.23"
-    oxfmt: "npm:0.63.0"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine/admin@workspace:packages/frontend/admin":
-  version: 0.0.0-use.local
-  resolution: "@affine/admin@workspace:packages/frontend/admin"
-  dependencies:
-    "@affine/component": "workspace:*"
-    "@affine/core": "workspace:*"
-    "@affine/error": "workspace:*"
-    "@affine/graphql": "workspace:*"
-    "@affine/routes": "workspace:*"
-    "@blocksuite/icons": "npm:^2.2.17"
-    "@radix-ui/react-accordion": "npm:^1.2.2"
-    "@radix-ui/react-alert-dialog": "npm:^1.1.3"
-    "@radix-ui/react-aspect-ratio": "npm:^1.1.1"
-    "@radix-ui/react-avatar": "npm:^1.1.2"
-    "@radix-ui/react-checkbox": "npm:^1.1.3"
-    "@radix-ui/react-collapsible": "npm:^1.1.2"
-    "@radix-ui/react-context-menu": "npm:^2.2.3"
-    "@radix-ui/react-dialog": "npm:^1.1.3"
-    "@radix-ui/react-dropdown-menu": "npm:^2.1.3"
-    "@radix-ui/react-hover-card": "npm:^1.1.3"
-    "@radix-ui/react-label": "npm:^2.1.1"
-    "@radix-ui/react-menubar": "npm:^1.1.3"
-    "@radix-ui/react-navigation-menu": "npm:^1.2.2"
-    "@radix-ui/react-popover": "npm:^1.1.3"
-    "@radix-ui/react-progress": "npm:^1.1.1"
-    "@radix-ui/react-radio-group": "npm:^1.2.2"
-    "@radix-ui/react-scroll-area": "npm:^1.2.2"
-    "@radix-ui/react-select": "npm:^2.1.3"
-    "@radix-ui/react-separator": "npm:^1.1.1"
-    "@radix-ui/react-slider": "npm:^1.2.2"
-    "@radix-ui/react-slot": "npm:^1.1.1"
-    "@radix-ui/react-switch": "npm:^1.1.2"
-    "@radix-ui/react-tabs": "npm:^1.1.2"
-    "@radix-ui/react-toast": "npm:^1.2.3"
-    "@radix-ui/react-toggle": "npm:^1.1.1"
-    "@radix-ui/react-toggle-group": "npm:^1.1.1"
-    "@radix-ui/react-tooltip": "npm:^1.1.5"
-    "@sentry/react": "npm:^10.53.1"
-    "@tanstack/react-table": "npm:^8.20.5"
-    "@testing-library/react": "npm:^16.3.2"
-    "@toeverything/theme": "npm:^1.1.23"
-    "@types/lodash-es": "npm:^4.17.12"
-    class-variance-authority: "npm:^0.7.1"
-    clsx: "npm:^2.1.1"
-    cmdk: "npm:^1.0.4"
-    embla-carousel-react: "npm:^8.5.1"
-    input-otp: "npm:^1.4.1"
-    lodash-es: "npm:^4.17.23"
-    lucide-react: "npm:^0.508.0"
-    next-themes: "npm:^0.4.4"
-    react: "npm:^19.2.1"
-    react-day-picker: "npm:^9.4.3"
-    react-dom: "npm:^19.2.1"
-    react-hook-form: "npm:^7.54.1"
-    react-resizable-panels: "npm:^3.0.6"
-    react-router-dom: "npm:^7.18.2"
-    recharts: "npm:^2.15.4"
-    sonner: "npm:^2.0.7"
-    swr: "npm:^2.3.7"
-    tailwind-merge: "npm:^3.4.0"
-    tailwindcss: "npm:^4.1.17"
-    tailwindcss-animate: "npm:^1.0.7"
-    vaul: "npm:^1.1.2"
-    vitest: "npm:^4.1.8"
-  languageName: unknown
-  linkType: soft
-
-"@affine/android@workspace:packages/frontend/apps/android":
-  version: 0.0.0-use.local
-  resolution: "@affine/android@workspace:packages/frontend/apps/android"
-  dependencies:
-    "@affine/component": "workspace:*"
-    "@affine/core": "workspace:*"
-    "@affine/env": "workspace:*"
-    "@affine/i18n": "workspace:*"
-    "@affine/mobile-shared": "workspace:*"
-    "@affine/nbstore": "workspace:*"
-    "@affine/track": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-    "@capacitor/android": "npm:^8.4.2"
-    "@capacitor/app": "npm:^8.0.0"
-    "@capacitor/cli": "npm:^8.4.2"
-    "@capacitor/core": "npm:^8.4.2"
-    "@capacitor/keyboard": "npm:^8.0.0"
-    "@capacitor/status-bar": "npm:^8.0.0"
-    "@capgo/inappbrowser": "npm:^8.6.14"
-    "@toeverything/infra": "workspace:*"
-    "@types/react": "npm:^19.0.1"
-    "@types/react-dom": "npm:^19.0.2"
-    async-call-rpc: "npm:^6.4.2"
-    idb: "npm:^8.0.0"
-    next-themes: "npm:^0.4.4"
-    react: "npm:^19.2.1"
-    react-dom: "npm:^19.2.1"
-    react-router-dom: "npm:^6.30.4"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine/auth@workspace:*, @affine/auth@workspace:packages/common/auth":
-  version: 0.0.0-use.local
-  resolution: "@affine/auth@workspace:packages/common/auth"
-  dependencies:
-    vitest: "npm:^4.1.8"
-  languageName: unknown
-  linkType: soft
-
-"@affine/changelog@workspace:tools/changelog":
-  version: 0.0.0-use.local
-  resolution: "@affine/changelog@workspace:tools/changelog"
-  dependencies:
-    "@napi-rs/simple-git": "npm:^1.0.0"
-    "@slack/web-api": "npm:^8.0.0"
-    "@types/node": "npm:^22.0.0"
-    changelogithub: "npm:^13.0.0"
-    jsx-slack: "npm:^6.1.2"
-    marked: "npm:^15.0.12"
-  languageName: unknown
-  linkType: soft
-
-"@affine/commitlint-config@workspace:tools/commitlint":
-  version: 0.0.0-use.local
-  resolution: "@affine/commitlint-config@workspace:tools/commitlint"
-  dependencies:
-    "@commitlint/cli": "npm:^19.8.1"
-    "@commitlint/config-conventional": "npm:^19.8.1"
-    commitlint: "npm:^19.6.0"
-  languageName: unknown
-  linkType: soft
-
-"@affine/component@workspace:*, @affine/component@workspace:packages/frontend/component":
-  version: 0.0.0-use.local
-  resolution: "@affine/component@workspace:packages/frontend/component"
-  dependencies:
-    "@affine-tools/utils": "workspace:*"
-    "@affine/debug": "workspace:*"
-    "@affine/error": "workspace:*"
-    "@affine/graphql": "workspace:*"
-    "@affine/i18n": "workspace:*"
-    "@atlaskit/pragmatic-drag-and-drop": "npm:^2.0.0"
-    "@atlaskit/pragmatic-drag-and-drop-hitbox": "npm:^2.0.0"
-    "@blocksuite/icons": "npm:^2.2.17"
-    "@emotion/react": "npm:^11.14.0"
-    "@emotion/styled": "npm:^11.14.0"
-    "@radix-ui/react-avatar": "npm:^1.1.11"
-    "@radix-ui/react-collapsible": "npm:^1.1.12"
-    "@radix-ui/react-context-menu": "npm:^2.2.16"
-    "@radix-ui/react-dialog": "npm:^1.1.15"
-    "@radix-ui/react-dropdown-menu": "npm:^2.1.16"
-    "@radix-ui/react-popover": "npm:^1.1.15"
-    "@radix-ui/react-progress": "npm:^1.1.8"
-    "@radix-ui/react-radio-group": "npm:^1.2.4"
-    "@radix-ui/react-scroll-area": "npm:^1.2.10"
-    "@radix-ui/react-slider": "npm:^1.2.4"
-    "@radix-ui/react-slot": "npm:^1.1.2"
-    "@radix-ui/react-tabs": "npm:^1.1.13"
-    "@radix-ui/react-toast": "npm:^1.2.15"
-    "@radix-ui/react-tooltip": "npm:^1.1.8"
-    "@radix-ui/react-visually-hidden": "npm:^1.1.3"
-    "@storybook/react": "npm:^10.2.14"
-    "@storybook/react-vite": "npm:^10.2.14"
-    "@testing-library/dom": "npm:^10.4.0"
-    "@testing-library/react": "npm:^16.1.0"
-    "@toeverything/theme": "npm:^1.1.23"
-    "@types/bytes": "npm:^3.1.5"
-    "@types/react": "npm:^19.0.1"
-    "@types/react-dom": "npm:^19.0.2"
-    "@vanilla-extract/css": "npm:^1.17.0"
-    "@vanilla-extract/dynamic": "npm:^2.1.2"
-    bytes: "npm:^3.1.2"
-    check-password-strength: "npm:^3.0.0"
-    clsx: "npm:^2.1.1"
-    dayjs: "npm:^1.11.13"
-    emojibase-data: "npm:^16.0.3"
-    foxact: "npm:^0.2.49"
-    jotai: "npm:^2.10.3"
-    lit: "npm:^3.2.1"
-    lodash-es: "npm:^4.17.23"
-    lottie-react: "npm:^2.4.0"
-    lottie-web: "npm:^5.12.2"
-    nanoid: "npm:^5.1.6"
-    next-themes: "npm:^0.4.4"
-    react: "npm:^19.2.1"
-    react-dom: "npm:19.2.1"
-    react-paginate: "npm:^8.3.0"
-    react-router-dom: "npm:^6.30.4"
-    react-transition-state: "npm:^2.2.0"
-    sonner: "npm:^2.0.7"
-    storybook: "npm:^10.2.14"
-    swr: "npm:^2.3.7"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    unplugin-swc: "npm:^1.5.9"
-    vite: "npm:^7.3.5"
-    vitest: "npm:^4.1.8"
-    zod: "npm:^3.25.76"
-  peerDependencies:
-    "@blocksuite/affine": "*"
-    "@swc/core": ^1.0.0
-    react: ^19.2.1
-    react-dom: ^19.2.1
-  languageName: unknown
-  linkType: soft
-
-"@affine/copilot-result@workspace:tools/copilot-result":
-  version: 0.0.0-use.local
-  resolution: "@affine/copilot-result@workspace:tools/copilot-result"
-  dependencies:
-    "@slack/web-api": "npm:^8.0.0"
-    "@types/node": "npm:^22.0.0"
-    jsx-slack: "npm:^6.1.2"
-    marked: "npm:^15.0.12"
-  languageName: unknown
-  linkType: soft
-
-"@affine/core@workspace:*, @affine/core@workspace:packages/frontend/core":
-  version: 0.0.0-use.local
-  resolution: "@affine/core@workspace:packages/frontend/core"
-  dependencies:
-    "@affine/component": "workspace:*"
-    "@affine/debug": "workspace:*"
-    "@affine/electron-api": "workspace:*"
-    "@affine/env": "workspace:*"
-    "@affine/error": "workspace:*"
-    "@affine/graphql": "workspace:*"
-    "@affine/i18n": "workspace:*"
-    "@affine/nbstore": "workspace:*"
-    "@affine/reader": "workspace:*"
-    "@affine/templates": "workspace:*"
-    "@affine/track": "workspace:*"
-    "@atlaskit/pragmatic-drag-and-drop": "npm:^2.0.0"
-    "@blocksuite/affine": "workspace:*"
-    "@blocksuite/affine-block-root": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-graph": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/data-view": "workspace:*"
-    "@blocksuite/global": "workspace:*"
-    "@blocksuite/icons": "npm:^2.2.17"
-    "@blocksuite/std": "workspace:*"
-    "@emotion/cache": "npm:^11.14.0"
-    "@emotion/css": "npm:^11.13.5"
-    "@floating-ui/dom": "npm:^1.6.13"
-    "@juggle/resize-observer": "npm:^3.4.0"
-    "@lottiefiles/dotlottie-wc": "npm:^0.9.4"
-    "@marsidev/react-turnstile": "npm:^1.1.0"
-    "@myriaddreamin/typst-ts-renderer": "npm:^0.7.0-rc2"
-    "@myriaddreamin/typst-ts-web-compiler": "npm:^0.7.0-rc2"
-    "@myriaddreamin/typst.ts": "npm:^0.7.0-rc2"
-    "@playwright/test": "npm:=1.58.2"
-    "@preact/signals-core": "npm:^1.8.0"
-    "@radix-ui/react-collapsible": "npm:^1.1.2"
-    "@radix-ui/react-dialog": "npm:^1.1.3"
-    "@radix-ui/react-popover": "npm:^1.1.3"
-    "@radix-ui/react-scroll-area": "npm:^1.2.2"
-    "@radix-ui/react-slot": "npm:^1.1.1"
-    "@radix-ui/react-toolbar": "npm:^1.1.1"
-    "@sentry/react": "npm:^10.53.1"
-    "@testing-library/dom": "npm:^10.4.0"
-    "@testing-library/react": "npm:^16.1.0"
-    "@toeverything/infra": "workspace:*"
-    "@toeverything/mermaid-wasm": "npm:^0.1.0"
-    "@toeverything/pdf-viewer": "npm:^0.1.1"
-    "@toeverything/theme": "npm:^1.1.23"
-    "@types/bytes": "npm:^3.1.5"
-    "@types/image-blob-reduce": "npm:^4.1.4"
-    "@types/lodash-es": "npm:^4.17.12"
-    "@types/semver": "npm:^7"
-    "@vanilla-extract/css": "npm:^1.17.0"
-    "@vanilla-extract/dynamic": "npm:^2.1.2"
-    animejs: "npm:^4.0.0"
-    bytes: "npm:^3.1.2"
-    clsx: "npm:^2.1.1"
-    cmdk: "npm:^1.0.4"
-    core-js: "npm:^3.39.0"
-    dayjs: "npm:^1.11.13"
-    dompurify: "npm:^3.4.11"
-    eventemitter2: "npm:^6.4.9"
-    fake-indexeddb: "npm:^6.0.0"
-    file-type: "npm:^21.0.0"
-    filesize: "npm:^10.1.6"
-    foxact: "npm:^0.2.49"
-    fuse.js: "npm:^7.0.0"
-    graphemer: "npm:^1.4.0"
-    graphql: "npm:^16.9.0"
-    happy-dom: "npm:^20.3.0"
-    history: "npm:^5.3.0"
-    idb: "npm:^8.0.0"
-    image-blob-reduce: "npm:^4.1.0"
-    is-svg: "npm:^6.1.0"
-    jotai: "npm:^2.10.3"
-    jotai-scope: "npm:^0.7.2"
-    katex: "npm:^0.16.27"
-    lit: "npm:^3.2.1"
-    lodash-es: "npm:^4.17.23"
-    lottie-react: "npm:^2.4.0"
-    mermaid: "npm:^11.15.0"
-    mp4-muxer: "npm:^5.2.2"
-    nanoid: "npm:^5.1.6"
-    next-themes: "npm:^0.4.4"
-    query-string: "npm:^9.1.1"
-    react: "npm:^19.2.1"
-    react-dom: "npm:^19.2.1"
-    react-error-boundary: "npm:^6.0.0"
-    react-router-dom: "npm:^6.30.4"
-    react-transition-state: "npm:^2.2.0"
-    react-virtuoso: "npm:^4.12.3"
-    recharts: "npm:^2.15.4"
-    rxjs: "npm:^7.8.2"
-    semver: "npm:^7.7.3"
-    shiki: "npm:^3.19.0"
-    socket.io-client: "npm:^4.8.3"
-    swr: "npm:^2.3.7"
-    tinykeys: "patch:tinykeys@npm%3A2.1.0#~/.yarn/patches/tinykeys-npm-2.1.0-819feeaed0.patch"
-    vite: "npm:^7.3.5"
-    vitest: "npm:^4.1.8"
-    y-protocols: "npm:^1.0.6"
-    yjs: "npm:^13.6.27"
-    zod: "npm:^3.25.76"
-  languageName: unknown
-  linkType: soft
-
-"@affine/debug@workspace:*, @affine/debug@workspace:packages/common/debug":
-  version: 0.0.0-use.local
-  resolution: "@affine/debug@workspace:packages/common/debug"
-  dependencies:
-    "@types/debug": "npm:^4.1.12"
-    debug: "npm:^4.4.0"
-    vitest: "npm:^4.1.8"
-  languageName: unknown
-  linkType: soft
-
-"@affine/doc-diff@workspace:tools/doc-diff":
-  version: 0.0.0-use.local
-  resolution: "@affine/doc-diff@workspace:tools/doc-diff"
-  dependencies:
-    "@affine-tools/cli": "workspace:*"
-    "@types/node": "npm:^22.0.0"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    yjs: "npm:^13.6.27"
-  languageName: unknown
-  linkType: soft
-
-"@affine/docs@workspace:docs/reference":
-  version: 0.0.0-use.local
-  resolution: "@affine/docs@workspace:docs/reference"
-  dependencies:
-    nodemon: "npm:^3.1.14"
-    serve: "npm:^14.2.6"
-    typedoc: "npm:^0.28.18"
-  languageName: unknown
-  linkType: soft
-
-"@affine/electron-api@workspace:*, @affine/electron-api@workspace:packages/frontend/electron-api":
-  version: 0.0.0-use.local
-  resolution: "@affine/electron-api@workspace:packages/frontend/electron-api"
-  dependencies:
-    "@affine/electron": "workspace:*"
-  languageName: unknown
-  linkType: soft
-
-"@affine/electron-renderer@workspace:packages/frontend/apps/electron-renderer":
-  version: 0.0.0-use.local
-  resolution: "@affine/electron-renderer@workspace:packages/frontend/apps/electron-renderer"
-  dependencies:
-    "@affine/component": "workspace:*"
-    "@affine/core": "workspace:*"
-    "@affine/debug": "workspace:*"
-    "@affine/electron-api": "workspace:*"
-    "@affine/i18n": "workspace:*"
-    "@affine/nbstore": "workspace:*"
-    "@affine/track": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-    "@emotion/react": "npm:^11.14.0"
-    "@toeverything/infra": "workspace:*"
-    "@toeverything/theme": "npm:^1.1.23"
-    "@types/react": "npm:^19.0.1"
-    "@types/react-dom": "npm:^19.0.2"
-    "@vanilla-extract/css": "npm:^1.17.0"
-    next-themes: "npm:^0.4.4"
-    react: "npm:^19.2.1"
-    react-dom: "npm:^19.2.1"
-    react-router-dom: "npm:^6.30.4"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    uuid: "npm:^14.0.0"
-  languageName: unknown
-  linkType: soft
-
-"@affine/electron@workspace:*, @affine/electron@workspace:packages/frontend/apps/electron":
-  version: 0.0.0-use.local
-  resolution: "@affine/electron@workspace:packages/frontend/apps/electron"
-  dependencies:
-    "@affine-tools/utils": "workspace:*"
-    "@affine/auth": "workspace:*"
-    "@affine/i18n": "workspace:*"
-    "@affine/native": "workspace:*"
-    "@affine/nbstore": "workspace:*"
-    "@electron-forge/cli": "npm:^7.11.1"
-    "@electron-forge/core": "npm:^7.11.1"
-    "@electron-forge/maker-deb": "npm:^7.11.1"
-    "@electron-forge/maker-dmg": "npm:^7.11.1"
-    "@electron-forge/maker-flatpak": "npm:^7.11.1"
-    "@electron-forge/maker-squirrel": "npm:^7.11.1"
-    "@electron-forge/maker-zip": "npm:^7.11.1"
-    "@electron-forge/plugin-auto-unpack-natives": "npm:^7.11.1"
-    "@electron-forge/plugin-fuses": "npm:^7.11.1"
-    "@electron-forge/shared-types": "npm:^7.11.1"
-    "@reforged/maker-appimage": "npm:^5.2.0"
-    "@sentry/electron": "npm:^7.13.0"
-    "@sentry/esbuild-plugin": "npm:^5.3.0"
-    "@toeverything/infra": "workspace:*"
-    "@types/set-cookie-parser": "npm:^2.4.10"
-    app-builder-lib: "npm:^26.15.0"
-    async-call-rpc: "npm:^6.4.2"
-    builder-util-runtime: "npm:^9.7.0"
-    cross-env: "npm:^10.1.0"
-    debug: "npm:^4.4.0"
-    electron: "npm:^39.0.0"
-    electron-log: "npm:^5.4.3"
-    electron-squirrel-startup: "npm:1.0.1"
-    electron-updater: "npm:^6.8.9"
-    electron-window-state: "npm:^5.0.3"
-    esbuild: "npm:^0.28.0"
-    fs-extra: "npm:^11.2.0"
-    glob: "npm:^11.0.0"
-    link-preview-js: "npm:^4.0.0"
-    lodash-es: "npm:^4.17.23"
-    msw: "npm:^2.13.2"
-    nanoid: "npm:^5.1.6"
-    rxjs: "npm:^7.8.2"
-    semver: "npm:^7.7.3"
-    set-cookie-parser: "npm:^2.7.1"
-    tree-kill: "npm:^1.2.2"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    uuid: "npm:^14.0.0"
-    vitest: "npm:^4.1.8"
-    yjs: "npm:^13.6.27"
-    zod: "npm:^3.25.76"
-  languageName: unknown
-  linkType: soft
-
-"@affine/env@workspace:*, @affine/env@workspace:packages/common/env":
-  version: 0.0.0-use.local
-  resolution: "@affine/env@workspace:packages/common/env"
-  dependencies:
-    vitest: "npm:^4.1.8"
-    zod: "npm:^3.25.76"
-  peerDependencies:
-    "@affine/templates": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-  languageName: unknown
-  linkType: soft
-
-"@affine/error@workspace:*, @affine/error@workspace:packages/common/error":
-  version: 0.0.0-use.local
-  resolution: "@affine/error@workspace:packages/common/error"
-  dependencies:
-    vitest: "npm:^4.1.8"
-  peerDependencies:
-    "@affine/graphql": "workspace:*"
-    graphql: ^16.9.0
-  languageName: unknown
-  linkType: soft
-
-"@affine/graphql@workspace:*, @affine/graphql@workspace:packages/common/graphql":
-  version: 0.0.0-use.local
-  resolution: "@affine/graphql@workspace:packages/common/graphql"
-  dependencies:
-    "@affine/debug": "workspace:*"
-    "@affine/error": "workspace:*"
-    "@graphql-codegen/cli": "npm:^6.2.1"
-    "@graphql-codegen/typescript": "npm:^5.0.9"
-    "@graphql-codegen/typescript-operations": "npm:^5.0.9"
-    "@types/lodash-es": "npm:^4.17.12"
-    graphql: "npm:^16.9.0"
-    lodash: "npm:^4.18.1"
-    lodash-es: "npm:^4.17.23"
-    oxfmt: "npm:0.63.0"
-    vitest: "npm:^4.1.8"
-  languageName: unknown
-  linkType: soft
-
-"@affine/i18n@workspace:*, @affine/i18n@workspace:packages/frontend/i18n":
-  version: 0.0.0-use.local
-  resolution: "@affine/i18n@workspace:packages/frontend/i18n"
-  dependencies:
-    "@affine-tools/cli": "workspace:*"
-    "@affine-tools/utils": "workspace:*"
-    "@affine/debug": "workspace:*"
-    "@magic-works/i18n-codegen": "npm:^0.6.1"
-    dayjs: "npm:^1.11.13"
-    glob: "npm:^11.0.0"
-    i18next: "npm:^25.0.0"
-    react: "npm:^19.2.1"
-    react-i18next: "npm:^15.2.0"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    vitest: "npm:^4.1.8"
-  languageName: unknown
-  linkType: soft
-
-"@affine/ios@workspace:packages/frontend/apps/ios":
-  version: 0.0.0-use.local
-  resolution: "@affine/ios@workspace:packages/frontend/apps/ios"
-  dependencies:
-    "@affine-tools/cli": "workspace:*"
-    "@affine-tools/utils": "workspace:*"
-    "@affine/component": "workspace:*"
-    "@affine/core": "workspace:*"
-    "@affine/env": "workspace:*"
-    "@affine/graphql": "workspace:*"
-    "@affine/i18n": "workspace:*"
-    "@affine/mobile-shared": "workspace:*"
-    "@affine/nbstore": "workspace:*"
-    "@affine/track": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-    "@capacitor/app": "npm:^8.0.0"
-    "@capacitor/browser": "npm:^8.0.0"
-    "@capacitor/cli": "npm:^8.4.2"
-    "@capacitor/core": "npm:^8.4.2"
-    "@capacitor/haptics": "npm:^8.0.0"
-    "@capacitor/ios": "npm:^8.4.2"
-    "@capacitor/keyboard": "npm:^8.0.0"
-    "@toeverything/infra": "workspace:^"
-    "@types/react": "npm:^19.0.1"
-    "@types/react-dom": "npm:^19.0.2"
-    async-call-rpc: "npm:^6.4.2"
-    capacitor-plugin-app-tracking-transparency: "npm:^3.0.0"
-    idb: "npm:^8.0.0"
-    next-themes: "npm:^0.4.4"
-    react: "npm:^19.2.1"
-    react-dom: "npm:^19.2.1"
-    react-router-dom: "npm:^6.30.4"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine/mobile-shared@workspace:*, @affine/mobile-shared@workspace:packages/frontend/apps/mobile-shared":
-  version: 0.0.0-use.local
-  resolution: "@affine/mobile-shared@workspace:packages/frontend/apps/mobile-shared"
-  dependencies:
-    "@affine/core": "workspace:*"
-    "@capacitor/core": "npm:^8.4.2"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    vitest: "npm:^4.1.8"
-  languageName: unknown
-  linkType: soft
-
-"@affine/mobile@workspace:packages/frontend/apps/mobile":
-  version: 0.0.0-use.local
-  resolution: "@affine/mobile@workspace:packages/frontend/apps/mobile"
-  dependencies:
-    "@affine/component": "workspace:*"
-    "@affine/core": "workspace:*"
-    "@affine/env": "workspace:*"
-    "@affine/nbstore": "workspace:*"
-    "@affine/track": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-    "@toeverything/infra": "workspace:*"
-    "@types/react": "npm:^19.0.1"
-    "@types/react-dom": "npm:^19.0.2"
-    react: "npm:^19.2.1"
-    react-dom: "npm:^19.2.1"
-    react-router-dom: "npm:^6.30.4"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine/monorepo@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "@affine/monorepo@workspace:."
-  dependencies:
-    "@affine-tools/cli": "workspace:*"
-    "@capacitor/cli": "npm:^8.4.2"
-    "@faker-js/faker": "npm:^10.1.0"
-    "@istanbuljs/schema": "npm:^0.1.3"
-    "@playwright/test": "npm:=1.58.2"
-    "@taplo/cli": "npm:^0.7.0"
-    "@toeverything/infra": "workspace:*"
-    "@types/node": "npm:^22.0.0"
-    "@typescript/native": "npm:typescript@7.0.2"
-    "@vanilla-extract/vite-plugin": "npm:^5.0.0"
-    "@vitest/browser": "npm:^4.1.10"
-    "@vitest/coverage-istanbul": "npm:^4.1.10"
-    "@vitest/ui": "npm:^4.1.10"
-    electron: "npm:^39.0.0"
-    eslint: "npm:9.39.2"
-    eslint-plugin-import-x: "npm:^4.16.1"
-    eslint-plugin-lit: "npm:^2.2.1"
-    eslint-plugin-react: "npm:^7.37.5"
-    eslint-plugin-react-hooks: "npm:^7.0.1"
-    eslint-plugin-simple-import-sort: "npm:^12.1.1"
-    eslint-plugin-sonarjs: "npm:^4.0.2"
-    happy-dom: "npm:^20.0.0"
-    husky: "npm:^9.1.7"
-    lint-staged: "npm:^16.0.0"
-    msw: "npm:^2.13.2"
-    oxfmt: "npm:0.63.0"
-    oxlint: "npm:1.78.0"
-    oxlint-tsgolint: "npm:7.0.2001"
-    semver: "npm:^7.7.3"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    unplugin-swc: "npm:^1.5.9"
-    vite: "npm:^7.3.5"
-    vitest: "npm:^4.1.10"
-  dependenciesMeta:
-    "@apollo/protobufjs":
-      built: false
-    "@prisma/client":
-      built: true
-    "@prisma/engines":
-      built: true
-    "@scarf/scarf":
-      built: false
-    "@sentry/cli":
-      built: true
-    "@swc/core":
-      built: false
-    core-js:
-      built: false
-    electron:
-      built: true
-    electron-winstaller:
-      built: true
-    esbuild:
-      built: true
-    msgpackr-extract:
-      built: false
-    msw:
-      built: false
-    prisma:
-      built: false
-    protobufjs:
-      built: false
-    unrs-resolver:
-      built: false
-  languageName: unknown
-  linkType: soft
-
-"@affine/native@workspace:*, @affine/native@workspace:packages/frontend/native":
-  version: 0.0.0-use.local
-  resolution: "@affine/native@workspace:packages/frontend/native"
-  dependencies:
-    "@napi-rs/cli": "npm:3.5.0"
-    "@napi-rs/whisper": "npm:^0.0.4"
-    "@types/node": "npm:^22.0.0"
-    ava: "npm:^7.0.0"
-    rxjs: "npm:^7.8.2"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine/nbstore@workspace:*, @affine/nbstore@workspace:packages/common/nbstore":
-  version: 0.0.0-use.local
-  resolution: "@affine/nbstore@workspace:packages/common/nbstore"
-  dependencies:
-    "@affine/error": "workspace:*"
-    "@affine/graphql": "workspace:*"
-    "@affine/reader": "workspace:*"
-    "@affine/realtime": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-    "@toeverything/infra": "workspace:*"
-    eventemitter2: "npm:^6.4.9"
-    fake-indexeddb: "npm:^6.0.0"
-    graphemer: "npm:^1.4.0"
-    idb: "npm:^8.0.0"
-    lodash-es: "npm:^4.17.23"
-    nanoid: "npm:^5.1.6"
-    rxjs: "npm:^7.8.2"
-    socket.io-client: "npm:^4.8.3"
-    uuid: "npm:^14.0.0"
-    vitest: "npm:^4.1.8"
-    y-protocols: "npm:^1.0.6"
-    yjs: "npm:^13.6.27"
-  peerDependencies:
-    "@affine/error": "workspace:*"
-    "@affine/graphql": "workspace:*"
-    "@affine/realtime": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-    idb: ^8.0.0
-    socket.io-client: ^4.8.3
-  languageName: unknown
-  linkType: soft
-
-"@affine/playstore-auto-bump@workspace:tools/playstore-auto-bump":
-  version: 0.0.0-use.local
-  resolution: "@affine/playstore-auto-bump@workspace:tools/playstore-auto-bump"
-  dependencies:
-    "@affine-tools/cli": "workspace:*"
-    "@affine-tools/utils": "workspace:*"
-    "@googleapis/androidpublisher": "npm:^36.0.0"
-    "@types/node": "npm:^22.0.0"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  languageName: unknown
-  linkType: soft
-
-"@affine/reader@workspace:*, @affine/reader@workspace:packages/common/reader":
-  version: 0.0.0-use.local
-  resolution: "@affine/reader@workspace:packages/common/reader"
-  dependencies:
-    "@blocksuite/affine": "workspace:*"
-    lodash-es: "npm:^4.17.23"
-    vitest: "npm:^4.1.8"
-    yjs: "npm:^13.6.27"
-  peerDependencies:
-    "@blocksuite/affine": "workspace:*"
-  languageName: unknown
-  linkType: soft
-
-"@affine/realtime@workspace:*, @affine/realtime@workspace:packages/common/realtime":
-  version: 0.0.0-use.local
-  resolution: "@affine/realtime@workspace:packages/common/realtime"
-  dependencies:
-    "@affine/graphql": "workspace:*"
-  languageName: unknown
-  linkType: soft
-
-"@affine/revert-update@workspace:tools/revert-update":
-  version: 0.0.0-use.local
-  resolution: "@affine/revert-update@workspace:tools/revert-update"
-  dependencies:
-    "@affine-tools/cli": "workspace:*"
-    "@types/node": "npm:^22.0.0"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-    yjs: "npm:^13.6.27"
-  languageName: unknown
-  linkType: soft
-
-"@affine/routes@workspace:*, @affine/routes@workspace:packages/frontend/routes":
-  version: 0.0.0-use.local
-  resolution: "@affine/routes@workspace:packages/frontend/routes"
-  dependencies:
-    "@affine-tools/cli": "workspace:*"
-    "@affine-tools/utils": "workspace:*"
-    path-to-regexp: "npm:^8.4.2"
-    vitest: "npm:^4.1.8"
-  peerDependencies:
-    react: ^19.2.1
-  languageName: unknown
-  linkType: soft
-
-"@affine/s3-compat@workspace:*, @affine/s3-compat@workspace:packages/common/s3-compat":
-  version: 0.0.0-use.local
-  resolution: "@affine/s3-compat@workspace:packages/common/s3-compat"
-  dependencies:
-    "@types/aws4": "npm:^1.11.6"
-    aws4: "npm:^1.13.2"
-    fast-xml-parser: "npm:^5.8.0"
-    s3mini: "npm:^0.9.1"
-  languageName: unknown
-  linkType: soft
-
-"@affine/templates@workspace:*, @affine/templates@workspace:packages/frontend/templates":
-  version: 0.0.0-use.local
-  resolution: "@affine/templates@workspace:packages/frontend/templates"
-  dependencies:
-    jszip: "npm:^3.10.1"
-  languageName: unknown
-  linkType: soft
-
-"@affine/track@workspace:*, @affine/track@workspace:packages/frontend/track":
-  version: 0.0.0-use.local
-  resolution: "@affine/track@workspace:packages/frontend/track"
-  dependencies:
-    "@affine/debug": "workspace:*"
-    "@sentry/react": "npm:^10.53.1"
-    "@types/react": "npm:^19.0.1"
-    nanoid: "npm:^5.1.6"
-    react: "npm:^19.2.1"
-    react-router-dom: "npm:^6.30.4"
-    vitest: "npm:^4.1.8"
-  languageName: unknown
-  linkType: soft
-
-"@affine/web@workspace:packages/frontend/apps/web":
-  version: 0.0.0-use.local
-  resolution: "@affine/web@workspace:packages/frontend/apps/web"
-  dependencies:
-    "@affine/component": "workspace:*"
-    "@affine/core": "workspace:*"
-    "@affine/env": "workspace:*"
-    "@affine/nbstore": "workspace:*"
-    "@affine/track": "workspace:*"
-    "@emotion/react": "npm:^11.14.0"
-    "@toeverything/infra": "workspace:*"
-    "@types/react": "npm:^19.0.1"
-    "@types/react-dom": "npm:^19.0.2"
-    react: "npm:^19.2.1"
-    react-dom: "npm:^19.2.1"
-    react-router-dom: "npm:^6.30.4"
-    typescript: "npm:@typescript/typescript6@6.0.2"
-  languageName: unknown
-  linkType: soft
-
 "@algolia/abtesting@npm:1.17.0":
   version: 1.17.0
   resolution: "@algolia/abtesting@npm:1.17.0"
@@ -1457,16 +521,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@blocksuite/affine-block-attachment@workspace:*, @blocksuite/affine-block-attachment@workspace:blocksuite/affine/blocks/attachment":
+"@blocksuite/bs-docs@workspace:blocksuite/docs":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-attachment@workspace:blocksuite/affine/blocks/attachment"
+  resolution: "@blocksuite/bs-docs@workspace:blocksuite/docs"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    typedoc: "npm:^0.28.18"
+    typedoc-plugin-markdown: "npm:^4.5.0"
+  languageName: unknown
+  linkType: soft
+
+"@blocksuite/cloud-notes-block-attachment@workspace:*, @blocksuite/cloud-notes-block-attachment@workspace:blocksuite/cloud-notes/blocks/attachment":
+  version: 0.0.0-use.local
+  resolution: "@blocksuite/cloud-notes-block-attachment@workspace:blocksuite/cloud-notes/blocks/attachment"
+  dependencies:
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1479,18 +552,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-bookmark@workspace:*, @blocksuite/affine-block-bookmark@workspace:blocksuite/affine/blocks/bookmark":
+"@blocksuite/cloud-notes-block-bookmark@workspace:*, @blocksuite/cloud-notes-block-bookmark@workspace:blocksuite/cloud-notes/blocks/bookmark":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-bookmark@workspace:blocksuite/affine/blocks/bookmark"
+  resolution: "@blocksuite/cloud-notes-block-bookmark@workspace:blocksuite/cloud-notes/blocks/bookmark"
   dependencies:
-    "@blocksuite/affine-block-embed": "workspace:*"
-    "@blocksuite/affine-block-embed-doc": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed-doc": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1506,17 +579,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-callout@workspace:*, @blocksuite/affine-block-callout@workspace:blocksuite/affine/blocks/callout":
+"@blocksuite/cloud-notes-block-callout@workspace:*, @blocksuite/cloud-notes-block-callout@workspace:blocksuite/cloud-notes/blocks/callout":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-callout@workspace:blocksuite/affine/blocks/callout"
+  resolution: "@blocksuite/cloud-notes-block-callout@workspace:blocksuite/cloud-notes/blocks/callout"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -1527,21 +600,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-code@workspace:*, @blocksuite/affine-block-code@workspace:blocksuite/affine/blocks/code":
+"@blocksuite/cloud-notes-block-code@workspace:*, @blocksuite/cloud-notes-block-code@workspace:blocksuite/cloud-notes/blocks/code":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-code@workspace:blocksuite/affine/blocks/code"
+  resolution: "@blocksuite/cloud-notes-block-code@workspace:blocksuite/cloud-notes/blocks/code"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-turbo-renderer": "workspace:*"
-    "@blocksuite/affine-inline-comment": "workspace:*"
-    "@blocksuite/affine-inline-latex": "workspace:*"
-    "@blocksuite/affine-inline-link": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-turbo-renderer": "workspace:*"
+    "@blocksuite/cloud-notes-inline-comment": "workspace:*"
+    "@blocksuite/cloud-notes-inline-latex": "workspace:*"
+    "@blocksuite/cloud-notes-inline-link": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1555,16 +628,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-data-view@workspace:*, @blocksuite/affine-block-data-view@workspace:blocksuite/affine/blocks/data-view":
+"@blocksuite/cloud-notes-block-data-view@workspace:*, @blocksuite/cloud-notes-block-data-view@workspace:blocksuite/cloud-notes/blocks/data-view":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-data-view@workspace:blocksuite/affine/blocks/data-view"
+  resolution: "@blocksuite/cloud-notes-block-data-view@workspace:blocksuite/cloud-notes/blocks/data-view"
   dependencies:
-    "@blocksuite/affine-block-database": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-block-database": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/data-view": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
@@ -1576,19 +649,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-database@workspace:*, @blocksuite/affine-block-database@workspace:blocksuite/affine/blocks/database":
+"@blocksuite/cloud-notes-block-database@workspace:*, @blocksuite/cloud-notes-block-database@workspace:blocksuite/cloud-notes/blocks/database":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-database@workspace:blocksuite/affine/blocks/database"
+  resolution: "@blocksuite/cloud-notes-block-database@workspace:blocksuite/cloud-notes/blocks/database"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-inline-reference": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-drag-handle": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-inline-reference": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-drag-handle": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/data-view": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
@@ -1606,15 +679,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-divider@workspace:*, @blocksuite/affine-block-divider@workspace:blocksuite/affine/blocks/divider":
+"@blocksuite/cloud-notes-block-divider@workspace:*, @blocksuite/cloud-notes-block-divider@workspace:blocksuite/cloud-notes/blocks/divider":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-divider@workspace:blocksuite/affine/blocks/divider"
+  resolution: "@blocksuite/cloud-notes-block-divider@workspace:blocksuite/cloud-notes/blocks/divider"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
     "@types/mdast": "npm:^4.0.4"
@@ -1622,17 +695,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-edgeless-text@workspace:*, @blocksuite/affine-block-edgeless-text@workspace:blocksuite/affine/blocks/edgeless-text":
+"@blocksuite/cloud-notes-block-edgeless-text@workspace:*, @blocksuite/cloud-notes-block-edgeless-text@workspace:blocksuite/cloud-notes/blocks/edgeless-text":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-edgeless-text@workspace:blocksuite/affine/blocks/edgeless-text"
+  resolution: "@blocksuite/cloud-notes-block-edgeless-text@workspace:blocksuite/cloud-notes/blocks/edgeless-text"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-text": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -1641,20 +714,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-embed-doc@workspace:*, @blocksuite/affine-block-embed-doc@workspace:blocksuite/affine/blocks/embed-doc":
+"@blocksuite/cloud-notes-block-embed-doc@workspace:*, @blocksuite/cloud-notes-block-embed-doc@workspace:blocksuite/cloud-notes/blocks/embed-doc":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-embed-doc@workspace:blocksuite/affine/blocks/embed-doc"
+  resolution: "@blocksuite/cloud-notes-block-embed-doc@workspace:blocksuite/cloud-notes/blocks/embed-doc"
   dependencies:
-    "@blocksuite/affine-block-embed": "workspace:*"
-    "@blocksuite/affine-block-paragraph": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-reference": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed": "workspace:*"
+    "@blocksuite/cloud-notes-block-paragraph": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-reference": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1668,16 +741,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-embed@workspace:*, @blocksuite/affine-block-embed@workspace:blocksuite/affine/blocks/embed":
+"@blocksuite/cloud-notes-block-embed@workspace:*, @blocksuite/cloud-notes-block-embed@workspace:blocksuite/cloud-notes/blocks/embed":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-embed@workspace:blocksuite/affine/blocks/embed"
+  resolution: "@blocksuite/cloud-notes-block-embed@workspace:blocksuite/cloud-notes/blocks/embed"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1690,18 +763,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-frame@workspace:*, @blocksuite/affine-block-frame@workspace:blocksuite/affine/blocks/frame":
+"@blocksuite/cloud-notes-block-frame@workspace:*, @blocksuite/cloud-notes-block-frame@workspace:blocksuite/cloud-notes/blocks/frame":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-frame@workspace:blocksuite/affine/blocks/frame"
+  resolution: "@blocksuite/cloud-notes-block-frame@workspace:blocksuite/cloud-notes/blocks/frame"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-pointer": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
-    "@blocksuite/affine-widget-frame-title": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-pointer": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-widget-frame-title": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1713,18 +786,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-image@workspace:*, @blocksuite/affine-block-image@workspace:blocksuite/affine/blocks/image":
+"@blocksuite/cloud-notes-block-image@workspace:*, @blocksuite/cloud-notes-block-image@workspace:blocksuite/cloud-notes/blocks/image":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-image@workspace:blocksuite/affine/blocks/image"
+  resolution: "@blocksuite/cloud-notes-block-image@workspace:blocksuite/cloud-notes/blocks/image"
   dependencies:
-    "@blocksuite/affine-block-note": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-turbo-renderer": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-block-note": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-turbo-renderer": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1736,17 +809,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-latex@workspace:*, @blocksuite/affine-block-latex@workspace:blocksuite/affine/blocks/latex":
+"@blocksuite/cloud-notes-block-latex@workspace:*, @blocksuite/cloud-notes-block-latex@workspace:blocksuite/cloud-notes/blocks/latex":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-latex@workspace:blocksuite/affine/blocks/latex"
+  resolution: "@blocksuite/cloud-notes-block-latex@workspace:blocksuite/cloud-notes/blocks/latex"
   dependencies:
-    "@blocksuite/affine-block-note": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-latex": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-block-note": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-latex": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -1758,17 +831,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-list@workspace:*, @blocksuite/affine-block-list@workspace:blocksuite/affine/blocks/list":
+"@blocksuite/cloud-notes-block-list@workspace:*, @blocksuite/cloud-notes-block-list@workspace:blocksuite/cloud-notes/blocks/list":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-list@workspace:blocksuite/affine/blocks/list"
+  resolution: "@blocksuite/cloud-notes-block-list@workspace:blocksuite/cloud-notes/blocks/list"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-turbo-renderer": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-turbo-renderer": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1779,21 +852,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-note@workspace:*, @blocksuite/affine-block-note@workspace:blocksuite/affine/blocks/note":
+"@blocksuite/cloud-notes-block-note@workspace:*, @blocksuite/cloud-notes-block-note@workspace:blocksuite/cloud-notes/blocks/note":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-note@workspace:blocksuite/affine/blocks/note"
+  resolution: "@blocksuite/cloud-notes-block-note@workspace:blocksuite/cloud-notes/blocks/note"
   dependencies:
-    "@blocksuite/affine-block-embed": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-fragment-doc-title": "workspace:*"
-    "@blocksuite/affine-gfx-turbo-renderer": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-fragment-doc-title": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-turbo-renderer": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1810,17 +883,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-paragraph@workspace:*, @blocksuite/affine-block-paragraph@workspace:blocksuite/affine/blocks/paragraph":
+"@blocksuite/cloud-notes-block-paragraph@workspace:*, @blocksuite/cloud-notes-block-paragraph@workspace:blocksuite/cloud-notes/blocks/paragraph":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-paragraph@workspace:blocksuite/affine/blocks/paragraph"
+  resolution: "@blocksuite/cloud-notes-block-paragraph@workspace:blocksuite/cloud-notes/blocks/paragraph"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-turbo-renderer": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-turbo-renderer": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -1832,36 +905,36 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-root@workspace:*, @blocksuite/affine-block-root@workspace:blocksuite/affine/blocks/root":
+"@blocksuite/cloud-notes-block-root@workspace:*, @blocksuite/cloud-notes-block-root@workspace:blocksuite/cloud-notes/blocks/root":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-root@workspace:blocksuite/affine/blocks/root"
+  resolution: "@blocksuite/cloud-notes-block-root@workspace:blocksuite/cloud-notes/blocks/root"
   dependencies:
-    "@blocksuite/affine-block-attachment": "workspace:*"
-    "@blocksuite/affine-block-bookmark": "workspace:*"
-    "@blocksuite/affine-block-database": "workspace:*"
-    "@blocksuite/affine-block-edgeless-text": "workspace:*"
-    "@blocksuite/affine-block-embed": "workspace:*"
-    "@blocksuite/affine-block-frame": "workspace:*"
-    "@blocksuite/affine-block-image": "workspace:*"
-    "@blocksuite/affine-block-note": "workspace:*"
-    "@blocksuite/affine-block-paragraph": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-brush": "workspace:*"
-    "@blocksuite/affine-gfx-connector": "workspace:*"
-    "@blocksuite/affine-gfx-group": "workspace:*"
-    "@blocksuite/affine-gfx-mindmap": "workspace:*"
-    "@blocksuite/affine-gfx-note": "workspace:*"
-    "@blocksuite/affine-gfx-pointer": "workspace:*"
-    "@blocksuite/affine-gfx-shape": "workspace:*"
-    "@blocksuite/affine-gfx-text": "workspace:*"
-    "@blocksuite/affine-inline-latex": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-attachment": "workspace:*"
+    "@blocksuite/cloud-notes-block-bookmark": "workspace:*"
+    "@blocksuite/cloud-notes-block-database": "workspace:*"
+    "@blocksuite/cloud-notes-block-edgeless-text": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed": "workspace:*"
+    "@blocksuite/cloud-notes-block-frame": "workspace:*"
+    "@blocksuite/cloud-notes-block-image": "workspace:*"
+    "@blocksuite/cloud-notes-block-note": "workspace:*"
+    "@blocksuite/cloud-notes-block-paragraph": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-brush": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-connector": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-group": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-mindmap": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-note": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-pointer": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-shape": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*"
+    "@blocksuite/cloud-notes-inline-latex": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/data-view": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
@@ -1877,18 +950,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-surface-ref@workspace:*, @blocksuite/affine-block-surface-ref@workspace:blocksuite/affine/blocks/surface-ref":
+"@blocksuite/cloud-notes-block-surface-ref@workspace:*, @blocksuite/cloud-notes-block-surface-ref@workspace:blocksuite/cloud-notes/blocks/surface-ref":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-surface-ref@workspace:blocksuite/affine/blocks/surface-ref"
+  resolution: "@blocksuite/cloud-notes-block-surface-ref@workspace:blocksuite/cloud-notes/blocks/surface-ref"
   dependencies:
-    "@blocksuite/affine-block-frame": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-reference": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-block-frame": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-reference": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1898,13 +971,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-surface@workspace:*, @blocksuite/affine-block-surface@workspace:blocksuite/affine/blocks/surface":
+"@blocksuite/cloud-notes-block-surface@workspace:*, @blocksuite/cloud-notes-block-surface@workspace:blocksuite/cloud-notes/blocks/surface":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-surface@workspace:blocksuite/affine/blocks/surface"
+  resolution: "@blocksuite/cloud-notes-block-surface@workspace:blocksuite/cloud-notes/blocks/surface"
   dependencies:
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -1922,17 +995,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-block-table@workspace:*, @blocksuite/affine-block-table@workspace:blocksuite/affine/blocks/table":
+"@blocksuite/cloud-notes-block-table@workspace:*, @blocksuite/cloud-notes-block-table@workspace:blocksuite/cloud-notes/blocks/table":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-block-table@workspace:blocksuite/affine/blocks/table"
+  resolution: "@blocksuite/cloud-notes-block-table@workspace:blocksuite/cloud-notes/blocks/table"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1945,12 +1018,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-components@workspace:*, @blocksuite/affine-components@workspace:blocksuite/affine/components":
+"@blocksuite/cloud-notes-components@workspace:*, @blocksuite/cloud-notes-components@workspace:blocksuite/cloud-notes/components":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-components@workspace:blocksuite/affine/components"
+  resolution: "@blocksuite/cloud-notes-components@workspace:blocksuite/cloud-notes/components"
   dependencies:
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -1971,9 +1044,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-ext-loader@workspace:*, @blocksuite/affine-ext-loader@workspace:blocksuite/affine/ext-loader":
+"@blocksuite/cloud-notes-ext-loader@workspace:*, @blocksuite/cloud-notes-ext-loader@workspace:blocksuite/cloud-notes/ext-loader":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-ext-loader@workspace:blocksuite/affine/ext-loader"
+  resolution: "@blocksuite/cloud-notes-ext-loader@workspace:blocksuite/cloud-notes/ext-loader"
   dependencies:
     "@blocksuite/global": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -1982,14 +1055,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-foundation@workspace:*, @blocksuite/affine-foundation@workspace:blocksuite/affine/foundation":
+"@blocksuite/cloud-notes-foundation@workspace:*, @blocksuite/cloud-notes-foundation@workspace:blocksuite/cloud-notes/foundation":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-foundation@workspace:blocksuite/affine/foundation"
+  resolution: "@blocksuite/cloud-notes-foundation@workspace:blocksuite/cloud-notes/foundation"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/data-view": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -1997,13 +1070,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-fragment-adapter-panel@workspace:*, @blocksuite/affine-fragment-adapter-panel@workspace:blocksuite/affine/fragments/adapter-panel":
+"@blocksuite/cloud-notes-fragment-adapter-panel@workspace:*, @blocksuite/cloud-notes-fragment-adapter-panel@workspace:blocksuite/cloud-notes/fragments/adapter-panel":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-fragment-adapter-panel@workspace:blocksuite/affine/fragments/adapter-panel"
+  resolution: "@blocksuite/cloud-notes-fragment-adapter-panel@workspace:blocksuite/cloud-notes/fragments/adapter-panel"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/store": "workspace:*"
@@ -2015,14 +1088,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-fragment-doc-title@workspace:*, @blocksuite/affine-fragment-doc-title@workspace:blocksuite/affine/fragments/doc-title":
+"@blocksuite/cloud-notes-fragment-doc-title@workspace:*, @blocksuite/cloud-notes-fragment-doc-title@workspace:blocksuite/cloud-notes/fragments/doc-title":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-fragment-doc-title@workspace:blocksuite/affine/fragments/doc-title"
+  resolution: "@blocksuite/cloud-notes-fragment-doc-title@workspace:blocksuite/cloud-notes/fragments/doc-title"
   dependencies:
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -2031,16 +1104,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-fragment-frame-panel@workspace:*, @blocksuite/affine-fragment-frame-panel@workspace:blocksuite/affine/fragments/frame-panel":
+"@blocksuite/cloud-notes-fragment-frame-panel@workspace:*, @blocksuite/cloud-notes-fragment-frame-panel@workspace:blocksuite/cloud-notes/fragments/frame-panel":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-fragment-frame-panel@workspace:blocksuite/affine/fragments/frame-panel"
+  resolution: "@blocksuite/cloud-notes-fragment-frame-panel@workspace:blocksuite/cloud-notes/fragments/frame-panel"
   dependencies:
-    "@blocksuite/affine-block-frame": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-frame": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2052,15 +1125,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-fragment-outline@workspace:*, @blocksuite/affine-fragment-outline@workspace:blocksuite/affine/fragments/outline":
+"@blocksuite/cloud-notes-fragment-outline@workspace:*, @blocksuite/cloud-notes-fragment-outline@workspace:blocksuite/cloud-notes/fragments/outline":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-fragment-outline@workspace:blocksuite/affine/fragments/outline"
+  resolution: "@blocksuite/cloud-notes-fragment-outline@workspace:blocksuite/cloud-notes/fragments/outline"
   dependencies:
-    "@blocksuite/affine-block-note": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-fragment-doc-title": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-note": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-fragment-doc-title": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2073,16 +1146,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-brush@workspace:*, @blocksuite/affine-gfx-brush@workspace:blocksuite/affine/gfx/brush":
+"@blocksuite/cloud-notes-gfx-brush@workspace:*, @blocksuite/cloud-notes-gfx-brush@workspace:blocksuite/cloud-notes/gfx/brush":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-brush@workspace:blocksuite/affine/gfx/brush"
+  resolution: "@blocksuite/cloud-notes-gfx-brush@workspace:blocksuite/cloud-notes/gfx/brush"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@preact/signals-core": "npm:^1.8.0"
@@ -2090,18 +1163,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-connector@workspace:*, @blocksuite/affine-gfx-connector@workspace:blocksuite/affine/gfx/connector":
+"@blocksuite/cloud-notes-gfx-connector@workspace:*, @blocksuite/cloud-notes-gfx-connector@workspace:blocksuite/cloud-notes/gfx/connector":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-connector@workspace:blocksuite/affine/gfx/connector"
+  resolution: "@blocksuite/cloud-notes-gfx-connector@workspace:blocksuite/cloud-notes/gfx/connector"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-text": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2115,18 +1188,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-group@workspace:*, @blocksuite/affine-gfx-group@workspace:blocksuite/affine/gfx/group":
+"@blocksuite/cloud-notes-gfx-group@workspace:*, @blocksuite/cloud-notes-gfx-group@workspace:blocksuite/cloud-notes/gfx/group":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-group@workspace:blocksuite/affine/gfx/group"
+  resolution: "@blocksuite/cloud-notes-gfx-group@workspace:blocksuite/cloud-notes/gfx/group"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-text": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2137,38 +1210,38 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-link@workspace:*, @blocksuite/affine-gfx-link@workspace:blocksuite/affine/gfx/link":
+"@blocksuite/cloud-notes-gfx-link@workspace:*, @blocksuite/cloud-notes-gfx-link@workspace:blocksuite/cloud-notes/gfx/link":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-link@workspace:blocksuite/affine/gfx/link"
+  resolution: "@blocksuite/cloud-notes-gfx-link@workspace:blocksuite/cloud-notes/gfx/link"
   dependencies:
-    "@blocksuite/affine-block-bookmark": "workspace:*"
-    "@blocksuite/affine-block-embed": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-bookmark": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/std": "workspace:*"
     lit: "npm:^3.2.0"
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-mindmap@workspace:*, @blocksuite/affine-gfx-mindmap@workspace:blocksuite/affine/gfx/mindmap":
+"@blocksuite/cloud-notes-gfx-mindmap@workspace:*, @blocksuite/cloud-notes-gfx-mindmap@workspace:blocksuite/cloud-notes/gfx/mindmap":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-mindmap@workspace:blocksuite/affine/gfx/mindmap"
+  resolution: "@blocksuite/cloud-notes-gfx-mindmap@workspace:blocksuite/cloud-notes/gfx/mindmap"
   dependencies:
-    "@blocksuite/affine-block-attachment": "workspace:*"
-    "@blocksuite/affine-block-image": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-connector": "workspace:*"
-    "@blocksuite/affine-gfx-pointer": "workspace:*"
-    "@blocksuite/affine-gfx-shape": "workspace:*"
-    "@blocksuite/affine-gfx-text": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-attachment": "workspace:*"
+    "@blocksuite/cloud-notes-block-image": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-connector": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-pointer": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-shape": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2183,20 +1256,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-note@workspace:*, @blocksuite/affine-gfx-note@workspace:blocksuite/affine/gfx/note":
+"@blocksuite/cloud-notes-gfx-note@workspace:*, @blocksuite/cloud-notes-gfx-note@workspace:blocksuite/cloud-notes/gfx/note":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-note@workspace:blocksuite/affine/gfx/note"
+  resolution: "@blocksuite/cloud-notes-gfx-note@workspace:blocksuite/cloud-notes/gfx/note"
   dependencies:
-    "@blocksuite/affine-block-attachment": "workspace:*"
-    "@blocksuite/affine-block-bookmark": "workspace:*"
-    "@blocksuite/affine-block-image": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-attachment": "workspace:*"
+    "@blocksuite/cloud-notes-block-bookmark": "workspace:*"
+    "@blocksuite/cloud-notes-block-image": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2206,15 +1279,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-pointer@workspace:*, @blocksuite/affine-gfx-pointer@workspace:blocksuite/affine/gfx/pointer":
+"@blocksuite/cloud-notes-gfx-pointer@workspace:*, @blocksuite/cloud-notes-gfx-pointer@workspace:blocksuite/cloud-notes/gfx/pointer":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-pointer@workspace:blocksuite/affine/gfx/pointer"
+  resolution: "@blocksuite/cloud-notes-gfx-pointer@workspace:blocksuite/cloud-notes/gfx/pointer"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2224,18 +1297,18 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-shape@workspace:*, @blocksuite/affine-gfx-shape@workspace:blocksuite/affine/gfx/shape":
+"@blocksuite/cloud-notes-gfx-shape@workspace:*, @blocksuite/cloud-notes-gfx-shape@workspace:blocksuite/cloud-notes/gfx/shape":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-shape@workspace:blocksuite/affine/gfx/shape"
+  resolution: "@blocksuite/cloud-notes-gfx-shape@workspace:blocksuite/cloud-notes/gfx/shape"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-text": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2250,16 +1323,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-template@workspace:*, @blocksuite/affine-gfx-template@workspace:blocksuite/affine/gfx/template":
+"@blocksuite/cloud-notes-gfx-template@workspace:*, @blocksuite/cloud-notes-gfx-template@workspace:blocksuite/cloud-notes/gfx/template":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-template@workspace:blocksuite/affine/gfx/template"
+  resolution: "@blocksuite/cloud-notes-gfx-template@workspace:blocksuite/cloud-notes/gfx/template"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -2271,17 +1344,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-text@workspace:*, @blocksuite/affine-gfx-text@workspace:blocksuite/affine/gfx/text":
+"@blocksuite/cloud-notes-gfx-text@workspace:*, @blocksuite/cloud-notes-gfx-text@workspace:blocksuite/cloud-notes/gfx/text":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-text@workspace:blocksuite/affine/gfx/text"
+  resolution: "@blocksuite/cloud-notes-gfx-text@workspace:blocksuite/cloud-notes/gfx/text"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2292,11 +1365,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-gfx-turbo-renderer@workspace:*, @blocksuite/affine-gfx-turbo-renderer@workspace:blocksuite/affine/gfx/turbo-renderer":
+"@blocksuite/cloud-notes-gfx-turbo-renderer@workspace:*, @blocksuite/cloud-notes-gfx-turbo-renderer@workspace:blocksuite/cloud-notes/gfx/turbo-renderer":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-gfx-turbo-renderer@workspace:blocksuite/affine/gfx/turbo-renderer"
+  resolution: "@blocksuite/cloud-notes-gfx-turbo-renderer@workspace:blocksuite/cloud-notes/gfx/turbo-renderer"
   dependencies:
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -2304,19 +1377,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-graph@workspace:*, @blocksuite/affine-graph@workspace:blocksuite/affine/graph":
+"@blocksuite/cloud-notes-graph@workspace:*, @blocksuite/cloud-notes-graph@workspace:blocksuite/cloud-notes/graph":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-graph@workspace:blocksuite/affine/graph"
+  resolution: "@blocksuite/cloud-notes-graph@workspace:blocksuite/cloud-notes/graph"
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-inline-comment@workspace:*, @blocksuite/affine-inline-comment@workspace:blocksuite/affine/inlines/comment":
+"@blocksuite/cloud-notes-inline-comment@workspace:*, @blocksuite/cloud-notes-inline-comment@workspace:blocksuite/cloud-notes/inlines/comment":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-inline-comment@workspace:blocksuite/affine/inlines/comment"
+  resolution: "@blocksuite/cloud-notes-inline-comment@workspace:blocksuite/cloud-notes/inlines/comment"
   dependencies:
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -2330,14 +1403,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-inline-footnote@workspace:*, @blocksuite/affine-inline-footnote@workspace:blocksuite/affine/inlines/footnote":
+"@blocksuite/cloud-notes-inline-footnote@workspace:*, @blocksuite/cloud-notes-inline-footnote@workspace:blocksuite/cloud-notes/inlines/footnote":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-inline-footnote@workspace:blocksuite/affine/inlines/footnote"
+  resolution: "@blocksuite/cloud-notes-inline-footnote@workspace:blocksuite/cloud-notes/inlines/footnote"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -2353,15 +1426,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-inline-latex@workspace:*, @blocksuite/affine-inline-latex@workspace:blocksuite/affine/inlines/latex":
+"@blocksuite/cloud-notes-inline-latex@workspace:*, @blocksuite/cloud-notes-inline-latex@workspace:blocksuite/cloud-notes/inlines/latex":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-inline-latex@workspace:blocksuite/affine/inlines/latex"
+  resolution: "@blocksuite/cloud-notes-inline-latex@workspace:blocksuite/cloud-notes/inlines/latex"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2376,15 +1449,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-inline-link@workspace:*, @blocksuite/affine-inline-link@workspace:blocksuite/affine/inlines/link":
+"@blocksuite/cloud-notes-inline-link@workspace:*, @blocksuite/cloud-notes-inline-link@workspace:blocksuite/cloud-notes/inlines/link":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-inline-link@workspace:blocksuite/affine/inlines/link"
+  resolution: "@blocksuite/cloud-notes-inline-link@workspace:blocksuite/cloud-notes/inlines/link"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-reference": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-reference": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2397,12 +1470,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-inline-mention@workspace:*, @blocksuite/affine-inline-mention@workspace:blocksuite/affine/inlines/mention":
+"@blocksuite/cloud-notes-inline-mention@workspace:*, @blocksuite/cloud-notes-inline-mention@workspace:blocksuite/cloud-notes/inlines/mention":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-inline-mention@workspace:blocksuite/affine/inlines/mention"
+  resolution: "@blocksuite/cloud-notes-inline-mention@workspace:blocksuite/cloud-notes/inlines/mention"
   dependencies:
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
@@ -2411,21 +1484,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-inline-preset@workspace:*, @blocksuite/affine-inline-preset@workspace:blocksuite/affine/inlines/preset":
+"@blocksuite/cloud-notes-inline-preset@workspace:*, @blocksuite/cloud-notes-inline-preset@workspace:blocksuite/cloud-notes/inlines/preset":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-inline-preset@workspace:blocksuite/affine/inlines/preset"
+  resolution: "@blocksuite/cloud-notes-inline-preset@workspace:blocksuite/cloud-notes/inlines/preset"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-comment": "workspace:*"
-    "@blocksuite/affine-inline-footnote": "workspace:*"
-    "@blocksuite/affine-inline-latex": "workspace:*"
-    "@blocksuite/affine-inline-link": "workspace:*"
-    "@blocksuite/affine-inline-mention": "workspace:*"
-    "@blocksuite/affine-inline-reference": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-comment": "workspace:*"
+    "@blocksuite/cloud-notes-inline-footnote": "workspace:*"
+    "@blocksuite/cloud-notes-inline-latex": "workspace:*"
+    "@blocksuite/cloud-notes-inline-link": "workspace:*"
+    "@blocksuite/cloud-notes-inline-mention": "workspace:*"
+    "@blocksuite/cloud-notes-inline-reference": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@blocksuite/store": "workspace:*"
     "@ctrl/tinycolor": "npm:^4.1.0"
@@ -2437,14 +1510,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-inline-reference@workspace:*, @blocksuite/affine-inline-reference@workspace:blocksuite/affine/inlines/reference":
+"@blocksuite/cloud-notes-inline-reference@workspace:*, @blocksuite/cloud-notes-inline-reference@workspace:blocksuite/cloud-notes/inlines/reference":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-inline-reference@workspace:blocksuite/affine/inlines/reference"
+  resolution: "@blocksuite/cloud-notes-inline-reference@workspace:blocksuite/cloud-notes/inlines/reference"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2458,9 +1531,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-model@workspace:*, @blocksuite/affine-model@workspace:blocksuite/affine/model":
+"@blocksuite/cloud-notes-model@workspace:*, @blocksuite/cloud-notes-model@workspace:blocksuite/cloud-notes/model":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-model@workspace:blocksuite/affine/model"
+  resolution: "@blocksuite/cloud-notes-model@workspace:blocksuite/cloud-notes/model"
   dependencies:
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
@@ -2474,13 +1547,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-rich-text@workspace:*, @blocksuite/affine-rich-text@workspace:blocksuite/affine/rich-text":
+"@blocksuite/cloud-notes-rich-text@workspace:*, @blocksuite/cloud-notes-rich-text@workspace:blocksuite/cloud-notes/rich-text":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-rich-text@workspace:blocksuite/affine/rich-text"
+  resolution: "@blocksuite/cloud-notes-rich-text@workspace:blocksuite/cloud-notes/rich-text"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2492,11 +1565,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-shared@workspace:*, @blocksuite/affine-shared@workspace:blocksuite/affine/shared":
+"@blocksuite/cloud-notes-shared@workspace:*, @blocksuite/cloud-notes-shared@workspace:blocksuite/cloud-notes/shared":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-shared@workspace:blocksuite/affine/shared"
+  resolution: "@blocksuite/cloud-notes-shared@workspace:blocksuite/cloud-notes/shared"
   dependencies:
-    "@blocksuite/affine-model": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2543,21 +1616,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-drag-handle@workspace:*, @blocksuite/affine-widget-drag-handle@workspace:blocksuite/affine/widgets/drag-handle":
+"@blocksuite/cloud-notes-widget-drag-handle@workspace:*, @blocksuite/cloud-notes-widget-drag-handle@workspace:blocksuite/cloud-notes/widgets/drag-handle":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-drag-handle@workspace:blocksuite/affine/widgets/drag-handle"
+  resolution: "@blocksuite/cloud-notes-widget-drag-handle@workspace:blocksuite/cloud-notes/widgets/drag-handle"
   dependencies:
-    "@blocksuite/affine-block-callout": "workspace:*"
-    "@blocksuite/affine-block-embed": "workspace:*"
-    "@blocksuite/affine-block-list": "workspace:*"
-    "@blocksuite/affine-block-note": "workspace:*"
-    "@blocksuite/affine-block-paragraph": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-callout": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed": "workspace:*"
+    "@blocksuite/cloud-notes-block-list": "workspace:*"
+    "@blocksuite/cloud-notes-block-note": "workspace:*"
+    "@blocksuite/cloud-notes-block-paragraph": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2569,15 +1642,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-edgeless-auto-connect@workspace:*, @blocksuite/affine-widget-edgeless-auto-connect@workspace:blocksuite/affine/widgets/edgeless-auto-connect":
+"@blocksuite/cloud-notes-widget-edgeless-auto-connect@workspace:*, @blocksuite/cloud-notes-widget-edgeless-auto-connect@workspace:blocksuite/cloud-notes/widgets/edgeless-auto-connect":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-edgeless-auto-connect@workspace:blocksuite/affine/widgets/edgeless-auto-connect"
+  resolution: "@blocksuite/cloud-notes-widget-edgeless-auto-connect@workspace:blocksuite/cloud-notes/widgets/edgeless-auto-connect"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2585,32 +1658,32 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-edgeless-dragging-area@workspace:*, @blocksuite/affine-widget-edgeless-dragging-area@workspace:blocksuite/affine/widgets/edgeless-dragging-area":
+"@blocksuite/cloud-notes-widget-edgeless-dragging-area@workspace:*, @blocksuite/cloud-notes-widget-edgeless-dragging-area@workspace:blocksuite/cloud-notes/widgets/edgeless-dragging-area":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-edgeless-dragging-area@workspace:blocksuite/affine/widgets/edgeless-dragging-area"
+  resolution: "@blocksuite/cloud-notes-widget-edgeless-dragging-area@workspace:blocksuite/cloud-notes/widgets/edgeless-dragging-area"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@toeverything/theme": "npm:^1.1.23"
     lit: "npm:^3.2.0"
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-edgeless-selected-rect@workspace:*, @blocksuite/affine-widget-edgeless-selected-rect@workspace:blocksuite/affine/widgets/edgeless-selected-rect":
+"@blocksuite/cloud-notes-widget-edgeless-selected-rect@workspace:*, @blocksuite/cloud-notes-widget-edgeless-selected-rect@workspace:blocksuite/cloud-notes/widgets/edgeless-selected-rect":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-edgeless-selected-rect@workspace:blocksuite/affine/widgets/edgeless-selected-rect"
+  resolution: "@blocksuite/cloud-notes-widget-edgeless-selected-rect@workspace:blocksuite/cloud-notes/widgets/edgeless-selected-rect"
   dependencies:
-    "@blocksuite/affine-block-frame": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-gfx-connector": "workspace:*"
-    "@blocksuite/affine-gfx-shape": "workspace:*"
-    "@blocksuite/affine-gfx-text": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-frame": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-connector": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-shape": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2621,15 +1694,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-edgeless-toolbar@workspace:*, @blocksuite/affine-widget-edgeless-toolbar@workspace:blocksuite/affine/widgets/edgeless-toolbar":
+"@blocksuite/cloud-notes-widget-edgeless-toolbar@workspace:*, @blocksuite/cloud-notes-widget-edgeless-toolbar@workspace:blocksuite/cloud-notes/widgets/edgeless-toolbar":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-edgeless-toolbar@workspace:blocksuite/affine/widgets/edgeless-toolbar"
+  resolution: "@blocksuite/cloud-notes-widget-edgeless-toolbar@workspace:blocksuite/cloud-notes/widgets/edgeless-toolbar"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2644,15 +1717,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-edgeless-zoom-toolbar@workspace:*, @blocksuite/affine-widget-edgeless-zoom-toolbar@workspace:blocksuite/affine/widgets/edgeless-zoom-toolbar":
+"@blocksuite/cloud-notes-widget-edgeless-zoom-toolbar@workspace:*, @blocksuite/cloud-notes-widget-edgeless-zoom-toolbar@workspace:blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-edgeless-zoom-toolbar@workspace:blocksuite/affine/widgets/edgeless-zoom-toolbar"
+  resolution: "@blocksuite/cloud-notes-widget-edgeless-zoom-toolbar@workspace:blocksuite/cloud-notes/widgets/edgeless-zoom-toolbar"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2665,16 +1738,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-frame-title@workspace:*, @blocksuite/affine-widget-frame-title@workspace:blocksuite/affine/widgets/frame-title":
+"@blocksuite/cloud-notes-widget-frame-title@workspace:*, @blocksuite/cloud-notes-widget-frame-title@workspace:blocksuite/cloud-notes/widgets/frame-title":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-frame-title@workspace:blocksuite/affine/widgets/frame-title"
+  resolution: "@blocksuite/cloud-notes-widget-frame-title@workspace:blocksuite/cloud-notes/widgets/frame-title"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@lit/context": "npm:^1.1.2"
@@ -2683,30 +1756,30 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-keyboard-toolbar@workspace:*, @blocksuite/affine-widget-keyboard-toolbar@workspace:blocksuite/affine/widgets/keyboard-toolbar":
+"@blocksuite/cloud-notes-widget-keyboard-toolbar@workspace:*, @blocksuite/cloud-notes-widget-keyboard-toolbar@workspace:blocksuite/cloud-notes/widgets/keyboard-toolbar":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-keyboard-toolbar@workspace:blocksuite/affine/widgets/keyboard-toolbar"
+  resolution: "@blocksuite/cloud-notes-widget-keyboard-toolbar@workspace:blocksuite/cloud-notes/widgets/keyboard-toolbar"
   dependencies:
-    "@blocksuite/affine-block-attachment": "workspace:*"
-    "@blocksuite/affine-block-database": "workspace:*"
-    "@blocksuite/affine-block-embed": "workspace:*"
-    "@blocksuite/affine-block-image": "workspace:*"
-    "@blocksuite/affine-block-latex": "workspace:*"
-    "@blocksuite/affine-block-list": "workspace:*"
-    "@blocksuite/affine-block-note": "workspace:*"
-    "@blocksuite/affine-block-paragraph": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-block-surface-ref": "workspace:*"
-    "@blocksuite/affine-block-table": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-fragment-doc-title": "workspace:*"
-    "@blocksuite/affine-inline-latex": "workspace:*"
-    "@blocksuite/affine-inline-link": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-attachment": "workspace:*"
+    "@blocksuite/cloud-notes-block-database": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed": "workspace:*"
+    "@blocksuite/cloud-notes-block-image": "workspace:*"
+    "@blocksuite/cloud-notes-block-latex": "workspace:*"
+    "@blocksuite/cloud-notes-block-list": "workspace:*"
+    "@blocksuite/cloud-notes-block-note": "workspace:*"
+    "@blocksuite/cloud-notes-block-paragraph": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface-ref": "workspace:*"
+    "@blocksuite/cloud-notes-block-table": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-fragment-doc-title": "workspace:*"
+    "@blocksuite/cloud-notes-inline-latex": "workspace:*"
+    "@blocksuite/cloud-notes-inline-link": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/data-view": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
@@ -2717,16 +1790,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-linked-doc@workspace:*, @blocksuite/affine-widget-linked-doc@workspace:blocksuite/affine/widgets/linked-doc":
+"@blocksuite/cloud-notes-widget-linked-doc@workspace:*, @blocksuite/cloud-notes-widget-linked-doc@workspace:blocksuite/cloud-notes/widgets/linked-doc":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-linked-doc@workspace:blocksuite/affine/widgets/linked-doc"
+  resolution: "@blocksuite/cloud-notes-widget-linked-doc@workspace:blocksuite/cloud-notes/widgets/linked-doc"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-inline-reference": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-inline-reference": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2745,16 +1818,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-note-slicer@workspace:*, @blocksuite/affine-widget-note-slicer@workspace:blocksuite/affine/widgets/note-slicer":
+"@blocksuite/cloud-notes-widget-note-slicer@workspace:*, @blocksuite/cloud-notes-widget-note-slicer@workspace:blocksuite/cloud-notes/widgets/note-slicer":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-note-slicer@workspace:blocksuite/affine/widgets/note-slicer"
+  resolution: "@blocksuite/cloud-notes-widget-note-slicer@workspace:blocksuite/cloud-notes/widgets/note-slicer"
   dependencies:
-    "@blocksuite/affine-block-note": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-selected-rect": "workspace:*"
+    "@blocksuite/cloud-notes-block-note": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-selected-rect": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2762,26 +1835,26 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-page-dragging-area@workspace:*, @blocksuite/affine-widget-page-dragging-area@workspace:blocksuite/affine/widgets/page-dragging-area":
+"@blocksuite/cloud-notes-widget-page-dragging-area@workspace:*, @blocksuite/cloud-notes-widget-page-dragging-area@workspace:blocksuite/cloud-notes/widgets/page-dragging-area":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-page-dragging-area@workspace:blocksuite/affine/widgets/page-dragging-area"
+  resolution: "@blocksuite/cloud-notes-widget-page-dragging-area@workspace:blocksuite/cloud-notes/widgets/page-dragging-area"
   dependencies:
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/std": "workspace:*"
     lit: "npm:^3.2.0"
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-remote-selection@workspace:*, @blocksuite/affine-widget-remote-selection@workspace:blocksuite/affine/widgets/remote-selection":
+"@blocksuite/cloud-notes-widget-remote-selection@workspace:*, @blocksuite/cloud-notes-widget-remote-selection@workspace:blocksuite/cloud-notes/widgets/remote-selection":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-remote-selection@workspace:blocksuite/affine/widgets/remote-selection"
+  resolution: "@blocksuite/cloud-notes-widget-remote-selection@workspace:blocksuite/cloud-notes/widgets/remote-selection"
   dependencies:
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
     "@preact/signals-core": "npm:^1.8.0"
@@ -2791,13 +1864,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-scroll-anchoring@workspace:*, @blocksuite/affine-widget-scroll-anchoring@workspace:blocksuite/affine/widgets/scroll-anchoring":
+"@blocksuite/cloud-notes-widget-scroll-anchoring@workspace:*, @blocksuite/cloud-notes-widget-scroll-anchoring@workspace:blocksuite/cloud-notes/widgets/scroll-anchoring":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-scroll-anchoring@workspace:blocksuite/affine/widgets/scroll-anchoring"
+  resolution: "@blocksuite/cloud-notes-widget-scroll-anchoring@workspace:blocksuite/cloud-notes/widgets/scroll-anchoring"
   dependencies:
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
     "@preact/signals-core": "npm:^1.8.0"
@@ -2806,14 +1879,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-slash-menu@workspace:*, @blocksuite/affine-widget-slash-menu@workspace:blocksuite/affine/widgets/slash-menu":
+"@blocksuite/cloud-notes-widget-slash-menu@workspace:*, @blocksuite/cloud-notes-widget-slash-menu@workspace:blocksuite/cloud-notes/widgets/slash-menu":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-slash-menu@workspace:blocksuite/affine/widgets/slash-menu"
+  resolution: "@blocksuite/cloud-notes-widget-slash-menu@workspace:blocksuite/cloud-notes/widgets/slash-menu"
   dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2826,17 +1899,17 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-toolbar@workspace:*, @blocksuite/affine-widget-toolbar@workspace:blocksuite/affine/widgets/toolbar":
+"@blocksuite/cloud-notes-widget-toolbar@workspace:*, @blocksuite/cloud-notes-widget-toolbar@workspace:blocksuite/cloud-notes/widgets/toolbar":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-toolbar@workspace:blocksuite/affine/widgets/toolbar"
+  resolution: "@blocksuite/cloud-notes-widget-toolbar@workspace:blocksuite/cloud-notes/widgets/toolbar"
   dependencies:
-    "@blocksuite/affine-block-database": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-block-table": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-block-database": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-block-table": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2848,85 +1921,85 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine-widget-viewport-overlay@workspace:*, @blocksuite/affine-widget-viewport-overlay@workspace:blocksuite/affine/widgets/viewport-overlay":
+"@blocksuite/cloud-notes-widget-viewport-overlay@workspace:*, @blocksuite/cloud-notes-widget-viewport-overlay@workspace:blocksuite/cloud-notes/widgets/viewport-overlay":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine-widget-viewport-overlay@workspace:blocksuite/affine/widgets/viewport-overlay"
+  resolution: "@blocksuite/cloud-notes-widget-viewport-overlay@workspace:blocksuite/cloud-notes/widgets/viewport-overlay"
   dependencies:
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
     "@blocksuite/std": "workspace:*"
     lit: "npm:^3.2.0"
   languageName: unknown
   linkType: soft
 
-"@blocksuite/affine@workspace:*, @blocksuite/affine@workspace:blocksuite/affine/all":
+"@blocksuite/cloud-notes@workspace:*, @blocksuite/cloud-notes@workspace:blocksuite/cloud-notes/all":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/affine@workspace:blocksuite/affine/all"
+  resolution: "@blocksuite/cloud-notes@workspace:blocksuite/cloud-notes/all"
   dependencies:
-    "@blocksuite/affine-block-attachment": "workspace:*"
-    "@blocksuite/affine-block-bookmark": "workspace:*"
-    "@blocksuite/affine-block-callout": "workspace:*"
-    "@blocksuite/affine-block-code": "workspace:*"
-    "@blocksuite/affine-block-data-view": "workspace:*"
-    "@blocksuite/affine-block-database": "workspace:*"
-    "@blocksuite/affine-block-divider": "workspace:*"
-    "@blocksuite/affine-block-edgeless-text": "workspace:*"
-    "@blocksuite/affine-block-embed": "workspace:*"
-    "@blocksuite/affine-block-embed-doc": "workspace:*"
-    "@blocksuite/affine-block-frame": "workspace:*"
-    "@blocksuite/affine-block-image": "workspace:*"
-    "@blocksuite/affine-block-latex": "workspace:*"
-    "@blocksuite/affine-block-list": "workspace:*"
-    "@blocksuite/affine-block-note": "workspace:*"
-    "@blocksuite/affine-block-paragraph": "workspace:*"
-    "@blocksuite/affine-block-root": "workspace:*"
-    "@blocksuite/affine-block-surface": "workspace:*"
-    "@blocksuite/affine-block-surface-ref": "workspace:*"
-    "@blocksuite/affine-block-table": "workspace:*"
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-ext-loader": "workspace:*"
-    "@blocksuite/affine-foundation": "workspace:*"
-    "@blocksuite/affine-fragment-adapter-panel": "workspace:*"
-    "@blocksuite/affine-fragment-doc-title": "workspace:*"
-    "@blocksuite/affine-fragment-frame-panel": "workspace:*"
-    "@blocksuite/affine-fragment-outline": "workspace:*"
-    "@blocksuite/affine-gfx-brush": "workspace:*"
-    "@blocksuite/affine-gfx-connector": "workspace:*"
-    "@blocksuite/affine-gfx-group": "workspace:*"
-    "@blocksuite/affine-gfx-link": "workspace:*"
-    "@blocksuite/affine-gfx-mindmap": "workspace:*"
-    "@blocksuite/affine-gfx-note": "workspace:*"
-    "@blocksuite/affine-gfx-pointer": "workspace:*"
-    "@blocksuite/affine-gfx-shape": "workspace:*"
-    "@blocksuite/affine-gfx-template": "workspace:*"
-    "@blocksuite/affine-gfx-text": "workspace:*"
-    "@blocksuite/affine-gfx-turbo-renderer": "workspace:*"
-    "@blocksuite/affine-inline-comment": "workspace:*"
-    "@blocksuite/affine-inline-footnote": "workspace:*"
-    "@blocksuite/affine-inline-latex": "workspace:*"
-    "@blocksuite/affine-inline-link": "workspace:*"
-    "@blocksuite/affine-inline-mention": "workspace:*"
-    "@blocksuite/affine-inline-preset": "workspace:*"
-    "@blocksuite/affine-inline-reference": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-rich-text": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
-    "@blocksuite/affine-widget-drag-handle": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-auto-connect": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-dragging-area": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-selected-rect": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-toolbar": "workspace:*"
-    "@blocksuite/affine-widget-edgeless-zoom-toolbar": "workspace:*"
-    "@blocksuite/affine-widget-frame-title": "workspace:*"
-    "@blocksuite/affine-widget-keyboard-toolbar": "workspace:*"
-    "@blocksuite/affine-widget-linked-doc": "workspace:*"
-    "@blocksuite/affine-widget-note-slicer": "workspace:*"
-    "@blocksuite/affine-widget-page-dragging-area": "workspace:*"
-    "@blocksuite/affine-widget-remote-selection": "workspace:*"
-    "@blocksuite/affine-widget-scroll-anchoring": "workspace:*"
-    "@blocksuite/affine-widget-slash-menu": "workspace:*"
-    "@blocksuite/affine-widget-toolbar": "workspace:*"
-    "@blocksuite/affine-widget-viewport-overlay": "workspace:*"
+    "@blocksuite/cloud-notes-block-attachment": "workspace:*"
+    "@blocksuite/cloud-notes-block-bookmark": "workspace:*"
+    "@blocksuite/cloud-notes-block-callout": "workspace:*"
+    "@blocksuite/cloud-notes-block-code": "workspace:*"
+    "@blocksuite/cloud-notes-block-data-view": "workspace:*"
+    "@blocksuite/cloud-notes-block-database": "workspace:*"
+    "@blocksuite/cloud-notes-block-divider": "workspace:*"
+    "@blocksuite/cloud-notes-block-edgeless-text": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed": "workspace:*"
+    "@blocksuite/cloud-notes-block-embed-doc": "workspace:*"
+    "@blocksuite/cloud-notes-block-frame": "workspace:*"
+    "@blocksuite/cloud-notes-block-image": "workspace:*"
+    "@blocksuite/cloud-notes-block-latex": "workspace:*"
+    "@blocksuite/cloud-notes-block-list": "workspace:*"
+    "@blocksuite/cloud-notes-block-note": "workspace:*"
+    "@blocksuite/cloud-notes-block-paragraph": "workspace:*"
+    "@blocksuite/cloud-notes-block-root": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface": "workspace:*"
+    "@blocksuite/cloud-notes-block-surface-ref": "workspace:*"
+    "@blocksuite/cloud-notes-block-table": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-foundation": "workspace:*"
+    "@blocksuite/cloud-notes-fragment-adapter-panel": "workspace:*"
+    "@blocksuite/cloud-notes-fragment-doc-title": "workspace:*"
+    "@blocksuite/cloud-notes-fragment-frame-panel": "workspace:*"
+    "@blocksuite/cloud-notes-fragment-outline": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-brush": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-connector": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-group": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-link": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-mindmap": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-note": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-pointer": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-shape": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-template": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-text": "workspace:*"
+    "@blocksuite/cloud-notes-gfx-turbo-renderer": "workspace:*"
+    "@blocksuite/cloud-notes-inline-comment": "workspace:*"
+    "@blocksuite/cloud-notes-inline-footnote": "workspace:*"
+    "@blocksuite/cloud-notes-inline-latex": "workspace:*"
+    "@blocksuite/cloud-notes-inline-link": "workspace:*"
+    "@blocksuite/cloud-notes-inline-mention": "workspace:*"
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*"
+    "@blocksuite/cloud-notes-inline-reference": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-rich-text": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/cloud-notes-widget-drag-handle": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-auto-connect": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-dragging-area": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-selected-rect": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-widget-edgeless-zoom-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-widget-frame-title": "workspace:*"
+    "@blocksuite/cloud-notes-widget-keyboard-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-widget-linked-doc": "workspace:*"
+    "@blocksuite/cloud-notes-widget-note-slicer": "workspace:*"
+    "@blocksuite/cloud-notes-widget-page-dragging-area": "workspace:*"
+    "@blocksuite/cloud-notes-widget-remote-selection": "workspace:*"
+    "@blocksuite/cloud-notes-widget-scroll-anchoring": "workspace:*"
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*"
+    "@blocksuite/cloud-notes-widget-toolbar": "workspace:*"
+    "@blocksuite/cloud-notes-widget-viewport-overlay": "workspace:*"
     "@blocksuite/data-view": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/std": "workspace:*"
@@ -2938,21 +2011,12 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@blocksuite/bs-docs@workspace:blocksuite/docs":
+"@blocksuite/data-view@workspace:*, @blocksuite/data-view@workspace:blocksuite/cloud-notes/data-view":
   version: 0.0.0-use.local
-  resolution: "@blocksuite/bs-docs@workspace:blocksuite/docs"
+  resolution: "@blocksuite/data-view@workspace:blocksuite/cloud-notes/data-view"
   dependencies:
-    typedoc: "npm:^0.28.18"
-    typedoc-plugin-markdown: "npm:^4.5.0"
-  languageName: unknown
-  linkType: soft
-
-"@blocksuite/data-view@workspace:*, @blocksuite/data-view@workspace:blocksuite/affine/data-view":
-  version: 0.0.0-use.local
-  resolution: "@blocksuite/data-view@workspace:blocksuite/affine/data-view"
-  dependencies:
-    "@blocksuite/affine-components": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/global": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/std": "workspace:*"
@@ -2977,7 +2041,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@blocksuite/docs@workspace:blocksuite/docs-site"
   dependencies:
-    "@blocksuite/affine": "workspace:*"
+    "@blocksuite/cloud-notes": "workspace:*"
     "@types/markdown-it-container": "npm:^4.0.0"
     date-fns: "npm:^4.4.0"
     markdown-it-container: "npm:^4.0.0"
@@ -3023,7 +2087,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@blocksuite/integration-test@workspace:blocksuite/integration-test"
   dependencies:
-    "@blocksuite/affine": "workspace:*"
+    "@blocksuite/cloud-notes": "workspace:*"
     "@preact/signals-core": "npm:^1.8.0"
     "@toeverything/theme": "npm:^1.1.23"
     "@vanilla-extract/vite-plugin": "npm:^5.0.0"
@@ -3042,9 +2106,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@blocksuite/playground@workspace:blocksuite/playground"
   dependencies:
-    "@blocksuite/affine": "workspace:*"
-    "@blocksuite/affine-model": "workspace:*"
-    "@blocksuite/affine-shared": "workspace:*"
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@blocksuite/cloud-notes-model": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
     "@blocksuite/data-view": "workspace:*"
     "@blocksuite/icons": "npm:^2.2.17"
     "@blocksuite/integration-test": "workspace:*"
@@ -3269,6 +2333,942 @@ __metadata:
   checksum: 10/ad39d7651a20b05ead9b4374f98afc39915118dda29678c2b623571aa3da3018a0f3fb799d1809605cafcae59cba637d640855ea0f97b9b01d0900d77d6781fe
   languageName: node
   linkType: hard
+
+"@cloud-notes-test/blocksuite@workspace:tests/blocksuite":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-test/blocksuite@workspace:tests/blocksuite"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@blocksuite/integration-test": "workspace:*"
+    "@cloud-notes-test/kit": "workspace:*"
+    "@playwright/test": "npm:=1.58.2"
+    "@toeverything/theme": "npm:^1.1.23"
+    json-stable-stringify: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-test/cloud-notes-cloud-copilot@workspace:tests/cloud-notes-cloud-copilot":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-test/cloud-notes-cloud-copilot@workspace:tests/cloud-notes-cloud-copilot"
+  dependencies:
+    "@cloud-notes-test/kit": "workspace:*"
+    "@playwright/test": "npm:=1.58.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-test/cloud-notes-cloud@workspace:tests/cloud-notes-cloud":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-test/cloud-notes-cloud@workspace:tests/cloud-notes-cloud"
+  dependencies:
+    "@cloud-notes-test/kit": "workspace:*"
+    "@playwright/test": "npm:=1.58.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-test/cloud-notes-desktop-cloud@workspace:tests/cloud-notes-desktop-cloud":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-test/cloud-notes-desktop-cloud@workspace:tests/cloud-notes-desktop-cloud"
+  dependencies:
+    "@cloud-notes-test/kit": "workspace:*"
+    "@playwright/test": "npm:=1.58.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-test/cloud-notes-desktop@workspace:tests/cloud-notes-desktop":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-test/cloud-notes-desktop@workspace:tests/cloud-notes-desktop"
+  dependencies:
+    "@cloud-notes-test/kit": "workspace:*"
+    "@cloud-notes/electron-api": "workspace:*"
+    "@playwright/test": "npm:=1.58.2"
+    "@types/fs-extra": "npm:^11.0.4"
+    fs-extra: "npm:^11.2.0"
+    playwright: "npm:=1.58.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-test/cloud-notes-local@workspace:tests/cloud-notes-local":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-test/cloud-notes-local@workspace:tests/cloud-notes-local"
+  dependencies:
+    "@cloud-notes-test/kit": "workspace:*"
+    "@playwright/test": "npm:=1.58.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-test/cloud-notes-mobile@workspace:tests/cloud-notes-mobile":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-test/cloud-notes-mobile@workspace:tests/cloud-notes-mobile"
+  dependencies:
+    "@cloud-notes-test/kit": "workspace:*"
+    "@playwright/test": "npm:=1.58.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-test/kit@workspace:*, @cloud-notes-test/kit@workspace:tests/kit":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-test/kit@workspace:tests/kit"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@cloud-notes-tools/utils": "workspace:*"
+    "@node-rs/argon2": "npm:^2.0.2"
+    "@playwright/test": "npm:=1.58.2"
+    "@toeverything/infra": "workspace:*"
+    express: "npm:^5.1.0"
+    http-proxy-middleware: "npm:^3.0.5"
+  peerDependencies:
+    "@playwright/test": "*"
+    express: "*"
+    http-proxy-middleware: "*"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-tools/cli@workspace:*, @cloud-notes-tools/cli@workspace:tools/cli":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-tools/cli@workspace:tools/cli"
+  dependencies:
+    "@cloud-notes-tools/utils": "workspace:*"
+    "@cloud-notes/s3-compat": "workspace:*"
+    "@napi-rs/simple-git": "npm:^1.0.0"
+    "@rspack/core": "npm:^2.0.8"
+    "@rspack/dev-server": "npm:^2.1.0"
+    "@sentry/webpack-plugin": "npm:^5.3.0"
+    "@swc/core": "npm:^1.10.1"
+    "@tailwindcss/postcss": "npm:^4.3.0"
+    "@types/lodash-es": "npm:^4.17.12"
+    "@types/mime-types": "npm:^3.0.0"
+    "@types/node": "npm:^22.0.0"
+    "@vanilla-extract/webpack-plugin": "npm:^2.3.15"
+    autoprefixer: "npm:^10.4.20"
+    clipanion: "npm:^3.2.1"
+    css-loader: "npm:^7.1.4"
+    cssnano: "npm:^7.0.6"
+    inquirer: "npm:^12.3.0"
+    jsonc-parser: "npm:^3.3.1"
+    lodash-es: "npm:^4.17.23"
+    mime-types: "npm:^3.0.0"
+    oxfmt: "npm:0.63.0"
+    postcss: "npm:^8.5.18"
+    postcss-loader: "npm:^8.2.1"
+    postcss-selector-parser: "npm:^7.1.0"
+    source-map-loader: "npm:^5.0.0"
+    style-loader: "npm:^4.0.0"
+    swc-loader: "npm:^0.2.6"
+    tailwindcss: "npm:^4.1.17"
+    tsx: "npm:^4.21.0"
+    typanion: "npm:^3.14.0"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  bin:
+    cloud-notes: ./bin/cli.js
+    r: ./bin/runner.js
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes-tools/utils@workspace:*, @cloud-notes-tools/utils@workspace:tools/utils":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes-tools/utils@workspace:tools/utils"
+  dependencies:
+    "@types/lodash-es": "npm:^4.17.12"
+    "@types/node": "npm:^22.0.0"
+    chalk: "npm:^5.3.0"
+    lodash-es: "npm:^4.17.23"
+    oxfmt: "npm:0.63.0"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/admin@workspace:packages/frontend/admin":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/admin@workspace:packages/frontend/admin"
+  dependencies:
+    "@blocksuite/icons": "npm:^2.2.17"
+    "@cloud-notes/component": "workspace:*"
+    "@cloud-notes/core": "workspace:*"
+    "@cloud-notes/error": "workspace:*"
+    "@cloud-notes/graphql": "workspace:*"
+    "@cloud-notes/routes": "workspace:*"
+    "@radix-ui/react-accordion": "npm:^1.2.2"
+    "@radix-ui/react-alert-dialog": "npm:^1.1.3"
+    "@radix-ui/react-aspect-ratio": "npm:^1.1.1"
+    "@radix-ui/react-avatar": "npm:^1.1.2"
+    "@radix-ui/react-checkbox": "npm:^1.1.3"
+    "@radix-ui/react-collapsible": "npm:^1.1.2"
+    "@radix-ui/react-context-menu": "npm:^2.2.3"
+    "@radix-ui/react-dialog": "npm:^1.1.3"
+    "@radix-ui/react-dropdown-menu": "npm:^2.1.3"
+    "@radix-ui/react-hover-card": "npm:^1.1.3"
+    "@radix-ui/react-label": "npm:^2.1.1"
+    "@radix-ui/react-menubar": "npm:^1.1.3"
+    "@radix-ui/react-navigation-menu": "npm:^1.2.2"
+    "@radix-ui/react-popover": "npm:^1.1.3"
+    "@radix-ui/react-progress": "npm:^1.1.1"
+    "@radix-ui/react-radio-group": "npm:^1.2.2"
+    "@radix-ui/react-scroll-area": "npm:^1.2.2"
+    "@radix-ui/react-select": "npm:^2.1.3"
+    "@radix-ui/react-separator": "npm:^1.1.1"
+    "@radix-ui/react-slider": "npm:^1.2.2"
+    "@radix-ui/react-slot": "npm:^1.1.1"
+    "@radix-ui/react-switch": "npm:^1.1.2"
+    "@radix-ui/react-tabs": "npm:^1.1.2"
+    "@radix-ui/react-toast": "npm:^1.2.3"
+    "@radix-ui/react-toggle": "npm:^1.1.1"
+    "@radix-ui/react-toggle-group": "npm:^1.1.1"
+    "@radix-ui/react-tooltip": "npm:^1.1.5"
+    "@sentry/react": "npm:^10.53.1"
+    "@tanstack/react-table": "npm:^8.20.5"
+    "@testing-library/react": "npm:^16.3.2"
+    "@toeverything/theme": "npm:^1.1.23"
+    "@types/lodash-es": "npm:^4.17.12"
+    class-variance-authority: "npm:^0.7.1"
+    clsx: "npm:^2.1.1"
+    cmdk: "npm:^1.0.4"
+    embla-carousel-react: "npm:^8.5.1"
+    input-otp: "npm:^1.4.1"
+    lodash-es: "npm:^4.17.23"
+    lucide-react: "npm:^0.508.0"
+    next-themes: "npm:^0.4.4"
+    react: "npm:^19.2.1"
+    react-day-picker: "npm:^9.4.3"
+    react-dom: "npm:^19.2.1"
+    react-hook-form: "npm:^7.54.1"
+    react-resizable-panels: "npm:^3.0.6"
+    react-router-dom: "npm:^7.18.2"
+    recharts: "npm:^2.15.4"
+    sonner: "npm:^2.0.7"
+    swr: "npm:^2.3.7"
+    tailwind-merge: "npm:^3.4.0"
+    tailwindcss: "npm:^4.1.17"
+    tailwindcss-animate: "npm:^1.0.7"
+    vaul: "npm:^1.1.2"
+    vitest: "npm:^4.1.8"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/android@workspace:packages/frontend/apps/android":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/android@workspace:packages/frontend/apps/android"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@capacitor/android": "npm:^8.4.2"
+    "@capacitor/app": "npm:^8.0.0"
+    "@capacitor/cli": "npm:^8.4.2"
+    "@capacitor/core": "npm:^8.4.2"
+    "@capacitor/keyboard": "npm:^8.0.0"
+    "@capacitor/status-bar": "npm:^8.0.0"
+    "@capgo/inappbrowser": "npm:^8.6.14"
+    "@cloud-notes/component": "workspace:*"
+    "@cloud-notes/core": "workspace:*"
+    "@cloud-notes/env": "workspace:*"
+    "@cloud-notes/i18n": "workspace:*"
+    "@cloud-notes/mobile-shared": "workspace:*"
+    "@cloud-notes/nbstore": "workspace:*"
+    "@cloud-notes/track": "workspace:*"
+    "@toeverything/infra": "workspace:*"
+    "@types/react": "npm:^19.0.1"
+    "@types/react-dom": "npm:^19.0.2"
+    async-call-rpc: "npm:^6.4.2"
+    idb: "npm:^8.0.0"
+    next-themes: "npm:^0.4.4"
+    react: "npm:^19.2.1"
+    react-dom: "npm:^19.2.1"
+    react-router-dom: "npm:^6.30.4"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/auth@workspace:*, @cloud-notes/auth@workspace:packages/common/auth":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/auth@workspace:packages/common/auth"
+  dependencies:
+    vitest: "npm:^4.1.8"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/changelog@workspace:tools/changelog":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/changelog@workspace:tools/changelog"
+  dependencies:
+    "@napi-rs/simple-git": "npm:^1.0.0"
+    "@slack/web-api": "npm:^8.0.0"
+    "@types/node": "npm:^22.0.0"
+    changelogithub: "npm:^13.0.0"
+    jsx-slack: "npm:^6.1.2"
+    marked: "npm:^15.0.12"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/commitlint-config@workspace:tools/commitlint":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/commitlint-config@workspace:tools/commitlint"
+  dependencies:
+    "@commitlint/cli": "npm:^19.8.1"
+    "@commitlint/config-conventional": "npm:^19.8.1"
+    commitlint: "npm:^19.6.0"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/component@workspace:*, @cloud-notes/component@workspace:packages/frontend/component":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/component@workspace:packages/frontend/component"
+  dependencies:
+    "@atlaskit/pragmatic-drag-and-drop": "npm:^2.0.0"
+    "@atlaskit/pragmatic-drag-and-drop-hitbox": "npm:^2.0.0"
+    "@blocksuite/icons": "npm:^2.2.17"
+    "@cloud-notes-tools/utils": "workspace:*"
+    "@cloud-notes/debug": "workspace:*"
+    "@cloud-notes/error": "workspace:*"
+    "@cloud-notes/graphql": "workspace:*"
+    "@cloud-notes/i18n": "workspace:*"
+    "@emotion/react": "npm:^11.14.0"
+    "@emotion/styled": "npm:^11.14.0"
+    "@radix-ui/react-avatar": "npm:^1.1.11"
+    "@radix-ui/react-collapsible": "npm:^1.1.12"
+    "@radix-ui/react-context-menu": "npm:^2.2.16"
+    "@radix-ui/react-dialog": "npm:^1.1.15"
+    "@radix-ui/react-dropdown-menu": "npm:^2.1.16"
+    "@radix-ui/react-popover": "npm:^1.1.15"
+    "@radix-ui/react-progress": "npm:^1.1.8"
+    "@radix-ui/react-radio-group": "npm:^1.2.4"
+    "@radix-ui/react-scroll-area": "npm:^1.2.10"
+    "@radix-ui/react-slider": "npm:^1.2.4"
+    "@radix-ui/react-slot": "npm:^1.1.2"
+    "@radix-ui/react-tabs": "npm:^1.1.13"
+    "@radix-ui/react-toast": "npm:^1.2.15"
+    "@radix-ui/react-tooltip": "npm:^1.1.8"
+    "@radix-ui/react-visually-hidden": "npm:^1.1.3"
+    "@storybook/react": "npm:^10.2.14"
+    "@storybook/react-vite": "npm:^10.2.14"
+    "@testing-library/dom": "npm:^10.4.0"
+    "@testing-library/react": "npm:^16.1.0"
+    "@toeverything/theme": "npm:^1.1.23"
+    "@types/bytes": "npm:^3.1.5"
+    "@types/react": "npm:^19.0.1"
+    "@types/react-dom": "npm:^19.0.2"
+    "@vanilla-extract/css": "npm:^1.17.0"
+    "@vanilla-extract/dynamic": "npm:^2.1.2"
+    bytes: "npm:^3.1.2"
+    check-password-strength: "npm:^3.0.0"
+    clsx: "npm:^2.1.1"
+    dayjs: "npm:^1.11.13"
+    emojibase-data: "npm:^16.0.3"
+    foxact: "npm:^0.2.49"
+    jotai: "npm:^2.10.3"
+    lit: "npm:^3.2.1"
+    lodash-es: "npm:^4.17.23"
+    lottie-react: "npm:^2.4.0"
+    lottie-web: "npm:^5.12.2"
+    nanoid: "npm:^5.1.6"
+    next-themes: "npm:^0.4.4"
+    react: "npm:^19.2.1"
+    react-dom: "npm:19.2.1"
+    react-paginate: "npm:^8.3.0"
+    react-router-dom: "npm:^6.30.4"
+    react-transition-state: "npm:^2.2.0"
+    sonner: "npm:^2.0.7"
+    storybook: "npm:^10.2.14"
+    swr: "npm:^2.3.7"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    unplugin-swc: "npm:^1.5.9"
+    vite: "npm:^7.3.5"
+    vitest: "npm:^4.1.8"
+    zod: "npm:^3.25.76"
+  peerDependencies:
+    "@blocksuite/cloud-notes": "*"
+    "@swc/core": ^1.0.0
+    react: ^19.2.1
+    react-dom: ^19.2.1
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/copilot-result@workspace:tools/copilot-result":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/copilot-result@workspace:tools/copilot-result"
+  dependencies:
+    "@slack/web-api": "npm:^8.0.0"
+    "@types/node": "npm:^22.0.0"
+    jsx-slack: "npm:^6.1.2"
+    marked: "npm:^15.0.12"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/core@workspace:*, @cloud-notes/core@workspace:packages/frontend/core":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/core@workspace:packages/frontend/core"
+  dependencies:
+    "@atlaskit/pragmatic-drag-and-drop": "npm:^2.0.0"
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@blocksuite/cloud-notes-block-root": "workspace:*"
+    "@blocksuite/cloud-notes-components": "workspace:*"
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*"
+    "@blocksuite/cloud-notes-graph": "workspace:*"
+    "@blocksuite/cloud-notes-shared": "workspace:*"
+    "@blocksuite/data-view": "workspace:*"
+    "@blocksuite/global": "workspace:*"
+    "@blocksuite/icons": "npm:^2.2.17"
+    "@blocksuite/std": "workspace:*"
+    "@cloud-notes/component": "workspace:*"
+    "@cloud-notes/debug": "workspace:*"
+    "@cloud-notes/electron-api": "workspace:*"
+    "@cloud-notes/env": "workspace:*"
+    "@cloud-notes/error": "workspace:*"
+    "@cloud-notes/graphql": "workspace:*"
+    "@cloud-notes/i18n": "workspace:*"
+    "@cloud-notes/nbstore": "workspace:*"
+    "@cloud-notes/reader": "workspace:*"
+    "@cloud-notes/templates": "workspace:*"
+    "@cloud-notes/track": "workspace:*"
+    "@emotion/cache": "npm:^11.14.0"
+    "@emotion/css": "npm:^11.13.5"
+    "@floating-ui/dom": "npm:^1.6.13"
+    "@juggle/resize-observer": "npm:^3.4.0"
+    "@lottiefiles/dotlottie-wc": "npm:^0.9.4"
+    "@marsidev/react-turnstile": "npm:^1.1.0"
+    "@myriaddreamin/typst-ts-renderer": "npm:^0.7.0-rc2"
+    "@myriaddreamin/typst-ts-web-compiler": "npm:^0.7.0-rc2"
+    "@myriaddreamin/typst.ts": "npm:^0.7.0-rc2"
+    "@playwright/test": "npm:=1.58.2"
+    "@preact/signals-core": "npm:^1.8.0"
+    "@radix-ui/react-collapsible": "npm:^1.1.2"
+    "@radix-ui/react-dialog": "npm:^1.1.3"
+    "@radix-ui/react-popover": "npm:^1.1.3"
+    "@radix-ui/react-scroll-area": "npm:^1.2.2"
+    "@radix-ui/react-slot": "npm:^1.1.1"
+    "@radix-ui/react-toolbar": "npm:^1.1.1"
+    "@sentry/react": "npm:^10.53.1"
+    "@testing-library/dom": "npm:^10.4.0"
+    "@testing-library/react": "npm:^16.1.0"
+    "@toeverything/infra": "workspace:*"
+    "@toeverything/mermaid-wasm": "npm:^0.1.0"
+    "@toeverything/pdf-viewer": "npm:^0.1.1"
+    "@toeverything/theme": "npm:^1.1.23"
+    "@types/bytes": "npm:^3.1.5"
+    "@types/image-blob-reduce": "npm:^4.1.4"
+    "@types/lodash-es": "npm:^4.17.12"
+    "@types/semver": "npm:^7"
+    "@vanilla-extract/css": "npm:^1.17.0"
+    "@vanilla-extract/dynamic": "npm:^2.1.2"
+    animejs: "npm:^4.0.0"
+    bytes: "npm:^3.1.2"
+    clsx: "npm:^2.1.1"
+    cmdk: "npm:^1.0.4"
+    core-js: "npm:^3.39.0"
+    dayjs: "npm:^1.11.13"
+    dompurify: "npm:^3.4.11"
+    eventemitter2: "npm:^6.4.9"
+    fake-indexeddb: "npm:^6.0.0"
+    file-type: "npm:^21.0.0"
+    filesize: "npm:^10.1.6"
+    foxact: "npm:^0.2.49"
+    fuse.js: "npm:^7.0.0"
+    graphemer: "npm:^1.4.0"
+    graphql: "npm:^16.9.0"
+    happy-dom: "npm:^20.3.0"
+    history: "npm:^5.3.0"
+    idb: "npm:^8.0.0"
+    image-blob-reduce: "npm:^4.1.0"
+    is-svg: "npm:^6.1.0"
+    jotai: "npm:^2.10.3"
+    jotai-scope: "npm:^0.7.2"
+    katex: "npm:^0.16.27"
+    lit: "npm:^3.2.1"
+    lodash-es: "npm:^4.17.23"
+    lottie-react: "npm:^2.4.0"
+    mermaid: "npm:^11.15.0"
+    mp4-muxer: "npm:^5.2.2"
+    nanoid: "npm:^5.1.6"
+    next-themes: "npm:^0.4.4"
+    query-string: "npm:^9.1.1"
+    react: "npm:^19.2.1"
+    react-dom: "npm:^19.2.1"
+    react-error-boundary: "npm:^6.0.0"
+    react-router-dom: "npm:^6.30.4"
+    react-transition-state: "npm:^2.2.0"
+    react-virtuoso: "npm:^4.12.3"
+    recharts: "npm:^2.15.4"
+    rxjs: "npm:^7.8.2"
+    semver: "npm:^7.7.3"
+    shiki: "npm:^3.19.0"
+    socket.io-client: "npm:^4.8.3"
+    swr: "npm:^2.3.7"
+    tinykeys: "patch:tinykeys@npm%3A2.1.0#~/.yarn/patches/tinykeys-npm-2.1.0-819feeaed0.patch"
+    vite: "npm:^7.3.5"
+    vitest: "npm:^4.1.8"
+    y-protocols: "npm:^1.0.6"
+    yjs: "npm:^13.6.27"
+    zod: "npm:^3.25.76"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/debug@workspace:*, @cloud-notes/debug@workspace:packages/common/debug":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/debug@workspace:packages/common/debug"
+  dependencies:
+    "@types/debug": "npm:^4.1.12"
+    debug: "npm:^4.4.0"
+    vitest: "npm:^4.1.8"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/doc-diff@workspace:tools/doc-diff":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/doc-diff@workspace:tools/doc-diff"
+  dependencies:
+    "@cloud-notes-tools/cli": "workspace:*"
+    "@types/node": "npm:^22.0.0"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    yjs: "npm:^13.6.27"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/docs@workspace:docs/reference":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/docs@workspace:docs/reference"
+  dependencies:
+    nodemon: "npm:^3.1.14"
+    serve: "npm:^14.2.6"
+    typedoc: "npm:^0.28.18"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/electron-api@workspace:*, @cloud-notes/electron-api@workspace:packages/frontend/electron-api":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/electron-api@workspace:packages/frontend/electron-api"
+  dependencies:
+    "@cloud-notes/electron": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/electron-renderer@workspace:packages/frontend/apps/electron-renderer":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/electron-renderer@workspace:packages/frontend/apps/electron-renderer"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@cloud-notes/component": "workspace:*"
+    "@cloud-notes/core": "workspace:*"
+    "@cloud-notes/debug": "workspace:*"
+    "@cloud-notes/electron-api": "workspace:*"
+    "@cloud-notes/i18n": "workspace:*"
+    "@cloud-notes/nbstore": "workspace:*"
+    "@cloud-notes/track": "workspace:*"
+    "@emotion/react": "npm:^11.14.0"
+    "@toeverything/infra": "workspace:*"
+    "@toeverything/theme": "npm:^1.1.23"
+    "@types/react": "npm:^19.0.1"
+    "@types/react-dom": "npm:^19.0.2"
+    "@vanilla-extract/css": "npm:^1.17.0"
+    next-themes: "npm:^0.4.4"
+    react: "npm:^19.2.1"
+    react-dom: "npm:^19.2.1"
+    react-router-dom: "npm:^6.30.4"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    uuid: "npm:^14.0.0"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/electron@workspace:*, @cloud-notes/electron@workspace:packages/frontend/apps/electron":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/electron@workspace:packages/frontend/apps/electron"
+  dependencies:
+    "@cloud-notes-tools/utils": "workspace:*"
+    "@cloud-notes/auth": "workspace:*"
+    "@cloud-notes/i18n": "workspace:*"
+    "@cloud-notes/native": "workspace:*"
+    "@cloud-notes/nbstore": "workspace:*"
+    "@electron-forge/cli": "npm:^7.11.1"
+    "@electron-forge/core": "npm:^7.11.1"
+    "@electron-forge/maker-deb": "npm:^7.11.1"
+    "@electron-forge/maker-dmg": "npm:^7.11.1"
+    "@electron-forge/maker-flatpak": "npm:^7.11.1"
+    "@electron-forge/maker-squirrel": "npm:^7.11.1"
+    "@electron-forge/maker-zip": "npm:^7.11.1"
+    "@electron-forge/plugin-auto-unpack-natives": "npm:^7.11.1"
+    "@electron-forge/plugin-fuses": "npm:^7.11.1"
+    "@electron-forge/shared-types": "npm:^7.11.1"
+    "@reforged/maker-appimage": "npm:^5.2.0"
+    "@sentry/electron": "npm:^7.13.0"
+    "@sentry/esbuild-plugin": "npm:^5.3.0"
+    "@toeverything/infra": "workspace:*"
+    "@types/set-cookie-parser": "npm:^2.4.10"
+    app-builder-lib: "npm:^26.15.0"
+    async-call-rpc: "npm:^6.4.2"
+    builder-util-runtime: "npm:^9.7.0"
+    cross-env: "npm:^10.1.0"
+    debug: "npm:^4.4.0"
+    electron: "npm:^39.0.0"
+    electron-log: "npm:^5.4.3"
+    electron-squirrel-startup: "npm:1.0.1"
+    electron-updater: "npm:^6.8.9"
+    electron-window-state: "npm:^5.0.3"
+    esbuild: "npm:^0.28.0"
+    fs-extra: "npm:^11.2.0"
+    glob: "npm:^11.0.0"
+    link-preview-js: "npm:^4.0.0"
+    lodash-es: "npm:^4.17.23"
+    msw: "npm:^2.13.2"
+    nanoid: "npm:^5.1.6"
+    rxjs: "npm:^7.8.2"
+    semver: "npm:^7.7.3"
+    set-cookie-parser: "npm:^2.7.1"
+    tree-kill: "npm:^1.2.2"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    uuid: "npm:^14.0.0"
+    vitest: "npm:^4.1.8"
+    yjs: "npm:^13.6.27"
+    zod: "npm:^3.25.76"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/env@workspace:*, @cloud-notes/env@workspace:packages/common/env":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/env@workspace:packages/common/env"
+  dependencies:
+    vitest: "npm:^4.1.8"
+    zod: "npm:^3.25.76"
+  peerDependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@cloud-notes/templates": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/error@workspace:*, @cloud-notes/error@workspace:packages/common/error":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/error@workspace:packages/common/error"
+  dependencies:
+    vitest: "npm:^4.1.8"
+  peerDependencies:
+    "@cloud-notes/graphql": "workspace:*"
+    graphql: ^16.9.0
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/graphql@workspace:*, @cloud-notes/graphql@workspace:packages/common/graphql":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/graphql@workspace:packages/common/graphql"
+  dependencies:
+    "@cloud-notes/debug": "workspace:*"
+    "@cloud-notes/error": "workspace:*"
+    "@graphql-codegen/cli": "npm:^6.2.1"
+    "@graphql-codegen/typescript": "npm:^5.0.9"
+    "@graphql-codegen/typescript-operations": "npm:^5.0.9"
+    "@types/lodash-es": "npm:^4.17.12"
+    graphql: "npm:^16.9.0"
+    lodash: "npm:^4.18.1"
+    lodash-es: "npm:^4.17.23"
+    oxfmt: "npm:0.63.0"
+    vitest: "npm:^4.1.8"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/i18n@workspace:*, @cloud-notes/i18n@workspace:packages/frontend/i18n":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/i18n@workspace:packages/frontend/i18n"
+  dependencies:
+    "@cloud-notes-tools/cli": "workspace:*"
+    "@cloud-notes-tools/utils": "workspace:*"
+    "@cloud-notes/debug": "workspace:*"
+    "@magic-works/i18n-codegen": "npm:^0.6.1"
+    dayjs: "npm:^1.11.13"
+    glob: "npm:^11.0.0"
+    i18next: "npm:^25.0.0"
+    react: "npm:^19.2.1"
+    react-i18next: "npm:^15.2.0"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    vitest: "npm:^4.1.8"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/ios@workspace:packages/frontend/apps/ios":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/ios@workspace:packages/frontend/apps/ios"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@capacitor/app": "npm:^8.0.0"
+    "@capacitor/browser": "npm:^8.0.0"
+    "@capacitor/cli": "npm:^8.4.2"
+    "@capacitor/core": "npm:^8.4.2"
+    "@capacitor/haptics": "npm:^8.0.0"
+    "@capacitor/ios": "npm:^8.4.2"
+    "@capacitor/keyboard": "npm:^8.0.0"
+    "@cloud-notes-tools/cli": "workspace:*"
+    "@cloud-notes-tools/utils": "workspace:*"
+    "@cloud-notes/component": "workspace:*"
+    "@cloud-notes/core": "workspace:*"
+    "@cloud-notes/env": "workspace:*"
+    "@cloud-notes/graphql": "workspace:*"
+    "@cloud-notes/i18n": "workspace:*"
+    "@cloud-notes/mobile-shared": "workspace:*"
+    "@cloud-notes/nbstore": "workspace:*"
+    "@cloud-notes/track": "workspace:*"
+    "@toeverything/infra": "workspace:^"
+    "@types/react": "npm:^19.0.1"
+    "@types/react-dom": "npm:^19.0.2"
+    async-call-rpc: "npm:^6.4.2"
+    capacitor-plugin-app-tracking-transparency: "npm:^3.0.0"
+    idb: "npm:^8.0.0"
+    next-themes: "npm:^0.4.4"
+    react: "npm:^19.2.1"
+    react-dom: "npm:^19.2.1"
+    react-router-dom: "npm:^6.30.4"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/mobile-shared@workspace:*, @cloud-notes/mobile-shared@workspace:packages/frontend/apps/mobile-shared":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/mobile-shared@workspace:packages/frontend/apps/mobile-shared"
+  dependencies:
+    "@capacitor/core": "npm:^8.4.2"
+    "@cloud-notes/core": "workspace:*"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    vitest: "npm:^4.1.8"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/mobile@workspace:packages/frontend/apps/mobile":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/mobile@workspace:packages/frontend/apps/mobile"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@cloud-notes/component": "workspace:*"
+    "@cloud-notes/core": "workspace:*"
+    "@cloud-notes/env": "workspace:*"
+    "@cloud-notes/nbstore": "workspace:*"
+    "@cloud-notes/track": "workspace:*"
+    "@toeverything/infra": "workspace:*"
+    "@types/react": "npm:^19.0.1"
+    "@types/react-dom": "npm:^19.0.2"
+    react: "npm:^19.2.1"
+    react-dom: "npm:^19.2.1"
+    react-router-dom: "npm:^6.30.4"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/monorepo@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/monorepo@workspace:."
+  dependencies:
+    "@capacitor/cli": "npm:^8.4.2"
+    "@cloud-notes-tools/cli": "workspace:*"
+    "@faker-js/faker": "npm:^10.1.0"
+    "@istanbuljs/schema": "npm:^0.1.3"
+    "@playwright/test": "npm:=1.58.2"
+    "@taplo/cli": "npm:^0.7.0"
+    "@toeverything/infra": "workspace:*"
+    "@types/node": "npm:^22.0.0"
+    "@typescript/native": "npm:typescript@7.0.2"
+    "@vanilla-extract/vite-plugin": "npm:^5.0.0"
+    "@vitest/browser": "npm:^4.1.10"
+    "@vitest/coverage-istanbul": "npm:^4.1.10"
+    "@vitest/ui": "npm:^4.1.10"
+    electron: "npm:^39.0.0"
+    eslint: "npm:9.39.2"
+    eslint-plugin-import-x: "npm:^4.16.1"
+    eslint-plugin-lit: "npm:^2.2.1"
+    eslint-plugin-react: "npm:^7.37.5"
+    eslint-plugin-react-hooks: "npm:^7.0.1"
+    eslint-plugin-simple-import-sort: "npm:^12.1.1"
+    eslint-plugin-sonarjs: "npm:^4.0.2"
+    happy-dom: "npm:^20.0.0"
+    husky: "npm:^9.1.7"
+    lint-staged: "npm:^16.0.0"
+    msw: "npm:^2.13.2"
+    oxfmt: "npm:0.63.0"
+    oxlint: "npm:1.78.0"
+    oxlint-tsgolint: "npm:7.0.2001"
+    semver: "npm:^7.7.3"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    unplugin-swc: "npm:^1.5.9"
+    vite: "npm:^7.3.5"
+    vitest: "npm:^4.1.10"
+  dependenciesMeta:
+    "@apollo/protobufjs":
+      built: false
+    "@prisma/client":
+      built: true
+    "@prisma/engines":
+      built: true
+    "@scarf/scarf":
+      built: false
+    "@sentry/cli":
+      built: true
+    "@swc/core":
+      built: false
+    core-js:
+      built: false
+    electron:
+      built: true
+    electron-winstaller:
+      built: true
+    esbuild:
+      built: true
+    msgpackr-extract:
+      built: false
+    msw:
+      built: false
+    prisma:
+      built: false
+    protobufjs:
+      built: false
+    unrs-resolver:
+      built: false
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/native@workspace:*, @cloud-notes/native@workspace:packages/frontend/native":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/native@workspace:packages/frontend/native"
+  dependencies:
+    "@napi-rs/cli": "npm:3.5.0"
+    "@napi-rs/whisper": "npm:^0.0.4"
+    "@types/node": "npm:^22.0.0"
+    ava: "npm:^7.0.0"
+    rxjs: "npm:^7.8.2"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/nbstore@workspace:*, @cloud-notes/nbstore@workspace:packages/common/nbstore":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/nbstore@workspace:packages/common/nbstore"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@cloud-notes/error": "workspace:*"
+    "@cloud-notes/graphql": "workspace:*"
+    "@cloud-notes/reader": "workspace:*"
+    "@cloud-notes/realtime": "workspace:*"
+    "@toeverything/infra": "workspace:*"
+    eventemitter2: "npm:^6.4.9"
+    fake-indexeddb: "npm:^6.0.0"
+    graphemer: "npm:^1.4.0"
+    idb: "npm:^8.0.0"
+    lodash-es: "npm:^4.17.23"
+    nanoid: "npm:^5.1.6"
+    rxjs: "npm:^7.8.2"
+    socket.io-client: "npm:^4.8.3"
+    uuid: "npm:^14.0.0"
+    vitest: "npm:^4.1.8"
+    y-protocols: "npm:^1.0.6"
+    yjs: "npm:^13.6.27"
+  peerDependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@cloud-notes/error": "workspace:*"
+    "@cloud-notes/graphql": "workspace:*"
+    "@cloud-notes/realtime": "workspace:*"
+    idb: ^8.0.0
+    socket.io-client: ^4.8.3
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/playstore-auto-bump@workspace:tools/playstore-auto-bump":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/playstore-auto-bump@workspace:tools/playstore-auto-bump"
+  dependencies:
+    "@cloud-notes-tools/cli": "workspace:*"
+    "@cloud-notes-tools/utils": "workspace:*"
+    "@googleapis/androidpublisher": "npm:^36.0.0"
+    "@types/node": "npm:^22.0.0"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/reader@workspace:*, @cloud-notes/reader@workspace:packages/common/reader":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/reader@workspace:packages/common/reader"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    lodash-es: "npm:^4.17.23"
+    vitest: "npm:^4.1.8"
+    yjs: "npm:^13.6.27"
+  peerDependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/realtime@workspace:*, @cloud-notes/realtime@workspace:packages/common/realtime":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/realtime@workspace:packages/common/realtime"
+  dependencies:
+    "@cloud-notes/graphql": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/revert-update@workspace:tools/revert-update":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/revert-update@workspace:tools/revert-update"
+  dependencies:
+    "@cloud-notes-tools/cli": "workspace:*"
+    "@types/node": "npm:^22.0.0"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+    yjs: "npm:^13.6.27"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/routes@workspace:*, @cloud-notes/routes@workspace:packages/frontend/routes":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/routes@workspace:packages/frontend/routes"
+  dependencies:
+    "@cloud-notes-tools/cli": "workspace:*"
+    "@cloud-notes-tools/utils": "workspace:*"
+    path-to-regexp: "npm:^8.4.2"
+    vitest: "npm:^4.1.8"
+  peerDependencies:
+    react: ^19.2.1
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/s3-compat@workspace:*, @cloud-notes/s3-compat@workspace:packages/common/s3-compat":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/s3-compat@workspace:packages/common/s3-compat"
+  dependencies:
+    "@types/aws4": "npm:^1.11.6"
+    aws4: "npm:^1.13.2"
+    fast-xml-parser: "npm:^5.8.0"
+    s3mini: "npm:^0.9.1"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/templates@workspace:*, @cloud-notes/templates@workspace:packages/frontend/templates":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/templates@workspace:packages/frontend/templates"
+  dependencies:
+    jszip: "npm:^3.10.1"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/track@workspace:*, @cloud-notes/track@workspace:packages/frontend/track":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/track@workspace:packages/frontend/track"
+  dependencies:
+    "@cloud-notes/debug": "workspace:*"
+    "@sentry/react": "npm:^10.53.1"
+    "@types/react": "npm:^19.0.1"
+    nanoid: "npm:^5.1.6"
+    react: "npm:^19.2.1"
+    react-router-dom: "npm:^6.30.4"
+    vitest: "npm:^4.1.8"
+  languageName: unknown
+  linkType: soft
+
+"@cloud-notes/web@workspace:packages/frontend/apps/web":
+  version: 0.0.0-use.local
+  resolution: "@cloud-notes/web@workspace:packages/frontend/apps/web"
+  dependencies:
+    "@cloud-notes/component": "workspace:*"
+    "@cloud-notes/core": "workspace:*"
+    "@cloud-notes/env": "workspace:*"
+    "@cloud-notes/nbstore": "workspace:*"
+    "@cloud-notes/track": "workspace:*"
+    "@emotion/react": "npm:^11.14.0"
+    "@toeverything/infra": "workspace:*"
+    "@types/react": "npm:^19.0.1"
+    "@types/react-dom": "npm:^19.0.2"
+    react: "npm:^19.2.1"
+    react-dom: "npm:^19.2.1"
+    react-router-dom: "npm:^6.30.4"
+    typescript: "npm:@typescript/typescript6@6.0.2"
+  languageName: unknown
+  linkType: soft
 
 "@codemirror/autocomplete@npm:^6.0.0, @codemirror/autocomplete@npm:^6.18.1":
   version: 6.20.1
@@ -12077,10 +12077,10 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@toeverything/infra@workspace:packages/common/infra"
   dependencies:
-    "@affine/debug": "workspace:*"
-    "@affine/env": "workspace:*"
-    "@affine/error": "workspace:*"
-    "@affine/templates": "workspace:*"
+    "@cloud-notes/debug": "workspace:*"
+    "@cloud-notes/env": "workspace:*"
+    "@cloud-notes/error": "workspace:*"
+    "@cloud-notes/templates": "workspace:*"
     "@preact/signals-core": "npm:^1.8.0"
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/react": "npm:^16.1.0"
@@ -12179,15 +12179,6 @@ __metadata:
   checksum: 10/6cf39f7a2926b1c8bc6fe3f9f03318a33dd6dae81bdbd059983f9c6ee22d10a827f12564d648c05a2d4926e03c86cbe2799fb20609ee65e9efc39603039b4765
   languageName: node
   linkType: hard
-
-"@types/affine__env@workspace:tools/@types/env":
-  version: 0.0.0-use.local
-  resolution: "@types/affine__env@workspace:tools/@types/env"
-  dependencies:
-    "@affine/env": "workspace:*"
-    "@blocksuite/affine": "workspace:*"
-  languageName: unknown
-  linkType: soft
 
 "@types/appdmg@npm:^0.5.5":
   version: 0.5.5
@@ -12310,6 +12301,15 @@ __metadata:
   checksum: 10/de425e7b02cc1233a93923866e019dffbafa892774813940b780ebb1ac9f8a8c57b7438c78686bf4e5db05cd3fc8a970fedf6b83638543995ecca88ef2060668
   languageName: node
   linkType: hard
+
+"@types/cloud-notes__env@workspace:tools/@types/env":
+  version: 0.0.0-use.local
+  resolution: "@types/cloud-notes__env@workspace:tools/@types/env"
+  dependencies:
+    "@blocksuite/cloud-notes": "workspace:*"
+    "@cloud-notes/env": "workspace:*"
+  languageName: unknown
+  linkType: soft
 
 "@types/connect@npm:3.4.38":
   version: 3.4.38

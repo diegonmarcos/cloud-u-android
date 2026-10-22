@@ -1,4 +1,4 @@
-import { i18nTime } from '@affine/i18n';
+import { i18nTime } from '@cloud-notes/i18n';
 import {
   AliasIcon as LitAliasIcon,
   BlockLinkIcon as LitBlockLinkIcon,
@@ -210,7 +210,7 @@ export class DocDisplayMetaService extends Service {
       // doc not found
       if (!doc) {
         return this.i18nService.i18n.i18next.t(
-          'com.affine.notFoundPage.title',
+          'com.cloud-notes.notFoundPage.title',
           { lng }
         );
       }

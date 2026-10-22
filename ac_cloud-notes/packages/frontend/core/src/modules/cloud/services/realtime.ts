@@ -1,5 +1,5 @@
-import { shallowEqual } from '@affine/component';
-import { ServerDeploymentType } from '@affine/graphql';
+import { shallowEqual } from '@cloud-notes/component';
+import { ServerDeploymentType } from '@cloud-notes/graphql';
 import { LiveData, OnEvent, Service } from '@toeverything/infra';
 
 import type { GlobalContextService } from '../../global-context';

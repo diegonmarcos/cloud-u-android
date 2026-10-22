@@ -47,7 +47,7 @@ async function checkNoteScale(
   expectedType: 'equal' | 'greater' | 'less' = 'equal'
 ) {
   const edgelessNote = page.locator(
-    `affine-edgeless-note[data-block-id="${noteId}"]`
+    `cloud-notes-edgeless-note[data-block-id="${noteId}"]`
   );
   const style = await edgelessNote.getAttribute('style');
 
@@ -124,7 +124,7 @@ test.describe('note scale', () => {
     await selectNoteInEdgeless(page, noteId);
 
     const edgelessNote = page.locator(
-      `affine-edgeless-note[data-block-id="${noteId}"]`
+      `cloud-notes-edgeless-note[data-block-id="${noteId}"]`
     );
     const noteRect = await edgelessNote.boundingBox();
     assertRectExist(noteRect);

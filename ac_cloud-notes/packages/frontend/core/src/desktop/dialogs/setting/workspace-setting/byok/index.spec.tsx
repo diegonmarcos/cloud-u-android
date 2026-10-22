@@ -79,7 +79,7 @@ const createMutation = vi.hoisted(() => Symbol('create'));
 const probeMutation = vi.hoisted(() => Symbol('probe'));
 const replaceMutation = vi.hoisted(() => Symbol('replace'));
 
-vi.mock('@affine/component', () => ({
+vi.mock('@cloud-notes/component', () => ({
   Button: ({
     children,
     ...props
@@ -167,7 +167,7 @@ vi.mock('@affine/component', () => ({
   notify: { error: vi.fn() },
 }));
 
-vi.mock('@affine/graphql', () => ({
+vi.mock('@cloud-notes/graphql', () => ({
   ByokProvider,
   ...ByokEnums,
   createWorkspaceByokProfileMutation: createMutation,
@@ -175,7 +175,7 @@ vi.mock('@affine/graphql', () => ({
   replaceWorkspaceByokProfileMutation: replaceMutation,
 }));
 
-vi.mock('@affine/i18n', () => ({
+vi.mock('@cloud-notes/i18n', () => ({
   useI18n: () => ({ t: (key: string) => key.split('.').at(-1) ?? key }),
 }));
 

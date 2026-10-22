@@ -4,7 +4,7 @@ import {
   type QueryOptions,
   type QueryResponse,
   type WorkspaceByokSettingsQuery,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 
 export const ByokStorage = {
   server: 'server',

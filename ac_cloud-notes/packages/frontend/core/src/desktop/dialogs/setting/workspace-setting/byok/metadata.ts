@@ -4,8 +4,8 @@ import {
   ByokModelInput,
   ByokModelOutput,
   ByokProvider,
-} from '@affine/graphql';
-import type { I18nInstance } from '@affine/i18n';
+} from '@cloud-notes/graphql';
+import type { I18nInstance } from '@cloud-notes/i18n';
 
 import { type ByokKey, ByokStorage } from './types';
 
@@ -14,7 +14,7 @@ export function byokT(
   key: string,
   options?: Record<string, unknown>
 ) {
-  return t.t('com.affine.settings.workspace.byok.' + key, options);
+  return t.t('com.cloud-notes.settings.workspace.byok.' + key, options);
 }
 
 export const providerLabels: Record<ByokProvider, string> = {

@@ -1,13 +1,13 @@
 {
-  "name": "@affine/admin",
+  "name": "@cloud-notes/admin",
   "version": "0.27.5",
   "private": true,
   "dependencies": {
-    "@affine/component": "workspace:*",
-    "@affine/core": "workspace:*",
-    "@affine/error": "workspace:*",
-    "@affine/graphql": "workspace:*",
-    "@affine/routes": "workspace:*",
+    "@cloud-notes/component": "workspace:*",
+    "@cloud-notes/core": "workspace:*",
+    "@cloud-notes/error": "workspace:*",
+    "@cloud-notes/graphql": "workspace:*",
+    "@cloud-notes/routes": "workspace:*",
     "@blocksuite/icons": "^2.2.17",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.3",
@@ -67,8 +67,8 @@
     "vitest": "^4.1.8"
   },
   "scripts": {
-    "build": "affine bundle",
-    "dev": "affine bundle --dev",
+    "build": "cloud-notes bundle",
+    "dev": "cloud-notes bundle --dev",
     "update-shadcn": "yarn dlx shadcn@latest add -p src/components/ui"
   },
   "exports": {

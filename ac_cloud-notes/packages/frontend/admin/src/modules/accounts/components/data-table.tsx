@@ -1,4 +1,4 @@
-import type { FeatureType } from '@affine/graphql';
+import type { FeatureType } from '@cloud-notes/graphql';
 import type {
   ColumnDef,
   PaginationState,

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use affine_preview::{
+use cloud_notes_preview::{
   MermaidRenderOptions as PreviewMermaidRenderOptions, TypstRenderOptions as PreviewTypstRenderOptions,
 };
 use napi::{Error, Result};
@@ -31,7 +31,7 @@ pub fn render_mermaid_svg(request: MermaidRenderRequest) -> Result<MermaidRender
     font_family: None,
     font_size: None,
   });
-  let svg = affine_preview::render_mermaid_svg(
+  let svg = cloud_notes_preview::render_mermaid_svg(
     &request.code,
     PreviewMermaidRenderOptions {
       theme: options.theme,
@@ -100,7 +100,7 @@ fn resolve_typst_font_dirs(options: &Option<TypstRenderOptions>) -> Vec<PathBuf>
 #[napi]
 pub fn render_typst_svg(request: TypstRenderRequest) -> Result<TypstRenderResult> {
   let font_dirs = resolve_typst_font_dirs(&request.options);
-  let svg = affine_preview::render_typst_svg(
+  let svg = cloud_notes_preview::render_typst_svg(
     &request.code,
     PreviewTypstRenderOptions {
       font_dirs,

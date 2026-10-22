@@ -1,4 +1,4 @@
-import type { PricesQuery } from '@affine/graphql';
+import type { PricesQuery } from '@cloud-notes/graphql';
 import {
   catchErrorInto,
   effect,

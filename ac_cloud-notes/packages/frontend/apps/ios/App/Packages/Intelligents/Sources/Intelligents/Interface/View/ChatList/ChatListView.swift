@@ -27,7 +27,7 @@ class ChatListView: UIView {
       make.edges.equalToSuperview()
     }
 
-    let dataSourceQueue = DispatchQueue(label: "com.affine.intelligents.chat.list.dataSource", qos: .userInteractive)
+    let dataSourceQueue = DispatchQueue(label: "com.cloud-notes.intelligents.chat.list.dataSource", qos: .userInteractive)
 
     Publishers.CombineLatest(
       IntelligentContext.shared.$currentSession

@@ -1,4 +1,4 @@
-import { ExpiredPage } from '@affine/component/member-components';
+import { ExpiredPage } from '@cloud-notes/component/member-components';
 import { useCallback } from 'react';
 
 import {
@@ -13,9 +13,9 @@ import {
  */
 export const Component = () => {
   const { jumpToIndex } = useNavigateHelper();
-  const onOpenAffine = useCallback(() => {
+  const onOpenCloudNotes = useCallback(() => {
     jumpToIndex(RouteLogic.REPLACE);
   }, [jumpToIndex]);
 
-  return <ExpiredPage onOpenAffine={onOpenAffine} />;
+  return <ExpiredPage onOpenCloudNotes={onOpenCloudNotes} />;
 };

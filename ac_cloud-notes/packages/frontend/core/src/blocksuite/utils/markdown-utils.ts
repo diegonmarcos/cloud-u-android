@@ -1,5 +1,5 @@
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { WorkspaceImpl } from '@affine/core/modules/workspace/impls/workspace';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { WorkspaceImpl } from '@cloud-notes/core/modules/workspace/impls/workspace';
 import {
   defaultImageProxyMiddleware,
   embedSyncedDocMiddleware,
@@ -7,13 +7,13 @@ import {
   pasteMiddleware,
   PlainTextAdapter,
   titleMiddleware,
-} from '@blocksuite/affine/shared/adapters';
+} from '@blocksuite/cloud-notes/shared/adapters';
 import {
   BlockStdScope,
   type EditorHost,
   type TextRangePoint,
   TextSelection,
-} from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/std';
 import type {
   BlockModel,
   BlockSnapshot,
@@ -22,8 +22,8 @@ import type {
   SliceSnapshot,
   Store,
   TransformerMiddleware,
-} from '@blocksuite/affine/store';
-import { toDraftModel, Transformer } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
+import { toDraftModel, Transformer } from '@blocksuite/cloud-notes/store';
 import { Doc as YDoc } from 'yjs';
 
 import { getStoreManager } from '../manager/store';
@@ -221,9 +221,9 @@ export async function replaceFromMarkdown(
 export async function markDownToDoc(
   answer: string,
   middlewares?: TransformerMiddleware[],
-  affineFeatureFlagService?: FeatureFlagService
+  cloudNotesFeatureFlagService?: FeatureFlagService
 ) {
-  const { collection, std } = getMarkdownWorkspace(affineFeatureFlagService);
+  const { collection, std } = getMarkdownWorkspace(cloudNotesFeatureFlagService);
 
   const transformer = new Transformer({
     schema: std.store.schema,

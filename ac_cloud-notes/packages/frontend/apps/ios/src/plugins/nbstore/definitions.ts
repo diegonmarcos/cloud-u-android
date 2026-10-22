@@ -1,11 +1,11 @@
-import type { CrawlResult, DocIndexedClock } from '@affine/nbstore';
+import type { CrawlResult, DocIndexedClock } from '@cloud-notes/nbstore';
 import type {
   NativeIndexField,
   NativeIndexHit,
   NativeIndexQuery,
   NativeIndexSearchOptions,
   NativeIndexSearchResult,
-} from '@affine/nbstore/sqlite';
+} from '@cloud-notes/nbstore/sqlite';
 
 type NativeIndexDocument = { id: string; fields: NativeIndexField[] };
 type NativeIndexAggregateResult = {
@@ -20,7 +20,7 @@ type NativeIndexAggregateResult = {
 
 export interface Blob {
   key: string;
-  // base64 encoded data, or "__AFFINE_BLOB_FILE__:<absolutePath>" for large blobs
+  // base64 encoded data, or "__CLOUD_NOTES_BLOB_FILE__:<absolutePath>" for large blobs
   data: string;
   mime: string;
   size: number;

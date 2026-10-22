@@ -1,13 +1,13 @@
-import { FlexWrapper, Input, notify, Wrapper } from '@affine/component';
-import { Button } from '@affine/component/ui/button';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { Upload } from '@affine/core/components/pure/file-upload';
-import { WorkspaceAvatar } from '@affine/core/components/workspace-avatar';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { validateAndReduceImage } from '@affine/core/utils/reduce-image';
-import { UNTITLED_WORKSPACE_NAME } from '@affine/env/constant';
-import { useI18n } from '@affine/i18n';
+import { FlexWrapper, Input, notify, Wrapper } from '@cloud-notes/component';
+import { Button } from '@cloud-notes/component/ui/button';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import { Upload } from '@cloud-notes/core/components/pure/file-upload';
+import { WorkspaceAvatar } from '@cloud-notes/core/components/workspace-avatar';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { validateAndReduceImage } from '@cloud-notes/core/utils/reduce-image';
+import { UNTITLED_WORKSPACE_NAME } from '@cloud-notes/env/constant';
+import { useI18n } from '@cloud-notes/i18n';
 import { CameraIcon } from '@blocksuite/icons/rc';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import type { KeyboardEvent } from 'react';
@@ -181,7 +181,7 @@ export const ProfilePanel = () => {
                 marginLeft: '12px',
               }}
             >
-              {t['com.affine.editCollection.save']()}
+              {t['com.cloud-notes.editCollection.save']()}
             </Button>
           )}
         </FlexWrapper>

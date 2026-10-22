@@ -1,6 +1,6 @@
 import process from 'node:process';
 
-import { testResultDir } from '@affine-test/kit/playwright';
+import { testResultDir } from '@cloud-notes-test/kit/playwright';
 import type { PlaywrightWorkerOptions } from '@playwright/test';
 import { defineConfig } from '@playwright/test';
 

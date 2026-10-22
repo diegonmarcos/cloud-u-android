@@ -4,22 +4,22 @@ import {
   Loading,
   toast,
   Tooltip,
-} from '@affine/component';
-import { Guard } from '@affine/core/components/guard';
-import { useAppSettingHelper } from '@affine/core/components/hooks/affine/use-app-setting-helper';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { DocsService } from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { DocsSearchService } from '@affine/core/modules/docs-search';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import { GuardService } from '@affine/core/modules/permissions';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/component';
+import { Guard } from '@cloud-notes/core/components/guard';
+import { useAppSettingHelper } from '@cloud-notes/core/components/hooks/cloud-notes/use-app-setting-helper';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { DocsSearchService } from '@cloud-notes/core/modules/docs-search';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import { GuardService } from '@cloud-notes/core/modules/permissions';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import {
   LiveData,
   MANUALLY_STOP,
@@ -161,7 +161,7 @@ export const NavigationPanelDocNode = ({
       dropTarget: {
         at: 'navigation-panel:doc',
       },
-    } satisfies AffineDNDData;
+    } satisfies CloudNotesDNDData;
   }, [docId, location]);
 
   const handleRename = useAsyncCallback(
@@ -173,12 +173,12 @@ export const NavigationPanelDocNode = ({
   );
 
   const handleDropOnDoc = useAsyncCallback(
-    async (data: DropTargetDropEvent<AffineDNDData>) => {
+    async (data: DropTargetDropEvent<CloudNotesDNDData>) => {
       if (data.treeInstruction?.type === 'make-child') {
         if (data.source.data.entity?.type === 'doc') {
           const canEdit = await guardService.can('Doc_Update', docId);
           if (!canEdit) {
-            toast(t['com.affine.no-permission']());
+            toast(t['com.cloud-notes.no-permission']());
             return;
           }
           await docsService.addLinkedDoc(docId, data.source.data.entity.id);
@@ -189,7 +189,7 @@ export const NavigationPanelDocNode = ({
             type: data.source.data.entity.type,
           });
         } else {
-          toast(t['com.affine.rootAppSidebar.doc.link-doc-only']());
+          toast(t['com.cloud-notes.rootAppSidebar.doc.link-doc-only']());
         }
       } else {
         onDrop?.(data);
@@ -213,11 +213,11 @@ export const NavigationPanelDocNode = ({
   );
 
   const handleDropOnPlaceholder = useAsyncCallback(
-    async (data: DropTargetDropEvent<AffineDNDData>) => {
+    async (data: DropTargetDropEvent<CloudNotesDNDData>) => {
       if (data.source.data.entity?.type === 'doc') {
         const canEdit = await guardService.can('Doc_Update', docId);
         if (!canEdit) {
-          toast(t['com.affine.no-permission']());
+          toast(t['com.cloud-notes.no-permission']());
           return;
         }
         // TODO(eyhn): timeout&error handling
@@ -229,13 +229,13 @@ export const NavigationPanelDocNode = ({
           type: data.source.data.entity.type,
         });
       } else {
-        toast(t['com.affine.rootAppSidebar.doc.link-doc-only']());
+        toast(t['com.cloud-notes.rootAppSidebar.doc.link-doc-only']());
       }
     },
     [docId, docsService, guardService, t]
   );
 
-  const handleCanDrop = useMemo<DropTargetOptions<AffineDNDData>['canDrop']>(
+  const handleCanDrop = useMemo<DropTargetOptions<CloudNotesDNDData>['canDrop']>(
     () => args => {
       const entityType = args.source.data.entity?.type;
       return args.treeInstruction?.type !== 'make-child'
@@ -289,7 +289,7 @@ export const NavigationPanelDocNode = ({
         referencesLoading &&
         !isCollapsed && (
           <Tooltip
-            content={t['com.affine.rootAppSidebar.docs.references-loading']()}
+            content={t['com.cloud-notes.rootAppSidebar.docs.references-loading']()}
           >
             <div className={styles.loadingIcon}>
               <Loading />

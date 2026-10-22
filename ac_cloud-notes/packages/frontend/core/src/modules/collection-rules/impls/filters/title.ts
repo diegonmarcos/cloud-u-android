@@ -1,4 +1,4 @@
-import type { DocsSearchService } from '@affine/core/modules/docs-search';
+import type { DocsSearchService } from '@cloud-notes/core/modules/docs-search';
 import { Service } from '@toeverything/infra';
 import { map, type Observable } from 'rxjs';
 

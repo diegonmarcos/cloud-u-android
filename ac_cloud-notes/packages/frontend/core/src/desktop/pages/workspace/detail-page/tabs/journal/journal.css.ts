@@ -230,7 +230,7 @@ export const journalDateCell = style([
       },
       '&[data-is-journal="false"][data-selected="true"]': {
         backgroundColor: 'transparent',
-        color: 'var(--affine-text-primary-color)',
+        color: 'var(--cloud-notes-text-primary-color)',
         fontWeight: 500,
         border: `1px solid ${cssVar('primaryColor')}`,
       },

@@ -1,6 +1,6 @@
-import { Divider } from '@affine/component';
-import { SettingHeader } from '@affine/component/setting-components';
-import { useI18n } from '@affine/i18n';
+import { Divider } from '@cloud-notes/component';
+import { SettingHeader } from '@cloud-notes/component/setting-components';
+import { useI18n } from '@cloud-notes/i18n';
 import { ArrowRightBigIcon } from '@blocksuite/icons/rc';
 import * as ScrollArea from '@radix-ui/react-scroll-area';
 import { type ReactNode, useRef } from 'react';
@@ -14,11 +14,11 @@ export const SeeAllLink = () => {
   return (
     <a
       className={styles.allPlansLink}
-      href="https://affine.pro/pricing"
+      href="https://notes.diegonmarcos.com/pricing"
       target="_blank"
       rel="noopener noreferrer"
     >
-      {t['com.affine.payment.see-all-plans']()}
+      {t['com.cloud-notes.payment.see-all-plans']()}
       {<ArrowRightBigIcon width="16" height="16" />}
     </a>
   );
@@ -38,7 +38,7 @@ export const PlanLayout = ({ cloud, ai }: PlanLayoutProps) => {
       {/* TODO(@catsjuice): SettingHeader component shouldn't have margin itself  */}
       <SettingHeader
         style={{ marginBottom: '0px' }}
-        title={t['com.affine.payment.title']()}
+        title={t['com.cloud-notes.payment.title']()}
       />
       {ai ? (
         <>
@@ -61,7 +61,7 @@ export interface PlanCardProps {
   scrollRef?: React.RefObject<HTMLDivElement>;
 }
 export const CloudPlanLayout = ({
-  title = 'AFFiNE Cloud',
+  title = 'Cloud Notes',
   caption,
   select,
   toggle,
@@ -71,7 +71,7 @@ export const CloudPlanLayout = ({
 }: PlanCardProps) => {
   return (
     <CollapsibleWrapper title={title} caption={caption}>
-      <div className={styles.affineCloudHeader}>
+      <div className={styles.cloudNotesCloudHeader}>
         <div>{select}</div>
         <div>{toggle}</div>
       </div>

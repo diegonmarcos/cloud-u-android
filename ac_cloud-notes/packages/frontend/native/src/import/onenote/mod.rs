@@ -9,7 +9,7 @@ mod content;
 #[cfg(windows)]
 mod windows_fs;
 
-use affine_importer::{
+use cloud_notes_importer::{
   FolderHierarchyDelta, ImportBatch, ImportBatchLimits, ImportCursor, ImportError, ImportOptions, ImportProgress,
   ImportProvider, ImportResult, ImportSource, ImportWarning, ImportedAsset, ImportedDocMeta, ImportedDocSnapshot,
 };
@@ -253,7 +253,7 @@ impl ImportCursor for OneNoteImportCursor {
     let end = (self.next_doc + self.limits.max_docs.max(1)).min(self.docs.len());
     let mut batch = empty_batch(self.docs.len());
     for doc in &self.docs[self.next_doc..end] {
-      let mut snapshot = affine_doc_loader::build_doc_snapshot(&doc.title, &doc.markdown, &doc.id)?;
+      let mut snapshot = cloud_notes_doc_loader::build_doc_snapshot(&doc.title, &doc.markdown, &doc.id)?;
       rewrite_non_image_assets_to_attachments(&mut snapshot, &doc.assets);
       remove_blocks_with_source_ids(&mut snapshot, &self.skipped_blob_ids);
       batch.docs.push(ImportedDocSnapshot {

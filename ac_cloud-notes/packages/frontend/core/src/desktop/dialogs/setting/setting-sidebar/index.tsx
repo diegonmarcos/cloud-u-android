@@ -1,13 +1,13 @@
-import { Scrollable } from '@affine/component';
-import { Avatar } from '@affine/component/ui/avatar';
-import { UserPlanButton } from '@affine/core/components/affine/auth/user-plan-button';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { AuthService } from '@affine/core/modules/cloud';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
-import type { SettingTab } from '@affine/core/modules/dialogs/constant';
-import { type WorkspaceMetadata } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { Scrollable } from '@cloud-notes/component';
+import { Avatar } from '@cloud-notes/component/ui/avatar';
+import { UserPlanButton } from '@cloud-notes/core/components/cloud-notes/auth/user-plan-button';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import { AuthService } from '@cloud-notes/core/modules/cloud';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { SettingTab } from '@cloud-notes/core/modules/dialogs/constant';
+import { type WorkspaceMetadata } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { Logo1Icon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
@@ -95,11 +95,11 @@ export const SignInButton = () => {
       </div>
 
       <div className="content">
-        <div className="name" title={t['com.affine.settings.sign']()}>
-          {t['com.affine.settings.sign']()}
+        <div className="name" title={t['com.cloud-notes.settings.sign']()}>
+          {t['com.cloud-notes.settings.sign']()}
         </div>
-        <div className="email" title={t['com.affine.setting.sign.message']()}>
-          {t['com.affine.setting.sign.message']()}
+        <div className="email" title={t['com.cloud-notes.setting.sign.message']()}>
+          {t['com.cloud-notes.setting.sign.message']()}
         </div>
       </div>
     </div>
@@ -185,12 +185,12 @@ export const SettingSidebar = ({
     const res = [
       {
         key: 'setting:general',
-        title: t['com.affine.settingSidebar.settings.general'](),
+        title: t['com.cloud-notes.settingSidebar.settings.general'](),
         items: generalList,
       },
       {
         key: 'setting:workspace',
-        title: t['com.affine.settingSidebar.settings.workspace'](),
+        title: t['com.cloud-notes.settingSidebar.settings.workspace'](),
         items: workspaceSettingList,
       },
     ].map(group => {
@@ -212,7 +212,7 @@ export const SettingSidebar = ({
   return (
     <div className={style.settingSlideBar} data-testid="settings-sidebar">
       <div className={style.sidebarTitle}>
-        {t['com.affine.settingSidebar.title']()}
+        {t['com.cloud-notes.settingSidebar.title']()}
       </div>
 
       {loginStatus === 'unauthenticated' ? <SignInButton /> : null}

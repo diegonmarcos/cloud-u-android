@@ -5,12 +5,12 @@
 //  Created by 秋星桥 on 2024/11/18.
 //
 
-import AffineResources
+import CloudNotesResources
 import UIKit
 import WebKit
 
 class RootViewController: UINavigationController {
-  private var affineViewController: AFFiNEViewController?
+  private var cloudNotesViewController: CloudNotesViewController?
   private var didScheduleOnboardingPresentation = false
 
   override init(rootViewController _: UIViewController) {
@@ -32,9 +32,9 @@ class RootViewController: UINavigationController {
 
   func commitInit() {
     assert(viewControllers.isEmpty)
-    let affineViewController = AFFiNEViewController()
-    self.affineViewController = affineViewController
-    viewControllers = [affineViewController]
+    let cloudNotesViewController = CloudNotesViewController()
+    self.cloudNotesViewController = cloudNotesViewController
+    viewControllers = [cloudNotesViewController]
   }
 
   override func viewDidLoad() {
@@ -67,8 +67,8 @@ class RootViewController: UINavigationController {
     Task { @MainActor [weak self, weak onboardingController] in
       guard let self else { return }
 
-      guard let webView = affineViewController?.webView else {
-        showOnboardingAlert(message: String(localized: "AFFiNE is still loading. Please try again in a moment."))
+      guard let webView = cloudNotesViewController?.webView else {
+        showOnboardingAlert(message: String(localized: "Cloud Notes is still loading. Please try again in a moment."))
         return
       }
 
@@ -133,7 +133,7 @@ class RootViewController: UINavigationController {
 
   private func finishOnboarding(from controller: UIViewController?) {
     OnboardingFlag.markCompleted()
-    affineViewController?.webView?.evaluateJavaScript("window.location.assign('/');")
+    cloudNotesViewController?.webView?.evaluateJavaScript("window.location.assign('/');")
 
     guard let controller, controller.presentingViewController != nil else {
       didScheduleOnboardingPresentation = true

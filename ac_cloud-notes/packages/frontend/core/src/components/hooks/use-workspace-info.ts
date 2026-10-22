@@ -1,7 +1,7 @@
 import {
   type WorkspaceMetadata,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
+} from '@cloud-notes/core/modules/workspace';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useEffect } from 'react';
 

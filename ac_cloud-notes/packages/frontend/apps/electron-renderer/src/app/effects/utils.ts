@@ -1,7 +1,7 @@
-import { ServersService } from '@affine/core/modules/cloud';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { WorkspacesService } from '@affine/core/modules/workspace';
+import { ServersService } from '@cloud-notes/core/modules/cloud';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { WorkspacesService } from '@cloud-notes/core/modules/workspace';
 import type { FrameworkProvider } from '@toeverything/infra';
 
 export function getCurrentWorkspace(frameworkProvider: FrameworkProvider) {

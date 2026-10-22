@@ -1,4 +1,4 @@
-import type { RichText } from '@blocksuite/affine-rich-text';
+import type { RichText } from '@blocksuite/cloud-notes-rich-text';
 import type { Page } from '@playwright/test';
 
 export async function setSelection(

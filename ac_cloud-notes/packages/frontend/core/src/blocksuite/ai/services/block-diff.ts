@@ -1,7 +1,7 @@
-import { sourceScopedBlobUrl } from '@affine/nbstore/cloud';
-import { parsePageDoc } from '@affine/reader';
-import { LifeCycleWatcher } from '@blocksuite/affine/std';
-import { Extension, type Store } from '@blocksuite/affine/store';
+import { sourceScopedBlobUrl } from '@cloud-notes/nbstore/cloud';
+import { parsePageDoc } from '@cloud-notes/reader';
+import { LifeCycleWatcher } from '@blocksuite/cloud-notes/std';
+import { Extension, type Store } from '@blocksuite/cloud-notes/store';
 import { type Container, createIdentifier } from '@blocksuite/global/di';
 import { LiveData } from '@toeverything/infra';
 import type { Subscription } from 'rxjs';
@@ -152,7 +152,7 @@ export interface BlockDiffProvider {
 }
 
 export const BlockDiffProvider = createIdentifier<BlockDiffProvider>(
-  'AffineBlockDiffService'
+  'CloudNotesBlockDiffService'
 );
 
 export class BlockDiffService extends Extension implements BlockDiffProvider {

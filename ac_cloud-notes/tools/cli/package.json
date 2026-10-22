@@ -1,10 +1,10 @@
 {
-  "name": "@affine-tools/cli",
+  "name": "@cloud-notes-tools/cli",
   "version": "0.27.5",
   "type": "module",
   "private": true,
   "bin": {
-    "affine": "./bin/cli.js",
+    "cloud-notes": "./bin/cli.js",
     "r": "./bin/runner.js"
   },
   "exports": {
@@ -12,11 +12,11 @@
     "./bundle": "./src/bundle.ts"
   },
   "scripts": {
-    "affine": "r ./src/affine.ts"
+    "cloud-notes": "r ./src/cloud-notes.ts"
   },
   "dependencies": {
-    "@affine-tools/utils": "workspace:*",
-    "@affine/s3-compat": "workspace:*",
+    "@cloud-notes-tools/utils": "workspace:*",
+    "@cloud-notes/s3-compat": "workspace:*",
     "@napi-rs/simple-git": "^1.0.0",
     "@rspack/core": "^2.0.8",
     "@rspack/dev-server": "^2.1.0",

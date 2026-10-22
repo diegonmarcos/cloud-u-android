@@ -1,5 +1,5 @@
-import { ColorScheme } from '@blocksuite/affine/model';
-import { createSignalFromObservable } from '@blocksuite/affine-shared/utils';
+import { ColorScheme } from '@blocksuite/cloud-notes/model';
+import { createSignalFromObservable } from '@blocksuite/cloud-notes-shared/utils';
 import type { Signal } from '@preact/signals-core';
 import { Entity, LiveData } from '@toeverything/infra';
 

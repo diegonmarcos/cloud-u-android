@@ -1,7 +1,7 @@
 import debug from 'debug';
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-const SESSION_KEY = 'affine:debug';
+const SESSION_KEY = 'cloud-notes:debug';
 
 if (typeof window !== 'undefined') {
   const getSessionValue = (key: string) => {

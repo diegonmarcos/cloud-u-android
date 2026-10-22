@@ -1,0 +1,51 @@
+{
+  "name": "@blocksuite/cloud-notes-block-note",
+  "description": "Note block for BlockSuite.",
+  "type": "module",
+  "scripts": {
+    "build": "yarn run -T tsc"
+  },
+  "sideEffects": false,
+  "keywords": [],
+  "author": "toeverything",
+  "license": "MIT",
+  "dependencies": {
+    "@blocksuite/cloud-notes-block-embed": "workspace:*",
+    "@blocksuite/cloud-notes-block-surface": "workspace:*",
+    "@blocksuite/cloud-notes-components": "workspace:*",
+    "@blocksuite/cloud-notes-ext-loader": "workspace:*",
+    "@blocksuite/cloud-notes-fragment-doc-title": "workspace:*",
+    "@blocksuite/cloud-notes-gfx-turbo-renderer": "workspace:*",
+    "@blocksuite/cloud-notes-inline-preset": "workspace:*",
+    "@blocksuite/cloud-notes-model": "workspace:*",
+    "@blocksuite/cloud-notes-rich-text": "workspace:*",
+    "@blocksuite/cloud-notes-shared": "workspace:*",
+    "@blocksuite/cloud-notes-widget-slash-menu": "workspace:*",
+    "@blocksuite/global": "workspace:*",
+    "@blocksuite/icons": "^2.2.17",
+    "@blocksuite/std": "workspace:*",
+    "@blocksuite/store": "workspace:*",
+    "@lit/context": "^1.1.2",
+    "@preact/signals-core": "^1.8.0",
+    "@toeverything/theme": "^1.1.23",
+    "@types/lodash-es": "^4.17.12",
+    "@types/mdast": "^4.0.4",
+    "@vanilla-extract/css": "^1.17.0",
+    "lit": "^3.2.0",
+    "lodash-es": "^4.17.23",
+    "zod": "^3.25.76"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./turbo-painter": "./src/turbo/note-painter.worker.ts",
+    "./store": "./src/store.ts",
+    "./view": "./src/view.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "!src/__tests__",
+    "!dist/__tests__"
+  ],
+  "version": "0.27.5"
+}

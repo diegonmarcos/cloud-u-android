@@ -13,4 +13,4 @@ export function configureDesktopApiModule(framework: Framework) {
 }
 
 export { DesktopApiService } from './service/desktop-api';
-export type { ClientEvents, TabViewsMetaSchema } from '@affine/electron-api';
+export type { ClientEvents, TabViewsMetaSchema } from '@cloud-notes/electron-api';

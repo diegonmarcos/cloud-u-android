@@ -1,4 +1,4 @@
-import type { DatabaseBlockModel } from '@blocksuite/affine/model';
+import type { DatabaseBlockModel } from '@blocksuite/cloud-notes/model';
 import type { DeltaInsert } from '@blocksuite/store';
 import { expect, type Page } from '@playwright/test';
 
@@ -185,7 +185,7 @@ test(scoped`database calendar setup and row interactions`, async ({ page }) => {
   ).toBeVisible();
 
   await page.locator('.calendar-entry').filter({ hasText: 'Task 1' }).click();
-  await expect(page.locator('affine-data-view-record-detail')).toBeVisible();
+  await expect(page.locator('cloud-notes-data-view-record-detail')).toBeVisible();
 
   await page.evaluate(({ databaseId, dateColumnId }) => {
     if (!dateColumnId) {
@@ -232,7 +232,7 @@ test(scoped`database calendar creates row from empty day`, async ({ page }) => {
   await targetDay.hover();
   await targetDay.getByRole('button', { name: '+ New row' }).click();
 
-  await expect(page.locator('affine-data-view-record-detail')).toBeVisible();
+  await expect(page.locator('cloud-notes-data-view-record-detail')).toBeVisible();
 
   const expectedDate = await getMonthTimestamp(page, ids.monthAnchor, 20);
   await expect
@@ -272,7 +272,7 @@ test(
 
     await page.evaluate(({ databaseId }) => {
       const database = document.querySelector(
-        `affine-database[data-block-id="${databaseId}"]`
+        `cloud-notes-database[data-block-id="${databaseId}"]`
       ) as any;
       database.dataViewRootLogic.value.openDetailPanel = ({
         rowId,

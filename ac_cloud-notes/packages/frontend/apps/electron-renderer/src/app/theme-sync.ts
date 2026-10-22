@@ -1,4 +1,4 @@
-import { DesktopApiService } from '@affine/core/modules/desktop-api';
+import { DesktopApiService } from '@cloud-notes/core/modules/desktop-api';
 import { useService } from '@toeverything/infra';
 import { useTheme } from 'next-themes';
 import { useRef } from 'react';

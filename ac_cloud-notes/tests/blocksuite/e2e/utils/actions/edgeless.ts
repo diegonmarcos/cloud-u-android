@@ -1,15 +1,15 @@
 import '../declare-test-window.js';
 
-import { ConnectorTool } from '@blocksuite/affine/gfx/connector';
-import { ShapeTool } from '@blocksuite/affine/gfx/shape';
-import type { IPoint, IVec } from '@blocksuite/affine/global/gfx';
-import { sleep } from '@blocksuite/affine/global/utils';
+import { ConnectorTool } from '@blocksuite/cloud-notes/gfx/connector';
+import { ShapeTool } from '@blocksuite/cloud-notes/gfx/shape';
+import type { IPoint, IVec } from '@blocksuite/cloud-notes/global/gfx';
+import { sleep } from '@blocksuite/cloud-notes/global/utils';
 import type {
   ConnectorElementModel,
   NoteBlockModel,
   NoteDisplayMode,
-} from '@blocksuite/affine/model';
-import type { ToolOptions } from '@blocksuite/affine/std/gfx';
+} from '@blocksuite/cloud-notes/model';
+import type { ToolOptions } from '@blocksuite/cloud-notes/std/gfx';
 import type { Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
@@ -131,7 +131,7 @@ export async function switchEditorMode(page: Page) {
 
 export async function switchMultipleEditorsMode(page: Page) {
   await page.evaluate(() => {
-    const containers = document.querySelectorAll('affine-editor-container');
+    const containers = document.querySelectorAll('cloud-notes-editor-container');
     const mode = containers[0].mode === 'edgeless' ? 'page' : 'edgeless';
 
     containers.forEach(container => {
@@ -292,7 +292,7 @@ export function locatorEdgelessComponentToolButton(
     more: 'More',
   }[type];
   const button = page
-    .locator('affine-toolbar-widget editor-toolbar editor-icon-button')
+    .locator('cloud-notes-toolbar-widget editor-toolbar editor-icon-button')
     .filter({
       hasText: text,
     });
@@ -402,7 +402,7 @@ export type ShapeName =
 
 export async function assertEdgelessShapeType(page: Page, type: ShapeName) {
   const curType = await page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) {
       throw new Error('Missing edgeless page');
     }
@@ -419,7 +419,7 @@ export async function assertEdgelessShapeType(page: Page, type: ShapeName) {
 export async function assertEdgelessTool(page: Page, mode: string) {
   await page.waitForTimeout(1000);
   const type = await page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) {
       throw new Error('Missing edgeless page');
     }
@@ -430,7 +430,7 @@ export async function assertEdgelessTool(page: Page, mode: string) {
 
 export async function getConnectorLabel(page: Page, id: string) {
   const text = await page.evaluate(id => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) {
       throw new Error('Missing edgeless page');
     }
@@ -450,7 +450,7 @@ export async function assertEdgelessConnectorToolMode(
   mode: ConnectorMode
 ) {
   const [toolName, toolOptions] = await page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) {
       throw new Error('Missing edgeless page');
     }
@@ -467,7 +467,7 @@ export async function assertEdgelessConnectorToolMode(
 }
 
 export async function getEdgelessBlockChild(page: Page) {
-  const block = page.locator('affine-edgeless-note');
+  const block = page.locator('cloud-notes-edgeless-note');
   const blockBox = await block.boundingBox();
   if (blockBox === null) throw new Error('Missing edgeless block child rect');
   return blockBox;
@@ -477,7 +477,7 @@ export async function getEdgelessSelectedRect(page: Page) {
   const selectedBox = await page.evaluate(() => {
     const selected = document
       .querySelector('edgeless-selected-rect')
-      ?.shadowRoot?.querySelector('.affine-edgeless-selected-rect');
+      ?.shadowRoot?.querySelector('.cloud-notes-edgeless-selected-rect');
     if (!selected) {
       throw new Error('Missing edgeless selected rect');
     }
@@ -488,7 +488,7 @@ export async function getEdgelessSelectedRect(page: Page) {
 
 export async function getEdgelessSelectedRectModel(page: Page): Promise<Bound> {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     const bound = container.service.selection.selectedBound;
     return [bound.x, bound.y, bound.w, bound.h];
@@ -571,7 +571,7 @@ export async function addBasicEdgelessText(
 ) {
   await setEdgelessTool(page, 'text');
   await page.mouse.click(x, y);
-  await page.locator('affine-edgeless-text').waitFor({ state: 'visible' });
+  await page.locator('cloud-notes-edgeless-text').waitFor({ state: 'visible' });
   await waitNextFrame(page, 100);
   await type(page, text, 20);
   await pressEscape(page, 2);
@@ -595,7 +595,7 @@ export async function addNote(page: Page, text: string, x: number, y: number) {
   }
 
   const { id } = await page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
 
     return {
@@ -608,7 +608,7 @@ export async function addNote(page: Page, text: string, x: number, y: number) {
 
 export async function exitEditing(page: Page) {
   await page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
 
     container.service.selection.set({
@@ -661,7 +661,7 @@ export async function rotateElementByHandle(
   steps = 1
 ) {
   const rect = await page
-    .locator('.affine-edgeless-selected-rect')
+    .locator('.cloud-notes-edgeless-selected-rect')
     .boundingBox();
   if (rect === null) throw new Error();
   const box = await page
@@ -712,7 +712,7 @@ export async function selectBrushSize(page: Page, size: string) {
 export async function pickColorAtPoints(page: Page, points: number[][]) {
   const pickedColors: `#${string}`[] = await page.evaluate(points => {
     const node = document.querySelector(
-      '.affine-edgeless-surface-block-container canvas'
+      '.cloud-notes-edgeless-surface-block-container canvas'
     ) as HTMLCanvasElement;
     const w = node.width;
     const h = node.height;
@@ -740,7 +740,7 @@ export async function pickColorAtPoints(page: Page, points: number[][]) {
 export async function getNoteBoundBoxInEdgeless(page: Page, noteId: string) {
   const editor = getEditorLocator(page);
   const note = editor.locator(
-    `affine-edgeless-note[data-block-id="${noteId}"]`
+    `cloud-notes-edgeless-note[data-block-id="${noteId}"]`
   );
   const bound = await note.boundingBox();
   if (!bound) {
@@ -751,7 +751,7 @@ export async function getNoteBoundBoxInEdgeless(page: Page, noteId: string) {
 
 export async function getAllNoteIds(page: Page) {
   return page.evaluate(() => {
-    return Array.from(document.querySelectorAll('affine-note')).map(
+    return Array.from(document.querySelectorAll('cloud-notes-note')).map(
       note => note.model.id
     );
   });
@@ -759,7 +759,7 @@ export async function getAllNoteIds(page: Page) {
 
 export async function getAllEdgelessNoteIds(page: Page) {
   return page.evaluate(() => {
-    return Array.from(document.querySelectorAll('affine-edgeless-note')).map(
+    return Array.from(document.querySelectorAll('cloud-notes-edgeless-note')).map(
       note => note.model.id
     );
   });
@@ -767,7 +767,7 @@ export async function getAllEdgelessNoteIds(page: Page) {
 
 export async function getAllEdgelessTextIds(page: Page) {
   return page.evaluate(() => {
-    return Array.from(document.querySelectorAll('affine-edgeless-text')).map(
+    return Array.from(document.querySelectorAll('cloud-notes-edgeless-text')).map(
       text => text.model.id
     );
   });
@@ -803,7 +803,7 @@ export function locatorNoteDisplayModeButton(
 }
 
 export function locatorScalePanelButton(page: Page, scale: number) {
-  return page.locator('affine-size-dropdown-menu').getByLabel(String(scale));
+  return page.locator('cloud-notes-size-dropdown-menu').getByLabel(String(scale));
 }
 
 export async function changeNoteDisplayMode(page: Page, mode: NoteDisplayMode) {
@@ -836,7 +836,7 @@ export async function updateExistedBrushElementSize(
 
 export async function openComponentToolbarMoreMenu(page: Page) {
   const btn = page
-    .locator('affine-toolbar-widget editor-toolbar')
+    .locator('cloud-notes-toolbar-widget editor-toolbar')
     .getByLabel('More menu');
 
   await btn.click();
@@ -878,7 +878,7 @@ export async function zoomByMouseWheel(
 // https://github.com/microsoft/playwright/issues/2903
 export async function multiTouchDown(page: Page, points: Point[]) {
   await page.evaluate(points => {
-    const target = document.querySelector('affine-edgeless-root');
+    const target = document.querySelector('cloud-notes-edgeless-root');
     if (!target) {
       throw new Error('Missing edgeless page');
     }
@@ -908,7 +908,7 @@ export async function multiTouchMove(
 ) {
   await page.evaluate(
     async ({ from, to, step }) => {
-      const target = document.querySelector('affine-edgeless-root');
+      const target = document.querySelector('cloud-notes-edgeless-root');
       if (!target) {
         throw new Error('Missing edgeless page');
       }
@@ -946,7 +946,7 @@ export async function multiTouchMove(
 
 export async function multiTouchUp(page: Page, points: Point[]) {
   await page.evaluate(points => {
-    const target = document.querySelector('affine-edgeless-root');
+    const target = document.querySelector('cloud-notes-edgeless-root');
     if (!target) {
       throw new Error('Missing edgeless page');
     }
@@ -1015,7 +1015,7 @@ export async function getZoomLevel(page: Page) {
 
 export async function getViewportCenter(page: Page): Promise<[number, number]> {
   return page.evaluate(() => {
-    const target = document.querySelector('affine-edgeless-root');
+    const target = document.querySelector('cloud-notes-edgeless-root');
     if (!target) {
       throw new Error('Missing edgeless page');
     }
@@ -1024,7 +1024,7 @@ export async function getViewportCenter(page: Page): Promise<[number, number]> {
 }
 export async function setViewportCenter(page: Page, center: [number, number]) {
   await page.evaluate(center => {
-    const target = document.querySelector('affine-edgeless-root');
+    const target = document.querySelector('cloud-notes-edgeless-root');
     if (!target) {
       throw new Error('Missing edgeless page');
     }
@@ -1069,7 +1069,7 @@ export async function deleteAll(page: Page) {
 
 export async function deleteAllConnectors(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     container.service.crud.getElementsByType('connector').forEach(c => {
       container.service.crud.removeElement(c.id);
@@ -1078,7 +1078,7 @@ export async function deleteAllConnectors(page: Page) {
 }
 
 export function locatorComponentToolbar(page: Page) {
-  return page.locator('affine-toolbar-widget editor-toolbar');
+  return page.locator('cloud-notes-toolbar-widget editor-toolbar');
 }
 
 export function locatorComponentToolbarMoreButton(page: Page) {
@@ -1452,7 +1452,7 @@ export async function resizeConnectorByStartCapitalHandler(
   steps = 1
 ) {
   const handler = page.locator(
-    '.affine-edgeless-selected-rect .line-controller.line-start'
+    '.cloud-notes-edgeless-selected-rect .line-controller.line-start'
   );
   const box = await handler.boundingBox();
   if (box === null) throw new Error();
@@ -1469,7 +1469,7 @@ export async function resizeConnectorByStartCapitalHandler(
 
 export function getEdgelessLineWidthPanel(page: Page) {
   return page
-    .locator('affine-toolbar-widget editor-toolbar')
+    .locator('cloud-notes-toolbar-widget editor-toolbar')
     .locator('edgeless-line-width-panel');
 }
 export async function changeShapeStrokeWidth(page: Page) {
@@ -1489,7 +1489,7 @@ export function locatorShapeStrokeStyleButton(
   mode: 'solid' | 'dash' | 'none'
 ) {
   return page
-    .locator('affine-toolbar-widget editor-toolbar')
+    .locator('cloud-notes-toolbar-widget editor-toolbar')
     .locator(`.line-style-button.mode-${mode}`);
 }
 
@@ -1506,7 +1506,7 @@ export function locatorShapeStyleButton(
   style: 'general' | 'scribbled'
 ) {
   return page
-    .locator('affine-toolbar-widget editor-toolbar')
+    .locator('cloud-notes-toolbar-widget editor-toolbar')
     .locator('edgeless-shape-style-panel')
     .getByRole('button', { name: style });
 }
@@ -1601,7 +1601,7 @@ export async function initThreeNotes(page: Page) {
 
 export async function toViewCoord(page: Page, point: number[]) {
   return page.evaluate(point => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.viewport.toViewCoord(point[0], point[1]);
   }, point);
@@ -1625,7 +1625,7 @@ export async function dragBetweenViewCoords(
 
 export async function toModelCoord(page: Page, point: number[]) {
   return page.evaluate(point => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.viewport.toModelCoord(point[0], point[1]);
   }, point);
@@ -1633,7 +1633,7 @@ export async function toModelCoord(page: Page, point: number[]) {
 
 export async function getConnectorSourceConnection(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.crud.getElementsByType('connector')[0].source;
   });
@@ -1642,7 +1642,7 @@ export async function getConnectorSourceConnection(page: Page) {
 export async function getConnectorPath(page: Page, index = 0): Promise<IVec[]> {
   return page.evaluate(
     ([index]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
       const connectors = container.service.crud.getElementsByType('connector');
       return connectors[index].absolutePath;
@@ -1663,7 +1663,7 @@ export async function getConnectorPathWithInOut(
 > {
   return page.evaluate(
     ([index]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
       const connectors = container.service.crud.getElementsByType('connector');
       return connectors[index].absolutePath.map(path => ({
@@ -1682,7 +1682,7 @@ export async function getEdgelessElementBound(
 ): Promise<[number, number, number, number]> {
   return page.evaluate(
     ([elementId]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
       const element = container.service.crud.getElementById(elementId);
       if (!element) throw new Error(`element not found: ${elementId}`);
@@ -1694,7 +1694,7 @@ export async function getEdgelessElementBound(
 
 export async function getSelectedIds(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.selection.selectedElements.map(e => e.id);
   });
@@ -1702,7 +1702,7 @@ export async function getSelectedIds(page: Page) {
 
 export async function getSelectedBoundCount(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.selection.selectedElements.length;
   });
@@ -1714,7 +1714,7 @@ export async function getSelectedBound(
 ): Promise<[number, number, number, number]> {
   return page.evaluate(
     ([index]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
       const selected = container.service.selection.selectedElements[index];
       return JSON.parse(selected.xywh);
@@ -1726,7 +1726,7 @@ export async function getSelectedBound(
 export async function getContainerOfElements(page: Page, ids: string[]) {
   return page.evaluate(
     ([ids]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
 
       return ids.map(id => container.service.surface.getGroup(id)?.id ?? null);
@@ -1737,7 +1737,7 @@ export async function getContainerOfElements(page: Page, ids: string[]) {
 
 export async function getContainerIds(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.elements.map(el => el.group?.id ?? 'null');
   });
@@ -1746,7 +1746,7 @@ export async function getContainerIds(page: Page) {
 export async function getContainerChildIds(page: Page, id: string) {
   return page.evaluate(
     ([id]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
       const gfxModel = container.service.crud.getElementById(id);
 
@@ -1760,7 +1760,7 @@ export async function getContainerChildIds(page: Page, id: string) {
 
 export async function getCanvasElementsCount(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.elements.length;
   });
@@ -1768,7 +1768,7 @@ export async function getCanvasElementsCount(page: Page) {
 
 export async function getSortedIds(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.layer.canvasElements.map(e => e.id);
   });
@@ -1776,7 +1776,7 @@ export async function getSortedIds(page: Page) {
 
 export async function getAllSortedIds(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.edgelessElements.map(e => e.id);
   });
@@ -1785,7 +1785,7 @@ export async function getAllSortedIds(page: Page) {
 export async function getTypeById(page: Page, id: string) {
   return page.evaluate(
     ([id]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
       const element = container.service.crud.getElementById(id)!;
       return 'flavour' in element ? element.flavour : element.type;
@@ -1797,7 +1797,7 @@ export async function getTypeById(page: Page, id: string) {
 export async function getIds(page: Page, filterGroup = false) {
   return page.evaluate(
     ([filterGroup]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
       return container.service.elements
         .filter(el => !filterGroup || el.type !== 'group')
@@ -1810,7 +1810,7 @@ export async function getIds(page: Page, filterGroup = false) {
 export async function getFirstContainerId(page: Page, exclude: string[] = []) {
   return page.evaluate(
     ([exclude]) => {
-      const container = document.querySelector('affine-edgeless-root');
+      const container = document.querySelector('cloud-notes-edgeless-root');
       if (!container) throw new Error('container not found');
       return (
         container.service.edgelessElements.find(
@@ -1824,7 +1824,7 @@ export async function getFirstContainerId(page: Page, exclude: string[] = []) {
 
 export async function getIndexes(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     return container.service.elements.map(e => e.index);
   });
@@ -1832,7 +1832,7 @@ export async function getIndexes(page: Page) {
 
 export async function getSortedIdsInViewport(page: Page) {
   return page.evaluate(() => {
-    const container = document.querySelector('affine-edgeless-root');
+    const container = document.querySelector('cloud-notes-edgeless-root');
     if (!container) throw new Error('container not found');
     const { service } = container;
     return service.gfx.grid
@@ -1973,13 +1973,13 @@ export function toIdCountMap(ids: string[]) {
 }
 
 export function getFrameTitle(page: Page, frame: string) {
-  return page.locator(`affine-frame-title[data-id="${frame}"]`);
+  return page.locator(`cloud-notes-frame-title[data-id="${frame}"]`);
 }
 
 export async function selectElementInEdgeless(page: Page, elements: string[]) {
   await page.evaluate(
     ({ elements }) => {
-      const edgelessBlock = document.querySelector('affine-edgeless-root');
+      const edgelessBlock = document.querySelector('cloud-notes-edgeless-root');
       if (!edgelessBlock) {
         throw new Error('edgeless block not found');
       }
@@ -1994,7 +1994,7 @@ export async function selectElementInEdgeless(page: Page, elements: string[]) {
 
 export async function waitFontsLoaded(page: Page) {
   await page.evaluate(() => {
-    const edgelessBlock = document.querySelector('affine-edgeless-root');
+    const edgelessBlock = document.querySelector('cloud-notes-edgeless-root');
     if (!edgelessBlock) {
       throw new Error('edgeless block not found');
     }

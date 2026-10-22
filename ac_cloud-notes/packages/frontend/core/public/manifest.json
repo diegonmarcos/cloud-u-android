@@ -1,7 +1,7 @@
 {
-  "name": "AFFiNE: There can be more than Notion and Miro.",
-  "short_name": "AFFiNE",
-  "description": "AFFiNE is a workspace with fully merged docs, whiteboards and databases. Get more things done, your creativity isn’t monotone.",
+  "name": "Cloud Notes: There can be more than Notion and Miro.",
+  "short_name": "Cloud Notes",
+  "description": "Cloud Notes is a workspace with fully merged docs, whiteboards and databases. Get more things done, your creativity isn’t monotone.",
   "start_url": "/?source=pwa",
   "background_color": "#ffffff",
   "display": "standalone",

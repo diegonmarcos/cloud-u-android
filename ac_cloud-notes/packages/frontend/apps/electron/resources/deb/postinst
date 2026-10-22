@@ -1,5 +1,5 @@
 #!/bin/sh
 set -e
 
-BUILD_TYPE=$(ls /usr/lib | grep '^affine')
-install -Dm0644 /usr/lib/${BUILD_TYPE}/resources/affine.metainfo.xml /usr/share/metainfo/affine.metainfo.xml
+BUILD_TYPE=$(ls /usr/lib | grep '^cloud-notes')
+install -Dm0644 /usr/lib/${BUILD_TYPE}/resources/cloud-notes.metainfo.xml /usr/share/metainfo/cloud-notes.metainfo.xml

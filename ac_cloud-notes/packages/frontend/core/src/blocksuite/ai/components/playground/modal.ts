@@ -1,4 +1,4 @@
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { CloseIcon } from '@blocksuite/icons/lit';
 import { css, html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -25,7 +25,7 @@ export class PlaygroundModal extends ShadowlessElement {
       position: relative;
       width: 90%;
       height: 90%;
-      background-color: var(--affine-background-primary-color);
+      background-color: var(--cloud-notes-background-primary-color);
       border-radius: 12px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       display: flex;
@@ -38,13 +38,13 @@ export class PlaygroundModal extends ShadowlessElement {
       justify-content: space-between;
       align-items: center;
       padding: 16px 20px;
-      border-bottom: 1px solid var(--affine-border-color);
+      border-bottom: 1px solid var(--cloud-notes-border-color);
     }
 
     .playground-modal-title {
       font-size: 18px;
       font-weight: 600;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
     }
 
     .playground-modal-close {
@@ -58,7 +58,7 @@ export class PlaygroundModal extends ShadowlessElement {
     }
 
     .playground-modal-close:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
 
     .playground-modal-content {

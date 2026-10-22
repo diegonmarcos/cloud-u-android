@@ -1,3 +1,3 @@
 # mobile
 
-AFFiNE Mobile Edition Web app.
+Cloud Notes Mobile Edition Web app.

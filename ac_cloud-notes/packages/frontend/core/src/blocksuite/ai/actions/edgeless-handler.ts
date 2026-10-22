@@ -1,5 +1,5 @@
-import { splitElements } from '@blocksuite/affine/blocks/root';
-import { DefaultTool } from '@blocksuite/affine/blocks/surface';
+import { splitElements } from '@blocksuite/cloud-notes/blocks/root';
+import { DefaultTool } from '@blocksuite/cloud-notes/blocks/surface';
 import {
   CodeBlockModel,
   EdgelessTextBlockModel,
@@ -9,14 +9,14 @@ import {
   NoteBlockModel,
   ShapeElementModel,
   TextElementModel,
-} from '@blocksuite/affine/model';
-import { matchModels } from '@blocksuite/affine/shared/utils';
-import type { EditorHost } from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/model';
+import { matchModels } from '@blocksuite/cloud-notes/shared/utils';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
 import {
   GfxControllerIdentifier,
   type GfxModel,
-} from '@blocksuite/affine/std/gfx';
-import { type BlockModel, Slice } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/std/gfx';
+import { type BlockModel, Slice } from '@blocksuite/cloud-notes/store';
 import type { TemplateResult } from 'lit';
 
 import { getContentFromSlice } from '../../utils';
@@ -37,7 +37,7 @@ import {
   getSelectedNoteAnchor,
   getSelections,
 } from '../utils/selection-utils';
-import type { AffineAIPanelWidget } from '../widgets/ai-panel/ai-panel';
+import type { CloudNotesAIPanelWidget } from '../widgets/ai-panel/ai-panel';
 import type { AIActionAnswer } from '../widgets/ai-panel/type';
 import type { EdgelessCopilotWidget } from '../widgets/edgeless-copilot';
 import { actionToAnswerRenderer } from './answer-renderer';
@@ -306,7 +306,7 @@ function actionToGeneration<T extends keyof BlockSuitePresets.AIActions>(
 function updateEdgelessAIPanelConfig<
   T extends keyof BlockSuitePresets.AIActions,
 >(
-  aiPanel: AffineAIPanelWidget,
+  aiPanel: CloudNotesAIPanelWidget,
   edgelessCopilot: EdgelessCopilotWidget,
   id: T,
   generatingIcon: TemplateResult<1>,

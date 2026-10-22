@@ -1,5 +1,5 @@
-import { Button } from '@affine/admin/components/ui/button';
-import { DialogFooter } from '@affine/admin/components/ui/dialog';
+import { Button } from '@cloud-notes/admin/components/ui/button';
+import { DialogFooter } from '@cloud-notes/admin/components/ui/dialog';
 import type { FC } from 'react';
 
 import { downloadCsvTemplate, ImportStatus } from '../../utils/csv-utils';

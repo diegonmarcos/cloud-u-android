@@ -1,10 +1,10 @@
-import type { InlineEditProps } from '@affine/component';
-import { InlineEdit } from '@affine/component';
-import { useGuard } from '@affine/core/components/guard';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { DocService, DocsService } from '@affine/core/modules/doc';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { track } from '@affine/track';
+import type { InlineEditProps } from '@cloud-notes/component';
+import { InlineEdit } from '@cloud-notes/component';
+import { useGuard } from '@cloud-notes/core/components/guard';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { DocService, DocsService } from '@cloud-notes/core/modules/doc';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { track } from '@cloud-notes/track';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import type { HTMLAttributes } from 'react';

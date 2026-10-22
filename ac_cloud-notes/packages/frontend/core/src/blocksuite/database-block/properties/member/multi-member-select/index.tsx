@@ -1,9 +1,9 @@
-import { Avatar, notify } from '@affine/component';
+import { Avatar, notify } from '@cloud-notes/component';
 import {
   type ExistedUserInfo,
   type UserListService,
   type UserService,
-} from '@blocksuite/affine/shared/services';
+} from '@blocksuite/cloud-notes/shared/services';
 import { computed, type ReadonlySignal, signal } from '@preact/signals-core';
 import clsx from 'clsx';
 import {

@@ -12,7 +12,7 @@ import {
   resolvePathInBase,
 } from '../../src/shared/utils';
 
-const tmpDir = path.join(os.tmpdir(), `affine-electron-utils-${randomUUID()}`);
+const tmpDir = path.join(os.tmpdir(), `cloud-notes-electron-utils-${randomUUID()}`);
 
 afterEach(async () => {
   await fs.rm(tmpDir, { recursive: true, force: true });

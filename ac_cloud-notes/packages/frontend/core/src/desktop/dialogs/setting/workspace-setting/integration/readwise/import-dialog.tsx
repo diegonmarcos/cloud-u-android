@@ -6,10 +6,10 @@ import {
   Modal,
   notify,
   Scrollable,
-} from '@affine/component';
-import { IntegrationService } from '@affine/core/modules/integration';
-import type { ReadwiseHighlight } from '@affine/core/modules/integration/type';
-import { i18nTime, Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { IntegrationService } from '@cloud-notes/core/modules/integration';
+import type { ReadwiseHighlight } from '@cloud-notes/core/modules/integration/type';
+import { i18nTime, Trans, useI18n } from '@cloud-notes/i18n';
 import { InformationFillDuotoneIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
@@ -76,7 +76,7 @@ export const ImportDialog = ({ onClose }: { onClose: () => void }) => {
 
       const startTime = Date.now();
       readwise
-        .highlightsToAffineDocs(selectedHighlights.reverse(), books, {
+        .highlightsToCloudNotesDocs(selectedHighlights.reverse(), books, {
           signal,
           onProgress: setImportProgress,
           onComplete: () => {
@@ -100,10 +100,10 @@ export const ImportDialog = ({ onClose }: { onClose: () => void }) => {
               alignMessage: 'icon',
               title:
                 t[
-                  'com.affine.integration.readwise.import.abort-notify-title'
+                  'com.cloud-notes.integration.readwise.import.abort-notify-title'
                 ](),
               message: t.t(
-                'com.affine.integration.readwise.import.abort-notify-desc',
+                'com.cloud-notes.integration.readwise.import.abort-notify-desc',
                 { finished }
               ),
             });
@@ -227,12 +227,12 @@ const SelectStage = ({
     <>
       <header>
         <h3 className={styles.title}>
-          {t['com.affine.integration.readwise.import.title']()}
+          {t['com.cloud-notes.integration.readwise.import.title']()}
         </h3>
         <div className={styles.desc}>
           {lastImportedAt ? (
             <Trans
-              i18nKey="com.affine.integration.readwise.import.desc-from-last"
+              i18nKey="com.cloud-notes.integration.readwise.import.desc-from-last"
               values={{
                 lastImportedAt: i18nTime(lastImportedAt, {
                   absolute: { accuracy: 'second' },
@@ -249,7 +249,7 @@ const SelectStage = ({
               }}
             ></Trans>
           ) : (
-            t['com.affine.integration.readwise.import.desc-from-start']()
+            t['com.cloud-notes.integration.readwise.import.desc-from-start']()
           )}
         </div>
         <Divider size="thinner" />
@@ -361,13 +361,13 @@ const HighlightTable = ({
           />
         </div>
         <div className={styles.tableCellTitle}>
-          {t['com.affine.integration.readwise.import.cell-h-content']()}
+          {t['com.cloud-notes.integration.readwise.import.cell-h-content']()}
         </div>
         <div className={styles.tableCellTodo}>
-          {t['com.affine.integration.readwise.import.cell-h-todo']()}
+          {t['com.cloud-notes.integration.readwise.import.cell-h-todo']()}
         </div>
         <div className={styles.tableCellTime}>
-          {t['com.affine.integration.readwise.import.cell-h-time']()}
+          {t['com.cloud-notes.integration.readwise.import.cell-h-time']()}
         </div>
       </div>
       <Virtuoso
@@ -415,15 +415,15 @@ const HighlightTable = ({
               <div className={styles.tableCellTodo}>
                 {action === 'new' ? (
                   <span className={styles.todoNew}>
-                    {t['com.affine.integration.readwise.import.todo-new']()}
+                    {t['com.cloud-notes.integration.readwise.import.todo-new']()}
                   </span>
                 ) : action === 'skip' ? (
                   <span className={styles.todoSkip}>
-                    {t['com.affine.integration.readwise.import.todo-skip']()}
+                    {t['com.cloud-notes.integration.readwise.import.todo-skip']()}
                   </span>
                 ) : (
                   <span className={styles.todoUpdate}>
-                    {t['com.affine.integration.readwise.import.todo-update']()}
+                    {t['com.cloud-notes.integration.readwise.import.todo-update']()}
                   </span>
                 )}
               </div>
@@ -444,7 +444,7 @@ const HighlightEmpty = () => {
   const t = useI18n();
   return (
     <div className={styles.empty}>
-      {t['com.affine.integration.readwise.import.empty']()}
+      {t['com.cloud-notes.integration.readwise.import.empty']()}
     </div>
   );
 };
@@ -468,17 +468,17 @@ const WritingStage = ({
           strokeWidth={3}
         />
         <h3 className={styles.importingTitle}>
-          {t['com.affine.integration.readwise.import.importing']()}
+          {t['com.cloud-notes.integration.readwise.import.importing']()}
         </h3>
       </header>
 
       <main className={styles.importingDesc}>
-        {t['com.affine.integration.readwise.import.importing-desc']()}
+        {t['com.cloud-notes.integration.readwise.import.importing-desc']()}
       </main>
 
       <footer className={styles.importingFooter}>
         <Button variant="error" onClick={onStop}>
-          {t['com.affine.integration.readwise.import.importing-stop']()}
+          {t['com.cloud-notes.integration.readwise.import.importing-stop']()}
         </Button>
       </footer>
     </>

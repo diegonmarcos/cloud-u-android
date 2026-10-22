@@ -1,7 +1,7 @@
-import { Button, RadioGroup } from '@affine/component';
-import { SelectPage } from '@affine/core/components/page-list/docs/select-page';
-import type { CollectionInfo } from '@affine/core/modules/collection';
-import { useI18n } from '@affine/i18n';
+import { Button, RadioGroup } from '@cloud-notes/component';
+import { SelectPage } from '@cloud-notes/core/components/page-list/docs/select-page';
+import type { CollectionInfo } from '@cloud-notes/core/modules/collection';
+import { useI18n } from '@cloud-notes/i18n';
 import { useCallback, useMemo, useState } from 'react';
 
 import * as styles from './edit-collection.css';
@@ -49,7 +49,7 @@ export const EditCollection = ({
     () => (
       <>
         <Button onClick={onCancel} className={styles.actionButton}>
-          {t['com.affine.editCollection.button.cancel']()}
+          {t['com.cloud-notes.editCollection.button.cancel']()}
         </Button>
         <Button
           className={styles.actionButton}
@@ -58,7 +58,7 @@ export const EditCollection = ({
           disabled={isNameEmpty}
           onClick={onSaveCollection}
         >
-          {onConfirmText ?? t['com.affine.editCollection.button.create']()}
+          {onConfirmText ?? t['com.cloud-notes.editCollection.button.create']()}
         </Button>
       </>
     ),
@@ -74,12 +74,12 @@ export const EditCollection = ({
         items={[
           {
             value: 'page',
-            label: t['com.affine.editCollection.pages'](),
+            label: t['com.cloud-notes.editCollection.pages'](),
             testId: 'edit-collection-pages-button',
           },
           {
             value: 'rule',
-            label: t['com.affine.editCollection.rules'](),
+            label: t['com.cloud-notes.editCollection.rules'](),
             testId: 'edit-collection-rules-button',
           },
         ]}

@@ -1,9 +1,9 @@
-import { useEnableCloud } from '@affine/core/components/hooks/affine/use-enable-cloud';
-import { WorkspaceShareSettingService } from '@affine/core/modules/share-setting';
-import type { Workspace } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
-import type { Store } from '@blocksuite/affine/store';
+import { useEnableCloud } from '@cloud-notes/core/components/hooks/cloud-notes/use-enable-cloud';
+import { WorkspaceShareSettingService } from '@cloud-notes/core/modules/share-setting';
+import type { Workspace } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect } from 'react';
 
@@ -37,14 +37,14 @@ export const SharePageButton = ({ workspace, page }: SharePageModalProps) => {
 
   const sharingDisabled = enableSharing === false;
   const disabledReason = sharingDisabled
-    ? t['com.affine.share-menu.workspace-sharing.disabled.tooltip']()
+    ? t['com.cloud-notes.share-menu.workspace-sharing.disabled.tooltip']()
     : undefined;
 
   return (
     <ShareMenu
       workspaceMetadata={workspace.meta}
       currentPage={page}
-      onEnableAffineCloud={() =>
+      onEnableCloudNotesCloud={() =>
         confirmEnableCloud(workspace, {
           openPageId: page.id,
         })

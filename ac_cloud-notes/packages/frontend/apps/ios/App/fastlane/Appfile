@@ -1,4 +1,4 @@
-app_identifier("app.affine.pro") # The bundle identifier of your app
+app_identifier("app.cloudnotes.pro") # The bundle identifier of your app
 apple_id("yinan.long@toeverything.info") # Your Apple Developer Portal username
 
 itc_team_id("126219637") # App Store Connect Team ID

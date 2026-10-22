@@ -1,19 +1,19 @@
-import type { IconData } from '@affine/component';
-import type { ExplorerIconService } from '@affine/core/modules/explorer-icon/services/explorer-icon';
-import type { OrganizeService } from '@affine/core/modules/organize';
-import type { TagService } from '@affine/core/modules/tag';
+import type { IconData } from '@cloud-notes/component';
+import type { ExplorerIconService } from '@cloud-notes/core/modules/explorer-icon/services/explorer-icon';
+import type { OrganizeService } from '@cloud-notes/core/modules/organize';
+import type { TagService } from '@cloud-notes/core/modules/tag';
 import {
   type ExtensionType,
   type Schema,
   Transformer,
   type Workspace,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import type {
   ImportBatch,
   ImportCommitResult,
   ImportFolder,
   ImportIconData,
-} from '@blocksuite/affine/widgets/linked-doc';
+} from '@blocksuite/cloud-notes/widgets/linked-doc';
 
 type Logger = {
   warn: (message: string, ...args: unknown[]) => void;

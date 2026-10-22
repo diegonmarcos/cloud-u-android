@@ -29,7 +29,7 @@ type AndroidIMEBridge = {
 
 declare global {
   interface HTMLElementEventMap {
-    'affine-android-ime-input': CustomEvent<AndroidIMEInputDetail>;
+    'cloud-notes-android-ime-input': CustomEvent<AndroidIMEInputDetail>;
   }
 }
 
@@ -41,9 +41,9 @@ export class EventService<TextAttributes extends BaseTextAttributes> {
   private readonly _androidIMEBridge = () => {
     const bridge = (
       globalThis as typeof globalThis & {
-        AffineAndroidIME?: AndroidIMEBridge;
+        CloudNotesAndroidIME?: AndroidIMEBridge;
       }
-    ).AffineAndroidIME;
+    ).CloudNotesAndroidIME;
     return bridge?.getProtocolVersion?.() === 1 ? bridge : undefined;
   };
 
@@ -573,7 +573,7 @@ export class EventService<TextAttributes extends BaseTextAttributes> {
     });
     this.editor.disposables.addFromEvent(
       eventSource,
-      'affine-android-ime-input',
+      'cloud-notes-android-ime-input',
       e => {
         this._onAndroidIMEInput(e).catch(console.error);
       }

@@ -1,11 +1,11 @@
 import type {
   MermaidRenderRequest,
   MermaidRenderResult,
-} from '@affine/core/modules/mermaid/renderer';
+} from '@cloud-notes/core/modules/mermaid/renderer';
 import type {
   TypstRenderRequest,
   TypstRenderResult,
-} from '@affine/core/modules/typst/renderer';
+} from '@cloud-notes/core/modules/typst/renderer';
 
 type NativePreviewHandlers = {
   renderMermaidSvg?: (

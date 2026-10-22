@@ -4,9 +4,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { UserFriendlyError } from '@affine/error';
-import type { EditorHost } from '@blocksuite/affine/std';
-import type { GfxModel } from '@blocksuite/affine/std/gfx';
+import { UserFriendlyError } from '@cloud-notes/error';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import type { GfxModel } from '@blocksuite/cloud-notes/std/gfx';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -50,11 +50,11 @@ const createWorkspaceByokLocalLeaseMutation = vi.hoisted(() =>
   Symbol('createWorkspaceByokLocalLeaseMutation')
 );
 
-vi.mock('@affine/electron-api', () => ({
+vi.mock('@cloud-notes/electron-api', () => ({
   apis: electronApis,
 }));
 
-vi.mock('@affine/graphql', () => ({
+vi.mock('@cloud-notes/graphql', () => ({
   ByokProvider: {
     openai: 'openai',
     anthropic: 'anthropic',

@@ -1,5 +1,5 @@
-import { Button, DragHandle, IconButton } from '@affine/component';
-import { useI18n } from '@affine/i18n';
+import { Button, DragHandle, IconButton } from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 import { DeleteIcon, EditIcon } from '@blocksuite/icons/rc';
 import type { DragEvent } from 'react';
 

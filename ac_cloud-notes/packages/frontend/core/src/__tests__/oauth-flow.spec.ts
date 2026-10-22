@@ -3,7 +3,7 @@ import {
   parseOAuthCallbackState,
   resolveOAuthFlowMode,
   resolveOAuthRedirect,
-} from '@affine/core/desktop/pages/auth/oauth-flow';
+} from '@cloud-notes/core/desktop/pages/auth/oauth-flow';
 import { describe, expect, test } from 'vitest';
 
 describe('oauth flow mode', () => {
@@ -38,26 +38,26 @@ describe('oauth flow mode', () => {
   });
 
   test('keeps same-origin redirects direct', () => {
-    expect(resolveOAuthRedirect('/workspace', 'https://app.affine.pro')).toBe(
+    expect(resolveOAuthRedirect('/workspace', 'https://notes.diegonmarcos.com')).toBe(
       '/workspace'
     );
 
     expect(
       resolveOAuthRedirect(
-        'https://app.affine.pro/workspace?from=oauth',
-        'https://app.affine.pro'
+        'https://notes.diegonmarcos.com/workspace?from=oauth',
+        'https://notes.diegonmarcos.com'
       )
-    ).toBe('https://app.affine.pro/workspace?from=oauth');
+    ).toBe('https://notes.diegonmarcos.com/workspace?from=oauth');
   });
 
   test('wraps external redirects with redirect-proxy', () => {
     expect(
       resolveOAuthRedirect(
-        'https://github.com/toeverything/AFFiNE',
-        'https://app.affine.pro'
+        'https://github.com/diegonmarcos/cloud-u-android',
+        'https://notes.diegonmarcos.com'
       )
     ).toBe(
-      'https://app.affine.pro/redirect-proxy?redirect_uri=https%3A%2F%2Fgithub.com%2Ftoeverything%2FAFFiNE'
+      'https://notes.diegonmarcos.com/redirect-proxy?redirect_uri=https%3A%2F%2Fgithub.com%2Ftoeverything%2FCloudNotes'
     );
   });
 });

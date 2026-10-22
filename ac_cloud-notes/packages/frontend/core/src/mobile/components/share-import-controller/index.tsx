@@ -1,13 +1,13 @@
-import { Button, Modal, notify, SafeArea, Scrollable } from '@affine/component';
-import { type Server, ServersService } from '@affine/core/modules/cloud';
+import { Button, Modal, notify, SafeArea, Scrollable } from '@cloud-notes/component';
+import { type Server, ServersService } from '@cloud-notes/core/modules/cloud';
 import {
   ImportClipperService,
   type ShareDestinationOptions,
-} from '@affine/core/modules/import-clipper';
+} from '@cloud-notes/core/modules/import-clipper';
 import {
   type WorkspaceMetadata,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
+} from '@cloud-notes/core/modules/workspace';
 import { ImageIcon, LinkIcon, TextIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -47,7 +47,7 @@ const errorMessage = (error?: string) => {
     case 'destination-not-found':
       return 'One or more selected tags or the collection no longer exist.';
     case 'offline-confirmation-required':
-      return 'AFFiNE could not confirm the latest workspace state.';
+      return 'Cloud Notes could not confirm the latest workspace state.';
     case 'attachment-missing':
       return 'The shared image is no longer available.';
     default:
@@ -328,9 +328,9 @@ export const ShareImportController = ({
     const handleRefresh = () => {
       requestRefresh();
     };
-    window.addEventListener('affine:share-inbox', handleRefresh);
+    window.addEventListener('cloud-notes:share-inbox', handleRefresh);
     return () =>
-      window.removeEventListener('affine:share-inbox', handleRefresh);
+      window.removeEventListener('cloud-notes:share-inbox', handleRefresh);
   }, [provider]);
 
   useEffect(() => {
@@ -547,7 +547,7 @@ export const ShareImportController = ({
               {selectedWorkspaceName}
             </h2>
             <p className={styles.confirmationText}>
-              AFFiNE could not confirm that this workspace, your permissions,
+              Cloud Notes could not confirm that this workspace, your permissions,
               and its destinations are current online. Saving will use the most
               recent data available on this device.
             </p>

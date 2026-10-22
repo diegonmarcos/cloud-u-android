@@ -1,8 +1,8 @@
-import { FavoriteTag } from '@affine/core/components/page-list';
-import { CompatibleFavoriteItemsAdapter } from '@affine/core/modules/favorite';
-import { toast } from '@affine/core/utils';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { FavoriteTag } from '@cloud-notes/core/components/page-list';
+import { CompatibleFavoriteItemsAdapter } from '@cloud-notes/core/modules/favorite';
+import { toast } from '@cloud-notes/core/utils';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
 
@@ -20,8 +20,8 @@ export const useFavorite = (pageId: string) => {
     favAdapter.toggle(pageId, 'doc');
     toast(
       favorite
-        ? t['com.affine.toastMessage.removedFavorites']()
-        : t['com.affine.toastMessage.addedFavorites']()
+        ? t['com.cloud-notes.toastMessage.removedFavorites']()
+        : t['com.cloud-notes.toastMessage.addedFavorites']()
     );
   }, [favorite, pageId, t, favAdapter]);
 

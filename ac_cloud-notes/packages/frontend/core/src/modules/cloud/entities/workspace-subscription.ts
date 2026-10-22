@@ -1,5 +1,5 @@
-import type { SubscriptionQuery, SubscriptionRecurring } from '@affine/graphql';
-import { SubscriptionPlan } from '@affine/graphql';
+import type { SubscriptionQuery, SubscriptionRecurring } from '@cloud-notes/graphql';
+import { SubscriptionPlan } from '@cloud-notes/graphql';
 import {
   catchErrorInto,
   effect,

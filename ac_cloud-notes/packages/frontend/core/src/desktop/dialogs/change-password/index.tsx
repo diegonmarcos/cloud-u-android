@@ -1,25 +1,25 @@
-import { Button, Modal, notify } from '@affine/component';
+import { Button, Modal, notify } from '@cloud-notes/component';
 import {
   AuthContent,
   AuthHeader,
   AuthInput,
-} from '@affine/component/auth-components';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+} from '@cloud-notes/component/auth-components';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import {
   AuthService,
   DefaultServerService,
   ServersService,
-} from '@affine/core/modules/cloud';
+} from '@cloud-notes/core/modules/cloud';
 import type {
   DialogComponentProps,
   GLOBAL_DIALOG_SCHEMA,
-} from '@affine/core/modules/dialogs';
-import { Unreachable } from '@affine/env/constant';
+} from '@cloud-notes/core/modules/dialogs';
+import { Unreachable } from '@cloud-notes/env/constant';
 import {
   sendChangePasswordEmailMutation,
   sendSetPasswordEmailMutation,
-} from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useEffect, useState } from 'react';
 
@@ -82,14 +82,14 @@ export const ChangePasswordDialog = ({
 
       notify.success({
         title: hasPassword
-          ? t['com.affine.auth.sent.change.password.hint']()
-          : t['com.affine.auth.sent.set.password.hint'](),
+          ? t['com.cloud-notes.auth.sent.change.password.hint']()
+          : t['com.cloud-notes.auth.sent.set.password.hint'](),
       });
       setHasSentEmail(true);
     } catch (err) {
       console.error(err);
       notify.error({
-        title: t['com.affine.auth.sent.change.email.fail'](),
+        title: t['com.cloud-notes.auth.sent.change.email.fail'](),
       });
     } finally {
       setLoading(false);
@@ -116,21 +116,21 @@ export const ChangePasswordDialog = ({
         title={serverName}
         subTitle={
           hasPassword
-            ? t['com.affine.auth.reset.password']()
-            : t['com.affine.auth.set.password']()
+            ? t['com.cloud-notes.auth.reset.password']()
+            : t['com.cloud-notes.auth.set.password']()
         }
       />
       <AuthContent>
         <p>
           {hasPassword
-            ? t['com.affine.auth.reset.password.message']()
-            : t['com.affine.auth.set.password.message']({
+            ? t['com.cloud-notes.auth.reset.password.message']()
+            : t['com.cloud-notes.auth.set.password.message']({
                 min: String(passwordLimits.minLength),
                 max: String(passwordLimits.maxLength),
               })}
         </p>
         <AuthInput
-          label={t['com.affine.settings.email']()}
+          label={t['com.cloud-notes.settings.email']()}
           disabled={true}
           value={email}
         />
@@ -143,10 +143,10 @@ export const ChangePasswordDialog = ({
           onClick={onSendEmail}
         >
           {hasSentEmail
-            ? t['com.affine.auth.sent']()
+            ? t['com.cloud-notes.auth.sent']()
             : hasPassword
-              ? t['com.affine.auth.send.reset.password.link']()
-              : t['com.affine.auth.send.set.password.link']()}
+              ? t['com.cloud-notes.auth.send.reset.password.link']()
+              : t['com.cloud-notes.auth.send.set.password.link']()}
         </Button>
       </AuthContent>
     </Modal>

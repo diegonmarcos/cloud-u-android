@@ -7,7 +7,7 @@ const { mockBase64ToUint8Array, mockConvertFileSrc } = vi.hoisted(() => ({
   mockConvertFileSrc: vi.fn((path: string) => `capacitor://localhost${path}`),
 }));
 
-vi.mock('@affine/core/modules/workspace-engine', () => ({
+vi.mock('@cloud-notes/core/modules/workspace-engine', () => ({
   base64ToUint8Array: mockBase64ToUint8Array,
 }));
 
@@ -69,7 +69,7 @@ describe('decodePayload', () => {
     } as Response);
 
     const path =
-      '/data/user/0/com.affine.app/cache/nbstore-blob-cache/0123456789abcdef/fedcba9876543210.blob';
+      '/data/user/0/com.cloud-notes.app/cache/nbstore-blob-cache/0123456789abcdef/fedcba9876543210.blob';
     const decoded = await decodePayload(
       `${MOBILE_BLOB_FILE_PREFIX}${path}`,
       MOBILE_BLOB_FILE_PREFIX

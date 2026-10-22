@@ -1,5 +1,5 @@
-import type { GraphModel, GraphNode, Positions } from '@blocksuite/affine-graph';
-import { adjacency } from '@blocksuite/affine-graph';
+import type { GraphModel, GraphNode, Positions } from '@blocksuite/cloud-notes-graph';
+import { adjacency } from '@blocksuite/cloud-notes-graph';
 import { useEffect, useMemo, useRef } from 'react';
 
 const DOC_COLOR = '#7a8cff';
@@ -236,7 +236,7 @@ export const GraphCanvas = ({
         height: '100%',
         display: 'block',
         touchAction: 'none',
-        color: 'var(--affine-text-primary-color, currentColor)',
+        color: 'var(--cloud-notes-text-primary-color, currentColor)',
       }}
     />
   );

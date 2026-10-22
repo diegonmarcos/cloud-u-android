@@ -1,7 +1,7 @@
 import type {
   RealtimeTopicEventOf,
   UserQuotaStateSnapshot,
-} from '@affine/realtime';
+} from '@cloud-notes/realtime';
 import { Entity, LiveData } from '@toeverything/infra';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import bytes from 'bytes';

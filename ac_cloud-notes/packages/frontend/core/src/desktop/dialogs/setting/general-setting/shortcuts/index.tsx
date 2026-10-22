@@ -1,16 +1,16 @@
 import {
   SettingHeader,
   SettingWrapper,
-} from '@affine/component/setting-components';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/setting-components';
+import { useI18n } from '@cloud-notes/i18n';
 
-import type { ShortcutsInfo } from '../../../../../components/hooks/affine/use-shortcuts';
+import type { ShortcutsInfo } from '../../../../../components/hooks/cloud-notes/use-shortcuts';
 import {
   useEdgelessShortcuts,
   useGeneralShortcuts,
   useMarkdownShortcuts,
   usePageShortcuts,
-} from '../../../../../components/hooks/affine/use-shortcuts';
+} from '../../../../../components/hooks/cloud-notes/use-shortcuts';
 import { shortcutKey, shortcutKeyContainer, shortcutRow } from './style.css';
 
 const ShortcutsPanel = ({
@@ -51,8 +51,8 @@ export const Shortcuts = () => {
   return (
     <>
       <SettingHeader
-        title={t['com.affine.keyboardShortcuts.title']()}
-        subtitle={t['com.affine.keyboardShortcuts.subtitle']()}
+        title={t['com.cloud-notes.keyboardShortcuts.title']()}
+        subtitle={t['com.cloud-notes.keyboardShortcuts.subtitle']()}
         data-testid="keyboard-shortcuts-title"
       />
       <ShortcutsPanel shortcutsInfo={generalShortcutsInfo} />

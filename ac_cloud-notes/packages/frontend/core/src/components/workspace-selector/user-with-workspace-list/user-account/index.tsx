@@ -1,4 +1,4 @@
-import { UserPlanButton } from '@affine/core/components/affine/auth/user-plan-button';
+import { UserPlanButton } from '@cloud-notes/core/components/cloud-notes/auth/user-plan-button';
 import type { SyntheticEvent } from 'react';
 
 import * as styles from './index.css';

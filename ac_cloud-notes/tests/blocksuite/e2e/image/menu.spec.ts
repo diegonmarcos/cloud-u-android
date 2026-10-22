@@ -13,7 +13,7 @@ test('select image should not show format bar', async ({ page }) => {
   await initImageState(page);
   await assertRichImage(page, 1);
 
-  const image = page.locator('affine-image');
+  const image = page.locator('cloud-notes-image');
   const rect = await image.boundingBox();
   if (!rect) {
     throw new Error('image not found');
@@ -23,7 +23,7 @@ test('select image should not show format bar', async ({ page }) => {
     { x: rect.x - 20, y: rect.y + 20 },
     { x: rect.x + 20, y: rect.y + 40 }
   );
-  const rects = page.locator('affine-block-selection').locator('visible=true');
+  const rects = page.locator('cloud-notes-block-selection').locator('visible=true');
   await expect(rects).toHaveCount(1);
   const formatQuickBar = page.locator(`.format-quick-bar`);
   await expect(formatQuickBar).not.toBeVisible();

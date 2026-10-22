@@ -1,6 +1,6 @@
 import { type DependencyList, type SyntheticEvent } from 'react';
 
-import { useAsyncCallback } from './affine-async-hooks';
+import { useAsyncCallback } from './cloud-notes-async-hooks';
 
 export const useCatchEventCallback = <
   E extends SyntheticEvent,

@@ -1,11 +1,11 @@
-import { PropertyValue } from '@affine/component';
-import { type TagLike, TagsInlineEditor } from '@affine/core/components/tags';
-import { TagService } from '@affine/core/modules/tag';
+import { PropertyValue } from '@cloud-notes/component';
+import { type TagLike, TagsInlineEditor } from '@cloud-notes/core/components/tags';
+import { TagService } from '@cloud-notes/core/modules/tag';
 import {
-  affineLabelToDatabaseTagColor,
+  cloudNotesLabelToDatabaseTagColor,
   databaseTagColorToV2,
-} from '@affine/core/modules/tag/entities/utils';
-import type { DatabaseBlockDataSource } from '@blocksuite/affine/blocks/database';
+} from '@cloud-notes/core/modules/tag/entities/utils';
+import type { DatabaseBlockDataSource } from '@blocksuite/cloud-notes/blocks/database';
 import type { SelectTag } from '@blocksuite/data-view';
 import { MultiSelectIcon, SingleSelectIcon } from '@blocksuite/icons/rc';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
@@ -164,7 +164,7 @@ const BlocksuiteDatabaseSelector = ({
 
   const onCreateTag = useCallback(
     (name: string, color: string) => {
-      // bs database uses --affine-tag-xxx colors
+      // bs database uses --cloud-notes-tag-xxx colors
       const newTag = {
         id: nanoid(),
         name: name,
@@ -201,7 +201,7 @@ const BlocksuiteDatabaseSelector = ({
   const tagColors = useMemo(() => {
     return tagService.tagColors.map(([name, color]) => ({
       id: name,
-      value: affineLabelToDatabaseTagColor(color),
+      value: cloudNotesLabelToDatabaseTagColor(color),
       name,
     }));
   }, [tagService.tagColors]);
@@ -210,7 +210,7 @@ const BlocksuiteDatabaseSelector = ({
     (tagId: string, property: string, value: string) => {
       adapter.updateTag(selectCell, dataSource, tagId, old => {
         if (property === 'color') {
-          value = affineLabelToDatabaseTagColor(value);
+          value = cloudNotesLabelToDatabaseTagColor(value);
         }
         return {
           ...old,

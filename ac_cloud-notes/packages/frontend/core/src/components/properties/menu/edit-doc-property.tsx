@@ -3,10 +3,10 @@ import {
   MenuItem,
   MenuSeparator,
   useConfirmModal,
-} from '@affine/component';
-import type { DocCustomPropertyInfo } from '@affine/core/modules/db';
-import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import type { DocCustomPropertyInfo } from '@cloud-notes/core/modules/db';
+import { WorkspacePropertyService } from '@cloud-notes/core/modules/workspace-property';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import { DeleteIcon, InvisibleIcon, ViewIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import {
@@ -168,10 +168,10 @@ export const EditWorkspacePropertyMenuItems = ({
             : styles.propertyRowTypeItem
         }
       >
-        {t['com.affine.page-properties.create-property.menu.header']()}
+        {t['com.cloud-notes.page-properties.create-property.menu.header']()}
         <div className={styles.propertyTypeName}>
           <WorkspacePropertyIcon propertyInfo={propertyInfo} />
-          {t[`com.affine.page-properties.property.${propertyType}`]()}
+          {t[`com.cloud-notes.page-properties.property.${propertyType}`]()}
         </div>
       </div>
       <MenuSeparator />
@@ -185,7 +185,7 @@ export const EditWorkspacePropertyMenuItems = ({
         data-property-visibility="always-show"
         disabled={readonly}
       >
-        {t['com.affine.page-properties.property.always-show']()}
+        {t['com.cloud-notes.page-properties.property.always-show']()}
       </MenuItem>
       <MenuItem
         prefixIcon={<InvisibleIcon />}
@@ -194,7 +194,7 @@ export const EditWorkspacePropertyMenuItems = ({
         data-property-visibility="hide-when-empty"
         disabled={readonly}
       >
-        {t['com.affine.page-properties.property.hide-when-empty']()}
+        {t['com.cloud-notes.page-properties.property.hide-when-empty']()}
       </MenuItem>
       <MenuItem
         prefixIcon={<InvisibleIcon />}
@@ -203,7 +203,7 @@ export const EditWorkspacePropertyMenuItems = ({
         data-property-visibility="always-hide"
         disabled={readonly}
       >
-        {t['com.affine.page-properties.property.always-hide']()}
+        {t['com.cloud-notes.page-properties.property.always-hide']()}
       </MenuItem>
       <MenuSeparator />
       <MenuItem
@@ -213,13 +213,13 @@ export const EditWorkspacePropertyMenuItems = ({
         onClick={() => {
           confirmModal.openConfirmModal({
             title:
-              t['com.affine.settings.workspace.properties.delete-property'](),
+              t['com.cloud-notes.settings.workspace.properties.delete-property'](),
             description: (
               <Trans
                 values={{
                   name: name,
                 }}
-                i18nKey="com.affine.settings.workspace.properties.delete-property-desc"
+                i18nKey="com.cloud-notes.settings.workspace.properties.delete-property-desc"
               >
                 The <strong>{{ name: name } as any}</strong> property will be
                 removed from count doc(s). This action cannot be undone.
@@ -235,7 +235,7 @@ export const EditWorkspacePropertyMenuItems = ({
           });
         }}
       >
-        {t['com.affine.settings.workspace.properties.delete-property']()}
+        {t['com.cloud-notes.settings.workspace.properties.delete-property']()}
       </MenuItem>
     </>
   );

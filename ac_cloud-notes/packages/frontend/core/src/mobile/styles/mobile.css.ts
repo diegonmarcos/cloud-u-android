@@ -7,7 +7,7 @@ globalStyle(':root', {
   vars: {
     [globalVars.appTabHeight]: BUILD_CONFIG.isIOS ? '49px' : '62px',
     [globalVars.appTabSafeArea]: `calc(${globalVars.appTabHeight} + var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)))`,
-    '--affine-edgeless-zoom-toolbar-bottom': `calc(10px + ${globalVars.appTabSafeArea})`,
+    '--cloud-notes-edgeless-zoom-toolbar-bottom': `calc(10px + ${globalVars.appTabSafeArea})`,
   },
   userSelect: 'none',
   WebkitUserSelect: 'none',
@@ -18,16 +18,16 @@ globalStyle('body', {
   minHeight: '100dvh',
   overflowY: 'unset',
 });
-globalStyle('body:has(>#app-tabs):not(:has(affine-keyboard-toolbar))', {
+globalStyle('body:has(>#app-tabs):not(:has(cloud-notes-keyboard-toolbar))', {
   paddingBottom: globalVars.appTabSafeArea,
 });
-globalStyle('body:has(affine-keyboard-toolbar)', {
+globalStyle('body:has(cloud-notes-keyboard-toolbar)', {
   paddingBottom: `calc(${globalVars.appTabSafeArea} + 46px)`,
 });
-globalStyle('body:has(affine-keyboard-toolbar[data-keyboard-visible])', {
+globalStyle('body:has(cloud-notes-keyboard-toolbar[data-keyboard-visible])', {
   paddingBottom: `calc(${globalVars.appKeyboardHeight} + 46px)`,
 });
-globalStyle('body:has(affine-keyboard-toolbar[data-panel-open])', {
+globalStyle('body:has(cloud-notes-keyboard-toolbar[data-panel-open])', {
   paddingBottom: `calc(${globalVars.appKeyboardStaticHeight} + 46px)`,
 });
 globalStyle('body:has(>#app-tabs) edgeless-toolbar-widget', {

@@ -1,29 +1,29 @@
-import { DocsService } from '@affine/core/modules/doc';
+import { DocsService } from '@cloud-notes/core/modules/doc';
 import {
   CreationQuickSearchSession,
   DocsQuickSearchSession,
   LinksQuickSearchSession,
   QuickSearchService,
   RecentDocsQuickSearchSession,
-} from '@affine/core/modules/quicksearch';
-import { ExternalLinksQuickSearchSession } from '@affine/core/modules/quicksearch/impls/external-links';
-import { JournalsQuickSearchSession } from '@affine/core/modules/quicksearch/impls/journals';
-import { track } from '@affine/track';
+} from '@cloud-notes/core/modules/quicksearch';
+import { ExternalLinksQuickSearchSession } from '@cloud-notes/core/modules/quicksearch/impls/external-links';
+import { JournalsQuickSearchSession } from '@cloud-notes/core/modules/quicksearch/impls/journals';
+import { track } from '@cloud-notes/track';
 import {
   BookmarkSlashMenuConfigIdentifier,
   insertLinkByQuickSearchCommand,
-} from '@blocksuite/affine/blocks/bookmark';
-import { LinkedDocSlashMenuConfigIdentifier } from '@blocksuite/affine/blocks/embed-doc';
-import type { ServiceIdentifier } from '@blocksuite/affine/global/di';
+} from '@blocksuite/cloud-notes/blocks/bookmark';
+import { LinkedDocSlashMenuConfigIdentifier } from '@blocksuite/cloud-notes/blocks/embed-doc';
+import type { ServiceIdentifier } from '@blocksuite/cloud-notes/global/di';
 import {
   QuickSearchExtension,
   type QuickSearchResult,
-} from '@blocksuite/affine/shared/services';
-import { type ExtensionType } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/shared/services';
+import { type ExtensionType } from '@blocksuite/cloud-notes/store';
 import type {
   SlashMenuConfig,
   SlashMenuItem,
-} from '@blocksuite/affine/widgets/slash-menu';
+} from '@blocksuite/cloud-notes/widgets/slash-menu';
 import type { FrameworkProvider } from '@toeverything/infra';
 import { pick } from 'lodash-es';
 
@@ -106,10 +106,10 @@ export function patchQuickSearchService(framework: FrameworkProvider) {
           },
           {
             label: {
-              i18nKey: 'com.affine.cmdk.insert-links',
+              i18nKey: 'com.cloud-notes.cmdk.insert-links',
             },
             placeholder: {
-              i18nKey: 'com.affine.cmdk.docs.placeholder',
+              i18nKey: 'com.cloud-notes.cmdk.docs.placeholder',
             },
           }
         )

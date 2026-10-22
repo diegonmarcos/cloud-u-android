@@ -5,15 +5,15 @@ import {
   monitorForElements,
   type MonitorGetFeedback,
   type toExternalData,
-} from '@affine/component';
-import type { AffineDNDData } from '@affine/core/types/dnd';
+} from '@cloud-notes/component';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
 import {
   DNDAPIExtension,
   DndApiExtensionIdentifier,
-} from '@blocksuite/affine/shared/services';
-import { BlockStdScope } from '@blocksuite/affine/std';
-import type { SliceSnapshot } from '@blocksuite/affine/store';
-import type { DragBlockPayload } from '@blocksuite/affine/widgets/drag-handle';
+} from '@blocksuite/cloud-notes/shared/services';
+import { BlockStdScope } from '@blocksuite/cloud-notes/std';
+import type { SliceSnapshot } from '@blocksuite/cloud-notes/store';
+import type { DragBlockPayload } from '@blocksuite/cloud-notes/widgets/drag-handle';
 import { Service } from '@toeverything/infra';
 
 import type { DocsService } from '../../doc';
@@ -21,12 +21,12 @@ import type { EditorSettingService } from '../../editor-setting';
 import { resolveLinkToDoc } from '../../navigation';
 import type { WorkspaceService } from '../../workspace';
 
-type Entity = AffineDNDData['draggable']['entity'];
+type Entity = CloudNotesDNDData['draggable']['entity'];
 type EntityResolver = (data: string) => Entity | null;
 
 type ExternalDragPayload = ExternalGetDataFeedbackArgs['source'];
 
-type MixedDNDData = AffineDNDData & {
+type MixedDNDData = CloudNotesDNDData & {
   draggable: DragBlockPayload;
 };
 
@@ -71,10 +71,10 @@ export class DndService extends Service {
 
   private setupBlocksuiteAdapter() {
     /**
-     * Migrate from affine to blocksuite
+     * Migrate from cloud-notes to blocksuite
      * For now, we only support doc
      */
-    const affineToBlocksuite = (args: MonitorGetFeedback<MixedDNDData>) => {
+    const cloudNotesToBlocksuite = (args: MonitorGetFeedback<MixedDNDData>) => {
       const data = args.source.data;
       if (data.entity && !data.bsEntity) {
         if (data.entity.type !== 'doc') {
@@ -100,9 +100,9 @@ export class DndService extends Service {
     };
 
     /**
-     * Migrate from blocksuite to affine
+     * Migrate from blocksuite to cloud-notes
      */
-    const blocksuiteToAffine = (args: MonitorGetFeedback<MixedDNDData>) => {
+    const blocksuiteToCloudNotes = (args: MonitorGetFeedback<MixedDNDData>) => {
       const data = args.source.data;
       if (!data.entity && data.bsEntity) {
         if (data.bsEntity.type !== 'blocks' || !data.bsEntity.snapshot) {
@@ -121,8 +121,8 @@ export class DndService extends Service {
     };
 
     function adaptDragEvent(args: MonitorGetFeedback<MixedDNDData>) {
-      affineToBlocksuite(args);
-      blocksuiteToAffine(args);
+      cloudNotesToBlocksuite(args);
+      blocksuiteToCloudNotes(args);
     }
 
     function canMonitor(args: MonitorGetFeedback<MixedDNDData>) {
@@ -136,9 +136,9 @@ export class DndService extends Service {
     function getBSDropTarget(args: MonitorDragEvent<MixedDNDData>) {
       for (const target of args.location.current.dropTargets) {
         const { tagName } = target.element;
-        if (['AFFINE-EDGELESS-NOTE', 'AFFINE-NOTE'].includes(tagName))
+        if (['Cloud Notes-EDGELESS-NOTE', 'Cloud Notes-NOTE'].includes(tagName))
           return 'note';
-        if (tagName === 'AFFINE-EDGELESS-ROOT') return 'canvas';
+        if (tagName === 'Cloud Notes-EDGELESS-ROOT') return 'canvas';
       }
       return 'other';
     }
@@ -192,7 +192,7 @@ export class DndService extends Service {
 
   private readonly resolvers: ((
     source: ExternalDragPayload
-  ) => AffineDNDData['draggable'] | null)[] = [];
+  ) => CloudNotesDNDData['draggable'] | null)[] = [];
 
   getBlocksuiteDndAPI(sourceDocId?: string) {
     const collection = this.workspaceService.workspace.docCollection;
@@ -211,7 +211,7 @@ export class DndService extends Service {
     return dndAPI;
   }
 
-  fromExternalData: fromExternalData<AffineDNDData> = (
+  fromExternalData: fromExternalData<CloudNotesDNDData> = (
     args: ExternalGetDataFeedbackArgs,
     isDropEvent?: boolean
   ) => {
@@ -219,7 +219,7 @@ export class DndService extends Service {
       return {};
     }
 
-    let resolved: AffineDNDData['draggable'] | null = null;
+    let resolved: CloudNotesDNDData['draggable'] | null = null;
 
     // in the order of the resolvers instead of the order of the types
     for (const resolver of this.resolvers) {
@@ -237,7 +237,7 @@ export class DndService extends Service {
     return resolved;
   };
 
-  toExternalData: toExternalData<AffineDNDData> = (args, data) => {
+  toExternalData: toExternalData<CloudNotesDNDData> = (args, data) => {
     const normalData = typeof data === 'function' ? data(args) : data;
 
     if (
@@ -301,7 +301,7 @@ export class DndService extends Service {
    */
   private readonly resolveBlocksuiteExternalData = (
     source: ExternalDragPayload
-  ): AffineDNDData['draggable'] | null => {
+  ): CloudNotesDNDData['draggable'] | null => {
     const dndAPI = this.getBlocksuiteDndAPI();
     if (!dndAPI) {
       return null;

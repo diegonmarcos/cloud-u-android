@@ -8,8 +8,7 @@ const packageJson = JSON.parse(
 );
 
 // #522: appId AND appName are read from the app's ONE declaration
-// (ac_cloud-notes/build.json), never restated here. appName said 'AFFiNE' —
-// the upstream project's name standing in for this product's identity.
+// (ac_cloud-notes/build.json), never restated here. appName was a literal copy of the label, a second declaration.
 const buildJson = JSON.parse(
   readFileSync(resolve(__dirname, '../../../../build.json'), 'utf-8')
 );
@@ -18,21 +17,21 @@ const capServerUrl = process.env.CAP_SERVER_URL;
 const allowsCleartextServer = capServerUrl?.startsWith('http://') ?? false;
 
 interface AppConfig {
-  affineVersion: string;
+  cloudNotesVersion: string;
 }
 
 const config: CapacitorConfig & AppConfig = {
-  appId: buildJson.android.application_id, // FLIPPED (#495): this app now IS Cloud Notes; namespace stays upstream app.affine.pro
+  appId: buildJson.android.application_id, // FLIPPED (#495): this app now IS Cloud Notes; namespace is app.cloudnotes.pro
   appName: buildJson.name,
   webDir: 'dist',
-  affineVersion: packageJson.version,
+  cloudNotesVersion: packageJson.version,
   android: {
     path: 'App',
     buildOptions: {
-      keystorePath: join(__dirname, 'affine.keystore'),
-      keystorePassword: process.env.AFFINE_ANDROID_KEYSTORE_PASSWORD,
+      keystorePath: join(__dirname, 'cloud-notes.keystore'),
+      keystorePassword: process.env.CLOUD_NOTES_ANDROID_KEYSTORE_PASSWORD,
       keystoreAlias: 'key0',
-      keystoreAliasPassword: process.env.AFFINE_ANDROID_KEYSTORE_ALIAS_PASSWORD,
+      keystoreAliasPassword: process.env.CLOUD_NOTES_ANDROID_KEYSTORE_ALIAS_PASSWORD,
       releaseType: 'AAB',
     },
   },

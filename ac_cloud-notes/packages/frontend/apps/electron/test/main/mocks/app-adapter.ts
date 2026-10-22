@@ -6,7 +6,7 @@ import type { AppAdapter } from 'electron-updater/out/AppAdapter';
  */
 export class MockedAppAdapter implements AppAdapter {
   version: string;
-  name = 'AFFiNE-testing';
+  name = 'Cloud Notes-testing';
   isPackaged = true;
   appUpdateConfigPath = '';
   userDataPath = '';

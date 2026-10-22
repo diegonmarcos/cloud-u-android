@@ -1,16 +1,16 @@
-import { MenuItem, SafeArea, usePromptModal } from '@affine/component';
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
-import { NavigationPanelTreeRoot } from '@affine/core/desktop/components/navigation-panel';
-import { CollectionService } from '@affine/core/modules/collection';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { FavoriteService } from '@affine/core/modules/favorite';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import { OrganizeService } from '@affine/core/modules/organize';
-import { TagService } from '@affine/core/modules/tag';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { MenuItem, SafeArea, usePromptModal } from '@cloud-notes/component';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
+import { NavigationPanelTreeRoot } from '@cloud-notes/core/desktop/components/navigation-panel';
+import { CollectionService } from '@cloud-notes/core/modules/collection';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { FavoriteService } from '@cloud-notes/core/modules/favorite';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import { OrganizeService } from '@cloud-notes/core/modules/organize';
+import { TagService } from '@cloud-notes/core/modules/tag';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import {
   AddCollectionIcon,
   AddOrganizeIcon,
@@ -68,10 +68,10 @@ import { NavigationPanelTreeNode } from '../tree/node';
 import * as styles from './styles.css';
 
 const sectionTitles = {
-  favorites: 'com.affine.rootAppSidebar.favorites',
-  organize: 'com.affine.rootAppSidebar.organize',
-  collections: 'com.affine.rootAppSidebar.collections',
-  tags: 'com.affine.rootAppSidebar.tags',
+  favorites: 'com.cloud-notes.rootAppSidebar.favorites',
+  organize: 'com.cloud-notes.rootAppSidebar.organize',
+  collections: 'com.cloud-notes.rootAppSidebar.collections',
+  tags: 'com.cloud-notes.rootAppSidebar.tags',
 } as const;
 
 const Header = () => (
@@ -339,7 +339,7 @@ const RemoveFromFolderMenuItem = ({ relationId }: { relationId: string }) => {
         organizeService.folderTree.folderNode$(relationId).value?.delete()
       }
     >
-      {t['com.affine.rootAppSidebar.organize.delete-from-folder']()}
+      {t['com.cloud-notes.rootAppSidebar.organize.delete-from-folder']()}
     </MenuItem>
   );
 };
@@ -389,7 +389,7 @@ const FolderRow = ({
             index: 0,
             view: (
               <MenuItem prefixIcon={<PageIcon />} onClick={handleNewDoc}>
-                {t['com.affine.rootAppSidebar.organize.folder.new-doc']()}
+                {t['com.cloud-notes.rootAppSidebar.organize.folder.new-doc']()}
               </MenuItem>
             ),
           },
@@ -442,7 +442,7 @@ const FolderNewDocAction = ({ row }: { row: MobileNavigationRow }) => {
       tabIndex={-1}
     >
       <AddItemPlaceholder
-        label={t['com.affine.rootAppSidebar.organize.folder.new-doc']()}
+        label={t['com.cloud-notes.rootAppSidebar.organize.folder.new-doc']()}
         onClick={handleCreate}
         data-testid="new-folder-in-folder-button"
       />
@@ -473,7 +473,7 @@ const DocNewLinkedActionEnabled = ({
       tabIndex={-1}
     >
       <AddItemPlaceholder
-        label={t['com.affine.rootAppSidebar.explorer.doc-add-tooltip']()}
+        label={t['com.cloud-notes.rootAppSidebar.explorer.doc-add-tooltip']()}
         onClick={handleCreate}
         data-testid="navigation-panel-doc-add-linked-page"
       />
@@ -567,7 +567,7 @@ const ProjectedEntityRow = ({
         tabIndex={-1}
       >
         {entry.canRead === false
-          ? t['com.affine.no-permission']()
+          ? t['com.cloud-notes.no-permission']()
           : t['Loading']()}
       </div>
     );
@@ -619,7 +619,7 @@ const OrganizeAction = () => {
       <AddItemPlaceholder
         icon={<AddOrganizeIcon />}
         data-testid="navigation-panel-bar-add-organize-button"
-        label={t['com.affine.rootAppSidebar.organize.add-folder']()}
+        label={t['com.cloud-notes.rootAppSidebar.organize.add-folder']()}
         onClick={() => setOpen(true)}
       />
       <FolderRenameDialog
@@ -641,13 +641,13 @@ const CollectionsAction = () => {
   const { openPromptModal } = usePromptModal();
   const handleCreate = useCallback(() => {
     openPromptModal({
-      title: t['com.affine.editCollection.saveCollection'](),
-      label: t['com.affine.editCollectionName.name'](),
+      title: t['com.cloud-notes.editCollection.saveCollection'](),
+      label: t['com.cloud-notes.editCollectionName.name'](),
       inputOptions: {
-        placeholder: t['com.affine.editCollectionName.name.placeholder'](),
+        placeholder: t['com.cloud-notes.editCollectionName.name.placeholder'](),
       },
-      confirmText: t['com.affine.editCollection.save'](),
-      cancelText: t['com.affine.editCollection.button.cancel'](),
+      confirmText: t['com.cloud-notes.editCollection.save'](),
+      cancelText: t['com.cloud-notes.editCollection.button.cancel'](),
       onConfirm(name) {
         const id = collectionService.createCollection({ name });
         workbenchService.workbench.openCollection(id);
@@ -658,7 +658,7 @@ const CollectionsAction = () => {
     <AddItemPlaceholder
       icon={<AddCollectionIcon />}
       data-testid="navigation-panel-bar-add-collection-button"
-      label={t['com.affine.rootAppSidebar.collection.new']()}
+      label={t['com.cloud-notes.rootAppSidebar.collection.new']()}
       onClick={handleCreate}
     />
   );
@@ -681,7 +681,7 @@ const TagsAction = () => {
         icon={<AddTagIcon />}
         data-testid="navigation-panel-add-tag-button"
         label={t[
-          'com.affine.rootAppSidebar.explorer.tag-section-add-tooltip'
+          'com.cloud-notes.rootAppSidebar.explorer.tag-section-add-tooltip'
         ]()}
         onClick={() => setOpen(true)}
       />
@@ -911,7 +911,7 @@ export const MobileNavigationVirtualScroller = () => {
                 tabIndex={-1}
               >
                 {row.blocked === 'denied'
-                  ? t['com.affine.no-permission']()
+                  ? t['com.cloud-notes.no-permission']()
                   : t['Loading']()}
               </div>
             );

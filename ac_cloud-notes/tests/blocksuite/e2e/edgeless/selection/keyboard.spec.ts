@@ -165,7 +165,7 @@ test('selection drag-area start should be same when space is pressed again', asy
         // Move the selection over to the rect
         await page.mouse.move(300, 300);
 
-        let draggingArea = page.locator('.affine-edgeless-dragging-area');
+        let draggingArea = page.locator('.cloud-notes-edgeless-dragging-area');
         const firstBound = await draggingArea.boundingBox();
 
         await page.keyboard.up('Space');
@@ -176,7 +176,7 @@ test('selection drag-area start should be same when space is pressed again', asy
         await page.mouse.move(410, 410);
         await page.mouse.move(400, 400);
 
-        draggingArea = page.locator('.affine-edgeless-dragging-area');
+        draggingArea = page.locator('.cloud-notes-edgeless-dragging-area');
         const newBound = await draggingArea.boundingBox();
 
         expect(firstBound).not.toBe(null);

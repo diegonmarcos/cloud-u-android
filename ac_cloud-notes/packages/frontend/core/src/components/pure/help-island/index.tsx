@@ -1,9 +1,9 @@
-import { Tooltip } from '@affine/component/ui/tooltip';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import type { SettingTab } from '@affine/core/modules/dialogs/constant';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { UrlService } from '@affine/core/modules/url';
-import { useI18n } from '@affine/i18n';
+import { Tooltip } from '@cloud-notes/component/ui/tooltip';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { SettingTab } from '@cloud-notes/core/modules/dialogs/constant';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { useI18n } from '@cloud-notes/i18n';
 import { CloseIcon, NewIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService, useServices } from '@toeverything/infra';
 import { useCallback, useState } from 'react';
@@ -71,7 +71,7 @@ export const HelpIsland = () => {
         style={{ height: spread ? `${showList.length * 40 + 4}px` : 0 }}
       >
         {showList.includes('whatNew') && (
-          <Tooltip content={t['com.affine.appUpdater.whatsNew']()} side="left">
+          <Tooltip content={t['com.cloud-notes.appUpdater.whatsNew']()} side="left">
             <StyledIconWrapper
               data-testid="right-bottom-change-log-icon"
               onClick={() => {
@@ -83,7 +83,7 @@ export const HelpIsland = () => {
           </Tooltip>
         )}
         {showList.includes('contact') && (
-          <Tooltip content={t['com.affine.helpIsland.contactUs']()} side="left">
+          <Tooltip content={t['com.cloud-notes.helpIsland.contactUs']()} side="left">
             <StyledIconWrapper
               data-testid="right-bottom-contact-us-icon"
               onClick={openAbout}
@@ -94,7 +94,7 @@ export const HelpIsland = () => {
         )}
         {showList.includes('shortcuts') && (
           <Tooltip
-            content={t['com.affine.keyboardShortcuts.title']()}
+            content={t['com.cloud-notes.keyboardShortcuts.title']()}
             side="left"
           >
             <StyledIconWrapper
@@ -113,7 +113,7 @@ export const HelpIsland = () => {
         </StyledTriggerWrapper>
       ) : (
         <Tooltip
-          content={t['com.affine.helpIsland.helpAndFeedback']()}
+          content={t['com.cloud-notes.helpIsland.helpAndFeedback']()}
           side="left"
         >
           <StyledTriggerWrapper data-testid="faq-icon">

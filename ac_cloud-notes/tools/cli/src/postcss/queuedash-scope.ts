@@ -23,7 +23,7 @@ function isInKeyframes(rule: Rule) {
   return false;
 }
 
-const DEFAULT_SCOPE_CLASS = 'affine-queuedash';
+const DEFAULT_SCOPE_CLASS = 'cloud-notes-queuedash';
 
 export const queuedashScopePostcssPlugin: PluginCreator<
   QueuedashScopeOptions
@@ -69,7 +69,7 @@ export const queuedashScopePostcssPlugin: PluginCreator<
   });
 
   return {
-    postcssPlugin: 'affine-queuedash-scope',
+    postcssPlugin: 'cloud-notes-queuedash-scope',
     Once(root, { result }) {
       const from =
         root.source?.input.file ||

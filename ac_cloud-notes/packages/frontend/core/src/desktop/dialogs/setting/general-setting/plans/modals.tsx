@@ -1,7 +1,7 @@
-import { Button } from '@affine/component/ui/button';
-import type { ConfirmModalProps } from '@affine/component/ui/modal';
-import { ConfirmModal, Modal } from '@affine/component/ui/modal';
-import { useI18n } from '@affine/i18n';
+import { Button } from '@cloud-notes/component/ui/button';
+import type { ConfirmModalProps } from '@cloud-notes/component/ui/modal';
+import { ConfirmModal, Modal } from '@cloud-notes/component/ui/modal';
+import { useI18n } from '@cloud-notes/i18n';
 import { DialogTrigger } from '@radix-ui/react-dialog';
 import type { ReactNode } from 'react';
 import { useEffect, useRef } from 'react';
@@ -29,11 +29,11 @@ export const ConfirmLoadingModal = ({
   const t = useI18n();
   const confirmed = useRef(false);
 
-  const title = t[`com.affine.payment.modal.${type}.title`]();
-  const confirmText = t[`com.affine.payment.modal.${type}.confirm`]();
-  const cancelText = t[`com.affine.payment.modal.${type}.cancel`]();
+  const title = t[`com.cloud-notes.payment.modal.${type}.title`]();
+  const confirmText = t[`com.cloud-notes.payment.modal.${type}.confirm`]();
+  const cancelText = t[`com.cloud-notes.payment.modal.${type}.cancel`]();
   const contentText =
-    type !== 'change' ? t[`com.affine.payment.modal.${type}.content`]() : '';
+    type !== 'change' ? t[`com.cloud-notes.payment.modal.${type}.content`]() : '';
 
   useEffect(() => {
     if (!loading && open && confirmed.current) {
@@ -91,7 +91,7 @@ export const DowngradeModal = ({
 
   return (
     <Modal
-      title={t['com.affine.payment.modal.downgrade.title']()}
+      title={t['com.cloud-notes.payment.modal.downgrade.title']()}
       open={open}
       contentOptions={{}}
       width={480}
@@ -99,10 +99,10 @@ export const DowngradeModal = ({
     >
       <div className={styles.downgradeContentWrapper}>
         <p className={styles.downgradeContent}>
-          {t['com.affine.payment.modal.downgrade.content']()}
+          {t['com.cloud-notes.payment.modal.downgrade.content']()}
         </p>
         <p className={styles.downgradeCaption}>
-          {t['com.affine.payment.modal.downgrade.caption']()}
+          {t['com.cloud-notes.payment.modal.downgrade.caption']()}
         </p>
       </div>
 
@@ -114,7 +114,7 @@ export const DowngradeModal = ({
           }}
           loading={loading}
         >
-          {t['com.affine.payment.modal.downgrade.cancel']()}
+          {t['com.cloud-notes.payment.modal.downgrade.cancel']()}
         </Button>
         <DialogTrigger asChild>
           <Button
@@ -122,7 +122,7 @@ export const DowngradeModal = ({
             onClick={() => onOpenChange?.(false)}
             variant="primary"
           >
-            {t['com.affine.payment.modal.downgrade.confirm']()}
+            {t['com.cloud-notes.payment.modal.downgrade.confirm']()}
           </Button>
         </DialogTrigger>
       </footer>
@@ -153,7 +153,7 @@ export const DowngradeTeamModal = ({
 
   return (
     <Modal
-      title={t['com.affine.payment.modal.downgrade.title']()}
+      title={t['com.cloud-notes.payment.modal.downgrade.title']()}
       open={open}
       contentOptions={{}}
       width={480}
@@ -161,7 +161,7 @@ export const DowngradeTeamModal = ({
     >
       <div className={styles.downgradeContentWrapper}>
         <p className={styles.downgradeContent}>
-          {t['com.affine.payment.modal.downgrade.content']()}
+          {t['com.cloud-notes.payment.modal.downgrade.content']()}
         </p>
       </div>
 
@@ -173,7 +173,7 @@ export const DowngradeTeamModal = ({
           }}
           loading={loading}
         >
-          {t['com.affine.payment.modal.downgrade.cancel']()}
+          {t['com.cloud-notes.payment.modal.downgrade.cancel']()}
         </Button>
         <DialogTrigger asChild>
           <Button
@@ -181,7 +181,7 @@ export const DowngradeTeamModal = ({
             onClick={() => onOpenChange?.(false)}
             variant="primary"
           >
-            {t['com.affine.payment.modal.downgrade.team-confirm']()}
+            {t['com.cloud-notes.payment.modal.downgrade.team-confirm']()}
           </Button>
         </DialogTrigger>
       </footer>

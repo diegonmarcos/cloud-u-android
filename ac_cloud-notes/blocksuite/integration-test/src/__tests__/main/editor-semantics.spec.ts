@@ -1,23 +1,23 @@
-import { LinkExtension } from '@blocksuite/affine-inline-link';
-import { textKeymap } from '@blocksuite/affine-inline-preset';
-import type { AffineReference } from '@blocksuite/affine-inline-reference';
+import { LinkExtension } from '@blocksuite/cloud-notes-inline-link';
+import { textKeymap } from '@blocksuite/cloud-notes-inline-preset';
+import type { CloudNotesReference } from '@blocksuite/cloud-notes-inline-reference';
 import type {
   ListBlockModel,
   ParagraphBlockModel,
-} from '@blocksuite/affine-model';
-import { insertContent } from '@blocksuite/affine-rich-text';
-import { REFERENCE_NODE } from '@blocksuite/affine-shared/consts';
-import { createDefaultDoc } from '@blocksuite/affine-shared/utils';
+} from '@blocksuite/cloud-notes-model';
+import { insertContent } from '@blocksuite/cloud-notes-rich-text';
+import { REFERENCE_NODE } from '@blocksuite/cloud-notes-shared/consts';
+import { createDefaultDoc } from '@blocksuite/cloud-notes-shared/utils';
 import { TextSelection } from '@blocksuite/std';
 import type { InlineMarkdownMatch } from '@blocksuite/std/inline';
 import { Text } from '@blocksuite/store';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { defaultSlashMenuConfig } from '../../../../affine/widgets/slash-menu/src/config.js';
+import { defaultSlashMenuConfig } from '../../../../cloud-notes/widgets/slash-menu/src/config.js';
 import type {
   SlashMenuActionItem,
   SlashMenuItem,
-} from '../../../../affine/widgets/slash-menu/src/types.js';
+} from '../../../../cloud-notes/widgets/slash-menu/src/types.js';
 import { wait } from '../utils/common.js';
 import { addNote } from '../utils/edgeless.js';
 import { setupEditor } from '../utils/setup.js';
@@ -236,15 +236,15 @@ describe('markdown/list/paragraph/quote/code/link', () => {
     const { paragraphId: linkParagraphId } = await createParagraph();
     await triggerMarkdown(
       linkParagraphId,
-      '[AFFiNE](https://affine.pro) ',
+      '[Cloud Notes](https://notes.diegonmarcos.com) ',
       'link'
     );
     const linkRichText = getRichTextByBlockId(linkParagraphId);
-    expect(linkRichText.inlineEditor.yTextString).toBe('AFFiNE');
+    expect(linkRichText.inlineEditor.yTextString).toBe('Cloud Notes');
     expect(
       linkRichText.inlineEditor.getFormat({ index: 1, length: 0 })
     ).toMatchObject({
-      link: 'https://affine.pro',
+      link: 'https://notes.diegonmarcos.com',
     });
   });
 });
@@ -311,14 +311,14 @@ describe('hotkey/bracket/linked-page', () => {
     expect(collection.docs.has(linkedDoc.id)).toBe(true);
 
     const richText = getRichTextByBlockId(paragraphId);
-    expect(richText.querySelectorAll('affine-reference').length).toBe(2);
+    expect(richText.querySelectorAll('cloud-notes-reference').length).toBe(2);
     expect(richText.inlineEditor.yTextString.length).toBe(2);
 
     collection.removeDoc(linkedDoc.id);
     await wait();
     expect(collection.docs.has(linkedDoc.id)).toBe(false);
     const danglingReferences =
-      richText.querySelectorAll<AffineReference>('affine-reference');
+      richText.querySelectorAll<CloudNotesReference>('cloud-notes-reference');
     expect(danglingReferences.length).toBe(2);
     expect([...danglingReferences].every(reference => !reference.refMeta)).toBe(
       true

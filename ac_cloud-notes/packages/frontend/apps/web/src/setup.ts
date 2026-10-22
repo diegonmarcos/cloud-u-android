@@ -1,3 +1,3 @@
-import '@affine/core/bootstrap/browser';
-import '@affine/core/bootstrap/cleanup';
-import '@affine/component/theme';
+import '@cloud-notes/core/bootstrap/browser';
+import '@cloud-notes/core/bootstrap/cleanup';
+import '@cloud-notes/component/theme';

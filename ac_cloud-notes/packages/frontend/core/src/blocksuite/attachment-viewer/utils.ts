@@ -1,4 +1,4 @@
-import type { AttachmentBlockModel } from '@blocksuite/affine/model';
+import type { AttachmentBlockModel } from '@blocksuite/cloud-notes/model';
 import { filesize } from 'filesize';
 
 import { downloadBlob } from '../../utils/resource';
@@ -37,4 +37,4 @@ export function buildAttachmentProps(
   return { model, name, ext, size };
 }
 
-export { getAttachmentType } from '@affine/core/modules/media/utils';
+export { getAttachmentType } from '@cloud-notes/core/modules/media/utils';

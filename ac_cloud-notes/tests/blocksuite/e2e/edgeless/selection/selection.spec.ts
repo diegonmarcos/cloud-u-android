@@ -44,7 +44,7 @@ test('should update rect of selection when resizing viewport', async ({
   await addBasicRectShapeElement(page, { x: 100, y: 100 }, { x: 200, y: 200 });
   await dragBetweenCoords(page, { x: 120, y: 90 }, { x: 220, y: 130 });
 
-  const selectedRectClass = '.affine-edgeless-selected-rect';
+  const selectedRectClass = '.cloud-notes-edgeless-selected-rect';
 
   await actions.zoomResetByKeyboard(page);
 
@@ -118,7 +118,7 @@ test('should update react of remote selection when resizing viewport', async ({
 
   const selectedRectInZoom = await getBoundingRect(
     pageB,
-    '.affine-edgeless-selected-rect'
+    '.cloud-notes-edgeless-selected-rect'
   );
   await assertEdgelessRemoteSelectedRect(pageB, [
     selectedRectInZoom.x,
@@ -204,7 +204,7 @@ test('when the selection is always a note, it should remain in an active state',
   await clickInCenter(page, bound);
   await clickInCenter(page, bound);
   await waitNextFrame(page);
-  await assertSelectionInNote(page, ids.noteId, 'affine-edgeless-note');
+  await assertSelectionInNote(page, ids.noteId, 'cloud-notes-edgeless-note');
 });
 
 test('should auto panning when selection rectangle reaches viewport edges', async ({
@@ -220,7 +220,7 @@ test('should auto panning when selection rectangle reaches viewport edges', asyn
   await page.mouse.click(210, 110);
   await assertEdgelessSelectedRect(page, [200, 100, 100, 100]);
 
-  const selectedRectClass = '.affine-edgeless-selected-rect';
+  const selectedRectClass = '.cloud-notes-edgeless-selected-rect';
 
   // Panning to the left
   await setEdgelessTool(page, 'pan');
@@ -400,7 +400,7 @@ test('should also update dragging area when viewport changes', async ({
   await setEdgelessTool(page, 'default');
   await page.mouse.click(200, 300);
 
-  const selectedRectClass = '.affine-edgeless-selected-rect';
+  const selectedRectClass = '.cloud-notes-edgeless-selected-rect';
   let selectedRect = page.locator(selectedRectClass);
   await expect(selectedRect).toBeHidden();
   // set up initial dragging area
@@ -485,7 +485,7 @@ test('should the selected rect be below the edgeless element toolbar', async ({
 
   await page.mouse.click(toolbarRect.x, toolbarRect.y - 20);
 
-  const selectedRect = page.locator('.affine-edgeless-selected-rect');
+  const selectedRect = page.locator('.cloud-notes-edgeless-selected-rect');
   await expect(selectedRect).toBeVisible();
 
   const brHandle = selectedRect.getByLabel('bottom-right');
@@ -535,11 +535,11 @@ test('should the block selectable after undo drag a block from canvas to note', 
   await toolbar.getByTestId('turn-into-linked-doc').click();
 
   await page.dragAndDrop(
-    '.affine-drag-handle-grabber.dots',
-    'affine-edgeless-note[data-block-id="2"]'
+    '.cloud-notes-drag-handle-grabber.dots',
+    'cloud-notes-edgeless-note[data-block-id="2"]'
   );
   await waitNextFrame(page);
   await undoByKeyboard(page);
-  await page.locator('affine-embed-edgeless-synced-doc-block').click();
+  await page.locator('cloud-notes-embed-edgeless-synced-doc-block').click();
   expect(await actions.getSelectedBoundCount(page)).toBe(1);
 });

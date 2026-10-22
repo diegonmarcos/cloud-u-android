@@ -1,6 +1,6 @@
-import { createReactComponentFromLit } from '@affine/component';
-import { LitTranscriptionBlock } from '@affine/core/blocksuite/ai/blocks/ai-chat-block/ai-transcription-block';
-import type { TranscriptionBlockModel } from '@affine/core/blocksuite/ai/blocks/transcription-block/model';
+import { createReactComponentFromLit } from '@cloud-notes/component';
+import { LitTranscriptionBlock } from '@cloud-notes/core/blocksuite/ai/blocks/ai-chat-block/ai-transcription-block';
+import type { TranscriptionBlockModel } from '@cloud-notes/core/blocksuite/ai/blocks/transcription-block/model';
 import { LiveData, useLiveData } from '@toeverything/infra';
 import React, { useCallback, useMemo } from 'react';
 

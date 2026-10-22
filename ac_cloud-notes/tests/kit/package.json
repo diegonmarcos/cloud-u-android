@@ -1,5 +1,5 @@
 {
-  "name": "@affine-test/kit",
+  "name": "@cloud-notes-test/kit",
   "private": true,
   "type": "module",
   "version": "0.27.5",
@@ -11,8 +11,8 @@
     "./bs/*": "./src/bs/*.ts"
   },
   "devDependencies": {
-    "@affine-tools/utils": "workspace:*",
-    "@blocksuite/affine": "workspace:*",
+    "@cloud-notes-tools/utils": "workspace:*",
+    "@blocksuite/cloud-notes": "workspace:*",
     "@node-rs/argon2": "^2.0.2",
     "@playwright/test": "=1.58.2",
     "@toeverything/infra": "workspace:*",

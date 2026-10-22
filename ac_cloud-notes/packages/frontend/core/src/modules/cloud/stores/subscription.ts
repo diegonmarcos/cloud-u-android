@@ -1,7 +1,7 @@
 import type {
   CreateCheckoutSessionInput,
   SubscriptionRecurring,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import {
   cancelSubscriptionMutation,
   createCheckoutSessionMutation,
@@ -11,7 +11,7 @@ import {
   SubscriptionPlan,
   subscriptionQuery,
   updateSubscriptionMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Store } from '@toeverything/infra';
 
 import type { GlobalCache } from '../../storage';

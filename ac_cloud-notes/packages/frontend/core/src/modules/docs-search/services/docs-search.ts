@@ -1,9 +1,9 @@
-import { toDocSearchParams } from '@affine/core/modules/navigation';
-import type { IndexerPreferOptions, IndexerSyncState } from '@affine/nbstore';
+import { toDocSearchParams } from '@cloud-notes/core/modules/navigation';
+import type { IndexerPreferOptions, IndexerSyncState } from '@cloud-notes/nbstore';
 import {
   type ReferenceParams,
   ReferenceParamsSchema,
-} from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/model';
 import { fromPromise, LiveData, Service } from '@toeverything/infra';
 import { isEmpty, omit } from 'lodash-es';
 import {

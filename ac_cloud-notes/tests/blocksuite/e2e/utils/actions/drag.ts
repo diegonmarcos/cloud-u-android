@@ -129,7 +129,7 @@ export async function dragHandleFromBlockToBlockBottomById(
     sourceBlock.y + sourceBlock.height / 2
   );
   await waitNextFrame(page);
-  const dragHandleContainer = page.locator('.affine-drag-handle-container');
+  const dragHandleContainer = page.locator('.cloud-notes-drag-handle-container');
   await dragHandleContainer.hover();
   const handle = await dragHandleContainer.boundingBox();
   if (!handle) {
@@ -182,7 +182,7 @@ export async function dragBlockToPoint(
     sourceBlock.y + sourceBlock.height / 2
   );
   const handle = await page
-    .locator('.affine-drag-handle-container')
+    .locator('.cloud-notes-drag-handle-container')
     .boundingBox();
   if (!handle) {
     throw new Error();
@@ -200,12 +200,12 @@ export async function dragBlockToPoint(
 }
 
 export async function moveToImage(page: Page) {
-  await page.locator('affine-image').hover({ timeout: 500 });
+  await page.locator('cloud-notes-image').hover({ timeout: 500 });
 }
 
 export async function popImageMoreMenu(page: Page) {
   await moveToImage(page);
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   const menu = toolbar.getByLabel('More menu');
   await menu.click();
 
@@ -240,7 +240,7 @@ export async function clickBlockDragHandle(page: Page, blockId: string) {
   );
 
   const handleBox = await page
-    .locator('.affine-drag-handle-container')
+    .locator('.cloud-notes-drag-handle-container')
     .boundingBox();
   if (!handleBox) {
     throw new Error();

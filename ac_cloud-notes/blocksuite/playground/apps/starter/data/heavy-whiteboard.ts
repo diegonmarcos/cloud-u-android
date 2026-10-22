@@ -1,12 +1,12 @@
-import type { SerializedXYWH } from '@blocksuite/affine/global/gfx';
+import type { SerializedXYWH } from '@blocksuite/cloud-notes/global/gfx';
 import {
   Boxed,
   nanoid,
   native2Y,
   Text,
   type Workspace,
-} from '@blocksuite/affine/store';
-import { DEFAULT_ROUGHNESS } from '@blocksuite/affine-model';
+} from '@blocksuite/cloud-notes/store';
+import { DEFAULT_ROUGHNESS } from '@blocksuite/cloud-notes-model';
 import type * as Y from 'yjs';
 
 import type { InitFn } from './utils.js';
@@ -31,9 +31,9 @@ function createShapes(count: number): Record<string, unknown> {
         shapeType: SHAPE_TYPES[Math.floor(Math.random() * 40) % 4],
         radius: 0,
         filled: false,
-        fillColor: '--affine-palette-shape-yellow',
+        fillColor: '--cloud-notes-palette-shape-yellow',
         strokeWidth: 4,
-        strokeColor: '--affine-palette-line-yellow',
+        strokeColor: '--cloud-notes-palette-line-yellow',
         strokeStyle: 'solid',
         roughness: DEFAULT_ROUGHNESS,
       },

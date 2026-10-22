@@ -29,7 +29,7 @@ test('should only show one format bar when multiple editors are toggled', async 
 
   // should only show one format bar
   const formatBar = page.locator(
-    'affine-toolbar-widget editor-toolbar[data-open]'
+    'cloud-notes-toolbar-widget editor-toolbar[data-open]'
   );
   await expect(formatBar).toHaveCount(1);
 });

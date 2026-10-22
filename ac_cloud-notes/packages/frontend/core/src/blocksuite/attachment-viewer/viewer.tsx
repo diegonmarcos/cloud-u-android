@@ -1,5 +1,5 @@
-import { IconButton, Menu, MenuItem } from '@affine/component';
-import type { AttachmentBlockModel } from '@blocksuite/affine/model';
+import { IconButton, Menu, MenuItem } from '@cloud-notes/component';
+import type { AttachmentBlockModel } from '@blocksuite/cloud-notes/model';
 import {
   //EditIcon,
   LocalDataIcon,

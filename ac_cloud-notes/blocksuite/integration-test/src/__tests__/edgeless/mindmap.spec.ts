@@ -1,10 +1,10 @@
-import type { MindMapView } from '@blocksuite/affine/gfx/mindmap';
-import { mountShapeTextEditor } from '@blocksuite/affine/gfx/shape';
+import type { MindMapView } from '@blocksuite/cloud-notes/gfx/mindmap';
+import { mountShapeTextEditor } from '@blocksuite/cloud-notes/gfx/shape';
 import {
   LayoutType,
   type MindmapElementModel,
   type ShapeElementModel,
-} from '@blocksuite/affine-model';
+} from '@blocksuite/cloud-notes-model';
 import { Bound, deserializeXYWH } from '@blocksuite/global/gfx';
 import type { GfxController } from '@blocksuite/std/gfx';
 import { beforeEach, describe, expect, test, vi } from 'vitest';

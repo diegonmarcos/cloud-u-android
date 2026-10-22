@@ -1,9 +1,9 @@
-import { Modal } from '@affine/component';
-import type { SignInStep } from '@affine/core/components/sign-in';
+import { Modal } from '@cloud-notes/component';
+import type { SignInStep } from '@cloud-notes/core/components/sign-in';
 import type {
   DialogComponentProps,
   GLOBAL_DIALOG_SCHEMA,
-} from '@affine/core/modules/dialogs';
+} from '@cloud-notes/core/modules/dialogs';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import { useEffect, useRef, useState } from 'react';
 

@@ -16,9 +16,9 @@ const {
   REDIS_SERVER_HOST,
   REDIS_SERVER_PASSWORD,
   STATIC_IP_NAME,
-  AFFINE_INDEXER_SEARCH_PROVIDER,
-  AFFINE_INDEXER_SEARCH_ENDPOINT,
-  AFFINE_INDEXER_SEARCH_API_KEY,
+  CLOUD_NOTES_INDEXER_SEARCH_PROVIDER,
+  CLOUD_NOTES_INDEXER_SEARCH_ENDPOINT,
+  CLOUD_NOTES_INDEXER_SEARCH_API_KEY,
 } = process.env;
 
 const buildType = BUILD_TYPE || 'canary';
@@ -68,9 +68,9 @@ const createHelmCommand = ({ isDryRun }) => {
         ]
       : [];
   const indexerOptions = [
-    `--set-string global.indexer.provider="${AFFINE_INDEXER_SEARCH_PROVIDER}"`,
-    `--set-string global.indexer.endpoint="${AFFINE_INDEXER_SEARCH_ENDPOINT}"`,
-    `--set-string global.indexer.apiKey="${AFFINE_INDEXER_SEARCH_API_KEY}"`,
+    `--set-string global.indexer.provider="${CLOUD_NOTES_INDEXER_SEARCH_PROVIDER}"`,
+    `--set-string global.indexer.endpoint="${CLOUD_NOTES_INDEXER_SEARCH_ENDPOINT}"`,
+    `--set-string global.indexer.apiKey="${CLOUD_NOTES_INDEXER_SEARCH_API_KEY}"`,
   ];
   const cloudSqlNodeSelector = isBeta
     ? `{ \\"iam.gke.io/gke-metadata-server-enabled\\": \\"true\\", \\"cloud.google.com/gke-spot\\": \\"true\\" }`
@@ -130,9 +130,9 @@ const createHelmCommand = ({ isDryRun }) => {
     .filter(host => host);
   const primaryHost = hosts[0] || '0.0.0.0';
   const deployCommand = [
-    `helm upgrade --install affine .github/helm/affine`,
+    `helm upgrade --install cloud-notes .github/helm/cloud-notes`,
     `--namespace  ${namespace}`,
-    `--set-string global.deployment.type="affine"`,
+    `--set-string global.deployment.type="cloud-notes"`,
     `--set-string global.deployment.platform="gcp"`,
     `--set-string global.app.buildType="${buildType}"`,
     `--set        global.ingress.enabled=true`,

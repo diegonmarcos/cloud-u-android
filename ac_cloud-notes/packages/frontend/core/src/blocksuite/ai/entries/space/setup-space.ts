@@ -1,9 +1,9 @@
-import type { RichText } from '@blocksuite/affine/rich-text';
-import { type EditorHost, TextSelection } from '@blocksuite/affine/std';
+import type { RichText } from '@blocksuite/cloud-notes/rich-text';
+import { type EditorHost, TextSelection } from '@blocksuite/cloud-notes/std';
 
 import { handleInlineAskAIAction } from '../../actions/doc-handler';
 import { hasAIRequestService } from '../../runtime/request';
-import type { AffineAIPanelWidget } from '../../widgets/ai-panel/ai-panel';
+import type { CloudNotesAIPanelWidget } from '../../widgets/ai-panel/ai-panel';
 
 function isSpaceEvent(event: KeyboardEvent) {
   return event.key === ' ' && event.which === 32 && !event.isComposing;
@@ -29,11 +29,11 @@ function insertSpace(host: EditorHost) {
   );
 }
 
-export function setupSpaceAIEntry(panel: AffineAIPanelWidget) {
+export function setupSpaceAIEntry(panel: CloudNotesAIPanelWidget) {
   // Background: The keydown event triggered by a space may originate from:
   // 1. Normal space insertion
   // 2. Space triggered by input method confirming candidate words
-  // In scenarios like (2), some browsers (see [ISSUE](https://github.com/toeverything/AFFiNE/issues/11541))
+  // In scenarios like (2), some browsers (see [ISSUE](https://github.com/diegonmarcos/cloud-u-android/issues/11541))
   // and input method callbacks produce events identical to scenario (1),
   // making it impossible to distinguish between the two.
   //

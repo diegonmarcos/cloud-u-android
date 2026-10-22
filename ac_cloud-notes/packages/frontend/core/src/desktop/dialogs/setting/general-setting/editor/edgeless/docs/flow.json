@@ -32,8 +32,8 @@
             "03ESqmbu0V": {
               "index": "aF",
               "seed": 456881005,
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-yellow",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "fontSize": 12,
@@ -45,7 +45,7 @@
               "shadow": null,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
@@ -64,8 +64,8 @@
             "YQDvi-2y7O": {
               "index": "aG",
               "seed": 1257533881,
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-yellow",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "fontSize": 12,
@@ -77,7 +77,7 @@
               "shadow": null,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
@@ -96,8 +96,8 @@
             "d16Jq63Ef-": {
               "index": "aH",
               "seed": 1257533881,
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-yellow",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "fontSize": 12,
@@ -109,7 +109,7 @@
               "shadow": null,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
@@ -128,8 +128,8 @@
             "pFUd4r8HSb": {
               "index": "aI",
               "seed": 666256980,
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-yellow",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "fontSize": 12,
@@ -141,7 +141,7 @@
               "shadow": null,
               "shapeStyle": "General",
               "shapeType": "diamond",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
@@ -160,8 +160,8 @@
             "WC0DtV40eR": {
               "index": "aJ",
               "seed": 1257533881,
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-yellow",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "fontSize": 12,
@@ -173,7 +173,7 @@
               "shadow": null,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
@@ -192,8 +192,8 @@
             "L8IRBW8JgC": {
               "index": "aK",
               "seed": 456881005,
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-yellow",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "fontSize": 12,
@@ -205,7 +205,7 @@
               "shadow": null,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "text": {
@@ -224,8 +224,8 @@
             "jnVx3KzCLh": {
               "index": "aR",
               "seed": 914130882,
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-yellow",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "fontSize": 16,
@@ -237,7 +237,7 @@
               "shadow": null,
               "shapeStyle": "General",
               "shapeType": "triangle",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "textResizing": 1,
@@ -248,8 +248,8 @@
             "hXY08VN1b_": {
               "index": "aS",
               "seed": 1037406953,
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-yellow",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "fontSize": 16,
@@ -261,7 +261,7 @@
               "shadow": null,
               "shapeStyle": "General",
               "shapeType": "ellipse",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "textResizing": 1,
@@ -281,7 +281,7 @@
                 "id": "03ESqmbu0V",
                 "position": [0.5, 1]
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "target": {
@@ -303,7 +303,7 @@
                 "id": "YQDvi-2y7O",
                 "position": [1, 0.5]
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "target": {
@@ -325,7 +325,7 @@
                 "id": "d16Jq63Ef-",
                 "position": [0.5, 1]
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "target": {
@@ -347,7 +347,7 @@
                 "id": "YQDvi-2y7O",
                 "position": [0.5, 1]
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "target": {
@@ -369,7 +369,7 @@
                 "id": "pFUd4r8HSb",
                 "position": [0.5, 1]
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "target": {
@@ -391,7 +391,7 @@
                 "id": "WC0DtV40eR",
                 "position": [0.5, 1]
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "target": {
@@ -412,7 +412,7 @@
             "props": {
               "xywh": "[30.80080405395168,20.987504771361614,71.2421875,56]",
               "index": "aE",
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:Inter",
               "fontStyle": "normal",
               "fontWeight": "400",

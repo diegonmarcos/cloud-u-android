@@ -1,6 +1,6 @@
-import { Button, Scrollable } from '@affine/component';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { type Island } from '@affine/core/utils/island';
+import { Button, Scrollable } from '@cloud-notes/component';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { type Island } from '@cloud-notes/core/utils/island';
 import { ArrowLeftBigIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { eases, waapi } from 'animejs';

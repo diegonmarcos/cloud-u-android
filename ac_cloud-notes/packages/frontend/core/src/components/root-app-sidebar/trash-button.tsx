@@ -3,14 +3,14 @@ import {
   toast,
   useConfirmModal,
   useDropTarget,
-} from '@affine/component';
-import { MenuLinkItem } from '@affine/core/modules/app-sidebar/views';
-import { DocsService } from '@affine/core/modules/doc';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { GuardService } from '@affine/core/modules/permissions';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { UserFriendlyError } from '@affine/error';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { MenuLinkItem } from '@cloud-notes/core/modules/app-sidebar/views';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { GuardService } from '@cloud-notes/core/modules/permissions';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 
 export const TrashButton = () => {
@@ -21,7 +21,7 @@ export const TrashButton = () => {
   const trashActive = useLiveData(globalContextService.globalContext.isTrash.$);
   const guardService = useService(GuardService);
 
-  const { dropTargetRef, draggedOver } = useDropTarget<AffineDNDData>(
+  const { dropTargetRef, draggedOver } = useDropTarget<CloudNotesDNDData>(
     () => ({
       data: {
         at: 'app-sidebar:trash',
@@ -35,8 +35,8 @@ export const TrashButton = () => {
           const docRecord = docsService.list.doc$(docId).value;
           if (docRecord) {
             openConfirmModal({
-              title: t['com.affine.moveToTrash.confirmModal.title'](),
-              description: t['com.affine.moveToTrash.confirmModal.description'](
+              title: t['com.cloud-notes.moveToTrash.confirmModal.title'](),
+              description: t['com.cloud-notes.moveToTrash.confirmModal.description'](
                 {
                   title: docRecord.title$.value || t['Untitled'](),
                 }
@@ -52,7 +52,7 @@ export const TrashButton = () => {
                     docRecord.id
                   );
                   if (!canTrash) {
-                    toast(t['com.affine.no-permission']());
+                    toast(t['com.cloud-notes.no-permission']());
                     return;
                   }
                   await docRecord.moveToTrash();
@@ -81,7 +81,7 @@ export const TrashButton = () => {
       to={'/trash'}
     >
       <span data-testid="trash-page">
-        {t['com.affine.workspaceSubPath.trash']()}
+        {t['com.cloud-notes.workspaceSubPath.trash']()}
       </span>
     </MenuLinkItem>
   );

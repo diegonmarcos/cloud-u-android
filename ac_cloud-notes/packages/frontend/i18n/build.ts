@@ -2,15 +2,15 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { parse } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { ProjectRoot } from '@affine-tools/utils/path';
-import { Package } from '@affine-tools/utils/workspace';
+import { ProjectRoot } from '@cloud-notes-tools/utils/path';
+import { Package } from '@cloud-notes-tools/utils/workspace';
 import { runCli } from '@magic-works/i18n-codegen';
 import { glob } from 'glob';
 
 const isDev = process.argv.includes('--dev');
 const shouldCleanup = process.argv.includes('--cleanup');
 
-const i18nPkg = new Package('@affine/i18n');
+const i18nPkg = new Package('@cloud-notes/i18n');
 const resourcesDir = i18nPkg.join('src', 'resources').toString();
 
 function readResource(lang: string): Record<string, string> {
@@ -48,8 +48,8 @@ async function cleanupResources() {
   });
 
   const dynamicPrefixes = new Set<string>();
-  const templatePrefixRegex = /`[^`]*?(com\.affine\.[^`]*?)\$\{/g;
-  const concatPrefixRegex = /['"](com\.affine\.[^'"]*?\.)['"]\s*\+/g;
+  const templatePrefixRegex = /`[^`]*?(com\.cloudNotes\.[^`]*?)\$\{/g;
+  const concatPrefixRegex = /['"](com\.cloud-notes\.[^'"]*?\.)['"]\s*\+/g;
   const addDynamicPrefix = (rawPrefix: string) => {
     let prefix = rawPrefix;
     if (!prefix.endsWith('.')) {
@@ -89,7 +89,7 @@ async function cleanupResources() {
 
   for (const resource of Object.values(resources)) {
     Object.keys(resource).forEach(key => {
-      if (!key.startsWith('com.affine.payment.modal.')) {
+      if (!key.startsWith('com.cloud-notes.payment.modal.')) {
         candidateKeys.add(key);
       }
     });
@@ -182,7 +182,7 @@ function i18nnext() {
 }
 
 async function appendErrorI18n() {
-  const server = new Package('@affine/server');
+  const server = new Package('@cloud-notes/server');
   const defFilePath = server.srcPath.join('base/error/def.ts');
 
   if (!defFilePath.exists()) {

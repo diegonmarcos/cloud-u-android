@@ -1,17 +1,17 @@
 /**
- * Custom fetch utility with AFFiNE version header
- * Automatically adds the x-affine-version header to all fetch requests
+ * Custom fetch utility with Cloud Notes version header
+ * Automatically adds the x-cloud-notes-version header to all fetch requests
  */
 
-// BUILD_CONFIG is defined globally in the AFFiNE project
+// BUILD_CONFIG is defined globally in the Cloud Notes project
 
 /**
- * Wrapper around fetch that automatically adds the x-affine-version header
+ * Wrapper around fetch that automatically adds the x-cloud-notes-version header
  * @param input Request URL
  * @param init Request initialization options
  * @returns Promise with the fetch Response
  */
-const CSRF_COOKIE_NAME = 'affine_csrf_token';
+const CSRF_COOKIE_NAME = 'cloud_notes_csrf_token';
 
 function getCookieValue(name: string) {
   if (typeof document === 'undefined') {
@@ -29,7 +29,7 @@ function getCookieValue(name: string) {
   return null;
 }
 
-export const affineFetch = (
+export const cloudNotesFetch = (
   input: RequestInfo | URL,
   init?: RequestInit
 ): Promise<Response> => {
@@ -43,8 +43,8 @@ export const affineFetch = (
     ...init,
     headers: {
       ...init?.headers,
-      'x-affine-version': BUILD_CONFIG.appVersion,
-      ...(csrfToken ? { 'x-affine-csrf-token': csrfToken } : {}),
+      'x-cloud-notes-version': BUILD_CONFIG.appVersion,
+      ...(csrfToken ? { 'x-cloud-notes-csrf-token': csrfToken } : {}),
     },
   });
 };

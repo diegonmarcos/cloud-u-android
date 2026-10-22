@@ -41,21 +41,21 @@ test('basic link', async ({ page }, testInfo) => {
   await pressCreateLinkShortCut(page);
   await page.mouse.move(0, 0);
 
-  const createLinkPopoverLocator = page.locator('.affine-link-popover.create');
+  const createLinkPopoverLocator = page.locator('.cloud-notes-link-popover.create');
   await expect(createLinkPopoverLocator).toBeVisible();
-  const linkPopoverInput = page.locator('.affine-link-popover-input');
+  const linkPopoverInput = page.locator('.cloud-notes-link-popover-input');
   await expect(linkPopoverInput).toBeVisible();
   await type(page, link);
   await pressEnter(page);
   await expect(createLinkPopoverLocator).not.toBeVisible();
 
-  const linkLocator = page.locator('affine-link a');
+  const linkLocator = page.locator('cloud-notes-link a');
   await expect(linkLocator).toHaveAttribute('href', link);
 
   // clear text selection
   await page.keyboard.press('ArrowLeft');
 
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   // Hover link
   await expect(toolbar).not.toBeVisible();
   await linkLocator.hover();
@@ -69,7 +69,7 @@ test('basic link', async ({ page }, testInfo) => {
   const editLinkBtn = toolbar.getByTestId('edit');
   await editLinkBtn.click();
 
-  const editLinkPopoverLocator = page.locator('.affine-link-edit-popover');
+  const editLinkPopoverLocator = page.locator('.cloud-notes-link-edit-popover');
   await expect(editLinkPopoverLocator).toBeVisible();
   // workaround to make tab key work as expected
   await editLinkPopoverLocator.click({
@@ -81,7 +81,7 @@ test('basic link', async ({ page }, testInfo) => {
   await type(page, link2);
   await page.keyboard.press('Tab');
   await pressEnter(page);
-  const link2Locator = page.locator('affine-link a');
+  const link2Locator = page.locator('cloud-notes-link a');
 
   await expect(link2Locator).toHaveAttribute('href', link2);
   expect(await getPageSnapshot(page, true)).toMatchSnapshot(
@@ -105,15 +105,15 @@ test('add link when dragging from empty line', async ({ page }) => {
   await pressCreateLinkShortCut(page);
   await page.mouse.move(0, 0);
 
-  const createLinkPopoverLocator = page.locator('.affine-link-popover.create');
+  const createLinkPopoverLocator = page.locator('.cloud-notes-link-popover.create');
   await expect(createLinkPopoverLocator).toBeVisible();
-  const linkPopoverInput = page.locator('.affine-link-popover-input');
+  const linkPopoverInput = page.locator('.cloud-notes-link-popover-input');
   await expect(linkPopoverInput).toBeVisible();
   await type(page, link);
   await pressEnter(page);
   await expect(createLinkPopoverLocator).not.toBeVisible();
 
-  const linkLocator = page.locator('affine-link a');
+  const linkLocator = page.locator('cloud-notes-link a');
   await expect(linkLocator).toHaveAttribute('href', link);
 });
 
@@ -175,7 +175,7 @@ test('readonly mode should not trigger toolbar', async ({ page }) => {
   const linkLocator = page.locator(`text="${linkText}"`);
 
   // Hover link
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   await linkLocator.hover();
   await expect(toolbar).toBeVisible();
 
@@ -195,7 +195,7 @@ test('readonly mode should not trigger toolbar', async ({ page }) => {
   await pressCreateLinkShortCut(page);
 
   await expect(toolbar).not.toBeVisible();
-  const linkPopoverInput = page.locator('.affine-link-popover-input');
+  const linkPopoverInput = page.locator('.cloud-notes-link-popover-input');
   await expect(linkPopoverInput).not.toBeVisible();
 });
 
@@ -235,11 +235,11 @@ test('should keyboard work in link popover', async ({ page }) => {
 
   await dragBetweenIndices(page, [0, 0], [0, 8]);
   await pressCreateLinkShortCut(page);
-  const linkPopoverInput = page.locator('.affine-link-popover-input');
+  const linkPopoverInput = page.locator('.cloud-notes-link-popover-input');
   await assertKeyboardWorkInInput(page, linkPopoverInput);
   await page.mouse.click(500, 500);
 
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   const linkLocator = page.locator(`text="${linkText}"`);
 
   await focusRichText(page);
@@ -252,15 +252,15 @@ test('should keyboard work in link popover', async ({ page }) => {
   const editLinkBtn = toolbar.getByTestId('edit');
   await editLinkBtn.click();
 
-  const editLinkPopover = page.locator('.affine-link-edit-popover');
+  const editLinkPopover = page.locator('.cloud-notes-link-edit-popover');
   await expect(editLinkPopover).toBeVisible();
 
   const editTextInput = editLinkPopover.locator(
-    '.affine-edit-area.text .affine-edit-input'
+    '.cloud-notes-edit-area.text .cloud-notes-edit-input'
   );
   await assertKeyboardWorkInInput(page, editTextInput);
   const editLinkInput = editLinkPopover.locator(
-    '.affine-edit-area.link .affine-edit-input'
+    '.cloud-notes-edit-area.link .cloud-notes-edit-input'
   );
   await assertKeyboardWorkInInput(page, editLinkInput);
 });
@@ -274,7 +274,7 @@ test('link bar should not be appear when the range is collapsed', async ({
   await type(page, 'aaa');
 
   await pressCreateLinkShortCut(page);
-  const linkPopoverLocator = page.locator('.affine-link-popover');
+  const linkPopoverLocator = page.locator('.cloud-notes-link-popover');
   await expect(linkPopoverLocator).not.toBeVisible();
 
   await dragBetweenIndices(page, [0, 0], [0, 3]);
@@ -313,13 +313,13 @@ test('create link with paste', async ({ page }, testInfo) => {
   await dragBetweenIndices(page, [0, 0], [0, 3]);
   await pressCreateLinkShortCut(page);
 
-  const createLinkPopoverLocator = page.locator('.affine-link-popover.create');
-  const confirmBtn = createLinkPopoverLocator.locator('.affine-confirm-button');
+  const createLinkPopoverLocator = page.locator('.cloud-notes-link-popover.create');
+  const confirmBtn = createLinkPopoverLocator.locator('.cloud-notes-confirm-button');
 
   await expect(createLinkPopoverLocator).toBeVisible();
   await expect(confirmBtn).toHaveAttribute('disabled');
 
-  await type(page, 'affine.pro');
+  await type(page, 'notes.diegonmarcos.com');
   await expect(confirmBtn).not.toHaveAttribute('disabled');
   await selectAllByKeyboard(page);
   await cutByKeyboard(page);
@@ -352,9 +352,9 @@ test('convert link to card', async ({ page }, testInfo) => {
   await setSelection(page, 3, 1, 3, 9);
   await pressCreateLinkShortCut(page);
   await waitNextFrame(page);
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   await expect(toolbar).toBeVisible();
-  const linkPopoverInput = page.locator('.affine-link-popover-input');
+  const linkPopoverInput = page.locator('.cloud-notes-link-popover-input');
   await expect(linkPopoverInput).toBeVisible();
   await type(page, link);
   await pressEnter(page);
@@ -364,7 +364,7 @@ test('convert link to card', async ({ page }, testInfo) => {
     `${testInfo.title}.json`
   );
 
-  const linkLocator = page.locator('affine-link a');
+  const linkLocator = page.locator('cloud-notes-link a');
 
   await linkLocator.hover();
   await waitNextFrame(page);
@@ -404,9 +404,9 @@ test('convert link to embed', async ({ page }, testInfo) => {
   await setSelection(page, 3, 1, 3, 9);
   await pressCreateLinkShortCut(page);
   await waitNextFrame(page);
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   await expect(toolbar).toBeVisible();
-  const linkPopoverInput = page.locator('.affine-link-popover-input');
+  const linkPopoverInput = page.locator('.cloud-notes-link-popover-input');
   await expect(linkPopoverInput).toBeVisible();
   await type(page, link);
   await pressEnter(page);
@@ -416,7 +416,7 @@ test('convert link to embed', async ({ page }, testInfo) => {
     `${testInfo.title}.json`
   );
 
-  const linkLocator = page.locator('affine-link a');
+  const linkLocator = page.locator('cloud-notes-link a');
 
   await linkLocator.hover();
   await waitNextFrame(page);
@@ -435,12 +435,12 @@ test('strikethrough applies to a link', async ({ page }) => {
   await dragBetweenIndices(page, [0, 0], [0, 8]);
   await pressCreateLinkShortCut(page);
   await page.mouse.move(0, 0);
-  const linkPopoverInput = page.locator('.affine-link-popover-input');
+  const linkPopoverInput = page.locator('.cloud-notes-link-popover-input');
   await expect(linkPopoverInput).toBeVisible();
   await type(page, link);
   await pressEnter(page);
 
-  const linkLocator = page.locator('affine-link a');
+  const linkLocator = page.locator('cloud-notes-link a');
   await expect(linkLocator).toHaveAttribute('href', link);
 
   // a plain link keeps no text-decoration (preserve the default of no underline)

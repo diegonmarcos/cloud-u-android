@@ -1,4 +1,4 @@
-import type { PeekViewService } from '@affine/core/modules/peek-view';
+import type { PeekViewService } from '@cloud-notes/core/modules/peek-view';
 import { WithDisposable } from '@blocksuite/global/lit';
 import { PageIcon, ViewIcon } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';

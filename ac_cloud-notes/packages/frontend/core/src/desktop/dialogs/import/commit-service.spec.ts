@@ -1,10 +1,10 @@
 import 'fake-indexeddb/auto';
 
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { getAFFiNEWorkspaceSchema } from '@affine/core/modules/workspace';
-import type { DocSnapshot } from '@blocksuite/affine/store';
-import { TestWorkspace } from '@blocksuite/affine/store/test';
-import type { ImportBatch } from '@blocksuite/affine/widgets/linked-doc';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { getCloudNotesWorkspaceSchema } from '@cloud-notes/core/modules/workspace';
+import type { DocSnapshot } from '@blocksuite/cloud-notes/store';
+import { TestWorkspace } from '@blocksuite/cloud-notes/store/test';
+import type { ImportBatch } from '@blocksuite/cloud-notes/widgets/linked-doc';
 import { describe, expect, test, vi } from 'vitest';
 
 import { ImportCommitService } from './commit-service';
@@ -105,7 +105,7 @@ function createCommitService(
 ) {
   return new ImportCommitService({
     collection,
-    schema: getAFFiNEWorkspaceSchema(),
+    schema: getCloudNotesWorkspaceSchema(),
     extensions: getStoreManager().config.init().value.get('store'),
     organizeService: options.organizeService as never,
     explorerIconService: options.explorerIconService as never,

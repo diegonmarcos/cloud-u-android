@@ -1,9 +1,9 @@
-import { Skeleton } from '@affine/component';
-import { NavigationPanelTreeRoot } from '@affine/core/desktop/components/navigation-panel';
-import { NavigationPanelService } from '@affine/core/modules/navigation-panel';
-import { OrganizeService } from '@affine/core/modules/organize';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
+import { Skeleton } from '@cloud-notes/component';
+import { NavigationPanelTreeRoot } from '@cloud-notes/core/desktop/components/navigation-panel';
+import { NavigationPanelService } from '@cloud-notes/core/modules/navigation-panel';
+import { OrganizeService } from '@cloud-notes/core/modules/organize';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import { AddOrganizeIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import { useCallback, useMemo, useState } from 'react';
@@ -45,7 +45,7 @@ export const NavigationPanelOrganize = () => {
   return (
     <CollapsibleSection
       path={path}
-      title={t['com.affine.rootAppSidebar.organize']()}
+      title={t['com.cloud-notes.rootAppSidebar.organize']()}
     >
       {/* TODO(@CatsJuice): Organize loading UI */}
       <NavigationPanelTreeRoot placeholder={isLoading ? <Skeleton /> : null}>
@@ -59,7 +59,7 @@ export const NavigationPanelOrganize = () => {
         <AddItemPlaceholder
           icon={<AddOrganizeIcon />}
           data-testid="navigation-panel-bar-add-organize-button"
-          label={t['com.affine.rootAppSidebar.organize.add-folder']()}
+          label={t['com.cloud-notes.rootAppSidebar.organize.add-folder']()}
           onClick={() => setOpenNewFolderDialog(true)}
         />
       </NavigationPanelTreeRoot>

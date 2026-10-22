@@ -1,10 +1,10 @@
-import { Button } from '@affine/component';
-import { AuthPageContainer } from '@affine/component/auth-components';
-import { useNavigateHelper } from '@affine/core/components/hooks/use-navigate-helper';
-import { GraphQLService } from '@affine/core/modules/cloud';
-import { UserFriendlyError } from '@affine/error';
-import { changeEmailMutation } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+import { Button } from '@cloud-notes/component';
+import { AuthPageContainer } from '@cloud-notes/component/auth-components';
+import { useNavigateHelper } from '@cloud-notes/core/components/hooks/use-navigate-helper';
+import { GraphQLService } from '@cloud-notes/core/modules/cloud';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { changeEmailMutation } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useService } from '@toeverything/infra';
 import { type FC, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -12,8 +12,8 @@ import { useSearchParams } from 'react-router-dom';
 import { AppContainer } from '../../components/app-container';
 
 export const ConfirmChangeEmail: FC<{
-  onOpenAffine: () => void;
-}> = ({ onOpenAffine }) => {
+  onOpenCloudNotes: () => void;
+}> = ({ onOpenCloudNotes }) => {
   const t = useI18n();
   const [searchParams] = useSearchParams();
   const navigateHelper = useNavigateHelper();
@@ -54,11 +54,11 @@ export const ConfirmChangeEmail: FC<{
 
   return (
     <AuthPageContainer
-      title={t['com.affine.auth.change.email.page.success.title']()}
-      subtitle={t['com.affine.auth.change.email.page.success.subtitle']()}
+      title={t['com.cloud-notes.auth.change.email.page.success.title']()}
+      subtitle={t['com.cloud-notes.auth.change.email.page.success.subtitle']()}
     >
-      <Button variant="primary" size="large" onClick={onOpenAffine}>
-        {t['com.affine.auth.open.affine']()}
+      <Button variant="primary" size="large" onClick={onOpenCloudNotes}>
+        {t['com.cloud-notes.auth.open.cloud-notes']()}
       </Button>
     </AuthPageContainer>
   );

@@ -1,4 +1,4 @@
-import type { IconData } from '@affine/component';
+import type { IconData } from '@cloud-notes/component';
 import {
   type DBSchemaBuilder,
   f,
@@ -12,7 +12,7 @@ import type { WorkspacePropertyType } from '../../workspace-property';
 
 const integrationType = f.enum('readwise');
 
-export const AFFiNE_WORKSPACE_DB_SCHEMA = {
+export const CLOUD_NOTES_WORKSPACE_DB_SCHEMA = {
   folders: {
     id: f.string().primaryKey().optional().default(nanoid),
     parentId: f.string().optional(),
@@ -55,14 +55,14 @@ export const AFFiNE_WORKSPACE_DB_SCHEMA = {
     icon: f.json<IconData>(),
   },
 } as const satisfies DBSchemaBuilder;
-export type AFFiNEWorkspaceDbSchema = typeof AFFiNE_WORKSPACE_DB_SCHEMA;
+export type CloudNotesWorkspaceDbSchema = typeof CLOUD_NOTES_WORKSPACE_DB_SCHEMA;
 
-export type DocProperties = ORMEntity<AFFiNEWorkspaceDbSchema['docProperties']>;
+export type DocProperties = ORMEntity<CloudNotesWorkspaceDbSchema['docProperties']>;
 export type DocCustomPropertyInfo = ORMEntity<
-  AFFiNEWorkspaceDbSchema['docCustomPropertyInfo']
+  CloudNotesWorkspaceDbSchema['docCustomPropertyInfo']
 >;
 
-export const AFFiNE_WORKSPACE_USERDATA_DB_SCHEMA = {
+export const CLOUD_NOTES_WORKSPACE_USERDATA_DB_SCHEMA = {
   favorite: {
     key: f.string().primaryKey(),
     index: f.string(),
@@ -76,15 +76,15 @@ export const AFFiNE_WORKSPACE_USERDATA_DB_SCHEMA = {
     id: f.string().primaryKey(),
     type: integrationType,
     /**
-     * Identify **affine user** and **integration type** and **integration account**
+     * Identify **cloud-notes user** and **integration type** and **integration account**
      * Used to quickly find user's all integrations
      */
     integrationId: f.string(),
     refMeta: f.json(),
   },
 } as const satisfies DBSchemaBuilder;
-export type AFFiNEWorkspaceUserdataDbSchema =
-  typeof AFFiNE_WORKSPACE_USERDATA_DB_SCHEMA;
+export type CloudNotesWorkspaceUserdataDbSchema =
+  typeof CLOUD_NOTES_WORKSPACE_USERDATA_DB_SCHEMA;
 export type DocIntegrationRef = ORMEntity<
-  AFFiNEWorkspaceUserdataDbSchema['docIntegrationRef']
+  CloudNotesWorkspaceUserdataDbSchema['docIntegrationRef']
 >;

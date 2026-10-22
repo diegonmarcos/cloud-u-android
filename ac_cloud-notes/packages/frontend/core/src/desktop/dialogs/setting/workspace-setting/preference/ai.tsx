@@ -1,13 +1,13 @@
-import { Switch } from '@affine/component';
+import { Switch } from '@cloud-notes/component';
 import {
   SettingRow,
   SettingWrapper,
-} from '@affine/component/setting-components';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { ServerService } from '@affine/core/modules/cloud';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
-import { WorkspaceShareSettingService } from '@affine/core/modules/share-setting';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/setting-components';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { ServerService } from '@cloud-notes/core/modules/cloud';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
+import { WorkspaceShareSettingService } from '@cloud-notes/core/modules/share-setting';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 
 export const AiSetting = () => {
@@ -35,11 +35,11 @@ export const AiSetting = () => {
 
   return (
     <SettingWrapper
-      title={t['com.affine.settings.workspace.affine-ai.title']()}
+      title={t['com.cloud-notes.settings.workspace.cloud-notes-ai.title']()}
     >
       <SettingRow
-        name={t['com.affine.settings.workspace.affine-ai.label']()}
-        desc={t['com.affine.settings.workspace.affine-ai.description']()}
+        name={t['com.cloud-notes.settings.workspace.cloud-notes-ai.label']()}
+        desc={t['com.cloud-notes.settings.workspace.cloud-notes-ai.description']()}
       >
         <Switch
           checked={!!workspaceEnableAi}

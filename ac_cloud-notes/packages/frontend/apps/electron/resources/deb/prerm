@@ -1,4 +1,4 @@
 #!/bin/sh
 set -e
 
-rm /usr/share/metainfo/affine.metainfo.xml
+rm /usr/share/metainfo/cloud-notes.metainfo.xml

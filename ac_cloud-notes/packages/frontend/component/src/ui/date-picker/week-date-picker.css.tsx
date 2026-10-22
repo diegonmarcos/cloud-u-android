@@ -68,10 +68,10 @@ export const dayCell = style({
       opacity: 0,
     },
     '&::before': {
-      boxShadow: '0 0 0 2px var(--affine-brand-color)',
+      boxShadow: '0 0 0 2px var(--cloud-notes-brand-color)',
     },
     '&::after': {
-      border: '1px solid var(--affine-brand-color)',
+      border: '1px solid var(--cloud-notes-brand-color)',
     },
     '&:focus-visible::before': {
       opacity: 0.5,
@@ -90,7 +90,7 @@ export const dayCellWeek = style({
   textOverflow: 'clip',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
-  color: 'var(--cell-color, var(--affine-text-secondary-color))',
+  color: 'var(--cell-color, var(--cloud-notes-text-secondary-color))',
 });
 export const dayCellDate = style({
   width: '100%',
@@ -98,5 +98,5 @@ export const dayCellDate = style({
   lineHeight: '20px',
   textAlign: 'center',
 
-  color: 'var(--cell-color, var(--affine-text-primary-color))',
+  color: 'var(--cell-color, var(--cloud-notes-text-primary-color))',
 });

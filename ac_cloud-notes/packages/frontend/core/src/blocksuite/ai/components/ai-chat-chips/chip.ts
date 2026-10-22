@@ -1,6 +1,6 @@
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { CloseIcon, PlusIcon } from '@blocksuite/icons/lit';
 import { css, html, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -112,7 +112,7 @@ export class ChatPanelChip extends SignalWatcher(
           <span class="chip-card-title">
             <span data-testid="chat-panel-chip-title">${this.name}</span>
           </span>
-          <affine-tooltip>${this.tooltip}</affine-tooltip>
+          <cloud-notes-tooltip>${this.tooltip}</cloud-notes-tooltip>
         </div>
         ${
           isCandidate

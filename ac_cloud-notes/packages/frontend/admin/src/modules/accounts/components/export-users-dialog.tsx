@@ -1,14 +1,14 @@
-import { Button } from '@affine/admin/components/ui/button';
-import { Checkbox } from '@affine/admin/components/ui/checkbox';
+import { Button } from '@cloud-notes/admin/components/ui/button';
+import { Checkbox } from '@cloud-notes/admin/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@affine/admin/components/ui/dialog';
-import { Label } from '@affine/admin/components/ui/label';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+} from '@cloud-notes/admin/components/ui/dialog';
+import { Label } from '@cloud-notes/admin/components/ui/label';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import { CopyIcon } from '@blocksuite/icons/rc';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';

@@ -1,7 +1,7 @@
 import {
   type DocPermissionActions,
   type WorkspacePermissionActions,
-} from '@affine/core/modules/permissions';
+} from '@cloud-notes/core/modules/permissions';
 import type React from 'react';
 
 import { useGuard } from './use-guard';

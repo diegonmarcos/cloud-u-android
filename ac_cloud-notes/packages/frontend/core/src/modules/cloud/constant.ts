@@ -2,7 +2,7 @@ import {
   OAuthProviderType,
   ServerDeploymentType,
   ServerFeature,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 
 import { DEFAULT_SELF_HOSTED_SERVER_NAME } from './server-name';
 import type { ServerConfig, ServerMetadata } from './types';
@@ -11,7 +11,7 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
   environment.isSelfHosted
     ? [
         {
-          id: 'affine-cloud',
+          id: 'cloud-notes-cloud',
           baseUrl: location.origin,
           // selfhosted baseUrl is `location.origin`
           // this is ok for web app, but not for desktop app
@@ -33,12 +33,12 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
     : BUILD_CONFIG.debug
       ? [
           {
-            id: 'affine-cloud',
+            id: 'cloud-notes-cloud',
             baseUrl: BUILD_CONFIG.isElectron
               ? 'http://localhost:8080'
               : location.origin,
             config: {
-              serverName: 'AFFiNE Cloud',
+              serverName: 'Cloud Notes',
               features: [
                 ServerFeature.Indexer,
                 ServerFeature.Copilot,
@@ -51,7 +51,7 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
                 OAuthProviderType.Google,
                 OAuthProviderType.Apple,
               ],
-              type: ServerDeploymentType.Affine,
+              type: ServerDeploymentType.CloudNotes,
               credentialsRequirement: {
                 password: {
                   minLength: 8,
@@ -64,14 +64,14 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
       : BUILD_CONFIG.appBuildType === 'stable'
         ? [
             {
-              id: 'affine-cloud',
+              id: 'cloud-notes-cloud',
               baseUrl: BUILD_CONFIG.isNative
                 ? BUILD_CONFIG.isIOS
-                  ? 'https://apple.getaffineapp.com'
-                  : 'https://app.affine.pro'
+                  ? 'https://apple.getcloudnotesapp.com'
+                  : 'https://notes.diegonmarcos.com'
                 : location.origin,
               config: {
-                serverName: 'AFFiNE Cloud',
+                serverName: 'Cloud Notes',
                 features: [
                   ServerFeature.Indexer,
                   ServerFeature.Copilot,
@@ -84,7 +84,7 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
                   OAuthProviderType.Google,
                   OAuthProviderType.Apple,
                 ],
-                type: ServerDeploymentType.Affine,
+                type: ServerDeploymentType.CloudNotes,
                 credentialsRequirement: {
                   password: {
                     minLength: 8,
@@ -97,14 +97,14 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
         : BUILD_CONFIG.appBuildType === 'beta'
           ? [
               {
-                id: 'affine-cloud',
+                id: 'cloud-notes-cloud',
                 baseUrl: BUILD_CONFIG.isNative
                   ? BUILD_CONFIG.isIOS
-                    ? 'https://apple.getaffineapp.com'
-                    : 'https://insider.affine.pro'
+                    ? 'https://apple.getcloudnotesapp.com'
+                    : 'https://notes.diegonmarcos.com'
                   : location.origin,
                 config: {
-                  serverName: 'AFFiNE Cloud',
+                  serverName: 'Cloud Notes',
                   features: [
                     ServerFeature.Indexer,
                     ServerFeature.Copilot,
@@ -117,7 +117,7 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
                     OAuthProviderType.Google,
                     OAuthProviderType.Apple,
                   ],
-                  type: ServerDeploymentType.Affine,
+                  type: ServerDeploymentType.CloudNotes,
                   credentialsRequirement: {
                     password: {
                       minLength: 8,
@@ -130,10 +130,10 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
           : BUILD_CONFIG.appBuildType === 'internal'
             ? [
                 {
-                  id: 'affine-cloud',
-                  baseUrl: 'https://insider.affine.pro',
+                  id: 'cloud-notes-cloud',
+                  baseUrl: 'https://notes.diegonmarcos.com',
                   config: {
-                    serverName: 'AFFiNE Cloud',
+                    serverName: 'Cloud Notes',
                     features: [
                       ServerFeature.Indexer,
                       ServerFeature.Copilot,
@@ -146,7 +146,7 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
                       OAuthProviderType.Google,
                       OAuthProviderType.Apple,
                     ],
-                    type: ServerDeploymentType.Affine,
+                    type: ServerDeploymentType.CloudNotes,
                     credentialsRequirement: {
                       password: {
                         minLength: 8,
@@ -159,12 +159,12 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
             : BUILD_CONFIG.appBuildType === 'canary'
               ? [
                   {
-                    id: 'affine-cloud',
+                    id: 'cloud-notes-cloud',
                     baseUrl: BUILD_CONFIG.isNative
-                      ? 'https://affine.fail'
+                      ? 'https://notes.diegonmarcos.com'
                       : location.origin,
                     config: {
-                      serverName: 'AFFiNE Cloud',
+                      serverName: 'Cloud Notes',
                       features: [
                         ServerFeature.Indexer,
                         ServerFeature.Copilot,
@@ -177,7 +177,7 @@ export const BUILD_IN_SERVERS: (ServerMetadata & { config: ServerConfig })[] =
                         OAuthProviderType.Google,
                         OAuthProviderType.Apple,
                       ],
-                      type: ServerDeploymentType.Affine,
+                      type: ServerDeploymentType.CloudNotes,
                       credentialsRequirement: {
                         password: {
                           minLength: 8,
@@ -197,10 +197,10 @@ export type TelemetryChannel =
   | 'local';
 
 const OFFICIAL_TELEMETRY_ENDPOINTS: Record<TelemetryChannel, string> = {
-  stable: 'https://app.affine.pro',
-  beta: 'https://insider.affine.pro',
-  internal: 'https://insider.affine.pro',
-  canary: 'https://affine.fail',
+  stable: 'https://notes.diegonmarcos.com',
+  beta: 'https://notes.diegonmarcos.com',
+  internal: 'https://notes.diegonmarcos.com',
+  canary: 'https://notes.diegonmarcos.com',
   local: 'http://localhost:8080',
 };
 

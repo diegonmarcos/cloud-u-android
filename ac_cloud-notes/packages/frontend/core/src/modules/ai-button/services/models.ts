@@ -1,4 +1,4 @@
-import { getCopilotRouteOptionsQuery } from '@affine/graphql';
+import { getCopilotRouteOptionsQuery } from '@cloud-notes/graphql';
 import { signal } from '@preact/signals-core';
 import { Service } from '@toeverything/infra';
 

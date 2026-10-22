@@ -6,12 +6,12 @@ import {
   Loading,
   useDraggable,
   useDropTarget,
-} from '@affine/component';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/component';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { CloseIcon, PlusIcon, RightSidebarIcon } from '@blocksuite/icons/rc';
 import {
   useLiveData,
@@ -44,7 +44,7 @@ import * as styles from './styles.css';
 const TabSupportType = new Set(['collection', 'tag', 'doc']);
 
 const tabCanDrop =
-  (tab?: TabStatus): NonNullable<DropTargetOptions<AffineDNDData>['canDrop']> =>
+  (tab?: TabStatus): NonNullable<DropTargetOptions<CloudNotesDNDData>['canDrop']> =>
   ctx => {
     if (
       ctx.source.data.from?.at === 'app-header:tabs' &&
@@ -222,7 +222,7 @@ const WorkbenchTab = ({
   active: boolean;
   tabsLength: number;
   dnd?: boolean;
-  onDrop?: (data: DropTargetDropEvent<AffineDNDData>) => void;
+  onDrop?: (data: DropTargetDropEvent<CloudNotesDNDData>) => void;
 }) => {
   useServiceOptional(DesktopStateSynchronizer);
   const tabsHeaderService = useService(AppTabsHeaderService);
@@ -236,7 +236,7 @@ const WorkbenchTab = ({
     });
   }, [tabsHeaderService, workbench.id]);
 
-  const { dropTargetRef, closestEdge } = useDropTarget<AffineDNDData>(
+  const { dropTargetRef, closestEdge } = useDropTarget<CloudNotesDNDData>(
     () => ({
       closestEdge: {
         allowedEdges: ['left', 'right'],
@@ -250,7 +250,7 @@ const WorkbenchTab = ({
     [dnd, onDrop, workbench]
   );
 
-  const { dragRef } = useDraggable<AffineDNDData>(() => {
+  const { dragRef } = useDraggable<CloudNotesDNDData>(() => {
     const urls = workbench.views.map(view => {
       const url = new URL(
         workbench.basename + (view.path?.pathname ?? ''),
@@ -260,7 +260,7 @@ const WorkbenchTab = ({
       return url.toString();
     });
 
-    let entity: AffineDNDData['draggable']['entity'];
+    let entity: CloudNotesDNDData['draggable']['entity'];
 
     for (const url of urls) {
       const maybeDocLink = resolveLinkToDoc(url);
@@ -415,7 +415,7 @@ export const AppTabsHeader = ({
   }, [mode, desktopApi]);
 
   const onDrop = useAsyncCallback(
-    async (data: DropTargetDropEvent<AffineDNDData>, targetId?: string) => {
+    async (data: DropTargetDropEvent<CloudNotesDNDData>, targetId?: string) => {
       const edge = data.closestEdge ?? 'right';
       targetId = targetId ?? tabs.at(-1)?.id;
 
@@ -481,7 +481,7 @@ export const AppTabsHeader = ({
   );
 
   const { dropTargetRef: spacerDropTargetRef, draggedOver } =
-    useDropTarget<AffineDNDData>(
+    useDropTarget<CloudNotesDNDData>(
       () => ({
         onDrop,
         dropEffect: 'move',
@@ -548,7 +548,7 @@ export const AppTabsHeader = ({
         <IconButton
           size={22.86}
           onClick={onAddTab}
-          tooltip={t['com.affine.multi-tab.new-tab']()}
+          tooltip={t['com.cloud-notes.multi-tab.new-tab']()}
           tooltipShortcut={['$mod', 'T']}
           data-testid="add-tab-view-button"
           style={{ width: 32, height: 32 }}

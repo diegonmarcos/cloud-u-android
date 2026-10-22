@@ -1,10 +1,10 @@
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
 import {
   SubscriptionService,
   UserQuotaService,
-} from '@affine/core/modules/cloud';
-import { UrlService } from '@affine/core/modules/url';
-import type { CreateCheckoutSessionInput } from '@affine/graphql';
+} from '@cloud-notes/core/modules/cloud';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import type { CreateCheckoutSessionInput } from '@cloud-notes/graphql';
 import { useService } from '@toeverything/infra';
 import { nanoid } from 'nanoid';
 import {

@@ -21,7 +21,7 @@ import {
  *
  * Live updates are a poll of the clock list: when another client changed a doc,
  * an update event with an empty payload makes the sync peer pull the diff (the
- * same device the AFFiNE cloud storage uses to repair invalidated docs).
+ * same device the Cloud Notes storage uses to repair invalidated docs).
  * `<room>` is `<spaceId>/<docId>`.
  */
 export interface NotesSyncDocStorageOptions extends DocStorageOptions {

@@ -1,29 +1,29 @@
-import { EditorLoading } from '@affine/component/page-detail-skeleton';
+import { EditorLoading } from '@cloud-notes/component/page-detail-skeleton';
 import type {
   EdgelessEditor,
   PageEditor,
-} from '@affine/core/blocksuite/editors';
-import { ServerService } from '@affine/core/modules/cloud';
+} from '@cloud-notes/core/blocksuite/editors';
+import { ServerService } from '@cloud-notes/core/modules/cloud';
 import {
   EditorSettingService,
   fontStyleOptions,
-} from '@affine/core/modules/editor-setting';
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import track from '@affine/track';
-import { appendParagraphCommand } from '@blocksuite/affine/blocks/paragraph';
-import type { DocTitle } from '@blocksuite/affine/fragments/doc-title';
-import { DisposableGroup } from '@blocksuite/affine/global/disposable';
-import { IS_LINUX } from '@blocksuite/affine/global/env';
-import type { DocMode, RootBlockModel } from '@blocksuite/affine/model';
+} from '@cloud-notes/core/modules/editor-setting';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import track from '@cloud-notes/track';
+import { appendParagraphCommand } from '@blocksuite/cloud-notes/blocks/paragraph';
+import type { DocTitle } from '@blocksuite/cloud-notes/fragments/doc-title';
+import { DisposableGroup } from '@blocksuite/cloud-notes/global/disposable';
+import { IS_LINUX } from '@blocksuite/cloud-notes/global/env';
+import type { DocMode, RootBlockModel } from '@blocksuite/cloud-notes/model';
 import {
   customImageProxyMiddleware,
   ImageProxyService,
-} from '@blocksuite/affine/shared/adapters';
-import { focusBlockEnd } from '@blocksuite/affine/shared/commands';
-import { getLastNoteBlock } from '@blocksuite/affine/shared/utils';
-import type { BlockStdScope, EditorHost } from '@blocksuite/affine/std';
-import type { Store } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/shared/adapters';
+import { focusBlockEnd } from '@blocksuite/cloud-notes/shared/commands';
+import { getLastNoteBlock } from '@blocksuite/cloud-notes/shared/utils';
+import type { BlockStdScope, EditorHost } from '@blocksuite/cloud-notes/std';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { Slot } from '@radix-ui/react-slot';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVar } from '@toeverything/theme';
@@ -35,7 +35,7 @@ import type { DefaultOpenProperty } from '../../components/properties';
 import { BlocksuiteDocEditor, BlocksuiteEdgelessEditor } from './lit-adaper';
 import * as styles from './styles.css';
 
-export interface AffineEditorContainer extends HTMLElement {
+export interface CloudNotesEditorContainer extends HTMLElement {
   page: Store;
   doc: Store;
   docTitle: DocTitle;
@@ -54,7 +54,7 @@ export interface EditorProps extends HTMLAttributes<HTMLDivElement> {
   readonly?: boolean;
   defaultOpenProperty?: DefaultOpenProperty;
   // on Editor ready
-  onEditorReady?: (editor: AffineEditorContainer) => (() => void) | void;
+  onEditorReady?: (editor: CloudNotesEditorContainer) => (() => void) | void;
 }
 
 const BlockSuiteEditorImpl = ({
@@ -84,9 +84,9 @@ const BlockSuiteEditorImpl = ({
   );
 
   /**
-   * mimic an AffineEditorContainer using proxy
+   * mimic an CloudNotesEditorContainer using proxy
    */
-  const affineEditorContainerProxy = useMemo(() => {
+  const cloudNotesEditorContainerProxy = useMemo(() => {
     const api = {
       get page() {
         return page;
@@ -144,14 +144,14 @@ const BlockSuiteEditorImpl = ({
         }
         return undefined;
       },
-    }) as AffineEditorContainer;
+    }) as CloudNotesEditorContainer;
 
     return proxy;
   }, [mode, page]);
 
   const handleClickPageModeBlank = useCallback(() => {
     if (shared || readonly || page.readonly) return;
-    const std = affineEditorContainerProxy.host?.std;
+    const std = cloudNotesEditorContainerProxy.host?.std;
     if (!std) {
       return;
     }
@@ -173,7 +173,7 @@ const BlockSuiteEditorImpl = ({
     }
 
     std.command.exec(appendParagraphCommand);
-  }, [affineEditorContainerProxy.host?.std, page, readonly, shared]);
+  }, [cloudNotesEditorContainerProxy.host?.std, page, readonly, shared]);
 
   useEffect(() => {
     const editorContainer = rootRef.current;
@@ -181,8 +181,8 @@ const BlockSuiteEditorImpl = ({
       const handleMiddleClick = (e: MouseEvent) => {
         if (
           e.target instanceof HTMLElement &&
-          (e.target.closest('affine-reference') ||
-            e.target.closest('affine-link'))
+          (e.target.closest('cloud-notes-reference') ||
+            e.target.closest('cloud-notes-link'))
         ) {
           return;
         }
@@ -209,7 +209,7 @@ const BlockSuiteEditorImpl = ({
   }, [enableMiddleClickPaste]);
 
   useEffect(() => {
-    const editor = affineEditorContainerProxy;
+    const editor = cloudNotesEditorContainerProxy;
     globalThis.currentEditor = editor;
     const disposableGroup = new DisposableGroup();
     let canceled = false;
@@ -240,7 +240,7 @@ const BlockSuiteEditorImpl = ({
       canceled = true;
       disposableGroup.dispose();
     };
-  }, [affineEditorContainerProxy, onEditorReady, page, server]);
+  }, [cloudNotesEditorContainerProxy, onEditorReady, page, server]);
 
   return (
     <div
@@ -253,7 +253,7 @@ const BlockSuiteEditorImpl = ({
         className
       )}
       style={style}
-      data-affine-editor-container
+      data-cloud-notes-editor-container
       ref={rootRef}
     >
       {mode === 'page' ? (
@@ -366,7 +366,7 @@ export const BlockSuiteEditor = (props: EditorProps) => {
   }, [loadStartTime, props.page, workspaceService]);
 
   return (
-    <Slot style={{ '--affine-font-family': fontFamily } as CSSProperties}>
+    <Slot style={{ '--cloud-notes-font-family': fontFamily } as CSSProperties}>
       {isLoading ? (
         <EditorLoading longerLoading={longerLoading} />
       ) : (

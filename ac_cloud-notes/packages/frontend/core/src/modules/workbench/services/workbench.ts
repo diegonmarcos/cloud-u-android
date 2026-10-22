@@ -1,4 +1,4 @@
-import { tracker } from '@affine/track';
+import { tracker } from '@cloud-notes/track';
 import { createEvent, Service } from '@toeverything/infra';
 import { combineLatest, distinctUntilChanged, map, skip } from 'rxjs';
 

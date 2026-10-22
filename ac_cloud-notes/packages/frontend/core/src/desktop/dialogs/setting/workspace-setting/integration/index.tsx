@@ -1,7 +1,7 @@
-import { SettingHeader } from '@affine/component/setting-components';
-import { useWorkspaceInfo } from '@affine/core/components/hooks/use-workspace-info';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+import { SettingHeader } from '@cloud-notes/component/setting-components';
+import { useWorkspaceInfo } from '@cloud-notes/core/components/hooks/use-workspace-info';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { useService } from '@toeverything/infra';
 import {
   type ReactNode,
@@ -61,12 +61,12 @@ export const IntegrationSetting = ({
   return (
     <>
       <SettingHeader
-        title={t['com.affine.integration.integrations']()}
+        title={t['com.cloud-notes.integration.integrations']()}
         subtitle={
           <>
-            {t['com.affine.integration.setting.description']()}
+            {t['com.cloud-notes.integration.setting.description']()}
             {/* <br /> */}
-            {/* <a>{t['Learn how to develop a integration for AFFiNE']()}</a> */}
+            {/* <a>{t['Learn how to develop a integration for Cloud Notes']()}</a> */}
           </>
         }
       />
@@ -124,7 +124,7 @@ const IntegrationSettingPage = ({
 
   return (
     <SubPageProvider
-      backText={t['com.affine.integration.integrations']()}
+      backText={t['com.cloud-notes.integration.integrations']()}
       island={island}
       open={open}
       onClose={onClose}

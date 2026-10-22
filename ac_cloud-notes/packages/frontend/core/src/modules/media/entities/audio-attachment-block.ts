@@ -1,14 +1,14 @@
 import {
   TranscriptionBlockFlavour,
   type TranscriptionBlockModel,
-} from '@affine/core/blocksuite/ai/blocks/transcription-block/model';
-import { insertFromMarkdown } from '@affine/core/blocksuite/utils';
-import { preprocessAudioBlobForTranscription } from '@affine/core/utils/opus-encoding';
-import { DebugLogger } from '@affine/debug';
-import track from '@affine/track';
-import type { AttachmentBlockModel } from '@blocksuite/affine/model';
-import type { AffineTextAttributes } from '@blocksuite/affine/shared/types';
-import { type DeltaInsert, Text } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/blocksuite/ai/blocks/transcription-block/model';
+import { insertFromMarkdown } from '@cloud-notes/core/blocksuite/utils';
+import { preprocessAudioBlobForTranscription } from '@cloud-notes/core/utils/opus-encoding';
+import { DebugLogger } from '@cloud-notes/debug';
+import track from '@cloud-notes/track';
+import type { AttachmentBlockModel } from '@blocksuite/cloud-notes/model';
+import type { CloudNotesTextAttributes } from '@blocksuite/cloud-notes/shared/types';
+import { type DeltaInsert, Text } from '@blocksuite/cloud-notes/store';
 import { computed } from '@preact/signals-core';
 import { Entity, LiveData } from '@toeverything/infra';
 import { cssVarV2 } from '@toeverything/theme/v2';
@@ -237,7 +237,7 @@ export class AudioAttachmentBlock extends Entity<AttachmentBlockModel> {
           color = colorOptions[speakerToColors.size % colorOptions.length];
           speakerToColors.set(segment.speaker, color);
         }
-        const deltaInserts: DeltaInsert<AffineTextAttributes>[] = [
+        const deltaInserts: DeltaInsert<CloudNotesTextAttributes>[] = [
           {
             insert: sanitizeText(segment.start + ' ' + segment.speaker),
             attributes: {

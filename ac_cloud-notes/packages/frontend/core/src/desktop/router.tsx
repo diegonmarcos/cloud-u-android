@@ -7,7 +7,7 @@ import {
   useNavigate,
 } from 'react-router-dom';
 
-import { AffineErrorComponent } from '../components/affine/affine-error-boundary/affine-error-fallback';
+import { CloudNotesErrorComponent } from '../components/cloud-notes/cloud-notes-error-boundary/cloud-notes-error-fallback';
 import { NavigateContext } from '../components/hooks/use-navigate-helper';
 import { RootWrapper } from './pages/root';
 import {
@@ -38,7 +38,7 @@ export function RootRouter() {
 export const topLevelRoutes = [
   {
     element: <RootRouter />,
-    errorElement: <AffineErrorComponent />,
+    errorElement: <CloudNotesErrorComponent />,
     children: [
       {
         path: '/',

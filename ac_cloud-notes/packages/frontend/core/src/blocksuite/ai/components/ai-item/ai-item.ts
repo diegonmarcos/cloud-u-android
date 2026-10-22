@@ -1,11 +1,11 @@
-import { ArrowRightIcon, EnterIcon } from '@blocksuite/affine/components/icons';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { ColorScheme } from '@blocksuite/affine/model';
+import { ArrowRightIcon, EnterIcon } from '@blocksuite/cloud-notes/components/icons';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { ColorScheme } from '@blocksuite/cloud-notes/model';
 import {
   EditorHost,
   PropTypes,
   requiredProperties,
-} from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/std';
 import { css, html, LitElement, nothing } from 'lit';
 import { property, query } from 'lit/decorators.js';
 

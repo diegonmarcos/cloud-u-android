@@ -1,5 +1,5 @@
-import { OutlineViewer } from '@blocksuite/affine/fragments/outline';
-import type { EditorHost } from '@blocksuite/affine/std';
+import { OutlineViewer } from '@blocksuite/cloud-notes/fragments/outline';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
 import { useCallback, useRef } from 'react';
 
 import * as styles from './outline-viewer.css';

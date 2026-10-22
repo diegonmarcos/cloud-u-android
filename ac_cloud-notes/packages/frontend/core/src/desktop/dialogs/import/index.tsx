@@ -1,34 +1,34 @@
-import { Button, IconButton, Modal } from '@affine/component';
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { useNavigateHelper } from '@affine/core/components/hooks/use-navigate-helper';
+import { Button, IconButton, Modal } from '@cloud-notes/component';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { useNavigateHelper } from '@cloud-notes/core/components/hooks/use-navigate-helper';
 import {
   type DialogComponentProps,
   GlobalDialogService,
   type WORKSPACE_DIALOG_SCHEMA,
-} from '@affine/core/modules/dialogs';
+} from '@cloud-notes/core/modules/dialogs';
 import {
   type ImportRunContext,
   ImportService,
-} from '@affine/core/modules/import';
-import { UrlService } from '@affine/core/modules/url';
+} from '@cloud-notes/core/modules/import';
+import { UrlService } from '@cloud-notes/core/modules/url';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   type WorkspaceMetadata,
   WorkspaceService,
-} from '@affine/core/modules/workspace';
-import { DebugLogger } from '@affine/debug';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
-import { openDirectory, openFilesWith } from '@blocksuite/affine/shared/utils';
-import type { Workspace } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/modules/workspace';
+import { DebugLogger } from '@cloud-notes/debug';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
+import { openDirectory, openFilesWith } from '@blocksuite/cloud-notes/shared/utils';
+import type { Workspace } from '@blocksuite/cloud-notes/store';
 import {
   DocxTransformer,
   HtmlTransformer,
   type ImportWarning,
   MarkdownTransformer,
   ZipTransformer,
-} from '@blocksuite/affine/widgets/linked-doc';
+} from '@blocksuite/cloud-notes/widgets/linked-doc';
 import {
   ExportToHtmlIcon,
   ExportToMarkdownIcon,
@@ -70,7 +70,7 @@ type ImportType =
   | 'snapshot'
   | 'html'
   | 'docx'
-  | 'dotaffinefile';
+  | 'dotcloudnotesfile';
 type AcceptType =
   | 'Markdown'
   | 'Zip'
@@ -78,7 +78,7 @@ type AcceptType =
   | 'Docx'
   | 'OneNote'
   | 'Directory'
-  | 'Skip'; // Skip is used for dotaffinefile
+  | 'Skip'; // Skip is used for dotcloudnotesfile
 type Status = 'idle' | 'importing' | 'success' | 'error';
 type ImportErrorState = {
   code: string;
@@ -101,7 +101,7 @@ type ImportedWorkspacePayload = {
 type ImportFunctionArgs = {
   docCollection: Workspace;
   files: File[];
-  importAffineFile: () => Promise<WorkspaceMetadata | undefined>;
+  importCloudNotesFile: () => Promise<WorkspaceMetadata | undefined>;
   importService?: ImportService;
   context: ImportRunContext;
 };
@@ -151,7 +151,7 @@ type ImportConfig = {
 const importOptions = [
   {
     key: 'markdown',
-    label: 'com.affine.import.markdown-files',
+    label: 'com.cloud-notes.import.markdown-files',
     prefixIcon: (
       <ExportToMarkdownIcon
         color={cssVarV2('icon/primary')}
@@ -164,20 +164,20 @@ const importOptions = [
   },
   {
     key: 'markdownZip',
-    label: 'com.affine.import.markdown-with-media-files',
+    label: 'com.cloud-notes.import.markdown-with-media-files',
     prefixIcon: (
       <ZipIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
     suffixIcon: (
       <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
-    suffixTooltip: 'com.affine.import.markdown-with-media-files.tooltip',
+    suffixTooltip: 'com.cloud-notes.import.markdown-with-media-files.tooltip',
     testId: 'editor-option-menu-import-markdown-with-media',
     type: 'markdownZip' as ImportType,
   },
   {
     key: 'html',
-    label: 'com.affine.import.html-files',
+    label: 'com.cloud-notes.import.html-files',
     prefixIcon: (
       <ExportToHtmlIcon
         color={cssVarV2('icon/primary')}
@@ -188,97 +188,97 @@ const importOptions = [
     suffixIcon: (
       <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
-    suffixTooltip: 'com.affine.import.html-files.tooltip',
+    suffixTooltip: 'com.cloud-notes.import.html-files.tooltip',
     testId: 'editor-option-menu-import-html',
     type: 'html' as ImportType,
   },
   {
     key: 'notion',
-    label: 'com.affine.import.notion',
+    label: 'com.cloud-notes.import.notion',
     prefixIcon: <NotionIcon color={cssVar('black')} width={20} height={20} />,
     suffixIcon: (
       <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
-    suffixTooltip: 'com.affine.import.notion.tooltip',
+    suffixTooltip: 'com.cloud-notes.import.notion.tooltip',
     testId: 'editor-option-menu-import-notion',
     type: 'notion' as ImportType,
   },
   {
     key: 'obsidian',
-    label: 'com.affine.import.obsidian',
+    label: 'com.cloud-notes.import.obsidian',
     prefixIcon: (
       <ExportToMarkdownIcon color={cssVar('black')} width={20} height={20} />
     ),
     suffixIcon: (
       <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
-    suffixTooltip: 'com.affine.import.obsidian.tooltip',
+    suffixTooltip: 'com.cloud-notes.import.obsidian.tooltip',
     testId: 'editor-option-menu-import-obsidian',
     type: 'obsidian' as ImportType,
   },
   {
     key: 'bear',
-    label: 'com.affine.import.bear',
+    label: 'com.cloud-notes.import.bear',
     prefixIcon: (
       <FileIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
     suffixIcon: (
       <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
-    suffixTooltip: 'com.affine.import.bear.tooltip',
+    suffixTooltip: 'com.cloud-notes.import.bear.tooltip',
     testId: 'editor-option-menu-import-bear',
     type: 'bear' as ImportType,
   },
   {
     key: 'oneNote',
-    label: 'com.affine.import.onenote',
+    label: 'com.cloud-notes.import.onenote',
     prefixIcon: (
       <FileIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
     suffixIcon: (
       <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
-    suffixTooltip: 'com.affine.import.onenote.tooltip',
+    suffixTooltip: 'com.cloud-notes.import.onenote.tooltip',
     testId: 'editor-option-menu-import-onenote',
     type: 'oneNote' as ImportType,
   },
   {
     key: 'docx',
-    label: 'com.affine.import.docx',
+    label: 'com.cloud-notes.import.docx',
     prefixIcon: <FileIcon color={cssVar('black')} width={20} height={20} />,
     suffixIcon: (
       <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
-    suffixTooltip: 'com.affine.import.docx.tooltip',
+    suffixTooltip: 'com.cloud-notes.import.docx.tooltip',
     testId: 'editor-option-menu-import-docx',
     type: 'docx' as ImportType,
   },
   {
     key: 'snapshot',
-    label: 'com.affine.import.snapshot',
+    label: 'com.cloud-notes.import.snapshot',
     prefixIcon: (
       <PageIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
     suffixIcon: (
       <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
     ),
-    suffixTooltip: 'com.affine.import.snapshot.tooltip',
+    suffixTooltip: 'com.cloud-notes.import.snapshot.tooltip',
     testId: 'editor-option-menu-import-snapshot',
     type: 'snapshot' as ImportType,
   },
   BUILD_CONFIG.isElectron
     ? {
-        key: 'dotaffinefile',
-        label: 'com.affine.import.dotaffinefile',
+        key: 'dotcloudnotesfile',
+        label: 'com.cloud-notes.import.dotcloudnotesfile',
         prefixIcon: (
           <SaveIcon color={cssVarV2('icon/primary')} width={20} height={20} />
         ),
         suffixIcon: (
           <HelpIcon color={cssVarV2('icon/primary')} width={20} height={20} />
         ),
-        suffixTooltip: 'com.affine.import.dotaffinefile.tooltip',
-        testId: 'editor-option-menu-import-dotaffinefile',
-        type: 'dotaffinefile' as ImportType,
+        suffixTooltip: 'com.cloud-notes.import.dotcloudnotesfile.tooltip',
+        testId: 'editor-option-menu-import-dotcloudnotesfile',
+        type: 'dotcloudnotesfile' as ImportType,
       }
     : null,
 ].filter(v => v !== null);
@@ -293,7 +293,7 @@ const importConfigs: Record<ImportType, ImportConfig> = {
         const fileName = file.name.split('.').slice(0, -1).join('.');
         const docId = await MarkdownTransformer.importMarkdownToDoc({
           collection: docCollection,
-          schema: getAFFiNEWorkspaceSchema(),
+          schema: getCloudNotesWorkspaceSchema(),
           markdown: text,
           fileName,
           extensions: getStoreManager().config.init().value.get('store'),
@@ -327,7 +327,7 @@ const importConfigs: Record<ImportType, ImportConfig> = {
         const fileName = file.name.split('.').slice(0, -1).join('.');
         const docId = await HtmlTransformer.importHTMLToDoc({
           collection: docCollection,
-          schema: getAFFiNEWorkspaceSchema(),
+          schema: getCloudNotesWorkspaceSchema(),
           extensions: getStoreManager().config.init().value.get('store'),
           html: text,
           fileName,
@@ -389,7 +389,7 @@ const importConfigs: Record<ImportType, ImportConfig> = {
       for (const file of files) {
         const docId = await DocxTransformer.importDocx({
           collection: docCollection,
-          schema: getAFFiNEWorkspaceSchema(),
+          schema: getCloudNotesWorkspaceSchema(),
           imported: file,
           extensions: getStoreManager().config.init().value.get('store'),
         });
@@ -408,7 +408,7 @@ const importConfigs: Record<ImportType, ImportConfig> = {
       const docIds = (
         await ZipTransformer.importDocs(
           docCollection,
-          getAFFiNEWorkspaceSchema(),
+          getCloudNotesWorkspaceSchema(),
           file
         )
       )
@@ -420,10 +420,10 @@ const importConfigs: Record<ImportType, ImportConfig> = {
       };
     },
   },
-  dotaffinefile: {
+  dotcloudnotesfile: {
     fileOptions: { acceptType: 'Skip', multiple: false },
-    importFunction: async ({ importAffineFile }) => {
-      const workspace = await importAffineFile();
+    importFunction: async ({ importCloudNotesFile }) => {
+      const workspace = await importCloudNotesFile();
       return {
         docIds: [],
         entryId: undefined,
@@ -514,7 +514,7 @@ const ImportOptions = ({
         )}
       </div>
       <div className={style.importModalTip}>
-        {t['com.affine.import.modal.tip']()}{' '}
+        {t['com.cloud-notes.import.modal.tip']()}{' '}
         <a
           className={style.link}
           href={BUILD_CONFIG.discordUrl}
@@ -544,10 +544,10 @@ const ImportingStatus = ({
   return (
     <>
       <div className={style.importModalTitle}>
-        {t['com.affine.import.status.importing.title']()}
+        {t['com.cloud-notes.import.status.importing.title']()}
       </div>
       <p className={style.importStatusContent}>
-        {t['com.affine.import.status.importing.message']()}
+        {t['com.cloud-notes.import.status.importing.message']()}
       </p>
       {progressLabel ? (
         <div className={style.importProgress}>{progressLabel}</div>
@@ -572,10 +572,10 @@ const SuccessStatus = ({
   return (
     <>
       <div className={style.importModalTitle}>
-        {t['com.affine.import.status.success.title']()}
+        {t['com.cloud-notes.import.status.success.title']()}
       </div>
       <p className={style.importStatusContent}>
-        {t['com.affine.import.status.success.message']()}{' '}
+        {t['com.cloud-notes.import.status.success.message']()}{' '}
         <a
           className={style.link}
           href={BUILD_CONFIG.discordUrl}
@@ -614,7 +614,7 @@ const ErrorStatus = ({
   return (
     <>
       <div className={style.importModalTitle}>
-        {t['com.affine.import.status.failed.title']()}
+        {t['com.cloud-notes.import.status.failed.title']()}
       </div>
       <p className={style.importStatusContent}>
         {error?.message || 'Unknown error occurred'}
@@ -682,7 +682,7 @@ export const ImportDialog = ({
     [jumpToPage]
   );
 
-  const handleImportAffineFile = useMemo(() => {
+  const handleImportCloudNotesFile = useMemo(() => {
     return async () => {
       track.$.navigationPanel.workspaceList.createWorkspace({
         control: 'import',
@@ -711,7 +711,7 @@ export const ImportDialog = ({
       try {
         const importConfig = importConfigs[type];
         if (importConfig.nativeOnly && !BUILD_CONFIG.isElectron) {
-          throw new Error(t['com.affine.import.onenote.desktop-only']());
+          throw new Error(t['com.cloud-notes.import.onenote.desktop-only']());
         }
         const { acceptType, multiple } = importConfig.fileOptions;
 
@@ -729,7 +729,7 @@ export const ImportDialog = ({
 
         if (!files || (files.length === 0 && acceptType !== 'Skip')) {
           throw new Error(
-            t['com.affine.import.status.failed.message.no-file-selected']()
+            t['com.cloud-notes.import.status.failed.message.no-file-selected']()
           );
         }
 
@@ -753,7 +753,7 @@ export const ImportDialog = ({
         } = await importConfig.importFunction({
           docCollection,
           files,
-          importAffineFile: handleImportAffineFile,
+          importCloudNotesFile: handleImportCloudNotesFile,
           importService,
           context: {
             signal: abortController.signal,
@@ -796,7 +796,7 @@ export const ImportDialog = ({
         logger.error('Failed to import', error);
       }
     },
-    [docCollection, handleImportAffineFile, importService, t]
+    [docCollection, handleImportCloudNotesFile, importService, t]
   );
 
   const finishImport = useCallback(() => {

@@ -1,15 +1,15 @@
-import { notify, Switch } from '@affine/component';
+import { notify, Switch } from '@cloud-notes/component';
 import {
   SettingHeader,
   SettingRow,
   SettingWrapper,
-} from '@affine/component/setting-components';
+} from '@cloud-notes/component/setting-components';
 import {
   type UserSettings,
   UserSettingsService,
-} from '@affine/core/modules/cloud';
-import { UserFriendlyError } from '@affine/error';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/cloud';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -59,11 +59,11 @@ export const NotificationSettings = () => {
   return (
     <>
       <SettingHeader
-        title={t['com.affine.setting.notifications.header.title']()}
-        subtitle={t['com.affine.setting.notifications.header.description']()}
+        title={t['com.cloud-notes.setting.notifications.header.title']()}
+        subtitle={t['com.cloud-notes.setting.notifications.header.description']()}
       />
       <SettingWrapper
-        title={t['com.affine.setting.notifications.email.title']()}
+        title={t['com.cloud-notes.setting.notifications.email.title']()}
       >
         {!userSettings && errorMessage && (
           <>
@@ -72,8 +72,8 @@ export const NotificationSettings = () => {
           </>
         )}
         <SettingRow
-          name={t['com.affine.setting.notifications.email.mention.title']()}
-          desc={t['com.affine.setting.notifications.email.mention.subtitle']()}
+          name={t['com.cloud-notes.setting.notifications.email.mention.title']()}
+          desc={t['com.cloud-notes.setting.notifications.email.mention.subtitle']()}
         >
           <Switch
             data-testid="notification-email-mention-trigger"
@@ -83,8 +83,8 @@ export const NotificationSettings = () => {
           />
         </SettingRow>
         <SettingRow
-          name={t['com.affine.setting.notifications.email.invites.title']()}
-          desc={t['com.affine.setting.notifications.email.invites.subtitle']()}
+          name={t['com.cloud-notes.setting.notifications.email.invites.title']()}
+          desc={t['com.cloud-notes.setting.notifications.email.invites.subtitle']()}
         >
           <Switch
             data-testid="notification-email-invites-trigger"
@@ -96,8 +96,8 @@ export const NotificationSettings = () => {
           />
         </SettingRow>
         <SettingRow
-          name={t['com.affine.setting.notifications.email.comments.title']()}
-          desc={t['com.affine.setting.notifications.email.comments.subtitle']()}
+          name={t['com.cloud-notes.setting.notifications.email.comments.title']()}
+          desc={t['com.cloud-notes.setting.notifications.email.comments.subtitle']()}
         >
           <Switch
             data-testid="notification-email-comments-trigger"

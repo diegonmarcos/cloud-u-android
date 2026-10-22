@@ -1,4 +1,4 @@
-import type { AttachmentBlockModel } from '@blocksuite/affine/model';
+import type { AttachmentBlockModel } from '@blocksuite/cloud-notes/model';
 
 const imageExts = new Set([
   'jpg',

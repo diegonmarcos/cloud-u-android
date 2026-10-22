@@ -74,7 +74,7 @@ export const ScrollableLayout = ({
         <div className={styles.linkGroup}>
           <a
             className={styles.link}
-            href="https://affine.pro/terms"
+            href="https://notes.diegonmarcos.com/terms"
             target="_blank"
             rel="noreferrer"
           >
@@ -83,7 +83,7 @@ export const ScrollableLayout = ({
           <Divider orientation="vertical" />
           <a
             className={styles.link}
-            href="https://affine.pro/privacy"
+            href="https://notes.diegonmarcos.com/privacy"
             target="_blank"
             rel="noreferrer"
           >
@@ -97,10 +97,10 @@ export const ScrollableLayout = ({
 
 export const OnboardingPage = ({
   user,
-  onOpenAffine,
+  onOpenCloudNotes,
 }: {
   user: User;
-  onOpenAffine: () => void;
+  onOpenCloudNotes: () => void;
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -250,14 +250,14 @@ export const OnboardingPage = ({
           you once again for your supports.
         </p>
         <Button
-          className={clsx(styles.button, styles.openAFFiNEButton)}
+          className={clsx(styles.button, styles.openCloudNotesButton)}
           variant="primary"
           size="extraLarge"
           onClick={() => {
             if (callbackUrl) {
               navigate(callbackUrl);
             } else {
-              onOpenAffine();
+              onOpenCloudNotes();
             }
           }}
           suffix={<ArrowRightSmallIcon />}

@@ -1,4 +1,4 @@
-use affine_doc_loader::ParseError;
+use cloud_notes_doc_loader::ParseError;
 
 pub type Result<T> = std::result::Result<T, Error>;
 

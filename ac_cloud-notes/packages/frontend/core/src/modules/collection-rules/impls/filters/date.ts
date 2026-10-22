@@ -1,5 +1,5 @@
-import type { DocsService } from '@affine/core/modules/doc';
-import type { WorkspacePropertyFilter } from '@affine/core/modules/workspace-property';
+import type { DocsService } from '@cloud-notes/core/modules/doc';
+import type { WorkspacePropertyFilter } from '@cloud-notes/core/modules/workspace-property';
 import { Service } from '@toeverything/infra';
 import dayjs, { type Dayjs, isDayjs } from 'dayjs';
 import { map, type Observable } from 'rxjs';

@@ -16,11 +16,11 @@ const WorkspaceDialogServiceToken = vi.hoisted(
 );
 const WorkbenchServiceToken = vi.hoisted(() => class WorkbenchService {});
 
-vi.mock('@affine/core/modules/dialogs', () => ({
+vi.mock('@cloud-notes/core/modules/dialogs', () => ({
   WorkspaceDialogService: WorkspaceDialogServiceToken,
 }));
 
-vi.mock('@affine/core/modules/workbench', () => ({
+vi.mock('@cloud-notes/core/modules/workbench', () => ({
   WorkbenchService: WorkbenchServiceToken,
 }));
 

@@ -1,4 +1,4 @@
-import { useI18n } from '@affine/i18n';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   CheckBoxCheckLinearIcon,
   PenIcon,
@@ -10,30 +10,30 @@ import * as styles from './ai-plan.css';
 
 const benefitsGetter = (t: ReturnType<typeof useI18n>) => [
   {
-    name: t['com.affine.payment.ai.benefit.g1'](),
+    name: t['com.cloud-notes.payment.ai.benefit.g1'](),
     icon: <TextIcon />,
     items: [
-      t['com.affine.payment.ai.benefit.g1-1'](),
-      t['com.affine.payment.ai.benefit.g1-2'](),
-      t['com.affine.payment.ai.benefit.g1-3'](),
+      t['com.cloud-notes.payment.ai.benefit.g1-1'](),
+      t['com.cloud-notes.payment.ai.benefit.g1-2'](),
+      t['com.cloud-notes.payment.ai.benefit.g1-3'](),
     ],
   },
   {
-    name: t['com.affine.payment.ai.benefit.g2'](),
+    name: t['com.cloud-notes.payment.ai.benefit.g2'](),
     icon: <PenIcon />,
     items: [
-      t['com.affine.payment.ai.benefit.g2-1'](),
-      t['com.affine.payment.ai.benefit.g2-2'](),
-      t['com.affine.payment.ai.benefit.g2-3'](),
+      t['com.cloud-notes.payment.ai.benefit.g2-1'](),
+      t['com.cloud-notes.payment.ai.benefit.g2-2'](),
+      t['com.cloud-notes.payment.ai.benefit.g2-3'](),
     ],
   },
   {
-    name: t['com.affine.payment.ai.benefit.g3'](),
+    name: t['com.cloud-notes.payment.ai.benefit.g3'](),
     icon: <CheckBoxCheckLinearIcon />,
     items: [
-      t['com.affine.payment.ai.benefit.g3-1'](),
-      t['com.affine.payment.ai.benefit.g3-2'](),
-      t['com.affine.payment.ai.benefit.g3-3'](),
+      t['com.cloud-notes.payment.ai.benefit.g3-1'](),
+      t['com.cloud-notes.payment.ai.benefit.g3-2'](),
+      t['com.cloud-notes.payment.ai.benefit.g3-3'](),
     ],
   },
 ];

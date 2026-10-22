@@ -1,9 +1,9 @@
-import { FeatureFlagService } from '@affine/core/modules/feature-flag';
+import { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
 
 export type { WorkspaceProfileInfo } from './entities/profile';
 export { Workspace } from './entities/workspace';
 export { WorkspaceEngineBeforeStart, WorkspaceInitialized } from './events';
-export { getAFFiNEWorkspaceSchema } from './global-schema';
+export { getCloudNotesWorkspaceSchema } from './global-schema';
 export type { WorkspaceMetadata } from './metadata';
 export type { WorkspaceOpenOptions } from './open-options';
 export type { WorkspaceFlavourProvider } from './providers/flavour';

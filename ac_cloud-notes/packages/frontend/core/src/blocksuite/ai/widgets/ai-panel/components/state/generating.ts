@@ -1,9 +1,9 @@
 import {
   AIStarIconWithAnimation,
   AIStopIcon,
-} from '@blocksuite/affine/components/icons';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import type { ColorScheme } from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/components/icons';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { ColorScheme } from '@blocksuite/cloud-notes/model';
 import { baseTheme } from '@toeverything/theme';
 import { css, html, LitElement, nothing, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -26,7 +26,7 @@ export class AIPanelGenerating extends WithDisposable(LitElement) {
       align-items: center;
       gap: 8px;
 
-      color: var(--affine-brand-color);
+      color: var(--cloud-notes-brand-color);
 
       .text {
         display: flex;
@@ -35,7 +35,7 @@ export class AIPanelGenerating extends WithDisposable(LitElement) {
         flex: 1 0 0;
 
         /* light/smMedium */
-        font-size: var(--affine-font-sm);
+        font-size: var(--cloud-notes-font-sm);
         font-style: normal;
         font-weight: 500;
         line-height: 22px; /* 157.143% */
@@ -62,7 +62,7 @@ export class AIPanelGenerating extends WithDisposable(LitElement) {
         width: 20px;
       }
       .esc-label {
-        font-size: var(--affine-font-xs);
+        font-size: var(--cloud-notes-font-xs);
         font-weight: 500;
         line-height: 20px;
       }

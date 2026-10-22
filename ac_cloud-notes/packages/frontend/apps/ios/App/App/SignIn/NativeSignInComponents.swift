@@ -11,7 +11,7 @@ struct LoginDotOverlay: View {
       for x in stride(from: CGFloat(0), through: size.width, by: spacing) {
         for y in stride(from: CGFloat(0), through: size.height, by: spacing) {
           context.fill(
-            dot.applying(CGAffineTransform(translationX: x, y: y)),
+            dot.applying(CGCloudNotesTransform(translationX: x, y: y)),
             with: .color(dotColor)
           )
         }

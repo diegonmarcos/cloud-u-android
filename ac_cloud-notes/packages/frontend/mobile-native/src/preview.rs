@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use affine_preview::{MermaidRenderOptions, TypstRenderOptions};
+use cloud_notes_preview::{MermaidRenderOptions, TypstRenderOptions};
 
 use crate::{Result, UniffiError};
 
@@ -11,7 +11,7 @@ pub fn render_mermaid_preview_svg(
   font_family: Option<String>,
   font_size: Option<f64>,
 ) -> Result<String> {
-  affine_preview::render_mermaid_svg(
+  cloud_notes_preview::render_mermaid_svg(
     &code,
     MermaidRenderOptions {
       theme,
@@ -34,7 +34,7 @@ pub fn render_typst_preview_svg(
   font_dirs: Option<Vec<String>>,
   cache_dir: Option<String>,
 ) -> Result<String> {
-  affine_preview::render_typst_svg(
+  cloud_notes_preview::render_typst_svg(
     &code,
     TypstRenderOptions {
       font_dirs: resolve_typst_font_dirs(font_dirs),

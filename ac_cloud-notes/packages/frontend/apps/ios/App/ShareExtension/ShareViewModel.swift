@@ -15,7 +15,7 @@ final class ShareViewModel: ObservableObject {
   @Published var linkPreviewFaviconImage: UIImage?
 
   var actionTitle: String {
-    "Open AFFiNE"
+    "Open Cloud Notes"
   }
 
   var canSave: Bool {

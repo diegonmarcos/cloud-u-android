@@ -1,4 +1,4 @@
-import { useI18n } from '@affine/i18n';
+import { useI18n } from '@cloud-notes/i18n';
 import { ViewLayersIcon } from '@blocksuite/icons/rc';
 
 import { NavigationPanelEmptySection } from '../../layouts/empty-section';
@@ -13,9 +13,9 @@ export const RootEmpty = ({
   return (
     <NavigationPanelEmptySection
       icon={ViewLayersIcon}
-      message={t['com.affine.collections.empty.message']()}
+      message={t['com.cloud-notes.collections.empty.message']()}
       messageTestId="slider-bar-collection-empty-message"
-      actionText={t['com.affine.collections.empty.new-collection-button']()}
+      actionText={t['com.cloud-notes.collections.empty.new-collection-button']()}
       onActionClick={onClickCreate}
     />
   );

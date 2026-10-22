@@ -1,19 +1,19 @@
-import { FlexWrapper, Input, notify } from '@affine/component';
+import { FlexWrapper, Input, notify } from '@cloud-notes/component';
 import {
   SettingHeader,
   SettingRow,
   SettingWrapper,
-} from '@affine/component/setting-components';
-import { Avatar } from '@affine/component/ui/avatar';
-import { Button } from '@affine/component/ui/button';
-import { useSignOut } from '@affine/core/components/hooks/affine/use-sign-out';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { useCatchEventCallback } from '@affine/core/components/hooks/use-catch-event-hook';
-import { Upload } from '@affine/core/components/pure/file-upload';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
-import { SubscriptionPlan } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+} from '@cloud-notes/component/setting-components';
+import { Avatar } from '@cloud-notes/component/ui/avatar';
+import { Button } from '@cloud-notes/component/ui/button';
+import { useSignOut } from '@cloud-notes/core/components/hooks/cloud-notes/use-sign-out';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { useCatchEventCallback } from '@cloud-notes/core/components/hooks/use-catch-event-hook';
+import { Upload } from '@cloud-notes/core/components/pure/file-upload';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
+import { SubscriptionPlan } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { ArrowRightSmallIcon, CameraIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService, useServices } from '@toeverything/infra';
 import { useCallback, useEffect, useState } from 'react';
@@ -108,20 +108,20 @@ export const AvatarAndName = () => {
 
   return (
     <SettingRow
-      name={t['com.affine.settings.profile']()}
-      desc={t['com.affine.settings.profile.message']()}
+      name={t['com.cloud-notes.settings.profile']()}
+      desc={t['com.cloud-notes.settings.profile.message']()}
       spreadCol={false}
     >
       <FlexWrapper style={{ margin: '12px 0 24px 0' }} alignItems="center">
         <UserAvatar />
 
         <div className={styles.profileInputWrapper}>
-          <label>{t['com.affine.settings.profile.name']()}</label>
+          <label>{t['com.cloud-notes.settings.profile.name']()}</label>
           <FlexWrapper alignItems="center">
             <Input
               defaultValue={input}
               data-testid="user-name-input"
-              placeholder={t['com.affine.settings.profile.placeholder']()}
+              placeholder={t['com.cloud-notes.settings.profile.placeholder']()}
               maxLength={64}
               minLength={0}
               style={{ width: 280, height: 32 }}
@@ -136,7 +136,7 @@ export const AvatarAndName = () => {
                   marginLeft: '12px',
                 }}
               >
-                {t['com.affine.editCollection.save']()}
+                {t['com.cloud-notes.editCollection.save']()}
               </Button>
             ) : null}
           </FlexWrapper>
@@ -165,7 +165,7 @@ const StoragePanel = ({
 
   return (
     <SettingRow
-      name={t['com.affine.storage.title']()}
+      name={t['com.cloud-notes.storage.title']()}
       desc=""
       spreadCol={false}
     >
@@ -186,7 +186,7 @@ const DevicesPanel = () => {
       setSessions(await auth.listDeviceSessions());
     } catch (error) {
       notify.error({
-        title: t['com.affine.settings.devices.load-failed'](),
+        title: t['com.cloud-notes.settings.devices.load-failed'](),
         message: String(error),
       });
     } finally {
@@ -197,7 +197,7 @@ const DevicesPanel = () => {
   useEffect(() => {
     reload().catch(error => {
       notify.error({
-        title: t['com.affine.settings.devices.load-failed'](),
+        title: t['com.cloud-notes.settings.devices.load-failed'](),
         message: String(error),
       });
     });
@@ -207,7 +207,7 @@ const DevicesPanel = () => {
     async (session: DeviceAuthSession) => {
       if (
         !window.confirm(
-          t['com.affine.settings.devices.confirm']({
+          t['com.cloud-notes.settings.devices.confirm']({
             device: session.deviceName ?? session.platform,
           })
         )
@@ -219,7 +219,7 @@ const DevicesPanel = () => {
         if (!session.current) await reload();
       } catch (error) {
         notify.error({
-          title: t['com.affine.settings.devices.sign-out-failed'](),
+          title: t['com.cloud-notes.settings.devices.sign-out-failed'](),
           message: String(error),
         });
       }
@@ -228,12 +228,12 @@ const DevicesPanel = () => {
   );
 
   const revokeAll = useCallback(async () => {
-    if (!window.confirm(t['com.affine.settings.devices.confirm-all']())) return;
+    if (!window.confirm(t['com.cloud-notes.settings.devices.confirm-all']())) return;
     try {
       await auth.revokeAllDeviceSessions();
     } catch (error) {
       notify.error({
-        title: t['com.affine.settings.devices.sign-out-all-failed'](),
+        title: t['com.cloud-notes.settings.devices.sign-out-all-failed'](),
         message: String(error),
       });
     }
@@ -241,13 +241,13 @@ const DevicesPanel = () => {
 
   return (
     <SettingRow
-      name={t['com.affine.settings.devices.title']()}
-      desc={t['com.affine.settings.devices.description']()}
+      name={t['com.cloud-notes.settings.devices.title']()}
+      desc={t['com.cloud-notes.settings.devices.description']()}
       spreadCol={false}
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {loading ? (
-          <span>{t['com.affine.settings.devices.loading']()}</span>
+          <span>{t['com.cloud-notes.settings.devices.loading']()}</span>
         ) : null}
         {sessions.map(session => (
           <div
@@ -258,23 +258,23 @@ const DevicesPanel = () => {
               <div>
                 {session.deviceName ?? session.platform}
                 {session.current
-                  ? ` (${t['com.affine.settings.devices.current']()})`
+                  ? ` (${t['com.cloud-notes.settings.devices.current']()})`
                   : ''}
               </div>
               <div>
                 {session.platform}
                 {session.appVersion ? ` · ${session.appVersion}` : ''}
-                {` · ${t['com.affine.settings.devices.last-used']({ time: new Date(session.lastSeenAt).toLocaleString() })}`}
+                {` · ${t['com.cloud-notes.settings.devices.last-used']({ time: new Date(session.lastSeenAt).toLocaleString() })}`}
               </div>
             </div>
             <Button onClick={() => void revoke(session)}>
-              {t['com.affine.settings.devices.sign-out']()}
+              {t['com.cloud-notes.settings.devices.sign-out']()}
             </Button>
           </div>
         ))}
         {sessions.length > 1 ? (
           <Button onClick={() => void revokeAll()}>
-            {t['com.affine.settings.devices.sign-out-all']()}
+            {t['com.cloud-notes.settings.devices.sign-out-all']()}
           </Button>
         ) : null}
       </div>
@@ -330,30 +330,30 @@ export const AccountSetting = ({
   return (
     <>
       <SettingHeader
-        title={t['com.affine.setting.account']()}
-        subtitle={t['com.affine.setting.account.message']()}
+        title={t['com.cloud-notes.setting.account']()}
+        subtitle={t['com.cloud-notes.setting.account.message']()}
         data-testid="account-title"
       />
       <AvatarAndName />
       <SettingWrapper>
         <SettingRow
-          name={t['com.affine.settings.email']()}
+          name={t['com.cloud-notes.settings.email']()}
           desc={account.email}
         >
           <Button onClick={onChangeEmail}>
             {account.info?.emailVerified
-              ? t['com.affine.settings.email.action.change']()
-              : t['com.affine.settings.email.action.verify']()}
+              ? t['com.cloud-notes.settings.email.action.change']()
+              : t['com.cloud-notes.settings.email.action.verify']()}
           </Button>
         </SettingRow>
         <SettingRow
-          name={t['com.affine.settings.password']()}
-          desc={t['com.affine.settings.password.message']()}
+          name={t['com.cloud-notes.settings.password']()}
+          desc={t['com.cloud-notes.settings.password.message']()}
         >
           <Button onClick={onPasswordButtonClick}>
             {hasPassword
-              ? t['com.affine.settings.password.action.change']()
-              : t['com.affine.settings.password.action.set']()}
+              ? t['com.cloud-notes.settings.password.action.change']()
+              : t['com.cloud-notes.settings.password.action.set']()}
           </Button>
         </SettingRow>
         <DevicesPanel />
@@ -364,7 +364,7 @@ export const AccountSetting = ({
         <IntegrationsPanel onChangeSettingState={onChangeSettingState} />
         <SettingRow
           name={t[`Sign out`]()}
-          desc={t['com.affine.setting.sign.out.message']()}
+          desc={t['com.cloud-notes.setting.sign.out.message']()}
           style={{ cursor: 'pointer' }}
           data-testid="sign-out-button"
           onClick={openSignOutModal}

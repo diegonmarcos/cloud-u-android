@@ -5,17 +5,17 @@ import {
   MenuItem,
   MenuTrigger,
   Switch,
-} from '@affine/component';
+} from '@cloud-notes/component';
 import {
   SettingHeader,
   SettingRow,
   SettingWrapper,
-} from '@affine/component/setting-components';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { DesktopApiService } from '@affine/core/modules/desktop-api';
-import { MeetingSettingsService } from '@affine/core/modules/media/services/meeting-settings';
-import type { MeetingSettingsSchema } from '@affine/electron/main/shared-state-schema';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/setting-components';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { DesktopApiService } from '@cloud-notes/core/modules/desktop-api';
+import { MeetingSettingsService } from '@cloud-notes/core/modules/media/services/meeting-settings';
+import type { MeetingSettingsSchema } from '@cloud-notes/electron/main/shared-state-schema';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import {
   ArrowRightSmallIcon,
   DoneIcon,
@@ -41,7 +41,7 @@ const RecordingModeMenu = () => {
 
   const options = useMemo(() => {
     return RecordingModes.map(mode => ({
-      label: t[`com.affine.settings.meetings.record.recording-mode.${mode}`](),
+      label: t[`com.cloud-notes.settings.meetings.record.recording-mode.${mode}`](),
       value: mode,
     }));
   }, [t]);
@@ -198,13 +198,13 @@ const MeetingsSettingsMain = () => {
     <div className={styles.meetingWrapper}>
       <SettingHeader
         beta
-        title={t['com.affine.settings.meetings']()}
+        title={t['com.cloud-notes.settings.meetings']()}
         subtitle={
           <>
-            {t['com.affine.settings.meetings.setting.prompt']()}
+            {t['com.cloud-notes.settings.meetings.setting.prompt']()}
             <br />
             <Trans
-              i18nKey="com.affine.settings.meetings.setting.prompt.2"
+              i18nKey="com.cloud-notes.settings.meetings.setting.prompt.2"
               components={{
                 strong: <strong />,
               }}
@@ -214,10 +214,10 @@ const MeetingsSettingsMain = () => {
       />
 
       <SettingRow
-        name={t['com.affine.settings.meetings.enable.title']()}
+        name={t['com.cloud-notes.settings.meetings.enable.title']()}
         desc={
           <Trans
-            i18nKey="com.affine.settings.meetings.enable.description"
+            i18nKey="com.cloud-notes.settings.meetings.enable.description"
             components={{
               1: (
                 <a
@@ -242,20 +242,20 @@ const MeetingsSettingsMain = () => {
         <>
           <SettingWrapper
             disabled={!settings.enabled}
-            title={t['com.affine.settings.meetings.record.header']()}
+            title={t['com.cloud-notes.settings.meetings.record.header']()}
           >
             <SettingRow
-              name={t['com.affine.settings.meetings.record.recording-mode']()}
+              name={t['com.cloud-notes.settings.meetings.record.recording-mode']()}
               desc={t[
-                'com.affine.settings.meetings.record.recording-mode.description'
+                'com.cloud-notes.settings.meetings.record.recording-mode.description'
               ]()}
             >
               <RecordingModeMenu />
             </SettingRow>
             <SettingRow
-              name={t['com.affine.settings.meetings.record.open-saved-file']()}
+              name={t['com.cloud-notes.settings.meetings.record.open-saved-file']()}
               desc={t[
-                'com.affine.settings.meetings.record.open-saved-file.description'
+                'com.cloud-notes.settings.meetings.record.open-saved-file.description'
               ]()}
             >
               <IconButton
@@ -266,14 +266,14 @@ const MeetingsSettingsMain = () => {
           </SettingWrapper>
           <SettingWrapper
             disabled={!settings.enabled}
-            title={t['com.affine.settings.meetings.transcription.header']()}
+            title={t['com.cloud-notes.settings.meetings.transcription.header']()}
           >
             <SettingRow
               name={t[
-                'com.affine.settings.meetings.transcription.auto-summary'
+                'com.cloud-notes.settings.meetings.transcription.auto-summary'
               ]()}
               desc={t[
-                'com.affine.settings.meetings.transcription.auto-summary.description'
+                'com.cloud-notes.settings.meetings.transcription.auto-summary.description'
               ]()}
             >
               <Switch
@@ -283,9 +283,9 @@ const MeetingsSettingsMain = () => {
               />
             </SettingRow>
             <SettingRow
-              name={t['com.affine.settings.meetings.transcription.auto-todo']()}
+              name={t['com.cloud-notes.settings.meetings.transcription.auto-todo']()}
               desc={t[
-                'com.affine.settings.meetings.transcription.auto-todo.description'
+                'com.cloud-notes.settings.meetings.transcription.auto-todo.description'
               ]()}
             >
               <Switch
@@ -297,21 +297,21 @@ const MeetingsSettingsMain = () => {
           </SettingWrapper>
           {environment.isMacOs && (
             <SettingWrapper
-              title={t['com.affine.settings.meetings.privacy.header']()}
+              title={t['com.cloud-notes.settings.meetings.privacy.header']()}
             >
               <PermissionSettingRow
-                nameKey="com.affine.settings.meetings.privacy.screen-system-audio-recording"
-                descriptionKey="com.affine.settings.meetings.privacy.screen-system-audio-recording.description"
-                permissionSettingKey="com.affine.settings.meetings.privacy.screen-system-audio-recording.permission-setting"
+                nameKey="com.cloud-notes.settings.meetings.privacy.screen-system-audio-recording"
+                descriptionKey="com.cloud-notes.settings.meetings.privacy.screen-system-audio-recording.description"
+                permissionSettingKey="com.cloud-notes.settings.meetings.privacy.screen-system-audio-recording.permission-setting"
                 hasPermission={permissions?.screen || false}
                 onOpenPermissionSetting={() =>
                   handleOpenPermissionSetting('screen')
                 }
               />
               <PermissionSettingRow
-                nameKey="com.affine.settings.meetings.privacy.microphone"
-                descriptionKey="com.affine.settings.meetings.privacy.microphone.description"
-                permissionSettingKey="com.affine.settings.meetings.privacy.microphone.permission-setting"
+                nameKey="com.cloud-notes.settings.meetings.privacy.microphone"
+                descriptionKey="com.cloud-notes.settings.meetings.privacy.microphone.description"
+                permissionSettingKey="com.cloud-notes.settings.meetings.privacy.microphone.permission-setting"
                 hasPermission={permissions?.microphone || false}
                 onOpenPermissionSetting={() =>
                   handleOpenPermissionSetting('microphone')
@@ -322,13 +322,13 @@ const MeetingsSettingsMain = () => {
 
           <SettingWrapper>
             <SettingRow
-              name={t['com.affine.settings.meetings.privacy.issues']()}
+              name={t['com.cloud-notes.settings.meetings.privacy.issues']()}
               desc={t[
-                'com.affine.settings.meetings.privacy.issues.description'
+                'com.cloud-notes.settings.meetings.privacy.issues.description'
               ]()}
             >
               <Button onClick={handleRestartApp}>
-                {t['com.affine.settings.meetings.privacy.issues.restart']()}
+                {t['com.cloud-notes.settings.meetings.privacy.issues.restart']()}
               </Button>
             </SettingRow>
           </SettingWrapper>

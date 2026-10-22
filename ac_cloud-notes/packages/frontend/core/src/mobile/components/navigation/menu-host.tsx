@@ -1,6 +1,6 @@
-import { MobileMenu } from '@affine/component';
-import type { NodeOperation } from '@affine/core/desktop/components/navigation-panel';
-import { WorkbenchService } from '@affine/core/modules/workbench';
+import { MobileMenu } from '@cloud-notes/component';
+import type { NodeOperation } from '@cloud-notes/core/desktop/components/navigation-panel';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { useLiveData, useService } from '@toeverything/infra';
 import {
   createContext,

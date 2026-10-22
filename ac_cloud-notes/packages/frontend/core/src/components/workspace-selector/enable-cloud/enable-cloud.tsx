@@ -1,4 +1,4 @@
-import type { Server } from '@affine/core/modules/cloud';
+import type { Server } from '@cloud-notes/core/modules/cloud';
 import { CloudWorkspaceIcon } from '@blocksuite/icons/rc';
 
 import { ServerSelector } from '../../server-selector';

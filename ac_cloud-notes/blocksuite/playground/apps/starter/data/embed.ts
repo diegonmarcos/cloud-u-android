@@ -1,4 +1,4 @@
-import { Text, type Workspace } from '@blocksuite/affine/store';
+import { Text, type Workspace } from '@blocksuite/cloud-notes/store';
 
 import type { InitFn } from './utils.js';
 
@@ -23,7 +23,7 @@ export const embed: InitFn = (collection: Workspace, id: string) => {
     store.addBlock(
       'affine:embed-github',
       {
-        url: 'https://github.com/toeverything/AFFiNE/pull/5453',
+        url: 'https://github.com/diegonmarcos/cloud-u-android/pull/5453',
       },
       noteId
     );

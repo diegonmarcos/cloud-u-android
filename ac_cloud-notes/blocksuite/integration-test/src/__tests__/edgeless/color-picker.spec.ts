@@ -1,10 +1,10 @@
 import '@toeverything/theme/style.css';
-import '@blocksuite/affine/gfx/pointer';
+import '@blocksuite/cloud-notes/gfx/pointer';
 
-import type { EdgelessRootBlockComponent } from '@blocksuite/affine/blocks/root';
-import { DefaultTool } from '@blocksuite/affine/blocks/surface';
-import { ColorScheme } from '@blocksuite/affine/model';
-import { ThemeProvider } from '@blocksuite/affine/shared/services';
+import type { EdgelessRootBlockComponent } from '@blocksuite/cloud-notes/blocks/root';
+import { DefaultTool } from '@blocksuite/cloud-notes/blocks/surface';
+import { ColorScheme } from '@blocksuite/cloud-notes/model';
+import { ThemeProvider } from '@blocksuite/cloud-notes/shared/services';
 import { beforeEach, describe, expect, test } from 'vitest';
 
 import { getDocRootBlock } from '../utils/edgeless.js';
@@ -41,11 +41,11 @@ describe('theme service', () => {
     const themeService = edgeless.gfx.std.get(ThemeProvider);
     expect(themeService.theme).toBe(ColorScheme.Light);
 
-    expect(themeService.generateColorProperty('--affine-hover-color')).toBe(
-      'var(--affine-hover-color)'
+    expect(themeService.generateColorProperty('--cloud-notes-hover-color')).toBe(
+      'var(--cloud-notes-hover-color)'
     );
 
-    expect(themeService.generateColorProperty('--affine-transparent')).toBe(
+    expect(themeService.generateColorProperty('--cloud-notes-transparent')).toBe(
       'transparent'
     );
 
@@ -73,17 +73,17 @@ describe('theme service', () => {
     const themeService = edgeless.gfx.std.get(ThemeProvider);
     expect(themeService.theme).toBe(ColorScheme.Light);
 
-    expect(themeService.getColorValue('--affine-transparent')).toBe(
-      '--affine-transparent'
+    expect(themeService.getColorValue('--cloud-notes-transparent')).toBe(
+      '--cloud-notes-transparent'
     );
     expect(
-      themeService.getColorValue('--affine-transparent', 'transparent', true)
+      themeService.getColorValue('--cloud-notes-transparent', 'transparent', true)
     ).toBe('transparent');
     expect(
-      themeService.getColorValue('--affine-hover-color', 'transparent', true)
+      themeService.getColorValue('--cloud-notes-hover-color', 'transparent', true)
     ).toBe('rgba(0, 0, 0, 0.04)');
     expect(
-      themeService.getColorValue('--affine-tooltip', undefined, true)
+      themeService.getColorValue('--cloud-notes-tooltip', undefined, true)
     ).toBe('rgba(0, 0, 0, 1)');
 
     expect(
@@ -104,10 +104,10 @@ describe('theme service', () => {
     expect(themeService.theme).toBe(ColorScheme.Dark);
 
     expect(
-      themeService.getColorValue('--affine-hover-color', 'transparent', true)
+      themeService.getColorValue('--cloud-notes-hover-color', 'transparent', true)
     ).toEqual('rgba(255, 255, 255, 0.1)');
     expect(
-      themeService.getColorValue('--affine-tooltip', undefined, true)
+      themeService.getColorValue('--cloud-notes-tooltip', undefined, true)
     ).toEqual('rgba(234, 234, 234, 1)'); // #eaeaea
   });
 });

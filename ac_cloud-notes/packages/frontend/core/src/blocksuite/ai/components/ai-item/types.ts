@@ -1,5 +1,5 @@
-import type { DocMode } from '@blocksuite/affine/model';
-import type { Chain, EditorHost, InitCommandCtx } from '@blocksuite/affine/std';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
+import type { Chain, EditorHost, InitCommandCtx } from '@blocksuite/cloud-notes/std';
 import type { TemplateResult } from 'lit';
 
 export interface AIItemGroupConfig {

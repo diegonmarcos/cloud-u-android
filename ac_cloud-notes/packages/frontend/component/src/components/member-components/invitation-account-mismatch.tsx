@@ -1,8 +1,8 @@
 import {
   AuthPageContainer,
   type User,
-} from '@affine/component/auth-components';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/auth-components';
+import { useI18n } from '@cloud-notes/i18n';
 
 import { Avatar } from '../../ui/avatar';
 import { Button } from '../../ui/button';
@@ -12,19 +12,19 @@ export const InvitationAccountMismatchPage = ({
   user,
   switchingAccount,
   onSwitchAccount,
-  onOpenAffine,
+  onOpenCloudNotes,
 }: {
   user: User | null;
   switchingAccount: boolean;
   onSwitchAccount: () => void;
-  onOpenAffine: () => void;
+  onOpenCloudNotes: () => void;
 }) => {
   const t = useI18n();
 
   return (
     <AuthPageContainer
-      title={t['com.affine.invitation.account-mismatch.title']()}
-      subtitle={t['com.affine.invitation.account-mismatch.description']()}
+      title={t['com.cloud-notes.invitation.account-mismatch.title']()}
+      subtitle={t['com.cloud-notes.invitation.account-mismatch.description']()}
     >
       {user ? (
         <div className={styles.currentAccount}>
@@ -41,10 +41,10 @@ export const InvitationAccountMismatchPage = ({
           onClick={onSwitchAccount}
           block
         >
-          {t['com.affine.invitation.account-mismatch.switch-account']()}
+          {t['com.cloud-notes.invitation.account-mismatch.switch-account']()}
         </Button>
-        <Button size="large" onClick={onOpenAffine} block>
-          {t['com.affine.invitation.account-mismatch.back-to-affine']()}
+        <Button size="large" onClick={onOpenCloudNotes} block>
+          {t['com.cloud-notes.invitation.account-mismatch.back-to-cloud-notes']()}
         </Button>
       </div>
     </AuthPageContainer>

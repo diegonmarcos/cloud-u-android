@@ -3,8 +3,8 @@ import {
   PropertyCollapsibleSection,
   PropertyName,
   PropertyRoot,
-} from '@affine/component';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { type ReactNode, useMemo } from 'react';
 
@@ -42,7 +42,7 @@ export const DocIntegrationPropertiesTable = ({
   return (
     <>
       <PropertyCollapsibleSection
-        title={t['com.affine.integration.properties']()}
+        title={t['com.cloud-notes.integration.properties']()}
       >
         <PropertyCollapsibleContent>
           {properties.map(property => {

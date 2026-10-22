@@ -2,7 +2,7 @@ import type {
   MindmapElementModel,
   MindmapNode,
   ShapeElementModel,
-} from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/model';
 import type { Page } from '@playwright/test';
 
 import { clickView } from './actions/click.js';
@@ -12,7 +12,7 @@ export async function createMindMap(page: Page, coords: [number, number]) {
   await clickView(page, coords);
 
   const id = await page.evaluate(() => {
-    const edgelessBlock = document.querySelector('affine-edgeless-root');
+    const edgelessBlock = document.querySelector('cloud-notes-edgeless-root');
     if (!edgelessBlock) {
       throw new Error('edgeless block not found');
     }
@@ -33,7 +33,7 @@ export async function getMindMapNode(
 ) {
   return page.evaluate(
     ({ mindmapId, pathOrId }) => {
-      const edgelessBlock = document.querySelector('affine-edgeless-root');
+      const edgelessBlock = document.querySelector('cloud-notes-edgeless-root');
       if (!edgelessBlock) {
         throw new Error('edgeless block not found');
       }
@@ -88,7 +88,7 @@ export async function addMindmapNodes(
 ) {
   return page.evaluate(
     ({ mindmapId, path, newNode }) => {
-      const edgelessBlock = document.querySelector('affine-edgeless-root');
+      const edgelessBlock = document.querySelector('cloud-notes-edgeless-root');
       if (!edgelessBlock) {
         throw new Error('edgeless block not found');
       }

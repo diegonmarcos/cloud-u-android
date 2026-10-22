@@ -1,4 +1,4 @@
-import type { Package } from '@affine-tools/utils/workspace';
+import type { Package } from '@cloud-notes-tools/utils/workspace';
 
 import { PackageToDistribution } from './distribution';
 
@@ -41,14 +41,14 @@ export function getBuildConfig(
 
         appBuildType: 'stable' as const,
         appVersion: pkg.version,
-        // editorVersion: pkg.dependencies['@blocksuite/affine'],
+        // editorVersion: pkg.dependencies['@blocksuite/cloud-notes'],
         editorVersion: pkg.version,
-        githubUrl: 'https://github.com/toeverything/AFFiNE',
-        changelogUrl: 'https://affine.pro/what-is-new',
-        downloadUrl: 'https://affine.pro/download',
-        pricingUrl: 'https://affine.pro/pricing',
-        discordUrl: 'https://affine.pro/redirect/discord',
-        requestLicenseUrl: 'https://affine.pro/redirect/license',
+        githubUrl: 'https://github.com/diegonmarcos/cloud-u-android',
+        changelogUrl: 'https://notes.diegonmarcos.com/what-is-new',
+        downloadUrl: 'https://notes.diegonmarcos.com/download',
+        pricingUrl: 'https://notes.diegonmarcos.com/pricing',
+        discordUrl: 'https://notes.diegonmarcos.com/redirect/discord',
+        requestLicenseUrl: 'https://notes.diegonmarcos.com/redirect/license',
         imageProxyUrl: '/api/worker/image-proxy',
         linkPreviewUrl: '/api/worker/link-preview',
         SENTRY_DSN: process.env.SENTRY_DSN ?? '',
@@ -58,14 +58,14 @@ export function getBuildConfig(
       return {
         ...this.stable,
         appBuildType: 'beta' as const,
-        changelogUrl: 'https://github.com/toeverything/AFFiNE/releases',
+        changelogUrl: 'https://github.com/diegonmarcos/cloud-u-android/releases',
       };
     },
     get internal() {
       return {
         ...this.stable,
         appBuildType: 'internal' as const,
-        changelogUrl: 'https://github.com/toeverything/AFFiNE/releases',
+        changelogUrl: 'https://github.com/diegonmarcos/cloud-u-android/releases',
       };
     },
     // canary will be aggressive and enable all features
@@ -73,7 +73,7 @@ export function getBuildConfig(
       return {
         ...this.stable,
         appBuildType: 'canary' as const,
-        changelogUrl: 'https://github.com/toeverything/AFFiNE/releases',
+        changelogUrl: 'https://github.com/diegonmarcos/cloud-u-android/releases',
       };
     },
   };

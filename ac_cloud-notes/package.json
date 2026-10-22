@@ -1,5 +1,5 @@
 {
-  "name": "@affine/monorepo",
+  "name": "@cloud-notes/monorepo",
   "version": "0.27.5",
   "private": true,
   "author": "toeverything",
@@ -18,10 +18,10 @@
     "node": ">=22.12.0 <23.0.0"
   },
   "scripts": {
-    "affine": "r affine.ts",
-    "af": "r affine.ts",
-    "dev": "yarn affine dev",
-    "build": "yarn affine build",
+    "cloud-notes": "r cloud-notes.ts",
+    "af": "r cloud-notes.ts",
+    "dev": "yarn cloud-notes dev",
+    "build": "yarn cloud-notes build",
     "lint:format": "oxfmt --check .",
     "lint:format:fix": "oxfmt --write .",
     "lint:ox": "oxlint --deny-warnings",
@@ -32,7 +32,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -b tsconfig.json --verbose",
-    "postinstall": "yarn affine init && yarn husky"
+    "postinstall": "yarn cloud-notes init && yarn husky"
   },
   "lint-staged": {
     "*": "oxfmt --write --no-error-on-unmatched-pattern",
@@ -94,7 +94,7 @@
     }
   },
   "devDependencies": {
-    "@affine-tools/cli": "workspace:*",
+    "@cloud-notes-tools/cli": "workspace:*",
     "@capacitor/cli": "^8.4.2",
     "@faker-js/faker": "^10.1.0",
     "@istanbuljs/schema": "^0.1.3",

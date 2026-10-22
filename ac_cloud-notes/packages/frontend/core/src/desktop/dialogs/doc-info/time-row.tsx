@@ -1,6 +1,6 @@
-import { PropertyName, PropertyRoot, PropertyValue } from '@affine/component';
-import { DocsService } from '@affine/core/modules/doc';
-import { i18nTime, useI18n } from '@affine/i18n';
+import { PropertyName, PropertyRoot, PropertyValue } from '@cloud-notes/component';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { i18nTime, useI18n } from '@cloud-notes/i18n';
 import { DateTimeIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';

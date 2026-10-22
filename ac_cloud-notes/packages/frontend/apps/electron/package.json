@@ -1,15 +1,15 @@
 {
-  "name": "@affine/electron",
+  "name": "@cloud-notes/electron",
   "private": true,
   "version": "0.27.5",
   "main": "./dist/main.js",
   "author": "toeverything",
   "repository": {
-    "url": "https://github.com/toeverything/AFFiNE",
+    "url": "https://github.com/diegonmarcos/cloud-u-android",
     "type": "git"
   },
-  "description": "AFFiNE Desktop App",
-  "homepage": "https://github.com/toeverything/AFFiNE",
+  "description": "Cloud Notes Desktop App",
+  "homepage": "https://github.com/diegonmarcos/cloud-u-android",
   "exports": {
     "./helper/exposed": "./src/helper/exposed.ts",
     "./main/exposed": "./src/main/exposed.ts",
@@ -33,11 +33,11 @@
     "make-nsis": "node ./scripts/make-nsis.ts"
   },
   "devDependencies": {
-    "@affine-tools/utils": "workspace:*",
-    "@affine/auth": "workspace:*",
-    "@affine/i18n": "workspace:*",
-    "@affine/native": "workspace:*",
-    "@affine/nbstore": "workspace:*",
+    "@cloud-notes-tools/utils": "workspace:*",
+    "@cloud-notes/auth": "workspace:*",
+    "@cloud-notes/i18n": "workspace:*",
+    "@cloud-notes/native": "workspace:*",
+    "@cloud-notes/nbstore": "workspace:*",
     "@electron-forge/cli": "^7.11.1",
     "@electron-forge/core": "^7.11.1",
     "@electron-forge/maker-deb": "^7.11.1",
@@ -85,9 +85,9 @@
   "build": {
     "protocols": [
       {
-        "name": "affine",
+        "name": "cloud-notes",
         "schemes": [
-          "affine"
+          "cloud-notes"
         ]
       }
     ]

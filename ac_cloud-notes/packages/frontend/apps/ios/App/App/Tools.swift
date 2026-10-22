@@ -1,6 +1,6 @@
 //
 //  Tools.swift
-//  AFFiNE
+//  Cloud Notes
 //
 //  Created by qaq on 9/18/25.
 //
@@ -148,7 +148,7 @@ enum PaywallAuthGuard {
     throw NSError(
       domain: "PaywallAuthGuard",
       code: -1,
-      userInfo: [NSLocalizedDescriptionKey: String(localized: "AFFiNE is still loading. Please wait a moment and try again.")]
+      userInfo: [NSLocalizedDescriptionKey: String(localized: "Cloud Notes is still loading. Please wait a moment and try again.")]
     )
   }
 

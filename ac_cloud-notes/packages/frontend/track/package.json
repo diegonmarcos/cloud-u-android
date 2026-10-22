@@ -1,5 +1,5 @@
 {
-  "name": "@affine/track",
+  "name": "@cloud-notes/track",
   "type": "module",
   "private": true,
   "version": "0.27.5",
@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@affine/debug": "workspace:*",
+    "@cloud-notes/debug": "workspace:*",
     "@sentry/react": "^10.53.1",
     "nanoid": "^5.1.6",
     "react": "^19.2.1",

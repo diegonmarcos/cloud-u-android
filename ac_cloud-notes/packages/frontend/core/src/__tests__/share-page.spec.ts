@@ -1,8 +1,8 @@
 // @vitest-environment happy-dom
 
-import { UserFriendlyError } from '@affine/error';
-import type * as AffineI18n from '@affine/i18n';
-import type { WorkerInitOptions } from '@affine/nbstore/worker/client';
+import { UserFriendlyError } from '@cloud-notes/error';
+import type * as CloudNotesI18n from '@cloud-notes/i18n';
+import type { WorkerInitOptions } from '@cloud-notes/nbstore/worker/client';
 import { act, render, waitFor } from '@testing-library/react';
 import type * as Infra from '@toeverything/infra';
 import { createElement } from 'react';
@@ -24,23 +24,23 @@ const sharePageMocks = vi.hoisted(() => ({
   services: new Map<string, unknown>(),
 }));
 
-vi.mock('@affine/core/desktop/components/app-container', () => ({
+vi.mock('@cloud-notes/core/desktop/components/app-container', () => ({
   AppContainer: ({ children }: { children: unknown }) => children,
 }));
 
-vi.mock('@affine/core/components/hooks/use-block-suite-editor', () => ({
+vi.mock('@cloud-notes/core/components/hooks/use-block-suite-editor', () => ({
   useActiveBlocksuiteEditor: () => [null, vi.fn()],
 }));
 
-vi.mock('@affine/core/components/hooks/use-navigate-helper', () => ({
+vi.mock('@cloud-notes/core/components/hooks/use-navigate-helper', () => ({
   useNavigateHelper: () => ({
     jumpToPageBlock: vi.fn(),
     openPage: vi.fn(),
   }),
 }));
 
-vi.mock('@affine/i18n', async importOriginal => ({
-  ...(await importOriginal<typeof AffineI18n>()),
+vi.mock('@cloud-notes/i18n', async importOriginal => ({
+  ...(await importOriginal<typeof CloudNotesI18n>()),
   useI18n: () => new Proxy({}, { get: () => () => '' }),
 }));
 
@@ -93,7 +93,7 @@ describe('fetchSharedPublishMode', () => {
 
     await expect(
       fetchSharedPublishMode({
-        serverBaseUrl: 'https://app.affine.pro',
+        serverBaseUrl: 'https://notes.diegonmarcos.com',
         workspaceId: 'workspace-id',
         docId: 'doc-id',
       })
@@ -102,7 +102,7 @@ describe('fetchSharedPublishMode', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       new URL(
         '/api/workspaces/workspace-id/public-docs/doc-id',
-        'https://app.affine.pro'
+        'https://notes.diegonmarcos.com'
       ),
       expect.objectContaining({ method: 'HEAD' })
     );
@@ -120,7 +120,7 @@ describe('fetchSharedPublishMode', () => {
 
     await expect(
       fetchSharedPublishMode({
-        serverBaseUrl: 'https://app.affine.pro',
+        serverBaseUrl: 'https://notes.diegonmarcos.com',
         workspaceId: 'workspace-id',
         docId: 'doc-id',
       })
@@ -214,7 +214,7 @@ describe('share workspace lifecycle', () => {
         })
       );
       sharePageMocks.services.set('ServerService', {
-        server: { baseUrl: 'https://app.affine.pro' },
+        server: { baseUrl: 'https://notes.diegonmarcos.com' },
       });
       sharePageMocks.services.set('WorkspacesService', { open });
 
@@ -267,7 +267,7 @@ describe('share workspace lifecycle', () => {
           "local": {
             "name": "IndexedDBBlobStorage",
             "opts": {
-              "flavour": "affine-cloud",
+              "flavour": "cloud-notes-cloud",
               "id": "workspace-id",
               "type": "workspace",
             },
@@ -276,7 +276,7 @@ describe('share workspace lifecycle', () => {
             "name": "CloudBlobStorage",
             "opts": {
               "id": "workspace-id",
-              "serverBaseUrl": "https://app.affine.pro",
+              "serverBaseUrl": "https://notes.diegonmarcos.com",
             },
           },
         },

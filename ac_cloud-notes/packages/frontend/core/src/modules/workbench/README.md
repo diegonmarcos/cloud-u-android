@@ -15,7 +15,7 @@
  └───────────────────────────────┴──────┘
 ```
 
-`Workbench` is the window manager in affine, including the main area and the right sidebar area.
+`Workbench` is the window manager in cloud-notes, including the main area and the right sidebar area.
 
 `View` is a managed window under the workbench. Each view has its own history(Support go back and forward) and currently URL.
 The view renders the content as defined by the router ([here](../../router.tsx)).

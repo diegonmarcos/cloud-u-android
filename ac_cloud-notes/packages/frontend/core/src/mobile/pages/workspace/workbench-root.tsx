@@ -1,9 +1,9 @@
 import {
   useBindWorkbenchToBrowserRouter,
   WorkbenchService,
-} from '@affine/core/modules/workbench';
-import { ViewRoot } from '@affine/core/modules/workbench/view/view-root';
-import { WorkspaceService } from '@affine/core/modules/workspace';
+} from '@cloud-notes/core/modules/workbench';
+import { ViewRoot } from '@cloud-notes/core/modules/workbench/view/view-root';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
 import { FrameworkScope, useLiveData, useService } from '@toeverything/infra';
 import {
   type PropsWithChildren,
@@ -28,7 +28,7 @@ const Activity = Reflect.get(React, 'Activity') as React.ComponentType<
 
 declare global {
   interface WindowEventMap {
-    'affine:memory-pressure': Event;
+    'cloud-notes:memory-pressure': Event;
   }
 }
 
@@ -140,8 +140,8 @@ export const MobileWorkbenchRoot = ({ routes }: { routes: RouteObject[] }) => {
     const evict = () => {
       if (!isHome) setHomeCache({ workspaceId, cached: false });
     };
-    window.addEventListener('affine:memory-pressure', evict);
-    return () => window.removeEventListener('affine:memory-pressure', evict);
+    window.addEventListener('cloud-notes:memory-pressure', evict);
+    return () => window.removeEventListener('cloud-notes:memory-pressure', evict);
   }, [isHome, workspaceId]);
 
   const root = (

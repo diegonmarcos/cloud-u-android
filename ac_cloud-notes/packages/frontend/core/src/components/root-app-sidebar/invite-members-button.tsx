@@ -1,7 +1,7 @@
-import { MenuItem } from '@affine/core/modules/app-sidebar/views';
-import { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+import { MenuItem } from '@cloud-notes/core/modules/app-sidebar/views';
+import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { CollaborationIcon } from '@blocksuite/icons/rc';
 import { useService } from '@toeverything/infra';
 import { useCallback } from 'react';

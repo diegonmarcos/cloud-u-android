@@ -4,13 +4,13 @@ import {
   DragHandle as DragHandleIcon,
   Tooltip,
   useDraggable,
-} from '@affine/component';
-import { DocsService } from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { WorkbenchLink } from '@affine/core/modules/workbench';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
+} from '@cloud-notes/component';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { WorkbenchLink } from '@cloud-notes/core/modules/workbench';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import {
   AutoTidyUpIcon,
   PropertyIcon,
@@ -148,7 +148,7 @@ export const DocListItem = ({ ...props }: DocListItemProps) => {
     [contextValue, handleMultiSelect, prevCheckAnchorId, props, selectMode]
   );
 
-  const { dragRef, CustomDragPreview } = useDraggable<AffineDNDData>(
+  const { dragRef, CustomDragPreview } = useDraggable<CloudNotesDNDData>(
     () => ({
       canDrag: true,
       data: {

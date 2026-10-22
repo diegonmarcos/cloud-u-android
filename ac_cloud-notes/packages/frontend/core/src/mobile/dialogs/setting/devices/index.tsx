@@ -1,9 +1,9 @@
-import { notify } from '@affine/component';
+import { notify } from '@cloud-notes/component';
 import {
   AuthService,
   type DeviceAuthSession,
-} from '@affine/core/modules/cloud';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/cloud';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -31,7 +31,7 @@ export const DevicesGroup = () => {
       .catch(error => {
         const toastId = notify.error(
           {
-            title: t['com.affine.settings.devices.load-failed'](),
+            title: t['com.cloud-notes.settings.devices.load-failed'](),
             message: String(error),
           },
           { id: loadFailedToastId, duration: 5000 }
@@ -57,7 +57,7 @@ export const DevicesGroup = () => {
     async (session: DeviceAuthSession) => {
       if (
         !window.confirm(
-          t['com.affine.settings.devices.confirm']({
+          t['com.cloud-notes.settings.devices.confirm']({
             device: session.deviceName ?? session.platform,
           })
         )
@@ -69,7 +69,7 @@ export const DevicesGroup = () => {
         if (!session.current) reload();
       } catch (error) {
         notify.error({
-          title: t['com.affine.settings.devices.sign-out-failed'](),
+          title: t['com.cloud-notes.settings.devices.sign-out-failed'](),
           message: String(error),
         });
       }
@@ -82,15 +82,15 @@ export const DevicesGroup = () => {
   }
 
   return (
-    <SettingGroup title={t['com.affine.settings.devices.title']()}>
+    <SettingGroup title={t['com.cloud-notes.settings.devices.title']()}>
       {sessions.map(session => (
         <RowLayout
           key={session.id}
           label={
             <div>
-              <div>{`${session.deviceName ?? session.platform}${session.current ? ` (${t['com.affine.settings.devices.current']()})` : ''}`}</div>
+              <div>{`${session.deviceName ?? session.platform}${session.current ? ` (${t['com.cloud-notes.settings.devices.current']()})` : ''}`}</div>
               <div>
-                {t['com.affine.settings.devices.last-used']({
+                {t['com.cloud-notes.settings.devices.last-used']({
                   time: new Date(session.lastSeenAt).toLocaleString(),
                 })}
               </div>
@@ -98,19 +98,19 @@ export const DevicesGroup = () => {
           }
           onClick={() => void revoke(session)}
         >
-          {t['com.affine.settings.devices.sign-out']()}
+          {t['com.cloud-notes.settings.devices.sign-out']()}
         </RowLayout>
       ))}
       {sessions.length > 1 ? (
         <RowLayout
-          label={t['com.affine.settings.devices.sign-out-all']()}
+          label={t['com.cloud-notes.settings.devices.sign-out-all']()}
           onClick={() => {
             if (
-              window.confirm(t['com.affine.settings.devices.confirm-all']())
+              window.confirm(t['com.cloud-notes.settings.devices.confirm-all']())
             ) {
               void auth.revokeAllDeviceSessions().catch(error => {
                 notify.error({
-                  title: t['com.affine.settings.devices.sign-out-all-failed'](),
+                  title: t['com.cloud-notes.settings.devices.sign-out-all-failed'](),
                   message: String(error),
                 });
               });

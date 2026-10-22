@@ -1,7 +1,7 @@
-import { Skeleton } from '@affine/component';
-import { AttachmentViewerView } from '@affine/core/blocksuite/attachment-viewer';
-import { type Doc, DocsService } from '@affine/core/modules/doc';
-import { type AttachmentBlockModel } from '@blocksuite/affine/model';
+import { Skeleton } from '@cloud-notes/component';
+import { AttachmentViewerView } from '@cloud-notes/core/blocksuite/attachment-viewer';
+import { type Doc, DocsService } from '@cloud-notes/core/modules/doc';
+import { type AttachmentBlockModel } from '@blocksuite/cloud-notes/model';
 import { FrameworkScope, useLiveData, useService } from '@toeverything/infra';
 import { type ReactElement, useLayoutEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';

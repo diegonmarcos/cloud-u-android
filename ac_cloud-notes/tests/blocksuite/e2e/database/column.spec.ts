@@ -92,7 +92,7 @@ test.describe('column operations', () => {
     await selectAllByKeyboard(page);
     await type(page, '2');
     await pressEnter(page);
-    const columns = page.locator('.affine-database-column');
+    const columns = page.locator('.cloud-notes-database-column');
     expect(await columns.count()).toBe(3);
 
     await assertDatabaseColumnOrder(page, ['1', '2']);
@@ -108,7 +108,7 @@ test.describe('column operations', () => {
     await selectAllByKeyboard(page);
     await type(page, '2');
     await pressEnter(page);
-    const columns = page.locator('.affine-database-column');
+    const columns = page.locator('.cloud-notes-database-column');
     expect(await columns.count()).toBe(3);
 
     await assertDatabaseColumnOrder(page, ['2', '1']);
@@ -120,7 +120,7 @@ test.describe('column operations', () => {
 
     await initDatabaseColumn(page, '1');
 
-    const columns = page.locator('.affine-database-column');
+    const columns = page.locator('.cloud-notes-database-column');
     expect(await columns.count()).toBe(2);
 
     await performColumnAction(page, '1', 'Delete');
@@ -136,7 +136,7 @@ test.describe('column operations', () => {
     await pressEscape(page);
     await performColumnAction(page, '1', 'duplicate');
     await pressEscape(page);
-    const cells = page.locator('affine-database-multi-select-cell');
+    const cells = page.locator('cloud-notes-database-multi-select-cell');
     expect(await cells.count()).toBe(2);
 
     const secondCell = cells.nth(1);
@@ -545,7 +545,7 @@ test.describe('select column tag action', () => {
     await assertSelectedStyle(
       page,
       'backgroundColor',
-      'var(--affine-v2-chip-label-red)'
+      'var(--cloud-notes-v2-chip-label-red)'
     );
   });
 });
@@ -613,7 +613,7 @@ test.describe('drag-to-fill', () => {
     await pressEscape(page);
     await pressArrowUp(page);
 
-    const cells = page.locator('affine-database-multi-select-cell');
+    const cells = page.locator('cloud-notes-database-multi-select-cell');
 
     expect(await cells.nth(0).innerText()).toBe('thing');
     expect(await cells.nth(1).innerText()).toBe('aaa');

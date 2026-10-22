@@ -13,7 +13,7 @@ describe('redirect allowlist', () => {
 
   test('allows trusted domains and subdomains', () => {
     expect(
-      isAllowedRedirectTarget('https://github.com/toeverything/AFFiNE', {
+      isAllowedRedirectTarget('https://github.com/diegonmarcos/cloud-u-android', {
         currentHostname: 'self.example.com',
       })
     ).toBe(true);
@@ -49,7 +49,7 @@ describe('redirect allowlist', () => {
     ).toBe(true);
 
     expect(
-      isAllowedRedirectTarget('https://affine.pro./', {
+      isAllowedRedirectTarget('https://notes.diegonmarcos.com./', {
         currentHostname: 'self.example.com',
       })
     ).toBe(true);

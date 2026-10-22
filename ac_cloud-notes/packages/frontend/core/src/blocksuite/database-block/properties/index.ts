@@ -1,4 +1,4 @@
-import type { PropertyMetaConfig } from '@blocksuite/affine/blocks/database';
+import type { PropertyMetaConfig } from '@blocksuite/cloud-notes/blocks/database';
 
 import { createdByPropertyConfig } from './created-by/view';
 import { filePropertyConfig } from './file/view';

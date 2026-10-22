@@ -1,5 +1,5 @@
-import type { Server } from '@affine/core/modules/cloud';
-import type { WorkspaceMetadata } from '@affine/core/modules/workspace';
+import type { Server } from '@cloud-notes/core/modules/cloud';
+import type { WorkspaceMetadata } from '@cloud-notes/core/modules/workspace';
 import { LinkIcon, WaveRectangleIcon } from '@blocksuite/icons/rc';
 import { useEffect, useRef, useState } from 'react';
 

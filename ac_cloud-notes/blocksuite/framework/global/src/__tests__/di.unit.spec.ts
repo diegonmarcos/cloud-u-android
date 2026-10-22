@@ -211,7 +211,7 @@ describe('di', () => {
     const editorScope = createScope('editor', pageScope);
 
     class System {
-      appName = 'affine';
+      appName = 'cloud-notes';
     }
 
     container.add(System);
@@ -243,18 +243,18 @@ describe('di', () => {
     container.scope(editorScope).add(Editor, [Page]);
 
     const root = container.provider();
-    expect(root.get(System).appName).toEqual('affine');
+    expect(root.get(System).appName).toEqual('cloud-notes');
     expect(() => root.get(Workspace)).toThrowError(ServiceNotFoundError);
 
     const workspace = container.provider(workspaceScope, root);
     expect(workspace.get(Workspace).name).toEqual('workspace');
-    expect(workspace.get(System).appName).toEqual('affine');
+    expect(workspace.get(System).appName).toEqual('cloud-notes');
     expect(() => root.get(Page)).toThrowError(ServiceNotFoundError);
 
     const page = container.provider(pageScope, workspace);
     expect(page.get(Page).name).toEqual('page');
     expect(page.get(Workspace).name).toEqual('workspace');
-    expect(page.get(System).appName).toEqual('affine');
+    expect(page.get(System).appName).toEqual('cloud-notes');
 
     const editor = container.provider(editorScope, page);
     expect(editor.get(Editor).name).toEqual('editor');

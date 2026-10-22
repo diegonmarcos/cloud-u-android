@@ -1,4 +1,4 @@
-import { I18nextProvider } from '@affine/i18n';
+import { I18nextProvider } from '@cloud-notes/i18n';
 import { useService } from '@toeverything/infra';
 import { type PropsWithChildren, useEffect } from 'react';
 

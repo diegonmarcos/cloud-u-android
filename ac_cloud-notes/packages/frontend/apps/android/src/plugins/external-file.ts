@@ -43,7 +43,7 @@ export type ExternalFilePluginType = {
   openSettings(): Promise<void>;
 };
 
-// Wired to app.affine.pro.plugin.ExternalFilePlugin on Android. Every failure
+// Wired to app.cloudnotes.pro.plugin.ExternalFilePlugin on Android. Every failure
 // resolves to REJECT with a code AND a human message — nothing here returns an
 // empty box (ticket #469 requirement).
 export const ExternalFile = registerPlugin<ExternalFilePluginType>('ExternalFile');

@@ -1,9 +1,9 @@
-import { Menu, MenuItem, MenuTrigger } from '@affine/component';
+import { Menu, MenuItem, MenuTrigger } from '@cloud-notes/component';
 import {
   OpenInAppService,
   OpenLinkMode,
-} from '@affine/core/modules/open-in-app';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/open-in-app';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useMemo } from 'react';
 
@@ -18,8 +18,8 @@ export const OpenInAppLinksMenu = () => {
     () =>
       Object.values(OpenLinkMode).map(mode => ({
         label:
-          t.t(`com.affine.setting.appearance.open-in-app.${mode}`) ||
-          `com.affine.setting.appearance.open-in-app.${mode}`,
+          t.t(`com.cloud-notes.setting.appearance.open-in-app.${mode}`) ||
+          `com.cloud-notes.setting.appearance.open-in-app.${mode}`,
         value: mode,
       })),
     [t]

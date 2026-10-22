@@ -1,4 +1,4 @@
-import { Path } from '@affine-tools/utils/path';
+import { Path } from '@cloud-notes-tools/utils/path';
 import type { Page } from '@playwright/test';
 
 export async function importImage(page: Page, pathInFixtures: string) {

@@ -1,16 +1,16 @@
-import { DebugLogger } from '@affine/debug';
+import { DebugLogger } from '@cloud-notes/debug';
 import type {
   RealtimeTopicEventOf,
   WorkspaceConfigSnapshot,
   WorkspaceInviteLinkSnapshot,
-} from '@affine/realtime';
+} from '@cloud-notes/realtime';
 import { Entity, LiveData } from '@toeverything/infra';
 
 import { RealtimeLiveQuery } from '../../cloud/realtime/live-query';
 import type { WorkspaceService } from '../../workspace';
 import type { WorkspaceShareSettingStore } from '../stores/share-setting';
 
-const logger = new DebugLogger('affine:workspace-permission');
+const logger = new DebugLogger('cloud-notes:workspace-permission');
 type InviteLink = WorkspaceInviteLinkSnapshot;
 
 export class WorkspaceShareSetting extends Entity {

@@ -1,6 +1,6 @@
 # Android
 
-AFFiNE Android app.
+Cloud Notes Android app.
 
 ## Setup
 
@@ -16,6 +16,6 @@ AFFiNE Android app.
 ## Build
 
 - yarn install
-- BUILD_TYPE=canary PUBLIC_PATH="/" yarn affine @affine/android build
-- yarn affine @affine/android cap sync
-- yarn affine @affine/android cap open android
+- BUILD_TYPE=canary PUBLIC_PATH="/" yarn cloud-notes @cloud-notes/android build
+- yarn cloud-notes @cloud-notes/android cap sync
+- yarn cloud-notes @cloud-notes/android cap open android

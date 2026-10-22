@@ -36,7 +36,7 @@ test('click outside should close language list', async ({ page }) => {
   const locator = codeBlock.langList;
   await expect(locator).toBeVisible();
 
-  const rect = await page.locator('affine-filterable-list').boundingBox();
+  const rect = await page.locator('cloud-notes-filterable-list').boundingBox();
   if (!rect) throw new Error('Failed to get bounding box of code block.');
   await page.mouse.click(rect.x - 10, rect.y - 10);
 
@@ -93,7 +93,7 @@ test('drag select code block can delete it with backspace', async ({
   await initEmptyCodeBlockState(page);
   await focusRichText(page);
 
-  const codeBlock = page.locator('affine-code');
+  const codeBlock = page.locator('cloud-notes-code');
   const bbox = await codeBlock.boundingBox();
   if (!bbox) {
     throw new Error("Failed to get code block's bounding box");
@@ -112,7 +112,7 @@ test('drag select code block can delete it with backspace', async ({
   );
   await page.waitForTimeout(10);
   await page.keyboard.press('Backspace');
-  const locator = page.locator('affine-code');
+  const locator = page.locator('cloud-notes-code');
   await expect(locator).toBeHidden();
 });
 
@@ -123,7 +123,7 @@ test('drag select code block can delete it with delete key', async ({
   await initEmptyCodeBlockState(page);
   await focusRichText(page);
 
-  const codeBlock = page.locator('affine-code');
+  const codeBlock = page.locator('cloud-notes-code');
   const bbox = await codeBlock.boundingBox();
   if (!bbox) {
     throw new Error("Failed to get code block's bounding box");
@@ -142,7 +142,7 @@ test('drag select code block can delete it with delete key', async ({
   );
   await page.waitForTimeout(10);
   await page.keyboard.press('Delete');
-  const locator = page.locator('affine-code');
+  const locator = page.locator('cloud-notes-code');
   await expect(locator).toBeHidden();
 });
 
@@ -155,7 +155,7 @@ test('press short key and enter at end of code block can jump out', async ({
 
   await pressEnterWithShortkey(page);
 
-  const locator = page.locator('affine-paragraph');
+  const locator = page.locator('cloud-notes-paragraph');
   await expect(locator).toBeVisible();
 });
 
@@ -169,7 +169,7 @@ test('press short key and enter at end of code block with content can jump out',
   await type(page, 'const a = 10;');
   await pressEnterWithShortkey(page);
 
-  const locator = page.locator('affine-paragraph');
+  const locator = page.locator('cloud-notes-paragraph');
   await expect(locator).toBeVisible();
 });
 
@@ -177,9 +177,9 @@ test('press backspace inside should select code block', async ({ page }) => {
   await enterPlaygroundRoom(page);
   await initEmptyCodeBlockState(page);
   await focusRichText(page);
-  const codeBlock = page.locator('affine-code');
+  const codeBlock = page.locator('cloud-notes-code');
   const selectedRects = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await page.keyboard.press('Backspace');
   await expect(selectedRects).toHaveCount(1);

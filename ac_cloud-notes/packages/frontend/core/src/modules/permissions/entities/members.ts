@@ -1,8 +1,8 @@
-import type { WorkspaceMemberStatus } from '@affine/graphql';
+import type { WorkspaceMemberStatus } from '@cloud-notes/graphql';
 import type {
   RealtimeTopicEventOf,
   WorkspaceMemberSnapshot,
-} from '@affine/realtime';
+} from '@cloud-notes/realtime';
 import { Entity, LiveData } from '@toeverything/infra';
 
 import { RealtimeLiveQuery } from '../../cloud/realtime/live-query';

@@ -1,11 +1,11 @@
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { getSelectedBlocksCommand } from '@blocksuite/affine/shared/commands';
-import type { CommentProvider } from '@blocksuite/affine/shared/services';
-import { CommentProviderIdentifier } from '@blocksuite/affine/shared/services';
-import type { BlockStdScope } from '@blocksuite/affine/std';
-import { StdIdentifier } from '@blocksuite/affine/std';
-import type { BaseSelection, ExtensionType } from '@blocksuite/affine/store';
-import { ImageSelection } from '@blocksuite/affine-shared/selection';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { getSelectedBlocksCommand } from '@blocksuite/cloud-notes/shared/commands';
+import type { CommentProvider } from '@blocksuite/cloud-notes/shared/services';
+import { CommentProviderIdentifier } from '@blocksuite/cloud-notes/shared/services';
+import type { BlockStdScope } from '@blocksuite/cloud-notes/std';
+import { StdIdentifier } from '@blocksuite/cloud-notes/std';
+import type { BaseSelection, ExtensionType } from '@blocksuite/cloud-notes/store';
+import { ImageSelection } from '@blocksuite/cloud-notes-shared/selection';
 import { type Container } from '@blocksuite/global/di';
 import {
   BlockSelection,
@@ -117,7 +117,7 @@ function extractTextFromSelection(
   }
 }
 
-class AffineCommentService implements CommentProvider {
+class CloudNotesCommentService implements CommentProvider {
   private readonly docCommentManager: DocCommentManagerService;
 
   constructor(
@@ -187,7 +187,7 @@ class AffineCommentService implements CommentProvider {
   }
 }
 
-export function AffineCommentProvider(
+export function CloudNotesCommentProvider(
   framework: FrameworkProvider
 ): ExtensionType {
   return {
@@ -195,7 +195,7 @@ export function AffineCommentProvider(
       di.addImpl(
         CommentProviderIdentifier,
         provider =>
-          new AffineCommentService(provider.get(StdIdentifier), framework)
+          new CloudNotesCommentService(provider.get(StdIdentifier), framework)
       );
     },
   };

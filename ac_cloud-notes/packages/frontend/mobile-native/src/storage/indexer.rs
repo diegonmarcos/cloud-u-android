@@ -1,4 +1,4 @@
-use affine_nbstore::indexer::{NativeIndexDocument, NativeIndexQuery, NativeIndexSearchOptions};
+use cloud_notes_nbstore::indexer::{NativeIndexDocument, NativeIndexQuery, NativeIndexSearchOptions};
 
 use super::*;
 

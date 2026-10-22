@@ -1,5 +1,5 @@
 {
-  "name": "@affine/mobile-shared",
+  "name": "@cloud-notes/mobile-shared",
   "version": "0.27.5",
   "type": "module",
   "private": true,
@@ -13,7 +13,7 @@
     "./nbstore/payload": "./src/nbstore/payload.ts"
   },
   "dependencies": {
-    "@affine/core": "workspace:*",
+    "@cloud-notes/core": "workspace:*",
     "@capacitor/core": "^8.4.2"
   },
   "devDependencies": {

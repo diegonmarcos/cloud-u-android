@@ -8,17 +8,17 @@ import {
   observeIntersection,
   Scrollable,
   Skeleton,
-} from '@affine/component';
-import { AuthService, InvitationService } from '@affine/core/modules/cloud';
-import { GlobalDialogService } from '@affine/core/modules/dialogs';
+} from '@cloud-notes/component';
+import { AuthService, InvitationService } from '@cloud-notes/core/modules/cloud';
+import { GlobalDialogService } from '@cloud-notes/core/modules/dialogs';
 import {
   type Notification,
   NotificationListService,
   NotificationType,
-} from '@affine/core/modules/notification';
-import { WorkspacesService } from '@affine/core/modules/workspace';
-import { extractEmojiIcon } from '@affine/core/utils';
-import { UserFriendlyError } from '@affine/error';
+} from '@cloud-notes/core/modules/notification';
+import { WorkspacesService } from '@cloud-notes/core/modules/workspace';
+import { extractEmojiIcon } from '@cloud-notes/core/utils';
+import { UserFriendlyError } from '@cloud-notes/error';
 import type {
   InvitationAcceptedNotificationBodyType,
   InvitationBlockedNotificationBodyType,
@@ -27,9 +27,9 @@ import type {
   InvitationReviewDeclinedNotificationBodyType,
   InvitationReviewRequestNotificationBodyType,
   MentionNotificationBodyType,
-} from '@affine/graphql';
-import { i18nTime, Trans, useI18n } from '@affine/i18n';
-import track from '@affine/track';
+} from '@cloud-notes/graphql';
+import { i18nTime, Trans, useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
 import {
   CollaborationIcon,
   DeleteIcon,
@@ -112,12 +112,12 @@ export const NotificationList = () => {
       data-mobile={BUILD_CONFIG.isMobileEdition ? '' : undefined}
     >
       <div className={styles.header}>
-        <span>{t['com.affine.rootAppSidebar.notifications']()}</span>
+        <span>{t['com.cloud-notes.rootAppSidebar.notifications']()}</span>
         {notifications.length > 0 && (
           <Menu
             items={
               <MenuItem prefixIcon={<DeleteIcon />} onClick={handleDeleteAll}>
-                <span>{t['com.affine.notification.delete-all']()}</span>
+                <span>{t['com.cloud-notes.notification.delete-all']()}</span>
               </MenuItem>
             }
           >
@@ -161,7 +161,7 @@ export const NotificationList = () => {
             className={showLoadingMore ? styles.loadMoreIndicator : ''}
           >
             {showLoadingMore
-              ? t['com.affine.notification.loading-more']()
+              ? t['com.cloud-notes.notification.loading-more']()
               : null}
           </div>
         </Scrollable.Viewport>
@@ -179,13 +179,13 @@ const NotificationSignIn = ({ onSignIn }: { onSignIn: () => void }) => {
         <NotificationIcon width={24} height={24} />
       </div>
       <div className={styles.listEmptyTitle}>
-        {t['com.affine.ai.login-required.dialog-title']()}
+        {t['com.cloud-notes.ai.login-required.dialog-title']()}
       </div>
       <div className={styles.listEmptyDescription}>
-        {t['com.affine.notification.empty.description']()}
+        {t['com.cloud-notes.notification.empty.description']()}
       </div>
       <Button variant="primary" onClick={onSignIn}>
-        {t['com.affine.ai.login-required.dialog-confirm']()}
+        {t['com.cloud-notes.ai.login-required.dialog-confirm']()}
       </Button>
     </div>
   );
@@ -234,10 +234,10 @@ const NotificationListEmpty = () => {
         <NotificationIcon width={24} height={24} />
       </div>
       <div className={styles.listEmptyTitle}>
-        {t['com.affine.notification.empty']()}
+        {t['com.cloud-notes.notification.empty']()}
       </div>
       <div className={styles.listEmptyDescription}>
-        {t['com.affine.notification.empty.description']()}
+        {t['com.cloud-notes.notification.empty.description']()}
       </div>
     </div>
   );
@@ -288,7 +288,7 @@ const NotificationItem = ({ notification }: { notification: Notification }) => {
     <div className={styles.itemContainer}>
       <Avatar size={22} />
       <div className={styles.itemNotSupported}>
-        {t['com.affine.notification.unsupported']()} ({type})
+        {t['com.cloud-notes.notification.unsupported']()} ({type})
       </div>
       <DeleteButton notification={notification} />
     </div>
@@ -336,7 +336,7 @@ const MentionNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.mention'}
+            i18nKey={'com.cloud-notes.notification.mention'}
             components={{
               1: (
                 <b
@@ -348,7 +348,7 @@ const MentionNotificationItem = ({
             }}
             values={{
               username:
-                body.createdByUser?.name ?? t['com.affine.inactive-member'](),
+                body.createdByUser?.name ?? t['com.cloud-notes.inactive-member'](),
               docTitle: body.doc.title || t['Untitled'](),
             }}
           />
@@ -399,7 +399,7 @@ const InvitationReviewRequestNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.invitation-review-request'}
+            i18nKey={'com.cloud-notes.notification.invitation-review-request'}
             components={{
               1: (
                 <b
@@ -411,9 +411,9 @@ const InvitationReviewRequestNotificationItem = ({
             }}
             values={{
               username:
-                body.createdByUser?.name ?? t['com.affine.inactive-member'](),
+                body.createdByUser?.name ?? t['com.cloud-notes.inactive-member'](),
               workspaceName:
-                body.workspace?.name ?? t['com.affine.inactive-workspace'](),
+                body.workspace?.name ?? t['com.cloud-notes.inactive-workspace'](),
             }}
           />
         </span>
@@ -449,7 +449,7 @@ const InvitationReviewDeclinedNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.invitation-review-declined'}
+            i18nKey={'com.cloud-notes.notification.invitation-review-declined'}
             components={{
               1: (
                 <b
@@ -461,9 +461,9 @@ const InvitationReviewDeclinedNotificationItem = ({
             }}
             values={{
               username:
-                body.createdByUser?.name ?? t['com.affine.inactive-member'](),
+                body.createdByUser?.name ?? t['com.cloud-notes.inactive-member'](),
               workspaceName:
-                body.workspace?.name ?? t['com.affine.inactive-workspace'](),
+                body.workspace?.name ?? t['com.cloud-notes.inactive-workspace'](),
             }}
           />
         </span>
@@ -516,7 +516,7 @@ const InvitationReviewApprovedNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.invitation-review-approved'}
+            i18nKey={'com.cloud-notes.notification.invitation-review-approved'}
             components={{
               1: (
                 <b
@@ -528,9 +528,9 @@ const InvitationReviewApprovedNotificationItem = ({
             }}
             values={{
               username:
-                body.createdByUser?.name ?? t['com.affine.inactive-member'](),
+                body.createdByUser?.name ?? t['com.cloud-notes.inactive-member'](),
               workspaceName:
-                body.workspace?.name ?? t['com.affine.inactive-workspace'](),
+                body.workspace?.name ?? t['com.cloud-notes.inactive-workspace'](),
             }}
           />
         </span>
@@ -541,7 +541,7 @@ const InvitationReviewApprovedNotificationItem = ({
             onClick={handleClick}
           >
             {t[
-              'com.affine.notification.invitation-review-approved.open-workspace'
+              'com.cloud-notes.notification.invitation-review-approved.open-workspace'
             ]()}
           </Button>
         )}
@@ -591,13 +591,13 @@ const InvitationAcceptedNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.invitation-accepted'}
+            i18nKey={'com.cloud-notes.notification.invitation-accepted'}
             components={{
               1: <WorkspaceNameWithIcon data-inactived={memberInactived} />,
             }}
             values={{
               username:
-                body.createdByUser?.name ?? t['com.affine.inactive-member'](),
+                body.createdByUser?.name ?? t['com.cloud-notes.inactive-member'](),
             }}
           />
         </span>
@@ -643,7 +643,7 @@ const InvitationBlockedNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.invitation-blocked'}
+            i18nKey={'com.cloud-notes.notification.invitation-blocked'}
             components={{
               1: (
                 <b
@@ -654,7 +654,7 @@ const InvitationBlockedNotificationItem = ({
             }}
             values={{
               workspaceName:
-                body.workspace?.name ?? t['com.affine.inactive-workspace'](),
+                body.workspace?.name ?? t['com.cloud-notes.inactive-workspace'](),
             }}
           />
         </span>
@@ -717,8 +717,8 @@ const InvitationNotificationItem = ({
         if (value === false) {
           // invite is expired
           notify.error({
-            title: t['com.affine.expired.page.title'](),
-            message: t['com.affine.expired.page.new-subtitle'](),
+            title: t['com.cloud-notes.expired.page.title'](),
+            message: t['com.cloud-notes.expired.page.new-subtitle'](),
           });
           notificationListService
             .readNotification(notification.id)
@@ -759,7 +759,7 @@ const InvitationNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.invitation'}
+            i18nKey={'com.cloud-notes.notification.invitation'}
             components={{
               1: (
                 <b
@@ -771,9 +771,9 @@ const InvitationNotificationItem = ({
             }}
             values={{
               username:
-                body.createdByUser?.name ?? t['com.affine.inactive-member'](),
+                body.createdByUser?.name ?? t['com.cloud-notes.inactive-member'](),
               workspaceName:
-                body.workspace?.name ?? t['com.affine.inactive-workspace'](),
+                body.workspace?.name ?? t['com.cloud-notes.inactive-workspace'](),
             }}
           />
         </span>
@@ -784,7 +784,7 @@ const InvitationNotificationItem = ({
             onClick={handleAcceptInvite}
             loading={isAccepting}
           >
-            {t['com.affine.notification.invitation.accept']()}
+            {t['com.cloud-notes.notification.invitation.accept']()}
           </Button>
         )}
         <div className={styles.itemDate}>
@@ -930,7 +930,7 @@ const CommentNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.comment'}
+            i18nKey={'com.cloud-notes.notification.comment'}
             components={{
               1: (
                 <b
@@ -942,7 +942,7 @@ const CommentNotificationItem = ({
             }}
             values={{
               username:
-                body.createdByUser?.name ?? t['com.affine.inactive-member'](),
+                body.createdByUser?.name ?? t['com.cloud-notes.inactive-member'](),
               docTitle: body.doc?.title || t['Untitled'](),
             }}
           />
@@ -1000,7 +1000,7 @@ const CommentMentionNotificationItem = ({
       <div className={styles.itemMain}>
         <span>
           <Trans
-            i18nKey={'com.affine.notification.comment-mention'}
+            i18nKey={'com.cloud-notes.notification.comment-mention'}
             components={{
               1: (
                 <b
@@ -1012,7 +1012,7 @@ const CommentMentionNotificationItem = ({
             }}
             values={{
               username:
-                body.createdByUser?.name ?? t['com.affine.inactive-member'](),
+                body.createdByUser?.name ?? t['com.cloud-notes.inactive-member'](),
               docTitle: body.doc?.title || t['Untitled'](),
             }}
           />

@@ -42,13 +42,13 @@ const enjson = JSON.parse(
 
 const keys = Object.keys(enjson).filter(
   // exceptions
-  key => !key.startsWith('com.affine.payment.modal.')
+  key => !key.startsWith('com.cloud-notes.payment.modal.')
 );
 
 const unusedKeys = keys.filter(key => {
   const regex1 = new RegExp(`[\`'"]${key.replace('.', '\\.')}[\`'"]`, 'g');
-  // some place use i18n key like `t[`com.affine.modal.${var}`]`
-  // com.affine.modal.confirm -> com.affine.modal.
+  // some place use i18n key like `t[`com.cloud-notes.modal.${var}`]`
+  // com.cloud-notes.modal.confirm -> com.cloud-notes.modal.
   const keyWithoutLastDot = key.replace(/(?<=\.)[^.]+$/, '');
   const regex2 = new RegExp(
     `[\`'"]${keyWithoutLastDot.replace('.', '\\.')}`,

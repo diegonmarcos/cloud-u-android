@@ -1,11 +1,11 @@
-import { CodeBlockPreviewIdentifier } from '@blocksuite/affine/blocks/code';
-import { addImages } from '@blocksuite/affine/blocks/image';
-import { getSurfaceBlock } from '@blocksuite/affine/blocks/surface';
-import { LoadingIcon } from '@blocksuite/affine/components/icons';
-import { addTree } from '@blocksuite/affine/gfx/mindmap';
-import { fitContent } from '@blocksuite/affine/gfx/shape';
-import { createTemplateJob } from '@blocksuite/affine/gfx/template';
-import { Bound } from '@blocksuite/affine/global/gfx';
+import { CodeBlockPreviewIdentifier } from '@blocksuite/cloud-notes/blocks/code';
+import { addImages } from '@blocksuite/cloud-notes/blocks/image';
+import { getSurfaceBlock } from '@blocksuite/cloud-notes/blocks/surface';
+import { LoadingIcon } from '@blocksuite/cloud-notes/components/icons';
+import { addTree } from '@blocksuite/cloud-notes/gfx/mindmap';
+import { fitContent } from '@blocksuite/cloud-notes/gfx/shape';
+import { createTemplateJob } from '@blocksuite/cloud-notes/gfx/template';
+import { Bound } from '@blocksuite/cloud-notes/global/gfx';
 import {
   EDGELESS_TEXT_BLOCK_MIN_HEIGHT,
   EDGELESS_TEXT_BLOCK_MIN_WIDTH,
@@ -14,15 +14,15 @@ import {
   type MindmapElementModel,
   NoteDisplayMode,
   type ShapeElementModel,
-} from '@blocksuite/affine/model';
-import { TelemetryProvider } from '@blocksuite/affine/shared/services';
-import type { EditorHost } from '@blocksuite/affine/std';
-import { GfxControllerIdentifier } from '@blocksuite/affine/std/gfx';
-import { Text } from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/model';
+import { TelemetryProvider } from '@blocksuite/cloud-notes/shared/services';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import { GfxControllerIdentifier } from '@blocksuite/cloud-notes/std/gfx';
+import { Text } from '@blocksuite/cloud-notes/store';
 import {
-  AFFINE_TOOLBAR_WIDGET,
-  type AffineToolbarWidget,
-} from '@blocksuite/affine/widgets/toolbar';
+  CLOUD_NOTES_TOOLBAR_WIDGET,
+  type CloudNotesToolbarWidget,
+} from '@blocksuite/cloud-notes/widgets/toolbar';
 import {
   ChatWithAiIcon,
   DeleteIcon,
@@ -47,26 +47,26 @@ import {
   getCopilotSelectedElems,
   getSurfaceElementFromEditor,
 } from '../utils/selection-utils';
-import type { AffineAIPanelWidget } from '../widgets/ai-panel/ai-panel';
+import type { CloudNotesAIPanelWidget } from '../widgets/ai-panel/ai-panel';
 import type { EdgelessCopilotWidget } from '../widgets/edgeless-copilot';
 import { EXCLUDING_INSERT_ACTIONS, generatingStages } from './consts';
 
 type FinishConfig = Exclude<
-  AffineAIPanelWidget['config'],
+  CloudNotesAIPanelWidget['config'],
   null
 >['finishStateConfig'];
 
 type ErrorConfig = Exclude<
-  AffineAIPanelWidget['config'],
+  CloudNotesAIPanelWidget['config'],
   null
 >['errorStateConfig'];
 
 export function getToolbar(host: EditorHost) {
   const rootBlockId = host.store.root?.id as string;
   const toolbar = host.view.getWidget(
-    AFFINE_TOOLBAR_WIDGET,
+    CLOUD_NOTES_TOOLBAR_WIDGET,
     rootBlockId
-  ) as AffineToolbarWidget;
+  ) as CloudNotesToolbarWidget;
 
   return toolbar.querySelector('editor-toolbar');
 }
@@ -78,7 +78,7 @@ export function getTriggerEntry(host: EditorHost) {
 }
 
 export function discard(
-  panel: AffineAIPanelWidget,
+  panel: CloudNotesAIPanelWidget,
   _: EdgelessCopilotWidget
 ): AIItemConfig {
   return {
@@ -92,7 +92,7 @@ export function discard(
   };
 }
 
-export function retry(panel: AffineAIPanelWidget): AIItemConfig {
+export function retry(panel: CloudNotesAIPanelWidget): AIItemConfig {
   return {
     name: 'Retry',
     icon: ResetIcon(),
@@ -721,7 +721,7 @@ export function actionToGenerating<T extends keyof BlockSuitePresets.AIActions>(
 export function actionToErrorResponse<
   T extends keyof BlockSuitePresets.AIActions,
 >(
-  panel: AffineAIPanelWidget,
+  panel: CloudNotesAIPanelWidget,
   id: T,
   host: EditorHost,
   ctx: AIContext,

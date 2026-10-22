@@ -5,7 +5,7 @@
 //  Created by 秋星桥 on 6/25/25.
 //
 
-import AffineGraphQL
+import CloudNotesGraphQL
 import Apollo
 import ApolloAPI
 import Foundation

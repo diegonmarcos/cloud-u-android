@@ -1,6 +1,6 @@
-import { Path } from '@affine-tools/utils/path';
-import { execAsync } from '@affine-tools/utils/process';
-import type { Package, PackageName } from '@affine-tools/utils/workspace';
+import { Path } from '@cloud-notes-tools/utils/path';
+import { execAsync } from '@cloud-notes-tools/utils/process';
+import type { Package, PackageName } from '@cloud-notes-tools/utils/workspace';
 
 import { Option, PackageCommand } from './command';
 
@@ -36,33 +36,33 @@ export class RunCommand extends PackageCommand {
   static override paths = [[], ['run'], ['r']];
 
   static override usage = PackageCommand.Usage({
-    description: 'AFFiNE Monorepo scripts',
+    description: 'Cloud Notes Monorepo scripts',
     details: `
-      \`affine web <script>\`    Run any script defined in package's package.json
+      \`cloud-notes web <script>\`    Run any script defined in package's package.json
 
-      \`affine init\`            Generate the required files if there are any package added or removed
+      \`cloud-notes init\`            Generate the required files if there are any package added or removed
 
-      \`affine clean\`           Clean the output files of ts, cargo, bundler outputs, etc.
+      \`cloud-notes clean\`           Clean the output files of ts, cargo, bundler outputs, etc.
 
-      \`affine bundle\`          Bundle the packages
+      \`cloud-notes bundle\`          Bundle the packages
 
-      \`affine build\`           A proxy for <-p package>'s \`build\` script
+      \`cloud-notes build\`           A proxy for <-p package>'s \`build\` script
 
-      \`affine dev\`             A proxy for <-p package>'s \`dev\` script
+      \`cloud-notes dev\`             A proxy for <-p package>'s \`dev\` script
     `,
     examples: [
       [`See detail of each command`, '$0 -h'],
       [
-        `Run custom 'xxx' script defined in @affine/web's package.json`,
+        `Run custom 'xxx' script defined in @cloud-notes/web's package.json`,
         '$0 web xxx',
       ],
       [`Run 'init' for workspace`, '$0 init'],
       [`Clean dist of each package`, '$0 clean --dist'],
       [`Clean node_modules under each package`, '$0 clean --node-modules'],
       [`Clean everything`, '$0 clean --all'],
-      [`Run 'build' script for @affine/web`, '$0 build -p web'],
+      [`Run 'build' script for @cloud-notes/web`, '$0 build -p web'],
       [
-        `Run 'build' script for @affine/web with all deps prebuild before`,
+        `Run 'build' script for @cloud-notes/web with all deps prebuild before`,
         '$0 build -p web --deps',
       ],
     ],
@@ -148,9 +148,9 @@ export class RunCommand extends PackageCommand {
       }
     }
 
-    const isAFFiNECommand = args[0] === 'affine';
-    if (isAFFiNECommand) {
-      // remove 'affine' from 'affine xxx' command
+    const isCloudNotesCommand = args[0] === 'cloud-notes';
+    if (isCloudNotesCommand) {
+      // remove 'cloud-notes' from 'cloud-notes xxx' command
       args.shift();
       args.push('-p', pkg.name);
 
@@ -170,7 +170,7 @@ export class RunCommand extends PackageCommand {
 
     const bin = args[0] === 'yarn' ? args[1] : args[0];
     const loader =
-      pkg.name === '@affine/server' ? serverRuntimeLoader : tsxRuntimeLoader;
+      pkg.name === '@cloud-notes/server' ? serverRuntimeLoader : tsxRuntimeLoader;
     const hasKnownLoader =
       process.env.NODE_OPTIONS?.includes('tsx') ||
       process.env.NODE_OPTIONS?.includes(tsxRuntimeLoader) ||

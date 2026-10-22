@@ -16,11 +16,11 @@ on:
 env:
   DEBUG: napi:*
   BUILD_TYPE: canary
-  APP_NAME: affine
-  AFFINE_ENV: dev
+  APP_NAME: cloud-notes
+  CLOUD_NOTES_ENV: dev
   COVERAGE: true
   MACOSX_DEPLOYMENT_TARGET: '11.6'
-  DEPLOYMENT_TYPE: affine
+  DEPLOYMENT_TYPE: cloud-notes
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         language: ['javascript', 'typescript']
-        project: ['affine', 'blocksuite']
+        project: ['cloud-notes', 'blocksuite']
 
     steps:
       - name: Checkout repository
@@ -51,10 +51,10 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          source-root: ${{ matrix.project == 'affine' && '.' || 'blocksuite' }}
+          source-root: ${{ matrix.project == 'cloud-notes' && '.' || 'blocksuite' }}
 
       - name: Delete blocksuite before codeql analysis
-        if: ${{ matrix.project == 'affine' }}
+        if: ${{ matrix.project == 'cloud-notes' }}
         run: rm -rf blocksuite
 
       - name: Autobuild
@@ -89,7 +89,7 @@ jobs:
       - name: Run oxlint
         run: yarn lint:ox
       - name: Run i18n codegen
-        run: yarn affine @affine/i18n build
+        run: yarn cloud-notes @cloud-notes/i18n build
       - name: Run Oxfmt
         # Set nmMode in `actions/setup-node` will modify the .yarnrc.yml
         run: |
@@ -112,10 +112,10 @@ jobs:
           full-cache: true
       - name: Run i18n codegen
         run: |
-          yarn affine @affine/i18n build
+          yarn cloud-notes @cloud-notes/i18n build
           git checkout packages/frontend/i18n/src/i18n-completenesses.json
           if git status --porcelain | grep -q .; then
-            echo "Run 'yarn affine @affine/i18n build' and make sure all generated i18n changes are submitted"
+            echo "Run 'yarn cloud-notes @cloud-notes/i18n build' and make sure all generated i18n changes are submitted"
             exit 1
           else
             echo "All generated i18n changes are submitted"
@@ -124,9 +124,9 @@ jobs:
         run: yarn typecheck
       - name: Run BS Docs Build
         run: |
-          yarn affine bs-docs build
+          yarn cloud-notes bs-docs build
           if git status --porcelain | grep -q .; then
-            echo "Run 'yarn typecheck && yarn affine bs-docs build' and make sure all changes are submitted"
+            echo "Run 'yarn typecheck && yarn cloud-notes bs-docs build' and make sure all changes are submitted"
             exit 1
           else
             echo "All changes are submitted"
@@ -178,7 +178,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-tools/cli @affine/android
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-tools/cli @cloud-notes/android
           electron-install: false
 
       - uses: actions/setup-java@v5
@@ -191,11 +191,11 @@ jobs:
         uses: ./.github/actions/build-rust
         with:
           target: 'aarch64-linux-android'
-          package: 'affine_mobile_native'
+          package: 'cloud_notes_mobile_native'
           no-build: 'true'
 
       - name: Build Android web assets
-        run: yarn affine @affine/android build
+        run: yarn cloud-notes @cloud-notes/android build
         env:
           PUBLIC_PATH: '/'
 
@@ -205,15 +205,15 @@ jobs:
           {
             "project_info": {
               "project_number": "1",
-              "project_id": "affine-ci",
-              "storage_bucket": "affine-ci.appspot.com"
+              "project_id": "cloud-notes-ci",
+              "storage_bucket": "cloud-notes-ci.appspot.com"
             },
             "client": [
               {
                 "client_info": {
                   "mobilesdk_app_id": "1:1:android:0000000000000000",
                   "android_client_info": {
-                    "package_name": "app.affine.pro"
+                    "package_name": "app.cloudnotes.pro"
                   }
                 },
                 "oauth_client": [],
@@ -234,7 +234,7 @@ jobs:
           JSON
 
       - name: Cap sync
-        run: yarn workspace @affine/android cap sync
+        run: yarn workspace @cloud-notes/android cap sync
 
       - name: Build Android debug app
         working-directory: packages/frontend/apps/android/App
@@ -248,7 +248,7 @@ jobs:
     needs:
       - mobile-native-build-filter
     env:
-      AFFINE_ANDROID_NATIVE_TARGET: x86_64
+      CLOUD_NOTES_ANDROID_NATIVE_TARGET: x86_64
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '16'
       CARGO_PROFILE_RELEASE_DEBUG: '1'
       CARGO_PROFILE_RELEASE_LTO: 'thin'
@@ -258,7 +258,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-tools/cli @affine/android
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-tools/cli @cloud-notes/android
           electron-install: false
 
       - uses: actions/setup-java@v5
@@ -271,11 +271,11 @@ jobs:
         uses: ./.github/actions/build-rust
         with:
           target: 'x86_64-linux-android'
-          package: 'affine_mobile_native'
+          package: 'cloud_notes_mobile_native'
           no-build: 'true'
 
       - name: Build Android web assets
-        run: yarn affine @affine/android build
+        run: yarn cloud-notes @cloud-notes/android build
         env:
           PUBLIC_PATH: '/'
 
@@ -285,15 +285,15 @@ jobs:
           {
             "project_info": {
               "project_number": "1",
-              "project_id": "affine-ci",
-              "storage_bucket": "affine-ci.appspot.com"
+              "project_id": "cloud-notes-ci",
+              "storage_bucket": "cloud-notes-ci.appspot.com"
             },
             "client": [
               {
                 "client_info": {
                   "mobilesdk_app_id": "1:1:android:0000000000000000",
                   "android_client_info": {
-                    "package_name": "app.affine.pro"
+                    "package_name": "app.cloudnotes.pro"
                   }
                 },
                 "oauth_client": [],
@@ -314,7 +314,7 @@ jobs:
           JSON
 
       - name: Cap sync
-        run: yarn workspace @affine/android cap sync
+        run: yarn workspace @cloud-notes/android cap sync
 
       - name: Run Android unit tests
         working-directory: packages/frontend/apps/android/App
@@ -344,7 +344,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-tools/cli @affine/ios
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-tools/cli @cloud-notes/ios
           electron-install: false
           hard-link-nm: false
 
@@ -356,16 +356,16 @@ jobs:
         uses: ./.github/actions/build-rust
         with:
           target: 'aarch64-apple-ios-sim'
-          package: 'affine_mobile_native'
+          package: 'cloud_notes_mobile_native'
           no-build: 'true'
 
       - name: Build iOS web assets
-        run: yarn affine @affine/ios build
+        run: yarn cloud-notes @cloud-notes/ios build
         env:
           PUBLIC_PATH: '/'
 
       - name: Cap sync
-        run: yarn workspace @affine/ios sync
+        run: yarn workspace @cloud-notes/ios sync
 
       - name: Build iOS simulator app
         run: |
@@ -392,7 +392,7 @@ jobs:
           xcrun simctl boot "$device_id" || true
           xcodebuild \
             -project packages/frontend/apps/ios/App/App.xcodeproj \
-            -scheme AFFiNETests \
+            -scheme CloudNotesTests \
             -configuration Debug \
             -sdk iphonesimulator \
             -destination "platform=iOS Simulator,id=$device_id" \
@@ -432,7 +432,7 @@ jobs:
       - uses: ./.github/actions/build-rust
         with:
           target: x86_64-unknown-linux-gnu
-          package: 'affine'
+          package: 'cloud-notes'
           no-build: 'true'
       - name: fmt check
         run: |
@@ -442,8 +442,8 @@ jobs:
       - name: Clippy
         run: |
           rustup component add clippy
-          cargo clippy --workspace --exclude affine_server_native --all-targets --all-features -- -D warnings
-          cargo clippy -p affine_server_native --all-targets --all-features -- -D warnings
+          cargo clippy --workspace --exclude cloud_notes_server_native --all-targets --all-features -- -D warnings
+          cargo clippy -p cloud_notes_server_native --all-targets --all-features -- -D warnings
 
   check-git-status:
     name: Check Git Status
@@ -465,13 +465,13 @@ jobs:
 
       - name: Run Check
         run: |
-          yarn affine init
-          yarn affine gql build
-          yarn affine i18n build
-          yarn affine server genconfig
+          yarn cloud-notes init
+          yarn cloud-notes gql build
+          yarn cloud-notes i18n build
+          yarn cloud-notes server genconfig
           git checkout packages/frontend/i18n/src/i18n-completenesses.json
           if git status --porcelain | grep -q .; then
-            echo "Run 'yarn affine init && yarn affine gql build && yarn affine i18n build && yarn affine server genconfig' and make sure all changes are submitted"
+            echo "Run 'yarn cloud-notes init && yarn cloud-notes gql build && yarn cloud-notes i18n build && yarn cloud-notes server genconfig' and make sure all changes are submitted"
             exit 1
           else
             echo "All changes are submitted"
@@ -501,7 +501,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-test/blocksuite @blocksuite/playground @blocksuite/integration-test
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-test/blocksuite @blocksuite/playground @blocksuite/integration-test
           playwright-install: true
           playwright-platform: 'chromium'
           electron-install: false
@@ -511,7 +511,7 @@ jobs:
         run: yarn workspace @blocksuite/playground build
 
       - name: Run playwright tests
-        run: yarn workspace @affine-test/blocksuite test --forbid-only --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        run: yarn workspace @cloud-notes-test/blocksuite test --forbid-only --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: Upload test results
         if: always()
@@ -529,7 +529,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-test/blocksuite @blocksuite/playground @blocksuite/integration-test
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-test/blocksuite @blocksuite/playground @blocksuite/integration-test
           playwright-install: true
           playwright-platform: 'chromium,firefox,webkit'
           electron-install: false
@@ -544,7 +544,7 @@ jobs:
 
       - name: Run cross-platform playwright tests
         timeout-minutes: 10
-        run: yarn workspace @affine-test/blocksuite test "cross-platform/" --forbid-only
+        run: yarn workspace @cloud-notes-test/blocksuite test "cross-platform/" --forbid-only
 
       - name: Upload test results
         if: always()
@@ -570,14 +570,14 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-test/affine-local @affine/web @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-test/cloud-notes-local @cloud-notes/web @cloud-notes/server
           playwright-install: true
           playwright-platform: 'chromium'
           electron-install: false
           full-cache: true
 
       - name: Run playwright tests
-        run: yarn affine @affine-test/affine-local e2e --forbid-only --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        run: yarn cloud-notes @cloud-notes-test/cloud-notes-local e2e --forbid-only --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: Upload test results
         if: always()
@@ -602,13 +602,13 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-test/affine-mobile @affine/mobile
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-test/cloud-notes-mobile @cloud-notes/mobile
           playwright-install: true
           electron-install: false
           full-cache: true
 
       - name: Run playwright tests
-        run: yarn affine @affine-test/affine-mobile e2e --forbid-only --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        run: yarn cloud-notes @cloud-notes-test/cloud-notes-mobile e2e --forbid-only --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
       - name: Upload test results
         if: always()
@@ -639,10 +639,10 @@ jobs:
           playwright-platform: 'chromium,firefox,webkit'
           full-cache: true
 
-      - name: Download affine.linux-x64-gnu.node
+      - name: Download cloud-notes.linux-x64-gnu.node
         uses: actions/download-artifact@v4
         with:
-          name: affine.linux-x64-gnu.node
+          name: cloud-notes.linux-x64-gnu.node
           path: ./packages/frontend/native
 
       - name: Unit Test
@@ -654,11 +654,11 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./.coverage/store/lcov.info
           flags: unittest
-          name: affine
+          name: cloud-notes
           fail_ci_if_error: false
 
   build-native-linux:
-    name: Build AFFiNE native (x86_64-unknown-linux-gnu)
+    name: Build Cloud Notes native (x86_64-unknown-linux-gnu)
     runs-on: ubuntu-latest
     env:
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '16'
@@ -669,7 +669,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/native
+          extra-flags: workspaces focus @cloud-notes/native
           electron-install: false
       - name: Setup filename
         id: filename
@@ -677,12 +677,12 @@ jobs:
         shell: bash
         run: |
           PLATFORM_ARCH_ABI="$(node -e "console.log(require('@napi-rs/cli').parseTriple('x86_64-unknown-linux-gnu').platformArchABI)")"
-          echo "filename=affine.$PLATFORM_ARCH_ABI.node" >> "$GITHUB_OUTPUT"
-      - name: Build AFFiNE native
+          echo "filename=cloud-notes.$PLATFORM_ARCH_ABI.node" >> "$GITHUB_OUTPUT"
+      - name: Build Cloud Notes native
         uses: ./.github/actions/build-rust
         with:
           target: x86_64-unknown-linux-gnu
-          package: '@affine/native'
+          package: '@cloud-notes/native'
       - name: Upload ${{ steps.filename.outputs.filename }}
         uses: actions/upload-artifact@v4
         if: always()
@@ -692,7 +692,7 @@ jobs:
           if-no-files-found: error
 
   build-native-macos:
-    name: Build AFFiNE native (${{ matrix.spec.target }})
+    name: Build Cloud Notes native (${{ matrix.spec.target }})
     runs-on: ${{ matrix.spec.os }}
     env:
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '16'
@@ -710,7 +710,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/native
+          extra-flags: workspaces focus @cloud-notes/native
           electron-install: false
       - name: Setup filename
         id: filename
@@ -718,12 +718,12 @@ jobs:
         shell: bash
         run: |
           PLATFORM_ARCH_ABI="$(node -e "console.log(require('@napi-rs/cli').parseTriple('${{ matrix.spec.target }}').platformArchABI)")"
-          echo "filename=affine.$PLATFORM_ARCH_ABI.node" >> "$GITHUB_OUTPUT"
-      - name: Build AFFiNE native
+          echo "filename=cloud-notes.$PLATFORM_ARCH_ABI.node" >> "$GITHUB_OUTPUT"
+      - name: Build Cloud Notes native
         uses: ./.github/actions/build-rust
         with:
           target: ${{ matrix.spec.target }}
-          package: '@affine/native'
+          package: '@cloud-notes/native'
       - name: Upload ${{ steps.filename.outputs.filename }}
         uses: actions/upload-artifact@v4
         if: always()
@@ -735,7 +735,7 @@ jobs:
   # Split Windows build because it's too slow
   # and other ci jobs required linux native
   build-native-windows:
-    name: Build AFFiNE native (${{ matrix.spec.target }})
+    name: Build Cloud Notes native (${{ matrix.spec.target }})
     runs-on: ${{ matrix.spec.os }}
     env:
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: '16'
@@ -761,7 +761,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/native
+          extra-flags: workspaces focus @cloud-notes/native
           electron-install: false
       - name: Setup filename
         id: filename
@@ -769,12 +769,12 @@ jobs:
         shell: bash
         run: |
           PLATFORM_ARCH_ABI="$(node -e "console.log(require('@napi-rs/cli').parseTriple('${{ matrix.spec.target }}').platformArchABI)")"
-          echo "filename=affine.$PLATFORM_ARCH_ABI.node" >> "$GITHUB_OUTPUT"
-      - name: Build AFFiNE native
+          echo "filename=cloud-notes.$PLATFORM_ARCH_ABI.node" >> "$GITHUB_OUTPUT"
+      - name: Build Cloud Notes native
         uses: ./.github/actions/build-rust
         with:
           target: ${{ matrix.spec.target }}
-          package: '@affine/native'
+          package: '@cloud-notes/native'
       - name: Upload ${{ steps.filename.outputs.filename }}
         uses: actions/upload-artifact@v4
         if: always()
@@ -787,7 +787,7 @@ jobs:
     name: Build Server native
     runs-on: ubuntu-latest
     env:
-      AFFINE_PRO_PUBLIC_KEY: |
+      CLOUD_NOTES_PRO_PUBLIC_KEY: |
         -----BEGIN PUBLIC KEY-----
         MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEObwJiTmbui7rkWfPJ7Lozvuy2Rcl
         otcrb0V6dlS2ijKEShm7ZttTwQn08xzesdjX/AxpoR5X9yfoHkauIBuuMQ==
@@ -800,13 +800,13 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/server-native
+          extra-flags: workspaces focus @cloud-notes/server-native
           electron-install: false
       - name: Build Rust
         uses: ./.github/actions/build-rust
         with:
           target: 'x86_64-unknown-linux-gnu'
-          package: '@affine/server-native'
+          package: '@cloud-notes/server-native'
       - name: Upload server-native.node
         uses: actions/upload-artifact@v4
         if: always()
@@ -816,18 +816,18 @@ jobs:
           if-no-files-found: error
 
   build-electron-renderer:
-    name: Build @affine/electron renderer
+    name: Build @cloud-notes/electron renderer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine/electron-renderer @affine/nbstore @toeverything/infra
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes/electron-renderer @cloud-notes/nbstore @toeverything/infra
           electron-install: false
           full-cache: true
       - name: Build Electron renderer
-        run: yarn affine @affine/electron-renderer build
+        run: yarn cloud-notes @cloud-notes/electron-renderer build
         env:
           DISTRIBUTION: desktop
       - name: zip web
@@ -850,15 +850,15 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine-tools/cli @affine/monorepo @affine/native
+          extra-flags: workspaces focus @cloud-notes-tools/cli @cloud-notes/monorepo @cloud-notes/native
           electron-install: false
-      - name: Download affine.linux-x64-gnu.node
+      - name: Download cloud-notes.linux-x64-gnu.node
         uses: actions/download-artifact@v4
         with:
-          name: affine.linux-x64-gnu.node
+          name: cloud-notes.linux-x64-gnu.node
           path: ./packages/frontend/native
       - name: Unit Test
-        run: yarn affine @affine/native test
+        run: yarn cloud-notes @cloud-notes/native test
 
   server-test:
     name: Server Test
@@ -872,13 +872,13 @@ jobs:
         total_nodes: [4]
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -901,7 +901,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes/server
           electron-install: false
           full-cache: true
 
@@ -915,7 +915,7 @@ jobs:
         uses: ./.github/actions/server-test-env
 
       - name: Run server tests
-        run: yarn affine @affine/server test:coverage --forbid-only
+        run: yarn cloud-notes @cloud-notes/server test:coverage --forbid-only
         env:
           CARGO_TARGET_DIR: '${{ github.workspace }}/target'
           CI_NODE_INDEX: ${{ matrix.node_index }}
@@ -927,7 +927,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/backend/server/.coverage/lcov.info
           flags: server-test
-          name: affine
+          name: cloud-notes
           fail_ci_if_error: false
 
   server-test-elasticsearch:
@@ -937,13 +937,13 @@ jobs:
       - build-server-native
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -980,7 +980,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes/server
           electron-install: false
           full-cache: true
 
@@ -996,7 +996,7 @@ jobs:
         uses: ./.github/actions/server-test-env
 
       - name: Run server tests with elasticsearch only
-        run: yarn affine @affine/server e2e:coverage src/__tests__/e2e/indexer/search-docs.spec.ts --forbid-only
+        run: yarn cloud-notes @cloud-notes/server e2e:coverage src/__tests__/e2e/indexer/search-docs.spec.ts --forbid-only
         env:
           CARGO_TARGET_DIR: '${{ github.workspace }}/target'
 
@@ -1006,7 +1006,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/backend/server/.coverage/lcov.info
           flags: server-test
-          name: affine
+          name: cloud-notes
           fail_ci_if_error: false
 
   server-test-embedded:
@@ -1016,13 +1016,13 @@ jobs:
       - build-server-native
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -1040,7 +1040,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes/server
           electron-install: false
           full-cache: true
 
@@ -1057,7 +1057,7 @@ jobs:
 
       - name: Run embedded Search provider E2E
         run: >-
-          yarn affine @affine/server e2e:coverage
+          yarn cloud-notes @cloud-notes/server e2e:coverage
           src/__tests__/e2e/indexer/aggregate.spec.ts
           src/__tests__/e2e/indexer/search-docs.spec.ts
           src/__tests__/e2e/indexer/search.spec.ts
@@ -1072,7 +1072,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/backend/server/.coverage/lcov.info
           flags: server-test
-          name: affine
+          name: cloud-notes
           fail_ci_if_error: false
 
   server-test-manticoresearch:
@@ -1082,13 +1082,13 @@ jobs:
       - build-server-native
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -1123,7 +1123,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes/server
           electron-install: false
           full-cache: true
 
@@ -1139,7 +1139,7 @@ jobs:
         uses: ./.github/actions/server-test-env
 
       - name: Run Manticore Search provider E2E
-        run: yarn affine @affine/server e2e:coverage src/__tests__/e2e/indexer/manticore-provider.spec.ts --forbid-only
+        run: yarn cloud-notes @cloud-notes/server e2e:coverage src/__tests__/e2e/indexer/manticore-provider.spec.ts --forbid-only
         env:
           CARGO_TARGET_DIR: '${{ github.workspace }}/target'
 
@@ -1149,7 +1149,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/backend/server/.coverage/lcov.info
           flags: server-test
-          name: affine
+          name: cloud-notes
           fail_ci_if_error: false
 
   server-e2e-test:
@@ -1160,13 +1160,13 @@ jobs:
       - build-server-native
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -1184,7 +1184,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes/server
           electron-install: false
           full-cache: true
 
@@ -1200,7 +1200,7 @@ jobs:
         uses: ./.github/actions/server-test-env
 
       - name: Run server tests
-        run: yarn affine @affine/server e2e:coverage --forbid-only
+        run: yarn cloud-notes @cloud-notes/server e2e:coverage --forbid-only
 
       - name: Upload server test coverage results
         uses: codecov/codecov-action@v5
@@ -1208,7 +1208,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/backend/server/.coverage/lcov.info
           flags: server-test
-          name: affine
+          name: cloud-notes
           fail_ci_if_error: false
 
   rust-test:
@@ -1219,13 +1219,13 @@ jobs:
       - rust-test-filter
     env:
       CARGO_TERM_COLOR: always
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       INVALIDATION_REDIS_URL: redis://localhost:6379/
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -1242,13 +1242,13 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes/server
           electron-install: false
       - name: Setup Rust
         uses: ./.github/actions/build-rust
         with:
           target: x86_64-unknown-linux-gnu
-          package: 'affine'
+          package: 'cloud-notes'
           no-build: 'true'
 
       - name: Install latest nextest release
@@ -1258,18 +1258,18 @@ jobs:
 
       - name: Initialize server-native test database
         run: |
-          psql -h localhost -U postgres -c "CREATE DATABASE affine;"
-          psql -h localhost -U postgres -c "CREATE USER affine WITH PASSWORD 'affine';"
-          psql -h localhost -U postgres -c "ALTER USER affine WITH SUPERUSER;"
-          yarn affine @affine/server prisma migrate deploy
+          psql -h localhost -U postgres -c "CREATE DATABASE cloud-notes;"
+          psql -h localhost -U postgres -c "CREATE USER cloud-notes WITH PASSWORD 'cloud-notes';"
+          psql -h localhost -U postgres -c "ALTER USER cloud-notes WITH SUPERUSER;"
+          yarn cloud-notes @cloud-notes/server prisma migrate deploy
         env:
-          PGPASSWORD: affine
+          PGPASSWORD: cloud-notes
 
       - name: Run workspace Rust tests
-        run: cargo nextest run --workspace --exclude affine_server_native --features use-as-lib --release --no-fail-fast
+        run: cargo nextest run --workspace --exclude cloud_notes_server_native --features use-as-lib --release --no-fail-fast
 
       - name: Run server-native Rust tests with PostgreSQL and Redis
-        run: cargo nextest run -p affine_server_native --release --no-fail-fast --test-threads=1
+        run: cargo nextest run -p cloud_notes_server_native --release --no-fail-fast --test-threads=1
 
   copilot-test-filter:
     name: Copilot test filter
@@ -1292,7 +1292,7 @@ jobs:
               - 'packages/backend/server/tests/copilot.*'
               - 'packages/frontend/core/src/blocksuite/ai/**'
               - 'packages/frontend/core/src/modules/workspace-indexer-embedding/**'
-              - 'tests/affine-cloud-copilot/**'
+              - 'tests/cloud-notes-cloud-copilot/**'
 
       - name: Decide test scope
         id: decision
@@ -1319,13 +1319,13 @@ jobs:
     env:
       NODE_ENV: test
       DISTRIBUTION: web
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -1348,7 +1348,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes/server
           electron-install: false
           full-cache: true
 
@@ -1364,7 +1364,7 @@ jobs:
         uses: ./.github/actions/server-test-env
 
       - name: Run server tests
-        run: yarn affine @affine/server test:copilot:coverage --forbid-only
+        run: yarn cloud-notes @cloud-notes/server test:copilot:coverage --forbid-only
         env:
           CARGO_TARGET_DIR: '${{ github.workspace }}/target'
 
@@ -1374,7 +1374,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./packages/backend/server/.coverage/lcov.info
           flags: server-test
-          name: affine
+          name: cloud-notes
           fail_ci_if_error: false
 
   copilot-e2e-test:
@@ -1383,10 +1383,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DISTRIBUTION: web
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       IN_CI_TEST: true
       REDIS_SERVER_HOST: localhost
-      DEPLOYMENT_TYPE: affine
+      DEPLOYMENT_TYPE: cloud-notes
     strategy:
       fail-fast: false
       matrix:
@@ -1399,7 +1399,7 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -1417,7 +1417,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-test/affine-cloud-copilot @affine/web @affine/server
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-test/cloud-notes-cloud-copilot @cloud-notes/web @cloud-notes/server
           playwright-install: true
           playwright-platform: 'chromium'
           electron-install: false
@@ -1437,7 +1437,7 @@ jobs:
       - name: Run Copilot E2E Test ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
         uses: ./.github/actions/copilot-test
         with:
-          script: yarn affine @affine-test/affine-cloud-copilot e2e --forbid-only --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+          script: yarn cloud-notes @cloud-notes-test/cloud-notes-cloud-copilot e2e --forbid-only --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
 
   cloud-e2e-test:
     name: ${{ matrix.tests.name }}
@@ -1447,7 +1447,7 @@ jobs:
       - build-native-linux
     env:
       DISTRIBUTION: web
-      DATABASE_URL: postgresql://affine:affine@localhost:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@localhost:5432/cloud-notes
       REDIS_SERVER_HOST: localhost
       IN_CI_TEST: true
     strategy:
@@ -1456,24 +1456,24 @@ jobs:
         tests:
           - name: 'Cloud E2E Test 1/2'
             shard: 1
-            script: yarn affine @affine-test/affine-cloud e2e --forbid-only --shard=1/2
+            script: yarn cloud-notes @cloud-notes-test/cloud-notes-cloud e2e --forbid-only --shard=1/2
           - name: 'Cloud E2E Test 2/2'
             shard: 2
-            script: yarn affine @affine-test/affine-cloud e2e --forbid-only --shard=2/2
+            script: yarn cloud-notes @cloud-notes-test/cloud-notes-cloud e2e --forbid-only --shard=2/2
           - name: 'Cloud Desktop E2E Test'
             shard: desktop
             script: |
-              yarn affine @affine/electron build:dev
+              yarn cloud-notes @cloud-notes/electron build:dev
               # Workaround for Electron apps failing to initialize on Ubuntu 24.04 due to AppArmor restrictions
               # Disables unprivileged user namespaces restriction to allow Electron apps to run
               # Reference: https://github.com/electron/electron/issues/42510
               sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-              xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- yarn affine @affine-test/affine-desktop-cloud e2e
+              xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- yarn cloud-notes @cloud-notes-test/cloud-notes-desktop-cloud e2e
     services:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_PASSWORD: affine
+          POSTGRES_PASSWORD: cloud-notes
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -1496,7 +1496,7 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
         with:
-          extra-flags: workspaces focus @affine/monorepo @affine-test/affine-cloud @affine-test/affine-desktop-cloud @affine/web @affine/server @affine/electron @affine/electron-renderer @affine/nbstore @toeverything/infra
+          extra-flags: workspaces focus @cloud-notes/monorepo @cloud-notes-test/cloud-notes-cloud @cloud-notes-test/cloud-notes-desktop-cloud @cloud-notes/web @cloud-notes/server @cloud-notes/electron @cloud-notes/electron-renderer @cloud-notes/nbstore @toeverything/infra
           playwright-install: true
           playwright-platform: 'chromium'
           electron-install: ${{ matrix.tests.shard == 'desktop' && 'true' || 'false' }}
@@ -1508,10 +1508,10 @@ jobs:
           name: server-native.node
           path: ./packages/backend/native
 
-      - name: Download affine.linux-x64-gnu.node
+      - name: Download cloud-notes.linux-x64-gnu.node
         uses: actions/download-artifact@v4
         with:
-          name: affine.linux-x64-gnu.node
+          name: cloud-notes.linux-x64-gnu.node
           path: ./packages/frontend/native
 
       - name: Prepare Server Test Environment
@@ -1577,7 +1577,7 @@ jobs:
         uses: ./.github/actions/setup-node
         timeout-minutes: 10
         with:
-          extra-flags: workspaces focus @affine/electron @affine/monorepo @affine-test/affine-desktop @affine/nbstore @toeverything/infra
+          extra-flags: workspaces focus @cloud-notes/electron @cloud-notes/monorepo @cloud-notes-test/cloud-notes-desktop @cloud-notes/nbstore @toeverything/infra
           playwright-install: ${{ matrix.spec.test && 'true' || 'false' }}
           playwright-platform: 'chromium'
           hard-link-nm: false
@@ -1588,7 +1588,7 @@ jobs:
         shell: bash
         run: |
           PLATFORM_ARCH_ABI="$(node -e "console.log(require('@napi-rs/cli').parseTriple('${{ matrix.spec.target }}').platformArchABI)")"
-          echo "filename=affine.$PLATFORM_ARCH_ABI.node" >> "$GITHUB_OUTPUT"
+          echo "filename=cloud-notes.$PLATFORM_ARCH_ABI.node" >> "$GITHUB_OUTPUT"
 
       - name: Download ${{ steps.filename.outputs.filename }}
         uses: actions/download-artifact@v4
@@ -1599,7 +1599,7 @@ jobs:
       - name: Run unit tests
         if: ${{ matrix.spec.test }}
         shell: bash
-        run: yarn affine @affine/electron vitest
+        run: yarn cloud-notes @cloud-notes/electron vitest
 
       - name: Download web artifact
         uses: ./.github/actions/download-web
@@ -1607,7 +1607,7 @@ jobs:
           path: packages/frontend/apps/electron/resources/web-static
 
       - name: Build Desktop Layers
-        run: yarn affine @affine/electron build
+        run: yarn cloud-notes @cloud-notes/electron build
 
       - name: Run desktop tests
         if: ${{ matrix.spec.os == 'ubuntu-latest' }}
@@ -1616,11 +1616,11 @@ jobs:
           # Disables unprivileged user namespaces restriction to allow Electron apps to run
           # Reference: https://github.com/electron/electron/issues/42510
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- yarn affine @affine-test/affine-desktop e2e
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" -- yarn cloud-notes @cloud-notes-test/cloud-notes-desktop e2e
 
       - name: Run desktop tests
         if: ${{ matrix.spec.test && matrix.spec.os != 'ubuntu-latest' }}
-        run: yarn affine @affine-test/affine-desktop e2e
+        run: yarn cloud-notes @cloud-notes-test/cloud-notes-desktop e2e
 
       - name: Make bundle (macOS)
         if: ${{ matrix.spec.target == 'aarch64-apple-darwin' }}
@@ -1628,7 +1628,7 @@ jobs:
           SKIP_BUNDLE: true
           SKIP_WEB_BUILD: true
           HOIST_NODE_MODULES: 1
-        run: yarn affine @affine/electron package --platform=darwin --arch=arm64
+        run: yarn cloud-notes @cloud-notes/electron package --platform=darwin --arch=arm64
 
       - name: Make Bundle (Windows)
         if: ${{ matrix.spec.target == 'x86_64-pc-windows-msvc' }}
@@ -1638,9 +1638,9 @@ jobs:
           SKIP_WEB_BUILD: true
           HOIST_NODE_MODULES: 1
         run: |
-          rm -rf packages/frontend/apps/electron/node_modules/@affine/nbstore/node_modules/@blocksuite/affine/node_modules
-          rm -rf packages/frontend/apps/electron/node_modules/@affine/native/node_modules
-          yarn affine @affine/electron package --platform=win32 --arch=x64
+          rm -rf packages/frontend/apps/electron/node_modules/@cloud-notes/nbstore/node_modules/@blocksuite/cloud-notes/node_modules
+          rm -rf packages/frontend/apps/electron/node_modules/@cloud-notes/native/node_modules
+          yarn cloud-notes @cloud-notes/electron package --platform=win32 --arch=x64
 
       - name: Make Bundle (Linux)
         run: |
@@ -1650,7 +1650,7 @@ jobs:
           flatpak update
           # some flatpak deps need git protocol.file.allow
           git config --global protocol.file.allow always
-          yarn affine @affine/electron make --platform=linux --arch=x64
+          yarn cloud-notes @cloud-notes/electron make --platform=linux --arch=x64
         if: ${{ matrix.spec.target == 'x86_64-unknown-linux-gnu' }}
         env:
           SKIP_WEB_BUILD: 1
@@ -1659,7 +1659,7 @@ jobs:
       - name: Output check
         if: ${{ matrix.spec.os == 'macos-latest' && matrix.spec.arch == 'arm64' }}
         run: |
-          yarn affine @affine/electron node ./scripts/macos-arm64-output-check.ts
+          yarn cloud-notes @cloud-notes/electron node ./scripts/macos-arm64-output-check.ts
 
       - name: Upload test results
         if: always()

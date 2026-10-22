@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ cloud-notes-engine — Cloud Notes from the vendored AFFiNE        ║
+# ║ cloud-notes-engine — Cloud Notes from the vendored tree           ║
 # ║                                                                  ║
-# ║ AFFiNE is vendored at the app root (ac_cloud-notes/, no .git).  ║
+# ║ Cloud Notes is vendored at the app root (ac_cloud-notes/, no .git).  ║
 # ║ This engine builds the Android APK from that committed source:   ║
-# ║   web bundle (rspack via the AFFiNE CLI) → cap sync → Gradle     ║
+# ║   web bundle (rspack via the Cloud Notes CLI) → cap sync → Gradle     ║
 # ║   (which cross-compiles the Rust store crate through the         ║
 # ║   mozilla-rust-android-gradle plugin) → shared-constellation     ║
 # ║   re-sign → dist/Cloud-Notes.apk.                                ║
@@ -14,7 +14,7 @@
 # ║                                                                  ║
 # ║ DE-CLOUDED (#469): the tree has no packages/backend, no          ║
 # ║ packages/common/native, no :service Apollo module, no Firebase.  ║
-# ║ The app is local-first: it never contacts an AFFiNE server.      ║
+# ║ The app is local-first: it never contacts a Cloud Notes server.      ║
 # ║                                                                  ║
 # ║ Commands:                                                        ║
 # ║   materialize-fork <key>  no-op — the tree is VENDORED (no .git) ║
@@ -174,24 +174,24 @@ PY
 
 # ── materialize-fork: the source is VENDORED, nothing to clone ────────
 step_materialize_fork() {
-  log "materialize-fork: no-op — AFFiNE is vendored at the app root (no .git); revision pinned in build.json"
+  log "materialize-fork: no-op — Cloud Notes is vendored at the app root (no .git); revision pinned in build.json"
 }
 
 # ── build-fork: the full three-stage build ────────────────────────────
 step_build_fork() {
   cd "$APP_ROOT"
 
-  [ -f yarn.lock ] || die "no yarn.lock at the app root — this is not the AFFiNE tree"
+  [ -f yarn.lock ] || die "no yarn.lock at the app root — this is not the Cloud Notes tree"
   [ -f packages/frontend/apps/android/package.json ] || die "android workspace missing — incomplete tree"
 
   # Node engines require >=22.12.0 <23.0.0; fail loudly rather than build
   # with the wrong interpreter.
   if command -v node >/dev/null 2>&1; then
-    node -e 'const v=process.versions.node; if (!(v>="22.12.0" && v<"23.0.0")) { console.error("node "+v+" not in AFFiNE engines range"); process.exit(1); }' \
-      || die "node version outside AFFiNE's engines range (>=22.12.0 <23.0.0)"
+    node -e 'const v=process.versions.node; if (!(v>="22.12.0" && v<"23.0.0")) { console.error("node "+v+" not in engines range"); process.exit(1); }' \
+      || die "node version outside the tree's engines range (>=22.12.0 <23.0.0)"
   fi
 
-  log "build-fork: yarn install (AFFiNE monorepo, Yarn 4.18.0)"
+  log "build-fork: yarn install (Cloud Notes monorepo, Yarn 4.18.0)"
   # --immutable and nothing else: on CI, Yarn 4 treats CI=true as immutable
   # anyway, so a fallback would fail equally — and silently regenerating the
   # lock on CI is drift. The committed yarn.lock already reflects the PRUNED
@@ -200,10 +200,10 @@ step_build_fork() {
   yarn install --immutable
 
   log "build-fork: web bundle (rspack) → packages/frontend/apps/android/dist"
-  yarn affine @affine/android build
+  yarn cloud-notes @cloud-notes/android build
 
   log "build-fork: cap sync → App android assets"
-  yarn workspace @affine/android sync
+  yarn workspace @cloud-notes/android sync
 
   log "build-fork: rust cross toolchain (aarch64-linux-android)"
   # Gradle's mozilla-rust-android-gradle plugin shells out to cargo-ndk and

@@ -1,21 +1,21 @@
-import { toolbarAIEntryConfig } from '@affine/core/blocksuite/ai';
-import { AIChatBlockSpec } from '@affine/core/blocksuite/ai/blocks';
-import { AITranscriptionBlockSpec } from '@affine/core/blocksuite/ai/blocks/ai-chat-block/ai-transcription-block';
-import { edgelessToolbarAIEntryConfig } from '@affine/core/blocksuite/ai/entries/edgeless';
-import { imageToolbarAIEntryConfig } from '@affine/core/blocksuite/ai/entries/image-toolbar/setup-image-toolbar';
-import { AICodeBlockWatcher } from '@affine/core/blocksuite/ai/extensions/ai-code';
-import { getAIEdgelessRootWatcher } from '@affine/core/blocksuite/ai/extensions/ai-edgeless-root';
-import { getAIPageRootWatcher } from '@affine/core/blocksuite/ai/extensions/ai-page-root';
-import { AiSlashMenuConfigExtension } from '@affine/core/blocksuite/ai/extensions/ai-slash-menu';
-import { CopilotTool } from '@affine/core/blocksuite/ai/tool/copilot-tool';
-import { aiPanelWidget } from '@affine/core/blocksuite/ai/widgets/ai-panel/ai-panel';
-import { edgelessCopilotWidget } from '@affine/core/blocksuite/ai/widgets/edgeless-copilot';
+import { toolbarAIEntryConfig } from '@cloud-notes/core/blocksuite/ai';
+import { AIChatBlockSpec } from '@cloud-notes/core/blocksuite/ai/blocks';
+import { AITranscriptionBlockSpec } from '@cloud-notes/core/blocksuite/ai/blocks/ai-chat-block/ai-transcription-block';
+import { edgelessToolbarAIEntryConfig } from '@cloud-notes/core/blocksuite/ai/entries/edgeless';
+import { imageToolbarAIEntryConfig } from '@cloud-notes/core/blocksuite/ai/entries/image-toolbar/setup-image-toolbar';
+import { AICodeBlockWatcher } from '@cloud-notes/core/blocksuite/ai/extensions/ai-code';
+import { getAIEdgelessRootWatcher } from '@cloud-notes/core/blocksuite/ai/extensions/ai-edgeless-root';
+import { getAIPageRootWatcher } from '@cloud-notes/core/blocksuite/ai/extensions/ai-page-root';
+import { AiSlashMenuConfigExtension } from '@cloud-notes/core/blocksuite/ai/extensions/ai-slash-menu';
+import { CopilotTool } from '@cloud-notes/core/blocksuite/ai/tool/copilot-tool';
+import { aiPanelWidget } from '@cloud-notes/core/blocksuite/ai/widgets/ai-panel/ai-panel';
+import { edgelessCopilotWidget } from '@cloud-notes/core/blocksuite/ai/widgets/edgeless-copilot';
 import {
   type ViewExtensionContext,
   ViewExtensionProvider,
-} from '@blocksuite/affine/ext-loader';
-import { ToolbarModuleExtension } from '@blocksuite/affine/shared/services';
-import { BlockFlavourIdentifier } from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/ext-loader';
+import { ToolbarModuleExtension } from '@blocksuite/cloud-notes/shared/services';
+import { BlockFlavourIdentifier } from '@blocksuite/cloud-notes/std';
 import { FrameworkProvider } from '@toeverything/infra';
 import { z } from 'zod';
 
@@ -36,7 +36,7 @@ const optionsSchema = z.object({
 type AIViewOptions = z.infer<typeof optionsSchema>;
 
 export class AIViewExtension extends ViewExtensionProvider<AIViewOptions> {
-  override name = 'affine-ai-view-extension';
+  override name = 'cloud-notes-ai-view-extension';
 
   override schema = optionsSchema;
 

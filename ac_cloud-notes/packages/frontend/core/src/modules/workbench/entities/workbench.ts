@@ -1,6 +1,6 @@
-import { toDocSearchParams } from '@affine/core/modules/navigation/utils';
-import { Unreachable } from '@affine/env/constant';
-import type { ReferenceParams } from '@blocksuite/affine/model';
+import { toDocSearchParams } from '@cloud-notes/core/modules/navigation/utils';
+import { Unreachable } from '@cloud-notes/env/constant';
+import type { ReferenceParams } from '@blocksuite/cloud-notes/model';
 import { Entity, LiveData } from '@toeverything/infra';
 import { type To } from 'history';
 import { omit } from 'lodash-es';

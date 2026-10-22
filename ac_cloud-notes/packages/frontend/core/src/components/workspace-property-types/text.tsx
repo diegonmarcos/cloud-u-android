@@ -1,6 +1,6 @@
-import { Input, PropertyValue } from '@affine/component';
-import type { FilterParams } from '@affine/core/modules/collection-rules';
-import { useI18n } from '@affine/i18n';
+import { Input, PropertyValue } from '@cloud-notes/component';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
+import { useI18n } from '@cloud-notes/i18n';
 import { TextIcon, TextTypeIcon } from '@blocksuite/icons/rc';
 import { cssVar } from '@toeverything/theme';
 import { cssVarV2 } from '@toeverything/theme/v2';
@@ -72,7 +72,7 @@ const DesktopTextValue = ({
         data-empty={!tempValue}
         autoFocus={false}
         placeholder={t[
-          'com.affine.page-properties.property-value-placeholder'
+          'com.cloud-notes.page-properties.property-value-placeholder'
         ]()}
         disabled={readonly}
       />
@@ -136,7 +136,7 @@ const MobileTextValue = ({
       >
         <div className={styles.mobileTextareaPlain} data-empty={!tempValue}>
           {tempValue ||
-            t['com.affine.page-properties.property-value-placeholder']()}
+            t['com.cloud-notes.page-properties.property-value-placeholder']()}
         </div>
       </PropertyValue>
       <ConfigModal
@@ -159,7 +159,7 @@ const MobileTextValue = ({
             data-empty={!tempValue}
             autoFocus
             placeholder={t[
-              'com.affine.page-properties.property-value-placeholder'
+              'com.cloud-notes.page-properties.property-value-placeholder'
             ]()}
           />
           <div className={styles.mobileTextInvisible}>
@@ -262,7 +262,7 @@ export const TextFilterValue = ({
         <span>{filter.value}</span>
       ) : (
         <span style={{ color: cssVarV2('text/placeholder') }}>
-          {t['com.affine.filter.empty']()}
+          {t['com.cloud-notes.filter.empty']()}
         </span>
       )}
     </FilterValueMenu>

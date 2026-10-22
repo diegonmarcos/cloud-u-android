@@ -1,4 +1,4 @@
-import { WithDisposable } from '@blocksuite/affine/global/lit';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
 import { css, html, LitElement } from 'lit';
 
 export class AIPanelDivider extends WithDisposable(LitElement) {
@@ -12,7 +12,7 @@ export class AIPanelDivider extends WithDisposable(LitElement) {
     }
     .divider {
       height: 0.5px;
-      background: var(--affine-border-color);
+      background: var(--cloud-notes-border-color);
       width: 100%;
     }
   `;

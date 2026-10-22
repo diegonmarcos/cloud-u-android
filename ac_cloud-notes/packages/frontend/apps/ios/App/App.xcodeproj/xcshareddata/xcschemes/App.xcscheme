@@ -16,8 +16,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "504EC3031FED79650016851F"
-               BuildableName = "AFFiNE.app"
-               BlueprintName = "AFFiNE"
+               BuildableName = "Cloud Notes.app"
+               BlueprintName = "Cloud Notes"
                ReferencedContainer = "container:App.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -30,8 +30,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA0000090000000000000000"
-               BuildableName = "AFFiNETests.xctest"
-               BlueprintName = "AFFiNETests"
+               BuildableName = "CloudNotesTests.xctest"
+               BlueprintName = "CloudNotesTests"
                ReferencedContainer = "container:App.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -49,8 +49,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "AA0000090000000000000000"
-               BuildableName = "AFFiNETests.xctest"
-               BlueprintName = "AFFiNETests"
+               BuildableName = "CloudNotesTests.xctest"
+               BlueprintName = "CloudNotesTests"
                ReferencedContainer = "container:App.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -71,8 +71,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "504EC3031FED79650016851F"
-            BuildableName = "AFFiNE.app"
-            BlueprintName = "AFFiNE"
+            BuildableName = "Cloud Notes.app"
+            BlueprintName = "Cloud Notes"
             ReferencedContainer = "container:App.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -88,8 +88,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "504EC3031FED79650016851F"
-            BuildableName = "AFFiNE.app"
-            BlueprintName = "AFFiNE"
+            BuildableName = "Cloud Notes.app"
+            BlueprintName = "Cloud Notes"
             ReferencedContainer = "container:App.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

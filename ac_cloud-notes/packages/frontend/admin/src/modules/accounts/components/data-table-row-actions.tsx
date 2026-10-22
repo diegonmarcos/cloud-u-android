@@ -1,11 +1,11 @@
-import { Button } from '@affine/admin/components/ui/button';
+import { Button } from '@cloud-notes/admin/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@affine/admin/components/ui/dropdown-menu';
+} from '@cloud-notes/admin/components/ui/dropdown-menu';
 import {
   AccountBanIcon,
   DeleteIcon,

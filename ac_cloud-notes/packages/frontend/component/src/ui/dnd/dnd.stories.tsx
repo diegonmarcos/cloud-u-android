@@ -233,7 +233,7 @@ export const DynamicDragPreview = () => {
           transition: 'transform 50ms, opacity 200ms',
           marginBottom: '100px',
           willChange: 'transform',
-          background: cssVar('--affine-background-primary-color'),
+          background: cssVar('--cloud-notes-background-primary-color'),
         }}
       >
         👉 drag here

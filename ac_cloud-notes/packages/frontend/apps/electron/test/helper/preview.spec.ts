@@ -10,7 +10,7 @@ const { native } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('@affine/native', () => native);
+vi.mock('@cloud-notes/native', () => native);
 
 const tmpDir = path.join(__dirname, 'tmp');
 const typstFontDirA = path.join(tmpDir, 'fonts-a');
@@ -26,7 +26,7 @@ describe('helper preview handlers', () => {
   beforeEach(async () => {
     await fs.ensureDir(typstFontDirA);
     await fs.ensureDir(typstFontDirB);
-    process.env.AFFINE_TYPST_FONT_DIRS = [
+    process.env.CLOUD_NOTES_TYPST_FONT_DIRS = [
       typstFontDirA,
       typstFontDirB,
       path.join(tmpDir, 'missing'),
@@ -42,7 +42,7 @@ describe('helper preview handlers', () => {
   });
 
   afterEach(async () => {
-    delete process.env.AFFINE_TYPST_FONT_DIRS;
+    delete process.env.CLOUD_NOTES_TYPST_FONT_DIRS;
     await fs.remove(tmpDir);
   });
 

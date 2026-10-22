@@ -1,7 +1,7 @@
-import { AuthPageContainer } from '@affine/component/auth-components';
-import { UserFriendlyError } from '@affine/error';
-import { ErrorNames, type GetInviteInfoQuery } from '@affine/graphql';
-import { Trans, useI18n } from '@affine/i18n';
+import { AuthPageContainer } from '@cloud-notes/component/auth-components';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { ErrorNames, type GetInviteInfoQuery } from '@cloud-notes/graphql';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 
 import { Avatar } from '../../ui/avatar';
 import * as styles from './styles.css';
@@ -17,12 +17,12 @@ export const JoinFailedPage = ({
   const t = useI18n();
   return (
     <AuthPageContainer
-      title={t['com.affine.fail-to-join-workspace.title']()}
+      title={t['notes.diegonmarcos.com-to-join-workspace.title']()}
       subtitle={
         userFriendlyError.name === ErrorNames.MEMBER_QUOTA_EXCEEDED ? (
           <div className={styles.lineHeight}>
             <Trans
-              i18nKey={'com.affine.fail-to-join-workspace.description-1'}
+              i18nKey={'notes.diegonmarcos.com-to-join-workspace.description-1'}
               components={{
                 1: (
                   <div className={styles.avatarWrapper}>
@@ -40,7 +40,7 @@ export const JoinFailedPage = ({
                 workspaceName: inviteInfo?.workspace.name,
               }}
             />
-            <div>{t['com.affine.fail-to-join-workspace.description-2']()}</div>
+            <div>{t['notes.diegonmarcos.com-to-join-workspace.description-2']()}</div>
           </div>
         ) : (
           <div>

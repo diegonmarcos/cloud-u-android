@@ -2,27 +2,27 @@ import type {
   AIDraftService,
   AIModelService,
   AIToolsConfigService,
-} from '@affine/core/modules/ai-button';
+} from '@cloud-notes/core/modules/ai-button';
 import type {
   ServerService,
   SubscriptionService,
-} from '@affine/core/modules/cloud';
-import type { WorkspaceDialogService } from '@affine/core/modules/dialogs';
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
+} from '@cloud-notes/core/modules/cloud';
+import type { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
 import {
   CanvasElementType,
   EdgelessCRUDIdentifier,
   getSurfaceBlock,
-} from '@blocksuite/affine/blocks/surface';
-import { ViewExtensionManagerIdentifier } from '@blocksuite/affine/ext-loader';
-import { ConnectorMode } from '@blocksuite/affine/model';
+} from '@blocksuite/cloud-notes/blocks/surface';
+import { ViewExtensionManagerIdentifier } from '@blocksuite/cloud-notes/ext-loader';
+import { ConnectorMode } from '@blocksuite/cloud-notes/model';
 import {
   DocModeProvider,
   NotificationProvider,
   TelemetryProvider,
-} from '@blocksuite/affine/shared/services';
-import type { EditorHost } from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/shared/services';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
 import { html, LitElement, nothing, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -474,7 +474,7 @@ export class AIChatBlockPeekView extends LitElement {
 
     this._textRendererOptions = {
       extensions,
-      affineFeatureFlagService: this.affineFeatureFlagService,
+      cloudNotesFeatureFlagService: this.cloudNotesFeatureFlagService,
     };
     this._historyMessages = this._deserializeHistoryChatMessages(
       this.historyMessagesString
@@ -585,11 +585,11 @@ export class AIChatBlockPeekView extends LitElement {
         .updateContext=${updateContext}
         .docDisplayConfig=${this.docDisplayConfig}
         .searchMenuConfig=${this.searchMenuConfig}
-        .affineWorkspaceDialogService=${this.affineWorkspaceDialogService}
+        .cloudNotesWorkspaceDialogService=${this.cloudNotesWorkspaceDialogService}
         .notificationService=${notificationService}
         .aiToolsConfigService=${this.aiToolsConfigService}
         .aiModelService=${this.aiModelService}
-        .affineFeatureFlagService=${this.affineFeatureFlagService}
+        .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
         .onChatSuccess=${this._onChatSuccess}
         .trackOptions=${{
           where: 'ai-chat-block',
@@ -626,10 +626,10 @@ export class AIChatBlockPeekView extends LitElement {
   accessor searchMenuConfig!: SearchMenuConfig;
 
   @property({ attribute: false })
-  accessor affineFeatureFlagService!: FeatureFlagService;
+  accessor cloudNotesFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
-  accessor affineWorkspaceDialogService!: WorkspaceDialogService;
+  accessor cloudNotesWorkspaceDialogService!: WorkspaceDialogService;
 
   @property({ attribute: false })
   accessor aiDraftService!: AIDraftService;
@@ -681,8 +681,8 @@ export const AIChatBlockPeekViewTemplate = (
   searchMenuConfig: SearchMenuConfig,
   reasoningConfig: AIReasoningConfig,
   serverService: ServerService,
-  affineFeatureFlagService: FeatureFlagService,
-  affineWorkspaceDialogService: WorkspaceDialogService,
+  cloudNotesFeatureFlagService: FeatureFlagService,
+  cloudNotesWorkspaceDialogService: WorkspaceDialogService,
   aiDraftService: AIDraftService,
   aiToolsConfigService: AIToolsConfigService,
   aiModelService: AIModelService,
@@ -696,8 +696,8 @@ export const AIChatBlockPeekViewTemplate = (
     .searchMenuConfig=${searchMenuConfig}
     .reasoningConfig=${reasoningConfig}
     .serverService=${serverService}
-    .affineFeatureFlagService=${affineFeatureFlagService}
-    .affineWorkspaceDialogService=${affineWorkspaceDialogService}
+    .cloudNotesFeatureFlagService=${cloudNotesFeatureFlagService}
+    .cloudNotesWorkspaceDialogService=${cloudNotesWorkspaceDialogService}
     .aiDraftService=${aiDraftService}
     .aiToolsConfigService=${aiToolsConfigService}
     .aiModelService=${aiModelService}

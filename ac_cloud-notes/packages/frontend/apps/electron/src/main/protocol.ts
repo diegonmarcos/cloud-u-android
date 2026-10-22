@@ -51,10 +51,10 @@ async function resolveWhitelistedLocalPath(filepath: string) {
 }
 
 const apiBaseByBuildType: Record<typeof buildType, string> = {
-  stable: 'https://app.affine.pro',
-  beta: 'https://insider.affine.pro',
-  internal: 'https://insider.affine.pro',
-  canary: 'https://affine.fail',
+  stable: 'https://notes.diegonmarcos.com',
+  beta: 'https://notes.diegonmarcos.com',
+  internal: 'https://notes.diegonmarcos.com',
+  canary: 'https://notes.diegonmarcos.com',
 };
 
 function resolveApiBaseUrl() {
@@ -153,12 +153,12 @@ const needRefererDomains = [
   /^(?:[a-zA-Z0-9-]+\.)*youtube-nocookie\.com$/,
   /^(?:[a-zA-Z0-9-]+\.)*googlevideo\.com$/,
 ];
-const defaultReferer = 'https://client.affine.local/';
-const affineDomains = [
-  /^(?:[a-z0-9-]+\.)*usercontent\.affine\.pro$/i,
-  /^(?:[a-z0-9-]+\.)*affine\.pro$/i,
-  /^(?:[a-z0-9-]+\.)*affine\.fail$/i,
-  /^(?:[a-z0-9-]+\.)*affine\.run$/i,
+const defaultReferer = 'https://client.cloud-notes.local/';
+const cloudNotesDomains = [
+  /^(?:[a-z0-9-]+\.)*usercontent\.cloudNotes\.pro$/i,
+  /^(?:[a-z0-9-]+\.)*cloudNotes\.pro$/i,
+  /^(?:[a-z0-9-]+\.)*cloudNotes\.fail$/i,
+  /^(?:[a-z0-9-]+\.)*cloudNotes\.run$/i,
 ];
 
 function setHeader(
@@ -238,7 +238,7 @@ export async function registerProtocol() {
             ensureFrameAncestors(responseHeaders, "'self'");
           } else if (
             (protocol === 'http:' || protocol === 'https:') &&
-            affineDomains.some(regex => regex.test(hostname))
+            cloudNotesDomains.some(regex => regex.test(hostname))
           ) {
             allowCors(responseHeaders);
           }

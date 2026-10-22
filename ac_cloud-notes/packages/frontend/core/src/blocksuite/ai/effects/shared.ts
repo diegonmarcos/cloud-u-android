@@ -1,4 +1,4 @@
-import { effects as tooltipEffects } from '@blocksuite/affine-components/tooltip';
+import { effects as tooltipEffects } from '@blocksuite/cloud-notes-components/tooltip';
 
 import { ArtifactSkeleton } from '../components/ai-artifact-skeleton';
 import { ChatContentImages } from '../components/ai-message-content/images';

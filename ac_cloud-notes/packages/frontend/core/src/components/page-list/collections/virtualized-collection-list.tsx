@@ -1,5 +1,5 @@
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { Trans } from '@affine/i18n';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { Trans } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
@@ -89,10 +89,10 @@ export const VirtualizedCollectionList = ({
         open={showFloatingToolbar}
         content={
           <Trans
-            i18nKey="com.affine.collection.toolbar.selected"
+            i18nKey="com.cloud-notes.collection.toolbar.selected"
             count={selectedCollectionIds.length}
           >
-            <div style={{ color: 'var(--affine-text-secondary-color)' }}>
+            <div style={{ color: 'var(--cloud-notes-text-secondary-color)' }}>
               {{ count: selectedCollectionIds.length } as any}
             </div>
             selected

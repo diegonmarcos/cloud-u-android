@@ -1,7 +1,7 @@
-import { ExplorerDisplayMenuButton } from '@affine/core/components/explorer/display-menu';
-import { ExplorerNavigation } from '@affine/core/components/explorer/header/navigation';
-import type { ExplorerDisplayPreference } from '@affine/core/components/explorer/types';
-import { Header } from '@affine/core/components/pure/header';
+import { ExplorerDisplayMenuButton } from '@cloud-notes/core/components/explorer/display-menu';
+import { ExplorerNavigation } from '@cloud-notes/core/components/explorer/header/navigation';
+import type { ExplorerDisplayPreference } from '@cloud-notes/core/components/explorer/types';
+import { Header } from '@cloud-notes/core/components/pure/header';
 
 export const TagDetailHeader = ({
   displayPreference,

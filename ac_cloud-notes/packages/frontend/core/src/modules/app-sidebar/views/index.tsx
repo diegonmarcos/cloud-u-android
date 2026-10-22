@@ -1,10 +1,10 @@
-import { type DropTargetGetFeedback, Skeleton } from '@affine/component';
-import { ResizePanel } from '@affine/component/resize-panel';
-import { useAppSettingHelper } from '@affine/core/components/hooks/affine/use-app-setting-helper';
-import { NavigateContext } from '@affine/core/components/hooks/use-navigate-helper';
-import { WorkspaceNavigator } from '@affine/core/components/workspace-selector';
-import type { AffineDNDData } from '@affine/core/types/dnd';
-import { useI18n } from '@affine/i18n';
+import { type DropTargetGetFeedback, Skeleton } from '@cloud-notes/component';
+import { ResizePanel } from '@cloud-notes/component/resize-panel';
+import { useAppSettingHelper } from '@cloud-notes/core/components/hooks/cloud-notes/use-app-setting-helper';
+import { NavigateContext } from '@cloud-notes/core/components/hooks/use-navigate-helper';
+import { WorkspaceNavigator } from '@cloud-notes/core/components/workspace-selector';
+import type { CloudNotesDNDData } from '@cloud-notes/core/types/dnd';
+import { useI18n } from '@cloud-notes/i18n';
 import {
   useLiveData,
   useService,
@@ -128,7 +128,7 @@ export function AppSidebar({ children }: PropsWithChildren) {
           viewId: firstView.id,
         };
       },
-      canDrop: (data: DropTargetGetFeedback<AffineDNDData>) => {
+      canDrop: (data: DropTargetGetFeedback<CloudNotesDNDData>) => {
         return (
           (!!data.source.data.entity?.type &&
             allowedSplitViewEntityTypes.has(data.source.data.entity?.type)) ||
@@ -199,8 +199,8 @@ const ResizeHandleTooltipContent = () => {
   const t = useI18n();
   return (
     <div>
-      <div>{t['com.affine.rootAppSidebar.resize-handle.tooltip.drag']()}</div>
-      <div>{t['com.affine.rootAppSidebar.resize-handle.tooltip.click']()}</div>
+      <div>{t['com.cloud-notes.rootAppSidebar.resize-handle.tooltip.drag']()}</div>
+      <div>{t['com.cloud-notes.rootAppSidebar.resize-handle.tooltip.click']()}</div>
     </div>
   );
 };

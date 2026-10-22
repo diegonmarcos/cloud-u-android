@@ -1,10 +1,10 @@
-import { createLitPortal } from '@blocksuite/affine/components/portal';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
+import { createLitPortal } from '@blocksuite/cloud-notes/components/portal';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
 import {
   BlockSelection,
   type EditorHost,
   TextSelection,
-} from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/std';
 import { flip, offset } from '@floating-ui/dom';
 import { css, html, LitElement } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -12,7 +12,7 @@ import { property } from 'lit/decorators.js';
 import { AIAppEvents } from '../provider';
 import { getAIPanelWidget } from '../utils/ai-widgets';
 import { extractSelectedContent } from '../utils/extract';
-import type { AffineAIPanelWidgetConfig } from '../widgets/ai-panel/type';
+import type { CloudNotesAIPanelWidgetConfig } from '../widgets/ai-panel/type';
 import type { AIItemGroupConfig } from './ai-item/types';
 
 export class AskAIToolbarButton extends WithDisposable(LitElement) {
@@ -68,7 +68,7 @@ export class AskAIToolbarButton extends WithDisposable(LitElement) {
     }).portal;
   };
 
-  private readonly _generateAnswer: AffineAIPanelWidgetConfig['generateAnswer'] =
+  private readonly _generateAnswer: CloudNotesAIPanelWidgetConfig['generateAnswer'] =
     ({ finish, input }) => {
       finish('success');
       const aiPanel = getAIPanelWidget(this.host);

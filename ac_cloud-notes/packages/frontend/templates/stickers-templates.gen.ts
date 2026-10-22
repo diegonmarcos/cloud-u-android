@@ -404,8 +404,8 @@ import stickerCover199 from './stickers/Cheeky Piggies/Cover/Thumbs Up.svg';
 import stickerContent199 from './stickers/Cheeky Piggies/Content/Thumbs Up.svg';
 import stickerCover200 from './stickers/Cheeky Piggies/Cover/What_.svg';
 import stickerContent200 from './stickers/Cheeky Piggies/Content/What_.svg';
-import stickerCover201 from './stickers/Contorted Stickers/Cover/AFFiNE.svg';
-import stickerContent201 from './stickers/Contorted Stickers/Content/AFFiNE.svg';
+import stickerCover201 from './stickers/Contorted Stickers/Cover/cloud-notes.svg';
+import stickerContent201 from './stickers/Contorted Stickers/Content/cloud-notes.svg';
 import stickerCover202 from './stickers/Contorted Stickers/Cover/AI.svg';
 import stickerContent202 from './stickers/Contorted Stickers/Content/AI.svg';
 import stickerCover203 from './stickers/Contorted Stickers/Cover/Cat.svg';
@@ -438,8 +438,8 @@ import stickerCover216 from './stickers/Paper/Cover/+1.svg';
 import stickerContent216 from './stickers/Paper/Content/+1.svg';
 import stickerCover217 from './stickers/Paper/Cover/A lot of question.svg';
 import stickerContent217 from './stickers/Paper/Content/A lot of question.svg';
-import stickerCover218 from './stickers/Paper/Cover/AFFiNE AI.svg';
-import stickerContent218 from './stickers/Paper/Content/AFFiNE AI.svg';
+import stickerCover218 from './stickers/Paper/Cover/cloud-notes AI.svg';
+import stickerContent218 from './stickers/Paper/Content/cloud-notes AI.svg';
 import stickerCover219 from './stickers/Paper/Cover/Arrow.svg';
 import stickerContent219 from './stickers/Paper/Content/Arrow.svg';
 import stickerCover220 from './stickers/Paper/Cover/Atention.svg';
@@ -1753,7 +1753,7 @@ const templates = {
         hash: "JqWfcP9Q0kGE4wDuVZCi4lW2U7O15trpL--fdNrRJvQ=",
       }),],
 "Contorted Stickers": [     buildStickerTemplate({
-        name: "AFFiNE",
+        name: "Cloud Notes",
         cover: stickerCover201,
         content: stickerContent201,
         hash: "i3piAMnoD4STQnEjTrAe_ZRdwHcD34n-sJZY8IN1blg=",
@@ -1855,7 +1855,7 @@ const templates = {
         hash: "yKPa7vqOxC6rh-e0SVdlp0RwMWQ9mzDKTtE5g2UnHGk=",
       }),
      buildStickerTemplate({
-        name: "AFFiNE AI",
+        name: "Cloud Notes AI",
         cover: stickerCover218,
         content: stickerContent218,
         hash: "FwBs2WApEGkiFmu1XR4fHZ_7fOlSsSBdYEyGs2lDeLk=",

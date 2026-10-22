@@ -1,9 +1,9 @@
-import { DesktopApiService } from '@affine/core/modules/desktop-api';
+import { DesktopApiService } from '@cloud-notes/core/modules/desktop-api';
 import { useServiceOptional } from '@toeverything/infra';
 import { useCallback } from 'react';
 import { redirect } from 'react-router-dom';
 
-import { Onboarding } from '../../../components/affine/onboarding/onboarding';
+import { Onboarding } from '../../../components/cloud-notes/onboarding/onboarding';
 import { appConfigStorage } from '../../../components/hooks/use-app-config-storage';
 
 /**

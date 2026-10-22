@@ -3,11 +3,11 @@ import {
   notify,
   PropertyValue,
   type RadioItem,
-} from '@affine/component';
-import type { FilterParams } from '@affine/core/modules/collection-rules';
-import { DocService } from '@affine/core/modules/doc';
-import { useI18n } from '@affine/i18n';
-import type { DocMode } from '@blocksuite/affine/model';
+} from '@cloud-notes/component';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
+import { DocService } from '@cloud-notes/core/modules/doc';
+import { useI18n } from '@cloud-notes/i18n';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import { EdgelessIcon, PageIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
@@ -49,12 +49,12 @@ export const DocPrimaryModeValue = ({
       notify.success({
         title:
           mode === 'page'
-            ? t['com.affine.toastMessage.defaultMode.page.title']()
-            : t['com.affine.toastMessage.defaultMode.edgeless.title'](),
+            ? t['com.cloud-notes.toastMessage.defaultMode.page.title']()
+            : t['com.cloud-notes.toastMessage.defaultMode.edgeless.title'](),
         message:
           mode === 'page'
-            ? t['com.affine.toastMessage.defaultMode.page.message']()
-            : t['com.affine.toastMessage.defaultMode.edgeless.message'](),
+            ? t['com.cloud-notes.toastMessage.defaultMode.page.message']()
+            : t['com.cloud-notes.toastMessage.defaultMode.edgeless.message'](),
       });
       onChange?.(mode, true);
     },
@@ -147,9 +147,9 @@ export const DocPrimaryModeGroupHeader = ({
   const t = useI18n();
   const text =
     groupId === 'edgeless'
-      ? t['com.affine.edgelessMode']()
+      ? t['com.cloud-notes.edgelessMode']()
       : groupId === 'page'
-        ? t['com.affine.pageMode']()
+        ? t['com.cloud-notes.pageMode']()
         : 'Default';
 
   return (

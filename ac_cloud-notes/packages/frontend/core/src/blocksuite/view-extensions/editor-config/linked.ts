@@ -1,5 +1,5 @@
-import { AtMenuConfigService } from '@affine/core/modules/at-menu-config/services';
-import type { LinkedWidgetConfig } from '@blocksuite/affine/widgets/linked-doc';
+import { AtMenuConfigService } from '@cloud-notes/core/modules/at-menu-config/services';
+import type { LinkedWidgetConfig } from '@blocksuite/cloud-notes/widgets/linked-doc';
 import { type FrameworkProvider } from '@toeverything/infra';
 
 export function createLinkedWidgetConfig(

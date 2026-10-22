@@ -1,5 +1,5 @@
-import { fuzzyMatch } from '@affine/core/utils/fuzzy-match';
-import { I18n } from '@affine/i18n';
+import { fuzzyMatch } from '@cloud-notes/core/utils/fuzzy-match';
+import { I18n } from '@cloud-notes/i18n';
 import dayjs from 'dayjs';
 
 import { JOURNAL_DATE_FORMAT } from './services/journal';
@@ -41,21 +41,21 @@ export function suggestJournalDate(query: string): {
   if (query === '' || fuzzyMatch('today', query, true)) {
     return {
       dateString: dayjs().format(JOURNAL_DATE_FORMAT),
-      alias: I18n.t('com.affine.today'),
+      alias: I18n.t('com.cloud-notes.today'),
     };
   }
 
   if (fuzzyMatch('tomorrow', query, true)) {
     return {
       dateString: dayjs().add(1, 'day').format(JOURNAL_DATE_FORMAT),
-      alias: I18n.t('com.affine.tomorrow'),
+      alias: I18n.t('com.cloud-notes.tomorrow'),
     };
   }
 
   if (fuzzyMatch('yesterday', query, true)) {
     return {
       dateString: dayjs().subtract(1, 'day').format(JOURNAL_DATE_FORMAT),
-      alias: I18n.t('com.affine.yesterday'),
+      alias: I18n.t('com.cloud-notes.yesterday'),
     };
   }
 
@@ -68,7 +68,7 @@ export function suggestJournalDate(query: string): {
       .format(JOURNAL_DATE_FORMAT)
   ).map(date => ({
     dateString: date,
-    alias: I18n.t('com.affine.next-week', {
+    alias: I18n.t('com.cloud-notes.next-week', {
       weekday: weekDayNames[dayjs(date).day()],
     }),
   }));
@@ -81,7 +81,7 @@ export function suggestJournalDate(query: string): {
       .format(JOURNAL_DATE_FORMAT)
   ).map(date => ({
     dateString: date,
-    alias: I18n.t('com.affine.last-week', {
+    alias: I18n.t('com.cloud-notes.last-week', {
       weekday: weekDayNames[dayjs(date).day()],
     }),
   }));

@@ -1,6 +1,6 @@
 export async function encryptPBKDF2(
   source: string,
-  secret = 'affine',
+  secret = 'cloud-notes',
   iterations = 100000
 ) {
   const encoder = new TextEncoder();

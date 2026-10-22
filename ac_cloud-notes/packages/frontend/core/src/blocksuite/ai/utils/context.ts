@@ -1,6 +1,6 @@
-import type { SerializedXYWH } from '@blocksuite/affine/global/gfx';
-import type { MindmapStyle } from '@blocksuite/affine/model';
-import type { GfxModel } from '@blocksuite/affine/std/gfx';
+import type { SerializedXYWH } from '@blocksuite/cloud-notes/global/gfx';
+import type { MindmapStyle } from '@blocksuite/cloud-notes/model';
+import type { GfxModel } from '@blocksuite/cloud-notes/std/gfx';
 
 import type { TemplateImage } from '../slides/template';
 
@@ -15,14 +15,14 @@ export interface ContextValue {
   style?: MindmapStyle;
   centerPosition?: SerializedXYWH;
   // slides
-  contents?: Array<{ blocks: AffineNode }>;
+  contents?: Array<{ blocks: CloudNotesNode }>;
   images?: TemplateImage[][];
 }
 
-export interface AffineNode {
+export interface CloudNotesNode {
   id: string;
   flavour: string;
-  children: AffineNode[];
+  children: CloudNotesNode[];
 }
 
 type MindMapNode = {

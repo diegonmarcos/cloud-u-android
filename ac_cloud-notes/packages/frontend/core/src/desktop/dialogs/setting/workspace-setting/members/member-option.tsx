@@ -1,11 +1,11 @@
-import { MenuItem, notify, useConfirmModal } from '@affine/component';
+import { MenuItem, notify, useConfirmModal } from '@cloud-notes/component';
 import {
   type Member,
   WorkspaceMembersService,
   WorkspacePermissionService,
-} from '@affine/core/modules/permissions';
-import { Permission, WorkspaceMemberStatus } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/permissions';
+import { Permission, WorkspaceMemberStatus } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 
@@ -31,12 +31,12 @@ export const MemberOptions = ({
   const openRemoveConfirmModal = useCallback(
     (successNotify: { title: string; message: string }) => {
       openConfirmModal({
-        title: t['com.affine.payment.member.team.remove.confirm.title'](),
+        title: t['com.cloud-notes.payment.member.team.remove.confirm.title'](),
         description:
-          t['com.affine.payment.member.team.remove.confirm.description'](),
+          t['com.cloud-notes.payment.member.team.remove.confirm.description'](),
         confirmText:
-          t['com.affine.payment.member.team.remove.confirm.confirm-button'](),
-        cancelText: t['com.affine.payment.member.team.remove.confirm.cancel'](),
+          t['com.cloud-notes.payment.member.team.remove.confirm.confirm-button'](),
+        cancelText: t['com.cloud-notes.payment.member.team.remove.confirm.cancel'](),
         confirmButtonOptions: {
           variant: 'error',
         },
@@ -69,8 +69,8 @@ export const MemberOptions = ({
 
   const handleRevoke = useCallback(() => {
     openRemoveConfirmModal({
-      title: t['com.affine.payment.member.team.revoke.notify.title'](),
-      message: t['com.affine.payment.member.team.revoke.notify.message']({
+      title: t['com.cloud-notes.payment.member.team.revoke.notify.title'](),
+      message: t['com.cloud-notes.payment.member.team.revoke.notify.message']({
         name: member.name || member.email || member.id,
       }),
     });
@@ -82,8 +82,8 @@ export const MemberOptions = ({
       .then(result => {
         if (result) {
           notify.success({
-            title: t['com.affine.payment.member.team.approve.notify.title'](),
-            message: t['com.affine.payment.member.team.approve.notify.message'](
+            title: t['com.cloud-notes.payment.member.team.approve.notify.title'](),
+            message: t['com.cloud-notes.payment.member.team.approve.notify.message'](
               {
                 name: member.name || member.email || member.id,
               }
@@ -102,8 +102,8 @@ export const MemberOptions = ({
 
   const handleDecline = useCallback(() => {
     openRemoveConfirmModal({
-      title: t['com.affine.payment.member.team.decline.notify.title'](),
-      message: t['com.affine.payment.member.team.decline.notify.message']({
+      title: t['com.cloud-notes.payment.member.team.decline.notify.title'](),
+      message: t['com.cloud-notes.payment.member.team.decline.notify.message']({
         name: member.name || member.email || member.id,
       }),
     });
@@ -111,8 +111,8 @@ export const MemberOptions = ({
 
   const handleRemove = useCallback(() => {
     openRemoveConfirmModal({
-      title: t['com.affine.payment.member.team.remove.notify.title'](),
-      message: t['com.affine.payment.member.team.remove.notify.message']({
+      title: t['com.cloud-notes.payment.member.team.remove.notify.title'](),
+      message: t['com.cloud-notes.payment.member.team.remove.notify.message']({
         name: member.name || member.email || member.id,
       }),
     });
@@ -124,9 +124,9 @@ export const MemberOptions = ({
       .then(result => {
         if (result) {
           notify.success({
-            title: t['com.affine.payment.member.team.change.notify.title'](),
+            title: t['com.cloud-notes.payment.member.team.change.notify.title'](),
             message: t[
-              'com.affine.payment.member.team.change.admin.notify.message'
+              'com.cloud-notes.payment.member.team.change.admin.notify.message'
             ]({
               name: member.name || member.email || member.id,
             }),
@@ -147,9 +147,9 @@ export const MemberOptions = ({
       .then(result => {
         if (result) {
           notify.success({
-            title: t['com.affine.payment.member.team.change.notify.title'](),
+            title: t['com.cloud-notes.payment.member.team.change.notify.title'](),
             message: t[
-              'com.affine.payment.member.team.change.collaborator.notify.message'
+              'com.cloud-notes.payment.member.team.change.collaborator.notify.message'
             ]({
               name: member.name || member.email || member.id,
             }),
@@ -167,15 +167,15 @@ export const MemberOptions = ({
 
   const handleRetryPayment = useCallback(() => {
     openConfirmModal({
-      title: t['com.affine.payment.member.team.retry-payment.title'](),
+      title: t['com.cloud-notes.payment.member.team.retry-payment.title'](),
       description:
         t[
-          `com.affine.payment.member.team.retry-payment.${isOwner ? 'owner' : 'admin'}.description`
+          `com.cloud-notes.payment.member.team.retry-payment.${isOwner ? 'owner' : 'admin'}.description`
         ](),
       confirmText:
         t[
           isOwner
-            ? 'com.affine.payment.member.team.retry-payment.update-payment'
+            ? 'com.cloud-notes.payment.member.team.retry-payment.update-payment'
             : 'Got it'
         ](),
       confirmButtonOptions: {
@@ -194,22 +194,22 @@ export const MemberOptions = ({
   const operationButtonInfo = useMemo(() => {
     return [
       {
-        label: t['com.affine.payment.member.team.retry-payment'](),
+        label: t['com.cloud-notes.payment.member.team.retry-payment'](),
         onClick: handleRetryPayment,
         show: member.status === WorkspaceMemberStatus.NeedMoreSeat,
       },
       {
-        label: t['com.affine.payment.member.team.approve'](),
+        label: t['com.cloud-notes.payment.member.team.approve'](),
         onClick: handleApprove,
         show: member.status === WorkspaceMemberStatus.UnderReview,
       },
       {
-        label: t['com.affine.payment.member.team.approve'](),
+        label: t['com.cloud-notes.payment.member.team.approve'](),
         onClick: handleRetryPayment,
         show: member.status === WorkspaceMemberStatus.NeedMoreSeatAndReview,
       },
       {
-        label: t['com.affine.payment.member.team.decline'](),
+        label: t['com.cloud-notes.payment.member.team.decline'](),
         onClick: handleDecline,
         show:
           (isAdmin || isOwner) &&
@@ -217,7 +217,7 @@ export const MemberOptions = ({
             member.status === WorkspaceMemberStatus.NeedMoreSeatAndReview),
       },
       {
-        label: t['com.affine.payment.member.team.revoke'](),
+        label: t['com.cloud-notes.payment.member.team.revoke'](),
         onClick: handleRevoke,
         show:
           (isAdmin || isOwner) &&
@@ -228,7 +228,7 @@ export const MemberOptions = ({
           ].includes(member.status),
       },
       {
-        label: t['com.affine.payment.member.team.remove'](),
+        label: t['com.cloud-notes.payment.member.team.remove'](),
         onClick: handleRemove,
         show:
           (isOwner && member.status === WorkspaceMemberStatus.Accepted) ||
@@ -238,7 +238,7 @@ export const MemberOptions = ({
             member.permission !== Permission.Admin),
       },
       {
-        label: t['com.affine.payment.member.team.change.collaborator'](),
+        label: t['com.cloud-notes.payment.member.team.change.collaborator'](),
         onClick: handleChangeToCollaborator,
         show:
           isOwner &&
@@ -246,7 +246,7 @@ export const MemberOptions = ({
           member.permission === Permission.Admin,
       },
       {
-        label: t['com.affine.payment.member.team.change.admin'](),
+        label: t['com.cloud-notes.payment.member.team.change.admin'](),
         onClick: handleChangeToAdmin,
         show:
           isTeam &&
@@ -256,7 +256,7 @@ export const MemberOptions = ({
           member.status === WorkspaceMemberStatus.Accepted,
       },
       {
-        label: t['com.affine.payment.member.team.assign'](),
+        label: t['com.cloud-notes.payment.member.team.assign'](),
         onClick: handleAssignOwner,
         show: isOwner && member.status === WorkspaceMemberStatus.Accepted,
       },

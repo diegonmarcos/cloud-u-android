@@ -52,7 +52,7 @@ test('press enter when image is selected should move next paragraph and should p
   await activeEmbed(page);
   await pressEnter(page);
 
-  const placeholder = page.locator('.affine-paragraph-placeholder.visible');
+  const placeholder = page.locator('.cloud-notes-paragraph-placeholder.visible');
   await expect(placeholder).toBeVisible();
 });
 

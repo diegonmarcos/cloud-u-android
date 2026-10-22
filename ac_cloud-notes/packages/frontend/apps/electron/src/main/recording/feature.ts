@@ -3,7 +3,7 @@ import { execSync } from 'node:child_process';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 
-import type * as NativeModuleType from '@affine/native';
+import type * as NativeModuleType from '@cloud-notes/native';
 import { app, systemPreferences } from 'electron';
 import fs from 'fs-extra';
 import { debounce } from 'lodash-es';
@@ -81,14 +81,14 @@ let shareableContent: ShareableContentType | null = null;
 let nativeModuleOverride: NativeModule | null = null;
 
 function getNativeModule(): NativeModule {
-  return nativeModuleOverride ?? (require('@affine/native') as NativeModule);
+  return nativeModuleOverride ?? (require('@cloud-notes/native') as NativeModule);
 }
 
 async function getNativeModuleAsync(): Promise<NativeModule> {
   if (nativeModuleOverride) {
     return nativeModuleOverride;
   }
-  return (await import('@affine/native')) as NativeModule;
+  return (await import('@cloud-notes/native')) as NativeModule;
 }
 
 async function assertRecordingFilepath(filepath: string) {
@@ -395,7 +395,7 @@ function getAllApps(): TappableAppInfo[] {
     (value): value is TappableAppInfo =>
       value !== null &&
       !value.bundleIdentifier.startsWith('com.apple') &&
-      !value.bundleIdentifier.startsWith('pro.affine') &&
+      !value.bundleIdentifier.startsWith('pro.cloud-notes') &&
       value.processId !== process.pid
   );
 }

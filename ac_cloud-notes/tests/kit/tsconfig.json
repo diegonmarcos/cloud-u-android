@@ -8,7 +8,7 @@
   "include": ["./src"],
   "references": [
     { "path": "../../tools/utils" },
-    { "path": "../../blocksuite/affine/all" },
+    { "path": "../../blocksuite/cloud-notes/all" },
     { "path": "../../packages/common/infra" }
   ]
 }

@@ -68,7 +68,7 @@ test('should format quick bar show when select text', async ({ page }) => {
   // Even not any button is clicked, the format quick bar should't be hidden
   await expect(formatBar).toBeVisible();
 
-  const noteEl = page.locator('affine-note');
+  const noteEl = page.locator('cloud-notes-note');
   const { x, y } = await getBoundingBox(noteEl);
   await page.mouse.click(x + 100, y + 20);
   await expect(formatBar).not.toBeVisible();
@@ -81,9 +81,9 @@ test('should format quick bar show when clicking drag handle', async ({
   await initEmptyParagraphState(page);
   await initThreeParagraphs(page);
 
-  const locator = page.locator('affine-paragraph').first();
+  const locator = page.locator('cloud-notes-paragraph').first();
   await locator.hover();
-  const dragHandle = page.locator('.affine-drag-handle-grabber');
+  const dragHandle = page.locator('.cloud-notes-drag-handle-grabber');
   const dragHandleRect = await dragHandle.boundingBox();
   if (!dragHandleRect) {
     throw new Error('dragHandleRect is not found');
@@ -257,7 +257,7 @@ test('should format quick bar be able to change background color', async ({
   ).toBe(true);
 
   const highlightMenu = formatBar.locator(
-    'affine-highlight-dropdown-menu editor-menu-button'
+    'cloud-notes-highlight-dropdown-menu editor-menu-button'
   );
   await highlightMenu.evaluate(menu => {
     Reflect.set(menu, 'popperOptions', { mainAxis: 1 });
@@ -280,7 +280,7 @@ test('should format quick bar be able to change background color', async ({
     [
       {
         attributes: {
-          color: 'var(--affine-text-highlight-foreground-red)',
+          color: 'var(--cloud-notes-text-highlight-foreground-red)',
         },
         insert: '456',
       },
@@ -291,7 +291,7 @@ test('should format quick bar be able to change background color', async ({
   // TODO(@fundon): these recent settings should be added to the dropdown menu.
   // await expect(highlight.highlightBtn).toHaveAttribute(
   //   'data-last-used',
-  //   'var(--affine-text-highlight-foreground-red)'
+  //   'var(--cloud-notes-text-highlight-foreground-red)'
   // );
 
   expect(await getPageSnapshot(page, true)).toMatchSnapshot(
@@ -314,7 +314,7 @@ test('should format quick bar be able to change background color', async ({
     [
       {
         attributes: {
-          color: 'var(--affine-text-highlight-foreground-red)',
+          color: 'var(--cloud-notes-text-highlight-foreground-red)',
         },
         insert: '123',
       },
@@ -375,7 +375,7 @@ test('should format quick bar be able to link text', async ({
   await expect(linkBtn).not.toHaveAttribute('active', '');
   await linkBtn.click();
 
-  const linkPopoverInput = page.locator('.affine-link-popover-input');
+  const linkPopoverInput = page.locator('.cloud-notes-link-popover-input');
   await expect(linkPopoverInput).toBeVisible();
 
   const url = 'https://www.example.com';
@@ -387,7 +387,7 @@ test('should format quick bar be able to link text', async ({
     `${testInfo.title}_init.json`
   );
 
-  const linkLocator = page.locator('affine-link a');
+  const linkLocator = page.locator('cloud-notes-link a');
   await expect(linkLocator).toHaveAttribute('href', url);
 
   await focusRichTextEnd(page);
@@ -587,7 +587,7 @@ test('should format quick bar work in single block selection', async ({
     { x: 0, y: 0 }
   );
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(1);
 
@@ -610,7 +610,7 @@ test('should format quick bar work in single block selection', async ({
     `${testInfo.title}.json`
   );
 
-  const noteEl = page.locator('affine-note');
+  const noteEl = page.locator('cloud-notes-note');
   const { x, y, width, height } = await getBoundingBox(noteEl);
   await page.mouse.click(x + width / 2, y + height / 2);
   await expect(formatBar).not.toBeVisible();
@@ -631,7 +631,7 @@ test('should format quick bar work in multiple block selection', async ({
     { x: 0, y: 0 }
   );
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(3);
 
@@ -650,7 +650,7 @@ test('should format quick bar work in multiple block selection', async ({
     `${testInfo.title}.json`
   );
 
-  const noteEl = page.locator('affine-note');
+  const noteEl = page.locator('cloud-notes-note');
   const { x, y, width, height } = await getBoundingBox(noteEl);
   await page.mouse.click(x + width / 2, y + height / 2);
   await expect(formatBarController.formatBar).not.toBeVisible();
@@ -671,7 +671,7 @@ test('should format quick bar with block selection works when update block type'
     { x: 0, y: 0 }
   );
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(3);
 
@@ -694,7 +694,7 @@ test('should format quick bar with block selection works when update block type'
   await expect(formatBarController.formatBar).toBeVisible();
   await expect(blockSelections).toHaveCount(3);
 
-  const noteEl = page.locator('affine-note');
+  const noteEl = page.locator('cloud-notes-note');
   const { x, y, width, height } = await getBoundingBox(noteEl);
   await page.mouse.click(x + width / 2, y + height / 2);
   await expect(formatBarController.formatBar).not.toBeVisible();
@@ -820,7 +820,7 @@ test('should the database action icon show correctly', async ({ page }) => {
   await focusRichText(page, 2);
   await pressEnter(page);
   await updateBlockType(page, 'affine:code');
-  const codeBlock = page.locator('affine-code');
+  const codeBlock = page.locator('cloud-notes-code');
   const codeBox = await codeBlock.boundingBox();
   if (!codeBox) throw new Error('Missing code block box');
 
@@ -855,9 +855,9 @@ test('should convert to database work', async ({ page }) => {
   );
   const databaseAction = page.getByTestId('convert-to-database');
   await databaseAction.click();
-  const database = page.locator('affine-database');
+  const database = page.locator('cloud-notes-database');
   await expect(database).toBeVisible();
-  const rows = page.locator('.affine-database-block-row');
+  const rows = page.locator('.cloud-notes-database-block-row');
   expect(await rows.count()).toBe(3);
 });
 
@@ -883,7 +883,7 @@ test('should show format-quick-bar and select all text of the block when triple 
 
   await assertRichTextInlineRange(page, 0, 0, 5);
 
-  const noteEl = page.locator('affine-note');
+  const noteEl = page.locator('cloud-notes-note');
   const { x, y, width, height } = await getBoundingBox(noteEl);
   await page.mouse.click(x + width / 2, y + height / 2);
 
@@ -988,7 +988,7 @@ test('create linked doc from block selection with format bar', async ({
   await waitNextFrame(page, 200);
 
   const blockSelections = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(blockSelections).toHaveCount(2);
 
@@ -996,7 +996,7 @@ test('create linked doc from block selection with format bar', async ({
   expect(await createLinkedDocBtn.isVisible()).toBe(true);
   await createLinkedDocBtn.click();
 
-  const linkedDocBlock = page.locator('affine-embed-linked-doc-block');
+  const linkedDocBlock = page.locator('cloud-notes-embed-linked-doc-block');
   await expect(linkedDocBlock).toHaveCount(1);
 
   const linkedDocBox = await linkedDocBlock.boundingBox();
@@ -1013,7 +1013,7 @@ test('create linked doc from block selection with format bar', async ({
     `${testInfo.title}.json`
   );
 
-  const paragraph = page.locator('affine-paragraph');
+  const paragraph = page.locator('cloud-notes-paragraph');
   await expect(paragraph).toHaveCount(3);
 });
 

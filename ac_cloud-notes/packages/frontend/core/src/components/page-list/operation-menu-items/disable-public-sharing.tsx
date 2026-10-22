@@ -1,6 +1,6 @@
-import type { MenuItemProps } from '@affine/component';
-import { MenuItem } from '@affine/component';
-import { useI18n } from '@affine/i18n';
+import type { MenuItemProps } from '@cloud-notes/component';
+import { MenuItem } from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 import { ShareIcon } from '@blocksuite/icons/rc';
 
 export const DisablePublicSharing = (props: MenuItemProps) => {

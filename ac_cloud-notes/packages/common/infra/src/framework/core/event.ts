@@ -1,4 +1,4 @@
-import { DebugLogger } from '@affine/debug';
+import { DebugLogger } from '@cloud-notes/debug';
 
 import { stableHash } from '../../utils';
 import type { FrameworkProvider } from '.';
@@ -19,7 +19,7 @@ export function createEvent<T>(id: string): FrameworkEvent<T> {
 export type FrameworkEventType<T> =
   T extends FrameworkEvent<infer E> ? E : never;
 
-const logger = new DebugLogger('affine:event-bus');
+const logger = new DebugLogger('cloud-notes:event-bus');
 
 export class EventBus {
   private listeners: Record<string, Array<(payload: any) => void>> = {};

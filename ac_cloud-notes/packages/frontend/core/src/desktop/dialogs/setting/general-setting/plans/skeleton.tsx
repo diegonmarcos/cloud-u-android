@@ -1,4 +1,4 @@
-import { Skeleton } from '@affine/component';
+import { Skeleton } from '@cloud-notes/component';
 
 import { AIPlanLayout } from './ai/layout';
 import { CloudPlanLayout, PlanLayout } from './layout';

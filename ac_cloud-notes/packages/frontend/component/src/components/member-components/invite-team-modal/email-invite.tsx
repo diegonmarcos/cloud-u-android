@@ -1,4 +1,4 @@
-import { useI18n } from '@affine/i18n';
+import { useI18n } from '@cloud-notes/i18n';
 import { cssVar } from '@toeverything/theme';
 
 import Input from '../../../ui/input';
@@ -23,14 +23,14 @@ export const EmailInvite = ({
   return (
     <>
       <div className={styles.modalSubTitle}>
-        {t['com.affine.payment.member.team.invite.email-invite']()}
+        {t['com.cloud-notes.payment.member.team.invite.email-invite']()}
       </div>
       <div>
         <Input
           inputStyle={{ fontSize: cssVar('fontXs') }}
           disabled={isMutating}
           placeholder={t[
-            'com.affine.payment.member.team.invite.email-placeholder'
+            'com.cloud-notes.payment.member.team.invite.email-placeholder'
           ]()}
           value={inviteEmail}
           onChange={setInviteEmail}
@@ -39,7 +39,7 @@ export const EmailInvite = ({
         />
         {!isValidEmail ? (
           <div className={styles.errorHint}>
-            {t['com.affine.auth.sign.email.error']()}
+            {t['com.cloud-notes.auth.sign.email.error']()}
           </div>
         ) : null}
       </div>

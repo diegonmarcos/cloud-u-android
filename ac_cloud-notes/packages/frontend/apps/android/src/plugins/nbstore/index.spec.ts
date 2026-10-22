@@ -44,15 +44,15 @@ const h = vi.hoisted(() => {
   return { disk, b64, unb64, makePlugin, plugin: { current: makePlugin() } };
 });
 
-vi.mock('@affine/core/modules/workspace-engine', () => ({
+vi.mock('@cloud-notes/core/modules/workspace-engine', () => ({
   base64ToUint8Array: h.unb64,
   uint8ArrayToBase64: async (u: Uint8Array) => h.b64(u),
 }));
-vi.mock('@affine/mobile-shared/nbstore/payload', () => ({
+vi.mock('@cloud-notes/mobile-shared/nbstore/payload', () => ({
   decodePayload: async (s: string) => h.unb64(s),
-  MOBILE_BLOB_FILE_PREFIX: '__AFFINE_BLOB_FILE__:',
+  MOBILE_BLOB_FILE_PREFIX: '__CLOUD_NOTES_BLOB_FILE__:',
 }));
-vi.mock('@affine/nbstore', () => ({
+vi.mock('@cloud-notes/nbstore', () => ({
   parseUniversalId: (id: string) => ({
     peer: 'local',
     type: 'workspace',
@@ -60,7 +60,7 @@ vi.mock('@affine/nbstore', () => ({
   }),
 }));
 // type-only import in index.ts, but the bundler keeps it as a side-effect import
-vi.mock('@affine/nbstore/sqlite', () => ({}));
+vi.mock('@cloud-notes/nbstore/sqlite', () => ({}));
 vi.mock('@capacitor/core', () => ({
   registerPlugin: () =>
     new Proxy(

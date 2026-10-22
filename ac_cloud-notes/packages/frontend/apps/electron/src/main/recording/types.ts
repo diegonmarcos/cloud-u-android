@@ -1,4 +1,4 @@
-import type { ApplicationInfo } from '@affine/native';
+import type { ApplicationInfo } from '@cloud-notes/native';
 
 export interface TappableAppInfo {
   info: ApplicationInfo;

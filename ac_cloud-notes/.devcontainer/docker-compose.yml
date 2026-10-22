@@ -10,7 +10,7 @@ services:
     command: sleep infinity
     network_mode: service:db
     environment:
-      DATABASE_URL: postgresql://affine:affine@db:5432/affine
+      DATABASE_URL: postgresql://cloud-notes:cloud-notes@db:5432/cloud-notes
       REDIS_SERVER_HOST: redis
 
   db:
@@ -19,9 +19,9 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:
-      POSTGRES_PASSWORD: affine
-      POSTGRES_USER: affine
-      POSTGRES_DB: affine
+      POSTGRES_PASSWORD: cloud-notes
+      POSTGRES_USER: cloud-notes
+      POSTGRES_DB: cloud-notes
   redis:
     image: redis
 

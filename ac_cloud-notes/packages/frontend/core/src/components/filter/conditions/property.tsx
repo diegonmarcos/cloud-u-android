@@ -1,6 +1,6 @@
-import type { FilterParams } from '@affine/core/modules/collection-rules';
-import { WorkspacePropertyService } from '@affine/core/modules/workspace-property';
-import { useI18n } from '@affine/i18n';
+import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
+import { WorkspacePropertyService } from '@cloud-notes/core/modules/workspace-property';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 
 import { WorkspacePropertyIcon, WorkspacePropertyName } from '../../properties';

@@ -43,26 +43,26 @@ let onRecordingImportQueueChanged:
   | ((queue: RecordingImportStatus[]) => void)
   | undefined;
 
-vi.mock('@affine/core/modules/doc', () => ({
+vi.mock('@cloud-notes/core/modules/doc', () => ({
   DocsService: class DocsService {},
 }));
 
-vi.mock('@affine/core/modules/media/services/audio-attachment', () => ({
+vi.mock('@cloud-notes/core/modules/media/services/audio-attachment', () => ({
   AudioAttachmentService: class AudioAttachmentService {},
 }));
 
-vi.mock('@affine/core/modules/workbench', () => ({
+vi.mock('@cloud-notes/core/modules/workbench', () => ({
   WorkbenchService: class WorkbenchService {},
 }));
 
-vi.mock('@affine/debug', () => ({
+vi.mock('@cloud-notes/debug', () => ({
   DebugLogger: class DebugLogger {
     debug = vi.fn();
     error = vi.fn();
   },
 }));
 
-vi.mock('@affine/electron-api', () => ({
+vi.mock('@cloud-notes/electron-api', () => ({
   apis: {
     ui: {
       isActiveTab,
@@ -89,11 +89,11 @@ vi.mock('@affine/electron-api', () => ({
   },
 }));
 
-vi.mock('@affine/i18n', () => ({
+vi.mock('@cloud-notes/i18n', () => ({
   i18nTime: vi.fn(() => 'Jan 1 09:00'),
 }));
 
-vi.mock('@affine/track', () => ({
+vi.mock('@cloud-notes/track', () => ({
   default: {
     doc: {
       editor: {

@@ -490,7 +490,7 @@ test('select text leaving a few words in the last line and delete by forwardDele
   expect(textOne).toBe('abc89');
 });
 
-test('select text in the same line with dragging leftward and move outside the affine-note', async ({
+test('select text in the same line with dragging leftward and move outside the cloud-notes-note', async ({
   page,
 }) => {
   await enterPlaygroundRoom(page);
@@ -499,7 +499,7 @@ test('select text in the same line with dragging leftward and move outside the a
   await assertRichTexts(page, ['123', '456', '789']);
 
   const noteLeft = await page.evaluate(() => {
-    const note = document.querySelector('affine-note');
+    const note = document.querySelector('cloud-notes-note');
     if (!note) {
       throw new Error();
     }
@@ -536,7 +536,7 @@ test('select text in the same line with dragging leftward and move outside the a
   await assertRichTexts(page, ['123', 'abc', '789']);
 });
 
-test('select text in the same line with dragging leftward and move outside the affine-note by forwardDelete', async ({
+test('select text in the same line with dragging leftward and move outside the cloud-notes-note by forwardDelete', async ({
   page,
 }) => {
   await enterPlaygroundRoom(page);
@@ -545,7 +545,7 @@ test('select text in the same line with dragging leftward and move outside the a
   await assertRichTexts(page, ['123', '456', '789']);
 
   const noteLeft = await page.evaluate(() => {
-    const note = document.querySelector('affine-note');
+    const note = document.querySelector('cloud-notes-note');
     if (!note) {
       throw new Error();
     }
@@ -582,7 +582,7 @@ test('select text in the same line with dragging leftward and move outside the a
   await assertRichTexts(page, ['123', 'abc', '789']);
 });
 
-test('select text in the same line with dragging rightward and move outside the affine-note', async ({
+test('select text in the same line with dragging rightward and move outside the cloud-notes-note', async ({
   page,
 }) => {
   await enterPlaygroundRoom(page);
@@ -591,7 +591,7 @@ test('select text in the same line with dragging rightward and move outside the 
   await assertRichTexts(page, ['123', '456', '789']);
 
   const noteRight = await page.evaluate(() => {
-    const note = document.querySelector('affine-note');
+    const note = document.querySelector('cloud-notes-note');
     if (!note) {
       throw new Error();
     }
@@ -629,7 +629,7 @@ test('select text in the same line with dragging rightward and move outside the 
   expect(textOne).toBe('abc');
 });
 
-test('select text in the same line with dragging rightward and move outside the affine-note by forwardDelete', async ({
+test('select text in the same line with dragging rightward and move outside the cloud-notes-note by forwardDelete', async ({
   page,
 }) => {
   await enterPlaygroundRoom(page);
@@ -638,7 +638,7 @@ test('select text in the same line with dragging rightward and move outside the 
   await assertRichTexts(page, ['123', '456', '789']);
 
   const noteRight = await page.evaluate(() => {
-    const note = document.querySelector('affine-note');
+    const note = document.querySelector('cloud-notes-note');
     if (!note) {
       throw new Error();
     }
@@ -912,7 +912,7 @@ test('should not crash when mouse over the left side of the list block prefix', 
     if (!block) {
       throw new Error();
     }
-    const prefixIcon = block.querySelector('.affine-list-block__prefix ');
+    const prefixIcon = block.querySelector('.cloud-notes-list-block__prefix ');
     if (!prefixIcon) {
       throw new Error();
     }
@@ -936,7 +936,7 @@ test('should not crash when mouse over the left side of the list block prefix', 
   assertClipItems(page, 'text/plain', '45');
 });
 
-test('should set the last block to end the range after when leaving the affine-note', async ({
+test('should set the last block to end the range after when leaving the cloud-notes-note', async ({
   page,
 }) => {
   await enterPlaygroundRoom(page);
@@ -961,7 +961,7 @@ test('should set the last block to end the range after when leaving the affine-n
   assertClipItems(page, 'text/plain', '3456789');
 });
 
-test('should set the first block to start the range before when leaving the affine-note-block-container', async ({
+test('should set the first block to start the range before when leaving the cloud-notes-note-block-container', async ({
   page,
 }) => {
   await enterPlaygroundRoom(page);
@@ -1024,7 +1024,7 @@ test('should select texts on cross-note dragging', async ({ page }) => {
   assertClipItems(page, 'text/plain', '3456789ABC');
 });
 
-test('should select full text of the first block when leaving the affine-note-block-container in edgeless mode', async ({
+test('should select full text of the first block when leaving the cloud-notes-note-block-container in edgeless mode', async ({
   page,
 }) => {
   await enterPlaygroundRoom(page);
@@ -1041,7 +1041,7 @@ test('should select full text of the first block when leaving the affine-note-bl
   assertClipItems(page, 'text/plain', '34567');
 
   const containerRect = await page.evaluate(() => {
-    const container = document.querySelector('.affine-note-block-container');
+    const container = document.querySelector('.cloud-notes-note-block-container');
     if (!container) {
       throw new Error();
     }
@@ -1076,7 +1076,7 @@ test('should add a new line when clicking the bottom of the last non-text block'
   await type(page, '```');
   await pressEnter(page);
 
-  const locator = page.locator('affine-code');
+  const locator = page.locator('cloud-notes-code');
   await expect(locator).toBeVisible();
 
   await type(page, 'ABC');
@@ -1208,7 +1208,7 @@ test('should clear native selection before block selection', async ({
 
   expect(text0).toBe('456');
   expect(textCount).toBe(0);
-  const rects = page.locator('affine-block-selection').locator('visible=true');
+  const rects = page.locator('cloud-notes-block-selection').locator('visible=true');
   await expect(rects).toHaveCount(1);
 });
 
@@ -1237,14 +1237,14 @@ test('should keep native range selection when scrolling backward with the scroll
   await assertRichTexts(page, data);
 
   const blockHeight = await page.evaluate(() => {
-    const viewport = document.querySelector('.affine-page-viewport');
+    const viewport = document.querySelector('.cloud-notes-page-viewport');
     if (!viewport) {
       throw new Error();
     }
     const distance = viewport.scrollHeight - viewport.clientHeight;
     viewport.scrollTo(0, distance);
     const container = viewport.querySelector(
-      'affine-note .affine-block-children-container'
+      'cloud-notes-note .cloud-notes-block-children-container'
     );
     if (!container) {
       throw new Error();
@@ -1309,12 +1309,12 @@ test('should keep native range selection when scrolling forward with the scroll 
   await assertRichTexts(page, data);
 
   const blockHeight = await page.evaluate(() => {
-    const viewport = document.querySelector('.affine-page-viewport');
+    const viewport = document.querySelector('.cloud-notes-page-viewport');
     if (!viewport) {
       throw new Error();
     }
     const container = viewport.querySelector(
-      'affine-note .affine-block-children-container'
+      'cloud-notes-note .cloud-notes-block-children-container'
     );
     if (!container) {
       throw new Error();
@@ -1334,7 +1334,7 @@ test('should keep native range selection when scrolling forward with the scroll 
   await page.waitForTimeout(250);
 
   await page.evaluate(() => {
-    document.querySelector('.affine-page-viewport')?.scrollTo(0, 0);
+    document.querySelector('.cloud-notes-page-viewport')?.scrollTo(0, 0);
   });
   await page.mouse.move(0, 0);
 
@@ -1364,7 +1364,7 @@ test('should not show toolbar of image on native selection', async ({
   await initImageState(page);
   await activeEmbed(page);
 
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
 
   await expect(toolbar).toBeVisible();
 
@@ -1538,7 +1538,7 @@ test('scroll vertically when inputting long text in a block', async ({
   }
 
   const viewportScrollTop = await page.evaluate(() => {
-    const viewport = document.querySelector('.affine-page-viewport');
+    const viewport = document.querySelector('.cloud-notes-page-viewport');
     if (!viewport) {
       throw new Error('viewport not found');
     }
@@ -1559,7 +1559,7 @@ test('scroll vertically when adding multiple blocks', async ({ page }) => {
   }
 
   const viewportScrollTop = await page.evaluate(() => {
-    const viewport = document.querySelector('.affine-page-viewport');
+    const viewport = document.querySelector('.cloud-notes-page-viewport');
     if (!viewport) {
       throw new Error('viewport not found');
     }
@@ -1582,9 +1582,9 @@ test('click to select divided', async ({ page }) => {
   await type(page, '--- ');
   await assertDivider(page, 1);
 
-  await page.click('affine-divider');
+  await page.click('cloud-notes-divider');
   const selectedBlocks = page
-    .locator('affine-block-selection')
+    .locator('cloud-notes-block-selection')
     .locator('visible=true');
   await expect(selectedBlocks).toHaveCount(1);
 
@@ -1607,7 +1607,7 @@ test('auto-scroll when creating a new paragraph-block by pressing enter', async 
 
   const getScrollTop = async () => {
     return page.evaluate(() => {
-      const viewport = document.querySelector('.affine-page-viewport');
+      const viewport = document.querySelector('.cloud-notes-page-viewport');
       if (!viewport) {
         throw new Error();
       }
@@ -1744,14 +1744,14 @@ test('abnormal cursor jumping', async ({ page }) => {
   await initImageState(page);
 
   await pressEnter(page);
-  await page.locator('affine-image block-zero-width .block-zero-width').click();
+  await page.locator('cloud-notes-image block-zero-width .block-zero-width').click();
   await pressArrowUp(page);
   await pressTab(page);
   await pressArrowDown(page);
   await pressTab(page);
   await pressEnter(page, 12);
 
-  const image = page.locator('affine-image');
+  const image = page.locator('cloud-notes-image');
   const rect = await image.boundingBox();
   // make sure the image is out of view
   expect(rect?.y).toBeLessThan(0);
@@ -1792,7 +1792,7 @@ test('unexpected scroll when clicking padding area', async ({ page }) => {
 
   await pressArrowUp(page, 4);
   await type(page, '/tableview\n');
-  const database = page.locator('affine-database');
+  const database = page.locator('cloud-notes-database');
   const databaseRect = await database.boundingBox();
   if (!databaseRect) {
     throw new Error('databaseRect is not found');

@@ -3,11 +3,11 @@ import { $typst, type BeforeBuildFn, loadFonts } from '@myriaddreamin/typst.ts';
 import type { TypstRenderOptions } from './types';
 
 export const DEFAULT_TYPST_FONT_URLS = [
-  'https://cdn.affine.pro/fonts/Inter-Regular.woff',
-  'https://cdn.affine.pro/fonts/Inter-SemiBold.woff',
-  'https://cdn.affine.pro/fonts/Inter-Italic.woff',
-  'https://cdn.affine.pro/fonts/Inter-SemiBoldItalic.woff',
-  'https://cdn.affine.pro/fonts/SarasaGothicCL-Regular.ttf',
+  '/fonts/Inter-Regular.woff',
+  '/fonts/Inter-SemiBold.woff',
+  '/fonts/Inter-Italic.woff',
+  '/fonts/Inter-SemiBoldItalic.woff',
+  '/fonts/SarasaGothicCL-Regular.ttf',
 ] as const;
 
 export const DEFAULT_TYPST_RENDER_OPTIONS: TypstRenderOptions = {

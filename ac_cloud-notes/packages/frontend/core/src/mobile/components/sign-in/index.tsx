@@ -1,5 +1,5 @@
-import { SignInPanel, type SignInStep } from '@affine/core/components/sign-in';
-import type { AuthSessionStatus } from '@affine/core/modules/cloud/entities/session';
+import { SignInPanel, type SignInStep } from '@cloud-notes/core/components/sign-in';
+import type { AuthSessionStatus } from '@cloud-notes/core/modules/cloud/entities/session';
 import { useCallback } from 'react';
 
 import { MobileSignInLayout } from './layout';

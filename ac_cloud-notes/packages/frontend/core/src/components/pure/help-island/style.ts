@@ -1,4 +1,4 @@
-import { displayFlex, positionAbsolute, styled } from '@affine/component';
+import { displayFlex, positionAbsolute, styled } from '@cloud-notes/component';
 
 export const StyledIsland = styled('div')<{
   spread: boolean;
@@ -8,24 +8,24 @@ export const StyledIsland = styled('div')<{
     width: '44px',
     position: 'relative',
     boxShadow: spread
-      ? 'var(--affine-menu-shadow)'
+      ? 'var(--cloud-notes-menu-shadow)'
       : inEdgelessPage
-        ? 'var(--affine-menu-shadow)'
+        ? 'var(--cloud-notes-menu-shadow)'
         : 'unset',
     padding: '0 4px 44px',
     borderRadius: '10px',
     background: spread
-      ? 'var(--affine-background-overlay-panel-color)'
-      : 'var(--affine-background-primary-color)',
+      ? 'var(--cloud-notes-background-overlay-panel-color)'
+      : 'var(--cloud-notes-background-primary-color)',
     ':hover': {
-      background: spread ? undefined : 'var(--affine-white)',
-      boxShadow: spread ? undefined : 'var(--affine-menu-shadow)',
+      background: spread ? undefined : 'var(--cloud-notes-white)',
+      boxShadow: spread ? undefined : 'var(--cloud-notes-menu-shadow)',
     },
     '::after': {
       content: '""',
       width: '36px',
       height: '1px',
-      background: spread ? 'var(--affine-border-color)' : 'transparent',
+      background: spread ? 'var(--cloud-notes-border-color)' : 'transparent',
       ...positionAbsolute({
         left: 0,
         right: 0,
@@ -37,7 +37,7 @@ export const StyledIsland = styled('div')<{
   };
 });
 export const StyledIconWrapper = styled('div')({
-  color: 'var(--affine-icon-color)',
+  color: 'var(--cloud-notes-icon-color)',
   ...displayFlex('center', 'center'),
   cursor: 'pointer',
   fontSize: '24px',
@@ -48,7 +48,7 @@ export const StyledIconWrapper = styled('div')({
   transition: 'background-color 0.2s',
   position: 'relative',
   ':hover': {
-    backgroundColor: 'var(--affine-hover-color)',
+    backgroundColor: 'var(--cloud-notes-hover-color)',
   },
 });
 
@@ -64,13 +64,13 @@ export const StyledTriggerWrapper = styled('div')<{
     width: '36px',
     height: '36px',
     cursor: 'pointer',
-    color: 'var(--affine-icon-color)',
+    color: 'var(--cloud-notes-icon-color)',
     borderRadius: '5px',
     fontSize: '24px',
     ...displayFlex('center', 'center'),
     ...positionAbsolute({ left: '4px', bottom: '4px' }),
     ':hover': {
-      backgroundColor: spread ? 'var(--affine-hover-color)' : undefined,
+      backgroundColor: spread ? 'var(--cloud-notes-hover-color)' : undefined,
     },
   };
 });

@@ -5,7 +5,7 @@ import React, { createElement, type ReactNode } from 'react';
 import { createComponent } from './create-component';
 
 export
-@customElement('affine-lit-template-wrapper')
+@customElement('cloud-notes-lit-template-wrapper')
 class LitTemplateWrapper extends LitElement {
   static override get properties() {
     return {

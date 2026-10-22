@@ -12,9 +12,9 @@ import {
   showMainWindow,
 } from './windows-manager';
 
-let protocol = buildType === 'stable' ? 'affine' : `affine-${buildType}`;
+let protocol = buildType === 'stable' ? 'cloud-notes' : `cloud-notes-${buildType}`;
 if (isDev) {
-  protocol = 'affine-dev';
+  protocol = 'cloud-notes-dev';
 }
 
 const authMethods = new Set(['magic-link', 'oauth', 'open-app-signin']);
@@ -42,7 +42,7 @@ function summarizeDeepLink(rawUrl: string) {
 }
 
 function logDeepLinkFailure(rawUrl: string, error: unknown) {
-  logger.error('failed to handle affine url', summarizeDeepLink(rawUrl), {
+  logger.error('failed to handle cloud-notes url', summarizeDeepLink(rawUrl), {
     error: error instanceof Error ? error.name : typeof error,
   });
 }
@@ -64,7 +64,7 @@ export function setupDeepLink(app: App) {
       event.preventDefault();
       app
         .whenReady()
-        .then(() => handleAffineUrl(url))
+        .then(() => handleCloudNotesUrl(url))
         .catch(e => {
           logDeepLinkFailure(url, e);
         });
@@ -78,7 +78,7 @@ export function setupDeepLink(app: App) {
         const url = commandLine.pop();
         if (url?.startsWith(`${protocol}://`)) {
           event.preventDefault();
-          handleAffineUrl(url).catch(e => {
+          handleCloudNotesUrl(url).catch(e => {
             logDeepLinkFailure(url, e);
           });
         }
@@ -97,17 +97,17 @@ export function setupDeepLink(app: App) {
         : { deepLink: false, argumentCount: process.argv.length }
     );
     if (url?.startsWith(`${protocol}://`)) {
-      handleAffineUrl(url).catch(e => {
+      handleCloudNotesUrl(url).catch(e => {
         logDeepLinkFailure(url, e);
       });
     }
   });
 }
 
-async function handleAffineUrl(url: string) {
+async function handleCloudNotesUrl(url: string) {
   await showMainWindow();
 
-  logger.info('open affine url', summarizeDeepLink(url));
+  logger.info('open cloud-notes url', summarizeDeepLink(url));
   const urlObj = new URL(url);
 
   if (urlObj.hostname === 'authentication') {

@@ -34,7 +34,7 @@ const { domPurifySanitize, sanitizeSvgForMock } = vi.hoisted(() => {
 });
 
 vi.mock(
-  '@affine/core/modules/code-block-preview-renderer/platform-backend',
+  '@cloud-notes/core/modules/code-block-preview-renderer/platform-backend',
   () => ({
     renderMermaidSvgBackend: mermaidRender,
     renderTypstSvgBackend: typstRender,

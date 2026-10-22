@@ -1,4 +1,4 @@
-import { Button } from '@affine/admin/components/ui/button';
+import { Button } from '@cloud-notes/admin/components/ui/button';
 import { EditIcon, LinkIcon } from '@blocksuite/icons/rc';
 import { useCallback, useState } from 'react';
 

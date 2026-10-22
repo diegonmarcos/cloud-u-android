@@ -2,24 +2,24 @@
   "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "description", "category": "data", "res": "packages/frontend/apps/android/App/app/src/main/res"},
   "name": "cloud-notes",
   "display_name": "Cloud Notes",
-  "description": "Cloud Notes \u2014 our own signed build of AFFiNE (the local-first notes/whiteboard app), vendored at ac_cloud-notes/ as owned code. AFFiNE is the UPSTREAM PROJECT, never the product name: the product is cloud-notes and always was (#522).  DE-CLOUDED (#469): no AFFiNE server, no Firebase/telemetry, no AI chat, no EE-licensed code. The one feature added over upstream is opening files from emulated storage (/storage/emulated/0/...) reached via the fleet rule about EAR discipline \u2014 see the ship workflow and testers.",
+  "description": "Cloud Notes \u2014 our own signed build (the local-first notes/whiteboard app), vendored at ac_cloud-notes/ as owned code. DE-CLOUDED (#469): no sync server, no Firebase/telemetry, no AI chat, no EE-licensed code. The one feature added over upstream is opening files from emulated storage (/storage/emulated/0/...) reached via the fleet rule about EAR discipline \u2014 see the ship workflow and testers.",
   "category": "android",
   "vendored_engine": "cloud-notes-engine.sh",
   "_doc_vendored_engine": "Byte-identical to ac_cloud-notes/build.sh, enforced by cloud-android-ship-repo-workflow-engine.sh parity check so the shipped engine and the vendored copy cannot drift.",
   "android": {
     "application_id": "com.diegonmarcos.cloudnotes",
-    "namespace": "app.affine.pro",
+    "namespace": "app.cloudnotes.pro",
     "flavor": "stable",
     "min_sdk": 26,
     "_doc_min_sdk": "26, not upstream's 24 (#743): libs:core and libs:devtools declare minSdk 26, and the manifest merger refuses a library whose minSdk is above the app's. Gradle reads the number from gradle/libs.versions.toml::minSdk (variables.gradle), which says the same.",
     "target_sdk": 36,
     "compile_sdk": 36,
     "gradle_module": "packages/frontend/apps/android/App/app",
-    "_doc_gradle_module": "Path (app-relative) of the Gradle module that builds the APK. EVERY other app in this fleet keeps it at ./app, so test-app-names-pattern.sh T6 hardcoded that convention and looked for <dir>/app/build.gradle \u2014 which this app has never had, because the Android project is nested inside the vendored AFFiNE monorepo. T6 therefore SKIPPED this app in silence, which is exactly how a launcher tile reading \"AFFiNE\" shipped behind 18 green checks (#522). The path is DATA now; T6 reads it and falls back to \"app\" for everyone else.",
+    "_doc_gradle_module": "Path (app-relative) of the Gradle module that builds the APK. EVERY other app in this fleet keeps it at ./app, so test-app-names-pattern.sh T6 hardcoded that convention and looked for <dir>/app/build.gradle \u2014 which this app has never had, because the Android project is nested inside the vendored monorepo. T6 therefore SKIPPED this app in silence, which is exactly how a launcher tile with the wrong label shipped behind 18 green checks (#522). The path is DATA now; T6 reads it and falls back to \"app\" for everyone else.",
     "version_code": 167,
     "version_name": "0.27.5",
-    "_doc_application_id": "FLIPPED (#495): this app now IS Cloud Notes, replacing Markor (formerly ac_cloud-notes, now deleted). #469 shipped it alongside the live Markor under com.diegonmarcos.affine on purpose, to avoid ripping out a live app and a 9000-file vendor in one commit; #495 is the flip that was always the documented next step. namespace stays app.affine.pro \u2014 it is the upstream Kotlin/TS package, never shipped as install identity, and renaming it across the vendored tree would be a large, pointless diff.",
-    "_doc_version": "164/0.27.5 (#495). version_code must exceed ac_cloud-notes's last shipped 163 or the fleet updater's downgrade guard refuses to install this as an update over the device's existing Cloud Notes (observed live: 'stale candidate for notes: versionCode 1 is OLDER than the installed 163') \u2014 the vendored AFFiNE Gradle defaults to versionCode 1 with no wiring to this file, which is the defect #495 fixes below. version_name FOLLOWS AFFINE'S OWN UPSTREAM VERSIONING (package.json version at the pinned revision) rather than continuing Markor's Apache-tag-mirroring scheme (163/2.16.1 mirrored upstream Markor tag v2.16.1) \u2014 the two apps have unrelated release trains and there is nothing for a post-flip Cloud Notes to mirror from Markor any more. Read into Gradle by app/build.gradle via JsonSlurper (see that file) \u2014 this is the ONE declaration; nothing else states these numbers. BUMPED TO 165 (#522): the fleet updater compares versionCode and will not offer an update that is not strictly newer, so a rebuild that kept 164 would fix the name and the logging in the repository and leave the owner's phone on the same bytes it has now. 164 is what run 5ba51c1ce published and what is installed today. The applicationId is UNCHANGED (com.diegonmarcos.cloudnotes since #495), so 165 installs straight over it as an ordinary update \u2014 no uninstall, no data loss. BUMPED TO 166 (#743) for the same reason: the APK now carries libs:core's fleet mesh membership, and only a strictly newer code reaches the phone. BUMPED TO 167: 166 crashed on launch (the resource shrinker stripped the ic_nav_* drawables looked up by name; res/raw/keep_nav_icons.xml keeps them), and only a strictly newer code replaces it on the phone."
+    "_doc_application_id": "FLIPPED (#495): this app now IS Cloud Notes, replacing Markor (formerly ac_cloud-notes, now deleted). #469 shipped it alongside the live Markor under its earlier, since retired application id on purpose, to avoid ripping out a live app and a 9000-file vendor in one commit; #495 is the flip that was always the documented next step. namespace is app.cloudnotes.pro (renamed from the upstream package in #1091) \u2014 never shipped as install identity.",
+    "_doc_version": "164/0.27.5 (#495). version_code must exceed ac_cloud-notes's last shipped 163 or the fleet updater's downgrade guard refuses to install this as an update over the device's existing Cloud Notes (observed live: 'stale candidate for notes: versionCode 1 is OLDER than the installed 163') \u2014 the vendored Gradle defaults to versionCode 1 with no wiring to this file, which is the defect #495 fixes below. version_name FOLLOWS THE UPSTREAM'S OWN VERSIONING (package.json version at the pinned revision) rather than continuing Markor's Apache-tag-mirroring scheme (163/2.16.1 mirrored upstream Markor tag v2.16.1) \u2014 the two apps have unrelated release trains and there is nothing for a post-flip Cloud Notes to mirror from Markor any more. Read into Gradle by app/build.gradle via JsonSlurper (see that file) \u2014 this is the ONE declaration; nothing else states these numbers. BUMPED TO 165 (#522): the fleet updater compares versionCode and will not offer an update that is not strictly newer, so a rebuild that kept 164 would fix the name and the logging in the repository and leave the owner's phone on the same bytes it has now. 164 is what run 5ba51c1ce published and what is installed today. The applicationId is UNCHANGED (com.diegonmarcos.cloudnotes since #495), so 165 installs straight over it as an ordinary update \u2014 no uninstall, no data loss. BUMPED TO 166 (#743) for the same reason: the APK now carries libs:core's fleet mesh membership, and only a strictly newer code reaches the phone. BUMPED TO 167: 166 crashed on launch (the resource shrinker stripped the ic_nav_* drawables looked up by name; res/raw/keep_nav_icons.xml keeps them), and only a strictly newer code replaces it on the phone."
   },
   "upstream": {
     "repo": "https://github.com/toeverything/AFFiNE.git",
@@ -61,7 +61,7 @@
     }
   },
   "ui": {
-    "_doc_nav": "#868 THE NAVIGATION IS ONE DECLARATION, drawn by libs:bottomnav (island = ui.bottom_nav, top tabs = ui.sections[].pages via PageTabsView). Cloud Notes is 'Miro + Notion + Obsidian' in one app (a0_docs/eng-specs/cloud-notes-hybrid.md); the five bottom items are the five ways in: Home (recent, daily note) | Pages (Notion-style docs: all, tags, collections, new) | Canvas (Miro-style edgeless boards) | Graph (Obsidian-style: global, local, tags) | Search (find, ask/AI). Only ids live here: the web half (core/src/mobile/components/native-nav-routes.ts) maps every `<section>/<page>` to an AFFiNE workbench route or action, and test/test-nav-routes.sh fails if the two drift. A page with a non-blank `action` is a LAUNCH tab (creates something) and leaves the strip where it was. Settings/Profile are not a bottom item: they are the top bar's Settings dropdown (top_bar below), so the island keeps five equal cells.",
+    "_doc_nav": "#868 THE NAVIGATION IS ONE DECLARATION, drawn by libs:bottomnav (island = ui.bottom_nav, top tabs = ui.sections[].pages via PageTabsView). Cloud Notes is 'Miro + Notion + Obsidian' in one app (a0_docs/eng-specs/cloud-notes-hybrid.md); the five bottom items are the five ways in: Home (recent, daily note) | Pages (Notion-style docs: all, tags, collections, new) | Canvas (Miro-style edgeless boards) | Graph (Obsidian-style: global, local, tags) | Search (find, ask/AI). Only ids live here: the web half (core/src/mobile/components/native-nav-routes.ts) maps every `<section>/<page>` to a Cloud Notes workbench route or action, and test/test-nav-routes.sh fails if the two drift. A page with a non-blank `action` is a LAUNCH tab (creates something) and leaves the strip where it was. Settings/Profile are not a bottom item: they are the top bar's Settings dropdown (top_bar below), so the island keeps five equal cells.",
     "bottom_nav": [
       "home",
       "pages",
@@ -71,7 +71,7 @@
     ],
     "default_section": "home",
     "top_bar": {
-      "_doc": "THE first row (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger whose drawer is Cloud Notes' own (NativeTopBar: the five sections and the editor's pages, pushed by the web half through window.CloudNotesHost.setDocs), the title (the launcher label), AI (libs:ai's shared chat) and Settings (Account launches Cloud Account; Configs asks the web half, through the cloud-notes:open-settings event, to open AFFiNE's own settings dialog). The status-bar inset is owned HERE: NativeTopBar reports its height and NativeNav puts the page strip and the WebView below it; the web half adds no status-bar padding of its own (setup.ts). No app draws its own copy of this row (cloud-android-top-bar-guard).",
+      "_doc": "THE first row (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger whose drawer is Cloud Notes' own (NativeTopBar: the five sections and the editor's pages, pushed by the web half through window.CloudNotesHost.setDocs), the title (the launcher label), AI (libs:ai's shared chat) and Settings (Account launches Cloud Account; Configs asks the web half, through the cloud-notes:open-settings event, to open Cloud Notes's own settings dialog). The status-bar inset is owned HERE: NativeTopBar reports its height and NativeNav puts the page strip and the WebView below it; the web half adds no status-bar padding of its own (setup.ts). No app draws its own copy of this row (cloud-android-top-bar-guard).",
       "drawer": true,
       "ai": true,
       "settings": [
@@ -193,14 +193,14 @@
       "asset_name": "Cloud-Notes.apk"
     },
     "artifact_assert": {
-      "_doc": "Read by cloud-notes-engine.sh::_assert_apk_payload (#513). The ship pipeline could not tell a working app from a blank one: gradle builds a perfectly valid APK around an empty assets/public/, signs it, and CI goes green. These are the floors the BUILT ARTIFACT must clear \u2014 bytes and presence, never a filename in a manifest. Set far below what a healthy build produces (observed on the published APK: index.html 2696 B, 114 chunks / 31.2 MB of JS, libaffine_mobile_native.so 51.8 MB) so a real regression trips them and normal upstream churn does not.",
+      "_doc": "Read by cloud-notes-engine.sh::_assert_apk_payload (#513). The ship pipeline could not tell a working app from a blank one: gradle builds a perfectly valid APK around an empty assets/public/, signs it, and CI goes green. These are the floors the BUILT ARTIFACT must clear \u2014 bytes and presence, never a filename in a manifest. Set far below what a healthy build produces (observed on the published APK: index.html 2696 B, 114 chunks / 31.2 MB of JS, libcloud_notes_mobile_native.so 51.8 MB) so a real regression trips them and normal upstream churn does not.",
       "web_entry": "assets/public/index.html",
       "web_entry_min_bytes": 1024,
       "js_prefix": "assets/public/js/",
       "js_min_chunks": 10,
       "js_min_total_bytes": 5000000,
       "native_libs": [
-        "lib/arm64-v8a/libaffine_mobile_native.so"
+        "lib/arm64-v8a/libcloud_notes_mobile_native.so"
       ],
       "native_lib_min_bytes": 1048576,
       "required_globs": [
@@ -208,8 +208,8 @@
         "assets/public/assets/onboarding.*.zip"
       ],
       "_doc_required_globs": "#522: the two payload files the FIRST LAUNCH cannot proceed without, named because the first launch is where this app has failed twice. app.tsx opens the local document store with `new Worker(getWorkerUrl(nbstore))`, and core/src/utils/first-app-data.ts bootstraps the first workspace with `fetch(onboardingUrl)` over the bundled onboarding template. Either one absent and createFirstAppData() rejects, the rejection is caught in core/src/desktop/pages/index/index.tsx, and the owner is shown \"An internal error occurred.\" behind a green CI run. Globs, not literal names, because both carry a content hash / a version.",
-      "kotlin_binding": "packages/frontend/apps/android/App/app/src/main/java/uniffi/affine_mobile_native/affine_mobile_native.kt",
-      "_doc_kotlin_binding": "#522: the committed UniFFI binding, asserted against the SHIPPED .so by test-launch-payload.sh. #469 hand-edited this file to drop hashcash_mint and cut two lines too many, leaving `uniffi_affine_mobile_native_fn_func_new_doc_storage_pool` CALLED but never DECLARED and an orphan `): Pointer` in the interface body \u2014 committed Kotlin that does not parse. Nothing noticed, because Gradle regenerates the file from the built .so before javaCompile (the generate<Variant>UniFFIBindings task, which #469 believed was a no-op). A committed source that is never the source that builds is a trap with a fuse on it."
+      "kotlin_binding": "packages/frontend/apps/android/App/app/src/main/java/uniffi/cloud_notes_mobile_native/cloud_notes_mobile_native.kt",
+      "_doc_kotlin_binding": "#522: the committed UniFFI binding, asserted against the SHIPPED .so by test-launch-payload.sh. #469 hand-edited this file to drop hashcash_mint and cut two lines too many, leaving `uniffi_cloud_notes_mobile_native_fn_func_new_doc_storage_pool` CALLED but never DECLARED and an orphan `): Pointer` in the interface body \u2014 committed Kotlin that does not parse. Nothing noticed, because Gradle regenerates the file from the built .so before javaCompile (the generate<Variant>UniFFIBindings task, which #469 believed was a no-op). A committed source that is never the source that builds is a trap with a fuse on it."
     }
   },
   "web": {
@@ -245,21 +245,21 @@
     "capacitor_surface": {
       "_doc": "Read by test/test-capacitor-plugin-surface.sh (#543). web_root is the tree walked to DERIVE which Capacitor plugin NAMES this app's bundle calls (registerPlugin<T>('Name')); activity is the ONE file that registers their native implementations; kotlin_root is where the @CapacitorPlugin(name = \"...\") annotations are read from. No plugin name is ever written in the tester — a missing native side must be derived, because that is the defect (#543: the web side called 'Auth', the de-clouding had deleted the native class, and Capacitor threw 'plugin is not implemented on android' on the LOCAL workspace path).",
       "web_root": "packages/frontend/apps/android/src",
-      "activity": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/MainActivity.kt",
-      "kotlin_root": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro"
+      "activity": "packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/MainActivity.kt",
+      "kotlin_root": "packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro"
     },
     "html_import": {
       "_doc": "Read by test/test-html-import-route.sh (#547). entrypoint is where an opened file is dispatched to an importer; native_plugin is the ONE file declaring which extensions the device will read (its SUPPORTED set); converter is upstream's HtmlTransformer source, read to derive the options importHTMLToDoc accepts. Which extensions ARE html is derived from Python's built-in MIME table, never written in the tester.",
       "entrypoint": "packages/frontend/apps/android/src/app.tsx",
-      "native_plugin": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/plugin/ExternalFilePlugin.kt",
-      "converter": "blocksuite/affine/widgets/linked-doc/src/transformers/html.ts"
+      "native_plugin": "packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/plugin/ExternalFilePlugin.kt",
+      "converter": "blocksuite/cloud-notes/widgets/linked-doc/src/transformers/html.ts"
     },
     "file_explorer": {
       "_doc": "Read by test/test-file-explorer.sh (#547). entrypoint is where the explorer renders and picks a file; plugin_ts is the web-side plugin type; native_plugin is the Kotlin class that must implement every method that type declares; activity is where the FAB dispatches the event the explorer listens for. Method and event names are DERIVED from these files, never written in the tester.",
       "entrypoint": "packages/frontend/apps/android/src/app.tsx",
       "plugin_ts": "packages/frontend/apps/android/src/plugins/external-file.ts",
-      "native_plugin": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/plugin/ExternalFilePlugin.kt",
-      "activity": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/MainActivity.kt"
+      "native_plugin": "packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/plugin/ExternalFilePlugin.kt",
+      "activity": "packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/MainActivity.kt"
     }
   }
 }

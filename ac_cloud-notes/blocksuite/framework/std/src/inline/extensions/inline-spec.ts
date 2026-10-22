@@ -8,7 +8,7 @@ import type { BaseTextAttributes, ExtensionType } from '@blocksuite/store';
 import type { InlineSpecs } from './type.js';
 
 export const InlineSpecIdentifier =
-  createIdentifier<unknown>('AffineInlineSpec');
+  createIdentifier<unknown>('CloudNotesInlineSpec');
 
 export function InlineSpecExtension<TextAttributes extends BaseTextAttributes>(
   name: string,

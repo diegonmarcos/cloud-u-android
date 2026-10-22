@@ -1,4 +1,4 @@
-import { BackButton } from '@affine/component/auth-components';
+import { BackButton } from '@cloud-notes/component/auth-components';
 import { type Dispatch, type SetStateAction, useCallback } from 'react';
 
 import type { SignInState } from '.';

@@ -32,7 +32,7 @@
  * Then you get a view portal.
  */
 
-import { createIsland, type Island } from '@affine/core/utils/island';
+import { createIsland, type Island } from '@cloud-notes/core/utils/island';
 import { useLiveData, useService } from '@toeverything/infra';
 import type React from 'react';
 import {

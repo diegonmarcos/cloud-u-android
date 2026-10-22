@@ -1,26 +1,26 @@
-import { createReactComponentFromLit } from '@affine/component';
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import { PeekViewProvider } from '@blocksuite/affine/components/peek';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { RefNodeSlotsProvider } from '@blocksuite/affine/inlines/reference';
-import type { ColorScheme } from '@blocksuite/affine/model';
+import { createReactComponentFromLit } from '@cloud-notes/component';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import { PeekViewProvider } from '@blocksuite/cloud-notes/components/peek';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { RefNodeSlotsProvider } from '@blocksuite/cloud-notes/inlines/reference';
+import type { ColorScheme } from '@blocksuite/cloud-notes/model';
 import {
   codeBlockWrapMiddleware,
   defaultImageProxyMiddleware,
   ImageProxyService,
-} from '@blocksuite/affine/shared/adapters';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
+} from '@blocksuite/cloud-notes/shared/adapters';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
 import {
   BlockStdScope,
   type EditorHost,
   ShadowlessElement,
-} from '@blocksuite/affine/std';
+} from '@blocksuite/cloud-notes/std';
 import type {
   ExtensionType,
   Query,
   Store,
   TransformerMiddleware,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import type { Signal } from '@preact/signals-core';
 import {
   darkCssVariablesV2,
@@ -34,45 +34,45 @@ import React from 'react';
 import { filter } from 'rxjs/operators';
 
 import { markDownToDoc } from '../../utils';
-import type { AffineAIPanelState } from '../widgets/ai-panel/type';
+import type { CloudNotesAIPanelState } from '../widgets/ai-panel/type';
 import { getCustomPageEditorBlockSpecs } from './page-editor-block-specs';
 
 const customHeadingStyles = css`
   .custom-heading {
     .h1 {
-      font-size: calc(var(--affine-font-h-1) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-1) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) + 6px);
+        font-size: calc(var(--cloud-notes-font-base) + 6px);
       }
     }
     .h2 {
-      font-size: calc(var(--affine-font-h-2) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-2) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) + 4px);
+        font-size: calc(var(--cloud-notes-font-base) + 4px);
       }
     }
     .h3 {
-      font-size: calc(var(--affine-font-h-3) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-3) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) + 2px);
+        font-size: calc(var(--cloud-notes-font-base) + 2px);
       }
     }
     .h4 {
-      font-size: calc(var(--affine-font-h-4) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-4) - 2px);
       code {
-        font-size: var(--affine-font-base);
+        font-size: var(--cloud-notes-font-base);
       }
     }
     .h5 {
-      font-size: calc(var(--affine-font-h-5) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-5) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) - 2px);
+        font-size: calc(var(--cloud-notes-font-base) - 2px);
       }
     }
     .h6 {
-      font-size: calc(var(--affine-font-h-6) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-6) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) - 4px);
+        font-size: calc(var(--cloud-notes-font-base) - 4px);
       }
     }
   }
@@ -83,7 +83,7 @@ export type TextRendererOptions = {
   extensions?: ExtensionType[];
   additionalMiddlewares?: TransformerMiddleware[];
   testId?: string;
-  affineFeatureFlagService?: FeatureFlagService;
+  cloudNotesFeatureFlagService?: FeatureFlagService;
   theme?: Signal<ColorScheme>;
   scrollable?: boolean;
 };
@@ -93,26 +93,26 @@ export class TextRenderer extends SignalWatcher(
   WithDisposable(ShadowlessElement)
 ) {
   static override styles = css`
-    .ai-answer-text-editor.affine-page-viewport {
+    .ai-answer-text-editor.cloud-notes-page-viewport {
       background: transparent;
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
       margin-top: 0;
       margin-bottom: 0;
     }
 
-    .ai-answer-text-editor .affine-page-root-block-container {
+    .ai-answer-text-editor .cloud-notes-page-root-block-container {
       padding: 0;
       margin: 0;
-      line-height: var(--affine-line-height);
+      line-height: var(--cloud-notes-line-height);
       color: ${unsafeCSSVarV2('text/primary')};
       font-weight: 400;
     }
 
     .ai-answer-text-editor {
-      .affine-note-block-container {
-        > .affine-block-children-container {
-          > :first-child:not(affine-callout),
-          > :first-child:not(affine-callout) * {
+      .cloud-notes-note-block-container {
+        > .cloud-notes-block-children-container {
+          > :first-child:not(cloud-notes-callout),
+          > :first-child:not(cloud-notes-callout) * {
             margin-top: 0 !important;
           }
           > :last-child,
@@ -122,13 +122,13 @@ export class TextRenderer extends SignalWatcher(
         }
       }
 
-      .affine-paragraph-block-container {
+      .cloud-notes-paragraph-block-container {
         line-height: 22px;
 
         .h6 {
           padding-left: 16px;
           color: ${unsafeCSSVarV2('text/link')};
-          font-size: var(--affine-font-base);
+          font-size: var(--cloud-notes-font-base);
 
           .toggle-icon {
             transform: translateX(0);
@@ -157,7 +157,7 @@ export class TextRenderer extends SignalWatcher(
       border-radius: 20px;
     }
     .text-renderer-container.show-scrollbar:hover::-webkit-scrollbar-thumb {
-      background-color: var(--affine-black-30);
+      background-color: var(--cloud-notes-black-30);
     }
     .text-renderer-container.show-scrollbar::-webkit-scrollbar-corner {
       display: none;
@@ -180,14 +180,14 @@ export class TextRenderer extends SignalWatcher(
     }
 
     .text-renderer-container[data-app-theme='dark'] {
-      .ai-answer-text-editor .affine-page-root-block-container {
-        color: ${unsafeCSS(darkCssVariablesV2['--affine-v2-text-primary'])};
+      .ai-answer-text-editor .cloud-notes-page-root-block-container {
+        color: ${unsafeCSS(darkCssVariablesV2['--cloud-notes-v2-text-primary'])};
       }
     }
 
     .text-renderer-container[data-app-theme='light'] {
-      .ai-answer-text-editor .affine-page-root-block-container {
-        color: ${unsafeCSS(lightCssVariablesV2['--affine-v2-text-primary'])};
+      .ai-answer-text-editor .cloud-notes-page-root-block-container {
+        color: ${unsafeCSS(lightCssVariablesV2['--cloud-notes-v2-text-primary'])};
       }
     }
 
@@ -265,7 +265,7 @@ export class TextRenderer extends SignalWatcher(
         markDownToDoc(
           latestAnswer,
           middlewares,
-          this.options.affineFeatureFlagService
+          this.options.cloudNotesFeatureFlagService
         )
           .then(doc => {
             this.disposeDoc();
@@ -340,7 +340,7 @@ export class TextRenderer extends SignalWatcher(
       >
         ${keyed(
           this._doc,
-          html`<div class="ai-answer-text-editor affine-page-viewport">
+          html`<div class="ai-answer-text-editor cloud-notes-page-viewport">
             ${this._host}
           </div>`
         )}
@@ -391,11 +391,11 @@ export class TextRenderer extends SignalWatcher(
   accessor options!: TextRendererOptions;
 
   @property({ attribute: false })
-  accessor state: AffineAIPanelState | undefined = undefined;
+  accessor state: CloudNotesAIPanelState | undefined = undefined;
 }
 
 export const createTextRenderer = (options: TextRendererOptions) => {
-  return (answer: string, state?: AffineAIPanelState) => {
+  return (answer: string, state?: CloudNotesAIPanelState) => {
     return html`<text-renderer
       contenteditable="false"
       .answer=${answer}

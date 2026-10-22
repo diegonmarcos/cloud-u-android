@@ -1,6 +1,6 @@
-import { Avatar, Tooltip } from '@affine/component';
-import { useCurrentServerService } from '@affine/core/components/providers/current-server-scope';
-import { useI18n } from '@affine/i18n';
+import { Avatar, Tooltip } from '@cloud-notes/component';
+import { useCurrentServerService } from '@cloud-notes/core/components/providers/current-server-scope';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData } from '@toeverything/infra';
 import {
   type ComponentType,

@@ -1,9 +1,9 @@
-import { AuthProvider } from '@affine/core/modules/cloud/provider/auth';
-import { FetchService } from '@affine/core/modules/cloud/services/fetch';
-import { GraphQLService } from '@affine/core/modules/cloud/services/graphql';
-import { ServerService } from '@affine/core/modules/cloud/services/server';
-import { AuthStore } from '@affine/core/modules/cloud/stores/auth';
-import { GlobalState, NbstoreService } from '@affine/core/modules/storage';
+import { AuthProvider } from '@cloud-notes/core/modules/cloud/provider/auth';
+import { FetchService } from '@cloud-notes/core/modules/cloud/services/fetch';
+import { GraphQLService } from '@cloud-notes/core/modules/cloud/services/graphql';
+import { ServerService } from '@cloud-notes/core/modules/cloud/services/server';
+import { AuthStore } from '@cloud-notes/core/modules/cloud/stores/auth';
+import { GlobalState, NbstoreService } from '@cloud-notes/core/modules/storage';
 import { Framework } from '@toeverything/infra';
 import { describe, expect, test, vi } from 'vitest';
 
@@ -59,11 +59,11 @@ describe('AuthStore', () => {
       });
     const store = createStore({ fetch });
 
-    await expect(store.checkUserByEmail('user@affine.pro')).resolves.toEqual(
+    await expect(store.checkUserByEmail('user@notes.diegonmarcos.com')).resolves.toEqual(
       validResponse
     );
     await expect(
-      store.checkUserByEmail('user@affine.pro')
+      store.checkUserByEmail('user@notes.diegonmarcos.com')
     ).rejects.toMatchObject({
       name: 'UNSUPPORTED_SERVER_VERSION',
       data: { serverVersion: '0.27.0' },
@@ -93,7 +93,7 @@ describe('AuthStore', () => {
     const gql = vi.fn(async () => ({
       currentUser: {
         id: 'u1',
-        email: 'u1@affine.pro',
+        email: 'u1@notes.diegonmarcos.com',
         name: 'User',
         emailVerified: true,
         hasPassword: true,
@@ -106,7 +106,7 @@ describe('AuthStore', () => {
     await expect(store.fetchSession()).resolves.toEqual({
       user: {
         id: 'u1',
-        email: 'u1@affine.pro',
+        email: 'u1@notes.diegonmarcos.com',
         name: 'User',
         emailVerified: true,
         hasPassword: true,
@@ -127,7 +127,7 @@ describe('AuthStore', () => {
     const gql = vi.fn(async () => ({
       currentUser: {
         id: 'u2',
-        email: 'u2@affine.pro',
+        email: 'u2@notes.diegonmarcos.com',
         name: 'User',
         emailVerified: true,
         hasPassword: true,

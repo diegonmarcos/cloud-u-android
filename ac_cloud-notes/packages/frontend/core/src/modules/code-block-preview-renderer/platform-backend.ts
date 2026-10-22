@@ -1,5 +1,5 @@
-import { getMermaidRenderer } from '@affine/core/modules/mermaid/renderer';
-import { getTypstRenderer } from '@affine/core/modules/typst/renderer';
+import { getMermaidRenderer } from '@cloud-notes/core/modules/mermaid/renderer';
+import { getTypstRenderer } from '@cloud-notes/core/modules/typst/renderer';
 
 import { renderClassicMermaidSvg } from './classic-mermaid';
 import { isMermaidWasmNativeRendererEnabled } from './runtime-config';

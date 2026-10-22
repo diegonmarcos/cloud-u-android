@@ -1,4 +1,4 @@
-name: 'AFFiNE Rust build'
+name: 'Cloud Notes Rust build'
 description: 'Rust build setup, including cache configuration'
 inputs:
   target:

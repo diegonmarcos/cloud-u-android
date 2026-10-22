@@ -1,4 +1,4 @@
-import AffineGraphQL
+import CloudNotesGraphQL
 import Capacitor
 import Foundation
 import Security
@@ -68,7 +68,7 @@ private struct AuthRefreshOperation {
 }
 
 private actor AuthSessionBroker {
-  private let tokenService = "app.affine.pro.auth-token"
+  private let tokenService = "app.cloudnotes.pro.auth-token"
   private var refreshTasks: [String: AuthRefreshOperation] = [:]
   private var mutationEpochs: [String: UInt] = [:]
 
@@ -177,8 +177,8 @@ private actor AuthSessionBroker {
     request.httpMethod = "POST"
     request.httpShouldHandleCookies = false
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    request.setValue("native", forHTTPHeaderField: "x-affine-client-kind")
-    request.setValue(AppConfigManager.getAffineVersion(), forHTTPHeaderField: "x-affine-version")
+    request.setValue("native", forHTTPHeaderField: "x-cloud-notes-client-kind")
+    request.setValue(AppConfigManager.getCloudNotesVersion(), forHTTPHeaderField: "x-cloud-notes-version")
     request.httpBody = try JSONEncoder().encode(body)
     request.timeoutInterval = 10
     for attempt in 0..<3 {
@@ -285,7 +285,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
   ]
 
   private let broker = AuthSessionBroker()
-  private let authCookieNames = Set(["affine_session", "affine_user_id", "affine_csrf_token"])
+  private let authCookieNames = Set(["cloud_notes_session", "cloud_notes_user_id", "cloud_notes_csrf_token"])
   private var isNativeSignInPresented = false
 
   @objc public func showNativeSignIn(_ call: CAPPluginCall) {
@@ -296,7 +296,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
       }
 
       do {
-        let webView = try self.webView.get("AFFiNE is still loading. Please try again in a moment.")
+        let webView = try self.webView.get("Cloud Notes is still loading. Please try again in a moment.")
         if self.isNativeSignInPresented {
           call.resolve(["success": false])
           return
@@ -386,7 +386,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
         let (data, response) = try await self.fetch(
           endpoint, method: "POST", action: "/api/auth/magic-link",
           headers: [
-            "x-affine-client-kind": "native"
+            "x-cloud-notes-client-kind": "native"
           ], body: ["email": email, "token": token, "client_nonce": clientNonce])
 
         if response.statusCode >= 400 {
@@ -412,7 +412,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
         let (data, response) = try await self.fetch(
           endpoint, method: "POST", action: "/api/oauth/callback",
           headers: [
-            "x-affine-client-kind": "native"
+            "x-cloud-notes-client-kind": "native"
           ], body: ["code": code, "state": state, "client_nonce": clientNonce])
 
         if response.statusCode >= 400 {
@@ -439,7 +439,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
         let (data, response) = try await self.fetch(
           endpoint, method: "POST", action: "/api/auth/sign-in",
           headers: [
-            "x-affine-client-kind": "native",
+            "x-cloud-notes-client-kind": "native",
             "x-captcha-token": verifyToken,
             "x-captcha-challenge": challenge,
             "x-captcha-provider": verifyToken == nil
@@ -467,7 +467,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
         let (data, response) = try await self.fetch(
           endpoint, method: "POST", action: "/api/auth/open-app/sign-in",
           headers: [
-            "x-affine-client-kind": "native"
+            "x-cloud-notes-client-kind": "native"
           ], body: ["code": code])
 
         if response.statusCode >= 400 {
@@ -511,7 +511,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
     let (data, response) = try await self.fetch(
       endpoint, method: "POST", action: "/api/auth/session/exchange",
       headers: [
-        "x-affine-client-kind": "native"
+        "x-cloud-notes-client-kind": "native"
       ],
       body: [
         "code": code,
@@ -532,7 +532,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
   }
 
   private func installationId() -> String {
-    let key = "app.affine.pro.auth-installation-id"
+    let key = "app.cloudnotes.pro.auth-installation-id"
     if let value = UserDefaults.standard.string(forKey: key) { return value }
     let value = UUID().uuidString
     UserDefaults.standard.set(value, forKey: key)
@@ -572,7 +572,7 @@ public class AuthPlugin: CAPPlugin, CAPBridgedPlugin {
       request.setValue("application/json", forHTTPHeaderField: "Content-Type")
       request.httpBody = try JSONEncoder().encode(body!)
     }
-    request.setValue(AppConfigManager.getAffineVersion(), forHTTPHeaderField: "x-affine-version")
+    request.setValue(AppConfigManager.getCloudNotesVersion(), forHTTPHeaderField: "x-cloud-notes-version")
     request.timeoutInterval = 10  // time out 10s
 
     let (data, response) = try await URLSession.shared.data(for: request)

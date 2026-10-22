@@ -1,10 +1,10 @@
-import { ServerDeploymentType } from '@affine/graphql';
+import { ServerDeploymentType } from '@cloud-notes/graphql';
 import {
   IndexedDBDocStorage,
   IndexedDBDocSyncStorage,
-} from '@affine/nbstore/idb';
-import { SqliteDocStorage, SqliteDocSyncStorage } from '@affine/nbstore/sqlite';
-import type { StoreClient } from '@affine/nbstore/worker/client';
+} from '@cloud-notes/nbstore/idb';
+import { SqliteDocStorage, SqliteDocSyncStorage } from '@cloud-notes/nbstore/sqlite';
+import type { StoreClient } from '@cloud-notes/nbstore/worker/client';
 import { Entity } from '@toeverything/infra';
 
 import type { ServerService } from '../../cloud';

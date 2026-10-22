@@ -1,11 +1,11 @@
-import { Button, type ButtonProps, useConfirmModal } from '@affine/component';
-import { useDowngradeNotify } from '@affine/core/components/affine/subscription-landing/notify';
-import { getDowngradeQuestionnaireLink } from '@affine/core/components/hooks/affine/use-subscription-notify';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { AuthService, SubscriptionService } from '@affine/core/modules/cloud';
-import { SubscriptionPlan } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { Button, type ButtonProps, useConfirmModal } from '@cloud-notes/component';
+import { useDowngradeNotify } from '@cloud-notes/core/components/cloud-notes/subscription-landing/notify';
+import { getDowngradeQuestionnaireLink } from '@cloud-notes/core/components/hooks/cloud-notes/use-subscription-notify';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { AuthService, SubscriptionService } from '@cloud-notes/core/modules/cloud';
+import { SubscriptionPlan } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import { useService } from '@toeverything/infra';
 import { nanoid } from 'nanoid';
 import { useState } from 'react';
@@ -29,17 +29,17 @@ export const AICancel = (btnProps: ButtonProps) => {
       });
     }
     openConfirmModal({
-      title: t['com.affine.payment.ai.action.cancel.confirm.title'](),
+      title: t['com.cloud-notes.payment.ai.action.cancel.confirm.title'](),
       description:
-        t['com.affine.payment.ai.action.cancel.confirm.description'](),
+        t['com.cloud-notes.payment.ai.action.cancel.confirm.description'](),
       reverseFooter: true,
       confirmText:
-        t['com.affine.payment.ai.action.cancel.confirm.confirm-text'](),
+        t['com.cloud-notes.payment.ai.action.cancel.confirm.confirm-text'](),
       confirmButtonOptions: {
         variant: 'secondary',
       },
       cancelText:
-        t['com.affine.payment.ai.action.cancel.confirm.cancel-text'](),
+        t['com.cloud-notes.payment.ai.action.cancel.confirm.cancel-text'](),
       cancelButtonOptions: {
         variant: 'primary',
       },
@@ -89,7 +89,7 @@ export const AICancel = (btnProps: ButtonProps) => {
       variant="secondary"
       {...btnProps}
     >
-      {t['com.affine.payment.ai.action.cancel.button-label']()}
+      {t['com.cloud-notes.payment.ai.action.cancel.button-label']()}
     </Button>
   );
 };

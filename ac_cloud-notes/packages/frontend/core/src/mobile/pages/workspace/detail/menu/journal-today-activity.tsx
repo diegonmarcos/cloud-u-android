@@ -1,14 +1,14 @@
-import { MenuItem, MenuSeparator, MobileMenuSub } from '@affine/component';
-import { sortPagesByDate } from '@affine/core/desktop/pages/workspace/detail-page/tabs/journal';
+import { MenuItem, MenuSeparator, MobileMenuSub } from '@cloud-notes/component';
+import { sortPagesByDate } from '@cloud-notes/core/desktop/pages/workspace/detail-page/tabs/journal';
 import {
   type DocRecord,
   DocService,
   DocsService,
-} from '@affine/core/modules/doc';
-import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
-import { JournalService } from '@affine/core/modules/journal';
-import { WorkbenchLink } from '@affine/core/modules/workbench';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/doc';
+import { DocDisplayMetaService } from '@cloud-notes/core/modules/doc-display-meta';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { WorkbenchLink } from '@cloud-notes/core/modules/workbench';
+import { useI18n } from '@cloud-notes/i18n';
 import { HistoryIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import dayjs from 'dayjs';
@@ -44,8 +44,8 @@ const ActivityBlock = ({
 
   const title =
     name === 'created'
-      ? t['com.affine.journal.created-today']()
-      : t['com.affine.journal.updated-today']();
+      ? t['com.cloud-notes.journal.created-today']()
+      : t['com.cloud-notes.journal.updated-today']();
   return (
     <>
       <div className={styles.title}>{title}</div>
@@ -56,8 +56,8 @@ const ActivityBlock = ({
       ) : (
         <div className={styles.empty}>
           {name === 'created'
-            ? t['com.affine.journal.daily-count-created-empty-tips']()
-            : t['com.affine.journal.daily-count-updated-empty-tips']()}
+            ? t['com.cloud-notes.journal.daily-count-created-empty-tips']()
+            : t['com.cloud-notes.journal.daily-count-updated-empty-tips']()}
         </div>
       )}
     </>
@@ -120,9 +120,9 @@ export const JournalTodayActivityMenuItem = ({
           prefixIcon: <HistoryIcon />,
         }}
         items={<TodaysActivity date={journalDate} />}
-        title={t['com.affine.m.selector.journal-menu.today-activity']()}
+        title={t['com.cloud-notes.m.selector.journal-menu.today-activity']()}
       >
-        {t['com.affine.m.selector.journal-menu.today-activity']()}
+        {t['com.cloud-notes.m.selector.journal-menu.today-activity']()}
       </MobileMenuSub>
       {suffix}
     </>

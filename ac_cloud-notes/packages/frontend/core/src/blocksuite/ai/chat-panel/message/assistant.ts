@@ -1,16 +1,16 @@
-import type { FeatureFlagService } from '@affine/core/modules/feature-flag';
-import type { PeekViewService } from '@affine/core/modules/peek-view';
-import type { AppThemeService } from '@affine/core/modules/theme';
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { isInsidePageEditor } from '@blocksuite/affine/shared/utils';
+import type { FeatureFlagService } from '@cloud-notes/core/modules/feature-flag';
+import type { PeekViewService } from '@cloud-notes/core/modules/peek-view';
+import type { AppThemeService } from '@cloud-notes/core/modules/theme';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { isInsidePageEditor } from '@blocksuite/cloud-notes/shared/utils';
 import {
   type BlockStdScope,
   type EditorHost,
   ShadowlessElement,
-} from '@blocksuite/affine/std';
-import type { ExtensionType } from '@blocksuite/affine/store';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+} from '@blocksuite/cloud-notes/std';
+import type { ExtensionType } from '@blocksuite/cloud-notes/store';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import type { Signal } from '@preact/signals-core';
 import { css, html, nothing } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -33,8 +33,8 @@ import { mergeStreamContent } from '../../utils/stream-objects';
 export class ChatMessageAssistant extends WithDisposable(ShadowlessElement) {
   static override styles = css`
     .message-info {
-      color: var(--affine-placeholder-color);
-      font-size: var(--affine-font-xs);
+      color: var(--cloud-notes-placeholder-color);
+      font-size: var(--cloud-notes-font-xs);
       font-weight: 400;
     }
   `;
@@ -61,10 +61,10 @@ export class ChatMessageAssistant extends WithDisposable(ShadowlessElement) {
   accessor extensions!: ExtensionType[];
 
   @property({ attribute: false })
-  accessor affineFeatureFlagService!: FeatureFlagService;
+  accessor cloudNotesFeatureFlagService!: FeatureFlagService;
 
   @property({ attribute: false })
-  accessor affineThemeService!: AppThemeService;
+  accessor cloudNotesThemeService!: AppThemeService;
 
   @property({ attribute: false })
   accessor session!: CopilotChatHistoryFragment | null | undefined;
@@ -157,9 +157,9 @@ export class ChatMessageAssistant extends WithDisposable(ShadowlessElement) {
       .state=${this.state}
       .width=${this.width}
       .extensions=${this.extensions}
-      .affineFeatureFlagService=${this.affineFeatureFlagService}
+      .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
       .notificationService=${this.notificationService}
-      .theme=${this.affineThemeService.appTheme.themeSignal}
+      .theme=${this.cloudNotesThemeService.appTheme.themeSignal}
       .independentMode=${this.independentMode}
       .docDisplayService=${this.docDisplayService}
       .peekViewService=${this.peekViewService}
@@ -172,8 +172,8 @@ export class ChatMessageAssistant extends WithDisposable(ShadowlessElement) {
       .text=${text}
       .state=${this.state}
       .extensions=${this.extensions}
-      .affineFeatureFlagService=${this.affineFeatureFlagService}
-      .theme=${this.affineThemeService.appTheme.themeSignal}
+      .cloudNotesFeatureFlagService=${this.cloudNotesFeatureFlagService}
+      .theme=${this.cloudNotesThemeService.appTheme.themeSignal}
     ></chat-content-rich-text>`;
   }
 

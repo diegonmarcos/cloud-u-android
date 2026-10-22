@@ -110,7 +110,7 @@ test('copy a nested list by clicking button, the clipboard data should be comple
   };
   await pasteContent(page, clipData);
 
-  const rootListBound = await page.locator('affine-list').first().boundingBox();
+  const rootListBound = await page.locator('cloud-notes-list').first().boundingBox();
   if (!rootListBound) {
     throw new Error('rootListBound is not found');
   }
@@ -361,7 +361,7 @@ test(scoped`cut should work for multi-block selection`, async ({ page }) => {
   await selectAllByKeyboard(page);
   await selectAllByKeyboard(page);
   await cutByKeyboard(page);
-  await page.locator('.affine-page-viewport').click();
+  await page.locator('.cloud-notes-page-viewport').click();
   await waitNextFrame(page);
   await assertText(page, '');
 });

@@ -1,5 +1,5 @@
-import { registerNativeImportSessionHandlers } from '@affine/core/modules/import';
-import { apis } from '@affine/electron-api';
+import { registerNativeImportSessionHandlers } from '@cloud-notes/core/modules/import';
+import { apis } from '@cloud-notes/electron-api';
 
 const importApis = apis?.import;
 

@@ -1,5 +1,5 @@
-import { Dialog, DialogContent } from '@affine/admin/components/ui/dialog';
-import { cn } from '@affine/admin/utils';
+import { Dialog, DialogContent } from '@cloud-notes/admin/components/ui/dialog';
+import { cn } from '@cloud-notes/admin/utils';
 import { type DialogProps } from '@radix-ui/react-dialog';
 import { Command as CommandPrimitive } from 'cmdk';
 import { Search } from 'lucide-react';

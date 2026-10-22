@@ -1,5 +1,5 @@
 {
-  "name": "@affine/i18n",
+  "name": "@cloud-notes/i18n",
   "version": "0.27.5",
   "description": "",
   "type": "module",
@@ -15,10 +15,10 @@
   "keywords": [],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/toeverything/AFFiNE.git"
+    "url": "git+https://github.com/diegonmarcos/cloud-u-android.git"
   },
   "dependencies": {
-    "@affine/debug": "workspace:*",
+    "@cloud-notes/debug": "workspace:*",
     "@magic-works/i18n-codegen": "^0.6.1",
     "dayjs": "^1.11.13",
     "i18next": "^25.0.0",
@@ -26,8 +26,8 @@
     "react-i18next": "^15.2.0"
   },
   "devDependencies": {
-    "@affine-tools/cli": "workspace:*",
-    "@affine-tools/utils": "workspace:*",
+    "@cloud-notes-tools/cli": "workspace:*",
+    "@cloud-notes-tools/utils": "workspace:*",
     "glob": "^11.0.0",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vitest": "^4.1.8"

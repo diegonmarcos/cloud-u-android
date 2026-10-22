@@ -1,13 +1,13 @@
-import type { AIToolsConfigService } from '@affine/core/modules/ai-button';
-import type { AIModelService } from '@affine/core/modules/ai-button/services/models';
+import type { AIToolsConfigService } from '@cloud-notes/core/modules/ai-button';
+import type { AIModelService } from '@cloud-notes/core/modules/ai-button/services/models';
 import {
   menu,
   popMenu,
   popupTargetFromElement,
-} from '@blocksuite/affine/components/context-menu';
-import { SignalWatcher, WithDisposable } from '@blocksuite/affine/global/lit';
-import { unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import type { NotificationService } from '@blocksuite/affine-shared/services';
+} from '@blocksuite/cloud-notes/components/context-menu';
+import { SignalWatcher, WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import type { NotificationService } from '@blocksuite/cloud-notes-shared/services';
 import {
   AiOutlineIcon,
   ArrowDownSmallIcon,
@@ -36,7 +36,7 @@ export class ChatInputPreference extends SignalWatcher(
       display: flex;
       align-items: center;
       padding: 0px 4px;
-      color: var(--affine-v2-icon-primary);
+      color: var(--cloud-notes-v2-icon-primary);
       transition: all 0.23s ease;
       border-radius: 4px;
       background: transparent;
@@ -44,7 +44,7 @@ export class ChatInputPreference extends SignalWatcher(
       cursor: pointer;
     }
     .chat-input-preference-trigger:hover {
-      background-color: var(--affine-v2-layer-background-hoverOverlay);
+      background-color: var(--cloud-notes-v2-layer-background-hoverOverlay);
     }
     .chat-input-preference-trigger-label {
       font-size: 14px;
@@ -169,7 +169,7 @@ export class ChatInputPreference extends SignalWatcher(
                   select: () => {
                     if (!model.available) {
                       this.notificationService.toast(
-                        'This model requires an AFFiNE AI subscription.'
+                        'This model requires a Cloud Notes AI subscription.'
                       );
                       this.onAISubscribe().catch(console.error);
                       return;

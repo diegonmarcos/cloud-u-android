@@ -1,6 +1,6 @@
-import type { EditorHost } from '@blocksuite/affine/block-std';
-import type { TestAffineEditorContainer } from '@blocksuite/integration-test';
-import type { BlockSchema, Blocks, Workspace, Transformer } from '@blocksuite/affine/store';
+import type { EditorHost } from '@blocksuite/cloud-notes/block-std';
+import type { TestCloudNotesEditorContainer } from '@blocksuite/integration-test';
+import type { BlockSchema, Blocks, Workspace, Transformer } from '@blocksuite/cloud-notes/store';
 import type { z } from 'zod';
 import type * as Y from 'yjs';
 
@@ -12,7 +12,7 @@ declare global {
   ];
 
   interface Window {
-    editor: TestAffineEditorContainer;
+    editor: TestCloudNotesEditorContainer;
     doc: Blocks;
     collection: Workspace;
     blockSchemas: z.infer<typeof BlockSchema>[];

@@ -1,8 +1,8 @@
-import { canonicalAuthEndpoint } from '@affine/mobile-shared/auth/endpoint';
+import { canonicalAuthEndpoint } from '@cloud-notes/mobile-shared/auth/endpoint';
 import {
   type AuthRequestProvider,
   installAuthRequestProxy,
-} from '@affine/mobile-shared/auth/request';
+} from '@cloud-notes/mobile-shared/auth/request';
 
 import { Auth } from './plugins/auth';
 

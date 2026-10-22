@@ -1,4 +1,4 @@
-import { LoadingIcon } from '@blocksuite/affine/components/icons';
+import { LoadingIcon } from '@blocksuite/cloud-notes/components/icons';
 import { WarningIcon } from '@blocksuite/icons/lit';
 import { type TemplateResult } from 'lit';
 

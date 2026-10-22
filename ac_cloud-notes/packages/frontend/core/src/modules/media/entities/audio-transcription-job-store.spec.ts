@@ -1,7 +1,7 @@
 import {
   settleTranscriptTaskMutation,
   submitTranscriptTaskMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Framework } from '@toeverything/infra';
 import { describe, expect, test, vi } from 'vitest';
 

@@ -1,4 +1,4 @@
-import { useThemeColorV2 } from '@affine/component';
+import { useThemeColorV2 } from '@cloud-notes/component';
 
 import { AllDocsHeader, CollectionList } from '../../../views';
 

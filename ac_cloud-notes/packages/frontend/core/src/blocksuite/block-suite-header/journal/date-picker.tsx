@@ -1,11 +1,11 @@
-import type { WeekDatePickerHandle } from '@affine/component';
-import { WeekDatePicker } from '@affine/component';
+import type { WeekDatePickerHandle } from '@cloud-notes/component';
+import { WeekDatePicker } from '@cloud-notes/component';
 import {
   JOURNAL_DATE_FORMAT,
   JournalService,
-} from '@affine/core/modules/journal';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import type { Store } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/modules/journal';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useLiveData, useService } from '@toeverything/infra';
 import dayjs from 'dayjs';
 import { useCallback, useEffect, useRef, useState } from 'react';

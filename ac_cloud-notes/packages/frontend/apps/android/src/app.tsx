@@ -1,14 +1,14 @@
-import { notify } from '@affine/component';
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { AffineContext } from '@affine/core/components/context';
-import { AppFallback } from '@affine/core/mobile/components/app-fallback';
-import { MobileModalConfigProvider } from '@affine/core/mobile/components/mobile-modal-config-provider';
-import { configureMobileModules } from '@affine/core/mobile/modules';
-import { MobileBackCoordinator } from '@affine/core/mobile/modules/back-coordinator';
-import { VirtualKeyboardProvider } from '@affine/core/mobile/modules/virtual-keyboard';
-import { router } from '@affine/core/mobile/router';
-import { configureCommonModules } from '@affine/core/modules';
-import { AIButtonProvider } from '@affine/core/modules/ai-button';
+import { notify } from '@cloud-notes/component';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { CloudNotesContext } from '@cloud-notes/core/components/context';
+import { AppFallback } from '@cloud-notes/core/mobile/components/app-fallback';
+import { MobileModalConfigProvider } from '@cloud-notes/core/mobile/components/mobile-modal-config-provider';
+import { configureMobileModules } from '@cloud-notes/core/mobile/modules';
+import { MobileBackCoordinator } from '@cloud-notes/core/mobile/modules/back-coordinator';
+import { VirtualKeyboardProvider } from '@cloud-notes/core/mobile/modules/virtual-keyboard';
+import { router } from '@cloud-notes/core/mobile/router';
+import { configureCommonModules } from '@cloud-notes/core/modules';
+import { AIButtonProvider } from '@cloud-notes/core/modules/ai-button';
 import {
   AuthProvider,
   AuthService,
@@ -17,37 +17,37 @@ import {
   ServerService,
   ServersService,
   ValidatorProvider,
-} from '@affine/core/modules/cloud';
-import { registerNativePreviewHandlers } from '@affine/core/modules/code-block-preview-renderer';
-import { DocsService } from '@affine/core/modules/doc';
-import { ImportService } from '@affine/core/modules/import';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { I18nProvider } from '@affine/core/modules/i18n';
-import { LifecycleService } from '@affine/core/modules/lifecycle';
+} from '@cloud-notes/core/modules/cloud';
+import { registerNativePreviewHandlers } from '@cloud-notes/core/modules/code-block-preview-renderer';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { ImportService } from '@cloud-notes/core/modules/import';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { I18nProvider } from '@cloud-notes/core/modules/i18n';
+import { LifecycleService } from '@cloud-notes/core/modules/lifecycle';
 import {
   configureLocalStorageStateStorageImpls,
   NbstoreProvider,
-} from '@affine/core/modules/storage';
-import { PopupWindowProvider } from '@affine/core/modules/url';
-import { ClientSchemeProvider } from '@affine/core/modules/url/providers/client-schema';
-import { configureBrowserWorkbenchModule } from '@affine/core/modules/workbench';
+} from '@cloud-notes/core/modules/storage';
+import { PopupWindowProvider } from '@cloud-notes/core/modules/url';
+import { ClientSchemeProvider } from '@cloud-notes/core/modules/url/providers/client-schema';
+import { configureBrowserWorkbenchModule } from '@cloud-notes/core/modules/workbench';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   WorkspacesService,
-} from '@affine/core/modules/workspace';
-import { configureBrowserWorkspaceFlavours } from '@affine/core/modules/workspace-engine';
-import { getWorkerUrl } from '@affine/env/worker';
-import { I18n } from '@affine/i18n';
-import { serveAuthRequests } from '@affine/mobile-shared/auth/channel';
-import { StoreManagerClient } from '@affine/nbstore/worker/client';
-import { setTelemetryTransport } from '@affine/track';
-import { Container } from '@blocksuite/affine/global/di';
+} from '@cloud-notes/core/modules/workspace';
+import { configureBrowserWorkspaceFlavours } from '@cloud-notes/core/modules/workspace-engine';
+import { getWorkerUrl } from '@cloud-notes/env/worker';
+import { I18n } from '@cloud-notes/i18n';
+import { serveAuthRequests } from '@cloud-notes/mobile-shared/auth/channel';
+import { StoreManagerClient } from '@cloud-notes/nbstore/worker/client';
+import { setTelemetryTransport } from '@cloud-notes/track';
+import { Container } from '@blocksuite/cloud-notes/global/di';
 import {
   docLinkBaseURLMiddleware,
   MarkdownAdapter,
   titleMiddleware,
-} from '@blocksuite/affine/shared/adapters';
-import { HtmlTransformer } from '@blocksuite/affine/widgets/linked-doc';
+} from '@blocksuite/cloud-notes/shared/adapters';
+import { HtmlTransformer } from '@blocksuite/cloud-notes/widgets/linked-doc';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Keyboard } from '@capacitor/keyboard';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -65,7 +65,7 @@ import { useTheme } from 'next-themes';
 import { Suspense, useEffect, useState } from 'react';
 import { RouterProvider } from 'react-router-dom';
 
-import { AffineTheme } from './plugins/affine-theme';
+import { CloudNotesTheme } from './plugins/cloud-notes-theme';
 import { AIButton } from './plugins/ai-button';
 import { Auth } from './plugins/auth';
 import {
@@ -131,7 +131,7 @@ framework.impl(PopupWindowProvider, {
 
 framework.impl(ClientSchemeProvider, {
   getClientScheme() {
-    return 'affine';
+    return 'cloud-notes';
   },
 });
 
@@ -155,7 +155,7 @@ framework.impl(VirtualKeyboardProvider, {
     Promise.all([
       Keyboard.addListener('keyboardWillShow', info => {
         (async () => {
-          const navBarHeight = (await AffineTheme.getSystemNavBarHeight())
+          const navBarHeight = (await CloudNotesTheme.getSystemNavBarHeight())
             .height;
           callback({
             // When an physical keyboard is connected, the virtual keyboard height is 0,
@@ -355,7 +355,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 const notifyAuthenticationError = (error: unknown, fallback: string) => {
   console.error(fallback, error);
   notify.error({
-    title: I18n['com.affine.auth.toast.title.failed'](),
+    title: I18n['com.cloud-notes.auth.toast.title.failed'](),
     message: getErrorMessage(error, fallback),
   });
 };
@@ -432,7 +432,7 @@ const ThemeProvider = () => {
             ? Style.Light
             : Style.Default,
     }).catch(console.error);
-    AffineTheme.onThemeChanged({
+    CloudNotesTheme.onThemeChanged({
       darkMode: resolvedTheme === 'dark',
     }).catch(console.error);
   }, [resolvedTheme]);
@@ -488,7 +488,7 @@ const AndroidBackAdapter = () => {
 // #469 — the ONE feature over upstream: open a file from emulated storage.
 // The native FAB dispatches 'cloud-notes:open-file'; the explorer below picks
 // a file, and openExternalFile reads it through ExternalFilePlugin (every
-// failure carries its own visible message) and import the markdown into the local workspace via AFFiNE's own
+// failure carries its own visible message) and import the markdown into the local workspace via Cloud Notes's own
 // Obsidian importer, so the vault docs land in the app's document store.
 //
 // #513 — this used to be `useService(ImportService)` in the component body, and
@@ -568,7 +568,7 @@ const openExternalFile = async (path: string) => {
     if (isHtmlFile(file.name)) {
       const docId = await HtmlTransformer.importHTMLToDoc({
         collection: workspace.docCollection,
-        schema: getAFFiNEWorkspaceSchema(),
+        schema: getCloudNotesWorkspaceSchema(),
         extensions: getStoreManager().config.init().value.get('store'),
         html: file.content,
         fileName: file.name.replace(/\.[^.]+$/, ''),
@@ -704,8 +704,8 @@ const ExternalFileOpener = () => {
         zIndex: 10000,
         display: 'flex',
         flexDirection: 'column',
-        background: 'var(--affine-background-primary-color, #fff)',
-        color: 'var(--affine-text-primary-color, #000)',
+        background: 'var(--cloud-notes-background-primary-color, #fff)',
+        color: 'var(--cloud-notes-text-primary-color, #000)',
       }}
     >
       <div style={{ ...row, display: 'flex', gap: 12, fontWeight: 600 }}>
@@ -762,7 +762,7 @@ export function App() {
       <FrameworkRoot framework={frameworkProvider}>
         <I18nProvider>
           <MobileModalConfigProvider>
-            <AffineContext store={getCurrentStore()}>
+            <CloudNotesContext store={getCurrentStore()}>
               <ThemeProvider />
               <AndroidBackAdapter />
               <ExternalFileOpener />
@@ -771,7 +771,7 @@ export function App() {
                 router={router}
                 future={future}
               />
-            </AffineContext>
+            </CloudNotesContext>
           </MobileModalConfigProvider>
         </I18nProvider>
       </FrameworkRoot>

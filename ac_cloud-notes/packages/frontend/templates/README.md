@@ -1,13 +1,13 @@
-# @affine/templates
+# @cloud-notes/templates
 
-Manages template files for use in AFFiNE. For now we only support onboarding templates.
+Manages template files for use in Cloud Notes. For now we only support onboarding templates.
 
 ## How to update
 
 Before we offer a better solution, to update the onboarding templates:
 
-1. run AFFiNE core locally (dev mode)
-2. expose `ZipTransformer` to window. e.g., `import {ZipTransformer} from '@blocksuite/affine/blocks/root'; window.ZipTransformer = ZipTransformer;`
+1. run Cloud Notes core locally (dev mode)
+2. expose `ZipTransformer` to window. e.g., `import {ZipTransformer} from '@blocksuite/cloud-notes/blocks/root'; window.ZipTransformer = ZipTransformer;`
 3. run the following script
    ```js
    (async () => {
@@ -27,7 +27,7 @@ Before we offer a better solution, to update the onboarding templates:
      const url = URL.createObjectURL(zipblob);
      const a = document.createElement('a');
      a.setAttribute('href', url);
-     a.setAttribute('download', `${currentWorkspace.id}.affine.zip`);
+     a.setAttribute('download', `${currentWorkspace.id}.cloud-notes.zip`);
      a.click();
      a.remove();
      URL.revokeObjectURL(url);

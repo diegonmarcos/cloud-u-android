@@ -1,6 +1,6 @@
-import { AIChatBlockSchema } from '@affine/core/blocksuite/ai/blocks';
-import { EdgelessClipboardConfig } from '@blocksuite/affine/blocks/surface';
-import type { BlockSnapshot } from '@blocksuite/affine/store';
+import { AIChatBlockSchema } from '@cloud-notes/core/blocksuite/ai/blocks';
+import { EdgelessClipboardConfig } from '@blocksuite/cloud-notes/blocks/surface';
+import type { BlockSnapshot } from '@blocksuite/cloud-notes/store';
 
 export class EdgelessClipboardAIChatConfig extends EdgelessClipboardConfig {
   static override readonly key = AIChatBlockSchema.model.flavour;

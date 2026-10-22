@@ -1,7 +1,7 @@
 import {
   type ViewExtensionContext,
   ViewExtensionProvider,
-} from '@blocksuite/affine/ext-loader';
+} from '@blocksuite/cloud-notes/ext-loader';
 import { z } from 'zod';
 
 import { turboRendererExtension } from './turbo-renderer';
@@ -13,7 +13,7 @@ const optionsSchema = z.object({
 type TurboRendererViewOptions = z.infer<typeof optionsSchema>;
 
 export class TurboRendererViewExtension extends ViewExtensionProvider<TurboRendererViewOptions> {
-  override name = 'affine-view-turbo-renderer';
+  override name = 'cloud-notes-view-turbo-renderer';
 
   override schema = optionsSchema;
 

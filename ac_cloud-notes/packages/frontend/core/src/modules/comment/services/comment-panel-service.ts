@@ -1,4 +1,4 @@
-import { type WorkbenchService } from '@affine/core/modules/workbench';
+import { type WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { Service } from '@toeverything/infra';
 
 import type { DocCommentEntity } from '../entities/doc-comment';

@@ -46,7 +46,7 @@ test.describe('frame copy and paste', () => {
     await createFrame(page, [50, 50], [450, 450]);
     await createShapeElement(page, [200, 200], [300, 300], Shape.Square);
 
-    const frameTitle = page.locator('affine-frame-title');
+    const frameTitle = page.locator('cloud-notes-frame-title');
 
     await pressEscape(page);
     await frameTitle.click();
@@ -69,7 +69,7 @@ test.describe('frame copy and paste', () => {
     await createShapeElement(page, [300, 300], [400, 400], Shape.Square);
     await pressEscape(page);
 
-    const frameTitles = page.locator('affine-frame-title');
+    const frameTitles = page.locator('cloud-notes-frame-title');
 
     await shiftClickView(page, [260, 260]);
     await shiftClickView(page, [310, 310]);
@@ -104,7 +104,7 @@ test.describe('frame copy and paste', () => {
     await createShapeElement(page, [100, 100], [200, 200], Shape.Square);
     await pressEscape(page);
 
-    const frameTitles = page.locator('affine-frame-title');
+    const frameTitles = page.locator('cloud-notes-frame-title');
 
     await frameTitles.nth(0).click();
 

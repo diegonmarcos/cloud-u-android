@@ -1,7 +1,7 @@
-import { showAILoginRequiredAtom } from '@affine/core/components/affine/auth/ai-login-required';
-import type { AIToolsConfig } from '@affine/core/modules/ai-button';
-import type { NbstoreService } from '@affine/core/modules/storage';
-import { UserFriendlyError } from '@affine/error';
+import { showAILoginRequiredAtom } from '@cloud-notes/core/components/cloud-notes/auth/ai-login-required';
+import type { AIToolsConfig } from '@cloud-notes/core/modules/ai-button';
+import type { NbstoreService } from '@cloud-notes/core/modules/storage';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   cleanupCopilotSessionMutation,
   createCopilotMessageMutation,
@@ -19,7 +19,7 @@ import {
   type QueryResponse,
   type RequestOptions,
   updateCopilotSessionMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { getCurrentStore } from '@toeverything/infra';
 
 import {

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { WorkerOpRenderer } from './worker-op-renderer';
 
-vi.mock('@affine/env/worker', () => ({
+vi.mock('@cloud-notes/env/worker', () => ({
   getWorkerUrl: vi.fn(() => '/worker.js'),
 }));
 

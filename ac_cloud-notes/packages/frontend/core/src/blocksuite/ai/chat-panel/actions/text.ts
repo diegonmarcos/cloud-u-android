@@ -1,9 +1,9 @@
 import './action-wrapper';
 
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { unsafeCSSVar } from '@blocksuite/affine/shared/theme';
-import type { EditorHost } from '@blocksuite/affine/std';
-import { ThemeProvider } from '@blocksuite/affine-shared/services';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { unsafeCSSVar } from '@blocksuite/cloud-notes/shared/theme';
+import type { EditorHost } from '@blocksuite/cloud-notes/std';
+import { ThemeProvider } from '@blocksuite/cloud-notes-shared/services';
 import { css, html, LitElement } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -16,7 +16,7 @@ export class ActionText extends WithDisposable(LitElement) {
     .original-text {
       border-radius: 4px;
       margin-bottom: 12px;
-      font-size: var(--affine-font-sm);
+      font-size: var(--cloud-notes-font-sm);
       line-height: 22px;
       max-height: 200px;
       overflow-y: auto;
@@ -53,7 +53,7 @@ export class ActionText extends WithDisposable(LitElement) {
       <div
         style=${styleMap({
           padding: isCode ? '0' : '10px 16px',
-          border: isCode ? 'none' : '1px solid var(--affine-border-color)',
+          border: isCode ? 'none' : '1px solid var(--cloud-notes-border-color)',
         })}
         class="original-text"
         data-testid="original-text"

@@ -24,7 +24,9 @@
                 "backend/native",
                 "common/native",
                 "affine_common",
-                "@affine/server"
+                "@affine/server",
+                "cloud_notes_common",
+                "@cloud-notes/server"
             ],
             "_doc_markers": "Literal substrings that betray a reach into a restricted dir across ALL THREE of this app's build systems: a Gradle/Apollo schema path, a Cargo path-dependency crate name, a yarn workspace package name. Two traps are baked in here. (1) Cargo RENAMES the directory to a crate name, so scanning for the directory path alone finds nothing — which is how the 2026-09-09 scoping missed affine_common. (2) The Gradle reach is written as a RELATIVE path — schemaFiles.from(\"../../../../../backend/server/src/schema.gql\") — so a marker of 'packages/backend' matches nothing. Markers are therefore the directory tails, not the repo-root paths. Both traps were found by running the guard, not by reading it: the first draft used repo-root paths and silently reported only 2 of the 3 reaches.",
             "scan_extensions": [

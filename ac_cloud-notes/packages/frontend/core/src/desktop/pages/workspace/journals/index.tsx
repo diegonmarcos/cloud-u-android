@@ -2,12 +2,12 @@ import {
   Button,
   WeekDatePicker,
   type WeekDatePickerHandle,
-} from '@affine/component';
-import { BlocksuiteEditorJournalDocTitleUI } from '@affine/core/blocksuite/block-suite-editor/journal-doc-title';
+} from '@cloud-notes/component';
+import { BlocksuiteEditorJournalDocTitleUI } from '@cloud-notes/core/blocksuite/block-suite-editor/journal-doc-title';
 import {
   JOURNAL_DATE_FORMAT,
   JournalService,
-} from '@affine/core/modules/journal';
+} from '@cloud-notes/core/modules/journal';
 import {
   ViewBody,
   ViewHeader,
@@ -15,8 +15,8 @@ import {
   ViewService,
   ViewTitle,
   WorkbenchService,
-} from '@affine/core/modules/workbench';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/workbench';
+import { useI18n } from '@cloud-notes/i18n';
 import { PlusIcon, TodayIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import dayjs from 'dayjs';
@@ -62,10 +62,10 @@ export const JournalPlaceholder = ({ dateString }: { dateString: string }) => {
             <TodayIcon />
           </div>
           <div className={styles.placeholderText}>
-            {t['com.affine.journal.placeholder.title']()}
+            {t['com.cloud-notes.journal.placeholder.title']()}
           </div>
           <div className={styles.placeholderDescription}>
-            {t['com.affine.journal.placeholder.description']()}
+            {t['com.cloud-notes.journal.placeholder.description']()}
           </div>
           <Button
             variant="primary"
@@ -74,7 +74,7 @@ export const JournalPlaceholder = ({ dateString }: { dateString: string }) => {
             onClick={createJournal}
             data-testid="confirm-create-journal-button"
           >
-            {t['com.affine.journal.placeholder.create']()}
+            {t['com.cloud-notes.journal.placeholder.create']()}
           </Button>
         </div>
       </div>
@@ -142,7 +142,7 @@ export const JournalsPageWithConfirmation = () => {
               className={styles.todayButton}
               onClick={() => openJournal(todayString)}
             >
-              {t['com.affine.today']()}
+              {t['com.cloud-notes.today']()}
             </Button>
           ) : null}
         </div>

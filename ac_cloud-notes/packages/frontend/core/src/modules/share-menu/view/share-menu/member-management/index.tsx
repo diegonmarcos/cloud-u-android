@@ -1,7 +1,7 @@
-import { Avatar, Skeleton, Tooltip } from '@affine/component';
-import { DocGrantedUsersService } from '@affine/core/modules/permissions';
-import { DocRole } from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+import { Avatar, Skeleton, Tooltip } from '@cloud-notes/component';
+import { DocGrantedUsersService } from '@cloud-notes/core/modules/permissions';
+import { DocRole } from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { ArrowRightSmallIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVarV2 } from '@toeverything/theme/v2';
@@ -45,18 +45,18 @@ export const MembersRow = ({ onClick }: { onClick: () => void }) => {
     }
     switch (grantedUserCount) {
       case 2:
-        return t['com.affine.share-menu.member-management.member-count-2']({
+        return t['com.cloud-notes.share-menu.member-management.member-count-2']({
           member1: topThreeMembers[0].name,
           member2: topThreeMembers[1].name,
         });
       case 3:
-        return t['com.affine.share-menu.member-management.member-count-3']({
+        return t['com.cloud-notes.share-menu.member-management.member-count-3']({
           member1: topThreeMembers[0].name,
           member2: topThreeMembers[1].name,
           member3: topThreeMembers[2].name,
         });
       default:
-        return t['com.affine.share-menu.member-management.member-count-more']({
+        return t['com.cloud-notes.share-menu.member-management.member-count-more']({
           member1: topThreeMembers[0].name,
           member2: topThreeMembers[1].name,
           memberCount: (grantedUserCount - 2).toString(),
@@ -136,7 +136,7 @@ export const MembersRow = ({ onClick }: { onClick: () => void }) => {
           <div className={styles.OwnerStyle}>{t['Owner']()}</div>
         </>
       ) : (
-        <div>{t['com.affine.share-menu.invite-editor.manage-members']()}</div>
+        <div>{t['com.cloud-notes.share-menu.invite-editor.manage-members']()}</div>
       )}
       <div className={styles.IconButtonStyle}>
         <ArrowRightSmallIcon />

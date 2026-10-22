@@ -1,15 +1,15 @@
-import { toast } from '@affine/component';
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { AppSidebarService } from '@affine/core/modules/app-sidebar';
-import { DocsService } from '@affine/core/modules/doc';
+import { toast } from '@cloud-notes/component';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { AppSidebarService } from '@cloud-notes/core/modules/app-sidebar';
+import { DocsService } from '@cloud-notes/core/modules/doc';
 import {
   EditorSettingService,
   resolveNewDocTitle,
-} from '@affine/core/modules/editor-setting';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { getAFFiNEWorkspaceSchema } from '@affine/core/modules/workspace';
-import { type DocMode } from '@blocksuite/affine/model';
-import type { Workspace } from '@blocksuite/affine/store';
+} from '@cloud-notes/core/modules/editor-setting';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { getCloudNotesWorkspaceSchema } from '@cloud-notes/core/modules/workspace';
+import { type DocMode } from '@blocksuite/cloud-notes/model';
+import type { Workspace } from '@blocksuite/cloud-notes/store';
 import { LiveData, useLiveData, useServices } from '@toeverything/infra';
 import { useCallback, useMemo } from 'react';
 
@@ -92,7 +92,7 @@ export const usePageHelper = (docCollection: Workspace) => {
   const importFileAndOpen = useMemo(
     () => async () => {
       const { showImportModal } =
-        await import('@blocksuite/affine/widgets/linked-doc');
+        await import('@blocksuite/cloud-notes/widgets/linked-doc');
       const { promise, resolve, reject } =
         Promise.withResolvers<
           Parameters<
@@ -122,7 +122,7 @@ export const usePageHelper = (docCollection: Workspace) => {
       };
       showImportModal({
         collection: docCollection,
-        schema: getAFFiNEWorkspaceSchema(),
+        schema: getCloudNotesWorkspaceSchema(),
         extensions: getStoreManager().config.init().value.get('store'),
         onSuccess,
         onFail: message => {

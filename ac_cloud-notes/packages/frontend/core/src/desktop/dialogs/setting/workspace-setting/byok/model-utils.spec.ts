@@ -4,7 +4,7 @@ import {
   ByokModelFeature,
   ByokModelInput,
   ByokModelOutput,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { describe, expect, test } from 'vitest';
 
 import {

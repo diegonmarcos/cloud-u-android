@@ -2,7 +2,7 @@
 use std::hint::black_box;
 
 #[cfg(target_os = "macos")]
-use affine_media_capture::macos::audio_buffer::{mix_audio_samples, mix_audio_samples_scalar};
+use cloud_notes_media_capture::macos::audio_buffer::{mix_audio_samples, mix_audio_samples_scalar};
 #[cfg(target_os = "macos")]
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 

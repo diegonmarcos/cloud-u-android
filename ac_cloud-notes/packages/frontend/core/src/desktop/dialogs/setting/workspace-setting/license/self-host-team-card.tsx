@@ -1,22 +1,22 @@
-import { Button, ConfirmModal, Input, Modal, notify } from '@affine/component';
-import { SettingRow } from '@affine/component/setting-components';
-import { useEnableCloud } from '@affine/core/components/hooks/affine/use-enable-cloud';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { useMutation } from '@affine/core/components/hooks/use-mutation';
+import { Button, ConfirmModal, Input, Modal, notify } from '@cloud-notes/component';
+import { SettingRow } from '@cloud-notes/component/setting-components';
+import { useEnableCloud } from '@cloud-notes/core/components/hooks/cloud-notes/use-enable-cloud';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { useMutation } from '@cloud-notes/core/components/hooks/use-mutation';
 import {
   SelfhostLicenseService,
   WorkspaceSubscriptionService,
-} from '@affine/core/modules/cloud';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
-import { WorkspaceQuotaService } from '@affine/core/modules/quota';
-import { UrlService } from '@affine/core/modules/url';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { UserFriendlyError } from '@affine/error';
+} from '@cloud-notes/core/modules/cloud';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
+import { WorkspaceQuotaService } from '@cloud-notes/core/modules/quota';
+import { UrlService } from '@cloud-notes/core/modules/url';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   createSelfhostCustomerPortalMutation,
   SubscriptionVariant,
-} from '@affine/graphql';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/graphql';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVarV2 } from '@toeverything/theme/v2';
 import clsx from 'clsx';
@@ -68,7 +68,7 @@ export const SelfHostTeamCard = () => {
         <div>
           <p>
             {t[
-              'com.affine.settings.workspace.license.self-host-team.team.description'
+              'com.cloud-notes.settings.workspace.license.self-host-team.team.description'
             ]({
               expirationDate: new Date(
                 license?.expiredAt || 0
@@ -83,7 +83,7 @@ export const SelfHostTeamCard = () => {
           {isOneTimePurchase ? (
             <p>
               <Trans
-                i18nKey="com.affine.settings.workspace.license.self-host-team.team.license"
+                i18nKey="com.cloud-notes.settings.workspace.license.self-host-team.team.license"
                 components={{ 1: <strong /> }}
               />
             </p>
@@ -92,7 +92,7 @@ export const SelfHostTeamCard = () => {
       );
     }
     return t[
-      'com.affine.settings.workspace.license.self-host-team.free.description'
+      'com.cloud-notes.settings.workspace.license.self-host-team.free.description'
     ]({
       memberCount: workspaceQuota?.humanReadable.memberLimit || '10',
     });
@@ -120,7 +120,7 @@ export const SelfHostTeamCard = () => {
           revalidate();
           notify.success({
             title:
-              t['com.affine.settings.workspace.license.activate-success'](),
+              t['com.cloud-notes.settings.workspace.license.activate-success'](),
           });
         })
         .catch(e => {
@@ -148,7 +148,7 @@ export const SelfHostTeamCard = () => {
         revalidate();
         notify.success({
           title:
-            t['com.affine.settings.workspace.license.deactivate-success'](),
+            t['com.cloud-notes.settings.workspace.license.deactivate-success'](),
         });
       })
       .catch(e => {
@@ -183,7 +183,7 @@ export const SelfHostTeamCard = () => {
             <SettingRow
               spreadCol={false}
               name={t[
-                `com.affine.settings.workspace.license.self-host${isTeam ? '-team' : ''}`
+                `com.cloud-notes.settings.workspace.license.self-host${isTeam ? '-team' : ''}`
               ]()}
               desc={description}
             />
@@ -195,7 +195,7 @@ export const SelfHostTeamCard = () => {
           >
             <span className={styles.seat}>
               {t[
-                'com.affine.settings.workspace.license.self-host-team.seats'
+                'com.cloud-notes.settings.workspace.license.self-host-team.seats'
               ]()}
             </span>
             <span>
@@ -217,7 +217,7 @@ export const SelfHostTeamCard = () => {
               onClick={handleOpenUploadModal}
             >
               {t[
-                'com.affine.settings.workspace.license.self-host-team.upload-license-file'
+                'com.cloud-notes.settings.workspace.license.self-host-team.upload-license-file'
               ]()}
             </Button>
           ) : null}
@@ -227,7 +227,7 @@ export const SelfHostTeamCard = () => {
             onClick={handleClick}
           >
             {t[
-              `com.affine.settings.workspace.license.self-host-team.${hasLicense ? 'deactivate-license' : 'use-purchased-key'}`
+              `com.cloud-notes.settings.workspace.license.self-host-team.${hasLicense ? 'deactivate-license' : 'use-purchased-key'}`
             ]()}
           </Button>
         </div>
@@ -314,10 +314,10 @@ const ActionModal = ({
         open={open}
         onOpenChange={handleOpenChange}
         title={t[
-          `com.affine.settings.workspace.license.deactivate-modal.title`
+          `com.cloud-notes.settings.workspace.license.deactivate-modal.title`
         ]()}
         description={t[
-          'com.affine.settings.workspace.license.deactivate-modal.description-license'
+          'com.cloud-notes.settings.workspace.license.deactivate-modal.description-license'
         ]()}
         cancelText={t['Cancel']()}
         cancelButtonOptions={{
@@ -342,11 +342,11 @@ const ActionModal = ({
         open={open}
         onOpenChange={handleOpenChange}
         title={t[
-          `com.affine.settings.workspace.license.deactivate-modal.title`
+          `com.cloud-notes.settings.workspace.license.deactivate-modal.title`
         ]()}
         description={
           <Trans
-            i18nKey="com.affine.settings.workspace.license.deactivate-modal.description"
+            i18nKey="com.cloud-notes.settings.workspace.license.deactivate-modal.description"
             components={{
               1: <strong />,
             }}
@@ -361,7 +361,7 @@ const ActionModal = ({
             disabled={isMutating}
           >
             {t[
-              'com.affine.settings.workspace.license.deactivate-modal.manage-payment'
+              'com.cloud-notes.settings.workspace.license.deactivate-modal.manage-payment'
             ]()}
           </Button>
           <div className={styles.rightActions}>
@@ -382,9 +382,9 @@ const ActionModal = ({
       width={480}
       open={open}
       onOpenChange={handleOpenChange}
-      title={t['com.affine.settings.workspace.license.activate-modal.title']()}
+      title={t['com.cloud-notes.settings.workspace.license.activate-modal.title']()}
       description={t[
-        'com.affine.settings.workspace.license.activate-modal.description'
+        'com.cloud-notes.settings.workspace.license.activate-modal.description'
       ]()}
       cancelText={t['Cancel']()}
       cancelButtonOptions={{
@@ -412,11 +412,11 @@ const ActionModal = ({
       />
       <span className={styles.tips}>
         <Trans
-          i18nKey="com.affine.settings.workspace.license.activate-modal.tips"
+          i18nKey="com.cloud-notes.settings.workspace.license.activate-modal.tips"
           components={{
             1: (
               <a
-                href="https://affine.pro/pricing/?type=selfhost#table"
+                href="https://notes.diegonmarcos.com/pricing/?type=selfhost#table"
                 target="_blank"
                 rel="noreferrer"
                 style={{ color: cssVarV2('text/link') }}

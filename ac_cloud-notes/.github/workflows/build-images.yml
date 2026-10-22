@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   build-web:
-    name: Build @affine/web
+    name: Build @cloud-notes/web
     runs-on: ubuntu-latest
     environment: ${{ inputs.build-type }}
     steps:
@@ -32,14 +32,14 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
       - name: Build Core
-        run: yarn affine @affine/web build
+        run: yarn cloud-notes @cloud-notes/web build
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           BUILD_TYPE: ${{ inputs.build-type }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: 'affine-web'
+          SENTRY_PROJECT: 'cloud-notes-web'
           SENTRY_RELEASE: ${{ inputs.app-version }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -52,7 +52,7 @@ jobs:
           if-no-files-found: error
 
   build-admin:
-    name: Build @affine/admin
+    name: Build @cloud-notes/admin
     runs-on: ubuntu-latest
     environment: ${{ inputs.build-type }}
     steps:
@@ -64,14 +64,14 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
       - name: Build Admin
-        run: yarn affine @affine/admin build
+        run: yarn cloud-notes @cloud-notes/admin build
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           BUILD_TYPE: ${{ inputs.build-type }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: 'affine-admin'
+          SENTRY_PROJECT: 'cloud-notes-admin'
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           PERFSEE_TOKEN: ${{ secrets.PERFSEE_TOKEN }}
@@ -83,7 +83,7 @@ jobs:
           if-no-files-found: error
 
   build-mobile:
-    name: Build @affine/mobile
+    name: Build @cloud-notes/mobile
     runs-on: ubuntu-latest
     environment: ${{ inputs.build-type }}
     steps:
@@ -95,14 +95,14 @@ jobs:
       - name: Setup Node.js
         uses: ./.github/actions/setup-node
       - name: Build Mobile
-        run: yarn affine @affine/mobile build
+        run: yarn cloud-notes @cloud-notes/mobile build
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           BUILD_TYPE: ${{ inputs.build-type }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: 'affine-mobile'
+          SENTRY_PROJECT: 'cloud-notes-mobile'
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
           PERFSEE_TOKEN: ${{ secrets.PERFSEE_TOKEN }}
@@ -138,15 +138,15 @@ jobs:
         uses: ./.github/actions/setup-node
         with:
           electron-install: false
-          extra-flags: workspaces focus @affine/server-native
+          extra-flags: workspaces focus @cloud-notes/server-native
       - name: Build Rust
         uses: ./.github/actions/build-rust
         env:
-          AFFINE_PRO_PUBLIC_KEY: ${{ secrets.AFFINE_PRO_PUBLIC_KEY }}
-          AFFINE_PRO_LICENSE_AES_KEY: ${{ secrets.AFFINE_PRO_LICENSE_AES_KEY }}
+          CLOUD_NOTES_PRO_PUBLIC_KEY: ${{ secrets.CLOUD_NOTES_PRO_PUBLIC_KEY }}
+          CLOUD_NOTES_PRO_LICENSE_AES_KEY: ${{ secrets.CLOUD_NOTES_PRO_LICENSE_AES_KEY }}
         with:
           target: ${{ matrix.targets.name }}
-          package: '@affine/server-native'
+          package: '@cloud-notes/server-native'
       - name: Rename ${{ matrix.targets.file }}
         run: |
           mv ./packages/backend/native/server-native.node ./packages/backend/native/${{ matrix.targets.file }}
@@ -172,7 +172,7 @@ jobs:
         uses: ./.github/actions/setup-node
         with:
           electron-install: false
-          extra-flags: workspaces focus @affine/server @types/affine__env
+          extra-flags: workspaces focus @cloud-notes/server @types/cloud-notes__env
       - name: Download server-native
         uses: actions/download-artifact@v4
         with:
@@ -182,7 +182,7 @@ jobs:
       - name: List server-native files
         run: ls -alh ./packages/backend/native
       - name: Build Server
-        run: yarn workspace @affine/server build
+        run: yarn workspace @cloud-notes/server build
       - name: Upload server dist
         uses: actions/upload-artifact@v4
         with:
@@ -247,10 +247,10 @@ jobs:
         run: |
           yarn config set --json supportedArchitectures.cpu '["x64", "arm64", "arm"]'
           yarn config set --json supportedArchitectures.libc '["glibc"]'
-          yarn workspaces focus @affine/server --production
+          yarn workspaces focus @cloud-notes/server --production
 
       - name: Generate Prisma client
-        run: yarn workspace @affine/server prisma generate
+        run: yarn workspace @cloud-notes/server prisma generate
 
       - name: Mv node_modules
         run: mv ./node_modules ./packages/backend/server
@@ -269,4 +269,4 @@ jobs:
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           provenance: true
           file: .github/deployment/node/Dockerfile
-          tags: ghcr.io/toeverything/affine:${{inputs.build-type}}-${{ inputs.git-short-hash }}
+          tags: ghcr.io/diegonmarcos/cloud-u-android:${{inputs.build-type}}-${{ inputs.git-short-hash }}

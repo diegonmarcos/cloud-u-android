@@ -1,13 +1,13 @@
-import { IconButton, MenuItem, MenuSeparator, toast } from '@affine/component';
-import { usePageHelper } from '@affine/core/blocksuite/block-suite-page-list/utils';
-import { IsFavoriteIcon } from '@affine/core/components/pure/icons';
-import { DocsService } from '@affine/core/modules/doc';
-import { FavoriteService } from '@affine/core/modules/favorite';
-import { TagService } from '@affine/core/modules/tag';
-import { WorkbenchService } from '@affine/core/modules/workbench';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
-import { track } from '@affine/track';
+import { IconButton, MenuItem, MenuSeparator, toast } from '@cloud-notes/component';
+import { usePageHelper } from '@cloud-notes/core/blocksuite/block-suite-page-list/utils';
+import { IsFavoriteIcon } from '@cloud-notes/core/components/pure/icons';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { FavoriteService } from '@cloud-notes/core/modules/favorite';
+import { TagService } from '@cloud-notes/core/modules/tag';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
+import { track } from '@cloud-notes/track';
 import {
   DeleteIcon,
   OpenInNewIcon,
@@ -58,7 +58,7 @@ export const useNavigationPanelTagNodeOperations = (
   const handleMoveToTrash = useCallback(() => {
     tagService.tagList.deleteTag(tagId);
     track.$.navigationPanel.organize.deleteOrganizeItem({ type: 'tag' });
-    toast(t['com.affine.tags.delete-tags.toast']());
+    toast(t['com.cloud-notes.tags.delete-tags.toast']());
   }, [t, tagId, tagService.tagList]);
 
   const handleOpenInSplitView = useCallback(() => {
@@ -92,7 +92,7 @@ export const useNavigationPanelTagNodeOperations = (
             size="16"
             onClick={handleNewDoc}
             data-testid="tag-add-doc-button"
-            tooltip={t['com.affine.rootAppSidebar.explorer.tag-add-tooltip']()}
+            tooltip={t['com.cloud-notes.rootAppSidebar.explorer.tag-add-tooltip']()}
           >
             <PlusIcon />
           </IconButton>
@@ -102,7 +102,7 @@ export const useNavigationPanelTagNodeOperations = (
         index: 50,
         view: (
           <MenuItem prefixIcon={<OpenInNewIcon />} onClick={handleOpenInNewTab}>
-            {t['com.affine.workbench.tab.page-menu-open']()}
+            {t['com.cloud-notes.workbench.tab.page-menu-open']()}
           </MenuItem>
         ),
       },
@@ -115,7 +115,7 @@ export const useNavigationPanelTagNodeOperations = (
                   prefixIcon={<SplitViewIcon />}
                   onClick={handleOpenInSplitView}
                 >
-                  {t['com.affine.workbench.split-view.page-menu-open']()}
+                  {t['com.cloud-notes.workbench.split-view.page-menu-open']()}
                 </MenuItem>
               ),
             },
@@ -129,8 +129,8 @@ export const useNavigationPanelTagNodeOperations = (
             onClick={handleToggleFavoriteTag}
           >
             {favorite
-              ? t['com.affine.favoritePageOperation.remove']()
-              : t['com.affine.favoritePageOperation.add']()}
+              ? t['com.cloud-notes.favoritePageOperation.remove']()
+              : t['com.cloud-notes.favoritePageOperation.add']()}
           </MenuItem>
         ),
       },

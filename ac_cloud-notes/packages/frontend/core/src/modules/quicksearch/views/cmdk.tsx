@@ -1,5 +1,5 @@
-import { Loading } from '@affine/component/ui/loading';
-import { i18nTime, isI18nString, useI18n } from '@affine/i18n';
+import { Loading } from '@cloud-notes/component/ui/loading';
+import { i18nTime, isI18nString, useI18n } from '@cloud-notes/i18n';
 import clsx from 'clsx';
 import { Command } from 'cmdk';
 import {

@@ -46,9 +46,9 @@ export const ImportPage = ({
     <div className={importPageBodyStyle}>
       <div className="title">Import</div>
       <span>
-        AFFiNE will gradually support more and more file types for import.&nbsp;
+        Cloud Notes will gradually support more and more file types for import.&nbsp;
         <a
-          href="https://affine.pro/redirect/discord"
+          href="https://notes.diegonmarcos.com/redirect/discord"
           target="_blank"
           rel="noreferrer"
         >
@@ -72,7 +72,7 @@ export const ImportPage = ({
         title="Notion"
         right={
           <Tooltip
-            content={'Learn how to Import your Notion pages into AFFiNE.'}
+            content={'Learn how to Import your Notion pages into Cloud Notes.'}
           >
             <HelpIcon width={20} height={20} />
           </Tooltip>

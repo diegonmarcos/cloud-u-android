@@ -1,6 +1,6 @@
-import { JournalService } from '@affine/core/modules/journal';
-import { i18nTime, useI18n } from '@affine/i18n';
-import type { Store } from '@blocksuite/affine/store';
+import { JournalService } from '@cloud-notes/core/modules/journal';
+import { i18nTime, useI18n } from '@cloud-notes/i18n';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import { useLiveData, useService } from '@toeverything/infra';
 import dayjs from 'dayjs';
 
@@ -44,7 +44,7 @@ export const BlocksuiteEditorJournalDocTitleUI = ({
       <span data-testid="date">{localizedJournalDate}</span>
       {isToday ? (
         <span className={styles.titleTodayTag} data-testid="date-today-label">
-          {t['com.affine.today']()}
+          {t['com.cloud-notes.today']()}
         </span>
       ) : (
         <span className={styles.titleDayTag}>{day}</span>

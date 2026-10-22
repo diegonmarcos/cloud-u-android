@@ -55,12 +55,12 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "AFFiNE AI Yearly Subscription",
-              "displayName" : "AFFiNE AI Yearly",
+              "description" : "Cloud Notes AI Yearly Subscription",
+              "displayName" : "Cloud Notes AI Yearly",
               "locale" : "en_US"
             }
           ],
-          "productID" : "app.affine.pro.ai.Annual",
+          "productID" : "app.cloudnotes.pro.ai.Annual",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "AI Yearly Subscription",
           "subscriptionGroupID" : "21781265",
@@ -92,12 +92,12 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "AFFiNE Pro Monthly Subscription",
-              "displayName" : "AFFiNE Pro Monthly",
+              "description" : "Cloud Notes Pro Monthly Subscription",
+              "displayName" : "Cloud Notes Pro Monthly",
               "locale" : "en_US"
             }
           ],
-          "productID" : "app.affine.pro.Monthly",
+          "productID" : "app.cloudnotes.pro.Monthly",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "Pro Monthly Subscription",
           "subscriptionGroupID" : "21781263",
@@ -120,12 +120,12 @@
           "introductoryOffer" : null,
           "localizations" : [
             {
-              "description" : "AFFiNE Pro Yearly Subscription",
-              "displayName" : "AFFiNE Pro Yearly",
+              "description" : "Cloud Notes Pro Yearly Subscription",
+              "displayName" : "Cloud Notes Pro Yearly",
               "locale" : "en_US"
             }
           ],
-          "productID" : "app.affine.pro.Annual",
+          "productID" : "app.cloudnotes.pro.Annual",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "Pro Yearly Subscription",
           "subscriptionGroupID" : "21781263",

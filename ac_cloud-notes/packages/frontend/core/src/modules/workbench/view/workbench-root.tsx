@@ -1,6 +1,6 @@
-import { ResizePanel } from '@affine/component/resize-panel';
-import { AffineErrorComponent } from '@affine/core/components/affine/affine-error-boundary/affine-error-fallback';
-import { workbenchRoutes } from '@affine/core/desktop/workbench-router';
+import { ResizePanel } from '@cloud-notes/component/resize-panel';
+import { CloudNotesErrorComponent } from '@cloud-notes/core/components/cloud-notes/cloud-notes-error-boundary/cloud-notes-error-fallback';
+import { workbenchRoutes } from '@cloud-notes/core/desktop/workbench-router';
 import {
   appSettingAtom,
   FrameworkScope,
@@ -29,7 +29,7 @@ const useAdapter = BUILD_CONFIG.isElectron
 const routes: RouteObject[] = [
   {
     element: <RouteContainer />,
-    errorElement: <AffineErrorComponent />,
+    errorElement: <CloudNotesErrorComponent />,
     children: workbenchRoutes,
   },
 ];

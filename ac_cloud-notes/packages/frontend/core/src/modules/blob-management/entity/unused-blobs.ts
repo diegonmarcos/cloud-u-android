@@ -1,4 +1,4 @@
-import type { ListedBlobRecord } from '@affine/nbstore';
+import type { ListedBlobRecord } from '@cloud-notes/nbstore';
 import {
   effect,
   Entity,

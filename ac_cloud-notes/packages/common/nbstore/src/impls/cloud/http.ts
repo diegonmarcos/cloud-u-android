@@ -1,5 +1,5 @@
-import { UserFriendlyError } from '@affine/error';
-import { gqlFetcherFactory } from '@affine/graphql';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { gqlFetcherFactory } from '@cloud-notes/graphql';
 
 import { DummyConnection } from '../../connection';
 
@@ -34,7 +34,7 @@ export class HttpConnection extends DummyConnection {
           headers: {
             ...this.requestHeaders,
             ...init?.headers,
-            'x-affine-version': BUILD_CONFIG.appVersion,
+            'x-cloud-notes-version': BUILD_CONFIG.appVersion,
           },
         })
         .catch(err => {

@@ -205,7 +205,7 @@ export const memberItemRemove = style({
   flexShrink: 0,
   cursor: 'pointer',
   ':hover': {
-    background: 'var(--affine-hover-color)',
+    background: 'var(--cloud-notes-hover-color)',
   },
 });
 

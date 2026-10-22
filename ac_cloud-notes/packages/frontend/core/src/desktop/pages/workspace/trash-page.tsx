@@ -1,15 +1,15 @@
-import { Button, toast, useConfirmModal } from '@affine/component';
+import { Button, toast, useConfirmModal } from '@cloud-notes/component';
 import {
   createDocExplorerContext,
   DocExplorerContext,
-} from '@affine/core/components/explorer/context';
-import { DocsExplorer } from '@affine/core/components/explorer/docs-view/docs-list';
-import { useBlockSuiteMetaHelper } from '@affine/core/components/hooks/affine/use-block-suite-meta-helper';
-import { Header } from '@affine/core/components/pure/header';
-import { CollectionRulesService } from '@affine/core/modules/collection-rules';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/components/explorer/context';
+import { DocsExplorer } from '@cloud-notes/core/components/explorer/docs-view/docs-list';
+import { useBlockSuiteMetaHelper } from '@cloud-notes/core/components/hooks/cloud-notes/use-block-suite-meta-helper';
+import { Header } from '@cloud-notes/core/components/pure/header';
+import { CollectionRulesService } from '@cloud-notes/core/modules/collection-rules';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
+import { useI18n } from '@cloud-notes/i18n';
 import { DeleteIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
@@ -52,7 +52,7 @@ const TrashHeader = ({ canManageTrash }: { canManageTrash: boolean }) => {
       left={
         <div className={styles.trashTitle}>
           <DeleteIcon className={styles.trashIcon} />
-          {t['com.affine.workspaceSubPath.trash']()}
+          {t['com.cloud-notes.workspaceSubPath.trash']()}
           {selectMode && canManageTrash && allDocIds.length > 0 ? (
             <Button
               className={styles.selectAllButton}
@@ -62,8 +62,8 @@ const TrashHeader = ({ canManageTrash }: { canManageTrash: boolean }) => {
               variant="plain"
             >
               {allSelected
-                ? t['com.affine.page.group-header.clear']()
-                : t['com.affine.page.group-header.select-all']()}
+                ? t['com.cloud-notes.page.group-header.clear']()
+                : t['com.cloud-notes.page.group-header.select-all']()}
             </Button>
           ) : null}
         </div>
@@ -114,7 +114,7 @@ export const TrashPage = () => {
       Promise.all(ids.map(id => restoreFromTrash(id)))
         .then(() => {
           toast(
-            t['com.affine.toastMessage.restored']({
+            t['com.cloud-notes.toastMessage.restored']({
               title: ids.length > 1 ? 'docs' : 'doc',
             })
           );
@@ -131,7 +131,7 @@ export const TrashPage = () => {
           await permanentlyDeletePage(pageId);
         })
       );
-      toast(t['com.affine.toastMessage.permanentlyDeleted']());
+      toast(t['com.cloud-notes.toastMessage.permanentlyDeleted']());
     },
     [permanentlyDeletePage, t]
   );
@@ -148,10 +148,10 @@ export const TrashPage = () => {
         return;
       }
       openConfirmModal({
-        title: `${t['com.affine.trashOperation.deletePermanently']()}?`,
-        description: t['com.affine.trashOperation.deleteDescription'](),
+        title: `${t['com.cloud-notes.trashOperation.deletePermanently']()}?`,
+        description: t['com.cloud-notes.trashOperation.deleteDescription'](),
         cancelText: t['Cancel'](),
-        confirmText: t['com.affine.trashOperation.delete'](),
+        confirmText: t['com.cloud-notes.trashOperation.delete'](),
         confirmButtonOptions: {
           variant: 'error',
         },

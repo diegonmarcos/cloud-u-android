@@ -10,12 +10,12 @@ export const relatedLinks = [
   {
     icon: <GithubIcon />,
     title: 'GitHub',
-    link: 'https://github.com/toeverything/AFFiNE',
+    link: 'https://github.com/diegonmarcos/cloud-u-android',
   },
   {
     icon: <TwitterIcon />,
     title: 'X',
-    link: 'https://twitter.com/AffineOfficial',
+    link: 'https://twitter.com/CloudNotesOfficial',
   },
   {
     icon: <DiscordIcon />,
@@ -25,11 +25,11 @@ export const relatedLinks = [
   {
     icon: <YouTubeIcon />,
     title: 'YouTube',
-    link: 'https://www.youtube.com/@affinepro',
+    link: 'https://www.youtube.com/@cloudnotespro',
   },
   {
     icon: <RedditIcon />,
     title: 'Reddit',
-    link: 'https://www.reddit.com/r/Affine/',
+    link: 'https://www.reddit.com/r/cloud-notes/',
   },
 ];

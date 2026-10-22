@@ -1,6 +1,6 @@
 [package]
 edition = "2024"
-name    = "affine_schema"
+name    = "cloud_notes_schema"
 publish = false
 version = "0.0.0"
 

@@ -1,6 +1,6 @@
-import { useThemeColorV2 } from '@affine/component';
-import { DocsService } from '@affine/core/modules/doc';
-import { WorkbenchService } from '@affine/core/modules/workbench';
+import { useThemeColorV2 } from '@cloud-notes/component';
+import { DocsService } from '@cloud-notes/core/modules/doc';
+import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
 import { useMemo } from 'react';
 

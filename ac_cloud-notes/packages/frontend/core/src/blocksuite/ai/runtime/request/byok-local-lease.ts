@@ -1,5 +1,5 @@
-import { apis, type ClientHandler } from '@affine/electron-api';
-import { UserFriendlyError } from '@affine/error';
+import { apis, type ClientHandler } from '@cloud-notes/electron-api';
+import { UserFriendlyError } from '@cloud-notes/error';
 import {
   type ByokAttachmentKind,
   type ByokAttachmentSource,
@@ -10,7 +10,7 @@ import {
   type ByokOpenAiDialect,
   ByokProvider,
   createWorkspaceByokLocalLeaseMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 
 import type { CopilotClient } from './copilot-client';
 

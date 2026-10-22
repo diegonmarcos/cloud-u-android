@@ -116,7 +116,7 @@ describe('mobile detail page immersive helpers', () => {
     zoomToolbar.append(zoomButton);
 
     const selectedRect = document.createElement('div');
-    selectedRect.className = 'affine-edgeless-selected-rect';
+    selectedRect.className = 'cloud-notes-edgeless-selected-rect';
     const resizeHandle = document.createElement('div');
     selectedRect.append(resizeHandle);
 

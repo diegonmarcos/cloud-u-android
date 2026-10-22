@@ -1,15 +1,15 @@
-import { Button, notify } from '@affine/component';
+import { Button, notify } from '@cloud-notes/component';
 import {
   AuthContainer,
   AuthContent,
   AuthFooter,
   AuthHeader,
   AuthInput,
-} from '@affine/component/auth-components';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import { ServersService } from '@affine/core/modules/cloud';
-import { UserFriendlyError } from '@affine/error';
-import { Trans, useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/auth-components';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import { ServersService } from '@cloud-notes/core/modules/cloud';
+import { UserFriendlyError } from '@cloud-notes/error';
+import { Trans, useI18n } from '@cloud-notes/i18n';
 import { useService } from '@toeverything/infra';
 import {
   type Dispatch,
@@ -42,7 +42,7 @@ export const AddSelfhostedStep = ({
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<boolean>(false);
   const [errorHint, setErrorHint] = useState(
-    t['com.affine.auth.sign.add-selfhosted.error']()
+    t['com.cloud-notes.auth.sign.add-selfhosted.error']()
   );
 
   const urlValid = useMemo(() => {
@@ -58,7 +58,7 @@ export const AddSelfhostedStep = ({
     (value: string) => {
       setBaseURL(value);
       setError(false);
-      setErrorHint(t['com.affine.auth.sign.add-selfhosted.error']());
+      setErrorHint(t['com.cloud-notes.auth.sign.add-selfhosted.error']());
     },
     [t]
   );
@@ -90,11 +90,11 @@ export const AddSelfhostedStep = ({
       ) {
         setErrorHint(t['error.NETWORK_ERROR']());
       } else {
-        setErrorHint(t['com.affine.auth.sign.add-selfhosted.error']());
+        setErrorHint(t['com.cloud-notes.auth.sign.add-selfhosted.error']());
       }
 
       notify.error({
-        title: t['com.affine.auth.toast.title.failed'](),
+        title: t['com.cloud-notes.auth.toast.title.failed'](),
         message:
           userFriendlyError.is('REQUEST_ABORTED') ||
           userFriendlyError.is('NETWORK_ERROR')
@@ -123,12 +123,12 @@ export const AddSelfhostedStep = ({
   return (
     <AuthContainer>
       <AuthHeader
-        title={t['com.affine.auth.sign.add-selfhosted.title']()}
-        subTitle={t['com.affine.auth.sign.add-selfhosted']()}
+        title={t['com.cloud-notes.auth.sign.add-selfhosted.title']()}
+        subTitle={t['com.cloud-notes.auth.sign.add-selfhosted']()}
       />
       <AuthContent>
         <AuthInput
-          label={t['com.affine.auth.sign.add-selfhosted.baseurl']()}
+          label={t['com.cloud-notes.auth.sign.add-selfhosted.baseurl']()}
           value={baseURL}
           onChange={onBaseURLChange}
           placeholder="https://your-server.com"
@@ -146,17 +146,17 @@ export const AddSelfhostedStep = ({
           loading={isConnecting}
           onClick={onConnect}
         >
-          {t['com.affine.auth.sign.add-selfhosted.connect-button']()}
+          {t['com.cloud-notes.auth.sign.add-selfhosted.connect-button']()}
         </Button>
       </AuthContent>
       <AuthFooter>
         <div className={styles.authMessage}>
           <Trans
-            i18nKey="com.affine.auth.sign.add-selfhosted.description"
+            i18nKey="com.cloud-notes.auth.sign.add-selfhosted.description"
             components={{
               1: (
                 <a
-                  href="https://docs.affine.pro/docs/self-host-affine"
+                  href="https://notes.diegonmarcos.com/docs/self-host-cloud-notes"
                   target="_blank"
                   rel="noreferrer"
                 />

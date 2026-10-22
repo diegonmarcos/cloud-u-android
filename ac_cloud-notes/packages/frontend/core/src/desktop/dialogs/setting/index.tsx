@@ -1,21 +1,21 @@
-import { Loading, Scrollable } from '@affine/component';
-import { WorkspaceDetailSkeleton } from '@affine/component/setting-components';
-import type { ModalProps } from '@affine/component/ui/modal';
-import { Modal } from '@affine/component/ui/modal';
+import { Loading, Scrollable } from '@cloud-notes/component';
+import { WorkspaceDetailSkeleton } from '@cloud-notes/component/setting-components';
+import type { ModalProps } from '@cloud-notes/component/ui/modal';
+import { Modal } from '@cloud-notes/component/ui/modal';
 import {
   AuthService,
   DefaultServerService,
   ServersService,
-} from '@affine/core/modules/cloud';
-import type { DialogComponentProps } from '@affine/core/modules/dialogs';
+} from '@cloud-notes/core/modules/cloud';
+import type { DialogComponentProps } from '@cloud-notes/core/modules/dialogs';
 import type {
   SettingTab,
   WORKSPACE_DIALOG_SCHEMA,
-} from '@affine/core/modules/dialogs/constant';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { createIsland, type Island } from '@affine/core/utils/island';
-import { ServerDeploymentType } from '@affine/graphql';
-import { Trans, useTranslation } from '@affine/i18n';
+} from '@cloud-notes/core/modules/dialogs/constant';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { createIsland, type Island } from '@cloud-notes/core/utils/island';
+import { ServerDeploymentType } from '@cloud-notes/graphql';
+import { Trans, useTranslation } from '@cloud-notes/i18n';
 import { ContactWithUsIcon } from '@blocksuite/icons/rc';
 import { FrameworkScope, useLiveData, useService } from '@toeverything/infra';
 import { debounce } from 'lodash-es';
@@ -34,7 +34,7 @@ import { AccountSetting } from './account-setting';
 import { GeneralSetting } from './general-setting';
 import { IssueFeedbackModal } from './issue-feedback-modal';
 import { SettingSidebar } from './setting-sidebar';
-import { StarAFFiNEModal } from './star-affine-modal';
+import { StarCloudNotesModal } from './star-cloud-notes-modal';
 import * as style from './style.css';
 import {
   SubPageContext,
@@ -143,15 +143,15 @@ const SettingModalInner = ({
     [setSettingState]
   );
   const [openIssueFeedbackModal, setOpenIssueFeedbackModal] = useState(false);
-  const [openStarAFFiNEModal, setOpenStarAFFiNEModal] = useState(false);
+  const [openStarCloudNotesModal, setOpenStarCloudNotesModal] = useState(false);
 
   const handleOpenIssueFeedbackModal = useCallback(() => {
     setOpenIssueFeedbackModal(true);
   }, [setOpenIssueFeedbackModal]);
 
-  const handleOpenStarAFFiNEModal = useCallback(() => {
-    setOpenStarAFFiNEModal(true);
-  }, [setOpenStarAFFiNEModal]);
+  const handleOpenStarCloudNotesModal = useCallback(() => {
+    setOpenStarCloudNotesModal(true);
+  }, [setOpenStarCloudNotesModal]);
 
   const addSubPageIsland = useCallback(() => {
     const island = createIsland();
@@ -236,12 +236,12 @@ const SettingModalInner = ({
               <div className={style.footer}>
                 <ContactWithUsIcon fontSize={16} />
                 <Trans
-                  i18nKey={'com.affine.settings.suggestion-2'}
+                  i18nKey={'com.cloud-notes.settings.suggestion-2'}
                   components={{
                     1: (
                       <span
                         className={style.link}
-                        onClick={handleOpenStarAFFiNEModal}
+                        onClick={handleOpenStarCloudNotesModal}
                       />
                     ),
                     2: (
@@ -253,9 +253,9 @@ const SettingModalInner = ({
                   }}
                 />
               </div>
-              <StarAFFiNEModal
-                open={openStarAFFiNEModal}
-                setOpen={setOpenStarAFFiNEModal}
+              <StarCloudNotesModal
+                open={openStarCloudNotesModal}
+                setOpen={setOpenStarCloudNotesModal}
               />
               <IssueFeedbackModal
                 open={openIssueFeedbackModal}

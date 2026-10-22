@@ -1,6 +1,6 @@
-import { I18n } from '@affine/i18n';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import { I18n } from '@cloud-notes/i18n';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { css, html, nothing } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -36,7 +36,7 @@ export class ChatMessageUser extends WithDisposable(ShadowlessElement) {
     .scope-receipt {
       align-self: flex-end;
       margin-top: 6px;
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       font-size: 11px;
       text-align: right;
     }
@@ -57,7 +57,7 @@ export class ChatMessageUser extends WithDisposable(ShadowlessElement) {
       : 0;
     const selectorNames = receipt?.selectors.map(selector => {
       if (selector.name) return selector.name;
-      return I18n[`com.affine.ai.chat-panel.scope.${selector.kind}`]();
+      return I18n[`com.cloud-notes.ai.chat-panel.scope.${selector.kind}`]();
     });
 
     return html`
@@ -80,7 +80,7 @@ export class ChatMessageUser extends WithDisposable(ShadowlessElement) {
         showReceipt
           ? html`<div class="scope-receipt" data-testid="chat-scope-receipt">
               ${selectorNames?.join(', ')} ·
-              ${I18n['com.affine.ai.chat-panel.scope.sources']({
+              ${I18n['com.cloud-notes.ai.chat-panel.scope.sources']({
                 count: String(resolvedCount),
               })}
               · ${new Date(receipt.resolvedAt).toLocaleString()}

@@ -46,14 +46,14 @@ test.describe('presentation', () => {
     await setEdgelessTool(page, 'frame');
     await dragBetweenViewCoords(page, [240, 0], [800, 200]);
 
-    expect(await page.locator('affine-frame').count()).toBe(2);
+    expect(await page.locator('cloud-notes-frame').count()).toBe(2);
 
     await enterPresentationMode(page);
     await waitNextFrame(page, 100);
 
     const nextButton = locatorPresentationToolbarButton(page, 'next');
     await nextButton.click();
-    const edgelessNote = page.locator('affine-edgeless-note');
+    const edgelessNote = page.locator('cloud-notes-edgeless-note');
     await expect(edgelessNote).toBeVisible();
 
     const prevButton = locatorPresentationToolbarButton(page, 'previous');
@@ -73,7 +73,7 @@ test.describe('presentation', () => {
     await setEdgelessTool(page, 'frame');
     await dragBetweenViewCoords(page, [240, 0], [800, 200]);
 
-    expect(await page.locator('affine-frame').count()).toBe(1);
+    expect(await page.locator('cloud-notes-frame').count()).toBe(1);
 
     await enterPresentationMode(page);
     await waitNextFrame(page, 300);
@@ -158,8 +158,8 @@ test.describe('presentation', () => {
     await toggleFramePanel(page);
 
     // await page.locator('.edgeless-frame-order-button').click();
-    const frameCards = page.locator('affine-frame-card .frame-card-body');
-    const frameTitles = page.locator('affine-frame-card-title .card-title');
+    const frameCards = page.locator('cloud-notes-frame-card .frame-card-body');
+    const frameTitles = page.locator('cloud-notes-frame-card-title .card-title');
 
     await expect(frameTitles).toHaveCount(4);
     await expect(frameTitles.nth(0)).toHaveText('Frame 1');
@@ -304,7 +304,7 @@ test.describe('presentation', () => {
     const nextButton = locatorPresentationToolbarButton(page, 'next');
     const prevButton = locatorPresentationToolbarButton(page, 'previous');
 
-    const note = page.locator('affine-edgeless-note');
+    const note = page.locator('cloud-notes-edgeless-note');
     await expect(note).toBeVisible();
 
     await nextButton.click();
@@ -322,7 +322,7 @@ test.describe('presentation', () => {
     await setEdgelessTool(page, 'frame');
     await dragBetweenViewCoords(page, [240, 0], [800, 200]);
 
-    expect(await page.locator('affine-frame').count()).toBe(1);
+    expect(await page.locator('cloud-notes-frame').count()).toBe(1);
     await enterPresentationMode(page);
     await waitNextFrame(page, 300);
 

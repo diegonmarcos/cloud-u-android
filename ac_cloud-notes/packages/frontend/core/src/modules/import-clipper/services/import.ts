@@ -1,8 +1,8 @@
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { createBlockStdScope } from '@affine/core/blocksuite/manager/view';
-import { EmbedOptionProvider } from '@blocksuite/affine/shared/services';
-import { Text } from '@blocksuite/affine/store';
-import { MarkdownTransformer } from '@blocksuite/affine/widgets/linked-doc';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { createBlockStdScope } from '@cloud-notes/core/blocksuite/manager/view';
+import { EmbedOptionProvider } from '@blocksuite/cloud-notes/shared/services';
+import { Text } from '@blocksuite/cloud-notes/store';
+import { MarkdownTransformer } from '@blocksuite/cloud-notes/widgets/linked-doc';
 import { Service } from '@toeverything/infra';
 
 import { CollectionService } from '../../collection';
@@ -10,7 +10,7 @@ import { DocsService } from '../../doc';
 import { GuardService } from '../../permissions';
 import { TagService } from '../../tag';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   type WorkspaceMetadata,
   type WorkspacesService,
 } from '../../workspace';
@@ -384,7 +384,7 @@ export class ImportClipperService extends Service {
     await workspace.engine.doc.waitForDocReady(workspace.id); // wait for root doc ready
     const docId = await MarkdownTransformer.importMarkdownToDoc({
       collection: workspace.docCollection,
-      schema: getAFFiNEWorkspaceSchema(),
+      schema: getCloudNotesWorkspaceSchema(),
       markdown: clipperInput.contentMarkdown,
       extensions: getStoreManager().config.init().value.get('store'),
     });
@@ -418,7 +418,7 @@ export class ImportClipperService extends Service {
         docCollection.doc.getMap('meta').set('name', workspaceName);
         docId = await MarkdownTransformer.importMarkdownToDoc({
           collection: docCollection,
-          schema: getAFFiNEWorkspaceSchema(),
+          schema: getCloudNotesWorkspaceSchema(),
           markdown: clipperInput.contentMarkdown,
           extensions: getStoreManager().config.init().value.get('store'),
         });

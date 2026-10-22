@@ -1,5 +1,5 @@
-import { Input } from '@affine/component';
-import { useI18n } from '@affine/i18n';
+import { Input } from '@cloud-notes/component';
+import { useI18n } from '@cloud-notes/i18n';
 import { SearchIcon } from '@blocksuite/icons/rc';
 import { cssVar } from '@toeverything/theme';
 
@@ -17,7 +17,7 @@ export const InviteInput = ({ onFocus }: { onFocus: () => void }) => {
         paddingLeft: '0',
         fontSize: cssVar('fontSm'),
       }}
-      placeholder={t['com.affine.share-menu.invite-editor.placeholder']()}
+      placeholder={t['com.cloud-notes.share-menu.invite-editor.placeholder']()}
     />
   );
 };

@@ -2,7 +2,7 @@ import type {
   StoreClient,
   StoreManagerClient,
   WorkerInitOptions,
-} from '@affine/nbstore/worker/client';
+} from '@cloud-notes/nbstore/worker/client';
 import { createIdentifier } from '@toeverything/infra';
 
 export interface NbstoreProvider {

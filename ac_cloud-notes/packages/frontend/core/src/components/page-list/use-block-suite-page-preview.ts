@@ -1,4 +1,4 @@
-import type { Store } from '@blocksuite/affine/store';
+import type { Store } from '@blocksuite/cloud-notes/store';
 import type { Atom } from 'jotai';
 import { atom } from 'jotai';
 

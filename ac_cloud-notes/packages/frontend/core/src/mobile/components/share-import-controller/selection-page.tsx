@@ -1,4 +1,4 @@
-import { Button, SafeArea, Scrollable } from '@affine/component';
+import { Button, SafeArea, Scrollable } from '@cloud-notes/component';
 
 import { PageHeader } from '../page-header';
 import * as styles from './style.css';

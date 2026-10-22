@@ -1,10 +1,10 @@
-import { getStoreManager } from '@affine/core/blocksuite/manager/store';
-import { toArrayBuffer } from '@affine/core/utils/array-buffer';
-import { Container } from '@blocksuite/affine/global/di';
+import { getStoreManager } from '@cloud-notes/core/blocksuite/manager/store';
+import { toArrayBuffer } from '@cloud-notes/core/utils/array-buffer';
+import { Container } from '@blocksuite/cloud-notes/global/di';
 import {
   customImageProxyMiddleware,
   MarkdownAdapter,
-} from '@blocksuite/affine/shared/adapters';
+} from '@blocksuite/cloud-notes/shared/adapters';
 import {
   type BlockModel,
   type DocSnapshot,
@@ -12,13 +12,13 @@ import {
   type Store,
   Text,
   Transformer,
-} from '@blocksuite/affine/store';
+} from '@blocksuite/cloud-notes/store';
 import { Service } from '@toeverything/infra';
 import { Doc as YDoc } from 'yjs';
 
 import type { DefaultServerService, WorkspaceServerService } from '../../cloud';
 import {
-  getAFFiNEWorkspaceSchema,
+  getCloudNotesWorkspaceSchema,
   type WorkspaceService,
 } from '../../workspace';
 import { WorkspaceImpl } from '../../workspace/impls/workspace';
@@ -69,7 +69,7 @@ export class SnapshotHelper extends Service {
   // todo: cache the transformer?
   getTransformer() {
     const collection = this.getTempWorkspace();
-    const schema = getAFFiNEWorkspaceSchema();
+    const schema = getCloudNotesWorkspaceSchema();
     const imageProxyUrl = new URL(
       BUILD_CONFIG.imageProxyUrl,
       this.serverService.baseUrl

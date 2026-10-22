@@ -1,20 +1,20 @@
-import { FlexWrapper } from '@affine/component';
-import { EmptyCollectionDetail } from '@affine/core/components/affine/empty/collection-detail';
+import { FlexWrapper } from '@cloud-notes/component';
+import { EmptyCollectionDetail } from '@cloud-notes/core/components/cloud-notes/empty/collection-detail';
 import {
   createDocExplorerContext,
   DocExplorerContext,
-} from '@affine/core/components/explorer/context';
-import { DocsExplorer } from '@affine/core/components/explorer/docs-view/docs-list';
-import type { ExplorerDisplayPreference } from '@affine/core/components/explorer/types';
+} from '@cloud-notes/core/components/explorer/context';
+import { DocsExplorer } from '@cloud-notes/core/components/explorer/docs-view/docs-list';
+import type { ExplorerDisplayPreference } from '@cloud-notes/core/components/explorer/types';
 import {
   type Collection,
   CollectionService,
-} from '@affine/core/modules/collection';
-import { CollectionRulesService } from '@affine/core/modules/collection-rules';
-import { GlobalContextService } from '@affine/core/modules/global-context';
-import { WorkspacePermissionService } from '@affine/core/modules/permissions';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/collection';
+import { CollectionRulesService } from '@cloud-notes/core/modules/collection-rules';
+import { GlobalContextService } from '@cloud-notes/core/modules/global-context';
+import { WorkspacePermissionService } from '@cloud-notes/core/modules/permissions';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { ViewLayersIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService, useServices } from '@toeverything/infra';
 import { useCallback, useEffect, useState } from 'react';
@@ -192,7 +192,7 @@ const Placeholder = ({ collection }: { collection: Collection }) => {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            fontSize: 'var(--affine-font-xs)',
+            fontSize: 'var(--cloud-notes-font-xs)',
           }}
         >
           <div
@@ -201,23 +201,23 @@ const Placeholder = ({ collection }: { collection: Collection }) => {
               alignItems: 'center',
               gap: 4,
               cursor: 'pointer',
-              color: 'var(--affine-text-secondary-color)',
+              color: 'var(--cloud-notes-text-secondary-color)',
               ['WebkitAppRegion' as string]: 'no-drag',
             }}
             onClick={handleJumpToCollections}
           >
             <ViewLayersIcon
-              style={{ color: 'var(--affine-icon-color)' }}
+              style={{ color: 'var(--cloud-notes-icon-color)' }}
               fontSize={14}
             />
-            {t['com.affine.collection.allCollections']()}
+            {t['com.cloud-notes.collection.allCollections']()}
             <div>/</div>
           </div>
           <div
             data-testid="collection-name"
             style={{
               fontWeight: 600,
-              color: 'var(--affine-text-primary-color)',
+              color: 'var(--cloud-notes-text-primary-color)',
               ['WebkitAppRegion' as string]: 'no-drag',
             }}
           >

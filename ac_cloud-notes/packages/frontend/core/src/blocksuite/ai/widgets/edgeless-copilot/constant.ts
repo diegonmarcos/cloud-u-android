@@ -1,1 +1,1 @@
-export const AFFINE_EDGELESS_COPILOT_WIDGET = 'affine-edgeless-copilot-widget';
+export const CLOUD_NOTES_EDGELESS_COPILOT_WIDGET = 'cloud-notes-edgeless-copilot-widget';

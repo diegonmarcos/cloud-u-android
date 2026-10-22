@@ -1,9 +1,9 @@
-import { FlexWrapper } from '@affine/component';
-import { ExplorerDisplayMenuButton } from '@affine/core/components/explorer/display-menu';
-import { ViewToggle } from '@affine/core/components/explorer/display-menu/view-toggle';
-import { ExplorerNavigation } from '@affine/core/components/explorer/header/navigation';
-import type { ExplorerDisplayPreference } from '@affine/core/components/explorer/types';
-import { Header } from '@affine/core/components/pure/header';
+import { FlexWrapper } from '@cloud-notes/component';
+import { ExplorerDisplayMenuButton } from '@cloud-notes/core/components/explorer/display-menu';
+import { ViewToggle } from '@cloud-notes/core/components/explorer/display-menu/view-toggle';
+import { ExplorerNavigation } from '@cloud-notes/core/components/explorer/header/navigation';
+import type { ExplorerDisplayPreference } from '@cloud-notes/core/components/explorer/types';
+import { Header } from '@cloud-notes/core/components/pure/header';
 
 export const CollectionDetailHeader = ({
   displayPreference,

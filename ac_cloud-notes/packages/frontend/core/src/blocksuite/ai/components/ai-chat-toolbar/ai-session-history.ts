@@ -1,8 +1,8 @@
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import { scrollbarStyle } from '@blocksuite/affine/shared/styles';
-import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/affine/shared/theme';
-import { ShadowlessElement } from '@blocksuite/affine/std';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import { scrollbarStyle } from '@blocksuite/cloud-notes/shared/styles';
+import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
+import { ShadowlessElement } from '@blocksuite/cloud-notes/std';
 import { DeleteIcon } from '@blocksuite/icons/lit';
 import { css, html, nothing, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -65,8 +65,8 @@ export class AISessionHistory extends WithDisposable(ShadowlessElement) {
       .loading-title,
       .empty-title {
         font-weight: 600;
-        font-size: var(--affine-font-sm);
-        color: var(--affine-text-secondary-color);
+        font-size: var(--cloud-notes-font-sm);
+        color: var(--cloud-notes-text-secondary-color);
       }
 
       .ai-session-group {
@@ -297,9 +297,9 @@ export class AISessionHistory extends WithDisposable(ShadowlessElement) {
             >
               <div class="ai-session-title">
                 ${sessionTitle}
-                <affine-tooltip .offsetX=${60}>
+                <cloud-notes-tooltip .offsetX=${60}>
                   Click to open this chat
-                </affine-tooltip>
+                </cloud-notes-tooltip>
               </div>
               ${
                 session.docId
@@ -314,7 +314,7 @@ export class AISessionHistory extends WithDisposable(ShadowlessElement) {
                 }}
               >
                 ${DeleteIcon()}
-                <affine-tooltip>Delete</affine-tooltip>
+                <cloud-notes-tooltip>Delete</cloud-notes-tooltip>
               </div>
             </div>
           `;
@@ -336,7 +336,7 @@ export class AISessionHistory extends WithDisposable(ShadowlessElement) {
     >
       ${docIcon}
       <span class="doc-title"> ${this.docDisplayConfig.getTitle(docId)} </span>
-      <affine-tooltip>Open this doc</affine-tooltip>
+      <cloud-notes-tooltip>Open this doc</cloud-notes-tooltip>
     </div>`;
   }
 

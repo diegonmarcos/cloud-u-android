@@ -53,20 +53,20 @@ const mocked = vi.hoisted(() => {
   };
 });
 
-vi.mock('@affine/admin/use-query', () => ({
+vi.mock('@cloud-notes/admin/use-query', () => ({
   useQuery: () => ({
     data: mocked.getQueryState(),
     mutate: mocked.mutateMock,
   }),
 }));
 
-vi.mock('@affine/admin/use-mutation', () => ({
+vi.mock('@cloud-notes/admin/use-mutation', () => ({
   useMutation: () => ({
     trigger: mocked.saveUpdatesMock,
   }),
 }));
 
-vi.mock('@affine/component', () => ({
+vi.mock('@cloud-notes/component', () => ({
   notify: {
     success: mocked.notifySuccessMock,
     error: mocked.notifyErrorMock,
@@ -80,7 +80,7 @@ describe('useAppConfig', () => {
     mocked.setQueryState({
       appConfig: {
         server: {
-          name: 'AFFiNE',
+          name: 'Cloud Notes',
           hosts: ['localhost'],
         },
         auth: {
@@ -114,12 +114,12 @@ describe('useAppConfig', () => {
     const { result } = renderHook(() => useAppConfig());
 
     act(() => {
-      result.current.update('server/name', 'AFFiNE Cloud');
+      result.current.update('server/name', 'Cloud Notes');
     });
     expect(result.current.isGroupDirty('server')).toBe(true);
 
     act(() => {
-      result.current.update('server/name', 'AFFiNE');
+      result.current.update('server/name', 'Cloud Notes');
     });
     expect(result.current.isGroupDirty('server')).toBe(false);
   });
@@ -128,7 +128,7 @@ describe('useAppConfig', () => {
     const { result } = renderHook(() => useAppConfig());
 
     act(() => {
-      result.current.update('server/name', 'AFFiNE Cloud');
+      result.current.update('server/name', 'Cloud Notes');
       result.current.update('auth/allowSignup', false);
     });
 
@@ -141,7 +141,7 @@ describe('useAppConfig', () => {
 
     expect(result.current.isGroupDirty('server')).toBe(false);
     expect(result.current.isGroupDirty('auth')).toBe(true);
-    expect(result.current.patchedAppConfig.server.name).toBe('AFFiNE');
+    expect(result.current.patchedAppConfig.server.name).toBe('Cloud Notes');
     expect(result.current.getGroupVersion('server')).toBe(1);
   });
 
@@ -149,14 +149,14 @@ describe('useAppConfig', () => {
     const { result } = renderHook(() => useAppConfig());
 
     act(() => {
-      result.current.update('server/name', 'AFFiNE Cloud');
+      result.current.update('server/name', 'Cloud Notes');
       result.current.update('auth/allowSignup', false);
     });
 
     mocked.saveUpdatesMock.mockResolvedValue({
       updateAppConfig: {
         server: {
-          name: 'AFFiNE Cloud',
+          name: 'Cloud Notes',
         },
       },
     });
@@ -170,13 +170,13 @@ describe('useAppConfig', () => {
         {
           module: 'server',
           key: 'name',
-          value: 'AFFiNE Cloud',
+          value: 'Cloud Notes',
         },
       ],
     });
     expect(result.current.isGroupDirty('server')).toBe(false);
     expect(result.current.isGroupDirty('auth')).toBe(true);
-    expect(result.current.patchedAppConfig.server.name).toBe('AFFiNE Cloud');
+    expect(result.current.patchedAppConfig.server.name).toBe('Cloud Notes');
     expect(result.current.getGroupVersion('server')).toBe(1);
     expect(mocked.notifySuccessMock).toHaveBeenCalledTimes(1);
   });

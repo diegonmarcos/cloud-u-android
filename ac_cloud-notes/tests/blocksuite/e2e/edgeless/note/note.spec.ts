@@ -146,7 +146,7 @@ test('always keep at least 1 note block', async ({ page }) => {
   // clicking in default mode will try to remove empty note block
   await page.mouse.click(0, 0);
 
-  const notes = await page.locator('affine-edgeless-note').all();
+  const notes = await page.locator('cloud-notes-edgeless-note').all();
   expect(notes.length).toEqual(1);
 });
 
@@ -191,9 +191,9 @@ test('dragging un-selected note', async ({ page }) => {
 
   await switchEditorMode(page);
 
-  const noteBox = await page.locator('affine-edgeless-note').boundingBox();
+  const noteBox = await page.locator('cloud-notes-edgeless-note').boundingBox();
   if (!noteBox) {
-    throw new Error('Missing edgeless affine-note');
+    throw new Error('Missing edgeless cloud-notes-note');
   }
   await page.mouse.click(noteBox.x + 5, noteBox.y + 5);
   await assertEdgelessSelectedRect(page, [
@@ -237,7 +237,7 @@ test('format quick bar should show up when double-clicking on text', async ({
       delay: 20,
     });
   await page.waitForTimeout(200);
-  const formatBar = page.locator('affine-toolbar-widget editor-toolbar');
+  const formatBar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   await expect(formatBar).toBeVisible();
 });
 
@@ -274,7 +274,7 @@ test('duplicate note should work correctly', async ({ page }) => {
   const moreActionsContainer = page.getByLabel('More menu').getByRole('menu');
   await expect(moreActionsContainer).toBeHidden();
 
-  const noteLocator = page.locator('affine-edgeless-note');
+  const noteLocator = page.locator('cloud-notes-edgeless-note');
   await expect(noteLocator).toHaveCount(2);
   const [firstNote, secondNote] = await noteLocator.all();
 
@@ -368,13 +368,13 @@ test('when no visible note block, clicking in page mode will auto add a new note
 
   await switchEditorMode(page);
   let note = await page.evaluate(() => {
-    return document.querySelector('affine-note');
+    return document.querySelector('cloud-notes-note');
   });
   expect(note).toBeNull();
   await click(page, { x: 200, y: 280 });
 
   note = await page.evaluate(() => {
-    return document.querySelector('affine-note');
+    return document.querySelector('cloud-notes-note');
   });
   expect(note).not.toBeNull();
 });
@@ -405,7 +405,7 @@ test.fixme('Click at empty note should add a paragraph block', async ({
   );
   await waitNextFrame(page);
   const handle = await page
-    .locator('.affine-drag-handle-container')
+    .locator('.cloud-notes-drag-handle-container')
     .boundingBox();
   if (!handle) {
     throw new Error('handle is not found');
@@ -456,7 +456,7 @@ test('Should focus at closest text block when note collapse', async ({
   // Select the note
   await zoomOutByKeyboard(page);
   const notePortalBox = await page
-    .locator('affine-edgeless-note')
+    .locator('cloud-notes-edgeless-note')
     .boundingBox();
   if (!notePortalBox) {
     throw new Error('notePortalBox is not found');
@@ -465,7 +465,7 @@ test('Should focus at closest text block when note collapse', async ({
   await waitNextFrame(page, 200);
   const selectedRect = page
     .locator('edgeless-selected-rect')
-    .locator('.affine-edgeless-selected-rect');
+    .locator('.cloud-notes-edgeless-selected-rect');
   await expect(selectedRect).toBeVisible();
 
   // Collapse the note
@@ -586,7 +586,7 @@ test.describe('visibility of hidden content of edgeless note', () => {
     await initEmptyEdgelessState(page);
     await switchEditorMode(page);
 
-    const note = page.locator('affine-edgeless-note');
+    const note = page.locator('cloud-notes-edgeless-note');
     await note.click({ clickCount: 3 });
     await type(page, 'hello');
     await pressEnter(page, 30);
@@ -604,8 +604,8 @@ test.describe('visibility of hidden content of edgeless note', () => {
   test('should hide content when note is not selected or hovered when selected', async ({
     page,
   }) => {
-    const note = page.locator('affine-edgeless-note');
-    const lastParagraph = page.locator('affine-paragraph').last();
+    const note = page.locator('cloud-notes-edgeless-note');
+    const lastParagraph = page.locator('cloud-notes-paragraph').last();
 
     await pressEscape(page, 3);
     await expect(lastParagraph).not.toBeInViewport();
@@ -627,8 +627,8 @@ test.describe('visibility of hidden content of edgeless note', () => {
   test('should show hidden content when hover on selected note', async ({
     page,
   }) => {
-    const note = page.locator('affine-edgeless-note');
-    const lastParagraph = page.locator('affine-paragraph').last();
+    const note = page.locator('cloud-notes-edgeless-note');
+    const lastParagraph = page.locator('cloud-notes-paragraph').last();
 
     const noteBound = await note.boundingBox();
     if (!noteBound) {
@@ -654,17 +654,17 @@ test.describe('visibility of hidden content of edgeless note', () => {
   test('should show hidden content when the note is being edited', async ({
     page,
   }) => {
-    const note = page.locator('affine-edgeless-note');
-    const lastParagraph = page.locator('affine-paragraph').last();
+    const note = page.locator('cloud-notes-edgeless-note');
+    const lastParagraph = page.locator('cloud-notes-paragraph').last();
 
     await note.click({ clickCount: 3 });
-    await page.locator('affine-paragraph').nth(22).click();
+    await page.locator('cloud-notes-paragraph').nth(22).click();
     await type(page, 'test');
 
     await expect(lastParagraph).toBeInViewport();
 
     await note.click({ clickCount: 3 });
-    await page.locator('affine-paragraph').nth(22).click();
+    await page.locator('cloud-notes-paragraph').nth(22).click();
 
     const noteBound = await note.boundingBox();
     if (!noteBound) {
@@ -678,7 +678,7 @@ test.describe('visibility of hidden content of edgeless note', () => {
     await expect(lastParagraph).toBeInViewport();
 
     await note.click({ clickCount: 3 });
-    await page.locator('affine-paragraph').nth(22).click();
+    await page.locator('cloud-notes-paragraph').nth(22).click();
 
     await page.mouse.wheel(0, 200);
     await expect(

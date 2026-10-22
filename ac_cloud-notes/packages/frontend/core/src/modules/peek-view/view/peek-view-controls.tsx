@@ -1,8 +1,8 @@
-import { IconButton, notify } from '@affine/component';
-import { copyTextToClipboard } from '@affine/core/utils/clipboard';
-import { useI18n } from '@affine/i18n';
-import track from '@affine/track';
-import type { DocMode } from '@blocksuite/affine/model';
+import { IconButton, notify } from '@cloud-notes/component';
+import { copyTextToClipboard } from '@cloud-notes/core/utils/clipboard';
+import { useI18n } from '@cloud-notes/i18n';
+import track from '@cloud-notes/track';
+import type { DocMode } from '@blocksuite/cloud-notes/model';
 import {
   CloseIcon,
   ExpandFullIcon,
@@ -89,7 +89,7 @@ export const DefaultPeekViewControls = ({
     return [
       {
         nameKey: 'close',
-        name: t['com.affine.peek-view-controls.close'](),
+        name: t['com.cloud-notes.peek-view-controls.close'](),
         icon: <CloseIcon />,
         onClick: () => peekView.close(),
         enabled: true,
@@ -120,14 +120,14 @@ export const DocPeekViewControls = ({
     return [
       {
         nameKey: 'close',
-        name: t['com.affine.peek-view-controls.close'](),
+        name: t['com.cloud-notes.peek-view-controls.close'](),
         icon: <CloseIcon />,
         onClick: () => peekView.close(),
         enabled: true,
       },
       {
         nameKey: 'open',
-        name: t['com.affine.peek-view-controls.open-doc'](),
+        name: t['com.cloud-notes.peek-view-controls.open-doc'](),
         icon: <ExpandFullIcon />,
         onClick: () => {
           workbench.openDoc(docRef);
@@ -137,7 +137,7 @@ export const DocPeekViewControls = ({
       },
       {
         nameKey: 'new-tab',
-        name: t['com.affine.peek-view-controls.open-doc-in-new-tab'](),
+        name: t['com.cloud-notes.peek-view-controls.open-doc-in-new-tab'](),
         icon: <OpenInNewIcon />,
         onClick: () => {
           workbench.openDoc(docRef, { at: 'new-tab' });
@@ -147,7 +147,7 @@ export const DocPeekViewControls = ({
       },
       {
         nameKey: 'split-view',
-        name: t['com.affine.peek-view-controls.open-doc-in-split-view'](),
+        name: t['com.cloud-notes.peek-view-controls.open-doc-in-split-view'](),
         icon: <SplitViewIcon />,
         onClick: () => {
           workbench.openDoc(docRef, { at: 'beside' });
@@ -157,7 +157,7 @@ export const DocPeekViewControls = ({
       },
       {
         nameKey: 'copy-link',
-        name: t['com.affine.peek-view-controls.copy-link'](),
+        name: t['com.cloud-notes.peek-view-controls.copy-link'](),
         icon: <LinkIcon />,
         onClick: async () => {
           const preferredMode = docsService.list.getPrimaryMode(docRef.docId);
@@ -179,7 +179,7 @@ export const DocPeekViewControls = ({
       },
       {
         nameKey: 'info',
-        name: t['com.affine.peek-view-controls.open-info'](),
+        name: t['com.cloud-notes.peek-view-controls.open-info'](),
         icon: <InformationIcon />,
         onClick: () => {
           workspaceDialogService.open('doc-info', { docId: docRef.docId });
@@ -224,7 +224,7 @@ export const AttachmentPeekViewControls = ({
     const controls = [
       {
         nameKey: 'close',
-        name: t['com.affine.peek-view-controls.close'](),
+        name: t['com.cloud-notes.peek-view-controls.close'](),
         icon: <CloseIcon />,
         onClick: () => peekView.close(),
         enabled: true,
@@ -237,7 +237,7 @@ export const AttachmentPeekViewControls = ({
       // TODO(@fundon): needs to be implemented on mobile
       {
         nameKey: 'open',
-        name: t['com.affine.peek-view-controls.open-attachment'](),
+        name: t['com.cloud-notes.peek-view-controls.open-attachment'](),
         icon: <ExpandFullIcon />,
         onClick: () => {
           workbench.openAttachment(docId, blockId);
@@ -249,7 +249,7 @@ export const AttachmentPeekViewControls = ({
       },
       {
         nameKey: 'new-tab',
-        name: t['com.affine.peek-view-controls.open-attachment-in-new-tab'](),
+        name: t['com.cloud-notes.peek-view-controls.open-attachment-in-new-tab'](),
         icon: <OpenInNewIcon />,
         onClick: () => {
           workbench.openAttachment(docId, blockId, { at: 'new-tab' });
@@ -262,7 +262,7 @@ export const AttachmentPeekViewControls = ({
       {
         nameKey: 'split-view',
         name: t[
-          'com.affine.peek-view-controls.open-attachment-in-split-view'
+          'com.cloud-notes.peek-view-controls.open-attachment-in-split-view'
         ](),
         icon: <SplitViewIcon />,
         onClick: () => {

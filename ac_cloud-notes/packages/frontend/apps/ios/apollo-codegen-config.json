@@ -1,5 +1,5 @@
 {
-  "schemaNamespace": "AffineGraphQL",
+  "schemaNamespace": "CloudNotesGraphQL",
   "input": {
     "operationSearchPaths": ["../../../common/graphql/src/graphql/**/*.gql"],
     "schemaSearchPaths": ["../../../backend/server/src/schema.gql"],
@@ -14,7 +14,7 @@
       "none": {}
     },
     "schemaTypes": {
-      "path": "./App/Packages/AffineGraphQL/",
+      "path": "./App/Packages/CloudNotesGraphQL/",
       "moduleType": {
         "swiftPackageManager": {}
       }

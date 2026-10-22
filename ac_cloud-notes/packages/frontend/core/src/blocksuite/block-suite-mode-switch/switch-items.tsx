@@ -1,9 +1,9 @@
-import { Tooltip } from '@affine/component';
+import { Tooltip } from '@cloud-notes/component';
 import {
   type CustomLottieProps,
   InternalLottie,
-} from '@affine/component/internal-lottie';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/component/internal-lottie';
+import { useI18n } from '@cloud-notes/i18n';
 import type { HTMLAttributes } from 'react';
 import type React from 'react';
 import { cloneElement, useState } from 'react';
@@ -63,7 +63,7 @@ export const PageSwitchItem = (
   const t = useI18n();
   return (
     <Tooltip
-      content={t['com.affine.header.mode-switch.page']()}
+      content={t['com.cloud-notes.header.mode-switch.page']()}
       shortcut={['$alt', 'S']}
       side="bottom"
     >
@@ -80,7 +80,7 @@ export const EdgelessSwitchItem = (
   const t = useI18n();
   return (
     <Tooltip
-      content={t['com.affine.header.mode-switch.edgeless']()}
+      content={t['com.cloud-notes.header.mode-switch.edgeless']()}
       shortcut={['$alt', 'S']}
       side="bottom"
     >

@@ -1,4 +1,4 @@
-import { AppSidebarService } from '@affine/core/modules/app-sidebar';
+import { AppSidebarService } from '@cloud-notes/core/modules/app-sidebar';
 import { useLiveData, useService } from '@toeverything/infra';
 import clsx from 'clsx';
 import type { ReactNode } from 'react';

@@ -1,4 +1,4 @@
-import { getOrCreateI18n, I18nextProvider } from '@affine/i18n';
+import { getOrCreateI18n, I18nextProvider } from '@cloud-notes/i18n';
 import { ThemeProvider } from 'next-themes';
 import type { ComponentType } from 'react';
 import '../src/theme';
@@ -9,7 +9,7 @@ import type { Preview } from '@storybook/react';
 import React, { useEffect } from 'react';
 import { ConfirmModalProvider } from '../src/ui/modal/confirm-modal';
 
-import { setupGlobal } from '@affine/env/global';
+import { setupGlobal } from '@cloud-notes/env/global';
 import { useTheme as useNextTheme } from 'next-themes';
 
 setupGlobal();

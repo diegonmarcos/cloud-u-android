@@ -133,8 +133,8 @@ struct ShareLinkPreviewClient {
   }
 
   private func addClientHeaders(to request: inout URLRequest) {
-    request.setValue("AFFiNE/\(appVersion)", forHTTPHeaderField: "User-Agent")
-    request.setValue(appVersion, forHTTPHeaderField: "x-affine-version")
+    request.setValue("cloud-notes/\(appVersion)", forHTTPHeaderField: "User-Agent")
+    request.setValue(appVersion, forHTTPHeaderField: "x-cloud-notes-version")
   }
 
   private struct Request: Encodable {
@@ -143,13 +143,13 @@ struct ShareLinkPreviewClient {
   }
 
   private struct AppConfig: Decodable {
-    var affineVersion: String
+    var cloudNotesVersion: String
   }
 
   private static var bundledAppVersion: String {
     if let url = Bundle.main.url(forResource: "capacitor.config", withExtension: "json"),
        let data = try? Data(contentsOf: url),
-       let version = try? JSONDecoder().decode(AppConfig.self, from: data).affineVersion,
+       let version = try? JSONDecoder().decode(AppConfig.self, from: data).cloudNotesVersion,
        !version.isEmpty
     {
       return version

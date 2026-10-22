@@ -17,15 +17,15 @@
     { "path": "../../common/nbstore" },
     { "path": "../../common/reader" },
     { "path": "../track" },
-    { "path": "../../../blocksuite/affine/all" },
-    { "path": "../../../blocksuite/affine/blocks/root" },
-    { "path": "../../../blocksuite/affine/components" },
-    { "path": "../../../blocksuite/affine/shared" },
-    { "path": "../../../blocksuite/affine/data-view" },
+    { "path": "../../../blocksuite/cloud-notes/all" },
+    { "path": "../../../blocksuite/cloud-notes/blocks/root" },
+    { "path": "../../../blocksuite/cloud-notes/components" },
+    { "path": "../../../blocksuite/cloud-notes/shared" },
+    { "path": "../../../blocksuite/cloud-notes/data-view" },
     { "path": "../../../blocksuite/framework/global" },
     { "path": "../../../blocksuite/framework/std" },
     { "path": "../../common/infra" },
-    { "path": "../../../blocksuite/affine/ext-loader" },
-    { "path": "../../../blocksuite/affine/graph" }
+    { "path": "../../../blocksuite/cloud-notes/ext-loader" },
+    { "path": "../../../blocksuite/cloud-notes/graph" }
   ]
 }

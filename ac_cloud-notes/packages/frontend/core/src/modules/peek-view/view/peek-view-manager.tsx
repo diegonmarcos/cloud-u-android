@@ -1,5 +1,5 @@
-import { toReactNode } from '@affine/component';
-import { BlockComponent } from '@blocksuite/affine/std';
+import { toReactNode } from '@cloud-notes/component';
+import { BlockComponent } from '@blocksuite/cloud-notes/std';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 

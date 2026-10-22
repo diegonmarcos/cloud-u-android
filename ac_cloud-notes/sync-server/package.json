@@ -1,7 +1,7 @@
 {
   "name": "cloud-notes-sync",
   "version": "0.1.0",
-  "description": "Cloud Notes sync server: Hocuspocus (MIT) over Yjs with SQLite persistence, Bearer-authenticated. Our own code; never AFFiNE's EE server.",
+  "description": "Cloud Notes sync server: Hocuspocus (MIT) over Yjs with SQLite persistence, Bearer-authenticated. Our own code; never Cloud Notes's EE server.",
   "private": true,
   "type": "module",
   "license": "MIT",

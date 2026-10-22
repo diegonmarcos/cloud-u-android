@@ -1,4 +1,4 @@
-import type { WorkspaceServerService } from '@affine/core/modules/cloud';
+import type { WorkspaceServerService } from '@cloud-notes/core/modules/cloud';
 import {
   type GrantDocUserRolesInput,
   grantDocUserRolesMutation,
@@ -7,7 +7,7 @@ import {
   type UpdateDocDefaultRoleInput,
   updateDocDefaultRoleMutation,
   updateDocUserRoleMutation,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 import { Store } from '@toeverything/infra';
 
 import type { NbstoreService } from '../../storage';

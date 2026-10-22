@@ -87,7 +87,7 @@ final class NativeSignInWebBridge {
 
   private func openAuthenticationSession(url: URL) async throws -> URL {
     try await withCheckedThrowingContinuation { continuation in
-      let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "affine") { [weak self] callbackURL, error in
+      let session = ASWebAuthenticationSession(url: url, callbackURLScheme: "cloud-notes") { [weak self] callbackURL, error in
         Task { @MainActor in
           self?.authenticationSession = nil
 
@@ -202,7 +202,7 @@ final class NativeSignInWebBridge {
   private func call(_ script: String, arguments: [String: Any]) async throws -> Any? {
     try Task.checkCancellation()
     guard let webView else {
-      throw signInError("AFFiNE is still loading. Please try again in a moment.")
+      throw signInError("Cloud Notes is still loading. Please try again in a moment.")
     }
 
     let result = try await webView.callAsyncJavaScript(

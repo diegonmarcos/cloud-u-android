@@ -1,4 +1,4 @@
-import AffineGraphQL
+import CloudNotesGraphQL
 import CryptoKit
 import Foundation
 
@@ -13,7 +13,7 @@ extension QLService {
         workspaceId: String,
         sessionId: String,
         content: String,
-        params: AffineGraphQL.JSON,
+        params: CloudNotesGraphQL.JSON,
         attachments: [CopilotAttachmentUpload]
     ) async throws -> String {
         if attachments.isEmpty {

@@ -31,7 +31,7 @@ import {
 import { test } from '../utils/playwright.js';
 
 async function focusCaption(page: Page) {
-  const toolbar = page.locator('affine-toolbar-widget editor-toolbar');
+  const toolbar = page.locator('cloud-notes-toolbar-widget editor-toolbar');
   await toolbar.getByLabel('Caption').click();
 }
 
@@ -119,7 +119,7 @@ test('enter shortcut on focusing embed block and its caption', async ({
 
   await focusCaption(page);
 
-  const caption = page.locator('affine-image block-caption-editor textarea');
+  const caption = page.locator('cloud-notes-image block-caption-editor textarea');
   await type(page, '123');
 
   test.info().annotations.push({
@@ -144,7 +144,7 @@ test('should support the enter key of image caption', async ({ page }) => {
 
   await focusCaption(page);
 
-  const caption = page.locator('affine-image block-caption-editor textarea');
+  const caption = page.locator('cloud-notes-image block-caption-editor textarea');
   await type(page, 'abc123');
   await pressArrowLeft(page, 3);
   await pressEnter(page);

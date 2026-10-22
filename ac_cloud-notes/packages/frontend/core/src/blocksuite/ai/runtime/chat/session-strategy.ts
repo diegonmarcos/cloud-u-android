@@ -1,4 +1,4 @@
-import type { CopilotChatHistoryFragment } from '@affine/graphql';
+import type { CopilotChatHistoryFragment } from '@cloud-notes/graphql';
 
 import type { AIRequestService } from '../request';
 import { type AIChatScope, type AIChatTab, createDraftTab } from './state';
@@ -89,7 +89,7 @@ export class DocAIChatSessionStrategy implements AIChatSessionStrategy {
     return request.createSessionWithHistory({
       workspaceId: scope.workspaceId,
       docId: scope.docId,
-      promptName: 'Chat With AFFiNE AI',
+      promptName: 'Chat With Cloud Notes AI',
       reuseLatestChat: false,
       pinned: options.pinned,
     });
@@ -145,7 +145,7 @@ export class WorkspaceAIChatSessionStrategy implements AIChatSessionStrategy {
   ) {
     return request.createSessionWithHistory({
       workspaceId: scope.workspaceId,
-      promptName: 'Chat With AFFiNE AI',
+      promptName: 'Chat With Cloud Notes AI',
       reuseLatestChat: false,
       pinned: options.pinned,
     });
@@ -193,7 +193,7 @@ export class ForkAIChatSessionStrategy implements AIChatSessionStrategy {
       return request.createSessionWithHistory({
         workspaceId: scope.workspaceId,
         docId,
-        promptName: 'Chat With AFFiNE AI',
+        promptName: 'Chat With Cloud Notes AI',
         reuseLatestChat: false,
         pinned: options.pinned,
       });

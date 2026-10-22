@@ -12,7 +12,7 @@ export const root = style({
   ['WebkitAppRegion' as string]: 'drag',
 });
 
-export const affineIcon = style({
+export const cloudNotesIcon = style({
   width: 28,
   height: 28,
 });

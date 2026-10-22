@@ -1,13 +1,13 @@
-import { Wrapper } from '@affine/component';
-import { EmptyDocs } from '@affine/core/components/affine/empty';
+import { Wrapper } from '@cloud-notes/component';
+import { EmptyDocs } from '@cloud-notes/core/components/cloud-notes/empty';
 import {
   createDocExplorerContext,
   DocExplorerContext,
-} from '@affine/core/components/explorer/context';
-import { DocsExplorer } from '@affine/core/components/explorer/docs-view/docs-list';
-import { Page } from '@affine/core/mobile/components/page';
-import { CollectionRulesService } from '@affine/core/modules/collection-rules';
-import type { Tag } from '@affine/core/modules/tag';
+} from '@cloud-notes/core/components/explorer/context';
+import { DocsExplorer } from '@cloud-notes/core/components/explorer/docs-view/docs-list';
+import { Page } from '@cloud-notes/core/mobile/components/page';
+import { CollectionRulesService } from '@cloud-notes/core/modules/collection-rules';
+import type { Tag } from '@cloud-notes/core/modules/tag';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useEffect, useState } from 'react';
 

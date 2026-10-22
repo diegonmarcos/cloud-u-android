@@ -1,5 +1,5 @@
 name: 'Deploy to Cluster'
-description: 'Deploy AFFiNE Cloud to cluster'
+description: 'Deploy Cloud Notes to cluster'
 inputs:
   gcp-project-number:
     description: 'GCP project number'

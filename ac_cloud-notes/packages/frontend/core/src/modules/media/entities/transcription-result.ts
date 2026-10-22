@@ -1,7 +1,7 @@
 import type {
   MeetingSummaryV2Type,
   NormalizedTranscriptSegmentType,
-} from '@affine/graphql';
+} from '@cloud-notes/graphql';
 
 import type { TranscriptionResult } from './types';
 

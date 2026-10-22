@@ -1,5 +1,5 @@
-import { IconPickerServiceIdentifier } from '@blocksuite/affine/shared/services';
-import { type ExtensionType } from '@blocksuite/affine/store';
+import { IconPickerServiceIdentifier } from '@blocksuite/cloud-notes/shared/services';
+import { type ExtensionType } from '@blocksuite/cloud-notes/store';
 import type { Container } from '@blocksuite/global/di';
 import type { FrameworkProvider } from '@toeverything/infra';
 

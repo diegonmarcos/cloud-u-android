@@ -18,8 +18,8 @@ ROOT="$(pwd)"
 VITEST=4.1.10
 RUST_TEST=doc_persists_across_reopen_byte_identical
 
-echo "== rust: affine_mobile_native =="
-cargo test -p affine_mobile_native --lib -- --nocapture 2>&1 | tee /tmp/phase0-rust.log
+echo "== rust: cloud_notes_mobile_native =="
+cargo test -p cloud_notes_mobile_native --lib -- --nocapture 2>&1 | tee /tmp/phase0-rust.log
 grep -q "test tests::$RUST_TEST ... ok" /tmp/phase0-rust.log || {
   echo "::error::Rust test $RUST_TEST did not run and pass"; exit 1; }
 

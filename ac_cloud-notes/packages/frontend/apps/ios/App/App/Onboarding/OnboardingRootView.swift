@@ -1,4 +1,4 @@
-import AffineResources
+import CloudNotesResources
 import SwiftUI
 import UIKit
 
@@ -55,7 +55,7 @@ struct OnboardingRootView: View {
       .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-    .foregroundStyle(AffineColors.textPrimary.color)
+    .foregroundStyle(CloudNotesColors.textPrimary.color)
   }
 
   @ViewBuilder
@@ -106,7 +106,7 @@ struct OnboardingRootView: View {
         Image(systemName: "chevron.left")
           .font(.system(size: 16, weight: .semibold))
           .frame(width: backButtonSize, height: backButtonSize)
-          .foregroundStyle(AffineColors.textSecondary.color)
+          .foregroundStyle(CloudNotesColors.textSecondary.color)
       }
       .padding(.leading, sideInset)
       .opacity(pageIndex > 0 ? 1 : 0)

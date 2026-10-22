@@ -1,4 +1,4 @@
-import { notify } from '@affine/component';
+import { notify } from '@cloud-notes/component';
 import {
   ChangeEmailPage,
   ChangePasswordPage,
@@ -6,12 +6,12 @@ import {
   SetPasswordPage,
   SignInSuccessPage,
   SignUpPage,
-} from '@affine/component/auth-components';
+} from '@cloud-notes/component/auth-components';
 import {
   changePasswordMutation,
   sendVerifyChangeEmailMutation,
-} from '@affine/graphql';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/graphql';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { useCallback } from 'react';
 import type { LoaderFunction } from 'react-router-dom';
@@ -73,11 +73,11 @@ export const Component = () => {
       // FIXME: There is not notification
       if (res?.sendVerifyChangeEmail) {
         notify.success({
-          title: t['com.affine.auth.sent.verify.email.hint'](),
+          title: t['com.cloud-notes.auth.sent.verify.email.hint'](),
         });
       } else {
         notify.error({
-          title: t['com.affine.auth.sent.change.email.fail'](),
+          title: t['com.cloud-notes.auth.sent.change.email.fail'](),
         });
       }
 
@@ -96,7 +96,7 @@ export const Component = () => {
     },
     [changePassword, searchParams]
   );
-  const onOpenAffine = useCallback(() => {
+  const onOpenCloudNotes = useCallback(() => {
     jumpToIndex(RouteLogic.REPLACE);
   }, [jumpToIndex]);
 
@@ -107,7 +107,7 @@ export const Component = () => {
   switch (authType) {
     case 'onboarding':
       return (
-        account && <OnboardingPage user={account} onOpenAffine={onOpenAffine} />
+        account && <OnboardingPage user={account} onOpenCloudNotes={onOpenCloudNotes} />
       );
     case 'signUp': {
       return (
@@ -116,20 +116,20 @@ export const Component = () => {
             user={account}
             passwordLimits={passwordLimits}
             onSetPassword={onSetPassword}
-            onOpenAffine={onOpenAffine}
+            onOpenCloudNotes={onOpenCloudNotes}
           />
         )
       );
     }
     case 'signIn': {
-      return <SignInSuccessPage onOpenAffine={onOpenAffine} />;
+      return <SignInSuccessPage onOpenCloudNotes={onOpenCloudNotes} />;
     }
     case 'changePassword': {
       return (
         <ChangePasswordPage
           passwordLimits={passwordLimits}
           onSetPassword={onSetPassword}
-          onOpenAffine={onOpenAffine}
+          onOpenCloudNotes={onOpenCloudNotes}
         />
       );
     }
@@ -138,7 +138,7 @@ export const Component = () => {
         <SetPasswordPage
           passwordLimits={passwordLimits}
           onSetPassword={onSetPassword}
-          onOpenAffine={onOpenAffine}
+          onOpenCloudNotes={onOpenCloudNotes}
         />
       );
     }
@@ -146,15 +146,15 @@ export const Component = () => {
       return (
         <ChangeEmailPage
           onChangeEmail={onSendVerifyChangeEmail}
-          onOpenAffine={onOpenAffine}
+          onOpenCloudNotes={onOpenCloudNotes}
         />
       );
     }
     case 'confirm-change-email': {
-      return <ConfirmChangeEmail onOpenAffine={onOpenAffine} />;
+      return <ConfirmChangeEmail onOpenCloudNotes={onOpenCloudNotes} />;
     }
     case 'verify-email': {
-      return <ConfirmVerifiedEmail onOpenAffine={onOpenAffine} />;
+      return <ConfirmVerifiedEmail onOpenCloudNotes={onOpenCloudNotes} />;
     }
   }
   return null;

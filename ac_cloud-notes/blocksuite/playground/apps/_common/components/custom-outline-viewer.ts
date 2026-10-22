@@ -1,5 +1,5 @@
-import { WithDisposable } from '@blocksuite/affine/global/lit';
-import type { TestAffineEditorContainer } from '@blocksuite/integration-test';
+import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
+import type { TestCloudNotesEditorContainer } from '@blocksuite/integration-test';
 import { css, html, LitElement, nothing } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 
@@ -16,10 +16,10 @@ export class CustomOutlineViewer extends WithDisposable(LitElement) {
   `;
 
   private _renderViewer() {
-    return html`<affine-outline-viewer
+    return html`<cloud-notes-outline-viewer
       .editor=${this.editor.host}
       .toggleOutlinePanel=${this.toggleOutlinePanel}
-    ></affine-outline-viewer>`;
+    ></cloud-notes-outline-viewer>`;
   }
 
   override render() {
@@ -38,7 +38,7 @@ export class CustomOutlineViewer extends WithDisposable(LitElement) {
   private accessor _show = false;
 
   @property({ attribute: false })
-  accessor editor!: TestAffineEditorContainer;
+  accessor editor!: TestCloudNotesEditorContainer;
 
   @property({ attribute: false })
   accessor toggleOutlinePanel: (() => void) | null = null;

@@ -1,4 +1,4 @@
-import { Modal, toast } from '@affine/component';
+import { Modal, toast } from '@cloud-notes/component';
 import {
   FavoriteTag,
   type ListItem,
@@ -7,16 +7,16 @@ import {
   TagListItemRenderer,
   type TagMeta,
   VirtualizedList,
-} from '@affine/core/components/page-list';
-import { SelectorLayout } from '@affine/core/components/page-list/selector/selector-layout';
+} from '@cloud-notes/core/components/page-list';
+import { SelectorLayout } from '@cloud-notes/core/components/page-list/selector/selector-layout';
 import type {
   DialogComponentProps,
   WORKSPACE_DIALOG_SCHEMA,
-} from '@affine/core/modules/dialogs';
-import { FavoriteService } from '@affine/core/modules/favorite';
-import { TagService } from '@affine/core/modules/tag';
-import { WorkspaceService } from '@affine/core/modules/workspace';
-import { useI18n } from '@affine/i18n';
+} from '@cloud-notes/core/modules/dialogs';
+import { FavoriteService } from '@cloud-notes/core/modules/favorite';
+import { TagService } from '@cloud-notes/core/modules/tag';
+import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
+import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVar } from '@toeverything/theme';
 import { useCallback, useMemo, useState } from 'react';
@@ -32,8 +32,8 @@ const FavoriteOperation = ({ tag }: { tag: ListItem }) => {
     favoriteService.favoriteList.toggle('tag', tag.id);
     toast(
       isFavorite
-        ? t['com.affine.toastMessage.removedFavorites']()
-        : t['com.affine.toastMessage.addedFavorites']()
+        ? t['com.cloud-notes.toastMessage.removedFavorites']()
+        : t['com.cloud-notes.toastMessage.addedFavorites']()
     );
   }, [favoriteService.favoriteList, tag.id, isFavorite, t]);
 
@@ -94,7 +94,7 @@ export const TagSelectorDialog = ({
       }}
     >
       <SelectorLayout
-        searchPlaceholder={t['com.affine.selector-tag.search.placeholder']()}
+        searchPlaceholder={t['com.cloud-notes.selector-tag.search.placeholder']()}
         selectedCount={selection.length}
         onSearch={setKeyword}
         onConfirm={() => close(selection)}

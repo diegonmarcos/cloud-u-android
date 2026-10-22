@@ -7,7 +7,7 @@ use std::{
   },
 };
 
-use affine_importer::{
+use cloud_notes_importer::{
   ImportBatchLimits, ImportOptions, ImportRegistry, ImportSession, ImportSessionOptions, ImportSource,
 };
 use napi::{Status, bindgen_prelude::*};
@@ -42,15 +42,15 @@ pub struct CreateImportBatchLimits {
   pub max_blob_bytes: Option<i64>,
 }
 
-fn map_import_error(error: affine_importer::ImportError) -> Error {
+fn map_import_error(error: cloud_notes_importer::ImportError) -> Error {
   let status = match error {
-    affine_importer::ImportError::Cancelled => Status::Cancelled,
-    affine_importer::ImportError::UnsupportedFormat(_) | affine_importer::ImportError::InvalidSource(_) => {
+    cloud_notes_importer::ImportError::Cancelled => Status::Cancelled,
+    cloud_notes_importer::ImportError::UnsupportedFormat(_) | cloud_notes_importer::ImportError::InvalidSource(_) => {
       Status::InvalidArg
     }
-    affine_importer::ImportError::Zip(_)
-    | affine_importer::ImportError::Io(_)
-    | affine_importer::ImportError::Document(_) => Status::GenericFailure,
+    cloud_notes_importer::ImportError::Zip(_)
+    | cloud_notes_importer::ImportError::Io(_)
+    | cloud_notes_importer::ImportError::Document(_) => Status::GenericFailure,
   };
   Error::new(status, error.to_string())
 }
@@ -153,7 +153,7 @@ mod tests {
 
   fn archive_path(entries: &[(&str, &[u8])]) -> PathBuf {
     let path = std::env::temp_dir().join(format!(
-      "affine-native-import-{}-{}.zip",
+      "cloud-notes-native-import-{}-{}.zip",
       std::process::id(),
       NEXT_TEST_ARCHIVE_ID.fetch_add(1, Ordering::Relaxed)
     ));
@@ -169,7 +169,7 @@ mod tests {
 
   fn directory_path(entries: &[(&str, &[u8])]) -> PathBuf {
     let root = std::env::temp_dir().join(format!(
-      "affine-native-import-dir-{}-{}",
+      "cloud-notes-native-import-dir-{}-{}",
       std::process::id(),
       NEXT_TEST_ARCHIVE_ID.fetch_add(1, Ordering::Relaxed)
     ));

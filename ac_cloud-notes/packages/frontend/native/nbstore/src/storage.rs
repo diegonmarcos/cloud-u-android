@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use affine_schema::{
+use cloud_notes_schema::{
   get_migrator,
   import_validation::{V2_IMPORT_SCHEMA_RULES, validate_import_schema, validate_required_schema},
 };
@@ -202,7 +202,7 @@ impl SqliteDocStorage {
 mod tests {
   use std::{borrow::Cow, fs, path::Path};
 
-  use affine_schema::get_migrator;
+  use cloud_notes_schema::get_migrator;
   use sqlx::migrate::{Migration, Migrator};
   use uuid::Uuid;
 
@@ -301,7 +301,7 @@ mod tests {
     fs::create_dir_all(&base).unwrap();
 
     let source = base.join("storage.db");
-    let export = base.join("backup.affine");
+    let export = base.join("backup.cloud-notes");
 
     let storage = SqliteDocStorage::new(path_string(&source));
     storage.connect().await.unwrap();

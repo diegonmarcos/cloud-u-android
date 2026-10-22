@@ -1,4 +1,4 @@
-import { type UserFriendlyError } from '@affine/error';
+import { type UserFriendlyError } from '@cloud-notes/error';
 import {
   catchErrorInto,
   effect,

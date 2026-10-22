@@ -1,8 +1,8 @@
-import { Divider, Loading, toast } from '@affine/component';
-import { Button, IconButton } from '@affine/component/ui/button';
-import { useAsyncCallback } from '@affine/core/components/hooks/affine-async-hooks';
-import type { ImageBlockModel } from '@blocksuite/affine/model';
-import type { BlockModel, Workspace } from '@blocksuite/affine/store';
+import { Divider, Loading, toast } from '@cloud-notes/component';
+import { Button, IconButton } from '@cloud-notes/component/ui/button';
+import { useAsyncCallback } from '@cloud-notes/core/components/hooks/cloud-notes-async-hooks';
+import type { ImageBlockModel } from '@blocksuite/cloud-notes/model';
+import type { BlockModel, Workspace } from '@blocksuite/cloud-notes/store';
 import {
   ArrowLeftSmallIcon,
   ArrowRightSmallIcon,

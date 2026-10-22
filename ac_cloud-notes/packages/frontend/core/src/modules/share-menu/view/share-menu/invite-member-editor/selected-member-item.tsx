@@ -1,4 +1,4 @@
-import type { Member } from '@affine/core/modules/permissions';
+import type { Member } from '@cloud-notes/core/modules/permissions';
 import { CloseIcon } from '@blocksuite/icons/rc';
 import { type MouseEventHandler, useCallback } from 'react';
 

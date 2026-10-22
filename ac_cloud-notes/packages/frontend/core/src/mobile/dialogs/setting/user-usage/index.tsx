@@ -1,10 +1,10 @@
-import { Skeleton } from '@affine/component';
+import { Skeleton } from '@cloud-notes/component';
 import {
   AuthService,
   ServerService,
   UserCopilotQuotaService,
   UserQuotaService,
-} from '@affine/core/modules/cloud';
+} from '@cloud-notes/core/modules/cloud';
 import { useLiveData, useService } from '@toeverything/infra';
 import { cssVar } from '@toeverything/theme';
 import { cssVarV2 } from '@toeverything/theme/v2';
