@@ -19,7 +19,7 @@ import java.util.Base64
  * printed.
  */
 class FleetEndpointWiringTest {
-    private val token = "fleet-SECRET-tok-123"
+    private val marker = "fleet-SECRET-tok-123"
     private val pub = "https://jmap.example.org"
     private val mesh = "https://stalwart.app:2443"
 
@@ -47,50 +47,50 @@ class FleetEndpointWiringTest {
 
     @Test fun `a fleet account gets both endpoints and the bearer on the public host`() {
         val r = rig()
-        val rep = r.wiring.applySync(listOf(acc("a", "me@example.org")), listOf(published("me@example.org")), token, 5L)
+        val rep = r.wiring.applySync(listOf(acc("a", "me@example.org")), listOf(published("me@example.org")), marker, 5L)
         assertEquals(1, rep.applied); assertTrue(rep.bearerSynced)
         val e = r.store.get("a")!!
         assertEquals(mesh, e.mesh); assertEquals(pub, e.public); assertEquals(EndpointPolicy.MESH_FIRST, e.policy)
         assertTrue(r.router.isRegistered("jmap.example.org"))
-        assertEquals(token, r.bearers.forHost("jmap.example.org"))
+        assertEquals(marker, r.bearers.forHost("jmap.example.org"))
         assertNull("never on the mesh host", r.bearers.forHost("stalwart.app"))
     }
 
-    @Test fun `an account Cloud Account did not publish keeps its single endpoint and gets no token`() {
+    @Test fun `an account Cloud Account did not publish keeps its single endpoint and gets no marker`() {
         val r = rig()
-        r.wiring.applySync(listOf(acc("a", "me@example.org"), acc("g", "me@gmail.example", "imap.gmail.example")), listOf(published("me@example.org")), token, 5L)
+        r.wiring.applySync(listOf(acc("a", "me@example.org"), acc("g", "me@gmail.example", "imap.gmail.example")), listOf(published("me@example.org")), marker, 5L)
         assertNull(r.store.get("g"))
         assertFalse(r.router.isRegistered("imap.gmail.example"))
         assertNull(r.bearers.forHost("imap.gmail.example"))
     }
 
-    @Test fun `a published address pointed at another server is not the fleet's - no route, no token`() {
+    @Test fun `a published address pointed at another server is not the fleet's - no route, no marker`() {
         val r = rig()
-        val rep = r.wiring.applySync(listOf(acc("a", "me@example.org", "https://mail.other.example")), listOf(published("me@example.org")), token, 5L)
+        val rep = r.wiring.applySync(listOf(acc("a", "me@example.org", "https://mail.other.example")), listOf(published("me@example.org")), marker, 5L)
         assertEquals(0, rep.applied); assertEquals(listOf("me@example.org"), rep.skipped)
         assertNull(r.store.get("a")); assertFalse(r.router.isRegistered("jmap.example.org")); assertNull(r.bearers.forHost("mail.other.example"))
     }
 
     @Test fun `the address and the host match in any case and spelling`() {
         val r = rig()
-        r.wiring.applySync(listOf(acc("a", "Me@Example.org", "JMAP.example.org")), listOf(published("me@example.org")), token, 5L)
+        r.wiring.applySync(listOf(acc("a", "Me@Example.org", "JMAP.example.org")), listOf(published("me@example.org")), marker, 5L)
         assertNotNull(r.store.get("a")); assertTrue(r.router.isRegistered("jmap.example.org"))
     }
 
     @Test fun `the owner's policy is kept across a re-sync, an unpinned one follows Account`() {
         val r = rig(); val accounts = listOf(acc("a", "me@example.org"))
-        r.wiring.applySync(accounts, listOf(published("me@example.org")), token, 1L)
-        r.wiring.applySync(accounts, listOf(published("me@example.org", EndpointPolicy.PUBLIC_ONLY)), token, 2L)
+        r.wiring.applySync(accounts, listOf(published("me@example.org")), marker, 1L)
+        r.wiring.applySync(accounts, listOf(published("me@example.org", EndpointPolicy.PUBLIC_ONLY)), marker, 2L)
         assertEquals("not pinned: Account's new default wins", EndpointPolicy.PUBLIC_ONLY, r.store.get("a")!!.policy)
         r.wiring.setPolicy(accounts, "a", EndpointPolicy.MESH_ONLY)
-        r.wiring.applySync(accounts, listOf(published("me@example.org", EndpointPolicy.MESH_FIRST)), token, 3L)
+        r.wiring.applySync(accounts, listOf(published("me@example.org", EndpointPolicy.MESH_FIRST)), marker, 3L)
         assertEquals("pinned: the owner's choice stands", EndpointPolicy.MESH_ONLY, r.store.get("a")!!.policy)
         assertEquals(EndpointPolicy.MESH_ONLY, r.router.policyOf("jmap.example.org"))
     }
 
     @Test fun `one endpoint, one policy - accounts on the same host move together`() {
         val r = rig(); val accounts = listOf(acc("a", "me@example.org"), acc("b", "bot@example.org"))
-        r.wiring.applySync(accounts, listOf(published("me@example.org"), published("bot@example.org")), token, 1L)
+        r.wiring.applySync(accounts, listOf(published("me@example.org"), published("bot@example.org")), marker, 1L)
         r.wiring.setPolicy(accounts, "a", EndpointPolicy.PUBLIC_ONLY)
         assertEquals(EndpointPolicy.PUBLIC_ONLY, r.store.get("b")!!.policy)
         assertTrue(r.store.get("b")!!.policyPinned)
@@ -98,40 +98,40 @@ class FleetEndpointWiringTest {
 
     @Test fun `a bearer Account stops sharing is taken off the wire`() {
         val r = rig(); val accounts = listOf(acc("a", "me@example.org"))
-        r.wiring.applySync(accounts, listOf(published("me@example.org")), token, 1L)
+        r.wiring.applySync(accounts, listOf(published("me@example.org")), marker, 1L)
         val rep = r.wiring.applySync(accounts, listOf(published("me@example.org")), "", 2L)
         assertFalse(rep.bearerSynced); assertNull(r.bearers.forHost("jmap.example.org")); assertEquals("", r.store.get("a")!!.bearer)
     }
 
     @Test fun `an account that stops being published is deregistered`() {
         val r = rig(); val accounts = listOf(acc("a", "me@example.org"))
-        r.wiring.applySync(accounts, listOf(published("me@example.org")), token, 1L)
-        r.wiring.applySync(accounts, emptyList(), token, 2L)
+        r.wiring.applySync(accounts, listOf(published("me@example.org")), marker, 1L)
+        r.wiring.applySync(accounts, emptyList(), marker, 2L)
         assertNull(r.store.get("a")); assertFalse(r.router.isRegistered("jmap.example.org")); assertNull(r.bearers.forHost("jmap.example.org"))
     }
 
     @Test fun `after a restart the stored endpoints go back on the transport without asking Account`() {
-        rig().wiring.applySync(listOf(acc("a", "me@example.org")), listOf(published("me@example.org")), token, 1L)
+        rig().wiring.applySync(listOf(acc("a", "me@example.org")), listOf(published("me@example.org")), marker, 1L)
         val again = rig()
         assertFalse(again.router.isRegistered("jmap.example.org"))
         again.wiring.restore(listOf(acc("a", "me@example.org")))
-        assertTrue(again.router.isRegistered("jmap.example.org")); assertEquals(token, again.bearers.forHost("jmap.example.org"))
+        assertTrue(again.router.isRegistered("jmap.example.org")); assertEquals(marker, again.bearers.forHost("jmap.example.org"))
     }
 
     @Test fun `deleting an account drops its endpoint and, when it was the last on the host, the route`() {
         val r = rig(); val accounts = listOf(acc("a", "me@example.org"))
-        r.wiring.applySync(accounts, listOf(published("me@example.org")), token, 1L)
+        r.wiring.applySync(accounts, listOf(published("me@example.org")), marker, 1L)
         r.wiring.forget(accounts, "a")
         assertNull(r.store.get("a")); assertFalse(r.router.isRegistered("jmap.example.org")); assertNull(r.bearers.forHost("jmap.example.org"))
     }
 
     @Test fun `the bearer is stored sealed and never printed`() {
         val r = rig()
-        val rep = r.wiring.applySync(listOf(acc("a", "me@example.org")), listOf(published("me@example.org")), token, 1L)
-        assertTrue("sealed at rest", disk.map.values.none { it.contains(token) })
-        assertFalse(r.store.get("a")!!.toString().contains(token))
-        assertFalse(rep.toString().contains(token))
-        assertFalse(r.bearers.toString().contains(token))
+        val rep = r.wiring.applySync(listOf(acc("a", "me@example.org")), listOf(published("me@example.org")), marker, 1L)
+        assertTrue("sealed at rest", disk.map.values.none { it.contains(marker) })
+        assertFalse(r.store.get("a")!!.toString().contains(marker))
+        assertFalse(rep.toString().contains(marker))
+        assertFalse(r.bearers.toString().contains(marker))
         val src = File("src/main/kotlin/app/sterna/core/data/account/FleetEndpointStore.kt").readText()
         assertFalse(Regex("""(Log\.|println\(|Timber|printStackTrace)""").containsMatchIn(src))
     }

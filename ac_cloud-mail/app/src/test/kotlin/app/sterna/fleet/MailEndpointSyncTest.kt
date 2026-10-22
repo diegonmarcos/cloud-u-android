@@ -52,7 +52,7 @@ class MailEndpointSyncTest {
     }
 
     private lateinit var ctx: Context
-    private val token = "fleet-SECRET-tok-123"
+    private val marker = "fleet-SECRET-tok-123"
     private val accounts = listOf(
         StoredAccount(id = "a", server = "https://jmap.example.org", username = "me@example.org"),
         StoredAccount(id = "g", server = "imap.gmail.example", username = "me@gmail.example"),
@@ -84,10 +84,10 @@ class MailEndpointSyncTest {
     })
 
     @Test fun `what Account published lands on the transport`() {
-        installAccount(); FakeAccount.reply = ok(doc(token))
+        installAccount(); FakeAccount.reply = ok(doc(marker))
         val out = MailEndpointSync.pull(ctx, wiring, accounts, now = 9L) as MailEndpointSync.Outcome.Synced
         assertEquals(1, out.report.applied); assertTrue(out.report.bearerSynced)
-        assertTrue(router.isRegistered("jmap.example.org")); assertEquals(token, bearers.forHost("jmap.example.org"))
+        assertTrue(router.isRegistered("jmap.example.org")); assertEquals(marker, bearers.forHost("jmap.example.org"))
         assertFalse("the plain provider account is not a fleet account", router.isRegistered("imap.gmail.example"))
         assertEquals(listOf(MailEndpointsContract.METHOD), FakeAccount.calls)
     }
@@ -115,7 +115,7 @@ class MailEndpointSyncTest {
     }
 
     @Test fun `without Cloud Account installed nothing is asked and nothing changes`() {
-        FakeAccount.reply = ok(doc(token))
+        FakeAccount.reply = ok(doc(marker))
         assertEquals(MailEndpointSync.Outcome.AccountMissing, MailEndpointSync.pull(ctx, wiring, accounts))
         assertTrue(FakeAccount.calls.isEmpty()); assertFalse(router.isRegistered("jmap.example.org"))
     }

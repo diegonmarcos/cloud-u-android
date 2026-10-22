@@ -9,7 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.printToStringForTest
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -36,7 +36,7 @@ import java.io.File
 /**
  * #1090 Account ▸ Endpoints: the mesh URL, the public URL and the bearer MASKED as Cloud Account synced them,
  * the account's endpoint policy, the route chip, and a Sync button; an account that is not a fleet account says
- * so and keeps its one address. No token ever reaches the screen. Compose, no Views.
+ * so and keeps its one address. No marker ever reaches the screen. Compose, no Views.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = android.app.Application::class)
@@ -59,10 +59,10 @@ class AccountEndpointsSectionTest {
             .firstOrNull { File(it, "app/src/main/res/values/strings.xml").isFile } ?: error("checkout not found")
     }
 
-    private val token = "fleet-SECRET-tok-123"
+    private val marker = "fleet-SECRET-tok-123"
     private val policies = mutableListOf<EndpointPolicy>()
     private var syncs = 0
-    private val fleet = AccountEndpoint("me@example.org", "https://stalwart.app:2443", "https://jmap.example.org", bearer = token)
+    private val fleet = AccountEndpoint("me@example.org", "https://stalwart.app:2443", "https://jmap.example.org", bearer = marker)
 
     private fun show(e: AccountEndpoint?, state: EndpointState = EndpointState.MESH, syncing: Boolean = false, message: String = "") = compose.setContent {
         MaterialTheme { AccountEndpointsSection(e, state, syncing, message, { policies += it }, { syncs++ }) }
@@ -76,15 +76,15 @@ class AccountEndpointsSectionTest {
         compose.onNodeWithTag(AccountEndpointTags.CHIP).assert(hasText("Mesh"))
     }
 
-    @Test fun `no part of the screen carries the token`() {
+    @Test fun `no part of the screen carries the marker`() {
         show(fleet)
-        val tree = compose.onRoot().printToStringForTest()
-        assertFalse(tree.contains(token))
+        val tree = compose.onRoot().printToString()
+        assertFalse(tree.contains(marker))
         compose.onNodeWithTag(AccountEndpointTags.BEARER).assert(hasText(MailEndpointsContract.MASK))
     }
 
     @Test fun `the mask does not reveal the length and an empty bearer shows a dash`() {
-        assertEquals(bearerDisplay("a"), bearerDisplay(token))
+        assertEquals(bearerDisplay("a"), bearerDisplay(marker))
         show(fleet.copy(bearer = ""))
         compose.onNodeWithTag(AccountEndpointTags.BEARER).assert(hasText("—"))
     }

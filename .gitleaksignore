@@ -1,3 +1,8 @@
 # gitleaks false positives, by fingerprint (commit:path:rule:line).
 # 17a87f3: prose in the copied sources.json::_doc ("...tokens) are never committed"), not a secret; reworded upstream (diegonmarcos.github.io c1a704d).
 17a87f3252dcdff159aee69d1bb7689daaa203cf:ac_cloud-media-center/web/data/sources.json:generic-api-key:2
+# ceee2ae8: test fixtures for #1090 (a made-up marker string in a variable named like a credential), not a secret.
+ceee2ae8be5f89ef42e97d833c8e15f428480892:ab_cloud-libs-shared/libs/fleetconfig-model/src/test/java/com/diegonmarcos/superapp/fleetconfig/MailEndpointsContractTest.kt:generic-api-key:20
+ceee2ae8be5f89ef42e97d833c8e15f428480892:ac_cloud-mail/app/src/test/kotlin/app/sterna/fleet/MailEndpointSyncTest.kt:generic-api-key:55
+ceee2ae8be5f89ef42e97d833c8e15f428480892:ac_cloud-mail/app/src/test/kotlin/app/sterna/ui/settings/AccountEndpointsSectionTest.kt:generic-api-key:62
+ceee2ae8be5f89ef42e97d833c8e15f428480892:ac_cloud-mail/core/data/src/test/kotlin/app/sterna/core/data/account/FleetEndpointWiringTest.kt:generic-api-key:22

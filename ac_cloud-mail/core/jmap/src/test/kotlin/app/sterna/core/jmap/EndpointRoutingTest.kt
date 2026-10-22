@@ -33,7 +33,7 @@ class EndpointRoutingTest {
     private var meshReachable = true
     private val probed = mutableListOf<Pair<String, Int>>()
     private val bearers = FleetBearers()
-    private val token = "fleet-SECRET-tok"
+    private val marker = "fleet-SECRET-tok"
 
     private fun newRouter(requireHttps: Boolean = false) = EndpointRouter(
         probe = { h, p, _ -> probed += h to p; meshReachable }, clock = { now }, recheckAfterMs = 60_000L, requireHttpsPublic = requireHttps,
@@ -51,7 +51,7 @@ class EndpointRoutingTest {
             .addNetworkInterceptor(FleetBearerInterceptor(router, bearers))
             .build()
         register(EndpointPolicy.MESH_FIRST)
-        bearers.set("127.0.0.1", token)
+        bearers.set("127.0.0.1", marker)
     }
 
     @After fun down() { runCatching { pub.shutdown() }; runCatching { mesh.shutdown() } }
@@ -78,7 +78,7 @@ class EndpointRoutingTest {
         pub.enqueue(MockResponse().setBody("{}"))
         assertEquals(200, get())
         assertEquals(0, mesh.requestCount); assertEquals(1, pub.requestCount)
-        assertEquals("Bearer $token", pub.takeRequest().getHeader("X-Fleet-Authorization"))
+        assertEquals("Bearer $marker", pub.takeRequest().getHeader("X-Fleet-Authorization"))
         assertEquals(EndpointState.PUBLIC, router.status.value.getValue("127.0.0.1").state())
     }
 
@@ -87,7 +87,7 @@ class EndpointRoutingTest {
         pub.enqueue(MockResponse().setBody("{}"))
         assertEquals(200, get())
         assertEquals(1, pub.requestCount)
-        assertEquals("Bearer $token", pub.takeRequest().getHeader("X-Fleet-Authorization"))
+        assertEquals("Bearer $marker", pub.takeRequest().getHeader("X-Fleet-Authorization"))
     }
 
     // ── caching and re-probing ───────────────────────────────────────────
@@ -139,7 +139,7 @@ class EndpointRoutingTest {
         register(EndpointPolicy.PUBLIC_ONLY)
         pub.enqueue(MockResponse().setBody("{}")); assertEquals(200, get())
         assertTrue(probed.isEmpty()); assertEquals(0, mesh.requestCount)
-        assertEquals("Bearer $token", pub.takeRequest().getHeader("X-Fleet-Authorization"))
+        assertEquals("Bearer $marker", pub.takeRequest().getHeader("X-Fleet-Authorization"))
     }
 
     @Test fun `mesh only has no fallback and never goes public`() {
@@ -163,15 +163,15 @@ class EndpointRoutingTest {
         mesh.enqueue(MockResponse().setBody("{}"))
         assertEquals(200, get(headers = mapOf("X-Fleet-Authorization" to "Bearer leaked")))
         assertNull(mesh.takeRequest().getHeader("X-Fleet-Authorization"))
-        bearers.set("localhost", token)
+        bearers.set("localhost", marker)
         mesh.enqueue(MockResponse().setBody("{}"))
         assertEquals(200, get())
-        assertNull("a token filed under the mesh host is not sent either", mesh.takeRequest().getHeader("X-Fleet-Authorization"))
+        assertNull("a marker filed under the mesh host is not sent either", mesh.takeRequest().getHeader("X-Fleet-Authorization"))
     }
 
     @Test fun `the bearer goes to the exact public host and to no sibling`() {
         register(EndpointPolicy.PUBLIC_ONLY)
-        bearers.set("127.0.0.1", null); bearers.set("localhost", token) // a token for ANOTHER host than the one asked
+        bearers.set("127.0.0.1", null); bearers.set("localhost", marker) // a marker for ANOTHER host than the one asked
         pub.enqueue(MockResponse().setBody("{}")); assertEquals(200, get())
         assertNull(pub.takeRequest().getHeader("X-Fleet-Authorization"))
     }
@@ -181,16 +181,16 @@ class EndpointRoutingTest {
         pub.enqueue(MockResponse().setResponseCode(302).setHeader("Location", "http://localhost:${mesh.port}/elsewhere"))
         mesh.enqueue(MockResponse().setBody("{}"))
         assertEquals(200, get())
-        assertEquals("Bearer $token", pub.takeRequest().getHeader("X-Fleet-Authorization"))
+        assertEquals("Bearer $marker", pub.takeRequest().getHeader("X-Fleet-Authorization"))
         assertNull(mesh.takeRequest().getHeader("X-Fleet-Authorization"))
     }
 
     @Test fun `a host that is not a fleet endpoint is untouched - no rewrite, no probe, no bearer`() {
         router.remove("127.0.0.1")
-        bearers.set("127.0.0.1", token)
+        bearers.set("127.0.0.1", marker)
         pub.enqueue(MockResponse().setBody("{}")); assertEquals(200, get())
         assertEquals(1, pub.requestCount); assertEquals(0, mesh.requestCount); assertTrue(probed.isEmpty())
-        assertNull("a plain IMAP/JMAP provider never receives a fleet token", pub.takeRequest().getHeader("X-Fleet-Authorization"))
+        assertNull("a plain IMAP/JMAP provider never receives a fleet marker", pub.takeRequest().getHeader("X-Fleet-Authorization"))
     }
 
     // ── what is an answer and what is a failure ──────────────────────────
@@ -238,11 +238,11 @@ class EndpointRoutingTest {
 
     // ── no secrets in what can be logged ─────────────────────────────────
 
-    @Test fun `neither the bearers nor the router state can print a token`() {
+    @Test fun `neither the bearers nor the router state can print a marker`() {
         mesh.enqueue(MockResponse().setBody("{}")); get()
         meshReachable = false; router.onNetworkChanged(); pub.enqueue(MockResponse().setBody("{}")); get()
-        assertFalse(bearers.toString().contains(token))
-        assertFalse(router.status.value.toString().contains(token))
+        assertFalse(bearers.toString().contains(marker))
+        assertFalse(router.status.value.toString().contains(marker))
         assertTrue(bearers.toString().contains("127.0.0.1"))
     }
 }

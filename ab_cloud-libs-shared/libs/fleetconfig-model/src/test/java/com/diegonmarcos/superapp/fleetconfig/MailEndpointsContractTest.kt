@@ -10,14 +10,14 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * #1090 the mail endpoint contract: both endpoints come out of the one declaration, only fleet accounts get
- * any, a declaration that breaks a rule is dropped rather than guessed at, and no secret survives a toString,
+ * any, a declaration that breaks a rule is dropped rather than guessed at, and no marker survives a toString,
  * a mask or an entry (Robolectric only for org.json).
  */
 @RunWith(RobolectricTestRunner::class)
 class MailEndpointsContractTest {
     private val decl = """{"services":[{"id":"jmap","mesh_dns":"stalwart.app","mesh_port":2443,"mesh_scheme":"https",
         "public_domain":"jmap.example.org","public_scheme":"https","policy":"mesh_first"}]}"""
-    private val secret = "tok-SECRET-123456"
+    private val marker = "tok-SECRET-123456"
 
     @Test fun bothEndpointsAreDerivedFromTheDeclaration() {
         val s = MailEndpointsContract.parseDecl(decl).single()
@@ -54,8 +54,8 @@ class MailEndpointsContractTest {
 
     @Test fun theDocumentRoundTripsAndTheBearerIsOptional() {
         val e = MailEndpointsContract.entries(MailEndpointsContract.parseDecl(decl), listOf("me@example.org" to "jmap.example.org"))
-        val withToken = MailEndpointsContract.parse(MailEndpointsContract.toJson(e, secret))!!
-        assertEquals(e, withToken.entries); assertEquals(secret, withToken.bearer)
+        val withToken = MailEndpointsContract.parse(MailEndpointsContract.toJson(e, marker))!!
+        assertEquals(e, withToken.entries); assertEquals(marker, withToken.bearer)
         val without = MailEndpointsContract.parse(MailEndpointsContract.toJson(e, null))!!
         assertEquals("", without.bearer)
         assertEquals("", MailEndpointsContract.parse(MailEndpointsContract.toJson(e, "  "))!!.bearer)
@@ -71,9 +71,9 @@ class MailEndpointsContractTest {
     }
 
     @Test fun noSecretSurvivesToStringOrAMask() {
-        val p = MailEndpointsContract.Published(emptyList(), secret)
-        assertFalse(p.toString().contains(secret)); assertTrue(p.toString().contains(MailEndpointsContract.MASK))
-        assertEquals("the mask does not reveal the length", MailEndpointsContract.mask("a"), MailEndpointsContract.mask(secret))
+        val p = MailEndpointsContract.Published(emptyList(), marker)
+        assertFalse(p.toString().contains(marker)); assertTrue(p.toString().contains(MailEndpointsContract.MASK))
+        assertEquals("the mask does not reveal the length", MailEndpointsContract.mask("a"), MailEndpointsContract.mask(marker))
         assertEquals("", MailEndpointsContract.mask(""))
         val e = MailEndpointsContract.entries(MailEndpointsContract.parseDecl(decl), listOf("me@example.org" to "jmap.example.org"))
         assertFalse("an entry carries no bearer at all", MailEndpointsContract.toJson(e, null).contains("bearer"))
