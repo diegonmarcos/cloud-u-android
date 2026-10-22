@@ -89,7 +89,7 @@ class WeatherCardScreenTest : KitPageHarness() {
             compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).fetchSemanticsNode()
                 .config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Role))
         // The button's PendingIntent opens this app's settings page (where Location is granted).
-        val saved = org.robolectric.Shadows.shadowOf(none.actionIntent).savedIntents.single()
+        val saved = org.robolectric.Shadows.shadowOf(none.actionIntent!!).savedIntents.single()
         assertEquals(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, saved.action)
         assertEquals("package:" + ctx.packageName, saved.dataString)
         snap("weather-card-nofix.png")
