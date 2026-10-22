@@ -3139,7 +3139,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-21",
+        "pricing_as_of": "2026-10-22",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -3166,7 +3166,7 @@
             "open": true,
             "params_b": 26,
             "quant": ["fp8", "bf16"],
-            "trained_for": ["marketing", "translation"],
+            "trained_for": ["academia", "marketing", "roleplay", "translation"],
             "prompt": 0.09, "completion": 0.3,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
@@ -3231,7 +3231,7 @@
             "name": "GLM 5.2",
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
-            "trained_for": ["academia", "legal", "programming", "roleplay", "science", "technology"],
+            "trained_for": ["academia", "legal", "programming", "roleplay", "science"],
             "prompt": 0.0341, "completion": 7,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
@@ -3241,7 +3241,7 @@
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.15, "completion": 0.5,
+            "prompt": 0.0055, "completion": 0.193,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {
@@ -3269,7 +3269,7 @@
           {
             "id": "google/gemini-2.5-flash",
             "name": "Gemini 2.5 Flash",
-            "trained_for": ["health"],
+            "trained_for": [],
             "prompt": 0.3, "completion": 2.5,
             "note": "The default: translation-ranked plus eight more categories, and still cheap."
           }
@@ -3652,9 +3652,8 @@
           "label": "Cloudflare Access",
           "kind": "cloudflare_access",
           "family": "cloudflare",
-          "_doc": "#1083 Cloudflare Zero Trust (Access / WARP). The sign-in is the auth broker's Cloudflare One flow at `start_url` (the same flow as the chooser button on auth.diegonmarcos.com: Cloudflare Access login, then the broker's /oauth2/cloudflare/callback verifies the Access JWT and issues the shared _diego_sso session); `login_url` is the team login page, kept as the fallback. WARP / Cloudflare One enrolment is the existing CloudflareWarp + CfKeyStore code of Cloud SuperApp (Mesh page), reached by `route`. `probe_url` is the team's public certs document: a 200 means the team is live.",
+          "_doc": "#1083 Cloudflare Zero Trust (Access / WARP). The sign-in is the team login page; WARP / Cloudflare One enrolment is the existing CloudflareWarp + CfKeyStore code of Cloud SuperApp (Mesh page), reached by `route`. `probe_url` is the team's public certs document: a 200 means the team is live.",
           "team": "diegonmarcos",
-          "start_url": "https://auth.diegonmarcos.com/oauth2/cloudflare/start",
           "login_url": "https://diegonmarcos.cloudflareaccess.com/",
           "probe_url": "https://diegonmarcos.cloudflareaccess.com/cdn-cgi/access/certs",
           "route": "extapp:cloud-superapp",
