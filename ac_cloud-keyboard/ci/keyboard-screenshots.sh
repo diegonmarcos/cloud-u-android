@@ -32,13 +32,22 @@ adb logcat -c
 adb install -r -g "$APK" >/dev/null && ok "installed" || { bad "install"; exit 1; }
 adb shell ime enable "$IME" >/dev/null; adb shell ime set "$IME" >/dev/null
 adb shell settings put secure show_ime_with_hard_keyboard 1
-adb shell am start -n "$PKG/.ShotActivity" >/dev/null
-for _ in $(seq 1 40); do
-    adb shell dumpsys input_method | grep -q 'mInputShown=true' && break
-    sleep 1
+# The app restarts itself when ACTION_BOOT_COMPLETED reaches it (SystemBroadcastReceiver: "Killing my process"), and on a slow
+# emulator that broadcast is still being delivered when the script starts: it killed the first run's screen. Let the boot
+# dispatch finish, then start the screen, and start it again if the process is gone.
+for _ in $(seq 1 60); do [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ] && break; sleep 2; done
+sleep 45
+shown() { adb shell dumpsys input_method | grep -q 'mInputShown=true'; }
+for attempt in 1 2 3; do
+    adb shell am start -n "$PKG/.ShotActivity" >/dev/null
+    for _ in $(seq 1 25); do shown && break; sleep 1; done
+    sleep 8
+    if [ -n "$(adb shell pidof "$PKG" | tr -d '\r')" ] && shown; then break; fi
+    echo "attempt $attempt: the screen or the keyboard is gone, starting again"
 done
-adb shell dumpsys input_method | grep -q 'mInputShown=true' && ok "the keyboard is up" || bad "the keyboard never came up"
-sleep 3
+shown && ok "the keyboard is up" || bad "the keyboard never came up"
+adb shell dumpsys input_method | grep -E "mCurMethodId|mInputShown|mCurId" | head -5
+sleep 2
 shot 00-start
 
 # ── the toolbar, page by page ─────────────────────────────────────────────
