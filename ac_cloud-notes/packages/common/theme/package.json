@@ -4,28 +4,28 @@
   "description": "Cloud Notes design tokens (CSS variables, typography), vendored from a Mozilla Public License 2.0 package; see LICENSE.",
   "license": "MPL-2.0",
   "type": "module",
-  "main": "dist/index.cjs",
-  "module": "dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "tokens/index.cjs",
+  "module": "tokens/index.js",
+  "types": "./tokens/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "types": "./tokens/index.d.ts",
+      "import": "./tokens/index.js",
+      "require": "./tokens/index.cjs"
     },
-    "./style.css": "./dist/style.css",
+    "./style.css": "./tokens/style.css",
     "./v2": {
-      "types": "./dist/v2/index.d.ts",
-      "import": "./dist/v2/index.js",
-      "require": "./dist/v2/index.cjs"
+      "types": "./tokens/v2/index.d.ts",
+      "import": "./tokens/v2/index.js",
+      "require": "./tokens/v2/index.cjs"
     },
     "./typography": {
-      "types": "./dist/presets/typography.css.d.ts",
-      "import": "./dist/presets/typography.js",
-      "require": "./dist/presets/typography.cjs"
+      "types": "./tokens/presets/typography.css.d.ts",
+      "import": "./tokens/presets/typography.js",
+      "require": "./tokens/presets/typography.cjs"
     }
   },
   "files": [
-    "dist"
+    "tokens"
   ]
 }
