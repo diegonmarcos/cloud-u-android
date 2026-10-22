@@ -9,7 +9,7 @@ import java.io.File
 
 /**
  * #1093 THE GUARD: no app talks to a fleet host without going through libs:fleet-endpoints. Every main-source file of the
- * fleet (apps, shared libs) that names a fleet host (a `*.diegonmarcos.com` host or an `http(s)://*.app` mesh URL) in code
+ * fleet (apps, shared libs) that names a fleet host (a `*.diegonmarcos.com` host or an `http(s)` mesh URL on a `.app` host) in code
  * must use the transport (FleetHttp, FleetTransport, the interceptors, the AuthHttp seam) or be listed in
  * `fleet-host-baseline.txt` with its reason. The list is a ratchet: it may only shrink. A listed file that no longer names a
  * fleet host or now uses the transport fails until its line is removed, and a new file that names one fails until it routes.
