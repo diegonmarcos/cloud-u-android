@@ -3,7 +3,6 @@ package com.diegonmarcos.superapp.appstore
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -42,7 +41,9 @@ object UnpackAfterInstall {
     @Volatile
     var starter: (Context, Intent) -> Boolean = { c, i ->
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) c.startForegroundService(i) != null else c.startService(i) != null
+            // startService, not startForegroundService: the Store holds its own foreground service for the
+            // length of an install, which allows it; the app's service goes foreground itself.
+            c.startService(i) != null
         } catch (_: Throwable) { false }
     }
 
