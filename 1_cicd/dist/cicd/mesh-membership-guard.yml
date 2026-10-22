@@ -18,8 +18,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+# contents: write ONLY for the IPC registry refresh below (one derived file, pushed to main).
 permissions:
-  contents: read
+  contents: write
 
 # ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
 concurrency:
@@ -105,6 +106,22 @@ jobs:
       # generated registry aa_cloud-superapp/data/ipc-mesh.json is current.
       - name: The IPC guard still fails on each way app-to-app traffic leaves IPC (#ipc)
         run: bash 1_cicd/src/scripts/test/ipc-mesh-guard.test.sh
+
+      # aa_cloud-superapp/data/ipc-mesh.json is DERIVED from every fleet app's manifests and sources, so the commit that makes it
+      # stale is a commit in some other app by an author with no reason to run `gen` (c3-webserver's DNS port, 2026-10-22: a red
+      # main for a file nobody was editing). Same reasoning as the test-coverage inventory in generated-up-to-date: on a push to
+      # main the registry is regenerated here and pushed (rebase-and-retry); anywhere else (a pull request) a stale registry stays red.
+      - name: Refresh the IPC registry on main (a derived file)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          python3 1_cicd/src/scripts/cloud-android-ipc-mesh.py gen .
+          f=aa_cloud-superapp/data/ipc-mesh.json
+          if git diff --quiet -- "$f"; then echo "IPC registry already current."; exit 0; fi
+          git diff --stat -- "$f"
+          git add -- "$f"
+          git -c user.name="github-actions[bot]" -c user.email="noreply@anthropic.com" commit -q -m "ci(ipc-mesh): regenerate the IPC registry from ${GITHUB_SHA::8} via run ${GITHUB_RUN_ID} [skip ci]"
+          bash 1_cicd/dist/scripts/cloud-android-push-main.sh
 
       - name: App to app on the phone is IPC, and the IPC registry is current (#ipc)
         run: python3 1_cicd/src/scripts/cloud-android-ipc-mesh.py check .
