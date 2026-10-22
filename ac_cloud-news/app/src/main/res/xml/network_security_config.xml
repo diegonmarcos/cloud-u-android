@@ -28,8 +28,8 @@
 
     <domain-config cleartextTrafficPermitted="true">
         <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
-        <domain>git-proxy-api.app</domain>
-        <domain>news-gdelt.app</domain>
+        <domain includeSubdomains="false">git-proxy-api.app</domain>
+        <domain includeSubdomains="false">news-gdelt.app</domain>
         <!-- END fleet-mesh-cleartext -->
         <!-- #1093 the mesh host of the declared news service (news-gdelt.app, WireGuard-only, WG encrypts) is GENERATED (above)
              from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; never hand-listed. -->

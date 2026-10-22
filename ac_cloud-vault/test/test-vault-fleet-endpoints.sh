@@ -52,7 +52,7 @@ def checks(f):
     need("@Volatile" in v and "private var bearer" in v, "F3 the bearer is not an in-memory field")
     need('<package android:name="com.diegonmarcos.cloudaccount"' in f[MANIFEST], "F3 the manifest does not query Cloud Account")
     x = f[NSC]
-    need("BEGIN fleet-mesh-cleartext" in x and re.search(r'BEGIN fleet-mesh-cleartext[^>]*-->\s*<domain>vaultwarden\.app</domain>', x) is not None, "F4 vaultwarden.app is not in the GENERATED cleartext block")
+    need("BEGIN fleet-mesh-cleartext" in x and re.search(r'BEGIN fleet-mesh-cleartext[^>]*-->\s*<domain includeSubdomains="false">vaultwarden\.app</domain>', x) is not None, "F4 vaultwarden.app is not in the GENERATED cleartext block")
     need(not re.search(r'<domain[^>]*>\.?app</domain>|<domain[^>]*>\*\.app</domain>', x), "F4 the whole .app TLD is opened")
     return bad
 
@@ -78,8 +78,8 @@ mutations = {
     "application does not start it": mut(APPCLS, "VaultFleetEndpoints.start(this)", "// removed"),
     "the vault hook runs nothing": mut(VAULTFLEET, "FleetBoot.start(context)", "Unit"),
     "no query for Cloud Account": mut(MANIFEST, '<package android:name="com.diegonmarcos.cloudaccount" />', ""),
-    "no cleartext entry": mut(NSC, "<domain>vaultwarden.app</domain>", ""),
-    "the whole .app TLD opened": mut(NSC, "<domain>vaultwarden.app</domain>", '<domain includeSubdomains="true">app</domain>'),
+    "no cleartext entry": mut(NSC, '<domain includeSubdomains="false">vaultwarden.app</domain>', ""),
+    "the whole .app TLD opened": mut(NSC, '<domain includeSubdomains="false">vaultwarden.app</domain>', '<domain includeSubdomains="true">app</domain>'),
     "the Android halves are not compiled": mut(APPGRADLE, "libs/fleet-endpoints-android", "libs/fleet-endpoints-androidX"),
 }
 survivors = []

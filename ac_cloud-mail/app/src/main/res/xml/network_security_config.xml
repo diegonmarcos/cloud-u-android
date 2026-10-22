@@ -23,7 +23,7 @@
 
     <domain-config cleartextTrafficPermitted="true">
         <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
-        <domain>stalwart.app</domain>
+        <domain includeSubdomains="false">stalwart.app</domain>
         <!-- END fleet-mesh-cleartext -->
     </domain-config>
 </network-security-config>

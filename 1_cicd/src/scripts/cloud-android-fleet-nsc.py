@@ -24,7 +24,7 @@ def hosts(root, cfg, wanted):
 
 
 def block(hs):
-    return "".join(["        " + BEGIN + "\n"] + ["        <domain>%s</domain>\n" % h for h in hs] + ["        " + END + "\n"])
+    return "".join(["        " + BEGIN + "\n"] + ["        <domain includeSubdomains=\"false\">%s</domain>\n" % h for h in hs] + ["        " + END + "\n"])
 
 
 def render(text, hs):
