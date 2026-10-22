@@ -129,6 +129,9 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
         // The reader went deeper into the site (an app page, then a dialog or another app took focus): coming back must not
         // throw that position away and reload the start page under them; Back still walks the history.
         if (w.canGoBack()) return
+        // A navigation is still in flight (a link was just tapped and a dialog paused the page before it committed): reloading the
+        // declared URL now would override it.
+        if (w.progress < 100) return
         loadFresh(w, failed ?: declaredUrl.ifBlank { return })
     }
 
