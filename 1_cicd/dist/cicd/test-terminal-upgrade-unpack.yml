@@ -127,6 +127,17 @@ jobs:
           # Before the upgrade nothing is unpacked: a fresh install runs no receiver, and the app is never opened.
           if adb shell "[ -e $D/unpack-result.json ]"; then echo "::error::unpack-result.json exists before the upgrade"; exit 1; fi
           if adb shell "[ -x $D/usr/bin/login ]"; then echo "::error::the bootstrap is unpacked before the upgrade: this test proves nothing"; exit 1; fi
+          # A package that was never started is in Android's "stopped" state, and the system does not
+          # deliver MY_PACKAGE_REPLACED to it (observed: stopped=true notLaunched=true, no unpack). A real
+          # phone's terminal has run before, so it is not stopped; Cloud Store's explicit start is what
+          # covers a stopped one. Take the state away WITHOUT any UI: start only the receiver's process
+          # (root, an action it ignores), then require stopped=false before the upgrade.
+          adb shell cmd package set-stopped-state --user 0 "$PKG" false >/dev/null 2>&1 || true
+          if adb shell dumpsys package "$PKG" | grep -q "stopped=true"; then
+            adb shell am broadcast -n "$PKG/com.termux.app.UnpackReceiver" -a android.intent.action.BOOT_COMPLETED --include-stopped-packages >/dev/null 2>&1 || true
+            sleep 5
+          fi
+          if adb shell dumpsys package "$PKG" | grep -q "stopped=true"; then echo "::error::could not take $PKG out of the stopped state"; exit 2; fi
           adb logcat -c || true
           # The upgrade: same package, replaced in place. The system sends MY_PACKAGE_REPLACED.
           adb install -r -g app.apk || { echo "::error::upgrade install failed"; exit 2; }
