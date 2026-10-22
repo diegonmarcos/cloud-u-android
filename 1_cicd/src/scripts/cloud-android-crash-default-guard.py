@@ -67,7 +67,10 @@ def main():
             continue
         # linked by the build.json module map, or by a hand-written settings file (Gallery, Camera: upstream trees
         # whose settings.gradle(.kts) includes the shared module by path)
-        linked = "libs:core" in (d.get("modules") or {}) or any(
+        # a fetched-tree app (Cloud Office) materializes the shared libs its patches include: build.modules names them
+        fetched = any(isinstance(v, dict) and str(v.get("dir", "")).rstrip("/").endswith("libs/core")
+                      for v in ((d.get("build") or {}).get("modules") or {}).values())
+        linked = "libs:core" in (d.get("modules") or {}) or fetched or any(
             re.search(r"""include\(\s*['"]:libs:core['"]""", strip(open(sf, encoding="utf-8", errors="replace").read()))
             for sf in glob.glob(os.path.join(ROOT, app, "settings.gradle*")))
         if d.get("crash_default") is False:

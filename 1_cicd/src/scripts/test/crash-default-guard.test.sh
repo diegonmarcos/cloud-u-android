@@ -37,5 +37,6 @@ r="$(mk)"; echo 'CRASH_SINK_PORT' > "$r/ab_cloud-libs-shared/libs/core/build.gra
 r="$(mk)"; echo '<manifest/>' > "$r/ab_cloud-libs-shared/libs/crash/src/main/AndroidManifest.xml"; expect "libs:crash without the crash screen is red" 1 "$r"
 r="$(mk)"; echo '{"android":{"application_id":"a.b"}}' > "$r/ac_cloud-a/build.json"; echo 'include(":libs:core")' > "$r/ac_cloud-a/settings.gradle.kts"; expect "an app that includes libs:core in its settings is green" 0 "$r"
 r="$(mk)"; echo '{"android":{"application_id":"a.b"}}' > "$r/ac_cloud-a/build.json"; echo '// include(":libs:core")' > "$r/ac_cloud-a/settings.gradle.kts"; expect "a commented-out settings include is red" 1 "$r"
+r="$(mk)"; echo '{"android":{"application_id":"a.b"},"build":{"modules":{"core":{"dir":"../ab_cloud-libs-shared/libs/core"}}}}' > "$r/ac_cloud-a/build.json"; expect "a fetched-tree app that materializes libs/core is green" 0 "$r"
 rm -f /tmp/crash-default-guard.$$
 [ "$fails" -eq 0 ] && echo "crash-default-guard.test: all green" || { echo "crash-default-guard.test: $fails FAILED"; exit 1; }
