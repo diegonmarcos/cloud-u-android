@@ -34,9 +34,9 @@ def checks(f):
     def need(c, m):
         if not c: bad.append(m)
     g = f[GRADLE]
-    need("ab_cloud-libs-shared/libs/fleet-endpoints/src/main/kotlin" in g and "java.directories.add" in g, "F1 network does not compile the shared fleet-endpoints tree by reference")
+    need("ab_cloud-libs-shared/libs/fleet-endpoints/src/main/kotlin" in g and "kotlin.directories.add" in g, "F1 network does not compile the shared fleet-endpoints tree by reference")
     need(not os.path.isdir(os.path.join(APP, "network/src/main/kotlin/com/diegonmarcos")), "F1 a copy of the shared tree sits in the network module")
-    need("ab_cloud-libs-shared/libs/fleet-endpoints-android/src/main/java" in f[APPGRADLE] and "java.directories.add" in f[APPGRADLE], "F1 the app does not compile the shared Android halves by reference")
+    need("ab_cloud-libs-shared/libs/fleet-endpoints-android/src/main/java" in f[APPGRADLE] and "kotlin.directories.add" in f[APPGRADLE], "F1 the app does not compile the shared Android halves by reference")
     n = f[NET]
     for name in ("createAuthenticatedRetrofit", "createUnauthenticatedRetrofit"):
         b = fn(n, name)
@@ -69,7 +69,7 @@ def mut(rel, old, new, count=1):
     return go
 
 mutations = {
-    "drop the by-reference source dir": mut(GRADLE, "java.directories.add", "java.directories.remove"),
+    "drop the by-reference source dir": mut(GRADLE, "kotlin.directories.add", "kotlin.directories.remove"),
     "no fleet interceptors in the static client": mut(NET, "                    .addInterceptor(permissionInterceptor)\n                    .withFleetEndpoints()\n                    .build(),\n            )\n            .build()\n    }\n\n    //endregion Static", "                    .addInterceptor(permissionInterceptor)\n                    .build(),\n            )\n            .build()\n    }\n\n    //endregion Static"),
     "fleet interceptors in the external client": lambda f: dict(f, **{NET: f[NET].replace("externalOkHttpClient\n                    .newBuilder()", "externalOkHttpClient\n                    .newBuilder().withFleetEndpoints()")}),
     "bearer interceptor as an application interceptor": mut(NET, "addNetworkInterceptor(FleetBearerInterceptor(", "addInterceptor(FleetBearerInterceptor("),

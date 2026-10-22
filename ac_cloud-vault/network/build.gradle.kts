@@ -34,7 +34,7 @@ configure<LibraryExtension> {
     // Cloud Mail and Cloud Account (ab_cloud-libs-shared/libs/fleet-endpoints, plain JVM Kotlin). It is compiled here BY
     // REFERENCE, against this tree's own OkHttp and coroutines, so no second copy exists and the strict dependency
     // locks of this build see no new module.
-    sourceSets["main"].java.directories.add("../../ab_cloud-libs-shared/libs/fleet-endpoints/src/main/kotlin")
+    sourceSets["main"].kotlin.directories.add("../../ab_cloud-libs-shared/libs/fleet-endpoints/src/main/kotlin")
     compileOptions {
         sourceCompatibility(libs.versions.jvmTarget.get())
         targetCompatibility(libs.versions.jvmTarget.get())
