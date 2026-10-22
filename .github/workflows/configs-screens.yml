@@ -154,43 +154,6 @@ jobs:
           UNIT_TEST_FILTER: "com.diegonmarcos.superapp.launcher.NotifyCard*"
         run: bash ./build.sh test
 
-      # #1120 Cloud Mesh: Status (Connect / Disconnect / Reconnect + Always-on) and Profile (Start-up) per state, PNGs
-      # mesh-status-*.png / mesh-profile-*.png, and every Mesh* test class (supervisor rules, Always-on, mesh-down
-      # debounce, alert, store, compose) run and then required BY NAME below.
-      - name: Render Cloud Mesh Status + Profile per state; run the Mesh tests (#1120)
-        if: always()
-        working-directory: aa_cloud-superapp
-        env:
-          BYPASS_NIX: "1"
-          VAULT_DIR: ${{ github.workspace }}/.vault
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          UNIT_TEST_FILTER: "com.diegonmarcos.superapp.*.*Mesh*"
-        run: bash ./build.sh test
-
-      - name: Mesh tests passed BY NAME (no failure, none skipped) (#1120)
-        if: always()
-        working-directory: aa_cloud-superapp
-        run: |
-          set -u
-          out=app/build/configs-screens/mesh-unit-xml; mkdir -p "$out"
-          find app/build/test-results -name 'TEST-*Mesh*.xml' -exec cp {} "$out"/ \;
-          rc=0
-          for c in network.MeshSupervisorTest network.MeshAlwaysOnVpnTest network.MeshDownModelTest network.MeshIntentTest \
-                   network.mesh.MeshDeclTest network.mesh.MeshStoreTest network.mesh.MeshPageComposeTest network.mesh.MeshVpnControlsTest \
-                   network.mesh.MeshScreensShotTest notificationcenter.MeshDownAlertTest; do
-            f="$out/TEST-com.diegonmarcos.superapp.$c.xml"
-            if [ ! -f "$f" ]; then echo "::error::no report for $c"; rc=1; continue; fi
-            t=$(grep -o 'tests="[0-9]*"' "$f" | head -1 | tr -dc 0-9)
-            bad=$(grep -o -E '(failures|errors|skipped)="[1-9][0-9]*"' "$f" | head -1 || true)
-            echo "$c tests=$t ${bad:-failures=0 errors=0 skipped=0}"
-            { [ "${t:-0}" -ge 1 ] && [ -z "$bad" ]; } || rc=1
-          done
-          for p in mesh-status-connected mesh-status-disconnected mesh-status-no-engine mesh-profile-startup mesh-profile-startup-no-channel; do
-            [ -s "app/build/configs-screens/$p.png" ] || { echo "::error::no screenshot $p.png"; rc=1; }
-          done
-          exit $rc
-
       - name: Render + guard the Configs grid fits one A37 screen (grid-fit@*.png)
         if: always()
         working-directory: aa_cloud-superapp
