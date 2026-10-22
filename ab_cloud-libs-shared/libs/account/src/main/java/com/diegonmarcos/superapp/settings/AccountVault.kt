@@ -62,6 +62,10 @@ class AccountVault(context: Context) {
     fun identities(): JSONArray = parse(prefs.text(ConfigsPrefs.K_DATA)).optJSONArray("identities") ?: JSONArray()
     fun putIdentities(a: JSONArray) = prefs.putText(ConfigsPrefs.K_DATA, JSONObject().put("identities", a).toString())
 
+    /** #1103 the Autocomplete document Account holds for Cloud Keyboard ("" before the first sync); one keystore-backed prefs key, like the sections above. */
+    fun autocompleteJson(): String = prefs.text(ConfigsPrefs.K_AUTOCOMPLETE)
+    fun putAutocomplete(json: String) = prefs.putText(ConfigsPrefs.K_AUTOCOMPLETE, json)
+
     // ── Configs ──────────────────────────────────────────────────────────
 
     /** `{"<app id>": {"<store>": {"<file>": {"<key>": value, "_types": {…}}}}}` */
@@ -211,10 +215,13 @@ class AccountVault(context: Context) {
                 "com.diegonmarcos.superapp" to listOf(FleetEndpointsContract.GRANT_ENDPOINTS),
                 "com.diegonmarcos.cloudstore" to listOf(FleetEndpointsContract.GRANT_ENDPOINTS),
             ),
+            // #1103 Cloud Keyboard's own Autocomplete store is filled from here (never from the network, never from Cloud Vault).
+            5 to mapOf(KEYBOARD_PACKAGE to listOf(com.diegonmarcos.superapp.profile.AutocompletePublisher.GRANT)),
         )
+        const val KEYBOARD_PACKAGE = "com.diegonmarcos.cloudkeyboard"
         const val VAULT_PACKAGE = "com.diegonmarcos.cloudvault"
         const val MAIL_PACKAGE = "com.diegonmarcos.comms.mail"
-        const val SEED_VERSION = 4
+        const val SEED_VERSION = 5
         val DEFAULT_GRANTS: Map<String, List<String>> = DEFAULT_GRANTS_BY_VERSION.values
             .fold(emptyMap<String, List<String>>()) { acc, m -> acc + m.mapValues { (k, v) -> acc[k].orEmpty() + v } }
 

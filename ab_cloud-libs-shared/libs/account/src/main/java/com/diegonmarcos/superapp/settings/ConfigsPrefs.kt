@@ -185,6 +185,8 @@ class ConfigsPrefs(context: Context) {
         const val K_DATA = "data_json"
         const val K_APP_CONFIGS = "app_configs_json"
         const val K_GRANTS = "grants_json"
+        /** #1103 the Autocomplete document (IDs, Addresses, URLs, Secrets) synced from cloud-me-api, served to the keyboard. */
+        const val K_AUTOCOMPLETE = "autocomplete_json"
         private const val SECTION_AUTH = "auth"
         private const val K_AUTHELIA_TOKEN = "authelia_token"
         private const val K_AUTHELIA_EMAIL = "authelia_email"

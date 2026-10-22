@@ -27,7 +27,7 @@ import org.json.JSONObject
  * [Provider] is the way out: `<package>.accountdata`, exported behind CONSTELLATION_DATA (the
  * fleet's signature permission, as FleetConfigProvider is) and re-checked in call(), because the
  * framework does not permission-check call() by itself. Four methods, [METHOD_EXPORT], (#874)
- * [METHOD_SECRET], (#1090) [METHOD_MAIL_ENDPOINTS] and (#1093) [METHOD_FLEET_ENDPOINTS]; everything else a ContentProvider can do is refused. It only ever READS: nothing a
+ * [METHOD_SECRET], (#1090) [METHOD_MAIL_ENDPOINTS], (#1093) [METHOD_FLEET_ENDPOINTS] and (#1103) [AutocompletePublisher.METHOD]; everything else a ContentProvider can do is refused. It only ever READS: nothing a
  * caller sends is written.
  *
  * Limits, on purpose: the copy is one-way (Cloud Account -> SuperApp) and never overwrites a
@@ -229,6 +229,13 @@ object AccountData {
                     val vault = AccountVault(ctx)
                     if (who != ctx.packageName && !vault.grants.allow(who, com.diegonmarcos.superapp.fleetendpoints.MailEndpointsContract.GRANT_ENDPOINTS)) error("no grant for $who")
                     else runCatching { MailEndpointsPublisher.publish(ctx, who, vault) }.getOrElse { error(it.javaClass.simpleName) }
+                }
+                // #1103 the Autocomplete rows for Cloud Keyboard's own store: only a package granted `autocomplete.read`
+                AutocompletePublisher.METHOD -> {
+                    val who = caller(ctx)
+                    val vault = AccountVault(ctx)
+                    if (who != ctx.packageName && !vault.grants.allow(who, AutocompletePublisher.GRANT)) error("no grant for $who")
+                    else runCatching { AutocompletePublisher.publish(vault) }.getOrElse { error(it.javaClass.simpleName) }
                 }
                 METHOD_FLEET_ENDPOINTS -> {
                     val who = caller(ctx)

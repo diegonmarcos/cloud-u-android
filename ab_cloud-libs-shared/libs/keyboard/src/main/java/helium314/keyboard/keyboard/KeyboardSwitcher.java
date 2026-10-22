@@ -34,6 +34,7 @@ import androidx.annotation.Nullable;
 
 import helium314.keyboard.event.Event;
 import helium314.keyboard.keyboard.KeyboardLayoutSet.KeyboardLayoutSetException;
+import helium314.keyboard.keyboard.autocomplete.AutocompleteView;
 import helium314.keyboard.keyboard.clipboard.ClipboardHistoryView;
 import helium314.keyboard.keyboard.emoji.EmojiPalettesView;
 import helium314.keyboard.keyboard.internal.KeyboardState;
@@ -76,6 +77,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private SuggestionStripView mSuggestionStripView;
     private FrameLayout mStripContainer;
     private ClipboardHistoryView mClipboardHistoryView;
+    private AutocompleteView mAutocompleteView; // #1103: Autocomplete is its own panel, not a page of the clipboard
     private FakeToastView mFakeToastView;
     private ImageView mBackgroundGatheringIndicator;
     private LatinIME mLatinIME;
@@ -197,7 +199,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public void saveKeyboardState() {
-        if (getKeyboard() != null || isShowingEmojiPalettes() || isShowingClipboardHistory()) {
+        if (getKeyboard() != null || isShowingEmojiPalettes() || isShowingClipboardHistory() || isShowingAutocomplete()) {
             mState.onSaveKeyboardState();
         }
     }
@@ -343,6 +345,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         applyViewState();
         mEmojiPalettesView.stopEmojiPalettes();
         mClipboardHistoryView.stopClipboardHistory();
+        mAutocompleteView.stopAutocomplete();
         if (deferred != null) requestToolbarCheck("deferred while a panel was open: " + deferred);
     }
 
@@ -371,6 +374,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         show(mClipboardStripScrollView, plan.shows(KeyboardViewState.Piece.CLIPBOARD_STRIP));
         show(mEmojiPalettesView, plan.shows(KeyboardViewState.Piece.EMOJI_PALETTES));
         show(mClipboardHistoryView, plan.shows(KeyboardViewState.Piece.CLIPBOARD_HISTORY));
+        show(mAutocompleteView, plan.shows(KeyboardViewState.Piece.AUTOCOMPLETE_VIEW));
         if (mViewState.isPanel() && plan.getExits().isEmpty())
             Log.e(TAG, "view state " + plan.getMode() + " rendered with NO exit - KeyboardViewState.plan is broken");
     }
@@ -434,6 +438,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         }
         mViewState.openPanel(KeyboardViewState.PanelKind.EMOJI);
         mClipboardHistoryView.stopClipboardHistory();
+        mAutocompleteView.stopAutocomplete();
         mEmojiPalettesView.startEmojiPalettes(mKeyboardView.getKeyVisualAttribute(),
                 mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener);
         applyViewState();
@@ -447,8 +452,24 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         }
         mViewState.openPanel(KeyboardViewState.PanelKind.CLIPBOARD);
         mEmojiPalettesView.stopEmojiPalettes();
+        mAutocompleteView.stopAutocomplete();
         // Builds the strip's keys (CLOSE_HISTORY always among them) from the settings of NOW.
         mClipboardHistoryView.startClipboardHistory(mLatinIME.getClipboardHistoryManager(), mKeyboardView.getKeyVisualAttribute(),
+                mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener);
+        applyViewState();
+        mClipboardStripScrollView.post(() -> mClipboardStripScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT));
+    }
+
+    // Implements {@link KeyboardState.SwitchActions}. #1103: the Autocomplete panel, its own view and engine.
+    @Override
+    public void setAutocompleteKeyboard() {
+        if (DEBUG_ACTION) {
+            Log.d(TAG, "setAutocompleteKeyboard");
+        }
+        mViewState.openPanel(KeyboardViewState.PanelKind.AUTOCOMPLETE);
+        mEmojiPalettesView.stopEmojiPalettes();
+        mClipboardHistoryView.stopClipboardHistory();
+        mAutocompleteView.startAutocomplete(mKeyboardView.getKeyVisualAttribute(),
                 mLatinIME.getCurrentInputEditorInfo(), mLatinIME.mKeyboardActionListener);
         applyViewState();
         mClipboardStripScrollView.post(() -> mClipboardStripScrollView.fullScroll(HorizontalScrollView.FOCUS_RIGHT));
@@ -486,7 +507,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     }
 
     public KeyboardSwitchState getKeyboardSwitchState() {
-        boolean hidden = !isShowingEmojiPalettes() && !isShowingClipboardHistory()
+        boolean hidden = !isShowingEmojiPalettes() && !isShowingClipboardHistory() && !isShowingAutocomplete()
                 && (mKeyboardLayoutSet == null
                 || mKeyboardView == null
                 || !mKeyboardView.isShown());
@@ -622,12 +643,15 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         // Reload the entire keyboard, and switch to the previous layout
         final boolean wasEmoji = mViewState.isPanel(KeyboardViewState.PanelKind.EMOJI);
         final boolean wasClipboard = mViewState.isPanel(KeyboardViewState.PanelKind.CLIPBOARD);
+        final boolean wasAutocomplete = mViewState.isPanel(KeyboardViewState.PanelKind.AUTOCOMPLETE);
         loadKeyboard(mLatinIME.getCurrentInputEditorInfo(), Settings.getValues(),
                 mLatinIME.getCurrentAutoCapsState(), mLatinIME.getCurrentRecapitalizeState(), null);
         if (wasEmoji) {
             setEmojiKeyboard();
         } else if (wasClipboard) {
             setClipboardKeyboard();
+        } else if (wasAutocomplete) {
+            setAutocompleteKeyboard();
         }
     }
 
@@ -732,8 +756,16 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         return mClipboardHistoryView != null && mClipboardHistoryView.isShown();
     }
 
+    public AutocompleteView getAutocompleteView() {
+        return mAutocompleteView;
+    }
+
+    public boolean isShowingAutocomplete() {
+        return mAutocompleteView != null && mAutocompleteView.isShown();
+    }
+
     public boolean isShowingPopupKeysPanel() {
-        if (isShowingEmojiPalettes() || isShowingClipboardHistory()) {
+        if (isShowingEmojiPalettes() || isShowingClipboardHistory() || isShowingAutocomplete()) {
             return false;
         }
         return mKeyboardView.isShowingPopupKeysPanel();
@@ -752,6 +784,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
             return mEmojiPalettesView;
         } else if (isShowingClipboardHistory()) {
             return mClipboardHistoryView;
+        } else if (isShowingAutocomplete()) {
+            return mAutocompleteView;
         }
         return mKeyboardView;
     }
@@ -785,6 +819,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         if (mClipboardHistoryView != null) {
             mClipboardHistoryView.stopClipboardHistory();
         }
+        if (mAutocompleteView != null) {
+            mAutocompleteView.stopAutocomplete();
+        }
     }
 
     public void trimMemory() {
@@ -814,6 +851,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mMainKeyboardFrame = mCurrentInputView.findViewById(R.id.main_keyboard_frame);
         mEmojiPalettesView = mCurrentInputView.findViewById(R.id.emoji_palettes_view);
         mClipboardHistoryView = mCurrentInputView.findViewById(R.id.clipboard_history_view);
+        mAutocompleteView = mCurrentInputView.findViewById(R.id.autocomplete_view);
         mFakeToastView = mCurrentInputView.findViewById(R.id.fakeToast);
 
         mKeyboardViewWrapper = mCurrentInputView.findViewById(R.id.keyboard_view_wrapper);
@@ -825,6 +863,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mEmojiPalettesView.setKeyboardActionListener(mLatinIME.mKeyboardActionListener);
         mClipboardHistoryView.setHardwareAcceleratedDrawingEnabled(isHardwareAcceleratedDrawingEnabled);
         mClipboardHistoryView.setKeyboardActionListener(mLatinIME.mKeyboardActionListener);
+        mAutocompleteView.setHardwareAcceleratedDrawingEnabled(isHardwareAcceleratedDrawingEnabled);
+        mAutocompleteView.setKeyboardActionListener(mLatinIME.mKeyboardActionListener);
         mEmojiTabStripView = mCurrentInputView.findViewById(R.id.emoji_tab_strip);
         mClipboardStripView = mCurrentInputView.findViewById(R.id.clipboard_strip);
         mClipboardStripScrollView = mCurrentInputView.findViewById(R.id.clipboard_strip_scroll_view);

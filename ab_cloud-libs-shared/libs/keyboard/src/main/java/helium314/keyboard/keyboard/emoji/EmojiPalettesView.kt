@@ -433,8 +433,9 @@ class EmojiPalettesView(context: Context, attrs: AttributeSet?, defStyle: Int) :
     }
 
     /**
-     * #1077: the search box of the panel. Typing needs the letter keys, so a tap opens the keyboard with the search bar
-     * (the existing EMOJI_SEARCH flow), whose results come from the bundled emoji dictionary: names and keywords, offline.
+     * #1077/#1103: the search box of the panel. Typing needs the letter keys, so a tap brings the alphabet pad back and
+     * opens the results box above it ([EmojiSearchUi.TAP_CODES]); the results come from the bundled emoji dictionary:
+     * names and keywords, offline.
      */
     @Composable
     private fun SearchBox() {
@@ -443,7 +444,10 @@ class EmojiPalettesView(context: Context, attrs: AttributeSet?, defStyle: Int) :
             Modifier.fillMaxWidth().height(SEARCH_ROW_HEIGHT).padding(horizontal = 8.dp, vertical = 3.dp)
                 .background(Color(colors.get(ColorType.STRIP_BACKGROUND)), RoundedCornerShape(8.dp))
                 .clickable {
-                    keyboardActionListener.onCodeInput(KeyCode.EMOJI_SEARCH, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                    // #1103: back to the letter keys first (this panel has none), then the results box above them
+                    EmojiSearchUi.TAP_CODES.forEach {
+                        keyboardActionListener.onCodeInput(it, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+                    }
                 }.padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

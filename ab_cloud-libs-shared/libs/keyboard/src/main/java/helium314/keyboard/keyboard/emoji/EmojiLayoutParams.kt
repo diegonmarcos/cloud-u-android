@@ -33,7 +33,7 @@ internal class EmojiLayoutParams(res: Resources) {
 
         val pageIdHeight = res.getDimension(R.dimen.config_emoji_category_page_id_height)
         emojiCategoryPageIdViewHeight = pageIdHeight.toInt()
-        val offset = 1.25f * res.displayMetrics.density * sv.mKeyboardHeightScale // like ClipboardLayoutParams
+        val offset = 1.25f * res.displayMetrics.density * sv.mKeyboardHeightScale // like PanelLayoutParams
         val emojiListHeight = defaultKeyboardHeight - bottomRowKeyboardHeight - bottomPadding + (offset.toInt())
         emojiListBottomMargin = 0
         emojiKeyboardHeight = emojiListHeight - emojiCategoryPageIdViewHeight - emojiListBottomMargin

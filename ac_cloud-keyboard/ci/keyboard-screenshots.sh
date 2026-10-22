@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# CI screenshots of the Cloud Keyboard on an emulator (ship-cloud-keyboard.yml, job keyboard_screenshots), with the checks that
+# make them evidence rather than pictures: each state is also read back from the keyboard (KeyboardDebugReceiver, a debuggable
+# build only) and compared with what the ticket asks for.
+#
+#   usage: keyboard-screenshots.sh <Cloud-Keyboard.apk> <out-dir>
+#
+#   00-start               the test screen, keyboard up
+#   01..03 toolbar-page-N  the first row, page by page (the 23 keys: 11 / 11 / 1)
+#   04..06 grammar-*       the Grammar mode icon after each tap: Highlight, Off, Auto Correct again
+#   07..10 autocomplete-*  the Autocomplete panel: IDs, Addresses, URLs, Secrets (masked)
+#   11 emoji-panel         the emoji page with its search field
+#   12 emoji-search-open   after a tap on the search field: the letter pad is back, the results box is above it
+#   13 emoji-search-heart  the same, typed "heart"
+#   14..15 configs-*       Configs, with the Android keyboard settings entry
+#
+# Made-up rows only. Nothing here is a credential.
+set -uo pipefail
+APK="${1:?apk}"; OUT="${2:?out dir}"
+PKG=com.diegonmarcos.cloudkeyboard
+IME="$PKG/helium314.keyboard.latin.LatinIME"
+mkdir -p "$OUT"
+FAILS=0
+ok()   { echo "ok     $1"; }
+bad()  { echo "FAIL   $1"; FAILS=$((FAILS + 1)); }
+shot() { sleep 1; adb exec-out screencap -p > "$OUT/$1.png"; echo "shot   $1 ($(wc -c < "$OUT/$1.png") bytes)"; }
+kb()   { adb shell "am broadcast -a com.diegonmarcos.cloudkeyboard.debug.CMD -p $PKG --es cmd '$1' --es arg '${2:-}'" >/dev/null; sleep 1.5; }
+last() { adb logcat -d -s KbdShot:I | grep -- "$1 ->" | tail -1; }
+state() { kb state; last state; }
+
+adb logcat -c
+adb install -r -g "$APK" >/dev/null && ok "installed" || { bad "install"; exit 1; }
+adb shell ime enable "$IME" >/dev/null; adb shell ime set "$IME" >/dev/null
+adb shell settings put secure show_ime_with_hard_keyboard 1
+adb shell am start -n "$PKG/.ShotActivity" >/dev/null
+for _ in $(seq 1 40); do
+    adb shell dumpsys input_method | grep -q 'mInputShown=true' && break
+    sleep 1
+done
+adb shell dumpsys input_method | grep -q 'mInputShown=true' && ok "the keyboard is up" || bad "the keyboard never came up"
+sleep 3
+shot 00-start
+
+# ── the toolbar, page by page ─────────────────────────────────────────────
+kb geometry
+G="$(last geometry)"; echo "$G"
+read -r SL ST SW SH < <(sed -n 's/.*strip=\([0-9]*\),\([0-9]*\),\([0-9]*\),\([0-9]*\).*/\1 \2 \3 \4/p' <<<"$G")
+if [ -z "${SW:-}" ]; then bad "the toolbar strip was not found"; SL=0; ST=1500; SW=1080; SH=240; fi
+Y=$((ST + SH / 4)); X1=$((SL + SW * 8 / 10)); X2=$((SL + SW * 2 / 10))
+shot 01-toolbar-page-1
+adb shell input swipe "$X1" "$Y" "$X2" "$Y" 250; sleep 1; shot 02-toolbar-page-2
+adb shell input swipe "$X1" "$Y" "$X2" "$Y" 250; sleep 1; shot 03-toolbar-page-3
+adb shell input swipe "$X2" "$Y" "$X1" "$Y" 250; adb shell input swipe "$X2" "$Y" "$X1" "$Y" 250; sleep 1
+
+# ── Grammar mode: Auto -> Highlight -> Off -> Auto ────────────────────────
+state | grep -q "grammar=auto_correct" && ok "grammar starts on Auto Correct" || bad "grammar does not start on Auto Correct: $(last state)"
+kb code GRAMMAR_MODE; state | grep -q "grammar=highlight" && ok "tap 1: Highlight" || bad "tap 1 is not Highlight: $(last state)"; shot 04-grammar-highlight
+kb code GRAMMAR_MODE; state | grep -q "grammar=off" && ok "tap 2: Off" || bad "tap 2 is not Off: $(last state)"; shot 05-grammar-off
+kb code GRAMMAR_MODE; state | grep -q "grammar=auto_correct" && ok "tap 3: Auto Correct again" || bad "tap 3 is not Auto Correct: $(last state)"; shot 06-grammar-auto
+
+# ── Autocomplete: its own panel, its own pages ────────────────────────────
+SEED='{"ids":[{"label":"National ID","value":"X0000000T"},{"label":"Passport","value":"P0000000"}],"addresses":[{"label":"Home","value":"1 Example Street, Sampletown"},{"label":"Work","value":"2 Sample Avenue, Exampleville"}],"urls":[{"label":"Site","value":"https://example.org"},{"label":"Blog","value":"https://blog.example.org"}],"secrets":[{"label":"Wi-Fi","value":"fake-passphrase"},{"label":"Router","value":"fake-router-pin"}]}'
+kb seed "$SEED"; last seed | grep -q "seeded 8" && ok "the local store took 8 made-up rows" || bad "seed: $(last seed)"
+kb code AUTOCOMPLETE; sleep 2
+state | grep -q "mode=PANEL(AUTOCOMPLETE)" && ok "the Autocomplete icon opened its own panel" || bad "not in the Autocomplete panel: $(last state)"
+last state | grep -q "rows=8" && ok "the panel holds the 8 rows" || bad "the panel rows: $(last state)"
+n=7
+for p in ids addresses urls secrets; do
+    kb page "$p"; state | grep -q "autocompletePage=$p" && ok "page $p" || bad "page $p: $(last state)"
+    shot "$(printf '%02d' $n)-autocomplete-$p"; n=$((n + 1))
+done
+kb code ALPHA; state | grep -q "mode=TYPING" && ok "ABC returns to typing" || bad "still in a panel: $(last state)"
+
+# ── Emoji page search ─────────────────────────────────────────────────────
+kb code EMOJI; sleep 1; state | grep -q "mode=PANEL(EMOJI)" && ok "emoji panel" || bad "not in the emoji panel: $(last state)"
+shot 11-emoji-panel
+kb search; sleep 1
+state | grep -q "mode=TYPING" && ok "a tap on the search field gave the letter pad back" || bad "the letter pad did not come back: $(last state)"
+last state | grep -q "emojiBarActive=true" && ok "the results box is open above it" || bad "the results box is not open: $(last state)"
+shot 12-emoji-search-open
+kb text heart; sleep 2
+shot 13-emoji-search-heart
+H="$(last state | sed -n 's/.*emojiBarHeightPx=\([0-9]*\).*/\1/p')"; kb state; H="$(last state | sed -n 's/.*emojiBarHeightPx=\([0-9]*\).*/\1/p')"
+D="$(last state | sed -n 's/.*density=\([0-9.]*\).*/\1/p')"
+WANT="$(awk -v d="${D:-1}" 'BEGIN { printf "%d", 95 * d + 0.5 }')"
+if [ -n "$H" ] && [ "$H" -ge $((WANT - 3)) ] && [ "$H" -le $((WANT + 3)) ]; then ok "the results box is ${H}px = 95dp (half of the old 190dp) at density $D"; else bad "the results box is ${H:-?}px, wanted $WANT (95dp at density $D)"; fi
+kb code ALPHA
+
+# ── Configs ───────────────────────────────────────────────────────────────
+adb shell am start -n "$PKG/helium314.keyboard.settings.SettingsActivity" >/dev/null; sleep 3
+shot 14-configs-top
+adb shell input swipe 540 1800 540 600 400; sleep 1
+shot 15-configs-scrolled
+
+if adb logcat -d | grep -q "FATAL EXCEPTION.*"; then bad "a crash is in the log"; adb logcat -d | grep -A12 "FATAL EXCEPTION" | head -40; else ok "no crash in the log"; fi
+adb logcat -d > "$OUT/logcat.txt" 2>/dev/null
+adb logcat -d -s KbdShot:I > "$OUT/kbdshot.txt" 2>/dev/null
+echo; echo "== $FAILS failed =="
+[ "$FAILS" = 0 ]

@@ -117,6 +117,15 @@ fun MainSettingsScreen(
                             onClick = onClickAiRouting,
                             icon = R.drawable.ic_settings_advanced
                         ) { NextScreenIcon() }
+                        // #1103: shortcut to Android's own keyboard (input method) settings, same intent as the toolbar key
+                        ConfigsEntry.ANDROID_SETTINGS -> {
+                            val ctx = androidx.compose.ui.platform.LocalContext.current
+                            Preference(
+                                name = stringResource(R.string.android_settings),
+                                onClick = { helium314.keyboard.latin.utils.AndroidKeyboardSettings.launch(ctx) },
+                                icon = R.drawable.ic_toolbar_android_settings
+                            ) { NextScreenIcon() }
+                        }
                         // #776 Config ▸ Update: shown when the consuming app's build.json declares an update block.
                         ConfigsEntry.UPDATE -> if (KeyboardUpdate.enabled) {
                             Preference(

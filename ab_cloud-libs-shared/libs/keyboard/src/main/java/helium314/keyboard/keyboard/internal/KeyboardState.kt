@@ -36,6 +36,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         fun setAlphabetShiftLockShiftedKeyboard()
         fun setEmojiKeyboard()
         fun setClipboardKeyboard()
+        fun setAutocompleteKeyboard()
         fun setNumpadKeyboard()
         fun toggleNumpad(withSliding: Boolean, autoCapsFlags: Int, recapitalizeMode: RecapitalizeMode?, forceReturnToAlpha: Boolean)
         fun setSymbolsKeyboard()
@@ -149,6 +150,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             Mode.SYMBOLS -> if (savedKeyboardState.shiftMode == ShiftMode.MANUAL) setSymbolsShiftedKeyboard() else setSymbolsKeyboard()
             Mode.EMOJI -> setEmojiKeyboard()
             Mode.CLIPBOARD -> setClipboardKeyboard()
+            Mode.AUTOCOMPLETE -> setAutocompleteKeyboard()
             // don't overwrite toggle state if reloading from orientation change, etc.
             Mode.NUMPAD -> setNumpadKeyboard(false, false, false)
         }
@@ -304,6 +306,18 @@ class KeyboardState(private val switchActions: SwitchActions) {
         switchActions.setClipboardKeyboard()
     }
 
+    /** #1103: the Autocomplete view is its own panel, not a page of the clipboard. */
+    private fun setAutocompleteKeyboard() {
+        if (DebugFlags.DEBUG_ENABLED) {
+            Log.d(TAG, "setAutocompleteKeyboard")
+        }
+        mode = Mode.AUTOCOMPLETE
+        recapitalizeMode = null
+        prevMainKeyboardWasShiftLocked = alphabetShiftState.isShiftLocked
+        alphabetShiftState.setShiftLocked(false)
+        switchActions.setAutocompleteKeyboard()
+    }
+
     private fun setNumpadKeyboard(withSliding: Boolean, forceReturnToAlpha: Boolean, rememberState: Boolean) {
         if (DebugFlags.DEBUG_ENABLED) {
             Log.d(TAG, "setNumpadKeyboard")
@@ -354,6 +368,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             }
             Mode.EMOJI -> setEmojiKeyboard()
             Mode.CLIPBOARD -> setClipboardKeyboard()
+            Mode.AUTOCOMPLETE -> setAutocompleteKeyboard()
             Mode.NUMPAD -> {}
         }
         if (withSliding) switchState = SwitchState.MOMENTARY_FROM_NUMPAD
@@ -408,7 +423,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
             KeyCode.NUMPAD       -> {
                 // if no sliding, toggling is instead handled by onEvent to accommodate toolbar key.
                 // also prevent sliding to clipboard layout, which isn't supported yet.
-                if (withSliding) setNumpadKeyboard(true, modeBeforeNumpad == Mode.CLIPBOARD, true)
+                if (withSliding) setNumpadKeyboard(true, modeBeforeNumpad == Mode.CLIPBOARD || modeBeforeNumpad == Mode.AUTOCOMPLETE, true)
             }
         }
     }
@@ -610,7 +625,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
                     prevSymbolsKeyboardWasShifted = false
                 }
             SwitchState.SYMBOL_BEGIN ->
-                if (mode == Mode.EMOJI || mode == Mode.CLIPBOARD) {
+                if (mode == Mode.EMOJI || mode == Mode.CLIPBOARD || mode == Mode.AUTOCOMPLETE) {
                     // When in the Emoji keyboard or clipboard one, we don't want to switch back to the main layout even
                     // after the user hits an emoji letter followed by an enter or a space.
                 } else if (!isSpaceOrEnter(code) && (Constants.isLetterCode(code) || code == KeyCode.MULTIPLE_CODE_POINTS)) {
@@ -651,8 +666,8 @@ class KeyboardState(private val switchActions: SwitchActions) {
             KeyCode.ALPHA -> setAlphabetKeyboard(autoCapsFlags, recapitalizeMode)
             // Note: Printing clipboard content is handled in InputLogic.handleFunctionalEvent
             KeyCode.CLIPBOARD -> if (Settings.getValues().mClipboardHistoryEnabled) setClipboardKeyboard()
-            // #1077: the Autocomplete list is the clipboard panel's second source: ask for it, then open the panel
-            KeyCode.AUTOCOMPLETE -> { helium314.keyboard.keyboard.clipboard.AutocompletePanel.request(); setClipboardKeyboard() }
+            // #1103: Autocomplete is its own engine and its own panel; nothing of the clipboard is asked for
+            KeyCode.AUTOCOMPLETE -> setAutocompleteKeyboard()
             KeyCode.NUMPAD -> toggleNumpad(false, autoCapsFlags, recapitalizeMode, false, true)
             KeyCode.SYMBOL -> setSymbolsKeyboard()
             KeyCode.TOGGLE_ONE_HANDED_MODE -> switchActions.setOneHandedModeEnabled(!Settings.getValues().mOneHandedModeEnabled)
@@ -694,6 +709,7 @@ class KeyboardState(private val switchActions: SwitchActions) {
         SYMBOLS,
         EMOJI,
         CLIPBOARD,
+        AUTOCOMPLETE,
         NUMPAD,
     }
 

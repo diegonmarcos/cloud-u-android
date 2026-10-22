@@ -83,7 +83,7 @@ class ClipboardHistoryManager(
         if (clipData.itemCount == 0) return
         val clipItem = clipData.getItemAt(0) ?: return
         val description = clipData.description ?: return
-        // #1077: a clip marked sensitive (the Autocomplete list marks the sensitive values it copies) never enters history
+        // #1077: a clip marked sensitive (EXTRA_IS_SENSITIVE: a password manager or any app that copies a secret) never enters history
         if (ClipboardManagerCompat.getClipSensitivity(description) == true) return
         val timeStamp = ClipboardManagerCompat.getClipTimestamp(clipData)
 

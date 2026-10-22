@@ -290,3 +290,59 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" ""
+
+  # #1103 CI screenshots of the keyboard on a real emulator: the toolbar (every page), the Grammar mode icon in its three
+  # states, the Autocomplete pages and the emoji search state, each also read back from the running keyboard and compared
+  # with what the ticket asks for (ac_cloud-keyboard/ci/keyboard-screenshots.sh). The pictures are the artifact
+  # `keyboard-screenshots`; the job is red when a state is not the asked one. A run whose publish gate skipped the build
+  # uploaded no APK and this job reports that and stops.
+  keyboard_screenshots:
+    name: "Keyboard screenshots (emulator)"
+    needs: build_and_publish
+    if: ${{ !cancelled() && needs.build_and_publish.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch the APK this run built
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: Cloud-Keyboard-*
+          path: apk
+
+      - name: Pick the APK
+        id: pick
+        run: |
+          apk="$(find apk -name '*.apk' 2>/dev/null | head -1)"
+          if [ -z "$apk" ]; then echo "found=false" >> "$GITHUB_OUTPUT"; echo "no APK in this run (publish gate skipped the build): nothing to screenshot"; exit 0; fi
+          echo "found=true" >> "$GITHUB_OUTPUT"; echo "apk=$apk" >> "$GITHUB_OUTPUT"; ls -la "$apk"
+
+      - name: Enable KVM
+        if: steps.pick.outputs.found == 'true'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Boot the emulator and take the screenshots
+        if: steps.pick.outputs.found == 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: bash ac_cloud-keyboard/ci/keyboard-screenshots.sh ${{ steps.pick.outputs.apk }} keyboard-shots
+
+      - name: Upload the screenshots
+        if: ${{ always() && steps.pick.outputs.found == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: keyboard-screenshots
+          path: keyboard-shots
+          if-no-files-found: warn
+          retention-days: 30

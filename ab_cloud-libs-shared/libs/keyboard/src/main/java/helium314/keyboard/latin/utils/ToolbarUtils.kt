@@ -28,6 +28,21 @@ import java.util.Locale
 fun toolbarKeyIcon(context: Context, key: ToolbarKey): Drawable? =
     KeyboardIconsSet.instance.getNewDrawable(key.name, context)
 
+/**
+ * #1103: the Grammar mode icon has one look per mode, so the state is readable at a glance: Auto Correct is the
+ * A with a check, Highlight the A with a wavy underline, Off the A struck through. Pure, so a test pins it.
+ */
+fun grammarIconRes(mode: GrammarMode): Int = when (mode) {
+    GrammarMode.AUTO_CORRECT -> R.drawable.ic_toolbar_grammar_auto
+    GrammarMode.HIGHLIGHT -> R.drawable.ic_toolbar_grammar_highlight
+    GrammarMode.OFF -> R.drawable.ic_toolbar_grammar_off
+}
+
+/** The icon the toolbar draws for [key] right now: the state-dependent Grammar icon, else [toolbarKeyIcon]. */
+fun toolbarKeyIconNow(context: Context, key: ToolbarKey): Drawable? =
+    if (key == GRAMMAR) androidx.core.content.ContextCompat.getDrawable(context, grammarIconRes(GrammarMode.read(context.prefs())))?.mutate()
+    else toolbarKeyIcon(context, key)
+
 fun toolbarKeyDescription(context: Context, key: ToolbarKey): String =
     key.name.lowercase().getStringResourceOrName("", context)
 
@@ -41,7 +56,7 @@ fun createToolbarKey(context: Context, key: ToolbarKey): ImageButton {
     button.tag = key
     button.contentDescription = toolbarKeyDescription(context, key)
     button.isActivated = isToolbarKeyActivated(context, key)
-    button.setImageDrawable(toolbarKeyIcon(context, key))
+    button.setImageDrawable(toolbarKeyIconNow(context, key))
     return button
 }
 
@@ -124,6 +139,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     ENHANCE -> KeyCode.ENHANCE_BAR // SuperApp addition — Text Enhancements: tap opens the bar
     LANGUAGE_SWITCH -> KeyCode.LANGUAGE_SWITCH // cloud-keyboard: same code the globe key emits → InputLogic → LatinIME.switchToNextSubtype
     VAULT -> KeyCode.VAULT // cloud-keyboard: launches Cloud Vault
+    ANDROID_SETTINGS -> KeyCode.ANDROID_IME_SETTINGS // #1103: the system's input-method settings
 }
 
 fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getCustomToolbarLongpressCode(key) ?: when (key) {
@@ -160,16 +176,17 @@ enum class ToolbarKey {
     AUTOCOMPLETE, // #1077: opens the list of Cloud Account / Cloud Vault autocomplete fields (tap pastes, long-press copies)
     ENHANCE,   // SuperApp addition — Text Enhancements: rewrite selection/field via AI Model Routing
     LANGUAGE_SWITCH, // cloud-keyboard: toolbar twin of the globe key (tap = next subtype/IME per "Language switch key behavior", long-press = picker). In the default first row.
-    VAULT // cloud-keyboard: opens Cloud Vault. Not an editing tool, so it sits alone on its own page — see [toolbarKeysOnOwnPage].
+    VAULT, // cloud-keyboard: opens Cloud Vault.
+    ANDROID_SETTINGS // #1103: shortcut to Android's keyboard (input method) settings; sits right before VAULT in the default row
 }
 
 /**
- * Keys that are a destination rather than an editing tool, and read as one only when nothing else
- * shares their page. [ToolbarPaging.gaps] gives such a key a left gap sized from the page
- * width it measured, so it always starts a page of its own at any screen width, icon size or
- * rotation — the page count is measured, never a constant, so filler keys could not do this.
+ * Keys that must start a page of their own. [ToolbarPaging.gaps] gives such a key a left gap sized from the page
+ * width it measured, so it starts a page at any screen width, icon size or rotation — the page count is measured,
+ * never a constant. #1103: none today, Vault now sits right after "Switch language" in the flow of the row; the
+ * mechanism stays declared here for the next destination key.
  */
-val toolbarKeysOnOwnPage = setOf(ToolbarKey.VAULT)
+val toolbarKeysOnOwnPage: Set<ToolbarKey> = emptySet()
 
 enum class ToolbarMode {
     EXPANDABLE, TOOLBAR_KEYS, SUGGESTION_STRIP, HIDDEN,
@@ -187,11 +204,11 @@ val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java))
 // A change of THIS order reaches existing phones only via TOOLBAR_LAYOUT_REVISION.
 val defaultToolbarPref by lazy {
     val default = listOf(
-        FULL_LEFT, GRAMMAR, AUTOCOMPLETE, ENHANCE, TRANSLATE, NUMPAD, CLIPBOARD, EMOJI, VOICE, LANGUAGE_SWITCH,
+        // #1103 page one: Autocomplete and Translate swapped, Clipboard and Numpad swapped; Android keyboard settings
+        // and Cloud Vault follow "Switch language" (settings first, Vault right after it).
+        FULL_LEFT, GRAMMAR, TRANSLATE, ENHANCE, AUTOCOMPLETE, CLIPBOARD, NUMPAD, EMOJI, VOICE, LANGUAGE_SWITCH,
+        ANDROID_SETTINGS, VAULT,
         FULL_RIGHT, SELECT_ALL, WORD_RIGHT, WORD_LEFT, REDO, UNDO, SELECT_WORD, COPY, PASTE, CUT, PAGE_START,
-        // Last, and alone on the page it starts (toolbarKeysOnOwnPage): the 21 editing keys above
-        // fill the first two pages, Cloud Vault gets the third.
-        VAULT,
     )
     val others = entries.filterNot { it in default || it == CLOSE_HISTORY }
     default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
@@ -221,14 +238,14 @@ val defaultClipboardToolbarPref by lazy {
  * the stored value does not know yet, so without this a reordered default would be visible to
  * fresh installs only — the exact trap that made earlier default changes look like no-ops.
  */
-const val TOOLBAR_LAYOUT_REVISION = 3 // 3: #1077 Grammar mode + Autocomplete replace Grammar + Auto Correction
+const val TOOLBAR_LAYOUT_REVISION = 4 // 3: #1077 Grammar mode + Autocomplete replace Grammar + Auto Correction; 4: #1103 reorder + Android settings key
 
 /**
  * Adopt the current default first and second rows, once per [TOOLBAR_LAYOUT_REVISION]. This
  * DISCARDS a hand-made arrangement, which is the point: the revision only moves when the shipped
  * layout is meant to win.
  */
-private fun adoptToolbarLayoutRevision(prefs: SharedPreferences) {
+fun adoptToolbarLayoutRevision(prefs: SharedPreferences) {
     if (prefs.getInt(Settings.PREF_TOOLBAR_LAYOUT_REVISION, 0) >= TOOLBAR_LAYOUT_REVISION) return
     prefs.edit {
         putString(Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)

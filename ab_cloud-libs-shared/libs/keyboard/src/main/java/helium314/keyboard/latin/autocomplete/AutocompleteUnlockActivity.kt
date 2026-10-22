@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-package helium314.keyboard.latin.autofill
+package helium314.keyboard.latin.autocomplete
 
 import android.app.Activity
 import android.app.KeyguardManager
@@ -9,16 +9,15 @@ import android.os.Bundle
 import android.os.SystemClock
 
 /**
- * #1077: asks for the phone's screen lock (PIN, pattern, fingerprint) before the Autocomplete list shows or
- * pastes a sensitive value. A keyboard has no window of its own to host the system prompt, so this
- * transparent activity does it and grants [AutocompleteUnlock] for a minute on success. A phone with no screen
- * lock cannot unlock: sensitive rows stay masked.
+ * #1077/#1103: asks for the phone's screen lock (PIN, pattern, fingerprint) before the Secrets page shows or pastes a
+ * value. A keyboard has no window of its own to host the system prompt, so this transparent activity does it and grants
+ * [AutocompleteUnlock] for a minute on success. A phone with no screen lock cannot unlock: the Secrets stay masked.
  */
 class AutocompleteUnlockActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val km = getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager
-        val intent = if (km.isDeviceSecure) km.createConfirmDeviceCredentialIntent("Autocomplete", "Unlock to show and paste sensitive fields") else null
+        val intent = if (km.isDeviceSecure) km.createConfirmDeviceCredentialIntent("Autocomplete", "Unlock to show and paste secrets") else null
         if (intent == null) { finish(); return }
         @Suppress("DEPRECATION")
         startActivityForResult(intent, REQUEST)

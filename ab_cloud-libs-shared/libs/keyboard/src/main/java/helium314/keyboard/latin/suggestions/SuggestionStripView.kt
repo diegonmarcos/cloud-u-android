@@ -104,6 +104,7 @@ import helium314.keyboard.latin.utils.stateColor
 import helium314.keyboard.latin.utils.toKitPalette
 import helium314.keyboard.latin.utils.toolbarKeyDescription
 import helium314.keyboard.latin.utils.toolbarKeyIcon
+import helium314.keyboard.latin.utils.toolbarKeyIconNow
 import helium314.keyboard.latin.utils.toolbarKeysOnOwnPage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -696,6 +697,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         val keyWidth = width ?: dimensionResource(R.dimen.config_suggestions_strip_edge_key_width)
         val tick = activationTick // a toggle changed: the icon is redrawn in its new state
         val activated = remember(tick, item) { isToolbarKeyActivated(context, item.key) }
+        // #1103: the Grammar mode icon has a look per mode (Auto Correct, Highlight, Off); the others keep their one icon
+        val icon = remember(tick, item) {
+            if (item.key == ToolbarKey.GRAMMAR) toolbarKeyIconNow(context, item.key)
+                ?.also { Settings.getValues().mColors.setColor(it, ColorType.TOOL_BAR_KEY) } ?: item.icon
+            else item.icon
+        }
         // a key pinned to the second row is marked in the first (when pinning is on)
         val pinned = !inSecondRow && Settings.getValues().mQuickPinToolbarKeys && secondRowKeys.any { it.key == item.key }
         Box(
@@ -706,13 +713,13 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 .semantics { contentDescription = item.description },
             contentAlignment = Alignment.Center,
         ) {
-            val w = item.icon.intrinsicWidth
-            val h = item.icon.intrinsicHeight
+            val w = icon.intrinsicWidth
+            val h = icon.intrinsicHeight
             Canvas(Modifier.width(with(density) { w.toDp() }).height(with(density) { h.toDp() })) {
                 drawIntoCanvas {
-                    item.icon.setState(if (activated) ACTIVATED else UNACTIVATED)
-                    item.icon.setBounds(0, 0, w, h)
-                    item.icon.draw(it.nativeCanvas)
+                    icon.setState(if (activated) ACTIVATED else UNACTIVATED)
+                    icon.setBounds(0, 0, w, h)
+                    icon.draw(it.nativeCanvas)
                 }
             }
         }

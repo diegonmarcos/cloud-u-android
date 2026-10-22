@@ -28,7 +28,8 @@ package helium314.keyboard.keyboard
  */
 class KeyboardViewState {
 
-    enum class PanelKind { EMOJI, CLIPBOARD }
+    /** AUTOCOMPLETE (#1103) is its own panel: it shares the clipboard's strip and bottom row, nothing of its content. */
+    enum class PanelKind { EMOJI, CLIPBOARD, AUTOCOMPLETE }
 
     sealed class Mode {
         object Typing : Mode() { override fun toString() = "TYPING" }
@@ -38,7 +39,7 @@ class KeyboardViewState {
     /** The views applyViewState() owns. Nothing outside it may change their visibility. */
     enum class Piece {
         MAIN_FRAME, KEYBOARD_WRAPPER, MAIN_KEYBOARD, STRIP_CONTAINER, SUGGESTION_STRIP,
-        EMOJI_TAB_STRIP, CLIPBOARD_STRIP, EMOJI_PALETTES, CLIPBOARD_HISTORY,
+        EMOJI_TAB_STRIP, CLIPBOARD_STRIP, EMOJI_PALETTES, CLIPBOARD_HISTORY, AUTOCOMPLETE_VIEW,
     }
 
     enum class Exit {
@@ -63,10 +64,14 @@ class KeyboardViewState {
         val exits: Set<Exit> get() {
             val panel = mode as? Mode.Panel ?: return emptySet()
             val out = HashSet<Exit>()
-            val panelView = if (panel.kind == PanelKind.CLIPBOARD) Piece.CLIPBOARD_HISTORY else Piece.EMOJI_PALETTES
+            val panelView = when (panel.kind) {
+                PanelKind.CLIPBOARD -> Piece.CLIPBOARD_HISTORY
+                PanelKind.AUTOCOMPLETE -> Piece.AUTOCOMPLETE_VIEW
+                PanelKind.EMOJI -> Piece.EMOJI_PALETTES
+            }
             if (shows(Piece.MAIN_FRAME) && shows(Piece.KEYBOARD_WRAPPER) && shows(panelView))
                 out.add(Exit.BOTTOM_ROW_ALPHA)
-            if (panel.kind == PanelKind.CLIPBOARD && shows(Piece.STRIP_CONTAINER) && shows(Piece.CLIPBOARD_STRIP))
+            if (panel.kind != PanelKind.EMOJI && shows(Piece.STRIP_CONTAINER) && shows(Piece.CLIPBOARD_STRIP))
                 out.add(Exit.PANEL_CLOSE_KEY)
             return out
         }
@@ -140,6 +145,12 @@ class KeyboardViewState {
                             v.add(Piece.CLIPBOARD_STRIP)
                             // Always: the strip carries CLOSE_HISTORY even when the user (or the
                             // keyguard) hid the secondary strip - then it carries ONLY that key.
+                            v.add(Piece.STRIP_CONTAINER)
+                        }
+                        PanelKind.AUTOCOMPLETE -> {
+                            // #1103: its own view, on the clipboard's strip (which carries the close key) and bottom row
+                            v.add(Piece.AUTOCOMPLETE_VIEW)
+                            v.add(Piece.CLIPBOARD_STRIP)
                             v.add(Piece.STRIP_CONTAINER)
                         }
                     }

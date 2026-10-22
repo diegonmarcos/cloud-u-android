@@ -6,4 +6,4 @@ package helium314.keyboard.settings
  * this order and a test pins it, so a page cannot drift to another position by an edit elsewhere.
  * Toolbar is first, Autocomplete sits right after Clipboard.
  */
-enum class ConfigsEntry { TOOLBAR, CLIPBOARD, AUTOCOMPLETE, EMOJI, TRANSLATION, TEXT_ENHANCE, GRAMMAR_CHECK, VOICE_TRANSCRIPT, AI_ROUTING, UPDATE }
+enum class ConfigsEntry { TOOLBAR, CLIPBOARD, AUTOCOMPLETE, EMOJI, TRANSLATION, TEXT_ENHANCE, GRAMMAR_CHECK, VOICE_TRANSCRIPT, AI_ROUTING, ANDROID_SETTINGS, UPDATE }

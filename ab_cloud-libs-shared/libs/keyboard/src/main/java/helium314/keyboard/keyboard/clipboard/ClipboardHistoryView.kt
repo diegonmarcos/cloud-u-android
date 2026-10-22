@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.rememberScrollState
@@ -51,13 +50,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -87,15 +83,12 @@ import helium314.keyboard.keyboard.MainKeyboardView
 import helium314.keyboard.keyboard.PointerTracker
 import helium314.keyboard.keyboard.internal.KeyDrawParams
 import helium314.keyboard.keyboard.internal.KeyVisualAttributes
+import helium314.keyboard.keyboard.panel.PanelLayoutParams
+import helium314.keyboard.keyboard.panel.drawableBackground
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.AudioAndHapticFeedbackManager
 import helium314.keyboard.latin.ClipboardHistoryEntry
 import helium314.keyboard.latin.ClipboardHistoryManager
-import helium314.keyboard.latin.autofill.AutocompleteItem
-import helium314.keyboard.latin.autofill.AutocompleteItems
-import helium314.keyboard.latin.autofill.AutocompleteUnlock
-import helium314.keyboard.latin.autofill.AutocompleteUnlockActivity
-import com.diegonmarcos.superapp.autofill.AutofillSotClient
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.common.ColorType
 import helium314.keyboard.latin.common.Constants
@@ -137,7 +130,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         val textSizePx: Float,
         val labelSizePx: Float,
         val colCount: Int,
-        val layout: ClipboardLayoutParams,
+        val layout: PanelLayoutParams,
         val keyboardWidth: Int,
         val keyboardHeight: Int,
         val padLeft: Int,
@@ -160,11 +153,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
     private var opening by mutableIntStateOf(0)
     private var pinPickerFor by mutableStateOf<Long?>(null)
     private val searchState = TextFieldState()
-    /** #1077: the list shows the Autocomplete rows instead of the clips (see [AutocompletePanel]). */
-    private var autocompleteMode by mutableStateOf(false)
-    private var autocompleteItems by mutableStateOf<List<AutocompleteItem>>(emptyList())
-    /** Bumped when the unlock state may have changed, so masked rows are drawn again. */
-    private var unlockTick by mutableIntStateOf(0)
     private val toolbarKeys = mutableListOf<ImageButton>()
 
     lateinit var keyboardActionListener: KeyboardActionListener
@@ -220,9 +208,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
                     val entries = remember(version, m, opening) {
                         List(m.getHistorySize()) { m.getHistoryEntry(it) }.filterNotNull()
                     }
-                    if (autocompleteMode) {
-                        AutocompleteList(look, keyBackground, textColor, fontFamily)
-                    } else if (entries.isEmpty()) {
+                    if (entries.isEmpty()) {
                         Text("¯\\_(ツ)_/¯", color = textColor, fontFamily = fontFamily, textAlign = TextAlign.Center,
                             fontSize = with(density) { (look.labelSizePx * 2).toSp() },
                             modifier = Modifier.align(Alignment.Center))
@@ -263,9 +249,8 @@ class ClipboardHistoryView @JvmOverloads constructor(
                     fontFamily = fontFamily,
                     fontSize = 14.sp,
                     modifier = Modifier
-                        .alpha(if (listName == current && !autocompleteMode) 1f else 0.5f)
+                        .alpha(if (listName == current) 1f else 0.5f)
                         .clickable {
-                            autocompleteMode = false
                             m.setCurrentList(listName)
                             version++
                         }
@@ -273,98 +258,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
                         // the clipboard panel replaces the keyboard).
                         .padding(horizontal = 8.dp, vertical = 4.dp),
                 )
-            }
-            // #1077: the second source of this panel
-            Text(
-                text = stringResource(R.string.autocomplete),
-                color = Color(keyText),
-                fontFamily = fontFamily,
-                fontSize = 14.sp,
-                modifier = Modifier
-                    .alpha(if (autocompleteMode) 1f else 0.5f)
-                    .clickable { showAutocomplete() }
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-            )
-        }
-    }
-
-    /** #1077: switch the list to the Autocomplete rows and read them from Cloud Account (off the main thread). */
-    private fun showAutocomplete() {
-        autocompleteMode = true
-        val ctx = context.applicationContext
-        Thread {
-            val items = try {
-                if (AutofillSotClient.installed(ctx) && AutofillSotClient.canRead(ctx))
-                    AutocompleteItems.build(AutofillSotClient.profiles(ctx), AutofillSotClient.snippets(ctx))
-                else AutocompleteItems.build(emptyList(), emptyList())
-            } catch (t: Throwable) {
-                Log.e("ClipboardHistoryView", "autocomplete rows could not be read", t)
-                AutocompleteItems.build(emptyList(), emptyList())
-            }
-            post { autocompleteItems = items; unlockTick++ }
-        }.start()
-    }
-
-    private fun unlockedNow() = AutocompleteUnlock.isUnlocked(android.os.SystemClock.elapsedRealtime())
-
-    /** #1077: tap pastes, long-press copies; sensitive rows are masked and ask for the screen lock first; vault rows open the vault. */
-    @Composable
-    private fun AutocompleteList(look: Look, keyBackground: Drawable?, textColor: Color, fontFamily: FontFamily?) {
-        val density = LocalDensity.current
-        unlockTick // read: a finished unlock redraws the masks
-        val unlocked = unlockedNow()
-        val rows = autocompleteItems
-        LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(700); unlockTick++ } } // a finished unlock lifts the masks
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = with(density) { look.padLeft.toDp() })) {
-            items(count = rows.size) { i ->
-                val item = rows[i]
-                Column {
-                if (i == 0 || rows[i - 1].group != item.group)
-                    Text(item.group, color = textColor.copy(alpha = 0.6f), fontFamily = fontFamily, fontSize = 12.sp,
-                        modifier = Modifier.padding(top = 6.dp, start = 4.dp))
-                var pressed by remember { mutableStateOf(false) }
-                Row(
-                    Modifier.fillMaxWidth().padding(vertical = 2.dp).drawableBackground(keyBackground, pressed)
-                        .pointerInput(item) {
-                            detectTapGestures(
-                                onPress = { pressed = true; tryAwaitRelease(); pressed = false },
-                                onTap = { useAutocomplete(item, copy = false) },
-                                onLongPress = { useAutocomplete(item, copy = true) },
-                            )
-                        }.padding(horizontal = 8.dp, vertical = 6.dp),
-                ) {
-                    Text(item.label, color = textColor.copy(alpha = 0.7f), fontFamily = fontFamily,
-                        fontSize = with(density) { look.textSizePx.toSp() }, modifier = Modifier.weight(0.4f))
-                    Text(AutocompleteItems.shown(item, unlocked), color = textColor, fontFamily = fontFamily, maxLines = 2,
-                        overflow = TextOverflow.Ellipsis, fontSize = with(density) { look.textSizePx.toSp() },
-                        modifier = Modifier.weight(0.6f))
-                }
-                }
-            }
-        }
-    }
-
-    private fun useAutocomplete(item: AutocompleteItem, copy: Boolean) {
-        when (AutocompleteItems.access(item, unlockedNow())) {
-            AutocompleteItems.Access.OPEN_VAULT ->
-                keyboardActionListener.onCodeInput(KeyCode.VAULT, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
-            AutocompleteItems.Access.NEEDS_UNLOCK -> AutocompleteUnlockActivity.start(context)
-            AutocompleteItems.Access.USE -> {
-                val value = item.value ?: return
-                if (copy) {
-                    val clip = android.content.ClipData.newPlainText(item.label, value)
-                    if (item.sensitive && android.os.Build.VERSION.SDK_INT >= 33)
-                        clip.description.extras = android.os.PersistableBundle().apply { putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true) }
-                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(clip)
-                    if (android.os.Build.VERSION.SDK_INT < 33)
-                        android.widget.Toast.makeText(context, item.label, android.widget.Toast.LENGTH_SHORT).show()
-                } else {
-                    keyboardActionListener.onPressKey(KeyCode.NOT_SPECIFIED, 0, true, HapticEvent.KEY_PRESS)
-                    keyboardActionListener.onTextInput(value)
-                    keyboardActionListener.onReleaseKey(KeyCode.NOT_SPECIFIED, false)
-                    if (Settings.getValues().mAlphaAfterClipHistoryEntry)
-                        keyboardActionListener.onCodeInput(KeyCode.ALPHA, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
-                }
             }
         }
     }
@@ -491,14 +384,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
         }
     }
 
-    private fun Modifier.drawableBackground(drawable: Drawable?, pressed: Boolean): Modifier =
-        if (drawable == null) this else drawBehind {
-            drawable.state = if (pressed) intArrayOf(android.R.attr.state_pressed, android.R.attr.state_enabled)
-                else intArrayOf(android.R.attr.state_enabled)
-            drawable.setBounds(0, 0, size.width.toInt(), size.height.toInt())
-            drawIntoCanvas { drawable.draw(it.nativeCanvas) }
-        }
-
     private fun setupBottomRow(view: MainKeyboardView, request: BottomRow) {
         if (bottomRowConfigured === request) return
         bottomRowConfigured = request
@@ -568,7 +453,7 @@ class ClipboardHistoryView @JvmOverloads constructor(
         pinPickerFor = null
 
         val settings = Settings.getInstance()
-        val layout = ClipboardLayoutParams(context)
+        val layout = PanelLayoutParams(context)
         val params = KeyDrawParams()
         params.updateParams(layout.bottomRowKeyboardHeight, keyVisualAttr)
         KeyboardTypeface.customTypeface()?.let { params.mTypeface = it }
@@ -600,8 +485,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
             padRight = rightPadding,
         )
         manager = historyManager
-        autocompleteMode = false
-        if (AutocompletePanel.consume()) showAutocomplete() // #1077: opened by the Autocomplete toolbar icon
         searchState.clearText() // clear search box on re-open
         opening++
         version++
@@ -611,8 +494,6 @@ class ClipboardHistoryView @JvmOverloads constructor(
     }
 
     fun stopClipboardHistory() {
-        AutocompleteUnlock.lock() // #1077: sensitive rows are masked again whenever the panel closes
-        autocompleteItems = emptyList()
         manager?.setHistoryChangeListener(null)
         pinPickerFor = null
     }

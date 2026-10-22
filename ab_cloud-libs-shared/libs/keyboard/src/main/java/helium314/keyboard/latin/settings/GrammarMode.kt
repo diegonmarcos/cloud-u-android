@@ -3,6 +3,7 @@ package helium314.keyboard.latin.settings
 
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import helium314.keyboard.latin.R
 
 /**
  * #1077: Auto Correction and Grammar Check are ONE feature with one mode. Auto Correct fixes silently
@@ -13,14 +14,25 @@ import androidx.core.content.edit
 enum class GrammarMode(val id: String) {
     AUTO_CORRECT("auto_correct"), HIGHLIGHT("highlight"), OFF("off");
 
-    /** The tap order of the toolbar's Grammar mode icon. */
-    fun next(): GrammarMode = when (this) { HIGHLIGHT -> AUTO_CORRECT; AUTO_CORRECT -> OFF; OFF -> HIGHLIGHT }
+    /** The tap order of the toolbar's Grammar mode icon (#1103): Auto, Highlights, Off, and round again. */
+    fun next(): GrammarMode = when (this) { AUTO_CORRECT -> HIGHLIGHT; HIGHLIGHT -> OFF; OFF -> AUTO_CORRECT }
 
     val autoCorrects get() = this == AUTO_CORRECT
     val checksGrammar get() = this != OFF
 
     companion object {
         fun fromId(id: String?): GrammarMode? = entries.firstOrNull { it.id == id }
+
+        /** The string naming [mode] in the toast the icon shows after a tap (#1103). Pure, so a test pins it. */
+        @JvmStatic
+        fun labelRes(mode: GrammarMode): Int = when (mode) {
+            AUTO_CORRECT -> R.string.grammar_check_mode_auto_correct
+            HIGHLIGHT -> R.string.grammar_check_mode_highlight
+            OFF -> R.string.grammar_check_mode_off
+        }
+
+        /** The toast text: "Grammar mode: Auto Correct". [title] and [label] are the two resource strings. */
+        fun toast(title: String, label: String) = "$title: $label"
 
         /** The mode for stored values; [legacyAutoCorrect] is the old boolean's value (default true), [legacyEngine] the old grammar engine. */
         fun resolve(stored: String?, legacyAutoCorrect: Boolean, legacyEngine: String?): GrammarMode =

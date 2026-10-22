@@ -760,7 +760,11 @@ public final class InputLogic {
                 mLatinIME.cycleGrammarMode();
                 break;
             case KeyCode.AUTOCOMPLETE:
-                // #1077: opening the list is KeyboardState's job (it is the clipboard panel's second source).
+                // #1077/#1103: opening the Autocomplete view is KeyboardState's job (its own panel since #1103).
+                break;
+            case KeyCode.ANDROID_IME_SETTINGS:
+                // #1103: TAP -> Android's keyboard (input method) settings.
+                mLatinIME.launchAndroidKeyboardSettings();
                 break;
             case KeyCode.ENHANCE:
                 // SuperApp addition: LONG-PRESS → Text Enhancements without the bar. Sends

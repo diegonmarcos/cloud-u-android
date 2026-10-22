@@ -369,7 +369,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
         GrammarMode.write(mPrefs, GrammarMode.read(mPrefs) == GrammarMode.AUTO_CORRECT ? GrammarMode.HIGHLIGHT : GrammarMode.AUTO_CORRECT);
     }
 
-    /** #1077: the toolbar's Grammar mode icon: Highlight -> Auto Correct -> Off -> Highlight. */
+    /** #1077: the toolbar's Grammar mode icon: Auto Correct -> Highlight -> Off -> Auto Correct (#1103). */
     public void cycleGrammarMode() {
         GrammarMode.write(mPrefs, GrammarMode.read(mPrefs).next());
     }

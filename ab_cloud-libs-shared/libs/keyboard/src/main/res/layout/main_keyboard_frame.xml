@@ -87,6 +87,15 @@
             android:visibility="gone"
             android:background="@android:color/transparent"
             style="?attr/clipboardHistoryViewStyle" />
+        <!-- #1103: the Autocomplete panel, its own view and engine; it takes the clipboard's styling, nothing of its content -->
+        <helium314.keyboard.keyboard.autocomplete.AutocompleteView
+            android:id="@+id/autocomplete_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:visibility="gone"
+            android:background="@android:color/transparent"
+            style="?attr/clipboardHistoryViewStyle" />
 
         <ImageButton
             android:id="@+id/btn_stop_one_handed_mode"

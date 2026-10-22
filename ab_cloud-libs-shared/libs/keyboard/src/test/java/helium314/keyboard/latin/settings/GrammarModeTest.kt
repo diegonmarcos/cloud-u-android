@@ -9,10 +9,10 @@ import org.junit.Test
 
 /** #1077 items 2, 3 and 9: the merged Grammar mode, its engines and the new defaults. */
 class GrammarModeTest {
-    @Test fun theModeCyclesHighlightAutoCorrectOffAndBack() {
-        assertEquals(GrammarMode.AUTO_CORRECT, GrammarMode.HIGHLIGHT.next())
-        assertEquals(GrammarMode.OFF, GrammarMode.AUTO_CORRECT.next())
-        assertEquals(GrammarMode.HIGHLIGHT, GrammarMode.OFF.next())
+    @Test fun theModeCyclesAutoCorrectHighlightOffAndBack() { // #1103 changed the order from Highlight, Auto Correct, Off
+        assertEquals(GrammarMode.HIGHLIGHT, GrammarMode.AUTO_CORRECT.next())
+        assertEquals(GrammarMode.OFF, GrammarMode.HIGHLIGHT.next())
+        assertEquals(GrammarMode.AUTO_CORRECT, GrammarMode.OFF.next())
     }
 
     @Test fun aStoredModeWins() {

@@ -151,6 +151,7 @@ public class LatinIME extends InputMethodService implements
     // hosted the same way as the translate bar. Replaces the old always-visible
     // in-panel emoji-only search field.
     private helium314.keyboard.keyboard.emoji.EmojiSearchBarView mEmojiSearchBar;
+    @Nullable private helium314.keyboard.latin.debug.KeyboardDebugReceiver mDebugReceiver;
 
     // SuperApp: the Text Enhancements bar (ENHANCE toolbar key, short tap).
     private EnhanceBarView mEnhanceBar;
@@ -594,6 +595,9 @@ public class LatinIME extends InputMethodService implements
             restartAfterUnlockFilter.addAction(Intent.ACTION_USER_UNLOCKED);
         registerReceiver(mRestartAfterDeviceUnlockReceiver, restartAfterUnlockFilter);
 
+        // the CI screenshot job's hands: only in a debuggable build, only for the adb shell (android.permission.DUMP)
+        mDebugReceiver = helium314.keyboard.latin.debug.KeyboardDebugReceiver.registerIfDebuggable(this);
+
         StatsUtils.onCreate(mSettings.getCurrent(), mRichImm);
     }
 
@@ -717,6 +721,7 @@ public class LatinIME extends InputMethodService implements
         unregisterReceiver(mDictionaryPackInstallReceiver);
         unregisterReceiver(mDictionaryDumpBroadcastReceiver);
         unregisterReceiver(mRestartAfterDeviceUnlockReceiver);
+        if (mDebugReceiver != null) unregisterReceiver(mDebugReceiver);
         mStatsUtilsManager.onDestroy(this /* context */);
         super.onDestroy();
         mHandler.removeCallbacksAndMessages(null);
@@ -951,6 +956,11 @@ public class LatinIME extends InputMethodService implements
      *  routes key presses into it instead of the app field. */
     public boolean isEmojiSearchBarActive() {
         return isPanelUp(mEmojiSearchBar);
+    }
+
+    /** #1103: the height in px of the emoji search results box while it is up, 0 otherwise (the CI state check reads it). */
+    public int getEmojiSearchBarHeightPx() {
+        return isPanelUp(mEmojiSearchBar) ? mEmojiSearchBar.getHeight() : 0;
     }
 
     /** SuperApp (patch 0001): true while the translate bar is shown — LatinIME
@@ -2225,16 +2235,25 @@ public class LatinIME extends InputMethodService implements
         startActivity(intent);
     }
 
-    /** #1077: the Grammar mode icon. Cycles Highlight / Auto Correct / Off and names the new mode. */
+    /** #1103: the ANDROID_SETTINGS toolbar key: hand over to Android's keyboard settings. */
+    public void launchAndroidKeyboardSettings() {
+        mInputLogic.commitTyped(mSettings.getCurrent(), LastComposedWord.NOT_A_SEPARATOR);
+        requestHideSelf(0);
+        final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
+        if (mainKeyboardView != null) {
+            mainKeyboardView.closing();
+        }
+        helium314.keyboard.latin.utils.AndroidKeyboardSettings.INSTANCE.launch(this);
+    }
+
+    /** #1077: the Grammar mode icon. Cycles Auto Correct / Highlight / Off (#1103) and names the new mode in a toast. */
     public void cycleGrammarMode() {
         Settings.getInstance().cycleGrammarMode();
         final helium314.keyboard.latin.settings.GrammarMode mode =
                 helium314.keyboard.latin.settings.GrammarMode.read(helium314.keyboard.latin.utils.DeviceProtectedUtils.getSharedPreferences(this));
-        final int label = mode == helium314.keyboard.latin.settings.GrammarMode.AUTO_CORRECT ? R.string.grammar_check_mode_auto_correct
-                : mode == helium314.keyboard.latin.settings.GrammarMode.HIGHLIGHT ? R.string.grammar_check_mode_highlight
-                : R.string.grammar_check_mode_off;
-        android.widget.Toast.makeText(this, getString(R.string.grammar_check_mode_title) + ": " + getString(label),
-                android.widget.Toast.LENGTH_SHORT).show();
+        final int label = helium314.keyboard.latin.settings.GrammarMode.labelRes(mode);
+        android.widget.Toast.makeText(this, helium314.keyboard.latin.settings.GrammarMode.Companion.toast(
+                getString(R.string.grammar_check_mode_title), getString(label)), android.widget.Toast.LENGTH_SHORT).show();
     }
 
     public void launchEmojiSearch() {

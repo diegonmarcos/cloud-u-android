@@ -161,6 +161,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
                     ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
                     ToolbarKey.AUTOCOMPLETE -> R.drawable.ic_toolbar_autocomplete // #1077
+                    ToolbarKey.ANDROID_SETTINGS -> R.drawable.ic_toolbar_android_settings // #1103
                 })
             }
         } }
@@ -229,6 +230,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch_lxx // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
                     ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
                     ToolbarKey.AUTOCOMPLETE -> R.drawable.ic_toolbar_autocomplete // #1077
+                    ToolbarKey.ANDROID_SETTINGS -> R.drawable.ic_toolbar_android_settings // #1103
                 })
             }
         } }
@@ -297,6 +299,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch_lxx // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
                     ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
                     ToolbarKey.AUTOCOMPLETE -> R.drawable.ic_toolbar_autocomplete // #1077
+                    ToolbarKey.ANDROID_SETTINGS -> R.drawable.ic_toolbar_android_settings // #1103
                 })
             }
         } }

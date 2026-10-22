@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
-package helium314.keyboard.keyboard.clipboard
+package helium314.keyboard.keyboard.panel
 
 import android.content.Context
 import helium314.keyboard.keyboard.internal.KeyboardParams
@@ -8,8 +8,11 @@ import helium314.keyboard.latin.R
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.ResourceUtils
 
-/** The clipboard panel's pixel geometry, derived from the keyboard's: key gaps, list and bottom-row heights. */
-class ClipboardLayoutParams(ctx: Context) {
+/**
+ * The pixel geometry of a panel that replaces the keys (clipboard, Autocomplete), derived from the keyboard's: key gaps, list
+ * and bottom-row heights. #1103: shared by the two panels so they look alike; they share nothing else.
+ */
+class PanelLayoutParams(ctx: Context) {
 
     val keyVerticalGap: Int
     val keyHorizontalGap: Int

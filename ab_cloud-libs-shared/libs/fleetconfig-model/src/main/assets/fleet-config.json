@@ -88,6 +88,14 @@
         "next_id": "device"
       }
     },
+    "autocomplete_store": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#1103 Cloud Keyboard's own Autocomplete database (IDs, Addresses, URLs, Secrets), kept like a browser's autofill store: one key, rows, holding an AES-GCM blob sealed with a non-exportable Android Keystore key of this phone. It is a cache of what Cloud Account syncs to the keyboard over its accountdata provider (grant autocomplete.read): it is re-filled from there, cannot be read on another phone (the key stays here) and never migrates. No vault calls, no network.",
+      "used_by": [
+        "lib-keyboard"
+      ]
+    },
     "PUSH_NOTIFICATIONS": {
       "kind": "prefs",
       "class": "device",

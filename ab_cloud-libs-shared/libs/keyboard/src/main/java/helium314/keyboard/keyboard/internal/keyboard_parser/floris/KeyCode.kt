@@ -105,7 +105,8 @@ object KeyCode {
     const val ENHANCE_BAR =                 -306 // SuperApp addition — open the Text Enhancements bar (tap)
     const val VAULT =                       -307 // SuperApp addition — open Cloud Vault (com.diegonmarcos.cloudvault)
     const val GRAMMAR_MODE =                -308 // #1077 — cycle Grammar mode: Highlight / Auto Correct / Off
-    const val AUTOCOMPLETE =                -309 // #1077 — open the Autocomplete list (Cloud Account / Cloud Vault fields)
+    const val AUTOCOMPLETE =                -309 // #1077 — open the Autocomplete view (its own engine since #1103)
+    const val ANDROID_IME_SETTINGS =        -310 // #1103 — open Android's input-method (keyboard) settings
 
     const val CURRENCY_SLOT_1 =             -801
     const val CURRENCY_SLOT_2 =             -802

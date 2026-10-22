@@ -11,6 +11,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -102,32 +103,35 @@ class EmojiSearchBarView(context: Context) : KitImeComposeView(context) {
     @Composable
     override fun Body() {
         val p = LocalKitPalette.current
-        Column(Modifier.fillMaxWidth().background(p.surface).padding(start = 10.dp, top = 6.dp, end = 10.dp, bottom = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        // #1103: half the height the three stacked rows made it (EmojiSearchUi): the typed text, then ONE row of results,
+        // emoji first, then stickers and GIFs; the hint or "No results." sits in that row too.
+        Column(Modifier.fillMaxWidth().height(EmojiSearchUi.BOX_HEIGHT_DP.dp).background(p.surface)
+            .padding(start = 10.dp, top = EmojiSearchUi.TOP_DP.dp, end = 10.dp, bottom = EmojiSearchUi.BOTTOM_DP.dp)) {
+            Row(Modifier.height(EmojiSearchUi.TYPED_LINE_DP.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(typed, color = p.textPrimary, fontSize = 16.sp, maxLines = 1,
                     modifier = Modifier.weight(1f).padding(4.dp))
                 Text("✕", color = p.textSecondary, fontSize = 16.sp,
                     modifier = Modifier.clickable { onClose?.run() }.padding(start = 10.dp, top = 2.dp, end = 4.dp, bottom = 2.dp))
             }
-            emptyText?.let {
-                Text(it, color = p.textSecondary, fontStyle = FontStyle.Italic, textAlign = TextAlign.Start,
-                    modifier = Modifier.padding(start = 4.dp, top = 8.dp, end = 4.dp, bottom = 4.dp))
-            }
             ResultRow {
+                emptyText?.let {
+                    Text(it, color = p.textSecondary, fontStyle = FontStyle.Italic, textAlign = TextAlign.Start,
+                        modifier = Modifier.align(Alignment.CenterVertically).padding(horizontal = 4.dp))
+                }
                 emojis.forEach { emoji ->
                     Box(Modifier.size(CELL_DP.dp).clickable { commitEmoji(emoji) }, contentAlignment = Alignment.Center) {
                         Text(emoji, fontSize = 22.sp, color = p.textPrimary)
                     }
                 }
+                stickers.forEach { MediaCell(it) }
+                gifs.forEach { MediaCell(it) }
             }
-            ResultRow { stickers.forEach { MediaCell(it) } }
-            ResultRow { gifs.forEach { MediaCell(it) } }
         }
     }
 
     @Composable
-    private fun ResultRow(content: @Composable () -> Unit) {
-        Row(Modifier.fillMaxWidth().height((CELL_DP + 8).dp).horizontalScroll(rememberScrollState())) { content() }
+    private fun ResultRow(content: @Composable RowScope.() -> Unit) {
+        Row(Modifier.fillMaxWidth().height(EmojiSearchUi.RESULT_ROW_DP.dp).horizontalScroll(rememberScrollState())) { content() }
     }
 
     @Composable

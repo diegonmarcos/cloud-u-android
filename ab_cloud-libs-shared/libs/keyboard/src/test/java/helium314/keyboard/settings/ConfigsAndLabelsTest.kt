@@ -25,6 +25,18 @@ class ConfigsAndLabelsTest {
         assertEquals(order.size, order.toSet().size)
     }
 
+    @Test fun androidKeyboardSettingsIsAnEntryOfConfigsAndHasAString() {
+        // #1103 item 6d: the same shortcut as the toolbar key, in the Configs menu list (before the conditional Update entry)
+        val order = ConfigsEntry.entries
+        assertTrue(ConfigsEntry.ANDROID_SETTINGS in order)
+        assertEquals(ConfigsEntry.UPDATE, order.last())
+        assertEquals(ConfigsEntry.ANDROID_SETTINGS, order[order.size - 2])
+        assertEquals("Android keyboard settings", string(File(res, "values/strings.xml"), "android_settings"))
+        val screen = File("src/main/java/helium314/keyboard/settings/screens/MainSettingsScreen.kt").readText()
+        assertTrue(screen.contains("AndroidKeyboardSettings.launch(ctx)"))
+        assertEquals("android.settings.INPUT_METHOD_SETTINGS", helium314.keyboard.latin.utils.AndroidKeyboardSettings.ACTION)
+    }
+
     @Test fun theThreeRenamesAreLabelsOnly() {
         val default = File(res, "values/strings.xml")
         assertEquals("Keyboard - first row icons", string(default, "toolbar_keys"))
@@ -53,7 +65,8 @@ class ConfigsAndLabelsTest {
 
     @Test fun theFirstToolbarPageHasOneGrammarModeIconAndTheAutocompleteIconInTheFreedSlot() {
         val enabled = defaultToolbarPref.split(Separators.ENTRY).filter { it.endsWith("true") }.map { it.substringBefore(Separators.KV) }
-        assertEquals(listOf("FULL_LEFT", "GRAMMAR", "AUTOCOMPLETE", "ENHANCE"), enabled.take(4))
+        // #1103: Autocomplete and Translate swapped (Translate is now third, Autocomplete fifth)
+        assertEquals(listOf("FULL_LEFT", "GRAMMAR", "TRANSLATE", "ENHANCE", "AUTOCOMPLETE"), enabled.take(5))
         assertEquals(1, enabled.count { it == "GRAMMAR" })
         assertTrue(ToolbarKey.entries.none { it.name == "AUTOCORRECT" }) // merged into Grammar mode
         assertFalse(defaultToolbarPref.contains("AUTOCORRECT"))

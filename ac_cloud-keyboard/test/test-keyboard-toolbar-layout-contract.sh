@@ -121,9 +121,9 @@ blocks = re.findall(r'val default = listOf\((.*?)\n\s*\)', tu, re.S)
 row = next((b for b in blocks if 'FULL_LEFT' in b), None)
 assert row is not None, 'the default first toolbar row is gone from ToolbarUtils'
 keys = re.findall(r'\b([A-Z][A-Z_]+)\b', re.sub(r'//[^\n]*', '', row))
-own_page = set(re.findall(r'ToolbarKey\.([A-Z_]+)',
-               re.search(r'toolbarKeysOnOwnPage = setOf\(([^)]*)\)', tu).group(1)))
-assert own_page, 'no key asks for its own page — Cloud Vault shared a page again'
+m_own = re.search(r'toolbarKeysOnOwnPage: Set<ToolbarKey> = (?:emptySet\(\)|setOf\(([^)]*)\))', tu)
+assert m_own, 'toolbarKeysOnOwnPage is gone'
+own_page = set(re.findall(r'ToolbarKey\.([A-Z_]+)', m_own.group(1) or ''))  # #1103: none today; the mechanism stays
 
 def slot_start(slot, per, page):          # ToolbarPaging.slotStart
     return (slot // per) * page + (slot % per) * page // per
@@ -154,12 +154,12 @@ pages = {}
 for k, st in zip(keys, starts):
     pages.setdefault(st // 1188, []).append(k)
 counts = [len(pages[p]) for p in sorted(pages)]
-assert per == 11 and counts == [11, 10, 1], f'pages hold {counts} at {per} per page, the design is 11 / 10 / the own-page key alone'
-assert set(pages[max(pages)]) == own_page
+assert per == 11 and counts == [11, 11, 1], f'pages hold {counts} at {per} per page, the design is 11 / 11 / 1'
+assert pages[0][-1] == 'ANDROID_SETTINGS' and pages[1][0] == 'VAULT', 'page 1 must end with Android keyboard settings and page 2 open with Vault'
 print(f'    {key_dp}dp keys, {len(keys)} in the default row, scales 0.85-1.3 checked, 1.0 splits {counts}')
 PYEOF
 then
-    pass "A3 the page geometry holds at scales 0.85 / 1.0 / 1.15 / 1.3 and splits 11 / 10 / the own-page key alone"
+    pass "A3 the page geometry holds at scales 0.85 / 1.0 / 1.15 / 1.3 and splits 11 / 11 / 1"
 else
     fail "A3 the page geometry no longer matches the design"
 fi

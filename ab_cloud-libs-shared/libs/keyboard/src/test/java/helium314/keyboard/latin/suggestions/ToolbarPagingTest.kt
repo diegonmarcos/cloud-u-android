@@ -68,15 +68,28 @@ class ToolbarPagingTest {
         }
     }
 
-    @Test fun theOwnPageKeyStartsAPageAtEveryScale() {
+    /** The own-page mechanism is kept for the next destination key; Vault used it until #1103 put it in the flow of the row. */
+    private val vaultOwnPage = setOf(ToolbarKey.VAULT)
+
+    @Test fun anOwnPageKeyStartsAPageAtEveryScale() {
         for (scale in scales) for (viewport in viewports) {
             val keys = defaultRow()
-            val layout = ToolbarPaging.layout(keys, toolbarKeysOnOwnPage, viewport, 36 * 3, scale)
+            val layout = ToolbarPaging.layout(keys, vaultOwnPage, viewport, 36 * 3, scale)
             val v = keys.indexOf(ToolbarKey.VAULT)
-            assertEquals("Cloud Vault starts a page at scale $scale, $viewport px", 0, layout.keyStart[v] % viewport)
+            assertEquals("the own-page key starts a page at scale $scale, $viewport px", 0, layout.keyStart[v] % viewport)
             assertTrue("and is alone on it", layout.keyStart[v - 1] / viewport < layout.keyStart[v] / viewport)
-            assertEquals(v, keys.size - 1)
         }
+    }
+
+    @Test fun vaultFollowsAndroidSettingsInTheFlowOfTheRow() {
+        val keys = defaultRow()
+        val a = keys.indexOf(ToolbarKey.ANDROID_SETTINGS)
+        assertEquals(a + 1, keys.indexOf(ToolbarKey.VAULT))
+        assertTrue(toolbarKeysOnOwnPage.isEmpty())
+        val layout = ToolbarPaging.layout(keys, toolbarKeysOnOwnPage, 1188, 108, 1.0f)
+        // eleven to a page: the first page ends with the Android settings key and Vault opens the second
+        assertEquals(0, layout.keyStart[a] / layout.page)
+        assertEquals(1, layout.keyStart[a + 1] / layout.page)
     }
 
     @Test fun theDefaultRowFillsWholePagesAtTheDeclaredScale() {
@@ -85,20 +98,21 @@ class ToolbarPagingTest {
         assertEquals(11, layout.perPage) // 1188 / 108
         val perPage = sortedMapOf<Int, MutableList<ToolbarKey>>()
         keys.forEachIndexed { i, key -> perPage.getOrPut(layout.keyStart[i] / layout.page) { mutableListOf() }.add(key) }
-        assertEquals(listOf(11, 10, 1), perPage.values.map { it.size })
-        assertEquals(toolbarKeysOnOwnPage, perPage.values.last().toSet())
+        assertEquals(listOf(11, 11, 1), perPage.values.map { it.size }) // #1103: 23 keys; before it 11 / 10 / Vault alone
+        assertEquals(ToolbarKey.ANDROID_SETTINGS, perPage.values.first().last())
+        assertEquals(ToolbarKey.VAULT, perPage.values.drop(1).first().first())
         assertEquals(3, layout.pages)
     }
 
     @Test fun onlyAKeyThatWantsItsOwnPageGetsAGap() {
         val keys = listOf(ToolbarKey.UNDO, ToolbarKey.REDO, ToolbarKey.VAULT)
-        val gaps = ToolbarPaging.gaps(keys, toolbarKeysOnOwnPage, 4)
+        val gaps = ToolbarPaging.gaps(keys, vaultOwnPage, 4)
         assertArrayEquals(intArrayOf(0, 0, 2), gaps) // the 2 cells that remain of the first page
     }
 
     @Test fun aKeyAlreadyOnAPageBoundaryNeedsNoGap() {
         val keys = listOf(ToolbarKey.UNDO, ToolbarKey.REDO, ToolbarKey.COPY, ToolbarKey.CUT, ToolbarKey.VAULT)
-        assertArrayEquals(intArrayOf(0, 0, 0, 0, 0), ToolbarPaging.gaps(keys, toolbarKeysOnOwnPage, 4))
+        assertArrayEquals(intArrayOf(0, 0, 0, 0, 0), ToolbarPaging.gaps(keys, vaultOwnPage, 4))
     }
 
     @Test fun theLayoutDoesNotMoveWhenTheRowIsLaidOutAgain() {

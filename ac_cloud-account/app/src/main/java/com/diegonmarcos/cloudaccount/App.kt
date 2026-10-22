@@ -56,6 +56,12 @@ class App : Application() {
             .onFailure { Log.w(TAG, "account debug API not registered", it) }
         // Settings ▸ Debug API off keeps the loopback server stopped (it is started by DebugInitProvider).
         runCatching { com.diegonmarcos.superapp.profile.DebugApiSwitch.apply(this) }
+        // #1103 the Autocomplete rows for Cloud Keyboard: pulled from cloud-me-api now and every 6 hours, kept in this app's encrypted store.
+        kotlin.concurrent.thread(name = "account-me-autocomplete") {
+            runCatching { com.diegonmarcos.superapp.profile.MeAutocompleteSync.sync(this) }
+                .onFailure { Log.w(TAG, "autocomplete sync failed: ${it.javaClass.simpleName}") }
+        }
+        runCatching { MeAutocompleteWorker.schedule(this) }.onFailure { Log.w(TAG, "autocomplete sync not scheduled", it) }
         // Settings ▸ Auto-backup: re-arm (or cancel) the daily job.
         runCatching { AutoBackupWorker.schedule(this) }.onFailure { Log.w(TAG, "auto-backup not scheduled", it) }
     }

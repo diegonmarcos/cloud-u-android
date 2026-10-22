@@ -1,0 +1,16 @@
+<!--
+    #1103 Android keyboard settings shortcut: a gear.
+    Drawn for this app (stroke glyph), runtime-tinted by the toolbar like the others.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:height="24dp"
+    android:width="24dp"
+    android:viewportHeight="24"
+    android:viewportWidth="24" >
+    <path android:strokeColor="#FFF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M8.8,12A3.2,3.2 0 1 0 15.2,12A3.2,3.2 0 1 0 8.8,12Z"/>
+    <path android:strokeColor="#FFF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M5.8,12A6.2,6.2 0 1 0 18.2,12A6.2,6.2 0 1 0 5.8,12Z"/>
+    <path android:strokeColor="#FFF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M12,2.5V5.8M12,18.2V21.5M2.5,12H5.8M18.2,12H21.5M5.3,5.3L7.6,7.6M16.4,16.4L18.7,18.7M5.3,18.7L7.6,16.4M16.4,7.6L18.7,5.3"/>
+</vector>

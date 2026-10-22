@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The toolbar row pages by a whole screen of icons: eleven on page one, ten on page two,
-# Cloud Vault alone on page three. It has now shown four instead of eleven twice, both
+# The toolbar row pages by a whole screen of icons: eleven on page one (ending with the Android keyboard
+# settings key), eleven on page two (opening with Cloud Vault), one on page three (#1103). It has now shown four instead of eleven twice, both
 # times because something OUTSIDE the paging arithmetic (ToolbarPaging) changed the width a
 # key occupies. This runner cannot lay out a view, so the proof is the arithmetic plus the
 # two things that feed it:
@@ -11,9 +11,10 @@
 #       The Compose strip takes one gap PER KEY from ToolbarPaging.gaps and nothing shared.
 #   T2  exactly one place computes the page-start gap of a toolbar key, and it is that alignment.
 #   T3  the geometry: page = as many whole keys as the viewport shows, and with the shipped
-#       key width on a 411dp portrait screen that is eleven, splitting the 22 default keys
-#       11 / 10 / Vault. Fails if the key width or the default row grows past the design.
-#   T4  Cloud Vault is last in the default row and is the key that starts its own page.
+#       key width on a 411dp portrait screen that is eleven, splitting the 23 default keys
+#       11 / 11 / 1. Fails if the key width or the default row grows past the design.
+#   T4  #1103: Android keyboard settings sits right before Cloud Vault, Vault right after Switch language,
+#       and no key is forced onto a page of its own any more.
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 K="$APP/../ab_cloud-libs-shared/libs/keyboard/src/main"
@@ -53,7 +54,9 @@ dim, tu = (open(p).read() for p in sys.argv[1:3])
 key_dp = int(re.search(r'"config_suggestions_strip_edge_key_width">(\d+)dp', dim).group(1))
 row = re.search(r'val default = listOf\((.*?)\n    \)', tu, re.S).group(1)
 keys = [k for k in re.findall(r'\b([A-Z][A-Z_]+)\b', re.sub(r'//[^\n]*', '', row))]
-own_page = set(re.findall(r'ToolbarKey\.([A-Z_]+)', re.search(r'toolbarKeysOnOwnPage = setOf\(([^)]*)\)', tu).group(1)))
+m_own = re.search(r'toolbarKeysOnOwnPage: Set<ToolbarKey> = (?:emptySet\(\)|setOf\(([^)]*)\))', tu)
+assert m_own, 'toolbarKeysOnOwnPage is gone'
+own_page = set(re.findall(r'ToolbarKey\.([A-Z_]+)', m_own.group(1) or ''))
 
 def slot_start(slot, per, page):
     return (slot // per) * page + (slot % per) * page // per
@@ -79,15 +82,15 @@ per, starts, widths = layout(1188, key_dp * 3, 1.0)
 pages = {}
 for k, st in zip(keys, starts): pages.setdefault(st // 1188, []).append(k)
 counts = [len(pages[p]) for p in sorted(pages)]
-assert per == 11 and counts == [11, 10, 1], f'pages hold {counts}, the design is 11 / 10 / Vault alone'
-assert pages[max(pages)] == ['VAULT'], f'page 3 holds {pages[max(pages)]}'
+assert per == 11 and counts == [11, 11, 1], f'pages hold {counts}, the design is 11 / 11 / 1'
+assert pages[0][-1] == 'ANDROID_SETTINGS' and pages[1][0] == 'VAULT', f'page 1 ends {pages[0][-1]}, page 2 opens {pages[1][0]}'
 print(f'{key_dp}dp keys, {per}/page, split {counts}')
 EOF
-then ok "T3 the page arithmetic gives 11 / 10 / Vault and holds at every scale"; else bad "T3 page arithmetic"; fi
+then ok "T3 the page arithmetic gives 11 / 11 / 1 and holds at every scale"; else bad "T3 page arithmetic"; fi
 
 # ── T4 Vault's place in the row ──────────────────────────────────────────────
-has "$TU" 'toolbarKeysOnOwnPage = setOf(ToolbarKey.VAULT)' "T4 Vault is the own-page key"
-has "$TU" '^        VAULT,$' "T4 Vault is last in the default row"
+has "$TU" 'toolbarKeysOnOwnPage: Set<ToolbarKey> = emptySet()' "T4 no key is forced onto its own page"
+has "$TU" 'LANGUAGE_SWITCH, ANDROID_SETTINGS, VAULT,\|^        ANDROID_SETTINGS, VAULT,$' "T4 Android keyboard settings, then Vault, follow Switch language"
 
 echo
 echo "== $PASS ok, $FAIL failed =="

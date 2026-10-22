@@ -125,6 +125,10 @@ clip = re.search(r"PanelKind\.CLIPBOARD\s*->\s*\{(.*?)\n\s{24}\}", VS, re.S)
 cb = clip.group(1) if clip else ""
 check(re.search(r"(?m)^\s*v\.add\(Piece\.STRIP_CONTAINER\)", cb) is not None and "v.add(Piece.CLIPBOARD_STRIP)" in cb,
       "G4 a clipboard panel always shows the strip container and its strip")
+ac = re.search(r"PanelKind\.AUTOCOMPLETE\s*->\s*\{(.*?)\n\s{24}\}", VS, re.S)
+acb = ac.group(1) if ac else ""
+check(re.search(r"(?m)^\s*v\.add\(Piece\.STRIP_CONTAINER\)", acb) is not None and "v.add(Piece.CLIPBOARD_STRIP)" in acb and "v.add(Piece.AUTOCOMPLETE_VIEW)" in acb,
+      "G4 an Autocomplete panel (#1103) shows its own view and always the strip container and the strip with the close key")
 panel = re.search(r"is Mode\.Panel\s*->\s*\{(.*)", VS, re.S)
 check(panel is not None and re.search(r"v\.add\(Piece\.MAIN_FRAME\);\s*v\.add\(Piece\.KEYBOARD_WRAPPER\)", panel.group(1)) is not None,
       "G4 every panel shows the frame and the wrapper that hold its ABC row")
@@ -192,6 +196,8 @@ mutate "the self-heal ignores an open panel" "$J/keyboard/KeyboardSwitcher.java"
     "s=s.replace('if (mViewState.deferToolbarCheck(trigger))','if (false)')" "G3 requestToolbarCheck consults"
 mutate "the clipboard strip follows the hidden secondary strip" "$J/keyboard/KeyboardViewState.kt" \
     "s=re.sub(r'(?m)^(\s*)v\.add\(Piece\.STRIP_CONTAINER\)\n(\s*)\}', r'\1if (inputs.secondaryStripVisible) v.add(Piece.STRIP_CONTAINER)\n\2}', s, count=1)" "G4 a clipboard panel always"
+mutate "the Autocomplete panel follows the hidden secondary strip" "$J/keyboard/KeyboardViewState.kt" \
+    "s=re.sub(r'(?s)(PanelKind\.AUTOCOMPLETE -> \{.*?)v\.add\(Piece\.STRIP_CONTAINER\)', r'\1if (inputs.secondaryStripVisible) v.add(Piece.STRIP_CONTAINER)', s, count=1)" "G4 an Autocomplete panel"
 mutate "panels respect 'show toolbar only' (hides the ABC row)" "$J/keyboard/KeyboardViewState.kt" \
     "s=s.replace('v.add(Piece.MAIN_FRAME); v.add(Piece.KEYBOARD_WRAPPER)','v.add(Piece.MAIN_FRAME); if (!inputs.showToolbarOnly) v.add(Piece.KEYBOARD_WRAPPER)')" "G4 every panel shows"
 mutate "a hidden strip drops the close key too" "$J/keyboard/KeyboardViewState.kt" \

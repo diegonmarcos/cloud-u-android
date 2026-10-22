@@ -1,0 +1,16 @@
+<!--
+    #1103 Grammar mode icon, state Highlight: the letter A with a wavy underline.
+    Drawn for this app (stroke glyph), runtime-tinted by the toolbar like the others.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:height="24dp"
+    android:width="24dp"
+    android:viewportHeight="24"
+    android:viewportWidth="24" >
+    <path android:strokeColor="#FFF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M4,18L9,5L14,18M5.8,14H12.2"/>
+    <path android:strokeColor="#FFF" android:strokeWidth="1.8" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M3,21.2Q4.5,19.2 6,21.2T9,21.2T12,21.2T15,21.2T18,21.2T21,21.2"/>
+    <path android:strokeColor="#FFF" android:strokeWidth="1.4" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M16,6H21M16,10H20"/>
+</vector>

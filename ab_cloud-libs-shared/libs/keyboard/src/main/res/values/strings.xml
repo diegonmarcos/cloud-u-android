@@ -324,6 +324,20 @@
     <!-- cloud-keyboard — VAULT toolbar key label (ToolbarKey.name.lowercase → getStringResourceOrName) -->
     <string name="vault" tools:keep="@string/vault">Cloud Vault</string>
     <string name="vault_not_installed">Cloud Vault is not installed</string>
+    <!-- #1103 — ANDROID_SETTINGS toolbar key label (ToolbarKey.name.lowercase → getStringResourceOrName) and the Configs entry -->
+    <string name="android_settings" tools:keep="@string/android_settings">Android keyboard settings</string>
+    <!-- #1103 — the Autocomplete panel and its Configs page -->
+    <string name="autocomplete_empty">Nothing here yet. Cloud Account fills this page from your private data.</string>
+    <string name="autocomplete_no_account">Cloud Account is not installed, so there is nothing to sync.</string>
+    <string name="autocomplete_no_grant">Cloud Account has not allowed this keyboard to read Autocomplete data (Account, Secrets, grants).</string>
+    <string name="autocomplete_reveal">Reveal (screen lock)</string>
+    <string name="autocomplete_hide">Hide</string>
+    <string name="autocomplete_pages">Pages</string>
+    <string name="autocomplete_masked">masked</string>
+    <string name="autocomplete_actions">This phone</string>
+    <string name="autocomplete_sync_now">Sync now from Cloud Account</string>
+    <string name="autocomplete_clear">Clear the Autocomplete data on this phone</string>
+    <string name="autocomplete_source_note">The keyboard keeps these rows on this phone, encrypted, like a browser\'s autofill store. Cloud Account holds your private data and syncs it here; the keyboard never fetches it from the network and never asks Cloud Vault.</string>
     <string name="enhance_style_title">Enhancement style</string>
     <string name="enhance_style_summary">What the AI is asked to do with the selected text (or the whole field)</string>
     <string name="enhance_toolbar_title">Show in toolbar</string>
