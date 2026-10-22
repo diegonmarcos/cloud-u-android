@@ -48,6 +48,12 @@ on:
 permissions:
   contents: read
 
+# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
+concurrency:
+  group: licence-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# ── end MANAGED-GUARD-CONCURRENCY ──
+
 jobs:
   licence-boundary:
     runs-on: ubuntu-latest

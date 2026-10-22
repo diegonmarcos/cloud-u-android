@@ -38,6 +38,12 @@ on:
 permissions:
   contents: read
 
+# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
+concurrency:
+  group: workflow-header-fence-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# ── end MANAGED-GUARD-CONCURRENCY ──
+
 jobs:
   header-fence:
     runs-on: ubuntu-latest

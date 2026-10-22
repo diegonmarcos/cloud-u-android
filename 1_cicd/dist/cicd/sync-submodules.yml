@@ -7,6 +7,12 @@ on:
     - cron: '23 */12 * * *'
   workflow_dispatch:
 
+# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
+concurrency:
+  group: sync-submodules-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# ── end MANAGED-GUARD-CONCURRENCY ──
+
 jobs:
   sync:
     runs-on: ubuntu-latest

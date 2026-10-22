@@ -24,6 +24,12 @@ on:
 permissions:
   contents: read
 
+# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
+concurrency:
+  group: dns-resolver-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# ── end MANAGED-GUARD-CONCURRENCY ──
+
 jobs:
   dns-resolver:
     runs-on: ubuntu-latest

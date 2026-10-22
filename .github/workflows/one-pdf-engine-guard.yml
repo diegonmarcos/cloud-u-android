@@ -36,6 +36,12 @@ on:
 permissions:
   contents: read
 
+# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──
+concurrency:
+  group: one-pdf-engine-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+# ── end MANAGED-GUARD-CONCURRENCY ──
+
 jobs:
   one-pdf-engine:
     runs-on: ubuntu-latest
