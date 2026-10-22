@@ -1,7 +1,7 @@
 name: "Ship → Cloud-C3-WebServer APK (build + push to GHCR via ORAS + attach to GH Release)"
 
 # The phone's local web server, as a Tauri 2 Android app: Rust plus the
-# server's own web UI, no hand-written Kotlin. `cargo tauri android build`
+# app shell (five tabs around the shared Linux file view), no hand-written Kotlin. `cargo tauri android build`
 # cross-compiles ac_cloud-c3-webserver/src-tauri (which links server/) with the
 # NDK for the variant's ABI and runs the committed Tauri gradle project
 # (src-tauri/gen/android). Every tool is pinned in build.json::toolchain: the
@@ -126,10 +126,25 @@ jobs:
       # wrong one for testing — editing a tester does not move the APK, and
       # gating here would let a new assertion land without ever running once.
       - name: "Test → this application's testers, and what is not covered"
+        env:
+          # test-c3-webserver-pages.sh and -render.sh write their Galaxy A37 screenshots here.
+          SHOTS_DIR: ${{ runner.temp }}/c3-webserver-shots
         run: |
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
+
+      # One PNG per page of the app (1080x2340 px, Galaxy A37 density): the five tabs, Configs About /
+      # Engines / Links, the file view and the link chooser. Uploaded even when a tester failed, because a
+      # failing run is the one whose pictures are wanted.
+      - name: Upload the page screenshots
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: c3-webserver-shots-${{ matrix.abi }}-${{ github.sha }}
+          path: ${{ runner.temp }}/c3-webserver-shots
+          if-no-files-found: warn
+          retention-days: 30
 
       # The toolchain this job uses, read from build.json — never restated here.
       - name: Resolve the declared toolchain

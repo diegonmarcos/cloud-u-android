@@ -126,7 +126,7 @@
       "wave": 0,
       "ui": "compose",
       "size": "-",
-      "notes": "Rust server + Compose tabs (#687). Nothing counted.",
+      "notes": "Rust server + web shell: five tabs in server/ui/shell.html (Tauri, no Kotlin since #712). Nothing counted.",
       "baseline": {
         "view_screens": 0,
         "layout_xml": 0,

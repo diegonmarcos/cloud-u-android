@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>cloud-c3-webserver</title>
+<style>
+  :root { --bg:#0b0e14; --panel:#131824; --line:#1e2634; --fg:#e6e9ef; --dim:#8b95a7; --acc:#7cc4ff; --nav:52px; --top:44px; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.35 system-ui, sans-serif; }
+  /* The shell top row: pages start below it. */
+  header { position:fixed; top:0; left:0; right:0; z-index:4; height:calc(var(--top) + env(safe-area-inset-top)); padding:env(safe-area-inset-top) 12px 0; background:var(--bg); border-bottom:1px solid var(--line); display:flex; align-items:center; gap:10px; }
+  header h1 { font-size:15px; margin:0; font-weight:600; }
+  header .sub { flex:1; color:var(--dim); font-size:12px; }
+  #gear { background:none; border:1px solid var(--line); color:var(--dim); border-radius:8px; width:32px; height:32px; font:17px system-ui; padding:0; }
+  #gear.on { color:var(--acc); border-color:var(--acc); }
+  main { padding:calc(var(--top) + env(safe-area-inset-top) + 8px) 10px calc(var(--nav) + env(safe-area-inset-bottom) + 12px); }
+  main.files { padding:0; }
+  #fileview { display:block; width:100%; border:0; position:fixed; left:0; right:0; top:calc(var(--top) + env(safe-area-inset-top)); bottom:calc(var(--nav) + env(safe-area-inset-bottom)); height:calc(100% - var(--top) - var(--nav) - env(safe-area-inset-top) - env(safe-area-inset-bottom)); background:#fff; }
+  nav { position:fixed; left:0; right:0; bottom:0; z-index:4; height:calc(var(--nav) + env(safe-area-inset-bottom)); display:flex; background:var(--panel); border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom); }
+  nav button { flex:1; background:none; border:0; color:var(--dim); font:12px system-ui; padding:6px 0; }
+  nav button.on { color:var(--acc); font-weight:600; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; margin-bottom:8px; overflow:hidden; }
+  section h2 { font-size:12px; margin:0; padding:6px 10px; color:var(--dim); text-transform:uppercase; letter-spacing:.04em; border-bottom:1px solid var(--line); }
+  .row { display:flex; gap:10px; padding:6px 10px; border-bottom:1px solid var(--line); word-break:break-word; }
+  .row:last-child { border-bottom:0; }
+  .row .k { flex:0 0 38%; color:var(--dim); }
+  .row .v { flex:1; min-width:0; }
+  a { color:var(--acc); text-decoration:none; }
+  .path { font:12px ui-monospace, monospace; }
+  .sum { color:var(--dim); font-size:12px; margin-top:1px; }
+  .tool { display:flex; gap:8px; align-items:center; padding:6px 10px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .tool button, .back a { color:var(--acc); background:none; border:1px solid var(--line); border-radius:6px; padding:6px 10px; font:13px system-ui; }
+  .index .cells { display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:6px; padding:8px 10px; }
+  .index .cell { background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:8px; font:13px system-ui; text-align:left; }
+  h2.macro { font-size:13px; margin:14px 2px 6px; color:var(--acc); letter-spacing:.04em; }
+  .back { margin:-2px 0 8px; text-align:right; }
+  .badge { font-size:11px; color:var(--dim); border:1px solid var(--line); border-radius:4px; padding:1px 6px; margin-left:6px; }
+  .err { color:#ff8a8a; padding:10px; }
+  .seg { display:flex; gap:6px; padding:6px 10px; border-bottom:1px solid var(--line); }
+  .seg button { flex:1; background:var(--bg); color:var(--dim); border:1px solid var(--line); border-radius:8px; padding:7px 0; font:600 13px system-ui; }
+  .seg button.on { color:var(--acc); border-color:var(--acc); }
+  .served { display:grid; grid-template-columns:auto 1fr; gap:2px 10px; align-items:center; }
+  .served .dot { width:9px; height:9px; border-radius:50%; background:var(--dim); display:inline-block; }
+  .served .dot.up { background:#7ee2a8; } .served .dot.down { background:#ff8a8a; }
+  .served .links { display:flex; flex-wrap:wrap; gap:4px 14px; }
+  .served .links a { padding:6px 0; min-height:32px; display:inline-flex; align-items:center; }
+  .served .head { font-weight:600; }
+  .note { color:var(--dim); font-size:12px; padding:6px 10px; }
+  .eng { display:flex; gap:10px; padding:6px 10px; border-bottom:1px solid var(--line); align-items:flex-start; }
+  .eng:last-child { border-bottom:0; }
+  .eng .t { flex:1; min-width:0; }
+  .eng .nm { font-weight:600; }
+  .eng .cv { color:var(--acc); font:12px ui-monospace, monospace; word-break:break-word; }
+  .eng .why { color:#e6c07b; font-size:12px; margin-top:2px; }
+  .toast { position:fixed; left:12px; right:12px; bottom:calc(var(--nav) + 10px); background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:13px; z-index:9; }
+  .toast.bad { border-color:#ff8a8a; color:#ff8a8a; }
+  /* The link chooser: a bottom sheet over the nav. */
+  #scrim { position:fixed; inset:0; z-index:8; background:rgba(0,0,0,.55); display:none; }
+  #scrim.on { display:block; }
+  #sheet { position:fixed; left:0; right:0; bottom:0; z-index:9; background:var(--panel); border-top:1px solid var(--line); border-radius:14px 14px 0 0; padding:12px 12px calc(12px + env(safe-area-inset-bottom)); display:none; }
+  #sheet.on { display:block; }
+  #sheet .u { font:12px ui-monospace, monospace; color:var(--dim); word-break:break-all; margin:2px 0 10px; max-height:3.6em; overflow:hidden; }
+  #sheet .ty { font-weight:600; }
+  #sheet button.ch { display:block; width:100%; margin:6px 0; min-height:44px; background:var(--bg); color:var(--acc); border:1px solid var(--line); border-radius:10px; font:600 14px system-ui; }
+  #sheet label { display:flex; gap:8px; align-items:center; color:var(--dim); font-size:13px; margin:8px 0 2px; }
+  #sheet button.cancel { background:none; border:0; color:var(--dim); width:100%; min-height:40px; font:14px system-ui; }
+</style>
+</head>
+<body>
+<header><h1 id="title">cloud-c3-webserver</h1><span class="sub" id="sub"></span><button id="gear" aria-label="Settings" title="Settings: Configs">⚙</button></header>
+<main id="main"><div class="err" id="boot">Connecting to the server…</div></main>
+<nav id="nav" aria-label="tabs"></nav>
+<div id="scrim"></div>
+<div id="sheet" role="dialog" aria-modal="true" aria-label="Open link"></div>
+
+<script id="pure">
+// PURE: no browser object is touched here. Every function maps server JSON to
+// an HTML string or a decision, so the tester runs this block under node and
+// proves what the tabs draw is what the route table said, and what a tapped
+// link offers is what build.json::links declared.
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+// The bottom nav is the route table's tab rows, in table order.
+function tabsFrom(routes) {
+  return routes.filter(function (r) { return r.tab; }).map(function (r) {
+    return { id: r.path.split('/').pop(), label: r.tab, path: r.path };
+  });
+}
+function tabFromPath(pathname) {
+  var m = /^\/__app__\/tab\/([a-z0-9-]+)\/?$/.exec(pathname || '');
+  return m ? m[1] : null;
+}
+function defaultTab(tabs) {
+  var home = tabs.filter(function (t) { return t.id === 'home'; })[0];
+  return home ? home.id : (tabs[0] ? tabs[0].id : null);
+}
+function renderNav(tabs, current) {
+  return tabs.map(function (t) {
+    return '<button data-tab="' + esc(t.id) + '"' + (t.id === current ? ' class="on"' : '') + '>' + esc(t.label) + '</button>';
+  }).join('');
+}
+// Pages and API tabs: one section, one row per route of that kind.
+function renderRoutes(routes, kind) {
+  var rows = routes.filter(function (r) { return r.kind === kind; });
+  var title = kind === 'page' ? rows.length + ' pages this app serves' : rows.length + ' API routes of this app';
+  var body = rows.map(function (r) {
+    var tab = r.tab ? '<span class="badge">tab: ' + esc(r.tab) + '</span>' : '';
+    return '<div class="row"><div class="v"><a class="path" href="' + esc(r.path) + '">' + esc(r.path) + '</a>' + tab +
+      '<div class="sum">' + esc(r.summary) + '</div></div></div>';
+  }).join('');
+  return '<section><h2>' + esc(title) + '</h2>' + body + '</section>';
+}
+function renderSections(sections) {
+  return sections.map(function (s) {
+    var rows = s.rows.map(function (kv) {
+      return '<div class="row"><div class="k">' + esc(kv[0]) + '</div><div class="v">' + esc(kv[1]) + '</div></div>';
+    }).join('');
+    return '<section><h2>' + esc(s.title) + '</h2>' + rows + '</section>';
+  }).join('');
+}
+// Home: the cloud-superapp Configs > About shape: an Index of the macro groups, then each group's sections.
+function renderAbout(groups) {
+  var cells = groups.map(function (g, i) {
+    return '<button class="cell" data-jump="macro-' + i + '">' + esc(g.macro) + '</button>';
+  }).join('');
+  var out = '<section class="index" id="about-index"><h2>Index</h2><div class="cells">' + cells + '</div>' +
+    '<div class="tool"><button data-copy-about>Copy All Infos</button></div></section>';
+  groups.forEach(function (g, i) {
+    out += '<h2 class="macro" id="macro-' + i + '">' + esc(g.macro) + '</h2>' + renderSections(g.sections) +
+      '<div class="back"><a data-jump="about-index" href="#about-index">Go Back Up to Index</a></div>';
+  });
+  return out;
+}
+function aboutText(groups) {
+  return groups.map(function (g) {
+    return '== ' + g.macro + ' ==\n' + g.sections.map(function (s) {
+      return '# ' + s.title + '\n' + s.rows.map(function (kv) { return kv[0] + ': ' + kv[1]; }).join('\n');
+    }).join('\n\n');
+  }).join('\n\n') + '\n';
+}
+function renderConfig(cfg) {
+  var top = []; var nested = [];
+  Object.keys(cfg).forEach(function (k) {
+    var v = cfg[k];
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) nested.push([k, v]);
+    else top.push([k, Array.isArray(v) ? v.join(', ') : String(v)]);
+  });
+  var out = renderSections([{ title: 'Server', rows: top }]);
+  nested.forEach(function (kv) {
+    out += renderSections([{ title: kv[0], rows: Object.keys(kv[1]).map(function (k) { return [k, String(kv[1][k])]; }) }]);
+  });
+  return out;
+}
+// Pages: every served page of the phone, by port and by private DNS name (/__app__/api/serving). A link here
+// goes through the link chooser like any other link; it never navigates this view by itself.
+function renderServed(sv) {
+  var rows = sv.endpoints.map(function (e) {
+    var state = e.up === true ? 'up' : (e.up === false ? 'down' : '');
+    var label = e.up === true ? 'answering' : (e.up === false ? 'not answering' : '');
+    return '<div class="row"><div class="v served">' +
+      '<span class="dot ' + state + '" title="' + esc(label) + '"></span>' +
+      '<span class="head">' + esc(e.title) + '<span class="badge">:' + esc(e.port) + '</span><span class="badge">' + esc(e.role) + '</span></span>' +
+      '<span></span><span class="links">' +
+        '<a href="' + esc(e.url_name) + '">' + esc(e.name) + '</a>' +
+        '<a href="' + esc(e.url_ip) + '">127.0.0.1:' + esc(e.port) + '</a></span>' +
+      '<span></span><span class="sum">' + esc(e.summary) + '</span></div></div>';
+  }).join('');
+  return '<section><h2>Served pages · tap a link to choose how to open it</h2>' + rows +
+    '<div class="note">Names resolve through this app\'s private DNS (udp ' + esc(sv.dns.host) + ':' + esc(sv.dns.port) + '), only inside our apps.</div></section>';
+}
+function renderCfgTabs(current) {
+  return '<div class="seg" role="tablist">' + [['about', 'About'], ['engines', 'Engines'], ['links', 'Links']].map(function (t) {
+    return '<button role="tab" data-cfg="' + t[0] + '"' + (t[0] === current ? ' class="on" aria-selected="true"' : '') + '>' + t[1] + '</button>';
+  }).join('') + '</div>';
+}
+function renderServing(sv, cfg) {
+  var drive = sv.endpoints.filter(function (e) { return e.role === 'drive'; })[0];
+  var diag = sv.endpoints.filter(function (e) { return e.role === 'diag'; })[0];
+  var serves = [
+    ['Emulated drive', drive ? drive.name + '  →  127.0.0.1:' + drive.port + '  ·  ' + (cfg.root || '') + ' and nothing else' : '—'],
+    ['Fleet diagnostics', diag ? diag.name + '  →  127.0.0.1:' + diag.port + '  ·  the SuperApp\'s About, Logcat and Diagnose' : '—'],
+    ['Reads', 'loopback only; any other peer is refused'],
+    ['Methods', (cfg.methods || []).join(', ') + ' (+ the guarded link opener)']
+  ];
+  var ports = sv.endpoints.map(function (e) {
+    return [e.name, '127.0.0.1:' + e.port + '  ·  ' + e.role + (e.up === true ? '  ·  answering' : (e.up === false ? '  ·  not answering' : '')) + '  ·  ' + e.owner];
+  });
+  var dns = [
+    ['Server', 'udp ' + sv.dns.host + ':' + sv.dns.port],
+    ['Answers', sv.dns.answer + ' (TTL ' + sv.dns.ttl_s + ' s) for the four names above, nothing else'],
+    ['Scope', sv.dns.scope],
+    ['Browser', sv.opener]
+  ];
+  var versions = [
+    ['App', sv.app + ' ' + sv.version_name + ' (code ' + sv.version_code + ')'],
+    ['Server crate', sv.crate_version],
+    ['Bridge', sv.bridge.authority]
+  ].concat((sv.bundled || []).map(function (b) { return [b.name, b.version]; }))
+   .concat([['Platform', (cfg.os || '') + ' / ' + (cfg.arch || '')]]);
+  return renderSections([
+    { title: 'What this app serves', rows: serves },
+    { title: 'Ports and DNS names', rows: ports },
+    { title: 'Private DNS', rows: dns },
+    { title: 'Versions', rows: versions }
+  ]);
+}
+// Configs > Engines: the registry, grouped, read-only (the shared server has no per-engine switch).
+function renderEngines(list) {
+  var groups = [['render', 'Render engines'], ['feature', 'Feature engines'], ['core', 'Core (always on)'], ['not-portable', 'Not served here']];
+  return groups.map(function (g) {
+    var rows = list.filter(function (e) { return e.group === g[0]; });
+    if (!rows.length) return '';
+    var body = rows.map(function (e) {
+      return '<div class="eng"><div class="t"><div class="nm">' + esc(e.name) + '<span class="badge">' + esc(e.id) + '</span></div>' +
+        '<div class="cv">' + esc(e.covers) + '</div><div class="sum">' + esc(e.summary) + '</div>' +
+        (e.reason ? '<div class="why">Not served: ' + esc(e.reason) + '</div>' : '') + '</div></div>';
+    }).join('');
+    return '<section><h2>' + esc(g[1]) + ' (' + rows.length + ')</h2>' + body + '</section>';
+  }).join('');
+}
+
+// ── Link-open: classify a tapped link by build.json::links, nothing here names a type ────────────────────
+function hostIsLocal(host, names) {
+  return host === '127.0.0.1' || host === 'localhost' || host === '[::1]' || names.indexOf(host) >= 0;
+}
+// The first declared type whose schemes and hosts match. href is resolved against base.
+function classifyLink(href, base, links, names) {
+  var u;
+  try { u = new URL(href, base); } catch (e) { return null; }
+  var scheme = u.protocol.replace(/:$/, '');
+  var local = hostIsLocal(u.hostname.indexOf(':') >= 0 ? '[' + u.hostname + ']' : u.hostname, names);
+  for (var i = 0; i < links.types.length; i++) {
+    var t = links.types[i];
+    var s = t.schemes.indexOf('*') >= 0 || t.schemes.indexOf(scheme) >= 0;
+    var h = t.hosts === 'any' || (t.hosts === 'local' ? local : !local);
+    if (s && h) return { url: u.href, scheme: scheme, type: t, choices: t.choices };
+  }
+  return null;
+}
+// A tap that is not a navigation to somewhere: in-page anchors, script URLs, nothing.
+function isLinkTarget(href) {
+  if (href == null) return false;
+  var h = String(href).trim();
+  return h !== '' && h.charAt(0) !== '#' && !/^javascript:/i.test(h);
+}
+// Open embedded runs inside this app's WebView, where the private names do not resolve: rewrite them to loopback.
+function embedUrl(url, endpoints) {
+  var u = new URL(url);
+  var ep = endpoints.filter(function (e) { return e.name === u.hostname; })[0];
+  if (!ep) return u.href;
+  u.hostname = '127.0.0.1';
+  if (!u.port) u.port = String(ep.port);
+  return u.href;
+}
+// What a tap does: 'ask' (show the chooser), or the one choice to run now (single-choice type, or remembered).
+function decide(cls, remembered, links) {
+  if (cls.choices.length === 1) return cls.choices[0];
+  if (links.remember && remembered && cls.choices.indexOf(remembered) >= 0) return remembered;
+  return 'ask';
+}
+function renderSheet(cls, links) {
+  var btn = cls.choices.map(function (id) {
+    var c = links.choices.filter(function (x) { return x.id === id; })[0];
+    return '<button class="ch" data-choice="' + esc(id) + '">' + esc(c ? c.label : id) + '</button>';
+  }).join('');
+  var rem = links.remember && cls.choices.length > 1 ? '<label><input type="checkbox" id="remember"> Remember my choice for ' + esc(cls.type.label.toLowerCase()) + 's</label>' : '';
+  return '<div class="ty">' + esc(cls.type.label) + '</div><div class="u">' + esc(cls.url) + '</div>' + btn + rem + '<button class="cancel" data-cancel>Cancel</button>';
+}
+function renderLinks(links, remembered) {
+  var rows = links.types.map(function (t) {
+    var cur = remembered[t.id] || '';
+    var opts = ['<option value=""' + (cur ? '' : ' selected') + '>Ask each time</option>'].concat(t.choices.map(function (id) {
+      var c = links.choices.filter(function (x) { return x.id === id; })[0];
+      return '<option value="' + esc(id) + '"' + (cur === id ? ' selected' : '') + '>' + esc(c ? c.label : id) + '</option>';
+    })).join('');
+    var sel = t.choices.length > 1 && links.remember
+      ? '<select data-remember="' + esc(t.id) + '" aria-label="' + esc(t.label) + '">' + opts + '</select>'
+      : '<span class="badge">' + esc(t.choices.join(', ')) + ' only</span>';
+    return '<div class="row"><div class="v"><b>' + esc(t.label) + '</b><span class="badge">' + esc(t.hosts) + ' · ' + esc(t.schemes.join(' ')) + '</span>' +
+      '<div class="sum">offers: ' + esc(t.choices.join(', ')) + '</div></div>' + sel + '</div>';
+  }).join('');
+  return '<section><h2>What a tapped link does</h2>' + rows + '<div class="note">Declared in build.json::links. A remembered choice lives in this app only.</div></section>';
+}
+if (typeof module !== 'undefined') {
+  module.exports = { esc: esc, tabsFrom: tabsFrom, tabFromPath: tabFromPath, defaultTab: defaultTab, renderNav: renderNav, renderRoutes: renderRoutes,
+    renderSections: renderSections, renderAbout: renderAbout, aboutText: aboutText, renderConfig: renderConfig, renderServed: renderServed,
+    renderCfgTabs: renderCfgTabs, renderServing: renderServing, renderEngines: renderEngines, hostIsLocal: hostIsLocal, classifyLink: classifyLink,
+    isLinkTarget: isLinkTarget, embedUrl: embedUrl, decide: decide, renderSheet: renderSheet, renderLinks: renderLinks };
+}
+</script>
+
+<script>
+// GLUE: fetch, state, DOM. The only source of tabs, pages and API rows is /__app__/api/routes, and of link types
+// /__app__/api/links; nothing here lists a route, a tab or a link type by name.
+(function () {
+  var $main = document.getElementById('main');
+  var $nav = document.getElementById('nav');
+  var $sub = document.getElementById('sub');
+  var $gear = document.getElementById('gear');
+  var $sheet = document.getElementById('sheet');
+  var $scrim = document.getElementById('scrim');
+  var ROUTES = [], TABS = [], ABOUT = [], SERVING = null, LINKS = null;
+  var cfgPage = 'about';
+  var KEY = 'c3.link.';
+
+  function j(url) {
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status + ' ' + url);
+      return r.json();
+    });
+  }
+  function fail(e) { $main.className = ''; $main.innerHTML = '<div class="err">' + esc(e && e.message ? e.message : e) + '</div>'; }
+  function store(op, k, v) { try { if (op === 'get') return localStorage.getItem(k); if (op === 'set') localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (x) {} return null; }
+  function remembered() {
+    var o = {};
+    if (LINKS) LINKS.types.forEach(function (t) { var v = store('get', KEY + t.id); if (v && t.choices.indexOf(v) >= 0) o[t.id] = v; });
+    return o;
+  }
+  function names() { return SERVING ? SERVING.endpoints.map(function (e) { return e.name; }) : []; }
+  function toast(text, bad) {
+    var t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = text;
+    document.body.appendChild(t); setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 2600);
+  }
+  function post(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', 'x-c3-write': '1' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (b) { if (!r.ok) throw new Error((b && b.error) || (r.status + ' ' + url)); return b; }); });
+  }
+
+  // ── links ───────────────────────────────────────────────────────────────
+  function runChoice(choice, cls) {
+    if (choice === 'embedded') {
+      // In this app's WebView: the system back gesture follows the WebView history, then falls back to the app.
+      window.location.assign(embedUrl(cls.url, SERVING ? SERVING.endpoints : []));
+    } else {
+      post('/__app__/api/open', { url: cls.url })
+        .then(function () { toast('Opening ' + cls.url + ' in cloud-browser'); })
+        .catch(function (e) { toast(e.message, true); });
+    }
+  }
+  function closeSheet() { $sheet.className = ''; $scrim.className = ''; $sheet.innerHTML = ''; }
+  function onLink(href, base) {
+    if (!LINKS) return false;
+    var cls = classifyLink(href, base, LINKS, names());
+    if (!cls) return false;
+    var d = decide(cls, store('get', KEY + cls.type.id), LINKS);
+    if (d !== 'ask') { runChoice(d, cls); return true; }
+    $sheet.innerHTML = renderSheet(cls, LINKS);
+    $sheet.className = 'on'; $scrim.className = 'on';
+    $sheet.onclick = function (ev) {
+      var c = ev.target.closest('[data-choice]');
+      if (c) {
+        var box = document.getElementById('remember');
+        if (box && box.checked) store('set', KEY + cls.type.id, c.getAttribute('data-choice'));
+        closeSheet(); runChoice(c.getAttribute('data-choice'), cls);
+      } else if (ev.target.closest('[data-cancel]')) closeSheet();
+    };
+    return true;
+  }
+  $scrim.addEventListener('click', closeSheet);
+
+  // One handler for every document that shows served links: this one, the file view, and the frames inside it.
+  function linkClick(ev) {
+    var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+    if (!a || !isLinkTarget(a.getAttribute('href'))) return;
+    if (a.hasAttribute('data-jump') || a.hasAttribute('data-tab')) return;
+    var href = a.getAttribute('href');
+    var tab = /^\/__app__\/tab\/([a-z0-9-]+)\/?$/.exec(href);
+    if (tab && a.ownerDocument === document) { ev.preventDefault(); show(tab[1], true); return; }
+    if (onLink(href, a.ownerDocument.baseURI || a.ownerDocument.location.href)) { ev.preventDefault(); ev.stopPropagation(); }
+  }
+  function watch(doc) {
+    if (!doc || doc.__c3) return;
+    doc.__c3 = true;
+    doc.addEventListener('click', linkClick, true);
+    var frames = doc.querySelectorAll('iframe');
+    for (var i = 0; i < frames.length; i++) watchFrame(frames[i]);
+  }
+  function watchFrame(f) {
+    var attach = function () { try { var d = f.contentDocument; if (d) { d.__c3 = false; watch(d); } } catch (x) {} };
+    f.addEventListener('load', attach);
+    attach();
+  }
+  document.addEventListener('click', linkClick, true);
+
+  // ── tabs ────────────────────────────────────────────────────────────────
+  var views = {
+    pages: function () { return j('/__app__/api/serving').then(function (sv) { SERVING = sv; return renderServed(sv) + renderRoutes(ROUTES, 'page'); }); },
+    api: function () { return Promise.resolve(renderRoutes(ROUTES, 'api')); },
+    home: function () { return j('/__app__/api/about').then(function (g) { ABOUT = g; return renderAbout(ABOUT); }); },
+    files: function () { return Promise.resolve('<iframe id="fileview" title="Files" src="/"></iframe>'); },
+    configs: function () {
+      var head = renderCfgTabs(cfgPage);
+      if (cfgPage === 'engines') return j('/__app__/api/engines').then(function (l) { return head + renderEngines(l); });
+      if (cfgPage === 'links') return Promise.resolve(head + renderLinks(LINKS, remembered()));
+      return Promise.all([j('/__app__/api/serving'), j('/__app__/api/config')]).then(function (rs) {
+        SERVING = rs[0]; return head + renderServing(rs[0], rs[1]) + renderConfig(rs[1]);
+      });
+    }
+  };
+
+  function show(tabId, push) {
+    var tab = TABS.filter(function (t) { return t.id === tabId; })[0] || TABS.filter(function (t) { return t.id === defaultTab(TABS); })[0];
+    if (!tab) { fail('the route table declares no tabs'); return; }
+    var view = views[tab.id];
+    if (!view) { fail('tab ' + tab.id + ' is declared by the server but this shell has no view for it'); return; }
+    closeSheet();
+    $nav.innerHTML = renderNav(TABS, tab.id);
+    $sub.textContent = tab.label;
+    $gear.className = tab.id === 'configs' ? 'on' : '';
+    if (push) history.pushState(null, '', tab.path);
+    view().then(function (html) {
+      $main.className = tab.id === 'files' ? 'files' : '';
+      $main.innerHTML = html;
+      var fv = document.getElementById('fileview');
+      if (fv) watchFrame(fv);
+    }).catch(fail);
+  }
+
+  function copyText(text, button) {
+    var done = function () { button.textContent = 'Copied'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { legacyCopy(text); done(); });
+    } else { legacyCopy(text); done(); }
+  }
+  function legacyCopy(text) {
+    var t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); } finally { document.body.removeChild(t); }
+  }
+
+  $main.addEventListener('click', function (ev) {
+    var cfg = ev.target.closest('[data-cfg]');
+    if (cfg) { cfgPage = cfg.getAttribute('data-cfg'); try { history.replaceState(null, '', '#' + cfgPage); } catch (x) {} show('configs', false); return; }
+    var jump = ev.target.closest('[data-jump]'); var copy = ev.target.closest('[data-copy-about]');
+    if (jump) { var to = document.getElementById(jump.getAttribute('data-jump')); if (to) to.scrollIntoView(); ev.preventDefault(); return; }
+    if (copy) copyText(aboutText(ABOUT), copy);
+  });
+  $main.addEventListener('change', function (ev) {
+    var s = ev.target.closest('[data-remember]');
+    if (!s) return;
+    if (s.value) store('set', KEY + s.getAttribute('data-remember'), s.value); else store('del', KEY + s.getAttribute('data-remember'));
+    toast(s.value ? 'Remembered: ' + s.value : 'Will ask each time');
+  });
+  $nav.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-tab]');
+    if (b) show(b.getAttribute('data-tab'), true);
+  });
+  $gear.addEventListener('click', function () { show('configs', true); });
+  var h = (location.hash || '').replace('#', '');
+  if (h === 'engines' || h === 'links') cfgPage = h;
+  window.addEventListener('popstate', function () { show(tabFromPath(location.pathname) || defaultTab(TABS), false); });
+
+  Promise.all([j('/__app__/api/routes'), j('/__app__/api/links'), j('/__app__/api/serving')]).then(function (rs) {
+    ROUTES = rs[0]; LINKS = rs[1]; SERVING = rs[2]; TABS = tabsFrom(ROUTES);
+    show(tabFromPath(location.pathname) || defaultTab(TABS), false);
+  }).catch(function (e) {
+    fail(e); setTimeout(function () { location.reload(); }, 1500);
+  });
+})();
+</script>
+</body>
+</html>

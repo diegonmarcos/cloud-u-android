@@ -4,7 +4,8 @@
 //!   * the emulated drive (build.json runtime.port, 8002): the SHARED web server of the fleet
 //!     (ab_cloud-libs-shared/libs/fleet-webserver) rooted at /storage/emulated/0 and nothing else. Its
 //!     UI is the Linux my-webserver frontend, bundled byte for byte by that crate; there is no
-//!     page, route, script or style of the drive in this crate;
+//!     page, route, script or style of the drive in this crate. The app's own pages (five tabs, link chooser)
+//!     live under `/__app__/` only (app.rs) and never shadow a path of the shared server;
 //!   * the fleet-diagnostics page (runtime.diag.port, 8003): the SuperApp's About, Logcat and
 //!     Diagnose, read through its bridge (diag.rs);
 //!   * the private DNS (serving.dns, udp 127.0.0.1:5353) for the four names.
@@ -13,8 +14,11 @@
 //! Tauri app (../src-tauri) calls [`start`] from its own process before it opens the window on the
 //! drive's URL, so the app is this crate plus a webview: no second process, no exec, no Kotlin.
 
+pub mod about;
+pub mod app;
 pub mod diag;
 pub mod dns;
+pub mod engines;
 pub mod serving;
 
 use fleet_webserver::http::{self, Req, Resp};
@@ -25,6 +29,8 @@ use std::time::Instant;
 
 /// What the :8003 handlers know about their listener.
 pub struct Ctx {
+    /// The served root (the diagnostics listener serves none; it carries the drive's for About).
+    pub root: std::path::PathBuf,
     pub port: u16,
     pub started: Instant,
     pub binary: String,
@@ -59,6 +65,15 @@ pub fn handle_diag(ctx: &Ctx, req: &Req) -> Resp {
     }
 }
 
+fn host_allowed(host: &str) -> bool {
+    matches!(host, "127.0.0.1" | "localhost" | "[::1]") || private_names().iter().any(|n| n == host)
+}
+
+/// The drive listener: `/__app__/...` is the app shell, everything else is the shared fleet-webserver.
+pub fn drive_handler(ctx: Ctx, files: Arc<http::Handler>) -> Arc<http::Handler> {
+    Arc::new(move |req: &Req| app::handle(&ctx, req, &host_allowed).unwrap_or_else(|| files(req)))
+}
+
 /// What the app hands the server. The ports come from build.json (build.rs), never from code.
 pub struct Config {
     pub drive_port: u16,
@@ -81,15 +96,18 @@ pub fn start(cfg: Config) -> Result<(), String> {
         ));
     }
     let drive = TcpListener::bind((Ipv4Addr::LOCALHOST, cfg.drive_port)).map_err(|e| format!("cannot bind 127.0.0.1:{} ({})", cfg.drive_port, e))?;
+    app::check_table()?;
+    app::links()?;
     let web = fleet_webserver::Config { port: cfg.drive_port, root: cfg.root.clone(), extra_hosts: private_names() };
     println!("c3-webserver {} on http://127.0.0.1:{}/ root={} pid={}", env!("CARGO_PKG_VERSION"), cfg.drive_port, cfg.root, std::process::id());
-    http::listen(drive, fleet_webserver::handler(&web));
-
     let binary = std::env::current_exe().map(|p| p.to_string_lossy().to_string()).unwrap_or_default();
+    let dctx = Ctx { root: std::path::PathBuf::from(&cfg.root), port: cfg.drive_port, started: Instant::now(), binary: binary.clone() };
+    http::listen(drive, drive_handler(dctx, fleet_webserver::handler(&web)));
+
     match TcpListener::bind((Ipv4Addr::LOCALHOST, cfg.diag_port)) {
         Ok(l) => {
             println!("c3-webserver diagnostics on http://127.0.0.1:{}/", cfg.diag_port);
-            let ctx = Ctx { port: cfg.diag_port, started: Instant::now(), binary };
+            let ctx = Ctx { root: std::path::PathBuf::from(&cfg.root), port: cfg.diag_port, started: Instant::now(), binary };
             http::listen(l, Arc::new(move |req: &Req| handle_diag(&ctx, req)));
         }
         Err(e) => eprintln!("c3-webserver: diagnostics listener not started: cannot bind 127.0.0.1:{} ({})", cfg.diag_port, e),
@@ -106,7 +124,7 @@ mod tests {
     use std::io::{Read, Write};
 
     fn diag_get(path: &str, host: &str) -> Resp {
-        let ctx = Ctx { port: 8003, started: Instant::now(), binary: "test".to_string() };
+        let ctx = Ctx { root: std::env::temp_dir(), port: 8003, started: Instant::now(), binary: "test".to_string() };
         let req = http::parse_request(&format!("GET {} HTTP/1.1\r\nhost: {}\r\n\r\n", path, host)).unwrap();
         handle_diag(&ctx, &req)
     }
@@ -136,9 +154,26 @@ mod tests {
         assert!(out.starts_with("HTTP/1.1 200"), "{}", &out[..out.len().min(200)]);
         let body = &out[out.find("\r\n\r\n").unwrap() + 4..];
         assert_eq!(body, fleet_webserver::render::browse_page("/"), "/ on the drive is the Linux frontend, byte for byte, and nothing else");
-        for custom in ["<nav", "__tab__", "/__api__/routes", "Engines", "Configs"] {
+        for custom in ["<nav", "__tab__", "__app__", "/__api__/routes", "Engines", "Configs"] {
             assert!(!body.contains(custom), "the drive's root page carries custom UI: {}", custom);
         }
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// The composed drive listener: `/` stays the shared Linux UI byte for byte, `/__app__/` is the shell.
+    #[test]
+    fn the_composed_drive_keeps_the_file_view_and_adds_the_shell() {
+        let root = std::env::temp_dir().join(format!("c3ws-compose-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let web = fleet_webserver::Config { port: 0, root: root.to_string_lossy().to_string(), extra_hosts: private_names() };
+        let h = drive_handler(Ctx { root: root.clone(), port: 8002, started: Instant::now(), binary: "t".to_string() }, fleet_webserver::handler(&web));
+        let get = |p: &str| h(&http::parse_request(&format!("GET {} HTTP/1.1\r\nhost: emulated.app\r\n\r\n", p)).unwrap());
+        assert_eq!(String::from_utf8_lossy(&get("/").body), fleet_webserver::render::browse_page("/"), "the file view is unchanged");
+        let shell = get("/__app__/");
+        assert_eq!(shell.status, 200);
+        assert!(String::from_utf8_lossy(&shell.body).contains("id=\"nav\""));
+        assert_eq!(get("/__api__/ls?path=/").status, 200, "the shared API is still the shared server's");
+        assert_eq!(get("/__app__/api/routes").status, 200);
         let _ = std::fs::remove_dir_all(&root);
     }
 

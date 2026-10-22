@@ -1,21 +1,26 @@
 #!/usr/bin/env bash
 # ╔═════════════════════════════════════════════════════════════════╗
-# ║ cloud-c3-webserver — :8002 carries no UI of its own, the app is   ║
-# ║ Rust + web (Tauri), the rename holds.                             ║
+# ║ cloud-c3-webserver — the file view is the shared one, the app is  ║
+# ║ five tabs around it, Rust + web (Tauri), the rename holds.         ║
 # ╚═════════════════════════════════════════════════════════════════╝
 #
-# THE FAILURES THIS EXISTS FOR. (1) :8002 served a custom page (a five-tab shell, its own file
-# browser and renderers) the owner never asked for; the owner's rule is ONE web UI for the whole
-# fleet, the Linux my-webserver's, served by ONE shared server (ab_cloud-libs-shared/libs/fleet-webserver).
-# (2) An earlier APK in this family shipped pages that drew "not built yet" behind green checks.
-# (3) A rename that leaves one copy of the old name behind publishes to the wrong asset, package or
-# workflow, and the guard for that is a ledger, not a hope.
+# THE FAILURES THIS EXISTS FOR. (1) :8002 served a custom file browser and renderers the owner never
+# asked for; the owner's rule is ONE web UI for the whole fleet, the Linux my-webserver's, served by
+# ONE shared server (ab_cloud-libs-shared/libs/fleet-webserver). (2) The fix for (1) took the whole
+# app with it: it opened straight onto the one served page and Pages, API, Home and Configs were
+# gone, with every check still green. (3) An earlier APK in this family shipped pages that drew "not
+# built yet" behind green checks. (4) A rename that leaves one copy of the old name behind publishes
+# to the wrong asset, package or workflow, and the guard for that is a ledger, not a hope.
 #
-#   T1  NO CUSTOM :8002 UI. server/ui holds diag.html (:8003) and nothing else; server/src holds
-#       diag, dns, lib and serving only; no route of :8002 is spelled in this crate; the crate
-#       depends on the shared server by path and serves :8002 through fleet_webserver::handler.
-#       (That the shared server IS the Linux UI is test-c3-webserver-shared.sh's business, and
-#       that it renders is test-c3-webserver-render.sh's.)
+#   T1  THE FILE VIEW IS THE SHARED SERVER'S. server/ui holds diag.html (:8003) and shell.html
+#       (/__app__/) only; server/src holds about, app, diag, dns, engines, lib and serving only; every
+#       route this crate answers is under /__app__/ (or is the :8003 page); no file-browser code in the
+#       shell; the crate depends on the shared server by path and serves the drive through
+#       drive_handler over fleet_webserver::handler. (That the shared server IS the Linux UI is
+#       test-c3-webserver-shared.sh's business, and that it renders is test-c3-webserver-render.sh's.)
+#   T7  NAVIGATION STRUCTURE. The bottom nav is exactly Pages, API, Home, Files, Configs, each routed at
+#       /__app__/tab/<id> with a view in the shell; the Files tab embeds the file view at /; the Tauri
+#       window opens on the shell, never straight onto one served page.
 #   T4  NO PLACEHOLDER IN A SHIPPED PAGE: no not-built wording in ui/ or src/.
 #   T5  TAURI SHAPE. build.json::tauri maps every shipped ABI to a tauri target;
 #       the app crate's [lib] is the declared lib_name and links the server
@@ -41,23 +46,24 @@ fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 for tool in python3 node grep jq; do
   command -v "$tool" >/dev/null 2>&1 || { echo "ERROR $tool absent — a verdict from a missing tool is not a verdict"; exit 1; }
 done
-for f in "$APP/build.json" "$APP/server/src/lib.rs" "$APP/server/ui/diag.html" \
+for f in "$APP/build.json" "$APP/server/src/lib.rs" "$APP/server/src/app.rs" "$APP/server/ui/diag.html" "$APP/server/ui/shell.html" \
          "$APP/src-tauri/src/lib.rs" "$APP/src-tauri/tauri.conf.json" "$APP/src-tauri/gen/android/app/build.gradle.kts"; do
   [ -f "$f" ] || { echo "ERROR missing source: $f — this tester is unrun, not passing"; exit 1; }
 done
 
-# ── t1 <app> : :8002 has NO custom UI — it is the shared server, and only that ───────
+# ── t1 <app> : the file view is the shared server's; the app's own pages live under /__app__/ ONLY ──
 t1() {
   python3 - "$1" <<'PY'
 import glob, os, re, sys
 app = sys.argv[1]
 bad = []
 ui = sorted(os.listdir(os.path.join(app, "server/ui"))) if os.path.isdir(os.path.join(app, "server/ui")) else []
-if ui != ["diag.html"]:
-    bad.append("server/ui holds %r; the only page this app may carry is diag.html (:8003): :8002 is the shared Linux UI" % ui)
+if ui != ["diag.html", "shell.html"]:
+    bad.append("server/ui holds %r; the only pages this app may carry are diag.html (:8003) and shell.html (/__app__/): the file view at / is the shared Linux UI" % ui)
 src = sorted(os.path.basename(p) for p in glob.glob(os.path.join(app, "server/src/*.rs")))
-if src != ["diag.rs", "dns.rs", "lib.rs", "serving.rs"]:
-    bad.append("server/src holds %r, want exactly diag.rs dns.rs lib.rs serving.rs (no routes/render/files/engines/about of :8002)" % src)
+want = ["about.rs", "app.rs", "diag.rs", "dns.rs", "engines.rs", "lib.rs", "serving.rs"]
+if src != want:
+    bad.append("server/src holds %r, want exactly %r (no routes/render/files of the file view: those are the shared server's)" % (src, want))
 cargo = open(os.path.join(app, "server/Cargo.toml")).read()
 if not re.search(r'^fleet-webserver\s*=\s*\{\s*path\s*=\s*"\.\./\.\./ab_cloud-libs-shared/libs/fleet-webserver"', cargo, re.M):
     bad.append("server/Cargo.toml does not depend on the shared web server by path")
@@ -65,20 +71,60 @@ for p in sorted(glob.glob(os.path.join(app, "server/src/*.rs"))):
     body = re.split(r"#\[cfg\(test\)\]", open(p).read())[0]
     body = re.sub(r"//.*", "", body)
     for lit in re.findall(r'"(/__[a-z_-]+__[^"]*)"', body):
-        if lit in ("/__diag__",) or lit.startswith("/__api__/diag/") or lit in ("/__api__/health", "/__api__/serving"):
+        if lit.startswith("/__app__") or lit in ("/__diag__",) or lit.startswith("/__api__/diag/") or lit in ("/__api__/health", "/__api__/serving"):
             continue
-        bad.append("%s spells the route %r: :8002's routes belong to the shared server" % (os.path.relpath(p, app), lit))
-    if re.search(r"include_str!\(\"\.\./ui/(?!diag\.html)", body):
-        bad.append("%s embeds a page other than diag.html" % os.path.relpath(p, app))
+        bad.append("%s spells the route %r: the file view's routes belong to the shared server, this crate answers /__app__/ only" % (os.path.relpath(p, app), lit))
+    if re.search(r"include_str!\(\"\.\./ui/(?!diag\.html|shell\.html)", body):
+        bad.append("%s embeds a page other than diag.html / shell.html" % os.path.relpath(p, app))
 lib = open(os.path.join(app, "server/src/lib.rs")).read()
-if "fleet_webserver::handler" not in lib:
-    bad.append("server/src/lib.rs does not serve :8002 through fleet_webserver::handler")
+if "fleet_webserver::handler" not in lib or "drive_handler(" not in lib:
+    bad.append("server/src/lib.rs does not serve the drive through drive_handler over fleet_webserver::handler")
+appsrc = open(os.path.join(app, "server/src/app.rs")).read()
+for path in re.findall(r'path: "([^"]+)"', re.split(r"#\[cfg\(test\)\]", appsrc)[0]):
+    if not (path == "/__app__" or path.startswith("/__app__/")):
+        bad.append("app.rs routes %r, outside /__app__/: it would shadow the shared file server" % path)
+shell = open(os.path.join(app, "server/ui/shell.html")).read()
+for needle in ("/__api__/ls", "/__api__/read", "/__api__/search", "loadDir("):
+    if needle in shell:
+        bad.append("shell.html carries file-browser code (%s): the file view is the shared UI, embedded unchanged" % needle)
 for b in bad:
     print("    " + b)
 sys.exit(1 if bad else 0)
 PY
 }
 
+# ── t7 <app> : NAVIGATION STRUCTURE. The app is five tabs, the file view is one of them ─────────────
+# THE FAILURE THIS EXISTS FOR: a change made the app open straight onto the one served page and the
+# rest of its structure (Pages, API, Home, Configs) vanished with no check going red.
+t7() {
+  python3 - "$1" <<'PY'
+import os, re, sys
+app = sys.argv[1]
+bad = []
+src = open(os.path.join(app, "server/src/app.rs")).read()
+body = re.split(r"#\[cfg\(test\)\]", src)[0]
+rows = re.findall(r'Route \{ kind: Kind::(\w+), path: "([^"]+)", tab: (None|Some\("([^"]+)"\))', body)
+tabs = [r[3] for r in rows if r[3]]
+if tabs != ["Pages", "API", "Home", "Files", "Configs"]:
+    bad.append("the bottom nav is %r, want Pages, API, Home, Files, Configs" % tabs)
+for r in rows:
+    if r[3] and r[1] != "/__app__/tab/" + r[3].lower():
+        bad.append("tab %s is routed at %s" % (r[3], r[1]))
+shell = open(os.path.join(app, "server/ui/shell.html")).read()
+if not re.search(r'<iframe id="fileview"[^>]*src="/"', shell):
+    bad.append("the Files tab does not embed the file view at / (the shared Linux UI)")
+for view in ("pages:", "api:", "home:", "files:", "configs:"):
+    if view not in shell:
+        bad.append("shell.html has no view for the %s tab" % view[:-1])
+tauri = open(os.path.join(app, "src-tauri/src/lib.rs")).read()
+m = re.search(r'format!\("http://127\.0\.0\.1:\{\}(/[^"]*)"', tauri)
+if not m or m.group(1) != "/__app__/":
+    bad.append("the app opens its window on %r, not on the shell /__app__/ (it must not open straight onto one served page)" % (m.group(1) if m else None))
+for b in bad:
+    print("    " + b)
+sys.exit(1 if bad else 0)
+PY
+}
 
 # ── t4 <app> : no placeholder in a shipped tab ─────────────────────────────
 t4() {
@@ -179,7 +225,8 @@ t6() {
 }
 
 echo "── cloud-c3-webserver ──"
-t1 "$APP" && pass "T1 :8002 has no custom UI: server/ui is diag.html only, server/src has no :8002 routes or pages, the drive is served through fleet_webserver::handler" || fail "T1 custom :8002 UI or routes found in this app"
+t1 "$APP" && pass "T1 the file view is the shared server's: the app's own pages answer /__app__/ only, no file-browser code of its own" || fail "T1 the app shadows or reimplements the file view"
+t7 "$APP" && pass "T7 navigation structure: five tabs Pages, API, Home, Files, Configs, the file view is the Files tab, the app opens on the shell" || fail "T7 the app lost its navigation structure"
 t4 "$APP" && pass "T4 no placeholder wording in a shipped tab" || fail "T4 a shipped tab can render a placeholder"
 t5 "$APP" && pass "T5 Tauri shape: ABIs mapped, lib + server crate linked, identity from build.json, bind before window, storage asked from Rust, no shell residue" || fail "T5 the Tauri shape is broken"
 t6 "$APP" && pass "T6 rename ledger clean: no retired spelling anywhere in this app" || fail "T6 a retired spelling survives"
@@ -200,7 +247,31 @@ new=s.replace('<body>', '<body><div>not built yet</div>',1)
 assert new!=s; open(p,"w").write(new)
 PY
 }
-m_custom_page() { printf '<!doctype html><nav>Pages API Home</nav>' > "$1/server/ui/shell.html"; }
+m_custom_page() { printf '<!doctype html><nav>Pages API Home</nav>' > "$1/server/ui/browse.html"; }
+m_drop_files_tab() { python3 - "$1" <<'PY'
+import sys,re; p=sys.argv[1]+"/server/src/app.rs"; s=open(p).read()
+new=s.replace('tab: Some("Files")','tab: None',1)
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_open_on_file_view() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/src-tauri/src/lib.rs"; s=open(p).read()
+new=s.replace('/__app__/"','/"',1)
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_route_outside_prefix() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/server/src/app.rs"; s=open(p).read()
+new=s.replace('path: "/__app__/api/config"','path: "/__api__/ls"',1)
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_fileview_copy() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/server/ui/shell.html"; s=open(p).read()
+new=s.replace('<iframe id="fileview" title="Files" src="/">','<iframe id="fileview" title="Files" src="/__app__/own-browser">',1)
+assert new!=s; open(p,"w").write(new)
+PY
+}
 m_route_in_lib() { python3 - "$1" <<'PY'
 import sys; p=sys.argv[1]+"/server/src/lib.rs"; s=open(p).read()
 new=s.replace('"/__api__/health" =>', '"/__tab__/pages" => Resp::text(200, "planted"),\n        "/__api__/health" =>')
@@ -242,6 +313,10 @@ d["identifier"]="com.diegonmarcos.cloudc3webserver"; json.dump(d,open(p,"w"),ind
 PY
 }
 mutate "a custom page next to the shared UI"                 t1 m_custom_page
+mutate "a route outside /__app__/ (shadows the file server)" t1 m_route_outside_prefix
+mutate "the Files tab removed from the nav"                 t7 m_drop_files_tab
+mutate "the app opens straight onto the file view"          t7 m_open_on_file_view
+mutate "the Files tab stops embedding the shared file view" t7 m_fileview_copy
 mutate "a :8002 route spelled in this crate"                t1 m_route_in_lib
 mutate "a renderer of its own in this crate"                t1 m_own_renderer
 mutate "the shared server dependency dropped"               t1 m_drop_shared_dep

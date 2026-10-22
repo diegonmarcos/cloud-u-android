@@ -2,7 +2,20 @@
 
 The phone's local web server, as an APK, in the cloud-c3 family: Rust and web only. It is a Tauri 2
 Android app: the Rust library in `src-tauri/` starts the web servers on threads of the app's own
-process, waits for the bind, and opens the app's one webview on `http://127.0.0.1:8002/`.
+process, waits for the bind, and opens the app's one webview on its shell, `http://127.0.0.1:8002/__app__/`.
+
+**The app is five tabs around the file view.** Pages, API, Home, Files, Configs (`server/ui/shell.html`, served
+under `/__app__/` only). The Files tab embeds `/`, the file view below, unchanged and shell-free. The tabs are the
+rows of `server/src/app.rs::ROUTES` that carry a caption, so a row added there appears and a row removed
+disappears. Pages lists every served page by port and private name; API lists the shell's routes; Home is the
+About-this-phone page in the SuperApp's Configs > About shape; Configs has About, Engines (read-only registry,
+`build.json::render_engines`) and Links.
+
+**Links.** Any link the web server serves (rendered Markdown and listings in the file view, the Pages tab)
+asks first: *Open in browser* (cloud-browser, explicit-package intent via `POST /__app__/api/open`) or *Open
+embedded* (this app's WebView, so the system back gesture follows the WebView history, then falls back to the
+app). Link types, their choices and whether a choice can be remembered are `build.json::links`; the shell holds
+no type. A remembered choice lives in the WebView's localStorage; Configs > Links resets it.
 
 **What :8002 serves.** ONLY the emulated root, `/storage/emulated/0`, with the EXACT web UI of the
 Linux `my-webserver`: folder tree on the left, viewer/renderer on the right (md, json, yaml, html with
@@ -11,12 +24,14 @@ It is `ab_cloud-libs-shared/libs/fleet-webserver`, the one web server of the fle
 nix-on-droid :8001 consume the same crate), whose `vendor/` is a byte-identical, sha256-checked mirror
 of `cloud-u-linux/da_my-webserver/src`, bundled at build time (nothing is downloaded at runtime).
 Refresh it with `ab_cloud-libs-shared/libs/fleet-webserver/sync.sh --from <cloud-u-linux checkout>`; there is
-no custom page, tab, route or script of :8002 in this directory.
+no custom page, route or script of the file view in this directory; the app's own pages are under `/__app__/`.
 
 | Piece | Where |
 |---|---|
 | The :8002 server and its Linux UI | `ab_cloud-libs-shared/libs/fleet-webserver` (`start`, `vendor/`, `sync.sh`) |
-| Start-up, :8003 listener, host allow-list | `server/src/lib.rs` |
+| The app shell: route table, tabs, link chooser, open endpoint | `server/src/app.rs`, `server/ui/shell.html` |
+| Home (About this phone) and Configs > Engines | `server/src/about.rs`, `server/src/engines.rs` |
+| Start-up, :8003 listener, host allow-list, drive = shell + shared server | `server/src/lib.rs` |
 | 8003 `cloud.app`: the SuperApp's About, Logcat, Diagnose | `server/src/diag.rs` + `server/ui/diag.html`, read through the SuperApp's `<pkg>.fleetdiag` provider (`src-tauri/src/bridge.rs`, JNI) |
 | Private DNS, udp 127.0.0.1:5353, four exact names, refuses the rest | `server/src/dns.rs`; asked by cloud-browser (`libs:browser PrivateNames`) only |
 | The name -> port map, ONE declaration | `build.json::serving` (+ `runtime.port`, `runtime.diag.port`) |
@@ -38,8 +53,9 @@ tauri CLI, the NDK and the Rust Android target, then `./build.sh build`
 (`cargo tauri android build --apk --target <abi>`, release profile) and re-signs the APK with the
 shared key.
 
-Testers: `test/test-c3-webserver.sh` (no custom :8002 UI, the shared server is the only :8002 code,
-Tauri shape, rename ledger), `test/test-c3-webserver-render.sh` (the real server in headless Chrome at
+Testers: `test/test-c3-webserver.sh` (the file view is the shared server's, the navigation structure, Tauri shape,
+rename ledger), `test/test-c3-webserver-shell.sh` (tabs and link chooser under node), `test/test-c3-webserver-pages.sh`
+(every page and the chooser in headless Chrome at A37 density, screenshots uploaded by the ship job), `test/test-c3-webserver-render.sh` (the real server in headless Chrome at
 Galaxy A37 density: tree left, viewer right, toolbar on top), `test/test-c3-webserver-ports.sh` (map,
 owners, readers, loopback-only DNS), `test/test-c3-webserver-no-kotlin.sh`, plus `cargo test` here and
 in the shared server (vendor hash == the Linux copy, every endpoint's contract, parity with the real

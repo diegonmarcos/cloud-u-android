@@ -7,14 +7,14 @@
   },
   "name": "cloud-c3-webserver",
   "display_name": "Cloud C3 Webserver",
-  "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the shared fleet web server (ab_cloud-libs-shared/libs/fleet-webserver, the Linux my-webserver UI bundled verbatim) in-process on 8002, rooted at /storage/emulated/0 and nothing else, and opens its one webview on it. The SuperApp's About, Logcat and Diagnose are served on 8003, and a private DNS (udp 5353) answers termux.app, nix.app, emulated.app and cloud.app.",
+  "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the shared fleet web server (ab_cloud-libs-shared/libs/fleet-webserver, the Linux my-webserver UI bundled verbatim) in-process on 8002, rooted at /storage/emulated/0 and nothing else, and opens its one webview on the app shell: five bottom tabs Pages, API, Home, Files and Configs, whose Files tab is that unchanged file view. A tapped link offers Open in browser or Open embedded (build.json::links). The SuperApp's About, Logcat and Diagnose are served on 8003, and a private DNS (udp 5353) answers termux.app, nix.app, emulated.app and cloud.app.",
   "category": "android",
   "fleet_webserver_src": "../ab_cloud-libs-shared/libs/fleet-webserver",
   "build": {
     "type": "gradle",
     "entry": "build.sh"
   },
-  "_doc": "WHY TAURI, AND WHAT IS LEFT OF KOTLIN. The app used to be a hand-written Kotlin shell (an Activity holding a WebView, a foreground Service, a class that exec'd the server binary from nativeLibraryDir). It is now a Tauri 2 Android app: src-tauri/ is a Rust library that calls server/'s start() on a thread of its own process and then opens the window on http://127.0.0.1:<runtime.port>/. The only Kotlin in the tree is the glue Tauri's Android template generates (tauri.glue below, every file pinned by sha256), plus the classes Tauri and wry write into the build at compile time (tauri.generated_kotlin, never committed); test/test-c3-webserver-no-kotlin.sh fails the CI run and build.sh fails the build on anything else. The :8002 UI is NOT written here: it is the Linux my-webserver frontend, bundled at build time by ab_cloud-libs-shared/libs/fleet-webserver from a hash-checked mirror of cloud-u-linux/da_my-webserver/src (one source of truth, no copy in this app).",
+  "_doc": "WHY TAURI, AND WHAT IS LEFT OF KOTLIN. The app used to be a hand-written Kotlin shell (an Activity holding a WebView, a foreground Service, a class that exec'd the server binary from nativeLibraryDir). It is now a Tauri 2 Android app: src-tauri/ is a Rust library that calls server/'s start() on a thread of its own process and then opens the window on http://127.0.0.1:<runtime.port>/. The only Kotlin in the tree is the glue Tauri's Android template generates (tauri.glue below, every file pinned by sha256), plus the classes Tauri and wry write into the build at compile time (tauri.generated_kotlin, never committed); test/test-c3-webserver-no-kotlin.sh fails the CI run and build.sh fails the build on anything else. The file view at / is NOT written here: it is the Linux my-webserver frontend, bundled at build time by ab_cloud-libs-shared/libs/fleet-webserver from a hash-checked mirror of cloud-u-linux/da_my-webserver/src (one source of truth, no copy in this app); this app adds only its own pages under /__app__/.",
   "tauri": {
     "_doc": "THE ONE declaration of how the APK is built. crate_dir is the Tauri app crate (its [lib] is lib_name, the .so Tauri's generated activity loads); server_crate is the library it links and starts; android_project is the Tauri-generated gradle project, committed as Tauri recommends; targets maps each Android ABI a release variant names to the key `cargo tauri android build --target` takes (tauri) and the Rust triple the workflow installs for it (rust). The APK is always built in Tauri's release profile (R8 + an optimised, stripped Rust library): the debug profile carries an unoptimised library with symbols that is two orders of magnitude larger, and build.sh re-signs every APK with the shared key either way.",
     "crate_dir": "src-tauri",
@@ -125,6 +125,266 @@
       "authority": "com.diegonmarcos.superapp.fleetdiag",
       "_doc": "The SuperApp's exported, CONSTELLATION_DATA signature-permission ContentProvider (aa_cloud-superapp FleetDiagnosticsProvider). call(about|logcat|diagnose) -> {ok, mime, payload}; read-only."
     }
+  },
+  "render_engines": {
+    "_doc": "THE ENGINE REGISTRY, declared once: every render and feature engine of the web server this app runs. Since the :8002 UI became the shared fleet-webserver, these are the SHARED server's engines (the Linux my-webserver feature set): Configs > Engines draws exactly this list, read-only, because the shared server has no per-engine switch. server/src/engines.rs compiles this block in; a test holds ids unique and every row described. group render|feature are what the server does to a file or request, core is what every request relies on, not-portable is an engine of my-webserver that is not served here and says why (reason).",
+    "list": [
+      {
+        "id": "markdown",
+        "name": "Markdown",
+        "group": "render",
+        "toggle": false,
+        "default_on": true,
+        "covers": ".md",
+        "summary": "marked.js 15 draws the file as a GitHub-dark page with a breadcrumb and a view-raw link; ?raw sends the source."
+      },
+      {
+        "id": "json",
+        "name": "JSON viewer",
+        "group": "render",
+        "toggle": false,
+        "default_on": true,
+        "covers": ".json",
+        "summary": "Objects become key/value tables, arrays of objects sortable tables, nested values cards; row filter, collapsible sections, copy buttons."
+      },
+      {
+        "id": "yaml",
+        "name": "YAML viewer",
+        "group": "render",
+        "toggle": false,
+        "default_on": true,
+        "covers": ".yaml .yml",
+        "summary": "js-yaml 4.1 parses the file and the same tables draw it; a parse error falls back to the raw text."
+      },
+      {
+        "id": "secrets",
+        "name": "Secrets table",
+        "group": "render",
+        "toggle": false,
+        "default_on": true,
+        "covers": ".secrets .secrets.json",
+        "summary": "Key/value rows with a copy button per row and a red badge. Nothing is decrypted here: the file is shown as stored."
+      },
+      {
+        "id": "eruda",
+        "name": "Eruda DevTools",
+        "group": "render",
+        "toggle": false,
+        "default_on": true,
+        "covers": "every HTML page",
+        "summary": "Injects the bundled Eruda 3.4.3 console, elements and network panels into HTML, index pages and rendered pages. No CDN."
+      },
+      {
+        "id": "html",
+        "name": "HTML pages",
+        "group": "render",
+        "toggle": false,
+        "default_on": true,
+        "covers": ".html, dir/index.html, /route",
+        "summary": "Serves .html natively, opens a directory's index.html with a <base>, and /route falls back to route.html."
+      },
+      {
+        "id": "spa-fallback",
+        "name": "SPA fallback",
+        "group": "render",
+        "toggle": false,
+        "default_on": true,
+        "covers": "unknown paths under a project",
+        "summary": "An unknown path inside a prerendered SvelteKit project serves its nearest ancestor 200.html with root-absolute assets rewritten."
+      },
+      {
+        "id": "browse",
+        "name": "File browser",
+        "group": "feature",
+        "toggle": false,
+        "default_on": true,
+        "covers": "/__browse__, directory pages",
+        "summary": "Sidebar tree, breadcrumb path bar, a viewer pane with a raw/rendered switch and a copy-raw button: the Linux frontend, byte for byte."
+      },
+      {
+        "id": "search",
+        "name": "Search",
+        "group": "feature",
+        "toggle": false,
+        "default_on": true,
+        "covers": "/__api__/search",
+        "summary": "Folder, filename and content search. Breadth-first, bounded by 3 s, 50 000 entries and 200 results, and says when it stopped early."
+      },
+      {
+        "id": "dotfiles",
+        "name": "Hidden files",
+        "group": "feature",
+        "toggle": false,
+        "default_on": true,
+        "covers": "dot=1",
+        "summary": "Lists and searches dot entries when asked (the Dot files switch)."
+      },
+      {
+        "id": "preview",
+        "name": "Preview",
+        "group": "feature",
+        "toggle": false,
+        "default_on": true,
+        "covers": "/__api__/read",
+        "summary": "Returns a text file (at most 5 MB) as JSON for the viewer pane."
+      },
+      {
+        "id": "diag",
+        "name": "Fleet diagnostics bridge",
+        "group": "feature",
+        "toggle": false,
+        "default_on": true,
+        "covers": "the diagnostics listener",
+        "summary": "About, Logcat and Diagnose of the SuperApp, read through its signature-permission provider."
+      },
+      {
+        "id": "listing",
+        "name": "Directory listing",
+        "group": "core",
+        "toggle": false,
+        "default_on": true,
+        "covers": "/__api__/ls",
+        "summary": "Folders first, then files by name, dangling symlinks shown as broken links instead of vanishing."
+      },
+      {
+        "id": "static",
+        "name": "Static files",
+        "group": "core",
+        "toggle": false,
+        "default_on": true,
+        "covers": "everything else",
+        "summary": "MIME table with text sniffing for unknown types, ?raw plain-text passthrough, HEAD."
+      },
+      {
+        "id": "confine",
+        "name": "Root confinement",
+        "group": "core",
+        "toggle": false,
+        "default_on": true,
+        "covers": "every path",
+        "summary": "Each path is canonicalised and must stay inside the served root; .. and symlinks that leave it are 404."
+      },
+      {
+        "id": "loopback",
+        "name": "Loopback only",
+        "group": "core",
+        "toggle": false,
+        "default_on": true,
+        "covers": "all listeners",
+        "summary": "Binds 127.0.0.1 and refuses any other peer. GET and HEAD only; the single POSTs are the app's own guarded link opener and the shared write API (off)."
+      },
+      {
+        "id": "dns",
+        "name": "Private DNS",
+        "group": "core",
+        "toggle": false,
+        "default_on": true,
+        "covers": "the DNS socket",
+        "summary": "Answers the four private .app names declared in build.json with 127.0.0.1 and refuses every other name. Only our own apps ask it; the system never does."
+      },
+      {
+        "id": "opener",
+        "name": "Open in cloud-browser",
+        "group": "core",
+        "toggle": false,
+        "default_on": true,
+        "covers": "/__api__/open",
+        "summary": "Any link the web server serves, and every served page of the Pages tab, can be handed to cloud-browser from the link chooser (Open in browser)."
+      },
+      {
+        "id": "write",
+        "name": "Write API",
+        "group": "not-portable",
+        "toggle": false,
+        "default_on": false,
+        "covers": "the write endpoint",
+        "summary": "Writes a file under an allow-listed directory with a shared-secret token (loopback only, off unless the environment turns it on).",
+        "reason": "This app does not turn it on: it needs a provisioned token file and is a write path into shared storage; the app is read-only by design."
+      },
+      {
+        "id": "git",
+        "name": "Git push API",
+        "group": "not-portable",
+        "toggle": false,
+        "default_on": false,
+        "covers": "the git endpoint",
+        "summary": "add, commit and push a scoped set of paths.",
+        "reason": "Needs a git binary and credentials the app does not have, and an exec surface a Tauri app does not carry."
+      },
+      {
+        "id": "watchdog",
+        "name": "Watchdog snapshot",
+        "group": "not-portable",
+        "toggle": false,
+        "default_on": false,
+        "covers": "the watchdog snapshot endpoint",
+        "summary": "Hands over my-watchdog's two-second metrics file.",
+        "reason": "The snapshot lives in /run or XDG_RUNTIME_DIR of a Linux session; Android has neither, and the phone's metrics are the Home tab."
+      },
+      {
+        "id": "apps",
+        "name": "App panels",
+        "group": "not-portable",
+        "toggle": false,
+        "default_on": false,
+        "covers": "the app panel prefix",
+        "summary": "Serves another project's dist/ directory as a panel.",
+        "reason": "Resolves a checkout under $HOME/git; there is no such tree on the phone."
+      }
+    ]
+  },
+  "links": {
+    "_doc": "THE LINK-OPEN DECLARATION. Every link the web server serves (in the file view, in rendered pages, in listings, in the Pages tab) is classified by the first `types` row whose `schemes` and `hosts` match it, and the type names the choices the link chooser offers; nothing in server/ui/shell.html spells a type or a choice. hosts: local = loopback and the four private .app names (they resolve only through this app's private DNS, so Open embedded rewrites them to 127.0.0.1:<port>), external = anything else, any = both. A choice is `browser` (hand the URL to cloud-browser, explicit-package VIEW intent) or `embedded` (open it inside this app's WebView, so the system back gesture follows the WebView history, then falls back to the app). `remember` offers a per-type 'Remember my choice' tick; the stored choice lives in the app WebView's localStorage and Configs > Links resets it. A type with one choice does not ask.",
+    "choices": [
+      {
+        "id": "browser",
+        "label": "Open in browser"
+      },
+      {
+        "id": "embedded",
+        "label": "Open embedded"
+      }
+    ],
+    "remember": true,
+    "types": [
+      {
+        "id": "served",
+        "label": "Served page",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "hosts": "local",
+        "choices": [
+          "browser",
+          "embedded"
+        ]
+      },
+      {
+        "id": "web",
+        "label": "Web link",
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "hosts": "external",
+        "choices": [
+          "browser",
+          "embedded"
+        ]
+      },
+      {
+        "id": "other",
+        "label": "Other link",
+        "schemes": [
+          "*"
+        ],
+        "hosts": "any",
+        "choices": [
+          "browser"
+        ]
+      }
+    ]
   },
   "android": {
     "application_id": "com.diegonmarcos.cloudwebserver",

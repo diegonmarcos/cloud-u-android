@@ -24,7 +24,8 @@ pub fn run() {
             if let Err(e) = c3_webserver::start(cfg) {
                 eprintln!("c3-webserver did not start: {}", e);
             }
-            let url: tauri::Url = format!("http://127.0.0.1:{}/", port).parse()?;
+            // The app opens on its shell (five tabs); the file view at / is one of its pages (the Files tab).
+            let url: tauri::Url = format!("http://127.0.0.1:{}/__app__/", port).parse()?;
             let _window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url)).build()?;
             #[cfg(target_os = "android")]
             {
