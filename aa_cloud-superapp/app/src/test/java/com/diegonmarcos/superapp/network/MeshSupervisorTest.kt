@@ -64,7 +64,7 @@ class MeshSupervisorTest {
         val c = MeshSupervisor.decide(input(consent = true)); assertFalse(c.connect); assertEquals(Why.NEEDS_CONSENT, c.why)
     }
 
-    @Test fun `a failed attempt backs off 5s 10s 20s ... capped at 5 minutes, and retries when the wait is over`() {
+    @Test fun `a failed attempt backs off 5s 10s 20s and so on, capped at 5 minutes, and retries when the wait is over`() {
         assertEquals(listOf(0L, 5_000L, 10_000L, 20_000L, 40_000L), (0..4).map { MeshSupervisor.backoffMs(it) })
         assertEquals(MeshSupervisor.MAX_MS, MeshSupervisor.backoffMs(30))
         val wait = MeshSupervisor.decide(input(last = now - 1_000, failures = 2))
