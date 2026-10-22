@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1200">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>File Browser</title>
 <style>
 :root {
@@ -415,13 +415,41 @@ body.sidebar-hidden #sidebar { display: none; }
 
 .info-close a:hover { text-decoration: underline; }
 
-html { min-width: 900px; }
+/* Responsive: wide screens keep the two-pane layout (tree left, viewer right).
+   Narrow screens (phones, the embedded WebView) show the tree as a full-screen
+   panel that closes when a file opens; the hamburger / close button bring it back. */
+html { overflow-x: hidden; }
+#viewer-path { min-width: 0; flex: 1; margin-right: 8px; }
+#sb-close { display: none; }
+.search-toggles { flex-wrap: wrap; }
+@media (max-width: 700px) {
+  body { height: 100dvh; }
+  #right-panel { height: 100dvh; min-width: 0; width: 100%; }
+  #sidebar {
+    position: fixed; inset: 0; z-index: 30; width: 100%; max-width: none;
+    height: 100dvh; resize: none;
+  }
+  #sidebar h1 { display: flex; align-items: center; justify-content: space-between; }
+  #sb-close {
+    display: inline-block; background: none; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-dim); font: 18px/1 var(--mono); width: 36px; height: 36px; cursor: pointer;
+  }
+  #hamburger { font-size: 22px; padding: 6px 12px 6px 0; }
+  #viewer-toolbar { flex-wrap: wrap; gap: 6px 8px; padding: 6px 12px; }
+  .toolbar-actions { gap: 8px; flex-wrap: wrap; }
+  .file-entry { padding: 10px 16px; font-size: 14px; }
+  .search-box input[type="text"] { font-size: 16px; padding: 8px 10px; }
+  .search-toggles { flex-wrap: wrap; font-size: 12px; gap: 8px 12px; }
+  .copy-raw-btn, .open-btn { font-size: 12px; padding: 6px 10px; }
+  .info-panel { left: 4px; right: 4px; max-height: 60dvh; }
+}
+@media (hover: none) { .file-entry[title]:hover::after { display: none; } }
 </style>
 </head>
 <body>
 
 <div id="sidebar">
-  <h1>File Browser</h1>
+  <h1><span>File Browser</span><button id="sb-close" title="Close" aria-label="Close file list">&times;</button></h1>
   <div class="search-box">
     <input type="text" id="search" placeholder="Search..." autocomplete="off">
     <div class="search-toggles">
@@ -589,6 +617,7 @@ function openFile(path, el) {
   // Update URL hash for bookmarking/sharing
   history.replaceState(null, '', '#' + (path));
   loadViewer(path, false);
+  if (window.matchMedia('(max-width: 700px)').matches) document.body.classList.add('sidebar-hidden');
 }
 
 function loadViewer(path, raw) {
@@ -603,6 +632,10 @@ document.getElementById('info-btn').addEventListener('click', () => {
 });
 document.getElementById('info-close').addEventListener('click', () => {
   document.getElementById('info-panel').style.display = 'none';
+});
+
+document.getElementById('sb-close').addEventListener('click', () => {
+  document.body.classList.add('sidebar-hidden');
 });
 
 document.getElementById('hamburger').addEventListener('click', () => {

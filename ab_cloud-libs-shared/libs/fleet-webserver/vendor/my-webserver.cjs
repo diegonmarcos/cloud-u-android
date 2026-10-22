@@ -312,6 +312,8 @@ table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px}
 thead th{background:var(--bg-head);color:var(--text);padding:8px 12px;text-align:left;font-weight:bold;border:1px solid var(--border);position:sticky;top:0;white-space:nowrap}
 tbody td{padding:6px 12px;border:1px solid var(--border);vertical-align:top;max-width:400px;overflow-wrap:break-word}
 tbody tr:nth-child(even){background:var(--bg-row-alt)}
+/* narrow screens: tighter page padding; a table wider than the screen scrolls inside itself, never the page */
+@media(max-width:700px){body{padding:12px}table{display:block;max-width:100%;overflow-x:auto}.card{padding:10px 12px}}
 tbody tr:hover{background:rgba(0,214,143,0.05);cursor:pointer}
 tbody tr.row-copied{background:rgba(0,214,143,0.2);transition:background 0.3s}
 .card{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-bottom:12px}

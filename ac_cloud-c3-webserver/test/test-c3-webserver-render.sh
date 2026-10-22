@@ -12,7 +12,8 @@
 # at 450 dpi, device pixel ratio 2.8125, a 1080 x 2340 px screenshot — through test/render-a37.mjs:
 #
 #   R1  `/` IS THE LINUX FRONTEND. Its title is "File Browser", there is no custom nav or tab, the
-#       folder tree is left of the viewer pane, the toolbar (search, Dot files, Raw) is on top of the
+#       folder tree is the full-width panel on a phone (left of the viewer on a desktop: see
+#       test-c3-webserver-responsive.sh), laid out at the device width, the toolbar (search, Dot files, Raw) is on top of the
 #       viewer, the tree lists the served root, and the PNG is 1080 x 2340 and drawn.
 #   R2  A MARKDOWN FILE OPENED FROM THE TREE RENDERS IN THE RIGHT PANE (the vendored marked + css).
 #   R3  :8003 is still the diagnostics page.

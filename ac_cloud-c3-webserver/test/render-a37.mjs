@@ -64,11 +64,11 @@ const geo = await evalJs(`(() => { const r = (s) => { const e = document.querySe
     search: r('#search'), dot: r('#showdot'), raw: r('#raw-toggle'), hamburger: r('#hamburger'), list: [...document.querySelectorAll('#file-list .file-entry')].map((e) => e.innerText.trim()),
     vw: window.innerWidth, vh: window.innerHeight, sw: document.documentElement.scrollWidth }; })()`);
 check('R1b', geo.title === 'File Browser' && !geo.nav && !geo.tabs, `the page is the Linux File Browser and nothing else (title=${JSON.stringify(geo.title)}, custom nav=${geo.nav})`);
-check('R1c', geo.side && geo.right && geo.side.r <= geo.right.l + 1 && geo.side.l < geo.right.l, `folder tree is LEFT of the viewer pane (tree ${Math.round(geo.side?.l)}..${Math.round(geo.side?.r)}, viewer pane from ${Math.round(geo.right?.l)})`);
+check('R1c', geo.side && geo.side.vis && geo.side.l <= 1 && geo.side.w >= geo.vw - 2, `on a phone the folder tree is the full-width panel (tree ${Math.round(geo.side?.l)}..${Math.round(geo.side?.r)} of ${geo.vw}); the viewer takes over once a file opens`)
 check('R1d', geo.bar && geo.viewer && geo.bar.vis && geo.bar.b <= geo.viewer.t + 1 && geo.bar.t <= geo.right.t + 1 && geo.bar.w > 100, `toolbar is on TOP of the viewer (toolbar ${Math.round(geo.bar?.t)}..${Math.round(geo.bar?.b)}, viewer from ${Math.round(geo.viewer?.t)})`);
 check('R1e', geo.search && geo.dot && geo.raw && geo.search.w > 20, 'the toolbar controls exist: search box, Dot files switch, Raw switch');
 check('R1f', expectDir && geo.list.some((x) => x.includes(expectDir)), `the tree lists the served root's folders (${geo.list.slice(0, 4).join(' | ')})`);
-check('R1g', geo.vw >= 1000, `the page lays out at its own <meta viewport> (1200 css px wide), as the Linux UI does on a phone: innerWidth=${geo.vw}`);
+check('R1g', geo.vw === W && geo.sw <= geo.vw, `the page lays out at the device width, no forced desktop viewport: innerWidth=${geo.vw} (want ${W}), scrollWidth=${geo.sw}`)
 const s1 = await shot('tree-left-viewer-right-toolbar-top');
 check('R1h', s1.w === 1080 && s1.h === 2340 && s1.bytes > 15000, `the screenshot is A37-sized and drawn: ${s1.w}x${s1.h} px, ${s1.bytes} bytes`);
 
@@ -80,8 +80,8 @@ const rendered = await until(`(() => { const f = document.querySelector('#viewer
 check('R2a', rendered, rendered ? 'a Markdown file is rendered in the right-hand viewer (marked + github-markdown-dark)' : 'the viewer did not render the Markdown file');
 const heading = await evalJs(`(() => { try { return document.querySelector('#viewer').contentDocument.querySelector('.markdown-body h1').innerText; } catch (e) { return null; } })()`);
 check('R2b', heading === expectHeading, `the rendered heading is the document's (${JSON.stringify(heading)})`);
-const vp = await evalJs(`(() => { const b = document.querySelector('#viewer').getBoundingClientRect(), s = document.querySelector('#sidebar').getBoundingClientRect(); return { vl: b.left, sr: s.right, vw: b.width }; })()`);
-check('R2c', vp.vl >= vp.sr - 1 && vp.vw > 200, `the viewer is to the right of the tree (viewer ${Math.round(vp.vl)}+${Math.round(vp.vw)}, tree ends ${Math.round(vp.sr)})`);
+const vp = await evalJs(`(() => { const b = document.querySelector('#viewer').getBoundingClientRect(), s = document.querySelector('#sidebar').getBoundingClientRect(); return { vl: b.left, sr: s.width ? s.right : 0, vw: b.width, hid: getComputedStyle(document.querySelector('#sidebar')).display }; })()`);
+check('R2c', vp.sr <= 1 && vp.vw >= W - 2, `a file opened, the tree closed and the viewer fills the phone width (viewer ${Math.round(vp.vl)}+${Math.round(vp.vw)}; tree hidden: ${vp.hid})`)
 const s2 = await shot('markdown-in-right-viewer');
 check('R2d', s2.w === 1080 && s2.h === 2340 && s2.bytes > 15000, `second screenshot ${s2.w}x${s2.h} px, ${s2.bytes} bytes`);
 

@@ -29,6 +29,14 @@
   .err { color:var(--bad); padding:10px; }
   .dim { color:var(--dim); }
   .yes { color:#7ee2a8; } .no { color:var(--bad); }
+  /* Desktop: the phone layout, centred in a readable column; the tab bar stays at the bottom, centred. */
+  @media (min-width:900px) {
+    main { max-width:960px; margin:0 auto; }
+    header { padding-left:max(12px, calc((100vw - 960px) / 2 + 10px)); padding-right:max(12px, calc((100vw - 960px) / 2 + 10px)); }
+    nav { justify-content:center; }
+    nav button { flex:0 0 160px; }
+    .row .k { flex-basis:30%; }
+  }
 </style>
 </head>
 <body>
