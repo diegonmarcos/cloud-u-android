@@ -351,6 +351,26 @@ jobs:
             term=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER cld.termux | tr -d '\r' | tail -1)
             case "$term" in */*) timeout 60 adb shell am start -W -n "$term" || true; sleep 25;; esac
           fi
+          # The migration backup the owner's flow leaves behind: the old build's files/ and shared_prefs/ as <legacy root>/.cloud-migrate/<pkg>/data.zip
+          # (what DataMigration.Archive writes), made here from the debuggable old build's real data.
+          adb exec-out run-as "$PKG" tar c files shared_prefs > out/data.tar 2> out/tar.err || true
+          python3 - <<'PY'
+          import tarfile, zipfile
+          n = 0
+          try:
+              with tarfile.open("out/data.tar") as t, zipfile.ZipFile("out/data.zip", "w") as z:
+                  for m in t.getmembers():
+                      r = m.name.lstrip("./")
+                      if not m.isfile() or m.size > 4 * 1024 * 1024 or "/cache/" in r or "credentials" in r or "__androidx_security" in r: continue
+                      z.writestr(r, t.extractfile(m).read()); n += 1
+          except Exception as e:
+              print("no archive:", e)
+          print("archive entries:", n)
+          PY
+          if [ -s out/data.zip ]; then
+            adb shell mkdir -p "/sdcard/CloudDrive/.cloud-migrate/$PKG"
+            adb push out/data.zip "/sdcard/CloudDrive/.cloud-migrate/$PKG/data.zip"
+          fi
           # the shared-uid build over the old one: Android refuses a uid change, so the migration is uninstall + install
           adb install -r -g apk/drive.apk > out/over.txt 2>&1; cat out/over.txt
           adb shell pm uninstall "$PKG" || true
@@ -364,6 +384,20 @@ jobs:
           if [ $rc = 124 ]; then echo "::error title=cloud-drive hung on launch after the upgrade::am start -W did not return"; ok=0; adb shell "kill -3 \$(pidof $PKG)" >/dev/null 2>&1 || true; sleep 3; fi
           sleep 10
           adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "process $PKG gone after the first launch"; ok=0; }
+          if [ $ok = 1 ]; then
+            # the restore notice, if it is up: tap Restore and let the app recreate
+            adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml out/ui-notice.xml >/dev/null 2>&1 || true
+            xy=$(python3 - <<'PY'
+          import re
+          try: x = open("out/ui-notice.xml", encoding="utf-8").read()
+          except Exception: x = ""
+          m = re.search(r'text="Restore"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', x)
+          print(f"{(int(m[1])+int(m[3]))//2} {(int(m[2])+int(m[4]))//2}" if m else "")
+          PY
+            )
+            echo "restore button: ${xy:-none}"
+            if [ -n "$xy" ]; then adb shell input tap $xy; sleep 8; adb exec-out screencap -p > out/screen-restored.png || true; adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "process $PKG died on Restore"; ok=0; }; fi
+          fi
           if [ $ok = 1 ]; then
             timeout 200 adb shell monkey -p "$PKG" --pct-syskeys 0 --pct-appswitch 0 --throttle 300 -s 5 --ignore-timeouts 300 > out/monkey.txt 2>&1 || true
             sleep 3
