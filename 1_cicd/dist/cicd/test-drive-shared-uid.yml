@@ -1,0 +1,115 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → cloud-drive launch inside the shared uid (emulator)             ║
+# ║                                                                        ║
+# ║ The launch smoke installs cloud-drive ALONE, so it never runs the      ║
+# ║ configuration owners have: cloud-drive in cld.termux's uid             ║
+# ║ (android:sharedUserId cld.termux.shared). This installs the released   ║
+# ║ cloud-terminal first, starts it once so its data dir exists, then      ║
+# ║ installs cloud-drive and launches it, bounded, and fails on a crash,   ║
+# ║ a hang or a dead process. logcat and a screenshot are uploaded.        ║
+# ║ Manual: run_id = a Ship run whose cloud-drive x86_64 APK to test.      ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → cloud-drive in the shared uid (emulator)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Ship cloud-drive run id whose x86_64 APK artifact to test (empty = the latest release asset)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  drive-shared-uid:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Fetch the APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -eu
+          mkdir -p apk
+          gh release download latest -R "$REPO" -p cloud-terminal-x86_64.apk -O apk/terminal.apk
+          if [ -n "$RUN_ID" ]; then
+            gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              --jq '.artifacts[] | select(.name|startswith("Cloud-Drive-x86_64-")) | .name' |
+            while read -r name; do gh run download "$RUN_ID" -R "$REPO" -n "$name" -D "apk/dl-$name"; done
+            find apk -name '*.apk' -path '*dl-*' | head -1 | xargs -I{} cp {} apk/drive.apk
+          else
+            gh release download latest -R "$REPO" -p Cloud-Drive-x86_64.apk -O apk/drive.apk
+          fi
+          ls -l apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Write the probe
+        run: |
+          cat > probe.sh <<'EOF'
+          #!/bin/bash
+          set -u
+          mkdir -p out
+          adb logcat -c || true
+          adb install -r -g apk/terminal.apk || { echo "::error::terminal install failed"; exit 2; }
+          term=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER cld.termux | tr -d '\r' | tail -1)
+          echo "terminal launcher: $term"
+          case "$term" in */*) timeout 60 adb shell am start -W -n "$term" || true; sleep 20;; esac
+          adb install -r -g apk/drive.apk || { echo "::error::drive install failed (a shared-uid install must be signed with the constellation key)"; adb logcat -d | tail -40; exit 2; }
+          adb shell dumpsys package com.diegonmarcos.clouddrive | grep -E "userId=|sharedUser" | tee out/uid.txt
+          PKG=com.diegonmarcos.clouddrive
+          act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
+          ok=1
+          timeout 120 adb shell am start -W -n "$act" > out/am-start.txt; rc=$?
+          cat out/am-start.txt
+          if [ $rc = 124 ]; then
+            echo "::error title=cloud-drive hung on launch (shared uid)::am start -W did not return in 120 s"
+            ok=0
+            adb shell "kill -3 \$(pidof $PKG)" >/dev/null 2>&1 || true; sleep 3
+          fi
+          for i in $(seq 1 40); do
+            [ $ok = 0 ] && break
+            sleep 1
+            if ! adb shell pidof "$PKG" >/dev/null 2>&1; then echo "process $PKG is gone after ${i}s"; ok=0; break; fi
+          done
+          adb logcat -d -v threadtime > out/logcat.txt
+          adb logcat -d -b crash -v threadtime > out/logcat-crash.txt || true
+          adb exec-out screencap -p > out/screen.png || true
+          awk '/FATAL EXCEPTION/{p=1} p&&/AndroidRuntime/{print} p&&!/AndroidRuntime/{p=0}' out/logcat.txt > out/fatal.txt
+          grep -q "Process: $PKG" out/fatal.txt && ok=0
+          grep -q "$PKG" out/logcat-crash.txt && ok=0
+          if [ $ok = 0 ]; then
+            echo "::group::FATAL EXCEPTION"; cat out/fatal.txt; echo "::endgroup::"
+            head -40 out/fatal.txt | while IFS= read -r l; do echo "::error title=cloud-drive crashed in the shared uid::$l"; done
+            [ -s out/fatal.txt ] || grep -E "$PKG|AndroidRuntime|ActivityManager" out/logcat.txt | tail -80
+            exit 1
+          fi
+          echo "cloud-drive survived 40 s in the shared uid."
+          EOF
+          chmod +x probe.sh
+
+      - name: Boot emulator + probe
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./probe.sh
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-shared-uid-launch
+          path: out/
+          if-no-files-found: warn
