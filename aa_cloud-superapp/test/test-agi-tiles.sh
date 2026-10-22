@@ -191,8 +191,10 @@ if configs:
     row = [t.get("label") for t in configs[0]["tiles"]]
     check(row == ["SuperApp", "|", "Account", "|", "Store", "Controls", "Firewall", "|", "C3", "|", "About"], "Configs row = SuperApp | Account | Store, Controls, Firewall | C3 | About (owner order 2026-10) (got %s)" % row)
     sa = next((t for t in configs[0]["tiles"] if t.get("label") == "SuperApp"), {})
-    check(sa.get("id") == "cloud-superapp" and sa.get("target") == "app://" + bj["android"]["application_id"],
-          "the moved SuperApp tile still opens this app's own package (%s)" % sa.get("target"))
+    # #1095: the tile opens this app's own Configs page (the shell's section:config), no longer a relaunch of
+    # the package at Home. Stricter than before: it must not be app://<own package> any more.
+    check(sa.get("id") == "cloud-superapp" and sa.get("target") == "section:config",
+          "the moved SuperApp tile opens this app's Configs page (%s)" % sa.get("target"))
 holders = [g.get("title") for g in groups(bj["ui"]["sections"], None)
            if any(t.get("id") == "cloud-superapp" for t in g["tiles"])]
 check(holders == ["Configs"], "the SuperApp tile is declared once, in Configs (found in %s)" % holders)

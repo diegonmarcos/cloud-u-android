@@ -286,6 +286,28 @@ assert len(ids) == len(set(ids)), "tile ids must stay unique"
 assert "Me" in [t["label"] for t in cloud["tiles_shared"]], "the Home index label follows the row name"
 PY
 
+echo "== T7 (#1095): the Configs-row SuperApp tile opens the Configs page, not Home =="
+python3 - "$BJ" "$APP" <<'PY' && ok "Cloud ▸ Apps ▸ Configs ▸ SuperApp → section:config, a section the shell declares and routes" || bad "the Configs-row SuperApp tile does not resolve to the Configs page"
+import json, os, sys
+d = json.load(open(sys.argv[1]))
+app = sys.argv[2]
+cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
+row = next(g for g in cloud["tile_groups"] if g["title"] == "Configs")
+tile = next(t for t in row["tiles"] if t.get("id") == "cloud-superapp")
+assert tile["label"] == "SuperApp", tile
+assert tile["target"] == "section:config", (
+    f"SuperApp tile target is {tile['target']!r}; it must open the Configs page (section:config), "
+    "not relaunch the package at Home (app://...)")
+# The target must name a section that really exists, and the shell must route the section: grammar.
+assert any(s["id"] == "config" for s in d["ui"]["sections"]), "no ui.sections[config] — the tile would open nothing"
+shell = open(os.path.join(app, "app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt"), encoding="utf-8").read()
+assert 'tileId.startsWith("section:") ->' in shell and "goSection(id" in shell, "ShellActivity.routeTarget no longer routes section:<id>"
+# Declared once in the row; nowhere else may keep an app:// relaunch of this app's own package.
+own = "app://" + d["android"]["application_id"]
+stale = [t.get("id") for g in cloud["tile_groups"] for t in g["tiles"] if t.get("target") == own]
+assert not stale, f"tiles still relaunch this app at Home: {stale}"
+PY
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

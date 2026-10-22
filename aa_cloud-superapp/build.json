@@ -2925,11 +2925,11 @@
             "title": "Configs",
             "tiles": [
               {
-                "_doc": "#803 the owner moved this tile out of AGI to sit immediately before Store (test-agi-tiles.sh T5). app:// resolves MAIN/LAUNCHER for the package and adds FLAG_ACTIVITY_NEW_TASK (see ShellActivity.handleTarget), which lands on .MainActivity — the app door, own taskAffinity, own Overview card. .HomeActivity (the launcher door) is a different task and is not reachable this way, which is the point.",
+                "_doc": "#803 the owner moved this tile out of AGI to sit immediately before Store (test-agi-tiles.sh T5). app:// resolves MAIN/LAUNCHER for the package and adds FLAG_ACTIVITY_NEW_TASK (see ShellActivity.handleTarget), which lands on .MainActivity — the app door, own taskAffinity, own Overview card. .HomeActivity (the launcher door) is a different task and is not reachable this way, which is the point. #1095: the tile now opens this app's own Configs page, not Home: target is the shell's own `section:config` (ShellActivity.routeTarget -> goSection), the same door the top-right orb uses, so no app:// relaunch and no new route. test-dashboard-cross-app-deeplink.sh T7 and ConfigsTileDeepLinkTest pin it.",
                 "id": "cloud-superapp",
                 "label": "SuperApp",
                 "icon": "ic_superapp_d",
-                "target": "app://com.diegonmarcos.superapp"
+                "target": "section:config"
               },
               {
                 "_doc": "Rule between tile groups (owner order: SuperApp | Account | Store, Controls, Firewall | C3 | About).",
