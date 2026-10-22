@@ -53,6 +53,9 @@ public class SystemEventReceiver extends BroadcastReceiver {
 
     public synchronized void onActionBootCompleted(@NonNull Context context, @NonNull Intent intent) {
         TermuxShellManager.onActionBootCompleted(context, intent);
+        // The mesh door (build.json::mesh_sshd): without it a rebooted or reinstalled phone answers
+        // ping on the mesh and refuses every port.
+        com.termux.app.MeshSshdBoot.onBoot(context);
     }
 
     public synchronized void onActionPackageUpdated(@NonNull Context context, @NonNull Intent intent) {

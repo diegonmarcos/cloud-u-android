@@ -144,6 +144,11 @@ android {
         buildConfigField "boolean", "CLOUD_WAKE_LOCK_DEFAULT_ON", "${cloudWakeLock().default_on}"
         buildConfigField "boolean", "CLOUD_WIFI_LOCK", "${cloudWakeLock().wifi_lock}"
 
+        // The mesh sshd started on boot: build.json::mesh_sshd, the one declaration.
+        buildConfigField "int", "CLOUD_MESH_SSHD_PORT", "${cloudMeshSshd().port}"
+        buildConfigField "String", "CLOUD_MESH_SSHD_BIND", "\"${cloudMeshSshd().bind.join(',')}\""
+        buildConfigField "boolean", "CLOUD_MESH_SSHD_ON_BOOT", "${cloudMeshSshd().start_on_boot}"
+
         // cloud-shared-store (ac_cloud-termux/build.json::shared_store + ::storage, the owner's ONE
         // declaration): the migration notice's backup drop and marker. The store itself is linked by
         // bin/login (bake_default_packages.py storage_setup) through the shared uid.
@@ -764,6 +769,14 @@ tasks.matching { it.name.toLowerCase().contains('debug') && it.name.startsWith('
 // #787 build.json::wake_lock -- whether a session takes the wake lock without being asked, and
 // whether the Wi-Fi lock comes with it. Both must be declared booleans: a missing key must not
 // quietly become "off".
+def cloudMeshSshd() {
+    def declaration = new File(projectDir.parentFile, "build.json")
+    def decl = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8")).mesh_sshd
+    if (!(decl?.port instanceof Integer) || !(decl?.bind instanceof List) || decl.bind.isEmpty() || !(decl?.start_on_boot instanceof Boolean))
+        throw new GradleException(declaration.toString() + " mesh_sshd must declare integer port, non-empty bind list and boolean start_on_boot")
+    return decl
+}
+
 def cloudWakeLock() {
     def declaration = new File(projectDir.parentFile, "build.json")
     def decl = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8")).wake_lock
