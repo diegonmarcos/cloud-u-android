@@ -786,7 +786,8 @@ class BrowserHostFragment : Fragment() {
         val names = config.privateNames
         if (!names.matches(url)) { loadUrl(url); return }
         val view = this
-        names.resolveAsync(url) { r ->
+        val appCtx = context?.applicationContext
+        names.resolveAsync(url, start = { startPrivateNamesService(appCtx, names) }) { r ->
             view.post {
                 when (r) {
                     is PrivateNames.Result.Ok -> view.loadUrl(r.url)
@@ -794,6 +795,20 @@ class BrowserHostFragment : Fragment() {
                 }
             }
         }
+    }
+
+    /**
+     * Start the app that owns the private names (Cloud C3 WebServer's keep-alive foreground service) by explicit
+     * intent, the component declared in build.json serving.keepalive and baked as private_names.service. The service
+     * is guarded by the fleet's CONSTELLATION_DATA signature permission, so only a fleet-signed browser may.
+     */
+    private fun startPrivateNamesService(ctx: android.content.Context?, names: PrivateNames): Boolean {
+        val target = names.service ?: return false
+        if (ctx == null) return false
+        return runCatching {
+            ctx.startForegroundService(android.content.Intent().setClassName(target.pkg, target.cls))
+            true
+        }.getOrDefault(false)
     }
 
     /** #886 what the strip draws, as Compose state the host refreshes when a tab's page, title, icon or group changes. */
@@ -1675,8 +1690,10 @@ class BrowserHostFragment : Fragment() {
         } else {
             // #893 never `; wv)` / `Version/x.x`: Google refuses sign-in to that (disallowed_useragent).
             s.userAgentString = BrowserNavPolicy.cleanUserAgent(config.userAgents["mobile"] ?: s.userAgentString)
-            s.useWideViewPort = false
-            s.loadWithOverviewMode = false
+            // Honour the page's <meta name=viewport> as Chrome does: with useWideViewPort off WebView ignores it and
+            // lays a page that asks for width=1200 (the C3 WebServer's file view) out at the phone's ~360 px.
+            s.useWideViewPort = true
+            s.loadWithOverviewMode = true
             wv.setInitialScale(0)
         }
     }

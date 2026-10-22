@@ -19,3 +19,5 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+# JNI: KeepAliveService.nativeStart is bound by name to the Rust library (src-tauri/src/lib.rs).
+-keepclasseswithmembernames class com.diegonmarcos.cloudwebserver.KeepAliveService { native <methods>; }

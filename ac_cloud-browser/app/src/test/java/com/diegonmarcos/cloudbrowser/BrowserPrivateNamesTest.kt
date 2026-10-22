@@ -24,6 +24,9 @@ import java.net.InetAddress
  *   N4 a non-loopback answer, a refusal, a wrong id and silence are all refusals, never a fall-through to the system
  *   N5 the wire: the query is a well-formed A/IN question and a real loopback UDP server resolves a name end to end
  *   N6 the shared library names nothing (#209) and the pins are the names
+ *   N7 the resolver ladder: owned names from the declaration (no DNS), DNS for the rest, the WebServer service
+ *      started once when the DNS is silent or the port refuses, a bounded retry, then the error
+ *   N8 the baked declaration owns the four names on loopback and names the keep-alive service; a bad row is dropped
  */
 class BrowserPrivateNamesTest {
 
@@ -147,5 +150,81 @@ class BrowserPrivateNamesTest {
         for ((url, _) in shipped().defaultPinnedTitles) assertNotNull(url, names.nameOf(url))
         // the config the browser ships has no private_names of its own: the gradle bake adds the one declaration
         assertFalse(json("../build.json").getJSONObject("ui").getJSONObject("browser").has("private_names"))
+    }
+
+    private val svc = PrivateNames.ServiceTarget("com.diegonmarcos.cloudwebserver", "com.diegonmarcos.cloudwebserver.KeepAliveService")
+    private fun owned() = PrivateNames(names.dnsHost, names.dnsPort, names.ports, owned = names.ports.keys.associateWith { "127.0.0.1" }, service = svc)
+    private fun dynamic(service: PrivateNames.ServiceTarget? = svc) = PrivateNames(names.dnsHost, names.dnsPort, names.ports, service = service)
+
+    @Test
+    fun `N7 an owned name never asks DNS and a running server loads at once`() {
+        val ev = mutableListOf<String>()
+        val r = owned().ladder("http://emulated.app/x?y#z", lookup = { ev += "dns"; error("DNS must not be asked for an owned name") },
+            serverUp = { ip, port -> ev += "up:$ip:$port"; true }, start = { ev += "start"; true }, sleep = { ev += "sleep" }) as PrivateNames.Result.Ok
+        assertEquals("http://127.0.0.1:8002/x?y#z", r.url)
+        assertEquals(listOf("up:127.0.0.1:8002"), ev)
+    }
+
+    @Test
+    fun `N7 a stopped server is started once, waited for, then the page loads`() {
+        val ev = mutableListOf<String>()
+        var polls = 0
+        val r = owned().ladder("http://emulated.app", lookup = { error("no DNS") },
+            serverUp = { _, _ -> ev += "up"; ++polls > 3 }, start = { ev += "start"; true }, sleep = { ev += "sleep" })
+        assertTrue(r is PrivateNames.Result.Ok)
+        assertEquals("the service is started exactly once, before any wait", 1, ev.count { it == "start" })
+        assertEquals(listOf("up", "start", "sleep", "up", "sleep", "up", "sleep", "up"), ev)
+    }
+
+    @Test
+    fun `N7 a server that never comes up is a bounded retry and then the error`() {
+        var starts = 0; var sleeps = 0
+        val r = owned().ladder("http://cloud.app", serverUp = { _, _ -> false }, start = { starts++; true }, attempts = 5, sleep = { sleeps++ })
+        assertTrue(r is PrivateNames.Result.Fail)
+        assertTrue((r as PrivateNames.Result.Fail).why.contains("not running"))
+        assertEquals(1, starts); assertEquals(5, sleeps)
+    }
+
+    @Test
+    fun `N7 a dynamic name asks DNS, starts the service when it is silent, retries, then loads`() {
+        val ev = mutableListOf<String>()
+        var asked = 0
+        val r = dynamic().ladder("http://nix.app/a", lookup = { ev += "dns"; if (++asked >= 3) "127.0.0.1" else null },
+            serverUp = { _, _ -> ev += "up"; true }, start = { ev += "start"; true }, sleep = { ev += "sleep" }) as PrivateNames.Result.Ok
+        assertEquals("http://127.0.0.1:8001/a", r.url)
+        assertEquals(listOf("dns", "start", "sleep", "dns", "sleep", "dns", "up"), ev)
+    }
+
+    @Test
+    fun `N7 DNS that never answers fails after one start and a bounded retry, never to the system`() {
+        var starts = 0; var asks = 0
+        val r = dynamic().ladder("http://termux.app", lookup = { asks++; null }, serverUp = { _, _ -> true }, start = { starts++; true }, attempts = 4, sleep = {})
+        val fail = r as PrivateNames.Result.Fail
+        assertTrue(fail.why, fail.why.contains("did not answer"))
+        assertEquals(1, starts); assertEquals(1 + 4, asks)
+    }
+
+    @Test
+    fun `N7 without a declared service nothing is started and a non-loopback answer is final`() {
+        var starts = 0
+        val none = dynamic(service = null).ladder("http://termux.app", lookup = { null }, serverUp = { _, _ -> true }, start = { starts++; true }, sleep = { error("no wait") })
+        assertTrue(none is PrivateNames.Result.Fail); assertEquals(0, starts)
+        val bad = dynamic().ladder("http://termux.app", lookup = { "93.184.216.34" }, serverUp = { _, _ -> true }, start = { starts++; true }, sleep = {})
+        assertTrue((bad as PrivateNames.Result.Fail).why.contains("not a loopback")); assertEquals("a wrong answer is not a silent DNS", 0, starts)
+        assertNull(owned().ladder("https://example.com/", lookup = { error("no") }))
+    }
+
+    @Test
+    fun `N8 the baked declaration owns the four names on loopback and names the keep-alive service`() {
+        assertEquals(names.ports.keys, names.owned.keys)
+        for (ip in names.owned.values) assertEquals("127.0.0.1", ip)
+        assertEquals(PrivateNames.ServiceTarget("com.diegonmarcos.cloudwebserver", "com.diegonmarcos.cloudwebserver.KeepAliveService"), names.service)
+        assertEquals("no wildcard: a subdomain of an owned name is not private", false, names.matches("http://www.emulated.app/"))
+        val parsed = PrivateNames.parse(JSONObject()
+            .put("dns", JSONObject().put("host", "127.0.0.1").put("port", 5353))
+            .put("names", JSONObject().put("a.app", 8000).put("b.app", 8001))
+            .put("owned", JSONObject().put("a.app", "127.0.0.1").put("b.app", "93.184.216.34").put("c.app", "127.0.0.1")))
+        assertEquals(mapOf("a.app" to "127.0.0.1"), parsed.owned)
+        assertNull(parsed.service)
     }
 }

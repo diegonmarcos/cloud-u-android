@@ -28,7 +28,7 @@
 #       window (one is opened in code only after start() has bound the port);
 #       lib.rs binds first, takes port and root from build.json via build.rs,
 #       asks the storage permission from Rust; the template's gradle reads
-#       build.json for identity, SDK levels and label; no service, no exec, no
+#       build.json for identity, SDK levels and label; the one declared keep-alive service, no exec, no
 #       server binary, no rootfs residue. (The no-Kotlin pin itself is
 #       test-c3-webserver-no-kotlin.sh.)
 #   T6  RENAME LEDGER. The retired spellings (the old cloud- id without the c3-
@@ -201,8 +201,25 @@ if not os.path.isdir(os.path.join(app, pkg_dir)):
 manifest = read(os.path.join(proj, "app/src/main/AndroidManifest.xml"))
 if "android.permission.READ_EXTERNAL_STORAGE" not in manifest:
     bad.append("the manifest does not declare READ_EXTERNAL_STORAGE")
-if "<service" in manifest:
-    bad.append("the manifest declares a service — there is no hand-written Android component in this app")
+# The one declared Android component pair: the keep-alive foreground service and its boot receiver
+# (build.json::serving.keepalive). Anything else hand-written in the manifest is still refused.
+ka = (json.loads(read("build.json")).get("serving") or {}).get("keepalive") or {}
+services = re.findall(r'<service\b[^>]*android:name="([^"]+)"', manifest)
+receivers = re.findall(r'<receiver\b[^>]*android:name="([^"]+)"', manifest)
+pkg_id = bj["android"]["application_id"]
+def full(n): return pkg_id + n if n.startswith(".") else n
+if [full(n) for n in services] != [ka.get("service")]:
+    bad.append("the manifest's services %r are not exactly build.json::serving.keepalive.service %r" % (services, ka.get("service")))
+if [full(n) for n in receivers] != [ka.get("receiver")]:
+    bad.append("the manifest's receivers %r are not exactly build.json::serving.keepalive.receiver %r" % (receivers, ka.get("receiver")))
+for want in ("android.permission.FOREGROUND_SERVICE", "android.permission.RECEIVE_BOOT_COMPLETED",
+             "android.intent.action.BOOT_COMPLETED", "android.intent.action.MY_PACKAGE_REPLACED"):
+    if want not in manifest:
+        bad.append("the manifest does not declare %s — the servers would not start at boot or after an update" % want)
+if ka.get("permission") and 'android:permission="%s"' % ka["permission"] not in manifest:
+    bad.append("the keep-alive service is not guarded by %s — any app could start it" % ka.get("permission"))
+if "nativeStart" not in read(os.path.join(crate, "src/lib.rs")) or "KeepAliveService_nativeStart" not in read(os.path.join(crate, "src/lib.rs")):
+    bad.append("src-tauri/src/lib.rs does not export KeepAliveService_nativeStart — the service would have no servers to keep alive")
 for stale in ("resolve_runtime.py", "test/test-webserver-rootfs.sh", "app", "settings.gradle", "build.gradle"):
     if os.path.exists(os.path.join(app, stale)):
         bad.append("%s still exists — the Kotlin shell / Route D residue" % stale)
@@ -291,6 +308,24 @@ new=re.sub(r"useLegacyPackaging\s*=\s*true", "useLegacyPackaging = false", s)
 assert new!=s; open(p,"w").write(new)
 PY
 }
+m_extra_service() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/src-tauri/gen/android/app/src/main/AndroidManifest.xml"; s=open(p).read()
+new=s.replace('<provider','<service android:name=".Evil" android:exported="true" />\n        <provider',1)
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_no_boot() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/src-tauri/gen/android/app/src/main/AndroidManifest.xml"; s=open(p).read()
+new=s.replace('android.intent.action.BOOT_COMPLETED','android.intent.action.NOPE',1)
+assert new!=s; open(p,"w").write(new)
+PY
+}
+m_unguarded_service() { python3 - "$1" <<'PY'
+import sys; p=sys.argv[1]+"/src-tauri/gen/android/app/src/main/AndroidManifest.xml"; s=open(p).read()
+new=s.replace('android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"','',1)
+assert new!=s; open(p,"w").write(new)
+PY
+}
 m_old_asset() { python3 - "$1" <<'PY'
 import sys,json; p=sys.argv[1]+"/build.json"; d=json.load(open(p))
 d["release"]["gh_release"]["asset_name"]="Cloud-Web"+"Server.apk"; json.dump(d,open(p,"w"),indent=2)
@@ -325,6 +360,9 @@ mutate "the Rust library stored uncompressed"               t5 m_no_legacy_packa
 mutate "the port typed into the Tauri app"                  t5 m_rust_port
 mutate "a window declared in tauri.conf.json (races bind)"  t5 m_window_before_bind
 mutate "tauri.conf.json identifier drifts from build.json"  t5 m_identifier_drift
+mutate "a second, undeclared service"                       t5 m_extra_service
+mutate "the boot start dropped from the receiver"           t5 m_no_boot
+mutate "the keep-alive service open to any app"             t5 m_unguarded_service
 mutate "the retired asset name put back"                    t6 m_old_asset
 
 echo

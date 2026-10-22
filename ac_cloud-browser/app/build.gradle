@@ -117,9 +117,17 @@ servingDecl.endpoints.each { e ->
     if (pin == null) throw new GradleException("ui.browser.default_pinned_tabs is missing ${want} (${e.title})")
     if (!(pin instanceof Map) || pin.title?.toString() != e.title) throw new GradleException("ui.browser.default_pinned_tabs entry ${want} must carry title '${e.title}'")
 }
+// serving.keepalive: the web server app's persistent foreground service, which this browser starts (explicit intent)
+// when a private name's server does not answer; its package is also the <queries> entry that makes it visible.
+def keepaliveDecl = servingDecl.keepalive
+if (keepaliveDecl == null || !keepaliveDecl['package'] || !keepaliveDecl['service']) throw new GradleException("ac_cloud-c3-webserver/build.json::serving.keepalive (package, service) is missing: the browser could not start the servers")
+def webserverPackage = keepaliveDecl['package'].toString()
 buildJson.ui.browser.private_names = [
     dns  : [host: servingDecl.dns.host, port: servingDecl.dns.port],
     names: servingDecl.endpoints.collectEntries { [(it.name): it.port] },
+    // `resolve: declared` = the declaration itself answers (serving.dns.answer), no DNS query; anything else asks the DNS.
+    owned: servingDecl.endpoints.findAll { it.resolve == 'declared' }.collectEntries { [(it.name): servingDecl.dns.answer] },
+    service: ['package': webserverPackage, 'class': keepaliveDecl['service']],
 ]
 def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
 // #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
@@ -268,7 +276,7 @@ android {
         buildConfigField "String", "AUTH_MISSION_B64",          "\"${authMissionB64}\""
         // #684 the manifest cannot read JSON; the declared action and signature permission are
         // injected as placeholders so the guarded activity and its intent-filter are data-driven.
-        manifestPlaceholders = [authMissionAction: authMissionAction, authMissionPermission: authMissionPermission, vaultPackage: vaultPackage]
+        manifestPlaceholders = [authMissionAction: authMissionAction, authMissionPermission: authMissionPermission, vaultPackage: vaultPackage, webserverPackage: webserverPackage]
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
         buildConfigField "String", "UI_PROFILE_EMAIL",     "\"${profileEmail}\""
         buildConfigField "String", "UI_PROFILE_INITIALS",  "\"${profileInitials}\""

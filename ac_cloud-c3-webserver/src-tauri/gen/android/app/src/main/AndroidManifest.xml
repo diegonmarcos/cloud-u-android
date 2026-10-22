@@ -5,6 +5,9 @@
          readable at targetSdk 28 once this is granted. src-tauri/src/lib.rs
          asks for it at launch, from Rust, through the activity's JNI handle. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- The keep-alive service (KeepAliveService): foreground, started at boot and after an update. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:icon="@mipmap/ic_launcher"
@@ -22,6 +25,25 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- build.json::serving.keepalive. Exported so Cloud Browser can start it by explicit intent when a private
+             name's DNS does not answer; only an app signed with the fleet key (CONSTELLATION_DATA, a signature
+             permission libs:core defines) may. -->
+        <service
+            android:name=".KeepAliveService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+
+        <!-- Exported so the emulator test can send BOOT_COMPLETED / MY_PACKAGE_REPLACED to it by component; all it does is
+             start the app's own keep-alive service, so a spoofed broadcast gains nothing. -->
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <provider
           android:name="androidx.core.content.FileProvider"

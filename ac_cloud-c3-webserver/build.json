@@ -32,8 +32,10 @@
       }
     },
     "glue": {
-      "_doc": "The ONLY Kotlin/Java files the app may commit: Tauri 2.12.1's Android template (templates/mobile/android in the tauri-cli crate) rendered for this identifier, byte for byte. A file here whose bytes change, a .kt/.java/standalone .kts anywhere else in the app, or a file listed here that is missing fails test/test-c3-webserver-no-kotlin.sh. Regenerating the template on a tauri-cli bump is the one legitimate reason to update a hash.",
-      "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/MainActivity.kt": "65fad043b6e51e2cc42e43af80c11e1a60e877844c9f4eb98a2260519314c71b",
+      "_doc": "The ONLY Kotlin/Java files the app may commit: Tauri 2.12.1's Android template (MainActivity.kt additionally promotes the servers to the keep-alive service) plus the two declared keep-alive files KeepAliveService.kt and BootReceiver.kt (serving.keepalive: a persistent foreground service has no Rust-only form, so they are the one declared exception, pinned like the template) (templates/mobile/android in the tauri-cli crate) rendered for this identifier, byte for byte. A file here whose bytes change, a .kt/.java/standalone .kts anywhere else in the app, or a file listed here that is missing fails test/test-c3-webserver-no-kotlin.sh. Regenerating the template on a tauri-cli bump is the one legitimate reason to update a hash.",
+      "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/MainActivity.kt": "bd53cfcec4bf8ef02e4b7c35096f829279267652f4a193bb2786f7dbb46c94b3",
+    "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/KeepAliveService.kt": "93c5b809273d988f14bc4b31fc28bdb9c4378bd4006c9d8a6dde71300ebbe2e0",
+    "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/BootReceiver.kt": "79bb994daa22d54b4ad924b710ccfb6975b6703234e2f26efba9650d0b471eef",
       "src-tauri/gen/android/buildSrc/src/main/java/com/diegonmarcos/cloudwebserver/kotlin/BuildTask.kt": "a23fc50bb35704302240dcfc02d30b972ec67aee59eaf14b23443e7fb4a02236",
       "src-tauri/gen/android/buildSrc/src/main/java/com/diegonmarcos/cloudwebserver/kotlin/RustPlugin.kt": "ba97577f2cf2b123eddd332662844d2b93a2ee589be65f3843bc7de4ea5b7ba7"
     },
@@ -76,11 +78,13 @@
       "port": 5353,
       "answer": "127.0.0.1",
       "ttl_s": 30,
+      "_doc_resolve": "Each endpoint's `resolve` says how Cloud Browser finds its address: `declared` = straight from this block (the name is OWNED by the fleet and stands for `answer`, 127.0.0.1, so no DNS query is needed and a stopped server cannot break the lookup); `dns` = ask the DNS above (a dynamic name). The browser still needs the SERVER up: it starts keepalive when the endpoint's port does not accept a connection.",
       "_doc": "Loopback only, both the socket and the answer. 5353 because :53 needs root. Not a system resolver: it answers the four names below, says NODATA for other record types of them and REFUSES every other name; it never forwards."
     },
     "endpoints": [
       {
         "id": "termux",
+        "resolve": "declared",
         "name": "termux.app",
         "port_from": "runtime.webserver.port",
         "role": "external",
@@ -90,6 +94,7 @@
       },
       {
         "id": "nix",
+        "resolve": "declared",
         "name": "nix.app",
         "port_from": "runtime.webserver.port",
         "role": "external",
@@ -99,6 +104,7 @@
       },
       {
         "id": "emulated",
+        "resolve": "declared",
         "name": "emulated.app",
         "port_from": "runtime.port",
         "role": "drive",
@@ -108,6 +114,7 @@
       },
       {
         "id": "cloud",
+        "resolve": "declared",
         "name": "cloud.app",
         "port_from": "runtime.diag.port",
         "role": "diag",
@@ -116,6 +123,13 @@
         "summary": "Fleet diagnostics: the SuperApp's About, Logcat and Diagnose"
       }
     ],
+    "keepalive": {
+      "_doc": "The persistent foreground service that keeps this app's servers (drive, diagnostics, private DNS) bound without the UI: started at boot and after an update (BootReceiver), by the activity, and by Cloud Browser when a private name's server does not answer (explicit intent by package and class; the service is exported behind the fleet's CONSTELLATION_DATA signature permission, so only a fleet-signed app can start it). START_STICKY restarts it if the system kills it. Read by app/build.gradle of the browser, which bakes it as ui.browser.private_names.service and the package into its <queries>.",
+      "package": "com.diegonmarcos.cloudwebserver",
+      "service": "com.diegonmarcos.cloudwebserver.KeepAliveService",
+      "receiver": "com.diegonmarcos.cloudwebserver.BootReceiver",
+      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
+    },
     "opener": {
       "package": "com.diegonmarcos.cloudbrowser",
       "_doc": "A served page is handed to this app as an explicit-package VIEW intent by the diagnostics bridge's opener; it is never offered to any other browser, because a private name sent to the system would resolve on the public internet."

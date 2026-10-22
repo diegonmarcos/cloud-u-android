@@ -8,22 +8,40 @@ mod bridge;
 
 use tauri::{WebviewUrl, WebviewWindowBuilder};
 
+/// Bind the servers (the drive, the diagnostics page and the private DNS). Idempotent: the activity and the
+/// keep-alive service both call it, whichever comes first binds. A failed bind is logged, not fatal.
+fn start_servers() -> Result<u16, Box<dyn std::error::Error>> {
+    let port: u16 = env!("C3_WEBSERVER_PORT").parse()?;
+    let cfg = c3_webserver::Config {
+        drive_port: port,
+        diag_port: env!("C3_WEBSERVER_DIAG_PORT").parse()?,
+        root: env!("C3_WEBSERVER_SERVE_ROOT").to_string(),
+    };
+    if let Err(e) = c3_webserver::start(cfg) {
+        eprintln!("c3-webserver did not start: {}", e);
+    }
+    Ok(port)
+}
+
+/// The keep-alive foreground service (KeepAliveService.kt, started at boot, after an update, by the browser and by
+/// the activity) calls this once it is in the foreground: the servers then live as long as the service, not the UI.
+#[cfg(target_os = "android")]
+#[no_mangle]
+pub extern "system" fn Java_com_diegonmarcos_cloudwebserver_KeepAliveService_nativeStart(
+    _env: jni::JNIEnv,
+    _service: jni::objects::JObject,
+) -> jni::sys::jboolean {
+    start_servers().is_ok() as jni::sys::jboolean
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            let port: u16 = env!("C3_WEBSERVER_PORT").parse()?;
             // A failed bind is logged, not fatal: the window still opens and
             // says "not available", which names the problem on the screen
             // instead of closing the app with no word.
-            let cfg = c3_webserver::Config {
-                drive_port: port,
-                diag_port: env!("C3_WEBSERVER_DIAG_PORT").parse()?,
-                root: env!("C3_WEBSERVER_SERVE_ROOT").to_string(),
-            };
-            if let Err(e) = c3_webserver::start(cfg) {
-                eprintln!("c3-webserver did not start: {}", e);
-            }
+            let port = start_servers()?;
             // The app opens on its shell (five tabs); the file view at / is one of its pages (the Files tab).
             let url: tauri::Url = format!("http://127.0.0.1:{}/__app__/", port).parse()?;
             let _window = WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url)).build()?;

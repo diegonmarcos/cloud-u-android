@@ -12,7 +12,8 @@
 //!
 //! Every listener binds 127.0.0.1 only and refuses every other peer, and answers GET and HEAD. The
 //! Tauri app (../src-tauri) calls [`start`] from its own process before it opens the window on the
-//! drive's URL, so the app is this crate plus a webview: no second process, no exec, no Kotlin.
+//! drive's URL, and so does the app's keep-alive foreground service (started at boot, after an update and by the
+//! browser when the DNS does not answer); [`start`] is idempotent, so whichever comes first binds and the other is a no-op.
 
 pub mod about;
 pub mod app;
@@ -24,6 +25,7 @@ pub mod serving;
 use fleet_webserver::http::{self, Req, Resp};
 use fleet_webserver::render::jstr;
 use std::net::{Ipv4Addr, TcpListener};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -88,6 +90,19 @@ pub struct Config {
 /// The root is NOT required to be readable yet: on Android the storage grant arrives after the app has started,
 /// and every request resolves its path afresh, so a root that becomes readable later is served from then on.
 pub fn start(cfg: Config) -> Result<(), String> {
+    // One server per process: the keep-alive service (src-tauri) and the activity both call this, in either order.
+    static STARTED: AtomicBool = AtomicBool::new(false);
+    if STARTED.swap(true, Ordering::SeqCst) {
+        return Ok(());
+    }
+    let r = start_once(cfg);
+    if r.is_err() {
+        STARTED.store(false, Ordering::SeqCst);
+    }
+    r
+}
+
+fn start_once(cfg: Config) -> Result<(), String> {
     let sv = serving::get();
     if cfg.drive_port != sv.drive_port || cfg.diag_port != sv.diag_port {
         return Err(format!(
