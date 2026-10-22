@@ -64,10 +64,10 @@ class WebPagesRenderTest {
             .putExtra("shortcut_action", "page:cloud/webapps"))
 
         fun web(): WebView? { var w: WebView? = null; resumed()?.let { a -> inst.runOnMainSync { w = findWeb(a.window.decorView) } }; return w }
-        fun until(what: String, ms: Long = 20_000, cond: () -> Boolean) {
+        fun until(what: String, ms: Long = 20_000, diag: () -> String = { "" }, cond: () -> Boolean) {
             val t0 = SystemClock.elapsedRealtime()
             while (SystemClock.elapsedRealtime() - t0 < ms) { clearPrompt(); if (cond()) return; SystemClock.sleep(500) }
-            throw AssertionError("timed out waiting for: $what")
+            throw AssertionError("timed out waiting for: $what ${diag()}")
         }
         fun urlOf(w: WebView): String { var u = ""; inst.runOnMainSync { u = w.url.orEmpty() }; return u }
         fun canBack(w: WebView): Boolean { var b = false; inst.runOnMainSync { b = w.canGoBack() }; return b }
@@ -81,7 +81,7 @@ class WebPagesRenderTest {
             // The first same-origin link that leaves the page: it must stay in this WebView (shouldOverrideUrlLoading) and add a history entry.
             val clicked = js(v, "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.origin===location.origin&&a.href.split('#')[0]!==location.href.split('#')[0]&&!a.hasAttribute('download'));if(!a)return 'none';a.click();return a.href})()")
             assertTrue("no same-origin app link on the WebApps page", clicked != "\"none\"")
-            until("the app page opens inside the WebView") { urlOf(v).split('#')[0] != main.split('#')[0] && canBack(v) }
+            until("the app page opens inside the WebView", diag = { "clicked $clicked, url ${urlOf(v)}, canGoBack ${canBack(v)}, main $main" }) { urlOf(v).split('#')[0] != main.split('#')[0] && canBack(v) }
         }
         fun tapShellBack() {
             val a = resumed()!!; val loc = IntArray(2); var wd = 0; var ht = 0
@@ -202,7 +202,7 @@ class WebPagesRenderTest {
                 embedNav = num("document.getElementById('cwa-nav')?1:0")
                 embedFlag = js(w, "String(document.documentElement.getAttribute('data-embed'))").trim('"')
                 embedLinks = num("document.querySelectorAll('main a[href]').length")
-                finalUrl = w.url.orEmpty()
+                finalUrl = url // read on the main thread above: WebView.getUrl() throws off it
                 // The SuperApp's top row (status / app top bar island) stays visible and the page sits BELOW it, inside the shell.
                 // resumed() itself runs on the main thread: calling it inside runOnMainSync throws "can not be called from the main application thread".
                 val shell = resumed()
