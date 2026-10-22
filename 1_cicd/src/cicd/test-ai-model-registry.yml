@@ -81,10 +81,7 @@ jobs:
           git add -- ab_cloud-libs-shared/build.json ac_cloud-mail/build.json ac_cloud-writer/build.json
           git -c user.name="Claude" -c user.email="noreply@anthropic.com" \
             commit -m "ci(ai-registry): refresh the baked OpenRouter values via run ${GITHUB_RUN_ID} [skip ci]"
-          for attempt in 1 2 3; do
-            git pull --rebase origin main && git push origin HEAD:main && exit 0
-            sleep 10
-          done
+          bash 1_cicd/dist/scripts/cloud-android-push-main.sh && exit 0
           echo "::warning::could not push the refreshed registries - main kept moving. The tester below still judges the refreshed values; the next scheduled run retries."
 
       # The tester decides the verdict and owns every assertion; this step only

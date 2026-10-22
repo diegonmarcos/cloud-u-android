@@ -121,4 +121,4 @@ jobs:
             -c user.name="Claude" \
             -c user.email="noreply@anthropic.com" \
             commit -m "ci(superapp-data): refresh topology snapshots via run ${GITHUB_RUN_ID} [skip ci]"
-          git push origin HEAD:main
+          bash 1_cicd/dist/scripts/cloud-android-push-main.sh

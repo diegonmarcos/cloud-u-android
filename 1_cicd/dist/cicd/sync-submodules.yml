@@ -29,5 +29,5 @@ jobs:
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git add -u
             git commit -m "chore: sync submodules" || true
-            git push || true
+            bash 1_cicd/dist/scripts/cloud-android-push-main.sh || true
           fi
