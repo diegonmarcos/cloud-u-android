@@ -1,17 +1,17 @@
 package com.diegonmarcos.superapp.notificationcenter
 
-import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.location.Geocoder
-import android.location.Location
-import android.location.LocationManager
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.diegonmarcos.superapp.R
 import kotlinx.coroutines.CoroutineScope
@@ -39,21 +39,23 @@ import java.util.Locale
  * derived from them) and the probability of precipitation the badge shows as
  * "💧40%". It replaced Open-Meteo, whose free tier is rate-shared and whose
  * page was a developer docs form rather than a forecast. Parsing lives in the
- * pure [WeatherModel]. The position is
- * the device's LAST KNOWN location — passive, no fix is ever requested, so
- * this badge costs zero battery for location. The place name comes from
+ * pure [WeatherModel]. The position comes from [WeatherLocation]: the
+ * persisted fix when fresh, then the system's cached fixes, then one network
+ * (Wi-Fi/cell) request, GPS only as the last resort; every fix is persisted
+ * and never cleared. The place name comes from
  * Android's own [Geocoder]; when it has no backend the coordinates are shown
  * instead, because a wrong name is worse than an honest number.
  *
- * NOTHING HERE IS ESTIMATED. No location yet → the badge says so and waits
- * for the next refresh; a failed fetch keeps the previous face and says when
- * it last succeeded, never inventing a number.
+ * NOTHING HERE IS ESTIMATED. A failed fetch keeps the previous forecast (also
+ * across a restart: it is persisted), never inventing a number. No position at
+ * all → the card names the missing permission or provider and offers the fix.
  */
 class WeatherBadgeService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob())
     private val main = Handler(Looper.getMainLooper())
     private var tick: Runnable? = null
+    private val store by lazy { WeatherFixStore(this) }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -62,7 +64,7 @@ class WeatherBadgeService : Service() {
         ensureChannel()
         // Foreground within the first few seconds or the platform kills us —
         // post the "reading…" face immediately, fill in when the fetch lands.
-        startForeground(NOTIF_ID, build(null))
+        startForeground(NOTIF_ID, build(initialState()))
         schedule()
     }
 
@@ -103,14 +105,44 @@ class WeatherBadgeService : Service() {
 
     private fun refresh() {
         scope.launch {
-            val today = runCatching { fetchToday() }.getOrNull()
+            val state = runCatching { compute() }.getOrElse { initialState() }
             main.post {
                 runCatching {
                     (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-                        .notify(NOTIF_ID, build(today))
+                        .notify(NOTIF_ID, build(state))
                 }
             }
         }
+    }
+
+    /** What to show before the first refresh lands (and after a crash in it): the persisted fix and the last good
+     *  forecast, so a restart or a reboot never shows an empty card while a position is known. */
+    private fun initialState(): WeatherFace.State {
+        val fix = store.load()
+        if (fix == null) {
+            val env = WeatherLocation.env(this)
+            val r = if (!env.coarse && !env.fine) WeatherLocation.Reason.PERMISSION
+            else if (!env.anyProviderOn) WeatherLocation.Reason.LOCATION_OFF else WeatherLocation.Reason.SEARCHING
+            return WeatherFace.State.NoLocation(r)
+        }
+        return cachedState(fix) ?: WeatherFace.State.Loading(coords(fix.lat, fix.lon), fix)
+    }
+
+    private fun cachedState(fix: WeatherLocation.Fix?): WeatherFace.State.Forecast? {
+        val c = store.loadForecast() ?: return null
+        val f = WeatherModel.parse(c.body, Instant.now(), ZoneId.systemDefault()) ?: return null
+        return WeatherFace.State.Forecast(WeatherToday(c.place, c.lat, c.lon, f), fix)
+    }
+
+    private fun compute(): WeatherFace.State {
+        val res = WeatherLocation.resolve(System.currentTimeMillis(), WeatherLocation.env(this),
+            WeatherLocation.AndroidProbe(this), store)
+        val fix = (res as? WeatherLocation.Result.Found)?.fix
+            ?: return WeatherFace.State.NoLocation((res as WeatherLocation.Result.None).reason)
+        val today = runCatching { fetchToday(fix) }.getOrNull()
+        // A failed fetch keeps the last good forecast; only a position with no forecast at all is "loading".
+        return if (today != null) WeatherFace.State.Forecast(today, fix)
+        else cachedState(fix) ?: WeatherFace.State.Loading(coords(fix.lat, fix.lon), fix)
     }
 
     data class WeatherToday(
@@ -120,22 +152,8 @@ class WeatherBadgeService : Service() {
         val forecast: WeatherModel.Forecast,
     )
 
-    /** The badge's declaration gates on the location grant, so by the time
-     *  this runs the permission is held — the lint suppress states that. */
-    @SuppressLint("MissingPermission")
-    private fun lastKnownLocation(): Location? {
-        val lm = getSystemService(LOCATION_SERVICE) as LocationManager
-        // Passive first: the position someone else already paid for.
-        for (p in listOf(LocationManager.PASSIVE_PROVIDER,
-                LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)) {
-            runCatching { lm.getLastKnownLocation(p) }.getOrNull()?.let { return it }
-        }
-        return null
-    }
-
-    private fun fetchToday(): WeatherToday? {
-        val loc = lastKnownLocation() ?: return null
-        val conn = (URL(WeatherModel.apiUrl(loc.latitude, loc.longitude)).openConnection() as HttpURLConnection).apply {
+    private fun fetchToday(loc: WeatherLocation.Fix): WeatherToday? {
+        val conn = (URL(WeatherModel.apiUrl(loc.lat, loc.lon)).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 5_000
             readTimeout = 5_000
@@ -149,29 +167,29 @@ class WeatherBadgeService : Service() {
             conn.disconnect()
         }
         val f = WeatherModel.parse(body, Instant.now(), ZoneId.systemDefault()) ?: return null
-        return WeatherToday(placeName(loc), loc.latitude, loc.longitude, f)
+        val place = placeName(loc)
+        store.saveForecast(WeatherFixStore.Cached(place, loc.lat, loc.lon, body, System.currentTimeMillis()))
+        return WeatherToday(place, loc.lat, loc.lon, f)
     }
+
+    private fun coords(lat: Double, lon: Double) = String.format(Locale.US, "%.2f, %.2f", lat, lon)
 
     /** City-ish name via the platform geocoder; honest coordinates when the
      *  device has no geocoder backend. */
-    private fun placeName(loc: Location): String = runCatching {
+    private fun placeName(loc: WeatherLocation.Fix): String = runCatching {
         @Suppress("DEPRECATION")
-        Geocoder(this, Locale.getDefault()).getFromLocation(loc.latitude, loc.longitude, 1)
+        Geocoder(this, Locale.getDefault()).getFromLocation(loc.lat, loc.lon, 1)
             ?.firstOrNull()
             ?.let { it.locality ?: it.subAdminArea ?: it.adminArea }
-    }.getOrNull() ?: String.format(Locale.US, "%.2f, %.2f", loc.latitude, loc.longitude)
+    }.getOrNull() ?: coords(loc.lat, loc.lon)
 
-    private fun build(today: WeatherToday?): android.app.Notification {
+    private fun build(state: WeatherFace.State): android.app.Notification {
         val b = badge()
         val showHourly = b?.let { BadgeCustomization.bool(this, it, "show_hourly") } ?: true
-
-        val title = if (today == null) getString(R.string.badge_weather_title)
-        else getString(R.string.badge_weather_title_fmt,
-            WeatherModel.headline(today.forecast), today.place)
-        val text = if (today == null) getString(R.string.badge_weather_no_data)
-        else getString(R.string.badge_weather_range_fmt,
-            String.format(Locale.US, "%.0f", today.forecast.maxC),
-            String.format(Locale.US, "%.0f", today.forecast.minC))
+        val today = (state as? WeatherFace.State.Forecast)?.today
+        val face = WeatherFace.of(this, state)
+        val title = face.title
+        val text = face.text
 
         val pinned = BadgeServices.pinned(this, BADGE_ID)
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -180,6 +198,7 @@ class WeatherBadgeService : Service() {
             .setContentTitle(title)
             .setContentText(text)
             .setSubText("Cloud SA - Weather")
+            .apply { actionPi(face.action)?.let { addAction(0, face.actionLabel, it) } }
             .setOnlyAlertOnce(true)
             .setOngoing(pinned)
             .apply { if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@WeatherBadgeService, NOTIF_ID)) }
@@ -193,13 +212,31 @@ class WeatherBadgeService : Service() {
                         .joinToString("   ") { (h, t) ->
                             String.format(Locale.US, "%02dh %.0f°", h, t)
                         }
-                    setStyle(NotificationCompat.BigTextStyle().bigText("$text\n\n$rows"))
+                    val pos = (state as WeatherFace.State.Forecast).fix
+                        ?.let { "\n" + WeatherFace.position(this@WeatherBadgeService, it, System.currentTimeMillis()) }.orEmpty()
+                    setStyle(NotificationCompat.BigTextStyle().bigText("$text\n\n$rows$pos"))
                 }
             }
             // Tap = the SOURCE's page for this position, the way Markets opens its ticker page.
             .setContentIntent(BadgeClick.pi(this, BadgeClick.weatherUrl(today?.lat, today?.lon)))
             .let { NotifyGroups.attach(this, it, BADGE_ID) } // #777 group G1
             .build()
+    }
+
+    /** The card's button: where the missing piece is fixed. A runtime permission cannot be asked from a
+     *  notification, so the permission button opens this app's settings page. */
+    private fun actionPi(a: WeatherFace.Action?): PendingIntent? {
+        val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        return when (a) {
+            null -> null
+            WeatherFace.Action.APP_SETTINGS -> PendingIntent.getActivity(this, 1,
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), flags)
+            WeatherFace.Action.LOCATION_SETTINGS -> PendingIntent.getActivity(this, 2,
+                Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), flags)
+            WeatherFace.Action.RETRY -> PendingIntent.getService(this, 3,
+                Intent(this, WeatherBadgeService::class.java), flags)
+        }
     }
 
     private fun ensureChannel() {

@@ -63,7 +63,7 @@ private fun accentOf(d: BadgeCardData.Data): Color =
     runCatching { Color(android.graphics.Color.parseColor(d.badge.card.accent)) }.getOrDefault(Color(0xFF8AB4F8))
 
 @Composable
-private fun BadgeCard(d: BadgeCardData.Data) {
+internal fun BadgeCard(d: BadgeCardData.Data) {
     val ctx = LocalContext.current
     val hostView = androidx.compose.ui.platform.LocalView.current
     val accent = accentOf(d)

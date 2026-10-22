@@ -1,0 +1,129 @@
+package com.diegonmarcos.superapp.notificationcenter
+
+import com.diegonmarcos.superapp.notificationcenter.WeatherLocation.Env
+import com.diegonmarcos.superapp.notificationcenter.WeatherLocation.Fix
+import com.diegonmarcos.superapp.notificationcenter.WeatherLocation.GPS
+import com.diegonmarcos.superapp.notificationcenter.WeatherLocation.NETWORK
+import com.diegonmarcos.superapp.notificationcenter.WeatherLocation.PASSIVE
+import com.diegonmarcos.superapp.notificationcenter.WeatherLocation.Reason
+import com.diegonmarcos.superapp.notificationcenter.WeatherLocation.Result
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/** Provider order, persistence rule and fallback of the Weather badge's position. Pure JVM. */
+class WeatherLocationTest {
+    private val now = 10_000_000_000L
+    private val min = 60_000L
+    private val all = Env(coarse = true, fine = true, background = true, anyProviderOn = true)
+
+    private fun fix(src: String, ageMin: Long, lat: Double = 40.4) = Fix(lat, -3.7, 30f, now - ageMin * min, src)
+
+    private class MemStore(var fix: Fix? = null) : WeatherLocation.FixStore {
+        override fun load() = fix
+        override fun save(fix: Fix): Boolean {
+            if (!fix.valid || (this.fix != null && fix.timeMs <= this.fix!!.timeMs)) return false
+            this.fix = fix; return true
+        }
+    }
+
+    private class FakeProbe(
+        val on: Set<String> = setOf(NETWORK, PASSIVE, GPS),
+        val cached: Map<String, Fix> = emptyMap(),
+        val fresh: Map<String, Fix> = emptyMap(),
+    ) : WeatherLocation.Probe {
+        val peeks = ArrayList<String>()
+        val requests = ArrayList<String>()
+        override fun enabled(provider: String) = provider in on
+        override fun lastKnown(provider: String): Fix? { peeks += provider; return cached[provider] }
+        override fun request(provider: String, timeoutMs: Long): Fix? { requests += provider; return fresh[provider] }
+    }
+
+    @Test fun orderIsCheapestFirstAndGpsIsLast() {
+        assertEquals(listOf(NETWORK, PASSIVE, GPS), WeatherLocation.PEEK_ORDER)
+        assertEquals(listOf(NETWORK, GPS), WeatherLocation.REQUEST_ORDER)
+    }
+
+    @Test fun freshPersistedFixUsesNoProviderAtAll() {
+        val p = FakeProbe(); val s = MemStore(fix("network", 10))
+        val r = WeatherLocation.resolve(now, all, p, s) as Result.Found
+        assertTrue(r.fresh); assertEquals("network", r.fix.source)
+        assertTrue(p.peeks.isEmpty() && p.requests.isEmpty())
+    }
+
+    @Test fun cachedNetworkFixWinsOverFresherPassiveAndGps() {
+        val p = FakeProbe(cached = mapOf(NETWORK to fix(NETWORK, 30), PASSIVE to fix(PASSIVE, 1), GPS to fix(GPS, 1)))
+        val s = MemStore()
+        val r = WeatherLocation.resolve(now, all, p, s) as Result.Found
+        assertEquals(NETWORK, r.fix.source)
+        assertEquals(listOf(NETWORK), p.peeks)
+        assertTrue(p.requests.isEmpty())
+        assertEquals(NETWORK, s.fix?.source)
+    }
+
+    @Test fun networkIsRequestedBeforeGpsAndGpsIsSkippedWhenNetworkAnswers() {
+        val p = FakeProbe(fresh = mapOf(NETWORK to fix(NETWORK, 0), GPS to fix(GPS, 0)))
+        val r = WeatherLocation.resolve(now, all, p, MemStore()) as Result.Found
+        assertEquals(NETWORK, r.fix.source)
+        assertEquals(listOf(NETWORK), p.requests)
+    }
+
+    @Test fun gpsOnlyAsLastResort() {
+        val p = FakeProbe(fresh = mapOf(GPS to fix(GPS, 0)))
+        val r = WeatherLocation.resolve(now, all, p, MemStore()) as Result.Found
+        assertEquals(GPS, r.fix.source)
+        assertEquals(listOf(NETWORK, GPS), p.requests)
+    }
+
+    @Test fun gpsNeedsFinePermissionAndDisabledProvidersAreNotAsked() {
+        val coarseOnly = all.copy(fine = false)
+        val p = FakeProbe(on = setOf(NETWORK, PASSIVE, GPS), fresh = mapOf(GPS to fix(GPS, 0)))
+        assertTrue(WeatherLocation.resolve(now, coarseOnly, p, MemStore()) is Result.None)
+        assertEquals(listOf(NETWORK), p.requests)
+        val noNet = FakeProbe(on = setOf(PASSIVE, GPS), fresh = mapOf(GPS to fix(GPS, 0)))
+        WeatherLocation.resolve(now, all, noNet, MemStore())
+        assertEquals(listOf(GPS), noNet.requests)
+    }
+
+    @Test fun failedRefreshNeverClearsTheStoredFix() {
+        val old = fix("network", 300)               // stale: a refresh is attempted
+        val s = MemStore(old)
+        val p = FakeProbe()                         // every provider answers nothing
+        val r = WeatherLocation.resolve(now, all, p, s) as Result.Found
+        assertFalse(r.fresh); assertEquals(old, r.fix)
+        assertEquals(old, s.fix)
+        assertEquals(listOf(NETWORK, GPS), p.requests)
+    }
+
+    @Test fun staleSystemFixIsUsedAndPersistedWhenNothingElseExists() {
+        val p = FakeProbe(cached = mapOf(PASSIVE to fix(PASSIVE, 600)))
+        val s = MemStore()
+        val r = WeatherLocation.resolve(now, all, p, s) as Result.Found
+        assertFalse(r.fresh); assertEquals(PASSIVE, r.fix.source); assertEquals(r.fix, s.fix)
+    }
+
+    @Test fun onlyANewerFixReplacesTheStoredOne() {
+        val s = MemStore(fix("network", 10))
+        assertFalse(s.save(fix("gps", 20, lat = 50.0)))
+        assertEquals(40.4, s.fix!!.lat, 0.0)
+        assertTrue(s.save(fix("gps", 1, lat = 50.0)))
+        assertEquals(50.0, s.fix!!.lat, 0.0)
+        assertFalse(s.save(Fix(0.0, 0.0, 1f, now, "gps")))      // null island = no fix
+        assertFalse(s.save(Fix(Double.NaN, 1.0, 1f, now, "gps")))
+    }
+
+    @Test fun revokedPermissionStillAnswersFromTheStoredFix() {
+        val denied = all.copy(coarse = false, fine = false)
+        assertTrue(WeatherLocation.resolve(now, denied, FakeProbe(), MemStore(fix("network", 500))) is Result.Found)
+        assertEquals(Reason.PERMISSION, (WeatherLocation.resolve(now, denied, FakeProbe(), MemStore()) as Result.None).reason)
+    }
+
+    @Test fun noFixSaysTheActualReason() {
+        fun why(e: Env) = (WeatherLocation.resolve(now, e, FakeProbe(), MemStore()) as Result.None).reason
+        assertEquals(Reason.PERMISSION, why(all.copy(coarse = false, fine = false)))
+        assertEquals(Reason.LOCATION_OFF, why(all.copy(anyProviderOn = false)))
+        assertEquals(Reason.BACKGROUND, why(all.copy(background = false)))
+        assertEquals(Reason.NO_FIX, why(all))
+    }
+}
