@@ -25,6 +25,12 @@
         <domain includeSubdomains="true">ocsp.sectigo.com</domain>
     </domain-config>
 
+    <!-- #1093 the self-hosted vault's mesh endpoint (build.json::fleet_endpoints in ac_cloud-account: containers.app.dns),
+         named exactly, never the whole .app TLD. Reachable over the WireGuard mesh only. -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain>vaultwarden.app</domain>
+    </domain-config>
+
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">bitwarden.com</domain>
         <domain includeSubdomains="true">bitwarden.eu</domain>

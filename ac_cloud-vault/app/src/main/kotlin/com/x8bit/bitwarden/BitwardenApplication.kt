@@ -9,6 +9,7 @@ import com.x8bit.bitwarden.data.platform.manager.event.OrganizationEventManager
 import com.x8bit.bitwarden.data.platform.manager.network.NetworkConfigManager
 import com.x8bit.bitwarden.data.platform.manager.restriction.RestrictionManager
 import com.x8bit.bitwarden.data.platform.repository.EnvironmentRepository
+import com.x8bit.bitwarden.fleet.VaultFleetEndpoints
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import javax.inject.Inject
@@ -48,6 +49,8 @@ class BitwardenApplication : Application() {
         // override the environmentRepository values.
         restrictionManager.initialize()
         environmentRepository.initialize()
+        // #1093 the self-hosted vault is a fleet service: mesh first through Cloud Account's published endpoints.
+        VaultFleetEndpoints.start(this)
     }
 
     override fun onLowMemory() {

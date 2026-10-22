@@ -30,6 +30,11 @@ configure<LibraryExtension> {
             )
         }
     }
+    // #1093 the fleet endpoint fallback (mesh `<service>.app` first, then public + bearer) is ONE source tree shared with
+    // Cloud Mail and Cloud Account (ab_cloud-libs-shared/libs/fleet-endpoints, plain JVM Kotlin). It is compiled here BY
+    // REFERENCE, against this tree's own OkHttp and coroutines, so no second copy exists and the strict dependency
+    // locks of this build see no new module.
+    sourceSets["main"].java.directories.add("../../ab_cloud-libs-shared/libs/fleet-endpoints/src/main/kotlin")
     compileOptions {
         sourceCompatibility(libs.versions.jvmTarget.get())
         targetCompatibility(libs.versions.jvmTarget.get())
@@ -51,6 +56,7 @@ dependencies {
     implementation(project(":core"))
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.kotlinx.coroutines.core) // StateFlow of the shared fleet-endpoints router
     implementation(libs.kotlinx.serialization)
     implementation(platform(libs.square.okhttp.bom))
     implementation(libs.square.okhttp)

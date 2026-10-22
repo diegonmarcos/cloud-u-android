@@ -1,0 +1,20 @@
+# #1093 fleet-host guard baseline (FleetHostGuardTest). One main-source file per line: <path> TAB <why it is allowed>.
+# A file that names a fleet host (a *.diegonmarcos.com host or an http(s)://*.app mesh URL) must go through
+# libs:fleet-endpoints (FleetHttp, FleetTransport, the interceptors or the AuthHttp seam) or be listed here with its reason.
+# The list may only shrink: a listed file that no longer names a fleet host, or now goes through the transport, fails the guard
+# until its line is removed. A NEW file that names a fleet host and is not listed fails it.
+aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/rss/NtfyCatalog.kt	ntfy topic catalog (data, links); no request is made here
+ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/Telemetry.kt	crash and log ingest to c3-infra-api (a service not yet declared in fleet_endpoints); libs:core is compiled into every app and cannot link the transport, so it needs the AuthHttp-style seam
+ab_cloud-libs-shared/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Defaults.kt	languagetool default endpoint (a preference value); service to be declared
+ab_cloud-libs-shared/libs/mail/src/main/java/com/diegonmarcos/superapp/mail/MailAuthHttp.kt	Authelia web login: the session cookie is bound to the auth host, so a mesh-origin login would not be the gate's session; to be decided with the auth broker
+ab_cloud-libs-shared/libs/news/src/main/java/com/diegonmarcos/superapp/news/NewsModels.kt	news API path constants; NewsApi requests to be routed once api.diegonmarcos.com/pub/news is declared
+ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater/source/ApkSource.kt	the updater's mesh leg to git-proxy-api.app (its own mesh-then-public order, MeshMirror); to be declared as a fleet service
+ab_cloud-libs-shared/libs/wallet/src/main/java/com/diegonmarcos/superapp/wallet/WalletMailConnector.kt	IMAP over TLS to imap.diegonmarcos.com, not an HTTP fleet endpoint
+ac_c3-morpheus/app/src/main/java/com/diegonmarcos/morpheus/MainActivity.kt	WebView page URLs (auth and paca), not an API call
+ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/hub/Providers.kt	provider labels and links shown in the UI; the Gitea calls go through ForgeClient and the fleet transport
+ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/hub/TokensClient.kt	tokens-api is not yet declared in fleet_endpoints; its calls ride AuthHttp but are not keyed
+ac_cloud-c3/app/src/main/java/com/diegonmarcos/cloudc3/cloud/NtfyCatalog.kt	ntfy topic catalog (data, links); no request is made here
+ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/home/HomeHandOffs.kt	links the user opens in the browser; no request is made here
+ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/settings/AccountAuthSection.kt	hint text naming the auth host; no request is made here
+ac_cloud-vault/data/src/main/kotlin/com/bitwarden/data/repository/util/EnvironmentUrlDataJsonExtensions.kt	ROUTED: the self-hosted server URL; the network module's fleet interceptors send it mesh first (#1093)
+ac_cloud-writer/app/src/main/java/com/diegonmarcos/cloudwriter/WriterPrefs.kt	languagetool default endpoint (a preference value); service to be declared

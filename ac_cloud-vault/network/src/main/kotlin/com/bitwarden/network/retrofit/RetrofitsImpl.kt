@@ -10,6 +10,9 @@ import com.bitwarden.network.interceptor.PermissionInterceptor
 import com.bitwarden.network.ssl.CertificateProvider
 import com.bitwarden.network.ssl.configureSsl
 import com.bitwarden.network.util.HEADER_KEY_AUTHORIZATION
+import com.diegonmarcos.superapp.fleetendpoints.EndpointRouteInterceptor
+import com.diegonmarcos.superapp.fleetendpoints.FleetBearerInterceptor
+import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -86,6 +89,7 @@ internal class RetrofitsImpl(
                     .newBuilder()
                     .addInterceptor(loggingInterceptor)
                     .addInterceptor(permissionInterceptor)
+                    .withFleetEndpoints()
                     .build(),
             )
             .build()
@@ -169,6 +173,7 @@ internal class RetrofitsImpl(
                     .addInterceptor(baseUrlInterceptor)
                     .addInterceptor(loggingInterceptor)
                     .addInterceptor(permissionInterceptor)
+                    .withFleetEndpoints()
                     .build(),
             )
             .build()
@@ -184,6 +189,7 @@ internal class RetrofitsImpl(
                     .addInterceptor(baseUrlInterceptor)
                     .addInterceptor(loggingInterceptor)
                     .addInterceptor(permissionInterceptor)
+                    .withFleetEndpoints()
                     .build(),
             )
             .build()
@@ -202,6 +208,16 @@ internal class RetrofitsImpl(
                     .build(),
             )
             .build()
+
+    /**
+     * Fleet endpoints (#1093): a request for a host Cloud Account declared (the self-hosted vault) goes over its mesh
+     * endpoint (`<service>.app`) first and, where the declaration allows, falls back to the public URL with the fleet
+     * bearer. Added AFTER the base-URL interceptor so it sees the real server URL, never the placeholder. A host Account
+     * did not declare (any Bitwarden cloud server) is untouched.
+     */
+    private fun OkHttpClient.Builder.withFleetEndpoints(): OkHttpClient.Builder = this
+        .addInterceptor(EndpointRouteInterceptor(FleetTransport.router))
+        .addNetworkInterceptor(FleetBearerInterceptor(FleetTransport.router, FleetTransport.bearers))
 
     //endregion Helper properties and functions
 }

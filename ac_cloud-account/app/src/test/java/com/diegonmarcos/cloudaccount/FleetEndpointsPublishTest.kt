@@ -114,4 +114,22 @@ class FleetEndpointsPublishTest {
         assertEquals(listOf("jmap"), FleetEndpointsContract.parseDecl(AccountHost.mailEndpointsDecl()).map { it.id })
         assertTrue(call(AccountData.METHOD_MAIL_ENDPOINTS).getBoolean(AccountData.KEY_OK))
     }
+
+    @Test fun cloudVaultIsGrantedTheFleetEndpointsAndTheBearerOnceAndARevokeSticks() {
+        val v = AccountVault(ctx)
+        v.prefs.putText("grants_seeded", "2")        // an install that already had the mail defaults: only the new one is added
+        v.seedDefaults()
+        assertTrue(v.grants.allow(AccountVault.VAULT_PACKAGE, FleetEndpointsContract.GRANT_ENDPOINTS))
+        assertTrue(v.grants.allow(AccountVault.VAULT_PACKAGE, FleetEndpointsContract.GRANT_BEARER))
+        assertFalse("no other package gets the fleet endpoints by default", v.grants.allow(other, FleetEndpointsContract.GRANT_ENDPOINTS))
+        v.grants.revoke(AccountVault.VAULT_PACKAGE); v.seedDefaults()
+        assertFalse(v.grants.allow(AccountVault.VAULT_PACKAGE, FleetEndpointsContract.GRANT_ENDPOINTS))
+    }
+
+    @Test fun theVaultServiceCarriesItsPublicNameButStaysMeshOnlyUntilAPublicHostExists() {
+        val s = FleetEndpointsContract.parseDecl(java.io.File("../build.json").readText().let { org.json.JSONObject(it).getJSONObject("fleet_endpoints").toString() })
+            .single { it.id == "vaultwarden" }
+        assertEquals("vault.diegonmarcos.com", s.publicDomain); assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, s.policy)
+        assertEquals("http://vaultwarden.app:8880", s.meshUrl())
+    }
 }

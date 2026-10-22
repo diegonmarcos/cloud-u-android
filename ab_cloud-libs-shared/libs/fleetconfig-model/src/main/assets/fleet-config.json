@@ -3436,6 +3436,7 @@
         "lib-bottomnav",
         "lib-core",
         "lib-devtools",
+        "lib-fleet-endpoints",
         "lib-fleetconfig-model"
       ],
       "items": [

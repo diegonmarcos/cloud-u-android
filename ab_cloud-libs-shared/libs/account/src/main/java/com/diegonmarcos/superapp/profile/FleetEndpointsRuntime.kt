@@ -4,11 +4,13 @@ import android.content.Context
 import com.diegonmarcos.cloudlib.auth.AuthHttp
 import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
 import com.diegonmarcos.superapp.fleetconfig.NetworkChangeWatch
+import com.diegonmarcos.superapp.fleetendpoints.EndpointPair
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
 import com.diegonmarcos.superapp.fleetendpoints.EndpointRouter
 import com.diegonmarcos.superapp.fleetendpoints.EndpointState
 import com.diegonmarcos.superapp.fleetendpoints.FleetBearers
 import com.diegonmarcos.superapp.fleetendpoints.FleetHttp
+import com.diegonmarcos.superapp.fleetendpoints.FleetRegistry
 import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
 import com.diegonmarcos.superapp.fleetendpoints.RouteStatus
 import com.diegonmarcos.superapp.settings.AccountVault
@@ -27,8 +29,9 @@ object FleetEndpointsRuntime {
     fun services(decl: String = AccountHost.fleetEndpointsDecl()): List<FleetEndpointsContract.Service> = FleetEndpointsContract.parseDecl(decl)
 
     /**
-     * Registers every service that has both endpoints with [router] and points [bearers] at [bearer]. A mesh-only
-     * service has nothing to fall back to, so it is not routed (the Status page still checks it). Returns the number registered.
+     * Registers every service that has a public host with [router] (under its declared policy: a `mesh_only` service is
+     * routed onto the mesh and never to the public host) and points [bearers] at [bearer]. A service with no public host
+     * has nothing to key a request on, so it is not routed (the Status page still checks it). Returns the number registered.
      */
     fun register(
         services: List<FleetEndpointsContract.Service>,
@@ -36,9 +39,9 @@ object FleetEndpointsRuntime {
         bearers: FleetBearers,
         bearer: () -> String?,
     ): Int {
-        val publicHosts = services.filter { it.hasPublic }.map { it.publicDomain }.toSet()
-        bearers.source = { host -> if (host.lowercase() in publicHosts) bearer() else null }
-        return services.count { it.hasPublic && router.set(it.publicUrl(), it.meshUrl(), EndpointPolicy.parse(it.policy), it.routePaths) }
+        return FleetRegistry.register(
+            services.filter { it.hasPublic }.map { EndpointPair(it.publicUrl(), it.meshUrl(), it.policy, it.routePaths) },
+            router, bearers, bearer)
     }
 
     /** Process start: register the declared pairs on the shared transport, and re-probe the mesh on a network change. */

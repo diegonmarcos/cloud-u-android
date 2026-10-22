@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.settings
 
 import android.content.Context
 import android.util.Base64
+import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
 import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
 import com.diegonmarcos.superapp.fleetconfig.SetupStores
 import com.diegonmarcos.superapp.profile.AccountData
@@ -202,9 +203,12 @@ class AccountVault(context: Context) {
             ),
             // #1090 Cloud Mail reads its accounts' mesh + public endpoints and the fleet bearer from here.
             2 to mapOf(MAIL_PACKAGE to listOf(MailEndpointsContract.GRANT_ENDPOINTS, MailEndpointsContract.GRANT_BEARER)),
+            // #1093 Cloud Vault authenticates to the self-hosted vault over the fleet endpoints Account publishes.
+            3 to mapOf(VAULT_PACKAGE to listOf(FleetEndpointsContract.GRANT_ENDPOINTS, FleetEndpointsContract.GRANT_BEARER)),
         )
+        const val VAULT_PACKAGE = "com.diegonmarcos.cloudvault"
         const val MAIL_PACKAGE = "com.diegonmarcos.comms.mail"
-        const val SEED_VERSION = 2
+        const val SEED_VERSION = 3
         val DEFAULT_GRANTS: Map<String, List<String>> = DEFAULT_GRANTS_BY_VERSION.values
             .fold(emptyMap<String, List<String>>()) { acc, m -> acc + m.mapValues { (k, v) -> acc[k].orEmpty() + v } }
 

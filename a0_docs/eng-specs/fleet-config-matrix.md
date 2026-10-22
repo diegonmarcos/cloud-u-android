@@ -942,7 +942,7 @@ Coverage: 10 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOM
 
 ## cloud-vault — `com.diegonmarcos.cloudvault`
 
-Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleetconfig-model.
+Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleet-endpoints, lib-fleetconfig-model.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

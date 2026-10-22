@@ -402,6 +402,8 @@
     </application>
 
     <queries>
+        <!-- #1093 Cloud Account publishes the fleet services' mesh + public endpoints over its accountdata provider. -->
+        <package android:name="com.diegonmarcos.cloudaccount" />
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>

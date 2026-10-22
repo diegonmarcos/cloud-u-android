@@ -108,4 +108,28 @@ class FleetHttpTest {
         assertNull(checker.publicStatus("http://127.0.0.1:$port", "/h"))
         assertNull(checker.publicStatus("nope", "/h"))
     }
+
+    // ── the registry every app uses ──────────────────────────────────────
+
+    @Test fun `the registry routes a pair, hands the bearer to its public host only and keeps it out of the state`() {
+        val r = EndpointRouter(probe = { _, _, _ -> true }, requireHttpsPublic = false); val b = FleetBearers()
+        var current: String? = marker
+        val n = FleetRegistry.register(listOf(
+            EndpointPair("http://127.0.0.1:${pub.port}", "http://localhost:${mesh.port}", "mesh_first"),
+            EndpointPair("not a url", "http://localhost:1", "mesh_first")), r, b) { current }
+        assertEquals(1, n); assertTrue(r.isRegistered("127.0.0.1"))
+        assertEquals(marker, b.forHost("127.0.0.1")); assertNull(b.forHost("localhost")); assertNull(b.forHost("other.example"))
+        current = "rotated"; assertEquals("read when asked, never copied", "rotated", b.forHost("127.0.0.1"))
+        assertFalse(b.toString().contains("rotated")); assertFalse(r.status.value.toString().contains("rotated"))
+    }
+
+    @Test fun `a mesh-only pair never falls back to the public host`() {
+        val r = EndpointRouter(probe = { _, _, _ -> false }, requireHttpsPublic = false); val b = FleetBearers()
+        FleetRegistry.register(listOf(EndpointPair("http://127.0.0.1:${pub.port}", "http://localhost:${mesh.port}", "mesh_only")), r, b) { marker }
+        mesh.shutdown() // the mesh is unreachable
+        val c = FleetHttp.client(r, b)
+        val e = runCatching { FleetHttp.call(c, "GET", url("/x"), emptyMap(), null) }.exceptionOrNull()
+        assertTrue("the request fails (a clear unreachable state)", e is IOException)
+        assertEquals("... and is never sent to the public host", 0, pub.requestCount)
+    }
 }
