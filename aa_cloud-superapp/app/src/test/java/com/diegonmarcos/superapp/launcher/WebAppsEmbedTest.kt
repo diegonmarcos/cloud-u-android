@@ -58,10 +58,10 @@ class WebAppsEmbedTest : KitPageHarness() {
         compose.waitForIdle()
         for (id in listOf("apps", "webapps", "lnktree", "configs")) compose.onNodeWithTag(PageTabsTags.tab(id)).assertExists()
         val strip = compose.onAllNodesWithTag(PageTabsTags.STRIP)[0].fetchSemanticsNode().boundsInWindow
-        val web = webViewIn(compose.activity.window.decorView)
-        assertTrue("a WebView is hosted under the strip", web != null)
-        val at = IntArray(2); web!!.getLocationInWindow(at)
-        assertTrue("the WebView (top ${at[1]}) starts below the strip (bottom ${strip.bottom})", at[1] >= strip.bottom.toInt() - 1)
+        assertTrue("the strip is drawn (bottom ${strip.bottom})", strip.bottom > strip.top)
+        // The pane's WebView is built by SectionTabsFragment.render through ShellActivity.nav.pageFragment; this harness hosts a plain
+        // FragmentActivity, so no pane (and no WebView) exists here (E2 builds the page through SectionPages for the same reason).
+        // That the WebView starts below the strip is held on a real emulator by WebPagesRenderTest (webTop >= stripBottom).
     }
 
     @Test

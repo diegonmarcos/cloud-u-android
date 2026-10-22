@@ -51,7 +51,12 @@ class WebPageBackChainTest : KitPageHarness() {
             assertTrue("$id is not a BackHandler", (page as Any) is BackHandler)
             val origin = declaredOrigin(shadowOf(web).lastLoadedUrl!!)
             val depth = 4
-            compose.runOnUiThread { for (i in 1 until depth) web.loadUrl("$origin/app$i/") }
+            // Robolectric's WebView records a load but adds NO history entry until pushEntryToHistory (a real WebView commits the
+            // navigation later): push the start page, then each app page, so canGoBack/goBack/copyBackForwardList see `depth` entries.
+            compose.runOnUiThread {
+                shadowOf(web).pushEntryToHistory(shadowOf(web).lastLoadedUrl!!)
+                for (i in 1 until depth) { web.loadUrl("$origin/app$i/"); shadowOf(web).pushEntryToHistory("$origin/app$i/") }
+            }
             assertEquals("$id history depth", depth, web.copyBackForwardList().size)
             // depth pages = depth - 1 steps back; the page is at its start after the last one.
             for (step in 1 until depth) {
