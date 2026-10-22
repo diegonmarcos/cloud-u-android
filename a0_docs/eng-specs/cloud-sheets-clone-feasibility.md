@@ -540,7 +540,7 @@ If the owner says yes:
    files into `ac_cloud-sheets/`, and write `engine-cloud-sheets.yml`.
 
 Do **not** clone first. A cloned tree with no way to build it is exactly the
-"half-wired project" failure mode `cloud-notes-affine-feasibility.md` was written
+"half-wired project" failure mode `cloud-notes-feasibility.md` was written
 to avoid.
 
 ---

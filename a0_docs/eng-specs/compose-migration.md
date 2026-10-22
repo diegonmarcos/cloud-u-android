@@ -74,7 +74,7 @@ files, 52 custom Views.**
   - Compose already: mail (sterna), matrix (Element X), gallery (ReFra) and vault
     (Bitwarden).
   - React Native: chat (Mattermost).
-  - WebView: notes (AFFiNE), office (Collabora) and code (Acode).
+  - WebView: notes (Cloud Notes), office (Collabora) and code (Acode).
   - Additions with no UI: termux, nix-on-droid and camera (GrapheneOS).
 - **Dialer:** half in scope. Only our additions are counted, through `roots`:
   ScreeningLogActivity, CallProviderChooserSheet and their three layouts.

@@ -54,7 +54,7 @@ metadata publishes the core (where the `.so` files live) as runtime-only, but th
 The binding is Apache-2.0 (its `LICENSE`; the POM declares the same). The native engine inside it,
 PDFium, is BSD-3-Clause. Both permissive. Nothing is vendored into this repository — it is a Maven
 Central dependency — so `1_cicd/src/data/licence-boundaries.json` (which guards mixed-licence
-upstreams whose restricted directories must not be vendored: AFFiNE, Acode) has nothing to hold it
+upstreams whose restricted directories must not be vendored: Cloud Notes, Acode) has nothing to hold it
 to; `cloud-android-licence-boundary-guard.py --repo .` still passes on the tree.
 
 ## Shape

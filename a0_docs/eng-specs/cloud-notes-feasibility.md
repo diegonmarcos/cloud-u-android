@@ -1,17 +1,22 @@
-# Cloud Notes (AFFiNE) — feasibility, and why nothing was shipped
+# Cloud Notes (Cloud Notes) — feasibility, and why nothing was shipped
 
-Status: **RESOLVED.** #469 vendored AFFiNE as `ac_cloud-notes/` — MIT-licensed
+> Note (#1091): this study evaluated the upstream project that Cloud Notes was
+> cloned from. The upstream product name has been replaced by "Cloud Notes"
+> throughout, so some sentences now read as if Cloud Notes were its own upstream;
+> read them as referring to that upstream project.
+
+Status: **RESOLVED.** #469 vendored tree as `ac_cloud-notes/` — MIT-licensed
 code only, `packages/backend` and `packages/common/native` pruned exactly as
 this doc's EE-licence analysis below required — shipped alongside the then-live
-Markor (`ac_cloud-notes/`) under a separate identity (`com.diegonmarcos.affine`)
+Markor (`ac_cloud-notes/`) under a separate identity (`com.diegonmarcos.cloud-notes`)
 rather than replacing it outright. #495 completed the replacement: flipped
 `ac_cloud-notes`'s applicationId to `com.diegonmarcos.cloudnotes` and deleted
-`ac_cloud-notes/` (Markor). Cloud Notes is AFFiNE from that commit on. The
+`ac_cloud-notes/` (Markor). Cloud Notes is Cloud Notes from that commit on. The
 analysis below is kept as the historical record of the licence and toolchain
 investigation that made the #469 vendoring possible; it predates both commits
 and its "nothing was shipped" framing no longer holds.
 
-Investigated against upstream `toeverything/AFFiNE` at canary
+Investigated against upstream `diegonmarcos/cloud-u-android` at canary
 `cfda4858d550c46ec1cd0b574801d7becdd6625b` (2026-09-09), release train
 `v0.27.5`.
 
@@ -29,13 +34,13 @@ is load-bearing. Read from the actual files:
   > license as defined in "LICENSE-MIT".
 - **`LICENSE-MIT`** — plain MIT, © 2022-present TOEVERYTHING PTE. LTD.
 - **`packages/backend/server/LICENSE`** and **`packages/backend/native/LICENSE`**
-  and **`packages/common/native/LICENSE`** — the *AFFiNE Enterprise Edition (EE)
+  and **`packages/common/native/LICENSE`** — the *the upstream's Enterprise Edition (EE)
   License*, a source-available term, not an open-source one:
   > Subject to the foregoing, it is forbidden to copy, merge, publish,
   > distribute, sublicense, and/or sell the Software.
-  with a production-use gate on holding an AFFiNE EE subscription, and a partial
+  with a production-use gate on holding an upstream EE subscription, and a partial
   carve-back:
-  > Any part of this Software distributed as part of AFFiNE CE or is served
+  > Any part of this Software distributed as part of Cloud Notes CE or is served
   > client-side as an image, font, cascading stylesheet (CSS), file which
   > produces or is compiled, arranged, augmented, or combined into client-side
   > JavaScript, in whole or in part, is copyrighted under the MPL2.0 license.
@@ -48,7 +53,7 @@ The parts we would actually want — the mobile web application
 `packages/common/graphql`, `blocksuite/`) — are **MIT**. MIT permits rebranding
 and redistribution outright. What must be preserved is small and absolute: the
 copyright notice and the MIT permission text, in every copy or substantial
-portion. In practice that means shipping AFFiNE's `LICENSE-MIT` text and
+portion. In practice that means shipping Cloud Notes's `LICENSE-MIT` text and
 copyright line inside the APK (an about/licences screen or a bundled asset), and
 keeping it in our repo alongside any vendored source. Nothing obliges us to
 publish our modifications.
@@ -62,7 +67,7 @@ its own — only a `build.gradle`, which points Apollo's codegen at:
 
 ```groovy
 apollo {
-    service("affine") {
+    service("cloud-notes") {
         srcDir("../../../../../common/graphql/src/graphql")
         schemaFiles.from("../../../../../backend/server/src/schema.gql")
 ```
@@ -74,7 +79,7 @@ LICENSE carves out to the EE licence. (The first path is
 
 So every Kotlin class in `:service` is generated from an EE-tree file, and those
 classes are compiled into the APK we would redistribute. Under the EE text's own
-carve-back the schema is arguably MPL-2.0 instead — AFFiNE CE ships a server, and
+carve-back the schema is arguably MPL-2.0 instead — Cloud Notes CE ships a server, and
 `schema.gql` is part of it — which *would* permit redistribution with notices and
 per-file source availability. Either reading is non-MIT, and the two differ on
 whether we may redistribute at all.
@@ -90,9 +95,9 @@ Not a preference — a fact, checked three ways:
 - **GitHub releases**: no `.apk` or `.aab` asset in any of the last 100
   releases. Assets are Linux/macOS desktop only (`.appimage`, `.deb`,
   `.flatpak`, `.dmg`, `.zip`) plus selfhost `docker-compose.yml`.
-- **F-Droid**: `GET https://f-droid.org/api/v1/packages/app.affine.pro` and
-  `.../pro.affine.app` both return `{"error":"NOT_FOUND"}` (HTTP 404).
-- **Google Play**: the listing for `app.affine.pro` exists, and
+- **F-Droid**: `GET https://f-droid.org/api/v1/packages/app.cloudnotes.pro` and
+  `.../app.cloudnotes.pro` both return `{"error":"NOT_FOUND"}` (HTTP 404).
+- **Google Play**: the listing for `app.cloudnotes.pro` exists, and
   `capacitor.config.ts` sets `releaseType: 'AAB'` — Play-only, AAB not APK.
   Play is precisely what a de-Googled phone does not have.
 
@@ -126,8 +131,8 @@ Traced through the real code rather than assumed:
   through `bindNativeDBApis` to the on-device Rust store, alongside
   `cloudStorages`. Local persistence is real SQLite on the phone.
 
-**Therefore: one APK, no service.** No AFFiNE server should be deployed on
-`oci-apps` for this. A self-hosted AFFiNE server (Postgres + Redis + the Node
+**Therefore: one APK, no service.** No Cloud Notes server should be deployed on
+`oci-apps` for this. A self-hosted Cloud Notes server (Postgres + Redis + the Node
 server image) remains an available later step if the owner ever wants
 cross-device sync, and is worth a separate scoped proposal at that point given
 `oci-apps` has had load-shedding incidents — but it is not needed to ship notes.
@@ -141,7 +146,7 @@ Cloud Office's NDK megabuild, but it is not a plain Gradle app either.
 |---|---|---|
 | Web bundle | Node 22.23.2 (`engines: >=22.12.0 <23.0.0`) | `.nvmrc`, `package.json` |
 | Package manager | **Yarn 4.18.0** (Berry, with vendored `.yarn/`) | `package.json` `packageManager` |
-| Native store | **Rust 1.97.1** cross-compiled to Android via `mozilla-rust-android-gradle` 0.9.6 + uniffi, crate `packages/frontend/mobile-native`, `libname affine_mobile_native`, `apiLevel 28`, `profile release` | `rust-toolchain.toml`, `App/app/build.gradle` `cargo {}` |
+| Native store | **Rust 1.97.1** cross-compiled to Android via `mozilla-rust-android-gradle` 0.9.6 + uniffi, crate `packages/frontend/mobile-native`, `libname cloud_notes_mobile_native`, `apiLevel 28`, `profile release` | `rust-toolchain.toml`, `App/app/build.gradle` `cargo {}` |
 | NDK | required for the Rust cross-compile; resolved at configure time as `new File(sdkDirectory, "ndk").listFiles().sort().last().name` — i.e. **whatever NDK happens to be installed on the runner**, unpinned | `App/app/build.gradle` |
 | Native wrap | Capacitor 8.4.2 (`cap sync`) | `apps/android/package.json` |
 | Gradle | **8.14.3**, **JDK 21**, AGP 8.13.2, Kotlin 2.2.20, compileSdk 36 / targetSdk 36 / minSdk 24 | `gradle-wrapper.properties`, `App/gradle/libs.versions.toml` |
@@ -153,7 +158,7 @@ those is wrong for this app. None is *impossible* — the fleet already installs
 Node in `1_cicd/src/actions/setup-deps/action.yml` and two workflows
 (`ship-cloud-chat.yml`, `ship-cloud-ide.yml`) already touch Node/Rust — but the
 honest cost is a new toolchain tier: Yarn 4 install over a ~58-workspace
-monorepo, an rspack bundle of the full AFFiNE editor, a Rust NDK cross-compile,
+monorepo, an rspack bundle of the full Cloud Notes editor, a Rust NDK cross-compile,
 then Gradle. Expect well past 30 minutes per ABI cold, and the arm64/x86_64
 matrix doubles it. Tractable; not free.
 
@@ -174,14 +179,14 @@ fetch dying on an upstream hiccup:
 `firebase-analytics`, `firebase-crashlytics`, `firebase-storage`. The
 `google-services.json` those need is **gitignored and absent from the
 repository** (`App/app/.gitignore` line 3). The upstream build therefore cannot
-be run as-is by anyone outside AFFiNE, and the target here is an explicitly
-de-Googled phone. Firebase appears in 4 Kotlin files: `AFFiNEApp.kt`,
+be run as-is by anyone outside Cloud Notes, and the target here is an explicitly
+de-Googled phone. Firebase appears in 4 Kotlin files: `CloudNotesApp.kt`,
 `service/OkHttp.kt`, `utils/logger/CrashlyticsTree.kt`, `utils/logger/FileTree.kt`.
 
-**Rebranding.** `appId: 'app.affine.pro'` / `appName: 'AFFiNE'` in
-`capacitor.config.ts`, `applicationId "app.affine.pro"` in `App/app/build.gradle`,
+**Rebranding.** `appId: 'app.cloudnotes.pro'` / `appName: 'Cloud Notes'` in
+`capacitor.config.ts`, `applicationId "app.cloudnotes.pro"` in `App/app/build.gradle`,
 plus icons and the in-app product name. MIT permits all of it. The `namespace`
-can stay `app.affine.pro` while `applicationId` moves to
+can stay `app.cloudnotes.pro` while `applicationId` moves to
 `com.diegonmarcos.cloudnotes`, which keeps the patch small.
 
 Note what these two have in common with the licence problem: Apollo/GraphQL
@@ -205,7 +210,7 @@ chat feature, which is a product decision the owner has not been asked to make.
    `packages/backend/server/src/schema.gql`, and obtaining or synthesising a
    `google-services.json`. Keeps AI chat. Carries the licence risk and a Google
    dependency on a de-Googled phone.
-3. **Do not ship an APK.** AFFiNE's web app is MIT and works in a browser; the
+3. **Do not ship an APK.** Cloud Notes's web app is MIT and works in a browser; the
    fleet already has an edge. Cheapest by far, no build tier, no fork.
 
 Option 1 is the one that matches what the owner actually asked for — an app they
@@ -231,11 +236,11 @@ server/src/schema.gql`. There is a **second, independent one**, and dropping
 
 ```
 packages/frontend/mobile-native/Cargo.toml:20
-    affine_common  = { workspace = true, features = ["hashcash"] }
+    cloud_notes_common  = { workspace = true, features = ["hashcash"] }
 Cargo.toml (root workspace.dependencies)
-    affine_common = { path = "./packages/common/native" }     <-- EE directory
+    cloud_notes_common = { path = "./packages/common/native" }     <-- EE directory
 packages/frontend/mobile-native/src/lib.rs:13
-    use affine_common::hashcash::Stamp;                        <-- unconditional
+    use cloud_notes_common::hashcash::Stamp;                        <-- unconditional
 packages/frontend/mobile-native/src/lib.rs:27-28
     pub fn hashcash_mint(resource: String, bits: u32) -> String {
       Stamp::mint(resource, Some(bits)).format()
@@ -251,8 +256,8 @@ $ md5sum packages/common/native/LICENSE packages/backend/server/LICENSE
 866b716b3d90fbfdea30e53a6a532302  packages/backend/server/LICENSE
 ```
 
-`affine_mobile_native` is the crate the Gradle `cargo {}` block cross-compiles
-into `libaffine_mobile_native.so` and packages into the APK. So **EE-licensed
+`cloud_notes_mobile_native` is the crate the Gradle `cargo {}` block cross-compiles
+into `libcloud_notes_mobile_native.so` and packages into the APK. So **EE-licensed
 Rust is statically linked into the artefact we would redistribute**, and the
 EE licence says: "it is forbidden to copy, merge, publish, distribute,
 sublicense, and/or sell the Software."
@@ -265,7 +270,7 @@ or is compiled, arranged, augmented, or combined into client-side JavaScript"
 (`packages/common/native/LICENSE:27-31`). That carve-back gave `schema.gql` an
 arguable MPL-2.0 reading. **It does not reach this one.** A native ARM shared
 object statically linked into an APK is not client-side JavaScript and is not
-"distributed as part of AFFiNE CE". There is no second reading here.
+"distributed as part of Cloud Notes CE". There is no second reading here.
 
 Note also that the carve-back would not have saved the clone pattern anyway:
 this fleet *vendors* upstream source into `cloud-u-android`. Committing
@@ -275,10 +280,10 @@ the binary contains.
 ### Why the section-1 method missed it, and the check that catches it
 
 The Android app's JavaScript workspace closure is clean — verified by walking
-every `package.json` dependency edge from `@affine/android`:
+every `package.json` dependency edge from `@cloud-notes/android`:
 
 ```
-ANDROID APP PACKAGE: @affine/android
+ANDROID APP PACKAGE: @cloud-notes/android
 workspace packages reachable: 92
 EE-directory packages in closure: NONE
 ```
@@ -298,11 +303,11 @@ That table is the complete set. It is the output of grepping the entire Android
 build tree for every reference to either EE directory:
 
 ```
-$ grep -rn 'backend/server\|backend/native\|common/native\|affine_common\|@affine/server' \
+$ grep -rn 'backend/server\|backend/native\|common/native\|cloud_notes_common\|@cloud-notes/server' \
       packages/frontend/apps/android/ packages/frontend/mobile-native/
 packages/frontend/apps/android/App/service/build.gradle:16:  schemaFiles.from(".../backend/server/src/schema.gql")
-packages/frontend/mobile-native/Cargo.toml:20:              affine_common  = { workspace = true, features = ["hashcash"] }
-packages/frontend/mobile-native/src/lib.rs:13:              use affine_common::hashcash::Stamp;
+packages/frontend/mobile-native/Cargo.toml:20:              cloud_notes_common  = { workspace = true, features = ["hashcash"] }
+packages/frontend/mobile-native/src/lib.rs:13:              use cloud_notes_common::hashcash::Stamp;
 ```
 
 Three hits, two reaches, no others.
@@ -322,30 +327,30 @@ packages/frontend/apps/android/src/app.tsx:180-184
 ```
 
 `ValidatorProvider` is the proof-of-work challenge the client solves for the
-**AFFiNE cloud** auth endpoint. On a local-first build with no server and an
+**Cloud Notes** auth endpoint. On a local-first build with no server and an
 unreachable sign-in wall (section 3), it is dead weight — the same category as
 `:service` and `ai/`. **The de-cloud principle does extend to it.** What it
 does not do is extend by itself: section 1's patch list does not touch Rust.
 
 ### The two ways out — owner's call, not an agent's
 
-1. **Extend the de-cloud into the Rust crate.** Drop the `affine_common`
+1. **Extend the de-cloud into the Rust crate.** Drop the `cloud_notes_common`
    dependency from `mobile-native/Cargo.toml`, drop `use ... Stamp`, drop
    `hashcash_mint`, drop `HashCashPlugin.kt`, and stub `ValidatorProvider` in
-   `app.tsx` — **and then patch `affine_nbstore` as well**, which the first
+   `app.tsx` — **and then patch `cloud_notes_nbstore` as well**, which the first
    draft of this section said was unnecessary. See the correction below.
 
 > **CORRECTION, 2026-09-10, on wiring the guard into CI.** The sentence this
-> section used to carry — *"the SQLite store (`affine_nbstore`) does not —
-> `nbstore`'s own `affine_common` dependency is behind its `napi` feature"* —
+> section used to carry — *"the SQLite store (`cloud_notes_nbstore`) does not —
+> `nbstore`'s own `cloud_notes_common` dependency is behind its `napi` feature"* —
 > is wrong, and it is wrong in the direction that matters.
 >
 > `packages/frontend/native/nbstore/Cargo.toml:16` reads
-> `affine_common = { workspace = true, features = ["napi"] }`, in plain
-> `[dependencies]`. The `napi = ["affine_common/napi"]` line in `[features]`
+> `cloud_notes_common = { workspace = true, features = ["napi"] }`, in plain
+> `[dependencies]`. The `napi = ["cloud_notes_common/napi"]` line in `[features]`
 > **adds a feature to that dependency; it does not gate it.** Only
-> `optional = true` would. So `affine_common` is an unconditional edge of
-> `affine_nbstore`, `affine_mobile_native` depends on `affine_nbstore`
+> `optional = true` would. So `cloud_notes_common` is an unconditional edge of
+> `cloud_notes_nbstore`, `cloud_notes_mobile_native` depends on `cloud_notes_nbstore`
 > unconditionally, and `packages/common/native` therefore stays in the APK's
 > Cargo build graph after every step of option 1 above. The tree will not even
 > configure without that EE directory on disk.
@@ -353,13 +358,13 @@ does not do is extend by itself: section 1's patch list does not touch Rust.
 > The scan that produced "three hits, two reaches, no others" could not have
 > seen this: it grepped `packages/frontend/apps/android/` and
 > `packages/frontend/mobile-native/`, and the nbstore crate is under neither.
-> `affine_nbstore` is a *crate name*; the directory it resolves to is
+> `cloud_notes_nbstore` is a *crate name*; the directory it resolves to is
 > `packages/frontend/native/nbstore`, three levels away. That is the same trap
-> as `affine_common` itself, one layer further out — the fourth spelling of the
+> as `cloud_notes_common` itself, one layer further out — the fourth spelling of the
 > same boundary.
 >
 > Two things are NOT claimed here. The symbol use
-> (`nbstore/src/lib.rs:12`, `use affine_common::napi_utils::to_napi_error`) sits
+> (`nbstore/src/lib.rs:12`, `use cloud_notes_common::napi_utils::to_napi_error`) sits
 > behind `#[cfg(not(feature = "use-as-lib"))]`, and the Android build **does**
 > set `use-as-lib`, so that import is compiled out on the Android path. And
 > with `lto = "fat"`, dead-code elimination may well leave no EE bytes in the
@@ -370,7 +375,7 @@ does not do is extend by itself: section 1's patch list does not touch Rust.
 > handset is an optimiser question; whether we copied EE source is not.
 >
 > Practical effect: option 1 is still the right shape, it is just one patch
-> larger — `nbstore/Cargo.toml` must drop `affine_common` and
+> larger — `nbstore/Cargo.toml` must drop `cloud_notes_common` and
 > `nbstore/src/lib.rs` must lose the `to_napi_error` import and its
 > `From<error::Error> for napi::Error` impl (both already dead on Android).
 > `licence-boundaries.json` now lists `packages/frontend/native/nbstore` as a
@@ -419,12 +424,12 @@ the owner access to Obsidian. It would only have created a dead target.
   source.
 - **`service/` the Kotlin package is not `:service` the Gradle module**, and
   section 5 blurs them. Only `service/GraphQLService.kt` imports the EE-derived
-  `com.affine.pro.graphql.*`. `service/OkHttp.kt` (`AuthHttp`, `CookieStore`)
+  `notes.diegonmarcos.com.graphql.*`. `service/OkHttp.kt` (`AuthHttp`, `CookieStore`)
   has MIT-only consumers — `plugin/AuthPlugin.kt` and `utils/logger/FileTree.kt`
   — and must be kept, minus its two Firebase call sites. A patch that deletes
   the whole package will not compile.
 - **ABI is already a single-ABI env switch**, not a matrix to invent:
-  `App/app/build.gradle:19-20` reads `AFFINE_ANDROID_NATIVE_TARGET`
+  `App/app/build.gradle:19-20` reads `CLOUD_NOTES_ANDROID_NATIVE_TARGET`
   (`arm64`|`x86_64`) into both `abiFilters` and the Cargo `targets`.
 - **Flavours exist**: `flavorDimensions = ['chanel']`, products
   `stable`/`beta`/`internal`/`canary`, so the task is `assembleStableRelease`,
@@ -487,13 +492,13 @@ materialised tree at build time, and they are not the same event.
 
 ---
 
-## 7. AMENDMENT 2026-09-10 (second run) — AFFiNE is the wrong product for this vault, licence aside
+## 7. AMENDMENT 2026-09-10 (second run) — Cloud Notes is the wrong product for this vault, licence aside
 
 Everything in sections 1 through 6 was re-verified independently against
 upstream `canary` at `cfda4858d550` (committed 2026-09-09). All of it holds.
 Two things are added here. The first makes the licence position worse than
 section 6 recorded. The second decides the question on its own, and would
-decide it the same way even if AFFiNE relicensed to MIT tomorrow.
+decide it the same way even if Cloud Notes relicensed to MIT tomorrow.
 
 ### 7.1 The MPL-2.0 carve-back does not reach the Rust crate
 
@@ -506,7 +511,7 @@ It downgrades to MPL-2.0 only the part of the Software
 > JavaScript".
 
 `packages/common/native` is a Rust crate. `app/build.gradle:155-164` compiles
-it, through `affine_mobile_native`, into `libaffine_mobile_native.so` and
+it, through `cloud_notes_mobile_native`, into `libcloud_notes_mobile_native.so` and
 packages that `.so` into the APK. A native shared object is not an image, not
 a font, not CSS, and is not compiled into client-side JavaScript — it is
 loaded over JNI. **The carve-back does not apply to it.** For the Rust path
@@ -519,22 +524,22 @@ first is arguable:
 | # | Edge | Evidence | MPL carve-back? |
 |---|------|----------|-----------------|
 | 1 | `:service` Apollo codegen reads the EE backend schema | `service/build.gradle:16` → `../../../../../backend/server/src/schema.gql`; `app/build.gradle:89` `implementation project(':service')` | Arguable — output is generated Kotlin |
-| 2 | `affine_mobile_native` → `affine_common` | `mobile-native/Cargo.toml:20`, plain `[dependencies]` | **No** — compiled `.so` |
-| 3 | `affine_nbstore` → `affine_common` | `nbstore/Cargo.toml:16`, plain `[dependencies]`; `mobile-native/Cargo.toml:21` depends on nbstore unconditionally | **No** — compiled `.so` |
+| 2 | `cloud_notes_mobile_native` → `cloud_notes_common` | `mobile-native/Cargo.toml:20`, plain `[dependencies]` | **No** — compiled `.so` |
+| 3 | `cloud_notes_nbstore` → `cloud_notes_common` | `nbstore/Cargo.toml:16`, plain `[dependencies]`; `mobile-native/Cargo.toml:21` depends on nbstore unconditionally | **No** — compiled `.so` |
 
-`Cargo.toml:18` fixes the mapping: `affine_common = { path = "./packages/common/native" }`,
+`Cargo.toml:18` fixes the mapping: `cloud_notes_common = { path = "./packages/common/native" }`,
 and the root LICENSE now names `packages/common/native` explicitly alongside
 `packages/backend` rather than leaving it to be derived. `cloud-u-android` is a
 **public** repository, so vendoring that tree here is publishing it, which is
 the exact verb the EE licence forbids.
 
-### 7.2 The finding that actually decides it: AFFiNE cannot open the owner's notes
+### 7.2 The finding that actually decides it: Cloud Notes cannot open the owner's notes
 
 The owner's notes already exist. `diegonmarcos/cloud-notes` is an Obsidian
 vault: 466 blobs, of which **179 are `.md`**, 11 are `.canvas`, plus a real
 `.obsidian/` configuration directory. Markdown files in folders on disk.
 
-AFFiNE does not store documents as files. Its on-device schema is
+Cloud Notes does not store documents as files. Its on-device schema is
 `packages/frontend/native/schema/src/lib.rs`:
 
 ```sql
@@ -551,7 +556,7 @@ Obsidian-compatibility permanently; there is no folder-vault mode to point at
 `cloud-notes/`.
 
 This is worth stating plainly because it is independent of everything in
-sections 1-6: **even if the EE problem vanished, AFFiNE would not deliver what
+sections 1-6: **even if the EE problem vanished, Cloud Notes would not deliver what
 the owner asked for.** The licence blocker was hiding a product blocker.
 
 It also kills the sync story. The fleet syncs files with Syncthing. Syncthing
@@ -580,8 +585,8 @@ precedents named in the brief:
 
 - It matches the **`ac_cloud-mail` / `cloud-keyboard` precedent exactly** — a
   plain Gradle Android tree with one `app/` module, which is the shape this
-  fleet's CI already compiles. None of AFFiNE's cost applies: no yarn install,
-  no `affine bundle`, no `cap sync`, no Rust cross-compile to `arm64-v8a`, no
+  fleet's CI already compiles. None of Cloud Notes's cost applies: no yarn install,
+  no `cloud-notes bundle`, no `cap sync`, no Rust cross-compile to `arm64-v8a`, no
   `uniffi-bindgen`, no NDK.
 - **It opens the existing vault unmodified.** 179 `.md` files, in place, on day
   one. Nothing to import and nothing to convert.
@@ -596,11 +601,11 @@ precedents named in the brief:
   surface is small and nameable: `INTERNET` and `REQUEST_INSTALL_PACKAGES` in
   `app/src/main/AndroidManifest.xml:18,20`, and the in-app update check they
   serve.
-- **Mirror-and-pin survives as a fallback**, which it never did for AFFiNE.
+- **Mirror-and-pin survives as a fallback**, which it never did for Cloud Notes.
   Markor publishes a real signed APK per release —
   `net.gsantner.markor-v163-2.16.1-flavorDefault-release.apk`, 12,065,877
   bytes, well inside GitHub's 100 MB blob cap. So if the clone-and-build ever
-  stalls, there are bytes to mirror. AFFiNE had none: 0 `.apk`/`.aab` assets
+  stalls, there are bytes to mirror. Cloud Notes had none: 0 `.apk`/`.aab` assets
   across 100 releases, `releaseType: 'AAB'`.
 
 ### 7.4 Still not an agent's call
@@ -612,11 +617,11 @@ untouched. Swapping the owner's notes application for a different product is a
 product decision, and 7.2 makes it a decision about his existing vault, which
 raises the stakes rather than lowering them.
 
-The question is now a single one, and it is no longer "is AFFiNE lawful":
+The question is now a single one, and it is no longer "is Cloud Notes lawful":
 
 > **Cloud Notes as Markor — an Android editor opening your existing Obsidian
-> vault directly — instead of AFFiNE? Yes or no.**
+> vault directly — instead of Cloud Notes? Yes or no.**
 
 A "yes" is a normal clone-and-own run of the kind this fleet does routinely. A
-"no, still AFFiNE" means committing to sever all three EE edges in 7.1 *and*
+"no, still Cloud Notes" means committing to sever all three EE edges in 7.1 *and*
 accepting that the 179 markdown files do not come with it.

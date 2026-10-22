@@ -200,7 +200,7 @@ def check_parity(root, app, spec, code, bad):
 
 def module_dirs(root, app):
     """The app's Gradle module dirs: ./app and ./ (the fleet convention) plus build.json
-    android.gradle_module when the Android project is nested (Cloud Notes vendors AFFiNE's, #868)."""
+    android.gradle_module when the Android project is nested (Cloud Notes vendors the upstream's, #868)."""
     dirs = [os.path.join(root, app, "app"), os.path.join(root, app)]
     try:
         gm = (json.load(open(os.path.join(root, app, "build.json"))).get("android") or {}).get("gradle_module")

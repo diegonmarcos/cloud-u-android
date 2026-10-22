@@ -4,8 +4,8 @@ Status: **Phase 0 done (storage tests run in CI), top bar done, Phase 4 (graph) 
 is a Notion-style page workspace, a Miro-style infinite canvas and an
 Obsidian-style linked vault. Decisions already taken by the owner:
 
-- **Extend our own AFFiNE 0.27.5 copy** (`ac_cloud-notes/`, MIT, de-clouded #469), not npm presets.
-  New features go in separate `blocksuite/affine/*` packages (or `packages/frontend/core/src/modules/*`)
+- **Extend our own Cloud Notes 0.27.5 copy** (`ac_cloud-notes/`, MIT, de-clouded #469), not npm presets.
+  New features go in separate `blocksuite/cloud-notes/*` packages (or `packages/frontend/core/src/modules/*`)
   so a re-vendor never touches them.
 - **Own Yjs sync server** (Hocuspocus or y-websocket) as a container behind the edge gate.
 - **Web build twice**: gated container (behind Authelia 2FA) and bundled in the APK.
@@ -15,9 +15,9 @@ Obsidian-style linked vault. Decisions already taken by the owner:
 
 Licence boundary (unchanged, enforced by `test/test-licence-clean.sh`): `packages/backend` and
 `packages/common/native` stay pruned (EE licence). Nothing below may add, copy or depend on them.
-The sync server is **our own** code (Hocuspocus is MIT), never AFFiNE's EE server.
+The sync server is **our own** code (Hocuspocus is MIT), never Cloud Notes's EE server.
 
-Legend: **EXISTS** = in our AFFiNE copy today; **PARTIAL** = a base exists, gaps named; **BUILD** = must build.
+Legend: **EXISTS** = in our Cloud Notes copy today; **PARTIAL** = a base exists, gaps named; **BUILD** = must build.
 
 ---
 
@@ -31,13 +31,13 @@ Reviewed end to end. **Storage is not removed and not broken by the de-clouding.
 JS NbStoreNativeDBApis (apps/android/src/plugins/nbstore/index.ts)
   -> Capacitor 'NbStoreDocStorage' (base64 over the bridge)
   -> NbStorePlugin.kt (Kotlin, 832 lines)
-  -> uniffi affine_mobile_native  (packages/frontend/mobile-native, Rust, MIT)
-  -> affine_nbstore               (packages/frontend/native/nbstore, Rust, MIT, sqlx/SQLite)
+  -> uniffi cloud_notes_mobile_native  (packages/frontend/mobile-native, Rust, MIT)
+  -> cloud_notes_nbstore               (packages/frontend/native/nbstore, Rust, MIT, sqlx/SQLite)
   -> <filesDir>/workspaces/<type>/<peer>/<spaceId>.db
 ```
 
-The EE-pruned `packages/common/native` is **not** on this path: `licence-proof/cargo-tree-affine_mobile_native.txt`
-shows `affine_mobile_native -> affine_nbstore -> affine_doc_loader` with no `affine_common`, and the licence
+The EE-pruned `packages/common/native` is **not** on this path: `licence-proof/cargo-tree-cloud_notes_mobile_native.txt`
+shows `cloud_notes_mobile_native -> cloud_notes_nbstore -> cloud_notes_doc_loader` with no `cloud_notes_common`, and the licence
 guard fails the push if that changes. So no Kotlin-SQLite reimplementation is needed; keeping SQLite stands.
 
 Findings and fix:
@@ -80,7 +80,7 @@ bar's drawer (0c) lists the newest pages. What is missing is only drag-to-re-par
 `AppTopBarScaffold` in a ComposeView over the editor (`NativeTopBar.kt`): hamburger drawer (the five sections and
 the editor's pages, pushed by the web half through `window.CloudNotesHost.setDocs`), title, AI (libs:ai's shared chat
 via `AiFleetChatPanel`) and Settings (Account launches Cloud Account; Configs fires `cloud-notes:open-settings`, which
-opens AFFiNE's own settings dialog). Search › Ask is the same chat as a full page between strip and island
+opens Cloud Notes's own settings dialog). Search › Ask is the same chat as a full page between strip and island
 (`NativeNav.NATIVE_PAGES`; the web table row is `kind: 'native'`).
 
 **One source of the top inset.** The bar owns the status bar and reports its height; `NativeNav.applyWebMargin` puts the
@@ -134,7 +134,7 @@ Acceptance tests:
 
 | Feature | State | Notes |
 |---|---|---|
-| Edgeless canvas: shapes, text, brush, mind map, connectors, frames, groups | EXISTS | `blocksuite/affine/gfx/*`, `blocks/frame` |
+| Edgeless canvas: shapes, text, brush, mind map, connectors, frames, groups | EXISTS | `blocksuite/cloud-notes/gfx/*`, `blocks/frame` |
 | Present frames (navigator) | EXISTS | frame navigator in edgeless toolbar |
 | Boards list (all edgeless docs) | BUILD | filter on `primaryMode = edgeless`; wires Canvas › Boards |
 | Magnetic anchors (connector snaps to 4/8 anchor points, follows resize) | DONE (device: snap feel) | `connector-manager.ts` eight anchors, 16 px pull; spec `connector-anchors.unit.spec.ts` |
@@ -153,12 +153,12 @@ Acceptance tests:
 
 ## Phase 4 — Graph (OBSIDIAN pillar, part 3) — DONE except the device run
 
-Shipped: `blocksuite/affine/graph` (`@blocksuite/affine-graph`: builder, local BFS, backlinks, orphans, seeded grid force layout; golden/BFS/determinism tests run in the `storage_tests` CI job) and the mobile views `/graph` and `/graph/local` (`core/src/mobile/views/graph`: canvas renderer with pan/pinch/tap, tag + orphan filters, hops 1–3, highlight search, Linked from / Links to lists). A4.1, A4.3, A4.4 are automated; A4.2 is asserted only as a 3 s CI smoke on 2,000 nodes / 6,000 edges (the 1.5 s / 30 fps phone budget needs the device).
+Shipped: `blocksuite/cloud-notes/graph` (`@blocksuite/cloud-notes-graph`: builder, local BFS, backlinks, orphans, seeded grid force layout; golden/BFS/determinism tests run in the `storage_tests` CI job) and the mobile views `/graph` and `/graph/local` (`core/src/mobile/views/graph`: canvas renderer with pan/pinch/tap, tag + orphan filters, hops 1–3, highlight search, Linked from / Links to lists). A4.1, A4.3, A4.4 are automated; A4.2 is asserted only as a 3 s CI smoke on 2,000 nodes / 6,000 edges (the 1.5 s / 30 fps phone budget needs the device).
 
 | Feature | State | Notes |
 |---|---|---|
 | Graph data (nodes = docs, edges = links, tags as nodes) | BUILD | from `doc-links` index + `tag` module; pure function, unit-testable |
-| Global graph view | BUILD | canvas/WebGL force layout in a new `blocksuite/affine/graph` package (no new heavy dependency without a licence + size check) |
+| Global graph view | BUILD | canvas/WebGL force layout in a new `blocksuite/cloud-notes/graph` package (no new heavy dependency without a licence + size check) |
 | Local graph (current doc, depth 1–3) | BUILD | Graph › Local follows the open doc |
 | Filters (tag, folder, orphans), search highlight, tap = open | BUILD | |
 
@@ -174,7 +174,7 @@ Acceptance tests:
 |---|---|---|
 | Nested pages (`/page` inline, sub-page blocks) | PARTIAL | linked-doc and embed exist; true `/page` that creates a child doc and shows it as a block BUILD |
 | Doc tree sidebar (Notion-style, drag to re-parent) | PARTIAL | `modules/organize` folders exist (desktop); mobile tree under Pages BUILD |
-| Database: Table, Kanban, Calendar views | EXISTS | `blocksuite/affine/data-view` |
+| Database: Table, Kanban, Calendar views | EXISTS | `blocksuite/cloud-notes/data-view` |
 | **Gallery view** | DONE (device: UI) | new view preset beside table/kanban/calendar (cover = first image property) |
 | **Relations** (row ↔ row across databases, two-way) | DONE | new property type |
 | **Rollups** (count/sum/min/max/percent over a relation) | DONE | depends on relations |
@@ -204,17 +204,17 @@ Acceptance tests:
 
 ### Not built: the client half and the fleet registration
 
-1. **Workspace flavour wiring.** The storage class exists and is tested; what is missing is the app using it: a `remotes` entry for `NotesSyncDocStorage` in the `local` flavour's engine options when a sync URL is configured (`packages/frontend/core/src/modules/workspace-engine/impls/local.ts`), the class added to the android nbstore worker's storage list (`apps/android/src/nbstore.worker.ts`, via `@affine/nbstore/notes-sync`), and the token: `libs:auth`'s fleet token provider through the existing `auth-access-token-channel` to the worker. A6.4 (airplane-mode edit survives app kill and syncs) and A6.5 (APK web and container web agree) need the app running.
+1. **Workspace flavour wiring.** The storage class exists and is tested; what is missing is the app using it: a `remotes` entry for `NotesSyncDocStorage` in the `local` flavour's engine options when a sync URL is configured (`packages/frontend/core/src/modules/workspace-engine/impls/local.ts`), the class added to the android nbstore worker's storage list (`apps/android/src/nbstore.worker.ts`, via `@cloud-notes/nbstore/notes-sync`), and the token: `libs:auth`'s fleet token provider through the existing `auth-access-token-channel` to the worker. A6.4 (airplane-mode edit survives app kill and syncs) and A6.5 (APK web and container web agree) need the app running.
 2. **Registration on the fleet** (two repos, generator-driven, so not done blind): `cloud-u-containers/<service>/` for the web image (like `user-comm_matrix-element`: `build.json` with `proxy.primary.auth: two_factor`, image `cloud-notes-web`) and for the sync image (proxy tier public-protected: Authelia for the web, Bearer through the introspect-proxy for `/` websocket and `/v1/docs`; volume for `/data`; env `SYNC_INTROSPECT_URL`), then the cloud-infra `1_cloud-configs` derive (`link-builds`, `consolidate`, `derive`) and `ship.yml` for the two services, only when no other Ship run is active. Open decision for the edge: a browser/WebView `WebSocket` cannot send an `Authorization` header, so the socket authenticates with `?access_token=` (the server accepts both); the edge rule must read the same token and must not log the query string.
 
 Design: a `cloud-notes-sync` container (Hocuspocus, MIT) on the fleet, reached only through the edge gate.
-Workspace flavour `local` stays the default; a new flavour `cloud-notes-sync` replaces the removed AFFiNE-cloud flavour.
+Workspace flavour `local` stays the default; a new flavour `cloud-notes-sync` replaces the removed Cloud Notes-cloud flavour.
 Documents are the same Yjs updates nbstore already stores, so SQLite stays the local source of truth and the server a peer.
 
 | Feature | State | Notes |
 |---|---|---|
 | Local-first storage and offline edit | EXISTS | Phase 0 |
-| Doc/blob sync protocol client (peer in nbstore: pull/push clocks) | PARTIAL | nbstore has `doc_sync`/`blob_sync` peers; the AFFiNE-cloud transport was removed — BUILD a websocket peer |
+| Doc/blob sync protocol client (peer in nbstore: pull/push clocks) | PARTIAL | nbstore has `doc_sync`/`blob_sync` peers; the Cloud Notes-cloud transport was removed — BUILD a websocket peer |
 | Sync server container + persistence (SQLite or Postgres volume) | BUILD | Hocuspocus + `onAuthenticate` |
 | Auth: web behind Authelia 2FA; WebSocket with `Authorization: Bearer` (fleet token, `libs:auth`) | BUILD | token provider already in the fleet (`FleetTokenProvider`); socket rejects without it |
 | Web build (gated container) + bundled in the APK | BUILD | one source, two targets; CI builds both |
@@ -233,7 +233,7 @@ Acceptance tests:
 |---|---|---|
 | Full-text search | EXISTS | `docs-search`, indexer in nbstore (`/search`) |
 | Quick switcher (`Ctrl-O`-style, fuzzy title/alias) | PARTIAL | `quicksearch`; alias search BUILD |
-| Search › Ask (AI over the vault) | BUILD | `libs:ai` gateway (fleet), retrieval over the nbstore index; AFFiNE's cloud AI stays removed |
+| Search › Ask (AI over the vault) | BUILD | `libs:ai` gateway (fleet), retrieval over the nbstore index; Cloud Notes's cloud AI stays removed |
 | Two-way sync of a vault folder (shared storage or Cloud Drive) | BUILD, optional | watcher + three-way merge on frontmatter-stable `.md`; conflicts → `name (conflict).md`, never overwrite |
 
 Acceptance tests:
@@ -265,7 +265,7 @@ Acceptance tests:
 - Every phase lands behind its guard: a `test/test-*.sh` derived from source, not a hand-kept list (see `test-nav-routes.sh`).
 - Every `planned` row in `native-nav-routes.ts` names its phase; closing the phase flips the row to `route` in the same commit.
 - Keep build size honest: `build.json::release.artifact_assert` floors stay as they are; any new native lib needs a licence note in `licence-proof/`.
-- Nothing in these phases may re-introduce AFFiNE cloud, telemetry or EE code; the licence guard is the gate.
+- Nothing in these phases may re-introduce Cloud Notes, telemetry or EE code; the licence guard is the gate.
 
 ## Order and rough sizing
 

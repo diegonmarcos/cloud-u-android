@@ -987,7 +987,7 @@ and `assets/notice.txt` come across with the assets.
 
 ### 12.7 What the licence-boundary guard should have
 
-`1_cicd/src/data/licence-boundaries.json` has one upstream, `affine`, and no
+`1_cicd/src/data/licence-boundaries.json` has one upstream, `cloud-notes`, and no
 Collabora entry — so it would not catch anything here either way. It also could
 not: its model is **source copyleft** (`restricted_dirs` that must not be
 vendored, `markers` that must not be named), and Collabora Online is uniformly

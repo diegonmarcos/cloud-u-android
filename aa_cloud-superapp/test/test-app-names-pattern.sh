@@ -160,9 +160,9 @@ print("== T6: an app whose gradle reads its build.json takes its launcher label 
 #
 # #522: THE GRADLE MODULE PATH IS DATA, NOT A CONVENTION. This block used to
 # look only at <dir>/app/build.gradle. ac_cloud-notes has never had that path —
-# its Android project is nested inside a vendored AFFiNE monorepo at
+# its Android project is nested inside a vendored monorepo at
 # packages/frontend/apps/android/App/app — so T6 did not fail on it, it SKIPPED
-# it, silently, and a launcher tile reading "AFFiNE" shipped behind 18 green
+# it, silently, and a launcher tile with the wrong label shipped behind 18 green
 # checks. An app that needs a different path DECLARES it in
 # build.json::android.gradle_module; "app" is the default nobody has to write.
 #

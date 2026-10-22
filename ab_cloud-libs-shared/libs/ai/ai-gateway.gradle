@@ -8,7 +8,7 @@
 // Nothing here restates either, so a moved gateway is one data edit in the catalogue.
 //
 // The fleet root is the parent of the app's gradle root (every app keeps its gradle root at <app>/), unless the app
-// sets `ext.aiFleetRoot` first: an app whose Android project is nested (Cloud Notes vendors AFFiNE's, four levels
+// sets `ext.aiFleetRoot` first: an app whose Android project is nested (Cloud Notes vendors the upstream's, four levels
 // down) names the repository root itself.
 def aiFleetRoot = project.hasProperty('aiFleetRoot') ? new File(project.property('aiFleetRoot').toString()) : new File(rootDir, '..')
 def aiContract = new groovy.json.JsonSlurper().parse(new File(aiFleetRoot, 'ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai.json'))

@@ -172,7 +172,7 @@ def app_findings(repo, cfg, app, top_bar, build):
         bad.append("%s: ui.top_bar.ai is declared but build.json::modules has no libs:ai (the AI panel is libs:ai's chat)" % app)
     gradle_files = list(cfg.get("gradle_files", ["app/build.gradle", "app/build.gradle.kts"]))
     gm = (build.get("android") or {}).get("gradle_module")
-    if isinstance(gm, str) and gm.strip("./"):  # a nested Android project (Cloud Notes vendors AFFiNE's)
+    if isinstance(gm, str) and gm.strip("./"):  # a nested Android project (Cloud Notes vendors the upstream's)
         gradle_files += [norm(os.path.join(gm, "build.gradle")), norm(os.path.join(gm, "build.gradle.kts"))]
     gradle = "".join(filter(None, (read(os.path.join(repo, app, g)) for g in gradle_files)))
     if cfg["wiring"]["bake"] not in gradle:
