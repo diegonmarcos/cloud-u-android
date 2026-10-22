@@ -63,7 +63,7 @@ class AppContainer(context: Context) {
      *  on the transport here, before any sync can run. Nothing about them is built into the app. */
     val fleetEndpointStore: app.sterna.core.data.account.FleetEndpointStore = app.sterna.core.data.account.FleetEndpointStore.of(appContext)
     val fleetEndpoints: app.sterna.core.data.account.FleetEndpointWiring = app.sterna.core.data.account.FleetEndpointWiring(
-        fleetEndpointStore, app.sterna.core.jmap.FleetTransport.router, app.sterna.core.jmap.FleetTransport.bearers,
+        fleetEndpointStore, com.diegonmarcos.superapp.fleetendpoints.FleetTransport.router, com.diegonmarcos.superapp.fleetendpoints.FleetTransport.bearers,
     ).also { w -> runCatching { w.restore(accountStore.accounts()) } }
 
     /** Asks Cloud Account for the fleet accounts' endpoints and applies them. BLOCKS: call off the main thread. */

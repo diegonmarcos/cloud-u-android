@@ -1302,7 +1302,7 @@ private fun AccountsScreen(
     val currentId by viewModel.currentId.collectAsStateWithLifecycle()
     val pending by viewModel.pendingImportAccounts.collectAsStateWithLifecycle()
     // #1090 the route each fleet account's mail is on follows the router's verdicts live.
-    val routes by app.sterna.core.jmap.FleetTransport.router.status.collectAsStateWithLifecycle()
+    val routes by com.diegonmarcos.superapp.fleetendpoints.FleetTransport.router.status.collectAsStateWithLifecycle()
     val endpointVersion by viewModel.endpointVersion.collectAsStateWithLifecycle()
     val endpointStates = remember(accounts, routes, endpointVersion) { accounts.associate { it.id to viewModel.endpointState(it.id, routes) } }
     val context = LocalContext.current
@@ -1804,12 +1804,12 @@ private fun AccountDetailScreen(
                 val endpointVersion by viewModel.endpointVersion.collectAsStateWithLifecycle()
                 val syncing by viewModel.endpointSyncing.collectAsStateWithLifecycle()
                 val syncMessage by viewModel.endpointMessage.collectAsStateWithLifecycle()
-                val routes by app.sterna.core.jmap.FleetTransport.router.status.collectAsStateWithLifecycle()
+                val routes by com.diegonmarcos.superapp.fleetendpoints.FleetTransport.router.status.collectAsStateWithLifecycle()
                 SettingsSection(stringResource(R.string.ep_title)) {
                     key(endpointVersion, routes) {
                         AccountEndpointsSection(
                             endpoint = viewModel.endpointOf(accountId),
-                            state = viewModel.endpointState(accountId, routes) ?: app.sterna.core.jmap.EndpointState.UNKNOWN,
+                            state = viewModel.endpointState(accountId, routes) ?: com.diegonmarcos.superapp.fleetendpoints.EndpointState.UNKNOWN,
                             syncing = syncing,
                             message = syncMessage,
                             onPolicy = { viewModel.setEndpointPolicy(accountId, it) },

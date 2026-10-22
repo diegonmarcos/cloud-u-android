@@ -1,4 +1,4 @@
-package app.sterna.core.jmap
+package com.diegonmarcos.superapp.fleetendpoints
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,14 +14,20 @@ import java.net.NoRouteToHostException
 import java.net.Socket
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.net.UnknownServiceException
 import java.util.concurrent.ConcurrentHashMap
 import javax.net.ssl.SSLHandshakeException
 
+/** The one request header the fleet bearer travels in (the edge gate reads it); `Authorization` stays the caller's own login. */
+object FleetHeaders {
+    const val FLEET = "X-Fleet-Authorization"
+}
+
 /**
- * #1090 Per-account endpoint routing for the fleet's mail services. A fleet account has TWO endpoints that
- * Cloud Account publishes: the mesh URL (`<service>.app`, private, reached over the WireGuard mesh) and the
- * public URL (reached with the fleet bearer). Everything else (a plain IMAP/JMAP provider) has one endpoint
- * and is never touched here.
+ * #1090/#1093 Endpoint routing for the fleet's services, ONE component for Cloud Mail and Cloud Account. A fleet
+ * service has TWO endpoints, both derived from the service's fleet declaration: the mesh URL (`<service>.app`,
+ * private, reached over the WireGuard mesh) and the public URL (reached with the fleet bearer). Everything else
+ * (a plain IMAP/JMAP provider, GitHub) has one endpoint and is never touched here.
  *
  * - [EndpointPolicy.MESH_FIRST]: probe the mesh with a short TCP check, use it when it answers, and fall back to
  *   the public URL when it does not (or when a request cannot even reach it). The verdict is cached, and
@@ -201,6 +207,8 @@ class EndpointRouter(
             while (t != null) {
                 when (t) {
                     is ConnectException, is UnknownHostException, is NoRouteToHostException, is SSLHandshakeException -> return true
+                    // Android refuses a cleartext request its network security config does not permit BEFORE it sends anything.
+                    is UnknownServiceException -> return true
                     is SocketTimeoutException -> return t.message.orEmpty().contains("connect", ignoreCase = true)
                 }
                 t = t.cause
@@ -216,10 +224,17 @@ class EndpointRouter(
  */
 class FleetBearers {
     private val byHost = ConcurrentHashMap<String, String>()
+
+    /**
+     * Where a host's token comes from when none was [set] for it (Cloud Account reads the vault each time, so a
+     * rotated bearer applies at once and no second copy of it is kept). Never listed by [toString].
+     */
+    @Volatile var source: ((String) -> String?)? = null
+
     fun set(host: String, token: String?) {
         if (token.isNullOrBlank()) byHost.remove(host.lowercase()) else byHost[host.lowercase()] = token.trim()
     }
-    fun forHost(host: String): String? = byHost[host.lowercase()]
+    fun forHost(host: String): String? = byHost[host.lowercase()] ?: source?.invoke(host.lowercase())?.trim()?.takeIf { it.isNotEmpty() }
     fun clear() = byHost.clear()
     override fun toString() = "FleetBearers(hosts=${byHost.keys.sorted()})"
 }
@@ -233,8 +248,8 @@ object FleetTransport {
 /**
  * Application interceptor: sends a request for a fleet endpoint over the planned route(s), in order. A request
  * for any other host passes through untouched. Only a failure that proves the server never saw the request
- * (refused, unresolvable, TLS handshake, connect timeout) moves on to the next route; anything later is thrown,
- * so a mail is never sent twice.
+ * (refused, unresolvable, TLS handshake, cleartext not permitted, connect timeout) moves on to the next route; anything later is thrown,
+ * so a request (a mail, a commit) is never sent twice.
  */
 class EndpointRouteInterceptor(private val router: EndpointRouter) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
@@ -261,18 +276,18 @@ class EndpointRouteInterceptor(private val router: EndpointRouter) : Interceptor
  * Network interceptor, per hop (a redirect to another host never carries the token): the fleet bearer goes in
  * `X-Fleet-Authorization` on the EXACT public https origin of a registered endpoint and nowhere else, and the
  * header is removed from any request to the mesh host, where the private path needs none. `Authorization`
- * stays the mailbox login.
+ * stays the caller's own login (a mailbox, a forge token).
  */
 class FleetBearerInterceptor(private val router: EndpointRouter, private val bearers: FleetBearers) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val req = chain.request()
         val url = req.url
         if (router.isMeshHost(url.host)) {
-            return if (req.header(GatewayHeaders.FLEET) == null) chain.proceed(req)
-            else chain.proceed(req.newBuilder().removeHeader(GatewayHeaders.FLEET).build())
+            return if (req.header(FleetHeaders.FLEET) == null) chain.proceed(req)
+            else chain.proceed(req.newBuilder().removeHeader(FleetHeaders.FLEET).build())
         }
         val token = bearers.forHost(url.host)
-        if (token == null || !router.isPublicOrigin(url) || req.header(GatewayHeaders.FLEET) != null) return chain.proceed(req)
-        return chain.proceed(req.newBuilder().header(GatewayHeaders.FLEET, "Bearer $token").build())
+        if (token == null || !router.isPublicOrigin(url) || req.header(FleetHeaders.FLEET) != null) return chain.proceed(req)
+        return chain.proceed(req.newBuilder().header(FleetHeaders.FLEET, "Bearer $token").build())
     }
 }

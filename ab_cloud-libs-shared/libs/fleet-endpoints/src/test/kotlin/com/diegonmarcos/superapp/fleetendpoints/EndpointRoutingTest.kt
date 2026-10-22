@@ -1,4 +1,4 @@
-package app.sterna.core.jmap
+package com.diegonmarcos.superapp.fleetendpoints
 
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -33,7 +33,7 @@ class EndpointRoutingTest {
     private var meshReachable = true
     private val probed = mutableListOf<Pair<String, Int>>()
     private val bearers = FleetBearers()
-    private val marker = "fleet-SECRET-tok"
+    private val marker = "fleet-SECRET-tok" // gitleaks:allow (a made-up test marker, not a credential)
 
     private fun newRouter(requireHttps: Boolean = false) = EndpointRouter(
         probe = { h, p, _ -> probed += h to p; meshReachable }, clock = { now }, recheckAfterMs = 60_000L, requireHttpsPublic = requireHttps,
@@ -215,6 +215,8 @@ class EndpointRoutingTest {
         assertTrue(EndpointRouter.neverReached(SSLHandshakeException("untrusted")))
         assertTrue(EndpointRouter.neverReached(IOException("wrapped", ConnectException())))
         assertTrue(EndpointRouter.neverReached(SocketTimeoutException("connect timed out")))
+        assertTrue("cleartext refused by the platform is refused before anything is sent",
+            EndpointRouter.neverReached(java.net.UnknownServiceException("CLEARTEXT communication to gitea.app not permitted by network security policy")))
         assertFalse(EndpointRouter.neverReached(SocketTimeoutException("timeout")))
         assertFalse(EndpointRouter.neverReached(IOException("unexpected end of stream")))
     }
@@ -244,5 +246,35 @@ class EndpointRoutingTest {
         assertFalse(bearers.toString().contains(marker))
         assertFalse(router.status.value.toString().contains(marker))
         assertTrue(bearers.toString().contains("127.0.0.1"))
+    }
+
+    // ── a bearer taken from a source (Cloud Account reads its vault each time) ──
+
+    @Test fun `a bearer from the source rides the public path only, and never the mesh path`() {
+        bearers.set("127.0.0.1", null)
+        val asked = mutableListOf<String>()
+        bearers.source = { h -> asked += h; marker }
+        mesh.enqueue(MockResponse().setBody("{}")); assertEquals(200, get())
+        assertNull(mesh.takeRequest().getHeader("X-Fleet-Authorization"))
+        meshReachable = false; router.onNetworkChanged()
+        pub.enqueue(MockResponse().setBody("{}")); assertEquals(200, get())
+        assertEquals("Bearer $marker", pub.takeRequest().getHeader("X-Fleet-Authorization"))
+        assertFalse("the source is never asked for the mesh host", "localhost" in asked)
+    }
+
+    @Test fun `a source that has nothing, or only blanks, sends no header`() {
+        bearers.set("127.0.0.1", null)
+        meshReachable = false
+        for (v in listOf<String?>(null, "", "   ")) {
+            bearers.source = { v }
+            pub.enqueue(MockResponse().setBody("{}")); assertEquals(200, get())
+            assertNull(pub.takeRequest().getHeader("X-Fleet-Authorization"))
+        }
+    }
+
+    @Test fun `the source's token is not printable through the bearers`() {
+        bearers.set("127.0.0.1", null); bearers.source = { marker }
+        assertEquals(marker, bearers.forHost("127.0.0.1"))
+        assertFalse(bearers.toString().contains(marker))
     }
 }

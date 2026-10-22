@@ -14,66 +14,38 @@ import org.json.JSONObject
  *   {"v":1,"accounts":[{"email","service","mesh","public","policy"}],"bearer":"…"?}
  * Entries need the `mail.endpoints` grant; the bearer rides along only for a caller also granted
  * `fleet.bearer` (the Secrets section of Account). Pure over org.json, so both ends share the rules.
+ *
+ * #1093 The service declaration, its rules, the policies and the mask are [FleetEndpointsContract]'s (Account's one
+ * `fleet_endpoints` declaration, of which the mail services are the ones with `kind: mail`); this adds what is
+ * mail's alone: the per-account entries and their wire.
  */
 object MailEndpointsContract {
     const val VERSION = 1
-    const val ACCOUNT_PACKAGE = "com.diegonmarcos.cloudaccount"
-    const val AUTHORITY = "$ACCOUNT_PACKAGE.accountdata"
+    const val ACCOUNT_PACKAGE = FleetEndpointsContract.ACCOUNT_PACKAGE
+    const val AUTHORITY = FleetEndpointsContract.AUTHORITY
     const val METHOD = "mail_endpoints"
-    const val KEY_OK = "ok"
-    const val KEY_ERROR = "error"
-    const val KEY_JSON = "endpoints_json"
+    const val KEY_OK = FleetEndpointsContract.KEY_OK
+    const val KEY_ERROR = FleetEndpointsContract.KEY_ERROR
+    const val KEY_JSON = FleetEndpointsContract.KEY_JSON
     const val GRANT_ENDPOINTS = "mail.endpoints"
-    const val GRANT_BEARER = "fleet.bearer"
+    const val GRANT_BEARER = FleetEndpointsContract.GRANT_BEARER
 
-    const val POLICY_MESH_FIRST = "mesh_first"
-    const val POLICY_MESH_ONLY = "mesh_only"
-    const val POLICY_PUBLIC_ONLY = "public_only"
-    val POLICIES = listOf(POLICY_MESH_FIRST, POLICY_MESH_ONLY, POLICY_PUBLIC_ONLY)
+    const val POLICY_MESH_FIRST = FleetEndpointsContract.POLICY_MESH_FIRST
+    const val POLICY_MESH_ONLY = FleetEndpointsContract.POLICY_MESH_ONLY
+    const val POLICY_PUBLIC_ONLY = FleetEndpointsContract.POLICY_PUBLIC_ONLY
+    val POLICIES = FleetEndpointsContract.POLICIES
 
-    /** What a secret looks like on screen and in a log: fixed width, so it leaks neither value nor length. */
-    const val MASK = "••••••••"
-    fun mask(secret: String): String = if (secret.isEmpty()) "" else MASK
+    const val MASK = FleetEndpointsContract.MASK
+    fun mask(secret: String): String = FleetEndpointsContract.mask(secret)
 
-    /** One mail service of the declaration, as the endpoints it implies. */
-    data class Service(
-        val id: String,
-        val meshScheme: String, val meshDns: String, val meshPort: Int,
-        val publicScheme: String, val publicDomain: String,
-        val policy: String,
-    ) {
-        /** `https://stalwart.app:2443`: an origin, never a path. */
-        fun meshUrl(): String = "$meshScheme://$meshDns" + if (meshPort > 0 && meshPort != defaultPort(meshScheme)) ":$meshPort" else ""
-        fun publicUrl(): String = "$publicScheme://$publicDomain"
-    }
-
-    private fun defaultPort(scheme: String) = if (scheme == "http") 80 else 443
-
-    /**
-     * The declaration (`{"services":[{id, mesh_dns, mesh_port, mesh_scheme, public_domain, public_scheme, policy}]}`).
-     * A service that breaks a rule is dropped, not guessed at: the mesh name must be a `.app` name (mesh
-     * naming rule), the public URL must be https (the bearer travels on it), the policy one of [POLICIES].
-     */
-    fun parseDecl(text: String): List<Service> {
-        val arr = runCatching { JSONObject(text).optJSONArray("services") }.getOrNull() ?: return emptyList()
-        return (0 until arr.length()).mapNotNull { i ->
-            val o = arr.optJSONObject(i) ?: return@mapNotNull null
-            val dns = o.optString("mesh_dns").trim().lowercase()
-            val domain = o.optString("public_domain").trim().lowercase()
-            val meshScheme = o.optString("mesh_scheme", "https").ifBlank { "https" }
-            val publicScheme = o.optString("public_scheme", "https").ifBlank { "https" }
-            val policy = o.optString("policy", POLICY_MESH_FIRST).ifBlank { POLICY_MESH_FIRST }
-            if (o.optString("id").isBlank() || !dns.endsWith(".app") || domain.isEmpty() || '/' in domain || ':' in domain) return@mapNotNull null
-            if (publicScheme != "https" || meshScheme !in setOf("http", "https") || policy !in POLICIES) return@mapNotNull null
-            Service(o.optString("id"), meshScheme, dns, o.optInt("mesh_port", 0), publicScheme, domain, policy)
-        }
-    }
+    /** The mail services of a declaration: those with a public URL (a mail account is matched by its public host). */
+    fun parseDecl(text: String): List<FleetEndpointsContract.Service> = FleetEndpointsContract.parseDecl(text).filter { it.hasPublic }
 
     /** One account's pair of endpoints. No secret in here, so it can be logged and compared freely. */
     data class Entry(val email: String, val service: String, val mesh: String, val public: String, val policy: String)
 
     /** [accounts] = (email, JMAP host) of the vault's declared mail accounts; only those on a declared service are fleet accounts. */
-    fun entries(services: List<Service>, accounts: List<Pair<String, String>>): List<Entry> = accounts.mapNotNull { (email, server) ->
+    fun entries(services: List<FleetEndpointsContract.Service>, accounts: List<Pair<String, String>>): List<Entry> = accounts.mapNotNull { (email, server) ->
         val host = hostOf(server)
         val s = services.firstOrNull { it.publicDomain == host } ?: return@mapNotNull null
         Entry(email.trim().lowercase(), s.id, s.meshUrl(), s.publicUrl(), s.policy)
@@ -109,7 +81,5 @@ object MailEndpointsContract {
         return Published(list, o.optString("bearer"))
     }
 
-    /** The host out of `https://h:port/path`, `h:port` or `h`. */
-    fun hostOf(server: String): String =
-        server.trim().removePrefix("https://").removePrefix("http://").substringBefore('/').substringBefore(':').lowercase()
+    fun hostOf(server: String): String = FleetEndpointsContract.hostOf(server)
 }

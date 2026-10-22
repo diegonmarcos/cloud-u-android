@@ -1,8 +1,8 @@
 package app.sterna.core.data.account
 
-import app.sterna.core.jmap.EndpointPolicy
-import app.sterna.core.jmap.EndpointRouter
-import app.sterna.core.jmap.FleetBearers
+import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
+import com.diegonmarcos.superapp.fleetendpoints.EndpointRouter
+import com.diegonmarcos.superapp.fleetendpoints.FleetBearers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

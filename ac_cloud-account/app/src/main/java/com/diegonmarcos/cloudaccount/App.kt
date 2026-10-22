@@ -9,6 +9,7 @@ import com.diegonmarcos.superapp.appstore.StoreImport
 import com.diegonmarcos.superapp.profile.AccountDebugApi
 import com.diegonmarcos.superapp.profile.AccountHost
 import com.diegonmarcos.superapp.profile.AccountMigrate
+import com.diegonmarcos.superapp.profile.FleetEndpointsRuntime
 import com.diegonmarcos.superapp.settings.AccountVault
 
 /**
@@ -29,12 +30,15 @@ class App : Application() {
             // Redesign task 3: the debug API's `tabs` op answers this app's five islands and their pages.
             nav = { navJson() }
             autoBackupChanged = { AutoBackupWorker.schedule(it) }
-            // #1090 the mail endpoint declaration Account publishes to Cloud Mail (build.json::mail_endpoints).
-            mailEndpointsDecl = { String(android.util.Base64.decode(BuildConfig.MAIL_ENDPOINTS_B64, android.util.Base64.DEFAULT)) }
+            // #1093 the fleet endpoint declaration (build.json::fleet_endpoints): this app's own mesh-first transport and
+            // Connect > Status, and what Account publishes to the other apps (Cloud Mail reads its kind=mail services, #1090).
+            fleetEndpointsDecl = { String(android.util.Base64.decode(BuildConfig.FLEET_ENDPOINTS_B64, android.util.Base64.DEFAULT)) }
         }
         // #874 the vault's Secrets section is enforced by this app's setup provider (`<package>.fleetsetup`) and by
         // AccountData.Provider: install the grant-aware authorizer and seed the defaults the fleet relied on, once.
         runCatching { AccountVault.install(this) }.onFailure { Log.w(TAG, "vault grants not installed: ${it.javaClass.simpleName}") }
+        // #1093 register every declared pair on the shared transport (mesh first, then public + bearer) and re-probe on a network change.
+        runCatching { FleetEndpointsRuntime.start(this) }.onFailure { Log.w(TAG, "fleet endpoints not registered: ${it.javaClass.simpleName}") }
         // #874 take in what SuperApp kept (Dagu bearer, DNS preset, WireGuard tunnel, mail login), only where the vault is empty.
         kotlin.concurrent.thread(name = "account-migrate") {
             runCatching { AccountMigrate.run(this) }.onFailure { Log.w(TAG, "migration from SuperApp failed: ${it.javaClass.simpleName}") }

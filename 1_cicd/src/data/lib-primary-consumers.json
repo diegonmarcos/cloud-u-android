@@ -16,6 +16,7 @@
     "databackend": "ac_cloud-contacts",
     "decisions": "ac_cloud-calc",
     "devtools": null,
+    "fleet-endpoints": "ac_cloud-account",
     "fleetconfig-model": "aa_cloud-superapp",
     "health": "aa_cloud-superapp",
     "mail": "aa_cloud-superapp",

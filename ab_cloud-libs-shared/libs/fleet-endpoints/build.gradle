@@ -1,0 +1,31 @@
+// libs:fleet-endpoints (#1093) - THE fleet endpoint fallback, shared BY REFERENCE by Cloud Mail and Cloud Account
+// (libs:account), one directory, no copy: a fleet service has two endpoints, the mesh one (`<service>.app`,
+// private) and the public one (reached with the fleet bearer). The router tries the mesh first (a short TCP
+// probe), falls back to public, caches the verdict and re-probes on a network change; the bearer goes to the
+// exact public origin only. Plain JVM (OkHttp + coroutines flows): no Android here, so its suite drives real
+// loopback servers, and Cloud Mail's JVM module core:jmap links it as readily as an Android library does. The
+// Android halves (the network-change signal, the sealed bearer) stay in the apps. It installs nothing
+// (lib-apks build.json::lib_apks.exclude) and is classified in 1_cicd/src/data/lib-classes.json.
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // In the public signatures (interceptors, the status flow), so `api`. Same versions Cloud Mail's catalog pins.
+    api 'com.squareup.okhttp3:okhttp:4.12.0'
+    api 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
+}

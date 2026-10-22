@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.profile
 
+import com.diegonmarcos.superapp.fleetendpoints.FleetHttp
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -198,9 +199,16 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
         }
     }
 
-    /** The phone's [Http]: HttpURLConnection, bounded. Blocking — call on IO. */
+    /**
+     * The phone's [Http]. A host that is a declared fleet service (#1093: Gitea) goes over the fleet endpoint fallback,
+     * mesh first and then public with the fleet bearer; any other host (GitHub) is a plain bounded HttpURLConnection.
+     * Blocking — call on IO.
+     */
     object UrlHttp : Http {
-        override fun call(method: String, url: String, headers: Map<String, String>, body: String?): Pair<Int, String> {
+        override fun call(method: String, url: String, headers: Map<String, String>, body: String?): Pair<Int, String> =
+            if (FleetHttp.routes(url)) FleetHttp.call(FleetHttp.shared, method, url, headers, body) else direct(method, url, headers, body)
+
+        private fun direct(method: String, url: String, headers: Map<String, String>, body: String?): Pair<Int, String> {
             val c = URL(url).openConnection() as HttpURLConnection
             try {
                 c.requestMethod = method

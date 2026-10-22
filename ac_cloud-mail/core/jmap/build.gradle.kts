@@ -20,6 +20,8 @@ kotlin {
 }
 
 dependencies {
+    // #1093 the fleet endpoint fallback, ONE component shared with Cloud Account (libs:account); in public signatures, so `api`.
+    api(project(":libs:fleet-endpoints"))
     implementation(libs.kotlinx.coroutines.core)
     // Exposed in public API (JmapSession.capabilities uses JsonObject), so `api`.
     api(libs.kotlinx.serialization.json)

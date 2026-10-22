@@ -15,8 +15,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import app.sterna.core.data.account.AccountEndpoint
-import app.sterna.core.jmap.EndpointPolicy
-import app.sterna.core.jmap.EndpointState
+import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
+import com.diegonmarcos.superapp.fleetendpoints.EndpointState
 import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

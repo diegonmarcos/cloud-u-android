@@ -4,9 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Base64
 import app.sterna.core.data.crypto.KeystoreCrypto
-import app.sterna.core.jmap.EndpointPolicy
-import app.sterna.core.jmap.EndpointRouter
-import app.sterna.core.jmap.FleetBearers
+import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
+import com.diegonmarcos.superapp.fleetendpoints.EndpointRouter
+import com.diegonmarcos.superapp.fleetendpoints.FleetBearers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive

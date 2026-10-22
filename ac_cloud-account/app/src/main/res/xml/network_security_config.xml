@@ -49,6 +49,14 @@
              .app TLD: .app is a public gTLD. Bound to wg0 only server-side. -->
         <domain>git-proxy-api.app</domain>
 
+        <!-- #1093 the http mesh endpoints of build.json::fleet_endpoints (each service's containers.app.dns), named exactly,
+             one line per declared http service (FleetEndpointsDeclTest keeps the two in step). Bound to wg0 server-side. -->
+        <domain>gitea.app</domain>
+        <domain>authelia.app</domain>
+        <domain>auth-broker.app</domain>
+        <domain>cloud-me-api.app</domain>
+        <domain>vaultwarden.app</domain>
+
         <!-- Home / office LAN typical first-octet pairs. Add more as
              needed; CIDR is not supported by this schema. -->
         <domain includeSubdomains="true">192.168.0.1</domain>

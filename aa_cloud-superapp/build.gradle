@@ -9,4 +9,6 @@ plugins {
     // (composeOptions.kotlinCompilerExtensionVersion is gone). Applied by
     // every Compose module: app, libs:wallet, libs:keyboard.
     id 'org.jetbrains.kotlin.plugin.compose' version '2.3.20' apply false
+    // #1093 libs:fleet-endpoints (linked by libs:account) is plain JVM Kotlin.
+    id 'org.jetbrains.kotlin.jvm' version '2.3.20' apply false
 }

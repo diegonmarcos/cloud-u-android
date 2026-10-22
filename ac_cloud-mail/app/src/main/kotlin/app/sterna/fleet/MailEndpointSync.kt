@@ -6,7 +6,7 @@ import app.sterna.core.data.account.EndpointSyncReport
 import app.sterna.core.data.account.FleetEndpointWiring
 import app.sterna.core.data.account.PublishedEndpoint
 import app.sterna.core.data.account.StoredAccount
-import app.sterna.core.jmap.EndpointPolicy
+import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
 import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
 
 /**

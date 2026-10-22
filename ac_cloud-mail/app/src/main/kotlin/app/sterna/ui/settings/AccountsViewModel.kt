@@ -16,11 +16,11 @@ import app.sterna.core.data.account.GatewayAuthStore
 import app.sterna.core.data.account.GatewayMode
 import app.sterna.core.data.account.GatewayStatus
 import app.sterna.core.data.account.GatewayStatuses
-import app.sterna.core.jmap.EndpointPolicy
-import app.sterna.core.jmap.EndpointState
-import app.sterna.core.jmap.FleetTransport
+import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
+import com.diegonmarcos.superapp.fleetendpoints.EndpointState
+import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
 import app.sterna.core.jmap.GatewayCookies
-import app.sterna.core.jmap.RouteStatus
+import com.diegonmarcos.superapp.fleetendpoints.RouteStatus
 import app.sterna.core.jmap.GatewayErrors
 import app.sterna.core.data.account.MailEndpoint
 import app.sterna.core.data.account.MailProtocol

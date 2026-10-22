@@ -134,7 +134,8 @@ kotlin {
 dependencies {
     implementation project(':libs:core')
     implementation project(':libs:databackend')       // DataBackendClient: the gh engine binding
-    implementation project(':libs:fleetconfig-model') // FleetPolicy: the manifest + policy the Fleet tab plans with
+    implementation project(':libs:fleetconfig-model') // FleetPolicy: the manifest + policy the Fleet tab plans with; FleetEndpointsContract
+    api project(':libs:fleet-endpoints')              // #1093 THE endpoint fallback (mesh first, then public + bearer), the one Cloud Mail also links; EndpointState is in EndpointRow
     implementation project(':libs:appstore')          // StoreStages, AppInventory, CONSTELLATION_FLEET_B64
     implementation project(':libs:updater')           // Fleet
     implementation project(':libs:mail')              // JmapPrefs

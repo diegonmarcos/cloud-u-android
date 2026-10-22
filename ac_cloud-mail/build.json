@@ -189,6 +189,11 @@
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"
     },
+    "libs:fleet-endpoints": {
+      "_doc": "#1093 THE fleet endpoint fallback (mesh `<service>.app` first, then the public URL with the fleet bearer; cached verdict; re-probe on a network change; the bearer on the exact public origin only), shared BY REFERENCE with Cloud Account (libs:account), one directory and no copy. Plain JVM, so core:jmap links it (`api`).",
+      "dir": "../ab_cloud-libs-shared/libs/fleet-endpoints",
+      "type": "library"
+    },
     "libs:fleetconfig-model": {
       "_doc": "#873 libs:core `api`s this module (the setup provider every app serves, describe / export / apply / status); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",

@@ -12,9 +12,9 @@ import androidx.test.core.app.ApplicationProvider
 import app.sterna.core.data.account.FleetEndpointStore
 import app.sterna.core.data.account.FleetEndpointWiring
 import app.sterna.core.data.account.StoredAccount
-import app.sterna.core.jmap.EndpointPolicy
-import app.sterna.core.jmap.EndpointRouter
-import app.sterna.core.jmap.FleetBearers
+import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
+import com.diegonmarcos.superapp.fleetendpoints.EndpointRouter
+import com.diegonmarcos.superapp.fleetendpoints.FleetBearers
 import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

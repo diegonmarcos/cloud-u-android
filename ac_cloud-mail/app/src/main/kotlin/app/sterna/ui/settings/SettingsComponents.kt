@@ -294,7 +294,7 @@ fun AccountRow(
     /** The auth chip (Connected / Token / Signed in / Needs sign-in / Error); null draws none. */
     gateway: app.sterna.core.data.account.GatewayStatus? = null,
     /** #1090 The route a fleet account's mail is on (Mesh / Public / Checking / Offline); null = not a fleet account. */
-    endpoint: app.sterna.core.jmap.EndpointState? = null,
+    endpoint: com.diegonmarcos.superapp.fleetendpoints.EndpointState? = null,
 ) {
     Row(
         modifier = Modifier

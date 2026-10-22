@@ -88,6 +88,11 @@
       "dir": "../ab_cloud-libs-shared/libs/databackend",
       "type": "library"
     },
+    "libs:fleet-endpoints": {
+      "_doc": "#1093 THE fleet endpoint fallback, shared BY REFERENCE with Cloud Mail (core:jmap): libs:account links it (`api`) for this app's own mesh-first transport. Plain JVM.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/fleet-endpoints"
+    },
     "libs:fleetconfig-model": {
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
       "type": "library"
@@ -300,18 +305,77 @@
       "enabled": true
     }
   },
-  "mail_endpoints": {
-    "_doc": "#1090 THE mail endpoint declaration, declared once. Cloud Account publishes from it, per fleet mail account, the mesh URL (<service>.app, private) and the public URL (reached with the fleet bearer) to Cloud Mail over the accountdata provider; Mail hard-codes neither. Each service is derived from its fleet declaration in cloud-u-containers: mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. An account is a fleet account when the vault's JMAP host equals a service's public_domain; any other account keeps its single endpoint. policy is the default endpoint policy: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. The bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets.",
+  "fleet_endpoints": {
+    "_doc": "#1093 THE fleet endpoint declaration, declared once (#1090 declared the mail part of it as mail_endpoints). Every fleet service Cloud Account talks to or shows has up to two endpoints, taken from the service's own fleet declaration in cloud-u-containers (`source`): mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. libs:account reads this for four things: (1) Account's own transport (libs:fleet-endpoints: mesh first with a short probe, then the public URL with the fleet bearer, cached, re-probed on a network change), (2) Connect > Status > Endpoints, (3) the `fleet_endpoints` accountdata method that publishes the pairs to the other apps, and (4) the `mail_endpoints` method, which takes the kind=mail services (Cloud Mail). A service with no public_domain is mesh-only (no public route is declared, or the public name is WG-only) and must say policy mesh_only; the bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets and sent on the exact public origin only. policy is the default: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. health is the path Status asks for. Every http mesh_scheme needs a named cleartext entry in app/src/main/res/xml/network_security_config.xml (FleetEndpointsDeclTest).",
     "services": [
       {
         "id": "jmap",
+        "kind": "mail",
         "source": "cloud-u-containers/user-comm_tools-stalwart/build.json",
         "mesh_dns": "stalwart.app",
         "mesh_port": 2443,
         "mesh_scheme": "https",
         "public_domain": "jmap.diegonmarcos.com",
         "public_scheme": "https",
-        "policy": "mesh_first"
+        "policy": "mesh_first",
+        "health": "/.well-known/jmap"
+      },
+      {
+        "id": "gitea",
+        "kind": "git",
+        "source": "cloud-u-containers/infra-dat_gitea/build.json",
+        "mesh_dns": "gitea.app",
+        "mesh_port": 3002,
+        "mesh_scheme": "http",
+        "public_domain": "git.diegonmarcos.com",
+        "public_scheme": "https",
+        "policy": "mesh_first",
+        "health": "/api/healthz"
+      },
+      {
+        "id": "authelia",
+        "kind": "auth",
+        "source": "cloud-u-containers/infra-sec_authelia/build.json",
+        "mesh_dns": "authelia.app",
+        "mesh_port": 9091,
+        "mesh_scheme": "http",
+        "public_domain": "auth.diegonmarcos.com",
+        "public_scheme": "https",
+        "policy": "mesh_first",
+        "health": "/api/health"
+      },
+      {
+        "id": "auth-broker",
+        "kind": "auth",
+        "source": "cloud-u-containers/infra-sec_auth-broker/build.json",
+        "_doc": "No public_domain: the broker's public leg is a path under auth.diegonmarcos.com that Authelia's edge fronts, not an endpoint of its own. Its google instance (4180) stands for the broker here.",
+        "mesh_dns": "auth-broker.app",
+        "mesh_port": 4180,
+        "mesh_scheme": "http",
+        "policy": "mesh_only",
+        "health": "/oauth2/google/health"
+      },
+      {
+        "id": "cloud-me-api",
+        "kind": "data",
+        "source": "cloud-u-containers/infra-api_cloud-me-api/build.json",
+        "_doc": "Mesh-only by its own declaration (deploy._host_doc: cloud-me-api.app over wg0, no public route).",
+        "mesh_dns": "cloud-me-api.app",
+        "mesh_port": 8124,
+        "mesh_scheme": "http",
+        "policy": "mesh_only",
+        "health": "/me/health"
+      },
+      {
+        "id": "vaultwarden",
+        "kind": "vault",
+        "source": "cloud-u-containers/user-vault_vaultwarden/build.json",
+        "_doc": "vault.diegonmarcos.com is wg_only: true, so its public name answers on the mesh alone and is no second endpoint.",
+        "mesh_dns": "vaultwarden.app",
+        "mesh_port": 8880,
+        "mesh_scheme": "http",
+        "policy": "mesh_only",
+        "health": "/alive"
       }
     ]
   },
@@ -538,6 +602,12 @@
                 "_doc": "Per fleet app: account/config state, its profile and its own Setup. Was Profiles > Apps.",
                 "id": "apps",
                 "label": "Apps",
+                "icon": "connect"
+              },
+              {
+                "_doc": "#1093 Every fleet service Account talks to, with the state of both its endpoints (mesh, public), the route a request takes and the masked fleet bearer. Declared once in fleet_endpoints (libs:account FleetEndpointsPage).",
+                "id": "endpoints",
+                "label": "Endpoints",
                 "icon": "connect"
               }
             ]

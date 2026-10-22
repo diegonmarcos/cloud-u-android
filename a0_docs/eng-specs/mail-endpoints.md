@@ -1,5 +1,9 @@
 # Mail endpoints: Cloud Account publishes, Cloud Mail routes (#1090)
 
+> #1093: the router, the bearer interceptors, the declaration parser and the network-change signal described below now
+> live once, in `libs:fleet-endpoints` and `libs:fleetconfig-model`, shared with Cloud Account; the declaration is
+> `ac_cloud-account/build.json::fleet_endpoints` (the `kind: mail` services). See [fleet-endpoints.md](fleet-endpoints.md).
+
 ## What exists
 
 - Cloud Account is the source of truth for the fleet mail accounts. It already syncs the vault's `mail` section
@@ -12,7 +16,7 @@
 
 ## What this adds
 
-1. **Declaration, once.** `ac_cloud-account/build.json::mail_endpoints.services[]`: `mesh_dns` / `mesh_port` /
+1. **Declaration, once.** `ac_cloud-account/build.json::fleet_endpoints.services[]` (`kind: mail`; was `mail_endpoints`): `mesh_dns` / `mesh_port` /
    `mesh_scheme` (the mail service's `containers.app.dns` / `.port` / `.protocol` in cloud-u-containers) and
    `public_domain` (`proxy.domain`). `MailEndpointsContract.parseDecl` drops a service whose mesh name is not a `.app`
    name, whose public URL is not https, or whose policy is unknown.

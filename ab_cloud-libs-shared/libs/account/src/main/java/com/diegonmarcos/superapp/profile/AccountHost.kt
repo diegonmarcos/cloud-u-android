@@ -99,10 +99,18 @@ object AccountHost {
     @Volatile var autoBackupChanged: (Context) -> Unit = {}
 
     /**
-     * #1090 The mail endpoint declaration (the host's build.json::mail_endpoints as JSON text), from which
-     * [MailEndpointsPublisher] derives each fleet mail account's mesh and public URL. "" publishes nothing.
+     * #1093 THE fleet endpoint declaration (the host's build.json::fleet_endpoints as JSON text): every fleet service
+     * Cloud Account talks to, with its mesh and public endpoint, taken from the service's fleet declaration. The host's
+     * own transport registers it ([FleetEndpointsRuntime]), Connect > Status shows it, and the accountdata provider
+     * publishes it to the other apps. "" declares nothing (the SuperApp host).
      */
-    @Volatile var mailEndpointsDecl: () -> String = { "" }
+    @Volatile var fleetEndpointsDecl: () -> String = { "" }
+
+    /**
+     * #1090 The mail services of that declaration (those with `kind: mail`), from which [MailEndpointsPublisher] derives
+     * each fleet mail account's mesh and public URL. Derived, never declared a second time.
+     */
+    @Volatile var mailEndpointsDecl: () -> String = { com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract.declOfKind(fleetEndpointsDecl(), "mail") }
 
     val DEFAULT_PALETTE: KitPalette = KitPalette.fromArgb(
         surface = 0xFF15161A.toInt(), surfaceSelected = 0xFF23252B.toInt(),

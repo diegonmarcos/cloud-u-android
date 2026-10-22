@@ -19,8 +19,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import app.sterna.R
 import app.sterna.core.data.account.AccountEndpoint
-import app.sterna.core.jmap.EndpointPolicy
-import app.sterna.core.jmap.EndpointState
+import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
+import com.diegonmarcos.superapp.fleetendpoints.EndpointState
 import app.sterna.ui.theme.MailMetrics
 import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
 

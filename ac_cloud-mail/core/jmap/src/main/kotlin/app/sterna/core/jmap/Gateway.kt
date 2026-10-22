@@ -1,5 +1,6 @@
 package app.sterna.core.jmap
 
+import com.diegonmarcos.superapp.fleetendpoints.FleetHeaders
 import okhttp3.Interceptor
 import okhttp3.Response
 import java.util.concurrent.ConcurrentHashMap
@@ -56,7 +57,8 @@ object GatewayFleetTokens {
 
 /** The gate credentials as request headers. Pure, so the composition is unit-tested. */
 object GatewayHeaders {
-    const val FLEET = "X-Fleet-Authorization"
+    /** The one header name lives in the shared fleet-endpoints library, where the bearer interceptor sets it. */
+    const val FLEET = FleetHeaders.FLEET
 
     /**
      * Headers to add for a request to [host]: the Authelia cookie (cookie mode) and/or the fleet token

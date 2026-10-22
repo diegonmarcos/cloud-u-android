@@ -7,4 +7,6 @@ plugins {
     // Compose (#565): the shell is Compose; the account pages it hosts are
     // libs:account's Fragments, embedded through fragment-compose.
     id 'org.jetbrains.kotlin.plugin.compose'       version '2.3.20' apply false
+    // #1093 libs:fleet-endpoints (the endpoint fallback shared with Cloud Mail) is plain JVM Kotlin.
+    id 'org.jetbrains.kotlin.jvm'                  version '2.3.20' apply false
 }

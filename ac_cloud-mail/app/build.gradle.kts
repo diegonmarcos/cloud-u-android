@@ -461,3 +461,8 @@ dependencies {
     testImplementation(platform(libs.androidx.compose.bom))
     testImplementation(libs.androidx.compose.ui.test.junit4)
 }
+
+// #1093 The fleet endpoint fallback moved out of :core:jmap into the shared libs:fleet-endpoints (one component with Cloud
+// Account). Its suite (the order of tries, the cache, the bearer on the public path only) is Mail's proof too, so the
+// unit-test step this app already runs executes it first.
+tasks.matching { it.name == "testReleaseUnitTest" }.configureEach { dependsOn(":libs:fleet-endpoints:test") }

@@ -40,6 +40,8 @@ import com.diegonmarcos.superapp.profile.BackupsPage
 import com.diegonmarcos.superapp.profile.C3ConfigsPage
 import com.diegonmarcos.superapp.profile.DesktopConfigsPage
 import com.diegonmarcos.superapp.profile.DevicesMeshPage
+import com.diegonmarcos.superapp.profile.EndpointCheck
+import com.diegonmarcos.superapp.profile.FleetEndpointsPage
 import com.diegonmarcos.superapp.profile.RunbookPage
 import com.diegonmarcos.superapp.profile.WalletPage
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
@@ -128,6 +130,7 @@ class SectionScreensTest(private val section: String, private val page: String) 
             "data/mesh" -> DevicesMeshPage()
             "connect/connections" -> ConnectionsPage(go)
             "connect/apps" -> AppProfilesPage()
+            "connect/endpoints" -> FleetEndpointsPage(check = { sv -> sv.associate { it.id to EndpointCheck(meshUp = it.hasPublic, publicStatus = if (it.hasPublic) 200 else null) } })
             "activity/activity" -> ActivityPage()
             else -> error("no page for $section/$page")
         }
@@ -191,7 +194,7 @@ class SectionScreensTest(private val section: String, private val page: String) 
         private val OUT = File("build/section-screens")
 
         /** The pages #1081 added: they must render. */
-        private val MUST = setOf("personal/wallet", "configs/desktop", "configs/c3", "data/databases", "data/mesh", "activity/activity")
+        private val MUST = setOf("personal/wallet", "configs/desktop", "configs/c3", "data/databases", "data/mesh", "activity/activity", "connect/endpoints")
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}/{1}")
@@ -199,7 +202,7 @@ class SectionScreensTest(private val section: String, private val page: String) 
             "personal/me", "personal/wallet", "personal/personal",
             "configs/runbook", "configs/perms", "configs/desktop", "configs/c3",
             "data/providers", "data/databases", "data/mesh",
-            "connect/connections", "connect/apps",
+            "connect/connections", "connect/apps", "connect/endpoints",
             "activity/activity",
         ).map { it.split('/').toTypedArray<Any>() }
     }
