@@ -18,7 +18,7 @@ import java.io.File
 class BoardsRenameTest {
     private fun myPm(): JSONArray {
         val root = JSONObject(File("../build.json").readText())
-        val secs = root.getJSONArray("sections")
+        val secs = root.getJSONObject("ui").getJSONArray("sections")
         for (i in 0 until secs.length()) secs.getJSONObject(i).let { if (it.optString("id") == "boards") return it.getJSONArray("stack_my-pm") }
         throw AssertionError("no boards section")
     }

@@ -6,10 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.onRoot
 import com.diegonmarcos.superapp.boards.Boards
 import com.diegonmarcos.superapp.boards.BoardsSource
 import com.diegonmarcos.superapp.boards.BoardsWire
@@ -69,7 +66,14 @@ class NavTrackerShotTest : KitPageHarness() {
         showKit { Box(Modifier.fillMaxWidth().background(Color(0xFF0A0A0A))) { BoardPlacesBody(0) {} } }
         compose.waitUntil(5_000) { compose.onAllNodes(hasTestTag("places-day:$t")).fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
-        val bmp = compose.onRoot().captureToImage().asAndroidBitmap()
+        // Draw the view tree into a software bitmap: captureToImage() waits for a hardware redraw that Robolectric never delivers.
+        var drawn: android.graphics.Bitmap? = null
+        compose.runOnUiThread {
+            val v = compose.activity.window.decorView
+            drawn = android.graphics.Bitmap.createBitmap(v.width.coerceAtLeast(1), v.height.coerceAtLeast(1), android.graphics.Bitmap.Config.ARGB_8888)
+            v.draw(android.graphics.Canvas(drawn!!))
+        }
+        val bmp = drawn!!
         val dir = File("build/board-shots").apply { mkdirs() }
         File(dir, "navigation-tracker.png").outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         val seen = HashSet<Int>()
