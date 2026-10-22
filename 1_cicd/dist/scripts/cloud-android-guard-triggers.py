@@ -36,6 +36,11 @@ DATA = "1_cicd/src/data/guard-triggers.json"
 CICD = "1_cicd/src/cicd"
 BEG = "    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──"
 END = "    # ── end MANAGED-GUARD-TRIGGERS ──"
+# #763 load: a guard never cancels a RUNNING run of its own on a push (the running one finishes, only the newest pending run
+# follows, so a burst of pushes skips intermediate commits instead of killing every guard before it ends); a pull request
+# still supersedes its own earlier run. A guard that already writes its own top-level `concurrency:` keeps it.
+CBEG = "# ── MANAGED-GUARD-CONCURRENCY: injected by cloud-android-guard-triggers.py ──"
+CEND = "# ── end MANAGED-GUARD-CONCURRENCY ──"
 
 
 def load(root):
@@ -49,15 +54,26 @@ def declared(name, spec):
 
 
 def strip_managed(lines):
-    out, skip = [], False
+    out, skip, after_c = [], False, False
     for l in lines:
-        if l == BEG:
+        if after_c and not l.strip():   # the blank line concurrency_block() adds after its fence
+            after_c = False
+            continue
+        after_c = False
+        if l in (BEG, CBEG):
             skip = True
-        elif l == END:
+        elif l in (END, CEND):
             skip = False
+            after_c = l == CEND
         elif not skip:
             out.append(l)
     return out
+
+
+def concurrency_block(name):
+    stem = name[:-4] if name.endswith(".yml") else name
+    return [CBEG, "concurrency:", f"  group: {stem}-${{{{ github.ref }}}}",
+            "  cancel-in-progress: ${{ github.event_name == 'pull_request' }}", CEND, ""]
 
 
 def push_block(lines):
@@ -103,6 +119,12 @@ def inject(root):
         elif not hand and name not in unfiltered:
             bad.append(f"{name}: runs on every push and is not in {DATA} — add it under `filtered` "
                        f"(with the paths it reads) or `unfiltered` (with the reason)")
+        if (name in filtered or name in unfiltered) and not any(l.startswith("concurrency:") for l in lines):
+            jobs = next((i for i, l in enumerate(lines) if l.rstrip() == "jobs:"), None)
+            if jobs is None:
+                bad.append(f"{name}: no top-level `jobs:` to put the concurrency block before")
+            else:
+                lines = lines[:jobs] + concurrency_block(name) + lines[jobs:]
         new = "\n".join(lines)
         if new != text:
             open(wf, "w").write(new)
