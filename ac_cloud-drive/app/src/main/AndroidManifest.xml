@@ -141,6 +141,27 @@
             </intent-filter>
         </activity>
 
+        <!-- #1115 GET_CONTENT / PICK for any type: a web page's file input and an app's "choose a file"
+             list the activities with these filters. PickerActivity forwards to the system picker on
+             Drive's root (documents.DriveDocumentsProvider) and returns the chosen document. -->
+        <activity
+            android:name=".documents.PickerActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.CloudDrive">
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.PICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+
         <!-- #567 push 5: the Compose host for the four engine libraries (git manager, full
              editor, rclone, mounts). Started by MainActivity.openEngine for a result; never
              exported. adjustResize so the editor's keyboard does not cover the line being typed. -->
@@ -192,5 +213,21 @@
             android:authorities="${applicationId}.agents.screenshots"
             android:exported="true"
             android:permission="${applicationId}.permission.READ_AGENT_RESULTS" />
+
+        <!-- #1115 Cloud Drive as a source in the system file picker (ACTION_OPEN_DOCUMENT, which a
+             WebView / Chrome file input uses). The framework only lists a provider that is exported,
+             answers DOCUMENTS_PROVIDER, grants URI permissions and is guarded by MANAGE_DOCUMENTS
+             (held by the system picker alone, so no third app can query it directly). Read-only:
+             roots "drive" (the fleet store) and "home" (cld.termux's home, via the shared uid). -->
+        <provider
+            android:name=".documents.DriveDocumentsProvider"
+            android:authorities="${applicationId}.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
     </application>
 </manifest>

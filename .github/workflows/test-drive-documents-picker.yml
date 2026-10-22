@@ -1,0 +1,102 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → Cloud Drive in the system file picker (emulator) #1115          ║
+# ║                                                                        ║
+# ║ Installs cloud-terminal then cloud-drive (shared uid), fires           ║
+# ║ ACTION_OPEN_DOCUMENT, opens the picker's roots drawer and fails unless ║
+# ║ a "Cloud Drive" root is listed. The screenshots are uploaded.          ║
+# ║ Manual: run_id = a Ship run whose cloud-drive x86_64 APK to test.      ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → Cloud Drive in the system file picker (emulator)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "Ship cloud-drive run id whose x86_64 APK artifact to test (empty = the latest release asset)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  drive-picker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Fetch the APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -eu
+          mkdir -p apk
+          gh release download latest -R "$REPO" -p cloud-terminal-x86_64.apk -O apk/terminal.apk
+          if [ -n "$RUN_ID" ]; then
+            gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              --jq '.artifacts[] | select(.name|startswith("Cloud-Drive-x86_64-")) | .name' |
+            while read -r name; do gh run download "$RUN_ID" -R "$REPO" -n "$name" -D "apk/dl-$name"; done
+            find apk -name '*.apk' -path '*dl-*' | head -1 | xargs -I{} cp {} apk/drive.apk
+          else
+            gh release download latest -R "$REPO" -p Cloud-Drive-x86_64.apk -O apk/drive.apk
+          fi
+          ls -l apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Write the probe
+        run: |
+          cat > probe.sh <<'EOF'
+          #!/bin/bash
+          set -u
+          mkdir -p out
+          PKG=com.diegonmarcos.clouddrive
+          adb install -r -g apk/terminal.apk || { echo "::error::terminal install failed"; exit 2; }
+          term=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER cld.termux | tr -d '\r' | tail -1)
+          case "$term" in */*) timeout 60 adb shell am start -W -n "$term" || true; sleep 20;; esac
+          adb install -r -g apk/drive.apk || { echo "::error::drive install failed"; exit 2; }
+          adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
+          # Framework view: the provider must be registered as a documents provider.
+          adb shell dumpsys package "$PKG" | grep -i -E "DriveDocumentsProvider|DOCUMENTS_PROVIDER|PickerActivity" | tee out/registered.txt
+          adb shell input keyevent KEYCODE_HOME
+          adb shell am start -a android.intent.action.OPEN_DOCUMENT -c android.intent.category.OPENABLE -t '*/*' > out/am.txt 2>&1
+          sleep 8
+          dump() { adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb exec-out cat /sdcard/ui.xml > "$1"; }
+          dump out/ui-1.xml
+          adb exec-out screencap -p > out/picker-1.png
+          # The roots drawer: the hamburger ("Show roots") or, on a wide layout, already visible.
+          if ! grep -q "Cloud Drive" out/ui-1.xml; then
+            adb shell input swipe 5 800 600 800 300; sleep 3
+            dump out/ui-2.xml
+            grep -q "Cloud Drive" out/ui-2.xml || { adb shell input tap 60 140; sleep 3; dump out/ui-2.xml; }
+          else cp out/ui-1.xml out/ui-2.xml; fi
+          adb exec-out screencap -p > out/picker-2.png
+          adb logcat -d -v threadtime > out/logcat.txt
+          if grep -q "Cloud Drive" out/ui-2.xml; then echo "Cloud Drive root is listed in the system picker."; exit 0; fi
+          echo "::error title=Cloud Drive missing from the system picker::no Cloud Drive root in the OPEN_DOCUMENT UI"
+          grep -o 'text="[^"]*"' out/ui-2.xml | head -40
+          exit 1
+          EOF
+          chmod +x probe.sh
+
+      - name: Boot emulator + probe
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./probe.sh
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: picker-evidence
+          path: out/
