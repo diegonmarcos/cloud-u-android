@@ -151,7 +151,7 @@ object FleetIdentity {
 
     /** How the page orders its rows. Declared once: the switch draws [values] and [sorted] reads the same entries. */
     enum class Sort(val id: String, val label: String) {
-        UID("uid", "By uid"), NAME("name", "By name"), PACKAGE("package", "By package");
+        UID("uid", "By uid"), NAME("label", "By name"), PACKAGE("package", "By package");
         companion object { fun of(id: String): Sort = values().firstOrNull { it.id == id } ?: UID }
     }
 

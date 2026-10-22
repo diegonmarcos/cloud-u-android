@@ -148,7 +148,7 @@ class FleetIdentityPageTest : KitPageHarness() {
         compose.onNodeWithTag(FleetIdentity.TAG_UID + "none", useUnmergedTree = true).assertExists()
         compose.onNodeWithTag(FleetIdentity.TAG_SHARED + "10200", useUnmergedTree = true).assertExists()
         compose.onNodeWithTag(FleetIdentity.TAG_SHARED + "10100", useUnmergedTree = true).assertDoesNotExist()
-        compose.onNodeWithTag(KitPartTags.segment(FleetIdentity.TAG_SORT, "name"), useUnmergedTree = true).performClick()
+        compose.onNodeWithTag(KitPartTags.segment(FleetIdentity.TAG_SORT, "label"), useUnmergedTree = true).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(FleetIdentity.TAG_UID + "10200", useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithTag("kit:listrow:" + FleetIdentity.TAG_ROW + "one", useUnmergedTree = true).assertExists()
