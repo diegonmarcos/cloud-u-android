@@ -1,7 +1,7 @@
 package com.diegonmarcos.cloudaccount
 
 import com.diegonmarcos.cloudlib.auth.AuthHttp
-import com.diegonmarcos.cloudlib.auth.ConfigSyncClient
+import com.diegonmarcos.superapp.core.ConfigSyncClient
 import com.diegonmarcos.cloudlib.auth.ProviderStatus
 import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy

@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.core
 
 import android.util.Log
+import com.diegonmarcos.cloudlib.auth.AuthHttp
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
