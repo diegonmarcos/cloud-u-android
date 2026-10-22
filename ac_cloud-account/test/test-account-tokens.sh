@@ -6,7 +6,7 @@
 #  2. a token value is fetched only after device auth: every client.reveal / client.generate in TokensPage sits inside
 #     RevealGate.revealOnIo's read lambda, and revealOnIo calls authenticate BEFORE read;
 #  3. the client never logs, prints or stores a value (no Log / println / SharedPreferences / AccountVault write);
-#  4. the engine is declared as a fleet endpoint (mesh tokens-api.app:4184, public tokens-api.diegonmarcos.com) with its
+#  4. the engine is declared as a fleet endpoint (mesh tokens-api.app:4184, public c3-pvt.diegonmarcos.com/tokens-api) with its
 #     named cleartext entry.
 # Then each mutation is planted in a scratch copy and the check must go RED. The runtime half is TokensTest.kt.
 set -u
@@ -57,7 +57,7 @@ ok(not re.search(r"SharedPreferences|AccountVault\([^)]*\)\.(put|set|save)|putSt
 ok('"Authorization" to "Bearer' in client, "the call carries the vault bearer as Authorization", "the call no longer sends the bearer")
 
 svc = {s["id"]: s for s in bj["fleet_endpoints"]["services"]}.get("tokens-api", {})
-ok(svc.get("mesh_dns") == "tokens-api.app" and svc.get("mesh_port") == 4184 and svc.get("public_domain") == "tokens-api.diegonmarcos.com",
+ok(svc.get("mesh_dns") == "tokens-api.app" and svc.get("mesh_port") == 4184 and svc.get("public_domain") == "c3-pvt.diegonmarcos.com" and svc.get("public_path") == "/tokens-api",
    "tokens-api is a declared fleet endpoint", "tokens-api is not (correctly) declared in fleet_endpoints")
 ok('<domain includeSubdomains="false">tokens-api.app</domain>' in rd(f"{A}/app/src/main/res/xml/network_security_config.xml"), "tokens-api.app has its named cleartext entry", "tokens-api.app has no cleartext entry")
 sys.exit(1 if fails else 0)
