@@ -15,12 +15,13 @@ import os, re, sys
 APP = os.environ["APP_DIR"]
 NET = "network/src/main/kotlin/com/bitwarden/network/retrofit/RetrofitsImpl.kt"
 GRADLE = "network/build.gradle.kts"
-FLEET = "app/src/main/kotlin/com/x8bit/bitwarden/fleet/VaultFleetEndpoints.kt"
+FLEET = "../ab_cloud-libs-shared/libs/fleet-endpoints-android/src/main/java/com/diegonmarcos/superapp/fleetendpoints/android/FleetBoot.kt"
+VAULTFLEET = "app/src/main/kotlin/com/x8bit/bitwarden/fleet/VaultFleetEndpoints.kt"
 APPCLS = "app/src/main/kotlin/com/x8bit/bitwarden/BitwardenApplication.kt"
 MANIFEST = "app/src/main/AndroidManifest.xml"
 NSC = "app/src/main/res/xml/network_security_config.xml"
 APPGRADLE = "app/build.gradle.kts"
-FILES = [NET, GRADLE, FLEET, APPCLS, MANIFEST, NSC, APPGRADLE]
+FILES = [NET, GRADLE, FLEET, VAULTFLEET, APPCLS, MANIFEST, NSC, APPGRADLE]
 
 def rd(rel): return open(os.path.join(APP, rel), encoding="utf-8").read()
 def fn(src, name):
@@ -46,6 +47,7 @@ def checks(f):
     v = f[FLEET]
     need("FleetEndpointsClient.pull(" in v and "NetworkChangeWatch.start(" in v, "F3 no pull at start / on a network change")
     need("VaultFleetEndpoints.start(this)" in f[APPCLS], "F3 the application does not start the endpoint pull")
+    need("FleetBoot.start(context)" in f[VAULTFLEET], "F3 the vault hook does not run the shared FleetBoot")
     need(not re.search(r"SharedPreferences|getSharedPreferences|writeText|openFileOutput|Timber|Log\.", v), "F3 the bearer holder persists or logs")
     need("@Volatile" in v and "private var bearer" in v, "F3 the bearer is not an in-memory field")
     need('<package android:name="com.diegonmarcos.cloudaccount"' in f[MANIFEST], "F3 the manifest does not query Cloud Account")
@@ -74,6 +76,7 @@ mutations = {
     "no pull": mut(FLEET, "FleetEndpointsClient.pull(", "FleetEndpointsClientX.pull("),
     "the bearer is logged": mut(FLEET, "private var bearer: String? = null", "private var bearer: String? = null.also { Timber.d(\"x\") }"),
     "application does not start it": mut(APPCLS, "VaultFleetEndpoints.start(this)", "// removed"),
+    "the vault hook runs nothing": mut(VAULTFLEET, "FleetBoot.start(context)", "Unit"),
     "no query for Cloud Account": mut(MANIFEST, '<package android:name="com.diegonmarcos.cloudaccount" />', ""),
     "no cleartext entry": mut(NSC, "<domain>vaultwarden.app</domain>", ""),
     "the whole .app TLD opened": mut(NSC, "<domain>vaultwarden.app</domain>", '<domain includeSubdomains="true">app</domain>'),

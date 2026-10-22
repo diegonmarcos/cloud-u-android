@@ -33,6 +33,15 @@ class FleetEndpointsDeclTest {
         assertEquals(listOf("jmap"), FleetEndpointsContract.parseDecl(FleetEndpointsContract.declOfKind(declared.toString(), "mail")).map { it.id })
     }
 
+    @Test fun theServicesTheLibrariesBakeTheirUrlsFromAreDeclared() {
+        // #1093 libs:mail (authelia), libs:updater (git-proxy-api), libs:news (news), the Keyboard/Writer (languagetool) bake their URL from
+        // these entries by ab_cloud-libs-shared/libs/fleet-urls.gradle; a rename here would silently bake an empty URL.
+        val byId = services.associateBy { it.id }
+        for (id in listOf("authelia", "git-proxy-api", "news", "languagetool")) assertTrue("$id must stay declared", byId.containsKey(id))
+        assertEquals("news-gdelt.app", byId.getValue("news").meshDns)
+        assertTrue(byId.getValue("news").hasPublic)
+    }
+
     @Test fun whatIsBakedIntoTheAppIsTheFile() {
         val baked = String(java.util.Base64.getDecoder().decode(BuildConfig.FLEET_ENDPOINTS_B64))
         assertEquals(services, FleetEndpointsContract.parseDecl(baked))

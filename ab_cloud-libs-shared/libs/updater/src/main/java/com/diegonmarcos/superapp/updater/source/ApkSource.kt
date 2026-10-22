@@ -216,8 +216,7 @@ internal object GhcrSource : ApkSource {
  * git-proxy-api.app, ports.app 8123). A direct wg0 dial needs no credential
  * there — which is the point: the Store's downloader has none.
  *
- * Tried LAST: the public legs are the canonical path and this one exists for
- * when they are unreachable. The sha256 sidecar is REQUIRED here, never the
+ * #1093 Tried FIRST (mesh first, like every fleet endpoint); the public legs follow when it is down. The sha256 sidecar is REQUIRED here, never the
  * size fallback ReleaseSource keeps for old ships — a second channel must not
  * be a weaker one, and the digest comes from the mirror itself so it is
  * readable exactly when this leg is the only one that works.
@@ -226,8 +225,8 @@ internal object GhcrSource : ApkSource {
 // drive it; the ApkSource entry below stays internal like its siblings.
 object MeshMirror {
 
-    /** host:port of git-proxy-api on the mesh (its build.json dns + ports.app). */
-    const val BASE = "http://git-proxy-api.app:8123"
+    /** The git-proxy-api mesh origin, from the one fleet declaration (ac_cloud-account build.json fleet_endpoints, baked as BuildConfig.MESH_MIRROR_BASE). */
+    val BASE: String get() = com.diegonmarcos.superapp.updater.BuildConfig.MESH_MIRROR_BASE
 
     /**
      * The same service by its wg0 address. MEASURED 2026-10-03 from oci-apps:
@@ -241,7 +240,7 @@ object MeshMirror {
     const val BASE_WG = "http://10.0.0.4:8123"
 
     /** The mirror origins, in order; a local stub in tests. */
-    @Volatile var bases: List<String> = listOf(BASE, BASE_WG)
+    @Volatile var bases: List<String> = listOf(BASE, BASE_WG).filter { it.isNotBlank() }
 
     /** Whether the wg0 tunnel is up, from the host that owns it (SuperApp:
      *  FleetDns.meshUp). null = not known here, and the leg is tried as before. */
@@ -271,7 +270,8 @@ object MeshMirror {
         val sidecar = "$assetUrl.sha256"
         val c = try {
             (java.net.URL(sidecar).openConnection() as java.net.HttpURLConnection).apply {
-                connectTimeout = 10_000
+                // Short: this leg is tried FIRST now, and a dead mesh must cost seconds, not the public legs' patience.
+                connectTimeout = 3_000
                 readTimeout = 10_000
             }
         } catch (t: Throwable) { throw java.io.IOException("mesh sidecar: ${t.message}", t) }

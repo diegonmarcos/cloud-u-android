@@ -205,10 +205,16 @@ class AccountVault(context: Context) {
             2 to mapOf(MAIL_PACKAGE to listOf(MailEndpointsContract.GRANT_ENDPOINTS, MailEndpointsContract.GRANT_BEARER)),
             // #1093 Cloud Vault authenticates to the self-hosted vault over the fleet endpoints Account publishes.
             3 to mapOf(VAULT_PACKAGE to listOf(FleetEndpointsContract.GRANT_ENDPOINTS, FleetEndpointsContract.GRANT_BEARER)),
+            // #1093 the SuperApp and the Store run the fleet endpoints too (the updater's mesh-first leg, Telemetry, news, mail): they
+            // already hold fleet.bearer (v1) and now read the endpoint pairs.
+            4 to mapOf(
+                "com.diegonmarcos.superapp" to listOf(FleetEndpointsContract.GRANT_ENDPOINTS),
+                "com.diegonmarcos.cloudstore" to listOf(FleetEndpointsContract.GRANT_ENDPOINTS),
+            ),
         )
         const val VAULT_PACKAGE = "com.diegonmarcos.cloudvault"
         const val MAIL_PACKAGE = "com.diegonmarcos.comms.mail"
-        const val SEED_VERSION = 3
+        const val SEED_VERSION = 4
         val DEFAULT_GRANTS: Map<String, List<String>> = DEFAULT_GRANTS_BY_VERSION.values
             .fold(emptyMap<String, List<String>>()) { acc, m -> acc + m.mapValues { (k, v) -> acc[k].orEmpty() + v } }
 

@@ -258,6 +258,9 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // #774 /api/store/{cache,stage,download,install,clear,auto} on the fleet
         // debug server — the Store's stages, verifiable with the screen locked.
         runCatching { com.diegonmarcos.superapp.appstore.StoreDebugApi.register(this) }
+        // #1093 the fleet endpoints: pull the pairs Cloud Account publishes (grants fleet.endpoints + fleet.bearer) and put the
+        // shared transport behind the seam, so the libraries below it (Telemetry, the updater/news/mail calls) go mesh first.
+        runCatching { com.diegonmarcos.superapp.fleetendpoints.android.FleetBoot.start(this) }
         // HeliBoard (libs:keyboard) is vendored WITHOUT its own Application —
         // our .App wins the manifest merge (tools:replace android:name), so the
         // keyboard's app-level init never ran. That left Settings /

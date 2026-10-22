@@ -38,6 +38,7 @@
         <domain>git-proxy-api.app</domain>
         <domain>gitea.app</domain>
         <domain>languagetool.app</domain>
+        <domain>news-gdelt.app</domain>
         <domain>stalwart.app</domain>
         <domain>tokens-api.app</domain>
         <domain>vaultwarden.app</domain>

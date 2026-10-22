@@ -2,6 +2,7 @@
 
 package helium314.keyboard.latin
 
+import com.diegonmarcos.superapp.fleetconfig.FleetHttpSeam
 import android.content.Context
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
@@ -133,6 +134,10 @@ object GrammarChecker {
 
     /** One form POST; null unless HTTP 200. Must NOT be called on the IME main thread. */
     private fun post(urlStr: String, body: String): String? {
+        // #1093 an app that runs the fleet endpoints sends the declared languagetool service over them (mesh_only: the mesh
+        // endpoint, WireGuard); any other app, or a URL that is not the declared one, takes the plain request below.
+        FleetHttpSeam.exchange("POST", urlStr, mapOf("Content-Type" to "application/x-www-form-urlencoded", "Accept" to "application/json"),
+            body, 3000, 8000)?.let { return if (it.code == 200) it.body else null }
         val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             // de-DE / pt-PT take 1.3–1.9 s per sentence on the mesh server (measured

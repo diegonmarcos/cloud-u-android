@@ -35,6 +35,7 @@ plugins {
 // keyboard APK was being baked with SUPERAPP's application_id and version -
 // its own BuildConfig identified it as cloud-superapp. rootDir is the
 // CONSUMING app's build.json, which is what 'single source of truth' meant.
+apply from: '../fleet-urls.gradle'   // #1093 fleetUrl(): the LanguageTool host comes from the one fleet declaration
 def kbBuildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
 // Data-driven LLM routing registry (build.json::keyboard_ai) — providers, model
 // lists, enhancement prompts. Consuming app's build.json first, this module's
@@ -57,6 +58,8 @@ android {
         buildConfigField "String", "VERSION_NAME",   "\"${kbBuildJson.android.version_name}\""
         buildConfigField "String", "APPLICATION_ID", "\"${kbBuildJson.android.application_id}\""
         // build.json::keyboard_ai — read by helium314.keyboard.latin.AiRouter.
+        // #1093 the LanguageTool check URL = the declared (public) URL of the languagetool service (../fleet-urls.gradle).
+        buildConfigField "String", "LANGUAGETOOL_URL", "\"${fleetUrl('languagetool')}/v2/check\""
         buildConfigField "String", "AI_ROUTING_B64", "\"${kbAiB64}\""
         // build.json::update - read by helium314.keyboard.latin.utils.KeyboardUpdate.
         buildConfigField "String", "UPDATE_B64", "\"${kbUpdateB64}\""
@@ -113,6 +116,7 @@ dependencies {
     // module exposes takes a text-tools type, and a consumer that wants the client
     // depends on :libs:text-tools directly rather than on the keyboard.
     implementation project(':libs:text-tools')
+    implementation project(':libs:fleetconfig-model')   // #1093 FleetHttpSeam (GrammarChecker)
     implementation project(':libs:decisions-link')   // #883 keyboard_style: asks the decisions engine, holds no key
 
     implementation project(':libs:translate')

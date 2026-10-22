@@ -4,6 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import com.diegonmarcos.superapp.fleetconfig.FleetHttpSeam
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -121,6 +122,12 @@ object NewsApi {
     private fun enc(s: String): String = URLEncoder.encode(s, "UTF-8")
 
     private fun get(urlStr: String, accept: String = "application/json"): String {
+        // #1093 an app that runs the fleet endpoints sends the declared news service over them (mesh first, then the
+        // public URL with the fleet bearer); a URL it does not claim, or an app without the transport, is unchanged.
+        FleetHttpSeam.exchange("GET", urlStr, mapOf("Accept" to accept, "User-Agent" to USER_AGENT), null, CONNECT_TIMEOUT_MS, READ_TIMEOUT_MS)?.let {
+            if (it.code !in 200..299) error("HTTP ${it.code}")
+            return it.body
+        }
         val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = CONNECT_TIMEOUT_MS

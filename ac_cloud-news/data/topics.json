@@ -3,8 +3,7 @@
   "_doc_fields": "topic: the raw GDELT query term sent to the API. label: shown in the UI tab/chip.",
   "version": 1,
   "api": {
-    "_doc": "base: the self-hosted GDELT proxy this app talks to. refresh_seconds: how often the UI polls a topic's cache. max_articles: cap per topic per fetch, mirrors TS MAX_ARTICLES.",
-    "base": "https://api.diegonmarcos.com/news",
+    "_doc": "base: NOT declared here (#1093) - the news service is declared once in ac_cloud-account/build.json::fleet_endpoints and libs:news bakes its URL as BuildConfig.NEWS_API_BASE; a base here would override it. refresh_seconds: how often the UI polls a topic's cache. max_articles: cap per topic per fetch, mirrors TS MAX_ARTICLES.",
     "refresh_seconds": 60,
     "max_articles": 50
   },

@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply from: '../../ab_cloud-libs-shared/libs/fleet-urls.gradle'   // #1093 fleetUrl(): fleet hosts come from the one declaration
 apply plugin: 'org.jetbrains.kotlin.android'
 // THE COMPOSE COMPILER. Pinned to the Kotlin version in the root build.gradle,
 // because since Kotlin 2.0 it ships with Kotlin rather than as a separately
@@ -104,6 +105,8 @@ android {
         targetSdk     a.target_sdk
         versionCode   codeFinal
         versionName   "${a.version_name} (sha-${shortSha})"
+        // #1093 the LanguageTool check URL = the declared (public) URL of the languagetool service.
+        buildConfigField "String", "LANGUAGETOOL_URL", "\"${fleetUrl('languagetool')}/v2/check\""
         buildConfigField "String", "GIT_SHORT_SHA", "\"${shortSha}\""
         ndk { abiFilters a.abi_filters as String[] }
 

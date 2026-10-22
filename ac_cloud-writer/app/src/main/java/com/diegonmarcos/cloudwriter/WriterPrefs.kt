@@ -178,7 +178,8 @@ object WriterPrefs {
     const val DEFAULT_GRAMMAR_FIX_CAPITALIZE_I = true
     const val DEFAULT_GRAMMAR_FIX_SENTENCE_CAPS = true
     const val DEFAULT_GRAMMAR_FIX_REPEATED_WORDS = true
-    const val DEFAULT_GRAMMAR_REMOTE_URL = "https://languagetool.diegonmarcos.com/v2/check"
+    /** #1093 the declared languagetool URL, baked from the one fleet declaration (BuildConfig.LANGUAGETOOL_URL). */
+    val DEFAULT_GRAMMAR_REMOTE_URL: String get() = BuildConfig.LANGUAGETOOL_URL
     const val DEFAULT_GRAMMAR_PT_VARIANT = "pt-PT"
     const val DEFAULT_GRAMMAR_NGRAM_URL = ""
 

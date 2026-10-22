@@ -15,6 +15,9 @@ object FleetHttpSeam {
 
     @Volatile var transport: Transport? = null
 
+    /** The route + bearer OkHttp interceptors (application, network) for a library that owns an OkHttp client; typed Any: no OkHttp here. */
+    @Volatile var okhttp: Pair<Any, Any>? = null
+
     fun exchange(method: String, url: String, headers: Map<String, String>, body: String?, connectMs: Int, readMs: Int): Reply? =
         transport?.exchange(method, url, headers, body, connectMs, readMs)
 }

@@ -393,6 +393,21 @@
         "policy": "mesh_first",
         "health": "/health"
       },
+        {
+          "id": "news",
+          "kind": "api",
+          "source": "cloud-u-containers/user-news_news-gdelt/build.json",
+          "_doc": "A PATH of api.diegonmarcos.com (/news; the edge strips it, so the mesh side serves from its root, as the Cloud News deployment note always said: public https://api.diegonmarcos.com/news or the WireGuard-mesh http://news-gdelt:3019). libs:news reads its default API base from this entry (BuildConfig.NEWS_API_BASE) and sends its calls over the seam. Only the read endpoints are routed.",
+          "mesh_dns": "news-gdelt.app",
+          "mesh_port": 3019,
+          "mesh_scheme": "http",
+          "public_domain": "api.diegonmarcos.com",
+          "public_scheme": "https",
+          "public_path": "/news",
+          "route_paths": ["/articles", "/timeline", "/tone", "/topics", "/health"],
+          "policy": "mesh_first",
+          "health": "/health"
+        },
       {
         "id": "languagetool",
         "kind": "tools",

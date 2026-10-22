@@ -15,7 +15,7 @@
 
   The base-config keeps cleartextTrafficPermitted="false" (HTTPS-only)
   for everything else, INCLUDING the app's default/public API base
-  (https://api.diegonmarcos.com/news, from data/topics.json). Only the
+  (the declared public URL of the news service). Only the
   one mesh hostname below is exempted — this file must NOT set
   android:usesCleartextTraffic="true" app-wide in the manifest.
 -->
@@ -27,10 +27,11 @@
     </base-config>
 
     <domain-config cleartextTrafficPermitted="true">
-        <!-- news-gdelt: the self-hosted GDELT proxy this app talks to,
-             reachable ONLY over the WireGuard mesh (no public_url in
-             cloud_services.json). Exact hostname, no subdomains — this
-             is a single internal service name, not a domain suffix. -->
-        <domain includeSubdomains="false">news-gdelt</domain>
+        <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
+        <domain>git-proxy-api.app</domain>
+        <domain>news-gdelt.app</domain>
+        <!-- END fleet-mesh-cleartext -->
+        <!-- #1093 the mesh host of the declared news service (news-gdelt.app, WireGuard-only, WG encrypts) is GENERATED (above)
+             from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; never hand-listed. -->
     </domain-config>
 </network-security-config>

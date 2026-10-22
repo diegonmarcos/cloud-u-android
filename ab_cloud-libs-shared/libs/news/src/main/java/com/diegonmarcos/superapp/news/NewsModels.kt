@@ -250,11 +250,11 @@ object NewsTopicsConfig {
             val root = JSONObject(json)
             val api = root.optJSONObject("api") ?: JSONObject()
             NewsApiConfig(
-                base = api.optString("base", "https://api.diegonmarcos.com/news"),
+                base = api.optString("base", BuildConfig.NEWS_API_BASE),
                 refreshSeconds = api.optInt("refresh_seconds", 60),
                 maxArticles = api.optInt("max_articles", 50),
             )
-        }.getOrDefault(NewsApiConfig("https://api.diegonmarcos.com/news", 60, 50))
+        }.getOrDefault(NewsApiConfig(BuildConfig.NEWS_API_BASE, 60, 50))
         apiCache = result
         return result
     }

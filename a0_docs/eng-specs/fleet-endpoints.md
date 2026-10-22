@@ -108,3 +108,23 @@ check, which a mesh call would skip, so it stays on the public URL and is never 
   back to, and stay mesh-only.
 - The router keys on the public host and base path: two services on one path cannot take different routes.
 - On-phone check pending: the mesh names resolve and answer only on a phone with the tunnel up.
+
+## Libraries below the transport (#1093, second pass)
+
+Libraries that sit below the OkHttp transport reach it through `FleetHttpSeam` (libs:fleetconfig-model): `transport` for the
+HttpURLConnection callers (Telemetry, news, the Keyboard's LanguageTool check) and `okhttp` (route + bearer interceptors) for
+the OkHttp ones (libs:mail's `MailHttp.client`). An app that runs `FleetBoot.start` (Account, Mail, Vault, SuperApp) installs
+both; any other app is unchanged. What moved:
+
+- **libs:mail** `MailHttp.client` adds the route interceptor LAST (so the sign-in interceptors still see the public host) and the
+  bearer interceptor on the network side. The cookie sign-in (`AutheliaCookieJar`, the portal) stays bound to the auth host; the
+  declared `authelia` pair routes only `/api/health`. The portal URL is `BuildConfig.FLEET_AUTH_URL`.
+- **libs:updater** tries the git-proxy mesh mirror FIRST (`sourceOrder`: mesh, release, ghcr); its base is
+  `BuildConfig.MESH_MIRROR_BASE`, derived from the `git-proxy-api` declaration. A dead mesh costs a 3 s connect, then the public legs run.
+- **libs:news** reads the declared `news` service (mesh `news-gdelt.app:3019`, public `api.diegonmarcos.com/news`, mesh first):
+  default base `BuildConfig.NEWS_API_BASE`, calls over the seam. `topics.json` no longer carries a `base`.
+- **Keyboard / Writer** default LanguageTool URL is `BuildConfig.LANGUAGETOOL_URL` (the declared `languagetool` URL).
+- Build scripts read the declaration through `ab_cloud-libs-shared/libs/fleet-urls.gradle` (`fleetUrl(id)`, `fleetMeshUrl(id)`).
+- Grants seed v4: the SuperApp and the Store read `fleet.endpoints` (they already held `fleet.bearer`).
+
+The five baseline lines these files held in `fleet-host-baseline.txt` are gone.

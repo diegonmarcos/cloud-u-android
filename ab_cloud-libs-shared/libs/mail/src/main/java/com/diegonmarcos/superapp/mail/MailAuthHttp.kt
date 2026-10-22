@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.mail
 
+import com.diegonmarcos.superapp.fleetconfig.FleetHttpSeam
 import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
@@ -16,7 +17,8 @@ import javax.net.ssl.SSLException
 
 /** The fleet's Authelia portal and the session cookie it sets for the whole domain. */
 object AutheliaPortal {
-    const val URL = "https://auth.diegonmarcos.com"
+    /** The portal URL, from the one fleet declaration (BuildConfig.FLEET_AUTH_URL, baked by this module's build.gradle), never typed. */
+    val URL: String get() = BuildConfig.FLEET_AUTH_URL
     const val COOKIE = "authelia_session"
     const val DOMAIN = "diegonmarcos.com"
     /** Authelia's default session lifetime when the cookie carries no Expires. */
@@ -160,13 +162,16 @@ object MailHttp {
         base: OkHttpClient = OkHttpClient(),
     ): OkHttpClient {
         val host = MailAuthScope.hostOf(server)
-        return base.newBuilder()
+        val b = base.newBuilder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .cookieJar(AutheliaCookieJar(host, creds, onRefresh))
             .addInterceptor(MailAuthInterceptor(host, creds, onRejected))
-            .addNetworkInterceptor(GateHeaderInterceptor(host, creds))
-            .build()
+        // #1093 In an app that runs the fleet endpoints, the API calls of a declared fleet host go mesh first (the route
+        // interceptor is added LAST, so the sign-in interceptors above still see the public host) and the fleet bearer rides the
+        // public path only. The cookie sign-in itself (AutheliaCookieJar, the portal) stays bound to the auth host.
+        FleetHttpSeam.okhttp?.let { (route, bearer) -> b.addInterceptor(route as Interceptor); b.addNetworkInterceptor(bearer as Interceptor) }
+        return b.addNetworkInterceptor(GateHeaderInterceptor(host, creds)).build()
     }
 
     /** The client for the account stored in [prefs], wired to its encrypted credentials. */

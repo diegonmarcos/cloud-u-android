@@ -489,11 +489,11 @@ object Fleet {
      * installs afterwards: an install prompt blocks on the user, so
      * interleaving made every tap wait on the next app's network fetch.
      */
-    private val sources: List<ApkSource> = listOf(ReleaseSource, GhcrSource, MeshMirrorSource)
+    private val sources: List<ApkSource> = listOf(MeshMirrorSource, ReleaseSource, GhcrSource)
 
-    /** #831 the legs in the order they are tried, by name. #837 the third is
-     *  the mesh mirror (git-proxy-api's release-asset route on the wg0-private
-     *  name), for when github.com / ghcr.io do not resolve. */
+    /** #831 the legs in the order they are tried, by name. #1093 the mesh mirror (git-proxy-api's release-asset
+     *  route on the wg0-private name) is FIRST, like every fleet endpoint: mesh first, the public legs (release,
+     *  GHCR) when it is down or does not carry the asset. */
     val sourceOrder: List<String> get() = sources.map { it.name }
 
     /**
