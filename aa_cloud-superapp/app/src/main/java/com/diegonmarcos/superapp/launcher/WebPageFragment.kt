@@ -113,6 +113,7 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
     private fun loadFresh(w: WebView, target: String) {
         lastLoadAt = android.os.SystemClock.elapsedRealtime()
         userNavigated = false
+        report("probe loadFresh target=$target w.url=${w.url} canGoBack=${w.canGoBack()} progress=${w.progress}")
         w.settings.cacheMode = WebSettings.LOAD_DEFAULT
         if (w.url == target) {
             lastEntry = "reload"
@@ -134,6 +135,7 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
         if (w.canGoBack()) return
         // The reader tapped a link and a dialog paused the page before it committed: reloading the declared URL now would override
         // it. Keyed on the navigation being the reader's own, NOT on load progress, so a stalled first load still recovers here.
+        report("probe onResume w.url=${w.url} canGoBack=${w.canGoBack()} progress=${w.progress} userNavigated=$userNavigated")
         if (userNavigated) return
         loadFresh(w, failed ?: declaredUrl.ifBlank { return })
     }
@@ -189,6 +191,7 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
                         }
                         webViewClient = object : WebViewClient() {
                             override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                report("probe onPageStarted url=$url declared=$declaredUrl canGoBack=${view?.canGoBack()}")
                                 if (!url.isNullOrBlank() && url != declaredUrl && url != failed) userNavigated = true
                             }
 
@@ -207,6 +210,7 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
                              *  pane where the user could not tell they had left the site. */
                             override fun shouldOverrideUrlLoading(view: WebView, request: android.webkit.WebResourceRequest): Boolean {
                                 val target = request.url
+                                report("probe shouldOverride target=$target main=${request.isForMainFrame} current=${view.url} canGoBack=${view.canGoBack()}")
                                 if (!embed || !request.isForMainFrame) return false
                                 val scheme = target.scheme.orEmpty()
                                 if (scheme != "http" && scheme != "https") return true
