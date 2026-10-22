@@ -52,6 +52,14 @@ class WeatherFaceTest {
         }
     }
 
+    @Test fun eachButtonOpensTheRightScreen() {
+        val app = WeatherFace.intentFor(ctx, Action.APP_SETTINGS)
+        assertEquals(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, app.action)
+        assertEquals("package:" + ctx.packageName, app.dataString)
+        assertEquals(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS, WeatherFace.intentFor(ctx, Action.LOCATION_SETTINGS).action)
+        assertEquals(WeatherBadgeService::class.java.name, WeatherFace.intentFor(ctx, Action.RETRY).component?.className)
+    }
+
     @Test fun positionLineSaysSourceAndAge() {
         assertEquals("Position: network, 12 min ago", WeatherFace.position(ctx, fix, fix.timeMs + 12 * 60_000L))
     }

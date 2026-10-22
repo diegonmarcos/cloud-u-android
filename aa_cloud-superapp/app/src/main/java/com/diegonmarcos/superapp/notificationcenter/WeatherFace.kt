@@ -49,6 +49,15 @@ object WeatherFace {
         }
     }
 
+    /** The screen each button opens. A runtime permission cannot be asked from a notification or a card, so the
+     *  permission buttons open this app's settings page, where Location is one tap away. */
+    fun intentFor(ctx: Context, a: Action): android.content.Intent = when (a) {
+        Action.APP_SETTINGS -> android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            android.net.Uri.fromParts("package", ctx.packageName, null))
+        Action.LOCATION_SETTINGS -> android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+        Action.RETRY -> android.content.Intent(ctx, WeatherBadgeService::class.java)
+    }
+
     /** "network · 12 min ago" - where the position came from and how old it is. */
     fun position(ctx: Context, fix: WeatherLocation.Fix, nowMs: Long): String {
         val m = ((nowMs - fix.timeMs) / 60_000L).coerceAtLeast(0)

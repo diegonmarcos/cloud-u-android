@@ -23,6 +23,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,13 +39,14 @@ import com.diegonmarcos.superapp.ui.Haptics
  * #1068 — the top of the Notify page: every declared badge as a One UI live / ongoing card, in the order build.json
  * ranks them (`card.rank` in `ui.notification_center.producers`; the shade's own group order is untouched). One list, one source: [BadgeDeclaration.badges] over [BadgeServices.declared]; a card exists for
  * every entry, drawn from [BadgeCardData] (the badge providers' real data), so a badge added to build.json is a card
- * here with no edit. No control lives on a card: the switches, Launch and customisation are in the page's Settings
+ * here with no edit. No control lives on a card, except the one action a badge's own notification carries (Weather: the fix for a missing permission): the switches, Launch and customisation are in the page's Settings
  * section at the very bottom.
  */
 internal object BadgeCardTags {
     const val LIST = "badge-cards"
     fun card(id: String) = "badge-card:$id"
     fun progress(id: String) = "badge-card-progress:$id"
+    fun action(id: String) = "badge-card-action:$id"
 }
 
 /** The declared badges in display order: `card.rank` from build.json, ties in declaration order (the sort is stable). */
@@ -99,6 +103,19 @@ internal fun BadgeCard(d: BadgeCardData.Data) {
             Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(6.dp).clip(CircleShape).background(NotifCard.pill)
                 .testTag(BadgeCardTags.progress(d.badge.id))) {
                 Box(Modifier.fillMaxWidth(p.coerceIn(0.02f, 1f)).height(6.dp).clip(CircleShape).background(accent))
+            }
+        }
+        val act = d.actionIntent
+        if (d.actionLabel != null && act != null) {
+            Box(
+                Modifier.padding(top = 10.dp).clip(CircleShape).background(accent.copy(alpha = 0.22f))
+                    .semantics { role = Role.Button }
+                    .clickable { Haptics.tap(hostView); runCatching { act.send() } }
+                    .padding(horizontal = 18.dp, vertical = 9.dp)
+                    .testTag(BadgeCardTags.action(d.badge.id)),
+            ) {
+                Text(d.actionLabel, color = accent, fontSize = NotifCard.bodySp, fontWeight = FontWeight.SemiBold,
+                    fontFamily = NotifCard.font, maxLines = 1)
             }
         }
         if (d.badge.card.kind == "quotes") {

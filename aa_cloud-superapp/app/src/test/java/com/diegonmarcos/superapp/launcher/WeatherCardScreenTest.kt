@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
@@ -53,8 +54,13 @@ class WeatherCardScreenTest : KitPageHarness() {
         val lines = if (state is WeatherFace.State.Forecast)
             state.today.forecast.hours.filter { it.first % 3 == 0 }.map { BadgeCardData.Line("%02dh".format(it.first), "%.0f°".format(it.second)) }
         else emptyList()
-        val sub = if (f.actionLabel != null) f.text + "  [ " + f.actionLabel + " ]" else f.text
-        return BadgeCardData.Data(b, b.label, f.title, sub, null, lines, true, "", System.currentTimeMillis(), null)
+        val pi = f.action?.let { a ->
+            val i = WeatherFace.intentFor(ctx, a)
+            if (a == WeatherFace.Action.RETRY) android.app.PendingIntent.getService(ctx, 3, i, android.app.PendingIntent.FLAG_IMMUTABLE)
+            else android.app.PendingIntent.getActivity(ctx, 1, i, android.app.PendingIntent.FLAG_IMMUTABLE)
+        }
+        return BadgeCardData.Data(b, b.label, f.title, f.text, null, lines, true, "", System.currentTimeMillis(), null,
+            f.actionLabel, pi)
     }
 
     @Test
@@ -77,7 +83,18 @@ class WeatherCardScreenTest : KitPageHarness() {
         val none = data(WeatherFace.State.NoLocation(WeatherLocation.Reason.PERMISSION))
         showKit { Column(androidx.compose.ui.Modifier.fillMaxSize().background(NotifCard.panel).padding(12.dp)) { BadgeCard(none) } }
         compose.onNodeWithTag(BadgeCardTags.card(WeatherBadgeService.BADGE_ID)).assertExists()
+        compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).assertExists().assertHasClickAction()
+        compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).assert(
+            androidx.compose.ui.test.SemanticsMatcher("is a Button") {
+                it.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Role) == androidx.compose.ui.semantics.Role.Button })
+        // The button's PendingIntent opens this app's settings page (where Location is granted).
+        val saved = org.robolectric.Shadows.shadowOf(none.actionIntent).savedIntents.single()
+        assertEquals(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, saved.action)
+        assertEquals("package:" + ctx.packageName, saved.dataString)
         snap("weather-card-nofix.png")
+        // A seeded card has no button at all.
+        showKit { Column(androidx.compose.ui.Modifier.fillMaxSize().background(NotifCard.panel).padding(12.dp)) { BadgeCard(withFix) } }
+        compose.onNodeWithTag(BadgeCardTags.action(WeatherBadgeService.BADGE_ID)).assertDoesNotExist()
     }
 
     private fun snap(name: String) {

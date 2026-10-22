@@ -33,6 +33,9 @@ object BadgeCardData {
         val note: String,
         val whenMs: Long,
         val open: PendingIntent?,
+        /** The notification's first action (a real button on the card), e.g. Weather's "Allow location". */
+        val actionLabel: String? = null,
+        val actionIntent: PendingIntent? = null,
     )
 
     /** Test seam: a JVM/Robolectric render has no running services, so it supplies the data a phone would have. */
@@ -57,7 +60,8 @@ object BadgeCardData {
                 if (i in 1..24) Line(l.substring(0, i), l.substring(i + 2)) else Line("", l)
             }
         fun data(headline: String, sub: String, progress: Float?, lines: List<Line>) = Data(
-            b, b.label, headline, sub, progress, lines, live, note, n?.`when` ?: 0L, n?.contentIntent)
+            b, b.label, headline, sub, progress, lines, live, note, n?.`when` ?: 0L, n?.contentIntent,
+            n?.actions?.firstOrNull()?.title?.toString(), n?.actions?.firstOrNull()?.actionIntent)
         return when (b.card.kind) {
             "level" -> {
                 val lv = batteryLevel(ctx)
