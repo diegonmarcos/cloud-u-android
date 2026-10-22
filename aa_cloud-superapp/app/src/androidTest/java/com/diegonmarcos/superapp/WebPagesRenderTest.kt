@@ -46,6 +46,61 @@ class WebPagesRenderTest {
     @Test fun b_webAppsEmbedRendersAtNight() = check("webapps-night", "page:cloud/webapps", night = true, embed = true)
     @Test fun c_linktreeRenders() = check("linktree", "page:cloud/lnktree", night = false)
 
+    /**
+     * Back follows the embedded page's history: from the WebApps main page, open an app page (a same-origin link, which must stay
+     * inside the WebView and land in its history), press the SYSTEM Back and land on the main page again; open the app page again
+     * and press the shell's top-right Back arrow, same result. Only at the main page does Back leave the page.
+     */
+    @Test fun d_webAppsBackFollowsHistory() {
+        sh("settings put global adb_wifi_enabled 0")
+        val pkg = inst.targetContext.packageName
+        sh("appops set $pkg REQUEST_INSTALL_PACKAGES allow")
+        sh("cmd role add-role-holder android.app.role.HOME $pkg 0")
+        sh("cmd uimode night no"); SystemClock.sleep(1500)
+        sh("input keyevent KEYCODE_WAKEUP"); sh("wm dismiss-keyguard")
+        val ctx = inst.targetContext
+        ctx.startActivity(Intent().setClassName(ctx.packageName, "${ctx.packageName}.MainActivity")
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            .putExtra("shortcut_action", "page:cloud/webapps"))
+
+        fun web(): WebView? { var w: WebView? = null; resumed()?.let { a -> inst.runOnMainSync { w = findWeb(a.window.decorView) } }; return w }
+        fun until(what: String, ms: Long = 20_000, cond: () -> Boolean) {
+            val t0 = SystemClock.elapsedRealtime()
+            while (SystemClock.elapsedRealtime() - t0 < ms) { clearPrompt(); if (cond()) return; SystemClock.sleep(500) }
+            throw AssertionError("timed out waiting for: $what")
+        }
+        fun urlOf(w: WebView): String { var u = ""; inst.runOnMainSync { u = w.url.orEmpty() }; return u }
+        fun canBack(w: WebView): Boolean { var b = false; inst.runOnMainSync { b = w.canGoBack() }; return b }
+        fun tiles(w: WebView) = js(w, "document.querySelectorAll('a[href]').length").trim('"').toIntOrNull() ?: 0
+
+        var w: WebView? = null
+        until("the WebApps page loads") { w = web(); val v = w; v != null && js(v, "document.readyState").contains("complete") && tiles(v) > 0 }
+        val main = urlOf(w!!)
+        fun openApp() {
+            val v = w!!
+            // The first same-origin link that leaves the page: it must stay in this WebView (shouldOverrideUrlLoading) and add a history entry.
+            val clicked = js(v, "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.origin===location.origin&&a.href.split('#')[0]!==location.href.split('#')[0]&&!a.hasAttribute('download'));if(!a)return 'none';a.click();return a.href})()")
+            assertTrue("no same-origin app link on the WebApps page", clicked != "\"none\"")
+            until("the app page opens inside the WebView") { urlOf(v).split('#')[0] != main.split('#')[0] && canBack(v) }
+        }
+        fun tapShellBack() {
+            val a = resumed()!!; val loc = IntArray(2); var wd = 0; var ht = 0
+            inst.runOnMainSync { a.findViewById<View>(R.id.toolbar).let { it.getLocationOnScreen(loc); wd = it.width; ht = it.height } }
+            sh("input tap ${loc[0] + wd - (28 * a.resources.displayMetrics.density).toInt()} ${loc[1] + ht / 2}")
+        }
+
+        openApp()
+        val app = urlOf(w!!)
+        sh("input keyevent KEYCODE_BACK")
+        until("system Back returns to the WebApps main page") { urlOf(w!!).split('#')[0] == main.split('#')[0] }
+        assertTrue("Back left the WebApps page instead of stepping back (url $app -> ${urlOf(w!!)})", web() != null)
+
+        openApp()
+        tapShellBack()
+        until("the top-right Back arrow returns to the WebApps main page") { urlOf(w!!).split('#')[0] == main.split('#')[0] }
+        assertTrue("the Back arrow left the WebApps page instead of stepping back", web() != null)
+    }
+
     /** The app is uninstalled after the run (taking its files dir with it), so the shell copies the evidence out. */
     private fun export(name: String) {
         sh("mkdir -p /data/local/tmp/webpage")

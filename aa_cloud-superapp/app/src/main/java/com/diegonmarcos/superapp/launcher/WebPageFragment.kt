@@ -56,7 +56,7 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
  * Compose since #773: the WebView is hosted in an AndroidView (a WebView has no Compose equivalent) and the Back
  * control is a composable floating over it.
  */
-class WebPageFragment : KitComposeFragment() {
+class WebPageFragment : KitComposeFragment(), BackHandler {
 
     private var web: WebView? = null
 
@@ -67,8 +67,21 @@ class WebPageFragment : KitComposeFragment() {
      *  pop the dispatcher already does. */
     private val backToPreviousPage = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
-            web?.takeIf { it.canGoBack() }?.goBack()
+            stepBack()
         }
+    }
+
+    /** The shell's page-level Back contract (BackHandler), so the top-right Back arrow and the system Back both walk the embedded
+     *  page's own history first, for every WebView page (Cloud > WebApps, Linktree, any http(s) tile). At the start page it
+     *  returns false and the shell does its normal pop / go-up. */
+    override fun tryHandleBack(): Boolean = stepBack()
+
+    /** One step back in the WebView's history; false when it is at its start page. */
+    internal fun stepBack(): Boolean {
+        val w = web ?: return false
+        if (!w.canGoBack()) return false
+        w.goBack()
+        return true
     }
 
     override fun palette() = LauncherPalette.kit(requireContext())
@@ -171,6 +184,11 @@ class WebPageFragment : KitComposeFragment() {
                                 refreshing = false
                             }
 
+                            /** Also fires for in-page (history.pushState / hash) navigation, which onPageFinished does not. */
+                            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                                backToPreviousPage.isEnabled = view?.canGoBack() == true
+                            }
+
                             /** Same site stays in the page; any other http(s) link goes through the app's link rules
                              *  (fleet hosts open in the embedded browser, the rest in the system's), never inside this
                              *  pane where the user could not tell they had left the site. */
@@ -245,11 +263,7 @@ class WebPageFragment : KitComposeFragment() {
      *  browser. The dispatcher does the leaving — [backToPreviousPage] is
      *  disabled in exactly that case, so this cannot recurse into itself. */
     private fun goBackOrClose() {
-        val wv = web
-        if (wv != null && wv.canGoBack()) {
-            wv.goBack()
-            return
-        }
+        if (stepBack()) return
         requireActivity().onBackPressedDispatcher.onBackPressed()
     }
 
