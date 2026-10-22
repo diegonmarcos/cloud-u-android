@@ -46,7 +46,9 @@ class EndpointRoutingTest {
         pub = MockWebServer().also { it.start() }
         mesh = MockWebServer().also { it.start() }
         router = newRouter()
-        http = OkHttpClient.Builder().connectTimeout(2, TimeUnit.SECONDS).readTimeout(2, TimeUnit.SECONDS)
+        // OkHttp's own retry would re-send a dropped GET to the next address of `localhost` (::1 refuses: a ConnectException that
+        // proves nothing about the first try); this suite is about the ROUTER's rule, so the client does not retry underneath it.
+        http = OkHttpClient.Builder().retryOnConnectionFailure(false).connectTimeout(2, TimeUnit.SECONDS).readTimeout(2, TimeUnit.SECONDS)
             .addInterceptor(EndpointRouteInterceptor(router))
             .addNetworkInterceptor(FleetBearerInterceptor(router, bearers))
             .build()
