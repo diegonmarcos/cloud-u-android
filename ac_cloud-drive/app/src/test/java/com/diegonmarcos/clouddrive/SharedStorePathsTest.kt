@@ -37,7 +37,7 @@ class SharedStorePathsTest {
         assertTrue(StorePaths.listViaOwner(p, files, 0, openable = false, mode = Mode.DIRECT))
         assertFalse(StorePaths.listViaOwner(p, files, 0, openable = true, mode = Mode.DIRECT))
         assertFalse(StorePaths.listViaOwner(p, files, 0, openable = false, mode = Mode.NONE))
-        assertFalse(StorePaths.listViaOwner(p, "/storage/emulated/0/Download", 0, openable = false, mode = Mode.EXEC))
+        assertFalse(StorePaths.listViaOwner(p, "$sd/Download", 0, openable = false, mode = Mode.EXEC))
     }
 
     @Test fun `DIRECT only when the shared uid is really in effect`() {
