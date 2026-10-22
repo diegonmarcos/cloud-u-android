@@ -82,7 +82,11 @@ class AuthHttpRoutingTest {
         val api = services.single { it.id == "c3-public-api" }
         assertEquals("https://c3-public-api.diegonmarcos.com", api.publicUrl()); assertEquals("http://c3-public-api.app:8087", api.meshUrl())
         assertEquals(listOf("/health", "/ready", "/analytics"), api.routePaths)
-        for (id in listOf("auth-broker", "cloud-me-api", "vaultwarden")) assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, services.single { it.id == id }.policy)
+        for (id in listOf("auth-broker", "vaultwarden")) assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, services.single { it.id == id }.policy)
+        // #1103/#1104 cloud-me-api: mesh first, then the private tier under its path (the Autocomplete rows GET /me/autocomplete)
+        val me = services.single { it.id == "cloud-me-api" }
+        assertEquals(FleetEndpointsContract.POLICY_MESH_FIRST, me.policy)
+        assertEquals("https://c3-pvt.diegonmarcos.com/cloud-me-api", me.publicUrl()); assertEquals("http://cloud-me-api.app:8124", me.meshUrl())
     }
 
     @Test fun aLibraryBelowTheTransportSendsThroughTheSeamAndAnUnclaimedUrlIsLeftToTheCaller() {

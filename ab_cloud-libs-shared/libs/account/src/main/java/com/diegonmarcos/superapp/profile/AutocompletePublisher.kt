@@ -62,15 +62,25 @@ object MeAutocompleteSync {
         data class Failed(val why: String) : Outcome
     }
 
-    /** One GET, status and body; a test hands in its own. */
-    @Volatile var http: (String) -> Pair<Int, String> = { url -> FleetHttp.call(FleetHttp.shared, "GET", url, emptyMap(), null) }
+    /** One GET (url, headers), status and body; a test hands in its own. */
+    @Volatile var http: (String, Map<String, String>) -> Pair<Int, String> =
+        { url, headers -> FleetHttp.call(FleetHttp.shared, "GET", url, headers, null) }
+
+    /**
+     * cloud-me-api verifies an Authelia bearer itself, mesh or public (the mesh is not a credential for it), so the request
+     * carries the Authelia token Account holds, else the fleet bearer. Null when Account holds neither.
+     */
+    fun bearer(vault: AccountVault): String? =
+        listOf("auth.authelia_token", "fleet.bearer").firstNotNullOfOrNull { vault.connection(it)?.toString()?.takeIf { t -> t.isNotBlank() } }
 
     fun url(decl: String): String? =
         FleetEndpointsContract.parseDecl(decl).firstOrNull { it.id == SERVICE }?.let { it.meshUrl() + PATH }
 
     fun sync(ctx: Context, vault: AccountVault = AccountVault(ctx), decl: String = AccountHost.fleetEndpointsDecl()): Outcome {
         val url = url(decl) ?: return Outcome.NoService
-        val (code, body) = runCatching { http(url) }.getOrElse { return Outcome.Failed(it.javaClass.simpleName) }
+        val token = bearer(vault) ?: return Outcome.Failed("no bearer")
+        val (code, body) = runCatching { http(url, mapOf("Authorization" to "Bearer $token", "Accept" to "application/json")) }
+            .getOrElse { return Outcome.Failed(it.javaClass.simpleName) }
         if (code !in 200..299) return Outcome.Failed("HTTP $code")
         val (doc, count) = AutocompletePublisher.normalize(body) ?: return Outcome.Failed("not a document")
         vault.putAutocomplete(doc)

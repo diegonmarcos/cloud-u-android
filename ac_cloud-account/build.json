@@ -447,11 +447,14 @@
         "id": "cloud-me-api",
         "kind": "data",
         "source": "cloud-u-containers/infra-api_cloud-me-api/build.json",
-        "_doc": "Mesh-only by its own declaration (deploy._host_doc: cloud-me-api.app over wg0, no public route).",
+        "_doc": "The owner's private data (cloud-me-* repos), incl. the Autocomplete rows GET /me/autocomplete (#1103): mesh first, then the private tier c3-pvt.diegonmarcos.com/cloud-me-api (#1104) behind the shared gate. The service also verifies the Authelia bearer itself.",
         "mesh_dns": "cloud-me-api.app",
         "mesh_port": 8124,
         "mesh_scheme": "http",
-        "policy": "mesh_only",
+        "public_domain": "c3-pvt.diegonmarcos.com",
+        "public_path": "/cloud-me-api",
+        "public_scheme": "https",
+        "policy": "mesh_first",
         "health": "/me/health"
       },
       {
