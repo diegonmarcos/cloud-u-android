@@ -64,6 +64,15 @@ grep -q 'checkCallingOrSelfPermission(PERMISSION)' "$TJ/SharedStoreProvider.java
     || bad "SharedStoreProvider.call() does not re-check the permission"
 
 echo "── T2 one shared uid ──"
+TG="$ROOT/ac_cloud-termux/app/build.gradle"
+if python3 - "$TG" <<'PY'
+import re, sys
+g = open(sys.argv[1]).read()
+m = re.search(r"signingConfigs\s*\{.*?\n    \}\n", g, re.S)
+d = re.search(r"\n        debug \{(.*?)\n        \}", m.group(0), re.S) if m else None
+sys.exit(0 if d and "ANDROID_KEYSTORE_FILE" in d.group(1) else 1)
+PY
+then ok "the debug terminal signs with the constellation key when it is supplied (the group cannot split)"; else bad "app/build.gradle debug signingConfig ignores ANDROID_KEYSTORE_FILE: a debug terminal would split the shared uid"; fi
 python3 - "$BJ" "$ROOT" <<'PY' || bad "the group's manifests do not share the declared sharedUserId"
 import json, os, re, sys
 A = "{http://schemas.android.com/apk/res/android}"

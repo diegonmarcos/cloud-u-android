@@ -61,6 +61,7 @@ object SharedUidMigration {
     const val TAG_INSTALL = "store-migrate:install:"
     const val TAG_OPEN = "store-migrate:open:"
     const val TAG_DONE = "store-migrate:done:"
+    const val TAG_AUTO = "store-migrate:auto:"
 
     // ── 1. detection ─────────────────────────────────────────────────────
 
@@ -83,6 +84,30 @@ object SharedUidMigration {
             ?.let { code -> Cause.values().firstOrNull { it.legacy == code } }?.let { return it }
         return if (m.contains("shared user changed", ignoreCase = true)) Cause.UID_CHANGED else null
     }
+
+    /**
+     * Pure, PROACTIVE detection (no failed install needed): [pkg] is declared a member of the shared-uid
+     * group [groupUserId] but the installed build is not in it: its manifest names another sharedUserId
+     * (or none; a sharedUserId naming the app's own package shares nothing), or its uid differs from the
+     * owner terminal's [ownerUid]. Android will refuse the in-place update, so the migration is due.
+     */
+    fun notJoined(groupUserId: String?, installedSharedUserId: String?, pkg: String, appUid: Int, ownerUid: Int?): Boolean {
+        if (groupUserId == null) return false
+        val got = installedSharedUserId?.takeIf { it != pkg }
+        return got != groupUserId || (ownerUid != null && appUid != ownerUid)
+    }
+
+    /** Live: [pkg] is installed outside its declared group (see [notJoined]); false when anything cannot be read. */
+    fun outsideGroup(ctx: Context, pkg: String): Boolean = runCatching {
+        val reg = baked() ?: return false
+        val g = reg.groups.firstOrNull { pkg in it.members && it.migration == KIND } ?: return false
+        val pm = ctx.packageManager
+        @Suppress("DEPRECATION") val shared = pm.getPackageInfo(pkg, 0).sharedUserId
+        val uid = pm.getApplicationInfo(pkg, 0).uid
+        val owner = (g.plan?.order?.firstOrNull() ?: g.members.first()).takeIf { it != pkg }
+        val ownerUid = owner?.let { o -> runCatching { pm.getApplicationInfo(o, 0).uid }.getOrNull() }
+        notJoined(g.sharedUserId, shared, pkg, uid, ownerUid)
+    }.getOrDefault(false)
 
     // ── 2. the declared plan ─────────────────────────────────────────────
 
@@ -194,11 +219,14 @@ object SharedUidMigration {
         var r = record(ctx, app.pkg)
         val note = ApkCache.noteOf(ctx, app.pkg)?.takeIf { it.stage == ApkCache.STAGE_INSTALL }
         val c = cause(note?.message)?.takeIf { migrates(it, app.pkg) }
-        if (c != null && installed.isNotEmpty() && (r == null || r.before != installed)) {
+        // proactive: installed outside the group and a build to reinstall is in the cache -> due before any failure
+        val due = c == null && r == null && installed.isNotEmpty() && StoreStages.cachedFor(ctx, app) != null && outsideGroup(ctx, app.pkg)
+        val cause = c ?: Cause.UID_CHANGED.takeIf { due }
+        if (cause != null && installed.isNotEmpty() && (r == null || r.before != installed)) {
             val ver = StoreStages.cachedFor(ctx, app)?.record?.versionCode?.let { "v$it" } ?: ""
-            r = Record(app.pkg, c, ver, installed, System.currentTimeMillis())
+            r = Record(app.pkg, cause, ver, installed, System.currentTimeMillis())
             save(ctx, r)
-            Log.i(TAG, "${app.pkg}: ${c.constant} — install retries stop; the row shows the migration")
+            Log.i(TAG, "${app.pkg}: ${cause.constant}${if (due) " (detected, not in the shared uid)" else ""} — install retries stop; the row shows the migration")
         }
         if (r != null && c != null && installed != r.before) ApkCache.clearNote(ctx, app.pkg)
         return r?.takeIf { !it.done }
@@ -308,6 +336,74 @@ object SharedUidMigration {
         } finally { runCatching { ctx.unbindService(conn) } }
     }
 
+    // ── 5. one tap: the four steps driven in order ───────────────────────
+
+    enum class Auto { START_BACKUP, WAIT, UNINSTALL, INSTALL, OPEN }
+
+    /** Pure: what the one-tap run does next. [archiveOk] = the terminal confirmed the archive is complete. */
+    fun autoAction(r: Record, installedNow: String, archiveOk: Boolean, started: Boolean, waitsFor: String?,
+                   uninstallAsked: Boolean, installAsked: Boolean): Auto {
+        val step = current(r, installedNow, if (archiveOk) Backup(1L, 0L, false) else null)
+        return when {
+            step == Step.RESTORE -> Auto.OPEN
+            step == Step.INSTALL -> if (installAsked) Auto.WAIT else Auto.INSTALL
+            waitsFor != null -> Auto.WAIT
+            step == Step.BACKUP -> if (started) Auto.WAIT else Auto.START_BACKUP
+            else -> if (uninstallAsked) Auto.WAIT else Auto.UNINSTALL
+        }
+    }
+
+    enum class Outcome { DONE, TIMEOUT }
+
+    /** The device side of the run, injected so the order is unit-tested. */
+    class Hooks(
+        val installedNow: () -> String, val archiveOk: () -> Boolean, val waitsFor: () -> String?,
+        val startBackup: () -> Unit, val uninstall: () -> Unit, val install: () -> Unit, val open: () -> Unit,
+        val sleep: (Long) -> Unit, val progress: (Auto) -> Unit = {},
+    )
+
+    /** Back up, uninstall (Android asks to confirm), reinstall from the cache, open: one tap. A prompt left unanswered is asked again. */
+    fun runAuto(r: Record, h: Hooks, maxTicks: Int = 900, reaskTicks: Int = 30): Outcome {
+        var started = false; var unAsked = -1; var inAsked = -1
+        for (tick in 0 until maxTicks) {
+            if (unAsked >= 0 && tick - unAsked >= reaskTicks) unAsked = -1
+            if (inAsked >= 0 && tick - inAsked >= reaskTicks) inAsked = -1
+            val a = autoAction(r, h.installedNow(), h.archiveOk(), started, h.waitsFor(), unAsked >= 0, inAsked >= 0)
+            h.progress(a)
+            when (a) {
+                Auto.START_BACKUP -> { h.startBackup(); started = true }
+                Auto.UNINSTALL -> { h.uninstall(); unAsked = tick }
+                Auto.INSTALL -> { h.install(); inAsked = tick }
+                Auto.OPEN -> { h.open(); return Outcome.DONE }
+                Auto.WAIT -> {}
+            }
+            h.sleep(2_000)
+        }
+        return Outcome.TIMEOUT
+    }
+
+    /** True when the terminal [owner] sees a non-empty archive at [path] (this app cannot read shared storage itself). */
+    fun archiveExists(ctx: Context, owner: String, path: String): Boolean = runCatching {
+        val call = ExecCall("$owner.CLOUD_EXEC", "${prefixOf(owner)}/bin/sh", listOf("-c", "test -s ${q(path)}"), homeOf(owner), 15_000)
+        execExit(ctx, call) == 0
+    }.getOrDefault(false)
+
+    private fun execExit(ctx: Context, call: ExecCall): Int? {
+        val latch = java.util.concurrent.CountDownLatch(1)
+        var svc: ICloudExec? = null
+        val conn = object : ServiceConnection {
+            override fun onServiceConnected(n: ComponentName?, b: IBinder?) { svc = ICloudExec.Stub.asInterface(b); latch.countDown() }
+            override fun onServiceDisconnected(n: ComponentName?) { svc = null }
+        }
+        val pkg = call.action.removeSuffix(".CLOUD_EXEC")
+        if (!ctx.bindService(Intent(call.action).setPackage(pkg), conn, Context.BIND_AUTO_CREATE)) return null
+        try {
+            if (!latch.await(10, java.util.concurrent.TimeUnit.SECONDS)) return null
+            val res = (svc ?: return null).exec(call.executable, call.args.toTypedArray(), null, call.workdir, call.timeoutMs) ?: return null
+            return if (res.getString("error") != null) null else res.getInt("exit")
+        } finally { runCatching { ctx.unbindService(conn) } }
+    }
+
     /** Step 2: Android's own uninstall confirmation. */
     fun uninstallIntent(pkg: String): Intent =
         @Suppress("DEPRECATION") Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -359,6 +455,7 @@ fun SharedUidMigrationCard(
     pkg: String, label: String, record: SharedUidMigration.Record, path: String, installedNow: String,
     backup: SharedUidMigration.Backup?, waitsFor: String?,
     onBackup: () -> Unit, onUninstall: () -> Unit, onInstall: () -> Unit, onOpen: () -> Unit, onDone: () -> Unit,
+    onMigrate: (() -> Unit)? = null,
 ) {
     val p = LocalKitPalette.current
     val step = SharedUidMigration.current(record, installedNow, backup)
@@ -368,7 +465,8 @@ fun SharedUidMigrationCard(
                 "place — install retries are stopped. Migrate once:",
             if (step == SharedUidMigration.Step.RESTORE) KitState.OK else KitState.WARN,
             tag = "migrate:$pkg",
-            action = if (step == SharedUidMigration.Step.RESTORE) KitAction("Done", SharedUidMigration.TAG_DONE + pkg, true, onDone) else null,
+            action = if (step == SharedUidMigration.Step.RESTORE) KitAction("Done", SharedUidMigration.TAG_DONE + pkg, true, onDone)
+                else onMigrate?.let { KitAction("Migrate", SharedUidMigration.TAG_AUTO + pkg, waitsFor == null, it) },
         )
         KitStepper(SharedUidMigration.steps(pkg, label, path, step, backup, waitsFor, onBackup, onUninstall, onInstall, onOpen))
         if (waitsFor != null) Text("Order: $waitsFor before $pkg", color = p.textSecondary, fontSize = KitDensity.caption)

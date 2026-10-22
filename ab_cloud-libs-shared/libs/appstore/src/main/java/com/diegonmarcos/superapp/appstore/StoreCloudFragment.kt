@@ -649,7 +649,27 @@ class StoreCloudFragment : KitComposeFragment() {
                 onUninstall = { runCatching { startActivity(SharedUidMigration.uninstallIntent(app.pkg)) } },
                 onInstall = { runStage(ctx, app, StoreStages.INSTALL) },
                 onOpen = { openApp(ctx, app.pkg) },
-                onDone = { SharedUidMigration.dismiss(ctx, app.pkg); thread { repaint() } })
+                onDone = { SharedUidMigration.dismiss(ctx, app.pkg); thread { repaint() } },
+                onMigrate = { thread(name = "migrate-auto-${app.id}") {
+                    val owner = plan.order.firstOrNull() ?: app.pkg
+                    val h = SharedUidMigration.Hooks(
+                        installedNow = { StoreStages.installedKey(ctx, app) },
+                        archiveOk = { SharedUidMigration.archiveExists(ctx, owner, path) },
+                        waitsFor = { SharedUidMigration.waitsFor(plan.order, app.pkg) { p -> SharedUidMigration.stillOld(ctx, p) } },
+                        startBackup = {
+                            SharedUidMigration.backupStarted(ctx, app.pkg)
+                            val m = SharedUidMigration.startBackup(ctx, app.pkg, path)
+                            main.post { Toast.makeText(ctx, "${app.label}: $m", Toast.LENGTH_LONG).show() }
+                        },
+                        uninstall = { runCatching { startActivity(SharedUidMigration.uninstallIntent(app.pkg)) } },
+                        install = { runStage(ctx, app, StoreStages.INSTALL) },
+                        open = { openApp(ctx, app.pkg) },
+                        sleep = { Thread.sleep(it) },
+                        progress = { repaint() },
+                    )
+                    val out = SharedUidMigration.runAuto(rec, h)
+                    main.post { Toast.makeText(ctx, if (out == SharedUidMigration.Outcome.DONE) "${app.label}: migrated, restore in the app" else "${app.label}: migration timed out, use the steps", Toast.LENGTH_LONG).show() }
+                } })
         }
     }
 

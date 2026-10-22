@@ -210,10 +210,22 @@ android {
         }
 
         debug {
-            storeFile file('dev_keystore.jks')
-            keyAlias 'alias'
-            storePassword 'xrj45yWGLbsO7W0v'
-            keyPassword 'xrj45yWGLbsO7W0v'
+            // The shared-uid group needs ONE signing key: a debug terminal signed with the throwaway key
+            // below splits cld.termux.shared (INSTALL_FAILED_SHARED_USER_INCOMPATIBLE). So whenever the
+            // constellation keystore is in the environment (CI, build.sh) debug signs with it; only a bare
+            // IDE build falls back to the throwaway key.
+            def constellation = System.getenv('ANDROID_KEYSTORE_FILE')
+            if (constellation && file(constellation).exists()) {
+                storeFile file(constellation)
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+            } else {
+                storeFile file('dev_keystore.jks')
+                keyAlias 'alias'
+                storePassword 'xrj45yWGLbsO7W0v'
+                keyPassword 'xrj45yWGLbsO7W0v'
+            }
         }
     }
 
