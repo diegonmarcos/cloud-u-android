@@ -2,8 +2,8 @@ package com.diegonmarcos.superapp.profile
 
 import android.content.Context
 import com.diegonmarcos.cloudlib.auth.AuthHttp
-import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
-import com.diegonmarcos.superapp.fleetconfig.NetworkChangeWatch
+import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.android.NetworkChangeWatch
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPair
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
 import com.diegonmarcos.superapp.fleetendpoints.EndpointRouter

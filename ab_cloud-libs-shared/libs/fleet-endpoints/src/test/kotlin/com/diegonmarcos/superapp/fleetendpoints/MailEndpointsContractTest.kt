@@ -1,19 +1,16 @@
-package com.diegonmarcos.superapp.fleetconfig
+package com.diegonmarcos.superapp.fleetendpoints
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 /**
  * #1090 the mail endpoint contract: both endpoints come out of the one declaration, only fleet accounts get
  * any, a declaration that breaks a rule is dropped rather than guessed at, and no marker survives a toString,
- * a mask or an entry (Robolectric only for org.json).
+ * a mask or an entry.
  */
-@RunWith(RobolectricTestRunner::class)
 class MailEndpointsContractTest {
     private val decl = """{"services":[{"id":"jmap","mesh_dns":"stalwart.app","mesh_port":2443,"mesh_scheme":"https",
         "public_domain":"jmap.example.org","public_scheme":"https","policy":"mesh_first"}]}"""

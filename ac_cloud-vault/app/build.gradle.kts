@@ -78,6 +78,10 @@ val uiDefaultSection = (fleetUi?.get("default_section") as? String).orEmpty()
 
 configure<ApplicationExtension> {
     namespace = "com.x8bit.bitwarden"
+    // #1093 the Android halves of the fleet endpoint design (NetworkChangeWatch, FleetEndpointsClient): two files shared with
+    // Cloud Account and Cloud Mail, compiled here BY REFERENCE next to the shared JVM tree in :network (no copy, and the
+    // strict dependency locks of this build see no new module).
+    sourceSets["main"].java.directories.add("../../ab_cloud-libs-shared/libs/fleet-endpoints-android/src/main/java")
     compileSdk {
         version = release(libs.versions.compileSdk.get().toInt())
     }

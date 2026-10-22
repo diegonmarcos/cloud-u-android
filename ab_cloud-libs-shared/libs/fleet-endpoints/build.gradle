@@ -3,8 +3,9 @@
 // private) and the public one (reached with the fleet bearer). The router tries the mesh first (a short TCP
 // probe), falls back to public, caches the verdict and re-probes on a network change; the bearer goes to the
 // exact public origin only. Plain JVM (OkHttp + coroutines flows): no Android here, so its suite drives real
-// loopback servers, and Cloud Mail's JVM module core:jmap links it as readily as an Android library does. The
-// Android halves (the network-change signal, the sealed bearer) stay in the apps. It installs nothing
+// loopback servers, and Cloud Mail's JVM module core:jmap links it as readily as an Android library does. It also holds the
+// endpoint CONTRACTS (the declaration parser and the wire Cloud Account publishes and the apps read). The Android halves
+// (the network-change signal, the provider pull) are libs:fleet-endpoints-android; the sealed bearer stays in the apps. It installs nothing
 // (lib-apks build.json::lib_apks.exclude) and is classified in 1_cicd/src/data/lib-classes.json.
 plugins {
     id 'org.jetbrains.kotlin.jvm'
@@ -26,6 +27,10 @@ dependencies {
     api 'com.squareup.okhttp3:okhttp:4.12.0'
     api 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0'
 
+    // The contracts (FleetEndpointsContract, MailEndpointsContract) are pure over org.json: Android's own at runtime, the
+    // real library for the JVM suite (the libs:decisions precedent).
+    compileOnly 'org.json:json:20240303'
+    testImplementation 'org.json:json:20240303'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'com.squareup.okhttp3:mockwebserver:4.12.0'
 }

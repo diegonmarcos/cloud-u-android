@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.fleetconfig
+package com.diegonmarcos.superapp.fleetendpoints
 
 import org.json.JSONArray
 import org.json.JSONObject

@@ -46,6 +46,29 @@ mesh-only. Declared now: `jmap` (mail), `gitea` (git), `authelia` and `auth-brok
    as well, and only when some service has a public endpoint) serves the pairs of every service; `mail_endpoints` (grant
    `mail.endpoints`) serves Cloud Mail its per-account view of the `kind: mail` services of the same declaration.
 
+## Where the code lives (decisions)
+
+- **Mesh transport is plain HTTP, public is HTTPS.** `.app` hosts are WireGuard-only and WG already encrypts, so every mesh
+  endpoint is declared `http` on its mesh-only port, and the cleartext allowlist of each app's `network_security_config.xml` is
+  GENERATED from the declaration (`1_cicd/src/scripts/cloud-android-fleet-nsc.py`, apps and services in
+  `1_cicd/src/data/fleet-nsc.json`), never hand-listed; a public host is never cleartext. `FleetHostGuardTest` holds all three
+  rules. Mail's stalwart mesh endpoint was `https://stalwart.app:2443`; it is now `http://stalwart.app:2080`. That port needs
+  the HTTP listener mapped in cloud-u-containers (`user-comm_tools-stalwart` extra_ports, wg0 + wg-public); until it ships the
+  mesh probe fails and Mail stays on the public URL with the bearer (the verdict is cached), so nothing breaks.
+- **Contracts live in the JVM lib.** `FleetEndpointsContract` and `MailEndpointsContract` moved into `libs:fleet-endpoints`
+  (pure over org.json, compileOnly), so `libs:fleetconfig-model` is back to its 1000-line cap. The Android halves
+  (`NetworkChangeWatch`, `FleetEndpointsClient`) are `libs:fleet-endpoints-android` rather than `libs:account`: Cloud Mail and
+  Cloud Vault must link them and cannot link `libs:account` (the whole Account page). Cloud Vault compiles the JVM tree and
+  those two files by reference (its build is strict-locked), Account and Mail link them as modules.
+
+## Every app that authenticates to the fleet
+
+The repo-wide guard (`FleetHostGuardTest`, run in the Account, Mail and Libs CI) fails when a main-source file names a fleet
+host without going through the transport. The files still to migrate are listed with their reasons in
+`ab_cloud-libs-shared/libs/fleet-endpoints/fleet-host-baseline.txt`; the list may only shrink. Migrated: Cloud Account (own
+transport, forge, libs:auth seam, ProfileSync), Cloud Mail (JMAP), Cloud Vault (the self-hosted vault, `mesh_only` until a
+bearer-protected public host exists, #1100).
+
 ## A service that is a PATH of a shared host
 
 `api.diegonmarcos.com/pub` is `c3-public-api`; the edge strips `/pub` before the service, so the mesh side serves from its

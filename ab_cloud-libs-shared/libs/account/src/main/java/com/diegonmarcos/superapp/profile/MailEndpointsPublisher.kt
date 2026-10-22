@@ -2,7 +2,7 @@ package com.diegonmarcos.superapp.profile
 
 import android.content.Context
 import android.os.Bundle
-import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.MailEndpointsContract
 import com.diegonmarcos.superapp.mail.JmapPrefs
 import com.diegonmarcos.superapp.settings.AccountVault
 import com.diegonmarcos.superapp.settings.ConfigsPrefs

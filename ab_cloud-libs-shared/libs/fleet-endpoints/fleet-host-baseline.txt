@@ -12,7 +12,7 @@ ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/update
 ab_cloud-libs-shared/libs/wallet/src/main/java/com/diegonmarcos/superapp/wallet/WalletMailConnector.kt	IMAP over TLS to imap.diegonmarcos.com, not an HTTP fleet endpoint
 ac_c3-morpheus/app/src/main/java/com/diegonmarcos/morpheus/MainActivity.kt	WebView page URLs (auth and paca), not an API call
 ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/hub/Providers.kt	provider labels and links shown in the UI; the Gitea calls go through ForgeClient and the fleet transport
-ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/hub/TokensClient.kt	tokens-api is not yet declared in fleet_endpoints; its calls ride AuthHttp but are not keyed
+ac_cloud-account/app/src/main/java/com/diegonmarcos/cloudaccount/hub/TokensClient.kt	tokens-api is declared in fleet_endpoints now, but this client still builds its own URL; its calls ride AuthHttp, to be keyed by the declared pair
 ac_cloud-c3/app/src/main/java/com/diegonmarcos/cloudc3/cloud/NtfyCatalog.kt	ntfy topic catalog (data, links); no request is made here
 ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/home/HomeHandOffs.kt	links the user opens in the browser; no request is made here
 ac_cloud-mail/app/src/main/kotlin/app/sterna/ui/settings/AccountAuthSection.kt	hint text naming the auth host; no request is made here

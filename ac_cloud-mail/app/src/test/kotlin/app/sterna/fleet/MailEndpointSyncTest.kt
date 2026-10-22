@@ -15,7 +15,7 @@ import app.sterna.core.data.account.StoredAccount
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
 import com.diegonmarcos.superapp.fleetendpoints.EndpointRouter
 import com.diegonmarcos.superapp.fleetendpoints.FleetBearers
-import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.MailEndpointsContract
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

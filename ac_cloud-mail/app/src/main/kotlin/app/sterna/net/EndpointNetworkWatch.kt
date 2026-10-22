@@ -1,7 +1,7 @@
 package app.sterna.net
 
 import android.content.Context
-import com.diegonmarcos.superapp.fleetconfig.NetworkChangeWatch
+import com.diegonmarcos.superapp.fleetendpoints.android.NetworkChangeWatch
 import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
 
 /**

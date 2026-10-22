@@ -22,7 +22,7 @@ import app.sterna.core.data.account.AccountEndpoint
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
 import com.diegonmarcos.superapp.fleetendpoints.EndpointState
 import app.sterna.ui.theme.MailMetrics
-import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.MailEndpointsContract
 
 /** Test tags of the account Endpoints section and the row chip. */
 object AccountEndpointTags {

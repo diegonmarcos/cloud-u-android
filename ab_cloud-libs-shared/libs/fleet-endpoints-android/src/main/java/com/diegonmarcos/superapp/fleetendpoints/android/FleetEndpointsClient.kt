@@ -1,7 +1,8 @@
-package com.diegonmarcos.superapp.fleetconfig
+package com.diegonmarcos.superapp.fleetendpoints.android
 
 import android.content.Context
 import android.net.Uri
+import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
 
 /**
  * #1093 The pull half of the fleet endpoint contract for an app that authenticates to the fleet but is not Cloud Account

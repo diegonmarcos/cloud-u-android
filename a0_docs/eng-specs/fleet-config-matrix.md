@@ -54,7 +54,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
-Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-databackend, lib-datamanager, lib-decisions-link, lib-devtools, lib-firewall, lib-fleet-endpoints, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-kit, lib-updater, lib-webserver.
+Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-databackend, lib-datamanager, lib-decisions-link, lib-devtools, lib-firewall, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-kit, lib-updater, lib-webserver.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -201,7 +201,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-account — `com.diegonmarcos.cloudaccount`
 
-Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleetconfig-model, lib-mail, lib-net, lib-shared-store, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
+Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-mail, lib-net, lib-shared-store, lib-shizuku-adb-debug-tools, lib-text-tools, lib-ui-kit, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -577,7 +577,7 @@ Coverage: 5 covered, 0 gaps.
 
 ## cloud-mail — `com.diegonmarcos.comms.mail`
 
-Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater.
+Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -942,7 +942,7 @@ Coverage: 10 covered, 7 gaps — file:$HOME/.termux/termux.properties, file:$HOM
 
 ## cloud-vault — `com.diegonmarcos.cloudvault`
 
-Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleet-endpoints, lib-fleetconfig-model.
+Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

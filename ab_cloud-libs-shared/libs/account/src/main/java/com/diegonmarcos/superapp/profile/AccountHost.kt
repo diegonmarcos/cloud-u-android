@@ -110,7 +110,7 @@ object AccountHost {
      * #1090 The mail services of that declaration (those with `kind: mail`), from which [MailEndpointsPublisher] derives
      * each fleet mail account's mesh and public URL. Derived, never declared a second time.
      */
-    @Volatile var mailEndpointsDecl: () -> String = { com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract.declOfKind(fleetEndpointsDecl(), "mail") }
+    @Volatile var mailEndpointsDecl: () -> String = { com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract.declOfKind(fleetEndpointsDecl(), "mail") }
 
     val DEFAULT_PALETTE: KitPalette = KitPalette.fromArgb(
         surface = 0xFF15161A.toInt(), surfaceSelected = 0xFF23252B.toInt(),

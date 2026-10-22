@@ -15,6 +15,9 @@
     <!-- A lot of TLS certificates point to http:// URLs for CRL and OCSP checking,
     so we need to allow cleartext traffic on them -->
     <domain-config cleartextTrafficPermitted="true">
+        <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
+        <domain>vaultwarden.app</domain>
+        <!-- END fleet-mesh-cleartext -->
         <!-- CRL Distribution Servers -->
         <domain includeSubdomains="true">c.lencr.org</domain>
         <domain includeSubdomains="true">c.pki.goog</domain>
@@ -23,12 +26,6 @@
         <!-- OCSP Responder Servers -->
         <domain includeSubdomains="true">o.pki.goog</domain>
         <domain includeSubdomains="true">ocsp.sectigo.com</domain>
-    </domain-config>
-
-    <!-- #1093 the self-hosted vault's mesh endpoint (build.json::fleet_endpoints in ac_cloud-account: containers.app.dns),
-         named exactly, never the whole .app TLD. Reachable over the WireGuard mesh only. -->
-    <domain-config cleartextTrafficPermitted="true">
-        <domain>vaultwarden.app</domain>
     </domain-config>
 
     <domain-config cleartextTrafficPermitted="false">

@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.fleetconfig
+package com.diegonmarcos.superapp.fleetendpoints.android
 
 import android.content.Context
 import android.net.ConnectivityManager

@@ -288,6 +288,11 @@
       "dir": "../ab_cloud-libs-shared/libs/fleet-endpoints",
       "type": "library"
     },
+    "libs:fleet-endpoints-android": {
+      "_doc_dir": "#1093 the Android halves of the fleet endpoint design; libs:account links it (`api`) and this app hosts libs:account.",
+      "dir": "../ab_cloud-libs-shared/libs/fleet-endpoints-android",
+      "type": "library"
+    },
     "libs:fleetconfig-model": {
       "_doc_dir": "#825 the fleet-config manifest + migration policy (FleetPolicy), out of libs:core: compiled by this app (it plans and diffs the whole fleet) and the Cloud-Lib-Fleetconfig engine every other app's provider asks over IPC.",
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",

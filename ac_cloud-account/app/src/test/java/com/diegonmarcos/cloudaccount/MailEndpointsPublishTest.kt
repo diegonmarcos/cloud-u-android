@@ -2,7 +2,7 @@ package com.diegonmarcos.cloudaccount
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.MailEndpointsContract
 import com.diegonmarcos.superapp.profile.AccountData
 import com.diegonmarcos.superapp.profile.AccountHost
 import com.diegonmarcos.superapp.profile.AccountStore

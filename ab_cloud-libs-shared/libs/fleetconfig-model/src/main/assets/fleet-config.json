@@ -2272,6 +2272,7 @@
         "lib-devtools",
         "lib-firewall",
         "lib-fleet-endpoints",
+        "lib-fleet-endpoints-android",
         "lib-fleetconfig-model",
         "lib-health",
         "lib-kde-connect",
@@ -2418,6 +2419,7 @@
         "lib-decisions-link",
         "lib-devtools",
         "lib-fleet-endpoints",
+        "lib-fleet-endpoints-android",
         "lib-fleetconfig-model",
         "lib-mail",
         "lib-net",
@@ -2925,6 +2927,7 @@
         "lib-decisions-link",
         "lib-devtools",
         "lib-fleet-endpoints",
+        "lib-fleet-endpoints-android",
         "lib-fleetconfig-model",
         "lib-ml-l-image",
         "lib-text-tools",
@@ -3437,6 +3440,7 @@
         "lib-core",
         "lib-devtools",
         "lib-fleet-endpoints",
+        "lib-fleet-endpoints-android",
         "lib-fleetconfig-model"
       ],
       "items": [

@@ -2,8 +2,8 @@ package com.diegonmarcos.superapp.settings
 
 import android.content.Context
 import android.util.Base64
-import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
-import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.MailEndpointsContract
 import com.diegonmarcos.superapp.fleetconfig.SetupStores
 import com.diegonmarcos.superapp.profile.AccountData
 import com.diegonmarcos.superapp.profile.AccountModel

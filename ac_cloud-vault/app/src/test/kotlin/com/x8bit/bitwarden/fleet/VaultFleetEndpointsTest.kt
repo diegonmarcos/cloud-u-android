@@ -1,6 +1,6 @@
 package com.x8bit.bitwarden.fleet
 
-import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
 import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
 import org.junit.jupiter.api.AfterEach

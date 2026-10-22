@@ -93,6 +93,11 @@
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/fleet-endpoints"
     },
+    "libs:fleet-endpoints-android": {
+      "_doc": "#1093 the Android halves of the fleet endpoint design; libs:account links it (`api`).",
+      "dir": "../ab_cloud-libs-shared/libs/fleet-endpoints-android",
+      "type": "library"
+    },
     "libs:fleetconfig-model": {
       "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
       "type": "library"
@@ -306,19 +311,31 @@
     }
   },
   "fleet_endpoints": {
-    "_doc": "#1093 THE fleet endpoint declaration, declared once (#1090 declared the mail part of it as mail_endpoints). Every fleet service Cloud Account talks to or shows has up to two endpoints, taken from the service's own fleet declaration in cloud-u-containers (`source`): mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. libs:account reads this for four things: (1) Account's own transport (libs:fleet-endpoints: mesh first with a short probe, then the public URL with the fleet bearer, cached, re-probed on a network change), (2) Connect > Status > Endpoints, (3) the `fleet_endpoints` accountdata method that publishes the pairs to the other apps, and (4) the `mail_endpoints` method, which takes the kind=mail services (Cloud Mail). A service that lives under a PATH of a shared host says public_path (and mesh_path when the mesh side differs) and route_paths (the part of it that may be routed). A service with no public_domain is mesh-only (no public route is declared, or the public name is WG-only) and must say policy mesh_only; the bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets and sent on the exact public origin only. policy is the default: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. health is the path Status asks for. Every http mesh_scheme needs a named cleartext entry in app/src/main/res/xml/network_security_config.xml (FleetEndpointsDeclTest).",
+    "_doc": "#1093 THE fleet endpoint declaration, declared once (#1090 declared the mail part of it as mail_endpoints). Every fleet service Cloud Account talks to or shows has up to two endpoints, taken from the service's own fleet declaration in cloud-u-containers (`source`): mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. libs:account reads this for four things: (1) Account's own transport (libs:fleet-endpoints: mesh first with a short probe, then the public URL with the fleet bearer, cached, re-probed on a network change), (2) Connect > Status > Endpoints, (3) the `fleet_endpoints` accountdata method that publishes the pairs to the other apps, and (4) the `mail_endpoints` method, which takes the kind=mail services (Cloud Mail). A service that lives under a PATH of a shared host says public_path (and mesh_path when the mesh side differs) and route_paths (the part of it that may be routed). A service with no public_domain is mesh-only (no public route is declared, or the public name is WG-only) and must say policy mesh_only; the bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets and sent on the exact public origin only. policy is the default: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. health is the path Status asks for. Every mesh endpoint is plain http (`.app` is WireGuard-only, WG encrypts) and every public URL https; each app's network_security_config.xml gets its cleartext `.app` entries GENERATED from this list (1_cicd/src/scripts/cloud-android-fleet-nsc.py, data 1_cicd/src/data/fleet-nsc.json, held by FleetHostGuardTest), never hand-listed.",
     "services": [
       {
         "id": "jmap",
         "kind": "mail",
         "source": "cloud-u-containers/user-comm_tools-stalwart/build.json",
+        "_doc": "The mesh endpoint is the fleet's convention: `.app` is WireGuard-only and WG already encrypts, so it is plain HTTP on the service's mesh-only port (2080 -> Stalwart's HTTP listener, bound on wg0 and wg-public like its other mesh ports; cloud-u-containers user-comm_tools-stalwart extra_ports must map it). Until that listener is shipped the mesh probe fails and Mail runs on the public URL with the bearer (the verdict is cached), so nothing breaks. The public URL stays https.",
         "mesh_dns": "stalwart.app",
-        "mesh_port": 2443,
-        "mesh_scheme": "https",
+        "mesh_port": 2080,
+        "mesh_scheme": "http",
         "public_domain": "jmap.diegonmarcos.com",
         "public_scheme": "https",
         "policy": "mesh_first",
         "health": "/.well-known/jmap"
+      },
+      {
+        "id": "git-proxy-api",
+        "kind": "git",
+        "source": "cloud-u-containers/infra-api_git-proxy-api/build.json",
+        "_doc": "The fleet's mesh mirror of release assets (#837): the Store and the updater download through it (their own MeshMirror order). Mesh-only, declared here so its cleartext entry is generated like every other mesh host.",
+        "mesh_dns": "git-proxy-api.app",
+        "mesh_port": 8123,
+        "mesh_scheme": "http",
+        "policy": "mesh_only",
+        "health": "/"
       },
       {
         "id": "gitea",

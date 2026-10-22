@@ -1,19 +1,16 @@
-package com.diegonmarcos.superapp.fleetconfig
+package com.diegonmarcos.superapp.fleetendpoints
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
 
 /**
  * #1093 The fleet endpoint contract: both endpoints of a service come out of its one declaration, a service that
  * breaks a rule is dropped (never guessed at), a service with no public URL can only be mesh-only, and the document
  * Cloud Account publishes round-trips with the bearer optional and masked wherever it could be printed.
  */
-@RunWith(RobolectricTestRunner::class)
 class FleetEndpointsContractTest {
     private val marker = "tok-SECRET-123456" // gitleaks:allow (a made-up test marker, not a credential)
     private val decl = """{"services":[

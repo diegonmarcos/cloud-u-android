@@ -7,7 +7,7 @@ import app.sterna.core.data.account.FleetEndpointWiring
 import app.sterna.core.data.account.PublishedEndpoint
 import app.sterna.core.data.account.StoredAccount
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
-import com.diegonmarcos.superapp.fleetconfig.MailEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.MailEndpointsContract
 
 /**
  * #1090 The pull half of the endpoint contract: ask Cloud Account (the source of truth) for each fleet mail

@@ -58,6 +58,7 @@ on:
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleet-endpoints/**"
+      - "ab_cloud-libs-shared/libs/fleet-endpoints-android/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ac_cloud-vault/**"
       - "!ac_cloud-vault/web/**"

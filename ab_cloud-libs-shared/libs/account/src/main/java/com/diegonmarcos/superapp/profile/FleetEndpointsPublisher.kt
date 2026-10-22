@@ -2,7 +2,7 @@ package com.diegonmarcos.superapp.profile
 
 import android.content.Context
 import android.os.Bundle
-import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
 import com.diegonmarcos.superapp.settings.AccountVault
 
 /**

@@ -421,6 +421,8 @@ dependencies {
     // The fleet setup contract's handler registry (SetupStores): the signatures store is served from here.
     // libs:core `api`s it, but libs:updater only `implementation`s core, so it is not on this app's compile path.
     implementation(project(":libs:fleetconfig-model"))
+    // #1093 the Android halves of the fleet endpoint design (network-change signal); the router and contracts come with :core:jmap.
+    implementation(project(":libs:fleet-endpoints-android"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime.ktx)

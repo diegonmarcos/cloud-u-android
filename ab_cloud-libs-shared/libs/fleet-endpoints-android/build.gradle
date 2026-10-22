@@ -1,0 +1,39 @@
+// libs:fleet-endpoints-android (#1093) - the Android halves of the fleet endpoint design, two small files: the "network
+// changed" signal the router re-probes on (NetworkChangeWatch) and the pull of Cloud Account's published endpoint pairs
+// (FleetEndpointsClient, an app that is not Cloud Account asks the accountdata provider). The router, the interceptors and
+// the contracts are the plain-JVM libs:fleet-endpoints this links (`api`). Cloud Account (libs:account) and Cloud Mail link
+// it as a module; Cloud Vault, whose locked build takes no new module, compiles these two files BY REFERENCE next to the
+// shared JVM tree. It installs nothing (lib-apks build.json::lib_apks.exclude).
+plugins {
+    id 'com.android.library'
+    // Conditional apply, the libs:core pattern: AGP 9 consumers register `kotlin` themselves.
+    id 'org.jetbrains.kotlin.android' apply false
+}
+
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.fleetendpoints.android'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    api project(':libs:fleet-endpoints')
+}

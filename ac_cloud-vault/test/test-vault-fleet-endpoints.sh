@@ -5,7 +5,7 @@
 #      static clients (so they see the real server URL) and NOT in the external client (non-Bitwarden hosts).
 #   F3 the application pulls Cloud Account's published endpoints at start; the bearer is held in memory only
 #      (no prefs, no file, no log), and the manifest queries Cloud Account.
-#   F4 the vault's mesh endpoint is a NAMED cleartext entry, never the whole .app TLD.
+#   F4 the vault's mesh endpoint is in the GENERATED cleartext block (from the fleet declaration), never the whole .app TLD.
 # Each check is then run against planted mutations of the real sources; a mutation that leaves every check green fails.
 set -eu
 APP_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
@@ -19,7 +19,8 @@ FLEET = "app/src/main/kotlin/com/x8bit/bitwarden/fleet/VaultFleetEndpoints.kt"
 APPCLS = "app/src/main/kotlin/com/x8bit/bitwarden/BitwardenApplication.kt"
 MANIFEST = "app/src/main/AndroidManifest.xml"
 NSC = "app/src/main/res/xml/network_security_config.xml"
-FILES = [NET, GRADLE, FLEET, APPCLS, MANIFEST, NSC]
+APPGRADLE = "app/build.gradle.kts"
+FILES = [NET, GRADLE, FLEET, APPCLS, MANIFEST, NSC, APPGRADLE]
 
 def rd(rel): return open(os.path.join(APP, rel), encoding="utf-8").read()
 def fn(src, name):
@@ -34,6 +35,7 @@ def checks(f):
     g = f[GRADLE]
     need("ab_cloud-libs-shared/libs/fleet-endpoints/src/main/kotlin" in g and "java.directories.add" in g, "F1 network does not compile the shared fleet-endpoints tree by reference")
     need(not os.path.isdir(os.path.join(APP, "network/src/main/kotlin/com/diegonmarcos")), "F1 a copy of the shared tree sits in the network module")
+    need("ab_cloud-libs-shared/libs/fleet-endpoints-android/src/main/java" in f[APPGRADLE] and "java.directories.add" in f[APPGRADLE], "F1 the app does not compile the shared Android halves by reference")
     n = f[NET]
     for name in ("createAuthenticatedRetrofit", "createUnauthenticatedRetrofit"):
         b = fn(n, name)
@@ -48,7 +50,7 @@ def checks(f):
     need("@Volatile" in v and "private var bearer" in v, "F3 the bearer is not an in-memory field")
     need('<package android:name="com.diegonmarcos.cloudaccount"' in f[MANIFEST], "F3 the manifest does not query Cloud Account")
     x = f[NSC]
-    need(re.search(r'cleartextTrafficPermitted="true">\s*<domain>vaultwarden\.app</domain>', x) is not None, "F4 vaultwarden.app is not a named cleartext entry")
+    need("BEGIN fleet-mesh-cleartext" in x and re.search(r'BEGIN fleet-mesh-cleartext[^>]*-->\s*<domain>vaultwarden\.app</domain>', x) is not None, "F4 vaultwarden.app is not in the GENERATED cleartext block")
     need(not re.search(r'<domain[^>]*>\.?app</domain>|<domain[^>]*>\*\.app</domain>', x), "F4 the whole .app TLD is opened")
     return bad
 
@@ -75,6 +77,7 @@ mutations = {
     "no query for Cloud Account": mut(MANIFEST, '<package android:name="com.diegonmarcos.cloudaccount" />', ""),
     "no cleartext entry": mut(NSC, "<domain>vaultwarden.app</domain>", ""),
     "the whole .app TLD opened": mut(NSC, "<domain>vaultwarden.app</domain>", '<domain includeSubdomains="true">app</domain>'),
+    "the Android halves are not compiled": mut(APPGRADLE, "libs/fleet-endpoints-android", "libs/fleet-endpoints-androidX"),
 }
 survivors = []
 for name, m in mutations.items():

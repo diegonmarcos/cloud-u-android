@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.fleetendpoints
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Test
 import java.io.File
 
@@ -40,6 +41,67 @@ class FleetHostGuardTest {
         assertTrue("these baseline lines no longer apply (the file routes or names no fleet host): remove them: $stale", stale.isEmpty())
         assertTrue("every baseline line carries a reason", listed.values.all { it.length >= 10 })
         assertTrue("the scan saw the fleet's sources (not an empty tree)", found.size >= 5)
+    }
+
+    @Test fun `every app's cleartext mesh allowlist is generated from the declaration and no public host is cleartext`() {
+        val root = repoRoot()
+        val cfg = org.json.JSONObject(File(root, "1_cicd/src/data/fleet-nsc.json").readText())
+        val services = org.json.JSONObject(File(root, cfg.getString("declaration")).readText()).getJSONObject("fleet_endpoints").getJSONArray("services")
+        val begin = Regex("<!-- BEGIN fleet-mesh-cleartext[^>]*-->"); val end = "<!-- END fleet-mesh-cleartext -->"
+        val listed = mutableSetOf<String>()
+        val apps = cfg.getJSONArray("apps")
+        for (i in 0 until apps.length()) {
+            val a = apps.getJSONObject(i); val path = a.getString("nsc"); listed += path
+            val wanted: (String) -> Boolean = if (a.get("services") == "*") { _ -> true } else { id -> (0 until a.getJSONArray("services").length()).any { a.getJSONArray("services").getString(it) == id } }
+            val expected = (0 until services.length()).map { services.getJSONObject(it) }
+                .filter { it.optString("mesh_scheme", "https") == "http" && wanted(it.getString("id")) }.map { it.getString("mesh_dns") }.toSortedSet()
+            val xml = File(root, path).readText()
+            val m = begin.find(xml)
+            assertTrue("$path has no generated block: run 1_cicd/src/scripts/cloud-android-fleet-nsc.py write", m != null)
+            val body = xml.substring(m!!.range.last + 1, xml.indexOf(end, m.range.last))
+            val have = Regex("<domain>([^<]+)</domain>").findAll(body).map { it.groupValues[1] }.toSortedSet()
+            assertEquals("$path: the generated cleartext hosts differ from the declaration (run cloud-android-fleet-nsc.py write)", expected, have)
+        }
+        // no hand-listed mesh host and no public host in cleartext, in ANY app's config
+        val generated = Regex("<!-- BEGIN fleet-mesh-cleartext.*?<!-- END fleet-mesh-cleartext -->", RegexOption.DOT_MATCHES_ALL)
+        val handApp = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*\\.app\\s*</domain>"); val publicHost = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*diegonmarcos\\.com\\s*</domain>")
+        root.listFiles().orEmpty().filter { it.isDirectory && (it.name.startsWith("ac_") || it.name.startsWith("aa_")) }.forEach { app ->
+            app.walkTopDown().onEnter { it.name != "build" && it.name != ".git" && it.name != "node_modules" }.filter { it.name == "network_security_config.xml" }.forEach { f ->
+                val rel = f.relativeTo(root).invariantSeparatorsPath
+                val xml = f.readText().replace(Regex("<!--(?!\\s*(BEGIN|END) fleet-mesh).*?-->", RegexOption.DOT_MATCHES_ALL), "")
+                val outside = generated.replace(xml, "")
+                assertFalse("$rel hand-lists a .app mesh host (generate it: add the service to fleet_endpoints and list the app in fleet-nsc.json)", handApp.containsMatchIn(outside))
+                // a public fleet host is never cleartext
+                for (cfgEl in Regex("<domain-config cleartextTrafficPermitted=\"true\">.*?</domain-config>", RegexOption.DOT_MATCHES_ALL).findAll(xml))
+                    assertFalse("$rel permits cleartext to a public fleet host", publicHost.containsMatchIn(cfgEl.value))
+            }
+        }
+    }
+
+    @Test fun `every declared mesh endpoint is plain http on the mesh and every public URL is https`() {
+        val root = repoRoot()
+        val services = org.json.JSONObject(File(root, "ac_cloud-account/build.json").readText()).getJSONObject("fleet_endpoints").getJSONArray("services")
+        for (i in 0 until services.length()) {
+            val s = services.getJSONObject(i); val id = s.getString("id")
+            assertTrue("$id: mesh names are .app names", s.getString("mesh_dns").endsWith(".app"))
+            assertEquals("$id: the mesh is WireGuard-only and WG encrypts, so the mesh endpoint is plain http", "http", s.optString("mesh_scheme", "https"))
+            assertEquals("$id: a public URL is https", "https", s.optString("public_scheme", "https"))
+            assertTrue("$id: a mesh port is declared", s.optInt("mesh_port", 0) > 0)
+        }
+    }
+
+    @Test fun `the mail service reaches its mesh endpoint over http - the request is rewritten onto it`() {
+        val root = repoRoot()
+        val decl = org.json.JSONObject(File(root, "ac_cloud-account/build.json").readText()).getJSONObject("fleet_endpoints").toString()
+        val jmap = FleetEndpointsContract.parseDecl(decl).single { it.id == "jmap" }
+        assertEquals("http://stalwart.app:${jmap.meshPort}", jmap.meshUrl())
+        val router = EndpointRouter(probe = { _, _, _ -> true })
+        assertTrue(router.set(jmap.publicUrl(), jmap.meshUrl(), EndpointPolicy.parse(jmap.policy)))
+        val url = "${jmap.publicUrl()}/jmap/session".toHttpUrl()
+        val (h, routes) = router.plan(url)!!
+        assertEquals(listOf(EndpointRoute.MESH, EndpointRoute.PUBLIC), routes)
+        assertEquals("the mesh route lands on the cleartext mesh origin", "http://stalwart.app:${jmap.meshPort}/jmap/session", router.rebase(h, EndpointRoute.MESH, url).toString())
+        assertEquals("the public route stays https", "${jmap.publicUrl()}/jmap/session", router.rebase(h, EndpointRoute.PUBLIC, url).toString())
     }
 
     @Test fun `the scan flags a fleet host in code and ignores comments, emails and package names`() {

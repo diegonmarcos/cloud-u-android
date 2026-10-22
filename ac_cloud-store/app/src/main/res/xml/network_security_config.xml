@@ -29,6 +29,9 @@
     </base-config>
 
     <domain-config cleartextTrafficPermitted="true">
+        <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
+        <domain>git-proxy-api.app</domain>
+        <!-- END fleet-mesh-cleartext -->
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>
 
@@ -44,10 +47,6 @@
         <domain>10.0.0.9</domain>
         <domain>10.0.0.10</domain>
 
-        <!-- #837 the fleet's mesh mirror of release assets (git-proxy-api
-             build.json dns + ports.app). Named exactly, never the whole
-             .app TLD: .app is a public gTLD. Bound to wg0 only server-side. -->
-        <domain>git-proxy-api.app</domain>
 
         <!-- Home / office LAN typical first-octet pairs. Add more as
              needed; CIDR is not supported by this schema. -->

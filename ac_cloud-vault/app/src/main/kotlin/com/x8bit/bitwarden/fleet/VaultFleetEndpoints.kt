@@ -2,9 +2,9 @@ package com.x8bit.bitwarden.fleet
 
 import android.content.Context
 import com.bitwarden.annotation.OmitFromCoverage
-import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsClient
-import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
-import com.diegonmarcos.superapp.fleetconfig.NetworkChangeWatch
+import com.diegonmarcos.superapp.fleetendpoints.android.FleetEndpointsClient
+import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.android.NetworkChangeWatch
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPair
 import com.diegonmarcos.superapp.fleetendpoints.FleetRegistry
 import com.diegonmarcos.superapp.fleetendpoints.FleetTransport

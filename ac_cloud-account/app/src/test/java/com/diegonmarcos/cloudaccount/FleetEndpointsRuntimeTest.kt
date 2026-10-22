@@ -1,6 +1,6 @@
 package com.diegonmarcos.cloudaccount
 
-import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
 import com.diegonmarcos.superapp.fleetendpoints.EndpointPolicy
 import com.diegonmarcos.superapp.fleetendpoints.EndpointRoute
 import com.diegonmarcos.superapp.fleetendpoints.EndpointRouter

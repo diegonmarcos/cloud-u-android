@@ -18,7 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.diegonmarcos.superapp.fleetconfig.FleetEndpointsContract
+import com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract
 import com.diegonmarcos.superapp.fleetendpoints.EndpointChecker
 import com.diegonmarcos.superapp.fleetendpoints.EndpointState
 import com.diegonmarcos.superapp.fleetendpoints.FleetTransport
