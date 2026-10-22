@@ -814,6 +814,14 @@ class BrowserHostFragment : Fragment() {
     /** Is [url] a page of this phone's own loopback servers (127.0.0.1 or localhost)? */
     private fun isLoopbackPage(url: String?): Boolean = BrowserSitePolicy.hostOf(url).let { it == "127.0.0.1" || it == "localhost" }
 
+    /**
+     * Page diagnostics to logcat are OFF in every build and for every reader. The emulator test turns them on for its own run with
+     * `adb shell settings put global cloud_browser_page_log 1` (a global setting nothing in the app writes). Not BuildConfig.DEBUG:
+     * the build that ships to the phone is the debug variant, so that gate would leave the logging on for the reader.
+     */
+    private fun pageLogOn(url: String?): Boolean = isLoopbackPage(url) &&
+        runCatching { android.provider.Settings.Global.getInt(requireContext().contentResolver, "cloud_browser_page_log", 0) == 1 }.getOrDefault(false)
+
     /** #886 what the strip draws, as Compose state the host refreshes when a tab's page, title, icon or group changes. */
     private class StripModel(val tabs: List<BrowserTab>, val activeKey: String, val group: String, val color: Int)
     private val strip = androidx.compose.runtime.mutableStateOf(StripModel(emptyList(), "", "", 0))
@@ -979,7 +987,7 @@ class BrowserHostFragment : Fragment() {
                     if (readerOn) return
                     // The layout numbers of a loopback page (logcat tag LocalPageMetrics), so a page that renders blank here and
                     // fine elsewhere says why (viewport, scroll size, text length) in the emulator test's evidence.
-                    if (isLoopbackPage(u)) view?.evaluateJavascript("JSON.stringify({w:innerWidth,h:innerHeight,dpr:devicePixelRatio,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,bw:document.body?document.body.getBoundingClientRect().width:-1,bh:document.body?document.body.getBoundingClientRect().height:-1,text:document.body?document.body.innerText.length:-1,js:true})") { r -> android.util.Log.d("LocalPageMetrics", "$u $r") }
+                    if (pageLogOn(u)) view?.evaluateJavascript("JSON.stringify({w:innerWidth,h:innerHeight,dpr:devicePixelRatio,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,bw:document.body?document.body.getBoundingClientRect().width:-1,bh:document.body?document.body.getBoundingClientRect().height:-1,text:document.body?document.body.innerText.length:-1,js:true})") { r -> android.util.Log.d("LocalPageMetrics", "$u $r") }
                     probePasskey(view, u)
                     // Tier 2: (re)install the DOM autofill engine; a private tab gets no prompts and never offers to save.
                     view?.let { domAutofill.inject(it, u, tab.isPrivate); ac.inject(it, u, tab.isPrivate) }
@@ -1015,7 +1023,7 @@ class BrowserHostFragment : Fragment() {
 
                 /** A page of the phone's own loopback servers: its console goes to logcat (tag LocalPageConsole), never any other page's. */
                 override fun onConsoleMessage(m: android.webkit.ConsoleMessage?): Boolean {
-                    if (m != null && isLoopbackPage(webView?.url)) android.util.Log.d("LocalPageConsole", "${m.messageLevel()} ${m.sourceId()}:${m.lineNumber()} ${m.message()}")
+                    if (m != null && pageLogOn(webView?.url)) android.util.Log.d("LocalPageConsole", "${m.messageLevel()} ${m.sourceId()}:${m.lineNumber()} ${m.message()}")
                     return false
                 }
 

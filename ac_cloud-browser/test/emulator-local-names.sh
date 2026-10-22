@@ -42,6 +42,8 @@ adb logcat -c || true
 adb install -r -g "$BROWSER_APK" >/dev/null || { bad "install of Cloud Browser failed"; exit 2; }
 adb install -r -g "$WS_APK" >/dev/null || { bad "install of Cloud C3 WebServer failed"; exit 2; }
 adb shell settings put global window_animation_scale 0 || true
+# The browser logs the console and layout numbers of loopback pages only when this global is 1 (off in every shipped build).
+adb shell settings put global cloud_browser_page_log 1 || true
 
 # ── E1 ───────────────────────────────────────────────────────────────────────
 adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$WPKG" | tr -d '\r' | tail -1)" >/dev/null
