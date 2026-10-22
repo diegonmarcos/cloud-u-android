@@ -122,3 +122,93 @@ jobs:
           name: drive-shared-uid-launch
           path: out/
           if-no-files-found: warn
+
+  drive-migration:
+    # The owner's real sequence: cloud-drive runs alone first (it backs its data up), the terminal then joins the uid,
+    # and cloud-drive is opened again with the restore notice waiting. Random taps include the notice's buttons.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Fetch the APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          set -eu
+          mkdir -p apk
+          gh release download latest -R "$REPO" -p cloud-terminal-x86_64.apk -O apk/terminal.apk
+          if [ -n "$RUN_ID" ]; then
+            gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --paginate \
+              --jq '.artifacts[] | select(.name|startswith("Cloud-Drive-x86_64-")) | .name' |
+            while read -r name; do gh run download "$RUN_ID" -R "$REPO" -n "$name" -D "apk/dl-$name"; done
+            find apk -name '*.apk' -path '*dl-*' | head -1 | xargs -I{} cp {} apk/drive.apk
+          else
+            gh release download latest -R "$REPO" -p Cloud-Drive-x86_64.apk -O apk/drive.apk
+          fi
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Write the probe
+        run: |
+          cat > probe.sh <<'EOF'
+          #!/bin/bash
+          set -u
+          PKG=com.diegonmarcos.clouddrive
+          mkdir -p out
+          adb logcat -c || true
+          adb install -r -g apk/drive.apk || { echo "::error::drive install failed"; exit 2; }
+          adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
+          timeout 120 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+          sleep 25
+          adb shell "find /sdcard -name data.zip 2>/dev/null" | tee out/backup.txt
+          adb install -r -g apk/terminal.apk || { echo "::error::terminal install failed"; exit 2; }
+          adb shell dumpsys package "$PKG" | grep -E "sharedUser" | tee out/uid.txt
+          adb shell am force-stop "$PKG"
+          ok=1
+          timeout 120 adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+          sleep 8
+          adb exec-out screencap -p > out/screen-notice.png || true
+          adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "process $PKG is gone after the joined launch"; ok=0; }
+          if [ $ok = 1 ]; then
+            timeout 170 adb shell monkey -p "$PKG" --pct-syskeys 0 --pct-appswitch 0 --throttle 300 -s 11 --ignore-timeouts 400 > out/monkey.txt 2>&1 || true
+            sleep 3
+            adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "process $PKG died while exercised"; ok=0; }
+            grep -q "// CRASH: $PKG" out/monkey.txt && ok=0
+          fi
+          adb logcat -d -v threadtime > out/logcat.txt
+          adb logcat -d -b crash -v threadtime > out/logcat-crash.txt || true
+          adb exec-out screencap -p > out/screen.png || true
+          awk '/FATAL EXCEPTION/{p=1} p&&/AndroidRuntime/{print} p&&!/AndroidRuntime/{p=0}' out/logcat.txt > out/fatal.txt
+          grep -q "Process: $PKG" out/fatal.txt && ok=0
+          grep -q "$PKG" out/logcat-crash.txt && ok=0
+          if [ $ok = 0 ]; then
+            echo "::group::FATAL EXCEPTION"; cat out/fatal.txt; echo "::endgroup::"
+            head -40 out/fatal.txt | while IFS= read -r l; do echo "::error title=cloud-drive crashed after joining the uid::$l"; done
+            [ -s out/fatal.txt ] || grep -E "$PKG|AndroidRuntime|ActivityManager" out/logcat.txt | tail -80
+            exit 1
+          fi
+          echo "cloud-drive survived the migration sequence."
+          EOF
+          chmod +x probe.sh
+
+      - name: Boot emulator + probe
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./probe.sh
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-migration-launch
+          path: out/
+          if-no-files-found: warn
