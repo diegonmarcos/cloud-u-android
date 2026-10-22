@@ -1,6 +1,6 @@
 import type { Edge } from '@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge';
 import type { Instruction } from '@atlaskit/pragmatic-drag-and-drop-hitbox/tree-item';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { assignInlineVars } from '@vanilla-extract/dynamic';
 import clsx from 'clsx';
 import { type ReactElement } from 'react';
@@ -25,8 +25,8 @@ function getTreeElement({
   const style = {
     [styles.horizontalIndent]: `${instruction.currentLevel * instruction.indentPerLevel}px`,
     [styles.indicatorColor]: !isBlocked
-      ? cssVar('--affine-primary-color')
-      : cssVar('--affine-warning-color'),
+      ? cssVar('--cloud-notes-primary-color')
+      : cssVar('--cloud-notes-warning-color'),
   };
 
   if (instruction.type === 'reorder-above') {

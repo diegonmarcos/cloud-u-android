@@ -1,6 +1,6 @@
 import { AiIcon, FrameIcon, TocIcon, TodayIcon } from '@blocksuite/icons/rc';
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { useState } from 'react';
 
 import { ResizePanel } from '../resize-panel/resize-panel';

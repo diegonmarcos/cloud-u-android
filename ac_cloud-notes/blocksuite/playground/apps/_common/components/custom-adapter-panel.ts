@@ -14,8 +14,8 @@ export class CustomAdapterPanel extends SignalWatcher(
       position: absolute;
       top: 0;
       right: 16px;
-      border: 1px solid var(--affine-border-color, #e3e2e4);
-      background: var(--affine-background-overlay-panel-color);
+      border: 1px solid var(--cloud-notes-border-color, #e3e2e4);
+      background: var(--cloud-notes-background-overlay-panel-color);
       height: 100vh;
       width: 30vw;
       box-sizing: border-box;

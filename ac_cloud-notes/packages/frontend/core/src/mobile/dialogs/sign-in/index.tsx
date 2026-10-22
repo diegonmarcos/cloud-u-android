@@ -4,7 +4,7 @@ import type {
   DialogComponentProps,
   GLOBAL_DIALOG_SCHEMA,
 } from '@cloud-notes/core/modules/dialogs';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { useEffect, useRef, useState } from 'react';
 
 import { MobileSignInPanel } from '../../components/sign-in';

@@ -17,7 +17,7 @@ export class EditorToolbarSeparator extends LitElement {
       display: flex;
       width: 0.5px;
       height: 100%;
-      background-color: var(--affine-border-color);
+      background-color: var(--cloud-notes-border-color);
     }
 
     :host([data-orientation='horizontal']) {

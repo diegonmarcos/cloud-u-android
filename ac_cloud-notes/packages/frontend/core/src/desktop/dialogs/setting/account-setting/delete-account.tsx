@@ -10,7 +10,7 @@ import { Trans, useI18n } from '@cloud-notes/i18n';
 import { track } from '@cloud-notes/track';
 import { ArrowRightSmallIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { useCallback, useState } from 'react';
 
 import * as styles from './style.css';

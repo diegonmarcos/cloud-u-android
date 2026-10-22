@@ -21,7 +21,7 @@ import {
   InformationIcon,
 } from '@blocksuite/icons/rc';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import clsx from 'clsx';
 import { nanoid } from 'nanoid';
 import {

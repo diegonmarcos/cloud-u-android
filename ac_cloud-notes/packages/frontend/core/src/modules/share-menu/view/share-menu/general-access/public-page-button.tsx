@@ -12,7 +12,7 @@ import {
   ViewIcon,
 } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import clsx from 'clsx';
 import { useEffect } from 'react';
 

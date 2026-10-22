@@ -1,4 +1,4 @@
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 export type SelectOptionColor = {
   oldColor: string;
@@ -7,52 +7,52 @@ export type SelectOptionColor = {
 };
 export const selectOptionColors: SelectOptionColor[] = [
   {
-    oldColor: 'var(--affine-tag-red)',
+    oldColor: 'var(--cloud-notes-tag-red)',
     color: cssVarV2('chip/label/red'),
     name: 'Red',
   },
   {
-    oldColor: 'var(--affine-tag-pink)',
+    oldColor: 'var(--cloud-notes-tag-pink)',
     color: cssVarV2('chip/label/magenta'),
     name: 'Magenta',
   },
   {
-    oldColor: 'var(--affine-tag-orange)',
+    oldColor: 'var(--cloud-notes-tag-orange)',
     color: cssVarV2('chip/label/orange'),
     name: 'Orange',
   },
   {
-    oldColor: 'var(--affine-tag-yellow)',
+    oldColor: 'var(--cloud-notes-tag-yellow)',
     color: cssVarV2('chip/label/yellow'),
     name: 'Yellow',
   },
   {
-    oldColor: 'var(--affine-tag-green)',
+    oldColor: 'var(--cloud-notes-tag-green)',
     color: cssVarV2('chip/label/green'),
     name: 'Green',
   },
   {
-    oldColor: 'var(--affine-tag-teal)',
+    oldColor: 'var(--cloud-notes-tag-teal)',
     color: cssVarV2('chip/label/teal'),
     name: 'Teal',
   },
   {
-    oldColor: 'var(--affine-tag-blue)',
+    oldColor: 'var(--cloud-notes-tag-blue)',
     color: cssVarV2('chip/label/blue'),
     name: 'Blue',
   },
   {
-    oldColor: 'var(--affine-tag-purple)',
+    oldColor: 'var(--cloud-notes-tag-purple)',
     color: cssVarV2('chip/label/purple'),
     name: 'Purple',
   },
   {
-    oldColor: 'var(--affine-tag-gray)',
+    oldColor: 'var(--cloud-notes-tag-gray)',
     color: cssVarV2('chip/label/grey'),
     name: 'Grey',
   },
   {
-    oldColor: 'var(--affine-tag-white)',
+    oldColor: 'var(--cloud-notes-tag-white)',
     color: cssVarV2('chip/label/white'),
     name: 'White',
   },
@@ -63,7 +63,7 @@ const oldColorMap = Object.fromEntries(
 );
 
 export const getColorByColor = (color: string) => {
-  if (color.startsWith('--affine-tag')) {
+  if (color.startsWith('--cloud-notes-tag')) {
     return oldColorMap[color] ?? color;
   }
   return color;

@@ -4,7 +4,7 @@ import type {
   TooltipProps as RootProps,
 } from '@radix-ui/react-tooltip';
 import * as TooltipPrimitive from '@radix-ui/react-tooltip';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import clsx from 'clsx';
 import { type ReactElement, type ReactNode } from 'react';
 

@@ -169,7 +169,7 @@ legend {
   background-color: unset;
   outline: 0;
   border: 0;
-  font-size: var(--affine-font-base);
+  font-size: var(--cloud-notes-font-base);
   font-family: inherit;
   font-feature-settings: 'calt' 0;
 }
@@ -190,7 +190,7 @@ input {
   outline: medium;
   /*Remove the default yellow border on mouse click*/
   background-color: transparent;
-  caret-color: var(--affine-primary-color);
+  caret-color: var(--cloud-notes-primary-color);
 }
 
 input:-webkit-autofill {
@@ -311,7 +311,7 @@ math {
 /* AI Block Diff */
 .ai-block-diff-deleted {
   background-color: var(
-    --affine-v2-aI-applyDeleteHighlight,
+    --cloud-notes-v2-aI-applyDeleteHighlight,
     #ffeaea
   ) !important;
   border-radius: 4px !important;

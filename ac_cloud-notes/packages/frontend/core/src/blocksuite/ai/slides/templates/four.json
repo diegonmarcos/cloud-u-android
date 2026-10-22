@@ -34,9 +34,9 @@
                 "shapeType": "ellipse",
                 "radius": 0,
                 "filled": true,
-                "fillColor": "--affine-palette-shape-navy",
+                "fillColor": "--cloud-notes-palette-shape-navy",
                 "strokeWidth": 2,
-                "strokeColor": "--affine-palette-transparent",
+                "strokeColor": "--cloud-notes-palette-transparent",
                 "strokeStyle": "solid",
                 "shapeStyle": "General",
                 "roughness": 1.4,
@@ -44,7 +44,7 @@
                 "maxWidth": false,
                 "type": "shape",
                 "id": "dvNokXHFjJ",
-                "color": "--affine-palette-line-white",
+                "color": "--cloud-notes-palette-line-white",
                 "text": {
                   "affine:surface:text": true,
                   "delta": [
@@ -64,9 +64,9 @@
                 "shapeType": "ellipse",
                 "radius": 0,
                 "filled": true,
-                "fillColor": "--affine-palette-shape-navy",
+                "fillColor": "--cloud-notes-palette-shape-navy",
                 "strokeWidth": 2,
-                "strokeColor": "--affine-palette-transparent",
+                "strokeColor": "--cloud-notes-palette-transparent",
                 "strokeStyle": "solid",
                 "shapeStyle": "General",
                 "roughness": 1.4,
@@ -74,7 +74,7 @@
                 "maxWidth": false,
                 "type": "shape",
                 "id": "pjLp5iRHj1",
-                "color": "--affine-palette-line-white",
+                "color": "--cloud-notes-palette-line-white",
                 "text": {
                   "affine:surface:text": true,
                   "delta": [
@@ -94,9 +94,9 @@
                 "shapeType": "ellipse",
                 "radius": 0,
                 "filled": true,
-                "fillColor": "--affine-palette-shape-navy",
+                "fillColor": "--cloud-notes-palette-shape-navy",
                 "strokeWidth": 2,
-                "strokeColor": "--affine-palette-transparent",
+                "strokeColor": "--cloud-notes-palette-transparent",
                 "strokeStyle": "solid",
                 "shapeStyle": "General",
                 "roughness": 1.4,
@@ -104,7 +104,7 @@
                 "maxWidth": false,
                 "type": "shape",
                 "id": "vrH9SvPlB6",
-                "color": "--affine-palette-line-white",
+                "color": "--cloud-notes-palette-line-white",
                 "text": {
                   "affine:surface:text": true,
                   "delta": [
@@ -124,9 +124,9 @@
                 "shapeType": "ellipse",
                 "radius": 0,
                 "filled": true,
-                "fillColor": "--affine-palette-shape-navy",
+                "fillColor": "--cloud-notes-palette-shape-navy",
                 "strokeWidth": 2,
-                "strokeColor": "--affine-palette-transparent",
+                "strokeColor": "--cloud-notes-palette-transparent",
                 "strokeStyle": "solid",
                 "shapeStyle": "General",
                 "roughness": 1.4,
@@ -134,7 +134,7 @@
                 "maxWidth": false,
                 "type": "shape",
                 "id": "UF3qaMw35x",
-                "color": "--affine-palette-line-white",
+                "color": "--cloud-notes-palette-line-white",
                 "text": {
                   "affine:surface:text": true,
                   "delta": [
@@ -154,9 +154,9 @@
                 "shapeType": "rect",
                 "radius": 0,
                 "filled": true,
-                "fillColor": "--affine-palette-shape-white",
+                "fillColor": "--cloud-notes-palette-shape-white",
                 "strokeWidth": 2,
-                "strokeColor": "--affine-palette-line-white",
+                "strokeColor": "--cloud-notes-palette-line-white",
                 "strokeStyle": "solid",
                 "shapeStyle": "General",
                 "roughness": 1.4,
@@ -164,7 +164,7 @@
                 "maxWidth": false,
                 "type": "shape",
                 "id": "TJhFxmm-4S",
-                "color": "--affine-palette-line-black"
+                "color": "--cloud-notes-palette-line-black"
               }
             }
           },
@@ -183,7 +183,7 @@
                     }
                   ]
                 },
-                "background": "--affine-palette-transparent",
+                "background": "--cloud-notes-palette-transparent",
                 "xywh": "[-2101.800074986049,1.1999424525670292,1933.7142508370534,1095.9999738420759]",
                 "index": "Zz",
                 "childElementIds": {
@@ -214,7 +214,7 @@
           "version": 1,
           "props": {
             "xywh": "[-2053.238012404669,-9.923971266973126,1341.3334350585938,283.6666920979818]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "a1",
             "hidden": false,
             "displayMode": "edgeless",
@@ -258,7 +258,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1957.8756949308126,298.9828272123103,810.9499838439583,216.11059503352658]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "a1V",
             "hidden": false,
             "displayMode": "edgeless",
@@ -302,7 +302,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1949.666909116133,409.4267986521621,747.1235944841051,274.25339814778795]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "a1l",
             "hidden": false,
             "displayMode": "edgeless",
@@ -346,7 +346,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1060.8108545830105,298.9828272123103,810.9499838439583,216.11059503352658]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "a5",
             "hidden": false,
             "displayMode": "edgeless",
@@ -390,7 +390,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1052.6020687683308,409.4267986521621,747.1235944841051,274.25339814778795]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "a6",
             "hidden": false,
             "displayMode": "edgeless",
@@ -434,7 +434,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1060.8108545830105,659.9727569688716,810.9499838439583,216.11059503352658]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "a9",
             "hidden": false,
             "displayMode": "edgeless",
@@ -478,7 +478,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1052.6020687683308,770.4167284087234,747.1235944841051,274.25339814778795]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "aA",
             "hidden": false,
             "displayMode": "edgeless",
@@ -522,7 +522,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1957.8756949308124,659.9727569688716,810.9499838439583,216.11059503352658]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "aD",
             "hidden": false,
             "displayMode": "edgeless",
@@ -566,7 +566,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1949.6669091161327,770.4167284087234,747.1235944841051,274.25339814778795]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "aE",
             "hidden": false,
             "displayMode": "edgeless",
@@ -641,9 +641,9 @@
                 "shapeType": "rect",
                 "radius": 0,
                 "filled": true,
-                "fillColor": "--affine-palette-shape-white",
+                "fillColor": "--cloud-notes-palette-shape-white",
                 "strokeWidth": 2,
-                "strokeColor": "--affine-palette-line-white",
+                "strokeColor": "--cloud-notes-palette-line-white",
                 "strokeStyle": "solid",
                 "shapeStyle": "General",
                 "roughness": 1.4,
@@ -651,7 +651,7 @@
                 "maxWidth": false,
                 "type": "shape",
                 "id": "TJhFxmm-4S",
-                "color": "--affine-palette-line-black"
+                "color": "--cloud-notes-palette-line-black"
               }
             }
           },
@@ -670,7 +670,7 @@
                     }
                   ]
                 },
-                "background": "--affine-palette-transparent",
+                "background": "--cloud-notes-palette-transparent",
                 "index": "Zz",
                 "xywh": "[-1509.6661094585195,-2898.612292265666,1960.6362584319918,1087.2819474283258]",
                 "childElementIds": {
@@ -768,7 +768,7 @@
           "flavour": "affine:note",
           "version": 1,
           "props": {
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "hidden": false,
             "displayMode": "edgeless",
             "index": "aB",
@@ -812,7 +812,7 @@
           "flavour": "affine:note",
           "version": 1,
           "props": {
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "hidden": false,
             "displayMode": "edgeless",
             "index": "aF",
@@ -857,7 +857,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1503.264569392059,-2279.702158995507,505.068393234737,409.5622543957249]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "aL",
             "hidden": false,
             "displayMode": "edgeless",
@@ -901,7 +901,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1048.5978722078141,-2279.702158995507,505.068393234737,409.5622543957249]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "am",
             "hidden": false,
             "displayMode": "edgeless",
@@ -945,7 +945,7 @@
           "version": 1,
           "props": {
             "xywh": "[-1054.9994122742746,-2449.148531089114,589.0618769832358,219.56087840116928]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "al",
             "hidden": false,
             "displayMode": "edgeless",
@@ -989,7 +989,7 @@
           "version": 1,
           "props": {
             "xywh": "[-589.9311851960954,-2279.702158995507,505.068393234737,409.5622543957249]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "aq",
             "hidden": false,
             "displayMode": "edgeless",
@@ -1033,7 +1033,7 @@
           "version": 1,
           "props": {
             "xywh": "[-596.3327252625559,-2449.148531089114,589.0618769832358,219.56087840116928]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "ap",
             "hidden": false,
             "displayMode": "edgeless",
@@ -1077,7 +1077,7 @@
           "version": 1,
           "props": {
             "xywh": "[-132.59791289791826,-2279.702158995507,505.068393234737,409.5622543957249]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "au",
             "hidden": false,
             "displayMode": "edgeless",
@@ -1121,7 +1121,7 @@
           "version": 1,
           "props": {
             "xywh": "[-138.99945296437875,-2449.148531089114,589.0618769832358,219.56087840116928]",
-            "background": "--affine-palette-transparent",
+            "background": "--cloud-notes-palette-transparent",
             "index": "at",
             "hidden": false,
             "displayMode": "edgeless",

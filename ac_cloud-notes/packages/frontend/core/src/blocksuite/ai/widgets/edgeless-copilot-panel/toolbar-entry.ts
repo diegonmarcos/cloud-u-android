@@ -18,7 +18,7 @@ export class EdgelessCopilotToolbarEntry extends WithDisposable(LitElement) {
       line-height: 20px;
 
       .label.medium {
-        color: var(--affine-brand-color);
+        color: var(--cloud-notes-brand-color);
       }
     }
   `;

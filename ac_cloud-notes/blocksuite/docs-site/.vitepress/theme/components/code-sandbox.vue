@@ -15,7 +15,7 @@
       ...props, // do not forget it
       deps: {
         yjs: 'latest',
-        '@toeverything/theme': 'latest',
+        '@cloud-notes/theme': 'latest',
         '@blocksuite/presets': 'canary',
       },
     }"

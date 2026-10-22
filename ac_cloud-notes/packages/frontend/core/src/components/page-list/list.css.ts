@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { createContainer, style } from '@vanilla-extract/css';
 
 import { root as collectionItemRoot } from './collections/collection-list-item.css';

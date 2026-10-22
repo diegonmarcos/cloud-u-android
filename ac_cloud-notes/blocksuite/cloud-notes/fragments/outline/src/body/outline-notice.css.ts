@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { style } from '@vanilla-extract/css';
 
 export const outlineNotice = style({
@@ -15,7 +15,7 @@ export const outlineNotice = style({
   fontSize: '12px',
   flexDirection: 'column',
   borderRadius: '8px',
-  backgroundColor: cssVar('--affine-background-overlay-panel-color'),
+  backgroundColor: cssVar('--cloud-notes-background-overlay-panel-color'),
 });
 
 export const outlineNoticeHeader = style({

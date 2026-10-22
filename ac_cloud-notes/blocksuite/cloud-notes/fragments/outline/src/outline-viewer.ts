@@ -67,12 +67,12 @@ export class OutlineViewer extends SignalWatcher(
       height: 2px;
       border-radius: 1px;
       overflow: hidden;
-      background: var(--affine-black-10, rgba(0, 0, 0, 0.1));
+      background: var(--cloud-notes-black-10, rgba(0, 0, 0, 0.1));
     }
 
     .outline-viewer-indicator.active {
       width: 24px;
-      background: var(--affine-text-primary-color);
+      background: var(--cloud-notes-text-primary-color);
     }
 
     .outline-viewer-panel {
@@ -87,8 +87,8 @@ export class OutlineViewer extends SignalWatcher(
       border-radius: 8px;
       border-width: 0px;
       border-style: solid;
-      border-color: var(--affine-border-color);
-      background: var(--affine-background-overlay-panel-color);
+      border-color: var(--cloud-notes-border-color);
+      background: var(--cloud-notes-background-overlay-panel-color);
       box-shadow: 0px 6px 16px 0px rgba(0, 0, 0, 0.14);
 
       overflow-y: auto;
@@ -115,10 +115,10 @@ export class OutlineViewer extends SignalWatcher(
       span {
         flex: 1;
         overflow: hidden;
-        color: var(--affine-text-secondary-color);
+        color: var(--cloud-notes-text-secondary-color);
         text-overflow: ellipsis;
 
-        font-family: var(--affine-font-family);
+        font-family: var(--cloud-notes-font-family);
         font-size: 12px;
         font-style: normal;
         font-weight: 500;

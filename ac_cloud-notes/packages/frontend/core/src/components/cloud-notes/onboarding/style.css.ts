@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { globalStyle, keyframes, style } from '@vanilla-extract/css';
 
 // in case that we need to support dark mode later
@@ -15,7 +15,7 @@ export const onboardingVars = {
     h: '302px',
     r: '8px',
     bg: 'white',
-    // textColor: 'var(--affine-light-text-primary-color)',
+    // textColor: 'var(--cloud-notes-light-text-primary-color)',
     textColor: '#121212',
     borderColor: '#E3E2E4',
   },

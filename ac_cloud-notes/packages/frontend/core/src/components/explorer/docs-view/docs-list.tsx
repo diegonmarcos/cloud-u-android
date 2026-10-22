@@ -8,7 +8,7 @@ import { DocsService } from '@cloud-notes/core/modules/doc';
 import { WorkspacePropertyService } from '@cloud-notes/core/modules/workspace-property';
 import { Trans, useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { memo, useCallback, useContext, useEffect, useMemo } from 'react';
 
 import { EmptyDocs } from '../../cloud-notes/empty';

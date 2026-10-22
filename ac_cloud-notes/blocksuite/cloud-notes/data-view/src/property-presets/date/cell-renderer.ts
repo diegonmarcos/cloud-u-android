@@ -106,7 +106,7 @@ export class DateCell extends BaseCellRenderer<number, number> {
       // TODO: use z-index from variable,
       //       for now the slide-layout-modal's z-index is `1001`
       //       the z-index of popover should be higher than it
-      // root.style.zIndex = 'var(--affine-z-index-popover)';
+      // root.style.zIndex = 'var(--cloud-notes-z-index-popover)';
       portal.style.zIndex = '1002';
     }
   };

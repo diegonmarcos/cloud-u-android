@@ -31,7 +31,7 @@ import {
 } from '@blocksuite/icons/lit';
 import { computed, Signal } from '@preact/signals-core';
 import { Service } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import type { FuseResultMatch } from 'fuse.js';
 import Fuse from 'fuse.js';
 import { html } from 'lit';

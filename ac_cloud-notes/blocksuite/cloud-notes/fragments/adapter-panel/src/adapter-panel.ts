@@ -10,7 +10,7 @@ import {
 import { SignalWatcher, WithDisposable } from '@blocksuite/global/lit';
 import { provide } from '@lit/context';
 import { effect, signal } from '@preact/signals-core';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, LitElement, type PropertyValues, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -34,7 +34,7 @@ export class AdapterPanel extends SignalWatcher(WithDisposable(LitElement)) {
     .adapters-container {
       width: 100%;
       height: 100%;
-      background-color: var(--affine-background-primary-color);
+      background-color: var(--cloud-notes-background-primary-color);
       box-sizing: border-box;
       font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
     }

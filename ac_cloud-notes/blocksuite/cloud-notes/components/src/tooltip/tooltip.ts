@@ -20,12 +20,12 @@ const styles = css`
     box-sizing: border-box;
     max-width: 280px;
     min-height: 32px;
-    font-family: var(--affine-font-family);
-    font-size: var(--affine-font-sm);
+    font-family: var(--cloud-notes-font-family);
+    font-size: var(--cloud-notes-font-sm);
     border-radius: 4px;
     padding: 6px 12px;
-    color: var(--affine-v2-tooltips-foreground, var(--affine-white));
-    background: var(--affine-v2-tooltips-background, var(--affine-tooltip));
+    color: var(--cloud-notes-v2-tooltips-foreground, var(--cloud-notes-white));
+    background: var(--cloud-notes-v2-tooltips-background, var(--cloud-notes-tooltip));
 
     overflow-wrap: anywhere;
     white-space: normal;
@@ -41,7 +41,7 @@ const styles = css`
 `;
 
 const TOOLTIP_ARROW_COLOR =
-  'var(--affine-v2-tooltips-background, var(--affine-tooltip))';
+  'var(--cloud-notes-v2-tooltips-background, var(--cloud-notes-tooltip))';
 
 // See http://apps.eky.hk/css-triangle-generator/
 const TRIANGLE_HEIGHT = 6;
@@ -116,7 +116,7 @@ const updateArrowStyles = ({
  *   .offset=${4}
  *   .autoFlip=${true}
  *   .arrow=${true}
- *   .tooltipStyle=${css`:host { z-index: 0; --affine-tooltip: #fff; }`}
+ *   .tooltipStyle=${css`:host { z-index: 0; --cloud-notes-tooltip: #fff; }`}
  *   .allowInteractive=${false}
  * >
  *   Content
@@ -323,7 +323,7 @@ export class Tooltip extends LitElement {
   accessor tooltipStyle: CSSResult = css``;
 
   @property({ attribute: false })
-  accessor zIndex: number | string = 'var(--affine-z-index-popover)';
+  accessor zIndex: number | string = 'var(--cloud-notes-z-index-popover)';
 }
 
 declare global {

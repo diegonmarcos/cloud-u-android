@@ -101,7 +101,7 @@ export class LanguageListButton extends WithDisposable(
       abortController: this._abortController,
       // stacking-context(editor-host)
       portalStyles: {
-        zIndex: 'var(--affine-z-index-popover)',
+        zIndex: 'var(--cloud-notes-z-index-popover)',
       },
     });
   };
@@ -133,7 +133,7 @@ export class LanguageListButton extends WithDisposable(
   override render() {
     const textStyles = styleMap({
       fontFamily: 'Inter',
-      fontSize: 'var(--affine-font-xs)',
+      fontSize: 'var(--cloud-notes-font-xs)',
       fontStyle: 'normal',
       fontWeight: '500',
       lineHeight: '20px',

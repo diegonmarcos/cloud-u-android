@@ -158,8 +158,8 @@ export class CloudNotesLink extends WithDisposable(ShadowlessElement) {
 
   override render() {
     const linkStyle = {
-      color: 'var(--affine-link-color)',
-      fill: 'var(--affine-link-color)',
+      color: 'var(--cloud-notes-link-color)',
+      fill: 'var(--cloud-notes-link-color)',
       cursor: 'pointer',
     };
 

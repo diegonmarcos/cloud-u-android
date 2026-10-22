@@ -11,7 +11,7 @@ import { useI18n } from '@cloud-notes/i18n';
 import { track } from '@cloud-notes/track';
 import { SingleSelectCheckSolidIcon } from '@blocksuite/icons/rc';
 import { useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { nanoid } from 'nanoid';
 import { useState } from 'react';
 

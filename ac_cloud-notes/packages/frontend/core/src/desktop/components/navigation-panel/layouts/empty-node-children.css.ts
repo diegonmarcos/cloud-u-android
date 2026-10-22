@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { fallbackVar, style } from '@vanilla-extract/css';
 
 import { levelIndent } from '../tree/node.css';

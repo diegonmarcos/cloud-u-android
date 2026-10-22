@@ -15,9 +15,9 @@ export class CloudNotesEdgelessZoomToolbarWidget extends WidgetComponent<RootBlo
   static override styles = css`
     :host {
       position: absolute;
-      bottom: var(--affine-edgeless-zoom-toolbar-bottom, 20px);
+      bottom: var(--cloud-notes-edgeless-zoom-toolbar-bottom, 20px);
       left: 12px;
-      z-index: var(--affine-z-index-popover);
+      z-index: var(--cloud-notes-z-index-popover);
       display: flex;
       justify-content: center;
       pointer-events: none;

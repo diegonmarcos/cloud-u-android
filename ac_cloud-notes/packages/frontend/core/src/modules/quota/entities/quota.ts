@@ -4,7 +4,7 @@ import type {
   WorkspaceQuotaStateSnapshot,
 } from '@cloud-notes/realtime';
 import { Entity, LiveData } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import bytes from 'bytes';
 
 import { RealtimeLiveQuery } from '../../cloud/realtime/live-query';

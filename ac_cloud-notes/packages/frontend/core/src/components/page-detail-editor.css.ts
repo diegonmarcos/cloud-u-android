@@ -6,8 +6,8 @@ export const editor = style({
       width: '100%',
       minWidth: 0,
       vars: {
-        '--affine-editor-width': '100%',
-        '--affine-editor-side-padding': '72px',
+        '--cloud-notes-editor-width': '100%',
+        '--cloud-notes-editor-side-padding': '72px',
       },
     },
   },
@@ -16,8 +16,8 @@ export const editor = style({
       selectors: {
         '&.is-public': {
           vars: {
-            '--affine-editor-width': '100%',
-            '--affine-editor-side-padding': '24px',
+            '--cloud-notes-editor-width': '100%',
+            '--cloud-notes-editor-side-padding': '24px',
           },
         },
       },

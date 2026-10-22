@@ -71,7 +71,7 @@ export class MobileOutlineMenu extends SignalWatcher(
     }
 
     .outline-menu-item:active {
-      background: var(--affine-hover-color);
+      background: var(--cloud-notes-hover-color);
     }
 
     .outline-menu-item.title,

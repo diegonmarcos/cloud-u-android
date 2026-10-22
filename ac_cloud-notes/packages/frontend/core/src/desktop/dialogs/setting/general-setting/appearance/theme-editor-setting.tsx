@@ -10,7 +10,7 @@ import {
   useService,
   useServiceOptional,
 } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useCallback } from 'react';
 
 export const ThemeEditorSetting = () => {

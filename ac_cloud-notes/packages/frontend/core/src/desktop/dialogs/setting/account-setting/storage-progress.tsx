@@ -1,7 +1,7 @@
 import { Button, ErrorMessage, Skeleton, Tooltip } from '@cloud-notes/component';
 import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useEffect, useMemo } from 'react';
 
 import {

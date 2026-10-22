@@ -2,7 +2,7 @@ import { Switch } from '@cloud-notes/component';
 import { AuthService, SubscriptionService } from '@cloud-notes/core/modules/cloud';
 import { SubscriptionPlan, SubscriptionRecurring } from '@cloud-notes/graphql';
 import { Trans, useI18n } from '@cloud-notes/i18n';
-import { AfFiNeIcon as CloudNotesIcon } from '@blocksuite/icons/rc';
+import { AccountIcon as CloudNotesIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
 import {
   type ReactNode,
@@ -285,7 +285,7 @@ export const CloudPlans = () => {
           questions, please contact our&nbsp;
           <a
             href="mailto:support@toeverything.info"
-            style={{ color: 'var(--affine-link-color)' }}
+            style={{ color: 'var(--cloud-notes-link-color)' }}
           >
             customer support
           </a>

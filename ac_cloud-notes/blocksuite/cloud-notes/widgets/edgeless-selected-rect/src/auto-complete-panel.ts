@@ -60,7 +60,7 @@ import {
 } from '@blocksuite/std';
 import { GfxControllerIdentifier } from '@blocksuite/std/gfx';
 import { consume } from '@lit/context';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, LitElement, nothing, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -97,8 +97,8 @@ export class EdgelessAutoCompletePanel extends WithDisposable(LitElement) {
       padding: 8px 0;
       gap: 8px;
       border-radius: 8px;
-      background: var(--affine-background-overlay-panel-color);
-      box-shadow: var(--affine-shadow-2);
+      background: var(--cloud-notes-background-overlay-panel-color);
+      box-shadow: var(--cloud-notes-shadow-2);
       z-index: 1;
     }
 
@@ -115,7 +115,7 @@ export class EdgelessAutoCompletePanel extends WithDisposable(LitElement) {
       font-size: 12px;
       font-style: normal;
       font-weight: 500;
-      border: 1px solid var(--affine-border-color, #e3e2e4);
+      border: 1px solid var(--cloud-notes-border-color, #e3e2e4);
       box-sizing: border-box;
     }
   `;
@@ -473,7 +473,7 @@ export class EdgelessAutoCompletePanel extends WithDisposable(LitElement) {
 
     const strokeColor = this.std
       .get(ThemeProvider)
-      .getCssVariableColor('--affine-black-30');
+      .getCssVariableColor('--cloud-notes-black-30');
     this._overlay = new AutoCompleteFrameOverlay(this.gfx, xywh, strokeColor);
     this.surface.renderer.addOverlay(this._overlay);
   }

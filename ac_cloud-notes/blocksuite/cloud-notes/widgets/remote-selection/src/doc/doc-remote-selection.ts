@@ -371,7 +371,7 @@ export class CloudNotesDocRemoteSelectionWidget extends WidgetComponent {
                       color: 'white',
                       maxWidth: '160px',
                       padding: '0 3px',
-                      border: '1px solid var(--affine-pure-black-20)',
+                      border: '1px solid var(--cloud-notes-pure-black-20)',
                       boxShadow: '0px 1px 6px 0px rgba(0, 0, 0, 0.16)',
                       borderRadius: '4px',
                       fontSize: '12px',

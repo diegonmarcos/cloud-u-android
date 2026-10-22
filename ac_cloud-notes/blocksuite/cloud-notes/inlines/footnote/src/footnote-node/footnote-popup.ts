@@ -13,7 +13,7 @@ import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/the
 import { SignalWatcher, WithDisposable } from '@blocksuite/global/lit';
 import type { BlockStdScope } from '@blocksuite/std';
 import { computed, signal } from '@preact/signals-core';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, LitElement, nothing, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -40,7 +40,7 @@ export class FootNotePopup extends SignalWatcher(WithDisposable(LitElement)) {
       text-overflow: ellipsis;
       white-space: nowrap;
       font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-      font-size: var(--affine-font-xs);
+      font-size: var(--cloud-notes-font-xs);
       font-style: normal;
       font-weight: 400;
       line-height: 20px;

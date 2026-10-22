@@ -10,7 +10,7 @@
     "@blocksuite/cloud-notes": "workspace:*",
     "@blocksuite/integration-test": "workspace:*",
     "@playwright/test": "=1.58.2",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "json-stable-stringify": "^1.2.1"
   },
   "version": "0.27.5"

@@ -1,5 +1,5 @@
 import { WithDisposable } from '@blocksuite/global/lit';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, html, LitElement, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -57,7 +57,7 @@ export class DatabaseNumberFormatBar extends WithDisposable(LitElement) {
       background-color: transparent;
       border: none;
       border-radius: 4px;
-      color: var(--affine-icon-color);
+      color: var(--cloud-notes-icon-color);
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -74,12 +74,12 @@ export class DatabaseNumberFormatBar extends WithDisposable(LitElement) {
     }
 
     .number-formatting-sample {
-      font-size: var(--affine-font-xs);
-      color: var(--affine-icon-color);
+      font-size: var(--cloud-notes-font-xs);
+      color: var(--cloud-notes-icon-color);
       margin-left: auto;
     }
     .number-format-toolbar-button:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
     .divider {
       width: 100%;

@@ -1,5 +1,5 @@
 import { useI18n } from '@cloud-notes/i18n';
-import { AfFiNeIcon as CloudNotesIcon, DoneIcon } from '@blocksuite/icons/rc';
+import { AccountIcon as CloudNotesIcon, DoneIcon } from '@blocksuite/icons/rc';
 import clsx from 'clsx';
 import type { HTMLAttributes } from 'react';
 

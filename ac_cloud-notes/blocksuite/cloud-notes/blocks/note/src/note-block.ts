@@ -8,7 +8,7 @@ export class NoteBlockComponent extends BlockComponent<NoteBlockModel> {
       display: flow-root;
     }
     .cloud-notes-note-block-container.selected {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
   `;
 

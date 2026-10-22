@@ -38,13 +38,13 @@ const chip = css({
   borderRadius: '10px',
   fontSize: '13px',
   lineHeight: '22px',
-  background: 'var(--affine-hover-color)',
+  background: 'var(--cloud-notes-hover-color)',
   maxWidth: '160px',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 });
-const hint = css({ color: 'var(--affine-text-secondary-color)', fontSize: '13px' });
+const hint = css({ color: 'var(--cloud-notes-text-secondary-color)', fontSize: '13px' });
 
 /** Relation cell: chips with the related rows' titles; click to choose the target database and the rows. */
 export class RelationCell extends BaseCellRenderer<string[], string[], RelationData> {

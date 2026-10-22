@@ -19,7 +19,7 @@
     "@blocksuite/global": "workspace:*",
     "@blocksuite/std": "workspace:*",
     "@lit/context": "^1.1.2",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "lit": "^3.2.0"
   },
   "exports": {

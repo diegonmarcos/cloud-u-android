@@ -7,7 +7,7 @@ import { AuthService } from '@cloud-notes/core/modules/cloud';
 import { useI18n } from '@cloud-notes/i18n';
 import { AiIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useEffect, useMemo, useRef } from 'react';
 
 import { toggleLocalAIOnboarding } from './apis';

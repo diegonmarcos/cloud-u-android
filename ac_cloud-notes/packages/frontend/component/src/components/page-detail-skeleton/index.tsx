@@ -39,7 +39,7 @@ export const EditorLoading = ({
                 components={{
                   1: (
                     <a
-                      style={{ color: 'var(--affine-primary-color)' }}
+                      style={{ color: 'var(--cloud-notes-primary-color)' }}
                       href="https://notes.diegonmarcos.com/redirect/discord"
                       target="__blank"
                     />

@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 const tagToPaletteLineMap: Record<string, string> = {
   [cssVar('tagRed')]: cssVar('paletteLineRed'),
@@ -14,7 +14,7 @@ const tagToPaletteLineMap: Record<string, string> = {
   [cssVar('tagGreen')]: cssVar('paletteLineGreen'),
 };
 
-// map var(--affine-tag-xxx) colors to var(--affine-chip-label-xxx)
+// map var(--cloud-notes-tag-xxx) colors to var(--cloud-notes-chip-label-xxx)
 const tagToChipColorMap: Record<string, string> = {
   [cssVar('tagRed')]: cssVarV2('chip/label/red'),
   [cssVar('tagTeal')]: cssVarV2('chip/label/teal'),
@@ -46,7 +46,7 @@ const paletteLineToChipMap: Record<string, string> = Object.fromEntries(
   ])
 );
 
-// hack: map var(--affine-tag-xxx)/var(--affine-chip-label-xxx) colors to var(--affine-palette-line-xxx)
+// hack: map var(--cloud-notes-tag-xxx)/var(--cloud-notes-chip-label-xxx) colors to var(--cloud-notes-palette-line-xxx)
 export const databaseTagColorToCloudNotesLabel = (color: string) => {
   return chipToPaletteLineMap[color] || tagToPaletteLineMap[color] || color;
 };

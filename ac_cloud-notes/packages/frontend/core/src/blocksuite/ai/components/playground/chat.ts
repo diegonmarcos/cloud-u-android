@@ -69,7 +69,7 @@ export class PlaygroundChat extends SignalWatcher(
       }
 
       .chat-panel-title {
-        background: var(--affine-background-primary-color);
+        background: var(--cloud-notes-background-primary-color);
         position: relative;
         padding: 8px 0px;
         width: 100%;
@@ -82,13 +82,13 @@ export class PlaygroundChat extends SignalWatcher(
         .chat-panel-title-text {
           font-size: 14px;
           font-weight: 500;
-          color: var(--affine-text-secondary-color);
+          color: var(--cloud-notes-text-secondary-color);
         }
 
         svg {
           width: 18px;
           height: 18px;
-          color: var(--affine-text-secondary-color);
+          color: var(--cloud-notes-text-secondary-color);
         }
       }
 
@@ -101,18 +101,18 @@ export class PlaygroundChat extends SignalWatcher(
         margin: 0 4px;
         padding: 8px 12px;
         border-radius: 8px;
-        border: 1px solid var(--affine-border-color);
+        border: 1px solid var(--cloud-notes-border-color);
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
       }
 
       .chat-panel-hints :first-child {
-        color: var(--affine-text-primary-color);
+        color: var(--cloud-notes-text-primary-color);
       }
 
       .chat-panel-hints :nth-child(2) {
-        color: var(--affine-text-secondary-color);
+        color: var(--cloud-notes-text-secondary-color);
       }
 
       .chat-panel-add,

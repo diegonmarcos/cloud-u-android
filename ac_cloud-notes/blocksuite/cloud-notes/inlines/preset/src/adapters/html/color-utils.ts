@@ -1,5 +1,5 @@
 import { TinyColor } from '@ctrl/tinycolor';
-import { cssVarV2, darkThemeV2, lightThemeV2 } from '@toeverything/theme/v2';
+import { cssVarV2, darkThemeV2, lightThemeV2 } from '@cloud-notes/theme/v2';
 
 type Rgb = { r: number; g: number; b: number };
 type Oklab = { l: number; a: number; b: number; chroma: number; hue: number };

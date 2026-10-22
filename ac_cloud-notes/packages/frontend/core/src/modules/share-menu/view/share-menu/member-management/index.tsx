@@ -4,7 +4,7 @@ import { DocRole } from '@cloud-notes/graphql';
 import { useI18n } from '@cloud-notes/i18n';
 import { ArrowRightSmallIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import clsx from 'clsx';
 import { useEffect, useMemo } from 'react';
 

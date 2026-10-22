@@ -105,7 +105,7 @@ export class AIChatAddContext extends SignalWatcher(
         ></chat-panel-add-popover>
       `,
       portalStyles: {
-        zIndex: 'var(--affine-z-index-popover)',
+        zIndex: 'var(--cloud-notes-z-index-popover)',
       },
       container: this.portalContainer ?? document.body,
       computePosition: {

@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { keyframes, style } from '@vanilla-extract/css';
 
 import {

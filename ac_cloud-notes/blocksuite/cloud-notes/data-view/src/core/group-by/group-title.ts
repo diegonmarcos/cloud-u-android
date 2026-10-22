@@ -49,11 +49,11 @@ const GroupTitleMobile = (
         width: 20px;
         height: 20px;
         border-radius: 4px;
-        background-color: var(--affine-background-secondary-color);
+        background-color: var(--cloud-notes-background-secondary-color);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--affine-text-secondary-color);
+        color: var(--cloud-notes-text-secondary-color);
         font-size: var(--data-view-cell-text-size);
       }
 
@@ -148,11 +148,11 @@ export const GroupTitle = (
         width: 20px;
         height: 20px;
         border-radius: 4px;
-        background-color: var(--affine-background-secondary-color);
+        background-color: var(--cloud-notes-background-secondary-color);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--affine-text-secondary-color);
+        color: var(--cloud-notes-text-secondary-color);
         font-size: var(--data-view-cell-text-size);
       }
 
@@ -186,19 +186,19 @@ export const GroupTitle = (
       .group-header-icon svg {
         width: 16px;
         height: 16px;
-        color: var(--affine-icon-color);
-        fill: var(--affine-icon-color);
+        color: var(--cloud-notes-icon-color);
+        fill: var(--cloud-notes-icon-color);
       }
 
       .group-header-op:hover {
-        background-color: var(--affine-hover-color);
+        background-color: var(--cloud-notes-hover-color);
       }
 
       .group-header-op svg {
         width: 16px;
         height: 16px;
-        fill: var(--affine-icon-color);
-        color: var(--affine-icon-color);
+        fill: var(--cloud-notes-icon-color);
+        color: var(--cloud-notes-icon-color);
       }
 
       .group-header-title {

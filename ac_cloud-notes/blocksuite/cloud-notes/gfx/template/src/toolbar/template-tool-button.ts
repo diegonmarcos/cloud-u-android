@@ -55,7 +55,7 @@ export class EdgelessTemplateButton extends EdgelessToolbarToolMixin(
 
     .arrow-icon {
       --y: 17px;
-      background: var(--affine-black-10);
+      background: var(--cloud-notes-black-10);
       width: 24px;
       height: 24px;
       border-radius: 50%;
@@ -64,7 +64,7 @@ export class EdgelessTemplateButton extends EdgelessToolbarToolMixin(
       align-items: center;
     }
     .arrow-icon > svg {
-      color: var(--affine-icon-color);
+      color: var(--cloud-notes-icon-color);
       fill: currentColor;
       width: 20px;
       height: 20px;

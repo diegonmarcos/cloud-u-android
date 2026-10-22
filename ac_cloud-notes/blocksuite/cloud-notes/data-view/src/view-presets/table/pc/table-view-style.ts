@@ -46,11 +46,11 @@ export const tableScrollContainerStyle = css({
 
   '&:hover::-webkit-scrollbar-thumb': {
     borderRadius: '16px',
-    backgroundColor: 'var(--affine-black-30)',
+    backgroundColor: 'var(--cloud-notes-black-30)',
   },
 
   '&:hover::-webkit-scrollbar-track': {
-    backgroundColor: 'var(--affine-hover-color)',
+    backgroundColor: 'var(--cloud-notes-hover-color)',
   },
 
   '.cloud-notes-database-table-container': {
@@ -69,7 +69,7 @@ export const addGroupStyle = css({
   alignItems: 'center',
   gap: '10px',
   padding: '6px 12px 6px 8px',
-  color: 'var(--affine-text-secondary-color)',
+  color: 'var(--cloud-notes-text-secondary-color)',
   fontSize: '12px',
   lineHeight: '20px',
   position: 'sticky',
@@ -78,7 +78,7 @@ export const addGroupStyle = css({
   cursor: 'pointer',
 
   '&:hover': {
-    backgroundColor: 'var(--affine-hover-color)',
+    backgroundColor: 'var(--cloud-notes-hover-color)',
   },
 });
 export const addGroupIconStyle = css({
@@ -89,7 +89,7 @@ export const addGroupIconStyle = css({
   '& svg': {
     width: '16px',
     height: '16px',
-    fill: 'var(--affine-icon-color)',
+    fill: 'var(--cloud-notes-icon-color)',
   },
 });
 export const groupsHiddenMessageStyle = css({
@@ -99,14 +99,14 @@ export const groupsHiddenMessageStyle = css({
   width: '100%',
   height: '80px',
   zIndex: 0,
-  color: 'var(--affine-text-secondary-color)',
+  color: 'var(--cloud-notes-text-secondary-color)',
   fontSize: '14px',
   textAlign: 'center',
 });
 const cellDividerStyle = css({
   width: '1px',
   height: '100%',
-  backgroundColor: 'var(--affine-border-color)',
+  backgroundColor: 'var(--cloud-notes-border-color)',
 });
 const leftToolBarStyle = css({
   display: 'flex',

@@ -1,6 +1,6 @@
 import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
 import { IS_MOBILE } from '@blocksuite/global/env';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, html, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -30,7 +30,7 @@ export class MenuInput extends MenuFocusable {
       font-size: 14px;
       line-height: 22px;
       padding: 4px 6px;
-      border: 1px solid var(--affine-border-color);
+      border: 1px solid var(--cloud-notes-border-color);
       width: 100%;
       color: ${unsafeCSSVarV2('text/primary')};
       background-color: transparent;

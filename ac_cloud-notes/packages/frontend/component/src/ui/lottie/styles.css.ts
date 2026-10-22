@@ -1,4 +1,4 @@
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { globalStyle, style } from '@vanilla-extract/css';
 export const root = style({
   display: 'inline-flex',
@@ -10,22 +10,22 @@ export const root = style({
 
 // replace primary colors to cssVarV2('icon/primary')
 const iconPrimaryColors = [
-  // legacy "--affine-icon-color"
+  // legacy "--cloud-notes-icon-color"
   'rgb(119,117,125)',
-  // --affine-v2-icon-primary
+  // --cloud-notes-v2-icon-primary
   'rgb(122,122,122)',
 ];
 
 // todo: may need to replace secondary colors & background colors as well?
 
 const backgroundPrimaryColors = [
-  // --affine-v2-background-primary
+  // --cloud-notes-v2-background-primary
   'rgb(255,255,255)',
   '#ffffff',
 ];
 
 const backgroundSecondaryColors = [
-  // --affine-v2-background-secondary
+  // --cloud-notes-v2-background-secondary
   'rgb(245,245,245)',
 ];
 

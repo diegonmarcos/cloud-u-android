@@ -236,7 +236,7 @@ export const GraphCanvas = ({
         height: '100%',
         display: 'block',
         touchAction: 'none',
-        color: 'var(--affine-text-primary-color, currentColor)',
+        color: 'var(--cloud-notes-text-primary-color, currentColor)',
       }}
     />
   );

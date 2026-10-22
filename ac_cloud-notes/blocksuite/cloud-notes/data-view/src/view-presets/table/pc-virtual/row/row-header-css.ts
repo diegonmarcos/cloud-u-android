@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 export const leftBar = css({
   display: 'flex',
@@ -18,7 +18,7 @@ export const dragHandler = css({
   alignItems: 'center',
   justifyContent: 'center',
   cursor: 'grab',
-  backgroundColor: 'var(--affine-background-primary-color)',
+  backgroundColor: 'var(--cloud-notes-background-primary-color)',
   opacity: 0,
 });
 
@@ -29,14 +29,14 @@ export const checkboxWrapper = css({
 });
 
 export const rowSelectedBg = css({
-  backgroundColor: 'var(--affine-primary-color-04)',
+  backgroundColor: 'var(--cloud-notes-primary-color-04)',
 });
 
 export const dragHandlerIndicator = css({
   width: '4px',
   borderRadius: '2px',
   height: '12px',
-  backgroundColor: 'var(--affine-placeholder-color)',
+  backgroundColor: 'var(--cloud-notes-placeholder-color)',
 });
 
 export const show = css({

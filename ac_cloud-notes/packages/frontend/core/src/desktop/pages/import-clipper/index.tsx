@@ -16,7 +16,7 @@ import { useI18n } from '@cloud-notes/i18n';
 import track from '@cloud-notes/track';
 import { AllDocsIcon } from '@blocksuite/icons/rc';
 import { LiveData, useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import * as styles from './style.css';

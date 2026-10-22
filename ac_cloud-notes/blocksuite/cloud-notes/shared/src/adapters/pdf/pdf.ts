@@ -444,7 +444,7 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
         : textContent
       : textContent;
 
-    const blueColor = resolveCssVariable('var(--affine-blue-700)') || '#1E96EB';
+    const blueColor = resolveCssVariable('var(--cloud-notes-blue-700)') || '#1E96EB';
 
     const iconCell: Content = prefixSvg
       ? {
@@ -566,8 +566,8 @@ export class PdfAdapter extends BaseAdapter<PdfAdapterFile> {
     const backgroundColorName = props.backgroundColorName || 'grey';
     const colorVar =
       backgroundColorName === 'default' || backgroundColorName === 'grey'
-        ? 'var(--affine-v2-block-callout-background-grey)'
-        : `var(--affine-v2-block-callout-background-${backgroundColorName})`;
+        ? 'var(--cloud-notes-v2-block-callout-background-grey)'
+        : `var(--cloud-notes-v2-block-callout-background-${backgroundColorName})`;
     const backgroundColor = resolveCssVariable(colorVar) || '#f5f5f5';
 
     const calloutContent: Content[] = [];

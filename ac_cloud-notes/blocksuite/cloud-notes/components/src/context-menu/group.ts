@@ -28,7 +28,7 @@ export const menuGroupItems = {
         index === 0
           ? ''
           : html` <div
-              style="height: 0.5px;background-color: var(--affine-divider-color);margin: 4px 0"
+              style="height: 0.5px;background-color: var(--cloud-notes-divider-color);margin: 4px 0"
             ></div>`
       }
       <div style="display: flex;flex-direction: column;gap:4px">${items}</div>`;

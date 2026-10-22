@@ -1,5 +1,5 @@
 import { SearchIcon } from '@blocksuite/icons/rc';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { type KeyboardEvent, useCallback, useState } from 'react';
 
 import { IconButton } from '../../../button';

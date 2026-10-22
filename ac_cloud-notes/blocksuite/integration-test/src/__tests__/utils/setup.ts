@@ -1,5 +1,4 @@
-import '@toeverything/theme/style.css';
-import '@toeverything/theme/fonts.css';
+import '@cloud-notes/theme/style.css';
 
 import type { DocMode } from '@blocksuite/cloud-notes/model';
 import { CloudNotesSchemas } from '@blocksuite/cloud-notes/schemas';

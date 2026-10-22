@@ -4,7 +4,7 @@ import {
 } from '@blocksuite/cloud-notes-shared/services';
 import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
 import { CloseIcon } from '@blocksuite/icons/lit';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, nothing, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -59,16 +59,16 @@ export class EmbedIframeLinkInputPopup extends EmbedIframeLinkInputBase {
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      color: var(--affine-icon-color);
+      color: var(--cloud-notes-icon-color);
       border-radius: 4px;
     }
     .popup-close-button:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
 
     .title {
       /* Client/h6 */
-      font-size: var(--affine-font-base);
+      font-size: var(--cloud-notes-font-base);
       font-style: normal;
       font-weight: 500;
       line-height: 24px;
@@ -80,7 +80,7 @@ export class EmbedIframeLinkInputPopup extends EmbedIframeLinkInputBase {
       font-feature-settings:
         'liga' off,
         'clig' off;
-      font-size: var(--affine-font-sm);
+      font-size: var(--cloud-notes-font-sm);
       font-style: normal;
       font-weight: 400;
       line-height: 22px;
@@ -102,8 +102,8 @@ export class EmbedIframeLinkInputPopup extends EmbedIframeLinkInputBase {
       }
 
       .link-input:focus {
-        border-color: var(--affine-blue-700);
-        box-shadow: var(--affine-active-shadow);
+        border-color: var(--cloud-notes-blue-700);
+        box-shadow: var(--cloud-notes-active-shadow);
         outline: none;
       }
       .link-input::placeholder {

@@ -50,7 +50,7 @@ const styles = css`
     border-radius: 4px;
     font-size: var(--data-view-cell-text-size);
     line-height: var(--data-view-cell-text-line-height);
-    color: var(--affine-text-secondary-color);
+    color: var(--cloud-notes-text-secondary-color);
   }
 `;
 

@@ -5,7 +5,7 @@ import {
 } from '@cloud-notes/core/modules/cloud/stores/server-config';
 import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 const rules = [
   {

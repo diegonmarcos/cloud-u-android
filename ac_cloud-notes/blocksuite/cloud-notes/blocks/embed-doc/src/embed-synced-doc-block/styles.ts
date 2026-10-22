@@ -38,7 +38,7 @@ export const blockStyles = css`
     height: calc(${EMBED_CARD_HEIGHT.syncedDoc}px + 36px);
   }
   .edgeless-block-portal-embed .cloud-notes-embed-synced-doc-container.surface {
-    border: 1px solid var(--affine-border-color);
+    border: 1px solid var(--cloud-notes-border-color);
   }
 
   cloud-notes-embed-synced-doc-block[data-nested-editor],
@@ -64,7 +64,7 @@ export const blockStyles = css`
     outline: 2px solid ${unsafeCSSVarV2('block/comment/highlightUnderline')};
   }
   .cloud-notes-embed-synced-doc-container.show-hover-border:hover {
-    border-color: var(--affine-border-color);
+    border-color: var(--cloud-notes-border-color);
   }
   .cloud-notes-embed-synced-doc-container.page {
     display: block;
@@ -81,7 +81,7 @@ export const blockStyles = css`
     left: 0;
     height: 34px;
     width: 100%;
-    background-color: var(--affine-white);
+    background-color: var(--cloud-notes-white);
     opacity: 0;
   }
   @media print {
@@ -99,7 +99,7 @@ export const blockStyles = css`
     width: 100%;
     height: 100%;
     padding: 0 var(--embed-padding);
-    background-color: var(--affine-hover-color);
+    background-color: var(--cloud-notes-hover-color);
   }
   .cloud-notes-embed-synced-doc-header svg {
     flex-shrink: 0;
@@ -144,11 +144,11 @@ export const blockStyles = css`
   }
 
   .cloud-notes-embed-synced-doc-editor-empty > span {
-    color: var(--affine-placeholder-color);
+    color: var(--cloud-notes-placeholder-color);
     font-feature-settings:
       'clig' off,
       'liga' off;
-    font-family: var(--affine-font-family);
+    font-family: var(--cloud-notes-font-family);
     font-size: 15px;
     font-style: normal;
     font-weight: 400;
@@ -233,7 +233,7 @@ export const cardStyles = css`
   .cloud-notes-embed-synced-doc-card-content-title-icon svg {
     width: 16px;
     height: 16px;
-    fill: var(--affine-background-primary-color);
+    fill: var(--cloud-notes-background-primary-color);
   }
 
   .cloud-notes-embed-synced-doc-card-content-title-text {
@@ -243,9 +243,9 @@ export const cardStyles = css`
     word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--affine-text-primary-color);
-    font-family: var(--affine-font-family);
-    font-size: var(--affine-font-sm);
+    color: var(--cloud-notes-text-primary-color);
+    font-family: var(--cloud-notes-font-family);
+    font-size: var(--cloud-notes-font-sm);
     font-style: normal;
     font-weight: 600;
     line-height: 22px;
@@ -267,9 +267,9 @@ export const cardStyles = css`
     word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--affine-placeholder-color);
-    font-family: var(--affine-font-family);
-    font-size: var(--affine-font-xs);
+    color: var(--cloud-notes-placeholder-color);
+    font-family: var(--cloud-notes-font-family);
+    font-size: var(--cloud-notes-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
@@ -295,9 +295,9 @@ export const cardStyles = css`
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--affine-text-secondary-color);
-    font-family: var(--affine-font-family);
-    font-size: var(--affine-font-xs);
+    color: var(--cloud-notes-text-secondary-color);
+    font-family: var(--cloud-notes-font-family);
+    font-size: var(--cloud-notes-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
@@ -323,8 +323,8 @@ export const cardStyles = css`
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: var(--affine-font-family);
-    font-size: var(--affine-font-xs);
+    font-family: var(--cloud-notes-font-family);
+    font-size: var(--cloud-notes-font-xs);
     font-style: normal;
     font-weight: 500;
     line-height: 20px;
@@ -372,7 +372,7 @@ export const cardStyles = css`
 
   .cloud-notes-embed-synced-doc-card:not(.loading).deleted,
   .cloud-notes-embed-synced-doc-card:not(.loading).error {
-    background: var(--affine-background-secondary-color);
+    background: var(--cloud-notes-background-secondary-color);
   }
   .cloud-notes-embed-synced-doc-card:not(.loading):not(.error):not(
       .surface

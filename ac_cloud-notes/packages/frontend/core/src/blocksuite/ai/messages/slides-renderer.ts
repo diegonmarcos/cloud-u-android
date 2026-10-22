@@ -110,7 +110,7 @@ export class AISlidesRenderer extends WithDisposable(LitElement) {
           width: 100%;
           height: 100%;
           border-radius: 4px;
-          border: 1px solid var(--affine-border-color);
+          border: 1px solid var(--cloud-notes-border-color);
         }
 
         .mask {
@@ -161,10 +161,10 @@ export class AISlidesRenderer extends WithDisposable(LitElement) {
           overflow: hidden;
           display: block;
           height: 100%;
-          font-family: var(--affine-font-family);
-          font-size: var(--affine-font-base);
-          line-height: var(--affine-line-height);
-          color: var(--affine-text-primary-color);
+          font-family: var(--cloud-notes-font-family);
+          font-size: var(--cloud-notes-font-base);
+          line-height: var(--cloud-notes-line-height);
+          color: var(--cloud-notes-text-primary-color);
           font-weight: 400;
         }
 
@@ -174,10 +174,10 @@ export class AISlidesRenderer extends WithDisposable(LitElement) {
           overflow: hidden;
           height: 100%;
           touch-action: none;
-          background-color: var(--affine-background-primary-color);
+          background-color: var(--cloud-notes-background-primary-color);
           background-image: radial-gradient(
-            var(--affine-edgeless-grid-color) 1px,
-            var(--affine-background-primary-color) 1px
+            var(--cloud-notes-edgeless-grid-color) 1px,
+            var(--cloud-notes-background-primary-color) 1px
           );
           z-index: 0;
         }
@@ -186,9 +186,9 @@ export class AISlidesRenderer extends WithDisposable(LitElement) {
           position: absolute;
           transform-origin: center;
           box-sizing: border-box;
-          border: 2px solid var(--affine-white-10);
+          border: 2px solid var(--cloud-notes-white-10);
           border-radius: 8px;
-          box-shadow: var(--affine-shadow-3);
+          box-shadow: var(--cloud-notes-shadow-3);
           pointer-events: all;
         }
 

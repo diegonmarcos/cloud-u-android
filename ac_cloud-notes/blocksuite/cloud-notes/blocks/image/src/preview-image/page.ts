@@ -31,7 +31,7 @@ export class ImagePlaceholderBlockComponent extends BlockComponent<ImageBlockMod
     }
 
     .placeholder-preview-content > .text {
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
       color: ${unsafeCSSVarV2('text/primary', '#121212')};
       font-size: 14px;
       line-height: 24px;

@@ -1,5 +1,5 @@
-import { subHeadlineRegular } from '@toeverything/theme/typography';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { subHeadlineRegular } from '@cloud-notes/theme/typography';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { globalStyle, style } from '@vanilla-extract/css';
 
 export const header = style({

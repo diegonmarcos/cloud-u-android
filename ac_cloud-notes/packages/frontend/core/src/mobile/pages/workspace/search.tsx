@@ -20,7 +20,7 @@ import {
   useService,
   useServices,
 } from '@toeverything/infra';
-import { bodyEmphasized } from '@toeverything/theme/typography';
+import { bodyEmphasized } from '@cloud-notes/theme/typography';
 import { useCallback, useEffect, useMemo } from 'react';
 
 import {

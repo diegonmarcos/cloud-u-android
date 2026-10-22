@@ -92,7 +92,7 @@ export const VirtualizedCollectionList = ({
             i18nKey="com.cloud-notes.collection.toolbar.selected"
             count={selectedCollectionIds.length}
           >
-            <div style={{ color: 'var(--affine-text-secondary-color)' }}>
+            <div style={{ color: 'var(--cloud-notes-text-secondary-color)' }}>
               {{ count: selectedCollectionIds.length } as any}
             </div>
             selected

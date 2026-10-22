@@ -67,22 +67,22 @@ export class PageRootBlockComponent extends BlockComponent<RootBlockModel> {
       flex-direction: column;
       width: 100%;
       height: 100%;
-      font-family: var(--affine-font-family);
-      font-size: var(--affine-font-base);
-      line-height: var(--affine-line-height);
-      color: var(--affine-text-primary-color);
+      font-family: var(--cloud-notes-font-family);
+      font-size: var(--cloud-notes-font-base);
+      line-height: var(--cloud-notes-line-height);
+      color: var(--cloud-notes-text-primary-color);
       font-weight: 400;
-      max-width: var(--affine-editor-width);
+      max-width: var(--cloud-notes-editor-width);
       margin: 0 auto;
 
       /* Leave a place for drag-handle */
       /* Do not use prettier format this style, or it will be broken */
       /* prettier-ignore */
-      padding-left: var(--affine-editor-side-padding, ${DOC_BLOCK_CHILD_PADDING}px);
+      padding-left: var(--cloud-notes-editor-side-padding, ${DOC_BLOCK_CHILD_PADDING}px);
       /* prettier-ignore */
-      padding-right: var(--affine-editor-side-padding, ${DOC_BLOCK_CHILD_PADDING}px);
+      padding-right: var(--cloud-notes-editor-side-padding, ${DOC_BLOCK_CHILD_PADDING}px);
       /* prettier-ignore */
-      padding-bottom: var(--affine-editor-bottom-padding, ${DOC_BOTTOM_PADDING}px);
+      padding-bottom: var(--cloud-notes-editor-bottom-padding, ${DOC_BOTTOM_PADDING}px);
     }
 
     /* Extra small devices (phones, 640px and down) */

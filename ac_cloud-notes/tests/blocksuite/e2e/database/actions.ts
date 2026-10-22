@@ -478,7 +478,7 @@ export async function assertKanbanCellSelected(
     }
   );
 
-  expect(border).toEqual('1px solid var(--affine-primary-color)');
+  expect(border).toEqual('1px solid var(--cloud-notes-primary-color)');
 }
 
 export async function assertKanbanCardSelected(
@@ -508,7 +508,7 @@ export async function assertKanbanCardSelected(
     }
   );
 
-  expect(border).toEqual('1px solid var(--affine-primary-color)');
+  expect(border).toEqual('1px solid var(--cloud-notes-primary-color)');
 }
 
 export function getKanbanCard(

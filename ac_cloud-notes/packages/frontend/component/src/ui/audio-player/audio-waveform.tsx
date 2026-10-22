@@ -1,4 +1,4 @@
-import { type AffineThemeKeyV2 as CloudNotesThemeKeyV2, cssVarV2 } from '@toeverything/theme/v2';
+import { type CloudNotesThemeKeyV2, cssVarV2 } from '@cloud-notes/theme/v2';
 import { clamp } from 'lodash-es';
 import { useCallback, useEffect, useRef } from 'react';
 

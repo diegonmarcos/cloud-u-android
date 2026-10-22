@@ -28,7 +28,7 @@ import { GfxControllerIdentifier } from '@blocksuite/std/gfx';
 import { autoPlacement, offset } from '@floating-ui/dom';
 import { ContextProvider } from '@lit/context';
 import { computed } from '@preact/signals-core';
-import { baseTheme, cssVar } from '@toeverything/theme';
+import { baseTheme, cssVar } from '@cloud-notes/theme';
 import { css, html, nothing, unsafeCSS } from 'lit';
 import { query, state } from 'lit/decorators.js';
 import { cache } from 'lit/directives/cache.js';
@@ -143,7 +143,7 @@ export class EdgelessToolbarWidget extends WidgetComponent<RootBlockModel> {
       display: block;
       width: 1px;
       height: 100%;
-      background-color: var(--affine-border-color);
+      background-color: var(--cloud-notes-border-color);
     }
     .pen-and-eraser {
       display: flex;
@@ -678,8 +678,8 @@ export class EdgelessToolbarWidget extends WidgetComponent<RootBlockModel> {
             .borderRadius=${16}
             .smooth=${0.7}
             .borderWidth=${1}
-            .bgColor=${'var(--affine-background-overlay-panel-color)'}
-            .borderColor=${'var(--affine-border-color)'}
+            .bgColor=${'var(--cloud-notes-background-overlay-panel-color)'}
+            .borderColor=${'var(--cloud-notes-border-color)'}
             style="filter: drop-shadow(${cssVar('toolbarShadow')})"
           >
             <div

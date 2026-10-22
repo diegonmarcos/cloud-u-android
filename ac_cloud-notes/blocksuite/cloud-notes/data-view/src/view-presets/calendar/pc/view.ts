@@ -414,7 +414,7 @@ export class CalendarViewUILogic extends DataViewUILogicBase<CalendarSingleView>
             prefix: TodayIcon(),
             closeOnSelect: false,
             postfix: html`<div
-                style="font-size:14px;color:var(--affine-text-secondary-color);"
+                style="font-size:14px;color:var(--cloud-notes-text-secondary-color);"
               >
                 ${
                   this.view.startDateMapping$.value.status === 'ready'
@@ -448,7 +448,7 @@ export class CalendarViewUILogic extends DataViewUILogicBase<CalendarSingleView>
             prefix: DateTimeIcon(),
             closeOnSelect: false,
             postfix: html`<div
-                style="font-size:14px;color:var(--affine-text-secondary-color);"
+                style="font-size:14px;color:var(--cloud-notes-text-secondary-color);"
               >
                 ${
                   selectedEnd

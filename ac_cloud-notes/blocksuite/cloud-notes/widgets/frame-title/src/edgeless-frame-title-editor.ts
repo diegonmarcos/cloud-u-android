@@ -5,7 +5,7 @@ import { WithDisposable } from '@blocksuite/global/lit';
 import { type BlockComponent, ShadowlessElement } from '@blocksuite/std';
 import { GfxControllerIdentifier } from '@blocksuite/std/gfx';
 import { RANGE_SYNC_EXCLUDE_ATTR } from '@blocksuite/std/inline';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, html, nothing } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -30,10 +30,10 @@ export class EdgelessFrameTitleEditor extends WithDisposable(
       padding: 0 4px;
       outline: none;
       z-index: 1;
-      border: 1px solid var(--affine-primary-color);
+      border: 1px solid var(--cloud-notes-primary-color);
       box-shadow: 0px 0px 0px 2px rgba(30, 150, 235, 0.3);
       overflow: hidden;
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
     }
   `;
 
@@ -146,7 +146,7 @@ export class EdgelessFrameTitleEditor extends WithDisposable(
 
     const colors = frameTitle?.colors ?? {
       background: cssVarV2('edgeless/frame/background/white'),
-      text: 'var(--affine-text-primary-color)',
+      text: 'var(--cloud-notes-text-primary-color)',
     };
 
     const inlineEditorStyle = styleMap({

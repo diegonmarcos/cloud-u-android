@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { createVar, globalStyle, style } from '@vanilla-extract/css';
 
 const propertyNameCellWidth = createVar();
@@ -163,7 +163,7 @@ export const collapsedIcon = style({
 
 export const backLinksMenu = style({
   background: cssVarV2('layer/white'),
-  maxWidth: 'calc(var(--affine-editor-width) / 2)',
+  maxWidth: 'calc(var(--cloud-notes-editor-width) / 2)',
   width: '100%',
   maxHeight: '30vh',
   overflowY: 'auto',

@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { style } from '@vanilla-extract/css';
 
 export const sidebarContainerInner = style({
@@ -44,6 +44,6 @@ export const sidebarBodyNoSelection = style({
   overflow: 'hidden',
   justifyContent: 'center',
   userSelect: 'none',
-  color: cssVar('--affine-text-secondary-color'),
+  color: cssVar('--cloud-notes-text-secondary-color'),
   alignItems: 'center',
 });

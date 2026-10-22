@@ -291,12 +291,12 @@ export class EdgelessTextBlockComponent extends GfxBlockComponent<EdgelessTextBl
     const containerStyle: StyleInfo = {
       transform: `rotate(${rotate}deg)`,
       transformOrigin: 'center',
-      border: `1px solid ${editing ? 'var(--affine—primary—color, #1e96eb)' : 'transparent'}`,
+      border: `1px solid ${editing ? 'var(--cloud-notes—primary—color, #1e96eb)' : 'transparent'}`,
       borderRadius: '4px',
       boxSizing: 'border-box',
       boxShadow: editing ? '0px 0px 0px 2px rgba(30, 150, 235, 0.3)' : 'none',
       fontWeight: '400',
-      lineHeight: 'var(--affine-line-height)',
+      lineHeight: 'var(--cloud-notes-line-height)',
       minWidth: !hasMaxWidth ? '220px' : undefined,
     };
 
@@ -337,8 +337,8 @@ export class EdgelessTextBlockComponent extends GfxBlockComponent<EdgelessTextBl
       '--edgeless-text-font-style': fontStyle,
       '--edgeless-text-font-weight': fontWeight,
       '--edgeless-text-text-align': textAlign,
-      '--affine-list-margin': '0',
-      '--affine-paragraph-margin': '0',
+      '--cloud-notes-list-margin': '0',
+      '--cloud-notes-paragraph-margin': '0',
     });
 
     return html`

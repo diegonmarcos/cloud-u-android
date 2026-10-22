@@ -20,7 +20,7 @@ const editLinkStyle = css`
   ${fontSMStyle('.cloud-notes-link-edit-popover label')}
   .cloud-notes-link-edit-popover label {
     box-sizing: border-box;
-    color: var(--affine-icon-color);
+    color: var(--cloud-notes-icon-color);
     font-weight: 400;
   }
 
@@ -30,17 +30,17 @@ const editLinkStyle = css`
     padding: 0;
     border: none;
     background: transparent;
-    color: var(--affine-text-primary-color);
+    color: var(--cloud-notes-text-primary-color);
   }
   .cloud-notes-link-edit-popover input::placeholder {
-    color: var(--affine-placeholder-color);
+    color: var(--cloud-notes-placeholder-color);
   }
   input:focus {
     outline: none;
   }
   .cloud-notes-link-edit-popover input:focus ~ label,
   .cloud-notes-link-edit-popover input:active ~ label {
-    color: var(--affine-primary-color);
+    color: var(--cloud-notes-primary-color);
   }
 
   .cloud-notes-edit-area {
@@ -54,7 +54,7 @@ const editLinkStyle = css`
     user-select: none;
     box-sizing: border-box;
 
-    border: 1px solid var(--affine-border-color);
+    border: 1px solid var(--cloud-notes-border-color);
     box-sizing: border-box;
 
     outline: none;
@@ -62,8 +62,8 @@ const editLinkStyle = css`
     background: transparent;
   }
   .cloud-notes-edit-area:focus-within {
-    border-color: var(--affine-blue-700);
-    box-shadow: var(--affine-active-shadow);
+    border-color: var(--cloud-notes-blue-700);
+    box-shadow: var(--cloud-notes-active-shadow);
   }
 
   .cloud-notes-edit-area.text {
@@ -100,7 +100,7 @@ export const linkPopupStyle = css`
 
   ${panelBaseStyle('.popover-container')}
   .popover-container {
-    z-index: var(--affine-z-index-popover);
+    z-index: var(--cloud-notes-z-index-popover);
     animation: cloud-notes-popover-fade-in 0.2s ease;
     position: absolute;
   }
@@ -122,7 +122,7 @@ export const linkPopupStyle = css`
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: var(--affine-z-index-popover);
+    z-index: var(--cloud-notes-z-index-popover);
   }
 
   .mock-selection-container {
@@ -134,7 +134,7 @@ export const linkPopupStyle = css`
     gap: 12px;
     padding: 8px;
 
-    color: var(--affine-text-primary-color);
+    color: var(--cloud-notes-text-primary-color);
   }
 
   .cloud-notes-link-popover-input {
@@ -142,20 +142,20 @@ export const linkPopupStyle = css`
     height: 30px;
     box-sizing: border-box;
     padding: 4px 10px;
-    background: var(--affine-white-10);
+    background: var(--cloud-notes-white-10);
     border-radius: 4px;
     border-width: 1px;
     border-style: solid;
-    border-color: var(--affine-border-color);
-    color: var(--affine-text-primary-color);
+    border-color: var(--cloud-notes-border-color);
+    color: var(--cloud-notes-text-primary-color);
   }
   ${fontSMStyle('.cloud-notes-link-popover-input')}
   .cloud-notes-link-popover-input::placeholder {
-    color: var(--affine-placeholder-color);
+    color: var(--cloud-notes-placeholder-color);
   }
   .cloud-notes-link-popover-input:focus {
-    border-color: var(--affine-blue-700);
-    box-shadow: var(--affine-active-shadow);
+    border-color: var(--cloud-notes-blue-700);
+    box-shadow: var(--cloud-notes-active-shadow);
   }
 
   ${editLinkStyle}

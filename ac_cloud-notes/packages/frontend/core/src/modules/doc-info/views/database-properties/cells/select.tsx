@@ -164,7 +164,7 @@ const BlocksuiteDatabaseSelector = ({
 
   const onCreateTag = useCallback(
     (name: string, color: string) => {
-      // bs database uses --affine-tag-xxx colors
+      // bs database uses --cloud-notes-tag-xxx colors
       const newTag = {
         id: nanoid(),
         name: name,

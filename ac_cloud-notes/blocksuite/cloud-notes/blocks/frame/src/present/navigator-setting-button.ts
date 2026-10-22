@@ -15,9 +15,9 @@ export class EdgelessNavigatorSettingButton extends WithDisposable(LitElement) {
       border-radius: 8px;
       font-size: 12px;
       font-weight: 500;
-      background-color: var(--affine-background-overlay-panel-color);
-      box-shadow: var(--affine-menu-shadow);
-      color: var(--affine-text-primary-color);
+      background-color: var(--cloud-notes-background-overlay-panel-color);
+      box-shadow: var(--cloud-notes-menu-shadow);
+      color: var(--cloud-notes-text-primary-color);
     }
 
     .navigator-setting-menu[data-show] {
@@ -42,15 +42,15 @@ export class EdgelessNavigatorSettingButton extends WithDisposable(LitElement) {
     .text {
       padding: 0px 4px;
       line-height: 22px;
-      font-size: var(--affine-font-sm);
-      color: var(--affine-text-primary-color);
+      font-size: var(--cloud-notes-font-sm);
+      color: var(--cloud-notes-text-primary-color);
     }
 
     .text.title {
       font-weight: 500;
       line-height: 20px;
-      font-size: var(--affine-font-xs);
-      color: var(--affine-text-secondary-color);
+      font-size: var(--cloud-notes-font-xs);
+      color: var(--cloud-notes-text-secondary-color);
     }
 
     .divider {
@@ -63,7 +63,7 @@ export class EdgelessNavigatorSettingButton extends WithDisposable(LitElement) {
       content: '';
       width: 100%;
       height: 1px;
-      background: var(--affine-border-color);
+      background: var(--cloud-notes-border-color);
     }
   `;
 

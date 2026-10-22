@@ -1,5 +1,5 @@
-import { baseTheme } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { baseTheme } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import {
   css,
   html,
@@ -44,7 +44,7 @@ export class IconButton extends LitElement {
       cursor: pointer;
       user-select: none;
       font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
       pointer-events: auto;
       padding: 4px;
     }
@@ -52,7 +52,7 @@ export class IconButton extends LitElement {
     // This media query can detect if the device has a hover capability
     @media (hover: hover) {
       :host(:hover) {
-        background: var(--affine-hover-color);
+        background: var(--cloud-notes-hover-color);
       }
     }
 
@@ -63,13 +63,13 @@ export class IconButton extends LitElement {
     :host([disabled]),
     :host(:disabled) {
       background: transparent;
-      color: var(--affine-text-disable-color);
+      color: var(--cloud-notes-text-disable-color);
       cursor: not-allowed;
     }
 
     /* You can add a 'hover' attribute to the button to show the hover style */
     :host([hover='true']) {
-      background: var(--affine-hover-color);
+      background: var(--cloud-notes-hover-color);
     }
     :host([hover='false']) {
       background: transparent;
@@ -94,17 +94,17 @@ export class IconButton extends LitElement {
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
-      font-size: var(--affine-font-sm);
-      line-height: var(--affine-line-height);
+      font-size: var(--cloud-notes-font-sm);
+      line-height: var(--cloud-notes-line-height);
     }
 
     :host .sub-text {
-      font-size: var(--affine-font-xs);
+      font-size: var(--cloud-notes-font-xs);
       color: var(
         --light-textColor-textSecondaryColor,
         var(--textColor-textSecondaryColor, #8e8d91)
       );
-      line-height: var(--affine-line-height);
+      line-height: var(--cloud-notes-line-height);
       white-space: nowrap;
       text-overflow: ellipsis;
       overflow: hidden;

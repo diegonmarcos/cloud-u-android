@@ -45,15 +45,15 @@ const styles = css`
     border-radius: 4px;
     justify-content: center;
     align-items: center;
-    color: var(--affine-icon-color);
-    border: 1px solid var(--affine-border-color);
-    background-color: var(--affine-background-overlay-panel-color);
-    box-shadow: var(--affine-menu-shadow);
+    color: var(--cloud-notes-icon-color);
+    border: 1px solid var(--cloud-notes-border-color);
+    background-color: var(--cloud-notes-background-overlay-panel-color);
+    box-shadow: var(--cloud-notes-menu-shadow);
     cursor: pointer;
     width: 24px;
     height: 24px;
     transform-origin: left top;
-    z-index: var(--affine-z-index-popover);
+    z-index: var(--cloud-notes-z-index-popover);
     opacity: 0;
     transition: opacity 150ms cubic-bezier(0.25, 0.1, 0.25, 1);
   }
@@ -72,10 +72,10 @@ const styles = css`
     display: block;
     height: 1px;
     width: 100%;
-    z-index: var(--affine-z-index-popover);
+    z-index: var(--cloud-notes-z-index-popover);
     background-image: linear-gradient(
       to right,
-      var(--affine-black-10) 50%,
+      var(--cloud-notes-black-10) 50%,
       transparent 50%
     );
     background-size: 4px 100%;
@@ -83,7 +83,7 @@ const styles = css`
   .note-slicer-dividing-line-container.active .note-slicer-dividing-line {
     background-image: linear-gradient(
       to right,
-      var(--affine-black-60) 50%,
+      var(--cloud-notes-black-60) 50%,
       transparent 50%
     );
     animation: slide 0.3s linear infinite;

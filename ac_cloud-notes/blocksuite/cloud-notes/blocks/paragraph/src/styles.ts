@@ -5,7 +5,7 @@ export const paragraphBlockStyles = css`
   cloud-notes-paragraph {
     box-sizing: border-box;
     display: block;
-    font-size: var(--affine-font-base);
+    font-size: var(--cloud-notes-font-base);
   }
 
   .cloud-notes-paragraph-block-container {
@@ -22,12 +22,12 @@ export const paragraphBlockStyles = css`
   }
 
   cloud-notes-paragraph code {
-    font-size: calc(var(--affine-font-base) - 3px);
+    font-size: calc(var(--cloud-notes-font-base) - 3px);
     padding: 0px 4px 2px;
   }
 
   .h1 {
-    font-size: var(--affine-font-h-1);
+    font-size: var(--cloud-notes-font-h-1);
     font-weight: 700;
     letter-spacing: -0.02em;
     line-height: calc(1em + 8px);
@@ -36,12 +36,12 @@ export const paragraphBlockStyles = css`
   }
 
   .h1 code {
-    font-size: calc(var(--affine-font-base) + 10px);
+    font-size: calc(var(--cloud-notes-font-base) + 10px);
     padding: 0px 4px;
   }
 
   .h2 {
-    font-size: var(--affine-font-h-2);
+    font-size: var(--cloud-notes-font-h-2);
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: calc(1em + 10px);
@@ -50,12 +50,12 @@ export const paragraphBlockStyles = css`
   }
 
   .h2 code {
-    font-size: calc(var(--affine-font-base) + 8px);
+    font-size: calc(var(--cloud-notes-font-base) + 8px);
     padding: 0px 4px;
   }
 
   .h3 {
-    font-size: var(--affine-font-h-3);
+    font-size: var(--cloud-notes-font-h-3);
     font-weight: 600;
     letter-spacing: -0.02em;
     line-height: calc(1em + 8px);
@@ -64,12 +64,12 @@ export const paragraphBlockStyles = css`
   }
 
   .h3 code {
-    font-size: calc(var(--affine-font-base) + 6px);
+    font-size: calc(var(--cloud-notes-font-base) + 6px);
     padding: 0px 4px;
   }
 
   .h4 {
-    font-size: var(--affine-font-h-4);
+    font-size: var(--cloud-notes-font-h-4);
     font-weight: 600;
     letter-spacing: -0.015em;
     line-height: calc(1em + 8px);
@@ -77,12 +77,12 @@ export const paragraphBlockStyles = css`
     margin-bottom: 10px;
   }
   .h4 code {
-    font-size: calc(var(--affine-font-base) + 4px);
+    font-size: calc(var(--cloud-notes-font-base) + 4px);
     padding: 0px 4px;
   }
 
   .h5 {
-    font-size: var(--affine-font-h-5);
+    font-size: var(--cloud-notes-font-h-5);
     font-weight: 600;
     letter-spacing: -0.015em;
     line-height: calc(1em + 8px);
@@ -90,12 +90,12 @@ export const paragraphBlockStyles = css`
     margin-bottom: 10px;
   }
   .h5 code {
-    font-size: calc(var(--affine-font-base) + 2px);
+    font-size: calc(var(--cloud-notes-font-base) + 2px);
     padding: 0px 4px;
   }
 
   .h6 {
-    font-size: var(--affine-font-h-6);
+    font-size: var(--cloud-notes-font-h-6);
     font-weight: 600;
     letter-spacing: -0.015em;
     line-height: calc(1em + 8px);
@@ -104,14 +104,14 @@ export const paragraphBlockStyles = css`
   }
 
   .h6 code {
-    font-size: var(--affine-font-base);
+    font-size: var(--cloud-notes-font-base);
     padding: 0px 4px 2px;
   }
 
   .quote {
     line-height: 26px;
     padding-left: 17px;
-    margin-top: var(--affine-paragraph-space);
+    margin-top: var(--cloud-notes-paragraph-space);
     padding-top: 10px;
     padding-bottom: 10px;
     position: relative;
@@ -125,7 +125,7 @@ export const paragraphBlockStyles = css`
     position: absolute;
     left: 0;
     top: 0;
-    background: var(--affine-quote-color);
+    background: var(--cloud-notes-quote-color);
     border-radius: 18px;
   }
 
@@ -139,8 +139,8 @@ export const paragraphBlockStyles = css`
     left: 0;
     bottom: 0;
     pointer-events: none;
-    color: var(--affine-black-30);
-    fill: var(--affine-black-30);
+    color: var(--cloud-notes-black-30);
+    fill: var(--cloud-notes-black-30);
   }
   @media print {
     .cloud-notes-paragraph-placeholder {

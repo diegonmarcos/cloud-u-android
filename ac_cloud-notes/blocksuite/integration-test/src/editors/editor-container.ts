@@ -25,7 +25,7 @@ export class TestCloudNotesEditorContainer extends SignalWatcher(
       overflow-y: auto;
       container-name: viewport;
       container-type: inline-size;
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
     }
     .cloud-notes-page-viewport * {
       box-sizing: border-box;
@@ -39,7 +39,7 @@ export class TestCloudNotesEditorContainer extends SignalWatcher(
 
     .playground-page-editor-container {
       flex-grow: 1;
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
       display: block;
     }
 
@@ -54,8 +54,8 @@ export class TestCloudNotesEditorContainer extends SignalWatcher(
     }
 
     .edgeless-editor-container {
-      font-family: var(--affine-font-family);
-      background: var(--affine-background-primary-color);
+      font-family: var(--cloud-notes-font-family);
+      background: var(--cloud-notes-background-primary-color);
       display: block;
       height: 100%;
       position: relative;

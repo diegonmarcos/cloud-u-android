@@ -58,7 +58,7 @@ const contentOptions: DialogContentProps = {
   style: {
     padding: 0,
     maxWidth: 944,
-    backgroundColor: 'var(--affine-background-primary-color)',
+    backgroundColor: 'var(--cloud-notes-background-primary-color)',
     overflow: 'hidden',
   },
 };

@@ -1,0 +1,32 @@
+{
+  "name": "@cloud-notes/theme",
+  "version": "1.1.23",
+  "description": "Cloud Notes design tokens (CSS variables, typography), vendored from a Mozilla Public License 2.0 package; see LICENSE.",
+  "license": "MPL-2.0",
+  "type": "module",
+  "private": true,
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./style.css": "./dist/style.css",
+    "./v2": {
+      "types": "./dist/v2/index.d.ts",
+      "import": "./dist/v2/index.js",
+      "require": "./dist/v2/index.cjs"
+    },
+    "./typography": {
+      "types": "./dist/presets/typography.css.d.ts",
+      "import": "./dist/presets/typography.js",
+      "require": "./dist/presets/typography.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}

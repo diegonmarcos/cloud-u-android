@@ -32,12 +32,12 @@ export class ToggleButton extends WithDisposable(ShadowlessElement) {
     }
 
     .toggle-icon:hover {
-      background: var(--affine-hover-color);
+      background: var(--cloud-notes-hover-color);
     }
 
     .toggle-icon:focus-visible {
       opacity: 1;
-      outline: 1px solid var(--affine-primary-color);
+      outline: 1px solid var(--cloud-notes-primary-color);
     }
 
     .toggle-icon[data-collapsed='true'] {

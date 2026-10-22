@@ -1,4 +1,4 @@
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { assignInlineVars } from '@vanilla-extract/dynamic';
 import clsx from 'clsx';
 
@@ -43,7 +43,7 @@ export const Loading = ({
         cy={12}
         r={8}
         strokeWidth={strokeWidth}
-        stroke="var(--affine-black-10)"
+        stroke="var(--cloud-notes-black-10)"
       />
       <circle
         cx={12}

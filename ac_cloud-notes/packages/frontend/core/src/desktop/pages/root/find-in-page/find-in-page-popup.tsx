@@ -43,7 +43,7 @@ const drawText = (
 
   const rootStyles = getComputedStyle(document.documentElement);
   const textColor = rootStyles
-    .getPropertyValue('--affine-text-primary-color')
+    .getPropertyValue('--cloud-notes-text-primary-color')
     .trim();
 
   ctx.scale(dpr, dpr);

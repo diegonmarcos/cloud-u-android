@@ -2,7 +2,7 @@ import type { IconButtonProps } from '@cloud-notes/component';
 import { IconButton } from '@cloud-notes/component';
 import { useI18n } from '@cloud-notes/i18n';
 import { FavoritedIcon, FavoriteIcon } from '@blocksuite/icons/rc';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import Lottie from 'lottie-react';
 import { forwardRef, useCallback, useState } from 'react';
 

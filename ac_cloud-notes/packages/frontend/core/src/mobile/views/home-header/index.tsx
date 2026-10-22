@@ -11,7 +11,7 @@ import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { useI18n } from '@cloud-notes/i18n';
 import { NotificationIcon, SettingsIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import clsx from 'clsx';
 import { useCallback, useEffect, useRef, useState } from 'react';
 

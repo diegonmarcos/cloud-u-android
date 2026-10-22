@@ -36,7 +36,7 @@ export class ChatMessageUser extends WithDisposable(ShadowlessElement) {
     .scope-receipt {
       align-self: flex-end;
       margin-top: 6px;
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       font-size: 11px;
       text-align: right;
     }

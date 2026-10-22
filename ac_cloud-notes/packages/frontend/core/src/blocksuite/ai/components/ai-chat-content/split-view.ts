@@ -67,7 +67,7 @@ export class ChatPanelSplitView extends SignalWatcher(
       content: '';
       width: 2px;
       height: 100%;
-      background-color: var(--affine-v2-button-primary);
+      background-color: var(--cloud-notes-v2-button-primary);
       opacity: 0;
       transition:
         opacity 0.23s ease,

@@ -185,7 +185,7 @@ const createDragPreview = (card: KanbanCard, x: number, y: number) => {
   kanbanCard.cardId = card.cardId;
   kanbanCard.kanbanViewLogic = card.kanbanViewLogic;
   kanbanCard.isFocus$.value = true;
-  kanbanCard.style.backgroundColor = 'var(--affine-background-primary-color)';
+  kanbanCard.style.backgroundColor = 'var(--cloud-notes-background-primary-color)';
   div.append(kanbanCard);
   div.className = 'with-data-view-css-variable';
   div.style.width = `${card.getBoundingClientRect().width}px`;
@@ -215,7 +215,7 @@ const createDropPreview = () => {
   div.style.zIndex = '9999';
   div.style.height = '3px';
   div.style.borderRadius = '2px';
-  div.style.backgroundColor = 'var(--affine-primary-color)';
+  div.style.backgroundColor = 'var(--cloud-notes-primary-color)';
   div.style.boxShadow = '0px 0px 8px 0px rgba(30, 150, 235, 0.35)';
   return {
     display(

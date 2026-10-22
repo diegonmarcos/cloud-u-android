@@ -9,7 +9,7 @@ import { matchModels } from '../model/checker.js';
 
 const ATTR_SELECTOR = `[${BLOCK_ID_ATTR}]`;
 
-// margin-top: calc(var(--affine-paragraph-space) + 24px);
+// margin-top: calc(var(--cloud-notes-paragraph-space) + 24px);
 // h1.margin-top = 8px + 24px = 32px;
 const MAX_SPACE = 32;
 const STEPS = MAX_SPACE / 2 / 2;

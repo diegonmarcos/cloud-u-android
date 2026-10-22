@@ -25,7 +25,7 @@ import type { Signal } from '@preact/signals-core';
 import {
   darkCssVariablesV2,
   lightCssVariablesV2,
-} from '@toeverything/theme/v2';
+} from '@cloud-notes/theme/v2';
 import { css, html, nothing, type PropertyValues, unsafeCSS } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -40,39 +40,39 @@ import { getCustomPageEditorBlockSpecs } from './page-editor-block-specs';
 const customHeadingStyles = css`
   .custom-heading {
     .h1 {
-      font-size: calc(var(--affine-font-h-1) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-1) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) + 6px);
+        font-size: calc(var(--cloud-notes-font-base) + 6px);
       }
     }
     .h2 {
-      font-size: calc(var(--affine-font-h-2) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-2) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) + 4px);
+        font-size: calc(var(--cloud-notes-font-base) + 4px);
       }
     }
     .h3 {
-      font-size: calc(var(--affine-font-h-3) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-3) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) + 2px);
+        font-size: calc(var(--cloud-notes-font-base) + 2px);
       }
     }
     .h4 {
-      font-size: calc(var(--affine-font-h-4) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-4) - 2px);
       code {
-        font-size: var(--affine-font-base);
+        font-size: var(--cloud-notes-font-base);
       }
     }
     .h5 {
-      font-size: calc(var(--affine-font-h-5) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-5) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) - 2px);
+        font-size: calc(var(--cloud-notes-font-base) - 2px);
       }
     }
     .h6 {
-      font-size: calc(var(--affine-font-h-6) - 2px);
+      font-size: calc(var(--cloud-notes-font-h-6) - 2px);
       code {
-        font-size: calc(var(--affine-font-base) - 4px);
+        font-size: calc(var(--cloud-notes-font-base) - 4px);
       }
     }
   }
@@ -95,7 +95,7 @@ export class TextRenderer extends SignalWatcher(
   static override styles = css`
     .ai-answer-text-editor.cloud-notes-page-viewport {
       background: transparent;
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
       margin-top: 0;
       margin-bottom: 0;
     }
@@ -103,7 +103,7 @@ export class TextRenderer extends SignalWatcher(
     .ai-answer-text-editor .cloud-notes-page-root-block-container {
       padding: 0;
       margin: 0;
-      line-height: var(--affine-line-height);
+      line-height: var(--cloud-notes-line-height);
       color: ${unsafeCSSVarV2('text/primary')};
       font-weight: 400;
     }
@@ -128,7 +128,7 @@ export class TextRenderer extends SignalWatcher(
         .h6 {
           padding-left: 16px;
           color: ${unsafeCSSVarV2('text/link')};
-          font-size: var(--affine-font-base);
+          font-size: var(--cloud-notes-font-base);
 
           .toggle-icon {
             transform: translateX(0);
@@ -157,7 +157,7 @@ export class TextRenderer extends SignalWatcher(
       border-radius: 20px;
     }
     .text-renderer-container.show-scrollbar:hover::-webkit-scrollbar-thumb {
-      background-color: var(--affine-black-30);
+      background-color: var(--cloud-notes-black-30);
     }
     .text-renderer-container.show-scrollbar::-webkit-scrollbar-corner {
       display: none;
@@ -181,13 +181,13 @@ export class TextRenderer extends SignalWatcher(
 
     .text-renderer-container[data-app-theme='dark'] {
       .ai-answer-text-editor .cloud-notes-page-root-block-container {
-        color: ${unsafeCSS(darkCssVariablesV2['--affine-v2-text-primary'])};
+        color: ${unsafeCSS(darkCssVariablesV2['--cloud-notes-v2-text-primary'])};
       }
     }
 
     .text-renderer-container[data-app-theme='light'] {
       .ai-answer-text-editor .cloud-notes-page-root-block-container {
-        color: ${unsafeCSS(lightCssVariablesV2['--affine-v2-text-primary'])};
+        color: ${unsafeCSS(lightCssVariablesV2['--cloud-notes-v2-text-primary'])};
       }
     }
 

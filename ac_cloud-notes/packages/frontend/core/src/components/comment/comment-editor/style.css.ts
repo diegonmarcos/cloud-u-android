@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { globalStyle, style } from '@vanilla-extract/css';
 
 export const container = style({
@@ -20,8 +20,8 @@ export const container = style({
     },
   },
   vars: {
-    '--affine-paragraph-margin': '0',
-    '--affine-font-base': '14px',
+    '--cloud-notes-paragraph-margin': '0',
+    '--cloud-notes-font-base': '14px',
   },
 });
 

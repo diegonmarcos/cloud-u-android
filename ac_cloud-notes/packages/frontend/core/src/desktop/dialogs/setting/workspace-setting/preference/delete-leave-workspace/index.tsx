@@ -11,7 +11,7 @@ import {
 import { useI18n } from '@cloud-notes/i18n';
 import { ArrowRightSmallIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useServices } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { useCallback, useEffect, useState } from 'react';
 
 import {

@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { style } from '@vanilla-extract/css';
 
 export const container = style({
@@ -9,5 +9,5 @@ export const container = style({
   height: '100vh',
   width: '100%',
   lineHeight: 4,
-  color: cssVar('--affine-text-secondary-color'),
+  color: cssVar('--cloud-notes-text-secondary-color'),
 });

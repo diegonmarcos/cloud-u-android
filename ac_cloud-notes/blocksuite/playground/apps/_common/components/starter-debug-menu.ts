@@ -148,13 +148,13 @@ function initStyleDebugMenu(
   fontFamilyFolder
     .addBinding(
       {
-        '--affine-font-family':
+        '--cloud-notes-font-family':
           'Roboto Mono, apple-system, BlinkMacSystemFont,Helvetica Neue, Tahoma, PingFang SC, Microsoft Yahei, Arial,Hiragino Sans GB, sans-serif, Apple Color Emoji, Segoe UI Emoji,Segoe UI Symbol, Noto Color Emoji',
       },
-      '--affine-font-family'
+      '--cloud-notes-font-family'
     )
     .on('change', e => {
-      writer.setProperty('--affine-font-family', e.value);
+      writer.setProperty('--cloud-notes-font-family', e.value);
     });
   ColorVariables.forEach(name => {
     const value = reader.getPropertyValue(name);
@@ -195,8 +195,8 @@ interface AdapterConfig {
 export class StarterDebugMenu extends ShadowlessElement {
   static override styles = css`
     :root {
-      --sl-font-size-medium: var(--affine-font-xs);
-      --sl-input-font-size-small: var(--affine-font-xs);
+      --sl-font-size-medium: var(--cloud-notes-font-xs);
+      --sl-input-font-size-small: var(--cloud-notes-font-xs);
     }
 
     .dg.ac {

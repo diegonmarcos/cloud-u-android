@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { style } from '@vanilla-extract/css';
 
 export const root = style({
@@ -40,7 +40,7 @@ export const link = style({
   background: cssVar('black'),
   borderRadius: '8px',
   border: `1px solid ${cssVar('pureBlack10')}`,
-  boxShadow: cssVar('--affine-button-inner-shadow'),
+  boxShadow: cssVar('--cloud-notes-button-inner-shadow'),
   color: cssVar('white'),
   padding: '8px 18px',
   gap: '4px',

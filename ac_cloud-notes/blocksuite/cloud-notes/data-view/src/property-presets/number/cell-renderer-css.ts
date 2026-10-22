@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 
 export const numberStyle = css({
   overflow: 'hidden',
@@ -12,7 +12,7 @@ export const numberStyle = css({
   fontFamily: baseTheme.fontSansFamily,
   fontSize: 'var(--data-view-cell-text-size)',
   lineHeight: 'var(--data-view-cell-text-line-height)',
-  color: 'var(--affine-text-primary-color)',
+  color: 'var(--cloud-notes-text-primary-color)',
   fontWeight: '400',
   backgroundColor: 'transparent',
   wordBreak: 'break-all',
@@ -27,7 +27,7 @@ export const numberInputStyle = css({
   fontFamily: baseTheme.fontSansFamily,
   fontSize: 'var(--data-view-cell-text-size)',
   lineHeight: 'var(--data-view-cell-text-line-height)',
-  color: 'var(--affine-text-primary-color)',
+  color: 'var(--cloud-notes-text-primary-color)',
   fontWeight: '400',
   backgroundColor: 'transparent',
   textAlign: 'right',

@@ -62,7 +62,7 @@ export class CloudNotesToolbarWidget extends WidgetComponent {
       width: max-content;
       touch-action: none;
       backface-visibility: hidden;
-      z-index: var(--affine-z-index-popover);
+      z-index: var(--cloud-notes-z-index-popover);
 
       will-change: opacity, overlay, display, transform;
       transition-property: opacity, overlay, display;

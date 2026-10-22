@@ -19,7 +19,7 @@
     "@blocksuite/std": "workspace:*",
     "@blocksuite/store": "workspace:*",
     "@floating-ui/dom": "^1.6.13",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "@types/lodash-es": "^4.17.12",
     "lit": "^3.2.0",
     "lodash-es": "^4.17.23"

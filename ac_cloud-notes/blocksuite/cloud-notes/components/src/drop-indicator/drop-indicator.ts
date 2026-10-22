@@ -9,7 +9,7 @@ export class DropIndicator extends LitElement {
       position: absolute;
       top: 0;
       left: 0;
-      background: var(--affine-primary-color);
+      background: var(--cloud-notes-primary-color);
       transition-property: height, transform;
       transition-duration: 100ms;
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

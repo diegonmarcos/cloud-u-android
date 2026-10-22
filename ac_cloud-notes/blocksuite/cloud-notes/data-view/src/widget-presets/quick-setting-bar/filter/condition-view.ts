@@ -50,7 +50,7 @@ export class FilterConditionView extends SignalWatcher(ShadowlessElement) {
     }
 
     .filter-condition-delete:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
 
     .filter-condition-delete svg {
@@ -61,14 +61,14 @@ export class FilterConditionView extends SignalWatcher(ShadowlessElement) {
     .filter-condition-function-name {
       font-size: 12px;
       line-height: 20px;
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       padding: 2px 8px;
       border-radius: 4px;
       cursor: pointer;
     }
 
     .filter-condition-function-name:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
 
     .filter-condition-arg {

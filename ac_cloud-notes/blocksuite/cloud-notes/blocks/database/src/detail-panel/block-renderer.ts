@@ -7,7 +7,7 @@ import type {
 import { WithDisposable } from '@blocksuite/global/lit';
 import type { EditorHost } from '@blocksuite/std';
 import { ShadowlessElement } from '@blocksuite/std';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, html, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -24,8 +24,8 @@ export class BlockRenderer
       gap: 16px;
       margin-bottom: 12px;
       border-bottom: 1px solid ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
-      font-size: var(--affine-font-base);
-      line-height: var(--affine-line-height);
+      font-size: var(--cloud-notes-font-base);
+      line-height: var(--cloud-notes-line-height);
     }
 
     database-datasource-block-renderer .tips-placeholder {
@@ -40,7 +40,7 @@ export class BlockRenderer
     database-datasource-block-renderer.empty rich-text::before {
       content: 'Untitled';
       position: absolute;
-      color: var(--affine-text-disable-color);
+      color: var(--cloud-notes-text-disable-color);
       font-size: 15px;
       line-height: 24px;
       user-select: none;
@@ -52,7 +52,7 @@ export class BlockRenderer
       height: 20px;
       padding: 2px;
       border-radius: 4px;
-      background-color: var(--affine-background-secondary-color);
+      background-color: var(--cloud-notes-background-secondary-color);
     }
 
     .database-block-detail-header-icon svg {

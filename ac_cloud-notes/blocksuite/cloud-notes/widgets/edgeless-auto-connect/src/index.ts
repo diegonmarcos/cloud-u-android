@@ -86,7 +86,7 @@ function getIndexLabelTooltip(icon: TemplateResult, content: string) {
     }
 
     .index-label-tooltip-content {
-      font-size: var(--affine-font-sm);
+      font-size: var(--cloud-notes-font-sm);
 
       display: flex;
       height: 16px;
@@ -125,7 +125,7 @@ export class EdgelessAutoConnectWidget extends WidgetComponent<RootBlockModel> {
       height: 24px;
       min-width: 24px;
 
-      color: var(--affine-white);
+      color: var(--cloud-notes-white);
       font-size: 15px;
       line-height: 22px;
       text-align: center;
@@ -134,7 +134,7 @@ export class EdgelessAutoConnectWidget extends WidgetComponent<RootBlockModel> {
       user-select: none;
 
       border-radius: 25px;
-      background: var(--affine-primary-color);
+      background: var(--cloud-notes-primary-color);
     }
 
     .navigator {
@@ -163,7 +163,7 @@ export class EdgelessAutoConnectWidget extends WidgetComponent<RootBlockModel> {
     }
 
     .navigator div:hover {
-      background: var(--affine-hover-color);
+      background: var(--cloud-notes-hover-color);
     }
 
     .navigator.show {
@@ -249,9 +249,9 @@ export class EdgelessAutoConnectWidget extends WidgetComponent<RootBlockModel> {
           width: `${EDGELESS_ONLY_INDEX_LABEL_WIDTH}px`,
           height: `${EDGELESS_ONLY_INDEX_LABEL_HEIGHT}px`,
           borderRadius: '50%',
-          backgroundColor: 'var(--affine-text-secondary-color)',
-          border: '1px solid var(--affine-border-color)',
-          color: 'var(--affine-white)',
+          backgroundColor: 'var(--cloud-notes-text-secondary-color)',
+          border: '1px solid var(--cloud-notes-border-color)',
+          color: 'var(--cloud-notes-white)',
           position: 'absolute',
           transform: `translate(${
             left + width / 2 - EDGELESS_ONLY_INDEX_LABEL_WIDTH / 2

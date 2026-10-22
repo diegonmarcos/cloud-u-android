@@ -23,7 +23,7 @@ export class CenterPeek extends ShadowlessElement {
     }
 
     .close-modal:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
     .close-modal {
       position: absolute;

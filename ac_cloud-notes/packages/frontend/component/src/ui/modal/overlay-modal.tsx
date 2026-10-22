@@ -1,5 +1,5 @@
 import { DialogTrigger } from '@radix-ui/react-dialog';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { memo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 

@@ -2,7 +2,7 @@ import { popupTargetFromElement } from '@blocksuite/cloud-notes-components/conte
 import { IS_MOBILE } from '@blocksuite/global/env';
 import { SortIcon } from '@blocksuite/icons/lit';
 import { computed } from '@preact/signals-core';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, html, nothing } from 'lit';
 import { styleMap } from 'lit/directives/style-map.js';
 
@@ -30,7 +30,7 @@ const styles = css`
 
   .cloud-notes-database-sort-button:hover,
   .cloud-notes-database-sort-button.active {
-    background-color: var(--affine-hover-color);
+    background-color: var(--cloud-notes-hover-color);
   }
 
   .cloud-notes-database-sort-button {

@@ -1,5 +1,5 @@
 import type { Meta, StoryFn } from '@storybook/react';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { cloneDeep } from 'lodash-es';
 import { useCallback, useState } from 'react';
 
@@ -233,7 +233,7 @@ export const DynamicDragPreview = () => {
           transition: 'transform 50ms, opacity 200ms',
           marginBottom: '100px',
           willChange: 'transform',
-          background: cssVar('--affine-background-primary-color'),
+          background: cssVar('--cloud-notes-background-primary-color'),
         }}
       >
         👉 drag here

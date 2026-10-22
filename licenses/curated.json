@@ -417,6 +417,11 @@
    "kind": "repo-meta",
    "what": "this licence inventory (#805)",
    "proposed": "PROPOSED (owner decides): CC0-1.0 for the data"
+  },
+  "ac_cloud-notes/packages/common/theme": {
+   "licence": "MPL-2.0",
+   "kind": "vendored-package",
+   "what": "Design tokens vendored as build output from a Mozilla Public License 2.0 package; files stay MPL-2.0, see its LICENSE (#1098)"
   }
  },
  "assets": {

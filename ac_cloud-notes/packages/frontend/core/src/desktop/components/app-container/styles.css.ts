@@ -1,4 +1,4 @@
-import { cssVar, lightCssVariables } from '@toeverything/theme';
+import { cssVar, lightCssVariables } from '@cloud-notes/theme';
 import { globalStyle, style } from '@vanilla-extract/css';
 
 export const appStyle = style({
@@ -16,7 +16,7 @@ export const appStyle = style({
       content: '""',
       position: 'absolute',
       inset: 0,
-      opacity: `var(--affine-noise-opacity, 0)`,
+      opacity: `var(--cloud-notes-noise-opacity, 0)`,
       backgroundRepeat: 'repeat',
       backgroundSize: '50px',
       // TODO(@Peng): figure out how to use vanilla-extract webpack plugin to inject img url
@@ -26,12 +26,12 @@ export const appStyle = style({
 });
 globalStyle(`html[data-theme="light"] ${appStyle}`, {
   vars: {
-    '--affine-noise-opacity': '0.2',
+    '--cloud-notes-noise-opacity': '0.2',
   },
 });
 globalStyle(`html[data-theme="dark"] ${appStyle}`, {
   vars: {
-    '--affine-noise-opacity': '1',
+    '--cloud-notes-noise-opacity': '1',
   },
   '@media': {
     print: {

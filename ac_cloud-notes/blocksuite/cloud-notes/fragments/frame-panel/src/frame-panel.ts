@@ -1,6 +1,6 @@
 import { WithDisposable } from '@blocksuite/global/lit';
 import { type EditorHost, ShadowlessElement } from '@blocksuite/std';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -16,7 +16,7 @@ const styles = css`
   }
 
   .frame-panel-container {
-    background-color: var(--affine-background-primary-color);
+    background-color: var(--cloud-notes-background-primary-color);
     box-sizing: border-box;
 
     display: flex;
@@ -48,7 +48,7 @@ const styles = css`
   }
 
   .frame-panel-body:hover::-webkit-scrollbar-thumb {
-    background-color: var(--affine-black-30);
+    background-color: var(--cloud-notes-black-30);
   }
 
   .frame-panel-body::-webkit-scrollbar-track {

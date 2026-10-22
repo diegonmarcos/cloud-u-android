@@ -1,6 +1,6 @@
 import { IconButton, Input, Menu, MenuItem } from '@cloud-notes/component';
 import { MoreHorizontalIcon } from '@blocksuite/icons/rc';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useCallback, useState } from 'react';
 
 import * as styles from '../theme-editor.css';

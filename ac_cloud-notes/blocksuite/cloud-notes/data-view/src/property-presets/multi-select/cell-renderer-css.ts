@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 
 export const multiSelectStyle = css({
   display: 'flex',
@@ -11,7 +11,7 @@ export const multiSelectStyle = css({
   fontFamily: baseTheme.fontSansFamily,
   fontSize: 'var(--data-view-cell-text-size)',
   lineHeight: 'var(--data-view-cell-text-line-height)',
-  color: 'var(--affine-text-primary-color)',
+  color: 'var(--cloud-notes-text-primary-color)',
   fontWeight: '400',
   backgroundColor: 'transparent',
 });

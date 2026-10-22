@@ -5,7 +5,7 @@ import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes/shared/theme';
 import { type EditorHost } from '@blocksuite/cloud-notes/std';
 import { InformationIcon, ToggleDownIcon } from '@blocksuite/icons/lit';
 import { signal } from '@preact/signals-core';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, LitElement, nothing, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -44,7 +44,7 @@ export class AIErrorWrapper extends SignalWatcher(WithDisposable(LitElement)) {
           'clig' off,
           'liga' off;
         /* light/sm */
-        font-size: var(--affine-font-sm);
+        font-size: var(--cloud-notes-font-sm);
         font-style: normal;
         font-weight: 400;
         line-height: 22px; /* 157.143% */
@@ -105,7 +105,7 @@ export class AIErrorWrapper extends SignalWatcher(WithDisposable(LitElement)) {
         border-radius: 8px;
         border: 1px solid ${unsafeCSSVarV2('button/innerBlackBorder')};
         padding: 4px 12px;
-        font-size: var(--affine-font-xs);
+        font-size: var(--cloud-notes-font-xs);
         font-style: normal;
         font-weight: 500;
         line-height: 20px;

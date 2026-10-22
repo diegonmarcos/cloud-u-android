@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 
 export const textStyle = css({
   display: 'flex',
@@ -9,9 +9,9 @@ export const textStyle = css({
   padding: '0',
   border: 'none',
   fontFamily: baseTheme.fontSansFamily,
-  fontSize: 'var(--affine-font-base)',
-  lineHeight: 'var(--affine-line-height)',
-  color: 'var(--affine-text-primary-color)',
+  fontSize: 'var(--cloud-notes-font-base)',
+  lineHeight: 'var(--cloud-notes-line-height)',
+  color: 'var(--cloud-notes-text-primary-color)',
   fontWeight: '400',
   backgroundColor: 'transparent',
   overflow: 'hidden',
@@ -27,9 +27,9 @@ export const textInputStyle = css({
   padding: '0',
   border: 'none',
   fontFamily: baseTheme.fontSansFamily,
-  fontSize: 'var(--affine-font-base)',
-  lineHeight: 'var(--affine-line-height)',
-  color: 'var(--affine-text-primary-color)',
+  fontSize: 'var(--cloud-notes-font-base)',
+  lineHeight: 'var(--cloud-notes-line-height)',
+  color: 'var(--cloud-notes-text-primary-color)',
   fontWeight: '400',
   backgroundColor: 'transparent',
   cursor: 'text',

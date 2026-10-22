@@ -20,7 +20,7 @@ import type { UniComponent } from '@blocksuite/cloud-notes-shared/types';
 import * as icons from '@blocksuite/icons/lit';
 import type { BlockComponent } from '@blocksuite/std';
 import { type Signal } from '@preact/signals-core';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import type { TemplateResult } from 'lit';
 import { html } from 'lit';
 import { type StyleInfo, styleMap } from 'lit/directives/style-map.js';
@@ -142,7 +142,7 @@ export class CalloutBlockComponent extends CaptionedBlockComponent<CalloutBlockM
     wrapper.props = props;
     wrapper.style.position = 'absolute';
     wrapper.style.backgroundColor = cssVarV2.layer.background.overlayPanel;
-    wrapper.style.boxShadow = 'var(--affine-menu-shadow)';
+    wrapper.style.boxShadow = 'var(--cloud-notes-menu-shadow)';
     wrapper.style.borderRadius = '8px';
 
     // Create popup target from the clicked element

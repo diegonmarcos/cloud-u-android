@@ -49,7 +49,7 @@ export const styles = css`
     width: 4px;
     height: 100%;
     border-radius: 1px;
-    background: var(--affine-placeholder-color);
+    background: var(--cloud-notes-placeholder-color);
     transition: width 0.25s ease;
   }
 
@@ -89,7 +89,7 @@ export const styles = css`
     top: 0;
     left: 0;
     border-radius: 6px;
-    background: var(--affine-hover-color);
+    background: var(--cloud-notes-hover-color);
     pointer-events: none;
     z-index: 2;
     animation: expand 0.25s forwards;

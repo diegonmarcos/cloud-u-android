@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 import { LEFT_TOOL_BAR_WIDTH } from '../consts.js';
 
@@ -33,10 +33,10 @@ export const tableBlockTable = css({
   },
   '&:hover::-webkit-scrollbar-thumb:horizontal': {
     borderRadius: '4px',
-    backgroundColor: 'var(--affine-black-30)',
+    backgroundColor: 'var(--cloud-notes-black-30)',
   },
   '&:hover::-webkit-scrollbar-track:horizontal': {
-    backgroundColor: 'var(--affine-hover-color)',
+    backgroundColor: 'var(--cloud-notes-hover-color)',
     height: '8px',
   },
 });

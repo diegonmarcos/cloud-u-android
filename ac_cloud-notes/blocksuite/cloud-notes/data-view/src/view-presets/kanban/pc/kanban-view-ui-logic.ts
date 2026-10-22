@@ -306,11 +306,11 @@ const kanbanGroupsStyle = css({
 
   '&:hover::-webkit-scrollbar-thumb': {
     borderRadius: '16px',
-    backgroundColor: 'var(--affine-black-30)',
+    backgroundColor: 'var(--cloud-notes-black-30)',
   },
 
   '&:hover::-webkit-scrollbar-track': {
-    backgroundColor: 'var(--affine-hover-color)',
+    backgroundColor: 'var(--cloud-notes-hover-color)',
   },
 });
 
@@ -322,14 +322,14 @@ const addGroupIconStyle = css({
   cursor: 'pointer',
 
   '&:hover': {
-    backgroundColor: 'var(--affine-hover-color)',
+    backgroundColor: 'var(--cloud-notes-hover-color)',
   },
 
   '& svg': {
     width: '16px',
     height: '16px',
-    fill: 'var(--affine-icon-color)',
-    color: 'var(--affine-icon-color)',
+    fill: 'var(--cloud-notes-icon-color)',
+    color: 'var(--cloud-notes-icon-color)',
   },
 });
 

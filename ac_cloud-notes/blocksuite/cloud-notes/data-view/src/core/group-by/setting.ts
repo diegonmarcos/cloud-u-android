@@ -7,7 +7,7 @@ import { SignalWatcher, WithDisposable } from '@blocksuite/global/lit';
 import { DeleteIcon, InvisibleIcon, ViewIcon } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';
 import { computed } from '@preact/signals-core';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, html, unsafeCSS } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -115,11 +115,11 @@ export class GroupSetting extends SignalWatcher(
       border-radius: 4px;
     }
     .group-item-op-icon:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
     .group-item-op-icon svg {
-      fill: var(--affine-icon-color);
-      color: var(--affine-icon-color);
+      fill: var(--cloud-notes-icon-color);
+      color: var(--cloud-notes-icon-color);
       width: 20px;
       height: 20px;
     }
@@ -141,7 +141,7 @@ export class GroupSetting extends SignalWatcher(
     }
 
     .properties-group-op:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
   `;
 
@@ -201,7 +201,7 @@ export class GroupSetting extends SignalWatcher(
         style="padding:7px 0;display:flex;justify-content:space-between;align-items:center;"
       >
         <div
-          style="padding:0 4px;font-size:12px;color:var(--affine-text-secondary-color);line-height:20px;"
+          style="padding:0 4px;font-size:12px;color:var(--cloud-notes-text-secondary-color);line-height:20px;"
         >
           Groups
         </div>
@@ -328,7 +328,7 @@ export const buildGroupSettingItems = (
           name: 'Group By',
           postfix: html`
             <div
-              style="display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;color:var(--affine-text-secondary-color);margin-left:8px;"
+              style="display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;color:var(--cloud-notes-text-secondary-color);margin-left:8px;"
               class="dv-icon-16"
             >
               ${renderUniLit(icon, {})} ${gProp.name$.value}
@@ -354,7 +354,7 @@ export const buildGroupSettingItems = (
                   autoHeight: true,
                   postfix: html`
                     <div
-                      style="display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;color:var(--affine-text-secondary-color);margin-left:30px;"
+                      style="display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;color:var(--cloud-notes-text-secondary-color);margin-left:30px;"
                     >
                       ${dateModeLabel(group.groupInfo$.value?.config.name)}
                     </div>
@@ -385,8 +385,8 @@ export const buildGroupSettingItems = (
                               return html`<span
                                 style="font-size:14px;color:${
                                   isSelected
-                                    ? 'var(--affine-text-emphasis-color)'
-                                    : 'var(--affine-text-secondary-color)'
+                                    ? 'var(--cloud-notes-text-emphasis-color)'
+                                    : 'var(--cloud-notes-text-secondary-color)'
                                 }"
                                 >${label}</span
                               >`;
@@ -416,7 +416,7 @@ export const buildGroupSettingItems = (
                         name: 'Start week on',
                         postfix: html`
                           <div
-                            style="display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;color:var(--affine-text-secondary-color);margin-left:8px;"
+                            style="display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;color:var(--cloud-notes-text-secondary-color);margin-left:8px;"
                           >
                             ${
                               group.groupInfo$.value?.config.name ===
@@ -444,8 +444,8 @@ export const buildGroupSettingItems = (
                                     return html`<span
                                       style="font-size:14px;color:${
                                         isSelected
-                                          ? 'var(--affine-text-emphasis-color)'
-                                          : 'var(--affine-text-secondary-color)'
+                                          ? 'var(--cloud-notes-text-emphasis-color)'
+                                          : 'var(--cloud-notes-text-secondary-color)'
                                       }"
                                       >${label}</span
                                     >`;
@@ -477,7 +477,7 @@ export const buildGroupSettingItems = (
                   autoHeight: true,
                   postfix: html`
                     <div
-                      style="display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;color:var(--affine-text-secondary-color);margin-left:8px;"
+                      style="display:flex;align-items:center;gap:4px;font-size:14px;line-height:20px;color:var(--cloud-notes-text-secondary-color);margin-left:8px;"
                     >
                       ${group.sortAsc$.value ? 'Oldest first' : 'Newest first'}
                     </div>
@@ -492,8 +492,8 @@ export const buildGroupSettingItems = (
                             return html`<span
                               style="font-size:14px;color:${
                                 isSelected
-                                  ? 'var(--affine-text-emphasis-color)'
-                                  : 'var(--affine-text-secondary-color)'
+                                  ? 'var(--cloud-notes-text-emphasis-color)'
+                                  : 'var(--cloud-notes-text-secondary-color)'
                               }"
                               >Oldest first</span
                             >`;
@@ -511,8 +511,8 @@ export const buildGroupSettingItems = (
                             return html`<span
                               style="font-size:14px;color:${
                                 isSelected
-                                  ? 'var(--affine-text-emphasis-color)'
-                                  : 'var(--affine-text-secondary-color)'
+                                  ? 'var(--cloud-notes-text-emphasis-color)'
+                                  : 'var(--cloud-notes-text-secondary-color)'
                               }"
                               >Newest first</span
                             >`;

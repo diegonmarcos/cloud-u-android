@@ -978,7 +978,7 @@ export class SelectionElement extends SignalWatcher(
       position: absolute;
       z-index: 2;
       box-sizing: border-box;
-      background-color: var(--affine-primary-color-04);
+      background-color: var(--cloud-notes-primary-color-04);
       pointer-events: none;
       display: none;
     }
@@ -987,7 +987,7 @@ export class SelectionElement extends SignalWatcher(
       position: absolute;
       z-index: 2;
       box-sizing: border-box;
-      border: 1px solid var(--affine-primary-color);
+      border: 1px solid var(--cloud-notes-primary-color);
       border-radius: 2px;
       pointer-events: none;
       outline: none;

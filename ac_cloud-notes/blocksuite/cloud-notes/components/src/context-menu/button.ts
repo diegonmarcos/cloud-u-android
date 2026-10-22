@@ -5,7 +5,7 @@ import {
   DoneIcon,
 } from '@blocksuite/icons/lit';
 import type { ReadonlySignal } from '@preact/signals-core';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, html, type TemplateResult, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -37,19 +37,19 @@ export class MenuButton extends MenuFocusable {
       padding: 4px;
       gap: 8px;
       border-radius: 4px;
-      color: var(--affine-icon-color);
+      color: var(--cloud-notes-icon-color);
     }
 
     .cloud-notes-menu-button:hover,
     cloud-notes-menu-button.active .cloud-notes-menu-button {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
 
     .cloud-notes-menu-button .cloud-notes-menu-action-text {
       flex: 1;
       font-size: 14px;
       line-height: 22px;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
     }
 
     .cloud-notes-menu-button.focused {
@@ -57,12 +57,12 @@ export class MenuButton extends MenuFocusable {
     }
 
     .cloud-notes-menu-button.delete-item:hover {
-      background-color: var(--affine-background-error-color);
-      color: var(--affine-error-color);
+      background-color: var(--cloud-notes-background-error-color);
+      color: var(--cloud-notes-error-color);
     }
 
     .cloud-notes-menu-button.delete-item:hover .cloud-notes-menu-action-text {
-      color: var(--affine-error-color);
+      color: var(--cloud-notes-error-color);
     }
   `;
 
@@ -125,22 +125,22 @@ export class MobileMenuButton extends MenuFocusable {
       padding: 11px 8px;
       gap: 8px;
       border-radius: 4px;
-      color: var(--affine-icon-color);
+      color: var(--cloud-notes-icon-color);
     }
 
     .mobile-menu-button .cloud-notes-menu-action-text {
       flex: 1;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
       font-size: 17px;
       line-height: 22px;
     }
 
     .mobile-menu-button.delete-item {
-      color: var(--affine-error-color);
+      color: var(--cloud-notes-error-color);
     }
 
     .mobile-menu-button.delete-item .mobile-menu-action-text {
-      color: var(--affine-error-color);
+      color: var(--cloud-notes-error-color);
     }
   `;
 

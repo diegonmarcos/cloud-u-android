@@ -19,7 +19,7 @@ export const LatexTooltip = (
       .latex-tooltip-content {
         width: 159px;
         color: #121212;
-        font-family: var(--affine-font-family);
+        font-family: var(--cloud-notes-font-family);
         font-size: 10px;
         font-style: normal;
 

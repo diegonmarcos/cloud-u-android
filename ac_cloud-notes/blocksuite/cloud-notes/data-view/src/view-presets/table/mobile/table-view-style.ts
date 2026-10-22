@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 export const mobileTableViewWrapper = css({
   position: 'relative',

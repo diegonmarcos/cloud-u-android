@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { style, styleVariants } from '@vanilla-extract/css';
 
 const interactive = style({
@@ -230,7 +230,7 @@ export const journalDateCell = style([
       },
       '&[data-is-journal="false"][data-selected="true"]': {
         backgroundColor: 'transparent',
-        color: 'var(--affine-text-primary-color)',
+        color: 'var(--cloud-notes-text-primary-color)',
         fontWeight: 500,
         border: `1px solid ${cssVar('primaryColor')}`,
       },

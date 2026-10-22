@@ -20,7 +20,7 @@ import { useI18n } from '@cloud-notes/i18n';
 import type { DocMode } from '@blocksuite/cloud-notes/model';
 import { AllDocsIcon } from '@blocksuite/icons/rc';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useCallback, useEffect, useState } from 'react';
 
 import * as styles from './dialog.css';

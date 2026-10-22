@@ -1,6 +1,6 @@
 import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
-import { baseTheme } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { baseTheme } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, unsafeCSS } from 'lit';
 
 import {
@@ -11,7 +11,7 @@ import {
 export const styles = css`
     cloud-notes-database-column-header {
         display: block;
-        background-color: var(--affine-background-primary-color);
+        background-color: var(--cloud-notes-background-primary-color);
         position: relative;
         z-index: 2;
     }
@@ -24,7 +24,7 @@ export const styles = css`
         border-top: 1px solid ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
         box-sizing: border-box;
         user-select: none;
-        background-color: var(--affine-background-primary-color);
+        background-color: var(--cloud-notes-background-primary-color);
     }
 
     .cloud-notes-database-column {
@@ -56,7 +56,7 @@ export const styles = css`
 
     .cloud-notes-database-column-content:hover,
     .cloud-notes-database-column-content.edit {
-        background: var(--affine-hover-color);
+        background: var(--cloud-notes-hover-color);
     }
 
     .cloud-notes-database-column-content.edit .cloud-notes-database-column-text-icon {
@@ -70,7 +70,7 @@ export const styles = css`
         gap: 6px;
         /* https://stackoverflow.com/a/36247448/15443637 */
         overflow: hidden;
-        color: var(--affine-text-secondary-color);
+        color: var(--cloud-notes-text-secondary-color);
         font-size: 14px;
         position: relative;
     }
@@ -108,7 +108,7 @@ export const styles = css`
         align-items: center;
         width: 16px;
         height: 16px;
-        background: var(--affine-white);
+        background: var(--cloud-notes-white);
         border: 1px solid ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
         border-radius: 4px;
         opacity: 0;
@@ -121,16 +121,16 @@ export const styles = css`
         height: 16px;
         border: 1px solid transparent;
         border-radius: 4px;
-        fill: var(--affine-icon-color);
+        fill: var(--cloud-notes-icon-color);
     }
 
     .cloud-notes-database-column-text-save-icon:hover {
-        background: var(--affine-white);
+        background: var(--cloud-notes-white);
         border-color: ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
     }
 
     .cloud-notes-database-column-text-icon svg {
-        fill: var(--affine-icon-color);
+        fill: var(--cloud-notes-icon-color);
     }
 
     .cloud-notes-database-column-input {
@@ -157,7 +157,7 @@ export const styles = css`
     .cloud-notes-database-column-move svg {
         width: 10px;
         height: 14px;
-        color: var(--affine-black-10);
+        color: var(--cloud-notes-black-10);
         cursor: grab;
         opacity: 0;
     }
@@ -179,7 +179,7 @@ export const styles = css`
 
     .header-add-column-button {
         height: ${DEFAULT_COLUMN_TITLE_HEIGHT}px;
-        background-color: var(--affine-background-primary-color);
+        background-color: var(--cloud-notes-background-primary-color);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -199,11 +199,11 @@ export const styles = css`
         border: 1px solid ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
         border-radius: 4px;
         padding: 5px;
-        background-color: var(--affine-background-secondary-color);
+        background-color: var(--cloud-notes-background-secondary-color);
     }
 
     .cloud-notes-database-column-type-menu-icon svg {
-        color: var(--affine-text-secondary-color);
+        color: var(--cloud-notes-text-secondary-color);
         width: 20px;
         height: 20px;
 
@@ -214,12 +214,12 @@ export const styles = css`
         z-index: 100;
         width: 100px;
         height: 100px;
-        background: var(--affine-text-emphasis-color);
+        background: var(--cloud-notes-text-emphasis-color);
     }
 
     .cloud-notes-database-column-move {
-        --color: var(--affine-placeholder-color);
-        --active: var(--affine-black-10);
+        --color: var(--cloud-notes-placeholder-color);
+        --active: var(--cloud-notes-black-10);
         --bw: 1px;
         --bw2: -1px;
         cursor: grab;

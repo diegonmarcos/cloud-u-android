@@ -1,5 +1,5 @@
 import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import {
   css,
   html,
@@ -46,7 +46,7 @@ export class FootNotePopupChip extends LitElement {
       height: 22px;
       line-height: 22px;
       color: ${unsafeCSSVarV2('text/primary')};
-      font-size: var(--affine-font-sm);
+      font-size: var(--cloud-notes-font-sm);
       font-weight: 500;
       font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
     }

@@ -21,7 +21,7 @@ export const embedNoteContentStyles = css`
     padding-top: 0;
     padding-bottom: 0;
     line-height: 20px;
-    font-size: var(--affine-font-xs);
+    font-size: var(--cloud-notes-font-xs);
     font-weight: 400;
   }
   .cloud-notes-embed-doc-content-note-blocks cloud-notes-list .cloud-notes-list-block__prefix {
@@ -53,7 +53,7 @@ export const embedNoteContentStyles = css`
     padding-top: 0;
     padding-bottom: 0;
     line-height: 20px;
-    font-size: var(--affine-font-xs);
+    font-size: var(--cloud-notes-font-xs);
     font-weight: 600;
   }
 

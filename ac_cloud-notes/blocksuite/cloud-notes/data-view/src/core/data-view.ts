@@ -183,7 +183,7 @@ export class DataViewRootUI extends SignalWatcher(
   static override styles = css`
     ${unsafeCSS(dataViewCommonStyle('cloud-notes-data-view-renderer'))}
     cloud-notes-data-view-renderer {
-      background-color: var(--affine-background-primary-color);
+      background-color: var(--cloud-notes-background-primary-color);
       display: contents;
     }
   `;

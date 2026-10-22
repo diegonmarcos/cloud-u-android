@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import type { KeyboardEvent, ReactElement } from 'react';
 import { useCallback, useEffect, useState } from 'react';
 

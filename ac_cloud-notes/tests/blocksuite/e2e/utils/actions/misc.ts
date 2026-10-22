@@ -1256,7 +1256,7 @@ export async function getCurrentEditorTheme(page: Page) {
     .evaluate(() =>
       window
         .getComputedStyle(document.documentElement)
-        .getPropertyValue('--affine-theme-mode')
+        .getPropertyValue('--cloud-notes-theme-mode')
         .trim()
     );
   return mode;

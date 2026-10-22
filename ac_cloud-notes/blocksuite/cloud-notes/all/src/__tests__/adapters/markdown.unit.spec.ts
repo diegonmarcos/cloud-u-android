@@ -1558,7 +1558,7 @@ hhh
                 borderRadius: 8,
                 borderSize: 4,
                 borderStyle: 'solid',
-                shadowType: '--affine-note-shadow-box',
+                shadowType: '--cloud-notes-note-shadow-box',
               },
             },
           },
@@ -1701,7 +1701,7 @@ hhh
                 borderRadius: 8,
                 borderSize: 4,
                 borderStyle: 'solid',
-                shadowType: '--affine-note-shadow-box',
+                shadowType: '--cloud-notes-note-shadow-box',
               },
             },
           },
@@ -2495,17 +2495,17 @@ hhh
               options: [
                 {
                   id: 'TKip9uc7Yx',
-                  color: 'var(--affine-tag-white)',
+                  color: 'var(--cloud-notes-tag-white)',
                   value: 'TODO',
                 },
                 {
                   id: 'F2bgsaE3X2',
-                  color: 'var(--affine-tag-green)',
+                  color: 'var(--cloud-notes-tag-green)',
                   value: 'In Progress',
                 },
                 {
                   id: 'y3O1A2IHHu',
-                  color: 'var(--affine-tag-gray)',
+                  color: 'var(--cloud-notes-tag-gray)',
                   value: 'Done',
                 },
               ],
@@ -2540,12 +2540,12 @@ hhh
                 {
                   id: '73UrEZWaKk',
                   value: 'test2',
-                  color: 'var(--affine-tag-purple)',
+                  color: 'var(--cloud-notes-tag-purple)',
                 },
                 {
                   id: '-2_QD3GZT1',
                   value: 'test1',
-                  color: 'var(--affine-tag-teal)',
+                  color: 'var(--cloud-notes-tag-teal)',
                 },
               ],
             },
@@ -2926,7 +2926,7 @@ hhh
                   borderRadius: 8,
                   borderSize: 4,
                   borderStyle: 'solid',
-                  shadowType: '--affine-note-shadow-box',
+                  shadowType: '--cloud-notes-note-shadow-box',
                 },
               },
             },
@@ -3010,7 +3010,7 @@ hhh
             version: 1,
             props: {
               xywh: '[0,0,800,95]',
-              background: '--affine-note-background-blue',
+              background: '--cloud-notes-note-background-blue',
               index: 'a0',
               hidden: false,
               displayMode: 'both',
@@ -3019,7 +3019,7 @@ hhh
                   borderRadius: 0,
                   borderSize: 4,
                   borderStyle: 'none',
-                  shadowType: '--affine-note-shadow-sticker',
+                  shadowType: '--cloud-notes-note-shadow-sticker',
                 },
               },
             },
@@ -3183,7 +3183,7 @@ hhh
             version: 1,
             props: {
               xywh: '[0,0,800,95]',
-              background: '--affine-note-background-blue',
+              background: '--cloud-notes-note-background-blue',
               index: 'a0',
               hidden: false,
               displayMode: 'both',
@@ -3192,7 +3192,7 @@ hhh
                   borderRadius: 0,
                   borderSize: 4,
                   borderStyle: 'none',
-                  shadowType: '--affine-note-shadow-sticker',
+                  shadowType: '--cloud-notes-note-shadow-sticker',
                 },
               },
             },
@@ -3957,7 +3957,7 @@ describe('markdown to snapshot', () => {
           ? {
               insert: 'Hello',
               attributes: {
-                color: `var(--affine-v2-text-highlight-fg-${mapped})`,
+                color: `var(--cloud-notes-v2-text-highlight-fg-${mapped})`,
               },
             }
           : { insert: 'Hello' },

@@ -15,7 +15,7 @@ export class CloudNotesLitIcon extends ShadowlessElement {
     }
 
     cloud-notes-lit-icon svg {
-      fill: var(--affine-icon-color);
+      fill: var(--cloud-notes-icon-color);
     }
   `;
 

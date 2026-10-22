@@ -24,7 +24,7 @@
     "@blocksuite/std": "workspace:*",
     "@blocksuite/store": "workspace:*",
     "@ctrl/tinycolor": "^4.1.0",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "@types/hast": "^3.0.4",
     "collapse-white-space": "^2.1.0",
     "lit": "^3.2.0",

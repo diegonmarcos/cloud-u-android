@@ -11,8 +11,8 @@ export class EdgelessEditor extends SignalWatcher(
 ) {
   static override styles = css`
     edgeless-editor {
-      font-family: var(--affine-font-family);
-      background: var(--affine-background-primary-color);
+      font-family: var(--cloud-notes-font-family);
+      background: var(--cloud-notes-background-primary-color);
     }
 
     edgeless-editor * {

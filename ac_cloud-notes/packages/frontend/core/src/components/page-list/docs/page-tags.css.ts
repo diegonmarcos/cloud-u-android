@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { createVar, style } from '@vanilla-extract/css';
 export const hoverMaxWidth = createVar();
 export const root = style({
@@ -140,6 +140,6 @@ export const tagRemove = style({
   flexShrink: 0,
   cursor: 'pointer',
   ':hover': {
-    background: 'var(--affine-hover-color)',
+    background: 'var(--cloud-notes-hover-color)',
   },
 });

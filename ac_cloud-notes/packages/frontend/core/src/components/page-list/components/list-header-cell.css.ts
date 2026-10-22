@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { style } from '@vanilla-extract/css';
 export const headerCell = style({
   padding: '0 8px',

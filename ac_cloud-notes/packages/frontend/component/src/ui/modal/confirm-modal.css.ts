@@ -1,4 +1,4 @@
-import { bodyEmphasized, bodyRegular } from '@toeverything/theme/typography';
+import { bodyEmphasized, bodyRegular } from '@cloud-notes/theme/typography';
 import { style } from '@vanilla-extract/css';
 
 // desktop

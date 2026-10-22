@@ -30,7 +30,7 @@ export class MultiTagView extends WithDisposable(ShadowlessElement) {
       flex-wrap: wrap;
       gap: 6px;
       width: 100%;
-      font-size: var(--affine-font-sm);
+      font-size: var(--cloud-notes-font-sm);
     }
 
     .cloud-notes-select-cell-container .select-selected {
@@ -40,7 +40,7 @@ export class MultiTagView extends WithDisposable(ShadowlessElement) {
       padding: 0 8px;
       border-radius: 4px;
       white-space: nowrap;
-      background: var(--affine-tag-white);
+      background: var(--cloud-notes-tag-white);
       overflow: hidden;
       text-overflow: ellipsis;
       border: 1px solid ${unsafeCSSVarV2('database/border')};

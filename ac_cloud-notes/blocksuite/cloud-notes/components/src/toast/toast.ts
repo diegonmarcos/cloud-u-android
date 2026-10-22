@@ -1,5 +1,5 @@
 import type { EditorHost } from '@blocksuite/std';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { html } from 'lit';
 
 import { createToastContainer } from './create.js';
@@ -26,12 +26,12 @@ export const toast = (
     max-width: 480px;
     text-align: center;
     font-family: ${baseTheme.fontSansFamily};
-    font-size: var(--affine-font-sm);
+    font-size: var(--cloud-notes-font-sm);
     padding: 6px 12px;
     margin: 10px 0 0 0;
-    color: var(--affine-white);
-    background: var(--affine-tooltip);
-    box-shadow: var(--affine-float-button-shadow);
+    color: var(--cloud-notes-white);
+    background: var(--cloud-notes-tooltip);
+    box-shadow: var(--cloud-notes-float-button-shadow);
     border-radius: 10px;
     transition: all 230ms cubic-bezier(0.21, 1.02, 0.73, 1);
     opacity: 0;

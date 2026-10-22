@@ -1,19 +1,19 @@
 import { css } from '@emotion/css';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 export const dataViewVars = {
-  cellTextSize: '--affine-data-view-cell-text-size',
-  cellTextLineHeight: '--affine-data-view-cell-text-line-height',
+  cellTextSize: '--cloud-notes-data-view-cell-text-size',
+  cellTextLineHeight: '--cloud-notes-data-view-cell-text-line-height',
 };
 
 export const dataViewRoot = css({
-  fontFamily: 'var(--affine-font-family)',
+  fontFamily: 'var(--cloud-notes-font-family)',
   [dataViewVars.cellTextSize]: '14px',
   [dataViewVars.cellTextLineHeight]: '22px',
 });
 
 export const withDataViewCssVariable = css({
-  fontFamily: 'var(--affine-font-family)',
+  fontFamily: 'var(--cloud-notes-font-family)',
   [dataViewVars.cellTextSize]: '14px',
   [dataViewVars.cellTextLineHeight]: '22px',
 });
@@ -30,7 +30,7 @@ export const p8 = css({
 
 export const hover = css({
   '&:hover, &.active': {
-    backgroundColor: 'var(--affine-hover-color)',
+    backgroundColor: 'var(--cloud-notes-hover-color)',
     cursor: 'pointer',
   },
 });
@@ -54,20 +54,20 @@ export const round8 = css({
   borderRadius: '8px',
 });
 export const color2 = css({
-  color: 'var(--affine-text-secondary-color)',
+  color: 'var(--cloud-notes-text-secondary-color)',
 });
 export const shadow2 = css({
-  boxShadow: 'var(--affine-shadow-2)',
+  boxShadow: 'var(--cloud-notes-shadow-2)',
 });
 
 export const dividerH = css({
   height: '1px',
-  backgroundColor: 'var(--affine-divider-color)',
+  backgroundColor: 'var(--cloud-notes-divider-color)',
   margin: '8px 0',
 });
 export const dividerV = css({
   width: '1px',
-  backgroundColor: 'var(--affine-divider-color)',
+  backgroundColor: 'var(--cloud-notes-divider-color)',
   margin: '0 8px',
 });
 

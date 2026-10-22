@@ -41,7 +41,7 @@ export class DataViewHeaderViews extends WidgetBase {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       white-space: nowrap;
       max-width: 200px;
       min-width: 28px;
@@ -69,8 +69,8 @@ export class DataViewHeaderViews extends WidgetBase {
     }
 
     .database-view-button.selected {
-      color: var(--affine-text-primary-color);
-      background-color: var(--affine-hover-color-filled);
+      color: var(--cloud-notes-text-primary-color);
+      background-color: var(--cloud-notes-hover-color-filled);
     }
   `;
 

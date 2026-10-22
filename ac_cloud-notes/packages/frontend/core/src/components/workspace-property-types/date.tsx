@@ -7,7 +7,7 @@ import {
 import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
 import { i18nTime, useI18n } from '@cloud-notes/i18n';
 import { DateTimeIcon } from '@blocksuite/icons/rc';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import {
   useCallback,
   useEffect,

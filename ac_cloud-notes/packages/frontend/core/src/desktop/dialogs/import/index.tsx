@@ -40,8 +40,8 @@ import {
   ZipIcon,
 } from '@blocksuite/icons/rc';
 import { useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import {
   type ReactElement,
   type SVGAttributes,

@@ -1,7 +1,7 @@
 import { ConfirmModal, Input } from '@cloud-notes/component';
 import type { Member } from '@cloud-notes/core/modules/permissions';
 import { useI18n } from '@cloud-notes/i18n';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 
 import * as styles from './styles.css';
 

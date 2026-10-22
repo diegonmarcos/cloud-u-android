@@ -52,12 +52,12 @@ export async function printToPdf(
                   display: none; 
                 }
                 :root, body {
-                  --affine-text-primary: #000 !important;
-                  --affine-text-secondary: #111 !important;
-                  --affine-text-tertiary: #333 !important;
-                  --affine-background-primary: #fff !important;
-                  --affine-background-secondary: #fff !important;
-                  --affine-background-tertiary: #fff !important;
+                  --cloud-notes-text-primary: #000 !important;
+                  --cloud-notes-text-secondary: #111 !important;
+                  --cloud-notes-text-tertiary: #333 !important;
+                  --cloud-notes-background-primary: #fff !important;
+                  --cloud-notes-background-secondary: #fff !important;
+                  --cloud-notes-background-tertiary: #fff !important;
                 }
                 body, [data-theme='dark'] {
                   color: #000 !important;
@@ -68,8 +68,8 @@ export async function printToPdf(
                   -webkit-text-fill-color: #000 !important;
                 }
                 :root {
-                  --affine-note-shadow-box: none !important;
-                  --affine-note-shadow-sticker: none !important;
+                  --cloud-notes-note-shadow-box: none !important;
+                  --cloud-notes-note-shadow-sticker: none !important;
                 }
               }</style></head><body></body></html>`);
       doc.close();
@@ -88,15 +88,15 @@ export async function printToPdf(
                 display: none; 
               }
               :root, body {
-                --affine-text-primary: #000 !important;
-                --affine-text-secondary: #111 !important;
-                --affine-text-tertiary: #333 !important;
-                --affine-background-primary: #fff !important;
-                --affine-background-secondary: #fff !important;
-                --affine-background-tertiary: #fff !important;
-                --affine-background-code-block: #f5f5f5 !important;
-                --affine-quote-color: #e3e3e3 !important;
-                --affine-border-color: #e3e3e3 !important;
+                --cloud-notes-text-primary: #000 !important;
+                --cloud-notes-text-secondary: #111 !important;
+                --cloud-notes-text-tertiary: #333 !important;
+                --cloud-notes-background-primary: #fff !important;
+                --cloud-notes-background-secondary: #fff !important;
+                --cloud-notes-background-tertiary: #fff !important;
+                --cloud-notes-background-code-block: #f5f5f5 !important;
+                --cloud-notes-quote-color: #e3e3e3 !important;
+                --cloud-notes-border-color: #e3e3e3 !important;
               }
               body, [data-theme='dark'] {
                 color: #000 !important;
@@ -107,8 +107,8 @@ export async function printToPdf(
                 -webkit-text-fill-color: #000 !important;
               }
               :root {
-                --affine-note-shadow-box: none !important;
-                --affine-note-shadow-sticker: none !important;
+                --cloud-notes-note-shadow-box: none !important;
+                --cloud-notes-note-shadow-sticker: none !important;
               }
             }</style></head><body></body></html>`);
 

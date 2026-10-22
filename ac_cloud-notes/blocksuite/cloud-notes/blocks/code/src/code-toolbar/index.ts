@@ -81,7 +81,7 @@ export class CloudNotesCodeToolbarWidget extends WidgetComponent<
           container: this.block,
           // stacking-context(editor-host)
           portalStyles: {
-            zIndex: 'var(--affine-z-index-popover)',
+            zIndex: 'var(--cloud-notes-z-index-popover)',
           },
           computePosition: {
             referenceElement: codeBlock,

@@ -68,7 +68,7 @@ export const WorkspaceSettingDetail = ({
         <DeleteLeaveWorkspace onCloseSetting={onCloseSetting} />
         <SettingRow
           name={
-            <span style={{ color: 'var(--affine-text-secondary-color)' }}>
+            <span style={{ color: 'var(--cloud-notes-text-secondary-color)' }}>
               {t['com.cloud-notes.resetSyncStatus.button']()}
             </span>
           }

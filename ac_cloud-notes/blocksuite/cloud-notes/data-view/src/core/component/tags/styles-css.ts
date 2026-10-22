@@ -1,6 +1,6 @@
 import { css } from '@emotion/css';
-import { baseTheme } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { baseTheme } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 export const tagSelectContainerStyle = css({
   position: 'absolute',
@@ -9,8 +9,8 @@ export const tagSelectContainerStyle = css({
   border: `0.5px solid ${cssVarV2('layer/insideBorder/blackBorder')}`,
   borderRadius: '8px',
   backgroundColor: cssVarV2.layer.background.overlayPanel,
-  boxShadow: 'var(--affine-shadow-1)',
-  fontFamily: 'var(--affine-font-family)',
+  boxShadow: 'var(--cloud-notes-shadow-1)',
+  fontFamily: 'var(--cloud-notes-font-family)',
   maxWidth: '400px',
   padding: '8px',
   display: 'flex',
@@ -39,7 +39,7 @@ export const tagSelectInputStyle = css({
   fontSize: '14px',
   outline: 'none',
   '::placeholder': {
-    color: 'var(--affine-placeholder-color)',
+    color: 'var(--cloud-notes-placeholder-color)',
   },
 });
 

@@ -1,6 +1,6 @@
 import { Progress } from '@cloud-notes/component';
 import { useI18n } from '@cloud-notes/i18n';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 import { embeddingProgress, embeddingProgressTitle } from './styles-css';
 

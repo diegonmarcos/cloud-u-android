@@ -1,6 +1,6 @@
 import { scrollbarStyle } from '@blocksuite/cloud-notes-shared/styles';
 import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, unsafeCSS } from 'lit';
 
 export const styles = css`
@@ -11,7 +11,7 @@ export const styles = css`
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: var(--affine-z-index-popover);
+    z-index: var(--cloud-notes-z-index-popover);
   }
 
   .slash-menu {
@@ -27,7 +27,7 @@ export const styles = css`
     background: ${unsafeCSSVarV2('layer/background/overlayPanel')};
     box-shadow: ${unsafeCSSVar('overlayPanelShadow')};
     border-radius: 8px;
-    z-index: var(--affine-z-index-popover);
+    z-index: var(--cloud-notes-z-index-popover);
     user-select: none;
     /* transition: max-height 0.2s ease-in-out; */
   }
@@ -38,9 +38,9 @@ export const styles = css`
     box-sizing: border-box;
     padding: 2px 8px;
 
-    font-size: var(--affine-font-xs);
+    font-size: var(--cloud-notes-font-xs);
     font-weight: 500;
-    line-height: var(--affine-line-height);
+    line-height: var(--cloud-notes-line-height);
     text-align: left;
     color: var(
       --light-textColor-textSecondaryColor,
@@ -59,9 +59,9 @@ export const styles = css`
     width: 28px;
     height: 28px;
     padding: 4px;
-    border: 1px solid var(--affine-border-color, #e3e2e4);
+    border: 1px solid var(--cloud-notes-border-color, #e3e2e4);
     border-radius: 4px;
-    color: var(--affine-icon-color);
+    color: var(--cloud-notes-icon-color);
     background: ${unsafeCSSVarV2('layer/background/overlayPanel')};
 
     display: flex;
@@ -76,10 +76,10 @@ export const styles = css`
   }
 
   .slash-menu-item.ask-ai {
-    color: var(--affine-brand-color);
+    color: var(--cloud-notes-brand-color);
   }
   .slash-menu-item.github .github-icon {
-    color: var(--affine-black);
+    color: var(--cloud-notes-black);
   }
 `;
 
@@ -102,8 +102,8 @@ export const slashItemToolTipStyle = css`
       --light-textColor-textSecondaryColor,
       var(--textColor-textSecondaryColor, #8e8d91)
     );
-    font-family: var(--affine-font-family);
-    font-size: var(--affine-font-xs);
-    line-height: var(--affine-line-height);
+    font-family: var(--cloud-notes-font-family);
+    font-size: var(--cloud-notes-font-xs);
+    line-height: var(--cloud-notes-line-height);
   }
 `;

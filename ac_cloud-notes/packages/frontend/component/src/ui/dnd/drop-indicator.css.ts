@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { createVar, style } from '@vanilla-extract/css';
 
 export const terminalSize = createVar();
@@ -157,7 +157,7 @@ export const edgeLine = style({
   // Blocking pointer events to prevent the line from triggering drag events
   // Dragging over the line should count as dragging over the element behind it
   pointerEvents: 'none',
-  background: cssVar('--affine-primary-color'),
+  background: cssVar('--cloud-notes-primary-color'),
 
   // Terminal
   '::before': {
@@ -166,7 +166,7 @@ export const edgeLine = style({
     height: 0,
     boxSizing: 'border-box',
     position: 'absolute',
-    border: `${terminalSize} solid ${cssVar('--affine-primary-color')}`,
+    border: `${terminalSize} solid ${cssVar('--cloud-notes-primary-color')}`,
     borderRadius: '50%',
   },
 

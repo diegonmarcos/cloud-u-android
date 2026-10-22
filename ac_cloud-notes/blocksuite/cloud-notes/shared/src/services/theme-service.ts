@@ -9,10 +9,10 @@ import { type BlockStdScope, StdIdentifier } from '@blocksuite/std';
 import { Extension } from '@blocksuite/store';
 import { type Signal, signal } from '@preact/signals-core';
 import {
-  type AffineCssVariables as CloudNotesCssVariables,
+  type CloudNotesCssVariables,
   combinedDarkCssVariables,
   combinedLightCssVariables,
-} from '@toeverything/theme';
+} from '@cloud-notes/theme';
 
 import { isInsideEdgelessEditor } from '../utils/dom';
 
@@ -79,7 +79,7 @@ export class ThemeService extends Extension {
    * `rgba(255,0,0)`
    * `#fff`
    * `light-dark(#fff, #000)`
-   * `var(--affine-palette-shape-blue)`
+   * `var(--cloud-notes-palette-shape-blue)`
    * ```
    */
   generateColorProperty(
@@ -113,7 +113,7 @@ export class ThemeService extends Extension {
    * ```
    * `rgba(255,0,0)`
    * `#fff`
-   * `--affine-palette-shape-blue`
+   * `--cloud-notes-palette-shape-blue`
    * ```
    */
   getColorValue(

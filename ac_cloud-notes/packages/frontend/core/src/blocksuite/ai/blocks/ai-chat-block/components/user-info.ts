@@ -1,4 +1,4 @@
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, LitElement, type TemplateResult, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -21,7 +21,7 @@ export class UserInfo extends LitElement {
       .user-avatar-container {
         width: 24px;
         height: 24px;
-        color: var(--affine-brand-color);
+        color: var(--cloud-notes-brand-color);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -40,14 +40,14 @@ export class UserInfo extends LitElement {
 
       .default-avatar,
       .avatar-image {
-        background-color: var(--affine-primary-color);
+        background-color: var(--cloud-notes-primary-color);
       }
 
       .user-name {
-        color: var(--affine-text-primary-color);
+        color: var(--cloud-notes-text-primary-color);
         text-align: justify;
         font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-        font-size: var(--affine-font-sm);
+        font-size: var(--cloud-notes-font-sm);
         font-style: normal;
         font-weight: 500;
         line-height: 22px;

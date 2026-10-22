@@ -1,5 +1,5 @@
 import { EDGELESS_BLOCK_CHILD_PADDING } from '@blocksuite/cloud-notes-shared/consts';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { style } from '@vanilla-extract/css';
 
 export const ACTIVE_NOTE_EXTRA_PADDING = 20;

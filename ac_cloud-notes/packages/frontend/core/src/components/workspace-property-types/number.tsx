@@ -2,8 +2,8 @@ import { Input, PropertyValue } from '@cloud-notes/component';
 import type { FilterParams } from '@cloud-notes/core/modules/collection-rules';
 import { useI18n } from '@cloud-notes/i18n';
 import { NumberIcon } from '@blocksuite/icons/rc';
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import {
   type ChangeEventHandler,
   useCallback,

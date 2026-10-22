@@ -6,7 +6,7 @@ import {
   Heading5Icon,
   Heading6Icon,
 } from '@blocksuite/icons/lit';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { html } from 'lit';
 
 export function HeadingIcon(i: 1 | 2 | 3 | 4 | 5 | 6) {

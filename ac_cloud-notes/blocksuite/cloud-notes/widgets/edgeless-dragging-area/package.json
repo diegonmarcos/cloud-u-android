@@ -14,7 +14,7 @@
     "@blocksuite/cloud-notes-ext-loader": "workspace:*",
     "@blocksuite/cloud-notes-model": "workspace:*",
     "@blocksuite/std": "workspace:*",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "lit": "^3.2.0"
   },
   "exports": {

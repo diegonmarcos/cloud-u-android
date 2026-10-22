@@ -160,7 +160,7 @@ export const CreateOrEditTag = ({
 
       <Input
         placeholder={t['com.cloud-notes.tags.create-tag.placeholder']()}
-        inputStyle={{ fontSize: 'var(--affine-font-xs)' }}
+        inputStyle={{ fontSize: 'var(--cloud-notes-font-xs)' }}
         onEnter={onConfirm}
         value={tagName}
         onChange={handleChangeName}

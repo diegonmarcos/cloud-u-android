@@ -27,23 +27,23 @@ export class DocTitle extends WithDisposable(ShadowlessElement) {
     .doc-icon-container,
     .doc-title-container {
       box-sizing: border-box;
-      font-family: var(--affine-font-family);
-      color: var(--affine-text-primary-color);
+      font-family: var(--cloud-notes-font-family);
+      color: var(--cloud-notes-text-primary-color);
       outline: none;
       resize: none;
       border: 0;
       width: 100%;
-      max-width: var(--affine-editor-width);
+      max-width: var(--cloud-notes-editor-width);
       margin-left: auto;
       margin-right: auto;
       padding: 38px 0;
 
       padding-left: var(
-        --affine-editor-side-padding,
+        --cloud-notes-editor-side-padding,
         ${DOC_BLOCK_CHILD_PADDING}px
       );
       padding-right: var(
-        --affine-editor-side-padding,
+        --cloud-notes-editor-side-padding,
         ${DOC_BLOCK_CHILD_PADDING}px
       );
     }
@@ -63,7 +63,7 @@ export class DocTitle extends WithDisposable(ShadowlessElement) {
 
     .doc-title-container-empty::before {
       content: 'Title';
-      color: var(--affine-placeholder-color);
+      color: var(--cloud-notes-placeholder-color);
       position: absolute;
       opacity: 0.5;
       pointer-events: none;

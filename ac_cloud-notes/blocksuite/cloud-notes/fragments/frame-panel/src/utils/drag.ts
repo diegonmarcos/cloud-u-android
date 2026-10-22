@@ -149,7 +149,7 @@ function createMaskElement(doc: Document) {
   mask.style.position = 'fixed';
   mask.style.left = '0';
   mask.style.top = '0';
-  mask.style.zIndex = 'calc(var(--affine-z-index-popover, 0) + 3)';
+  mask.style.zIndex = 'calc(var(--cloud-notes-z-index-popover, 0) + 3)';
   mask.style.cursor = 'grabbing';
 
   return mask;

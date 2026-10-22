@@ -19,15 +19,15 @@ export class DateGroupView extends SignalWatcher(
       gap: 6px;
     }
     .dv-date-group:hover {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
     .counter {
       flex-shrink: 0;
       min-width: 22px;
       height: 22px;
       border-radius: 4px;
-      background: var(--affine-background-secondary-color);
-      color: var(--affine-text-secondary-color);
+      background: var(--cloud-notes-background-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       font-size: var(--data-view-cell-text-size);
       display: flex;
       align-items: center;

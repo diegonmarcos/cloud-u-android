@@ -3,7 +3,7 @@ import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
 import { SignalWatcher, WithDisposable } from '@blocksuite/global/lit';
 import { CenterPeekIcon, MoreHorizontalIcon } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, nothing, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -49,7 +49,7 @@ export class MobileTableRow extends SignalWatcher(
       padding: 4px;
       border-radius: 4px;
       box-shadow: 0px 0px 4px 0px rgba(66, 65, 73, 0.14);
-      background-color: var(--affine-background-primary-color);
+      background-color: var(--cloud-notes-background-primary-color);
       position: relative;
       font-size: 16px;
       color: ${unsafeCSSVarV2('icon/primary')};

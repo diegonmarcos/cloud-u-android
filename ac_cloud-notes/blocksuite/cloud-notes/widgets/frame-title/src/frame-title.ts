@@ -16,7 +16,7 @@ import {
 } from '@blocksuite/std';
 import { GfxControllerIdentifier } from '@blocksuite/std/gfx';
 import { consume } from '@lit/context';
-import { themeToVar } from '@toeverything/theme/v2';
+import { themeToVar } from '@cloud-notes/theme/v2';
 import { LitElement } from 'lit';
 import { property, state } from 'lit/decorators.js';
 

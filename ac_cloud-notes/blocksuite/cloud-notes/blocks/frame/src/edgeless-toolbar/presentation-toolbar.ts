@@ -22,7 +22,7 @@ import {
 import type { BlockComponent } from '@blocksuite/std';
 import type { ToolOptions } from '@blocksuite/std/gfx';
 import { effect } from '@preact/signals-core';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { css, html, LitElement, nothing, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 
@@ -55,7 +55,7 @@ export class PresentationToolbar extends EdgelessToolbarToolMixin(
       content: '';
       width: 1px;
       height: 100%;
-      background: var(--affine-border-color);
+      background: var(--cloud-notes-border-color);
       transform: scaleX(0.5);
     }
     .config-buttons {
@@ -82,7 +82,7 @@ export class PresentationToolbar extends EdgelessToolbarToolMixin(
     }
 
     .edgeless-frame-navigator-count {
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       white-space: nowrap;
     }
     .edgeless-frame-navigator-stop {
@@ -111,7 +111,7 @@ export class PresentationToolbar extends EdgelessToolbarToolMixin(
       border-radius: inherit;
     }
     .edgeless-frame-navigator-stop:hover::before {
-      background: var(--affine-hover-color);
+      background: var(--cloud-notes-hover-color);
     }
   `;
 

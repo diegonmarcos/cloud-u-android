@@ -23,7 +23,7 @@ export class EditorToolbar extends WithDisposable(LitElement) {
       justify-content: center;
       align-items: center;
       gap: 8px;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
       fill: currentColor;
     }
   `;

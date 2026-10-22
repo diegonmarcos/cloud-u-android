@@ -1,6 +1,6 @@
 import keywords from '@blocksuite/icons/keywords/en.json';
 import * as allIcons from '@blocksuite/icons/rc';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import {
   type KeyboardEvent,
   startTransition,

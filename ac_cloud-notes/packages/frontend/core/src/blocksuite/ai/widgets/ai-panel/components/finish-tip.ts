@@ -6,7 +6,7 @@ import {
 import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
 import { NotificationProvider } from '@blocksuite/cloud-notes/shared/services';
 import type { EditorHost } from '@blocksuite/cloud-notes/std';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, LitElement, nothing, unsafeCSS } from 'lit';
 import { property, state } from 'lit/decorators.js';
 
@@ -27,7 +27,7 @@ export class AIFinishTip extends WithDisposable(LitElement) {
       padding: 0 12px;
       gap: 4px;
 
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
 
       .text {
         display: flex;
@@ -35,7 +35,7 @@ export class AIFinishTip extends WithDisposable(LitElement) {
         flex: 1 0 0;
 
         /* light/xs */
-        font-size: var(--affine-font-xs);
+        font-size: var(--cloud-notes-font-xs);
         font-style: normal;
         font-weight: 400;
         line-height: 20px; /* 166.667% */
@@ -56,12 +56,12 @@ export class AIFinishTip extends WithDisposable(LitElement) {
           user-select: none;
         }
         .copy:hover {
-          color: var(--affine-icon-color);
-          background: var(--affine-hover-color);
+          color: var(--cloud-notes-icon-color);
+          background: var(--cloud-notes-hover-color);
           cursor: pointer;
         }
         .copied {
-          color: var(--affine-brand-color);
+          color: var(--cloud-notes-brand-color);
         }
       }
     }

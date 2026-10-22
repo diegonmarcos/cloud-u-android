@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { assignInlineVars } from '@vanilla-extract/dynamic';
 
 import * as styles from './desktop/styles.css';

@@ -18,7 +18,7 @@ import { TagService } from '@cloud-notes/core/modules/tag';
 import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
 import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useCallback, useMemo, useState } from 'react';
 
 const FavoriteOperation = ({ tag }: { tag: ListItem }) => {

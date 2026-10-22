@@ -1,5 +1,5 @@
 import { useI18n } from '@cloud-notes/i18n';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 
 import Input from '../../../ui/input';
 import * as styles from './styles.css';

@@ -20,7 +20,7 @@ import {
 } from '@blocksuite/std/inline';
 import type { DeltaInsert } from '@blocksuite/store';
 import { flip, offset, shift } from '@floating-ui/dom';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, nothing, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 import { classMap } from 'lit-html/directives/class-map.js';
@@ -62,7 +62,7 @@ export class CloudNotesFootnoteNode extends WithDisposable(ShadowlessElement) {
 
     .footnote-node.hover-effect {
       .footnote-content-default {
-        color: var(--affine-text-primary-color);
+        color: var(--cloud-notes-text-primary-color);
         background: ${unsafeCSSVarV2('block/footnote/numberBg')};
       }
     }

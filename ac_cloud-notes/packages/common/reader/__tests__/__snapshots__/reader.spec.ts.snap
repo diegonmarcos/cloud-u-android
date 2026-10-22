@@ -99,12 +99,12 @@ Self host Cloud Notes
 
 ||Title|Tag|
 |---|---|---|
-|Cloud Notes Development|Cloud Notes Development|<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--affine-tag-pink)">Cloud Notes</span>|
-|For developers or installations guides, please go to Cloud Notes Doc|For developers or installations guides, please go to Cloud Notes Doc|<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--affine-tag-orange)">Developers</span>|
-|Quip & Notion with their great concept of "everything is a block"|Quip & Notion with their great concept of "everything is a block"|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Trello with their Kanban|Trello with their Kanban|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Airtable & Miro with their no-code programable datasheets|Airtable & Miro with their no-code programable datasheets|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Miro & Whimiscal with their edgeless visual whiteboard|Miro & Whimiscal with their edgeless visual whiteboard|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
+|Cloud Notes Development|Cloud Notes Development|<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--cloud-notes-tag-pink)">Cloud Notes</span>|
+|For developers or installations guides, please go to Cloud Notes Doc|For developers or installations guides, please go to Cloud Notes Doc|<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--cloud-notes-tag-orange)">Developers</span>|
+|Quip & Notion with their great concept of "everything is a block"|Quip & Notion with their great concept of "everything is a block"|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Trello with their Kanban|Trello with their Kanban|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Airtable & Miro with their no-code programable datasheets|Airtable & Miro with their no-code programable datasheets|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Miro & Whimiscal with their edgeless visual whiteboard|Miro & Whimiscal with their edgeless visual whiteboard|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
 |Remnote & Capacities with their object-based tag system|Remnote & Capacities with their object-based tag system||
 
 ## Cloud Notes Development
@@ -373,12 +373,12 @@ For developer or installation guides, please go to [Cloud Notes Development](htt
             "children": [],
             "content": "||Title|Tag|
 |---|---|---|
-|Cloud Notes Development|Cloud Notes Development|<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--affine-tag-pink)">Cloud Notes</span>|
-|For developers or installations guides, please go to Cloud Notes Doc|For developers or installations guides, please go to Cloud Notes Doc|<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--affine-tag-orange)">Developers</span>|
-|Quip & Notion with their great concept of "everything is a block"|Quip & Notion with their great concept of "everything is a block"|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Trello with their Kanban|Trello with their Kanban|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Airtable & Miro with their no-code programable datasheets|Airtable & Miro with their no-code programable datasheets|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
-|Miro & Whimiscal with their edgeless visual whiteboard|Miro & Whimiscal with their edgeless visual whiteboard|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>|
+|Cloud Notes Development|Cloud Notes Development|<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--cloud-notes-tag-pink)">Cloud Notes</span>|
+|For developers or installations guides, please go to Cloud Notes Doc|For developers or installations guides, please go to Cloud Notes Doc|<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--cloud-notes-tag-orange)">Developers</span>|
+|Quip & Notion with their great concept of "everything is a block"|Quip & Notion with their great concept of "everything is a block"|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Trello with their Kanban|Trello with their Kanban|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Airtable & Miro with their no-code programable datasheets|Airtable & Miro with their no-code programable datasheets|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
+|Miro & Whimiscal with their edgeless visual whiteboard|Miro & Whimiscal with their edgeless visual whiteboard|<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>|
 |Remnote & Capacities with their object-based tag system|Remnote & Capacities with their object-based tag system||
 
 ",
@@ -386,7 +386,7 @@ For developer or installation guides, please go to [Cloud Notes Development](htt
             "id": "U_GoHFD9At",
             "rows": [
               {
-                "Tag": "<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--affine-tag-pink)">Cloud Notes</span>",
+                "Tag": "<span data-cloud-notes-option data-value="AxSe-53xjX" data-option-color="var(--cloud-notes-tag-pink)">Cloud Notes</span>",
                 "Title": "Cloud Notes Development
 
 ",
@@ -395,7 +395,7 @@ For developer or installation guides, please go to [Cloud Notes Development](htt
 ",
               },
               {
-                "Tag": "<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--affine-tag-orange)">Developers</span>",
+                "Tag": "<span data-cloud-notes-option data-value="0jh9gNw4Yl" data-option-color="var(--cloud-notes-tag-orange)">Developers</span>",
                 "Title": "For developers or installations guides, please go to Cloud Notes Doc
 
 ",
@@ -404,7 +404,7 @@ For developer or installation guides, please go to [Cloud Notes Development](htt
 ",
               },
               {
-                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>",
+                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>",
                 "Title": "Quip & Notion with their great concept of "everything is a block"
 
 ",
@@ -413,7 +413,7 @@ For developer or installation guides, please go to [Cloud Notes Development](htt
 ",
               },
               {
-                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>",
+                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>",
                 "Title": "Trello with their Kanban
 
 ",
@@ -422,7 +422,7 @@ For developer or installation guides, please go to [Cloud Notes Development](htt
 ",
               },
               {
-                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>",
+                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>",
                 "Title": "Airtable & Miro with their no-code programable datasheets
 
 ",
@@ -431,7 +431,7 @@ For developer or installation guides, please go to [Cloud Notes Development](htt
 ",
               },
               {
-                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--affine-tag-blue)">Reference</span>",
+                "Tag": "<span data-cloud-notes-option data-value="HgHsKOUINZ" data-option-color="var(--cloud-notes-tag-blue)">Reference</span>",
                 "Title": "Miro & Whimiscal with their edgeless visual whiteboard
 
 ",
@@ -1530,17 +1530,17 @@ exports[`should read doc blocks work 1`] = `
             "data": {
               "options": [
                 {
-                  "color": "var(--affine-tag-blue)",
+                  "color": "var(--cloud-notes-tag-blue)",
                   "id": "HgHsKOUINZ",
                   "value": "Reference",
                 },
                 {
-                  "color": "var(--affine-tag-orange)",
+                  "color": "var(--cloud-notes-tag-orange)",
                   "id": "0jh9gNw4Yl",
                   "value": "Developers",
                 },
                 {
-                  "color": "var(--affine-tag-pink)",
+                  "color": "var(--cloud-notes-tag-pink)",
                   "id": "AxSe-53xjX",
                   "value": "Cloud Notes",
                 },
@@ -1883,7 +1883,7 @@ exports[`should read doc blocks work 1`] = `
           "type": "$blocksuite:internal:native$",
           "value": {
             "EkqQL1MU5m": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 120,
               "fontStyle": "normal",
@@ -1899,7 +1899,7 @@ exports[`should read doc blocks work 1`] = `
               "xywh": "[988.4153663986212,-181.71961053807448,563,168.75]",
             },
             "F-GXtb8ubm": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:Lora",
               "fontSize": 72,
               "fontStyle": "normal",
@@ -1957,7 +1957,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -1970,7 +1970,7 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "Nb_9OXyIT3": {
-              "fillColor": "--affine-palette-shape-yellow",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "id": "Nb_9OXyIT3",
               "index": "a0",
@@ -1980,15 +1980,15 @@ exports[`should read doc blocks work 1`] = `
               "seed": 97408177,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
               "xywh": "[2403.9004515323168,57.24116579067933,955.1393577008388,542.1082071559455]",
             },
             "R2MK4ZzUb3": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-white",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-white",
               "filled": true,
               "id": "R2MK4ZzUb3",
               "index": "a0",
@@ -1998,7 +1998,7 @@ exports[`should read doc blocks work 1`] = `
               "seed": 1558899337,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "type": "shape",
@@ -2017,7 +2017,7 @@ exports[`should read doc blocks work 1`] = `
               "xywh": "[-1043.6169874048903,-641.7901035486665,622.6248931928226,667.0980998494529]",
             },
             "UloPoCxt6P": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -2056,7 +2056,7 @@ exports[`should read doc blocks work 1`] = `
               "type": "group",
             },
             "Z7D3qrSurD": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 120,
               "fontStyle": "normal",
@@ -2072,7 +2072,7 @@ exports[`should read doc blocks work 1`] = `
               "xywh": "[2478.972284676839,-1231.0379248118952,879.4798583984375,168.75]",
             },
             "_nC65-wkSP": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -2104,7 +2104,7 @@ exports[`should read doc blocks work 1`] = `
                   1.0000000000000002,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2117,7 +2117,7 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "gPvT0nfbcw": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -2133,8 +2133,8 @@ exports[`should read doc blocks work 1`] = `
               "xywh": "[2459.953125798208,208.4260321250699,779,147]",
             },
             "hLAqby4WpD": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-white",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-white",
               "filled": true,
               "id": "hLAqby4WpD",
               "index": "Zz",
@@ -2144,15 +2144,15 @@ exports[`should read doc blocks work 1`] = `
               "seed": 2025695507,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "type": "shape",
               "xywh": "[-259.87318248973133,-371.99627945163166,948.0569720935435,876.3267415022492]",
             },
             "istDk5DOMO": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-blue",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-blue",
               "filled": true,
               "id": "istDk5DOMO",
               "index": "aI",
@@ -2162,7 +2162,7 @@ exports[`should read doc blocks work 1`] = `
               "seed": 858601929,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
@@ -2198,7 +2198,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2207,8 +2207,8 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "qRCk-vrGXw": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-magenta",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-magenta",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "id": "qRCk-vrGXw",
@@ -2219,7 +2219,7 @@ exports[`should read doc blocks work 1`] = `
               "seed": 2015167989,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "text": "",
@@ -2243,7 +2243,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2252,7 +2252,7 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "saGXC7nPOk": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -2284,7 +2284,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2309,7 +2309,7 @@ exports[`should read doc blocks work 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -2318,8 +2318,8 @@ exports[`should read doc blocks work 1`] = `
               "type": "connector",
             },
             "uzfdAcEDxu": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-purple",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-purple",
               "filled": true,
               "id": "uzfdAcEDxu",
               "index": "aTG",
@@ -2329,15 +2329,15 @@ exports[`should read doc blocks work 1`] = `
               "seed": 462401908,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
               "xywh": "[2421.751354148884,-1283.6175127158676,1085.7995880501803,519.0294552479265]",
             },
             "w86OKmzMtn": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-tangerine",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-tangerine",
               "filled": true,
               "fontFamily": "blocksuite:surface:Poppins",
               "fontSize": 36,
@@ -2351,7 +2351,7 @@ exports[`should read doc blocks work 1`] = `
               "seed": 1298533711,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "text": "You can check these URLs to learn about Cloud Notes",
@@ -3221,17 +3221,17 @@ exports[`should read doc blocks work without root doc 1`] = `
             "data": {
               "options": [
                 {
-                  "color": "var(--affine-tag-blue)",
+                  "color": "var(--cloud-notes-tag-blue)",
                   "id": "HgHsKOUINZ",
                   "value": "Reference",
                 },
                 {
-                  "color": "var(--affine-tag-orange)",
+                  "color": "var(--cloud-notes-tag-orange)",
                   "id": "0jh9gNw4Yl",
                   "value": "Developers",
                 },
                 {
-                  "color": "var(--affine-tag-pink)",
+                  "color": "var(--cloud-notes-tag-pink)",
                   "id": "AxSe-53xjX",
                   "value": "Cloud Notes",
                 },
@@ -3574,7 +3574,7 @@ exports[`should read doc blocks work without root doc 1`] = `
           "type": "$blocksuite:internal:native$",
           "value": {
             "EkqQL1MU5m": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 120,
               "fontStyle": "normal",
@@ -3590,7 +3590,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "xywh": "[988.4153663986212,-181.71961053807448,563,168.75]",
             },
             "F-GXtb8ubm": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:Lora",
               "fontSize": 72,
               "fontStyle": "normal",
@@ -3648,7 +3648,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -3661,7 +3661,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "Nb_9OXyIT3": {
-              "fillColor": "--affine-palette-shape-yellow",
+              "fillColor": "--cloud-notes-palette-shape-yellow",
               "filled": true,
               "id": "Nb_9OXyIT3",
               "index": "a0",
@@ -3671,15 +3671,15 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 97408177,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-line-yellow",
+              "strokeColor": "--cloud-notes-palette-line-yellow",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
               "xywh": "[2403.9004515323168,57.24116579067933,955.1393577008388,542.1082071559455]",
             },
             "R2MK4ZzUb3": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-white",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-white",
               "filled": true,
               "id": "R2MK4ZzUb3",
               "index": "a0",
@@ -3689,7 +3689,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 1558899337,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "type": "shape",
@@ -3708,7 +3708,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "xywh": "[-1043.6169874048903,-641.7901035486665,622.6248931928226,667.0980998494529]",
             },
             "UloPoCxt6P": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -3747,7 +3747,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "group",
             },
             "Z7D3qrSurD": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 120,
               "fontStyle": "normal",
@@ -3763,7 +3763,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "xywh": "[2478.972284676839,-1231.0379248118952,879.4798583984375,168.75]",
             },
             "_nC65-wkSP": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -3795,7 +3795,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   1.0000000000000002,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -3808,7 +3808,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "gPvT0nfbcw": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -3824,8 +3824,8 @@ exports[`should read doc blocks work without root doc 1`] = `
               "xywh": "[2459.953125798208,208.4260321250699,779,147]",
             },
             "hLAqby4WpD": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-white",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-white",
               "filled": true,
               "id": "hLAqby4WpD",
               "index": "Zz",
@@ -3835,15 +3835,15 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 2025695507,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 2,
               "type": "shape",
               "xywh": "[-259.87318248973133,-371.99627945163166,948.0569720935435,876.3267415022492]",
             },
             "istDk5DOMO": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-blue",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-blue",
               "filled": true,
               "id": "istDk5DOMO",
               "index": "aI",
@@ -3853,7 +3853,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 858601929,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
@@ -3889,7 +3889,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -3898,8 +3898,8 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "qRCk-vrGXw": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-magenta",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-magenta",
               "filled": true,
               "fontFamily": "blocksuite:surface:Inter",
               "id": "qRCk-vrGXw",
@@ -3910,7 +3910,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 2015167989,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "text": "",
@@ -3934,7 +3934,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -3943,7 +3943,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "saGXC7nPOk": {
-              "color": "--affine-palette-line-black",
+              "color": "--cloud-notes-palette-line-black",
               "fontFamily": "blocksuite:surface:OrelegaOne",
               "fontSize": 128,
               "fontStyle": "normal",
@@ -3975,7 +3975,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -4000,7 +4000,7 @@ exports[`should read doc blocks work without root doc 1`] = `
                   0.5,
                 ],
               },
-              "stroke": "--affine-palette-line-grey",
+              "stroke": "--cloud-notes-palette-line-grey",
               "strokeStyle": "solid",
               "strokeWidth": 8,
               "target": {
@@ -4009,8 +4009,8 @@ exports[`should read doc blocks work without root doc 1`] = `
               "type": "connector",
             },
             "uzfdAcEDxu": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-purple",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-purple",
               "filled": true,
               "id": "uzfdAcEDxu",
               "index": "aTG",
@@ -4020,15 +4020,15 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 462401908,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "type": "shape",
               "xywh": "[2421.751354148884,-1283.6175127158676,1085.7995880501803,519.0294552479265]",
             },
             "w86OKmzMtn": {
-              "color": "--affine-palette-line-black",
-              "fillColor": "--affine-palette-shape-tangerine",
+              "color": "--cloud-notes-palette-line-black",
+              "fillColor": "--cloud-notes-palette-shape-tangerine",
               "filled": true,
               "fontFamily": "blocksuite:surface:Poppins",
               "fontSize": 36,
@@ -4042,7 +4042,7 @@ exports[`should read doc blocks work without root doc 1`] = `
               "seed": 1298533711,
               "shapeStyle": "General",
               "shapeType": "rect",
-              "strokeColor": "--affine-palette-transparent",
+              "strokeColor": "--cloud-notes-palette-transparent",
               "strokeStyle": "solid",
               "strokeWidth": 4,
               "text": "You can check these URLs to learn about Cloud Notes",

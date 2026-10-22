@@ -32,7 +32,7 @@ export const GroupDomRendererExtension = DomElementRendererExtension(
       titleElement.style.fontWeight = `${FontWeight.Regular}`;
       titleElement.style.fontStyle = 'normal';
       titleElement.style.fontSize = `${GROUP_TITLE_FONT_SIZE}px`;
-      titleElement.style.color = renderer.getPropertyValue('--affine-blue');
+      titleElement.style.color = renderer.getPropertyValue('--cloud-notes-blue');
       titleElement.style.textAlign = 'left';
       titleElement.style.padding = `${GROUP_TITLE_PADDING[0]}px ${GROUP_TITLE_PADDING[1]}px`;
       titleElement.textContent = text;
@@ -44,7 +44,7 @@ export const GroupDomRendererExtension = DomElementRendererExtension(
         renderTitle();
       } else {
         domElement.style.outlineColor =
-          renderer.getPropertyValue('--affine-blue');
+          renderer.getPropertyValue('--cloud-notes-blue');
         domElement.style.outlineWidth = '2px';
         domElement.style.outlineStyle = 'solid';
       }

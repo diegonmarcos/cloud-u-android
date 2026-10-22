@@ -21,7 +21,7 @@
     "@blocksuite/std": "workspace:*",
     "@blocksuite/store": "workspace:*",
     "@preact/signals-core": "^1.8.0",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "@types/lodash-es": "^4.17.12",
     "fflate": "^0.8.2",
     "js-yaml": "^5.0.0",

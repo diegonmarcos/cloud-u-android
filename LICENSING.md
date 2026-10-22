@@ -77,6 +77,14 @@ Limits of the inventory, stated so it is not read as more than it is:
 
 The full per-directory record (with `kind`, `what`, `exceptions`) is `licenses/curated.json::directories`.
 
+### 2.1 A vendored Mozilla Public License 2.0 directory (#1098)
+
+`ac_cloud-notes/packages/common/theme` is the Cloud Notes design-token package,
+vendored as build output from a package published under MPL-2.0 (its `LICENSE` is
+kept). MPL-2.0 is file-level: those files stay MPL-2.0 and their source is this
+directory; the rest of `ac_cloud-notes` stays MIT. Modification: variable and type
+names renamed to Cloud Notes naming; source maps and font files left out.
+
 ## 3. Upstream-derived vs newly authored, per module
 
 Measured 2026-10-03 against each module's pinned upstream revision, tree at `fe93fb7c4`.

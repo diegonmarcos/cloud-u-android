@@ -409,11 +409,11 @@ export class ExportManager {
     if (edgelessBackground) {
       await this._drawEdgelessBackground(ctx, {
         backgroundColor: containerComputedStyle.getPropertyValue(
-          '--affine-background-primary-color'
+          '--cloud-notes-background-primary-color'
         ),
         size: getBgGridGap(edgelessBackground.zoom),
         gridColor: containerComputedStyle.getPropertyValue(
-          '--affine-edgeless-grid-color'
+          '--cloud-notes-edgeless-grid-color'
         ),
       });
     }

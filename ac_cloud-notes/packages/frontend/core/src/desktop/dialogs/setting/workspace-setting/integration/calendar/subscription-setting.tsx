@@ -1,6 +1,6 @@
 import { Checkbox } from '@cloud-notes/component';
 import type { CalendarAccountsQuery } from '@cloud-notes/graphql';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { useCallback } from 'react';
 
 import * as styles from './subscription-setting.css';

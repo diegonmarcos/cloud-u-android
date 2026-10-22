@@ -10,7 +10,7 @@ const fadeIn = keyframes({
 export const tooltip = style({
   width: 500,
   textAlign: 'center',
-  fontFamily: 'var(--affine-font-family)',
+  fontFamily: 'var(--cloud-notes-font-family)',
   fontSize: '20px',
   lineHeight: '28px',
   fontWeight: 600,

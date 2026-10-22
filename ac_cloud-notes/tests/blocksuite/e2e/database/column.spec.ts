@@ -545,7 +545,7 @@ test.describe('select column tag action', () => {
     await assertSelectedStyle(
       page,
       'backgroundColor',
-      'var(--affine-v2-chip-label-red)'
+      'var(--cloud-notes-v2-chip-label-red)'
     );
   });
 });

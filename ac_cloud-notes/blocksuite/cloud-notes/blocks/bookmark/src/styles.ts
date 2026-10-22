@@ -1,5 +1,5 @@
 import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, unsafeCSS } from 'lit';
 
 export const styles = css`
@@ -55,7 +55,7 @@ export const styles = css`
   .cloud-notes-bookmark-content-title-icon svg {
     width: 16px;
     height: 16px;
-    fill: var(--affine-background-primary-color);
+    fill: var(--cloud-notes-background-primary-color);
   }
 
   .cloud-notes-bookmark-content-title-text {
@@ -66,10 +66,10 @@ export const styles = css`
     word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--affine-text-primary-color);
+    color: var(--cloud-notes-text-primary-color);
 
-    font-family: var(--affine-font-family);
-    font-size: var(--affine-font-sm);
+    font-family: var(--cloud-notes-font-family);
+    font-size: var(--cloud-notes-font-sm);
     font-style: normal;
     font-weight: 600;
     line-height: 22px;
@@ -86,10 +86,10 @@ export const styles = css`
     word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--affine-text-primary-color);
+    color: var(--cloud-notes-text-primary-color);
 
-    font-family: var(--affine-font-family);
-    font-size: var(--affine-font-xs);
+    font-family: var(--cloud-notes-font-family);
+    font-size: var(--cloud-notes-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
@@ -113,19 +113,19 @@ export const styles = css`
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--affine-text-secondary-color);
+    color: var(--cloud-notes-text-secondary-color);
 
     font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-    font-size: var(--affine-font-xs);
+    font-size: var(--cloud-notes-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
   }
   .cloud-notes-bookmark-content-url:hover > span {
-    color: var(--affine-link-color);
+    color: var(--cloud-notes-link-color);
   }
   .cloud-notes-bookmark-content-url:hover {
-    fill: var(--affine-link-color);
+    fill: var(--cloud-notes-link-color);
   }
 
   .cloud-notes-bookmark-content-url-icon {
@@ -164,22 +164,22 @@ export const styles = css`
 
   .cloud-notes-bookmark-card.loading {
     .cloud-notes-bookmark-content-title-text {
-      color: var(--affine-placeholder-color);
+      color: var(--cloud-notes-placeholder-color);
     }
   }
 
   .cloud-notes-bookmark-card.error {
     .cloud-notes-bookmark-content-description {
-      color: var(--affine-placeholder-color);
+      color: var(--cloud-notes-placeholder-color);
     }
   }
 
   .cloud-notes-bookmark-card.selected {
     .cloud-notes-bookmark-content-url > span {
-      color: var(--affine-link-color);
+      color: var(--cloud-notes-link-color);
     }
     .cloud-notes-bookmark-content-url .cloud-notes-bookmark-content-url-icon {
-      color: var(--affine-link-color);
+      color: var(--cloud-notes-link-color);
     }
   }
 

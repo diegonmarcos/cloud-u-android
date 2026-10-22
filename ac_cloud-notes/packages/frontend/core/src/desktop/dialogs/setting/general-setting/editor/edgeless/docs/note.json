@@ -75,7 +75,7 @@
               "borderRadius": 0,
               "borderSize": 4,
               "borderStyle": "none",
-              "shadowType": "--affine-note-shadow-sticker"
+              "shadowType": "--cloud-notes-note-shadow-sticker"
             }
           }
         },

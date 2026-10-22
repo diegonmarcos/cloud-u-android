@@ -3,7 +3,7 @@ import { WithDisposable } from '@blocksuite/global/lit';
 import { ViewBarIcon } from '@blocksuite/icons/lit';
 import type { BlockStdScope } from '@blocksuite/std';
 import { GfxControllerIdentifier } from '@blocksuite/std/gfx';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, html, LitElement, unsafeCSS } from 'lit';
 import { property } from 'lit/decorators.js';
 
@@ -24,10 +24,10 @@ export class MobileZoomRuler extends WithDisposable(LitElement) {
       display: flex;
       align-items: center;
       height: 32px;
-      background: var(--affine-background-overlay-panel-color);
-      border: 1px solid var(--affine-border-color);
+      background: var(--cloud-notes-background-overlay-panel-color);
+      border: 1px solid var(--cloud-notes-border-color);
       border-radius: 999px;
-      box-shadow: var(--affine-shadow-1);
+      box-shadow: var(--cloud-notes-shadow-1);
       overflow: hidden;
     }
 
@@ -40,7 +40,7 @@ export class MobileZoomRuler extends WithDisposable(LitElement) {
       font-size: 12px;
       font-weight: 500;
       line-height: 1;
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       white-space: nowrap;
       user-select: none;
     }
@@ -48,7 +48,7 @@ export class MobileZoomRuler extends WithDisposable(LitElement) {
     .divider {
       width: 1px;
       height: 16px;
-      background: var(--affine-border-color);
+      background: var(--cloud-notes-border-color);
       flex-shrink: 0;
     }
 
@@ -61,18 +61,18 @@ export class MobileZoomRuler extends WithDisposable(LitElement) {
       padding: 0;
       border: none;
       background: transparent;
-      color: var(--affine-icon-color);
+      color: var(--cloud-notes-icon-color);
       cursor: pointer;
     }
 
     .fit-button:hover:not(:disabled) {
-      background: var(--affine-hover-color);
-      color: var(--affine-primary-color);
+      background: var(--cloud-notes-hover-color);
+      color: var(--cloud-notes-primary-color);
     }
 
     .fit-button:disabled {
       cursor: not-allowed;
-      color: var(--affine-text-disable-color);
+      color: var(--cloud-notes-text-disable-color);
     }
 
     .fit-button svg {

@@ -1,4 +1,4 @@
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { createVar, fallbackVar, keyframes, style } from '@vanilla-extract/css';
 
 const gap = createVar();

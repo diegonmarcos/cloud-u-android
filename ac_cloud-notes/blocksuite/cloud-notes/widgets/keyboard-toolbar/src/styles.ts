@@ -18,7 +18,7 @@ export const keyboardToolbarStyles = css`
     padding: 0px 8px;
     box-sizing: border-box;
     gap: 8px;
-    z-index: var(--affine-z-index-popover);
+    z-index: var(--cloud-notes-z-index-popover);
 
     background-color: ${unsafeCSSVarV2('layer/background/primary')};
     border-top: 0.5px solid ${unsafeCSSVarV2('layer/insideBorder/border')};

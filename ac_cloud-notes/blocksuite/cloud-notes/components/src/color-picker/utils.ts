@@ -215,7 +215,7 @@ export const keepColor = (color: string) =>
 export const parseStringToRgba = (value: string) => {
   value = value.trim();
 
-  // Compatible old format: `--affine-palette-transparent`
+  // Compatible old format: `--cloud-notes-palette-transparent`
   if (value.endsWith('transparent')) {
     return { r: 1, g: 1, b: 1, a: 0 };
   }
@@ -243,7 +243,7 @@ export const parseStringToRgba = (value: string) => {
 export const preprocessColor = (style: CSSStyleDeclaration) => {
   return ({ type, value }: { type: ModeType; value: string }) => {
     if (value.startsWith('--')) {
-      // Compatible old format: `--affine-palette-transparent`
+      // Compatible old format: `--cloud-notes-palette-transparent`
       value = value.endsWith('transparent')
         ? 'transparent'
         : style.getPropertyValue(value);
@@ -265,7 +265,7 @@ export const preprocessColor = (style: CSSStyleDeclaration) => {
  * @example
  *
  * ```json
- * { 'fillColor': '--affine-palette-shape-yellow' }
+ * { 'fillColor': '--cloud-notes-palette-shape-yellow' }
  * { 'fillColor': '#ffffff' }
  * { 'fillColor': { normal: '#ffffffff' }}
  * { 'fillColor': { light: '#fff000ff', 'dark': '#0000fff00' }}
@@ -323,7 +323,7 @@ export const calcCustomButtonStyle = (
 
   if (color.startsWith('--')) {
     if (!color.endsWith('transparent')) {
-      b = 'var(--affine-background-overlay-panel-color)';
+      b = 'var(--cloud-notes-background-overlay-panel-color)';
       c = keepColor(
         rgbaToHex8(
           preprocessColor(window.getComputedStyle(ele))({
@@ -334,7 +334,7 @@ export const calcCustomButtonStyle = (
       );
     }
   } else {
-    b = 'var(--affine-background-overlay-panel-color)';
+    b = 'var(--cloud-notes-background-overlay-panel-color)';
     c = keepColor(color);
   }
 

@@ -11,7 +11,7 @@ import { unsafeHTML } from '@blocksuite/cloud-notes-shared/utils';
 import { CollectionsIcon, WarningIcon } from '@blocksuite/icons/lit';
 import { computed, signal } from '@preact/signals-core';
 import { Service } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import Fuse, { type FuseResultMatch } from 'fuse.js';
 import { html } from 'lit';
 import { catchError, map, of } from 'rxjs';

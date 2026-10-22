@@ -19,7 +19,7 @@ vi.mock('@cloud-notes/component', () => ({
     open ? <div role="dialog">{children}</div> : null,
 }));
 
-vi.mock('@toeverything/theme/v2', () => ({
+vi.mock('@cloud-notes/theme/v2', () => ({
   cssVarV2: () => 'mock-color',
 }));
 

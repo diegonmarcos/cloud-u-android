@@ -10,7 +10,7 @@ import { UserFriendlyError } from '@cloud-notes/error';
 import { type InvoicesQuery, InvoiceStatus } from '@cloud-notes/graphql';
 import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useCallback, useEffect } from 'react';
 
 import * as styles from './style.css';

@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { style } from '@vanilla-extract/css';
 
 export const member = style({
@@ -49,6 +49,6 @@ export const remove = style({
   flexShrink: 0,
   cursor: 'pointer',
   ':hover': {
-    background: 'var(--affine-hover-color)',
+    background: 'var(--cloud-notes-hover-color)',
   },
 });

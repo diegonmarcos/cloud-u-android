@@ -29,7 +29,7 @@ import {
   type Rect,
   shift,
 } from '@floating-ui/dom';
-import { darkCssVariables, lightCssVariables } from '@toeverything/theme';
+import { darkCssVariables, lightCssVariables } from '@cloud-notes/theme';
 import { css, html, nothing, type PropertyValues, unsafeCSS } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { choose } from 'lit/directives/choose.js';
@@ -52,7 +52,7 @@ export class CloudNotesAIPanelWidget extends WidgetComponent {
       outline: none;
       border-radius: var(--8, 8px);
       border: 1px solid;
-      border-color: ${unsafeCSSVar('--affine-border-color')};
+      border-color: ${unsafeCSSVar('--cloud-notes-border-color')};
       background: ${unsafeCSSVar('backgroundOverlayPanelColor')};
       box-shadow: ${unsafeCSSVar('overlayShadow')};
 
@@ -63,23 +63,23 @@ export class CloudNotesAIPanelWidget extends WidgetComponent {
       left: 0;
       overflow-y: auto;
       scrollbar-width: none !important;
-      z-index: var(--affine-z-index-popover);
-      --affine-font-family: var(--affine-font-sans-family);
+      z-index: var(--cloud-notes-z-index-popover);
+      --cloud-notes-font-family: var(--cloud-notes-font-sans-family);
     }
 
     :host([data-app-theme='light']) {
       background: ${unsafeCSS(
-        lightCssVariables['--affine-background-overlay-panel-color']
+        lightCssVariables['--cloud-notes-background-overlay-panel-color']
       )};
-      border-color: ${unsafeCSS(lightCssVariables['--affine-border-color'])};
-      box-shadow: ${unsafeCSS(lightCssVariables['--affine-overlay-shadow'])};
+      border-color: ${unsafeCSS(lightCssVariables['--cloud-notes-border-color'])};
+      box-shadow: ${unsafeCSS(lightCssVariables['--cloud-notes-overlay-shadow'])};
     }
     :host([data-app-theme='dark']) {
       background: ${unsafeCSS(
-        darkCssVariables['--affine-background-overlay-panel-color']
+        darkCssVariables['--cloud-notes-background-overlay-panel-color']
       )};
-      border-color: ${unsafeCSS(darkCssVariables['--affine-border-color'])};
-      box-shadow: ${unsafeCSS(darkCssVariables['--affine-overlay-shadow'])};
+      border-color: ${unsafeCSS(darkCssVariables['--cloud-notes-border-color'])};
+      box-shadow: ${unsafeCSS(darkCssVariables['--cloud-notes-overlay-shadow'])};
     }
 
     .ai-panel-container {

@@ -5,7 +5,7 @@ import {
 import { WorkspaceDialogService } from '@cloud-notes/core/modules/dialogs';
 import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { assignInlineVars } from '@vanilla-extract/dynamic';
 import clsx from 'clsx';
 import { useCallback, useEffect } from 'react';

@@ -42,7 +42,7 @@ export class EdgelessFrameOrderButton extends WithDisposable(LitElement) {
     return html`
       <style>
         .edgeless-frame-order-button svg {
-          color: ${readonly ? 'var(--affine-text-disable-color)' : 'inherit'};
+          color: ${readonly ? 'var(--cloud-notes-text-disable-color)' : 'inherit'};
         }
       </style>
       <edgeless-tool-icon-button

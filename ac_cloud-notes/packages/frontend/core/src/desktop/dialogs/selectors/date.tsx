@@ -2,7 +2,7 @@ import { DatePicker, Menu } from '@cloud-notes/component';
 import type { DialogComponentProps } from '@cloud-notes/core/modules/dialogs';
 import type { WORKSPACE_DIALOG_SCHEMA } from '@cloud-notes/core/modules/dialogs/constant';
 import { useI18n } from '@cloud-notes/i18n';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { useCallback, useState } from 'react';
 
 /**

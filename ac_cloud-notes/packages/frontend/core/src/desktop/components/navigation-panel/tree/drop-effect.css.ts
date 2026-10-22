@@ -1,4 +1,4 @@
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { style } from '@vanilla-extract/css';
 
 export const dropEffect = style({
@@ -6,8 +6,8 @@ export const dropEffect = style({
   position: 'fixed',
   left: '10px',
   top: '-20px',
-  background: cssVar('--affine-background-primary-color'),
-  boxShadow: cssVar('--affine-toolbar-shadow'),
+  background: cssVar('--cloud-notes-background-primary-color'),
+  boxShadow: cssVar('--cloud-notes-toolbar-shadow'),
   padding: '0px 4px',
   fontSize: '12px',
   borderRadius: '4px',

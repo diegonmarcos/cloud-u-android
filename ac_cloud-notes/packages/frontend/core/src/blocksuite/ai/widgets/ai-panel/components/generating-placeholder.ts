@@ -1,7 +1,7 @@
 import { LoadingIcon } from '@blocksuite/cloud-notes/components/icons';
 import { WithDisposable } from '@blocksuite/cloud-notes/global/lit';
 import { unsafeCSSVar } from '@blocksuite/cloud-notes/shared/theme';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import {
   css,
   html,

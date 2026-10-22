@@ -1,6 +1,6 @@
 import { cssVarV2 } from '@blocksuite/cloud-notes-shared/theme';
 import { css } from '@emotion/css';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 
 export const linkCellStyle = css({
   width: '100%',
@@ -30,7 +30,7 @@ export const linkIconContainerStyle = css({
   alignItems: 'center',
   visibility: 'hidden',
   backgroundColor: cssVarV2.layer.background.primary,
-  boxShadow: 'var(--affine-button-shadow)',
+  boxShadow: 'var(--cloud-notes-button-shadow)',
   borderRadius: '4px',
   overflow: 'hidden',
   zIndex: 1,
@@ -58,11 +58,11 @@ export const showLinkIconStyle = css({
 
 export const linkedDocStyle = css({
   textDecoration: 'underline',
-  textDecorationColor: 'var(--affine-divider-color)',
+  textDecorationColor: 'var(--cloud-notes-divider-color)',
   transition: 'text-decoration-color 0.2s ease-out',
   cursor: 'pointer',
   ':hover': {
-    textDecorationColor: 'var(--affine-icon-color)',
+    textDecorationColor: 'var(--cloud-notes-icon-color)',
   },
 });
 
@@ -73,7 +73,7 @@ export const linkEditingStyle = css({
   padding: '0',
   border: 'none',
   fontFamily: baseTheme.fontSansFamily,
-  color: 'var(--affine-text-primary-color)',
+  color: 'var(--cloud-notes-text-primary-color)',
   fontWeight: 400,
   backgroundColor: 'transparent',
   fontSize: 'var(--data-view-cell-text-size)',
@@ -86,8 +86,8 @@ export const linkEditingStyle = css({
 
 export const inlineLinkNodeStyle = css({
   wordBreak: 'break-all',
-  color: 'var(--affine-link-color)',
-  fill: 'var(--affine-link-color)',
+  color: 'var(--cloud-notes-link-color)',
+  fill: 'var(--cloud-notes-link-color)',
   cursor: 'pointer',
   fontWeight: 'normal',
   fontStyle: 'normal',

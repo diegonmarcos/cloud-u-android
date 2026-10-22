@@ -38,7 +38,7 @@
     "@radix-ui/react-tooltip": "^1.1.5",
     "@sentry/react": "^10.53.1",
     "@tanstack/react-table": "^8.20.5",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "cmdk": "^1.0.4",
     "embla-carousel-react": "^8.5.1",
     "input-otp": "^1.4.1",

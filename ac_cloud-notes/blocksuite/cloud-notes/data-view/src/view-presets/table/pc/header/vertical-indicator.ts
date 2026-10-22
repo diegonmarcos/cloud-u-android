@@ -34,7 +34,7 @@ export class TableVerticalIndicator extends WithDisposable(ShadowlessElement) {
       height: 100%;
       content: '';
       right: 0;
-      background-color: var(--affine-primary-color);
+      background-color: var(--cloud-notes-primary-color);
       border-radius: 1px;
     }
 

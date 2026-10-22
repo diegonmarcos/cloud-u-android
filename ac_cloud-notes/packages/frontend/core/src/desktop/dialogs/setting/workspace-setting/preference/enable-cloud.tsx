@@ -48,7 +48,7 @@ export const EnableCloudPanel = ({
       spreadCol={false}
       style={{
         padding: '10px',
-        background: 'var(--affine-background-secondary-color)',
+        background: 'var(--cloud-notes-background-secondary-color)',
         marginTop: '24px',
       }}
     >

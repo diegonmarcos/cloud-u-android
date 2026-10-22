@@ -1,16 +1,16 @@
 import { css } from '@emotion/css';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 export const databaseBlockStyles = css({
   display: 'block',
   borderRadius: '8px',
-  backgroundColor: 'var(--affine-background-primary-color)',
+  backgroundColor: 'var(--cloud-notes-background-primary-color)',
   padding: '8px',
   margin: '8px -8px -8px',
 });
 
 export const databaseBlockSelectedStyles = css({
-  backgroundColor: 'var(--affine-hover-color)',
+  backgroundColor: 'var(--cloud-notes-hover-color)',
   borderRadius: '4px',
 });
 
@@ -24,7 +24,7 @@ export const databaseOpsStyles = css({
   fontSize: '16px',
   color: cssVarV2.icon.primary,
   ':hover': {
-    backgroundColor: 'var(--affine-hover-color)',
+    backgroundColor: 'var(--cloud-notes-hover-color)',
   },
 
   '@media print': {
@@ -68,6 +68,6 @@ export const databaseViewBarContainerStyles = css({
 
 export const databaseContentStyles = css({
   position: 'relative',
-  backgroundColor: 'var(--affine-background-primary-color)',
+  backgroundColor: 'var(--cloud-notes-background-primary-color)',
   borderRadius: '4px',
 });

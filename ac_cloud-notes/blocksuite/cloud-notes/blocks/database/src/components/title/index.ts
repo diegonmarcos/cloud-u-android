@@ -23,7 +23,7 @@ export class DatabaseTitle extends SignalWatcher(
       font-size: 20px;
       line-height: 28px;
       font-weight: 600;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
       overflow: hidden;
     }
 
@@ -67,11 +67,11 @@ export class DatabaseTitle extends SignalWatcher(
       content: 'Untitled';
       position: absolute;
       pointer-events: none;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
     }
 
     .cloud-notes-database-title [data-title-focus='true']::before {
-      color: var(--affine-placeholder-color);
+      color: var(--cloud-notes-placeholder-color);
     }
 
     .cloud-notes-database-title.comment-highlighted {

@@ -34,7 +34,7 @@ export class MenuComponent
 {
   static override styles = css`
     cloud-notes-menu {
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
       display: flex;
       flex-direction: column;
       user-select: none;
@@ -79,7 +79,7 @@ export class MenuComponent
     .no-results {
       font-size: 12px;
       line-height: 20px;
-      color: var(--affine-text-secondary-color);
+      color: var(--cloud-notes-text-secondary-color);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -187,7 +187,7 @@ export class MenuComponent
     });
     return html` <div style=${searchStyle} class="cloud-notes-menu-search-container">
       <div
-        style="font-size:20px;display:flex;align-items:center;color: var(--affine-text-secondary-color)"
+        style="font-size:20px;display:flex;align-items:center;color: var(--cloud-notes-text-secondary-color)"
       >
         ${SearchIcon()}
       </div>
@@ -232,7 +232,7 @@ export class MenuComponent
             : nothing
         }
         <div
-          style="flex:1;font-weight:500;font-size: 14px;line-height: 22px;color: var(--affine-text-primary-color)"
+          style="flex:1;font-weight:500;font-size: 14px;line-height: 22px;color: var(--cloud-notes-text-primary-color)"
         >
           ${title.text}
         </div>
@@ -269,7 +269,7 @@ export class MobileMenuComponent
   static override styles = css`
     mobile-menu {
       height: 100%;
-      font-family: var(--affine-font-family);
+      font-family: var(--cloud-notes-font-family);
       display: flex;
       flex-direction: column;
       user-select: none;
@@ -354,7 +354,7 @@ export class MobileMenuComponent
           font-style: normal;
           font-weight: 500;
           line-height: 22px;
-          color: var(--affine-text-primary-color);
+          color: var(--cloud-notes-text-primary-color);
           display: flex;
           justify-content: center;
 "
@@ -407,7 +407,7 @@ export const createModal = (container: HTMLElement = document.body) => {
   div.style.width = '100%';
   div.style.height = '100%';
   div.style.zIndex = '1001';
-  div.style.fontFamily = 'var(--affine-font-family)';
+  div.style.fontFamily = 'var(--cloud-notes-font-family)';
   container.append(div);
   return div;
 };

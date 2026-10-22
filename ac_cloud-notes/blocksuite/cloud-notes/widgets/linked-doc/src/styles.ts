@@ -1,6 +1,6 @@
 import { scrollbarStyle } from '@blocksuite/cloud-notes-shared/styles';
 import { unsafeCSSVar, unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
-import { baseTheme } from '@toeverything/theme';
+import { baseTheme } from '@cloud-notes/theme';
 import { css, unsafeCSS } from 'lit';
 
 export const linkedDocWidgetStyles = css`
@@ -23,7 +23,7 @@ export const linkedDocPopoverStyles = css`
     top: 0;
     box-sizing: border-box;
     font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-    font-size: var(--affine-font-base);
+    font-size: var(--cloud-notes-font-base);
     padding: 8px;
     display: flex;
     flex-direction: column;
@@ -33,7 +33,7 @@ export const linkedDocPopoverStyles = css`
     background: ${unsafeCSSVarV2('layer/background/primary')};
     box-shadow: ${unsafeCSSVar('overlayPanelShadow')};
     border-radius: 4px;
-    z-index: var(--affine-z-index-popover);
+    z-index: var(--cloud-notes-z-index-popover);
   }
 
   .linked-doc-popover icon-button {
@@ -43,10 +43,10 @@ export const linkedDocPopoverStyles = css`
   }
 
   .linked-doc-popover .group-title {
-    color: var(--affine-text-secondary-color);
+    color: var(--cloud-notes-text-secondary-color);
     padding: 0 8px;
     height: 30px;
-    font-size: var(--affine-font-xs);
+    font-size: var(--cloud-notes-font-xs);
     display: flex;
     align-items: center;
     flex-shrink: 0;

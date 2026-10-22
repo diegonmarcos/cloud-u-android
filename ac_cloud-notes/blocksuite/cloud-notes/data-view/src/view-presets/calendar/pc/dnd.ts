@@ -188,8 +188,8 @@ export class CalendarDnd {
         preview.style.cssText =
           'padding:0 6px;height:22px;line-height:22px;border-radius:4px;' +
           'font-size:12px;white-space:nowrap;overflow:hidden;' +
-          'background:var(--affine-hover-color,#f5f5f5);' +
-          'color:var(--affine-text-primary-color,#333);' +
+          'background:var(--cloud-notes-hover-color,#f5f5f5);' +
+          'color:var(--cloud-notes-text-primary-color,#333);' +
           'max-width:140px;text-overflow:ellipsis;pointer-events:none;';
         container.append(preview);
         setOffset({ x: 10, y: 11 });

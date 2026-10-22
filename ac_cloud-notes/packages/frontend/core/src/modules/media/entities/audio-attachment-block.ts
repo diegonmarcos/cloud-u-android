@@ -11,7 +11,7 @@ import type { CloudNotesTextAttributes } from '@blocksuite/cloud-notes/shared/ty
 import { type DeltaInsert, Text } from '@blocksuite/cloud-notes/store';
 import { computed } from '@preact/signals-core';
 import { Entity, LiveData } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 
 import type { WorkspaceService } from '../../workspace';
 import type { AudioMediaManagerService } from '../services/audio-media-manager';

@@ -3,7 +3,7 @@ import { unsafeCSSVarV2 } from '@blocksuite/cloud-notes-shared/theme';
 import { SignalWatcher, WithDisposable } from '@blocksuite/global/lit';
 import { CenterPeekIcon, MoreHorizontalIcon } from '@blocksuite/icons/lit';
 import { ShadowlessElement } from '@blocksuite/std';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { css, unsafeCSS } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { classMap } from 'lit/directives/class-map.js';
@@ -22,7 +22,7 @@ const styles = css`
     border: 0.5px solid ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
     box-shadow: 0px 2px 3px 0px rgba(0, 0, 0, 0.05);
     border-radius: 8px;
-    background-color: var(--affine-background-kanban-card-color);
+    background-color: var(--cloud-notes-background-kanban-card-color);
   }
 
   .mobile-card-header {
@@ -47,7 +47,7 @@ const styles = css`
 
   .mobile-card-header-icon {
     padding: 4px;
-    background-color: var(--affine-background-secondary-color);
+    background-color: var(--cloud-notes-background-secondary-color);
     display: flex;
     align-items: center;
     border-radius: 4px;
@@ -81,7 +81,7 @@ const styles = css`
     padding: 4px;
     border-radius: 4px;
     box-shadow: 0px 0px 4px 0px rgba(66, 65, 73, 0.14);
-    background-color: var(--affine-background-primary-color);
+    background-color: var(--cloud-notes-background-primary-color);
     font-size: 16px;
     color: ${unsafeCSSVarV2('icon/primary')};
   }

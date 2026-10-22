@@ -1,5 +1,5 @@
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { createVar, globalStyle, style } from '@vanilla-extract/css';
 
 // Using variables can override externally, without considering the priority of selectors.

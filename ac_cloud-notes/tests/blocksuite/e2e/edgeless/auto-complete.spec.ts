@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { lightThemeV2 } from '@toeverything/theme/v2';
+import { lightThemeV2 } from '@cloud-notes/theme/v2';
 
 import { clickView, moveView } from '../utils/actions/click.js';
 import { dragBetweenCoords } from '../utils/actions/drag.js';

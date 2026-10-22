@@ -6,7 +6,7 @@ import { JournalService } from '@cloud-notes/core/modules/journal';
 import { ViewService, WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { i18nTime } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import dayjs from 'dayjs';
 import { useCallback, useLayoutEffect, useState } from 'react';
 

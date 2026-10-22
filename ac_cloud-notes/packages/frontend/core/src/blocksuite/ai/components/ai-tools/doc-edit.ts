@@ -81,7 +81,7 @@ export class DocEditTool extends WithDisposable(ShadowlessElement) {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      background: ${unsafeCSSVar('--affine-overlay-panel-shadow')};
+      background: ${unsafeCSSVar('--cloud-notes-overlay-panel-shadow')};
       box-shadow: ${unsafeCSSVar('shadow1')};
       border-radius: 8px;
       width: 100%;

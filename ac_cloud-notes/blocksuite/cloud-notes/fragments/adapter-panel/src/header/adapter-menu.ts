@@ -18,10 +18,10 @@ export class AdapterMenu extends SignalWatcher(LitElement) {
     .adapter-menu {
       min-width: 120px;
       padding: 4px;
-      background: var(--affine-background-primary-color);
-      border: 1px solid var(--affine-border-color);
+      background: var(--cloud-notes-background-primary-color);
+      border: 1px solid var(--cloud-notes-border-color);
       border-radius: 4px;
-      box-shadow: var(--affine-shadow-1);
+      box-shadow: var(--cloud-notes-shadow-1);
     }
     .adapter-menu-item {
       display: block;
@@ -31,17 +31,17 @@ export class AdapterMenu extends SignalWatcher(LitElement) {
       background: none;
       text-align: left;
       cursor: pointer;
-      color: var(--affine-text-primary-color);
-      font-family: var(--affine-font-family);
-      font-size: var(--affine-font-xs);
+      color: var(--cloud-notes-text-primary-color);
+      font-family: var(--cloud-notes-font-family);
+      font-size: var(--cloud-notes-font-xs);
       border-radius: 4px;
     }
     .adapter-menu-item:hover {
-      background: var(--affine-hover-color);
+      background: var(--cloud-notes-hover-color);
     }
     .adapter-menu-item.active {
-      color: var(--affine-primary-color);
-      background: var(--affine-hover-color);
+      color: var(--cloud-notes-primary-color);
+      background: var(--cloud-notes-hover-color);
     }
   `;
 

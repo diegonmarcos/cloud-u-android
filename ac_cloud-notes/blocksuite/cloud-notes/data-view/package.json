@@ -20,7 +20,7 @@
     "@emotion/hash": "^0.9.2",
     "@floating-ui/dom": "^1.6.13",
     "@preact/signals-core": "^1.8.0",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "@types/lodash-es": "^4.17.12",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",

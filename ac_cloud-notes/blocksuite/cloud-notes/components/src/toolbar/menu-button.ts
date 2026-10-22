@@ -193,7 +193,7 @@ export class EditorMenuAction extends LitElement {
       text-overflow: ellipsis;
       cursor: pointer;
       gap: 8px;
-      color: var(--affine-text-primary-color);
+      color: var(--cloud-notes-text-primary-color);
       font-weight: 400;
       min-height: 30px; // 22 + 8
       user-select: none;
@@ -201,7 +201,7 @@ export class EditorMenuAction extends LitElement {
 
     :host(:hover),
     :host([data-selected]) {
-      background-color: var(--affine-hover-color);
+      background-color: var(--cloud-notes-hover-color);
     }
 
     :host([data-selected]) {
@@ -210,18 +210,18 @@ export class EditorMenuAction extends LitElement {
 
     :host(:hover.delete),
     :host(:hover.delete) ::slotted(svg) {
-      background-color: var(--affine-background-error-color);
-      color: var(--affine-error-color);
+      background-color: var(--cloud-notes-background-error-color);
+      color: var(--cloud-notes-error-color);
     }
 
     :host([disabled]) {
       pointer-events: none;
       cursor: not-allowed;
-      color: var(--affine-text-disable-color);
+      color: var(--cloud-notes-text-disable-color);
     }
 
     ::slotted(svg) {
-      color: var(--affine-icon-color);
+      color: var(--cloud-notes-icon-color);
       font-size: 20px;
     }
 

@@ -139,28 +139,6 @@
       "reason": "Ordinary French word (imperative of 'affiner', refine) in a string resource."
     },
     {
-      "id": "registry-theme-css-variables",
-      "category": "external-identifier",
-      "paths": [
-        "ac_cloud-notes/**"
-      ],
-      "patterns": [
-        "--affine[-—][A-Za-z0-9_—-]*"
-      ],
-      "reason": "CSS custom properties are defined by the registry package @toeverything/theme (and by the stylesheet that imports it); consumers must spell them exactly. Forking that MPL-2.0 package under our own naming is a separate ticket."
-    },
-    {
-      "id": "registry-theme-exports",
-      "category": "external-identifier",
-      "paths": [
-        "ac_cloud-notes/**"
-      ],
-      "patterns": [
-        "Affine(?:CssVariables|ThemeKeyV2|Theme)(?= as CloudNotes)|AfFiNeIcon(?= as CloudNotesIcon)"
-      ],
-      "reason": "Named exports of the registry packages @toeverything/theme and @blocksuite/icons, imported under our own names."
-    },
-    {
       "id": "legacy-storage-migration",
       "category": "persisted-format",
       "paths": [

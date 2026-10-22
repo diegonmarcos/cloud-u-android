@@ -1,9 +1,9 @@
-import { type AffineTheme as CloudNotesTheme, darkTheme, lightTheme } from '@toeverything/theme';
+import { type CloudNotesTheme, darkTheme, lightTheme } from '@cloud-notes/theme';
 import {
-  type AffineThemeKeyV2 as CloudNotesThemeKeyV2,
+  type CloudNotesThemeKeyV2,
   darkThemeV2,
   lightThemeV2,
-} from '@toeverything/theme/v2';
+} from '@cloud-notes/theme/v2';
 import { useTheme } from 'next-themes';
 
 export const useThemeValueV2 = (key: CloudNotesThemeKeyV2) => {

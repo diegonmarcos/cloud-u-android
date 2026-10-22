@@ -26,7 +26,7 @@ export const typeConfig = (property: Property) => {
         hide: () => !property.typeCanSet,
         postfix: html` <div
           class="cloud-notes-database-column-type-icon"
-          style="color: var(--affine-text-secondary-color);gap:4px;font-size: 14px;"
+          style="color: var(--cloud-notes-text-secondary-color);gap:4px;font-size: 14px;"
         >
           ${renderUniLit(property.icon)}
           ${

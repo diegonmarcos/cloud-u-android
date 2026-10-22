@@ -35,7 +35,7 @@
     "@blocksuite/icons": "^2.2.17",
     "@blocksuite/std": "workspace:*",
     "@preact/signals-core": "^1.8.0",
-    "@toeverything/theme": "^1.1.23",
+    "@cloud-notes/theme": "workspace:*",
     "lit": "^3.2.0"
   },
   "exports": {

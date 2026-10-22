@@ -53,7 +53,7 @@ export const CustomThemeModifier = () => {
   useEffect(() => {
     if (settings.fontSize) {
       document.documentElement.style.setProperty(
-        '--affine-font-base',
+        '--cloud-notes-font-base',
         `${settings.fontSize}px`
       );
     }

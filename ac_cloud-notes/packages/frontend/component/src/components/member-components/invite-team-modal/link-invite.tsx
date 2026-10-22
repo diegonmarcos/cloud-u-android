@@ -4,8 +4,8 @@ import {
 } from '@cloud-notes/graphql';
 import { useI18n } from '@cloud-notes/i18n';
 import { CloseIcon } from '@blocksuite/icons/rc';
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { useCallback, useMemo, useState } from 'react';
 
 import { Button, IconButton } from '../../../ui/button';

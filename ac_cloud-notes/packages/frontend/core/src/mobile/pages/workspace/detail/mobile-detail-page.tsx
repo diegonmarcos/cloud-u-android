@@ -32,7 +32,7 @@ import {
   useService,
   useServices,
 } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import clsx from 'clsx';
 import dayjs from 'dayjs';
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react';
@@ -224,7 +224,7 @@ const DetailPageImpl = ({
 
   const immersiveViewportStyle = immersiveZoomToolbarBottom
     ? ({
-        '--affine-edgeless-zoom-toolbar-bottom': immersiveZoomToolbarBottom,
+        '--cloud-notes-edgeless-zoom-toolbar-bottom': immersiveZoomToolbarBottom,
       } as CSSProperties)
     : undefined;
 

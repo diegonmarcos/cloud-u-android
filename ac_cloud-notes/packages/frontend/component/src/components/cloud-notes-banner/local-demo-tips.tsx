@@ -1,7 +1,7 @@
 import { Button, IconButton } from '@cloud-notes/component/ui/button';
 import { useI18n } from '@cloud-notes/i18n';
 import { CloseIcon } from '@blocksuite/icons/rc';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { useCallback } from 'react';
 
 import * as styles from './index.css';

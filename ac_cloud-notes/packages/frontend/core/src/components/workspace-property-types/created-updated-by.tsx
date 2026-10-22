@@ -5,7 +5,7 @@ import { type DocRecord, DocService } from '@cloud-notes/core/modules/doc';
 import { WorkspaceService } from '@cloud-notes/core/modules/workspace';
 import { useI18n } from '@cloud-notes/i18n';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { PlainTextDocGroupHeader } from '../explorer/docs-view/group-header';

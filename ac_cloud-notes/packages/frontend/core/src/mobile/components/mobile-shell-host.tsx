@@ -1,6 +1,6 @@
 import { WorkbenchService } from '@cloud-notes/core/modules/workbench';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import {
   createContext,
   type PropsWithChildren,

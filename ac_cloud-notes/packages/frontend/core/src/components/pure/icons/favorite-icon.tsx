@@ -1,5 +1,5 @@
 import { FavoritedIcon, FavoriteIcon } from '@blocksuite/icons/rc';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import type { SVGProps } from 'react';
 
 export const IsFavoriteIcon = ({

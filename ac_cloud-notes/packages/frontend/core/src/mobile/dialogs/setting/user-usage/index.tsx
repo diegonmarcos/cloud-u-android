@@ -6,8 +6,8 @@ import {
   UserQuotaService,
 } from '@cloud-notes/core/modules/cloud';
 import { useLiveData, useService } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVar } from '@cloud-notes/theme';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { type ReactNode, useEffect } from 'react';
 
 import { SettingGroup } from '../group';

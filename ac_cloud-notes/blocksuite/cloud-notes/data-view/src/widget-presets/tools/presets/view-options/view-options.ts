@@ -51,7 +51,7 @@ const styles = css`
   }
 
   .cloud-notes-database-toolbar-item.more-action:hover {
-    background: var(--affine-hover-color);
+    background: var(--cloud-notes-hover-color);
   }
 
   .cloud-notes-database-toolbar-item.more-action {
@@ -60,7 +60,7 @@ const styles = css`
   }
 
   .more-action.active {
-    background: var(--affine-hover-color);
+    background: var(--cloud-notes-hover-color);
   }
 `;
 
@@ -193,7 +193,7 @@ export const popViewOptions = (
       return () =>
         html`<div
           class="properties-group-op"
-          style="padding:4px 8px;font-size:12px;line-height:20px;font-weight:500;border-radius:4px;cursor:pointer;color:var(--affine-primary-color);"
+          style="padding:4px 8px;font-size:12px;line-height:20px;font-weight:500;border-radius:4px;cursor:pointer;color:var(--cloud-notes-primary-color);"
           @click="${clickChangeAll}"
         >
           ${isAllShowed ? 'Hide All' : 'Show All'}
@@ -339,15 +339,15 @@ export const popViewOptions = (
                   const iconStyle = styleMap({
                     fontSize: '24px',
                     color: isSelected
-                      ? 'var(--affine-text-emphasis-color)'
-                      : 'var(--affine-icon-secondary)',
+                      ? 'var(--cloud-notes-text-emphasis-color)'
+                      : 'var(--cloud-notes-icon-secondary)',
                   });
                   const textStyle = styleMap({
                     fontSize: '14px',
                     lineHeight: '22px',
                     color: isSelected
-                      ? 'var(--affine-text-emphasis-color)'
-                      : 'var(--affine-text-secondary-color)',
+                      ? 'var(--cloud-notes-text-emphasis-color)'
+                      : 'var(--cloud-notes-text-secondary-color)',
                   });
                   const buttonData: MenuButtonData = {
                     content: () => html`
@@ -391,12 +391,12 @@ export const popViewOptions = (
                 style="display:flex;align-items:center;gap:8px;padding:0 2px;"
               >
                 <div
-                  style="display:flex;align-items:center;color:var(--affine-icon-color);"
+                  style="display:flex;align-items:center;color:var(--cloud-notes-icon-color);"
                 >
                   ${LayoutIcon()}
                 </div>
                 <div
-                  style="font-size:14px;line-height:22px;color:var(--affine-text-secondary-color);"
+                  style="font-size:14px;line-height:22px;color:var(--cloud-notes-text-secondary-color);"
                 >
                   Layout
                 </div>

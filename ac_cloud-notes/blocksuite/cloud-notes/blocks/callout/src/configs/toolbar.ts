@@ -16,7 +16,7 @@ import {
 import { DeleteIcon, PaletteIcon, SmileIcon } from '@blocksuite/icons/lit';
 import { BlockFlavourIdentifier } from '@blocksuite/std';
 import type { ExtensionType } from '@blocksuite/store';
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -69,7 +69,7 @@ const backgroundColorAction = {
             const isDefault = color === 'default';
             const value = isDefault
               ? cssVarV2.block.callout.background.grey
-              : `var(--affine-text-highlight-${color})`;
+              : `var(--cloud-notes-text-highlight-${color})`;
             const displayName = `${color} Background`;
 
             return html`
@@ -79,7 +79,7 @@ const backgroundColorAction = {
               >
                 <cloud-notes-text-duotone-icon
                   style=${styleMap({
-                    '--color': 'var(--affine-text-primary-color)',
+                    '--color': 'var(--cloud-notes-text-primary-color)',
                     '--background': value ?? 'transparent',
                   })}
                 ></cloud-notes-text-duotone-icon>
@@ -136,7 +136,7 @@ const iconPickerAction = {
       wrapper.props = props;
       wrapper.style.position = 'absolute';
       wrapper.style.backgroundColor = cssVarV2.layer.background.overlayPanel;
-      wrapper.style.boxShadow = 'var(--affine-menu-shadow)';
+      wrapper.style.boxShadow = 'var(--cloud-notes-menu-shadow)';
       wrapper.style.borderRadius = '8px';
 
       // Create popup target from the clicked element

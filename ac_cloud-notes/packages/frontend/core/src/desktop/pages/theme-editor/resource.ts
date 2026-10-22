@@ -1,8 +1,8 @@
-import { darkCssVariables, lightCssVariables } from '@toeverything/theme';
+import { darkCssVariables, lightCssVariables } from '@cloud-notes/theme';
 import {
   darkCssVariablesV2,
   lightCssVariablesV2,
-} from '@toeverything/theme/v2';
+} from '@cloud-notes/theme/v2';
 
 import { partsToVariableName, variableNameToParts } from './utils';
 

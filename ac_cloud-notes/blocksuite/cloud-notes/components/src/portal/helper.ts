@@ -4,7 +4,7 @@ import {
   computePosition,
   type ComputePositionReturn,
 } from '@floating-ui/dom';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 import { render } from 'lit';
 import { Subject } from 'rxjs';
 

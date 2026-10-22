@@ -1,4 +1,4 @@
-import { cssVarV2 } from '@toeverything/theme/v2';
+import { cssVarV2 } from '@cloud-notes/theme/v2';
 import { createContainer, globalStyle, style } from '@vanilla-extract/css';
 
 const copyLinkContainer = createContainer('copy-link-container');

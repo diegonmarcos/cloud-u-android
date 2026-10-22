@@ -1,5 +1,5 @@
 import { Service } from '@toeverything/infra';
-import { cssVar } from '@toeverything/theme';
+import { cssVar } from '@cloud-notes/theme';
 
 import { TagList } from '../entities/tag-list';
 
