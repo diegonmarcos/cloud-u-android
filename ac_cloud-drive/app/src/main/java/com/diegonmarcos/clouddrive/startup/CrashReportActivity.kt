@@ -29,10 +29,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.diegonmarcos.clouddrive.MainActivity
 import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.denseTypography
 
 /**
@@ -54,8 +53,8 @@ class CrashReportActivity : ComponentActivity() {
     @Composable
     private fun Screen(report: String) {
         Column(
-            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().padding(DriveMetrics.padWide),
+            verticalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
         ) {
             Text(stringResource(R.string.crash_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
             Text(
@@ -67,11 +66,11 @@ class CrashReportActivity : ComponentActivity() {
                     report,
                     Modifier.verticalScroll(rememberScrollState()),
                     fontFamily = FontFamily.Monospace,
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onBackground,
                 )
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
                 OutlinedButton(onClick = { copy(report) }, Modifier.weight(1f)) { Text(stringResource(R.string.crash_copy)) }
                 OutlinedButton(onClick = { share(report) }, Modifier.weight(1f)) { Text(stringResource(R.string.crash_share)) }
             }
