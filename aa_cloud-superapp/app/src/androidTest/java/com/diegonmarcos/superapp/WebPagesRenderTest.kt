@@ -79,9 +79,21 @@ class WebPagesRenderTest {
         fun openApp() {
             val v = w!!
             // The first same-origin link that leaves the page: it must stay in this WebView (shouldOverrideUrlLoading) and add a history entry.
-            val clicked = js(v, "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.origin===location.origin&&a.href.split('#')[0]!==location.href.split('#')[0]&&!a.hasAttribute('download'));if(!a)return 'none';a.click();return a.href})()")
-            assertTrue("no same-origin app link on the WebApps page", clicked != "\"none\"")
-            until("the app page opens inside the WebView", diag = { "clicked $clicked, url ${urlOf(v)}, canGoBack ${canBack(v)}, main $main" }) { urlOf(v).split('#')[0] != main.split('#')[0] && canBack(v) }
+            // It is TAPPED, not a.click()ed: Chromium marks a history entry that never saw a user gesture as skippable, so a script click
+            // leaves the start page unreachable (canGoBack false) exactly as run 39778820062 showed (url moved, canGoBack false). A reader taps.
+            val pick = "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.origin===location.origin&&a.href.split('#')[0]!==location.href.split('#')[0]&&!a.hasAttribute('download'));if(!a)return 'none';a.scrollIntoView({block:'center'});const r=a.getBoundingClientRect();return a.href+'|'+(r.left+r.width/2)+','+(r.top+r.height/2)+','+devicePixelRatio})()"
+            val clicked = js(v, pick).trim('"')
+            assertTrue("no same-origin app link on the WebApps page", clicked != "none")
+            SystemClock.sleep(500)
+            val (href, xy) = clicked.split('|').let { it[0] to it.getOrElse(1) { "" } }
+            val c = xy.split(',').mapNotNull { it.toDoubleOrNull() }
+            val loc = IntArray(2); inst.runOnMainSync { v.getLocationOnScreen(loc) }
+            if (c.size == 3) sh("input tap ${(loc[0] + c[0] * c[2]).toInt()} ${(loc[1] + c[1] * c[2]).toInt()}")
+            val t0 = SystemClock.elapsedRealtime()
+            while (SystemClock.elapsedRealtime() - t0 < 6_000 && urlOf(v).split('#')[0] == main.split('#')[0]) { clearPrompt(); SystemClock.sleep(500) }
+            // The tap missed (scaled viewport, a covering view): fall back to the script click so the rest of the test still runs.
+            if (urlOf(v).split('#')[0] == main.split('#')[0]) js(v, "(()=>{const a=[...document.querySelectorAll('a[href]')].find(a=>a.href===${org.json.JSONObject.quote(href)});if(a)a.click();return 'ok'})()")
+            until("the app page opens inside the WebView", diag = { "tapped $clicked, url ${urlOf(v)}, canGoBack ${canBack(v)}, main $main" }) { urlOf(v).split('#')[0] != main.split('#')[0] && canBack(v) }
         }
         fun tapShellBack() {
             val a = resumed()!!; val loc = IntArray(2); var wd = 0; var ht = 0
