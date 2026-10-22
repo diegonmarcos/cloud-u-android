@@ -336,6 +336,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
+      # Board screenshots drawn by the unit suite (MyHealthShotTest): evidence of the rendered My-Health board.
+      - name: Upload board screenshots
+        if: always() && steps.gate.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: board-shots-${{ matrix.abi }}-${{ github.sha }}
+          path: ${{ env.WORK_DIR }}/app/build/board-shots/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+
       - name: Build APK (engine)
         if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ env.WORK_DIR }}
