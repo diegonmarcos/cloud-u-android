@@ -9,7 +9,7 @@ import java.util.concurrent.Executors
 
 /**
  * An app's PRIVATE NAMES: a few exact host names that stand for servers on this phone's own loopback, answered by
- * a DNS server the phone's own app runs (cloud-c3-webserver: udp 127.0.0.1:5353), and resolved only here, inside
+ * a DNS server the phone's own app runs (cloud-c3-webserver: udp 127.0.0.1:5354), and resolved only here, inside
  * the browser's own page loads.
  *
  * Why this exists rather than the system resolver: Android cannot bind :53 without root and cannot be told to use

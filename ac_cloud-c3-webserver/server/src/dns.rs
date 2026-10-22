@@ -1,4 +1,4 @@
-//! The app's private DNS server: UDP 127.0.0.1:<serving.dns.port> (5353).
+//! The app's private DNS server: UDP 127.0.0.1:<serving.dns.port> (5354).
 //!
 //! Android cannot bind :53 without root and cannot point the system resolver at
 //! loopback, so this is NOT a system resolver and nothing is told to use it.
@@ -125,10 +125,11 @@ pub fn query_a(id: u16, name: &str) -> Vec<u8> {
     q
 }
 
-/// Bind `host:port` with SO_REUSEADDR and SO_REUSEPORT set first. 5353 is also the mDNS port: Android's own mDNS
-/// daemon binds it on every address, and a plain `UdpSocket::bind` of 127.0.0.1:5353 then fails with "Address already
-/// in use" (seen on the emulator: the private DNS never started, whoever opened the app). With the options set, the
-/// kernel delivers a datagram sent to 127.0.0.1:5353 to this more specific socket. Falls back to the plain bind.
+/// Bind `host:port` with SO_REUSEADDR and SO_REUSEPORT set first. The declared port is 5354 and NOT 5353 on purpose: 5353 is
+/// the mDNS port, which Android's own mDNS daemon (and the SuperApp's firestack) bind on every address; a plain
+/// `UdpSocket::bind` of 127.0.0.1:5353 failed with "Address already in use" on the emulator, and sharing it would
+/// deliver our queries to the wrong socket. The reuse options stay as hardening against any other holder of the port.
+/// Falls back to the plain bind.
 fn bind_shared(host: &str, port: u16) -> std::io::Result<UdpSocket> {
     if let Ok(ip) = host.parse::<Ipv4Addr>() {
         // SAFETY: plain libc socket calls; the fd is closed on every error path and otherwise owned by the UdpSocket.

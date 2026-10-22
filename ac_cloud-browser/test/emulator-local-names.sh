@@ -4,7 +4,7 @@
 #   $1 Cloud Browser APK   $2 Cloud C3 WebServer APK   $3 output dir (screenshots, logcat, ui dumps)
 #
 # What it proves, in the order it runs:
-#   E1 force-stop the WebServer, its drive (tcp 8002) and DNS (udp 5353) are gone
+#   E1 force-stop the WebServer, its drive (tcp 8002) and DNS (udp $DNS_PORT) are gone
 #   E2 Cloud Browser opens http://emulated.app: the page loads, the browser's own "private DNS did not answer"
 #      page is NOT shown, and the keep-alive service is in the foreground with the servers bound again
 #   E3 the same after a BOOT_COMPLETED and a MY_PACKAGE_REPLACED broadcast to the stopped app (the boot path)
@@ -14,11 +14,13 @@ set -u
 BROWSER_APK="$1"; WS_APK="$2"; OUT="$3"; mkdir -p "$OUT"
 BPKG=com.diegonmarcos.cloudbrowser; WPKG=com.diegonmarcos.cloudwebserver
 fails=0
+# The private DNS port is the declaration's (ac_cloud-c3-webserver/build.json::serving.dns.port), never typed here.
+DNS_PORT=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["serving"]["dns"]["port"])' "$(dirname "$0")/../../ac_cloud-c3-webserver/build.json")
 ok()  { echo "PASS  $1"; }
 bad() { echo "::error title=local names emulator test::$1"; echo "FAIL  $1"; fails=$((fails + 1)); }
 shot() { adb exec-out screencap -p > "$OUT/$1.png" 2>/dev/null || true; }
 dump() { adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb shell cat /sdcard/ui.xml 2>/dev/null > "$OUT/$1.xml" || true; }
-# Anchored to 127.0.0.1: the system's own mDNS daemon binds udp 5353 on every address, so an unanchored match is always true.
+# Anchored to 127.0.0.1: the system's own mDNS daemon binds udp $DNS_PORT on every address, so an unanchored match is always true.
 tcp_listening() { local h; h=$(printf '%04X' "$1"); adb shell cat /proc/net/tcp 2>/dev/null | tr -d '\r' | awk -v p="0100007F:$h" '$4=="0A" && toupper($2)==p {f=1} END{exit !f}'; }
 udp_bound() { local h; h=$(printf '%04X' "$1"); adb shell cat /proc/net/udp 2>/dev/null | tr -d '\r' | awk -v p="0100007F:$h" 'toupper($2)==p {f=1} END{exit !f}'; }
 # Tap the first node of the current screen whose text matches $1 (a regex); returns 1 when none does.
@@ -46,7 +48,7 @@ adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief -a an
 wait_for 40 tcp_listening 8002 && ok "E0 the WebServer app binds 8002 when opened" || bad "E0 the WebServer app never bound tcp 8002"
 adb shell input keyevent KEYCODE_HOME
 adb shell am force-stop "$WPKG"; sleep 2
-if tcp_listening 8002 || udp_bound 5353; then bad "E1 the servers are still bound after force-stop"; else ok "E1 force-stopped: tcp 8002 and udp 5353 are gone"; fi
+if tcp_listening 8002 || udp_bound "$DNS_PORT"; then bad "E1 the servers are still bound after force-stop"; else ok "E1 force-stopped: tcp 8002 and udp $DNS_PORT are gone"; fi
 
 # ── E2 ───────────────────────────────────────────────────────────────────────
 adb shell am start -W -a android.intent.action.VIEW -d http://emulated.app -p "$BPKG" >/dev/null
@@ -55,14 +57,22 @@ sleep 12; shot e2-emulated-app; dump e2-emulated-app
 if grep -q "did not answer\|private name of this phone" "$OUT/e2-emulated-app.xml" 2>/dev/null; then bad "E2 the browser shows its private-name error page"; else ok "E2 no private-name error page"; fi
 if grep -qiE "emulated|storage|File Browser|Index of" "$OUT/e2-emulated-app.xml" 2>/dev/null; then ok "E2 the drive page content is on screen"; else bad "E2 nothing of the drive page is on screen (see e2-emulated-app.png)"; fi
 fg_service && ok "E2 KeepAliveService is a foreground service" || bad "E2 KeepAliveService is not in the foreground"
-udp_bound 5353 && ok "E2 the private DNS (udp 5353) is bound again" || bad "E2 udp 5353 is not bound"
+udp_bound "$DNS_PORT" && ok "E2 the private DNS (udp $DNS_PORT) is bound again" || bad "E2 udp $DNS_PORT is not bound"
 
 # ── E3 ───────────────────────────────────────────────────────────────────────
+# After a force-stop the package is in the "stopped" state and gets no broadcast until something starts it, so the
+# boot path is tested the way a real boot reaches it: the app is not stopped. First the process DIES (am crash does
+# not set the stopped state): START_STICKY must bring the servers back with nobody's help.
+adb shell am crash "$WPKG" >/dev/null 2>&1
+sleep 2
+if wait_for 40 tcp_listening 8002 && wait_for 10 udp_bound "$DNS_PORT"; then ok "E3 the service restarted itself after its process died"; else bad "E3 the servers did not come back after the process died"; fi
+# Then the boot and update broadcasts reach the receiver, which starts the service (its log line is the proof).
 for act in android.intent.action.BOOT_COMPLETED android.intent.action.MY_PACKAGE_REPLACED; do
-  adb shell am force-stop "$WPKG"; sleep 2
-  adb shell am broadcast --include-stopped-packages -a "$act" -n "$WPKG/.BootReceiver" 2>&1 | tr -d '\r' | tee "$OUT/e3-broadcast-${act##*.}.txt"
-  adb shell dumpsys package "$WPKG" 2>/dev/null | tr -d '\r' | grep -iE -B1 -A6 "receiver|bootreceiver" > "$OUT/e3-package-${act##*.}.txt" || true
-  if wait_for 25 tcp_listening 8002 && wait_for 5 udp_bound 5353; then ok "E3 $act started the servers with no UI"; else bad "E3 $act did not start the servers"; fi
+  adb logcat -c || true
+  adb shell am broadcast -a "$act" -n "$WPKG/.BootReceiver" 2>&1 | tr -d '\r' | tee "$OUT/e3-broadcast-${act##*.}.txt"
+  sleep 3
+  if adb logcat -d -s C3BootReceiver:I | grep -q "start keep-alive service on $act"; then ok "E3 the receiver ran for $act and started the service"; else bad "E3 the receiver did not run for $act"; fi
+  wait_for 20 tcp_listening 8002 && wait_for 5 udp_bound "$DNS_PORT" || bad "E3 the servers are not bound after $act"
 done
 
 # ── E4 ───────────────────────────────────────────────────────────────────────

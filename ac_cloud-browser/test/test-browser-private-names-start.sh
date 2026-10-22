@@ -1,7 +1,7 @@
 #!/bin/bash
 # test-browser-private-names-start.sh — emulated.app must just work.
 #
-# THE FAILURE THIS EXISTS FOR. emulated.app showed "the private DNS server at 127.0.0.1:5353 did not answer": the
+# THE FAILURE THIS EXISTS FOR. emulated.app showed "the private DNS server at 127.0.0.1:5354 did not answer": the
 # web server app bound its DNS only inside its activity, so nothing ran after a reboot, a kill or Doze, and the
 # browser asked once and gave up. The contract now, all from ONE declaration (ac_cloud-c3-webserver/build.json::serving):
 #   owned names   endpoints[].resolve=declared -> baked as private_names.owned, resolved with no DNS

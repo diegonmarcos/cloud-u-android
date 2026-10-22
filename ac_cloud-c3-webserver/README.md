@@ -33,7 +33,7 @@ no custom page, route or script of the file view in this directory; the app's ow
 | Home (About this phone) and Configs > Engines | `server/src/about.rs`, `server/src/engines.rs` |
 | Start-up, :8003 listener, host allow-list, drive = shell + shared server | `server/src/lib.rs` |
 | 8003 `cloud.app`: the SuperApp's About, Logcat, Diagnose | `server/src/diag.rs` + `server/ui/diag.html`, read through the SuperApp's `<pkg>.fleetdiag` provider (`src-tauri/src/bridge.rs`, JNI) |
-| Private DNS, udp 127.0.0.1:5353, four exact names, refuses the rest | `server/src/dns.rs`; asked by cloud-browser (`libs:browser PrivateNames`) only |
+| Private DNS, udp 127.0.0.1:5354, four exact names, refuses the rest | `server/src/dns.rs`; asked by cloud-browser (`libs:browser PrivateNames`) only |
 | The name -> port map, ONE declaration | `build.json::serving` (+ `runtime.port`, `runtime.diag.port`) |
 | The app: bind, then the window; storage permission over JNI | `src-tauri/src/lib.rs` |
 | Port and served root (baked by `src-tauri/build.rs`) | `build.json::runtime` |

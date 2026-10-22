@@ -9,7 +9,7 @@ import android.content.Intent
 import android.os.IBinder
 
 /**
- * The phone's local servers (the drive on 8002, diagnostics on 8003 and the private DNS on udp 5353) live in the
+ * The phone's local servers (the drive on 8002, diagnostics on 8003 and the private DNS on udp 5354) live in the
  * Rust library; this foreground service is what keeps that process alive and binds them without the UI. It is
  * started at boot and after an update ([BootReceiver]), by Cloud Browser when a private name's DNS does not
  * answer (explicit intent, guarded by the fleet's CONSTELLATION_DATA signature permission) and by the activity.

@@ -7,7 +7,7 @@
   },
   "name": "cloud-c3-webserver",
   "display_name": "Cloud C3 Webserver",
-  "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the shared fleet web server (ab_cloud-libs-shared/libs/fleet-webserver, the Linux my-webserver UI bundled verbatim) in-process on 8002, rooted at /storage/emulated/0 and nothing else, and opens its one webview on the app shell: five bottom tabs Pages, API, Home, Files and Configs, whose Files tab is that unchanged file view. A tapped link offers Open in browser or Open embedded (build.json::links). The SuperApp's About, Logcat and Diagnose are served on 8003, and a private DNS (udp 5353) answers termux.app, nix.app, emulated.app and cloud.app.",
+  "description": "The phone's local web server, as an APK, in Rust and web only: a Tauri 2 app whose Rust library starts the shared fleet web server (ab_cloud-libs-shared/libs/fleet-webserver, the Linux my-webserver UI bundled verbatim) in-process on 8002, rooted at /storage/emulated/0 and nothing else, and opens its one webview on the app shell: five bottom tabs Pages, API, Home, Files and Configs, whose Files tab is that unchanged file view. A tapped link offers Open in browser or Open embedded (build.json::links). The SuperApp's About, Logcat and Diagnose are served on 8003, and a private DNS (udp 5354) answers termux.app, nix.app, emulated.app and cloud.app.",
   "category": "android",
   "fleet_webserver_src": "../ab_cloud-libs-shared/libs/fleet-webserver",
   "build": {
@@ -34,8 +34,8 @@
     "glue": {
       "_doc": "The ONLY Kotlin/Java files the app may commit: Tauri 2.12.1's Android template (MainActivity.kt additionally promotes the servers to the keep-alive service) plus the two declared keep-alive files KeepAliveService.kt and BootReceiver.kt (serving.keepalive: a persistent foreground service has no Rust-only form, so they are the one declared exception, pinned like the template) (templates/mobile/android in the tauri-cli crate) rendered for this identifier, byte for byte. A file here whose bytes change, a .kt/.java/standalone .kts anywhere else in the app, or a file listed here that is missing fails test/test-c3-webserver-no-kotlin.sh. Regenerating the template on a tauri-cli bump is the one legitimate reason to update a hash.",
       "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/MainActivity.kt": "bd53cfcec4bf8ef02e4b7c35096f829279267652f4a193bb2786f7dbb46c94b3",
-    "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/KeepAliveService.kt": "93c5b809273d988f14bc4b31fc28bdb9c4378bd4006c9d8a6dde71300ebbe2e0",
-    "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/BootReceiver.kt": "79bb994daa22d54b4ad924b710ccfb6975b6703234e2f26efba9650d0b471eef",
+    "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/KeepAliveService.kt": "12e57f4eac83f4340f7887daeb56ea264b8ef03d3fb54d953eca40fdf53ff71a",
+    "src-tauri/gen/android/app/src/main/java/com/diegonmarcos/cloudwebserver/BootReceiver.kt": "a8e030716dfd4015212eb30ffe317486f4e40e340b7e0e53964704118d29d387",
       "src-tauri/gen/android/buildSrc/src/main/java/com/diegonmarcos/cloudwebserver/kotlin/BuildTask.kt": "a23fc50bb35704302240dcfc02d30b972ec67aee59eaf14b23443e7fb4a02236",
       "src-tauri/gen/android/buildSrc/src/main/java/com/diegonmarcos/cloudwebserver/kotlin/RustPlugin.kt": "ba97577f2cf2b123eddd332662844d2b93a2ee589be65f3843bc7de4ea5b7ba7"
     },
@@ -75,11 +75,11 @@
     "_doc": "THE ONE name -> port map of the phone's local servers, and the private DNS that names them. It holds NO port number: each endpoint names its `owner` (an app dir) and `port_from`, the path inside that owner's build.json where the port is declared (ac_cloud-termux and ac_cloud-nix-on-droid: runtime.webserver.port; this app: runtime.port and runtime.diag.port), and every reader resolves the number from there at BUILD time -- server/build.rs (the Rust crate: it compiles the resolved copy in, so src-tauri/build.rs and server/src/serving.rs see an ordinary `port`) and ac_cloud-browser/app/build.gradle (baked into the browser, which fails the build when its pinned tabs drift or an endpoint spells a literal `port`). A port number written here would be a second copy of the owner's, so test/test-c3-webserver-ports.sh fails on one. .app is a real public TLD and termux.app is a real website: only these four exact names are answered, by this app's own DNS server on loopback (udp, never :53 -- Android cannot bind it without root and cannot point the system resolver at loopback), and only our own apps ask it; nothing is changed system-wide. DNS carries no ports, so the browser maps the port from the resolved block. test/test-localhost-ports.sh fails when a port or name repeats across apps.",
     "dns": {
       "host": "127.0.0.1",
-      "port": 5353,
+      "port": 5354,
       "answer": "127.0.0.1",
       "ttl_s": 30,
       "_doc_resolve": "Each endpoint's `resolve` says how Cloud Browser finds its address: `declared` = straight from this block (the name is OWNED by the fleet and stands for `answer`, 127.0.0.1, so no DNS query is needed and a stopped server cannot break the lookup); `dns` = ask the DNS above (a dynamic name). The browser still needs the SERVER up: it starts keepalive when the endpoint's port does not accept a connection.",
-      "_doc": "Loopback only, both the socket and the answer. 5353 because :53 needs root. Not a system resolver: it answers the four names below, says NODATA for other record types of them and REFUSES every other name; it never forwards."
+      "_doc": "Loopback only, both the socket and the answer. 5354 because :53 needs root and 5353 is the mDNS port, held by Android's own mDNS daemon and the SuperApp's firestack (a bind there failed with Address already in use, and sharing it would misdeliver queries). Not a system resolver: it answers the four names below, says NODATA for other record types of them and REFUSES every other name; it never forwards."
     },
     "endpoints": [
       {

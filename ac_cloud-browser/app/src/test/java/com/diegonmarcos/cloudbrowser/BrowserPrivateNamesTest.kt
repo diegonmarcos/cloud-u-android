@@ -47,7 +47,7 @@ class BrowserPrivateNamesTest {
         assertTrue(names.enabled)
         assertEquals(mapOf("termux.app" to 8000, "nix.app" to 8001, "emulated.app" to 8002, "cloud.app" to 8003), names.ports)
         assertEquals("127.0.0.1", names.dnsHost)
-        assertEquals(5353, names.dnsPort)
+        assertEquals(5354, names.dnsPort)
         // the gradle bake (BuildConfig.UI_BROWSER_CONFIG_B64) is this same parse of the same block
         val viaConfig = BrowserConfig.parse(JSONObject().put("private_names", JSONObject()
             .put("dns", JSONObject().put("host", names.dnsHost).put("port", names.dnsPort))
@@ -84,10 +84,10 @@ class BrowserPrivateNamesTest {
         assertTrue(PrivateNames.isLoopbackAddress("127.0.0.1") && PrivateNames.isLoopbackAddress("127.12.0.9"))
         for (ip in listOf("128.0.0.1", "10.0.0.1", "0.0.0.0", "127.0.0", "127.0.0.256", "localhost", "::1", "")) assertFalse(ip, PrivateNames.isLoopbackAddress(ip))
         // the server must be on loopback itself: a configured public address disables the whole feature
-        assertFalse(PrivateNames("10.1.2.3", 5353, mapOf("a.app" to 8000)).enabled)
+        assertFalse(PrivateNames("10.1.2.3", 5354, mapOf("a.app" to 8000)).enabled)
         assertFalse(PrivateNames("127.0.0.1", 53, mapOf("a.app" to 8000)).enabled)
-        assertFalse(PrivateNames("127.0.0.1", 5353, emptyMap()).enabled)
-        assertNull(PrivateNames.lookupA("10.1.2.3", 5353, "termux.app", 100))
+        assertFalse(PrivateNames("127.0.0.1", 5354, emptyMap()).enabled)
+        assertNull(PrivateNames.lookupA("10.1.2.3", 5354, "termux.app", 100))
         val page = PrivateNames.errorPage(PrivateNames.Result.Fail("termux.app", "no <answer>"))
         assertTrue(page.contains("termux.app") && page.contains("no &lt;answer&gt;") && !page.contains("<answer>"))
     }
@@ -221,7 +221,7 @@ class BrowserPrivateNamesTest {
         assertEquals(PrivateNames.ServiceTarget("com.diegonmarcos.cloudwebserver", "com.diegonmarcos.cloudwebserver.KeepAliveService"), names.service)
         assertEquals("no wildcard: a subdomain of an owned name is not private", false, names.matches("http://www.emulated.app/"))
         val parsed = PrivateNames.parse(JSONObject()
-            .put("dns", JSONObject().put("host", "127.0.0.1").put("port", 5353))
+            .put("dns", JSONObject().put("host", "127.0.0.1").put("port", 5354))
             .put("names", JSONObject().put("a.app", 8000).put("b.app", 8001))
             .put("owned", JSONObject().put("a.app", "127.0.0.1").put("b.app", "93.184.216.34").put("c.app", "127.0.0.1")))
         assertEquals(mapOf("a.app" to "127.0.0.1"), parsed.owned)

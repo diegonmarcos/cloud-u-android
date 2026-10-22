@@ -293,7 +293,7 @@ mod tests {
             ],
             "the owner's map: termux 8000, nix 8001, emulated drive 8002, cloud diagnostics 8003"
         );
-        assert_eq!((sv.dns.host.as_str(), sv.dns.port), ("127.0.0.1", 5353));
+        assert_eq!((sv.dns.host.as_str(), sv.dns.port), ("127.0.0.1", 5354));
     }
 
     #[test]
@@ -316,7 +316,7 @@ mod tests {
     fn ports_must_stay_unique() {
         let e = parse(&mutated(|v| v["serving"]["endpoints"][1]["port"] = 8000.into())).unwrap_err();
         assert!(e.contains("declared twice"), "{}", e);
-        let e = parse(&mutated(|v| v["serving"]["endpoints"][3]["port"] = 5353.into())).unwrap_err();
+        let e = parse(&mutated(|v| v["serving"]["endpoints"][3]["port"] = 5354.into())).unwrap_err();
         assert!(e.contains("DNS server's own port"), "{}", e);
     }
 

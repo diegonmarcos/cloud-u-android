@@ -8,7 +8,7 @@
 //!     live under `/__app__/` only (app.rs) and never shadow a path of the shared server;
 //!   * the fleet-diagnostics page (runtime.diag.port, 8003): the SuperApp's About, Logcat and
 //!     Diagnose, read through its bridge (diag.rs);
-//!   * the private DNS (serving.dns, udp 127.0.0.1:5353) for the four names.
+//!   * the private DNS (serving.dns, udp 127.0.0.1:5354) for the four names.
 //!
 //! Every listener binds 127.0.0.1 only and refuses every other peer, and answers GET and HEAD. The
 //! Tauri app (../src-tauri) calls [`start`] from its own process before it opens the window on the
