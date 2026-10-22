@@ -154,8 +154,28 @@ jobs:
             -c user.email="noreply@anthropic.com" \
             commit -m "ci(test-coverage): refresh the derived inventory from ${GITHUB_SHA::8} via run ${GITHUB_RUN_ID} [skip ci]"
 
-          if ! git push origin HEAD:main; then
-            echo "::error::could not push the refreshed inventory -- main moved underneath this run. Nothing is lost: run './build.sh test-coverage' and commit 1_cicd/dist/data/test-coverage.json."
+          # Agents push to main every few minutes, so the first push often loses the race.
+          # The checkout is shallow, so rather than rebase, take the new main and lay this
+          # run's one derived file onto it again (the commit is that file and nothing else),
+          # bounded to 5 tries with backoff. A newer main whose own test-coverage.json
+          # differs from this run's is simply overwritten with the content this run derived
+          # from its sources; the next run on that main re-derives it again.
+          pushed=0
+          for try in 1 2 3 4 5; do
+            if git push origin HEAD:main; then pushed=1; break; fi
+            echo "push $try lost the race; re-applying the inventory on the new main"
+            sleep $((try * 5))
+            cp "$derived" "$RUNNER_TEMP/test-coverage.json"
+            git fetch --depth=1 origin main
+            git reset -q --hard origin/main
+            cp "$RUNNER_TEMP/test-coverage.json" "$derived"
+            if git diff --quiet -- "$derived"; then pushed=1; echo "main already carries this inventory"; break; fi
+            git add -- "$derived"
+            git -c user.name="github-actions[bot]" -c user.email="noreply@anthropic.com" \
+              commit -q -m "ci(test-coverage): refresh the derived inventory from ${GITHUB_SHA::8} via run ${GITHUB_RUN_ID} [skip ci]"
+          done
+          if [ "$pushed" != 1 ]; then
+            echo "::error::could not push the refreshed inventory after 5 tries -- main kept moving. Run './build.sh test-coverage' and commit 1_cicd/dist/data/test-coverage.json."
             exit 1
           fi
 
