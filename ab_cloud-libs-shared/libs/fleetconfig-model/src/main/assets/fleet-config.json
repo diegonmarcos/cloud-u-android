@@ -2016,6 +2016,14 @@
       "used_by": [
         "aa_cloud-superapp"
       ]
+    },
+    "myhealth_card": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "SuperApp MyHealth badge: the last face (km with steps, resting HR, sleep, or the named error) and when it was read, shown at once while the card refreshes; a cache re-derived from Health Connect on the new phone, never migrated (#1029).",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
     }
   },
   "bundle": {
