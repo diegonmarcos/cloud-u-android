@@ -165,9 +165,18 @@ jobs:
           act=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
           case "$act" in */*) ;; *) echo "::error::$PKG has no launcher activity ($act)"; exit 2;; esac
           echo "launching $act"
-          adb shell am start -W -n "$act" | tee out/am-start.txt
+          # Bounded: a launch that never finishes (a hung main thread or provider) must fail with its logcat, not wait for the job timeout.
           ok=1
+          timeout 120 adb shell am start -W -n "$act" > out/am-start.txt; rc=$?
+          cat out/am-start.txt
+          if [ $rc = 124 ]; then
+            echo "::error title=$APP hung on launch::am start -W did not return in 120 s"
+            ok=0
+            # A Java thread dump of the stuck process lands in logcat (SIGQUIT), main thread first.
+            adb shell "kill -3 \$(pidof $PKG)" >/dev/null 2>&1 || true; sleep 3
+          fi
           for i in $(seq 1 45); do
+            [ $ok = 0 ] && break
             sleep 1
             if ! adb shell pidof "$PKG" >/dev/null 2>&1; then echo "process $PKG is gone after ${i}s"; ok=0; break; fi
           done
