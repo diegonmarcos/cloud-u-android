@@ -43,9 +43,10 @@ concurrency:
 jobs:
   regenerate-and-compare:
     runs-on: ubuntu-latest
-    # Write, for ONE file: 1_cicd/dist/data/test-coverage.json, pushed back to
-    # main by the comparison step below. Every other kind of drift is still
-    # read-only and still red.
+    # Write, for two kinds of path: 1_cicd/dist/data/test-coverage.json and the
+    # script copies under 1_cicd/dist/scripts/, pushed back to main by the
+    # comparison step below. Every other kind of drift is still read-only and
+    # still red.
     permissions:
       contents: write
     steps:
@@ -100,14 +101,23 @@ jobs:
       # count read 13 where the committed tree says 12). A runner's checkout is
       # the only place the inputs are unambiguous.
       #
-      # The relaxation is exactly one path. Anything else that drifts is still
-      # red, and on a pull request even this file is red — with the NARROW
-      # command named, because there is nothing safe to push to.
+      # The relaxation is exactly these paths: the inventory above and 1_cicd/dist/scripts/.
+      # The scripts directory is a verbatim copy of 1_cicd/src/scripts behind a one-line header, so
+      # it can only drift when someone edits a source script and does not carry the copy along
+      # (three red mains in one day, 2026-10-22: fleet-nsc, guard-triggers, ...). It is derived
+      # here for the same reason as the inventory. NOT included, deliberately: 1_cicd/dist/cicd
+      # and .github/workflows. A workflow file cannot be pushed with GITHUB_TOKEN (GitHub refuses
+      # a token without the `workflows` scope), and what a workflow says decides what runs, so
+      # a drifted one stays red and is fixed by the author.
+      # Anything else that drifts is still red, and on a pull request even these paths are red
+      # — with the NARROW command named, because there is nothing safe to push to.
       - name: Committed output matches what the sources produce
         run: |
           set -euo pipefail
 
           derived="1_cicd/dist/data/test-coverage.json"
+          derived_re='^.. (1_cicd/dist/data/test-coverage\.json|1_cicd/dist/scripts/)'
+          derived_paths="$derived 1_cicd/dist/scripts"
 
           # --porcelain and NOT `git diff --exit-code`: a plain diff sees only
           # tracked files, and the largest single piece of drift found when this
@@ -123,7 +133,7 @@ jobs:
 
           # grep -v, so a run where the inventory drifted ALONGSIDE something
           # else still reports the something else and still goes red.
-          other="$(printf '%s\n' "$drift" | grep -v -- "$derived" || true)"
+          other="$(printf '%s\n' "$drift" | grep -Ev -- "$derived_re" || true)"
 
           if [ -n "$other" ]; then
             echo "::error::Generated files are out of date. Run './build.sh workflow' and commit the result."
@@ -135,24 +145,24 @@ jobs:
             exit 1
           fi
 
-          echo "Only the derived test-coverage inventory drifted:"
-          git --no-pager diff -- "$derived"
+          echo "Only the derived paths drifted (test-coverage inventory, dist/scripts copies):"
+          git --no-pager diff -- $derived_paths
 
           if [ "${GITHUB_EVENT_NAME}" != "push" ] || [ "${GITHUB_REF}" != "refs/heads/main" ]; then
-            echo "::error::$derived is out of date. Run './build.sh test-coverage' and commit that one file. Do NOT run './build.sh workflow' for this -- it rebuilds all of 1_cicd/dist and races other work in the tree."
+            echo "::error::derived files are out of date: $(printf '%s' "$drift" | tr '\n' ' '). Copy 1_cicd/src/scripts/<name> to 1_cicd/dist/scripts/<name> (keeping its first header line) or run './build.sh test-coverage' for the inventory, and commit those files. Do NOT run './build.sh workflow' for this -- it rebuilds all of 1_cicd/dist and races other work in the tree."
             exit 1
           fi
 
           # Stage the ONE path, explicitly. `git add -A` here would sweep in
           # anything the generator happened to leave behind.
-          git add -- "$derived"
+          git add -- $derived_paths
 
           # Why this cannot loop: a commit pushed with GITHUB_TOKEN does not
           # trigger workflows, and [skip ci] says so a second time.
           git \
             -c user.name="Claude" \
             -c user.email="noreply@anthropic.com" \
-            commit -m "ci(test-coverage): refresh the derived inventory from ${GITHUB_SHA::8} via run ${GITHUB_RUN_ID} [skip ci]"
+            commit -m "ci(generated): refresh the derived files from ${GITHUB_SHA::8} via run ${GITHUB_RUN_ID} [skip ci]"
 
           # Agents push to main every few minutes, so the first push often loses the race.
           # The checkout is shallow, so rather than rebase, take the new main and lay this
@@ -165,21 +175,22 @@ jobs:
             if git push origin HEAD:main; then pushed=1; break; fi
             echo "push $try lost the race; re-applying the inventory on the new main"
             sleep $((try * 5))
-            cp "$derived" "$RUNNER_TEMP/test-coverage.json"
+            git diff --name-only HEAD~1 HEAD > "$RUNNER_TEMP/derived.list"
+            tar cf "$RUNNER_TEMP/derived.tar" -T "$RUNNER_TEMP/derived.list"
             git fetch --depth=1 origin main
             git reset -q --hard origin/main
-            cp "$RUNNER_TEMP/test-coverage.json" "$derived"
-            if git diff --quiet -- "$derived"; then pushed=1; echo "main already carries this inventory"; break; fi
-            git add -- "$derived"
+            tar xf "$RUNNER_TEMP/derived.tar"
+            if git diff --quiet -- $derived_paths && [ -z "$(git status --porcelain -- $derived_paths)" ]; then pushed=1; echo "main already carries these files"; break; fi
+            git add -- $derived_paths
             git -c user.name="github-actions[bot]" -c user.email="noreply@anthropic.com" \
-              commit -q -m "ci(test-coverage): refresh the derived inventory from ${GITHUB_SHA::8} via run ${GITHUB_RUN_ID} [skip ci]"
+              commit -q -m "ci(generated): refresh the derived files from ${GITHUB_SHA::8} via run ${GITHUB_RUN_ID} [skip ci]"
           done
           if [ "$pushed" != 1 ]; then
-            echo "::error::could not push the refreshed inventory after 5 tries -- main kept moving. Run './build.sh test-coverage' and commit 1_cicd/dist/data/test-coverage.json."
+            echo "::error::could not push the refreshed files after 5 tries -- main kept moving. Commit the derived files named above yourself."
             exit 1
           fi
 
-          echo "Refreshed $derived and pushed it to main."
+          echo "Refreshed the derived files and pushed them to main."
 
       # A gate that has never been watched failing is decoration. This proves,
       # on every run, that the comparison above can actually go red: it edits a
