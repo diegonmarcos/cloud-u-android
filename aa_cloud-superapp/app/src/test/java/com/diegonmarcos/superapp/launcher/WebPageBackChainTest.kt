@@ -52,7 +52,7 @@ class WebPageBackChainTest : KitPageHarness() {
             val origin = declaredOrigin(shadowOf(web).lastLoadedUrl!!)
             val depth = 4
             compose.runOnUiThread { for (i in 1 until depth) web.loadUrl("$origin/app$i/") }
-            assertEquals("$id history depth", depth, shadowOf(web).historicalUrls.size)
+            assertEquals("$id history depth", depth, web.copyBackForwardList().size)
             // depth pages = depth - 1 steps back; the page is at its start after the last one.
             for (step in 1 until depth) {
                 var handled = false

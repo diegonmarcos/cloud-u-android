@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.apps
 
 import android.app.Application
-import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import com.diegonmarcos.superapp.appstore.FleetIdentity
