@@ -73,9 +73,9 @@ class StoreMeshMirrorTest {
         repoUrl = "", ghcrPage = "", blocked = false, kind = "lib",
     )
 
-    @Test fun `the mesh leg is tried third, after release and ghcr`() {
-        assertEquals("mesh", Fleet.sourceOrder.last())
-        assertEquals(listOf("release", "ghcr"), Fleet.sourceOrder.take(2))
+    @Test fun `the mesh leg is tried first (#1093), then release and ghcr`() {
+        assertEquals("mesh", Fleet.sourceOrder.first())
+        assertEquals(listOf("release", "ghcr"), Fleet.sourceOrder.drop(1))
     }
 
     @Test fun `a GitHub release-download URL maps onto git-proxy-api's mesh name and port`() {
@@ -161,7 +161,8 @@ class StoreMeshMirrorTest {
     @Test fun `guard - cleartext is allowed for the mesh mirror's exact name, not the whole app TLD`() {
         val f = File("src/main/res/xml/network_security_config.xml").takeIf { it.isFile } ?: return
         val s = f.readText()
-        assertTrue(s.contains("<domain>git-proxy-api.app</domain>"))
+        // #1093 the generated cleartext entry carries includeSubdomains="false" (exact name, never the whole .app TLD).
+        assertTrue(Regex("<domain[^>]*>git-proxy-api\\.app</domain>").containsMatchIn(s))
         assertTrue(!s.contains(">app</domain>"))
     }
 }
