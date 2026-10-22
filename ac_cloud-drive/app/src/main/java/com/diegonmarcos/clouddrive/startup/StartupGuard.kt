@@ -141,6 +141,9 @@ object StartupGuard {
                 launchReport(app, clearTask = true)
             } catch (_: Throwable) {
             } finally {
+                // Chain AFTER the report is on screen: the fleet's crash logger / telemetry handlers
+                // (installed earlier by libs:devtools / libs:core) still get the exception.
+                try { previous?.uncaughtException(thread, t) } catch (_: Throwable) {}
                 Process.killProcess(Process.myPid())
                 exitProcess(10)
             }
