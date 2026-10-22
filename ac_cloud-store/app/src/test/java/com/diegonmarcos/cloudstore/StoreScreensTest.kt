@@ -24,6 +24,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.fragment.app.FragmentActivity
@@ -188,6 +189,10 @@ class StoreScreensTest(private val section: String, private val shot: String) {
                     compose.waitForIdle()
                     last.assertIsDisplayed()
                 }
+            }
+            if (section == "feed") {
+                // the feed reads GitHub on open (no seam to seed): shoot what it settled on (rows, or its own "why" line), not "loading..."
+                runCatching { compose.waitUntil(30_000) { compose.onAllNodesWithText("loading…", useUnmergedTree = true).fetchSemanticsNodes().isEmpty() } }
             }
             if ("$section/$page" == "settings/notifications") {
                 // the update-checks card, with the battery need still open (nothing is exempt in the seed)
