@@ -38,6 +38,16 @@
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- #1121 The cross-app start the fleet IPC grants declare: after the Store installs the Termux
+         terminal or Nix-on-Droid it starts that app's UnpackService (action
+         com.diegonmarcos.cloud.action.UNPACK), guarded by this signature permission. Declared with the
+         same definition the terminals and MyTerminal use, so the grant never depends on install order. -->
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.TERMINAL_SESSION"
+        android:label="Cloud terminal sessions"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.TERMINAL_SESSION" />
+
     <application
         android:name=".App"
         android:allowBackup="true"

@@ -104,7 +104,10 @@ object StoreInstallWatch {
         val v = decide(p, now, StoreStages.installedKey(ctx, app), failedFor(app.pkg),
             sessionAlive(ctx, app.pkg), load(ctx).timeoutMs)
         when (v) {
-            LANDED -> forget(ctx, app.pkg)
+            LANDED -> {
+                forget(ctx, app.pkg)
+                runCatching { UnpackAfterInstall.run(ctx, app.pkg) }   // #1121
+            }
             RETRY -> {
                 forget(ctx, app.pkg)
                 // The installer's own reason (ABORTED: "User rejected") wins.

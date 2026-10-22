@@ -266,6 +266,27 @@
             </intent-filter>
         </service>
 
+        <!-- #1121 Self-unpack: after this app is updated (by the Store, adb, anything) the system's
+             MY_PACKAGE_REPLACED starts UnpackService, a short foreground service with no UI, which
+             unpacks the bundled files. Cloud Store starts the same service explicitly after it
+             installs this package (action com.diegonmarcos.cloud.action.UNPACK), guarded by the
+             fleet's signature permission, and shows the result. -->
+        <receiver
+            android:name=".app.UnpackReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <service
+            android:name=".app.UnpackService"
+            android:exported="true"
+            android:permission="com.diegonmarcos.cloud.permission.TERMINAL_SESSION">
+            <intent-filter>
+                <action android:name="com.diegonmarcos.cloud.action.UNPACK" />
+            </intent-filter>
+        </service>
+
         <!-- A login shell in a PTY for Cloud MyTerminal (ICloudSession): no sshd, no
              listening socket, no key to copy. Exported ONLY behind the signature-level
              TERMINAL_SESSION permission, and every call re-checks permission and

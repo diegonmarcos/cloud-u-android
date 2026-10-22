@@ -2317,6 +2317,27 @@
       "myterminal",
       "termux"
      ]
+    },
+    {
+     "permission": "com.diegonmarcos.cloud.permission.TERMINAL_SESSION",
+     "level": "signature",
+     "source": "ac_cloud-nix-on-droid/app/src/main/AndroidManifest.xml",
+     "component": ".app.UnpackService",
+     "id": "service:.app.UnpackService",
+     "kind": "service",
+     "name": "UnpackService",
+     "actions": [
+      "com.diegonmarcos.cloud.action.UNPACK"
+     ],
+     "aidl": [],
+     "callers": [
+      "aa_cloud-superapp",
+      "account",
+      "lib-rootfs-nixdroid",
+      "lib-rootfs-termux",
+      "store",
+      "termux"
+     ]
     }
    ]
   },
@@ -2629,6 +2650,27 @@
       "lib-rootfs-termux",
       "myterminal",
       "nix-on-droid"
+     ]
+    },
+    {
+     "permission": "com.diegonmarcos.cloud.permission.TERMINAL_SESSION",
+     "level": "signature",
+     "source": "ac_cloud-termux/app/src/main/AndroidManifest.xml",
+     "component": ".app.UnpackService",
+     "id": "service:.app.UnpackService",
+     "kind": "service",
+     "name": "UnpackService",
+     "actions": [
+      "com.diegonmarcos.cloud.action.UNPACK"
+     ],
+     "aidl": [],
+     "callers": [
+      "aa_cloud-superapp",
+      "account",
+      "lib-rootfs-nixdroid",
+      "lib-rootfs-termux",
+      "nix-on-droid",
+      "store"
      ]
     },
     {
@@ -3180,6 +3222,27 @@
       "nix-on-droid",
       "termux"
      ]
+    },
+    {
+     "permission": "com.diegonmarcos.cloud.permission.TERMINAL_SESSION",
+     "level": "signature",
+     "source": "ac_cloud-nix-on-droid/app/src/main/AndroidManifest.xml",
+     "component": ".app.UnpackService",
+     "id": "service:.app.UnpackService",
+     "kind": "service",
+     "name": "UnpackService",
+     "actions": [
+      "com.diegonmarcos.cloud.action.UNPACK"
+     ],
+     "aidl": [],
+     "callers": [
+      "aa_cloud-superapp",
+      "account",
+      "lib-rootfs-termux",
+      "nix-on-droid",
+      "store",
+      "termux"
+     ]
     }
    ]
   },
@@ -3278,6 +3341,27 @@
       "lib-rootfs-nixdroid",
       "myterminal",
       "nix-on-droid",
+      "termux"
+     ]
+    },
+    {
+     "permission": "com.diegonmarcos.cloud.permission.TERMINAL_SESSION",
+     "level": "signature",
+     "source": "ac_cloud-termux/app/src/main/AndroidManifest.xml",
+     "component": ".app.UnpackService",
+     "id": "service:.app.UnpackService",
+     "kind": "service",
+     "name": "UnpackService",
+     "actions": [
+      "com.diegonmarcos.cloud.action.UNPACK"
+     ],
+     "aidl": [],
+     "callers": [
+      "aa_cloud-superapp",
+      "account",
+      "lib-rootfs-nixdroid",
+      "nix-on-droid",
+      "store",
       "termux"
      ]
     },

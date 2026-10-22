@@ -111,6 +111,13 @@ object StoreStages {
      * update" is left unknown.
      */
     fun stage(ctx: Context, app: Fleet.App, remote: Fleet.State? = null): Stage {
+        val s = stageBase(ctx, app, remote)
+        // #1121 an installed terminal shows what its unpack said ("unpacked" or the error).
+        val unpack = if (s.id == "installed") UnpackAfterInstall.resultOf(ctx, app.pkg) else null
+        return if (unpack == null) s else Stage(s.id, "${s.text} · $unpack", s.actions, s.cached, s.failedAt)
+    }
+
+    private fun stageBase(ctx: Context, app: Fleet.App, remote: Fleet.State?): Stage {
         when (busy[app.pkg]) {
             DOWNLOAD -> {
                 // This row's OWN state (keyed by package), never the process-wide one another row is writing.
@@ -291,6 +298,8 @@ object StoreStages {
             installCached(ctx, app, e)
             if (!e.file.exists()) return@named stage(ctx, app)   // the receiver already reaped it
             if (!ApkCache.landed(ctx, ApkCache.entry(e.file), app.pkg)) return@named stage(ctx, app)
+            // #1121 the terminals unpack their bundled files after an update: start that explicitly.
+            runCatching { UnpackAfterInstall.run(ctx, app.pkg) }
             clear(ctx, app)
         }
     }

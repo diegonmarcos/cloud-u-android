@@ -305,3 +305,18 @@ jobs:
       artifact_prefix: cloud-nixdroid-x86_64-
       lib_package: "com.diegonmarcos.cloudlib.rootfsnixdroid"
       lib_release_asset: "Cloud-Lib-Rootfs-Nixdroid-x86_64.apk"
+
+  # #1121 install, never open, replace in place: the update must unpack the bundled files by itself
+  # (UnpackReceiver -> UnpackService). Evidence: unpack-result.json, bin/login, a screenshot.
+  upgrade_unpack:
+    needs: build_and_publish
+    if: ${{ !cancelled() && needs.build_and_publish.result == 'success' }}
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/test-terminal-upgrade-unpack.yml
+    with:
+      app: cloud-terminal-nix
+      artifact_prefix: cloud-nixdroid-x86_64-
+      lib_package: "com.diegonmarcos.cloudlib.rootfsnixdroid"
+      lib_release_asset: "Cloud-Lib-Rootfs-Nixdroid-x86_64.apk"
