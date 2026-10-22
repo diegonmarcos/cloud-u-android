@@ -58,7 +58,7 @@ class DriveDocumentsProviderTest {
     }
 
     @Test fun listsChildrenFoldersFirst() {
-        val c = provider.queryChildDocuments("drive:", null, null)
+        val c = provider.queryChildDocuments("drive:", null, null as String?)
         val names = mutableListOf<String>()
         while (c.moveToNext()) names += c.getString(c.getColumnIndexOrThrow(Document.COLUMN_DISPLAY_NAME))
         assertEquals(listOf("sub", "a.txt"), names)
