@@ -1,5 +1,5 @@
 {
-  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "lock", "category": "data", "res": "app/src/main/res"},
+  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "lock", "category": "tools", "res": "app/src/main/res"},
   "name": "cloud-vault",
   "display_name": "Cloud Vault",
   "description": "Diego's Cloud Vault — standalone Vaultwarden client Android app. Hosts vault.diegonmarcos.com (self-hosted Vaultwarden) in a dedicated BrowserHostFragment APK with the constellation updater. Extracted from Cloud SuperApp's vault section (libs:vault was a KeePassDX stub) in favour of the full Vaultwarden web-app experience. Build via Nix devShell, one APK out.",
