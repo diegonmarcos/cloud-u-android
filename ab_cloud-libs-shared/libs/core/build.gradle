@@ -33,6 +33,13 @@ android {
     // #825 IFleetConfigEngine: the provider's one wire to the fleet-config policy engine
     // (Cloud-Lib-Fleetconfig). Tiny and versioned (FleetConfigEngine.CONTRACT_VERSION); the policy
     // it replaced in this module was ~300 lines every app recompiled on each edit.
+    // #1122 lifecycle's NullSafeMutableLiveData detector (on lint's classpath through libs:crash's activity/compose
+    // dependencies) throws IncompatibleClassChangeError under the older AGP lint of the Termux-line apps and fails
+    // lintVitalAnalyzeRelease. Neither module touches LiveData, so the one detector is off, not lint.
+    lint {
+        disable 'NullSafeMutableLiveData'
+    }
+
     buildFeatures {
         aidl true
         buildConfig true

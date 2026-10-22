@@ -40,6 +40,13 @@ android {
         buildConfigField "int", "CRASH_SINK_PORT", "${c3ws ? (new groovy.json.JsonSlurper().parse(c3ws).runtime?.port ?: 0) : 0}"
     }
 
+    // #1122 lifecycle's NullSafeMutableLiveData detector (on lint's classpath through libs:crash's activity/compose
+    // dependencies) throws IncompatibleClassChangeError under the older AGP lint of the Termux-line apps and fails
+    // lintVitalAnalyzeRelease. Neither module touches LiveData, so the one detector is off, not lint.
+    lint {
+        disable 'NullSafeMutableLiveData'
+    }
+
     buildFeatures {
         buildConfig true
         compose = composeOn

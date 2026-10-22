@@ -96,6 +96,9 @@
     "ab_cloud-libs-shared/libs/autofill": {
       "base_language": "host"
     },
+    "ab_cloud-libs-shared/libs/crash": {
+      "base_language": "host"
+    },
     "ac_cloud-vault/ui": {
       "base_language": "host"
     },
