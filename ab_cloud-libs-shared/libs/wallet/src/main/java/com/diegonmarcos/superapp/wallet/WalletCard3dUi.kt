@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.dp
  *     the slab it is cut from. This is the part that was missing: perspective
  *     on a zero-thickness plane is still a plane.
  *  2. **Perspective.** A near camera, so rotation foreshortens instead of
- *     shearing. Without [cameraDistance] a rotationY is an affine squash.
+ *     shearing. Without [cameraDistance] a rotationY is a plain squash.
  *  3. **A moving highlight.** The specular band slides against the rotation,
  *     which is what tells the eye the surface is catching light.
  *

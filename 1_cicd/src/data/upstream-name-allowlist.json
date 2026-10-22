@@ -1,0 +1,142 @@
+{
+  "_doc": "#1091 Cloud Notes is our own app, so the upstream project's name must not appear in this repository. This is the complete list of exemptions read by cloud-android-upstream-name-guard.py: licence and attribution notices the licence requires, identifiers owned by someone else (crates.io, Google Play, third-party libraries) and ordinary words. Every entry names its files, its category and its reason; an entry with patterns covers only the text the patterns match, and an entry that covers nothing fails the guard. This file is the one place that spells the name, so the guard does not scan it.",
+  "entries": [
+    {
+      "id": "licence-text",
+      "category": "licence",
+      "paths": [
+        "ac_cloud-notes/LICENSE"
+      ],
+      "reason": "The upstream licence text names its licensor's product; the MIT notice has to be kept exactly as written."
+    },
+    {
+      "id": "licence-register",
+      "category": "attribution",
+      "paths": [
+        "LICENSING.md"
+      ],
+      "reason": "The repository's licence register records which upstream each vendored tree came from and under which licence."
+    },
+    {
+      "id": "licence-proof",
+      "category": "licence",
+      "paths": [
+        "ac_cloud-notes/licence-proof/**"
+      ],
+      "reason": "Recorded output of the licence-boundary guard and its mutation test, kept as produced (it names the upstream's restricted edition and the crate it checked)."
+    },
+    {
+      "id": "licence-boundary-policy",
+      "category": "licence",
+      "paths": [
+        "1_cicd/src/data/licence-boundaries.json",
+        "1_cicd/src/scripts/cloud-android-licence-boundary-guard.py",
+        "1_cicd/dist/scripts/cloud-android-licence-boundary-guard.py",
+        "1_cicd/src/scripts/test/licence-boundary-guard.test.sh",
+        "1_cicd/src/cicd/licence-guard.yml",
+        "1_cicd/dist/cicd/licence-guard.yml",
+        ".github/workflows/licence-guard.yml",
+        "ac_cloud-notes/test/test-licence-clean.sh"
+      ],
+      "reason": "The guard that keeps the upstream's Enterprise-licensed code out of every artefact we sign has to name that upstream, its restricted directories and the crate/package names that would betray a reach into them; its tester reproduces the upstream's lines verbatim."
+    },
+    {
+      "id": "licence-maps",
+      "category": "attribution",
+      "paths": [
+        "licenses/inventory.json",
+        "licenses/provenance.json",
+        "licenses/curated.json",
+        "licenses/upstreams.json"
+      ],
+      "patterns": [
+        "(?i)affine \\(MIT part; (?:EE|Enterprise) dirs pruned[^\\\"]*\\)",
+        "(?i)affine fork \\(MIT part; Enterprise dirs pruned and guarded by licence-guard\\.yml\\)",
+        "https://github\\.com/toeverything/AFFiNE\\.git"
+      ],
+      "reason": "Licence map: names the upstream each vendored tree came from, its licence and its repository."
+    },
+    {
+      "id": "provenance-counterparts",
+      "category": "attribution",
+      "paths": [
+        "licenses/provenance/notes.tsv"
+      ],
+      "patterns": [
+        "(?i)(?<=\\t)[^\\t]*affine[^\\t]*(?=\\t)"
+      ],
+      "reason": "Per-file provenance: the third column is the path of the upstream file each of our files derives from, and upstream's paths keep upstream's names."
+    },
+    {
+      "id": "pinned-upstream",
+      "category": "attribution",
+      "paths": [
+        "ac_cloud-notes/build.json"
+      ],
+      "patterns": [
+        "https://github\\.com/toeverything/AFFiNE\\.git"
+      ],
+      "reason": "The pinned base repository the licence-boundary guard and the provenance tool read from build.json::upstream."
+    },
+    {
+      "id": "registry-crates",
+      "category": "external-identifier",
+      "paths": [
+        "ac_cloud-notes/Cargo.toml",
+        "ac_cloud-notes/Cargo.lock"
+      ],
+      "patterns": [
+        "(?i)\\\"affine_(?:doc_loader|importer|preview)\\\""
+      ],
+      "reason": "Three crates.io packages are published under the upstream's name and cannot be renamed; the manifest aliases them as cloud_notes_* and the lockfile has to record the registry name."
+    },
+    {
+      "id": "persisted-block-flavours",
+      "category": "persisted-format",
+      "paths": [
+        "ac_cloud-notes/**"
+      ],
+      "patterns": [
+        "(?<![A-Za-z0-9_-])affine:(?:paragraph|note|page|surface|list|image|code|callout|bookmark|latex|divider|embed-linked-doc|embed-synced-doc|embed-edgeless-synced-doc|embed-youtube|embed-iframe|embed-loom|embed-github|embed-figma|embed-html|embed-ai-chat|embed-|database|surface-ref|attachment|table|table-group|frame|edgeless-text|data-view|transcription|reference|link|test-paragraph|note-invalid-block-video|note-block-video|note-block-role-test|synced-block|kanban|footnote|mention|comment|latex-node)(?![A-Za-z0-9_])",
+        "(?<=['\\\"`])affine:(?=['\\\"`])",
+        "(?<![A-Za-z0-9_/-])affine:(?=\\$\\{)"
+      ],
+      "reason": "Block flavour ids are stored inside every user document; renaming them needs a document migration that has not been written (follow-up ticket), so the stored ids stay as they are."
+    },
+    {
+      "id": "upstream-play-package",
+      "category": "external-identifier",
+      "paths": [
+        "a0_tasks/upstream-apps-s21.json",
+        "a0_docs/eng-specs/store-upstream-sources.md",
+        "ab_cloud-libs-shared/libs/appstore/src/main/assets/appstore-install-sources.json"
+      ],
+      "patterns": [
+        "app\\.affine\\.pro"
+      ],
+      "reason": "Google Play package id of the upstream app as installed on the test phone (store-source data about a third-party app): an external identifier."
+    },
+    {
+      "id": "three-js-api",
+      "category": "third-party",
+      "paths": [
+        "ac_cloud-nav/app/src/main/assets/space/three.module.min.js"
+      ],
+      "patterns": [
+        "determinantAffine"
+      ],
+      "reason": "Public method name in the minified three.js library."
+    },
+    {
+      "id": "french-word",
+      "category": "language",
+      "paths": [
+        "ac_cloud-mail/app/src/main/res/values-fr/strings.xml"
+      ],
+      "patterns": [
+        "Affinez"
+      ],
+      "reason": "Ordinary French word (imperative of 'affiner', refine) in a string resource."
+    }
+  ]
+}

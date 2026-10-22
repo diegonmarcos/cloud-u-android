@@ -1,0 +1,41 @@
+name: "upstream name guard — Cloud Notes is our own app, the project it was cloned from is not named"
+
+# WHY (#1091). Cloud Notes (ac_cloud-notes) is our own app, cloned and owned. The
+# name of the project it was cloned from had spread through package names,
+# imports, crate names, i18n keys, element tags, CSS variables, file names, docs
+# and workflows, and it kept coming back in new code. This guard fails the push
+# that mentions it again anywhere in the repository (file names and file
+# contents, any letter case), except where a licence or attribution notice has
+# to name it or the name belongs to someone else (a crates.io package, a Google
+# Play package id, a third-party library). Those exemptions are the allowlist
+# 1_cicd/src/data/upstream-name-allowlist.json: every entry carries its files,
+# its category and its reason, and an entry that covers nothing fails too.
+#
+# WHY NO PATH FILTER. The commit it must catch can add the name to any file in
+# any app, lib or document. The check is one git grep, about a second.
+#
+# WHY THE TESTER RUNS FIRST. A guard whose own failure modes are unproven is a
+# green tick that means nothing: the tester breaks a fixture repository seven
+# ways (content, file name, three letter cases, a second mention next to an
+# allowed token, a stale exemption) and requires a failure each time.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream-name:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The guard still fails when the name comes back
+        run: bash 1_cicd/src/scripts/test/upstream-name-guard.test.sh
+
+      - name: The upstream project's name appears only where a licence or an external identifier needs it
+        run: python3 1_cicd/src/scripts/cloud-android-upstream-name-guard.py .
