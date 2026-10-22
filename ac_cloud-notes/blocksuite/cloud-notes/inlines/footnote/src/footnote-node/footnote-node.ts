@@ -62,7 +62,7 @@ export class CloudNotesFootnoteNode extends WithDisposable(ShadowlessElement) {
 
     .footnote-node.hover-effect {
       .footnote-content-default {
-        color: var(--cloud-notes-text-primary-color);
+        color: var(--affine-text-primary-color);
         background: ${unsafeCSSVarV2('block/footnote/numberBg')};
       }
     }

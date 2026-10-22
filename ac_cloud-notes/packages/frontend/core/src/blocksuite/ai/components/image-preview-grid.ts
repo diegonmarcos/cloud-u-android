@@ -38,7 +38,7 @@ export class ImagePreviewGrid extends LitElement {
       justify-content: center;
       align-items: center;
       flex: 0 0 auto;
-      border: 1px solid var(--cloud-notes-v2-layer-insideBorder-border);
+      border: 1px solid var(--affine-v2-layer-insideBorder-border);
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
@@ -48,13 +48,13 @@ export class ImagePreviewGrid extends LitElement {
       width: 16px;
       height: 16px;
       border-radius: 4px;
-      border: 0.5px solid var(--cloud-notes-v2-layer-insideBorder-border);
+      border: 0.5px solid var(--affine-v2-layer-insideBorder-border);
       justify-content: center;
       align-items: center;
       display: none;
       position: absolute;
-      background-color: var(--cloud-notes-v2-layer-background-primary);
-      color: var(--cloud-notes-v2-icon-primary);
+      background-color: var(--affine-v2-layer-background-primary);
+      color: var(--affine-v2-icon-primary);
       z-index: 1;
       cursor: pointer;
       top: -6px;
@@ -66,9 +66,9 @@ export class ImagePreviewGrid extends LitElement {
     }
 
     .close-wrapper:hover {
-      background-color: var(--cloud-notes-v2-layer-background-error);
-      border: 0.5px solid var(--cloud-notes-v2-button-error);
-      color: var(--cloud-notes-v2-button-error);
+      background-color: var(--affine-v2-layer-background-error);
+      border: 0.5px solid var(--affine-v2-button-error);
+      color: var(--affine-v2-button-error);
     }
   `;
 

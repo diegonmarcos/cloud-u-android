@@ -89,14 +89,14 @@ export class EdgelessConnectorMenu extends EdgelessToolbarToolMixin(
     }
 
     .connector-mode-button-group > edgeless-tool-icon-button svg {
-      fill: var(--cloud-notes-icon-color);
+      fill: var(--affine-icon-color);
     }
 
     .submenu-divider {
       width: 1px;
       height: 24px;
       margin: 0 16px;
-      background-color: var(--cloud-notes-border-color);
+      background-color: var(--affine-border-color);
       display: inline-block;
     }
   `;

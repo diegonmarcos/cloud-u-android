@@ -134,8 +134,8 @@ export class DatabaseCellContainer extends SignalWatcher(
     );
     const style = this.parentElement?.style;
     if (style) {
-      style.borderBottom = '1px solid var(--cloud-notes-border-color)';
-      style.borderRight = '1px solid var(--cloud-notes-border-color)';
+      style.borderBottom = '1px solid var(--affine-border-color)';
+      style.borderRight = '1px solid var(--affine-border-color)';
     }
   }
 

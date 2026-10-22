@@ -25,12 +25,12 @@ class RandomPicker<T> {
 }
 
 export const multiPlayersColor = new RandomPicker([
-  'var(--cloud-notes-multi-players-purple)',
-  'var(--cloud-notes-multi-players-magenta)',
-  'var(--cloud-notes-multi-players-red)',
-  'var(--cloud-notes-multi-players-orange)',
-  'var(--cloud-notes-multi-players-green)',
-  'var(--cloud-notes-multi-players-blue)',
-  'var(--cloud-notes-multi-players-brown)',
-  'var(--cloud-notes-multi-players-grey)',
+  'var(--affine-multi-players-purple)',
+  'var(--affine-multi-players-magenta)',
+  'var(--affine-multi-players-red)',
+  'var(--affine-multi-players-orange)',
+  'var(--affine-multi-players-green)',
+  'var(--affine-multi-players-blue)',
+  'var(--affine-multi-players-brown)',
+  'var(--affine-multi-players-grey)',
 ]);

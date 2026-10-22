@@ -60,9 +60,9 @@ describe('DatabaseManager', () => {
   let col3: ColumnDataType['id'];
 
   const selection = [
-    { id: '1', value: 'Done', color: 'var(--cloud-notes-tag-white)' },
-    { id: '2', value: 'TODO', color: 'var(--cloud-notes-tag-pink)' },
-    { id: '3', value: 'WIP', color: 'var(--cloud-notes-tag-blue)' },
+    { id: '1', value: 'Done', color: 'var(--affine-tag-white)' },
+    { id: '2', value: 'TODO', color: 'var(--affine-tag-pink)' },
+    { id: '3', value: 'WIP', color: 'var(--affine-tag-blue)' },
   ];
 
   beforeEach(() => {

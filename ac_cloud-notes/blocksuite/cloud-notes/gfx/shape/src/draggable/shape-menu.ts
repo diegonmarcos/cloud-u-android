@@ -48,7 +48,7 @@ export class EdgelessShapeMenu extends SignalWatcher(
     }
     .shape-type-container svg,
     .shape-style-container svg {
-      fill: var(--cloud-notes-icon-color);
+      fill: var(--affine-icon-color);
       stroke: none;
     }
     menu-divider {

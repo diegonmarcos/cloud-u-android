@@ -52,8 +52,8 @@ export class AIPanelInput extends SignalWatcher(WithDisposable(LitElement)) {
         color: ${unsafeCSSVarV2('text/primary')};
 
         /* light/sm */
-        font-family: var(--cloud-notes-font-family);
-        font-size: var(--cloud-notes-font-sm);
+        font-family: var(--affine-font-family);
+        font-size: var(--affine-font-sm);
         font-style: normal;
         font-weight: 400;
         line-height: 22px; /* 157.143% */
@@ -109,81 +109,81 @@ export class AIPanelInput extends SignalWatcher(WithDisposable(LitElement)) {
 
     :host([data-app-theme='light']) {
       .network svg {
-        color: ${unsafeCSS(lightCssVariablesV2['--cloud-notes-v2-icon-primary'])};
+        color: ${unsafeCSS(lightCssVariablesV2['--affine-v2-icon-primary'])};
       }
 
       .network[data-active='true'] svg {
-        color: ${unsafeCSS(lightCssVariablesV2['--cloud-notes-v2-icon-activated'])};
+        color: ${unsafeCSS(lightCssVariablesV2['--affine-v2-icon-activated'])};
       }
 
       textarea {
-        color: ${unsafeCSS(lightCssVariablesV2['--cloud-notes-v2-text-primary'])};
+        color: ${unsafeCSS(lightCssVariablesV2['--affine-v2-text-primary'])};
       }
 
       textarea::placeholder {
         color: ${unsafeCSS(
-          lightCssVariablesV2['--cloud-notes-v2-text-placeholder']
+          lightCssVariablesV2['--affine-v2-text-placeholder']
         )};
       }
 
       textarea::-moz-placeholder {
         color: ${unsafeCSS(
-          lightCssVariablesV2['--cloud-notes-v2-text-placeholder']
+          lightCssVariablesV2['--affine-v2-text-placeholder']
         )};
       }
 
       .arrow {
         background: ${unsafeCSS(
-          lightCssVariablesV2['--cloud-notes-v2-icon-disable']
+          lightCssVariablesV2['--affine-v2-icon-disable']
         )};
       }
 
       .arrow[data-active='true'] {
         background: ${unsafeCSS(
-          lightCssVariablesV2['--cloud-notes-v2-icon-activated']
+          lightCssVariablesV2['--affine-v2-icon-activated']
         )};
       }
 
       .arrow svg {
-        color: ${unsafeCSS(lightCssVariablesV2['--cloud-notes-v2-pure-white-text'])};
+        color: ${unsafeCSS(lightCssVariablesV2['--affine-v2-pure-white-text'])};
       }
     }
 
     :host([data-app-theme='dark']) {
       .network svg {
-        color: ${unsafeCSS(darkCssVariablesV2['--cloud-notes-v2-icon-primary'])};
+        color: ${unsafeCSS(darkCssVariablesV2['--affine-v2-icon-primary'])};
       }
 
       .network[data-active='true'] svg {
-        color: ${unsafeCSS(darkCssVariablesV2['--cloud-notes-v2-icon-activated'])};
+        color: ${unsafeCSS(darkCssVariablesV2['--affine-v2-icon-activated'])};
       }
 
       textarea {
-        color: ${unsafeCSS(darkCssVariablesV2['--cloud-notes-v2-text-primary'])};
+        color: ${unsafeCSS(darkCssVariablesV2['--affine-v2-text-primary'])};
       }
 
       textarea::placeholder {
-        color: ${unsafeCSS(darkCssVariablesV2['--cloud-notes-v2-text-placeholder'])};
+        color: ${unsafeCSS(darkCssVariablesV2['--affine-v2-text-placeholder'])};
       }
 
       textarea::-moz-placeholder {
-        color: ${unsafeCSS(darkCssVariablesV2['--cloud-notes-v2-text-placeholder'])};
+        color: ${unsafeCSS(darkCssVariablesV2['--affine-v2-text-placeholder'])};
       }
 
       .arrow {
         background: ${unsafeCSS(
-          darkCssVariablesV2['--cloud-notes-v2-icon-disable']
+          darkCssVariablesV2['--affine-v2-icon-disable']
         )};
       }
 
       .arrow[data-active='true'] {
         background: ${unsafeCSS(
-          darkCssVariablesV2['--cloud-notes-v2-icon-activated']
+          darkCssVariablesV2['--affine-v2-icon-activated']
         )};
       }
 
       .arrow svg {
-        color: ${unsafeCSS(darkCssVariablesV2['--cloud-notes-v2-pure-white-text'])};
+        color: ${unsafeCSS(darkCssVariablesV2['--affine-v2-pure-white-text'])};
       }
     }
   `;

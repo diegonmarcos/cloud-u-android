@@ -142,7 +142,7 @@ export class CalloutBlockComponent extends CaptionedBlockComponent<CalloutBlockM
     wrapper.props = props;
     wrapper.style.position = 'absolute';
     wrapper.style.backgroundColor = cssVarV2.layer.background.overlayPanel;
-    wrapper.style.boxShadow = 'var(--cloud-notes-menu-shadow)';
+    wrapper.style.boxShadow = 'var(--affine-menu-shadow)';
     wrapper.style.borderRadius = '8px';
 
     // Create popup target from the clicked element

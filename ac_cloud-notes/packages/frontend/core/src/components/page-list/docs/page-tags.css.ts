@@ -140,6 +140,6 @@ export const tagRemove = style({
   flexShrink: 0,
   cursor: 'pointer',
   ':hover': {
-    background: 'var(--cloud-notes-hover-color)',
+    background: 'var(--affine-hover-color)',
   },
 });

@@ -32,7 +32,7 @@ async function changeTagColor(scope: Locator, color: string) {
 async function createRootTag(
   page: Page,
   name: string,
-  color = 'var(--cloud-notes-palette-line-red)'
+  color = 'var(--affine-palette-line-red)'
 ) {
   const section = await expandCollapsibleSection(page, 'tags');
   await section.getByTestId('navigation-panel-add-tag-button').tap();
@@ -98,7 +98,7 @@ test('rename a tag from navigation panel', async ({ page }) => {
 });
 
 test('change tag color from navigation panel', async ({ page }) => {
-  const newColor = 'var(--cloud-notes-palette-line-green)';
+  const newColor = 'var(--affine-palette-line-green)';
   const tagName = 'Test Tag';
   const tag = await createRootTag(page, tagName);
   const menu = await openNavigationPanelNodeMenu(page, tag);

@@ -366,7 +366,7 @@ test.describe('edgeless note element toolbar', () => {
         borderRadius: 8,
         borderSize: 4,
         borderStyle: 'none',
-        shadowType: '--cloud-notes-note-shadow-box',
+        shadowType: '--affine-note-shadow-box',
       },
     });
 
@@ -379,7 +379,7 @@ test.describe('edgeless note element toolbar', () => {
         borderRadius: 8,
         borderSize: 4,
         borderStyle: 'none',
-        shadowType: '--cloud-notes-note-shadow-film',
+        shadowType: '--affine-note-shadow-film',
       },
     });
 
@@ -394,7 +394,7 @@ test.describe('edgeless note element toolbar', () => {
         borderRadius: 8,
         borderSize: 8,
         borderStyle: 'solid',
-        shadowType: '--cloud-notes-note-shadow-film',
+        shadowType: '--affine-note-shadow-film',
       },
     });
 
@@ -408,7 +408,7 @@ test.describe('edgeless note element toolbar', () => {
         borderRadius: 24,
         borderSize: 8,
         borderStyle: 'solid',
-        shadowType: '--cloud-notes-note-shadow-film',
+        shadowType: '--affine-note-shadow-film',
       },
     });
 
@@ -427,7 +427,7 @@ test.describe('edgeless note element toolbar', () => {
         borderRadius: 24,
         borderSize: 8,
         borderStyle: 'solid',
-        shadowType: '--cloud-notes-note-shadow-film',
+        shadowType: '--affine-note-shadow-film',
       },
     });
   });

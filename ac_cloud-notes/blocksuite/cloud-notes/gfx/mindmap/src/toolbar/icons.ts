@@ -552,16 +552,16 @@ export const mindMapStyle4 = svg`<svg width="64" height="48" viewBox="0 0 64 48"
   stroke="#FF8C38" stroke-width="1.4" stroke-linecap="round" />
 <path
   d="M7 26C9.85124 21.8236 11.8347 18.5607 11.8347 20.649C11.8347 22.7372 10.9669 24.695 11.2149 25.3475C11.4628 26 12.9504 24.0423 13.9421 22.8677C14.9339 21.6931 15.9256 21.0405 15.8017 22.8677C15.6777 24.6949 16.2975 25.739 17.2893 24.8254C18.281 23.9118 19.2727 23.5203 20.0165 23.7813C20.6116 23.9901 21.5868 24.5644 22 24.8254"
-  stroke="var(--cloud-notes-black)" stroke-width="1.4" stroke-linecap="round" />
+  stroke="var(--affine-black)" stroke-width="1.4" stroke-linecap="round" />
 <path
   d="M44 11C46.4711 7.51964 48.1901 4.80062 48.1901 6.54079C48.1901 8.28097 47.438 9.91246 47.6529 10.4562C47.8678 11 49.157 9.36862 50.0165 8.38977C50.876 7.41092 51.7355 6.86712 51.6281 8.38977C51.5207 9.91243 52.0579 10.7825 52.9174 10.0212C53.7769 9.25986 54.6364 8.93358 55.281 9.1511C55.7967 9.32512 56.6419 9.80367 57 10.0212"
-  stroke="var(--cloud-notes-black)" stroke-width="1.4" stroke-linecap="round" />
+  stroke="var(--affine-black)" stroke-width="1.4" stroke-linecap="round" />
 <path
   d="M44 25.5C46.4711 22.0196 48.1901 19.3006 48.1901 21.0408C48.1901 22.781 47.438 24.4125 47.6529 24.9562C47.8678 25.5 49.157 23.8686 50.0165 22.8898C50.876 21.9109 51.7355 21.3671 51.6281 22.8898C51.5207 24.4124 52.0579 25.2825 52.9174 24.5212C53.7769 23.7599 54.6364 23.4336 55.281 23.6511C55.7967 23.8251 56.6419 24.3037 57 24.5212"
-  stroke="var(--cloud-notes-black)" stroke-width="1.4" stroke-linecap="round" />
+  stroke="var(--affine-black)" stroke-width="1.4" stroke-linecap="round" />
 <path
   d="M44 40C46.4711 36.5196 48.1901 33.8006 48.1901 35.5408C48.1901 37.281 47.438 38.9125 47.6529 39.4562C47.8678 40 49.157 38.3686 50.0165 37.3898C50.876 36.4109 51.7355 35.8671 51.6281 37.3898C51.5207 38.9124 52.0579 39.7825 52.9174 39.0212C53.7769 38.2599 54.6364 37.9336 55.281 38.1511C55.7967 38.3251 56.6419 38.8037 57 39.0212"
-  stroke="var(--cloud-notes-black)" stroke-width="1.4" stroke-linecap="round" />
+  stroke="var(--affine-black)" stroke-width="1.4" stroke-linecap="round" />
 </svg>`;
 
 export const importMindMapIcon = svg`<svg width="64" height="48" viewBox="0 0 64 48" fill="none" xmlns="http://www.w3.org/2000/svg">

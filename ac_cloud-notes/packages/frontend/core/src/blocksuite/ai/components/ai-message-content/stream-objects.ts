@@ -165,7 +165,7 @@ export class ChatContentStreamObjects extends WithDisposable(
 
     .tool-group {
       margin: 8px 0;
-      border: 0.5px solid var(--cloud-notes-border-color);
+      border: 0.5px solid var(--affine-border-color);
       border-radius: 8px;
       overflow: hidden;
     }
@@ -175,7 +175,7 @@ export class ChatContentStreamObjects extends WithDisposable(
       align-items: center;
       gap: 8px;
       padding: 12px;
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
       cursor: pointer;
       list-style: none;
       user-select: none;
@@ -226,7 +226,7 @@ export class ChatContentStreamObjects extends WithDisposable(
     }
 
     .tool-group-content {
-      border-top: 0.5px solid var(--cloud-notes-border-color);
+      border-top: 0.5px solid var(--affine-border-color);
     }
 
     .tool-group-content .ai-tool-call-wrapper,
@@ -234,7 +234,7 @@ export class ChatContentStreamObjects extends WithDisposable(
     .tool-group-content .ai-tool-failed-wrapper {
       margin: 0;
       border: 0;
-      border-bottom: 0.5px solid var(--cloud-notes-border-color);
+      border-bottom: 0.5px solid var(--affine-border-color);
       border-radius: 0;
     }
 
@@ -245,7 +245,7 @@ export class ChatContentStreamObjects extends WithDisposable(
     }
 
     .tool-group.failed > .tool-group-summary {
-      color: var(--cloud-notes-error-color);
+      color: var(--affine-error-color);
     }
 
     @media (prefers-reduced-motion: reduce) {

@@ -224,7 +224,7 @@ const DetailPageImpl = ({
 
   const immersiveViewportStyle = immersiveZoomToolbarBottom
     ? ({
-        '--cloud-notes-edgeless-zoom-toolbar-bottom': immersiveZoomToolbarBottom,
+        '--affine-edgeless-zoom-toolbar-bottom': immersiveZoomToolbarBottom,
       } as CSSProperties)
     : undefined;
 

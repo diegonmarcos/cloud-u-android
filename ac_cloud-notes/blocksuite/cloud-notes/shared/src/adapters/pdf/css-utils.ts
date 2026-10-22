@@ -1,5 +1,5 @@
 /**
- * Resolve CSS variable color (var(--cloud-notes-xxx)) using computed styles
+ * Resolve CSS variable color (var(--affine-xxx)) using computed styles
  */
 export function resolveCssVariable(color: string): string | null {
   if (!color || typeof color !== 'string') {

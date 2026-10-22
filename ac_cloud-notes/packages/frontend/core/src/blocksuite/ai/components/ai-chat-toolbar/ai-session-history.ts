@@ -65,8 +65,8 @@ export class AISessionHistory extends WithDisposable(ShadowlessElement) {
       .loading-title,
       .empty-title {
         font-weight: 600;
-        font-size: var(--cloud-notes-font-sm);
-        color: var(--cloud-notes-text-secondary-color);
+        font-size: var(--affine-font-sm);
+        color: var(--affine-text-secondary-color);
       }
 
       .ai-session-group {

@@ -34,7 +34,7 @@
               "delta": [
                 {
                   "attributes": {
-                    "color": "var(--cloud-notes-text-highlight-foreground-red)"
+                    "color": "var(--affine-text-highlight-foreground-red)"
                   },
                   "insert": "456"
                 }
@@ -79,7 +79,7 @@
             "borderRadius": 8,
             "borderSize": 4,
             "borderStyle": "none",
-            "shadowType": "--cloud-notes-note-shadow-box"
+            "shadowType": "--affine-note-shadow-box"
           }
         },
         "hidden": false,

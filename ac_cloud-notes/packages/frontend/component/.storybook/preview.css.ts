@@ -6,15 +6,15 @@ globalStyle('*', {
 });
 
 globalStyle('body', {
-  color: 'var(--cloud-notes-text-primary-color)',
-  fontFamily: 'var(--cloud-notes-font-family)',
-  fontSize: 'var(--cloud-notes-font-base)',
-  lineHeight: 'var(--cloud-notes-font-height)',
-  backgroundColor: 'var(--cloud-notes-background-primary-color)',
+  color: 'var(--affine-text-primary-color)',
+  fontFamily: 'var(--affine-font-family)',
+  fontSize: 'var(--affine-font-base)',
+  lineHeight: 'var(--affine-font-height)',
+  backgroundColor: 'var(--affine-background-primary-color)',
 });
 
 globalStyle('.docs-story', {
-  backgroundColor: 'var(--cloud-notes-background-primary-color)',
+  backgroundColor: 'var(--affine-background-primary-color)',
 });
 
 globalStyle('body.sb-main-fullscreen', {

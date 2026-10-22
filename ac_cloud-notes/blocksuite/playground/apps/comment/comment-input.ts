@@ -15,9 +15,9 @@ export class CommentInput extends WithDisposable(ShadowlessElement) {
 
     .comment-quote {
       font-size: 10px;
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
       padding-left: 8px;
-      border-left: 2px solid var(--cloud-notes-text-secondary-color);
+      border-left: 2px solid var(--affine-text-secondary-color);
       margin-bottom: 8px;
     }
 

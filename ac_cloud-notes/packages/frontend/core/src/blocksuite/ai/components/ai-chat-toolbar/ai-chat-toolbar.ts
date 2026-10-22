@@ -226,7 +226,7 @@ export class AIChatToolbar extends WithDisposable(ShadowlessElement) {
         ></ai-session-history>
       `,
       portalStyles: {
-        zIndex: 'var(--cloud-notes-z-index-popover)',
+        zIndex: 'var(--affine-z-index-popover)',
       },
       container: document.body,
       computePosition: {

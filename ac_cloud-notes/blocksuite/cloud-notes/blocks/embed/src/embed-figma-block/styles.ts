@@ -84,7 +84,7 @@ export const styles = css`
   .cloud-notes-embed-figma-content-title-icon svg {
     width: 20px;
     height: 20px;
-    fill: var(--cloud-notes-background-primary-color);
+    fill: var(--affine-background-primary-color);
   }
 
   .cloud-notes-embed-figma-content-title-text {
@@ -97,10 +97,10 @@ export const styles = css`
     word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
 
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-sm);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-sm);
     font-style: normal;
     font-weight: 600;
     line-height: 22px;
@@ -115,10 +115,10 @@ export const styles = css`
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
 
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
@@ -129,7 +129,7 @@ export const styles = css`
     position: absolute;
     right: 0;
     bottom: 0;
-    background-color: var(--cloud-notes-background-primary-color);
+    background-color: var(--affine-background-primary-color);
   }
 
   .cloud-notes-embed-figma-content-url {
@@ -152,17 +152,17 @@ export const styles = css`
     text-overflow: ellipsis;
     color: ${unsafeCSSVarV2('icon/primary')};
 
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
   }
   .cloud-notes-embed-figma-content-url:hover > span {
-    color: var(--cloud-notes-link-color);
+    color: var(--affine-link-color);
   }
   .cloud-notes-embed-figma-content-url:hover .open-icon {
-    fill: var(--cloud-notes-link-color);
+    fill: var(--affine-link-color);
   }
 
   .cloud-notes-embed-figma-content-url-icon {
@@ -180,10 +180,10 @@ export const styles = css`
 
   .cloud-notes-embed-figma-block.selected {
     .cloud-notes-embed-figma-content-url > span {
-      color: var(--cloud-notes-link-color);
+      color: var(--affine-link-color);
     }
     .cloud-notes-embed-figma-content-url .open-icon {
-      fill: var(--cloud-notes-link-color);
+      fill: var(--affine-link-color);
     }
   }
 `;

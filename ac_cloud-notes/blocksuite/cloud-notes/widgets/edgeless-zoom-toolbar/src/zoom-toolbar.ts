@@ -37,9 +37,9 @@ export class EdgelessZoomToolbar extends WithDisposable(LitElement) {
     .edgeless-zoom-toolbar-container.vertical {
       flex-direction: column;
       width: 40px;
-      background-color: var(--cloud-notes-background-overlay-panel-color);
-      box-shadow: var(--cloud-notes-shadow-2);
-      border: 1px solid var(--cloud-notes-border-color);
+      background-color: var(--affine-background-overlay-panel-color);
+      box-shadow: var(--affine-shadow-2);
+      border: 1px solid var(--affine-border-color);
       border-radius: 8px;
     }
 
@@ -62,7 +62,7 @@ export class EdgelessZoomToolbar extends WithDisposable(LitElement) {
       border: none;
       box-sizing: border-box;
       padding: 4px;
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
       background-color: transparent;
       border-radius: 4px;
       cursor: pointer;
@@ -74,14 +74,14 @@ export class EdgelessZoomToolbar extends WithDisposable(LitElement) {
     }
 
     .zoom-percent:hover {
-      color: var(--cloud-notes-primary-color);
-      background-color: var(--cloud-notes-hover-color);
+      color: var(--affine-primary-color);
+      background-color: var(--affine-hover-color);
     }
 
     .zoom-percent[disabled] {
       pointer-events: none;
       cursor: not-allowed;
-      color: var(--cloud-notes-text-disable-color);
+      color: var(--affine-text-disable-color);
     }
   `;
 

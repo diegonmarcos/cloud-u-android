@@ -26,7 +26,7 @@ export class AIPanelGenerating extends WithDisposable(LitElement) {
       align-items: center;
       gap: 8px;
 
-      color: var(--cloud-notes-brand-color);
+      color: var(--affine-brand-color);
 
       .text {
         display: flex;
@@ -35,7 +35,7 @@ export class AIPanelGenerating extends WithDisposable(LitElement) {
         flex: 1 0 0;
 
         /* light/smMedium */
-        font-size: var(--cloud-notes-font-sm);
+        font-size: var(--affine-font-sm);
         font-style: normal;
         font-weight: 500;
         line-height: 22px; /* 157.143% */
@@ -62,7 +62,7 @@ export class AIPanelGenerating extends WithDisposable(LitElement) {
         width: 20px;
       }
       .esc-label {
-        font-size: var(--cloud-notes-font-xs);
+        font-size: var(--affine-font-xs);
         font-weight: 500;
         line-height: 20px;
       }

@@ -86,7 +86,7 @@ export class SelectGroupView extends BaseGroup<
     if (!tag) {
       const displayName = `No ${this.group.property.name$.value}`;
       return html` <div
-        style="font-size: 14px;color: var(--cloud-notes-text-primary-color);line-height: 22px;"
+        style="font-size: 14px;color: var(--affine-text-primary-color);line-height: 22px;"
       >
         ${displayName}
       </div>`;

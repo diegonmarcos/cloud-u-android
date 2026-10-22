@@ -74,13 +74,13 @@ const createAndShowNewToast = (
     bottom: 0;
     max-width: 480px;
     text-align: center;
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-sm);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-sm);
     padding: 10px 16px;
     margin: 0;
-    color: var(--cloud-notes-white);
-    background: var(--cloud-notes-tooltip);
-    box-shadow: var(--cloud-notes-float-button-shadow);
+    color: var(--affine-white);
+    background: var(--affine-tooltip);
+    box-shadow: var(--affine-float-button-shadow);
     border-radius: 8px;
     opacity: 0;
     transform: translateY(100%);

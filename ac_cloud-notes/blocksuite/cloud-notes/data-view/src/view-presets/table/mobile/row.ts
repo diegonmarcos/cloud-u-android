@@ -49,7 +49,7 @@ export class MobileTableRow extends SignalWatcher(
       padding: 4px;
       border-radius: 4px;
       box-shadow: 0px 0px 4px 0px rgba(66, 65, 73, 0.14);
-      background-color: var(--cloud-notes-background-primary-color);
+      background-color: var(--affine-background-primary-color);
       position: relative;
       font-size: 16px;
       color: ${unsafeCSSVarV2('icon/primary')};

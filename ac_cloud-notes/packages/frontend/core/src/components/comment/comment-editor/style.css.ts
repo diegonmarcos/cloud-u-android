@@ -20,8 +20,8 @@ export const container = style({
     },
   },
   vars: {
-    '--cloud-notes-paragraph-margin': '0',
-    '--cloud-notes-font-base': '14px',
+    '--affine-paragraph-margin': '0',
+    '--affine-font-base': '14px',
   },
 });
 

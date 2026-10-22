@@ -904,7 +904,7 @@ export class ConnectionOverlay extends Overlay {
 
   private _getEmphasisColor(): string {
     return getComputedStyle(this.gfx.std.host).getPropertyValue(
-      '--cloud-notes-text-emphasis-color'
+      '--affine-text-emphasis-color'
     );
   }
 

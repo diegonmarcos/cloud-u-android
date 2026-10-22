@@ -67,24 +67,24 @@ module.exports = {
         },
         // Selfhost sidebar tokens
         sidebar: {
-          bg: 'var(--cloud-notes-v2-selfhost-layer-background-sidebarBg-sidebarBg)',
-          foreground: 'var(--cloud-notes-v2-selfhost-text-sidebar-primary)',
+          bg: 'var(--affine-v2-selfhost-layer-background-sidebarBg-sidebarBg)',
+          foreground: 'var(--affine-v2-selfhost-text-sidebar-primary)',
           'foreground-secondary':
-            'var(--cloud-notes-v2-selfhost-text-sidebar-secondary)',
-          hover: 'var(--cloud-notes-v2-selfhost-button-sidebarButton-bg-hover)',
-          active: 'var(--cloud-notes-v2-selfhost-button-sidebarButton-bg-select)',
+            'var(--affine-v2-selfhost-text-sidebar-secondary)',
+          hover: 'var(--affine-v2-selfhost-button-sidebarButton-bg-hover)',
+          active: 'var(--affine-v2-selfhost-button-sidebarButton-bg-select)',
         },
         // Chip / badge tokens
         chip: {
-          blue: 'var(--cloud-notes-v2-chip-label-blue)',
-          white: 'var(--cloud-notes-v2-chip-label-white)',
-          text: 'var(--cloud-notes-v2-chip-label-text)',
+          blue: 'var(--affine-v2-chip-label-blue)',
+          white: 'var(--affine-v2-chip-label-white)',
+          text: 'var(--affine-v2-chip-label-text)',
         },
         // Toggle tokens
         toggle: {
-          on: 'var(--cloud-notes-v2-selfhost-toggle-backgroundOn)',
-          off: 'var(--cloud-notes-v2-selfhost-toggle-backgroundOff)',
-          thumb: 'var(--cloud-notes-v2-selfhost-toggle-foreground)',
+          on: 'var(--affine-v2-selfhost-toggle-backgroundOn)',
+          off: 'var(--affine-v2-selfhost-toggle-backgroundOff)',
+          thumb: 'var(--affine-v2-selfhost-toggle-foreground)',
         },
       },
       borderRadius: {

@@ -23,11 +23,11 @@ const styles = css`
     box-shadow: 0px 2px 3px 0px rgba(0, 0, 0, 0.05);
     border-radius: 8px;
     transition: background-color 100ms ease-in-out;
-    background-color: var(--cloud-notes-background-kanban-card-color);
+    background-color: var(--affine-background-kanban-card-color);
   }
 
   cloud-notes-data-view-kanban-card:hover {
-    background-color: var(--cloud-notes-hover-color);
+    background-color: var(--affine-hover-color);
   }
 
   cloud-notes-data-view-kanban-card .card-header {
@@ -52,7 +52,7 @@ const styles = css`
 
   cloud-notes-data-view-kanban-card .card-header-icon {
     padding: 4px;
-    background-color: var(--cloud-notes-background-secondary-color);
+    background-color: var(--affine-background-secondary-color);
     display: flex;
     align-items: center;
     border-radius: 4px;
@@ -62,8 +62,8 @@ const styles = css`
   cloud-notes-data-view-kanban-card .card-header-icon svg {
     width: 16px;
     height: 16px;
-    fill: var(--cloud-notes-icon-color);
-    color: var(--cloud-notes-icon-color);
+    fill: var(--affine-icon-color);
+    color: var(--affine-icon-color);
   }
 
   cloud-notes-data-view-kanban-card .card-body {
@@ -100,7 +100,7 @@ const styles = css`
     padding: 4px;
     border-radius: 4px;
     box-shadow: 0px 0px 4px 0px rgba(66, 65, 73, 0.14);
-    background-color: var(--cloud-notes-background-primary-color);
+    background-color: var(--affine-background-primary-color);
   }
 
   .card-op:hover:before {
@@ -111,12 +111,12 @@ const styles = css`
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: var(--cloud-notes-hover-color);
+    background-color: var(--affine-hover-color);
   }
 
   .card-op svg {
-    fill: var(--cloud-notes-icon-color);
-    color: var(--cloud-notes-icon-color);
+    fill: var(--affine-icon-color);
+    color: var(--affine-icon-color);
     width: 16px;
     height: 16px;
   }
@@ -306,7 +306,7 @@ export class KanbanCard extends SignalWatcher(
       v => !this.view.isInHeader(v.id)
     );
     this.style.border = this.isFocus$.value
-      ? '1px solid var(--cloud-notes-primary-color)'
+      ? '1px solid var(--affine-primary-color)'
       : '';
     return html`
       ${this.renderHeader(columns)} ${this.renderBody(columns)}

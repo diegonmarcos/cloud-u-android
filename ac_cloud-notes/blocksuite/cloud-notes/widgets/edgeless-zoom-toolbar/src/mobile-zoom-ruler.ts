@@ -24,10 +24,10 @@ export class MobileZoomRuler extends WithDisposable(LitElement) {
       display: flex;
       align-items: center;
       height: 32px;
-      background: var(--cloud-notes-background-overlay-panel-color);
-      border: 1px solid var(--cloud-notes-border-color);
+      background: var(--affine-background-overlay-panel-color);
+      border: 1px solid var(--affine-border-color);
       border-radius: 999px;
-      box-shadow: var(--cloud-notes-shadow-1);
+      box-shadow: var(--affine-shadow-1);
       overflow: hidden;
     }
 
@@ -40,7 +40,7 @@ export class MobileZoomRuler extends WithDisposable(LitElement) {
       font-size: 12px;
       font-weight: 500;
       line-height: 1;
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
       white-space: nowrap;
       user-select: none;
     }
@@ -48,7 +48,7 @@ export class MobileZoomRuler extends WithDisposable(LitElement) {
     .divider {
       width: 1px;
       height: 16px;
-      background: var(--cloud-notes-border-color);
+      background: var(--affine-border-color);
       flex-shrink: 0;
     }
 
@@ -61,18 +61,18 @@ export class MobileZoomRuler extends WithDisposable(LitElement) {
       padding: 0;
       border: none;
       background: transparent;
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
       cursor: pointer;
     }
 
     .fit-button:hover:not(:disabled) {
-      background: var(--cloud-notes-hover-color);
-      color: var(--cloud-notes-primary-color);
+      background: var(--affine-hover-color);
+      color: var(--affine-primary-color);
     }
 
     .fit-button:disabled {
       cursor: not-allowed;
-      color: var(--cloud-notes-text-disable-color);
+      color: var(--affine-text-disable-color);
     }
 
     .fit-button svg {

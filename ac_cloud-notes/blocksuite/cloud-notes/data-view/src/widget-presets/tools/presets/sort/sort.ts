@@ -30,7 +30,7 @@ const styles = css`
 
   .cloud-notes-database-sort-button:hover,
   .cloud-notes-database-sort-button.active {
-    background-color: var(--cloud-notes-hover-color);
+    background-color: var(--affine-hover-color);
   }
 
   .cloud-notes-database-sort-button {

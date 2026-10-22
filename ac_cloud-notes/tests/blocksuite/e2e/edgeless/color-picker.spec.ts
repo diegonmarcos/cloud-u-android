@@ -371,7 +371,7 @@ test.describe('basic functions', () => {
     rgba = parseStringToRgba('--blocksuite-transparent');
     expect(rgba).toEqual({ r: 1, g: 1, b: 1, a: 0 });
 
-    rgba = parseStringToRgba('--cloud-notes-palette-transparent');
+    rgba = parseStringToRgba('--affine-palette-transparent');
     expect(rgba).toEqual({ r: 1, g: 1, b: 1, a: 0 });
 
     rgba = parseStringToRgba('#ff0');

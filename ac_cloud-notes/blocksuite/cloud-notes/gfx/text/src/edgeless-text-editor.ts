@@ -118,7 +118,7 @@ export class EdgelessTextEditor extends WithDisposable(ShadowlessElement) {
       transform-origin: left top;
       font-kerning: none;
       border: ${EdgelessTextEditor.BORDER_WIDTH}px solid
-        var(--cloud-notes-primary-color, #1e96eb);
+        var(--affine-primary-color, #1e96eb);
       border-radius: 4px;
       box-shadow: 0px 0px 0px 2px rgba(30, 150, 235, 0.3);
       padding: ${EdgelessTextEditor.PADDING_VERTICAL}px
@@ -138,7 +138,7 @@ export class EdgelessTextEditor extends WithDisposable(ShadowlessElement) {
 
     .edgeless-text-editor-placeholder {
       pointer-events: none;
-      color: var(--cloud-notes-text-disable-color);
+      color: var(--affine-text-disable-color);
       white-space: nowrap;
     }
   `;

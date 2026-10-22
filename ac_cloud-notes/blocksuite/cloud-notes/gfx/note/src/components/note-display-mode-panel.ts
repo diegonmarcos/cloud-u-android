@@ -35,7 +35,7 @@ export class NoteDisplayModePanel extends WithDisposable(LitElement) {
       justify-content: center;
       align-items: center;
       gap: 4px;
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
 
       svg {
         width: 20px;
@@ -44,7 +44,7 @@ export class NoteDisplayModePanel extends WithDisposable(LitElement) {
     }
     .item:hover,
     .item.selected {
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
     }
   `;
 

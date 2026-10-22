@@ -32,10 +32,10 @@ export class AttachmentViewerPanel extends SignalWatcher(
       dialog {
         padding: 0;
         top: 50px;
-        border: 1px solid var(--cloud-notes-border-color);
+        border: 1px solid var(--affine-border-color);
         border-radius: 8px;
-        background: var(--cloud-notes-v2-dialog-background-primary);
-        box-shadow: var(--cloud-notes-overlay-shadow);
+        background: var(--affine-v2-dialog-background-primary);
+        box-shadow: var(--affine-overlay-shadow);
         outline: none;
       }
 
@@ -70,7 +70,7 @@ export class AttachmentViewerPanel extends SignalWatcher(
           justify-content: space-between;
           align-items: center;
           font-size: 12px;
-          color: var(--cloud-notes-text-secondary-color);
+          color: var(--affine-text-secondary-color);
         }
 
         h5 {

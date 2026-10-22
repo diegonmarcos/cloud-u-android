@@ -9,11 +9,11 @@ export const dividerBlockStyles = css`
     flex-direction: column;
     justify-content: center;
     padding: 18px 8px;
-    margin-top: var(--cloud-notes-paragraph-space);
+    margin-top: var(--affine-paragraph-space);
   }
   .cloud-notes-divider-block-container hr {
     border: none;
-    border-top: 1px solid var(--cloud-notes-divider-color);
+    border-top: 1px solid var(--affine-divider-color);
     width: 100%;
   }
 `;

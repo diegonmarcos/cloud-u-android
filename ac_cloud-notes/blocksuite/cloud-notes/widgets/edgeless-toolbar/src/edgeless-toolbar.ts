@@ -143,7 +143,7 @@ export class EdgelessToolbarWidget extends WidgetComponent<RootBlockModel> {
       display: block;
       width: 1px;
       height: 100%;
-      background-color: var(--cloud-notes-border-color);
+      background-color: var(--affine-border-color);
     }
     .pen-and-eraser {
       display: flex;
@@ -678,8 +678,8 @@ export class EdgelessToolbarWidget extends WidgetComponent<RootBlockModel> {
             .borderRadius=${16}
             .smooth=${0.7}
             .borderWidth=${1}
-            .bgColor=${'var(--cloud-notes-background-overlay-panel-color)'}
-            .borderColor=${'var(--cloud-notes-border-color)'}
+            .bgColor=${'var(--affine-background-overlay-panel-color)'}
+            .borderColor=${'var(--affine-border-color)'}
             style="filter: drop-shadow(${cssVar('toolbarShadow')})"
           >
             <div

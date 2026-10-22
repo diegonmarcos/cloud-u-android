@@ -9,8 +9,8 @@ export const tagSelectContainerStyle = css({
   border: `0.5px solid ${cssVarV2('layer/insideBorder/blackBorder')}`,
   borderRadius: '8px',
   backgroundColor: cssVarV2.layer.background.overlayPanel,
-  boxShadow: 'var(--cloud-notes-shadow-1)',
-  fontFamily: 'var(--cloud-notes-font-family)',
+  boxShadow: 'var(--affine-shadow-1)',
+  fontFamily: 'var(--affine-font-family)',
   maxWidth: '400px',
   padding: '8px',
   display: 'flex',
@@ -39,7 +39,7 @@ export const tagSelectInputStyle = css({
   fontSize: '14px',
   outline: 'none',
   '::placeholder': {
-    color: 'var(--cloud-notes-placeholder-color)',
+    color: 'var(--affine-placeholder-color)',
   },
 });
 

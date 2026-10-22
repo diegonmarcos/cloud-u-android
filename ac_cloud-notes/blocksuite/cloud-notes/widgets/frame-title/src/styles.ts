@@ -21,7 +21,7 @@ export const frameTitleStyle = css`
     transform-origin: left bottom;
     background-color: var(--bg-color);
 
-    font-family: var(--cloud-notes-font-family);
+    font-family: var(--affine-font-family);
     font-size: ${frameTitleStyleVars.fontSize}px;
     cursor: default;
     white-space: nowrap;

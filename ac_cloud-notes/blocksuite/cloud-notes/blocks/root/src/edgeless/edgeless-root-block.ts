@@ -77,15 +77,15 @@ export class EdgelessRootBlockComponent extends BlockComponent<
 
     .edgeless-background {
       height: 100%;
-      background-color: var(--cloud-notes-background-primary-color);
+      background-color: var(--affine-background-primary-color);
       background-image: radial-gradient(
-        var(--cloud-notes-edgeless-grid-color) 1px,
-        var(--cloud-notes-background-primary-color) 1px
+        var(--affine-edgeless-grid-color) 1px,
+        var(--affine-background-primary-color) 1px
       );
     }
 
     .edgeless-container {
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
       position: relative;
     }
 

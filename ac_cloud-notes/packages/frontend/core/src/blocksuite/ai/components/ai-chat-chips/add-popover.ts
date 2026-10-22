@@ -90,7 +90,7 @@ export class ChatPanelAddPopover extends SignalWatcher(
       border: none;
       line-height: 20px;
       height: 20px;
-      font-size: var(--cloud-notes-font-sm);
+      font-size: var(--affine-font-sm);
       color: ${unsafeCSSVarV2('text/primary')};
       flex-grow: 1;
       background-color: transparent;
@@ -108,7 +108,7 @@ export class ChatPanelAddPopover extends SignalWatcher(
     }
     .no-result {
       padding: 4px;
-      font-size: var(--cloud-notes-font-sm);
+      font-size: var(--affine-font-sm);
       color: ${unsafeCSSVarV2('text/secondary')};
     }
     .menu-items icon-button {

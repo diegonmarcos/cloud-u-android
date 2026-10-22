@@ -42,7 +42,7 @@ export class FilterRootView extends SignalWatcher(ShadowlessElement) {
       font-size: 14px;
       font-weight: 600;
       line-height: 22px;
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
     }
 
     .filter-root-op {
@@ -60,7 +60,7 @@ export class FilterRootView extends SignalWatcher(ShadowlessElement) {
     }
 
     .filter-root-op-clickable:hover {
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
     }
 
     .filter-root-container {
@@ -81,24 +81,24 @@ export class FilterRootView extends SignalWatcher(ShadowlessElement) {
       line-height: 22px;
       border-radius: 4px;
       cursor: pointer;
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
     }
 
     .filter-root-button svg {
-      fill: var(--cloud-notes-text-secondary-color);
-      color: var(--cloud-notes-text-secondary-color);
+      fill: var(--affine-text-secondary-color);
+      color: var(--affine-text-secondary-color);
       width: 20px;
       height: 20px;
     }
 
     .filter-root-button:hover {
-      background-color: var(--cloud-notes-hover-color);
-      color: var(--cloud-notes-text-primary-color);
+      background-color: var(--affine-hover-color);
+      color: var(--affine-text-primary-color);
     }
 
     .filter-root-button:hover svg {
-      fill: var(--cloud-notes-text-primary-color);
-      color: var(--cloud-notes-text-primary-color);
+      fill: var(--affine-text-primary-color);
+      color: var(--affine-text-primary-color);
     }
 
     .filter-root-item {
@@ -115,7 +115,7 @@ export class FilterRootView extends SignalWatcher(ShadowlessElement) {
       line-height: 22px;
       display: flex;
       align-items: center;
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
       gap: 6px;
     }
 
@@ -129,32 +129,32 @@ export class FilterRootView extends SignalWatcher(ShadowlessElement) {
     }
 
     .filter-root-item-ops:hover {
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
     }
 
     .filter-root-item-ops svg {
-      fill: var(--cloud-notes-text-secondary-color);
-      color: var(--cloud-notes-text-secondary-color);
+      fill: var(--affine-text-secondary-color);
+      color: var(--affine-text-secondary-color);
       width: 18px;
       height: 18px;
     }
 
     .filter-root-item-ops:hover svg {
-      fill: var(--cloud-notes-text-primary-color);
-      color: var(--cloud-notes-text-primary-color);
+      fill: var(--affine-text-primary-color);
+      color: var(--affine-text-primary-color);
     }
 
     .filter-root-grabber {
       cursor: grab;
       width: 4px;
       height: 12px;
-      background-color: var(--cloud-notes-placeholder-color);
+      background-color: var(--affine-placeholder-color);
       border-radius: 1px;
     }
 
     .divider {
       height: 1px;
-      background-color: var(--cloud-notes-divider-color);
+      background-color: var(--affine-divider-color);
       flex-shrink: 0;
       margin: 8px 0;
     }

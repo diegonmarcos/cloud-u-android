@@ -37,30 +37,30 @@ export class SizeDropdownMenu extends SignalWatcher(
 
     editor-menu-action {
       justify-content: space-between;
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
     }
 
     :host([data-type='check']) editor-menu-action[data-selected] {
-      color: var(--cloud-notes-primary-color);
+      color: var(--affine-primary-color);
       background-color: unset;
     }
 
     input {
       display: flex;
       align-self: stretch;
-      border: 0.5px solid var(--cloud-notes-border-color);
+      border: 0.5px solid var(--affine-border-color);
       border-radius: 8px;
       padding: 4px 8px;
       box-sizing: border-box;
     }
 
     input:focus {
-      outline-color: var(--cloud-notes-primary-color);
+      outline-color: var(--affine-primary-color);
       outline-width: 0.5px;
     }
 
     input::placeholder {
-      color: var(--cloud-notes-placeholder-color);
+      color: var(--affine-placeholder-color);
     }
   `;
 

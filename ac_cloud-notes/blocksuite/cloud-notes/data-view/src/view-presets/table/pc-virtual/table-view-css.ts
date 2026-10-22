@@ -33,10 +33,10 @@ export const tableBlockTable = css({
   },
   '&:hover::-webkit-scrollbar-thumb:horizontal': {
     borderRadius: '4px',
-    backgroundColor: 'var(--cloud-notes-black-30)',
+    backgroundColor: 'var(--affine-black-30)',
   },
   '&:hover::-webkit-scrollbar-track:horizontal': {
-    backgroundColor: 'var(--cloud-notes-hover-color)',
+    backgroundColor: 'var(--affine-hover-color)',
     height: '8px',
   },
 });

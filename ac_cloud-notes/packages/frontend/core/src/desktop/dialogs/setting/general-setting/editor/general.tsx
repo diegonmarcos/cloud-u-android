@@ -322,7 +322,7 @@ const FontSizeSettings = () => {
       editorSettingService.editorSetting.set('fontSize', size);
       // Update CSS variable immediately
       document.documentElement.style.setProperty(
-        '--cloud-notes-font-base',
+        '--affine-font-base',
         `${size}px`
       );
     },
@@ -332,7 +332,7 @@ const FontSizeSettings = () => {
   // Apply current font size to CSS variable on mount
   useEffect(() => {
     document.documentElement.style.setProperty(
-      '--cloud-notes-font-base',
+      '--affine-font-base',
       `${settings.fontSize}px`
     );
   }, [settings.fontSize]);

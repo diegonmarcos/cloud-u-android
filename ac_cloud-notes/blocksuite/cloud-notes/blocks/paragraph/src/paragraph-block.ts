@@ -399,6 +399,6 @@ export class ParagraphBlockComponent extends CaptionedBlockComponent<ParagraphBl
   private accessor _richTextElement: RichText | null = null;
 
   override accessor blockContainerStyles = {
-    margin: 'var(--cloud-notes-paragraph-margin, 10px 0)',
+    margin: 'var(--affine-paragraph-margin, 10px 0)',
   };
 }

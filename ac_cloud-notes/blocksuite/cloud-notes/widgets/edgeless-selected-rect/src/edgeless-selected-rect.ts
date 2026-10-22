@@ -58,7 +58,7 @@ export class EdgelessSelectedRectWidget extends WidgetComponent<RootBlockModel> 
       pointer-events: none;
       box-sizing: border-box;
       z-index: 1;
-      border-color: var(--cloud-notes-blue);
+      border-color: var(--affine-blue);
       border-width: 2px;
       border-style: solid;
       transform: translate(0, 0) rotate(0);
@@ -98,7 +98,7 @@ export class EdgelessSelectedRectWidget extends WidgetComponent<RootBlockModel> 
       height: 12px;
       box-sizing: border-box;
       border-radius: 50%;
-      border: 2px var(--cloud-notes-blue) solid;
+      border: 2px var(--affine-blue) solid;
       background: white;
     }
 
@@ -170,7 +170,7 @@ export class EdgelessSelectedRectWidget extends WidgetComponent<RootBlockModel> 
     .cloud-notes-edgeless-selected-rect .handle[aria-label='right'] {
       border: 0;
       background: transparent;
-      border-color: var('--cloud-notes-blue');
+      border-color: var('--affine-blue');
     }
 
     .cloud-notes-edgeless-selected-rect .handle[aria-label='left'],
@@ -322,11 +322,11 @@ export class EdgelessSelectedRectWidget extends WidgetComponent<RootBlockModel> 
       content: attr(data-scale-percent);
       display: none;
       position: absolute;
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
       font-feature-settings:
         'clig' off,
         'liga' off;
-      font-family: var(--cloud-notes-font-family);
+      font-family: var(--affine-font-family);
       font-size: 12px;
       font-style: normal;
       font-weight: 400;
@@ -729,7 +729,7 @@ export class EdgelessSelectedRectWidget extends WidgetComponent<RootBlockModel> 
               width: `${(w * zoom) / viewScale}px`,
               height: `${(h * zoom) / viewScale}px`,
               transform: `rotate(${element.rotate}deg)`,
-              border: `1px solid var(--cloud-notes-primary-color)`,
+              border: `1px solid var(--affine-primary-color)`,
             };
             return html`<div
               class="element-handle"
@@ -781,7 +781,7 @@ export class EdgelessSelectedRectWidget extends WidgetComponent<RootBlockModel> 
           left: 1.5px;
           width: 2px;
           height: 100%;
-          background: var(--cloud-notes-error-color);
+          background: var(--affine-error-color);
           filter: drop-shadow(-6px 0px 12px rgba(235, 67, 53, 0.35));
         }
 
@@ -793,7 +793,7 @@ export class EdgelessSelectedRectWidget extends WidgetComponent<RootBlockModel> 
           left: 0px;
           width: 100%;
           height: 2px;
-          background: var(--cloud-notes-error-color);
+          background: var(--affine-error-color);
           filter: drop-shadow(-6px 0px 12px rgba(235, 67, 53, 0.35));
         }
       </style>

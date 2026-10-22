@@ -62,7 +62,7 @@ const styles = css`
     align-self: center;
     width: 230px;
     height: 48px;
-    color: var(--cloud-notes-text-secondary-color, #8e8d91);
+    color: var(--affine-text-secondary-color, #8e8d91);
     text-align: center;
 
     /* light/base */
@@ -75,7 +75,7 @@ const styles = css`
   .insert-indicator {
     height: 2px;
     border-radius: 1px;
-    background-color: var(--cloud-notes-blue-600);
+    background-color: var(--affine-blue-600);
     position: absolute;
     contain: layout size;
     width: 284px;

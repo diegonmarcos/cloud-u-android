@@ -366,7 +366,7 @@ export const BlockSuiteEditor = (props: EditorProps) => {
   }, [loadStartTime, props.page, workspaceService]);
 
   return (
-    <Slot style={{ '--cloud-notes-font-family': fontFamily } as CSSProperties}>
+    <Slot style={{ '--affine-font-family': fontFamily } as CSSProperties}>
       {isLoading ? (
         <EditorLoading longerLoading={longerLoading} />
       ) : (

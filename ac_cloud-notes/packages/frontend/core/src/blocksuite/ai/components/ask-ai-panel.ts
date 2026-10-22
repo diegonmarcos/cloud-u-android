@@ -23,16 +23,16 @@ export class AskAIPanel extends WithDisposable(LitElement) {
       padding: 8px 4px 8px 8px;
       max-height: 374px;
       overflow-y: auto;
-      background: var(--cloud-notes-background-overlay-panel-color);
+      background: var(--affine-background-overlay-panel-color);
       box-shadow: ${unsafeCSS(cssVar('overlayPanelShadow'))};
       border-radius: 8px;
-      z-index: var(--cloud-notes-z-index-popover);
+      z-index: var(--affine-z-index-popover);
       scrollbar-gutter: stable;
     }
 
     ${scrollbarStyle('.ask-ai-panel')}
     .ask-ai-panel:hover::-webkit-scrollbar-thumb {
-      background-color: var(--cloud-notes-black-30);
+      background-color: var(--affine-black-30);
     }
   `;
 

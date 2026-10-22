@@ -22,7 +22,7 @@ export function AiSlashMenuConfigExtension() {
   const AIItems = pageAIGroups.flatMap(group => group.items);
 
   const iconWrapper = (icon: AIItemConfig['icon']) => {
-    return html`<div style="color: var(--cloud-notes-primary-color)">
+    return html`<div style="color: var(--affine-primary-color)">
       ${typeof icon === 'function' ? html`${icon()}` : icon}
     </div>`;
   };

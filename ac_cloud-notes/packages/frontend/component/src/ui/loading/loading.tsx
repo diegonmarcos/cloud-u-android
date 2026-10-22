@@ -43,7 +43,7 @@ export const Loading = ({
         cy={12}
         r={8}
         strokeWidth={strokeWidth}
-        stroke="var(--cloud-notes-black-10)"
+        stroke="var(--affine-black-10)"
       />
       <circle
         cx={12}

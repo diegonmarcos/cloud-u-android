@@ -280,7 +280,7 @@ test('should format quick bar be able to change background color', async ({
     [
       {
         attributes: {
-          color: 'var(--cloud-notes-text-highlight-foreground-red)',
+          color: 'var(--affine-text-highlight-foreground-red)',
         },
         insert: '456',
       },
@@ -291,7 +291,7 @@ test('should format quick bar be able to change background color', async ({
   // TODO(@fundon): these recent settings should be added to the dropdown menu.
   // await expect(highlight.highlightBtn).toHaveAttribute(
   //   'data-last-used',
-  //   'var(--cloud-notes-text-highlight-foreground-red)'
+  //   'var(--affine-text-highlight-foreground-red)'
   // );
 
   expect(await getPageSnapshot(page, true)).toMatchSnapshot(
@@ -314,7 +314,7 @@ test('should format quick bar be able to change background color', async ({
     [
       {
         attributes: {
-          color: 'var(--cloud-notes-text-highlight-foreground-red)',
+          color: 'var(--affine-text-highlight-foreground-red)',
         },
         insert: '123',
       },

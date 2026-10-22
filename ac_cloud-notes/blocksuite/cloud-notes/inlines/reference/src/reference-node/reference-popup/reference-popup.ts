@@ -29,7 +29,7 @@ export class ReferencePopup extends SignalWatcher(
 
     .overlay-mask {
       position: fixed;
-      z-index: var(--cloud-notes-z-index-popover);
+      z-index: var(--affine-z-index-popover);
       top: 0;
       left: 0;
       width: 100vw;
@@ -45,7 +45,7 @@ export class ReferencePopup extends SignalWatcher(
       justify-content: space-between;
       align-items: center;
       animation: cloud-notes-popover-fade-in 0.2s ease;
-      z-index: var(--cloud-notes-z-index-popover);
+      z-index: var(--affine-z-index-popover);
     }
 
     @keyframes cloud-notes-popover-fade-in {
@@ -65,11 +65,11 @@ export class ReferencePopup extends SignalWatcher(
       padding: 0;
       border: none;
       background: transparent;
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
     }
     ${fontXSStyle('input')}
     input::placeholder {
-      color: var(--cloud-notes-placeholder-color);
+      color: var(--affine-placeholder-color);
     }
     input:focus {
       outline: none;

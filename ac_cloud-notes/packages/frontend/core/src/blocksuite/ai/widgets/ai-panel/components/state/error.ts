@@ -38,9 +38,9 @@ export class AIPanelError extends WithDisposable(LitElement) {
         align-self: stretch;
         .answer-label {
           align-self: stretch;
-          color: var(--cloud-notes-text-secondary-color);
+          color: var(--affine-text-secondary-color);
           /* light/xsMedium */
-          font-size: var(--cloud-notes-font-xs);
+          font-size: var(--affine-font-xs);
           font-style: normal;
           font-weight: 500;
           line-height: 20px; /* 166.667% */
@@ -48,12 +48,12 @@ export class AIPanelError extends WithDisposable(LitElement) {
       }
       .error-info {
         align-self: stretch;
-        color: var(--cloud-notes-error-color, #eb4335);
+        color: var(--affine-error-color, #eb4335);
         font-feature-settings:
           'clig' off,
           'liga' off;
         /* light/sm */
-        font-size: var(--cloud-notes-font-sm);
+        font-size: var(--affine-font-sm);
         font-style: normal;
         font-weight: 400;
         line-height: 22px; /* 157.143% */
@@ -78,11 +78,11 @@ export class AIPanelError extends WithDisposable(LitElement) {
         align-items: center;
         gap: 4px;
         border-radius: 8px;
-        border: 1px solid var(--cloud-notes-border-color);
-        background: var(--cloud-notes-white);
-        color: var(--cloud-notes-text-primary-color);
+        border: 1px solid var(--affine-border-color);
+        background: var(--affine-white);
+        color: var(--affine-text-primary-color);
         /* light/xsMedium */
-        font-size: var(--cloud-notes-font-xs);
+        font-size: var(--affine-font-xs);
         font-style: normal;
         font-weight: 500;
         line-height: 20px; /* 166.667% */
@@ -91,9 +91,9 @@ export class AIPanelError extends WithDisposable(LitElement) {
         cursor: pointer;
       }
       .action-button.primary {
-        border: 1px solid var(--cloud-notes-black-10);
-        background: var(--cloud-notes-primary-color);
-        color: var(--cloud-notes-pure-white);
+        border: 1px solid var(--affine-black-10);
+        background: var(--affine-primary-color);
+        color: var(--affine-pure-white);
       }
       .action-button > span {
         display: flex;
@@ -102,7 +102,7 @@ export class AIPanelError extends WithDisposable(LitElement) {
         padding: 0 4px;
       }
       .action-button:not(.primary):hover {
-        background: var(--cloud-notes-hover-color);
+        background: var(--affine-hover-color);
       }
     }
 
@@ -120,8 +120,8 @@ export class AIPanelError extends WithDisposable(LitElement) {
 
     .response-list-container ai-item-list {
       --item-padding: 4px;
-      --item-icon-color: var(--cloud-notes-icon-secondary);
-      --item-icon-hover-color: var(--cloud-notes-icon-color);
+      --item-icon-color: var(--affine-icon-secondary);
+      --item-icon-hover-color: var(--affine-icon-color);
     }
   `;
 

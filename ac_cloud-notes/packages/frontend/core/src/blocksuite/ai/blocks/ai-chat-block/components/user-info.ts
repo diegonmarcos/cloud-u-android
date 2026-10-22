@@ -21,7 +21,7 @@ export class UserInfo extends LitElement {
       .user-avatar-container {
         width: 24px;
         height: 24px;
-        color: var(--cloud-notes-brand-color);
+        color: var(--affine-brand-color);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -40,14 +40,14 @@ export class UserInfo extends LitElement {
 
       .default-avatar,
       .avatar-image {
-        background-color: var(--cloud-notes-primary-color);
+        background-color: var(--affine-primary-color);
       }
 
       .user-name {
-        color: var(--cloud-notes-text-primary-color);
+        color: var(--affine-text-primary-color);
         text-align: justify;
         font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-        font-size: var(--cloud-notes-font-sm);
+        font-size: var(--affine-font-sm);
         font-style: normal;
         font-weight: 500;
         line-height: 22px;

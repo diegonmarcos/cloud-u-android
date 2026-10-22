@@ -9,7 +9,7 @@ import type { ChatStatus } from '../ai-chat-messages';
 const CloudNotesAvatarIcon = AiIcon({
   width: '20px',
   height: '20px',
-  style: 'color: var(--cloud-notes-primary-color)',
+  style: 'color: var(--affine-primary-color)',
 });
 
 export class AssistantAvatar extends ShadowlessElement {

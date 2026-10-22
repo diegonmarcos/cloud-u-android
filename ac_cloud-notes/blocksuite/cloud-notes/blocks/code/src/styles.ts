@@ -8,11 +8,11 @@ export const codeBlockStyles = css`
   }
 
   .cloud-notes-code-block-container {
-    font-size: var(--cloud-notes-font-xs);
-    line-height: var(--cloud-notes-line-height);
+    font-size: var(--affine-font-xs);
+    line-height: var(--affine-line-height);
     position: relative;
     padding: 32px 20px;
-    background: var(--cloud-notes-background-code-block);
+    background: var(--affine-background-code-block);
     border-radius: 10px;
     box-sizing: border-box;
   }
@@ -38,7 +38,7 @@ export const codeBlockStyles = css`
   }
 
   .cloud-notes-code-block-container .inline-editor {
-    font-family: var(--cloud-notes-font-code-family);
+    font-family: var(--affine-font-code-family);
     font-variant-ligatures: none;
   }
 
@@ -65,10 +65,10 @@ export const codeBlockStyles = css`
     white-space: nowrap;
     left: -0.5px;
     z-index: 1;
-    background: var(--cloud-notes-background-code-block);
-    font-size: var(--cloud-notes-font-xs);
-    line-height: var(--cloud-notes-line-height);
-    color: var(--cloud-notes-text-secondary);
+    background: var(--affine-background-code-block);
+    font-size: var(--affine-font-xs);
+    line-height: var(--affine-line-height);
+    color: var(--affine-text-secondary);
     box-sizing: border-box;
     user-select: none;
   }
@@ -86,7 +86,7 @@ export const codeBlockStyles = css`
   /* Clamp the rich-text to the first 8 lines */
   .cloud-notes-code-block-container.collapsed rich-text {
     display: block;
-    max-height: calc(8 * var(--cloud-notes-line-height));
+    max-height: calc(8 * var(--affine-line-height));
     overflow: hidden;
   }
 
@@ -105,7 +105,7 @@ export const codeBlockStyles = css`
     background: linear-gradient(
       to bottom,
       transparent,
-      var(--cloud-notes-background-code-block)
+      var(--affine-background-code-block)
     );
     border-radius: 0 0 10px 10px;
     pointer-events: none;

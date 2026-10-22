@@ -333,7 +333,7 @@ export const htmlMarkElementToDeltaMatcher = HtmlASTToDeltaExtension({
       context.toDelta(child, { trim: false }).map(delta => {
         delta.attributes = {
           ...delta.attributes,
-          background: `var(--cloud-notes-text-highlight-${colorName})`,
+          background: `var(--affine-text-highlight-${colorName})`,
         };
         return delta;
       })

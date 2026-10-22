@@ -941,7 +941,7 @@ export class SelectionElement extends WithDisposable(ShadowlessElement) {
       position: absolute;
       z-index: 2;
       box-sizing: border-box;
-      background: var(--cloud-notes-primary-color-04);
+      background: var(--affine-primary-color-04);
       pointer-events: none;
       display: none;
     }
@@ -951,7 +951,7 @@ export class SelectionElement extends WithDisposable(ShadowlessElement) {
       width: 100%;
       z-index: 2;
       box-sizing: border-box;
-      border: 1px solid var(--cloud-notes-primary-color);
+      border: 1px solid var(--affine-primary-color);
       border-radius: 2px;
       pointer-events: none;
       display: none;
@@ -1161,7 +1161,7 @@ export class SelectionElement extends WithDisposable(ShadowlessElement) {
     div.style.top = `${y}px`;
     div.style.width = `${w}px`;
     div.style.height = `${h}px`;
-    div.style.borderColor = 'var(--cloud-notes-primary-color)';
+    div.style.borderColor = 'var(--affine-primary-color)';
     div.style.borderStyle = this.controller.__dragToFillElement.dragging
       ? 'dashed'
       : 'solid';

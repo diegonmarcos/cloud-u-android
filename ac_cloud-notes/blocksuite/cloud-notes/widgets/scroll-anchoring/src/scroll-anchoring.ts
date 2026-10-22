@@ -38,12 +38,12 @@ export class CloudNotesScrollAnchoringWidget extends WidgetComponent {
           border-color: ${unsafeCSS(
             cssVarV2('layer/insideBorder/primaryBorder')
           )};
-          box-shadow: var(--cloud-notes-active-shadow);
+          box-shadow: var(--affine-active-shadow);
         }
 
         &.page {
           border-radius: 5px;
-          background-color: var(--cloud-notes-hover-color);
+          background-color: var(--affine-hover-color);
         }
       }
     }

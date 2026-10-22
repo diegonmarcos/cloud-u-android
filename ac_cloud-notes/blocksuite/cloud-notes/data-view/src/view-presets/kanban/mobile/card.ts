@@ -22,7 +22,7 @@ const styles = css`
     border: 0.5px solid ${unsafeCSS(cssVarV2.layer.insideBorder.border)};
     box-shadow: 0px 2px 3px 0px rgba(0, 0, 0, 0.05);
     border-radius: 8px;
-    background-color: var(--cloud-notes-background-kanban-card-color);
+    background-color: var(--affine-background-kanban-card-color);
   }
 
   .mobile-card-header {
@@ -47,7 +47,7 @@ const styles = css`
 
   .mobile-card-header-icon {
     padding: 4px;
-    background-color: var(--cloud-notes-background-secondary-color);
+    background-color: var(--affine-background-secondary-color);
     display: flex;
     align-items: center;
     border-radius: 4px;
@@ -81,7 +81,7 @@ const styles = css`
     padding: 4px;
     border-radius: 4px;
     box-shadow: 0px 0px 4px 0px rgba(66, 65, 73, 0.14);
-    background-color: var(--cloud-notes-background-primary-color);
+    background-color: var(--affine-background-primary-color);
     font-size: 16px;
     color: ${unsafeCSSVarV2('icon/primary')};
   }

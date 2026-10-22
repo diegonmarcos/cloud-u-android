@@ -19,7 +19,7 @@ const styles = css`
     height: 20px;
     box-sizing: border-box;
     gap: 6px;
-    font-size: var(--cloud-notes-font-sm);
+    font-size: var(--affine-font-sm);
     cursor: default;
     position: relative;
   }
@@ -33,10 +33,10 @@ const styles = css`
     height: 18px;
     box-sizing: border-box;
     border-radius: 2px;
-    background: var(--cloud-notes-black);
+    background: var(--affine-black);
     margin-left: 2px;
 
-    color: var(--cloud-notes-white);
+    color: var(--affine-white);
     text-align: center;
     font-weight: 500;
     line-height: 18px;
@@ -44,7 +44,7 @@ const styles = css`
 
   .frame-card-title-container .card-title {
     height: 20px;
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
     font-weight: 400;
     line-height: 20px;
 

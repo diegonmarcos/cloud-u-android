@@ -33,7 +33,11 @@ import {
 } from '@cloud-notes/nbstore/sqlite/v1';
 import type { WorkerInitOptions } from '@cloud-notes/nbstore/worker/client';
 import type { FrameworkProvider } from '@toeverything/infra';
-import { LiveData, Service } from '@toeverything/infra';
+import {
+  LiveData,
+  migrateLegacyLocalStorage,
+  Service,
+} from '@toeverything/infra';
 import { isEqual } from 'lodash-es';
 import { nanoid } from 'nanoid';
 import { Observable } from 'rxjs';
@@ -54,6 +58,8 @@ import {
 } from './workspace-id-utils';
 
 export const LOCAL_WORKSPACE_LOCAL_STORAGE_KEY = 'cloud-notes-local-workspace';
+// the list used to be stored under the app's earlier name; carry it over once
+migrateLegacyLocalStorage();
 export const LOCAL_WORKSPACE_GLOBAL_STATE_KEY =
   'workspace-engine:local-workspace-ids:v1';
 const LOCAL_WORKSPACE_CHANGED_BROADCAST_CHANNEL_KEY =

@@ -62,7 +62,7 @@ export class CitationCard extends SignalWatcher(WithDisposable(LitElement)) {
         text-align: left;
         line-height: 22px;
         color: ${unsafeCSSVarV2('text/primary')};
-        font-size: var(--cloud-notes-font-sm);
+        font-size: var(--affine-font-sm);
         font-weight: 500;
       }
 
@@ -100,7 +100,7 @@ export class CitationCard extends SignalWatcher(WithDisposable(LitElement)) {
         'clig' off;
       text-overflow: ellipsis;
       white-space: nowrap;
-      font-size: var(--cloud-notes-font-xs);
+      font-size: var(--affine-font-xs);
       font-style: normal;
       font-weight: 400;
       line-height: 20px; /* 166.667% */

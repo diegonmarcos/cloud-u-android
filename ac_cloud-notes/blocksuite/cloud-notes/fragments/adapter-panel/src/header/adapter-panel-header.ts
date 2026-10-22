@@ -17,7 +17,7 @@ export class AdapterPanelHeader extends SignalWatcher(LitElement) {
       align-items: center;
       justify-content: space-between;
       padding: 12px 16px;
-      background: var(--cloud-notes-background-primary-color);
+      background: var(--affine-background-primary-color);
     }
     .adapter-selector {
       display: flex;
@@ -26,17 +26,17 @@ export class AdapterPanelHeader extends SignalWatcher(LitElement) {
       width: 100px;
       cursor: pointer;
       border-radius: 4px;
-      border: 1px solid var(--cloud-notes-border-color);
+      border: 1px solid var(--affine-border-color);
       padding: 4px 8px;
     }
     .adapter-selector:hover {
-      background: var(--cloud-notes-hover-color);
+      background: var(--affine-hover-color);
     }
     .adapter-selector-label {
       display: flex;
       align-items: center;
-      color: var(--cloud-notes-text-primary-color);
-      font-size: var(--cloud-notes-font-xs);
+      color: var(--affine-text-primary-color);
+      font-size: var(--affine-font-xs);
     }
     .update-button {
       height: 20px;
@@ -46,10 +46,10 @@ export class AdapterPanelHeader extends SignalWatcher(LitElement) {
       justify-content: center;
       border-radius: 4px;
       cursor: pointer;
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
     }
     .update-button:hover {
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
     }
   `;
 
@@ -69,7 +69,7 @@ export class AdapterPanelHeader extends SignalWatcher(LitElement) {
         .abortController=${this._adapterMenuAbortController}
       ></cloud-notes-adapter-menu>`,
       portalStyles: {
-        zIndex: 'var(--cloud-notes-z-index-popover)',
+        zIndex: 'var(--affine-z-index-popover)',
       },
       container: this._adapterPanelHeader,
       computePosition: {

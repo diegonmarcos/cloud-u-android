@@ -1,25 +1,25 @@
 import {
-  type CloudNotesCssVariables,
+  type AffineCssVariables as CloudNotesCssVariables,
   combinedDarkCssVariables,
   combinedLightCssVariables,
 } from '@toeverything/theme';
 import { unsafeCSS } from 'lit';
 
 const toolbarColorKeys: Array<keyof CloudNotesCssVariables> = [
-  '--cloud-notes-background-overlay-panel-color',
-  '--cloud-notes-v2-layer-background-overlayPanel' as never,
-  '--cloud-notes-v2-layer-insideBorder-blackBorder' as never,
-  '--cloud-notes-v2-icon-primary' as never,
-  '--cloud-notes-background-error-color',
-  '--cloud-notes-background-primary-color',
-  '--cloud-notes-background-tertiary-color',
-  '--cloud-notes-icon-color',
-  '--cloud-notes-icon-secondary',
-  '--cloud-notes-border-color',
-  '--cloud-notes-divider-color',
-  '--cloud-notes-text-primary-color',
-  '--cloud-notes-hover-color',
-  '--cloud-notes-hover-color-filled',
+  '--affine-background-overlay-panel-color',
+  '--affine-v2-layer-background-overlayPanel' as never,
+  '--affine-v2-layer-insideBorder-blackBorder' as never,
+  '--affine-v2-icon-primary' as never,
+  '--affine-background-error-color',
+  '--affine-background-primary-color',
+  '--affine-background-tertiary-color',
+  '--affine-icon-color',
+  '--affine-icon-secondary',
+  '--affine-border-color',
+  '--affine-divider-color',
+  '--affine-text-primary-color',
+  '--affine-hover-color',
+  '--affine-hover-color-filled',
 ];
 
 export const lightToolbarStyles = (selector: string) => `

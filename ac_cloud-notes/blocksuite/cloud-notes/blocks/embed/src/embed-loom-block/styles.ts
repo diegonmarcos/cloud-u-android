@@ -85,7 +85,7 @@ export const styles = css`
   .cloud-notes-embed-loom-content-title-icon svg {
     width: 20px;
     height: 20px;
-    fill: var(--cloud-notes-background-primary-color);
+    fill: var(--affine-background-primary-color);
   }
 
   .cloud-notes-embed-loom-content-title-text {
@@ -98,10 +98,10 @@ export const styles = css`
     word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
 
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-sm);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-sm);
     font-style: normal;
     font-weight: 600;
     line-height: 22px;
@@ -119,10 +119,10 @@ export const styles = css`
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
 
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
@@ -146,19 +146,19 @@ export const styles = css`
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--cloud-notes-text-secondary-color);
+    color: var(--affine-text-secondary-color);
 
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
   }
   .cloud-notes-embed-loom-content-url:hover > span {
-    color: var(--cloud-notes-link-color);
+    color: var(--affine-link-color);
   }
   .cloud-notes-embed-loom-content-url:hover .open-icon {
-    fill: var(--cloud-notes-link-color);
+    fill: var(--affine-link-color);
   }
 
   .cloud-notes-embed-loom-content-url-icon {
@@ -171,21 +171,21 @@ export const styles = css`
   .cloud-notes-embed-loom-content-url-icon .open-icon {
     height: 12px;
     width: 12px;
-    fill: var(--cloud-notes-text-secondary-color);
+    fill: var(--affine-text-secondary-color);
   }
 
   .cloud-notes-embed-loom-block.loading {
     .cloud-notes-embed-loom-content-title-text {
-      color: var(--cloud-notes-placeholder-color);
+      color: var(--affine-placeholder-color);
     }
   }
 
   .cloud-notes-embed-loom-block.selected {
     .cloud-notes-embed-loom-content-url > span {
-      color: var(--cloud-notes-link-color);
+      color: var(--affine-link-color);
     }
     .cloud-notes-embed-loom-content-url .open-icon {
-      fill: var(--cloud-notes-link-color);
+      fill: var(--affine-link-color);
     }
   }
 `;

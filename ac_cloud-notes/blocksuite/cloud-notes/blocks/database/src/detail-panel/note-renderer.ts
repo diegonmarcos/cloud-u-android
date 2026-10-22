@@ -27,7 +27,7 @@ export class NoteRenderer
   static override styles = css`
     database-datasource-note-renderer {
       width: 100%;
-      --cloud-notes-editor-side-padding: 0;
+      --affine-editor-side-padding: 0;
       flex: 1;
     }
   `;
@@ -93,7 +93,7 @@ export class NoteRenderer
   protected override render(): unknown {
     return html`
       <div
-        style="height: 1px;max-width: var(--cloud-notes-editor-width);background-color: ${unsafeCSS(
+        style="height: 1px;max-width: var(--affine-editor-width);background-color: ${unsafeCSS(
           cssVarV2.layer.insideBorder.border
         )};margin: auto;margin-bottom: 16px"
       ></div>
@@ -106,7 +106,7 @@ export class NoteRenderer
       return html` <div>
         <div
           @click="${this.addNote}"
-          style="max-width: var(--cloud-notes-editor-width);margin: auto;cursor: pointer;color: var(--cloud-notes-text-disable-color)"
+          style="max-width: var(--affine-editor-width);margin: auto;cursor: pointer;color: var(--affine-text-disable-color)"
         >
           Click to create a linked doc in center peek.
         </div>

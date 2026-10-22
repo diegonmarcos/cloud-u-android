@@ -4,13 +4,13 @@ import { cssVarV2 } from '@toeverything/theme/v2';
 export const databaseBlockStyles = css({
   display: 'block',
   borderRadius: '8px',
-  backgroundColor: 'var(--cloud-notes-background-primary-color)',
+  backgroundColor: 'var(--affine-background-primary-color)',
   padding: '8px',
   margin: '8px -8px -8px',
 });
 
 export const databaseBlockSelectedStyles = css({
-  backgroundColor: 'var(--cloud-notes-hover-color)',
+  backgroundColor: 'var(--affine-hover-color)',
   borderRadius: '4px',
 });
 
@@ -24,7 +24,7 @@ export const databaseOpsStyles = css({
   fontSize: '16px',
   color: cssVarV2.icon.primary,
   ':hover': {
-    backgroundColor: 'var(--cloud-notes-hover-color)',
+    backgroundColor: 'var(--affine-hover-color)',
   },
 
   '@media print': {
@@ -68,6 +68,6 @@ export const databaseViewBarContainerStyles = css({
 
 export const databaseContentStyles = css({
   position: 'relative',
-  backgroundColor: 'var(--cloud-notes-background-primary-color)',
+  backgroundColor: 'var(--affine-background-primary-color)',
   borderRadius: '4px',
 });

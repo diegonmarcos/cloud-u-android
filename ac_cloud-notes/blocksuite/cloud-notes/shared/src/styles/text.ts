@@ -17,11 +17,11 @@ export function cloudNotesTextStyles(
   let inlineCodeStyle = {};
   if (props.code) {
     inlineCodeStyle = {
-      'font-family': 'var(--cloud-notes-font-code-family)',
-      background: 'var(--cloud-notes-background-code-block)',
-      border: '1px solid var(--cloud-notes-border-color)',
+      'font-family': 'var(--affine-font-code-family)',
+      background: 'var(--affine-background-code-block)',
+      border: '1px solid var(--affine-border-color)',
       'border-radius': '4px',
-      color: 'var(--cloud-notes-text-primary-color)',
+      color: 'var(--affine-text-primary-color)',
       'font-variant-ligatures': 'none',
       'vertical-align': 'bottom',
       'line-height': 'inherit',

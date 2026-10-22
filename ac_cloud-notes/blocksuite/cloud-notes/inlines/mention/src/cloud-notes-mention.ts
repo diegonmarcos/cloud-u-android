@@ -23,7 +23,7 @@ export class CloudNotesMention extends SignalWatcher(
         'clig' off;
       /* Client/baseMedium */
       font-family: Inter;
-      font-size: var(--cloud-notes-font-size-base);
+      font-size: var(--affine-font-size-base);
       font-style: normal;
       font-weight: 500;
       line-height: 24px; /* 160% */
@@ -32,10 +32,10 @@ export class CloudNotesMention extends SignalWatcher(
       user-select: none;
     }
     .cloud-notes-mention:hover {
-      background: var(--cloud-notes-hover-color);
+      background: var(--affine-hover-color);
     }
     .cloud-notes-mention[data-selected='true'] {
-      background: var(--cloud-notes-hover-color);
+      background: var(--affine-hover-color);
     }
     .cloud-notes-mention[data-type='default'] {
       color: ${unsafeCSSVarV2('text/primary')};

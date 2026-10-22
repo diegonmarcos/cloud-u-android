@@ -30,7 +30,7 @@ const styles = css`
 
   .cloud-notes-database-filter-button:hover,
   .cloud-notes-database-filter-button.active {
-    background-color: var(--cloud-notes-hover-color);
+    background-color: var(--affine-hover-color);
   }
 
   .cloud-notes-database-filter-button {

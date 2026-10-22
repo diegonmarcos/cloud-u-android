@@ -6,7 +6,7 @@ export const groupHeaderCount = css({
   width: '20px',
   height: '20px',
   borderRadius: '4px',
-  backgroundColor: 'var(--cloud-notes-background-secondary-color)',
+  backgroundColor: 'var(--affine-background-secondary-color)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

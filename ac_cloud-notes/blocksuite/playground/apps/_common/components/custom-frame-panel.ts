@@ -12,8 +12,8 @@ export class CustomFramePanel extends WithDisposable(ShadowlessElement) {
       position: absolute;
       top: 0;
       right: 0;
-      border: 1px solid var(--cloud-notes-border-color, #e3e2e4);
-      background-color: var(--cloud-notes-background-primary-color);
+      border: 1px solid var(--affine-border-color, #e3e2e4);
+      background-color: var(--affine-background-primary-color);
       height: 100vh;
       width: 320px;
       box-sizing: border-box;

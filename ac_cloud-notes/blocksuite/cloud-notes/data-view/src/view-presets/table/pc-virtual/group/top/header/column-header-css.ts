@@ -5,7 +5,7 @@ import { DEFAULT_COLUMN_TITLE_HEIGHT } from '../../../../consts';
 
 export const columnHeaderContainer = css({
   display: 'block',
-  backgroundColor: 'var(--cloud-notes-background-primary-color)',
+  backgroundColor: 'var(--affine-background-primary-color)',
   position: 'relative',
   zIndex: 2,
 });
@@ -18,7 +18,7 @@ export const columnHeader = css({
   borderTop: `1px solid ${cssVarV2.layer.insideBorder.border}`,
   boxSizing: 'border-box',
   userSelect: 'none',
-  backgroundColor: 'var(--cloud-notes-background-primary-color)',
+  backgroundColor: 'var(--affine-background-primary-color)',
 });
 
 export const column = css({
@@ -31,7 +31,7 @@ export const cell = css({
 
 export const headerAddColumnButton = css({
   height: `${DEFAULT_COLUMN_TITLE_HEIGHT}px`,
-  backgroundColor: 'var(--cloud-notes-background-primary-color)',
+  backgroundColor: 'var(--affine-background-primary-color)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

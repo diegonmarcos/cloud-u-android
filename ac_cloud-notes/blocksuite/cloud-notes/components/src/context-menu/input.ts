@@ -30,7 +30,7 @@ export class MenuInput extends MenuFocusable {
       font-size: 14px;
       line-height: 22px;
       padding: 4px 6px;
-      border: 1px solid var(--cloud-notes-border-color);
+      border: 1px solid var(--affine-border-color);
       width: 100%;
       color: ${unsafeCSSVarV2('text/primary')};
       background-color: transparent;

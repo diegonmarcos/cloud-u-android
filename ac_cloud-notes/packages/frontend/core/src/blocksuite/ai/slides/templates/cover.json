@@ -39,7 +39,7 @@
                     }
                   ]
                 },
-                "color": "--cloud-notes-palette-line-black",
+                "color": "--affine-palette-line-black",
                 "fontSize": 128,
                 "fontFamily": "blocksuite:surface:Poppins",
                 "fontWeight": "400",
@@ -83,7 +83,7 @@
                     }
                   ]
                 },
-                "background": "--cloud-notes-palette-transparent",
+                "background": "--affine-palette-transparent",
                 "xywh": "[-340.7451171875,-395.744140625,2000,1160]",
                 "index": "Zz",
                 "childElementIds": {

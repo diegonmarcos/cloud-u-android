@@ -12,12 +12,12 @@ export const DEFAULT_PAGE_BLOCK_WIDTH = 800;
 export const DEFAULT_PAGE_BLOCK_HEIGHT = DEFAULT_NOTE_HEIGHT;
 
 export enum NoteShadow {
-  Box = '--cloud-notes-note-shadow-box',
-  Film = '--cloud-notes-note-shadow-film',
-  Float = '--cloud-notes-note-shadow-float',
+  Box = '--affine-note-shadow-box',
+  Film = '--affine-note-shadow-film',
+  Float = '--affine-note-shadow-float',
   None = '',
-  Paper = '--cloud-notes-note-shadow-paper',
-  Sticker = '--cloud-notes-note-shadow-sticker',
+  Paper = '--affine-note-shadow-paper',
+  Sticker = '--affine-note-shadow-sticker',
 }
 
 export const NoteShadowMap = createEnumMap(NoteShadow);

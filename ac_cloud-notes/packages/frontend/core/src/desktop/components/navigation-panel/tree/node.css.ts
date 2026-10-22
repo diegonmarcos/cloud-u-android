@@ -176,7 +176,7 @@ export const contentContainer = style({
 });
 
 export const draggingContainer = style({
-  background: cssVar('--cloud-notes-background-primary-color'),
+  background: cssVar('--affine-background-primary-color'),
   width: '200px',
   borderRadius: '6px',
 });
@@ -190,7 +190,7 @@ export const draggedOverEffect = style({
         content: '""',
         position: 'absolute',
         zIndex: 1,
-        background: cssVar('--cloud-notes-hover-color'),
+        background: cssVar('--affine-hover-color'),
         left: levelIndent,
         top: 0,
         width: `calc(100% - ${levelIndent})`,

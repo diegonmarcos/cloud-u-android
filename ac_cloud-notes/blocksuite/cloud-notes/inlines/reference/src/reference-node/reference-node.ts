@@ -42,8 +42,8 @@ export class CloudNotesReference extends WithDisposable(ShadowlessElement) {
     .cloud-notes-reference {
       white-space: normal;
       word-break: break-word;
-      color: var(--cloud-notes-text-primary-color);
-      fill: var(--cloud-notes-icon-color);
+      color: var(--affine-text-primary-color);
+      fill: var(--affine-icon-color);
       border-radius: 4px;
       text-decoration: none;
       cursor: pointer;
@@ -51,20 +51,20 @@ export class CloudNotesReference extends WithDisposable(ShadowlessElement) {
       padding: 1px 2px 1px 0;
     }
     .cloud-notes-reference:hover {
-      background: var(--cloud-notes-hover-color);
+      background: var(--affine-hover-color);
     }
 
     .cloud-notes-reference[data-selected='true'] {
-      background: var(--cloud-notes-hover-color);
+      background: var(--affine-hover-color);
     }
 
     .cloud-notes-reference-title {
       margin-left: 4px;
-      border-bottom: 0.5px solid var(--cloud-notes-divider-color);
+      border-bottom: 0.5px solid var(--affine-divider-color);
       transition: border 0.2s ease-out;
     }
     .cloud-notes-reference-title:hover {
-      border-bottom: 0.5px solid var(--cloud-notes-icon-color);
+      border-bottom: 0.5px solid var(--affine-icon-color);
     }
   `;
 
@@ -264,9 +264,9 @@ export class CloudNotesReference extends WithDisposable(ShadowlessElement) {
       attributes,
       isDeleted
         ? {
-            color: 'var(--cloud-notes-text-disable-color)',
+            color: 'var(--affine-text-disable-color)',
             textDecoration: 'line-through',
-            fill: 'var(--cloud-notes-text-disable-color)',
+            fill: 'var(--affine-text-disable-color)',
           }
         : {}
     );

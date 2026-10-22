@@ -231,7 +231,7 @@ export const EmptyList = ({ search }: { search?: string }) => {
           <Trans i18nKey="com.cloud-notes.selectPage.empty.tips" values={{ search }}>
             No page titles contain
             <span
-              style={{ fontWeight: 600, color: 'var(--cloud-notes-primary-color)' }}
+              style={{ fontWeight: 600, color: 'var(--affine-primary-color)' }}
             >
               search
             </span>

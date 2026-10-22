@@ -69,7 +69,7 @@ const backgroundColorAction = {
             const isDefault = color === 'default';
             const value = isDefault
               ? cssVarV2.block.callout.background.grey
-              : `var(--cloud-notes-text-highlight-${color})`;
+              : `var(--affine-text-highlight-${color})`;
             const displayName = `${color} Background`;
 
             return html`
@@ -79,7 +79,7 @@ const backgroundColorAction = {
               >
                 <cloud-notes-text-duotone-icon
                   style=${styleMap({
-                    '--color': 'var(--cloud-notes-text-primary-color)',
+                    '--color': 'var(--affine-text-primary-color)',
                     '--background': value ?? 'transparent',
                   })}
                 ></cloud-notes-text-duotone-icon>
@@ -136,7 +136,7 @@ const iconPickerAction = {
       wrapper.props = props;
       wrapper.style.position = 'absolute';
       wrapper.style.backgroundColor = cssVarV2.layer.background.overlayPanel;
-      wrapper.style.boxShadow = 'var(--cloud-notes-menu-shadow)';
+      wrapper.style.boxShadow = 'var(--affine-menu-shadow)';
       wrapper.style.borderRadius = '8px';
 
       // Create popup target from the clicked element

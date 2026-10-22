@@ -40,7 +40,7 @@ export class FootNotePopup extends SignalWatcher(WithDisposable(LitElement)) {
       text-overflow: ellipsis;
       white-space: nowrap;
       font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-      font-size: var(--cloud-notes-font-xs);
+      font-size: var(--affine-font-xs);
       font-style: normal;
       font-weight: 400;
       line-height: 20px;

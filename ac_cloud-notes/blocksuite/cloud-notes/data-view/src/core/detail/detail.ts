@@ -44,7 +44,7 @@ const styles = css`
     flex-direction: column;
     padding: 20px;
     gap: 12px;
-    background-color: var(--cloud-notes-background-primary-color);
+    background-color: var(--affine-background-primary-color);
     border-radius: 8px;
     height: 100%;
     width: 100%;
@@ -59,7 +59,7 @@ const styles = css`
     font-style: normal;
     font-weight: 400;
     line-height: var(--data-view-cell-text-line-height);
-    color: var(--cloud-notes-text-disable-color);
+    color: var(--affine-text-disable-color);
     border-radius: 4px;
     padding: 6px 8px 6px 4px;
     cursor: pointer;
@@ -68,7 +68,7 @@ const styles = css`
   }
 
   .add-property:hover {
-    background-color: var(--cloud-notes-hover-color);
+    background-color: var(--affine-hover-color);
   }
 
   .add-property .icon {
@@ -77,7 +77,7 @@ const styles = css`
   }
 
   .add-property .icon svg {
-    fill: var(--cloud-notes-icon-color);
+    fill: var(--affine-icon-color);
     width: 20px;
     height: 20px;
   }
@@ -90,11 +90,11 @@ const styles = css`
     border-radius: 4px;
     cursor: pointer;
     font-size: 22px;
-    color: var(--cloud-notes-icon-color);
+    color: var(--affine-icon-color);
   }
 
   .switch-row:hover {
-    background-color: var(--cloud-notes-hover-color);
+    background-color: var(--affine-hover-color);
   }
 
   .switch-row.disable {
@@ -238,7 +238,7 @@ export class RecordDetail extends SignalWatcher(
       </div>
       <div style="flex:1;overflow-y: auto;overflow-x: hidden">
         <div
-          style="width: 100%;max-width: var(--cloud-notes-editor-width);display: flex;flex-direction: column;margin: 0 auto;box-sizing: border-box;"
+          style="width: 100%;max-width: var(--affine-editor-width);display: flex;flex-direction: column;margin: 0 auto;box-sizing: border-box;"
         >
           ${keyed(this.rowId, this.renderHeader())}
           ${repeat(

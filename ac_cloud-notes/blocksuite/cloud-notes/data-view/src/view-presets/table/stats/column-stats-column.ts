@@ -25,7 +25,7 @@ const styles = css`
     cursor: pointer;
     transition: opacity 230ms ease;
     font-size: 12px;
-    color: var(--cloud-notes-text-secondary-color);
+    color: var(--affine-text-secondary-color);
     display: flex;
     opacity: 0;
     justify-content: flex-end;
@@ -41,7 +41,7 @@ const styles = css`
   .stats-cell:hover,
   cloud-notes-database-column-stats-cell.active .stats-cell {
     opacity: 1;
-    background-color: var(--cloud-notes-hover-color);
+    background-color: var(--affine-hover-color);
     cursor: pointer;
   }
 
@@ -59,11 +59,11 @@ const styles = css`
 
   .stats-cell .label {
     text-transform: uppercase;
-    color: var(--cloud-notes-text-secondary-color);
+    color: var(--affine-text-secondary-color);
   }
 
   .stats-cell .value {
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
   }
 `;
 

@@ -30,10 +30,10 @@ export class EdgelessFrameTitleEditor extends WithDisposable(
       padding: 0 4px;
       outline: none;
       z-index: 1;
-      border: 1px solid var(--cloud-notes-primary-color);
+      border: 1px solid var(--affine-primary-color);
       box-shadow: 0px 0px 0px 2px rgba(30, 150, 235, 0.3);
       overflow: hidden;
-      font-family: var(--cloud-notes-font-family);
+      font-family: var(--affine-font-family);
     }
   `;
 
@@ -146,7 +146,7 @@ export class EdgelessFrameTitleEditor extends WithDisposable(
 
     const colors = frameTitle?.colors ?? {
       background: cssVarV2('edgeless/frame/background/white'),
-      text: 'var(--cloud-notes-text-primary-color)',
+      text: 'var(--affine-text-primary-color)',
     };
 
     const inlineEditorStyle = styleMap({

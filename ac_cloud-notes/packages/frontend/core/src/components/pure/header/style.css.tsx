@@ -68,14 +68,14 @@ export const windowAppControl = style({
   alignItems: 'center',
   justifyContent: 'center',
   borderRadius: '0',
-  color: 'var(--cloud-notes-icon-color)',
+  color: 'var(--affine-icon-color)',
   selectors: {
     '&[data-type="close"]:hover': {
-      background: 'var(--cloud-notes-windows-close-button)',
-      color: 'var(--cloud-notes-pure-white)',
+      background: 'var(--affine-windows-close-button)',
+      color: 'var(--affine-pure-white)',
     },
     '&:hover': {
-      background: 'var(--cloud-notes-hover-color)',
+      background: 'var(--affine-hover-color)',
     },
   },
 } as ComplexStyleRule);
@@ -83,5 +83,5 @@ export const windowAppControl = style({
 export const headerDivider = style({
   height: '20px',
   width: '1px',
-  background: 'var(--cloud-notes-border-color)',
+  background: 'var(--affine-border-color)',
 });

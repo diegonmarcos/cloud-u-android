@@ -41,11 +41,11 @@ describe('theme service', () => {
     const themeService = edgeless.gfx.std.get(ThemeProvider);
     expect(themeService.theme).toBe(ColorScheme.Light);
 
-    expect(themeService.generateColorProperty('--cloud-notes-hover-color')).toBe(
-      'var(--cloud-notes-hover-color)'
+    expect(themeService.generateColorProperty('--affine-hover-color')).toBe(
+      'var(--affine-hover-color)'
     );
 
-    expect(themeService.generateColorProperty('--cloud-notes-transparent')).toBe(
+    expect(themeService.generateColorProperty('--affine-transparent')).toBe(
       'transparent'
     );
 
@@ -73,17 +73,17 @@ describe('theme service', () => {
     const themeService = edgeless.gfx.std.get(ThemeProvider);
     expect(themeService.theme).toBe(ColorScheme.Light);
 
-    expect(themeService.getColorValue('--cloud-notes-transparent')).toBe(
-      '--cloud-notes-transparent'
+    expect(themeService.getColorValue('--affine-transparent')).toBe(
+      '--affine-transparent'
     );
     expect(
-      themeService.getColorValue('--cloud-notes-transparent', 'transparent', true)
+      themeService.getColorValue('--affine-transparent', 'transparent', true)
     ).toBe('transparent');
     expect(
-      themeService.getColorValue('--cloud-notes-hover-color', 'transparent', true)
+      themeService.getColorValue('--affine-hover-color', 'transparent', true)
     ).toBe('rgba(0, 0, 0, 0.04)');
     expect(
-      themeService.getColorValue('--cloud-notes-tooltip', undefined, true)
+      themeService.getColorValue('--affine-tooltip', undefined, true)
     ).toBe('rgba(0, 0, 0, 1)');
 
     expect(
@@ -104,10 +104,10 @@ describe('theme service', () => {
     expect(themeService.theme).toBe(ColorScheme.Dark);
 
     expect(
-      themeService.getColorValue('--cloud-notes-hover-color', 'transparent', true)
+      themeService.getColorValue('--affine-hover-color', 'transparent', true)
     ).toEqual('rgba(255, 255, 255, 0.1)');
     expect(
-      themeService.getColorValue('--cloud-notes-tooltip', undefined, true)
+      themeService.getColorValue('--affine-tooltip', undefined, true)
     ).toEqual('rgba(234, 234, 234, 1)'); // #eaeaea
   });
 });

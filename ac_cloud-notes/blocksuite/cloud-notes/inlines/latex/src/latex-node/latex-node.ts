@@ -30,7 +30,7 @@ export class CloudNotesLatexNode extends SignalWatcher(
       white-space: nowrap;
       word-break: break-word;
       color: ${unsafeCSSVar('textPrimaryColor')};
-      fill: var(--cloud-notes-icon-color);
+      fill: var(--affine-icon-color);
       border-radius: 4px;
       text-decoration: none;
       cursor: pointer;
@@ -226,7 +226,7 @@ export class CloudNotesLatexNode extends SignalWatcher(
       abortController: this._editorAbortController,
       shadowDom: false,
       portalStyles: {
-        zIndex: 'var(--cloud-notes-z-index-popover)',
+        zIndex: 'var(--affine-z-index-popover)',
       },
     });
 

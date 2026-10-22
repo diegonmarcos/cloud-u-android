@@ -33,8 +33,8 @@ import { mergeStreamContent } from '../../utils/stream-objects';
 export class ChatMessageAssistant extends WithDisposable(ShadowlessElement) {
   static override styles = css`
     .message-info {
-      color: var(--cloud-notes-placeholder-color);
-      font-size: var(--cloud-notes-font-xs);
+      color: var(--affine-placeholder-color);
+      font-size: var(--affine-font-xs);
       font-weight: 400;
     }
   `;

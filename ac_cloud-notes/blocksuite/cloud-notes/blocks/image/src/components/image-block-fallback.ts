@@ -56,22 +56,22 @@ export class ImageBlockFallbackCard extends WithDisposable(ShadowlessElement) {
       height: 16px;
       align-items: center;
       justify-content: center;
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
     }
 
     .cloud-notes-image-fallback-card-title-text {
-      color: var(--cloud-notes-placeholder-color);
-      font-family: var(--cloud-notes-font-family);
-      font-size: var(--cloud-notes-font-sm);
+      color: var(--affine-placeholder-color);
+      font-family: var(--affine-font-family);
+      font-size: var(--affine-font-sm);
       font-style: normal;
       font-weight: 600;
       line-height: 22px;
     }
 
     .cloud-notes-image-fallback-card-description {
-      color: var(--cloud-notes-text-secondary-color);
-      font-family: var(--cloud-notes-font-family);
-      font-size: var(--cloud-notes-font-xs);
+      color: var(--affine-text-secondary-color);
+      font-family: var(--affine-font-family);
+      font-size: var(--affine-font-xs);
       font-style: normal;
       font-weight: 400;
       line-height: 20px;
@@ -79,7 +79,7 @@ export class ImageBlockFallbackCard extends WithDisposable(ShadowlessElement) {
 
     .cloud-notes-image-fallback-card.loading {
       .cloud-notes-image-fallback-card-title {
-        color: var(--cloud-notes-placeholder-color);
+        color: var(--affine-placeholder-color);
       }
     }
 

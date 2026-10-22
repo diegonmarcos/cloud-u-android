@@ -1,5 +1,5 @@
 import {
-  type CloudNotesThemeKeyV2,
+  type AffineThemeKeyV2 as CloudNotesThemeKeyV2,
   darkThemeV2,
   lightThemeV2,
 } from '@toeverything/theme/v2';

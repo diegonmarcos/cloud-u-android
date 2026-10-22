@@ -53,14 +53,14 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
     font-size: 16px;
   }
 
   .cloud-notes-attachment-content-title-text {
-    color: var(--cloud-notes-text-primary-color);
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-sm);
+    color: var(--affine-text-primary-color);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-sm);
     font-style: normal;
     font-weight: 600;
     line-height: 22px;
@@ -74,9 +74,9 @@ export const styles = css`
   }
 
   .cloud-notes-attachment-content-info {
-    color: var(--cloud-notes-text-secondary-color);
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    color: var(--affine-text-secondary-color);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
@@ -91,8 +91,8 @@ export const styles = css`
     white-space: nowrap;
     padding: 0 4px;
     color: ${unsafeCSSVarV2('button/primary')};
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 500;
     text-transform: capitalize;

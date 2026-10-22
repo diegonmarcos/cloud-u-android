@@ -16,7 +16,7 @@ export class CloudNotesViewportOverlayWidget extends WidgetComponent<RootBlockMo
       left: 0;
       background: transparent;
       pointer-events: none;
-      z-index: calc(var(--cloud-notes-z-index-popover) - 1);
+      z-index: calc(var(--affine-z-index-popover) - 1);
     }
 
     .cloud-notes-viewport-overlay-widget.lock {

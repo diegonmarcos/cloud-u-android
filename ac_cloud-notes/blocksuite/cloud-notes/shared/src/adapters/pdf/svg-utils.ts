@@ -9,7 +9,7 @@ import { resolveCssVariable } from './css-utils.js';
  */
 export function getBulletIconSvg(depth: number): string {
   const bulletIndex = depth % 4;
-  const blueColor = resolveCssVariable('var(--cloud-notes-blue-700)') || '#1E96EB';
+  const blueColor = resolveCssVariable('var(--affine-blue-700)') || '#1E96EB';
   const bulletSvgs = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><circle cx="7" cy="12" r="3" fill="${blueColor}"/></svg>`,
     `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path d="M7 14.25C8.243 14.25 9.25 13.243 9.25 12C9.25 10.757 8.243 9.75 7 9.75C5.757 9.75 4.75 10.757 4.75 12C4.75 13.243 5.757 14.25 7 14.25ZM7 15C8.657 15 10 13.657 10 12C10 10.343 8.657 9 7 9C5.343 9 4 10.343 4 12C4 13.657 5.343 15 7 15Z" fill="${blueColor}" fill-rule="evenodd"/></svg>`,

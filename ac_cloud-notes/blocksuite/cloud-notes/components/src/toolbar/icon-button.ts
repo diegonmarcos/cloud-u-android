@@ -12,7 +12,7 @@ export class EditorIconButton extends LitElement {
     :host(:disabled) {
       pointer-events: none;
       cursor: not-allowed;
-      color: var(--cloud-notes-text-disable-color);
+      color: var(--affine-text-disable-color);
     }
 
     .icon-container {
@@ -32,20 +32,20 @@ export class EditorIconButton extends LitElement {
     }
 
     :host([active]) .icon-container.active-mode-color {
-      color: var(--cloud-notes-primary-color);
+      color: var(--affine-primary-color);
     }
 
     :host([active]) .icon-container.active-mode-border {
-      border: 1px solid var(--cloud-notes-brand-color);
+      border: 1px solid var(--affine-brand-color);
     }
 
     :host([active]) .icon-container.active-mode-background {
-      background: var(--cloud-notes-hover-color);
+      background: var(--affine-hover-color);
     }
 
     .icon-container[coming] {
       cursor: not-allowed;
-      color: var(--cloud-notes-text-disable-color);
+      color: var(--affine-text-disable-color);
     }
 
     ::slotted(svg) {
@@ -73,7 +73,7 @@ export class EditorIconButton extends LitElement {
     .icon-container[with-hover]::before {
       content: '';
       display: block;
-      background: var(--cloud-notes-hover-color);
+      background: var(--affine-hover-color);
       position: absolute;
       width: 100%;
       height: 100%;
@@ -134,7 +134,7 @@ export class EditorIconButton extends LitElement {
       <style>
         .icon-container:hover,
         .icon-container.hovered {
-          background: ${this.hover ? `var(--cloud-notes-hover-color)` : 'inherit'};
+          background: ${this.hover ? `var(--affine-hover-color)` : 'inherit'};
         }
       </style>
       <div

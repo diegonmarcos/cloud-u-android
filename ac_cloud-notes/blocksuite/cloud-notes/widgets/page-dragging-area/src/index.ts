@@ -305,7 +305,7 @@ export class CloudNotesPageDraggingAreaWidget extends WidgetComponent<RootBlockM
       <style>
         .cloud-notes-page-dragging-area {
           position: absolute;
-          background: var(--cloud-notes-hover-color);
+          background: var(--affine-hover-color);
           z-index: 1;
           pointer-events: none;
         }

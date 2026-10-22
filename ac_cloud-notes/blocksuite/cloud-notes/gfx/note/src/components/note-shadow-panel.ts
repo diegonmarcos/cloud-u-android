@@ -88,7 +88,7 @@ export class EdgelessNoteShadowPanel extends WithDisposable(LitElement) {
     }
 
     .item:hover {
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
     }
   `;
 
@@ -112,7 +112,7 @@ export class EdgelessNoteShadowPanel extends WithDisposable(LitElement) {
             style=${styleMap({
               border:
                 this.value === shadow.type
-                  ? '1px solid var(--cloud-notes-brand-color)'
+                  ? '1px solid var(--affine-brand-color)'
                   : 'none',
             })}
           >

@@ -57,10 +57,10 @@ export class SurfaceBlockComponent extends BlockComponent<SurfaceBlockModel> {
       overflow: hidden;
       display: block;
       height: 100%;
-      font-family: var(--cloud-notes-font-family);
-      font-size: var(--cloud-notes-font-base);
-      line-height: var(--cloud-notes-line-height);
-      color: var(--cloud-notes-text-primary-color);
+      font-family: var(--affine-font-family);
+      font-size: var(--affine-font-base);
+      line-height: var(--affine-line-height);
+      color: var(--affine-text-primary-color);
       font-weight: 400;
     }
 
@@ -76,10 +76,10 @@ export class SurfaceBlockComponent extends BlockComponent<SurfaceBlockModel> {
        * https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action
        */
       touch-action: none;
-      background-color: var(--cloud-notes-background-primary-color);
+      background-color: var(--affine-background-primary-color);
       background-image: radial-gradient(
-        var(--cloud-notes-edgeless-grid-color) 1px,
-        var(--cloud-notes-background-primary-color) 1px
+        var(--affine-edgeless-grid-color) 1px,
+        var(--affine-background-primary-color) 1px
       );
       z-index: 0;
     }
@@ -88,9 +88,9 @@ export class SurfaceBlockComponent extends BlockComponent<SurfaceBlockModel> {
       position: absolute;
       transform-origin: center;
       box-sizing: border-box;
-      border: 2px solid var(--cloud-notes-white-10);
+      border: 2px solid var(--affine-white-10);
       border-radius: 8px;
-      box-shadow: var(--cloud-notes-shadow-3);
+      box-shadow: var(--affine-shadow-3);
       pointer-events: all;
     }
   `;

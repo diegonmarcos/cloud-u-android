@@ -123,7 +123,7 @@ function highlightBlock(host: EditorHost, blockId: string) {
     left: `${left - offsetX + scrollLeft}px`,
     width: `${width}px`,
     height: `${height}px`,
-    background: 'var(--cloud-notes-hover-color)',
+    background: 'var(--affine-hover-color)',
     borderRadius: '4px',
     display: 'block',
   });

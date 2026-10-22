@@ -56,7 +56,7 @@ export const styles = css`
   .cloud-notes-embed-linked-doc-content-title-icon svg {
     width: 16px;
     height: 16px;
-    fill: var(--cloud-notes-background-primary-color);
+    fill: var(--affine-background-primary-color);
   }
 
   .cloud-notes-embed-linked-doc-content-title-text {
@@ -66,9 +66,9 @@ export const styles = css`
     word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--cloud-notes-text-primary-color);
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-sm);
+    color: var(--affine-text-primary-color);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-sm);
     font-style: normal;
     font-weight: 600;
     line-height: 22px;
@@ -94,9 +94,9 @@ export const styles = css`
     word-break: break-word;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--cloud-notes-placeholder-color);
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    color: var(--affine-placeholder-color);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
@@ -107,7 +107,7 @@ export const styles = css`
   }
 
   .cloud-notes-embed-linked-doc-content-note.alias {
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
   }
 
   .cloud-notes-embed-linked-doc-card-content-reload,
@@ -142,8 +142,8 @@ export const styles = css`
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 500;
     line-height: 20px;
@@ -157,9 +157,9 @@ export const styles = css`
     white-space: normal;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--cloud-notes-text-secondary-color);
-    font-family: var(--cloud-notes-font-family);
-    font-size: var(--cloud-notes-font-xs);
+    color: var(--affine-text-secondary-color);
+    font-family: var(--affine-font-family);
+    font-size: var(--affine-font-xs);
     font-style: normal;
     font-weight: 400;
     line-height: 20px;
@@ -219,7 +219,7 @@ export const styles = css`
   }
   .cloud-notes-embed-linked-doc-block:not(.loading).error,
   .cloud-notes-embed-linked-doc-block:not(.loading).deleted {
-    background: var(--cloud-notes-background-secondary-color);
+    background: var(--affine-background-secondary-color);
 
     .cloud-notes-embed-linked-doc-content-note.render {
       display: none;

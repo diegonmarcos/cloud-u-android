@@ -15,10 +15,10 @@ export type NewDocDateTitleFormat =
   (typeof newDocDateTitleFormatOptions)[number];
 
 export const fontStyleOptions = [
-  { key: 'Sans', value: 'var(--cloud-notes-font-sans-family)' },
-  { key: 'Serif', value: 'var(--cloud-notes-font-serif-family)' },
-  { key: 'Mono', value: 'var(--cloud-notes-font-mono-family)' },
-  { key: 'Custom', value: 'var(--cloud-notes-font-sans-family)' },
+  { key: 'Sans', value: 'var(--affine-font-sans-family)' },
+  { key: 'Serif', value: 'var(--affine-font-serif-family)' },
+  { key: 'Mono', value: 'var(--affine-font-mono-family)' },
+  { key: 'Custom', value: 'var(--affine-font-sans-family)' },
 ] satisfies {
   key: FontFamily;
   value: string;

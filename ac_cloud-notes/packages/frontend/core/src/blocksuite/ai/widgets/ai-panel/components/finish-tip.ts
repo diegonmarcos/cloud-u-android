@@ -27,7 +27,7 @@ export class AIFinishTip extends WithDisposable(LitElement) {
       padding: 0 12px;
       gap: 4px;
 
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
 
       .text {
         display: flex;
@@ -35,7 +35,7 @@ export class AIFinishTip extends WithDisposable(LitElement) {
         flex: 1 0 0;
 
         /* light/xs */
-        font-size: var(--cloud-notes-font-xs);
+        font-size: var(--affine-font-xs);
         font-style: normal;
         font-weight: 400;
         line-height: 20px; /* 166.667% */
@@ -56,12 +56,12 @@ export class AIFinishTip extends WithDisposable(LitElement) {
           user-select: none;
         }
         .copy:hover {
-          color: var(--cloud-notes-icon-color);
-          background: var(--cloud-notes-hover-color);
+          color: var(--affine-icon-color);
+          background: var(--affine-hover-color);
           cursor: pointer;
         }
         .copied {
-          color: var(--cloud-notes-brand-color);
+          color: var(--affine-brand-color);
         }
       }
     }

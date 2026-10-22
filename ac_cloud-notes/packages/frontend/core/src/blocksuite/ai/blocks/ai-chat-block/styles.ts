@@ -10,10 +10,10 @@ export const AIChatBlockStyles = css`
     height: 100%;
     box-sizing: border-box;
     padding: 16px;
-    background: var(--cloud-notes-white);
-    color: var(--cloud-notes-text-primary-color);
+    background: var(--affine-white);
+    color: var(--affine-text-primary-color);
     line-height: 22px;
-    font-size: var(--cloud-notes-font-sm);
+    font-size: var(--affine-font-sm);
     font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
     border-radius: 8px;
     user-select: none;
@@ -24,15 +24,15 @@ export const AIChatBlockStyles = css`
       flex: 1 0 0;
       width: 100%;
       box-sizing: border-box;
-      background: linear-gradient(to top, transparent, var(--cloud-notes-white));
+      background: linear-gradient(to top, transparent, var(--affine-white));
       -webkit-mask-image: linear-gradient(
         to bottom,
-        var(--cloud-notes-white) 25%,
+        var(--affine-white) 25%,
         transparent
       );
       mask-image: linear-gradient(
         to bottom,
-        var(--cloud-notes-white) 25%,
+        var(--affine-white) 25%,
         transparent
       );
       overflow: hidden;
@@ -47,7 +47,7 @@ export const AIChatBlockStyles = css`
       gap: 8px;
       font-weight: 600;
       svg {
-        color: var(--cloud-notes-icon-color);
+        color: var(--affine-icon-color);
       }
     }
   }

@@ -33,7 +33,7 @@ export const useActions = ({
         },
       },
       {
-        icon: <DeleteIcon style={{ color: 'var(--cloud-notes-error-color)' }} />,
+        icon: <DeleteIcon style={{ color: 'var(--affine-error-color)' }} />,
         name: 'delete',
         tooltip: t['com.cloud-notes.collection-bar.action.tooltip.delete'](),
         click: onDelete,

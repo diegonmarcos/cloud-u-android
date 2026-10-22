@@ -28,17 +28,17 @@ export class AISubItemList extends WithDisposable(LitElement) {
       min-width: 240px;
       max-height: 320px;
       overflow-y: auto;
-      background: var(--cloud-notes-background-overlay-panel-color);
-      box-shadow: var(--cloud-notes-shadow-2);
+      background: var(--affine-background-overlay-panel-color);
+      box-shadow: var(--affine-shadow-2);
       border-radius: 8px;
-      z-index: var(--cloud-notes-z-index-popover);
+      z-index: var(--affine-z-index-popover);
       font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
       text-align: justify;
       font-feature-settings:
         'clig' off,
         'liga' off;
-      font-size: var(--cloud-notes-font-sm);
+      font-size: var(--affine-font-sm);
       font-style: normal;
       font-weight: 400;
       line-height: 22px;

@@ -42,7 +42,7 @@ export class EdgelessCopilotWidget extends WidgetComponent<RootBlockModel> {
       position: absolute;
       box-sizing: border-box;
       border-radius: 4px;
-      border: 2px dashed var(--cloud-notes-brand-color, #1e96eb);
+      border: 2px dashed var(--affine-brand-color, #1e96eb);
     }
   `;
 

@@ -38,21 +38,21 @@ export class ChatActionList extends LitElement {
       padding: 4px 18px;
       box-sizing: border-box;
       border-radius: 8px;
-      border: 1px solid var(--cloud-notes-border-color);
-      background-color: var(--cloud-notes-white-10);
+      border: 1px solid var(--affine-border-color);
+      background-color: var(--affine-white-10);
       display: flex;
       flex-direction: row;
       align-items: center;
       gap: 4px;
-      font-size: var(--cloud-notes-font-sm);
+      font-size: var(--affine-font-sm);
       font-weight: 500;
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
       cursor: pointer;
       user-select: none;
       line-height: 22px;
     }
     .action svg {
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
     }
   `;
 

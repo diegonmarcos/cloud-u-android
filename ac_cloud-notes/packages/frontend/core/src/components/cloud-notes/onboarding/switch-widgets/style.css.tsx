@@ -25,7 +25,7 @@ export const switchButtons = style({
       backgroundColor: 'white',
       position: 'absolute',
       transition: 'transform 0.15s ease',
-      boxShadow: 'var(--cloud-notes-shadow-1)',
+      boxShadow: 'var(--affine-shadow-1)',
     },
     '&[data-mode="edgeless"]::before': {
       transform: `translateX(64px)`,
@@ -99,7 +99,7 @@ export const onboardingBlock = style([
     selectors: {
       '&[data-bg-mode="true"]': {
         background: 'var(--bg)',
-        // boxShadow: 'var(--cloud-notes-menu-shadow)', // dark-mode issue
+        // boxShadow: 'var(--affine-menu-shadow)', // dark-mode issue
         boxShadow:
           '0px 0px 12px 0px rgba(66, 65, 73, 0.14), 0px 0px 0px 0.5px #E3E3E4 inset',
         padding: '18px 28px',

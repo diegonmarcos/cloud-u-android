@@ -46,7 +46,7 @@ export const CollectionEditorDialog = ({
         style: {
           padding: 0,
           maxWidth: 944,
-          backgroundColor: 'var(--cloud-notes-background-primary-color)',
+          backgroundColor: 'var(--affine-background-primary-color)',
         },
       }}
       persistent

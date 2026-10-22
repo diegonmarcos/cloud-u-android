@@ -55,7 +55,7 @@ export class PresentationToolbar extends EdgelessToolbarToolMixin(
       content: '';
       width: 1px;
       height: 100%;
-      background: var(--cloud-notes-border-color);
+      background: var(--affine-border-color);
       transform: scaleX(0.5);
     }
     .config-buttons {
@@ -82,7 +82,7 @@ export class PresentationToolbar extends EdgelessToolbarToolMixin(
     }
 
     .edgeless-frame-navigator-count {
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
       white-space: nowrap;
     }
     .edgeless-frame-navigator-stop {
@@ -111,7 +111,7 @@ export class PresentationToolbar extends EdgelessToolbarToolMixin(
       border-radius: inherit;
     }
     .edgeless-frame-navigator-stop:hover::before {
-      background: var(--cloud-notes-hover-color);
+      background: var(--affine-hover-color);
     }
   `;
 

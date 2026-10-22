@@ -62,7 +62,7 @@ export class EdgelessRemoteSelectionWidget extends WidgetComponent<RootBlockMode
 
       max-width: 160px;
       padding: 0px 3px;
-      border: 1px solid var(--cloud-notes-pure-black-20);
+      border: 1px solid var(--affine-pure-black-20);
 
       box-shadow: 0px 1px 6px 0px rgba(0, 0, 0, 0.16);
       border-radius: 4px;

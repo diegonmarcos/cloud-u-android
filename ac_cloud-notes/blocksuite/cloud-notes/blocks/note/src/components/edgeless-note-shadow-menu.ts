@@ -140,11 +140,11 @@ export class EdgelessNoteShadowMenu extends LitElement {
     }
 
     .item:hover {
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
     }
 
     .item[data-selected] {
-      border: 1px solid var(--cloud-notes-brand-color);
+      border: 1px solid var(--affine-brand-color);
     }
   `;
 

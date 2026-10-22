@@ -20,7 +20,7 @@ export class CloudNotesAddBlockWidget extends LitElement {
       margin-top: 8px;
       cursor: pointer;
       border-radius: 4px;
-      color: var(--cloud-notes-placeholder-color);
+      color: var(--affine-placeholder-color);
       background: transparent;
       border: none;
       padding: 0;
@@ -33,8 +33,8 @@ export class CloudNotesAddBlockWidget extends LitElement {
     }
 
     .cloud-notes-add-block-widget:hover {
-      background: var(--cloud-notes-hover-color);
-      color: var(--cloud-notes-text-primary-color);
+      background: var(--affine-hover-color);
+      color: var(--affine-text-primary-color);
     }
 
     .cloud-notes-add-block-widget svg {

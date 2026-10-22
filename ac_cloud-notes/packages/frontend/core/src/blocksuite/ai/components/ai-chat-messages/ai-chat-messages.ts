@@ -61,8 +61,8 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
       align-items: center;
       gap: 10px;
       margin-bottom: 4px;
-      color: var(--cloud-notes-text-primary-color);
-      font-size: var(--cloud-notes-font-sm);
+      color: var(--affine-text-primary-color);
+      font-size: var(--affine-font-sm);
       font-weight: 500;
       user-select: none;
     }
@@ -87,12 +87,12 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
     .messages-placeholder-title {
       font-size: 18px;
       font-weight: 600;
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
     }
 
     .messages-placeholder-title[data-loading='true'] {
-      font-size: var(--cloud-notes-font-sm);
-      color: var(--cloud-notes-text-secondary-color);
+      font-size: var(--affine-font-sm);
+      color: var(--affine-text-secondary-color);
     }
 
     .onboarding-wrapper {
@@ -116,13 +116,13 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
     }
 
     .onboarding-item-text {
-      font-size: var(--cloud-notes-font-xs);
+      font-size: var(--affine-font-xs);
       font-weight: 400;
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
       white-space: nowrap;
     }
 
@@ -135,9 +135,9 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
       border-radius: 50%;
       width: 32px;
       height: 32px;
-      border: 0.5px solid var(--cloud-notes-border-color);
-      background-color: var(--cloud-notes-background-primary-color);
-      box-shadow: var(--cloud-notes-shadow-2);
+      border: 0.5px solid var(--affine-border-color);
+      background-color: var(--affine-background-primary-color);
+      box-shadow: var(--affine-shadow-2);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -345,8 +345,8 @@ export class AIChatMessages extends WithDisposable(ShadowlessElement) {
               >
                 ${CloudNotesIcon(
                   isHistoryLoading
-                    ? 'var(--cloud-notes-icon-secondary)'
-                    : 'var(--cloud-notes-primary-color)'
+                    ? 'var(--affine-icon-secondary)'
+                    : 'var(--affine-primary-color)'
                 )}
                 <div
                   class="messages-placeholder-title"

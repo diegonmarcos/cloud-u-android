@@ -7,15 +7,15 @@ export const root = style({
 
 export const editor = style({
   vars: {
-    '--cloud-notes-editor-side-padding': '96px',
+    '--affine-editor-side-padding': '96px',
   },
   minHeight: '100%',
 });
 
 globalStyle(`[data-full-width-layout="true"] ${editor}`, {
   vars: {
-    '--cloud-notes-editor-width': '100%',
-    '--cloud-notes-editor-side-padding': '72px',
+    '--affine-editor-width': '100%',
+    '--affine-editor-side-padding': '72px',
   },
 });
 

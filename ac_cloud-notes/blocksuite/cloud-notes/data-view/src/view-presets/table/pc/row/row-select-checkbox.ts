@@ -19,11 +19,11 @@ export class RowSelectCheckbox extends SignalWatcher(
     .row-select-checkbox {
       display: flex;
       align-items: center;
-      background-color: var(--cloud-notes-background-primary-color);
+      background-color: var(--affine-background-primary-color);
       opacity: 0;
       cursor: pointer;
       font-size: 20px;
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
     }
     .row-select-checkbox:hover {
       opacity: 1;

@@ -322,8 +322,8 @@ function NotificationCard(props: NotificationCardProps): ReactNode {
                 color:
                   notification.theme !== 'light' &&
                   notification.theme !== 'default'
-                    ? 'var(--cloud-notes-pure-white)'
-                    : 'var(--cloud-notes-text-primary-color)',
+                    ? 'var(--affine-pure-white)'
+                    : 'var(--affine-text-primary-color)',
               }}
             >
               <CloseIcon onClick={onClickRemove} />
@@ -345,14 +345,14 @@ function NotificationCard(props: NotificationCardProps): ReactNode {
               <rect
                 width="100%"
                 height="4"
-                fill="var(--cloud-notes-hover-color)"
+                fill="var(--affine-hover-color)"
                 rx="2"
                 ry="2"
               />
               <rect
                 width="0%"
                 height="4"
-                fill="var(--cloud-notes-primary-color)"
+                fill="var(--affine-primary-color)"
                 rx="2"
                 ry="2"
               >

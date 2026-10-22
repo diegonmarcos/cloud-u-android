@@ -34,7 +34,7 @@ export class AdapterPanel extends SignalWatcher(WithDisposable(LitElement)) {
     .adapters-container {
       width: 100%;
       height: 100%;
-      background-color: var(--cloud-notes-background-primary-color);
+      background-color: var(--affine-background-primary-color);
       box-sizing: border-box;
       font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
     }

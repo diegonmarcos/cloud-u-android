@@ -10,22 +10,22 @@ export const root = style({
 
 // replace primary colors to cssVarV2('icon/primary')
 const iconPrimaryColors = [
-  // legacy "--cloud-notes-icon-color"
+  // legacy "--affine-icon-color"
   'rgb(119,117,125)',
-  // --cloud-notes-v2-icon-primary
+  // --affine-v2-icon-primary
   'rgb(122,122,122)',
 ];
 
 // todo: may need to replace secondary colors & background colors as well?
 
 const backgroundPrimaryColors = [
-  // --cloud-notes-v2-background-primary
+  // --affine-v2-background-primary
   'rgb(255,255,255)',
   '#ffffff',
 ];
 
 const backgroundSecondaryColors = [
-  // --cloud-notes-v2-background-secondary
+  // --affine-v2-background-secondary
   'rgb(245,245,245)',
 ];
 

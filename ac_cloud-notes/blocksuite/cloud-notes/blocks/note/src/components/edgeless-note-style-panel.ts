@@ -73,7 +73,7 @@ export class EdgelessNoteStylePanel extends SignalWatcher(
         'clig' off;
 
       /* Client/sm */
-      font-family: var(--cloud-notes-font-family);
+      font-family: var(--affine-font-family);
       font-size: 14px;
       font-style: normal;
       font-weight: 400;

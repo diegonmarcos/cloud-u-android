@@ -141,7 +141,7 @@ test.describe('Formatting', () => {
 
     await highlightButton.click();
 
-    const yellow = 'var(--cloud-notes-text-highlight-yellow)';
+    const yellow = 'var(--affine-text-highlight-yellow)';
     const bgYellowButton = toolbar.locator('[data-testid="background-yellow"]');
     await bgYellowButton.click();
 

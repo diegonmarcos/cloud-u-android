@@ -23,7 +23,7 @@ export const linkedDocPopoverStyles = css`
     top: 0;
     box-sizing: border-box;
     font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-    font-size: var(--cloud-notes-font-base);
+    font-size: var(--affine-font-base);
     padding: 8px;
     display: flex;
     flex-direction: column;
@@ -33,7 +33,7 @@ export const linkedDocPopoverStyles = css`
     background: ${unsafeCSSVarV2('layer/background/primary')};
     box-shadow: ${unsafeCSSVar('overlayPanelShadow')};
     border-radius: 4px;
-    z-index: var(--cloud-notes-z-index-popover);
+    z-index: var(--affine-z-index-popover);
   }
 
   .linked-doc-popover icon-button {
@@ -43,10 +43,10 @@ export const linkedDocPopoverStyles = css`
   }
 
   .linked-doc-popover .group-title {
-    color: var(--cloud-notes-text-secondary-color);
+    color: var(--affine-text-secondary-color);
     padding: 0 8px;
     height: 30px;
-    font-size: var(--cloud-notes-font-xs);
+    font-size: var(--affine-font-xs);
     display: flex;
     align-items: center;
     flex-shrink: 0;

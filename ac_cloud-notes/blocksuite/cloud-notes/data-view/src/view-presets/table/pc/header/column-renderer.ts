@@ -23,7 +23,7 @@ export class DataViewColumnPreview extends SignalWatcher(
       pointer-events: none;
       display: block;
       position: fixed;
-      font-family: var(--cloud-notes-font-family);
+      font-family: var(--affine-font-family);
     }
   `;
 
@@ -35,9 +35,9 @@ export class DataViewColumnPreview extends SignalWatcher(
     const columnIndex = this.column.index$.value;
     return html`
       <div
-        style="background-color: var(--cloud-notes-background-primary-color);border-top: 1px solid ${unsafeCSS(
+        style="background-color: var(--affine-background-primary-color);border-top: 1px solid ${unsafeCSS(
           cssVarV2.layer.insideBorder.border
-        )};box-shadow: var(--cloud-notes-shadow-2);"
+        )};box-shadow: var(--affine-shadow-2);"
       >
         <cloud-notes-database-header-column
           .tableViewLogic="${this.tableViewLogic}"

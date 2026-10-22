@@ -38,7 +38,7 @@ export const embedCardModalStyles = css`
     padding: 12px;
     gap: 12px;
     border-radius: 8px;
-    font-size: var(--cloud-notes-font-xs);
+    font-size: var(--affine-font-xs);
     line-height: 20px;
   }
 
@@ -50,7 +50,7 @@ export const embedCardModalStyles = css`
 
   .embed-card-modal-row label {
     padding: 0px 2px;
-    color: var(--cloud-notes-text-secondary-color);
+    color: var(--affine-text-secondary-color);
     font-weight: 600;
   }
   .embed-card-modal-input {
@@ -58,9 +58,9 @@ export const embedCardModalStyles = css`
     padding-left: 10px;
     padding-right: 10px;
     border-radius: 8px;
-    border: 1px solid var(--cloud-notes-border-color);
-    background: var(--cloud-notes-white-10);
-    color: var(--cloud-notes-text-primary-color);
+    border: 1px solid var(--affine-border-color);
+    background: var(--affine-white-10);
+    color: var(--affine-text-primary-color);
   }
   ${fontXSStyle('.embed-card-modal-input')}
   input.embed-card-modal-input {
@@ -74,12 +74,12 @@ export const embedCardModalStyles = css`
     max-width: 100%;
   }
   .embed-card-modal-input:focus {
-    border-color: var(--cloud-notes-blue-700);
-    box-shadow: var(--cloud-notes-active-shadow);
+    border-color: var(--affine-blue-700);
+    box-shadow: var(--affine-active-shadow);
     outline: none;
   }
   .embed-card-modal-input::placeholder {
-    color: var(--cloud-notes-placeholder-color);
+    color: var(--affine-placeholder-color);
   }
 
   .embed-card-modal-row:has(.embed-card-modal-button) {
@@ -97,14 +97,14 @@ export const embedCardModalStyles = css`
     box-sizing: border-box;
   }
   .embed-card-modal-button.save {
-    border: 1px solid var(--cloud-notes-black-10);
-    background: var(--cloud-notes-primary-color);
-    color: var(--cloud-notes-pure-white);
+    border: 1px solid var(--affine-black-10);
+    background: var(--affine-primary-color);
+    color: var(--affine-pure-white);
   }
   .embed-card-modal-button[disabled] {
     pointer-events: none;
     cursor: not-allowed;
-    color: var(--cloud-notes-text-disable-color);
+    color: var(--affine-text-disable-color);
     background: transparent;
   }
   .embed-card-modal-button.reset {
@@ -112,7 +112,7 @@ export const embedCardModalStyles = css`
     border: none;
     background: transparent;
     text-decoration: underline;
-    color: var(--cloud-notes-secondary-color);
+    color: var(--affine-secondary-color);
     user-select: none;
   }
 

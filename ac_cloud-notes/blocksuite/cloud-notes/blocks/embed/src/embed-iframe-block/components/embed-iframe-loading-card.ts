@@ -51,7 +51,7 @@ export class EmbedIframeLoadingCard extends LitElement {
           text-overflow: ellipsis;
           /* Client/smMedium */
           font-family: Inter;
-          font-size: var(--cloud-notes-font-sm);
+          font-size: var(--affine-font-sm);
           font-style: normal;
           font-weight: 500;
           line-height: 22px; /* 157.143% */

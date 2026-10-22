@@ -36,7 +36,7 @@ export class CloudNotesCodeToolbar extends WithDisposable(LitElement) {
     .code-toolbar-button {
       color: ${unsafeCSSVarV2('icon/primary')};
       background-color: ${unsafeCSSVarV2('button/secondary')};
-      box-shadow: var(--cloud-notes-shadow-1);
+      box-shadow: var(--affine-shadow-1);
       border-radius: 4px;
     }
   `;
@@ -89,7 +89,7 @@ export class CloudNotesCodeToolbar extends WithDisposable(LitElement) {
       `,
       // should be greater than block-selection z-index as selection and popover wil share the same stacking context(editor-host)
       portalStyles: {
-        zIndex: 'var(--cloud-notes-z-index-popover)',
+        zIndex: 'var(--affine-z-index-popover)',
       },
       container: this.context.host,
       computePosition: {

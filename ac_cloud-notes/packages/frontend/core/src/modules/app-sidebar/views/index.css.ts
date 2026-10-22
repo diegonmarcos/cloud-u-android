@@ -25,7 +25,7 @@ export const hoverNavWrapperStyle = style({
       height: 'calc(100% - 60px)',
       marginTop: '52px',
       marginLeft: '4px',
-      boxShadow: cssVar('--cloud-notes-popover-shadow'),
+      boxShadow: cssVar('--affine-popover-shadow'),
       borderRadius: '6px',
     },
     '&[data-is-floating="true"][data-is-electron="true"]': {
@@ -39,7 +39,7 @@ export const hoverNavWrapperStyle = style({
       content: '""',
       position: 'absolute',
       inset: 0,
-      opacity: `var(--cloud-notes-noise-opacity, 0)`,
+      opacity: `var(--affine-noise-opacity, 0)`,
       backgroundRepeat: 'repeat',
       backgroundSize: '50px',
       // TODO(@Peng): figure out how to use vanilla-extract webpack plugin to inject img url

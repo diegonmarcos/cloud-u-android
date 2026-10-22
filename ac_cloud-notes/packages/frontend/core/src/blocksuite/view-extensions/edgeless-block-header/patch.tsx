@@ -59,7 +59,7 @@ export function patchForEdgelessNoteConfig(
           const leftPadding = parseInt(
             window
               .getComputedStyle(rootView)
-              .getPropertyValue('--cloud-notes-editor-side-padding')
+              .getPropertyValue('--affine-editor-side-padding')
               .replace('px', '')
           );
           if (isNaN(leftPadding)) {
@@ -69,7 +69,7 @@ export function patchForEdgelessNoteConfig(
           let editorWidth = parseInt(
             window
               .getComputedStyle(rootView)
-              .getPropertyValue('--cloud-notes-editor-width')
+              .getPropertyValue('--affine-editor-width')
               .replace('px', '')
           );
           if (isNaN(editorWidth)) {

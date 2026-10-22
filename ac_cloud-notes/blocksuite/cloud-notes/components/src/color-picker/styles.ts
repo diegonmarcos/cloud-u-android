@@ -18,7 +18,7 @@ export const COLOR_PICKER_STYLE = css`
     gap: 4px;
     align-self: stretch;
     border-radius: 8px;
-    background: var(--cloud-notes-hover-color);
+    background: var(--affine-hover-color);
   }
 
   ${fontXSStyle('nav button')}
@@ -30,7 +30,7 @@ export const COLOR_PICKER_STYLE = css`
     align-items: center;
     flex: 1 0 0;
 
-    color: var(--cloud-notes-text-secondary-color);
+    color: var(--affine-text-secondary-color);
     font-weight: 600;
 
     border-radius: 8px;
@@ -39,9 +39,9 @@ export const COLOR_PICKER_STYLE = css`
   }
 
   nav button[active] {
-    color: var(--cloud-notes-text-primary-color, #121212);
-    background: var(--cloud-notes-background-primary-color);
-    box-shadow: var(--cloud-notes-shadow-1);
+    color: var(--affine-text-primary-color, #121212);
+    background: var(--affine-background-primary-color);
+    box-shadow: var(--affine-shadow-1);
     pointer-events: none;
   }
 
@@ -73,7 +73,7 @@ export const COLOR_PICKER_STYLE = css`
     gap: 4px;
     align-self: stretch;
     border-radius: 8px;
-    border: 1px solid var(--cloud-notes-border-color);
+    border: 1px solid var(--affine-border-color);
     box-sizing: border-box;
 
     font-weight: 400;
@@ -110,7 +110,7 @@ export const COLOR_PICKER_STYLE = css`
   }
   .modes .mode button[active] {
     pointer-events: none;
-    outline: 2px solid var(--cloud-notes-brand-color, #1e96eb);
+    outline: 2px solid var(--affine-brand-color, #1e96eb);
   }
 
   .content {
@@ -269,8 +269,8 @@ export const COLOR_PICKER_STYLE = css`
     align-items: center;
     gap: 4px;
     border-radius: 8px;
-    border: 1px solid var(--cloud-notes-border-color);
-    background: var(--cloud-notes-background-primary-color);
+    border: 1px solid var(--affine-border-color);
+    background: var(--affine-background-primary-color);
     box-sizing: border-box;
   }
 
@@ -292,7 +292,7 @@ export const COLOR_PICKER_STYLE = css`
     border: none;
     outline: none;
     font-weight: 400;
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
   }
 
   /* Chrome, Safari, Edge, Opera */

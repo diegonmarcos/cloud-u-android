@@ -67,7 +67,7 @@ export class SelectionLayer extends SignalWatcher(
       return styleMap({
         display: 'none',
       });
-    const border = '2px solid var(--cloud-notes-primary-color)';
+    const border = '2px solid var(--affine-primary-color)';
 
     return styleMap({
       position: 'absolute',

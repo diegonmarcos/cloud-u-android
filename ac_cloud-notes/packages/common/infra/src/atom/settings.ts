@@ -4,6 +4,8 @@ import { atom } from 'jotai';
 import { atomWithStorage } from 'jotai/utils';
 import { atomEffect } from 'jotai-effect';
 
+import { migrateLegacyLocalStorage } from '../utils/legacy-storage';
+
 setupGlobal();
 
 const logger = new DebugLogger('cloud-notes:settings');
@@ -25,6 +27,8 @@ export const windowFrameStyleOptions: AppSetting['windowFrameStyle'][] = [
 ];
 
 export const APP_SETTINGS_STORAGE_KEY = 'cloud-notes-settings';
+// the settings used to be stored under the app's earlier name; carry them over once
+migrateLegacyLocalStorage();
 const appSettingBaseAtom = atomWithStorage<AppSetting>(
   APP_SETTINGS_STORAGE_KEY,
   {

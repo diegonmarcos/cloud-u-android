@@ -13,8 +13,8 @@ export class CommentPanel extends WithDisposable(ShadowlessElement) {
       position: absolute;
       top: 0;
       right: 0;
-      border: 1px solid var(--cloud-notes-border-color, #e3e2e4);
-      background-color: var(--cloud-notes-background-primary-color);
+      border: 1px solid var(--affine-border-color, #e3e2e4);
+      background-color: var(--affine-background-primary-color);
       height: 100vh;
       width: 320px;
       box-sizing: border-box;
@@ -42,9 +42,9 @@ export class CommentPanel extends WithDisposable(ShadowlessElement) {
 
     .comment-panel-comment-quote {
       font-size: 10px;
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
       padding-left: 8px;
-      border-left: 2px solid var(--cloud-notes-text-secondary-color);
+      border-left: 2px solid var(--affine-text-secondary-color);
       margin-bottom: 8px;
     }
 

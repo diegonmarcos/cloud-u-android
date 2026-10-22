@@ -62,7 +62,7 @@ export class AIChatComposer extends SignalWatcher(
       display: flex;
       flex-direction: column;
       gap: 4px;
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
       font-size: 12px;
       user-select: none;
     }

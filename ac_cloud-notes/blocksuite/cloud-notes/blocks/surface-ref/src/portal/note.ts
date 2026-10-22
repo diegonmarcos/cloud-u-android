@@ -89,7 +89,7 @@ export class SurfaceRefNotePortal extends WithDisposable(ShadowlessElement) {
           : undefined,
       transform: `translate(${modelX}px, ${modelY}px)`,
       padding: `${EDGELESS_BLOCK_CHILD_PADDING}px`,
-      border: `${EDGELESS_BLOCK_CHILD_BORDER_WIDTH}px none var(--cloud-notes-black-10)`,
+      border: `${EDGELESS_BLOCK_CHILD_BORDER_WIDTH}px none var(--affine-black-10)`,
       backgroundColor,
       boxShadow: `var(${NoteShadow.Sticker})`,
       position: 'absolute',

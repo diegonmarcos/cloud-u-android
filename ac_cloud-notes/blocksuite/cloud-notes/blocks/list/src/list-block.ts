@@ -226,6 +226,6 @@ export class ListBlockComponent extends CaptionedBlockComponent<ListBlockModel> 
   private accessor _richTextElement: RichText | null = null;
 
   override accessor blockContainerStyles = {
-    margin: 'var(--cloud-notes-list-margin, 10px 0)',
+    margin: 'var(--affine-list-margin, 10px 0)',
   };
 }

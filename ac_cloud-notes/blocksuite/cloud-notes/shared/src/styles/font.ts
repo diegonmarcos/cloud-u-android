@@ -14,7 +14,7 @@ export const fontBaseStyle = (container: string) => css`
 export const fontSMStyle = (container: string) => css`
   ${fontBaseStyle(container)}
   ${unsafeCSS(container)} {
-    font-size: var(--cloud-notes-font-sm);
+    font-size: var(--affine-font-sm);
     font-weight: 500;
     line-height: 22px;
   }
@@ -23,7 +23,7 @@ export const fontSMStyle = (container: string) => css`
 export const fontXSStyle = (container: string) => css`
   ${fontBaseStyle(container)}
   ${unsafeCSS(container)} {
-    font-size: var(--cloud-notes-font-xs);
+    font-size: var(--affine-font-xs);
     font-weight: 500;
     line-height: 20px;
   }

@@ -107,7 +107,7 @@ export const VirtualizedTagList = ({
             i18nKey="com.cloud-notes.tag.toolbar.selected"
             count={selectedTagIds.length}
           >
-            <div style={{ color: 'var(--cloud-notes-text-secondary-color)' }}>
+            <div style={{ color: 'var(--affine-text-secondary-color)' }}>
               {{ count: selectedTagIds.length } as any}
             </div>
             selected

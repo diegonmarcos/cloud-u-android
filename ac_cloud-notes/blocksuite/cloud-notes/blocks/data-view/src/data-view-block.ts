@@ -52,13 +52,13 @@ export class DataViewBlockComponent extends CaptionedBlockComponent<DataViewBloc
     cloud-notes-database {
       display: block;
       border-radius: 8px;
-      background-color: var(--cloud-notes-background-primary-color);
+      background-color: var(--affine-background-primary-color);
       padding: 8px;
       margin: 8px -8px -8px;
     }
 
     .database-block-selected {
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
       border-radius: 4px;
     }
 
@@ -72,11 +72,11 @@ export class DataViewBlockComponent extends CaptionedBlockComponent<DataViewBloc
     .database-ops svg {
       width: 16px;
       height: 16px;
-      color: var(--cloud-notes-icon-color);
+      color: var(--affine-icon-color);
     }
 
     .database-ops:hover {
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
     }
 
     @media print {

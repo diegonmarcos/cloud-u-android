@@ -28,7 +28,7 @@ const styles = css`
   .search-container-expand {
     overflow: visible;
     width: 138px;
-    background-color: var(--cloud-notes-hover-color);
+    background-color: var(--affine-hover-color);
   }
 
   .search-input-container {
@@ -59,7 +59,7 @@ const styles = css`
   }
 
   .cloud-notes-database-search-input-icon:hover {
-    background: var(--cloud-notes-hover-color);
+    background: var(--affine-hover-color);
   }
 
   .search-container-expand .cloud-notes-database-search-input-icon {
@@ -73,7 +73,7 @@ const styles = css`
     padding: 0 2px 0 30px;
     border: none;
     font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
-    font-size: var(--cloud-notes-font-sm);
+    font-size: var(--affine-font-sm);
     box-sizing: border-box;
     color: inherit;
     background: transparent;
@@ -81,8 +81,8 @@ const styles = css`
   }
 
   .cloud-notes-database-search-input::placeholder {
-    color: var(--cloud-notes-placeholder-color);
-    font-size: var(--cloud-notes-font-sm);
+    color: var(--affine-placeholder-color);
+    font-size: var(--affine-font-sm);
   }
 `;
 
@@ -164,7 +164,7 @@ export class DataViewHeaderToolsSearch extends WidgetBase<
                 boxSizing: 'border-box',
                 padding: '2px 6px',
                 borderRadius: '4px',
-                background: 'var(--cloud-notes-white-10)',
+                background: 'var(--affine-white-10)',
               })}
               >Esc</span
             >

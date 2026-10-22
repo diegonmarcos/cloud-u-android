@@ -46,7 +46,7 @@ export class HighlightDropdownMenu extends LitElement {
   };
 
   override render() {
-    const prefix = '--cloud-notes-text-highlight';
+    const prefix = '--affine-text-highlight';
 
     return html`
       <editor-menu-button
@@ -56,8 +56,8 @@ export class HighlightDropdownMenu extends LitElement {
             <cloud-notes-highlight-duotone-icon
               style=${styleMap({
                 '--color':
-                  // latestHighlightColor ?? 'var(--cloud-notes-text-primary-color)',
-                  'var(--cloud-notes-text-primary-color)',
+                  // latestHighlightColor ?? 'var(--affine-text-primary-color)',
+                  'var(--affine-text-primary-color)',
               })}
             ></cloud-notes-highlight-duotone-icon>
             ${EditorChevronDown}
@@ -78,7 +78,7 @@ export class HighlightDropdownMenu extends LitElement {
               >
                 <cloud-notes-text-duotone-icon
                   style=${styleMap({
-                    '--color': value ?? 'var(--cloud-notes-text-primary-color)',
+                    '--color': value ?? 'var(--affine-text-primary-color)',
                   })}
                 ></cloud-notes-text-duotone-icon>
                 <span class="label capitalize"
@@ -99,7 +99,7 @@ export class HighlightDropdownMenu extends LitElement {
               >
                 <cloud-notes-text-duotone-icon
                   style=${styleMap({
-                    '--color': 'var(--cloud-notes-text-primary-color)',
+                    '--color': 'var(--affine-text-primary-color)',
                     '--background': value ?? 'transparent',
                   })}
                 ></cloud-notes-text-duotone-icon>

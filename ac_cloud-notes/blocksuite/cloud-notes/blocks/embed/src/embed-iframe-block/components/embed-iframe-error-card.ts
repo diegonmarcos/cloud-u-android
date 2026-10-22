@@ -63,7 +63,7 @@ export class EmbedIframeErrorCard extends WithDisposable(LitElement) {
             color: ${unsafeCSSVarV2('text/primary')};
             text-align: justify;
             /* Client/smBold */
-            font-size: var(--cloud-notes-font-sm);
+            font-size: var(--affine-font-sm);
             font-style: normal;
             font-weight: 600;
             line-height: 22px; /* 157.143% */
@@ -83,7 +83,7 @@ export class EmbedIframeErrorCard extends WithDisposable(LitElement) {
             'clig' off;
           text-overflow: ellipsis;
           /* Client/xs */
-          font-size: var(--cloud-notes-font-xs);
+          font-size: var(--affine-font-xs);
           font-style: normal;
           font-weight: 400;
           line-height: 20px; /* 166.667% */
@@ -109,7 +109,7 @@ export class EmbedIframeErrorCard extends WithDisposable(LitElement) {
 
             .text {
               padding: 0px 4px;
-              font-size: var(--cloud-notes-font-xs);
+              font-size: var(--affine-font-xs);
               font-style: normal;
               font-weight: 500;
               line-height: 20px; /* 166.667% */

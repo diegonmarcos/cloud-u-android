@@ -704,8 +704,8 @@ const ExternalFileOpener = () => {
         zIndex: 10000,
         display: 'flex',
         flexDirection: 'column',
-        background: 'var(--cloud-notes-background-primary-color, #fff)',
-        color: 'var(--cloud-notes-text-primary-color, #000)',
+        background: 'var(--affine-background-primary-color, #fff)',
+        color: 'var(--affine-text-primary-color, #000)',
       }}
     >
       <div style={{ ...row, display: 'flex', gap: 12, fontWeight: 600 }}>

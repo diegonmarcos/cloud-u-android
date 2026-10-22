@@ -40,7 +40,7 @@ export const link = style({
   background: cssVar('black'),
   borderRadius: '8px',
   border: `1px solid ${cssVar('pureBlack10')}`,
-  boxShadow: cssVar('--cloud-notes-button-inner-shadow'),
+  boxShadow: cssVar('--affine-button-inner-shadow'),
   color: cssVar('white'),
   padding: '8px 18px',
   gap: '4px',

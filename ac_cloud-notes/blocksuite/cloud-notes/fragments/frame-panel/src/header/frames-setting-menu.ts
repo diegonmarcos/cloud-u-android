@@ -36,7 +36,7 @@ const styles = css`
     font-size: 12px;
     font-weight: 500;
     line-height: 20px;
-    color: var(--cloud-notes-text-secondary-color);
+    color: var(--affine-text-secondary-color);
     padding: 0 4px;
   }
 
@@ -44,7 +44,7 @@ const styles = css`
     width: 100%;
     height: 1px;
     box-sizing: border-box;
-    background: var(--cloud-notes-border-color);
+    background: var(--affine-border-color);
     margin: 8px 0;
   }
 
@@ -59,7 +59,7 @@ const styles = css`
     font-size: 12px;
     font-weight: 500;
     line-height: 20px;
-    color: var(--cloud-notes-text-primary-color);
+    color: var(--affine-text-primary-color);
   }
 
   .frames-setting-menu-item .toggle-button {

@@ -30,8 +30,8 @@ export class AdapterPanelBody extends SignalWatcher(LitElement) {
       width: 100%;
       height: 100%;
       white-space: pre-wrap;
-      color: var(--cloud-notes-text-primary-color);
-      font-size: var(--cloud-notes-font-sm);
+      color: var(--affine-text-primary-color);
+      font-size: var(--affine-font-sm);
       box-sizing: border-box;
     }
 
@@ -48,7 +48,7 @@ export class AdapterPanelBody extends SignalWatcher(LitElement) {
       flex: 1 0 0;
       border: none;
       box-sizing: border-box;
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
       overflow: auto;
     }
 

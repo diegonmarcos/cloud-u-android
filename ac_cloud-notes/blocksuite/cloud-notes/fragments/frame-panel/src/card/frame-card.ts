@@ -53,8 +53,8 @@ const styles = css`
     justify-content: center;
     align-items: center;
     border-radius: 8px;
-    border: 1px solid var(--cloud-notes-border-color);
-    background: var(--cloud-notes-background-primary-color);
+    border: 1px solid var(--affine-border-color);
+    background: var(--affine-background-primary-color);
     box-shadow: 0px 0px 12px 0px rgba(66, 65, 73, 0.18);
     cursor: pointer;
     position: relative;
@@ -70,7 +70,7 @@ const styles = css`
     position: fixed;
     top: 0;
     left: 0;
-    z-index: calc(var(--cloud-notes-z-index-popover, 0) + 3);
+    z-index: calc(var(--affine-z-index-popover, 0) + 3);
   }
 
   .frame-card-container.dragging frame-card-title {
@@ -89,8 +89,8 @@ const styles = css`
     min-width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--cloud-notes-black);
-    color: var(--cloud-notes-white);
+    background: var(--affine-black);
+    color: var(--affine-white);
     font-size: 15px;
     line-height: 24px;
     text-align: center;

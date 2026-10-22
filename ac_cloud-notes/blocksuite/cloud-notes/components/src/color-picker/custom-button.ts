@@ -18,7 +18,7 @@ export class EdgelessColorCustomButton extends LitElement {
       content: '';
       width: 27px;
       height: 27px;
-      border: 1.5px solid var(--cloud-notes-primary-color);
+      border: 1.5px solid var(--affine-primary-color);
       border-radius: 50%;
       box-sizing: border-box;
       overflow: hidden;

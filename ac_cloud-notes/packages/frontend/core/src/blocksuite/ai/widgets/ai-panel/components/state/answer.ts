@@ -32,10 +32,10 @@ export class AIPanelAnswer extends WithDisposable(LitElement) {
     .answer-head {
       align-self: stretch;
 
-      color: var(--cloud-notes-text-secondary-color);
+      color: var(--affine-text-secondary-color);
 
       /* light/xsMedium */
-      font-size: var(--cloud-notes-font-xs);
+      font-size: var(--affine-font-xs);
       font-style: normal;
       font-weight: 500;
       line-height: 20px; /* 166.667% */
@@ -45,13 +45,13 @@ export class AIPanelAnswer extends WithDisposable(LitElement) {
     .answer-body {
       align-self: stretch;
 
-      color: var(--cloud-notes-text-primary-color);
+      color: var(--affine-text-primary-color);
       font-feature-settings:
         'clig' off,
         'liga' off;
 
       /* light/sm */
-      font-size: var(--cloud-notes-font-xs);
+      font-size: var(--affine-font-xs);
       font-style: normal;
       font-weight: 400;
       line-height: 22px; /* 157.143% */
@@ -76,8 +76,8 @@ export class AIPanelAnswer extends WithDisposable(LitElement) {
     }
 
     .response-list-container ai-item-list {
-      --item-icon-color: var(--cloud-notes-icon-secondary);
-      --item-icon-hover-color: var(--cloud-notes-icon-color);
+      --item-icon-color: var(--affine-icon-secondary);
+      --item-icon-hover-color: var(--affine-icon-color);
     }
   `;
 

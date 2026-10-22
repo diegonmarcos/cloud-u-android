@@ -296,7 +296,7 @@
       "name": "cloud-notes",
       "module": "ac_cloud-notes",
       "application_id": "com.diegonmarcos.cloudnotes",
-      "description": "Cloud Notes — our own signed build of Cloud Notes (the local-first notes/whiteboard app), vendored at ac_cloud-notes/ as owned code. Cloud Notes is the UPSTREAM PROJECT, ",
+      "description": "Cloud Notes — our own signed build (the local-first notes/whiteboard app), vendored at ac_cloud-notes/ as owned code. DE-CLOUDED (#469): no sync server, no Fire",
       "web": {
         "_doc": "#876 Cloud Notes as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-notes-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-notes-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
         "dir": "web",

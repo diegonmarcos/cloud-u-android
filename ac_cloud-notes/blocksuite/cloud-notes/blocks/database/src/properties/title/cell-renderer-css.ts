@@ -27,5 +27,5 @@ export const headerAreaIconStyle = css({
   borderRadius: '4px',
   marginTop: '2px',
   color: cssVarV2.icon.primary,
-  backgroundColor: 'var(--cloud-notes-background-secondary-color)',
+  backgroundColor: 'var(--affine-background-secondary-color)',
 });

@@ -44,6 +44,6 @@ export const sidebarBodyNoSelection = style({
   overflow: 'hidden',
   justifyContent: 'center',
   userSelect: 'none',
-  color: cssVar('--cloud-notes-text-secondary-color'),
+  color: cssVar('--affine-text-secondary-color'),
   alignItems: 'center',
 });

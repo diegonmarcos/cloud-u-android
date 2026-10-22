@@ -23,7 +23,7 @@ export class TableRowView extends SignalWatcher(
 ) {
   static override styles = css`
     .cloud-notes-database-block-row:has(.row-select-checkbox.selected) {
-      background: var(--cloud-notes-primary-color-04);
+      background: var(--affine-primary-color-04);
     }
     .cloud-notes-database-block-row:has(.row-select-checkbox.selected)
       .row-selected-bg {
@@ -37,7 +37,7 @@ export class TableRowView extends SignalWatcher(
       right: 0;
       top: 0;
       bottom: 0;
-      background: var(--cloud-notes-primary-color-04);
+      background: var(--affine-primary-color-04);
     }
     .cloud-notes-database-block-row {
       width: 100%;
@@ -88,8 +88,8 @@ export class TableRowView extends SignalWatcher(
       display: flex;
       padding: 4px;
       border-radius: 4px;
-      box-shadow: var(--cloud-notes-button-shadow);
-      background-color: var(--cloud-notes-background-primary-color);
+      box-shadow: var(--affine-button-shadow);
+      background-color: var(--affine-background-primary-color);
       position: relative;
     }
 
@@ -101,12 +101,12 @@ export class TableRowView extends SignalWatcher(
       right: 0;
       top: 0;
       bottom: 0;
-      background-color: var(--cloud-notes-hover-color);
+      background-color: var(--affine-hover-color);
     }
 
     .row-op svg {
-      fill: var(--cloud-notes-icon-color);
-      color: var(--cloud-notes-icon-color);
+      fill: var(--affine-icon-color);
+      color: var(--affine-icon-color);
       width: 16px;
       height: 16px;
     }
@@ -117,7 +117,7 @@ export class TableRowView extends SignalWatcher(
       align-items: center;
       justify-content: center;
       cursor: grab;
-      background-color: var(--cloud-notes-background-primary-color);
+      background-color: var(--affine-background-primary-color);
     }
   `;
 
@@ -190,7 +190,7 @@ export class TableRowView extends SignalWatcher(
                     style="width: 4px;
                   border-radius: 2px;
                   height: 12px;
-                  background-color: var(--cloud-notes-placeholder-color);"
+                  background-color: var(--affine-placeholder-color);"
                   ></div>
                 </div>
                 <row-select-checkbox

@@ -24,26 +24,26 @@ export class EdgelessCopilotPanel extends WithDisposable(LitElement) {
       min-width: 330px;
       overflow-y: auto;
       overscroll-behavior: contain;
-      background: ${unsafeCSSVar('--cloud-notes-background-overlay-panel-color')};
-      box-shadow: ${unsafeCSSVar('--cloud-notes-overlay-shadow')};
+      background: ${unsafeCSSVar('--affine-background-overlay-panel-color')};
+      box-shadow: ${unsafeCSSVar('--affine-overlay-shadow')};
       border-radius: 8px;
-      z-index: var(--cloud-notes-z-index-popover);
+      z-index: var(--affine-z-index-popover);
     }
 
     .edgeless-copilot-panel[data-app-theme='light'] {
       background: ${unsafeCSS(
-        lightCssVariables['--cloud-notes-background-overlay-panel-color']
+        lightCssVariables['--affine-background-overlay-panel-color']
       )};
 
-      box-shadow: ${unsafeCSS(lightCssVariables['--cloud-notes-overlay-shadow'])};
+      box-shadow: ${unsafeCSS(lightCssVariables['--affine-overlay-shadow'])};
     }
 
     .edgeless-copilot-panel[data-app-theme='dark'] {
       background: ${unsafeCSS(
-        darkCssVariables['--cloud-notes-background-overlay-panel-color']
+        darkCssVariables['--affine-background-overlay-panel-color']
       )};
 
-      box-shadow: ${unsafeCSS(darkCssVariables['--cloud-notes-overlay-shadow'])};
+      box-shadow: ${unsafeCSS(darkCssVariables['--affine-overlay-shadow'])};
     }
 
     .edgeless-copilot-panel[data-app-theme='dark'] ai-item {
@@ -52,15 +52,15 @@ export class EdgelessCopilotPanel extends WithDisposable(LitElement) {
 
     ${scrollbarStyle('.edgeless-copilot-panel')}
     .edgeless-copilot-panel:hover::-webkit-scrollbar-thumb {
-      background-color: var(--cloud-notes-black-30);
+      background-color: var(--affine-black-30);
     }
 
     .edgeless-copilot-panel[data-app-theme='light']:hover::-webkit-scrollbar-thumb {
-      background-color: ${unsafeCSS(lightCssVariables['--cloud-notes-black30'])};
+      background-color: ${unsafeCSS(lightCssVariables['--affine-black30'])};
     }
 
     .edgeless-copilot-panel[data-app-theme='dark']:hover::-webkit-scrollbar-thumb {
-      background-color: ${unsafeCSS(darkCssVariables['--cloud-notes-black30'])};
+      background-color: ${unsafeCSS(darkCssVariables['--affine-black30'])};
     }
   `;
 

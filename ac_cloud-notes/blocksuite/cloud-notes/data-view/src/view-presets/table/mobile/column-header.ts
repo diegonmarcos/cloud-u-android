@@ -88,7 +88,7 @@ export class MobileTableColumnHeader extends SignalWatcher(
                   return menu.action({
                     isSelected: data.format === format.type,
                     prefix: html`<span
-                      style="font-size: var(--cloud-notes-font-base); scale: 1.2;"
+                      style="font-size: var(--affine-font-base); scale: 1.2;"
                       >${format.symbol}</span
                     >`,
                     name: format.label,

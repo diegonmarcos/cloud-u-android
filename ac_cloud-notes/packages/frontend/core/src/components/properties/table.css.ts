@@ -163,7 +163,7 @@ export const collapsedIcon = style({
 
 export const backLinksMenu = style({
   background: cssVarV2('layer/white'),
-  maxWidth: 'calc(var(--cloud-notes-editor-width) / 2)',
+  maxWidth: 'calc(var(--affine-editor-width) / 2)',
   width: '100%',
   maxHeight: '30vh',
   overflowY: 'auto',

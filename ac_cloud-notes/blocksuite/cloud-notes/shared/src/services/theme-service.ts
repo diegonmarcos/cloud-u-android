@@ -9,7 +9,7 @@ import { type BlockStdScope, StdIdentifier } from '@blocksuite/std';
 import { Extension } from '@blocksuite/store';
 import { type Signal, signal } from '@preact/signals-core';
 import {
-  type CloudNotesCssVariables,
+  type AffineCssVariables as CloudNotesCssVariables,
   combinedDarkCssVariables,
   combinedLightCssVariables,
 } from '@toeverything/theme';
@@ -79,7 +79,7 @@ export class ThemeService extends Extension {
    * `rgba(255,0,0)`
    * `#fff`
    * `light-dark(#fff, #000)`
-   * `var(--cloud-notes-palette-shape-blue)`
+   * `var(--affine-palette-shape-blue)`
    * ```
    */
   generateColorProperty(
@@ -113,7 +113,7 @@ export class ThemeService extends Extension {
    * ```
    * `rgba(255,0,0)`
    * `#fff`
-   * `--cloud-notes-palette-shape-blue`
+   * `--affine-palette-shape-blue`
    * ```
    */
   getColorValue(

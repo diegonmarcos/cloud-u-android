@@ -100,7 +100,7 @@
             "borderRadius": 8,
             "borderSize": 4,
             "borderStyle": "none",
-            "shadowType": "--cloud-notes-note-shadow-box"
+            "shadowType": "--affine-note-shadow-box"
           }
         },
         "hidden": false,

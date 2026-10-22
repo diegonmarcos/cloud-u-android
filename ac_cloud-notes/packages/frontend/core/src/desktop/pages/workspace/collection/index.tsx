@@ -192,7 +192,7 @@ const Placeholder = ({ collection }: { collection: Collection }) => {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            fontSize: 'var(--cloud-notes-font-xs)',
+            fontSize: 'var(--affine-font-xs)',
           }}
         >
           <div
@@ -201,13 +201,13 @@ const Placeholder = ({ collection }: { collection: Collection }) => {
               alignItems: 'center',
               gap: 4,
               cursor: 'pointer',
-              color: 'var(--cloud-notes-text-secondary-color)',
+              color: 'var(--affine-text-secondary-color)',
               ['WebkitAppRegion' as string]: 'no-drag',
             }}
             onClick={handleJumpToCollections}
           >
             <ViewLayersIcon
-              style={{ color: 'var(--cloud-notes-icon-color)' }}
+              style={{ color: 'var(--affine-icon-color)' }}
               fontSize={14}
             />
             {t['com.cloud-notes.collection.allCollections']()}
@@ -217,7 +217,7 @@ const Placeholder = ({ collection }: { collection: Collection }) => {
             data-testid="collection-name"
             style={{
               fontWeight: 600,
-              color: 'var(--cloud-notes-text-primary-color)',
+              color: 'var(--affine-text-primary-color)',
               ['WebkitAppRegion' as string]: 'no-drag',
             }}
           >

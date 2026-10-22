@@ -8,7 +8,7 @@ export const dateCellStyle = css({
   padding: '0',
   border: 'none',
   fontFamily: baseTheme.fontSansFamily,
-  color: 'var(--cloud-notes-text-primary-color)',
+  color: 'var(--affine-text-primary-color)',
   fontWeight: '400',
   backgroundColor: 'transparent',
   fontSize: 'var(--data-view-cell-text-size)',

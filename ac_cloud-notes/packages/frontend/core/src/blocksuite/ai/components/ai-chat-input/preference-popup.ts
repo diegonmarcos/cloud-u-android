@@ -36,7 +36,7 @@ export class ChatInputPreference extends SignalWatcher(
       display: flex;
       align-items: center;
       padding: 0px 4px;
-      color: var(--cloud-notes-v2-icon-primary);
+      color: var(--affine-v2-icon-primary);
       transition: all 0.23s ease;
       border-radius: 4px;
       background: transparent;
@@ -44,7 +44,7 @@ export class ChatInputPreference extends SignalWatcher(
       cursor: pointer;
     }
     .chat-input-preference-trigger:hover {
-      background-color: var(--cloud-notes-v2-layer-background-hoverOverlay);
+      background-color: var(--affine-v2-layer-background-hoverOverlay);
     }
     .chat-input-preference-trigger-label {
       font-size: 14px;

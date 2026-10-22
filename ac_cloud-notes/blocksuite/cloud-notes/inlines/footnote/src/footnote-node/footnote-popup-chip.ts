@@ -46,7 +46,7 @@ export class FootNotePopupChip extends LitElement {
       height: 22px;
       line-height: 22px;
       color: ${unsafeCSSVarV2('text/primary')};
-      font-size: var(--cloud-notes-font-sm);
+      font-size: var(--affine-font-sm);
       font-weight: 500;
       font-family: ${unsafeCSS(baseTheme.fontSansFamily)};
     }

@@ -37,7 +37,7 @@ export class ChatCopyMore extends WithDisposable(LitElement) {
       }
 
       div:hover {
-        background-color: var(--cloud-notes-hover-color);
+        background-color: var(--affine-hover-color);
       }
 
       .button {
@@ -54,8 +54,8 @@ export class ChatCopyMore extends WithDisposable(LitElement) {
     .more-menu {
       width: 226px;
       border-radius: 8px;
-      background-color: var(--cloud-notes-background-overlay-panel-color);
-      box-shadow: var(--cloud-notes-menu-shadow);
+      background-color: var(--affine-background-overlay-panel-color);
+      box-shadow: var(--affine-menu-shadow);
       display: flex;
       flex-direction: column;
       gap: 4px;
@@ -76,7 +76,7 @@ export class ChatCopyMore extends WithDisposable(LitElement) {
       }
 
       > div:hover {
-        background-color: var(--cloud-notes-hover-color);
+        background-color: var(--affine-hover-color);
       }
     }
   `;

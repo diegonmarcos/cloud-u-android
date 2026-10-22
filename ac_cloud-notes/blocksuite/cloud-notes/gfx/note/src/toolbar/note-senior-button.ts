@@ -31,7 +31,7 @@ export class EdgelessNoteSeniorButton extends EdgelessToolbarToolMixin(
     }
 
     .note-root[data-app-theme='light'] {
-      --paper-border-color: var(--cloud-notes-pure-white);
+      --paper-border-color: var(--affine-pure-white);
       --paper-foriegn-color: rgba(0, 0, 0, 0.1);
       --paper-shadow: 0px 2px 4px rgba(0, 0, 0, 0.25);
       --icon-card-bg: #fff;
@@ -39,7 +39,7 @@ export class EdgelessNoteSeniorButton extends EdgelessToolbarToolMixin(
         0px 2px 4px rgba(0, 0, 0, 0.22), inset 0px -2px 1px rgba(0, 0, 0, 0.14);
     }
     .note-root[data-app-theme='dark'] {
-      --paper-border-color: var(--cloud-notes-divider-color);
+      --paper-border-color: var(--affine-divider-color);
       --paper-foriegn-color: rgba(255, 255, 255, 0.12);
       --paper-shadow: 0px 2px 6px rgba(0, 0, 0, 0.8);
       --icon-card-bg: #343434;
@@ -82,7 +82,7 @@ export class EdgelessNoteSeniorButton extends EdgelessToolbarToolMixin(
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--cloud-notes-icon-secondary);
+      color: var(--affine-icon-secondary);
       background: var(--icon-card-bg);
       box-shadow: var(--icon-card-shadow);
       bottom: 12px;
