@@ -48,12 +48,12 @@ sealed class StartupError(val step: StartupStep) {
 }
 
 sealed class StartupState {
-    object Idle : StartupState()
-    object CheckingTerminal : StartupState()
-    object StartingTerminal : StartupState()
+    object Idle : StartupState() { override fun toString() = "Idle" }
+    object CheckingTerminal : StartupState() { override fun toString() = "CheckingTerminal" }
+    object StartingTerminal : StartupState() { override fun toString() = "StartingTerminal" }
     data class WaitingForHome(val attempt: Int) : StartupState()
-    object Mounting : StartupState()
-    object Ready : StartupState()
+    object Mounting : StartupState() { override fun toString() = "Mounting" }
+    object Ready : StartupState() { override fun toString() = "Ready" }
     data class Failed(val error: StartupError) : StartupState()
 
     val finished: Boolean get() = this is Ready || this is Failed
