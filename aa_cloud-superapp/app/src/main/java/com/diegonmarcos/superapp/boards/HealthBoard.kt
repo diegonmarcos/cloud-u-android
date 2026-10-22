@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.util.Locale
 
 /**
- * My-Health board (Boards > My-PM): what Health Connect holds, boiled down to Today / 7-day / 30-day figures and a
+ * MyHealth board (Boards > My-PM): what Health Connect holds, boiled down to Today / 7-day / 30-day figures and a
  * 7-day chart for steps (in km), resting heart rate and sleep. [HealthAgg] is pure (no Android), so a JVM test holds
  * the rules: a day with no record is MISSING, never zero, and an average is taken over the days that have data.
  */

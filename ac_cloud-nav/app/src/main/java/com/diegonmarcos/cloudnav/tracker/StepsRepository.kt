@@ -132,6 +132,15 @@ class StepsRepository(private val ctx: Context) {
         return out.sortedBy { it.ts }
     }
 
+    /** The stops the tracker's stop-detector recorded (what Cloud Nav's Stops and Daily pages list), oldest first. */
+    internal fun stops(from: Long, to: Long): List<StopFix> = runCatching {
+        MapsDb.get(ctx).stopsBetween(from, to).sortedBy { it.startedAt }.map { s ->
+            StopFix(s.startedAt, s.endedAt, s.lat, s.lon,
+                s.placeName?.takeIf { it.isNotBlank() }
+                    ?: listOfNotNull(s.neighborhood, s.city).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null })
+        }
+    }.getOrDefault(emptyList())
+
     /** Geocoder place name when the platform has one, else the coordinates. Cached on a ~100 m grid. */
     @Suppress("DEPRECATION")
     internal fun name(f: PlaceFix): String {

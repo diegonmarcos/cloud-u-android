@@ -39,4 +39,34 @@ class PlacesDigestTest {
         assertTrue(days[0].second.isEmpty())
         assertEquals(1, days[1].second.size)
     }
+
+    // The tracker had 7 days of recorded stops (what Cloud Nav's Stops/Daily pages list) but no raw points kept:
+    // tracker/places used to read points only and answered empty days, so the card said "no places".
+    @Test fun `stops alone give places for each seeded day, newest first, named`() {
+        val now = at(23, 0)
+        val stops = (0..6).flatMap { back ->
+            val d = day.minusDays(back.toLong())
+            fun t(h: Int) = d.atTime(h, 0).toInstant(zone).toEpochMilli()
+            listOf(StopFix(t(8), t(9), 40.4168, -3.7038, "Home"), StopFix(t(10), t(18), 40.45, -3.69, null))
+        }
+        val days = PlacesDigest.byDay(emptyList(), zone, day, 7, stops, now)
+        assertEquals(7, days.size)
+        assertEquals(day, days[0].first)
+        days.forEach { assertEquals(2, it.second.size) }
+        assertEquals("Home", days[0].second[0].label)
+        assertEquals(null, days[0].second[1].label)
+        assertEquals("08:00–09:00", PlacesDigest.span(days[3].second[0], zone))
+    }
+
+    @Test fun `a stop still open runs to now and a point-derived stay under a stop is not doubled`() {
+        val now = at(15, 0)
+        val stops = listOf(StopFix(at(12, 0), null, 40.0, -3.0, "Office"))
+        val under = (0..3).map { PlaceFix(at(12, 10 + it * 10), 40.0, -3.0) }          // inside the stop
+        val elsewhere = (0..3).map { PlaceFix(at(8, it * 10), 41.0, 2.0) }              // before it
+        val d = PlacesDigest.byDay(under + elsewhere, zone, day, 1, stops, now)[0].second
+        assertEquals(2, d.size)
+        assertEquals(at(8, 0), d[0].startMs)
+        assertEquals("Office", d[1].label)
+        assertEquals(now, d[1].endMs)
+    }
 }

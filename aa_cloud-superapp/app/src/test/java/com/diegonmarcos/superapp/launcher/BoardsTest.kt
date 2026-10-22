@@ -141,7 +141,7 @@ class BoardsTest : KitPageHarness() {
         waitForText("Cloud Tasks is not installed")
     }
 
-    @Test fun `My-health shows steps in km, today and the averages`() {
+    @Test fun `MyHealth shows steps in km, today and the averages`() {
         val today = LocalDate.now()
         use(Fake(health = Read.Ok(HealthAgg.board(HealthFixtures.seeded(today), today))))
         showKit { BoardStepsBody(0) { opened += it } }
@@ -152,7 +152,7 @@ class BoardsTest : KitPageHarness() {
         compose.onNodeWithText("Today (11,000 steps)").assertExists()
     }
 
-    @Test fun `My-health without the permissions says so and offers the grant`() {
+    @Test fun `MyHealth without the permissions says so and offers the grant`() {
         val today = LocalDate.now()
         val raw = HealthBoardReader.Raw(HealthBoardReader.Status.NEEDS_PERMISSION, emptySet())
         use(Fake(health = Read.Ok(HealthAgg.board(raw, today))))
@@ -162,13 +162,13 @@ class BoardsTest : KitPageHarness() {
         compose.onNodeWithTag("health-perm:Sleep").assertExists()
     }
 
-    @Test fun `My-health unavailable shows the reason`() {
+    @Test fun `MyHealth unavailable shows the reason`() {
         use(Fake(health = Read.Unavailable(Why.OUTDATED, "Health Connect needs an update before it can be read")))
         showKit { BoardStepsBody(0) { opened += it } }
         waitForText("needs an update")
     }
 
-    @Test fun `Nav tracker lists the places per day`() {
+    @Test fun `Navigation/Tracker lists the places per day`() {
         val d = LocalDate.of(2026, 10, 16)
         use(Fake(places = Read.Ok(listOf(PlacesDay(d, listOf(
             PlaceVisit("08:00–08:30", "Calle Mayor, Madrid", 40.4168, -3.7038, false),
@@ -180,7 +180,7 @@ class BoardsTest : KitPageHarness() {
         compose.onNodeWithTag("places-map:$d").assertExists()
     }
 
-    @Test fun `Nav tracker with no fixes is honest`() {
+    @Test fun `Navigation/Tracker with no fixes is honest`() {
         use(Fake(places = Read.Ok(listOf(PlacesDay(LocalDate.of(2026, 10, 16), emptyList(), 0)))))
         showKit { BoardPlacesBody(0) { opened += it } }
         waitForText("No places recorded")

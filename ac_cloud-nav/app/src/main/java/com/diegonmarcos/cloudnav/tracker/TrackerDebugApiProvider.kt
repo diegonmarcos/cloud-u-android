@@ -62,20 +62,22 @@ class TrackerDebugApiProvider : ContentProvider() {
             val repo = StepsRepository(ctx)
             val today = LocalDate.now(zone)
             val from = today.minusDays(days - 1L).atStartOfDay(zone).toInstant().toEpochMilli()
-            val fixes = repo.fixes(from, System.currentTimeMillis())
+            val now = System.currentTimeMillis()
+            val fixes = repo.fixes(from, now)
+            val stops = repo.stops(from, now)
             val out = JSONArray()
-            for ((d, stays) in PlacesDigest.byDay(fixes, zone, today, days)) {
+            for ((d, stays) in PlacesDigest.byDay(fixes, zone, today, days, stops, now)) {
                 val v = JSONArray()
                 for (s in stays) {
                     v.put(JSONObject()
                         .put("part", PlacesDigest.span(s, zone))
-                        .put("label", repo.name(PlaceFix(s.startMs, s.lat, s.lon, s.predicted)))
+                        .put("label", s.label ?: repo.name(PlaceFix(s.startMs, s.lat, s.lon, s.predicted)))
                         .put("lat", s.lat).put("lon", s.lon)
                         .put("predicted", s.predicted))
                 }
                 out.put(JSONObject().put("date", d.toString()).put("visits", v))
             }
-            return JSONObject().put("days", out).put("fixes", fixes.size)
+            return JSONObject().put("days", out).put("fixes", fixes.size).put("stops", stops.size)
         }
     }
 

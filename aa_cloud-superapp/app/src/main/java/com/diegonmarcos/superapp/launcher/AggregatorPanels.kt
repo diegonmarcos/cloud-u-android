@@ -91,6 +91,12 @@ internal class PageAnchors(private val state: AggregatorState, private val scrol
 
     fun declares(id: String) = id in owner
 
+    companion object {
+        /** [id] as the panel that now owns it names it: a retired alias maps to its panel's `anchor`, anything else is itself. */
+        fun resolve(panels: List<Sections.StackPanel>, id: String): String =
+            panels.firstOrNull { it.anchor.isNotBlank() && id in it.aliases }?.anchor ?: id
+    }
+
     fun content(coords: LayoutCoordinates) { content = coords }
 
     fun target(id: String, coords: LayoutCoordinates) { if (id.isNotBlank() && declares(id)) targets[id] = coords }
@@ -99,7 +105,7 @@ internal class PageAnchors(private val state: AggregatorState, private val scrol
      *  through to the navigating dispatcher. */
     fun dispatch(target: String, scope: CoroutineScope): Boolean {
         if (!target.startsWith(StackAnchors.PREFIX)) return false
-        val id = target.removePrefix(StackAnchors.PREFIX)
+        val id = target.removePrefix(StackAnchors.PREFIX).let { resolve(state.panels, it) }
         val idx = owner[id] ?: return false
         state.panelOpen[idx] = true
         scope.launch {

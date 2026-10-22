@@ -22,7 +22,7 @@ class HealthGrantActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState != null) return
-        // EXTRA_BOARD: the My-Health board asks for steps, distance, resting HR, sleep and height in one dialog.
+        // EXTRA_BOARD: the MyHealth board asks for steps, distance, resting HR, sleep and height in one dialog.
         val perms = if (intent.getBooleanExtra(EXTRA_BOARD, false)) HealthBoardReader.BOARD_PERMISSIONS else HealthConnectGateway.BADGE_PERMISSIONS
         runCatching { ask.launch(perms) }.onFailure {
             sequenceOf(

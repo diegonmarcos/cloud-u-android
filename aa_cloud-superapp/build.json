@@ -2358,22 +2358,28 @@
             "subtitle": "Agenda · Day · ToDo"
           },
           {
-            "_doc": "Myfin lives in Cloud-Me (Buro ▸ Fin). The card used to print sample numbers here; it now only opens the real page.",
+            "_doc": "MyBuro/MyFin (was 'Myfin'): the MyBuro group's MyFin card. It lives in Cloud-Me (Buro ▸ Fin); the card only opens the real page. `anchor` is the id, `aliases` the retired ids that still resolve (anchor: deep links).",
             "kind": "open_link",
-            "title": "Myfin · Cloud-Me Buro ▸ Fin",
+            "title": "MyBuro/MyFin",
+            "anchor": "myburo/myfin",
+            "aliases": ["myfin", "my-fin"],
             "url": "extapp:cloud-me#page:buro/fin"
           },
           {
-            "_doc": "My-health: cloud-nav's tracker step counts (today + 7 days) over the fleet IPC door, op tracker/steps.",
+            "_doc": "MyHealth (was 'My-health'): Health Connect board. The kind stays board_steps. `aliases` are the retired ids that still resolve.",
             "kind": "board_steps",
-            "title": "My-health",
-            "subtitle": "Steps · cloud-nav tracker",
+            "title": "MyHealth",
+            "anchor": "myhealth",
+            "aliases": ["my-health"],
+            "subtitle": "Steps · sleep · heart rate",
             "url": "extapp:cloud-nav"
           },
           {
-            "_doc": "Nav tracker: the places cloud-nav recorded, per day, op tracker/places.",
+            "_doc": "Navigation/Tracker (was 'Nav tracker'): the Navigation group's Tracker card, the places cloud-nav recorded per day, op tracker/places. `aliases` are the retired ids that still resolve.",
             "kind": "board_places",
-            "title": "Nav tracker",
+            "title": "Navigation/Tracker",
+            "anchor": "navigation/tracker",
+            "aliases": ["nav-tracker", "nav_tracker", "tracker"],
             "subtitle": "Places · cloud-nav tracker",
             "url": "extapp:cloud-nav"
           }

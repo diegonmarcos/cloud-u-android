@@ -6,7 +6,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** One place the tracker saw the phone stay at: centroid, first and last fix, how many fixes, measured or predicted. */
-data class Stay(val startMs: Long, val endMs: Long, val lat: Double, val lon: Double, val fixes: Int, val predicted: Boolean)
+data class Stay(val startMs: Long, val endMs: Long, val lat: Double, val lon: Double, val fixes: Int, val predicted: Boolean, val label: String? = null)
+
+/** A stop the tracker's stop-detector recorded (the table Cloud Nav's own Stops / Daily pages read): [endMs] null while it lasts. */
+data class StopFix(val startMs: Long, val endMs: Long?, val lat: Double, val lon: Double, val name: String?)
 
 /**
  * The places of a day, for the SuperApp's Boards ▸ My-PM ▸ Nav tracker card (op tracker/places). Pure, so a JVM test
@@ -40,12 +43,23 @@ object PlacesDigest {
         return if (kept.isEmpty() && out.isNotEmpty()) listOf(out.maxBy { it.fixes }) else kept
     }
 
-    /** The [days] most recent local days ending today, newest first, each with its stays. */
-    fun byDay(fixes: List<PlaceFix>, zone: ZoneId, today: LocalDate, days: Int): List<Pair<LocalDate, List<Stay>>> =
+    /** A recorded stop as a stay. Still open (or ended before it began) it runs to [nowMs]. */
+    fun stay(s: StopFix, nowMs: Long) = Stay(s.startMs, (s.endMs ?: nowMs).coerceAtLeast(s.startMs), s.lat, s.lon, 1, false, s.name)
+
+    /**
+     * The [days] most recent local days ending today, newest first, each with its stays. The stop-detector's [stops] are
+     * the tracker's own record of where the phone stayed (and the only record when the raw points were never kept or
+     * were cleared), so they come first; a stay derived from raw fixes is added only where no stop covers that time.
+     */
+    fun byDay(fixes: List<PlaceFix>, zone: ZoneId, today: LocalDate, days: Int,
+              stops: List<StopFix> = emptyList(), nowMs: Long = System.currentTimeMillis()): List<Pair<LocalDate, List<Stay>>> =
         (0 until days).map { today.minusDays(it.toLong()) }.map { d ->
             val from = d.atStartOfDay(zone).toInstant().toEpochMilli()
             val to = d.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-            d to stays(fixes.filter { it.ts in from until to })
+            val recorded = stops.filter { it.startMs in from until to }.map { stay(it, nowMs) }
+            val derived = stays(fixes.filter { it.ts in from until to })
+                .filter { f -> recorded.none { r -> f.startMs <= r.endMs && r.startMs <= f.endMs } }
+            d to (recorded + derived).sortedBy { it.startMs }
         }
 
     private val HM = DateTimeFormatter.ofPattern("HH:mm")

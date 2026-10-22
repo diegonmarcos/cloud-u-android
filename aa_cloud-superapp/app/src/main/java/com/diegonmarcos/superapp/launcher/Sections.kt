@@ -202,6 +202,8 @@ object Sections {
          *  readable straight out of build.json, and a tile pointing at an id
          *  nobody declares is a static error rather than a dead tap. */
         val anchors: List<PanelAnchor> = emptyList(),
+        /** Retired ids of [anchor]: an `anchor:<alias>` link (an old build's deep link) lands on this panel. */
+        val aliases: List<String> = emptyList(),
         /** Used by kind=feed — which fetcher builds this card's rows:
          *  github_runs | github_commits | gitea_commits | dagu_runs. Blank
          *  renders a visible "unknown source" hint rather than nothing, same
@@ -927,6 +929,7 @@ object Sections {
                         stream          = p.optString("stream", ""),
                         anchor          = p.optString("anchor", ""),
                         anchors         = panelAnchors,
+                        aliases         = p.optJSONArray("aliases")?.let { aa -> (0 until aa.length()).map { aa.optString(it) }.filter { it.isNotBlank() } } ?: emptyList(),
                         source          = p.optString("source", ""),
                         classId         = p.optString("class", ""),
                         limit           = p.optInt("limit", 0),

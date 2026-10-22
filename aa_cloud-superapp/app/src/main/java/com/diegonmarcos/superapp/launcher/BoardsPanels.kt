@@ -261,7 +261,7 @@ private fun AppGlyph(icon: ImageBitmap?, label: String) {
 }
 
 
-// ── My-PM: My-health (steps in km, resting heart rate, sleep) ───────
+// ── My-PM: MyHealth (steps in km, resting heart rate, sleep) ───────
 
 /** Counts ON_RESUME after the first composition: back from the Health Connect dialog, the board reads again. */
 @Composable
@@ -323,7 +323,7 @@ private fun HealthPermissionCard(missing: Set<String>, onGrant: () -> Unit) {
     val p = LocalKitPalette.current
     val rows = listOf("Steps" to HealthBoardReader.STEPS, "Distance" to HealthBoardReader.DISTANCE,
         "Resting heart rate" to HealthBoardReader.RESTING_HR, "Sleep" to HealthBoardReader.SLEEP)
-    KitStatusBanner("My-Health needs read access in Health Connect", KitState.WARN,
+    KitStatusBanner("MyHealth needs read access in Health Connect", KitState.WARN,
         Modifier.padding(vertical = KitDensity.small / 2), tag = BoardTags.unavailable("health-permissions"),
         action = KitAction("Grant access", "fix:health_grant", onClick = onGrant))
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp).testTag("health-permissions")) {
@@ -456,7 +456,7 @@ private fun SleepChart(week: List<SleepDay>) {
     }
 }
 
-// ── My-PM: Nav tracker (places) ─────────────────────────────────────
+// ── My-PM: Navigation/Tracker (places) ─────────────────────────────────────
 
 @Composable
 internal fun BoardPlacesBody(epoch: Int, onOpen: (String) -> Unit) {

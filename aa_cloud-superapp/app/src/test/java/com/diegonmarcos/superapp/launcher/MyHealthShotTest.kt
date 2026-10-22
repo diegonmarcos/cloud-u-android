@@ -67,12 +67,12 @@ class MyHealthShotTest : KitPageHarness() {
         assertTrue("$name.png is blank (${seen.size} colours)", seen.size > 8)
     }
 
-    @Test fun `seeded My-Health board`() {
+    @Test fun `seeded MyHealth board`() {
         val today = LocalDate.now()
         shoot("my-health", HealthAgg.board(HealthFixtures.seeded(today), today), "sleep-chart")
     }
 
-    @Test fun `My-Health board asking for permissions`() {
+    @Test fun `MyHealth board asking for permissions`() {
         val today = LocalDate.now()
         val raw = HealthFixtures.seeded(today).copy(granted = setOf(HealthBoardReader.STEPS, HealthBoardReader.DISTANCE),
             restingHr = emptyMap(), sleep = emptyMap())
