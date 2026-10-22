@@ -2,7 +2,7 @@ package com.diegonmarcos.superapp.core
 
 import java.io.File
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -24,8 +24,8 @@ class TelemetryRouteTest {
 
     @Test fun aCrashThatCouldNotBeSentIsKeptAndGoesOutOnTheNextStart() {
         val dir = tmp()
-        assertTrue(TelemetryQueue.enqueue(dir, "{\"n\":1}", 1000))
-        assertTrue(TelemetryQueue.enqueue(dir, "{\"n\":2}", 2000))
+        assertTrue(TelemetryQueue.enqueue(dir, "{\"n\":1}", 1000) != null)
+        assertTrue(TelemetryQueue.enqueue(dir, "{\"n\":2}", 2000) != null)
         // the network is still down: nothing goes, nothing is lost
         assertEquals(0, TelemetryQueue.drain(dir) { false })
         assertEquals(2, TelemetryQueue.files(dir).size)
@@ -52,7 +52,7 @@ class TelemetryRouteTest {
         val kept = TelemetryQueue.files(dir).map { it.readText() }
         assertEquals(TelemetryQueue.MAX_ITEMS, kept.size)
         assertEquals("{\"n\":${TelemetryQueue.MAX_ITEMS + 3}}", kept.last())
-        assertFalse(TelemetryQueue.enqueue(dir, "x".repeat(TelemetryQueue.MAX_ITEM_BYTES + 1)))
+        assertNull(TelemetryQueue.enqueue(dir, "x".repeat(TelemetryQueue.MAX_ITEM_BYTES + 1)))
         dir.deleteRecursively()
     }
 }

@@ -24,13 +24,14 @@ object TelemetryQueue {
     const val MAX_ITEMS = 10
     const val MAX_ITEM_BYTES = 400_000
 
-    /** Stores [payload]; false when it is too large to keep. Keeps the newest [MAX_ITEMS]. */
-    fun enqueue(dir: File, payload: String, nowMs: Long = System.currentTimeMillis()): Boolean {
-        if (payload.length > MAX_ITEM_BYTES) return false
+    /** Stores [payload] and returns its file; null when it is too large to keep. Keeps the newest [MAX_ITEMS]. */
+    fun enqueue(dir: File, payload: String, nowMs: Long = System.currentTimeMillis()): File? {
+        if (payload.length > MAX_ITEM_BYTES) return null
         dir.mkdirs()
-        File(dir, "%016d-%04d.json".format(nowMs, Math.floorMod(System.nanoTime(), 10_000L).toInt())).writeText(payload, Charsets.UTF_8)
+        val f = File(dir, "%016d-%04d.json".format(nowMs, Math.floorMod(System.nanoTime(), 10_000L).toInt()))
+        f.writeText(payload, Charsets.UTF_8)
         files(dir).dropLast(MAX_ITEMS).forEach { it.delete() }
-        return true
+        return f
     }
 
     fun files(dir: File): List<File> = dir.listFiles { f -> f.isFile && f.name.endsWith(".json") }?.sortedBy { it.name }.orEmpty()

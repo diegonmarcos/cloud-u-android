@@ -18,6 +18,10 @@ on:
         description: "Ship cloud-drive run id whose x86_64 APK artifact to test (empty = the latest release asset)"
         required: false
         default: ""
+      old_run_id:
+        description: "Ship cloud-drive run id of the OLD (pre shared-uid) x86_64 APK for the upgrade path"
+        required: false
+        default: "39628434646"
 
 permissions:
   contents: read
@@ -288,5 +292,114 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: drive-cold-starts
+          path: out/
+          if-no-files-found: warn
+
+  drive-upgrade:
+    # The owner's phone path: an old cloud-drive (no shared uid) with data, then the shared-uid build over it
+    # (refused, so uninstall + install), with the terminal's $HOME present or absent and all-files access granted or revoked.
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        termux-home: [present, absent]
+        all-files: [granted, revoked]
+    steps:
+      - name: Fetch the APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+          OLD_RUN_ID: ${{ inputs.old_run_id }}
+        run: |
+          set -eu
+          mkdir -p apk
+          gh release download latest -R "$REPO" -p cloud-terminal-x86_64.apk -O apk/terminal.apk
+          fetch() { # run id, output file
+            gh api "repos/$REPO/actions/runs/$1/artifacts" --paginate \
+              --jq '.artifacts[] | select(.name|startswith("Cloud-Drive-x86_64-")) | .name' |
+            while read -r name; do gh run download "$1" -R "$REPO" -n "$name" -D "apk/dl-$1-$name"; done
+            find apk -name '*.apk' -path "*dl-$1-*" | head -1 | xargs -I{} cp {} "$2"
+          }
+          fetch "$OLD_RUN_ID" apk/old.apk
+          if [ -n "$RUN_ID" ]; then fetch "$RUN_ID" apk/drive.apk; else gh release download latest -R "$REPO" -p Cloud-Drive-x86_64.apk -O apk/drive.apk; fi
+          ls -l apk/*.apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+
+      - name: Write the probe
+        run: |
+          cat > probe.sh <<'EOF'
+          #!/bin/bash
+          set -u
+          PKG=com.diegonmarcos.clouddrive
+          HOME_MODE='${{ matrix.termux-home }}'; FILES_MODE='${{ matrix.all-files }}'
+          mkdir -p out
+          adb logcat -c || true
+          allfiles() { adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE "$([ "$FILES_MODE" = granted ] && echo allow || echo deny)" || true; }
+          adb install -r -g apk/old.apk || { echo "::error::old drive install failed"; exit 2; }
+          allfiles
+          adb shell dumpsys package "$PKG" | grep -E "sharedUser|versionName" | tee out/old-uid.txt
+          # the old build gets used: data, prefs, saved state
+          timeout 200 adb shell monkey -p "$PKG" --pct-syskeys 0 --pct-appswitch 0 --throttle 300 -s 3 --ignore-timeouts 250 > out/monkey-old.txt 2>&1 || true
+          if [ "$HOME_MODE" = present ]; then
+            adb install -r -g apk/terminal.apk || { echo "::error::terminal install failed"; exit 2; }
+            term=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER cld.termux | tr -d '\r' | tail -1)
+            case "$term" in */*) timeout 60 adb shell am start -W -n "$term" || true; sleep 25;; esac
+          fi
+          # the shared-uid build over the old one: Android refuses a uid change, so the migration is uninstall + install
+          adb install -r -g apk/drive.apk > out/over.txt 2>&1; cat out/over.txt
+          adb shell pm uninstall "$PKG" || true
+          if [ "$HOME_MODE" = absent ]; then :; fi
+          adb install -g apk/drive.apk || { echo "::error::new drive install failed"; adb logcat -d | tail -30; exit 2; }
+          allfiles
+          adb shell dumpsys package "$PKG" | grep -E "sharedUser|versionName" | tee out/new-uid.txt
+          ok=1
+          timeout 120 adb shell am start -W -n "$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)" > out/am-start.txt; rc=$?
+          cat out/am-start.txt
+          if [ $rc = 124 ]; then echo "::error title=cloud-drive hung on launch after the upgrade::am start -W did not return"; ok=0; adb shell "kill -3 \$(pidof $PKG)" >/dev/null 2>&1 || true; sleep 3; fi
+          sleep 10
+          adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "process $PKG gone after the first launch"; ok=0; }
+          if [ $ok = 1 ]; then
+            timeout 200 adb shell monkey -p "$PKG" --pct-syskeys 0 --pct-appswitch 0 --throttle 300 -s 5 --ignore-timeouts 300 > out/monkey.txt 2>&1 || true
+            sleep 3
+            adb shell pidof "$PKG" >/dev/null 2>&1 || { echo "process $PKG died while exercised"; ok=0; }
+            grep -q "// CRASH: $PKG" out/monkey.txt && ok=0
+          fi
+          adb logcat -d -v threadtime > out/logcat.txt
+          adb logcat -d -b crash -v threadtime > out/logcat-crash.txt || true
+          adb exec-out screencap -p > out/screen.png || true
+          awk '/FATAL EXCEPTION/{p=1} p&&/AndroidRuntime/{print} p&&!/AndroidRuntime/{p=0}' out/logcat.txt > out/fatal.txt
+          grep -q "Process: $PKG" out/fatal.txt && ok=0
+          grep -q "$PKG" out/logcat-crash.txt && ok=0
+          if [ $ok = 0 ]; then
+            echo "::group::FATAL EXCEPTION"; cat out/fatal.txt; echo "::endgroup::"
+            head -40 out/fatal.txt | while IFS= read -r l; do echo "::error title=cloud-drive crashed after the upgrade (home $HOME_MODE, all-files $FILES_MODE)::$l"; done
+            [ -s out/fatal.txt ] || grep -E "$PKG|AndroidRuntime|ActivityManager" out/logcat.txt | tail -80
+            exit 1
+          fi
+          echo "cloud-drive survived the upgrade path (home $HOME_MODE, all-files $FILES_MODE)."
+          EOF
+          chmod +x probe.sh
+
+      - name: Boot emulator + probe
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./probe.sh
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-upgrade-${{ matrix.termux-home }}-${{ matrix.all-files }}
           path: out/
           if-no-files-found: warn

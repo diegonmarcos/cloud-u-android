@@ -291,12 +291,10 @@ object Telemetry {
             log?.let { put("log", it) }
             if (meta.isNotEmpty()) put("meta", JSONObject(meta))
         }.toString()
-        try {
-            send(urls, payload, connectTimeoutMs, readTimeoutMs)
-        } catch (e: Exception) {
-            // A crash that cannot leave now waits on disk and goes out at the next start (flushQueue).
-            if (kind == "crash") runCatching { TelemetryQueue.enqueue(queueDir(context), payload) }
-            throw e
-        }
+        // A crash is written to this app's own files dir BEFORE any network attempt, so it survives the process dying mid-send:
+        // it is removed once delivered, else flushQueue sends it at the next start.
+        val kept = if (kind == "crash") runCatching { TelemetryQueue.enqueue(queueDir(context), payload) }.getOrNull() else null
+        send(urls, payload, connectTimeoutMs, readTimeoutMs)
+        kept?.delete()
     }
 }
