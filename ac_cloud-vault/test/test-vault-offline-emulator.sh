@@ -54,7 +54,7 @@ signin_selfhosted() {
   # point the app at the seeded server: environment menu -> Self-hosted -> server URL -> Save
   $ui tap 'Logging in on|Region|Server|\.com|diegonmarcos' 20 || die env-menu "no environment selector"
   $ui tap 'Self-hosted' 15 || die env-selfhosted "no Self-hosted entry"
-  $ui type "http://vaultwarden.app"
+  $ui type "${VAULT_URL:-http://vaultwarden.app}"
   $ui tap '^Save$|Save' 15 || die env-save "no Save"
   sleep 1
   $ui type "$VAULT_EMAIL"
