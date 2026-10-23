@@ -39,7 +39,7 @@ enrol_fingerprint() {
   sleep 4
   $ui has 'PIN|password|pattern' && { adb -e shell input text 1234; adb -e shell input keyevent 66; sleep 3; }
   for _ in 1 2 3 4 5 6; do
-    $ui tap 'I agree|Agree|Next|Get started|More|Yes|Start' 4 2>/dev/null || true
+    $ui tap '^I agree$|^Agree$' 3 2>/dev/null || $ui tap '^Next$|^Get started$|^Yes$|^Start$|^Done$' 3 2>/dev/null || $ui tap '^More$' 2 2>/dev/null || true
     sleep 1
   done
   for _ in $(seq 1 14); do touch_finger; sleep 1.2; done
