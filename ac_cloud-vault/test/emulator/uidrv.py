@@ -67,14 +67,25 @@ def main():
         (poll(lambda: find(args[0]), float(args[1]) if len(args) > 1 else 60) is not None) or fail("never saw: " + args[0])
     elif cmd == "has":
         sys.exit(0 if find(args[0]) is not None else 1)
-    elif cmd == "type":  # tap the first text field, then type (alphanumerics only)
-        n = poll(lambda: next((x for x in nodes() if x.get("class") == "android.widget.EditText"), None), 25)
-        (n is not None) or fail("no text field to type into")
-        x, y = center(n)
-        adb("shell", "input", "tap", str(x), str(y))
-        time.sleep(1)
-        adb("shell", "input", "keyevent", "123", *(["67"] * 60))  # move to end, clear any prefilled text (e.g. the default server URL)
-        adb("shell", "input", "text", args[0].replace(" ", "%s"))
+    elif cmd == "type":  # tap the first text field, clear it, type, and verify (retry: the CI emulator drops key events)
+        want = args[0]
+        for _ in range(4):
+            n = poll(lambda: next((x for x in nodes() if x.get("class") == "android.widget.EditText"), None), 25)
+            (n is not None) or fail("no text field to type into")
+            x, y = center(n)
+            adb("shell", "input", "tap", str(x), str(y))
+            time.sleep(1)
+            adb("shell", "input", "keycombination", "113", "29")  # CTRL+A
+            adb("shell", "input", "keyevent", "67")
+            for _ in range(3):
+                adb("shell", "input", "keyevent", "123", *(["67"] * 40))  # move to end, delete backwards
+                time.sleep(0.5)
+            adb("shell", "input", "text", want.replace(" ", "%s"))
+            time.sleep(1.5)
+            n = next((m for m in nodes() if m.get("class") == "android.widget.EditText"), None)
+            if n is None or n.get("password") == "true" or n.get("text") == want:
+                return
+        fail("typed text never matched: " + (n.get("text", "") if n is not None else "?"))
     elif cmd == "texts":
         print(" | ".join(filter(None, (n.get("text") or n.get("content-desc") for n in nodes())))[:500])
     elif cmd == "dump":
