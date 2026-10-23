@@ -63,9 +63,11 @@ tok = post("/identity/connect/token", {
     "grant_type": "password", "username": email, "password": pw_hash, "scope": "api offline_access",
     "client_id": "web", "deviceType": "9", "deviceName": "ci-seed", "deviceIdentifier": str(uuid.uuid4()),
 }, form=True)
+auth = {"Authorization": "Bearer " + tok["access_token"]}
+uid = json.loads(urllib.request.urlopen(urllib.request.Request(base + "/api/accounts/profile", headers=auth)).read())["id"]
 e = lambda s: enc(s.encode(), user_key[:32], user_key[32:])
 post("/api/ciphers", {
     "type": 1, "name": e(item), "notes": None, "favorite": False, "organizationId": None, "folderId": None,
-    "reprompt": 0, "encryptedFor": None, "login": {"username": e("ci-user"), "password": e("ci-seed-secret"), "uris": []},
+    "reprompt": 0, "encryptedFor": uid, "login": {"username": e("ci-user"), "password": e("ci-seed-secret"), "uris": []},
 }, {"Authorization": "Bearer " + tok["access_token"]})
 print("seeded 1 item for", email)
