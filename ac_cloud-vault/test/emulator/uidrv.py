@@ -37,7 +37,7 @@ def poll(fn, timeout):
     end = time.time() + timeout
     while True:
         v = fn()
-        if v:
+        if v is not None:
             return v
         if time.time() > end:
             return None
@@ -60,16 +60,16 @@ def main():
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "tap":
         n = poll(lambda: find(args[0]), float(args[1]) if len(args) > 1 else 25)
-        n or fail("nothing to tap: " + args[0])
+        (n is not None) or fail("nothing to tap: " + args[0])
         x, y = center(n)
         adb("shell", "input", "tap", str(x), str(y))
     elif cmd == "wait":
-        poll(lambda: find(args[0]), float(args[1]) if len(args) > 1 else 60) or fail("never saw: " + args[0])
+        (poll(lambda: find(args[0]), float(args[1]) if len(args) > 1 else 60) is not None) or fail("never saw: " + args[0])
     elif cmd == "has":
-        sys.exit(0 if find(args[0]) else 1)
+        sys.exit(0 if find(args[0]) is not None else 1)
     elif cmd == "type":  # tap the first text field, then type (alphanumerics only)
         n = poll(lambda: next((x for x in nodes() if x.get("class") == "android.widget.EditText"), None), 25)
-        n or fail("no text field to type into")
+        (n is not None) or fail("no text field to type into")
         x, y = center(n)
         adb("shell", "input", "tap", str(x), str(y))
         time.sleep(1)
