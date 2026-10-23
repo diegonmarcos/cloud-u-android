@@ -137,7 +137,7 @@ class DayTimelineTest {
     }
 
     @Test fun `editing the mode of a move sticks and feeds the summary`() {
-        val store = listOf(move(at(8), at(9), 20000.0, 0))
+        val store = listOf(move(at(8), at(9), 40000.0, 0))
         val m = DayTimeline.build(store, at(8), at(9)).single() as DaySeg.Move
         assertEquals(Mode.CAR, m.mode)
         val fixed = DayTimeline.build(store, at(8), at(9), listOf(Edits.editMode(m, Mode.TRAIN))).single() as DaySeg.Move

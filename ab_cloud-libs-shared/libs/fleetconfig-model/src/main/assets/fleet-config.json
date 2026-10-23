@@ -1263,6 +1263,22 @@
         "ac_cloud-nav"
       ]
     },
+    "tracker_corrections": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "The owner's corrections to the Tracker timeline (confirmed visits, edited places and modes, deleted or split segments, added visits). Recorded data tied to the timeline store, never migrated; the store is re-derived on the new phone.",
+      "used_by": [
+        "ac_cloud-nav"
+      ]
+    },
+    "tracker_place_names": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "Cache of reverse-geocoded place names (open provider answers by ~11 m grid cell) so a place is asked once; re-fetched on demand.",
+      "used_by": [
+        "ac_cloud-nav"
+      ]
+    },
     "maps_tracker_state": {
       "kind": "prefs",
       "class": "device",
