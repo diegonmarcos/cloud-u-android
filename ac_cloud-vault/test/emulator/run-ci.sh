@@ -36,6 +36,7 @@ H=$(openssl x509 -in "$T/ca.pem" -subject_hash_old -noout)
 adb -e root >/dev/null 2>&1; adb -e wait-for-device
 adb -e shell "mkdir -p /data/misc/user/0/cacerts-added" && adb -e push "$T/ca.pem" "/data/misc/user/0/cacerts-added/$H.0" >/dev/null 2>&1
 adb -e shell "chmod 644 /data/misc/user/0/cacerts-added/$H.0; restorecon -R /data/misc/user/0/cacerts-added" >/dev/null 2>&1
+adb -e unroot >/dev/null 2>&1; adb -e wait-for-device   # the rest of the test runs as the shell user, as it did before the CA was needed
 rm -f "$T/ca.key" "$T/srv.key"
 adb -e shell "ping -c1 -W3 vault.diegonmarcos.com" >"$OUT_DIR/net-check.txt" 2>&1
 curl -s --cacert "$T/ca.pem" --resolve vault.diegonmarcos.com:443:127.0.0.1 https://vault.diegonmarcos.com/alive >>"$OUT_DIR/net-check.txt" 2>&1 && echo "host tls ok" >>"$OUT_DIR/net-check.txt"

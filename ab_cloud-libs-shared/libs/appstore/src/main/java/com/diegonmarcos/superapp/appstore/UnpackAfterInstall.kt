@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.Parcel
 import android.os.ResultReceiver
+import com.diegonmarcos.superapp.core.StoreNotifyGate
 
 /**
  * #1121 After the Store installs the Termux terminal or Nix-on-Droid, those apps must unpack their
@@ -85,6 +86,8 @@ object UnpackAfterInstall {
     /** The explicit start; call after the install has landed. Never blocks, never throws. */
     fun run(ctx: Context, pkg: String) {
         if (!applies(pkg)) return
+        // #894 the foreground start below is a posting primitive: only Cloud Store owns installs, so only it runs the hand-off.
+        if (!StoreNotifyGate.mayPost(ctx)) return
         val app = ctx.applicationContext
         record(app, pkg, UNPACKING)
         val receiver = sender(object : ResultReceiver(Handler(Looper.getMainLooper())) {
