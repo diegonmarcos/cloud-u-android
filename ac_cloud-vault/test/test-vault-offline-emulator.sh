@@ -84,8 +84,8 @@ if [ -n "${OLD_APK:-}" ]; then
   launch
   signin_selfhosted
   # first (master password) unlock offers the biometric wrap: approve it with the fingerprint
-  sleep 8; shot old-after-login
-  touch_finger; sleep 3; touch_finger; sleep 3
+  for t in 2 4 8; do sleep $t; trace after-login-$t; done; shot old-after-login
+  touch_finger; sleep 3; trace after-finger-1; touch_finger; sleep 3; trace after-finger-2
   $ui wait "$item" 90 || die old-vault "seeded vault item not shown after sign-in on the OLD apk"
   shot old-vault
   adb -e shell am force-stop $pkg
