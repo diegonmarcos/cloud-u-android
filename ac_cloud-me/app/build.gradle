@@ -85,6 +85,13 @@ def uiSectionsB64     = b64(buildJson.ui.sections ?: [])
 // runtime through libs:bottomnav's NavDecl together with UI_SECTIONS_B64.
 def uiBottomNav       = (buildJson.ui.bottom_nav ?: []).join(',')
 def uiDefaultSection  = (buildJson.ui.default_section ?: '').toString()
+// ui.settings: the section ids drawn as the visible Settings entries at the top right (Profile, Configs).
+def uiSettings        = (buildJson.ui.settings ?: []).join(',')
+(buildJson.ui.settings ?: []).each { id ->
+    if (!(buildJson.ui.sections ?: []).any { it.id == id }) {
+        throw new GradleException("ui.settings names '${id}', which is not a ui.sections id")
+    }
+}
 def uiExternalAppsB64 = b64(buildJson.ui.external_apps ?: [])
 def uiPermsRuntimeB64 = b64(buildJson.ui.permissions?.runtime ?: [])
 def profile           = buildJson.ui.profile_default ?: [:]
@@ -140,6 +147,7 @@ android {
         buildConfigField "String", "UI_SECTIONS_B64",      "\"${uiSectionsB64}\""
         buildConfigField "String", "UI_BOTTOM_NAV",        "\"${uiBottomNav}\""
         buildConfigField "String", "UI_DEFAULT_SECTION",   "\"${uiDefaultSection}\""
+        buildConfigField "String", "UI_SETTINGS",          "\"${uiSettings}\""
         buildConfigField "String", "UI_EXTERNAL_APPS_B64", "\"${uiExternalAppsB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermsRuntimeB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",  "\"${profile.name ?: ''}\""

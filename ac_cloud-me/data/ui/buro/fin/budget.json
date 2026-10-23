@@ -30,13 +30,13 @@
         "title": "Travel",
         "subtitle": "Flights · stays · local transport",
         "accent": "#42A5F5",
-        "target": "page:projects/trips"
+        "target": "page:home/trips"
       },
       {
         "title": "Study",
         "subtitle": "Courses · books · certifications",
         "accent": "#FFA726",
-        "target": "page:projects/studying"
+        "target": "page:study/cv"
       },
       {
         "title": "Savings",

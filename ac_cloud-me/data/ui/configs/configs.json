@@ -18,14 +18,9 @@
         "target": "extapp:cloud-superapp"
       },
       {
-        "label": "Wallet",
-        "icon": "ic_wallet",
-        "target": "extapp:cloud-wallet"
-      },
-      {
-        "label": "Vault",
-        "icon": "ic_vault",
-        "target": "extapp:cloud-vault"
+        "label": "Account",
+        "icon": "ic_p_identities",
+        "target": "extapp:cloud-account"
       },
       {
         "label": "Source",

@@ -7,7 +7,7 @@
       {
         "label": "Bookings",
         "icon": "ic_p_cal_day",
-        "target": "extapp:cloud-wallet"
+        "target": "page:buro/wallet"
       },
       {
         "label": "Calendar",
@@ -38,13 +38,13 @@
         "title": "Documents & visas",
         "subtitle": "Passport validity · visa · vaccination record",
         "accent": "#7E57C2",
-        "target": "extapp:cloud-wallet"
+        "target": "page:buro/wallet"
       },
       {
         "title": "Bookings",
         "subtitle": "Flights · stays · transfers · car",
         "accent": "#42A5F5",
-        "target": "extapp:cloud-wallet"
+        "target": "page:buro/wallet"
       },
       {
         "title": "Money",
@@ -56,7 +56,7 @@
         "title": "Health",
         "subtitle": "Insurance · prescriptions · pharmacy",
         "accent": "#EC407A",
-        "target": "page:projects/health"
+        "target": "page:health/body"
       }
     ]
   }

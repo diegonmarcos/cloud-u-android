@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tester (#531): Cloud Me's bottom bar is libs:bottomnav's Compose island, the
 # stock Material BottomNavigationView is gone, and the bar reads
-# Buro | Projects | Profile | Agenda | Wallet (#504). Structure only: the
+# Health | Study | Achieves | Profile | Home | Work | Buro (#1144, was #504). Structure only: the
 # rendered order, pill, tap routing, clearance and scroll-collapse are MEASURED on
 # the real shell body (MeBody) by app/src/test/.../MeBottomNavTest (CI tests.unit).
 set -u
@@ -49,7 +49,7 @@ print('; '.join(hits) or 'OK')
 PY
 )" "the stock BottomNavigationView is gone"
 
-echo "== T3: the bar sections, in order, are Buro | Projects | Profile | Agenda | Wallet (#504) =="
+echo "== T3: the bar sections, in order, are Health | Study | Achieves | Profile | Home | Work | Buro (#1144) =="
 check "$(python3 - "$APP/build.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -57,7 +57,7 @@ d = json.load(open(sys.argv[1]))
 secs = {s['id']: s for s in d['ui']['sections']}
 ids = d['ui'].get('bottom_nav', [])
 got = [secs[i]['label'] for i in ids if i in secs]
-want = ['Buro', 'Projects', 'Profile', 'Agenda', 'Wallet']
+want = ['Health', 'Study', 'Achieves', 'Profile', 'Home', 'Work', 'Buro']
 p = []
 if len(got) != len(ids):
     p.append('ui.bottom_nav names an id that is not a ui.sections id')
@@ -66,7 +66,7 @@ if any(k in s for s in secs.values() for k in ('bottom_nav', 'order', 'default')
 if d['ui'].get('default_section') not in ids:
     p.append('ui.default_section is not one of ui.bottom_nav')
 if got != want:
-    p.append('the bar reads %s, #504 asked for %s' % (' | '.join(got), ' | '.join(want)))
+    p.append('the bar reads %s, #1144 asked for %s' % (' | '.join(got), ' | '.join(want)))
 mod = d.get('modules', {}).get('libs:bottomnav', {})
 if mod.get('dir') != '../ab_cloud-libs-shared/libs/bottomnav':
     p.append('modules.libs:bottomnav does not point at the ONE shared module')

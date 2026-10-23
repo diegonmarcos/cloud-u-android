@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.commit
@@ -54,6 +55,8 @@ fun SectionScreen(sectionId: String, requestedPage: String?, modifier: Modifier 
     }
     val page = section.page(pageId)?.leaf() ?: return
     val chain = section.path(page.id)
+    val ctx = LocalContext.current
+    val onTarget = LocalMeTarget.current
 
     Column(modifier.fillMaxSize()) {
         // Draws the strips [chain] implies: level 0 offers the section's own
@@ -70,6 +73,9 @@ fun SectionScreen(sectionId: String, requestedPage: String?, modifier: Modifier 
                     pages = siblings,
                     selectedId = chain.getOrNull(level)?.id,
                     onSelect = { tab ->
+                        // A launch tab (Buro > Account) leaves for its action and the strip keeps
+                        // pointing at the page the user comes back to.
+                        if (tab.action.isNotBlank()) { onTarget(tab.action); return@PageTabs }
                         // A container tab has no content of its own; tapping one opens the child
                         // you were last on — which is what staying on the chain means — or its
                         // first child. Tapping a leaf opens the leaf.
@@ -77,6 +83,8 @@ fun SectionScreen(sectionId: String, requestedPage: String?, modifier: Modifier 
                         pageId = if (stillBelow) pageId else section.page(tab.id)?.leaf()?.id
                     },
                     underTopChrome = false,
+                    // The Samsung Health strip (#1144): icon-only pills, the selected one also shows its name.
+                    iconFor = { p -> pageIcon(ctx, p.icon)?.let { painterResource(it) } },
                 )
             }
         }
@@ -112,6 +120,10 @@ private fun PageContent(section: Section, page: Page, modifier: Modifier) {
         StackScreen(stack, modifier)
     }
 }
+
+@Suppress("DiscouragedApi")
+private fun pageIcon(ctx: Context, name: String): Int? =
+    if (name.isBlank()) null else ctx.resources.getIdentifier(name, "drawable", ctx.packageName).takeIf { it != 0 }
 
 private fun healthFragment(o: JSONObject): Fragment = HealthFragment.newInstance(
     o.optString("page", HealthFragment.PAGE_SUMMARY),

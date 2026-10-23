@@ -2,6 +2,7 @@
   {
     "kind": "fragment",
     "id": "health",
-    "page": "summary"
+    "page": "metric",
+    "metric": "activity"
   }
 ]

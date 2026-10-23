@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,7 +56,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Renders one page's `stack_<id>` list. Seven block kinds cover every page in
+ * Renders one page's list of blocks. Eleven block kinds cover every page in
  * the app that is not a library surface:
  *
  *   section_title  a heading between blocks
@@ -66,6 +67,10 @@ import org.json.JSONObject
  *                  whole training programme with, one item per movement
  *   link_grid      a four-column icon grid of navigation targets
  *   image_grid     a three-column photo grid, loaded from URLs
+ *   bullets        a card of rows, each an optional bold `label` and its `text` (Achieves)
+ *   quote          a quotation with its `by` line
+ *   table          `columns` and `rows` ({cells, group?}) with an optional `link` row (the NomadMania table)
+ *   link           one tappable row: `label` and `url`
  *   about          version, commit, build time and the update control
  *   permissions    the runtime permissions from build.json, requestable inline
  *
@@ -111,6 +116,10 @@ private fun Block(o: JSONObject) {
             Titles(o)
             ImageGrid(o.optJSONArray("images") ?: JSONArray())
         }
+        "bullets" -> BulletsCard(o)
+        "quote" -> QuoteCard(o)
+        "table" -> TableCard(o)
+        "link" -> LinkRow(o.optString("label"), o.optString("url"))
         "about" -> AboutCard(o)
         "permissions" -> PermissionsCard(o)
         // `fragment` is consumed by SectionScreen when it is a page's
@@ -141,6 +150,69 @@ private fun StatsCard(o: JSONObject) {
             KeyValueRow(r.optString("label"), r.optString("value"))
         }
     }
+}
+
+@Composable
+private fun BulletsCard(o: JSONObject) {
+    MeCard {
+        o.optString("title").takeIf { it.isNotBlank() }?.let { CardTitle(it) }
+        val items = o.optJSONArray("items") ?: JSONArray()
+        for (i in 0 until items.length()) {
+            val item = items.optJSONObject(i) ?: continue
+            val label = item.optString("label")
+            Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                if (label.isNotBlank()) {
+                    Text(label, color = colorResource(R.color.me_primary), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Text(item.optString("text"), color = colorResource(R.color.me_text), fontSize = 14.sp, lineHeight = 20.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuoteCard(o: JSONObject) {
+    MeCard {
+        Text("\"${o.optString("text")}\"", color = colorResource(R.color.me_text), fontSize = 15.sp, lineHeight = 22.sp,
+            fontStyle = FontStyle.Italic)
+        o.optString("by").takeIf { it.isNotBlank() }?.let { Dim("\u2014 $it") }
+    }
+}
+
+/** `columns` header, then `rows`; a row flagged `group` is a bold subtotal that the rows under it belong to. */
+@Composable
+private fun TableCard(o: JSONObject) {
+    val cols = o.optJSONArray("columns") ?: JSONArray()
+    val rows = o.optJSONArray("rows") ?: JSONArray()
+    MeCard {
+        o.optString("title").takeIf { it.isNotBlank() }?.let { CardTitle(it) }
+        TableRow((0 until cols.length()).map { cols.optString(it) }, group = false, header = true)
+        for (i in 0 until rows.length()) {
+            val r = rows.optJSONObject(i) ?: continue
+            val cells = r.optJSONArray("cells") ?: continue
+            TableRow((0 until cells.length()).map { cells.optString(it) }, group = r.optBoolean("group"), header = false)
+        }
+        o.optJSONObject("link")?.let { LinkRow(it.optString("label"), it.optString("url")) }
+    }
+}
+
+@Composable
+private fun TableRow(cells: List<String>, group: Boolean, header: Boolean) {
+    val ink = colorResource(if (header) R.color.me_text_dim else R.color.me_text)
+    val weight = if (group || header) FontWeight.Bold else FontWeight.Normal
+    Row(Modifier.fillMaxWidth().padding(top = if (group) 12.dp else 6.dp, start = if (group || header) 0.dp else 12.dp)) {
+        cells.forEachIndexed { i, c ->
+            Text(c, color = ink, fontSize = 13.sp, fontWeight = weight, modifier = Modifier.weight(if (i == 0) 2.4f else 1f),
+                textAlign = if (i == 0) TextAlign.Start else TextAlign.End)
+        }
+    }
+}
+
+@Composable
+private fun LinkRow(label: String, url: String) {
+    val onTarget = LocalMeTarget.current
+    Text(label, color = colorResource(R.color.me_primary), fontSize = 14.sp, fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(top = 12.dp).clickable { onTarget(url) })
 }
 
 @Composable

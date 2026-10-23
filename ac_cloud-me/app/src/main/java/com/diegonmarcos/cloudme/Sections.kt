@@ -14,10 +14,10 @@ import org.json.JSONObject
  * [BuildConfig.UI_BOTTOM_NAV] + [BuildConfig.UI_SECTIONS_B64] + [BuildConfig.UI_DEFAULT_SECTION],
  * which app/build.gradle bakes from build.json::ui.
  *
- * There is deliberately no other list of destinations in this app: the bottom bar, the drawer,
- * the toolbar gear and every tab strip are all built from [all]. A section moves between the bar
- * and the drawer by adding or removing its id in `ui.bottom_nav`, and a new tab is a new `pages`
- * entry plus the matching page file — no Kotlin edit, no menu resource, nothing to keep in step.
+ * There is deliberately no other list of destinations in this app: the bottom bar, the Settings
+ * entries and every tab strip are all built from [all]. A section moves in or out of the bar by
+ * adding or removing its id in `ui.bottom_nav`, and a new tab is a new `pages` entry plus the
+ * matching page file — no Kotlin edit, no menu resource, nothing to keep in step. There is no drawer.
  *
  * What NavDecl does not carry is Cloud Me's two section extras, `toolbar` and `target`; they are
  * read from the same blob here. Parsing is fail-soft throughout.
@@ -29,10 +29,10 @@ typealias Page = NavPage
 /** A [NavSection] plus the two things only Cloud Me reads off it. */
 data class Section(
     val nav: NavSection,
-    /** Drawn as the toolbar gear instead of in the bar or drawer. */
+    /** Not a bar section: reached from the Settings entries at the top right. */
     val toolbar: Boolean,
-    /** Non-blank ⇒ this bar/drawer item is a launch target, not a page host: the string goes to
-     *  [MainActivity.onTarget] and nothing in this app is shown. Wallet is the one today. */
+    /** Non-blank ⇒ this bar item is a launch target, not a page host: the string goes to
+     *  [MainActivity.onTarget] and nothing in this app is shown. No section declares one today. */
     val target: String,
 ) {
     val id: String get() = nav.id
@@ -61,16 +61,11 @@ object Sections {
 
     fun byId(id: String?): Section? = if (id == null) null else index[id]
 
-    /** The bottom bar, in `ui.bottom_nav` order (the island holds at most five). */
+    /** The bottom bar, in `ui.bottom_nav` order (the island holds at most eight). */
     fun bottom(): List<Section> = decl.bottomSections().mapNotNull { index[it.id] }
 
-    /** Everything reachable from the hamburger: the sections the bar has no room for. */
-    fun drawer(): List<Section> {
-        val inBar = bottom().map { it.id }.toSet()
-        return entries.filter { !it.toolbar && it.id !in inBar }
-    }
-
-    fun toolbarSection(): Section? = entries.firstOrNull { it.toolbar }
+    /** The Settings entries, drawn as visible buttons at the top right (`ui.settings`, section ids, in order). */
+    fun settings(): List<Section> = BuildConfig.UI_SETTINGS.split(',').mapNotNull { index[it.trim()] }
 
     /** Where the app opens: `ui.default_section`, else the first bar section. */
     fun default(): Section? =

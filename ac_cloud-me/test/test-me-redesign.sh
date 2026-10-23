@@ -1,0 +1,288 @@
+#!/usr/bin/env bash
+# Tester (#1144): Cloud Me's seven-section bar, the Samsung Health page tabs, the two visible Settings entries,
+# the Achieves text, the removed edge-swipe drawer, the Account launch and the removed Wallet link.
+# Structure and data only; the RENDERED strip, bar and top bar are measured by app/src/test/.../MeTabsTest.
+# Every check is proven red by its own mutation of a copy of the tree (the tail of this file).
+set -u
+APP="$(cd "$(dirname "$0")/.." && pwd)"
+PASS=0; FAIL=0
+ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
+bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
+
+# check_tree <app dir> <libs dir> : prints one "ID<TAB>problem" line per failure, nothing when green.
+check_tree() {
+python3 - "$1" "$2" <<'PY'
+import json, os, re, sys
+
+app, libs = sys.argv[1], sys.argv[2]
+bj = json.load(open(os.path.join(app, "build.json")))
+ui = bj["ui"]
+secs = {s["id"]: s for s in ui["sections"]}
+MAIN = os.path.join(app, "app/src/main")
+out = []
+def bad(i, m): out.append(f"{i}\t{m}")
+
+def code(path):
+    t = open(path, encoding="utf-8").read()
+    t = re.sub(r"/\*.*?\*/", "", t, flags=re.S)
+    return re.sub(r"(?m)^\s*//.*$", "", t)
+
+def kt(root):
+    for r, _, fs in os.walk(root):
+        for f in fs:
+            if f.endswith(".kt"):
+                yield os.path.join(r, f)
+
+def pages(ps):
+    for p in ps or []:
+        yield p
+        yield from pages(p.get("pages"))
+
+def strings(o):
+    if isinstance(o, str): yield o
+    elif isinstance(o, dict):
+        for v in o.values(): yield from strings(v)
+    elif isinstance(o, list):
+        for v in o: yield from strings(v)
+
+# ---- N1 nav order
+want_ids = ["health", "study", "achieves", "me", "home", "work", "buro"]
+want_labels = ["Health", "Study", "Achieves", "Profile", "Home", "Work", "Buro"]
+if ui.get("bottom_nav") != want_ids:
+    bad("nav-order", f"ui.bottom_nav is {ui.get('bottom_nav')}, wanted {want_ids}")
+if [secs[i]["label"] for i in ui.get("bottom_nav", []) if i in secs] != want_labels:
+    bad("nav-order", f"the bar labels are not {want_labels}")
+
+# ---- N2 tab style: icon-only, the selected one also shows its name
+strip = os.path.join(libs, "bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/IconPillTabs.kt")
+tabs = os.path.join(libs, "bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt")
+if not os.path.exists(strip):
+    bad("tab-style", "libs:bottomnav has no IconPillTabs.kt")
+else:
+    t = code(strip)
+    if "PageTabsTags.icon(" not in t:
+        bad("tab-style", "the icon pill does not draw an icon for every tab")
+    m = re.search(r"if \(on\) \{\s*Text\(\s*page\.label", t)
+    if not m:
+        bad("tab-style", "the tab name is not drawn inside `if (on)` - it must show on the selected tab only")
+    if len(re.findall(r"page\.label", t)) != len(re.findall(r"if \(on\) \{\s*Text\(\s*page\.label", t)) + len(re.findall(r"contentDescription = page\.label|page\.label\.take", t)):
+        bad("tab-style", "an unselected tab draws its name")
+if "iconFor" not in code(tabs) or "IconPillStrip(" not in code(tabs):
+    bad("tab-style", "PageTabs does not route iconFor to the icon pills")
+sec = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/SectionScreen.kt"))
+i = sec.find("PageTabs(")
+if i < 0 or not re.search(r"\biconFor\s*=", sec[i:i + 2500]):
+    bad("tab-style", "SectionScreen draws its strips without iconFor (no icon-only pills)")
+drawables = {n[:-4] for n in os.listdir(os.path.join(MAIN, "res/drawable")) if n.endswith(".xml")}
+for s in secs.values():
+    if len(s.get("pages", [])) > 1 or any(len(p.get("pages", [])) > 1 for p in pages(s.get("pages"))):
+        for p in pages(s["pages"]):
+            if not p.get("icon") or p["icon"] not in drawables:
+                bad("tab-style", f"tab {s['id']}/{p['id']} has no drawable icon ({p.get('icon')!r}); an icon-only tab would be blank")
+
+# ---- N3 settings: two visible entries, Profile and Configs, no dropdown
+st = ui.get("settings")
+if st != ["me", "configs"] or [secs[i]["label"] for i in (st or []) if i in secs] != ["Profile", "Configs"]:
+    bad("settings", f"ui.settings is {st}; wanted the sections Profile and Configs, in that order")
+for p in kt(MAIN):
+    if re.search(r"\bDropdownMenu\b|\bAppTopBar(Scaffold)?\b|Icons\.Filled\.Settings", code(p)):
+        bad("settings", f"{os.path.relpath(p, app)} draws a Settings dropdown")
+top = os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MeTopBar.kt")
+if not os.path.exists(top) or "Sections.settings()" not in code(top):
+    bad("settings", "MeTopBar does not draw the ui.settings entries")
+if "MeTopBar(" not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MainActivity.kt")):
+    bad("settings", "MainActivity does not draw MeTopBar")
+
+# ---- N4 achieves: the owner's text, byte for byte
+ach = {}
+for pid in ("personal", "pursuits", "international"):
+    f = os.path.join(app, f"data/ui/achieves/{pid}.json")
+    ach[pid] = json.load(open(f, encoding="utf-8")) if os.path.exists(f) else []
+    if not ach[pid]:
+        bad("achieves", f"data/ui/achieves/{pid}.json is missing or empty")
+if [p["id"] for p in secs.get("achieves", {}).get("pages", [])] != ["personal", "pursuits", "international"] or \
+   [p["label"] for p in secs.get("achieves", {}).get("pages", [])] != ["Personal", "Personal Pursuits", "International Experience"]:
+    bad("achieves", "Achieves pages are not Personal, Personal Pursuits, International Experience")
+EXPECT = {
+ "personal": [
+  "B1) Personal",
+  "Modern Physics (Quantum and Particle), Global Macro, Mediterranean and Vegetarian Cooking, Backpacking, Jazzy Music.",
+  "Hiking, Rock Climbing, Cycling, Skydiving and Bungee Jump.",
+  "Tennis (5y), Handball (3y), Rugby (1y) and Waterpolo (1y).",
+  "Aikido, Yoga and Meditation.",
+  "Oceans Seven Endurance, pre-Tour de France cycling and Seven Summits hike.",
+  "INTERESTS", "ENDURANCE", "COMPETING", "MINDFULNESS", "PURSUITS"],
+ "pursuits": [
+  "B2) Personal Pursuits", "@brief", "@projects",
+  "Modern Physics (Quantum and Particle), Global Macro, Mediterranean and Vegetarian Cooking, Backpacking, Jazzy Music.",
+  "It is not death that a man should fear, but he should fear never beginning to live.", "Epictetus",
+  "🪂 High Adrenaline Sports", "🏂 Adrenaline Sports", "🏔️ Nature Sports and Activities", "🥋 Martial Arts", "⚽️ Collective Sports", "🏃 Individual Sports",
+  "My Bucket 50 (things before 50)",
+  "🌿 Personal Growth, 🌐 Travel & Adventure, 🌍 Health & Wellness, 💼 Career and Finance, ❤️ Relationship & Community, ✨ Creativity & Fun",
+  "🌱 (By 30) Foundational goals, 🌳 (By 40) Mastery & long-term planning, 🍁 (By 50) Legacy goals",
+  "🚵🏻‍♂️ Trail Moto | 🪂 Skydiving | 🧗🏻‍♂️ Rock Climbing | 🏂🏻 Snowboarding",
+  "🥾 Hiking | 🏄🏻‍♂️ Wakeboard | 🛹 Skating",
+  "🏕️ Camping | 🏄🏻‍♂️ Surfing | ⚓ Scuba Diving | ⛵ Sailing",
+  "🥋 Aikido",
+  "🤾🏻‍♂️ Handball | 🏐 Volleyball | 🏉 Rugby | 🤽🏻‍♂️ Waterpolo",
+  "⚽ Futebol",
+  "🎾 Tennis | 🏊🏻‍♂️ Swimming | 🚲 Cycling | 🏃🏻‍♂️ Running | 🚴🏻‍♂️🏊🏻‍♂️ Biathlon",
+  "⛳ Golf | ⛸️ Ice Lake Skying"],
+ "international": [
+  "B3) International Experience (Dec 2020 – Present)", "@brief", "@projects",
+  "For 5 years, travelled to 180+ cities (110+ NM regions) over 45+ countries across 5 continents; lived in 5 European cities, born and raised in São Paulo.",
+  "A ship in harbor is safer, but that is not what ships are built for.", "John A. Shedd",
+  "Portuguese, English and Spanish", "Gallego", "Deutsche", "Catalán, French and Italian.",
+  "Born and raised in São Paulo, the 5th biggest city in the world",
+  "On long stays lived (studying and working remotely) in 5 European cities: Berlin and Barcelona; London, Valencia and Paris",
+  "Also took long stays in: Rio de Janeiro, Casablanca and Chiang Mai",
+  "On short stays traveled over 180+ cities, 110+ NomadMania Regions, 45+ countries across 5 continents",
+  "Visited: World Heritage Sites (60+), New Seven Wonder+Pyramids (3/8) and The Seven Natural WW (1/7)",
+  "Places {175 Cities (108 NM) | 43 Countries}",
+  "EU", "102 (70)", "⚙️ Germanic", "🪆 Slavic", "🏛️ Romanic-Greek", "🏔️ Non-Euro", "NORTH/SOUTH AMERICA", "51 (22)",
+  "🗽 Anglo-Franco", "🪭 Spanish-Aztec/Inca", "🎉 Romance-African", "OCEANIA", "🦘 Anglo-Aborigenal", "🪶 Anglo-Maori", "🗿 Poly-Micronesia",
+  "ASIA", "13 (9)", "🕯️ Abrahamic", "🧘🏻‍♂️ Hindu;Buddhist;Tao/Conf", "AFRICA", "9 (4)", "🫖 North-Maghreb", "🥁 Francosphere", "💎 Lusosphere", "🪨 Anglosphere"],
+}
+for pid, want in EXPECT.items():
+    have = set(strings(ach[pid]))
+    for w in want:
+        if w not in have:
+            bad("achieves", f"{pid}: the owner's text is missing or altered: {w!r}")
+tbl = [b for b in ach["international"] if isinstance(b, dict) and b.get("kind") == "table"]
+if not tbl or (tbl[0].get("link") or {}).get("url") != "https://nomadmania.com/profile/73889":
+    bad("achieves", "the NomadMania region table has no link to https://nomadmania.com/profile/73889")
+elif len(tbl[0].get("rows", [])) != 21:
+    bad("achieves", f"the NomadMania table has {len(tbl[0].get('rows', []))} rows, the owner's text has 21")
+stack = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/StackScreen.kt"))
+kinds = set(re.findall(r'^\s*"([a-z_]+)"(?:\s*,\s*"[a-z_]+")*\s*->', stack, flags=re.M))
+for pid, blocks in ach.items():
+    for b in blocks:
+        if isinstance(b, dict) and b.get("kind") not in kinds:
+            bad("achieves", f"{pid}: block kind {b.get('kind')!r} has no renderer in StackScreen")
+
+# ---- N5 the edge-swipe drawer is gone for good
+FORBID = r"ModalNavigationDrawer|DismissibleNavigationDrawer|PermanentNavigationDrawer|rememberDrawerState|DrawerValue|ModalDrawerSheet|NavigationDrawerItem|detectHorizontalDragGestures|detectDragGestures|\bswipeable\b|\banchoredDraggable\b|\bdraggable\b|GestureDetector|OnTouchListener|setOnTouchListener|DrawerLayout|ic_hamburger|gesturesEnabled"
+for p in kt(MAIN):
+    m = re.search(FORBID, code(p))
+    if m:
+        bad("no-drawer", f"{os.path.relpath(p, app)} carries `{m.group(0)}`: a swipe-to-open drawer handler")
+if re.search(r"fun\s+drawer\s*\(", code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/Sections.kt"))):
+    bad("no-drawer", "Sections still declares a drawer()")
+html = open(os.path.join(app, "data/web/mysocials/linkedin.html"), encoding="utf-8").read()
+m = re.search(r"touchstart|touchmove|touchend|swipe|drawer|hamburger", html, flags=re.I)
+if m:
+    bad("no-drawer", f"the Profile page (linkedin.html) carries `{m.group(0)}`: a touch or drawer handler")
+for r, _, fs in os.walk(os.path.join(MAIN, "res")):
+    for f in fs:
+        if "drawer" in f.lower() or "hamburger" in f.lower():
+            bad("no-drawer", f"resource {f} is a drawer leftover")
+
+# ---- N6 Account: renamed from Vault and launching Cloud Account
+buro = secs["buro"]
+acct = [p for p in buro["pages"] if p["id"] == "account"]
+if not acct or acct[0].get("label") != "Account":
+    bad("account", "Buro has no page `account` labelled Account")
+elif acct[0].get("action") != "extapp:cloud-account":
+    bad("account", "Buro > Account is not a launch tab for extapp:cloud-account")
+if any(p.get("label") == "Vault" or p["id"] == "vault" for p in pages(buro["pages"])):
+    bad("account", "Buro still has a Vault tab")
+ea = {a["id"]: a["package"] for a in ui.get("external_apps", [])}
+if ea.get("cloud-account") != "com.diegonmarcos.cloudaccount":
+    bad("account", "ui.external_apps does not map cloud-account to com.diegonmarcos.cloudaccount")
+fleet = os.path.join(app, "../aa_cloud-superapp/data/constellation-fleet.json")
+if os.path.exists(fleet):
+    pk = {a["id"]: a["package"] for a in json.load(open(fleet))["apps"]}
+    if pk.get("account") != ea.get("cloud-account"):
+        bad("account", "the fleet manifest's account package differs from ui.external_apps")
+mf = open(os.path.join(MAIN, "AndroidManifest.xml")).read()
+if "com.diegonmarcos.cloudaccount" not in mf:
+    bad("account", "AndroidManifest <queries> does not list com.diegonmarcos.cloudaccount (the launch would be invisible on API 30+)")
+af = os.path.join(app, "data/ui/buro/account.json")
+if not os.path.exists(af) or "extapp:cloud-account" not in open(af).read():
+    bad("account", "data/ui/buro/account.json has no extapp:cloud-account tile")
+if "page:buro/vault" in "\n".join(strings([json.load(open(os.path.join(r, f))) for r, _, fs in os.walk(os.path.join(app, "data/ui")) for f in fs if f.endswith(".json")])):
+    bad("account", "a page still targets page:buro/vault")
+sec_src = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/SectionScreen.kt"))
+if "tab.action" not in sec_src:
+    bad("account", "SectionScreen never dispatches a launch tab's action")
+
+# ---- N7 Wallet link removed
+if "wallet" in ui.get("bottom_nav", []) or "wallet" in secs:
+    bad("no-wallet", "the Wallet bar section is still declared")
+if "cloud-wallet" in ea or "com.diegonmarcos.cloudwallet" in mf:
+    bad("no-wallet", "Cloud Wallet is still a declared external app / queried package")
+blob = json.dumps(ui["sections"]) + "\n".join(
+    open(os.path.join(r, f), encoding="utf-8").read() for r, _, fs in os.walk(os.path.join(app, "data/ui")) for f in fs if f.endswith(".json"))
+if "extapp:cloud-wallet" in blob:
+    bad("no-wallet", "something still launches extapp:cloud-wallet")
+
+# ---- N8 the new section pages
+want_pages = {
+    "health": ["Body Composition", "HR stats", "Sleep", "Blood Test", "Nutrition Plan", "Workout Plan", "Activities"],
+    "study": ["CV", "Roadmap"],
+    "work": ["Employed Endeavours"],
+}
+for sid, labels in want_pages.items():
+    if [p["label"] for p in secs.get(sid, {}).get("pages", [])] != labels:
+        bad("pages", f"{sid} pages are not {labels}")
+for sid, pg in (("study", "cv"), ("study", "roadmap"), ("work", "employed")):
+    f = os.path.join(app, f"data/ui/{sid}/{pg}.json")
+    if not os.path.exists(f) or not json.load(open(f, encoding="utf-8")):
+        bad("pages", f"data/ui/{sid}/{pg}.json is missing or empty")
+
+for line in out: print(line)
+PY
+}
+
+expect_green() { # name
+  local r; r="$(check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs")"
+  if [ -z "$r" ]; then ok "$1"; else bad "$1"; echo "$r" | sed 's/^/        /'; fi
+}
+only() { # <check id>: nothing but that id is red in the real tree
+  local r; r="$(check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | cut -f1 | sort -u | grep -x "$1" || true)"
+  [ -z "$r" ]
+}
+for t in "nav-order|the bar reads Health, Study, Achieves, Profile, Home, Work, Buro" \
+         "tab-style|page tabs are icon-only pills that show the name of the selected tab only" \
+         "settings|Settings is two visible entries, Profile and Configs, with no dropdown" \
+         "achieves|Achieves renders the owner's text (B1, B2, B3, region table with its link)" \
+         "no-drawer|no swipe-to-open drawer handler anywhere (shell, Profile page, resources)" \
+         "account|Buro > Account launches Cloud Account through extapp, Vault is gone" \
+         "no-wallet|the Wallet link is gone" \
+         "pages|Health, Study and Work pages are declared with their data"; do
+  id="${t%%|*}"; name="${t#*|}"
+  if only "$id"; then ok "$name"; else bad "$name"; check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | grep "^$id" | sed 's/^/        /'; fi
+done
+
+echo "== mutations: each check must go red on its own break =="
+W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
+mkdir -p "$W/base/ac_cloud-me" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src"
+cp -r "$APP/build.json" "$APP/app" "$APP/data" "$W/base/ac_cloud-me/" 2>/dev/null
+rm -rf "$W/base/ac_cloud-me/app/build"
+cp -r "$APP/../ab_cloud-libs-shared/libs/bottomnav/src/commonMain" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src/"
+mutant() { # id description sh-command-run-in-copy
+  local id="$1" desc="$2" cmd="$3" d="$W/m"
+  rm -rf "$d"; cp -r "$W/base" "$d"
+  ( cd "$d/ac_cloud-me" && eval "$cmd" ) >/dev/null 2>&1
+  if check_tree "$d/ac_cloud-me" "$d/ab_cloud-libs-shared/libs" | cut -f1 | grep -qx "$id"; then ok "red: $desc"; else bad "NOT red: $desc"; fi
+}
+BJ='python3 - "$@"'
+mutant nav-order "bar order swapped" "python3 -c \"import json;d=json.load(open('build.json'));b=d['ui']['bottom_nav'];b[0],b[1]=b[1],b[0];json.dump(d,open('build.json','w'))\""
+mutant tab-style "selected-only name drawn on every tab" "sed -i 's/if (on) {/if (true) {/' ../ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/IconPillTabs.kt"
+mutant tab-style "SectionScreen back to text pills" "sed -i 's/iconFor = /xxx = /' app/src/main/java/com/diegonmarcos/cloudme/SectionScreen.kt"
+mutant settings "Settings entries reduced to one" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['settings']=['configs'];json.dump(d,open('build.json','w'))\""
+mutant settings "a dropdown comes back" "echo 'val x = DropdownMenu' >> app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"
+mutant achieves "one owner sentence altered" "sed -i 's/Aikido, Yoga and Meditation\\./Aikido and Yoga./' data/ui/achieves/personal.json"
+mutant achieves "NomadMania link dropped" "sed -i 's#https://nomadmania.com/profile/73889#https://example.com#' data/ui/achieves/international.json"
+mutant no-drawer "the drawer is back in the shell" "echo 'val d = ModalNavigationDrawer' >> app/src/main/java/com/diegonmarcos/cloudme/MainActivity.kt"
+mutant no-drawer "a drag handler is back in the shell" "echo 'val d = detectHorizontalDragGestures' >> app/src/main/java/com/diegonmarcos/cloudme/StackScreen.kt"
+mutant no-drawer "Profile page gains a swipe handler" "echo '<script>document.addEventListener(\"touchstart\",function(){})</script>' >> data/web/mysocials/linkedin.html"
+mutant account "Account tab loses its launch action" "python3 -c \"import json;d=json.load(open('build.json'));[p.pop('action',None) for s in d['ui']['sections'] if s['id']=='buro' for p in s['pages']];json.dump(d,open('build.json','w'))\""
+mutant account "Account renamed back to Vault" "sed -i 's/\"label\": \"Account\"/\"label\": \"Vault\"/' build.json"
+mutant no-wallet "Wallet link comes back" "sed -i 's#extapp:cloud-account#extapp:cloud-wallet#' data/ui/configs/configs.json"
+mutant no-wallet "Wallet section comes back" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'wallet','label':'Wallet','pages':[]});json.dump(d,open('build.json','w'))\""
+mutant pages "a Health page is dropped" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].pop(3) for s in d['ui']['sections'] if s['id']=='health'];json.dump(d,open('build.json','w'))\""
+
+echo
+echo "== RESULT: $PASS passed, $FAIL failed =="
+[ "$FAIL" -eq 0 ]

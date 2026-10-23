@@ -7,10 +7,11 @@ launcher for everything the *person* runs: paperwork and money, what is due,
 the public profile, travel, study — and health.
 
 ```
-┌──────┬────────┬──────┬──────────┬──────────┐
-│ Buro │ Agenda │  Me  │ Projects │ Studying │   ← bottom nav
-└──────┴────────┴──────┴──────────┴──────────┘
-  ☰ drawer: Health            ⚙ toolbar: Configs
+┌────────┬───────┬──────────┬─────────┬──────┬──────┬──────┐
+│ Health │ Study │ Achieves │ Profile │ Home │ Work │ Buro │   ← bottom nav
+└────────┴───────┴──────────┴─────────┴──────┴──────┴──────┘
+  top right: Profile · Configs   (two visible entries, no drawer, no edge swipe)
+  page tabs: Samsung Health pills — icon only, the selected one also shows its name
 ```
 
 ## What it stores
@@ -21,11 +22,13 @@ Almost nothing. That is the design.
 |---|---|
 | Buro → Docs | cloud-myterminal (files) |
 | Buro → IDs | Cloud Wallet (the card deck) |
-| Buro → Vault | Cloud Vault (Vaultwarden) |
+| Buro → Account | Cloud Account (launch tab, `extapp:cloud-account`) |
 | Buro → Accounting | `libs:fin`, from `build.json::ui.myfin_mock` |
 | Agenda | `libs:cal` — CalDAV events + VTODOs, read locally |
 | Me | `libs:wallet` — the same Me tab Cloud Wallet shows |
 | Health | `libs:health` — Health Connect, on-device only |
+| Study, Work | `data/regen-study.py` from the bundled LinkedIn profile data (no LinkedIn API) |
+| Achieves | `data/ui/achieves/*.json` — the owner's own text |
 
 A second copy of a card, a password or a health record would be a second thing
 to keep correct. Cloud Me indexes; the app that owns the data keeps it.

@@ -30,7 +30,7 @@ object MeBottomNav {
     const val CONTENT_TAG = "me:content"
 
     /** The section whose item the pill sits on: a bar section lights its item, an off-bar section
-     *  (reached from the drawer, a tile or restored state) leaves none lit. */
+     *  (reached from the Settings entries, a tile or restored state) leaves none lit. */
     fun pillFor(sectionId: String?): String? =
         sectionId?.takeIf { id -> Sections.bottom().any { it.id == id } }
 }

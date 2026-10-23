@@ -57,7 +57,7 @@ d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
 group = next(g for g in cloud["tile_groups"] if g["title"] == "Me")
 tiles = {t.get("id"): t for t in group["tiles"]}
-want = {"myhealth": "extapp:cloud-me#page:projects/health"}
+want = {"myhealth": "extapp:cloud-me#page:health/body"}
 for tid, target in want.items():
     assert tid in tiles, f"Me tile {tid} is gone — the icon must remain"
     assert tiles[tid]["target"] == target, (tid, tiles[tid]["target"], "!=", target)
@@ -180,9 +180,9 @@ TARGETS = {
     "pmx":       "https://paca.diegonmarcos.com/projects",
     "pm-zirkus": "https://paca.diegonmarcos.com/projects",
     "myburo":    "extapp:cloud-me#page:buro/summary",
-    "myhealth":  "extapp:cloud-me#page:projects/health",
-    "mystudy":   "extapp:cloud-me#page:projects/studying",
-    "mytrips":   "extapp:cloud-me#page:projects/trips",
+    "myhealth":  "extapp:cloud-me#page:health/body",
+    "mystudy":   "extapp:cloud-me#page:study/cv",
+    "mytrips":   "extapp:cloud-me#page:home/trips",
 }
 
 def kind(tile):

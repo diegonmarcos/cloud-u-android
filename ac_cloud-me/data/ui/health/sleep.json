@@ -2,6 +2,7 @@
   {
     "kind": "fragment",
     "id": "health",
-    "page": "configs"
+    "page": "metric",
+    "metric": "sleep"
   }
 ]

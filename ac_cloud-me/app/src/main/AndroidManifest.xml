@@ -20,8 +20,7 @@
              them getLaunchIntentForPackage returns null and every extapp:
              tile silently does nothing on Android 11+. -->
         <package android:name="com.diegonmarcos.cloudme" />
-        <package android:name="com.diegonmarcos.cloudwallet" />
-        <package android:name="com.diegonmarcos.cloudvault" />
+        <package android:name="com.diegonmarcos.cloudaccount" />
         <package android:name="com.diegonmarcos.ide" />
         <package android:name="com.diegonmarcos.cloudagenda" />
         <package android:name="com.diegonmarcos.cloudmediacenter" />

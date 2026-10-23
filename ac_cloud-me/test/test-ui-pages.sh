@@ -161,7 +161,7 @@ if os.path.isdir("data/files"):
         if name in pages and pages[name]:
             bad.append(f"section '{name}' collides with data/files/{name}/ in the asset root")
 
-# #868 the bar is ui.bottom_nav: at most five ids, each a section, and the
+# #868 the bar is ui.bottom_nav: at most eight ids (the island fits them all, nav-shape N1), each a section, and the
 # landing section (ui.default_section) is one of them. No section carries the
 # old bottom_nav/order/default flags any more.
 bar_ids = ui.get("bottom_nav", [])
@@ -169,8 +169,8 @@ by_id = {s["id"]: s for s in secs}
 for i in bar_ids:
     if i not in by_id:
         bad.append(f"ui.bottom_nav names '{i}' — no such section")
-if len(bar_ids) > 5:
-    bad.append(f"{len(bar_ids)} ui.bottom_nav ids — the island holds five")
+if len(bar_ids) > 8:
+    bad.append(f"{len(bar_ids)} ui.bottom_nav ids — the island holds eight")
 if ui.get("default_section") not in bar_ids:
     bad.append(f"ui.default_section '{ui.get('default_section')}' is not in ui.bottom_nav")
 for s in secs:
@@ -180,9 +180,9 @@ for s in secs:
 bar = [by_id[i] for i in bar_ids if i in by_id]
 
 # Mirror NavDecl.bottomSections() — the order is the declared order. Diego's
-# #504 ask: Buro, Projects, Profile, Agenda, Wallet, left to right.
-bar_order = [s.get("label") for s in bar][:5]
-EXPECTED_BAR_ORDER = ["Buro", "Projects", "Profile", "Agenda", "Wallet"]
+# #1144 ask: Health, Study, Achieves, Profile, Home, Work, Buro, left to right.
+bar_order = [s.get("label") for s in bar]
+EXPECTED_BAR_ORDER = ["Health", "Study", "Achieves", "Profile", "Home", "Work", "Buro"]
 if bar_order != EXPECTED_BAR_ORDER:
     bad.append(f"bottom bar order is {bar_order}, expected {EXPECTED_BAR_ORDER}")
 
@@ -260,13 +260,13 @@ def strings(o):
     elif isinstance(o, list):
         for v in o:          yield from strings(v)
 
-# Every route the SuperApp actually ships, plus the one Projects > Summary was
+# Every route the SuperApp actually ships, plus the one Home > Summary was
 # built to answer. The literal is here on purpose: it is the contract this app
 # publishes, and it has to hold on the day the SuperApp side is written as much
 # as on the day after.
 routes = {s.split("#", 1)[1] for s in strings(json.load(open(SUPERAPP)))
           if s.startswith("extapp:cloud-me#") and "#" in s}
-routes.add("page:projects/pm")
+routes.add("page:home/pm")
 
 bad = [why for _, why in map(resolve, sorted(routes)) if why]
 for b in bad:
@@ -286,6 +286,9 @@ fi
 
 # Cloud Wallet's bundled wallet.json is this tree flattened, not a second copy.
 ./data/regen-wallet-json.py --check
+
+# Study and Work are generated from the bundled LinkedIn profile data.
+./data/regen-study.py --check
 
 # Profile ships the real mySocials pages. Skipped when the sibling front repo
 # is not checked out — CI has the committed bundle and does not need the source.

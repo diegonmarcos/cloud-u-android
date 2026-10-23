@@ -1,0 +1,135 @@
+package com.diegonmarcos.cloudme
+
+import android.app.Application
+import android.content.ComponentName
+import androidx.activity.ComponentActivity
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextEquals
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
+import com.diegonmarcos.superapp.uikit.CloudKitTheme
+import com.diegonmarcos.superapp.uikit.KitPalette
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
+import org.junit.runner.RunWith
+import org.junit.runners.model.Statement
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+/**
+ * #1144 — the Samsung Health page tabs, the Settings entries and the bar order, MEASURED on what the
+ * app draws: [PageTabs] in its `iconFor` mode over Health's real pages (build.json, through [Sections]),
+ * and [MeTopBar] over the real `ui.settings`.
+ *
+ *  - every tab is drawn as an icon; NO tab but the selected one draws its name;
+ *  - a tap moves the name with the selection;
+ *  - Settings is two visible entries, Profile and Configs, each opening its own section;
+ *  - the bar reads Health, Study, Achieves, Profile, Home, Work, Buro.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp-xxhdpi")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class MeTabsTest {
+
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @get:Rule
+    val rules: RuleChain = RuleChain.outerRule(TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                val app = RuntimeEnvironment.getApplication()
+                shadowOf(app.packageManager).addActivityIfNotPresent(ComponentName(app, ComponentActivity::class.java))
+                base.evaluate()
+            }
+        }
+    }).around(compose)
+
+    private val palette = KitPalette(Color.Black, Color.DarkGray, Color.White, Color.LightGray, Color.Magenta, Color.Gray, Color.Black)
+    private val health get() = Sections.byId("health")!!.pages
+    private var selected by mutableStateOf<String?>(null)
+
+    private fun showTabs(select: String) {
+        selected = select
+        compose.setContent {
+            CloudKitTheme(palette) {
+                val ctx = LocalContext.current
+                PageTabs(
+                    pages = health,
+                    selectedId = selected,
+                    onSelect = { selected = it.id },
+                    underTopChrome = false,
+                    iconFor = { p -> painterResource(ctx.resources.getIdentifier(p.icon, "drawable", ctx.packageName)) },
+                )
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun nameCount(id: String) =
+        compose.onAllNodesWithTag(PageTabsTags.label(id), useUnmergedTree = true).fetchSemanticsNodes().size
+
+    @Test
+    fun `every tab is an icon and only the selected tab shows its name`() {
+        assertEquals(7, health.size)
+        showTabs(health[2].id)
+        for (p in health) {
+            compose.onAllNodesWithTag(PageTabsTags.icon(p.id), useUnmergedTree = true).assertCountEquals(1)
+        }
+        for (p in health) {
+            assertEquals("tab ${p.id} name visibility", if (p.id == selected) 1 else 0, nameCount(p.id))
+        }
+        compose.onNodeWithTag(PageTabsTags.label(health[2].id), useUnmergedTree = true).assertTextEquals(health[2].label)
+        compose.onNodeWithTag(PageTabsTags.tab(health[2].id)).assertIsSelected()
+    }
+
+    @Test
+    fun `a tap moves the pill and the name together`() {
+        showTabs(health[0].id)
+        compose.onNodeWithTag(PageTabsTags.tab(health[5].id)).performClick()
+        compose.waitForIdle()
+        assertEquals(health[5].id, selected)
+        assertEquals("the old tab kept its name", 0, nameCount(health[0].id))
+        assertEquals("the new tab shows its name", 1, nameCount(health[5].id))
+        compose.onNodeWithTag(PageTabsTags.tab(health[5].id)).assertIsSelected()
+    }
+
+    @Test
+    fun `settings are two visible entries, Profile and Configs, and each opens its section`() {
+        assertEquals(listOf("Profile", "Configs"), Sections.settings().map { it.label })
+        val opened = mutableListOf<String>()
+        compose.setContent { CloudKitTheme(palette) { MeTopBar("Health", "health", onOpen = { opened += it }) } }
+        compose.waitForIdle()
+        for (s in Sections.settings()) {
+            compose.onNodeWithTag(MeTopBar.entry(s.id)).performClick()
+        }
+        assertEquals(Sections.settings().map { it.id }, opened)
+        compose.onNodeWithTag(MeTopBar.TITLE).assertTextEquals("Health")
+    }
+
+    @Test
+    fun `the bar reads Health, Study, Achieves, Profile, Home, Work, Buro`() {
+        assertEquals(
+            listOf("Health", "Study", "Achieves", "Profile", "Home", "Work", "Buro"),
+            Sections.bottom().map { it.label },
+        )
+        assertTrue("a launch section is back on the bar", Sections.bottom().none { it.target.isNotBlank() })
+    }
+}

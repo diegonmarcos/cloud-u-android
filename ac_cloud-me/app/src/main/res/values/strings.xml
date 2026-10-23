@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Section and page titles are NOT here: they come from build.json::ui.sections
      and are baked into BuildConfig.UI_SECTIONS_B64, so the bottom nav, the
-     drawer and every tab strip are built at runtime from one list. Only the
+     Settings entries and every tab strip are built at runtime from one list. Only the
      handful of strings the framework itself needs live in resources. -->
 <resources>
-    <string name="drawer_open">Open navigation</string>
-    <string name="drawer_close">Close navigation</string>
     <string name="action_configs">Configs</string>
     <!-- Agenda's two engine lines: the cal engine (Cloud-Lib-Cal.apk) is missing, or too old for this build. -->
     <string name="cal_engine_missing_title">Calendar engine not installed</string>

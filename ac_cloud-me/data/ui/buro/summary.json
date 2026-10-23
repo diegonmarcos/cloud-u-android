@@ -42,15 +42,15 @@
         "target": "page:buro/fin"
       },
       {
-        "title": "Vault",
+        "title": "Account",
         "subtitle": "Credentials",
-        "icon": "ic_vault",
+        "icon": "ic_p_identities",
         "accent": "#FFA726",
-        "body": "Empty by design, and not waiting for a source to arrive. Passwords and identities live in Cloud Vault, which holds the only copy and the only key; Cloud Me never reads them, because counting them would mean unlocking the vault from here.",
+        "body": "Empty by design, and not waiting for a source to arrive. Passwords and identities live in Cloud Account, which holds the only copy and the only key; Cloud Me never reads them, because counting them would mean unlocking the account from here.",
         "meta": [
-          { "label": "Source", "value": "none — held by Cloud Vault" }
+          { "label": "Source", "value": "none — held by Cloud Account" }
         ],
-        "target": "page:buro/vault"
+        "target": "page:buro/account"
       }
     ]
   }

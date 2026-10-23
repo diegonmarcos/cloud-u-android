@@ -17,12 +17,12 @@
       {
         "label": "Agenda",
         "icon": "ic_nav_agenda",
-        "target": "page:agenda/agenda"
+        "target": "page:home/agenda"
       },
       {
         "label": "ToDo",
         "icon": "ic_p_more",
-        "target": "page:agenda/todo"
+        "target": "page:home/todo"
       },
       {
         "label": "Boards",
@@ -41,7 +41,7 @@
         "subtitle": "Agenda · Day · ToDo",
         "accent": "#42A5F5",
         "body": "The next thirty days of events and every open VTODO, both from the same CalDAV account Agenda reads.",
-        "target": "page:agenda/todo",
+        "target": "page:home/todo",
         "meta": [
           {
             "label": "Source",
@@ -67,7 +67,7 @@
         "subtitle": "Health & fitness",
         "accent": "#EC407A",
         "body": "Steps, sleep, resting heart rate and workouts, read locally from Health Connect. The only MyHealth surface in the constellation.",
-        "target": "page:projects/health",
+        "target": "page:health/body",
         "meta": [
           {
             "label": "Source",
@@ -92,8 +92,8 @@
         "title": "Studying",
         "subtitle": "Courses and hours",
         "accent": "#FFA726",
-        "body": "The standing project — its own tab in this section.",
-        "target": "page:projects/studying",
+        "body": "The standing project — its own section, CV and Roadmap.",
+        "target": "page:study/cv",
         "meta": [
           {
             "label": "Source",

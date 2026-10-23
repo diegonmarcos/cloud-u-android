@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CollectionInfo
@@ -75,6 +76,10 @@ import androidx.compose.ui.unit.sp
  * near-white page). Both palettes are [NavTokens]' own, so an app chooses a surface and never a
  * colour (#872 parity); a host derives it from its declaration with [NavDecl.stripSurface].
  *
+ * ICON PILLS (`iconFor` non-null, owner's request for Cloud Me, ticket #1144): the Samsung Health strip. One
+ * rounded capsule holds ICON-ONLY tabs; the selected tab is a highlighted pill that ALSO shows its name. Same
+ * palettes and strokes as above; [iconFor] hands the glyph of a page (null = its initial). See [IconPillStrip].
+ *
  * [onSelect] fires for a tap on an unselected pill - including a launch pill, whose [NavPage.action]
  * the host dispatches and which it should NOT make [selectedId] - and [onReselect] for the
  * selected one. [selectedId] only MOVES the pill; it never calls back.
@@ -89,8 +94,9 @@ public fun PageTabs(
     underTopChrome: Boolean = true,
     surface: TabSurface = TabSurface.Dark,
     flushTop: Boolean = false,
+    iconFor: (@Composable (NavPage) -> Painter?)? = null,
 ) {
-    PageTabsImpl(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, null, surface, flushTop)
+    PageTabsImpl(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, null, surface, flushTop, iconFor)
 }
 
 /** What a page-tab strip is drawn over; picks one of the two lib-owned palettes in [NavTokens]. */
@@ -108,10 +114,15 @@ internal fun PageTabsImpl(
     insets: WindowInsets?,
     surface: TabSurface = TabSurface.Dark,
     flushTop: Boolean = false,
+    iconFor: (@Composable (NavPage) -> Painter?)? = null,
 ) {
     // An app's MaterialTheme text style (line height, family) must not reach the pills.
     CompositionLocalProvider(LocalTextStyle provides TextStyle.Default) {
-        PageTabsContent(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, insets, surface, flushTop)
+        if (iconFor != null) {
+            IconPillStrip(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, insets, surface, flushTop, iconFor)
+        } else {
+            PageTabsContent(pages, selectedId, onSelect, modifier, onReselect, underTopChrome, insets, surface, flushTop)
+        }
     }
 }
 
@@ -327,4 +338,6 @@ public object PageTabsTags {
     public const val STRIP: String = "pagetabs_strip"
     public fun tab(id: String): String = "pagetabs_tab_$id"
     public fun label(id: String): String = "pagetabs_label_$id"
+    /** The glyph of an icon-pill tab ([PageTabs] with `iconFor`); present for every tab. */
+    public fun icon(id: String): String = "pagetabs_icon_$id"
 }
