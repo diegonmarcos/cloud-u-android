@@ -189,6 +189,23 @@
     "level": "signature",
     "source": "libs:appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreDebugApi.kt",
     "callers": []
+   },
+   {
+    "permission": "android.permission.DUMP",
+    "level": "none",
+    "source": "libs:appstore/src/main/AndroidManifest.xml",
+    "component": "com.diegonmarcos.superapp.appstore.UnpackTestReceiver",
+    "id": "receiver:com.diegonmarcos.superapp.appstore.UnpackTestReceiver",
+    "kind": "receiver",
+    "name": "UnpackTestReceiver",
+    "actions": [
+     "com.diegonmarcos.cloud.action.TEST_UNPACK"
+    ],
+    "callers": [
+     "aa_cloud-superapp",
+     "account",
+     "store"
+    ]
    }
   ],
   "cal": [
