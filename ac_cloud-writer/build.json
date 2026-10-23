@@ -179,7 +179,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-22",
+        "pricing_as_of": "2026-10-23",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -206,8 +206,8 @@
               "fp8",
               "bf16"
             ],
-            "prompt": 0.0938,
-            "completion": 0.25,
+            "prompt": 0.075,
+            "completion": 0.2,
             "note": "24B open weights, no category ranking; cheap European-language rewriting."
           },
           {
@@ -345,7 +345,7 @@
               "legal",
               "programming",
               "roleplay",
-              "science"
+              "technology"
             ],
             "prompt": 0.0341,
             "completion": 7,
@@ -410,7 +410,7 @@
           {
             "id": "google/gemini-2.5-flash",
             "name": "Gemini 2.5 Flash",
-            "trained_for": [],
+            "trained_for": ["trivia"],
             "prompt": 0.3,
             "completion": 2.5,
             "note": "Translation-ranked plus eight more categories, and cheap. Selectable, but no longer any tool's default — see _doc_tool_models."

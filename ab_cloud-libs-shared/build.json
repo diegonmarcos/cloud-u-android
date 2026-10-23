@@ -3139,7 +3139,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-22",
+        "pricing_as_of": "2026-10-23",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -3157,7 +3157,7 @@
             "open": true,
             "params_b": 24,
             "quant": ["fp8", "bf16"],
-            "prompt": 0.0938, "completion": 0.25,
+            "prompt": 0.075, "completion": 0.2,
             "note": "24B open weights, no category ranking; cheap European-language rewriting."
           },
           {
@@ -3231,7 +3231,7 @@
             "name": "GLM 5.2",
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
-            "trained_for": ["academia", "legal", "programming", "roleplay", "science"],
+            "trained_for": ["academia", "legal", "programming", "roleplay", "technology"],
             "prompt": 0.0341, "completion": 7,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
@@ -3269,7 +3269,7 @@
           {
             "id": "google/gemini-2.5-flash",
             "name": "Gemini 2.5 Flash",
-            "trained_for": [],
+            "trained_for": ["trivia"],
             "prompt": 0.3, "completion": 2.5,
             "note": "The default: translation-ranked plus eight more categories, and still cheap."
           }
