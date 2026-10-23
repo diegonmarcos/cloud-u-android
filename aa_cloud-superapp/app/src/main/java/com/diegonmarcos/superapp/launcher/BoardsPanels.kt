@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.diegonmarcos.superapp.boards.Boards
 import com.diegonmarcos.superapp.boards.BoardsSource
+import com.diegonmarcos.superapp.boards.TrackerAgg
 import com.diegonmarcos.superapp.boards.InboxGroup
 import com.diegonmarcos.superapp.boards.InboxItem
 import com.diegonmarcos.superapp.boards.PlacesDay
@@ -320,6 +321,30 @@ private fun HealthContent(b: HealthBoard) {
     if (HealthBoardReader.SLEEP in b.missing) AggCaption("Not allowed yet: grant Sleep above")
     else SleepSection(b.sleep)
     AggCaption("Source: Health Connect, read on this phone" + (b.error?.let { " · a read failed ($it)" } ?: ""))
+    TrackerHealthSection()
+}
+
+/** Sleep hours and walking distance as Cloud Nav's tracker records them (tracker/daily, contract v1); independent of Health Connect. */
+@Composable
+private fun TrackerHealthSection() {
+    val r = rememberBoardRead(0, "tracker-daily") { it.daily(7) }
+    AggShadeLabel("PHONE TRACKER (CLOUD NAV)")
+    when (r) {
+        null -> BoardLoading()
+        is Read.Unavailable -> AggCaption("Tracker: ${r.detail}", Modifier.testTag(BoardTags.unavailable("tracker-daily")))
+        is Read.Ok -> {
+            val t = TrackerAgg.summarize(r.value, java.time.LocalDate.now())
+            val ok = t.lastNightH != null || t.walkTodayKm != null || t.avgWalkKm != null
+            Row(Modifier.fillMaxWidth().padding(vertical = KitDensity.small / 2), horizontalArrangement = Arrangement.spacedBy(KitDensity.small)) {
+                val st = if (ok) KitState.OK else KitState.IDLE
+                KitStatTile(TrackerAgg.hoursText(t.lastNightH), "Slept" + (t.sleepCity?.let { " in $it" } ?: ""), st, Modifier.weight(1f), tag = "tracker-sleep")
+                KitStatTile(TrackerAgg.hoursText(t.avgSleepH), "7-day sleep average", st, Modifier.weight(1f), tag = "tracker-sleep-avg")
+                KitStatTile(HealthAgg.kmText(t.walkTodayKm), "Walked today", st, Modifier.weight(1f), tag = "tracker-walk")
+                KitStatTile(HealthAgg.kmText(t.avgWalkKm), "7-day walk average", st, Modifier.weight(1f), tag = "tracker-walk-avg")
+            }
+            AggCaption("Source: Cloud Nav tracker (segments of the day, no Health Connect needed)")
+        }
+    }
 }
 
 /** Which of the four reads the board has, one line each, and the one button that asks for the rest. */

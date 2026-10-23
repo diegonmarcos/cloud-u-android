@@ -2350,7 +2350,7 @@
           }
         ],
         "tabs": true,
-        "_doc_pages": "Boards = what you WORK ON and what ARRIVES, each read live from the app that owns it. Inboxes = unread/recent messages: fleet mail through cloud-mail's signature-guarded agentmail provider, every other app (fleet chat/matrix/ntfy and third-party WhatsApp, Gmail, Telegram…) through the SuperApp's own notification listener, grouped by app. ME (was My-PM) = MyBuro/MyFin, MyHealth (steps, sleep, heart rate) and MyTrips (the last 24 h timeline from cloud-nav, tracker/timeline over the fleet IPC door). Tasks = one card per project declared in cloud-tasks (projects/list over the fleet IPC door), the tasks table and the calendar. Work-PM and C3-PM were removed by the owner (2026-10-17); their ids alias to Tasks. No board carries sample numbers: an unreachable source says so.",
+        "_doc_pages": "Boards = what you WORK ON and what ARRIVES, each read live from the app that owns it. Inboxes = unread/recent messages: fleet mail through cloud-mail's signature-guarded agentmail provider, every other app (fleet chat/matrix/ntfy and third-party WhatsApp, Gmail, Telegram…) through the SuperApp's own notification listener, grouped by app. ME (was My-PM) = MyBuro/MyFin, MyHealth (steps, sleep, heart rate) and MyTrips (the last 24 h timeline from cloud-nav, tracker/segments + tracker/daily over the fleet IPC door; tracker/timeline only as a one-release shim). Tasks = one card per project declared in cloud-tasks (projects/list over the fleet IPC door), the tasks table and the calendar. Work-PM and C3-PM were removed by the owner (2026-10-17); their ids alias to Tasks. No board carries sample numbers: an unreachable source says so.",
         "stack_my-pm": [
           {
             "_doc": "MyBuro/MyFin (was 'Myfin'): the MyBuro group's MyFin card. It lives in Cloud-Me (Buro ▸ Fin); the card only opens the real page. `anchor` is the id, `aliases` the retired ids that still resolve (anchor: deep links).",
@@ -2370,7 +2370,7 @@
             "url": "extapp:cloud-nav"
           },
           {
-            "_doc": "MyTrips (was 'Navigation/Tracker', #1114): the last 24 h as an ordered timeline (start, move, stop, move, sleep, ...) read from Cloud Nav's ONE timeline store over the fleet IPC door, op tracker/timeline (read-only). The SuperApp only fetches and draws it. `aliases` are the retired ids that still resolve.",
+            "_doc": "MyTrips (was 'Navigation/Tracker', #1114): the last 24 h as an ordered timeline (start, move, stop, move, sleep, ...) read from Cloud Nav's ONE timeline store over the fleet IPC door, op tracker/segments (contract v1; tracker/timeline only as a one-release compatibility shim; read-only). The SuperApp only fetches and draws it. `aliases` are the retired ids that still resolve.",
             "kind": "board_timeline",
             "title": "MyTrips",
             "anchor": "mytrips",

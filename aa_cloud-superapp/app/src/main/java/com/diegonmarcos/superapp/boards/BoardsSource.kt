@@ -22,7 +22,9 @@ import java.util.concurrent.ConcurrentHashMap
  *    SuperApp's own notification listener (PhoneNotificationStore) for every other app — fleet chat / matrix / ntfy
  *    and third-party WhatsApp, Gmail, Telegram… — grouped by app.
  *  - ME (was My-PM): cloud-nav's tracker over the fleet IPC door (com.diegonmarcos.cloudnav.fleet, signature-guarded):
- *    `tracker/steps`, `tracker/places` and, for MyTrips, `tracker/timeline`.
+ *    `tracker/steps`, `tracker/places` and, for MyTrips and MyHealth, the contract-v1 `tracker/segments` and
+ *    `tracker/daily`. The old `tracker/timeline` is read only as a compatibility shim for a Cloud Nav that predates v1
+ *    (one release; then the shim and [BoardsWire.timeline] go).
  *  - Tasks: cloud-tasks over the same door: `projects/list`.
  *
  * Tests swap [Boards.source] for a fake; the parsers in [BoardsWire] are pure.
@@ -34,8 +36,10 @@ interface BoardsSource {
     /** My-Health: Health Connect read in this app (steps, distance, resting HR, sleep), 30 days ending today. */
     fun health(days: Int = 30): Read<HealthBoard> = Read.Unavailable(Why.FAILED, "Health Connect is not wired to this source")
     fun places(days: Int = 7): Read<List<PlacesDay>>
-    /** MyTrips: the last [hours] of Cloud Nav's ONE timeline store (tracker/timeline). Read-only: the SuperApp stores nothing. */
+    /** MyTrips: the last [hours] of Cloud Nav's ONE timeline store (tracker/segments v1; tracker/timeline only as the shim). Read-only: the SuperApp stores nothing. */
     fun timeline(hours: Int = 24): Read<TimelineBoard> = Read.Unavailable(Why.FAILED, "the timeline is not wired to this source")
+    /** MyHealth / ME: per-day sleep hours and walking distance from Cloud Nav's tracker/daily (contract v1), oldest first. */
+    fun daily(days: Int = 7): Read<List<TrackerDay>> = Read.Unavailable(Why.FAILED, "the tracker daily aggregates are not wired to this source")
     fun taskProjects(): Read<List<TaskProject>>
 }
 
@@ -90,6 +94,9 @@ data class TimelineSeg(
 )
 
 data class TimelineBoard(val nowMs: Long, val hours: Int, val segments: List<TimelineSeg>)
+
+/** One day of Cloud Nav's tracker/daily (contract v1). [vehicleM] is metres per vehicle mode (walking and running excluded). */
+data class TrackerDay(val date: LocalDate, val sleepH: Double, val sleepCity: String, val walkM: Long, val runM: Long, val vehicleM: Map<String, Long>, val visits: Int)
 
 data class TaskProject(
     val id: String,
@@ -190,6 +197,73 @@ object BoardsWire {
         return TimelineBoard(o.optLong("now"), o.optInt("hours", 24), segs)
     }
 
+    /** The only contract version this reader understands (Cloud Nav's DayJson.VERSION). A different one is refused, never half-read. */
+    const val TRACKER_CONTRACT = 1
+
+    private fun checkVersion(o: JSONObject) {
+        val v = o.optInt("version", 0)
+        if (v != TRACKER_CONTRACT) throw IllegalStateException("tracker contract v$v, expected v$TRACKER_CONTRACT")
+    }
+
+    private fun placeText(loc: JSONObject?): Triple<String, Double?, Double?> {
+        if (loc == null) return Triple("", null, null)
+        val name = loc.optString("name")
+        val label = name.ifBlank { loc.optString("address") }
+        return Triple(label, if (loc.has("lat")) loc.getDouble("lat") else null, if (loc.has("lon")) loc.getDouble("lon") else null)
+    }
+
+    /** `tracker/segments` (v1) to the rows MyTrips draws: stay(sleep) is "sleep", stay(idle) "stop", move "move". */
+    fun segments(body: String): List<TimelineSeg> {
+        val o = JSONObject(body); checkVersion(o)
+        val arr = o.optJSONArray("segments") ?: return emptyList()
+        return (0 until arr.length()).map { i ->
+            val g = arr.getJSONObject(i)
+            if (g.optString("type") == "move") {
+                val (_, lat, lon) = placeText(g.optJSONObject("to"))
+                TimelineSeg("move", g.getLong("start"), g.getLong("end"), "", lat, lon, g.optLong("steps"), g.optLong("distance_m"), "")
+            } else {
+                val (label, lat, lon) = placeText(g.optJSONObject("location"))
+                TimelineSeg(if (g.optString("kind") == "sleep") "sleep" else "stop", g.getLong("start"), g.getLong("end"), label, lat, lon, 0L, 0L, "")
+            }
+        }.sortedBy { it.startMs }
+    }
+
+    /** The last [hours] of several days' v1 segments, clipped to the window ending [nowMs]. */
+    fun timelineOf(segs: List<TimelineSeg>, nowMs: Long, hours: Int): TimelineBoard {
+        val from = nowMs - hours * 3_600_000L
+        val clipped = segs.filter { it.endMs > from && it.startMs < nowMs }.sortedBy { it.startMs }.map { s ->
+            val a = maxOf(s.startMs, from); val b = minOf(s.endMs, nowMs)
+            if (a == s.startMs && b == s.endMs) s else {
+                val f = (b - a).toDouble() / (s.endMs - s.startMs).coerceAtLeast(1)
+                s.copy(startMs = a, endMs = b, steps = Math.round(s.steps * f), distanceM = Math.round(s.distanceM * f))
+            }
+        }
+        return TimelineBoard(nowMs, hours, clipped)
+    }
+
+    /**
+     * MyTrips' read: the days that cover the window from tracker/segments (v1). A Cloud Nav that predates v1 answers 404
+     * (OUTDATED); only then the old tracker/timeline is asked via [legacy] (the compatibility shim, for one release).
+     */
+    fun timelineV1OrShim(today: LocalDate, nowMs: Long, hours: Int, segments: (LocalDate) -> Read<List<TimelineSeg>>, legacy: () -> Read<TimelineBoard>): Read<TimelineBoard> {
+        val reads = (0..(hours + 23) / 24).map { segments(today.minusDays(it.toLong())) }
+        val bad = reads.filterIsInstance<Read.Unavailable>().firstOrNull()
+            ?: return Read.Ok(timelineOf(reads.flatMap { (it as Read.Ok).value }, nowMs, hours))
+        return if (bad.why == Why.OUTDATED) legacy() else bad
+    }
+
+    /** `tracker/daily` (v1), oldest first. */
+    fun daily(body: String): List<TrackerDay> {
+        val o = JSONObject(body); checkVersion(o)
+        val arr = o.optJSONArray("days") ?: return emptyList()
+        return (0 until arr.length()).map { i ->
+            val d = arr.getJSONObject(i)
+            val veh = d.optJSONObject("vehicle_m")
+            TrackerDay(LocalDate.parse(d.getString("date")), d.optDouble("sleep_h", 0.0), d.optString("sleep_city"), d.optLong("walk_m"), d.optLong("run_m"),
+                veh?.keys()?.asSequence()?.associateWith { veh.optLong(it) } ?: emptyMap(), d.optInt("visits"))
+        }.sortedBy { it.date }
+    }
+
     fun projects(body: String): List<TaskProject> {
         val arr = JSONObject(body).optJSONArray("projects") ?: return emptyList()
         return (0 until arr.length()).map { i ->
@@ -283,8 +357,14 @@ class FleetBoardsSource(private val ctx: Context) : BoardsSource {
     override fun places(days: Int): Read<List<PlacesDay>> =
         ask(Boards.NAV_PKG, "Cloud Nav", "tracker/places", mapOf("days" to days.toString())) { BoardsWire.places(it) }
 
+    /** v1 first: the days that cover the window from tracker/segments. A Cloud Nav without v1 (404) is read through the old tracker/timeline (compatibility shim, one release). */
     override fun timeline(hours: Int): Read<TimelineBoard> =
-        ask(Boards.NAV_PKG, "Cloud Nav", "tracker/timeline", mapOf("hours" to hours.toString())) { BoardsWire.timeline(it) }
+        BoardsWire.timelineV1OrShim(LocalDate.now(), System.currentTimeMillis(), hours,
+            { d -> ask(Boards.NAV_PKG, "Cloud Nav", "tracker/segments", mapOf("date" to d.toString())) { BoardsWire.segments(it) } },
+            { ask(Boards.NAV_PKG, "Cloud Nav", "tracker/timeline", mapOf("hours" to hours.toString())) { BoardsWire.timeline(it) } })
+
+    override fun daily(days: Int): Read<List<TrackerDay>> =
+        ask(Boards.NAV_PKG, "Cloud Nav", "tracker/daily", mapOf("days" to days.toString())) { BoardsWire.daily(it) }
 
     override fun taskProjects(): Read<List<TaskProject>> =
         ask(Boards.TASKS_PKG, "Cloud Tasks", "projects/list", emptyMap()) { BoardsWire.projects(it) }

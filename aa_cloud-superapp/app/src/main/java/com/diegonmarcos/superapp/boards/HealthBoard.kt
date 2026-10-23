@@ -126,3 +126,20 @@ object HealthAgg {
 
     fun bpmText(v: Double?): String = if (v == null) "--" else String.format(Locale.US, "%d", Math.round(v))
 }
+
+/** Sleep and walking from Cloud Nav's tracker/daily (v1), boiled down for the MyHealth card. A day with no sleep is MISSING, never 0 h. */
+data class TrackerHealth(val lastNightH: Double?, val avgSleepH: Double?, val walkTodayKm: Double?, val avgWalkKm: Double?, val sleepCity: String?)
+
+object TrackerAgg {
+    fun summarize(days: List<TrackerDay>, today: LocalDate): TrackerHealth {
+        val week = days.filter { !it.date.isAfter(today) }.sortedBy { it.date }.takeLast(7)
+        val slept = week.filter { it.sleepH > 0.0 }
+        val last = slept.lastOrNull { it.date == today } ?: slept.lastOrNull()
+        val walk = week.filter { it.walkM > 0L }
+        return TrackerHealth(last?.sleepH, slept.takeIf { it.isNotEmpty() }?.map { it.sleepH }?.average(),
+            week.lastOrNull { it.date == today }?.walkM?.takeIf { it > 0 }?.let { it / 1000.0 },
+            walk.takeIf { it.isNotEmpty() }?.map { it.walkM / 1000.0 }?.average(), last?.sleepCity?.takeIf { it.isNotBlank() })
+    }
+
+    fun hoursText(h: Double?): String = if (h == null) "--" else String.format(Locale.US, "%.1fh", h)
+}
