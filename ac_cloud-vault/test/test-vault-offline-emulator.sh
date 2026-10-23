@@ -104,6 +104,10 @@ if [ -n "${OLD_APK:-}" ]; then
   else
     echo "old app has no auto-enrolment: enabling biometric unlock in Settings"
     $ui type "$VAULT_PW"; $ui tap '^Unlock$|Unlock' 15 || die old-unlock "no Unlock button"
+    # the old app's one-per-process enrolment prompt shows after this unlock: answer it so the vault is reachable
+    if $ui wait 'Touch the fingerprint sensor|Biometric verification' 30 2>/dev/null; then
+      for _ in 1 2 3; do touch_finger; sleep 2; $ui has 'Touch the fingerprint sensor|Biometric verification' || break; done
+    fi
     $ui wait "$item" 60 || die old-unlock-vault "vault not shown after master password unlock"
     $ui tap '^Close$' 4 2>/dev/null || true
     $ui tap '^Settings$' 20 || die settings-tab "no Settings tab"
