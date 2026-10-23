@@ -47,7 +47,7 @@
       "path": "data/repos.sot.json",
       "url": "https://raw.githubusercontent.com/diegonmarcos/git-repos-master/claude/new-session-vb0job/repos.json",
       "schema": "cloud-repos/v1",
-      "sha256": "4be7829a673c330167c16df6ba0a43e39a72e17f7114701fc6475e310b67c33e",
+      "sha256": "a334da58983221bae9187f2a9030da017e377afd4be9697fd1ac10c536c782da",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },
@@ -669,8 +669,8 @@
             "caption": "cloud-infra"
           },
           {
-            "repo": "cloud-infra-desktop",
-            "caption": "cloud-infra-desktop"
+            "repo": "cloud-u-desktop",
+            "caption": "cloud-u-desktop"
           },
           {
             "repo": "cloud-me_data-pub",
@@ -701,8 +701,8 @@
             "caption": "front-assets-cdn"
           },
           {
-            "repo": "front-data",
-            "caption": "front-data"
+            "repo": "z-archived_front-data",
+            "caption": "z-archived_front-data"
           }
         ]
       }

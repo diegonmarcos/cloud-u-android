@@ -21,22 +21,10 @@
       "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`."
     },
     {
-      "name": "cloud-data",
-      "repo": "diegonmarcos/cloud-data",
-      "private": true,
-      "doc": "Generated fleet config consumed by cloud's services."
-    },
-    {
       "name": "cloud-data-lfs",
       "repo": "diegonmarcos/cloud-data-lfs",
       "private": true,
-      "doc": "Large binary artefacts (git-lfs) for cloud-data."
-    },
-    {
-      "name": "cloud-me-my-ai",
-      "repo": "diegonmarcos/cloud-me-my-ai",
-      "private": true,
-      "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here."
+      "doc": "Large binary artefacts (git-lfs) for cloud-me-data-pvt (was cloud-data)."
     },
     {
       "name": "cloud-infra",
@@ -45,10 +33,28 @@
       "doc": "Fleet: services, infra, the derive engine (1_cloud-configs)."
     },
     {
-      "name": "cloud-infra-desktop",
-      "repo": "diegonmarcos/cloud-infra-desktop",
-      "private": false,
-      "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)."
+      "name": "cloud-me-containers",
+      "repo": "diegonmarcos/cloud-me-containers",
+      "private": true,
+      "doc": "The owner's own (cloud-me) containers. Created 2026-10-21 (private)."
+    },
+    {
+      "name": "cloud-me-data-pvt",
+      "repo": "diegonmarcos/cloud-me-data-pvt",
+      "private": true,
+      "doc": "Generated fleet config consumed by cloud's services."
+    },
+    {
+      "name": "cloud-me-my-ai",
+      "repo": "diegonmarcos/cloud-me-my-ai",
+      "private": true,
+      "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here."
+    },
+    {
+      "name": "cloud-me-notes",
+      "repo": "diegonmarcos/cloud-me-notes",
+      "private": true,
+      "doc": "Personal notes (Obsidian vault)."
     },
     {
       "name": "cloud-me_cgc",
@@ -69,12 +75,6 @@
       "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it."
     },
     {
-      "name": "cloud-notes",
-      "repo": "diegonmarcos/cloud-notes",
-      "private": true,
-      "doc": "Personal notes (Obsidian vault)."
-    },
-    {
       "name": "cloud-u-containers",
       "repo": "diegonmarcos/cloud-u-containers",
       "private": false,
@@ -87,22 +87,28 @@
       "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloud-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha."
     },
     {
+      "name": "cloud-u-desktop",
+      "repo": "diegonmarcos/cloud-u-desktop",
+      "private": false,
+      "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)."
+    },
+    {
       "name": "cloud-u-linux",
       "repo": "diegonmarcos/cloud-u-linux",
       "private": false,
-      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
+      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloud-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
+    },
+    {
+      "name": "cloud-webapps",
+      "repo": "diegonmarcos/cloud-webapps",
+      "private": false,
+      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
     },
     {
       "name": "front",
       "repo": "diegonmarcos/front",
       "private": false,
       "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume."
-    },
-    {
-      "name": "front-data",
-      "repo": "diegonmarcos/front-data",
-      "private": false,
-      "doc": "Front-end content and data."
     },
     {
       "name": "front-diegonmarcos",
@@ -121,6 +127,12 @@
       "repo": "diegonmarcos/front-unity",
       "private": true,
       "doc": "Unity asset pipeline (unity-asset-vm: upkg2gltf, fetch-and-convert) plus its assets. Was front-asset-cdn, the predecessor of front-assets-cdn; renamed 2026-08-18 to match what it actually holds - the CDN itself is front-assets-cdn."
+    },
+    {
+      "name": "z-archived_front-data",
+      "repo": "diegonmarcos/z-archived_front-data",
+      "private": false,
+      "doc": "Front-end content and data. Renamed z-archived_front-data 2026-10-23; to be archived on GitHub (owner click)."
     }
   ],
   "_doc_hubs": "cloud and front are the HUB repos — the symlink farms. They are mirrored FIRST-CLASS, not skipped: their committed symlinks are the navigation layer, and because every member is a sibling here exactly as it is in ~/git, a link like cloud/cloud-infra -> ../cloud-infra resolves INSIDE the mirror. That is what makes this a usable copy of the workspace rather than a pile of unrelated directories. A link to something not mirrored (cloud-vault, cloud-u-android) dangles, which the farms' own doc already treats as meaning 'a repo you have not cloned yet'."

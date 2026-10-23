@@ -42,8 +42,8 @@
    "notes": "Infrastructure declarations, keys, CI"
   },
   {
-   "name": "cloud-infra-desktop",
-   "label": "cloud-infra-desktop",
+   "name": "cloud-u-desktop",
+   "label": "cloud-u-desktop",
    "seed": true,
    "notes": "Desktop-NixOS twin of the cloud"
   },
@@ -90,8 +90,8 @@
    "notes": "Static assets. #629 CORRECTED: the prose here contradicted the flag beside it — it IS seeded."
   },
   {
-   "name": "front-data",
-   "label": "front-data",
+   "name": "z-archived_front-data",
+   "label": "z-archived_front-data",
    "seed": true,
    "notes": "Front-end data feeds. #608 CORRECTED: this file said private: true and the live API says private=false (an unauthenticated GET of the repository answers 200), so it is public and belongs to the Git page's declared public set. #629 CORRECTED the trailing claim that it was not seeded: it carries the seed flag and IS seeded."
   }

@@ -23,20 +23,22 @@
   "_unregistered_doc": "GitHub repos (by GitHub name) that exist but deliberately have no entry. cloud-infra's repos-sot tester fails when the fetched GitHub inventory holds a repo that is neither registered above nor listed here, and when a pending_creation repo already shows up in the inventory (flip its status).",
   "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know.",
   "consumers": [
+    { "repo": "lecole-42", "what": "d_lecole project master: repos.json subset + clone/link script", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
     { "repo": "git-repos-master", "what": "clone.sh + committed symlink farm", "reads": "repos.json (itself)", "guard": "9_others/test/test-repos-sot.sh" },
     { "repo": "cloud", "what": "project master subset (a_cloud + front) used by derive-repo-map and the libs:repos refresh", "reads": "repos.json (subset)", "guard": "check-repos-sot.sh (in the cloud repo)" },
     { "repo": "front", "what": "front project master subset", "reads": "repos.json (subset)", "guard": "check-repos-sot.sh (in the front repo)" },
     { "repo": "cloud-infra", "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory", "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy)", "guard": "9_others/test/repos-sot.test.sh (registered in 9_others/test-registry.json)" },
     { "repo": "cloud-u-android", "what": "libs:repos mirror list, cloud-drive Sync > Git list, cloud-drive seed/clone targets", "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies)", "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt" },
-    { "repo": "cloud-infra-desktop", "what": "NixOS/home-manager twin: embeds only the `cloud` index submodule, keeps no repo list", "reads": "none (submodule of cloud)", "guard": "n/a" },
+    { "repo": "cloud-u-desktop", "what": "NixOS/home-manager twin: embeds only the `cloud` index submodule, keeps no repo list", "reads": "none (submodule of cloud)", "guard": "n/a" },
     { "repo": "cloud-u-linux", "what": "dtk/linux-account: no repo list of its own", "reads": "none", "guard": "n/a" },
     { "repo": "cloud-me-my-ai", "what": "layout.json dotfile map + per-repo a_commits snapshots: keyed by repo name, no list of its own", "reads": "none", "guard": "n/a" }
   ],
 
   "base_dir_doc": "Where clones live. Override with $CLOUD_GIT_BASE; otherwise ~/cloud-shared-store/git — every repo lives in that ONE place, on every machine. Clones are NEVER placed inside this repo — repo_master holds relative symlinks (../../<name> from a group directory) pointing out to them, committed, so `ls <group>/` is the inventory and a dangling link is just a repo you have not cloned yet.",
+  "shared_store_dir": "cloud-shared-store",
   "base_dir_default": "~/cloud-shared-store/git",
 
-  "_path_doc": "`path` is where the clone actually sits under base_dir; it defaults to `name`. Only the d_lecole entries set it, because those ten were moved into ~/cloud-shared-store/git/lecole-42/ on 2026-08-18 to keep the root of ~/cloud-shared-store/git legible. Indexing them and moving them are separate decisions: `path` lets this file describe where they are instead of demanding they move back.",
+  "_path_doc": "`path` is where the clone actually sits under base_dir; it defaults to `name`. No entry sets it since 2026-10-23: the d_lecole repos were renamed lecole-42_* and now sit at the root of base_dir, so the old ~/cloud-shared-store/git/lecole-42/ folder is only a stale machine-local directory (owner step: move or re-clone).",
 
   "_archived_doc": "FairEmail and octocode forks were deleted on GitHub on 2026-08-18 — FairEmail was fully reproduced by unix/aa_cloud-mail/patches, octocode was 0 commits ahead of Muvon/octocode. Nothing else has been archived. The ten d_lecole repos were deregistered the same day and are registered again as of 2026-08-20; they were never gone, only unindexed.",
 
@@ -101,6 +103,24 @@
       "to": ["others/0_apps/src/claude/settings.json", "others/0_apps/dist/dotfiles/claude/settings.json"],
       "requires": "others/0_apps/src/claude",
       "doc": "cloud-me_vault/others: a vendored copy of the cloud module (src and dist; no deployed .claude). Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
+    },
+    {
+      "from": "git-repos-master/.claude/skills/c3-infra",
+      "to": [".claude/skills/c3-infra"],
+      "requires": ".claude",
+      "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloud-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. c3-infra skill + rules/*.md."
+    },
+    {
+      "from": "git-repos-master/.claude/hooks/c3",
+      "to": [".claude/hooks/c3"],
+      "requires": ".claude",
+      "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloud-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. c3-infra PreToolUse guard hooks and tests, wired in settings.json hooks."
+    },
+    {
+      "from": "git-repos-master/.claude/agents",
+      "to": [".claude/agents"],
+      "requires": ".claude",
+      "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloud-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. lean agents build/explore/ops/review/general-purpose."
     }
   ],
 
@@ -109,7 +129,7 @@
     "a_cloud": "The cloud project — infrastructure, services, data, devices and the tooling built for them. Its own project master is `cloud`, which indexes this same set minus the account-level repos.",
     "b_front": "The front-end — the published site, its content, its assets and its experiments. Its project master is `ffront`. Kept out of a_cloud because it ships on its own cadence to its own hosts; folding it in was what made a_cloud mean nothing.",
     "c_gh": "Account-level GitHub repos — things that exist because GitHub requires a repo for them, not because they are a project.",
-    "d_lecole": "42 / l'École coursework and its experiments. Clones live under ~/cloud-shared-store/git/lecole-42/ (see _path_doc), so these entries carry `path`."
+    "d_lecole": "42 / l'École coursework and its experiments. Project master is `lecole-42`; every member is lecole-42_<thing> (or lecole-42-projects), cloned at the root of base_dir like the other groups."
   },
 
   "repos": [
@@ -120,7 +140,7 @@
       "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`." },
     { "name": "cloud-infra", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-infra.git", "private": false,
       "doc": "Fleet: services, infra, the derive engine (1_cloud-configs)." },
-    { "name": "cloud-infra-desktop", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-infra-desktop.git", "private": false,
+    { "name": "cloud-u-desktop", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-u-desktop.git", "private": false, "renamed_from": ["cloud-infra-desktop"],
       "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)." },
     { "name": "cloud-u-android", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-u-android.git", "private": false,
       "doc": "Android client." },
@@ -133,19 +153,19 @@
     { "name": "cloud-me_configs", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me_configs.git", "private": true,
       "doc": "Private configs (cloud-me family). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it. (/home/user/cloud-vault is just a second clone of cloud-me_vault, not a separate repo.)" },
     { "name": "cloud-u-linux", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-u-linux.git", "private": false,
-      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs." },
-    { "name": "cloud-data", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-data.git", "private": true,
+      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloud-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs." },
+    { "name": "cloud-me-data-pvt", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me-data-pvt.git", "private": true, "renamed_from": ["cloud-data"],
       "doc": "Generated fleet config consumed by cloud's services." },
     { "name": "cloud-data-lfs", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-data-lfs.git", "private": true,
-      "doc": "Large binary artefacts (git-lfs) for cloud-data." },
+      "doc": "Large binary artefacts (git-lfs) for cloud-me-data-pvt (was cloud-data)." },
     { "name": "cloud-me-my-ai", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me-my-ai.git", "private": true, "renamed_from": ["cloud-data-my-ai-memory"],
       "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here." },
-    { "name": "cloud-notes", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-notes.git", "private": true,
+    { "name": "cloud-me-notes", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me-notes.git", "private": true, "renamed_from": ["cloud-notes"],
       "doc": "Personal notes (Obsidian vault)." },
-    { "name": "cloud-webapps", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-webapps.git", "private": false, "status": "pending_creation",
-      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Repo not created yet as of 2026-10-21; until then the same tree lives in front-diegonmarcos/cloud-webapps." },
-    { "name": "cloud-me-containers", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me-containers.git", "private": true, "status": "pending_creation",
-      "doc": "The owner's own (cloud-me) containers. Repo not created yet as of 2026-10-21 (#1073): declared so every farmer already knows it and skips it until the status field is removed." },
+    { "name": "cloud-webapps", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-webapps.git", "private": false,
+      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps." },
+    { "name": "cloud-me-containers", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me-containers.git", "private": true,
+      "doc": "The owner's own (cloud-me) containers. Created 2026-10-21 (private)." },
     { "name": "cloud-me_data-pub", "group": "a_cloud", "url": "git@github.com:diegonmarcos/cloud-me_data-pub.git", "private": false,
       "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it." },
 
@@ -156,8 +176,8 @@
       "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud." },
     { "name": "front-assets-cdn", "group": "b_front", "url": "git@github.com:diegonmarcos/front-assets-cdn.git", "private": false,
       "doc": "Front-end static assets served from the CDN." },
-    { "name": "front-data", "group": "b_front", "url": "git@github.com:diegonmarcos/front-data.git", "private": false,
-      "doc": "Front-end content and data." },
+    { "name": "z-archived_front-data", "group": "b_front", "url": "git@github.com:diegonmarcos/z-archived_front-data.git", "private": false, "renamed_from": ["front-data"],
+      "doc": "Front-end content and data. Renamed z-archived_front-data 2026-10-23; to be archived on GitHub (owner click)." },
     { "name": "front-galaxy-gaia", "group": "b_front", "url": "git@github.com:diegonmarcos/front-galaxy-gaia.git", "private": true,
       "doc": "Front-end experiment." },
     { "name": "front-unity", "group": "b_front", "url": "git@github.com:diegonmarcos/front-unity.git", "private": true,
@@ -166,25 +186,27 @@
     { "name": "front-gh-profile-diegonmarcos", "group": "c_gh", "url": "git@github.com:diegonmarcos/diegonmarcos.git", "private": false,
       "doc": "GitHub profile README repo (diegonmarcos). Cloned under a descriptive front-* name because 'diegonmarcos' at the root of ~/cloud-shared-store/git says nothing about what it is." },
 
-    { "name": "lecole42", "group": "d_lecole", "path": "lecole-42/lecole42", "url": "git@github.com:diegonmarcos/lecole42.git", "private": true,
+    { "name": "lecole-42", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42.git", "private": true,
+      "doc": "Project master for the 42 coursework: its own repos.json plus a clone/link script that symlinks the ten lecole-42* repos. Private because lecole-42-projects and lecole-42_dev are private. Created 2026-10-23 (#1136)." },
+    { "name": "lecole-42-projects", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42-projects.git", "private": true, "renamed_from": ["lecole42"],
       "doc": "The 42 curriculum itself." },
-    { "name": "back-Algo", "group": "d_lecole", "path": "lecole-42/back-Algo", "url": "git@github.com:diegonmarcos/back-Algo.git", "private": false,
+    { "name": "lecole-42_back-Algo", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_back-Algo.git", "private": false, "renamed_from": ["back-Algo"],
       "doc": "Algorithms coursework." },
-    { "name": "back-Graphic", "group": "d_lecole", "path": "lecole-42/back-Graphic", "url": "git@github.com:diegonmarcos/back-Graphic.git", "private": false,
+    { "name": "lecole-42_back-Graphic", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_back-Graphic.git", "private": false, "renamed_from": ["back-Graphic"],
       "doc": "Graphics coursework." },
-    { "name": "back-System", "group": "d_lecole", "path": "lecole-42/back-System", "url": "git@github.com:diegonmarcos/back-System.git", "private": false,
+    { "name": "lecole-42_back-System", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_back-System.git", "private": false, "renamed_from": ["back-System"],
       "doc": "Systems coursework." },
-    { "name": "cyber-Cyberwarfare", "group": "d_lecole", "path": "lecole-42/cyber-Cyberwarfare", "url": "git@github.com:diegonmarcos/cyber-Cyberwarfare.git", "private": false,
+    { "name": "lecole-42_cyber-Cyberwarfare", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_cyber-Cyberwarfare.git", "private": false, "renamed_from": ["cyber-Cyberwarfare"],
       "doc": "Security coursework." },
-    { "name": "dev", "group": "d_lecole", "path": "lecole-42/dev", "url": "git@github.com:diegonmarcos/dev.git", "private": true,
+    { "name": "lecole-42_dev", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_dev.git", "private": true, "renamed_from": ["dev"],
       "doc": "Scratch and experiments." },
-    { "name": "ml-Agentic", "group": "d_lecole", "path": "lecole-42/ml-Agentic", "url": "git@github.com:diegonmarcos/ml-Agentic.git", "private": false,
+    { "name": "lecole-42_ml-Agentic", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_ml-Agentic.git", "private": false, "renamed_from": ["ml-Agentic"],
       "doc": "Agentic-AI work." },
-    { "name": "ml-DataScience", "group": "d_lecole", "path": "lecole-42/ml-DataScience", "url": "git@github.com:diegonmarcos/ml-DataScience.git", "private": false,
+    { "name": "lecole-42_ml-DataScience", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_ml-DataScience.git", "private": false, "renamed_from": ["ml-DataScience"],
       "doc": "Data-science work. Was the whole of the b_data_science group, which held one repo and then none." },
-    { "name": "ml-MachineLearning", "group": "d_lecole", "path": "lecole-42/ml-MachineLearning", "url": "git@github.com:diegonmarcos/ml-MachineLearning.git", "private": false,
+    { "name": "lecole-42_ml-MachineLearning", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_ml-MachineLearning.git", "private": false, "renamed_from": ["ml-MachineLearning"],
       "doc": "Machine-learning work." },
-    { "name": "ops-Mylibs", "group": "d_lecole", "path": "lecole-42/ops-Mylibs", "url": "git@github.com:diegonmarcos/ops-Mylibs.git", "private": false,
+    { "name": "lecole-42_ops-Mylibs", "group": "d_lecole", "url": "git@github.com:diegonmarcos/lecole-42_ops-Mylibs.git", "private": false, "renamed_from": ["ops-Mylibs"],
       "doc": "Personal libraries." }
   ]
 }

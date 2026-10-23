@@ -52,13 +52,14 @@
    "notes": "Infrastructure declarations, keys, CI"
   },
   {
-   "name": "cloud-infra-desktop",
-   "label": "cloud-infra-desktop",
+   "name": "cloud-u-desktop",
+   "label": "cloud-u-desktop",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
-   "notes": "Desktop-NixOS twin of the cloud"
+   "notes": "Desktop-NixOS twin of the cloud",
+   "renamed_from": ["cloud-infra-desktop"]
   },
   {
    "name": "cloud-me_data-pub",
@@ -126,13 +127,14 @@
    "notes": "Static assets. #629 CORRECTED: the prose here contradicted the flag beside it — it IS seeded."
   },
   {
-   "name": "front-data",
-   "label": "front-data",
+   "name": "z-archived_front-data",
+   "label": "z-archived_front-data",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
-   "notes": "Front-end data feeds. #608 CORRECTED: this file said private: true and the live API says private=false (an unauthenticated GET of the repository answers 200), so it is public and belongs to the Git page's declared public set. #629 CORRECTED the trailing claim that it was not seeded: it carries the seed flag and IS seeded."
+   "notes": "Front-end data feeds. #608 CORRECTED: this file said private: true and the live API says private=false (an unauthenticated GET of the repository answers 200), so it is public and belongs to the Git page's declared public set. #629 CORRECTED the trailing claim that it was not seeded: it carries the seed flag and IS seeded.",
+   "renamed_from": ["front-data"]
   }
  ],
  "_doc_clone": "#575/#606 Every repository here is cloned INTO THE ONE SHARED STORE (ac_cloud-drive/build.json::storage.shared_root) as <root>/<git_subdir>/<name>, by the page's Clone/Open button: the target folder and the upstream URL (https://<github host>/<github_owner>/<name>.git, composed from the github instance above) are handed to the native git manager (libs:git-sync), which asks only for a token when the repository is private. A folder that already holds the clone opens instead of cloning. Nothing here is a path: the root lives in build.json and the page reads it through FilesBridge.sharedRoot().",
