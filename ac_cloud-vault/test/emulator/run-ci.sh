@@ -13,7 +13,10 @@ python3 test/emulator/seed-vaultwarden.py http://127.0.0.1 "$VAULT_EMAIL" "$VAUL
 sudo DNS_BIND="$DNS_IP" python3 -u test/emulator/dns-stub.py >"$OUT_DIR/dns-stub.log" 2>&1 &
 sleep 1
 adb -e shell "ping -c1 -W3 vaultwarden.app" >"$OUT_DIR/net-check.txt" 2>&1
-adb -e shell "printf 'GET /alive HTTP/1.0\r\nHost: vaultwarden.app\r\n\r\n' | nc -w 4 vaultwarden.app 80" >>"$OUT_DIR/net-check.txt" 2>&1
+for h in 10.0.2.2 vaultwarden.app; do
+  { echo "--- tcp $h:80"; adb -e shell "printf 'GET /alive HTTP/1.0\\r\\nHost: vaultwarden.app\\r\\n\\r\\n' | toybox nc -w 5 $h 80; echo rc=\$?"; } >>"$OUT_DIR/net-check.txt" 2>&1
+done
+{ echo "--- host listeners"; ss -ltn | grep ':80 '; } >>"$OUT_DIR/net-check.txt" 2>&1
 adb -e logcat -c
 REQUIRE_EMULATOR=1 OLD_APK="$old" NEW_APK="$new" bash test/test-vault-offline-emulator.sh
 rc=$?
