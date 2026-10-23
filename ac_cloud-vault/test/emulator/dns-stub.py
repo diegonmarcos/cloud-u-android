@@ -16,6 +16,7 @@ while True:
     try:
         name, end = name_of(q)
         qtype = struct.unpack(">H", q[end:end + 2])[0]
+        print("q", name, qtype, flush=True)
         ip = "10.0.2.2" if name == "vaultwarden.app" or name.endswith(".vaultwarden.app") else None
         if ip is None and qtype == 1:
             try:
