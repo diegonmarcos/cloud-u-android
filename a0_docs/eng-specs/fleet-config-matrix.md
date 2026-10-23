@@ -780,7 +780,9 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, 
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `timeline_state` | prefs | device | no | Timeline store migration marker (#1114): when the stops, step samples and raw fixes were moved into the one timeline store (maps.db timeline_segments); the store itself is re-derived on the new phone, never migrated. |
+| `tracker_corrections` | prefs | device | no | The owner's corrections to the Tracker timeline (confirmed visits, edited places and modes, deleted or split segments, added visits). Recorded data tied to the timeline store, never migrated; the store is re-derived on the new phone. |
 | `tracker_engine` | prefs | config | yes | Tracking engine settings (sources, accurate-fix / cell / motion triggers), its progress counters and the learned step length. |
+| `tracker_place_names` | prefs | device | no | Cache of reverse-geocoded place names (open provider answers by ~11 m grid cell) so a place is asked once; re-fetched on demand. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
