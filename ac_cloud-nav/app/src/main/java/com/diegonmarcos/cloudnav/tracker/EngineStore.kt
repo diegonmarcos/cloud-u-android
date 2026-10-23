@@ -39,6 +39,13 @@ class EnginePrefs(ctx: Context) {
         set(s) { sp.edit().putLong("last_acc", s.lastAccurateMs).putLong("last_cell", s.lastCellMs)
             .putLong("steps_acc", s.stepsSinceAccurate).putLong("steps_motion", s.stepsSinceMotion).apply() }
 
+    /** Wake-source state: moving until a time, and the geofence around the current STAY (see [WakePolicy]). */
+    var wake: WakeState
+        get() = WakeState(sp.getBoolean("wake_moving", false), sp.getLong("wake_until", 0L),
+            Double.fromBits(sp.getLong("fence_lat", 0L)), Double.fromBits(sp.getLong("fence_lon", 0L)), Double.fromBits(sp.getLong("fence_r", 0L)))
+        set(w) { sp.edit().putBoolean("wake_moving", w.moving).putLong("wake_until", w.untilMs).putLong("fence_lat", w.fenceLat.toRawBits())
+            .putLong("fence_lon", w.fenceLon.toRawBits()).putLong("fence_r", w.fenceRadiusM.toRawBits()).apply() }
+
     /** The running step length (m), calibrated from accurate fixes. */
     var stepLengthM: Double
         get() = sp.getFloat("step_m", DeadReckoning.DEFAULT_STEP_M.toFloat()).toDouble()

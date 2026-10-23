@@ -76,9 +76,10 @@ object TriggerPlanner {
      * What is due now, strongest first. An accurate fix supersedes the two low-power actions (it
      * resets them), so they are listed only when no accurate fix is due.
      */
-    fun due(c: EngineConfig, s: EngineState, nowMs: Long): List<Action> {
+    fun due(c: EngineConfig, s: EngineState, nowMs: Long, moving: Boolean = false): List<Action> {
         if (!c.enabled) return emptyList()
-        if (accurateDue(c, s, nowMs)) return listOf(Action.ACCURATE_FIX)
+        // moving (a wake source says so): follow the MOVE with accurate fixes; the provider is still chosen by BatteryPolicy
+        if (accurateDue(c, s, nowMs) || WakePolicy.accurateWhileMoving(moving, s.lastAccurateMs, nowMs)) return listOf(Action.ACCURATE_FIX)
         val out = mutableListOf<Action>()
         if (SourceRules.lowPowerProvider(c) != null && c.cellByTime &&
             nowMs - s.lastCellMs >= c.cellEveryHours * HOUR_MS) out += Action.CELL_UPDATE

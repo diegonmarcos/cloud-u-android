@@ -27,7 +27,8 @@ import kotlin.coroutines.resume
 /** WorkManager periodic job (15 min is Android's floor): no foreground service, no wake lock held between runs. */
 class EngineWorker(ctx: Context, p: WorkerParameters) : CoroutineWorker(ctx, p) {
     override suspend fun doWork(): Result {
-        runCatching { EngineRunner.tick(applicationContext) }
+        val kind = inputData.getString(WakeSources.KEY_KIND)?.let { n -> WakeKind.values().firstOrNull { it.name == n } } ?: WakeKind.TICK
+        runCatching { EngineRunner.tick(applicationContext, wake = kind) }
         return Result.success()
     }
 }
@@ -38,9 +39,11 @@ object EngineScheduler {
     /** Starts / stops the periodic job to match [cfg]; safe to call as often as you like. */
     fun apply(ctx: Context, cfg: EngineConfig = EnginePrefs(ctx).config) {
         val wm = WorkManager.getInstance(ctx)
-        if (!cfg.enabled) { wm.cancelUniqueWork(NAME); return }
+        if (!cfg.enabled) { wm.cancelUniqueWork(NAME); WakeSources.disarm(ctx); return }
+        // wake sources first; the periodic tick is only the fallback, relaxed while at least one source is armed
+        WakeSources.arm(ctx)
         wm.enqueueUniquePeriodicWork(NAME, ExistingPeriodicWorkPolicy.UPDATE,
-            PeriodicWorkRequestBuilder<EngineWorker>(15, TimeUnit.MINUTES).build())
+            PeriodicWorkRequestBuilder<EngineWorker>(WakePolicy.tickMinutes(WakeSources.armed), TimeUnit.MINUTES).build())
     }
 }
 
@@ -48,7 +51,7 @@ object EngineRunner {
     private val directExecutor = Executor { it.run() }
 
     /** One engine pass: sample the step counter + heading, then do whatever [TriggerPlanner] says is due. */
-    suspend fun tick(ctx: Context, now: Long = System.currentTimeMillis()) {
+    suspend fun tick(ctx: Context, now: Long = System.currentTimeMillis(), wake: WakeKind = WakeKind.TICK) {
         val prefs = EnginePrefs(ctx); val cfg = prefs.config
         if (!cfg.enabled) return
         val db = EngineDb.get(ctx)
@@ -66,8 +69,13 @@ object EngineRunner {
         }
         st = st.copy(stepsSinceAccurate = st.stepsSinceAccurate + delta, stepsSinceMotion = st.stepsSinceMotion + delta)
 
-        val moving = BatteryPolicy.isMoving(delta)
-        for (a in TriggerPlanner.due(cfg, st, now)) when (a) {
+        // moving = the step cadence, or a wake source (activity, significant motion, geofence exit) that has not lapsed; STILL clears it
+        val moving = WakePolicy.effectiveMoving(BatteryPolicy.isMoving(delta), prefs.wake, now)
+        if (wake == WakeKind.ACTIVITY_STILL && cfg.useCell) {
+            // a new STAY begins: one cheap network fix (never GPS) so the geofence is centred on it
+            locate(ctx, Provider.NETWORK)?.let { db.addFix(PlaceFix(now, it.latitude, it.longitude, false, it.accuracy.toDouble()), "net") }
+        }
+        for (a in TriggerPlanner.due(cfg, st, now, moving)) when (a) {
             Action.ACCURATE_FIX -> {
                 val want = BatteryPolicy.accurateProvider(cfg, moving)   // still: network / cell only, never GPS
                 if (want == null) { st = st.copy(lastAccurateMs = now); continue }
@@ -102,6 +110,7 @@ object EngineRunner {
             }
         }
         prefs.state = st
+        runCatching { WakeSources.arm(ctx) }   // re-arm the one-shot significant-motion sensor and the geofence at the current STAY
         runCatching { NavTimelineExtra.tick(ctx, now, moving = moving) }   // #1114: the timeline store follows every pass
     }
 

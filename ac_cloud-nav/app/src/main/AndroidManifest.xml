@@ -101,6 +101,10 @@
         <receiver
             android:name="com.diegonmarcos.superapp.updater.PackageInstallerReceiver"
             android:exported="false" />
+        <!-- Tracker wake sources (#1145): Activity Recognition transitions + geofence exit PendingIntents. Not exported. -->
+        <receiver
+            android:name=".tracker.WakeReceiver"
+            android:exported="false" />
         <!-- tracker/steps + tracker/places + tracker/timeline on the fleet IPC door, for the SuperApp's Boards ▸ ME (registers before Application.onCreate). -->
         <provider
             android:name=".tracker.TrackerDebugApiProvider"
