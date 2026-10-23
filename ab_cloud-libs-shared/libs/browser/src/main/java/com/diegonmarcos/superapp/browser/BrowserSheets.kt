@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
 import com.diegonmarcos.superapp.uikit.KitSettingsRow
 import com.diegonmarcos.superapp.uikit.KitSwitchRow
@@ -52,9 +53,13 @@ import com.diegonmarcos.superapp.uikit.LocalKitPalette
  */
 
 /** One row of a sheet: what [BrowserMenuRow] resolves to, or an ad-hoc row (the tab card menu). */
-data class SheetRow(val id: String, val label: String, val enabled: Boolean = true, val why: String? = null, val checked: Boolean? = null)
+data class SheetRow(val id: String, val label: String, val enabled: Boolean = true, val why: String? = null, val checked: Boolean? = null, val caption: String? = null)
 
-fun BrowserMenuRow.sheet() = SheetRow(item.id, item.label, enabled, why, checked)
+fun BrowserMenuRow.sheet() = SheetRow(item.id, item.label, enabled, why, checked, item.caption)
+
+/** #1141 icon cell: a 48 dp touch target, a 28 sp glyph, an optional one-word caption; a lit (checked) toggle shows in the accent. */
+const val ICON_TOUCH_DP = 48
+const val ICON_GLYPH_SP = 28
 
 /** A bottom sheet over a scrim: an optional icon row, then titled sections. Scrim tap dismisses. */
 @Composable
@@ -63,6 +68,8 @@ fun BrowserSheet(
     sections: List<Pair<String, List<SheetRow>>>,
     onPick: (String) -> Unit,
     onDismiss: () -> Unit,
+    /** #1141 further icon rows under [icons] (row 2 …). */
+    moreIcons: List<List<SheetRow>> = emptyList(),
 ) {
     val p = LocalKitPalette.current
     Box(Modifier.fillMaxSize().background(Color(0x99000000)).clickable(onClick = onDismiss)) {
@@ -74,13 +81,9 @@ fun BrowserSheet(
                 .padding(horizontal = 16.dp, vertical = 10.dp)
                 .testTag("browser:sheet"),
         ) {
-            if (icons.isNotEmpty()) {
+            (listOf(icons) + moreIcons).filter { it.isNotEmpty() }.forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    icons.forEach { r ->
-                        TextButton(onClick = { onPick(r.id) }, enabled = r.enabled, modifier = Modifier.testTag("browser:menu:${r.id}")) {
-                            Text(r.label, style = MaterialTheme.typography.titleLarge)
-                        }
-                    }
+                    row.forEach { r -> IconCell(r, Modifier.weight(1f), onPick) }
                 }
             }
             sections.forEach { (title, rows) ->
@@ -98,6 +101,20 @@ fun BrowserSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun IconCell(r: SheetRow, modifier: Modifier, onPick: (String) -> Unit) {
+    val p = LocalKitPalette.current
+    val ink = when { !r.enabled -> p.textSecondary; r.checked == true -> p.accent; else -> p.textPrimary }
+    Column(
+        modifier.heightIn(min = ICON_TOUCH_DP.dp).clickable(enabled = r.enabled) { onPick(r.id) }.padding(vertical = 4.dp)
+            .testTag("browser:menu:${r.id}"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(r.label, color = ink, fontSize = ICON_GLYPH_SP.sp)
+        r.caption?.let { Text(it, color = ink, style = MaterialTheme.typography.labelSmall) }
     }
 }
 

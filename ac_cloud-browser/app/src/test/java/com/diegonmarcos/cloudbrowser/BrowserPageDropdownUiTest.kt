@@ -56,10 +56,9 @@ class BrowserPageDropdownUiTest {
     private val picked = mutableListOf<String>()
 
     private fun show(facts: Map<String, Boolean>) {
-        val grouped = cfg.menu.grouped(facts)
-        val icons = grouped.firstOrNull { it.first.id == "icons" }?.second.orEmpty().map { it.sheet() }
-        val sections = grouped.filter { it.first.id != "icons" }.map { (s, rows) -> s.label to rows.map { it.sheet() } }
-        compose.setContent { CloudKitTheme(palette) { BrowserSheet(icons, sections, onPick = { picked += it }, onDismiss = {}) } }
+        val iconRows = cfg.menu.iconRows(facts).map { r -> r.map { it.sheet() } }
+        val sections = cfg.menu.listSections(facts).map { (s, rows) -> s.label to rows.map { it.sheet() } }
+        compose.setContent { CloudKitTheme(palette) { BrowserSheet(iconRows.first(), sections, onPick = { picked += it }, onDismiss = {}, moreIcons = iconRows.drop(1)) } }
         compose.waitForIdle()
     }
 

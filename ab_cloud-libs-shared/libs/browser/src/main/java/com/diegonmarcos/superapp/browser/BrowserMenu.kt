@@ -18,6 +18,8 @@ data class BrowserMenuItem(
     val api: Boolean = false,
     /** #886 a `settings`-section row that belongs INSIDE one Configs section (its id) instead of at the page's foot. */
     val settingsSection: String? = null,
+    /** #1141 the small word under an icon-row glyph. */
+    val caption: String? = null,
 )
 
 data class BrowserMenuSection(val id: String, val label: String)
@@ -54,6 +56,14 @@ class BrowserMenu(
         return sections.map { s -> s to rows.filter { it.item.section == s.id } }.filter { it.second.isNotEmpty() }
     }
 
+    /** #1141 the icon rows, top to bottom: every `icons*` section in declared order (row 1 `icons`, row 2 `icons2`). */
+    fun iconRows(facts: Map<String, Boolean>): List<List<BrowserMenuRow>> =
+        grouped(facts).filter { isIconSection(it.first.id) }.map { it.second }
+
+    /** #1141 the titled list sections under the icon rows. */
+    fun listSections(facts: Map<String, Boolean>): List<Pair<BrowserMenuSection, List<BrowserMenuRow>>> =
+        grouped(facts).filterNot { isIconSection(it.first.id) }
+
     fun item(id: String): BrowserMenuItem? = items.firstOrNull { it.id == id }
 
     fun toJson(facts: Map<String, Boolean>): JSONArray = JSONArray().also { arr ->
@@ -70,6 +80,8 @@ class BrowserMenu(
 
     companion object {
         val EMPTY = BrowserMenu(emptyList(), emptyList(), emptyMap())
+
+        fun isIconSection(id: String) = id == "icons" || (id.startsWith("icons") && id.drop(5).all { it.isDigit() })
 
         fun parse(o: JSONObject?): BrowserMenu {
             if (o == null) return EMPTY
@@ -89,6 +101,7 @@ class BrowserMenu(
                     checked = it.optString("checked").ifBlank { null },
                     api = it.optBoolean("api", false),
                     settingsSection = it.optString("settings_section").ifBlank { null },
+                    caption = it.optString("caption").ifBlank { null },
                 )
             }
             val whys = HashMap<String, String>()

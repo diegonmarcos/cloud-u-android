@@ -631,6 +631,10 @@
             "label": ""
           },
           {
+            "id": "icons2",
+            "label": ""
+          },
+          {
             "id": "page",
             "label": "Page"
           },
@@ -641,6 +645,10 @@
           {
             "id": "addons",
             "label": "Page tools"
+          },
+          {
+            "id": "devtools",
+            "label": "Dev Tools"
           }
         ],
         "requires_why": {
@@ -700,6 +708,47 @@
             ]
           },
           {
+            "id": "translate",
+            "section": "icons2",
+            "label": "文A",
+            "caption": "Translate",
+            "requires": [
+              "page",
+              "text_tools"
+            ],
+            "kind": "toggle",
+            "checked": "translated"
+          },
+          {
+            "id": "desktop",
+            "section": "icons2",
+            "label": "🖥",
+            "caption": "Desktop",
+            "kind": "toggle",
+            "checked": "desktop_mode",
+            "api": true
+          },
+          {
+            "id": "hard_refresh",
+            "section": "icons2",
+            "label": "⟲",
+            "caption": "Hard refresh",
+            "requires": [
+              "page"
+            ],
+            "_doc": "#1141 first visit again: clears this site's HTTP cache, cookies, DOM and local storage and Service Workers, then reloads past the cache."
+          },
+          {
+            "id": "light_refresh",
+            "section": "icons2",
+            "label": "⟳",
+            "caption": "Light refresh",
+            "requires": [
+              "page"
+            ],
+            "_doc": "#1141 clears the HTTP cache and this site's Service Workers, keeps cookies and storage, reloads past the cache."
+          },
+          {
             "id": "find",
             "section": "page",
             "label": "Find in page",
@@ -733,14 +782,6 @@
             ]
           },
           {
-            "id": "desktop",
-            "section": "page",
-            "label": "Desktop site",
-            "kind": "toggle",
-            "checked": "desktop_mode",
-            "api": true
-          },
-          {
             "id": "zoom",
             "section": "page",
             "label": "Zoom (this site)…",
@@ -748,17 +789,6 @@
               "page"
             ],
             "api": true
-          },
-          {
-            "id": "translate",
-            "section": "page",
-            "label": "Translate page",
-            "requires": [
-              "page",
-              "text_tools"
-            ],
-            "kind": "toggle",
-            "checked": "translated"
           },
           {
             "id": "summarize_topics",
@@ -778,14 +808,6 @@
               "page"
             ],
             "api": true
-          },
-          {
-            "id": "view_source",
-            "section": "page",
-            "label": "View source",
-            "requires": [
-              "page"
-            ]
           },
           {
             "id": "print",
@@ -890,6 +912,53 @@
             "requires": [
               "page"
             ]
+          },
+          {
+            "id": "view_source",
+            "section": "devtools",
+            "label": "View source",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "dev_console",
+            "section": "devtools",
+            "label": "Console and JS REPL",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "dev_network",
+            "section": "devtools",
+            "label": "Network requests",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "dev_elements",
+            "section": "devtools",
+            "label": "Elements (live DOM)",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "dev_storage",
+            "section": "devtools",
+            "label": "Storage: cookies, local, session, workers",
+            "requires": [
+              "page"
+            ]
+          },
+          {
+            "id": "dev_remote_debug",
+            "section": "devtools",
+            "label": "Remote debugging (chrome://inspect)",
+            "kind": "toggle",
+            "checked": "remote_debug"
           }
         ]
       },

@@ -32,7 +32,8 @@ def check(root, ok):
     ok("!BrowserNavPolicy.isFormPostResult(list.currentItem?.url)" in ws, "S1 a restored state sitting on a POST result is refused")
     ok('path.startsWith("/gsi/")' in pol and 'host == "accounts.google.com"' in pol, "S1 the policy knows Google's gsi endpoints")
     ok("if (!BrowserNavPolicy.isFormPostResult(it.url)) it.reload()" in frag, "S1 a settings change does not reload a POST result")
-    ok(frag.count("BrowserNavPolicy.cleanUserAgent(") >= 2, "S2 both the mobile and the desktop user agent are cleaned")
+    dev = src.get(LIB + "/BrowserDevTools.kt", "")
+    ok('ViewModePlan.of(desktopMode, config.userAgents["desktop"], config.userAgents["mobile"]' in frag and "BrowserNavPolicy.cleanUserAgent((if (desktop) desktopUa else mobileUa) ?: current)" in dev, "S2 both the mobile and the desktop user agent are cleaned")
     ok('ua.replace(Regex(";\\\\s*wv\\\\b")' in pol and 'Version/' in pol, "S2 the policy strips the wv token and the Version marker")
     ok('setAcceptThirdPartyCookies(wv, browserSettings.bool("block_third_party_cookies") != true)' in frag, "S3 third-party cookies are on unless blocked")
     ok("cookiesOf(this).setAcceptCookie(true)" in frag, "S3 cookies are accepted")
@@ -49,7 +50,7 @@ main("sign-in", check, [
     ("a POST result is committed again", LIB + "/BrowserTabStore.kt", "if (BrowserNavPolicy.isFormPostResult(u)) return false", "", "refuses a POST result"),
     ("a POST state is restored again", LIB + "/BrowserWebState.kt", "!BrowserNavPolicy.isFormPostResult(list.currentItem?.url)", "true", "refused"),
     ("gsi leaves the policy", LIB + "/BrowserNavPolicy.kt", 'path.startsWith("/gsi/")', 'path.startsWith("/gsx/")', "gsi endpoints"),
-    ("the mobile agent is left raw", FRAG, "BrowserNavPolicy.cleanUserAgent(config.userAgents[\"mobile\"] ?: s.userAgentString)", "(config.userAgents[\"mobile\"] ?: s.userAgentString)", "cleaned"),
+    ("the mobile agent is left raw", LIB + "/BrowserDevTools.kt", "BrowserNavPolicy.cleanUserAgent((if (desktop) desktopUa else mobileUa) ?: current)", "((if (desktop) desktopUa else mobileUa) ?: current)", "cleaned"),
     ("the wv token stays", LIB + "/BrowserNavPolicy.kt", 'ua.replace(Regex(";\\\\s*wv\\\\b")', 'ua.replace(Regex(";\\\\s*wvx\\\\b")', "strips the wv token"),
     ("third-party cookies go off again", FRAG, '!= true)\n        applyViewMode', '== true)\n        applyViewMode', "third-party cookies are on"),
     ("child windows are off", FRAG, "settings.setSupportMultipleWindows(true)", "settings.setSupportMultipleWindows(false)", "child windows"),

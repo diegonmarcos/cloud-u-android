@@ -74,6 +74,7 @@ import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitPalette
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
+import org.json.JSONArray
 import org.json.JSONObject
 import com.diegonmarcos.superapp.browser.R
 import java.io.File
@@ -949,9 +950,18 @@ class BrowserHostFragment : Fragment() {
                 override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? {
                     val r = request ?: return null
                     val page = pageHostNow
-                    if (page.isNotEmpty() && trackers.shouldBlock(r.url.host.orEmpty().lowercase(), page, r.isForMainFrame) && trackersBlocked(page))
-                        return android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
+                    val block = page.isNotEmpty() && trackers.shouldBlock(r.url.host.orEmpty().lowercase(), page, r.isForMainFrame) && trackersBlocked(page)
+                    // #1141 the Network panel's log (bounded, in memory; a private tab logs nothing).
+                    if (!tab.isPrivate) DevTools.net.add(NetLog.entry(System.currentTimeMillis(), r.method, r.url.toString(), r.isForMainFrame, r.requestHeaders?.get("Accept"), block))
+                    if (block) return android.webkit.WebResourceResponse("text/plain", "utf-8", java.io.ByteArrayInputStream(ByteArray(0)))
                     return null
+                }
+
+                /** #1141 the status of a failed request (WebView reports 4xx / 5xx only), onto its Network row. */
+                override fun onReceivedHttpError(view: WebView?, request: android.webkit.WebResourceRequest?, errorResponse: android.webkit.WebResourceResponse?) {
+                    val u = request?.url?.toString() ?: return
+                    val code = errorResponse?.statusCode ?: return
+                    DevTools.net.updateLast({ it.url == u && it.status == null }) { it.copy(status = code) }
                 }
 
                 /** #887 inside a saved copy, a link to a page the copy holds opens the saved page, not the network. */
@@ -984,6 +994,8 @@ class BrowserHostFragment : Fragment() {
                 override fun onPageFinished(view: WebView?, finishedUrl: String?) {
                     super.onPageFinished(view, finishedUrl)
                     val u = finishedUrl ?: return
+                    // #1141 desktop view: the layout viewport is a desktop width even if the page's meta viewport says device-width.
+                    if (desktopMode) view?.evaluateJavascript(ViewModePlan.DESKTOP_VIEWPORT_JS, null)
                     if (readerOn) return
                     // The layout numbers of a loopback page (logcat tag LocalPageMetrics), so a page that renders blank here and
                     // fine elsewhere says why (viewport, scroll size, text length) in the emulator test's evidence.
@@ -1024,6 +1036,8 @@ class BrowserHostFragment : Fragment() {
                 /** A page of the phone's own loopback servers: its console goes to logcat (tag LocalPageConsole), never any other page's. */
                 override fun onConsoleMessage(m: android.webkit.ConsoleMessage?): Boolean {
                     if (m != null && pageLogOn(webView?.url)) android.util.Log.d("LocalPageConsole", "${m.messageLevel()} ${m.sourceId()}:${m.lineNumber()} ${m.message()}")
+                    // #1141 every page's console into the in-memory ring buffer (Dev Tools > Console); a private tab logs nothing.
+                    if (m != null && !tab.isPrivate) DevTools.console.add(ConsoleLog.entry(System.currentTimeMillis(), m.messageLevel().name, m.message().orEmpty(), m.sourceId(), m.lineNumber(), webView?.url.orEmpty()))
                     return false
                 }
 
@@ -1702,20 +1716,12 @@ class BrowserHostFragment : Fragment() {
 
     private fun applyViewMode(wv: WebView) {
         val s = wv.settings
-        if (desktopMode) {
-            s.userAgentString = BrowserNavPolicy.cleanUserAgent(config.userAgents["desktop"] ?: s.userAgentString)
-            s.useWideViewPort = true
-            s.loadWithOverviewMode = true
-            wv.setInitialScale(1)
-        } else {
-            // #893 never `; wv)` / `Version/x.x`: Google refuses sign-in to that (disallowed_useragent).
-            s.userAgentString = BrowserNavPolicy.cleanUserAgent(config.userAgents["mobile"] ?: s.userAgentString)
-            // Honour the page's <meta name=viewport> as Chrome does: with useWideViewPort off WebView ignores it and
-            // lays a page that asks for width=1200 (the C3 WebServer's file view) out at the phone's ~360 px.
-            s.useWideViewPort = true
-            s.loadWithOverviewMode = true
-            wv.setInitialScale(0)
-        }
+        // #893 never `; wv)` / `Version/x.x` in the UA: Google refuses sign-in to that (disallowed_useragent). ViewModePlan holds the values.
+        val plan = ViewModePlan.of(desktopMode, config.userAgents["desktop"], config.userAgents["mobile"], s.userAgentString)
+        s.userAgentString = plan.userAgent
+        s.useWideViewPort = plan.wideViewPort
+        s.loadWithOverviewMode = plan.overview
+        wv.setInitialScale(plan.initialScale)
     }
 
     // ── #802 the declared menu, its actions, and the live-page host ───────
@@ -1915,6 +1921,7 @@ class BrowserHostFragment : Fragment() {
             "reader_on" to readerOn,
             "translated" to translator.active,
             "desktop_mode" to desktopMode,
+            "remote_debug" to DevTools.remoteDebugging,
             "pinned" to (currentTab()?.pinned == true),
             "bookmarked" to (page && bookmarks.has(wv!!.url ?: "")),
             "private_tab" to (currentTab()?.isPrivate == true),
@@ -1932,13 +1939,22 @@ class BrowserHostFragment : Fragment() {
 
     private fun installed(pkg: String) = runCatching { requireContext().packageManager.getPackageInfo(pkg, 0) }.isSuccess
 
+    /** #1141 the shared viewer of View source and Elements. */
+    private fun showSource(title: String, text: String) {
+        overlay { close -> BrowserSourceViewer(title, text, onCopy = { copyText("source", it, "Copied") }, onClose = close) }
+    }
+
+    /** #1141 Dev Tools: console + REPL (0), network (1), storage (2) of the current page. */
+    private fun showDevTools(tab: Int) {
+        overlay { close -> BrowserDevToolsScreen(tab, DevToolsBridge({ webView }) { label, text -> copyText(label, text, "Copied") }, close) }
+    }
+
     private fun showMenuSheet() {
-        val grouped = config.menu.grouped(allFacts())
-        val icons = grouped.firstOrNull { it.first.id == ICON_SECTION }?.second.orEmpty().map { it.sheet() }
-        val sections = grouped.filter { it.first.id != ICON_SECTION }
-            .map { (s, rows) -> s.label to rows.map { it.sheet() } }
+        val facts = allFacts()
+        val iconRows = config.menu.iconRows(facts).map { r -> r.map { it.sheet() } }
+        val sections = config.menu.listSections(facts).map { (s, rows) -> s.label to rows.map { it.sheet() } }
         overlay { close ->
-            BrowserSheet(icons, sections, onPick = { id -> close(); runAction(id) }, onDismiss = close)
+            BrowserSheet(iconRows.firstOrNull().orEmpty(), sections, onPick = { id -> close(); runAction(id) }, onDismiss = close, moreIcons = iconRows.drop(1))
         }
     }
 
@@ -2254,7 +2270,32 @@ class BrowserHostFragment : Fragment() {
             }
             "open_external" -> { openInExternalBrowser(url); done(ok()) }
             "print" -> { BrowserPageActions.print(wv ?: return needPage()); done(ok()) }
-            "desktop" -> { browserSettings.put("desktop_mode", !desktopMode); done(ok().put("desktop_mode", desktopMode)) }
+            "desktop" -> {
+                browserSettings.put("desktop_mode", !desktopMode)
+                // #1141 really switch: UA + viewport onto the live WebView, then load the page again under them.
+                wv?.let { applyViewMode(it); it.reload() }
+                done(ok().put("desktop_mode", desktopMode))
+            }
+            "hard_refresh", "light_refresh" -> {
+                wv ?: return needPage()
+                val mode = if (id == "hard_refresh") RefreshMode.HARD else RefreshMode.LIGHT
+                BrowserRefresh.run(wv, mode) { done(ok().put("cleared", JSONArray(RefreshPlan.of(mode).scopes()))) }
+            }
+            "dev_console" -> { showDevTools(0); done(ok()) }
+            "dev_network" -> { showDevTools(1); done(ok()) }
+            "dev_storage" -> { showDevTools(2); done(ok()) }
+            "dev_remote_debug" -> {
+                DevTools.remoteDebugging = !DevTools.remoteDebugging
+                WebView.setWebContentsDebuggingEnabled(DevTools.remoteDebugging)
+                done(ok().put("remote_debug", DevTools.remoteDebugging).put("toast", if (DevTools.remoteDebugging) "Remote debugging on: chrome://inspect" else "Remote debugging off"))
+            }
+            "dev_elements" -> {
+                wv ?: return needPage()
+                BrowserPageActions.run(wv, "(function(){return JSON.stringify({html:document.documentElement.outerHTML.slice(0,${DOM_MAX})});})()") { r ->
+                    showSource("Elements of ${BrowserSitePolicy.hostOf(url)} (live DOM)", r?.optString("html").orEmpty().ifEmpty { "(nothing to show)" })
+                    done(ok())
+                }
+            }
             "reader" -> {
                 wv ?: return needPage()
                 if (readerOn) { readerOn = false; wv.loadUrl(url); done(ok().put("reader", false)) }
@@ -2291,12 +2332,9 @@ class BrowserHostFragment : Fragment() {
             }
             "view_source" -> {
                 wv ?: return needPage()
-                BrowserPageActions.run(wv, "(function(){return JSON.stringify({html:document.documentElement.outerHTML.slice(0,60000)});})()") { r ->
+                BrowserPageActions.run(wv, "(function(){return JSON.stringify({html:document.documentElement.outerHTML.slice(0,${DOM_MAX})});})()") { r ->
                     val src = r?.optString("html").orEmpty().ifEmpty { "(nothing to show)" }
-                    overlay { close ->
-                        BrowserTextPanel("Source of ${BrowserSitePolicy.hostOf(url)} (the page as it is now)", src,
-                            listOf(SheetRow("copy", "Copy")), onPick = { copyText("source", src, "Source copied") }, onClose = close)
-                    }
+                    showSource("Source of ${BrowserSitePolicy.hostOf(url)} (the page as it is now)", src)
                     done(ok().put("length", src.length))
                 }
             }
@@ -2479,6 +2517,7 @@ class BrowserHostFragment : Fragment() {
         private const val TAG = "Browser"
         /** The declared menu section drawn as the icon row, and the one the Settings page lists. */
         private const val ICON_SECTION = "icons"
+        private const val DOM_MAX = 500_000
         private const val ARG_OPEN_URL = "open_url"
         private const val ARG_CONFIG_B64 = "config_b64"
         private const val REMOTE_SUGGEST_DELAY_MS = 250L
