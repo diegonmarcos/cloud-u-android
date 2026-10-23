@@ -33,6 +33,7 @@ object SafeEncryptedPrefs {
             },
             deleteFile = { app.deleteSharedPreferences(fileName) },
             deleteKey = { deleteMasterKeyAlias() },
+            memory = { memoryFor(fileName) },
         )
         if (opened.wasReset) runCatching { app.getSharedPreferences(FLAGS, Context.MODE_PRIVATE).edit().putBoolean(fileName, true).apply() }
         return opened
@@ -48,6 +49,16 @@ object SafeEncryptedPrefs {
     @JvmStatic fun acknowledgeReset(context: Context, fileName: String) {
         runCatching { (context.applicationContext ?: context).getSharedPreferences(FLAGS, Context.MODE_PRIVATE).edit().remove(fileName).apply() }
     }
+
+    private val memoryStores = HashMap<String, SharedPreferences>()
+
+    /**
+     * ONE in-memory store per file for the whole process. Callers open the file anew on each use (the sync worker,
+     * the seed, the Git page), so a fresh empty store per open made a credential saved at sign-in invisible to the
+     * next reader: the sign-in looked lost and every pass asked again.
+     */
+    internal fun memoryFor(fileName: String): SharedPreferences =
+        synchronized(memoryStores) { memoryStores.getOrPut(fileName) { MemoryPrefs() } }
 
     /** The recovery policy with the Android parts injected, so a JVM test can drive it. Never throws. */
     internal fun recover(

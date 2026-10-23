@@ -54,4 +54,12 @@ class SafeEncryptedPrefsTest {
         r.prefs.edit().remove("b").apply()
         assertFalse(r.prefs.contains("b"))
     }
+
+    // #1085 the memory fallback is shared per file: a value saved through one open is read through the next.
+    @Test fun memoryFallbackIsSharedAcrossOpensOfTheSameFile() {
+        val a = SafeEncryptedPrefs.memoryFor("t1085.xml")
+        a.edit().putString("token", "x").commit()
+        assertEquals("x", SafeEncryptedPrefs.memoryFor("t1085.xml").getString("token", ""))
+        assertFalse(SafeEncryptedPrefs.memoryFor("other1085.xml").contains("token"))
+    }
 }
