@@ -814,6 +814,7 @@ class AuthRepositoryTest {
             }
             coVerify(exactly = 0) { userLogoutManager.softLogout(any(), any()) }
             coVerify(exactly = 0) { userLogoutManager.logout(any(), any()) }
+            fakeAuthDiskSource.assertReauthNeeded(userId = USER_ID_1, expected = true)
         }
 
     @Suppress("MaxLineLength")
@@ -883,9 +884,40 @@ class AuthRepositoryTest {
             userId = USER_ID_1,
             accountTokens = updatedAccountTokens,
         )
+        fakeAuthDiskSource.assertReauthNeeded(userId = USER_ID_1, expected = false)
         coVerify(exactly = 1) {
             identityService.refreshTokenSynchronously(REFRESH_TOKEN)
         }
+    }
+
+    @Test
+    fun `refresh success clears a persisted reauth-needed flag`() = runTest {
+        fakeAuthDiskSource.userState = SINGLE_USER_STATE_1
+        fakeAuthDiskSource.storeAccountTokens(userId = USER_ID_1, accountTokens = ACCOUNT_TOKENS_1)
+        fakeAuthDiskSource.storeReauthNeeded(userId = USER_ID_1, reauthNeeded = true)
+        coEvery {
+            identityService.refreshTokenSynchronously(REFRESH_TOKEN)
+        } returns REFRESH_TOKEN_RESPONSE_JSON.asSuccess()
+
+        repository.refreshAccessTokenSynchronously(USER_ID_1)
+
+        fakeAuthDiskSource.assertReauthNeeded(userId = USER_ID_1, expected = false)
+    }
+
+    @Test
+    fun `reauthenticate failure keeps tokens and vault and never logs out`() = runTest {
+        fakeAuthDiskSource.userState = SINGLE_USER_STATE_1
+        fakeAuthDiskSource.storeAccountTokens(userId = USER_ID_1, accountTokens = ACCOUNT_TOKENS_1)
+        fakeAuthDiskSource.storeReauthNeeded(userId = USER_ID_1, reauthNeeded = true)
+        coEvery { identityService.preLogin(any()) } returns IllegalStateException("offline").asFailure()
+
+        val result = repository.reauthenticate(password = "not-a-real-password")
+
+        assertTrue(result.isFailure)
+        fakeAuthDiskSource.assertAccountTokens(userId = USER_ID_1, accountTokens = ACCOUNT_TOKENS_1)
+        fakeAuthDiskSource.assertReauthNeeded(userId = USER_ID_1, expected = true)
+        coVerify(exactly = 0) { userLogoutManager.softLogout(any(), any()) }
+        coVerify(exactly = 0) { userLogoutManager.logout(any(), any()) }
     }
 
     @Test

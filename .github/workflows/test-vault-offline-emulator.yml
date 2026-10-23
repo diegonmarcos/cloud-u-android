@@ -1,0 +1,110 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → Cloud Vault offline + update survival (emulator)                ║
+# ║                                                                        ║
+# ║ Boots an x86_64 API-34 emulator, enrols a fingerprint, installs the    ║
+# ║ PREVIOUS Ship build of the fork, signs in to a seeded Vaultwarden on   ║
+# ║ the runner, wraps the vault key with the fingerprint, `install -r`s    ║
+# ║ the NEW build, turns the network OFF and opens it with the             ║
+# ║ fingerprint: the cached vault must show, with the "Offline - last      ║
+# ║ synced" line. Script: ac_cloud-vault/test/test-vault-offline-          ║
+# ║ emulator.sh (REQUIRE_EMULATOR=1: it cannot skip here). Screenshots,    ║
+# ║ ui dumps and logcat are uploaded as `vault-offline-evidence`.          ║
+# ║                                                                        ║
+# ║ Called by Ship -> Cloud Vault APK after the fork build (new_run_id =   ║
+# ║ that run); dispatch it by hand to re-run against a finished Ship run.  ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → Cloud Vault offline + update (emulator)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      new_run_id:
+        description: "Ship Cloud Vault run whose fork APK is the NEW build (empty = latest successful)"
+        required: false
+        default: ""
+      old_run_id:
+        description: "Ship Cloud Vault run whose fork APK is the OLD build (empty = the successful run before the new one)"
+        required: false
+        default: ""
+  workflow_call:
+    inputs:
+      new_run_id:
+        type: string
+        required: false
+        default: ""
+      old_run_id:
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  vault-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch the OLD and NEW fork APKs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NEW_RUN: ${{ inputs.new_run_id }}
+          OLD_RUN: ${{ inputs.old_run_id }}
+        run: |
+          set -eu
+          WF=ship-cloud-vault.yml
+          runs=$(gh run list -R "$REPO" -w "$WF" -b main -s success -L 30 --json databaseId --jq '.[].databaseId')
+          [ -n "$NEW_RUN" ] || NEW_RUN=$(echo "$runs" | head -1)
+          grab() { # grab <run id> <dir>: the fork APK artifact of a run, or non-zero
+            mkdir -p "$2"
+            gh run download "$1" -R "$REPO" -p 'cloud-vault-bitwarden-fork-*' -D "$2" >/dev/null 2>&1 || return 1
+            find "$2" -name '*.apk' | head -1 | grep -q .
+          }
+          grab "$NEW_RUN" new || { echo "::error::no fork APK artifact in run $NEW_RUN"; exit 1; }
+          if [ -n "$OLD_RUN" ]; then
+            grab "$OLD_RUN" old || { echo "::error::no fork APK artifact in run $OLD_RUN"; exit 1; }
+          else
+            for r in $runs; do
+              [ "$r" -lt "$NEW_RUN" ] || continue
+              grab "$r" old && { OLD_RUN=$r; break; }
+              rm -rf old
+            done
+          fi
+          [ -n "$OLD_RUN" ] || { echo "::error::no earlier successful Ship run with an APK to upgrade from"; exit 1; }
+          cp "$(find new -name '*.apk' | head -1)" new.apk
+          cp "$(find old -name '*.apk' | head -1)" old.apk
+          echo "upgrade from run $OLD_RUN to run $NEW_RUN"; ls -l old.apk new.apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Host address for the emulator's DNS
+        run: echo "DNS_IP=$(hostname -I | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Boot emulator + run the offline / update test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -dns-server ${{ env.DNS_IP }}
+          disable-animations: true
+          script: bash ac_cloud-vault/test/emulator/run-ci.sh old.apk new.apk out
+
+      - name: Upload evidence (screenshots, ui dumps, logcat)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vault-offline-evidence
+          path: out/
+          if-no-files-found: warn

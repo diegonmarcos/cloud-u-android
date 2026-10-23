@@ -31,6 +31,7 @@ private const val BIOMETRICS_INIT_VECTOR_KEY = "biometricInitializationVector"
 private const val BIOMETRICS_UNLOCK_KEY = "userKeyBiometricUnlock"
 private const val USER_AUTO_UNLOCK_KEY_KEY = "userKeyAutoUnlock"
 private const val DEVICE_KEY_KEY = "deviceKey"
+private const val REAUTH_NEEDED_KEY = "reauthNeeded"
 private const val PENDING_ADMIN_AUTH_REQUEST_KEY = "pendingAdminAuthRequest"
 
 // These keys should not be encrypted
@@ -172,6 +173,7 @@ class AuthDiskSourceImpl(
         storeMasterPasswordHash(userId = userId, passwordHash = null)
         storePolicies(userId = userId, policies = null)
         storeAccountTokens(userId = userId, accountTokens = null)
+        storeReauthNeeded(userId = userId, reauthNeeded = null)
         storeShouldUseKeyConnector(userId = userId, shouldUseKeyConnector = null)
         storeIsTdeLoginComplete(userId = userId, isTdeLoginComplete = null)
         storeAuthenticatorSyncUnlockKey(userId = userId, authenticatorSyncUnlockKey = null)
@@ -524,6 +526,16 @@ class AuthDiskSourceImpl(
             value = accountTokens?.let { json.encodeToString(it) },
         )
         getMutableAccountTokensFlow(userId = userId).tryEmit(accountTokens)
+    }
+
+    override fun getReauthNeeded(userId: String): Boolean =
+        getBoolean(key = REAUTH_NEEDED_KEY.appendIdentifier(userId)) == true
+
+    override fun storeReauthNeeded(userId: String, reauthNeeded: Boolean?) {
+        putBoolean(
+            key = REAUTH_NEEDED_KEY.appendIdentifier(userId),
+            value = reauthNeeded?.takeIf { it },
+        )
     }
 
     override fun getOnboardingStatus(userId: String): OnboardingStatus? {

@@ -319,6 +319,10 @@ class AuthRepositoryImpl(
         get() = !settingsRepository.hasUserLoggedInOrCreatedAccount
 
     init {
+        // The persisted invalid_grant flag survives a restart: show the sync notice again until a sign-in.
+        authDiskSource.userState?.activeUserId?.let { id ->
+            if (authDiskSource.getReauthNeeded(id)) com.x8bit.bitwarden.fleet.SyncSignInNeeded.set(true)
+        }
         combine(
             userStateManager.hasPendingAccountAdditionStateFlow,
             authDiskSource.userStateFlow,
@@ -777,6 +781,9 @@ class AuthRepositoryImpl(
                     // next online sync needs a new login. The caller sees a failure and syncs quietly later.
                     is RefreshTokenResponseJson.Error -> {
                         Timber.w("refresh failed (invalid_grant=${refreshTokenResponse.isInvalidGrant}); vault kept")
+                        if (refreshTokenResponse.isInvalidGrant) {
+                            authDiskSource.storeReauthNeeded(userId = userId, reauthNeeded = true)
+                        }
                         com.x8bit.bitwarden.fleet.SyncSignInNeeded.set(true)
                         IllegalStateException(refreshTokenResponse.error).asFailure()
                     }
@@ -794,6 +801,7 @@ class AuthRepositoryImpl(
                     }
 
                     is RefreshTokenResponseJson.Success -> {
+                        authDiskSource.storeReauthNeeded(userId = userId, reauthNeeded = null)
                         com.x8bit.bitwarden.fleet.SyncSignInNeeded.set(false)
                         // Store the new token information
                         authDiskSource.storeAccountTokens(
@@ -1451,6 +1459,54 @@ class AuthRepositoryImpl(
                 onSuccess = { PasswordStrengthResult.Success(passwordStrength = it) },
                 onFailure = { PasswordStrengthResult.Error(error = it) },
             )
+
+    override suspend fun reauthenticate(password: String): Result<Unit> {
+        val account = authDiskSource.userState?.activeAccount
+            ?: return IllegalStateException("no active account").asFailure()
+        val userId = account.profile.userId
+        val email = account.profile.email
+        return identityService
+            .preLogin(email = email)
+            .flatMap {
+                authSdkSource.hashPassword(
+                    email = email,
+                    password = password,
+                    kdf = it.kdfParams.toSdkParams(),
+                    purpose = HashPurpose.SERVER_AUTHORIZATION,
+                )
+            }
+            .flatMap { passwordHash ->
+                identityService.getToken(
+                    uniqueAppId = authDiskSource.uniqueAppId,
+                    deeplinkScheme = environmentRepository.environment.appLinksScheme,
+                    email = email,
+                    authModel = IdentityTokenAuthModel.MasterPassword(
+                        username = email,
+                        password = passwordHash,
+                    ),
+                    twoFactorData = getRememberedTwoFactorData(email),
+                    newDeviceOtp = null,
+                )
+            }
+            .flatMap { response ->
+                if (response is GetTokenResponseJson.Success) {
+                    // Tokens only: no keys, KDF, vault data or lock state change.
+                    authDiskSource.storeAccountTokens(
+                        userId = userId,
+                        accountTokens = AccountTokensJson(
+                            accessToken = response.accessToken,
+                            refreshToken = response.refreshToken,
+                            expiresAtSec = clock.instant().epochSecond + response.expiresInSeconds,
+                        ),
+                    )
+                    authDiskSource.storeReauthNeeded(userId = userId, reauthNeeded = null)
+                    com.x8bit.bitwarden.fleet.SyncSignInNeeded.set(false)
+                    Unit.asSuccess()
+                } else {
+                    IllegalStateException("sign-in was not completed").asFailure()
+                }
+            }
+    }
 
     override suspend fun validatePassword(password: String): ValidatePasswordResult {
         val profile = authDiskSource

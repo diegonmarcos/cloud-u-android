@@ -386,6 +386,13 @@ interface AuthRepository :
     suspend fun validatePassword(password: String): ValidatePasswordResult
 
     /**
+     * Non-destructive re-authentication for the "Sync needs sign-in" notice: signs in again with the master
+     * [password] and replaces ONLY the account tokens. Keys, KDF, the cached vault and the lock state are
+     * never touched, and a failure never logs out or wipes anything.
+     */
+    suspend fun reauthenticate(password: String): Result<Unit>
+
+    /**
      * Validates the PIN for the current logged-in user.
      */
     suspend fun validatePinUserKey(pin: String): ValidatePinResult

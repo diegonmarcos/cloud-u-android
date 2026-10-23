@@ -25,3 +25,16 @@ grep -q 'SyncSignInNeeded.set(true)' $d/data/auth/repository/AuthRepositoryImpl.
 grep -q 'setUserAuthenticationRequired(true)' $d/data/platform/manager/BiometricsEncryptionManagerImpl.kt \
   || { echo "FAIL: Keystore key no longer requires biometric auth"; exit 1; }
 echo "PASS: biometric local lock wiring and sync notice"
+# #1116/#1119 gaps: sign-in action on the banner (tokens only), persisted re-auth flag, offline / last-synced header.
+grep -q 'Text("Sign in")' $d/ui/platform/feature/vaultunlockednavbar/FleetNavScaffold.kt \
+  || { echo "FAIL: the sync banner has no Sign in action"; exit 1; }
+re=$(awk '/override suspend fun reauthenticate/{p=1} p{print} /override suspend fun validatePassword/{if(p)exit}' $d/data/auth/repository/AuthRepositoryImpl.kt)
+if grep -q -E 'softLogout|logout\(|clearData|deleteVaultData|clearCrypto|storeMasterPasswordHash|storeAccountCryptographicState' <<<"$re" \
+  || ! grep -q 'storeAccountTokens' <<<"$re"; then
+  echo "FAIL: reauthenticate must refresh only the tokens"; exit 1
+fi
+grep -q 'storeReauthNeeded(userId = userId, reauthNeeded = true)' $d/data/auth/repository/AuthRepositoryImpl.kt \
+  || { echo "FAIL: invalid_grant does not persist the re-auth flag"; exit 1; }
+grep -q 'Offline — last synced' $d/fleet/OfflineStatus.kt \
+  || { echo "FAIL: no 'Offline — last synced' indicator"; exit 1; }
+echo "PASS: sign-in action, persisted re-auth flag, offline indicator"

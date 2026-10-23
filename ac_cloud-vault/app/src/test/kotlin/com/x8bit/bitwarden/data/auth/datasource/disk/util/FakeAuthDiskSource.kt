@@ -53,6 +53,7 @@ class FakeAuthDiskSource : AuthDiskSource {
         mutableMapOf<String, List<SyncResponseJson.Profile.Organization>?>()
     private val storedOrganizationKeys = mutableMapOf<String, Map<String, String>?>()
     private val storedAccountTokens = mutableMapOf<String, AccountTokensJson?>()
+    private val storedReauthNeeded = mutableMapOf<String, Boolean?>()
     private val storedDeviceKey = mutableMapOf<String, String?>()
     private val storedPendingAuthRequests = mutableMapOf<String, PendingAuthRequestJson?>()
     private val storedBiometricInitVectors = mutableMapOf<String, ByteArray?>()
@@ -87,6 +88,7 @@ class FakeAuthDiskSource : AuthDiskSource {
         storedOrganizations.remove(userId)
         storedPolicies.remove(userId)
         storedAccountTokens.remove(userId)
+        storedReauthNeeded.remove(userId)
         storedBiometricInitVectors.remove(userId)
         storedBiometricKeys.remove(userId)
         storedOrganizationKeys.remove(userId)
@@ -313,6 +315,16 @@ class FakeAuthDiskSource : AuthDiskSource {
     override fun storeAccountTokens(userId: String, accountTokens: AccountTokensJson?) {
         storedAccountTokens[userId] = accountTokens
         getMutableAccountTokensFlow(userId = userId).tryEmit(accountTokens)
+    }
+
+    override fun getReauthNeeded(userId: String): Boolean = storedReauthNeeded[userId] == true
+
+    override fun storeReauthNeeded(userId: String, reauthNeeded: Boolean?) {
+        storedReauthNeeded[userId] = reauthNeeded
+    }
+
+    fun assertReauthNeeded(userId: String, expected: Boolean) {
+        assertEquals(expected, getReauthNeeded(userId))
     }
 
     override fun getOnboardingStatus(userId: String): OnboardingStatus? =

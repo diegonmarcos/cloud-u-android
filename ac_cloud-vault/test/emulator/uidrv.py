@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+"""Tiny uiautomator driver for the emulator tests: tap/wait/has/type by text regex. Exit 1 on timeout."""
+import os, re, subprocess, sys, time
+import xml.etree.ElementTree as ET
+
+def adb(*a):
+    return subprocess.run(["adb", "-e", *a], capture_output=True, text=True).stdout
+
+def dump():
+    out = adb("exec-out", "uiautomator", "dump", "/dev/tty")
+    i, j = out.find("<?xml"), out.rfind("</hierarchy>")
+    return out[i:j + len("</hierarchy>")] if i >= 0 and j >= 0 else ""
+
+def nodes():
+    try:
+        return list(ET.fromstring(dump()).iter("node"))
+    except ET.ParseError:
+        return []
+
+def center(n):
+    l, t, r, b = map(int, re.findall(r"-?\d+", n.get("bounds", "[0,0][0,0]")))
+    return (l + r) // 2, (t + b) // 2
+
+def hit(n, rx):
+    return re.search(rx, n.get("text", "") + "\n" + n.get("content-desc", ""), re.I) is not None
+
+def find(rx):
+    for n in nodes():
+        if hit(n, rx) and n.get("bounds") != "[0,0][0,0]":
+            return n
+
+def poll(fn, timeout):
+    end = time.time() + timeout
+    while True:
+        v = fn()
+        if v:
+            return v
+        if time.time() > end:
+            return None
+        time.sleep(1.5)
+
+def fail(msg):
+    d = os.environ.get("OUT_DIR", "/tmp")
+    try:
+        open(os.path.join(d, "fail-ui.xml"), "w").write(dump())
+    except OSError:
+        pass
+    print("FAIL: " + msg, file=sys.stderr)
+    sys.exit(1)
+
+def main():
+    cmd, args = sys.argv[1], sys.argv[2:]
+    if cmd == "tap":
+        n = poll(lambda: find(args[0]), float(args[1]) if len(args) > 1 else 25)
+        n or fail("nothing to tap: " + args[0])
+        x, y = center(n)
+        adb("shell", "input", "tap", str(x), str(y))
+    elif cmd == "wait":
+        poll(lambda: find(args[0]), float(args[1]) if len(args) > 1 else 60) or fail("never saw: " + args[0])
+    elif cmd == "has":
+        sys.exit(0 if find(args[0]) else 1)
+    elif cmd == "type":  # tap the first text field, then type (alphanumerics only)
+        n = poll(lambda: next((x for x in nodes() if x.get("class") == "android.widget.EditText"), None), 25)
+        n or fail("no text field to type into")
+        x, y = center(n)
+        adb("shell", "input", "tap", str(x), str(y))
+        time.sleep(1)
+        adb("shell", "input", "text", args[0].replace(" ", "%s"))
+    elif cmd == "dump":
+        open(args[0], "w").write(dump())
+    else:
+        fail("unknown command " + cmd)
+
+main()

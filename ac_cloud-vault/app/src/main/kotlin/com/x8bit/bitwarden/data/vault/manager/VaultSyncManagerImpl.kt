@@ -289,6 +289,7 @@ class VaultSyncManagerImpl(
                                 userId = userId,
                                 lastSyncTime = clock.instant(),
                             )
+                            com.x8bit.bitwarden.fleet.SyncHealth.setLastSyncFailed(false)
                             vaultDiskSource.resyncVaultData(userId = userId)
                             val itemsAvailable = vaultDiskSource
                                 .getCiphersFlow(userId)
@@ -298,6 +299,7 @@ class VaultSyncManagerImpl(
                         }
                     },
                     onFailure = {
+                        com.x8bit.bitwarden.fleet.SyncHealth.setLastSyncFailed(true)
                         updateVaultStateFlowsToError(throwable = it)
                         return SyncVaultDataResult.Error(throwable = it)
                     },
@@ -343,6 +345,7 @@ class VaultSyncManagerImpl(
                         userId = userId,
                         lastSyncTime = clock.instant(),
                     )
+                    com.x8bit.bitwarden.fleet.SyncHealth.setLastSyncFailed(false)
                     vaultDiskSource.replaceVaultData(userId = userId, vault = syncResponse)
                     fillAssistManager.syncIfNecessary()
                     val itemsAvailable = syncResponse.ciphers?.isNotEmpty() == true
@@ -350,6 +353,7 @@ class VaultSyncManagerImpl(
                 }
             },
             onFailure = {
+                com.x8bit.bitwarden.fleet.SyncHealth.setLastSyncFailed(true)
                 updateVaultStateFlowsToError(throwable = it)
                 SyncVaultDataResult.Error(throwable = it)
             },

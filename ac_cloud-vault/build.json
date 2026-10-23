@@ -279,6 +279,11 @@
       "requires": [
         "jq"
       ]
+    },
+    "unit": {
+      "_doc": "The Bitwarden fork's JVM suites (src/test, no emulator). The fork job of the ship workflow runs this task's autofill + matching suites plus AuthRepositoryTest (a failed refresh never wipes the vault, the persisted re-auth flag, the token-only re-auth) and the fleet package (OfflineStatusTest) before anything is published; the whole app suite is ~470 classes and not that job's question.",
+      "task": ":app:testFdroidDebugUnitTest",
+      "enabled": true
     }
   }
 }

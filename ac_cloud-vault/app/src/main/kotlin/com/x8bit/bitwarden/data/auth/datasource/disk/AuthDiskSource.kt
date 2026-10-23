@@ -345,6 +345,17 @@ interface AuthDiskSource : AppIdProvider {
     fun storeAccountTokens(userId: String, accountTokens: AccountTokensJson?)
 
     /**
+     * Whether the server refused the refresh token (invalid_grant) for [userId], so the next sync needs a new
+     * sign-in. Persisted so it survives a restart. It never locks or wipes anything: the cached vault stays.
+     */
+    fun getReauthNeeded(userId: String): Boolean
+
+    /**
+     * Stores the "re-auth needed" flag for [userId]. Storing `false` or null clears it.
+     */
+    fun storeReauthNeeded(userId: String, reauthNeeded: Boolean?)
+
+    /**
      * Gets the onboarding status for the given [userId].
      */
     fun getOnboardingStatus(userId: String): OnboardingStatus?
