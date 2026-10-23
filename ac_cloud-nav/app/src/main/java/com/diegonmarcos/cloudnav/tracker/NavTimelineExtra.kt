@@ -40,7 +40,8 @@ class NavTimelineExtra(private val ctx: Context, private val radio: Boolean = fa
             .filter { !it.predicted && it.accuracyM <= MAX_ACC_M }
             .minByOrNull { Math.abs(it.ts - stop.startMs) }
         if (near != null) return stop.copy(lat = near.lat, lon = near.lon, locSource = "fix")
-        val current = stop.endMs == null || nowMs - stop.endMs <= NEAR_MS
+        val end = stop.endMs
+        val current = end == null || nowMs - end <= NEAR_MS
         if (!radio || !current) return null
         val f = StopLocator.resolve(nowMs, StopLocator.env(ctx), StopLocator.AndroidProbe(ctx)) ?: return null
         db.addFix(PlaceFix(f.timeMs, f.lat, f.lon, false, f.accuracyM.coerceAtLeast(0f).toDouble()), if (f.source == StopLocator.GPS) "gps" else "net")
