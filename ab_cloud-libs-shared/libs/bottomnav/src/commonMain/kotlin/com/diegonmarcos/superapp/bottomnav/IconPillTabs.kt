@@ -87,7 +87,7 @@ internal fun IconPillStrip(
                 .border(tokens.tabsPillStroke, colors.idleStroke, capsule)
                 .horizontalScroll(scroll)
                 .padding(tokens.tabsStripPadding)
-                .widthIn(min = maxWidth - 2 * tokens.tabsStripPadding - 2.dp)
+                .widthIn(min = maxWidth - tokens.tabsStripPadding * 2 - 2.dp)
                 .selectableGroup()
                 .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = pages.size) },
             horizontalArrangement = Arrangement.SpaceBetween,
