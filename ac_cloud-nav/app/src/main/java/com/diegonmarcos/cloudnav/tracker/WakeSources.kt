@@ -36,7 +36,8 @@ object WakeSources {
     private const val WORK = "tracker-engine-wake"
 
     /** True once at least one source is armed, so the periodic tick can be relaxed. */
-    @Volatile var armed = false; private set
+    @Volatile var armed = false
+        private set
     private var motionListener: TriggerEventListener? = null
 
     /** Arms what is missing; safe to call as often as you like (app start, every pass, a wake). */

@@ -1271,10 +1271,10 @@
         "ac_cloud-nav"
       ]
     },
-    "tracker_place_names": {
+    "tracker_place_addr_v2": {
       "kind": "prefs",
       "class": "device",
-      "doc": "Cache of reverse-geocoded place names (open provider answers by ~11 m grid cell) so a place is asked once; re-fetched on demand.",
+      "doc": "Cache of reverse-geocoded addresses and POI name + category (open provider answers by ~11 m grid cell) so a place is asked once; re-fetched on demand.",
       "used_by": [
         "ac_cloud-nav"
       ]
