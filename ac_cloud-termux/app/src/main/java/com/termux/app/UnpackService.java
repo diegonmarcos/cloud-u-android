@@ -50,7 +50,7 @@ public class UnpackService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         startForeground(NOTIFICATION_ID, notification());
-        final ResultReceiver receiver = intent == null ? null : intent.getParcelableExtra(UnpackReport.EXTRA_RECEIVER);
+        final ResultReceiver receiver = receiverOf(intent);
         final Context app = getApplicationContext();
         new Thread(() -> {
             String error;
@@ -68,6 +68,22 @@ public class UnpackService extends Service {
             stopSelf(startId);
         }, "cloud-unpack").start();
         return START_NOT_STICKY;
+    }
+
+    /**
+     * The reply channel, or null. A sender whose receiver class this app cannot load (BadParcelableException),
+     * a wrong type or a missing extra must never stop the unpack, so every failure here means no reply.
+     */
+    static ResultReceiver receiverOf(Intent intent) {
+        if (intent == null) return null;
+        try {
+            if (Build.VERSION.SDK_INT >= 33)
+                return intent.getParcelableExtra(UnpackReport.EXTRA_RECEIVER, ResultReceiver.class);
+            return intent.getParcelableExtra(UnpackReport.EXTRA_RECEIVER);
+        } catch (RuntimeException e) {   // BadParcelableException, ClassCastException
+            Logger.logStackTraceWithMessage(LOG_TAG, "Reply channel unreadable, unpacking without it", e);
+            return null;
+        }
     }
 
     /** null on success, else why not; the verdict is written to files/unpack-result.json either way. */

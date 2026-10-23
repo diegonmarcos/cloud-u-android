@@ -288,3 +288,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "${{ matrix.abi }}"
+
+  # #1121 The Store, a package of its own, starts a terminal's unpack and gets the reply across
+  # processes (the phone crashed here: a ResultReceiver subclass the terminal could not load).
+  store_unpack_cross_process:
+    needs: build_and_publish
+    if: ${{ !cancelled() && needs.build_and_publish.result == 'success' }}
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/test-store-unpack-cross-process.yml
+    with:
+      store_artifact_prefix: "Cloud-Store-x86_64-"

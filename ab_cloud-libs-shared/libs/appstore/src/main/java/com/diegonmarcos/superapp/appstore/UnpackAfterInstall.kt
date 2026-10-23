@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.Parcel
 import android.os.ResultReceiver
 
 /**
@@ -56,15 +57,32 @@ object UnpackAfterInstall {
         } catch (_: Throwable) { false }
     }
 
+    /**
+     * A plain [ResultReceiver] that forwards to [local]. Sending a subclass across processes makes the
+     * other app unmarshal that class by name, which its classloader does not have (BadParcelableException,
+     * #1121 on the phone). Written to a Parcel and read back, only the binder is left, so the receiving
+     * app sees the framework class alone.
+     */
+    fun receiverForSending(local: ResultReceiver): ResultReceiver {
+        val p = Parcel.obtain()
+        try {
+            local.writeToParcel(p, 0)
+            p.setDataPosition(0)
+            return ResultReceiver.CREATOR.createFromParcel(p)
+        } finally {
+            p.recycle()
+        }
+    }
+
     /** The explicit start; call after the install has landed. Never blocks, never throws. */
     fun run(ctx: Context, pkg: String) {
         if (!applies(pkg)) return
         val app = ctx.applicationContext
         record(app, pkg, UNPACKING)
-        val receiver = object : ResultReceiver(Handler(Looper.getMainLooper())) {
+        val receiver = receiverForSending(object : ResultReceiver(Handler(Looper.getMainLooper())) {
             override fun onReceiveResult(resultCode: Int, data: Bundle?) =
                 record(app, pkg, text(resultCode, data?.getString("error")))
-        }
+        })
         val intent = Intent(ACTION).setComponent(ComponentName(pkg, SERVICE)).putExtra(EXTRA_RECEIVER, receiver)
         if (starter(app, intent)) return
         // The service is unavailable (an older build, or Android refused a background start): the

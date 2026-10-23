@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- No components: the store is Fragments the host inflates, and its
-     background pass is a WorkManager worker the host schedules. -->
+<!-- The store is Fragments the host inflates, and its background pass is a WorkManager worker the
+     host schedules. The one component is the #1121 test entry, reachable only by adb (DUMP). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- SharedUidMigration step 1: the store asks the OLD terminal build to tar its own home.
          CLOUD_EXEC is signature-level (granted with no prompt, fleet key); RUN_COMMAND is the
@@ -9,4 +9,14 @@
     <uses-permission android:name="cld.termux.nix.permission.CLOUD_EXEC" />
     <uses-permission android:name="cld.termux.permission.RUN_COMMAND" />
     <uses-permission android:name="cld.termux.nix.permission.RUN_COMMAND" />
+    <application>
+        <receiver
+            android:name="com.diegonmarcos.superapp.appstore.UnpackTestReceiver"
+            android:exported="true"
+            android:permission="android.permission.DUMP">
+            <intent-filter>
+                <action android:name="com.diegonmarcos.cloud.action.TEST_UNPACK" />
+            </intent-filter>
+        </receiver>
+    </application>
 </manifest>

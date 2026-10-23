@@ -1,0 +1,168 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → Store starts a terminal's unpack across processes (emulator)    ║
+# ║                                                                        ║
+# ║ #1121 on the phone: Cloud Store passed a ResultReceiver SUBCLASS to    ║
+# ║ the terminal's UnpackService, whose classloader could not unmarshal it ║
+# ║ (BadParcelableException) and the service died. The CI test that came   ║
+# ║ before started the service from adb, one process, so it never saw it.  ║
+# ║ Here the Store is its own package: this run's Store APK is installed   ║
+# ║ beside the terminal (and its rootfs lib) and told, by its adb-only     ║
+# ║ UnpackTestReceiver, to run UnpackAfterInstall exactly as after an      ║
+# ║ install. Required: files/unpack-result.json ok:true, the Store keeps   ║
+# ║ "unpacked", and no BadParcelableException in the log. Then the service ║
+# ║ is started with NO reply channel: it must still unpack and write the   ║
+# ║ result. The terminals and libs are the rolling 'latest' release.       ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → Store starts a terminal unpack across processes (emulator, reusable)"
+
+on:
+  workflow_call:
+    inputs:
+      store_artifact_prefix:
+        description: "Name prefix of the x86_64 Cloud Store artifact the calling Ship run uploaded"
+        type: string
+        required: true
+      api_level:
+        type: string
+        default: "34"
+  workflow_dispatch:
+    inputs:
+      store_artifact_prefix: {type: string, default: "Cloud-Store-x86_64-"}
+      api_level: {type: string, default: "34"}
+      run_id:
+        description: "Store Ship run whose APK artifact to test"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  cross-process:
+    name: "${{ matrix.app }}: the Store's unpack start crosses processes (API ${{ inputs.api_level }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {app: cloud-terminal-termux, term_asset: cloud-terminal-x86_64.apk, lib_asset: Cloud-Lib-Rootfs-Termux-x86_64.apk, term_pkg: cld.termux, lib_pkg: com.diegonmarcos.cloudlib.rootfstermux}
+          - {app: cloud-terminal-nix, term_asset: cloud-nixdroid-x86_64.apk, lib_asset: Cloud-Lib-Rootfs-Nixdroid-x86_64.apk, term_pkg: cld.termux.nix, lib_pkg: com.diegonmarcos.cloudlib.rootfsnixdroid}
+    steps:
+      - name: Fetch this run's Store APK
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.store_artifact_prefix }}*
+          path: apk
+          run-id: ${{ inputs.run_id || github.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch the terminal and its lib from the rolling release
+        id: apk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TERM_ASSET: ${{ matrix.term_asset }}
+          LIB_ASSET: ${{ matrix.lib_asset }}
+        run: |
+          set -eu
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          store=$(find apk -name '*.apk' 2>/dev/null | sort | head -1)
+          if [ -z "$store" ]; then
+            echo "No Store APK in this run (the publish gate skipped the build): nothing new to test."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          cp "$store" store.apk
+          gh release download latest -R "$REPO" -p "$TERM_ASSET" -O term.apk
+          gh release download latest -R "$REPO" -p "$LIB_ASSET" -O lib.apk
+          echo "store=$("$aapt2" dump packagename store.apk) term=$("$aapt2" dump packagename term.apk) lib=$("$aapt2" dump packagename lib.apk)"
+          { echo "skip=false"; echo "store_pkg=$("$aapt2" dump packagename store.apk)"; } >> "$GITHUB_OUTPUT"
+
+      - name: Enable KVM
+        if: steps.apk.outputs.skip != 'true'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Write the probe
+        if: steps.apk.outputs.skip != 'true'
+        env:
+          PKG: ${{ matrix.term_pkg }}
+          STORE: ${{ steps.apk.outputs.store_pkg }}
+          APP: ${{ matrix.app }}
+        run: |
+          printf "#!/bin/bash\nPKG='%s'; STORE='%s'; APP='%s'\n" "$PKG" "$STORE" "$APP" > probe.sh
+          cat >> probe.sh <<'EOF'
+          set -u
+          mkdir -p out
+          adb root >/dev/null 2>&1 || true
+          sleep 3
+          adb wait-for-device
+          [ "$(adb shell id -u | tr -d '\r')" = 0 ] || { echo "::error::adb root is not available on this image"; exit 2; }
+          D=/data/data/$PKG/files
+          # The terminal declares the signature permission the Store needs, so it goes in first.
+          adb install -r lib.apk  || { echo "::error::lib APK install failed"; exit 2; }
+          adb install -r -g term.apk || { echo "::error::terminal APK install failed"; exit 2; }
+          adb install -r -g store.apk || { echo "::error::Store APK install failed (signed with another key than the terminal?)"; exit 2; }
+          adb shell pm check-permission com.diegonmarcos.cloud.permission.TERMINAL_SESSION "$STORE" || true
+          adb shell dumpsys package "$STORE" | grep -E "TERMINAL_SESSION" | head -3 || true
+          adb shell "rm -f $D/unpack-result.json"
+          adb logcat -c || true
+          # The Store, a package of its own, starts the unpack as it does after an install.
+          adb shell am broadcast --include-stopped-packages -n "$STORE/com.diegonmarcos.superapp.appstore.UnpackTestReceiver" \
+            -a com.diegonmarcos.cloud.action.TEST_UNPACK --es pkg "$PKG" || { echo "::error::the Store test receiver did not take the broadcast"; exit 2; }
+          wait_result() {
+            for i in $(seq 1 60); do
+              sleep 10
+              r=$(adb shell cat $D/unpack-result.json 2>/dev/null | tr -d '\r' || true)
+              case "$r" in *'"ok":true'*|*'"ok":false'*) echo "$r"; return 0;; esac
+            done
+            echo "none"
+          }
+          ok1=$(wait_result)
+          adb shell "cat /data/data/$STORE/shared_prefs/unpack_after_install.xml" > out/store-prefs.xml 2>&1 || true
+          adb logcat -d -v threadtime > out/logcat.txt
+          echo "Store-started result: $ok1"; cat out/store-prefs.xml
+          fail=0
+          case "$ok1" in *'"ok":true'*) ;; *) echo "::error title=$APP cross-process::the Store's start did not unpack (result '$ok1')"; fail=1;; esac
+          if grep -q "BadParcelableException" out/logcat.txt; then echo "::error title=$APP cross-process::BadParcelableException in the log"; grep BadParcelable out/logcat.txt | head; fail=1; fi
+          grep -q "unpacked" out/store-prefs.xml || { echo "::error title=$APP cross-process::the Store never got the reply (no 'unpacked' kept)"; fail=1; }
+          # No reply channel at all (adb, root): the service must still unpack and write the result.
+          adb shell "rm -f $D/unpack-result.json"
+          adb logcat -c || true
+          adb shell am start-foreground-service -n "$PKG/com.termux.app.UnpackService" -a com.diegonmarcos.cloud.action.UNPACK || true
+          ok2=$(wait_result)
+          adb logcat -d -v threadtime > out/logcat-noreply.txt
+          echo "No-reply result: $ok2"
+          case "$ok2" in *'"ok":true'*) ;; *) echo "::error title=$APP no reply channel::the unpack did not run without a reply channel (result '$ok2')"; fail=1;; esac
+          adb shell "ls -la $D" > out/files.txt 2>&1 || true
+          [ "$fail" = 0 ] || { grep -E "$PKG|$STORE|Unpack|AndroidRuntime" out/logcat.txt | tail -60; exit 1; }
+          echo "$APP: the Store's start crossed processes and unpacked."
+          EOF
+          chmod +x probe.sh
+
+      - name: Boot a clean emulator + probe
+        if: steps.apk.outputs.skip != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ inputs.api_level }}
+          arch: x86_64
+          target: google_apis
+          disk-size: 8G
+          ram-size: 4096M
+          cores: 4
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -wipe-data -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./probe.sh
+
+      - name: Upload evidence
+        if: always() && steps.apk.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-store-unpack-cross-process
+          path: out/
+          if-no-files-found: warn

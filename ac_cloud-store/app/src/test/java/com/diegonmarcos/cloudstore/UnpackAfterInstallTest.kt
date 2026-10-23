@@ -97,4 +97,24 @@ class UnpackAfterInstallTest {
         assertEquals("unpack failed: unknown error", UnpackAfterInstall.text(1, null))
         assertEquals("unpack failed: unknown error", UnpackAfterInstall.text(1, " "))
     }
+
+    /** #1121 the phone crash: the terminal cannot load a Store subclass of ResultReceiver. */
+    @Test fun receiverForSendingIsAPlainResultReceiverThatForwards() {
+        var got: Pair<Int, String?>? = null
+        class Mine : ResultReceiver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onReceiveResult(resultCode: Int, data: Bundle?) { got = resultCode to data?.getString("error") }
+        }
+        val plain = UnpackAfterInstall.receiverForSending(Mine())
+        assertEquals(ResultReceiver::class.java, plain.javaClass)
+        plain.send(1, Bundle().apply { putString("error", "boom") })
+        shadowOf(android.os.Looper.getMainLooper()).idle()
+        assertEquals(1 to "boom", got)
+    }
+
+    @Test fun theIntentCarriesAPlainResultReceiver() {
+        val sent = ArrayList<Intent>()
+        UnpackAfterInstall.starter = { _, i -> sent += i; true }
+        UnpackAfterInstall.run(app, "cld.termux")
+        assertEquals(ResultReceiver::class.java, sent[0].getParcelableExtra<ResultReceiver>(UnpackAfterInstall.EXTRA_RECEIVER)!!.javaClass)
+    }
 }
