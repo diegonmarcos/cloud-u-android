@@ -1271,6 +1271,14 @@
         "ac_cloud-nav"
       ]
     },
+    "tracker_home": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "The owner's home-city override for the Trips tab (blank = detect from the most frequent sleep city of the last 90 days). Tied to the timeline store, re-derivable, never migrated.",
+      "used_by": [
+        "ac_cloud-nav"
+      ]
+    },
     "tracker_place_addr_v2": {
       "kind": "prefs",
       "class": "device",
