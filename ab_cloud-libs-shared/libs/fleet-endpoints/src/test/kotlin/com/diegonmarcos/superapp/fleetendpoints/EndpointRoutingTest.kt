@@ -213,7 +213,7 @@ class EndpointRoutingTest {
 
     @Test fun `only a failure that proves the request never arrived allows the other route`() {
         assertTrue(EndpointRouter.neverReached(ConnectException("refused")))
-        assertTrue(EndpointRouter.neverReached(UnknownHostException("x.app")))
+        assertTrue(EndpointRouter.neverReached(UnknownHostException("x.mesh.diegonmarcos.com")))
         assertTrue(EndpointRouter.neverReached(SSLHandshakeException("untrusted")))
         assertTrue(EndpointRouter.neverReached(IOException("wrapped", ConnectException())))
         assertTrue(EndpointRouter.neverReached(SocketTimeoutException("connect timed out")))
@@ -233,11 +233,11 @@ class EndpointRoutingTest {
 
     @Test fun `an unusable pair is refused`() {
         val strict = newRouter(requireHttps = true)
-        assertFalse("a plain-http public endpoint would carry the bearer in clear", strict.set("http://pub.example", "https://svc.app", EndpointPolicy.MESH_FIRST))
+        assertFalse("a plain-http public endpoint would carry the bearer in clear", strict.set("http://pub.example", "https://svc.mesh.diegonmarcos.com", EndpointPolicy.MESH_FIRST))
         assertFalse("the same host twice is not two endpoints", strict.set("https://pub.example", "https://pub.example:2443", EndpointPolicy.MESH_FIRST))
-        assertFalse("a base URL carries no query string", strict.set("https://pub.example/jmap?x=1", "https://svc.app", EndpointPolicy.MESH_FIRST))
-        assertFalse(strict.set("not a url", "https://svc.app", EndpointPolicy.MESH_FIRST))
-        assertTrue(strict.set("https://pub.example", "https://svc.app:2443", EndpointPolicy.MESH_FIRST))
+        assertFalse("a base URL carries no query string", strict.set("https://pub.example/jmap?x=1", "https://svc.mesh.diegonmarcos.com", EndpointPolicy.MESH_FIRST))
+        assertFalse(strict.set("not a url", "https://svc.mesh.diegonmarcos.com", EndpointPolicy.MESH_FIRST))
+        assertTrue(strict.set("https://pub.example", "https://svc.mesh.diegonmarcos.com:2443", EndpointPolicy.MESH_FIRST))
     }
 
     // ── no secrets in what can be logged ─────────────────────────────────

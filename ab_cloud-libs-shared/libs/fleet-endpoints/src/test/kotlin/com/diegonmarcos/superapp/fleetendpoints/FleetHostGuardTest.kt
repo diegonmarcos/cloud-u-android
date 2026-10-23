@@ -64,13 +64,13 @@ class FleetHostGuardTest {
         }
         // no hand-listed mesh host and no public host in cleartext, in ANY app's config
         val generated = Regex("<!-- BEGIN fleet-mesh-cleartext.*?<!-- END fleet-mesh-cleartext -->", RegexOption.DOT_MATCHES_ALL)
-        val handApp = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*\\.app\\s*</domain>"); val publicHost = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*diegonmarcos\\.com\\s*</domain>")
+        val handApp = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*\\.mesh\\.diegonmarcos\\.com\\s*</domain>"); val publicHost = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*diegonmarcos\\.com\\s*</domain>")
         root.listFiles().orEmpty().filter { it.isDirectory && (it.name.startsWith("ac_") || it.name.startsWith("aa_")) }.forEach { app ->
             app.walkTopDown().onEnter { it.name != "build" && it.name != ".git" && it.name != "node_modules" }.filter { it.name == "network_security_config.xml" }.forEach { f ->
                 val rel = f.relativeTo(root).invariantSeparatorsPath
                 val xml = f.readText().replace(Regex("<!--(?!\\s*(BEGIN|END) fleet-mesh).*?-->", RegexOption.DOT_MATCHES_ALL), "")
                 val outside = generated.replace(xml, "")
-                assertFalse("$rel hand-lists a .app mesh host (generate it: add the service to fleet_endpoints and list the app in fleet-nsc.json)", handApp.containsMatchIn(outside))
+                assertFalse("$rel hand-lists a mesh host (generate it: add the service to fleet_endpoints and list the app in fleet-nsc.json)", handApp.containsMatchIn(outside))
                 // a public fleet host is never cleartext
                 for (cfgEl in Regex("<domain-config cleartextTrafficPermitted=\"true\">.*?</domain-config>", RegexOption.DOT_MATCHES_ALL).findAll(xml))
                     assertFalse("$rel permits cleartext to a public fleet host", publicHost.containsMatchIn(cfgEl.value))
@@ -83,7 +83,7 @@ class FleetHostGuardTest {
         val services = org.json.JSONObject(File(root, "ac_cloud-account/build.json").readText()).getJSONObject("fleet_endpoints").getJSONArray("services")
         for (i in 0 until services.length()) {
             val s = services.getJSONObject(i); val id = s.getString("id")
-            assertTrue("$id: mesh names are .app names", s.getString("mesh_dns").endsWith(".app"))
+            assertTrue("$id: mesh names are .mesh.diegonmarcos.com names", s.getString("mesh_dns").endsWith(".mesh.diegonmarcos.com"))
             assertEquals("$id: the mesh is WireGuard-only and WG encrypts, so the mesh endpoint is plain http", "http", s.optString("mesh_scheme", "https"))
             assertEquals("$id: a public URL is https", "https", s.optString("public_scheme", "https"))
             assertTrue("$id: a mesh port is declared", s.optInt("mesh_port", 0) > 0)

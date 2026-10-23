@@ -54,7 +54,7 @@ class UnisonConfigTest {
     @Test fun aHostThatIsNotAMeshNameIsRefused() {
         refused(ssh.replace("oci-apps.mesh.diegonmarcos.com", "203.0.113.7"), needle = "<name>.app mesh name")
         refused(ssh.replace("oci-apps.mesh.diegonmarcos.com", "files.diegonmarcos.com"), needle = "<name>.app mesh name")
-        refused(ssh.replace("oci-apps.mesh.diegonmarcos.com", "OCI_apps.app"), needle = "<name>.app mesh name")
+        refused(ssh.replace("oci-apps.mesh.diegonmarcos.com", "OCI_apps.mesh.diegonmarcos.com"), needle = "<name>.app mesh name")
     }
 
     @Test fun anAutomaticWinnerWithoutBackupIsASilentOverwriteAndIsRefused() {

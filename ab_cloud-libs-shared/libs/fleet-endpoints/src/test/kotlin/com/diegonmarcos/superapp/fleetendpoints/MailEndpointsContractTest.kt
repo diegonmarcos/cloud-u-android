@@ -59,8 +59,8 @@ class MailEndpointsContractTest {
     }
 
     @Test fun anEntryWithAnUnusablePublicUrlIsDropped() {
-        val doc = """{"v":1,"accounts":[{"email":"a@x.org","service":"j","mesh":"https://m.app","public":"http://plain.example"},
-            {"email":"b@x.org","service":"j","mesh":"https://m.app","public":"https://ok.example","policy":"bogus"}]}"""
+        val doc = """{"v":1,"accounts":[{"email":"a@x.org","service":"j","mesh":"https://m.mesh.diegonmarcos.com","public":"http://plain.example"},
+            {"email":"b@x.org","service":"j","mesh":"https://m.mesh.diegonmarcos.com","public":"https://ok.example","policy":"bogus"}]}"""
         val p = MailEndpointsContract.parse(doc)!!
         assertEquals(listOf("b@x.org"), p.entries.map { it.email })
         assertEquals("an unknown policy falls back to mesh first", "mesh_first", p.entries.single().policy)

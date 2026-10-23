@@ -79,7 +79,7 @@ object FleetEndpointsContract {
             val publicScheme = o.optString("public_scheme", "https").ifBlank { "https" }
             val policy = o.optString("policy", POLICY_MESH_FIRST).ifBlank { POLICY_MESH_FIRST }
             val health = o.optString("health", "/").ifBlank { "/" }
-            if (id.isEmpty() || !dns.endsWith(".app") || '/' in domain || ':' in domain || ' ' in domain) return@mapNotNull null
+            if (id.isEmpty() || !dns.endsWith(".mesh.diegonmarcos.com") || '/' in domain || ':' in domain || ' ' in domain) return@mapNotNull null
             if (meshScheme !in setOf("http", "https") || policy !in POLICIES || !health.startsWith("/")) return@mapNotNull null
             val publicPath = o.optString("public_path").trim().trimEnd('/')
             val meshPath = o.optString("mesh_path").trim().trimEnd('/')

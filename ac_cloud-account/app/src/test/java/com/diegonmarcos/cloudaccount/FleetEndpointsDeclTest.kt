@@ -51,7 +51,7 @@ class FleetEndpointsDeclTest {
         val arr = declared.getJSONArray("services")
         for (i in 0 until arr.length()) assertTrue(arr.getJSONObject(i).getString("source").startsWith("cloud-u-containers/"))
         for (s in services.filter { !it.hasPublic }) assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, s.policy)
-        for (s in services) assertTrue("mesh names are .app names", s.meshDns.endsWith(".app"))
+        for (s in services) assertTrue("mesh names are .mesh.diegonmarcos.com names", s.meshDns.endsWith(".mesh.diegonmarcos.com"))
     }
 
     @Test fun noSecretIsDeclared() {

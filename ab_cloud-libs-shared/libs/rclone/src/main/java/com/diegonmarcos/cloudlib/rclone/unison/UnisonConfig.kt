@@ -15,7 +15,7 @@ object UnisonConfig {
 
     /** How the second root is reached. */
     sealed class Peer {
-        /** A fleet host or desktop over SSH on the WireGuard mesh, by its `<host>.app` mesh name. */
+        /** A fleet host or desktop over SSH on the WireGuard mesh, by its `<host>.mesh.diegonmarcos.com` mesh name. */
         data class Ssh(val host: String, val port: Int, val user: String, val path: String, val mount: String, val serverCommand: String) : Peer()
         /** Another folder on this phone (e.g. shared storage ↔ another volume). */
         data class Local(val path: String) : Peer()
@@ -57,8 +57,8 @@ object UnisonConfig {
     val FASTCHECK = setOf("default", "true", "false", "yes", "no")
     val PREFER = setOf("a", "b", "newer", "older")
     private val ID = Regex("[a-z0-9][a-z0-9-]{0,40}")
-    /** The mesh name rule: a fleet host is addressed as `<name>.app`, never a raw IP or a public name. */
-    val MESH_HOST = Regex("[a-z0-9][a-z0-9-]*\\.app")
+    /** The mesh name rule: a fleet host is addressed as `<name>.mesh.diegonmarcos.com`, never a raw IP or a public name. */
+    val MESH_HOST = Regex("[a-z0-9][a-z0-9-]*\\.mesh\\.diegonmarcos\\.com")
     /** An ignore directive in Unison's own grammar, so the profile can carry it verbatim. */
     private val IGNORE = Regex("(Name|Path|BelowPath|Regex) \\S.*")
 
@@ -98,7 +98,7 @@ object UnisonConfig {
                 val host = b.str("host")
                 val user = b.str("user")
                 val path = b.str("path")
-                if (!MESH_HOST.matches(host)) { bad("root_b.host '$host' is not a <name>.app mesh name"); continue }
+                if (!MESH_HOST.matches(host)) { bad("root_b.host '$host' is not a <name>.mesh.diegonmarcos.com mesh name"); continue }
                 if (user.isBlank() || '@' in user || ' ' in user) { bad("root_b.user is missing or malformed"); continue }
                 if (path.isBlank() || '\n' in path || path.contains("..")) { bad("root_b.path is missing or climbs"); continue }
                 Peer.Ssh(host, b.optInt("port", 22), user, path, b.str("mount"), b.str("server_cmd", "unison -server"))

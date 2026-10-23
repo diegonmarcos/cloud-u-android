@@ -84,9 +84,9 @@ class FleetEndpointsContractTest {
         assertNull(FleetEndpointsContract.parse("""{"v":2,"services":[]}"""))
         assertNull(FleetEndpointsContract.parse("nope"))
         val p = FleetEndpointsContract.parse("""{"v":1,"services":[
-            {"service":"a","mesh":"http://a.app:1","public":"http://insecure.example.org"},
-            {"service":"b","mesh":"ftp://b.app","public":""},
-            {"service":"c","mesh":"http://c.app:1","public":"https://c.example.org","policy":"x"}]}""")!!
+            {"service":"a","mesh":"http://a.mesh.diegonmarcos.com:1","public":"http://insecure.example.org"},
+            {"service":"b","mesh":"ftp://b.mesh.diegonmarcos.com","public":""},
+            {"service":"c","mesh":"http://c.mesh.diegonmarcos.com:1","public":"https://c.example.org","policy":"x"}]}""")!!
         assertEquals(listOf("c"), p.entries.map { it.service })
         assertEquals("an unknown policy falls back to the default", FleetEndpointsContract.POLICY_MESH_FIRST, p.entries.single().policy)
     }
@@ -108,14 +108,14 @@ class FleetEndpointsContractTest {
     }
 
     @Test fun aBadPathIsDroppedAndAMeshOnlyServiceHasNoPublicPath() {
-        val d = """{"services":[{"id":"api","mesh_dns":"x.app","public_domain":"a.example.org","PATHS":1,"policy":"mesh_first"}]}"""
+        val d = """{"services":[{"id":"api","mesh_dns":"x.mesh.diegonmarcos.com","public_domain":"a.example.org","PATHS":1,"policy":"mesh_first"}]}"""
         fun n(extra: String) = FleetEndpointsContract.parseDecl(d.replace("\"PATHS\":1", extra)).size
         assertEquals(1, n("\"public_path\":\"/pub\""))
         assertEquals("a path starts with a slash", 0, n("\"public_path\":\"pub\""))
         assertEquals("no query in a path", 0, n("\"public_path\":\"/pub?x\""))
         assertEquals("an empty route path", 0, n("\"route_paths\":[\"\"]"))
         assertEquals("a route path starts with a slash", 0, n("\"route_paths\":[\"health\"]"))
-        val meshOnly = """{"services":[{"id":"m","mesh_dns":"m.app","policy":"mesh_only","public_path":"/pub"}]}"""
+        val meshOnly = """{"services":[{"id":"m","mesh_dns":"m.mesh.diegonmarcos.com","policy":"mesh_only","public_path":"/pub"}]}"""
         assertEquals("a path of a public host it does not have", 0, FleetEndpointsContract.parseDecl(meshOnly).size)
     }
 }

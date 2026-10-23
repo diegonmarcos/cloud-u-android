@@ -162,7 +162,7 @@ class StoreMeshMirrorTest {
         val f = File("src/main/res/xml/network_security_config.xml").takeIf { it.isFile } ?: return
         val s = f.readText()
         // #1093 the generated cleartext entry carries includeSubdomains="false" (exact name, never the whole .app TLD).
-        assertTrue(Regex("<domain[^>]*>git-proxy-api\\.app</domain>").containsMatchIn(s))
+        assertTrue(Regex("<domain[^>]*>git-proxy-api\\.mesh\\.diegonmarcos\\.com</domain>").containsMatchIn(s))
         assertTrue(!s.contains(">app</domain>"))
     }
 }
