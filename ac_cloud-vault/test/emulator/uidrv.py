@@ -74,6 +74,8 @@ def main():
         adb("shell", "input", "tap", str(x), str(y))
         time.sleep(1)
         adb("shell", "input", "text", args[0].replace(" ", "%s"))
+    elif cmd == "texts":
+        print(" | ".join(filter(None, (n.get("text") or n.get("content-desc") for n in nodes())))[:500])
     elif cmd == "dump":
         open(args[0], "w").write(dump())
     else:

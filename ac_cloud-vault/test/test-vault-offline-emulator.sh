@@ -48,20 +48,32 @@ enrol_fingerprint() {
   adb -e shell input keyevent 3
 }
 
+trace() { echo "[$1] $($ui texts)" >> "$OUT_DIR/steps.txt"; }
+
 signin_selfhosted() {
   $ui wait 'Continue|Log in|Email' 240 || die login-screen "app did not reach the login screen"
+  trace s1
   $ui has 'Create account' && $ui tap '^Log in$|Log in' 15   # onboarding carousel -> email screen
   # point the app at the seeded server: environment menu -> Self-hosted -> server URL -> Save
   $ui tap 'Logging in on|Region|Server|\.com|diegonmarcos' 20 || die env-menu "no environment selector"
+  trace s2
   $ui tap 'Self-hosted' 15 || die env-selfhosted "no Self-hosted entry"
+  trace s3
   $ui type "${VAULT_URL:-http://vaultwarden.app}"
+  trace s4
   $ui tap '^Save$|Save' 15 || die env-save "no Save"
+  trace s5
   sleep 1
   $ui type "$VAULT_EMAIL"
+  trace s6
   $ui tap 'Continue' 15 || die email-continue "no Continue"
+  trace s7
   $ui wait 'Master password' 30 || die master-pw "no master password screen"
+  trace s8
   $ui type "$VAULT_PW"
+  trace s9
   $ui tap 'Log in with master password|Log in|Unlock' 15 || die master-login "no log in button"
+  trace s10
 }
 
 if [ -n "${OLD_APK:-}" ]; then
