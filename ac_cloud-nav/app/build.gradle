@@ -324,6 +324,7 @@ dependencies {
 
     // JVM unit tests: dead reckoning, source rules, trigger scheduling, segmentation, aggregation, day picker.
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20250107'   // DayJson contract test: the Android stub is not mocked on the JVM
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

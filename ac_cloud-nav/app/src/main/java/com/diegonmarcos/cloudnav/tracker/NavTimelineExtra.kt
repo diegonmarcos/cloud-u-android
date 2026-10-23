@@ -12,7 +12,7 @@ import java.time.ZoneId
  * fixes, the stays derived from those fixes, and a place for a stop whose coordinates are unusable. [radio] false (the
  * pages, the IPC door) never wakes a radio; the engine's 15-minute tick passes true and so may ask [StopLocator].
  */
-class NavTimelineExtra(private val ctx: Context, private val radio: Boolean = false) : TimelineSync.Extra {
+class NavTimelineExtra(private val ctx: Context, private val radio: Boolean = false, private val allowGps: Boolean = false) : TimelineSync.Extra {
     private val db get() = EngineDb.get(ctx)
 
     override fun fixes(fromMs: Long, toMs: Long): List<TlFix> =
@@ -43,7 +43,7 @@ class NavTimelineExtra(private val ctx: Context, private val radio: Boolean = fa
         val end = stop.endMs
         val current = end == null || nowMs - end <= NEAR_MS
         if (!radio || !current) return null
-        val f = StopLocator.resolve(nowMs, StopLocator.env(ctx), StopLocator.AndroidProbe(ctx)) ?: return null
+        val f = StopLocator.resolve(nowMs, StopLocator.env(ctx), StopLocator.AndroidProbe(ctx), allowGps = allowGps) ?: return null
         db.addFix(PlaceFix(f.timeMs, f.lat, f.lon, false, f.accuracyM.coerceAtLeast(0f).toDouble()), if (f.source == StopLocator.GPS) "gps" else "net")
         return stop.copy(lat = f.lat, lon = f.lon, locSource = if (f.source == StopLocator.NETWORK) "net" else f.source)
     }
@@ -56,11 +56,11 @@ class NavTimelineExtra(private val ctx: Context, private val radio: Boolean = fa
         fun install(ctx: Context) { TimelineSync.extra = NavTimelineExtra(ctx.applicationContext) }
 
         /** The engine's tick: one-time migration, then the last two days rebuilt, with the radio allowed. */
-        fun tick(ctx: Context, now: Long, zone: ZoneId = ZoneId.systemDefault()) {
+        fun tick(ctx: Context, now: Long, zone: ZoneId = ZoneId.systemDefault(), moving: Boolean = false) {
             val app = ctx.applicationContext
             install(app)
             TimelineSync.migrateOnce(app, now)
-            TimelineSync.run(app, now, now - 2 * 86_400_000L, zone, NavTimelineExtra(app, radio = true))
+            TimelineSync.run(app, now, now - 2 * 86_400_000L, zone, NavTimelineExtra(app, radio = true, allowGps = BatteryPolicy.allowGps(moving)))
         }
     }
 }

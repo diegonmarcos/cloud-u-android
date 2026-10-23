@@ -5,7 +5,7 @@
 #
 # What this certifies, statically (the nav is data, the bar and the strips are libs:bottomnav's):
 #   S1 build.json::ui is ONE declaration: bottom_nav = the five sections, default_section routes,
-#      Timeline carries Explored|Daily|Stops|Steps and Configs Tracker|APIs|Update|Cache|Layers|About as
+#      Timeline carries Explored|Daily|Stops|Steps|Day and Configs Tracker|APIs|Update|Cache|Layers|About as
 #      its pages; the old nav_tabs / default_tab keys are gone.
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
 #   S3 MainActivity (Compose) draws the bar with libs:bottomnav's BottomNavHost fed by NavConfig.decl (NavDecl),
@@ -36,7 +36,8 @@ CFG = json.loads(r'''{
    "explored",
    "daily",
    "stops",
-   "steps"
+   "steps",
+   "day"
   ],
   "configs": [
    "tracker",

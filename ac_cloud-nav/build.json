@@ -165,6 +165,10 @@
           {
             "id": "steps",
             "label": "Steps"
+          },
+          {
+            "id": "day",
+            "label": "Day"
           }
         ]
       },

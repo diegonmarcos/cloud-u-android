@@ -86,3 +86,23 @@ object TriggerPlanner {
         return out
     }
 }
+
+/**
+ * Battery policy: no high-accuracy (GPS) request while the phone is still. A tick counts as moving when the step counter
+ * advanced by at least [MOVING_STEPS] since the previous one; while still, only the network / cell provider may be asked.
+ */
+object BatteryPolicy {
+    const val MOVING_STEPS = 30L
+
+    fun isMoving(stepsSinceLastTick: Long): Boolean = stepsSinceLastTick >= MOVING_STEPS
+
+    /** The provider an accurate fix may use now, or null when the policy forbids a request (still, and no cell source). */
+    fun accurateProvider(c: EngineConfig, moving: Boolean): Provider? = when {
+        moving -> SourceRules.accurateProvider(c)
+        c.useCell -> Provider.NETWORK
+        else -> null
+    }
+
+    /** May an active GPS request be made at all? */
+    fun allowGps(moving: Boolean): Boolean = moving
+}

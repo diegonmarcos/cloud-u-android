@@ -18,6 +18,7 @@ import com.diegonmarcos.cloudnav.maps.MapsExploredFragment
 import com.diegonmarcos.cloudnav.maps.MapsPageStrip
 import com.diegonmarcos.cloudnav.maps.MapsStopsFragment
 import com.diegonmarcos.cloudnav.maps.TimelineHost
+import com.diegonmarcos.cloudnav.tracker.DayFragment
 import com.diegonmarcos.cloudnav.tracker.StepsFragment
 import com.diegonmarcos.cloudnav.tracker.TrackerInk
 import com.diegonmarcos.superapp.bottomnav.NavPage
@@ -26,7 +27,7 @@ import com.diegonmarcos.superapp.uikit.KitPalette
 
 /**
  * Timeline section: the strip of build.json's `ui.sections[timeline].pages` (Explored | Daily |
- * Stops | Steps) over one child page. Explored / Daily / Stops are libs:maps' pages; Steps is this
+ * Stops | Steps | Day) over one child page. Explored / Daily / Stops are libs:maps' pages; Steps is this
  * app's ([StepsFragment]) — which is why the host lives here and not in libs:maps' own Timeline host.
  */
 class TimelineFragment : KitComposeFragment(), TimelineHost {
@@ -68,6 +69,7 @@ class TimelineFragment : KitComposeFragment(), TimelineHost {
         PAGE_DAILY -> MapsDailyFragment.newInstance()
         PAGE_STOPS -> MapsStopsFragment.newInstance(pendingStopsDayMs.also { pendingStopsDayMs = null })
         PAGE_STEPS -> StepsFragment()
+        PAGE_DAY -> DayFragment()
         else -> MapsExploredFragment.newInstance()
     }
 
@@ -77,6 +79,7 @@ class TimelineFragment : KitComposeFragment(), TimelineHost {
         const val PAGE_DAILY = "daily"
         const val PAGE_STOPS = "stops"
         const val PAGE_STEPS = "steps"
-        val DEFAULT_PAGES = listOf(NavPage(PAGE_EXPLORED, "Explored"), NavPage(PAGE_DAILY, "Daily"), NavPage(PAGE_STOPS, "Stops"), NavPage(PAGE_STEPS, "Steps"))
+        const val PAGE_DAY = "day"
+        val DEFAULT_PAGES = listOf(NavPage(PAGE_EXPLORED, "Explored"), NavPage(PAGE_DAILY, "Daily"), NavPage(PAGE_STOPS, "Stops"), NavPage(PAGE_STEPS, "Steps"), NavPage(PAGE_DAY, "Day"))
     }
 }

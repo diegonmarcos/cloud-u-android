@@ -51,12 +51,13 @@ object StopLocator {
     private fun fresh(now: Long, f: Fix) = now - f.timeMs in 0..FRESH_MS
 
     /** [held] = a fix the engine already stored (its network/cell fixes). Null when nothing at all can be had. */
-    fun resolve(now: Long, env: Env, probe: Probe, held: Fix? = null): Fix? {
+    fun resolve(now: Long, env: Env, probe: Probe, held: Fix? = null, allowGps: Boolean = true): Fix? {
         if (held != null && held.valid && fresh(now, held)) return held
         if (!env.coarse && !env.fine) return held?.takeIf { it.valid }
         val usable = PEEK_ORDER.filter { allowed(env, it) && probe.enabled(it) }
+        val askable = if (allowGps) usable else usable.filter { it != GPS }   // battery policy: no GPS radio while still
         for (p in usable) probe.lastKnown(p)?.takeIf { it.valid && fresh(now, it) }?.let { return it }
-        for (p in REQUEST_ORDER.filter { it in usable })
+        for (p in REQUEST_ORDER.filter { it in askable })
             probe.request(p, if (p == GPS) GPS_TIMEOUT_MS else NETWORK_TIMEOUT_MS)?.takeIf { it.valid }?.let { return it }
         return (listOfNotNull(held) + usable.mapNotNull { runCatching { probe.lastKnown(it) }.getOrNull() }).filter { it.valid }.maxByOrNull { it.timeMs }
     }

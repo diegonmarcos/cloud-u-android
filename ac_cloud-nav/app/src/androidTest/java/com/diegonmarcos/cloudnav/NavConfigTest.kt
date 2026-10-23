@@ -35,7 +35,7 @@ class NavConfigTest {
     }
 
     @Test fun timeline_and_configs_carry_their_strips() {
-        assertEquals(listOf("explored", "daily", "stops", "steps"), NavConfig.decl.section("timeline")?.pages?.map { it.id })
+        assertEquals(listOf("explored", "daily", "stops", "steps", "day"), NavConfig.decl.section("timeline")?.pages?.map { it.id })
         assertEquals(
             listOf("tracker", "apis", "update", "cache", "layers", "about"),
             NavConfig.decl.section("configs")?.pages?.map { it.id },

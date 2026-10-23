@@ -66,9 +66,11 @@ object EngineRunner {
         }
         st = st.copy(stepsSinceAccurate = st.stepsSinceAccurate + delta, stepsSinceMotion = st.stepsSinceMotion + delta)
 
+        val moving = BatteryPolicy.isMoving(delta)
         for (a in TriggerPlanner.due(cfg, st, now)) when (a) {
             Action.ACCURATE_FIX -> {
-                val want = SourceRules.accurateProvider(cfg)
+                val want = BatteryPolicy.accurateProvider(cfg, moving)   // still: network / cell only, never GPS
+                if (want == null) { st = st.copy(lastAccurateMs = now); continue }
                                 // GPS can't fix indoors: fall back to cell towers rather than skip the fix (only when that source is on)
                 var used = want
                 var loc = locate(ctx, want)
@@ -100,7 +102,7 @@ object EngineRunner {
             }
         }
         prefs.state = st
-        runCatching { NavTimelineExtra.tick(ctx, now) }   // #1114: the timeline store follows every pass
+        runCatching { NavTimelineExtra.tick(ctx, now, moving = moving) }   // #1114: the timeline store follows every pass
     }
 
     private fun granted(ctx: Context, perm: String) = ContextCompat.checkSelfPermission(ctx, perm) == PackageManager.PERMISSION_GRANTED
