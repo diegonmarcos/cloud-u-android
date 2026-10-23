@@ -17,16 +17,25 @@ class PasskeySupportTest {
         passkeys. Try a different browser or device.
     """.trimIndent()
 
-    @Test fun `mode is FOR_BROWSER only when the WebView has the feature`() {
-        assertEquals(PasskeySupport.Mode.FOR_BROWSER, PasskeySupport.modeFor(true))
+    @Test fun `mode is FOR_APP only when the WebView has the feature`() {
+        assertEquals(PasskeySupport.Mode.FOR_APP, PasskeySupport.modeFor(true))
         assertNull(PasskeySupport.modeFor(false))
         assertNull(PasskeySupport.modeFor(true, enabled = false))
+    }
+
+    @Test fun `the browser never asks WebView for the privileged browser-level WebAuthn mode`() {
+        assertEquals(listOf("FOR_APP"), PasskeySupport.Mode.values().map { it.name })
+        val dir = java.io.File("../ab_cloud-libs-shared/libs/browser/src/main")
+        assertTrue("lib source found", dir.isDirectory)
+        val offenders = dir.walkTopDown().filter { it.isFile && it.extension == "kt" }
+            .filter { it.readText().contains("SUPPORT_" + "FOR_BROWSER") }.map { it.name }.toList()
+        assertEquals("these files request the browser-level mode (CREDENTIAL_MANAGER_SET_ORIGIN crash)", emptyList<String>(), offenders)
     }
 
     @Test fun `the Google does-not-support page triggers the offer`() {
         val u = "https://accounts.google.com/v3/signin/challenge/pk"
         assertTrue(PasskeySupport.isUnsupportedPage(u, googleUnsupported))
-        assertTrue(PasskeySupport.shouldOfferSecureBrowser(u, googleUnsupported, false, PasskeySupport.Mode.FOR_BROWSER))
+        assertTrue(PasskeySupport.shouldOfferSecureBrowser(u, googleUnsupported, false, PasskeySupport.Mode.FOR_APP))
     }
 
     @Test fun `other pages and other hosts do not trigger it`() {
@@ -34,14 +43,14 @@ class PasskeySupportTest {
         assertFalse(PasskeySupport.isUnsupportedPage("https://evil.example/", googleUnsupported))
         assertFalse(PasskeySupport.isUnsupportedPage("https://accounts.google.com.evil.example/", googleUnsupported))
         assertFalse(PasskeySupport.isUnsupportedPage("http://accounts.google.com/", googleUnsupported))
-        assertFalse(PasskeySupport.shouldOfferSecureBrowser("https://example.com/", "hello", false, PasskeySupport.Mode.FOR_BROWSER))
+        assertFalse(PasskeySupport.shouldOfferSecureBrowser("https://example.com/", "hello", false, PasskeySupport.Mode.FOR_APP))
     }
 
     @Test fun `a passkey challenge url only offers when WebAuthn is off`() {
         val u = "https://accounts.google.com/v3/signin/challenge/pk/presend"
         assertTrue(PasskeySupport.isPasskeyChallengeUrl(u))
         assertTrue(PasskeySupport.shouldOfferSecureBrowser(u, null, false, null))
-        assertFalse(PasskeySupport.shouldOfferSecureBrowser(u, null, false, PasskeySupport.Mode.FOR_BROWSER))
+        assertFalse(PasskeySupport.shouldOfferSecureBrowser(u, null, false, PasskeySupport.Mode.FOR_APP))
         assertFalse(PasskeySupport.isPasskeyChallengeUrl("https://accounts.google.com/v3/signin/challenge/pwd"))
     }
 
@@ -51,7 +60,7 @@ class PasskeySupportTest {
         assertTrue(PasskeySupport.isWebAuthnFailure("NotAllowedError", 50))
         assertFalse(PasskeySupport.isWebAuthnFailure("NotAllowedError", 8000))
         assertFalse(PasskeySupport.isWebAuthnFailure("AbortError", 10))
-        assertTrue(PasskeySupport.shouldOfferSecureBrowser("https://example.com/login", null, true, PasskeySupport.Mode.FOR_BROWSER))
+        assertTrue(PasskeySupport.shouldOfferSecureBrowser("https://example.com/login", null, true, PasskeySupport.Mode.FOR_APP))
     }
 
     @Test fun `the secure browser is never us, and only https leaves`() {

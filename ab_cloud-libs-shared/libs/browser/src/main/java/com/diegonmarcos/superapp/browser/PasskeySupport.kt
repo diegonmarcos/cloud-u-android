@@ -6,12 +6,12 @@ import android.os.Bundle
 /**
  * Passkeys (WebAuthn) in the browser. Android WebView ships WebAuthn OFF; two layers here:
  *
- *  1. [modeFor] / [apply]: turn on `WebSettingsCompat.setWebAuthenticationSupport(FOR_BROWSER)` where the
- *     installed WebView has the WEB_AUTHENTICATION feature. FOR_BROWSER is the only level that may assert
- *     another site's origin (accounts.google.com); FOR_APP covers only the app's own asset-linked origins and is
- *     useless for a browser. Credential providers (Google Password Manager) answer FOR_BROWSER only for a
- *     PRIVILEGED caller (package + signing cert on the provider's allowlist), so for a sideloaded build this can
- *     still be refused at the provider. That is why layer 2 exists.
+ *  1. [modeFor] / [apply]: turn on WebView WebAuthn at the APP level only (`WebSettingsCompat.setWebAuthenticationSupport`
+ *     with the FOR_APP constant). The browser-level mode makes WebView call CredentialManager with another site's
+ *     origin, which needs the privileged CREDENTIAL_MANAGER_SET_ORIGIN permission that only allowlisted system
+ *     browsers hold; without it Android throws a SecurityException on WebView's own thread and the process dies
+ *     (#1141 crash on the owner's phone, SDK 36). So this app NEVER requests that mode; a page's passkey call
+ *     fails inside the page (a JS error) and layer 2 below takes over.
  *  2. [shouldOfferSecureBrowser] / [secureBrowserIntent]: when the page cannot be served, offer to carry on in the
  *     system browser (a Custom Tab where available), where passkeys always work. We never see a password or a
  *     passkey in either path; the platform and the provider do.
@@ -21,11 +21,11 @@ import android.os.Bundle
 object PasskeySupport {
 
     /** Support level asked of WebView; mapped to WebSettingsCompat's constants in [apply]. */
-    enum class Mode { FOR_BROWSER }
+    enum class Mode { FOR_APP }
 
     /** `featureSupported` is `WebViewFeature.isFeatureSupported(WEB_AUTHENTICATION)`; null = leave WebView as is. */
     fun modeFor(featureSupported: Boolean, enabled: Boolean = true): Mode? =
-        if (featureSupported && enabled) Mode.FOR_BROWSER else null
+        if (featureSupported && enabled) Mode.FOR_APP else null
 
     /** Gate and set. Returns the mode actually requested (null when the WebView cannot do WebAuthn). */
     fun apply(settings: android.webkit.WebSettings, enabled: Boolean = true): Mode? {
@@ -33,7 +33,7 @@ object PasskeySupport {
             ?: return null
         runCatching {
             androidx.webkit.WebSettingsCompat.setWebAuthenticationSupport(
-                settings, androidx.webkit.WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_BROWSER)
+                settings, androidx.webkit.WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_APP)
         }.onFailure { return null }
         return m
     }
