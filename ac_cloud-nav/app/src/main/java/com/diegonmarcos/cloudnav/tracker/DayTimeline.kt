@@ -14,12 +14,16 @@ enum class Mode { WALK, RUN, BIKE, CAR, TRAIN, PLANE, UNKNOWN;
 
 enum class StayKind { SLEEP, IDLE }
 
-/** A resolved place. street / postcode / state stay null until the reverse-geocode enrichment delivers them. */
+/** A resolved place. street / postcode / state / [category] (a [PoiCategory] name) are filled by [PlaceNamer] (open reverse-geocode + POI lookup). */
 data class Place(
     val lat: Double?, val lon: Double?, val name: String? = null, val street: String? = null, val postcode: String? = null,
     val neighborhood: String? = null, val city: String? = null, val state: String? = null, val country: String? = null,
+    val category: String? = null,
 ) {
     val located: Boolean get() = lat != null && lon != null
+    val poi: PoiCategory get() = PoiCategory.parse(category)
+    /** Still worth asking the geocoder: located but no street, postcode, state or country yet. */
+    val needsAddress: Boolean get() = located && (street.isNullOrBlank() || postcode.isNullOrBlank() || state.isNullOrBlank() || country.isNullOrBlank())
     val label: String? get() = name?.takeIf { it.isNotBlank() } ?: listOfNotNull(street, neighborhood, city).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null }
     val address: String get() = listOfNotNull(street, postcode, neighborhood, city, state, country).filter { it.isNotBlank() }.joinToString(", ")
 }

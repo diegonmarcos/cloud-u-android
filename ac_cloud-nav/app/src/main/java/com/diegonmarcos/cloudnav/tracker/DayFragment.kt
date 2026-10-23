@@ -78,6 +78,7 @@ class DayFragment : KitComposeFragment() {
         val dates = (0..29).map { first.plusDays(it.toLong()) }
         val stats = Aggregates.perDay(store, dates, now, zone, corrections, memory)
         val month = dates.map { d -> DayTimeline.build(store, DayTimeline.dayStart(d, zone), minOf(DayTimeline.dayStart(d.plusDays(1), zone), now), corrections, memory) }
-        return DayUi(date, today, dayList, stats, Rankings.places(month), Rankings.cities(month), Rankings.countries(month), false)
+        val fixes = runCatching { EngineDb.get(app).fixes(a, b) }.getOrDefault(emptyList())
+        return DayUi(date, today, dayList, stats, Rankings.places(month), Rankings.cities(month), Rankings.countries(month), false, fixes)
     }
 }

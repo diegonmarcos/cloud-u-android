@@ -23,6 +23,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
@@ -66,7 +68,7 @@ object DayTags {
 data class DayUi(
     val date: LocalDate, val today: LocalDate, val day: List<DaySeg> = emptyList(), val stats: List<DayStats> = emptyList(),
     val places: List<PlaceTotal> = emptyList(), val cities: List<CityTotal> = emptyList(), val countries: List<CountryTotal> = emptyList(),
-    val loading: Boolean = false,
+    val loading: Boolean = false, val fixes: List<PlaceFix> = emptyList(),
 )
 
 class DayActions(
@@ -78,10 +80,7 @@ class DayActions(
 
 object DayFormat {
     fun modeLabel(m: Mode) = m.name.lowercase().replaceFirstChar { it.uppercase() }
-    fun modeColor(m: Mode): Color = when (m) {
-        Mode.WALK -> Color(0xFF4ADE80); Mode.RUN -> Color(0xFFFB923C); Mode.BIKE -> Color(0xFF2DD4BF)
-        Mode.CAR -> Color(0xFF60A5FA); Mode.TRAIN -> Color(0xFFA78BFA); Mode.PLANE -> Color(0xFFF472B6); Mode.UNKNOWN -> Color(0xFF9AA3B2)
-    }
+    fun modeColor(m: Mode): Color = Color(RouteGeo.modeArgb(m))
     fun dateLabel(d: LocalDate, today: LocalDate): String = when (d) {
         today -> "Today"; today.minusDays(1) -> "Yesterday"
         else -> d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) + " " + d.dayOfMonth + " " + d.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())
@@ -161,7 +160,10 @@ private fun SummaryRow(ui: DayUi) {
     Row(Modifier.fillMaxWidth().testTag(DayTags.SUMMARY).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         for ((m, st) in sum.byMode) {
             Column(Modifier.clip(MaterialTheme.shapes.small).background(p.surfaceSelected).padding(10.dp)) {
-                Text(DayFormat.modeLabel(m), color = DayFormat.modeColor(m), style = MaterialTheme.typography.labelMedium)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(painterResource(DayIcons.mode(m)), DayFormat.modeLabel(m), Modifier.size(16.dp), tint = DayFormat.modeColor(m))
+                    Text(DayFormat.modeLabel(m), color = DayFormat.modeColor(m), style = MaterialTheme.typography.labelMedium)
+                }
                 Text(StepsFormat.distance(st.distanceM), color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
                 Text(StepsFormat.duration(st.movingMs), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             }
@@ -173,28 +175,22 @@ private fun SummaryRow(ui: DayUi) {
     }
 }
 
-/** The day's route on a plain canvas: stays as dots, moves as lines coloured by mode, the newest stay marked as the current position. */
+/** The day's route on a real OSM basemap ([DayRouteMap]): a polyline per move in its mode's colour, mode and category icons, the current position. */
 @Composable
 private fun RouteMap(ui: DayUi) {
     val p = LocalKitPalette.current
-    val pts = ui.day.mapNotNull { s -> (s as? DaySeg.Stay)?.place?.takeIf { it.located } }
-    Box(Modifier.fillMaxWidth().height(160.dp).clip(MaterialTheme.shapes.medium).background(p.surfaceSelected).testTag(DayTags.MAP)) {
-        if (pts.isEmpty()) { Text("No route for this day", Modifier.align(Alignment.Center), color = p.textSecondary); return@Box }
-        val all = ui.day.flatMap { s -> when (s) { is DaySeg.Stay -> listOfNotNull(s.place); is DaySeg.Move -> listOfNotNull(s.from, s.to) } }.filter { it.located }
-        val minLat = all.minOf { it.lat!! }; val maxLat = all.maxOf { it.lat!! }
-        val minLon = all.minOf { it.lon!! }; val maxLon = all.maxOf { it.lon!! }
-        val live = ui.date == ui.today
-        Canvas(Modifier.fillMaxSize().padding(14.dp)) {
-            val cosLat = Math.cos(Math.toRadians((minLat + maxLat) / 2)).coerceAtLeast(0.2)
-            val w = ((maxLon - minLon) * cosLat).coerceAtLeast(1e-5); val h = (maxLat - minLat).coerceAtLeast(1e-5)
-            val k = minOf(size.width / w, size.height / h).toFloat()
-            fun at(pl: Place) = Offset(((pl.lon!! - minLon) * cosLat * k).toFloat() + (size.width - (w * k).toFloat()) / 2,
-                size.height - ((pl.lat!! - minLat) * k).toFloat() - (size.height - (h * k).toFloat()) / 2)
-            for (s in ui.day) if (s is DaySeg.Move && s.from?.located == true && s.to?.located == true)
-                drawLine(DayFormat.modeColor(s.mode), at(s.from), at(s.to), strokeWidth = 6f)
-            for (pl in pts) drawCircle(p.textSecondary, 7f, at(pl))
-            if (live) { val c = at(pts.last()); drawCircle(Color(0xFF3B82F6), 12f, c); drawCircle(Color.White, 12f, c, style = Stroke(3f)) }
-        }
+    val model = remember(ui.day, ui.fixes, ui.date, ui.today) { RouteGeo.build(ui.day, ui.fixes, live = ui.date == ui.today) }
+    Box(Modifier.fillMaxWidth().height(240.dp).clip(MaterialTheme.shapes.medium).background(p.surfaceSelected).testTag(DayTags.MAP)) {
+        if (model.isEmpty) Text("No route for this day", Modifier.align(Alignment.Center), color = p.textSecondary)
+        else DayRouteMap(model, Modifier.fillMaxSize())
+    }
+}
+
+/** A round glyph: a vector [res] in white on [bg]. */
+@Composable
+private fun Glyph(res: Int, bg: Color, desc: String, modifier: Modifier = Modifier) {
+    Box(modifier.size(34.dp).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
+        Icon(painterResource(res), desc, Modifier.size(20.dp), tint = Color.White)
     }
 }
 
@@ -206,13 +202,12 @@ private fun StayRow(i: Int, s: DaySeg.Stay, a: DayActions, zone: ZoneId, onAddMi
     var edit by remember { mutableStateOf(false) }
     KitCard(Modifier.testTag(DayTags.seg(i))) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(if (s.kind == StayKind.SLEEP) Color(0xFF6366F1) else p.accent), contentAlignment = Alignment.Center) {
-                Text(if (s.missing) "?" else if (s.kind == StayKind.SLEEP) "Z" else "P", color = Color.White, style = MaterialTheme.typography.labelLarge)
-            }
+            Glyph(if (s.missing) com.diegonmarcos.cloudnav.R.drawable.ic_mode_unknown else DayIcons.stay(s),
+                if (s.kind == StayKind.SLEEP) Color(0xFF6366F1) else p.accent, s.place?.poi?.label ?: "Place")
             Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(DayFormat.stayTitle(s), color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
                 s.place?.address?.takeIf { it.isNotBlank() }?.let { Text(it, color = p.textSecondary, style = MaterialTheme.typography.bodySmall) }
-                Text(StepsFormat.time(s.startMs, zone) + "-" + StepsFormat.time(s.endMs, zone) + "  ·  " + StepsFormat.duration(s.durationMs) + if (s.kind == StayKind.SLEEP) "  ·  sleep" else "",
+                Text(StepsFormat.time(s.startMs, zone) + "-" + StepsFormat.time(s.endMs, zone) + "  ·  " + StepsFormat.duration(s.durationMs) + if (s.kind == StayKind.SLEEP) "  ·  sleep" else s.place?.poi?.takeIf { it != PoiCategory.OTHER }?.let { "  ·  " + it.label } ?: "",
                     color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
             }
             Box {
@@ -243,9 +238,7 @@ private fun MoveRow(i: Int, m: DaySeg.Move, a: DayActions, zone: ZoneId) {
     var pick by remember { mutableStateOf(false) }
     KitCard(Modifier.testTag(DayTags.seg(i))) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(DayFormat.modeColor(m.mode)), contentAlignment = Alignment.Center) {
-                Text(DayFormat.modeLabel(m.mode).take(2), color = Color.Black, style = MaterialTheme.typography.labelMedium)
-            }
+            Glyph(DayIcons.mode(m.mode), DayFormat.modeColor(m.mode), DayFormat.modeLabel(m.mode))
             Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
                 Text(DayFormat.modeLabel(m.mode) + "  ·  " + StepsFormat.distance(m.distanceM) + "  ·  " + StepsFormat.duration(m.durationMs), color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
                 Text(StepsFormat.time(m.startMs, zone) + "-" + StepsFormat.time(m.endMs, zone) + "  ·  %.1f km/h".format(Locale.US, m.avgSpeedMps * 3.6) +

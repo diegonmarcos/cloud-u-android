@@ -15,7 +15,7 @@ object DayJson {
             if (it.lat != null && it.lon != null) put("lat", it.lat).put("lon", it.lon)
             put("name", it.name ?: ""); put("street", it.street ?: ""); put("postcode", it.postcode ?: "")
             put("neighborhood", it.neighborhood ?: ""); put("city", it.city ?: ""); put("state", it.state ?: ""); put("country", it.country ?: "")
-            put("address", it.address)
+            put("address", it.address); put("category", it.category ?: "")
         }
     }
 
