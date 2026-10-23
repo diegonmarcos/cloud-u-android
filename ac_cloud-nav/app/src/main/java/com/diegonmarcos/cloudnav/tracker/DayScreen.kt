@@ -56,7 +56,7 @@ enum class DayTab(val label: String) { DAY("Day"), TRIPS("Trips"), INSIGHTS("Ins
 
 object DayTags {
     const val PREV = "day:prev"; const val NEXT = "day:next"; const val PICK = "day:pick"; const val ADD = "day:add"; const val MAP = "day:map"
-    const val SUMMARY = "day:summary"
+    const val SUMMARY = "day:summary"; const val LIST = "day:list"
     fun tab(t: DayTab) = "day:tab:${t.name.lowercase()}"
     fun seg(i: Int) = "day:seg:$i"
     fun confirm(i: Int) = "day:confirm:$i"
@@ -121,7 +121,7 @@ private fun DayTabView(ui: DayUi, a: DayActions, zone: ZoneId) {
     var adding by remember { mutableStateOf(false) }
     var addRange by remember { mutableStateOf<Pair<Long, Long>?>(null) }
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp).testTag(DayTags.LIST), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item { DatePicker(ui, a) }
             item { RouteMap(ui) }
             item { SummaryRow(ui) }

@@ -1,7 +1,6 @@
 package com.diegonmarcos.cloudnav.tracker
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -37,7 +36,7 @@ class DayScreenTest {
         rule.onNodeWithTag(DayTags.MAP).assertIsDisplayed()
         rule.onNodeWithTag(DayTags.SUMMARY).assertIsDisplayed()
         rule.onNodeWithText("Seestrasse 1, 8000, Zurich, Zurich, Switzerland").assertIsDisplayed()
-        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Cafe Central"))
+        rule.onNodeWithTag(DayTags.LIST).performScrollToNode(hasText("Cafe Central"))
         rule.onNodeWithText("Cafe Central").assertExists()
         rule.onNodeWithText("Bahnhofstrasse 14, 8001, Zurich, Zurich, Switzerland").assertExists()
         rule.onNodeWithText("Food and drink", substring = true).assertExists()
