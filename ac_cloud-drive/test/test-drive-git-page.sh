@@ -394,7 +394,7 @@ p1 "$TMP/no-size-op.json" >/dev/null && fail "P1 passed a thirteen-operation dec
 sed 's/"personal" -> {/"personnal" -> {/' "$PAGE" > "$TMP/page.kt"
 cmp -s "$PAGE" "$TMP/page.kt" && fail "the section mutation changed nothing (tester is stale)"
 p3 "$BJ" "$TMP/page.kt" >/dev/null && fail "P3 passed a misspelt section dispatch (tester is vacuous)" || pass "a section id misspelt in the screen → P3 RED"
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["git"]["public_repos"].append({"repo":"cloud-data-my-ai-memory","caption":"x"}); b["ui"]["sync"]["git"]["public_repos"].sort(key=lambda r:r["repo"]); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/private-in-public.json"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["git"]["public_repos"].append({"repo":"cloud-me-my-ai","caption":"x"}); b["ui"]["sync"]["git"]["public_repos"].sort(key=lambda r:r["repo"]); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/private-in-public.json"
 p2 "$TMP/private-in-public.json" "$REPOS" >/dev/null && fail "P2 passed a PRIVATE repository in the public set (tester is vacuous)" || pass "a private repository added to the public set → P2 RED"
 grep -v '    fun forcePush(' "$ENGINE" > "$TMP/engine.kt"
 cmp -s "$ENGINE" "$TMP/engine.kt" && fail "the engine mutation changed nothing (tester is stale)"

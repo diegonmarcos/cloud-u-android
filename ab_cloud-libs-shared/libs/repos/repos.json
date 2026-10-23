@@ -33,8 +33,8 @@
       "doc": "Large binary artefacts (git-lfs) for cloud-data."
     },
     {
-      "name": "cloud-data-my-ai-memory",
-      "repo": "diegonmarcos/cloud-data-my-ai-memory",
+      "name": "cloud-me-my-ai",
+      "repo": "diegonmarcos/cloud-me-my-ai",
       "private": true,
       "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here."
     },

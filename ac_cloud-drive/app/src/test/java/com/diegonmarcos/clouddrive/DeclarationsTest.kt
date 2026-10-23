@@ -263,7 +263,7 @@ class DeclarationsTest {
         assertTrue(connections.size >= 10); assertTrue(connections.all { it.status.isNotBlank() })
         val family = Declarations.parseGitFamily(File(data, "drive-git-repos.json").readText())
         assertNotNull(family.upstream)
-        assertTrue(family.repos.any { it.name == "cloud-data-my-ai-memory" && it.private })
+        assertTrue(family.repos.any { it.name == "cloud-me-my-ai" && it.private })
         // #603 the store's first-run seed set: marked, public, and never a private repository —
         // an anonymous clone of one fails every time, so seeding it would bake a permanent red.
         val seeded = family.repos.filter { it.seed }

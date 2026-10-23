@@ -35,7 +35,7 @@
 #       library adds-without-overwriting (the JVM test says so by name), and a
 #       job's relative local leg is resolved against the store.
 #   S6  the data agrees: drive-git-repos.json declares the proof-case repository
-#       (cloud-data-my-ai-memory) and every remote with an `rclone` block carries
+#       (cloud-me-my-ai) and every remote with an `rclone` block carries
 #       a type and NO secret-shaped key.
 #
 # OWN-SOURCE ONLY: everything read here is under this app or a module dir its
@@ -173,8 +173,8 @@ import json, sys
 repos = json.load(open(sys.argv[1]))
 bad = 0
 names = [r["name"] for r in repos["repos"]]
-if "cloud-data-my-ai-memory" not in names:
-    print("    drive-git-repos.json does not declare cloud-data-my-ai-memory"); bad += 1
+if "cloud-me-my-ai" not in names:
+    print("    drive-git-repos.json does not declare cloud-me-my-ai"); bad += 1
 if not any(i.get("kind") == "upstream" and i.get("host") for i in repos["instances"]):
     print("    no upstream instance with a host — the page cannot compose a clone URL"); bad += 1
 remotes = json.load(open(sys.argv[2]))["remotes"]

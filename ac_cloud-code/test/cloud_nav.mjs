@@ -94,7 +94,7 @@ out(typeof nav.shared_store?.app === "string" && nav.shared_store.app.length > 0
 for (const [k, v] of [["backlog.source_dir", nav.backlog?.source_dir], ["repos.root", nav.repos?.root]]) {
 	out(typeof v === "string" && !v.startsWith("/") && !v.includes(".."), `nav.${k} is relative to the store (${JSON.stringify(v)})`);
 }
-out(nav.backlog?.source_dir?.startsWith("cloud-data-my-ai-memory/"), "Backlog reads cloud-data-my-ai-memory FROM the store (the #575 proof case)");
+out(nav.backlog?.source_dir?.startsWith("cloud-me-my-ai/"), "Backlog reads cloud-me-my-ai FROM the store (the #575 proof case)");
 const resolver = read("tools/resolve-targets.py");
 out(/def shared_root\(app_root, fleet_id\)/.test(resolver) && /"shared_root": shared_root\(app_root, nav\["shared_store"\]\["app"\]\)/.test(resolver), "resolve-targets.py emits shared_root from nav.shared_store.app");
 out(/\("storage"\) or \{\}\)\.get\("shared_root"\)/.test(resolver) && /root\.startswith\("\/"\)/.test(resolver), "the resolver reads build.json::storage.shared_root and refuses an absolute one");
