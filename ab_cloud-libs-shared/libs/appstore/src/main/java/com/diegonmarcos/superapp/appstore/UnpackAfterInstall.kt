@@ -48,6 +48,10 @@ object UnpackAfterInstall {
         } catch (_: Throwable) { false }
     }
 
+    /** Seam: how the reply channel is made safe to send. A JVM test has no real binder, so it swaps this; the phone never does. */
+    @Volatile
+    var sender: (ResultReceiver) -> ResultReceiver = { receiverForSending(it) }
+
     /** Seam: opens the app's main activity; false when it has none or Android refuses. */
     @Volatile
     var launcher: (Context, String) -> Boolean = { c, pkg ->
@@ -79,7 +83,7 @@ object UnpackAfterInstall {
         if (!applies(pkg)) return
         val app = ctx.applicationContext
         record(app, pkg, UNPACKING)
-        val receiver = receiverForSending(object : ResultReceiver(Handler(Looper.getMainLooper())) {
+        val receiver = sender(object : ResultReceiver(Handler(Looper.getMainLooper())) {
             override fun onReceiveResult(resultCode: Int, data: Bundle?) =
                 record(app, pkg, text(resultCode, data?.getString("error")))
         })

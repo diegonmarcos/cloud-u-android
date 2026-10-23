@@ -68,8 +68,12 @@ kotlin {
 
 dependencies {
     implementation 'androidx.activity:activity-ktx:1.9.3'
-    // #1106 SafeEncryptedPrefs: the one place the fleet opens an EncryptedSharedPreferences file.
-    implementation 'androidx.security:security-crypto:1.1.0'
+    // #1106 SafeEncryptedPrefs: the one place the fleet opens an EncryptedSharedPreferences file. compileOnly: every
+    // app that opens one links security-crypto itself (an app that does not, such as Cloud Mail whose own tink
+    // would clash with tink-android, or Cloud Nav whose fleet-config provider reports "cannot open" for an
+    // encrypted store, must not gain the cipher just by linking libs:core).
+    compileOnly 'androidx.security:security-crypto:1.1.0'
+    testImplementation 'androidx.security:security-crypto:1.1.0'
     if (composeOn) {
         implementation platform('androidx.compose:compose-bom:2025.11.01')
         implementation 'androidx.compose.ui:ui'
