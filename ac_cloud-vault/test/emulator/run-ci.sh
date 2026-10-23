@@ -9,6 +9,15 @@ docker run -d --name vw --network host -e I_REALLY_WANT_VOLATILE_STORAGE=true -e
 for _ in $(seq 1 40); do curl -fs http://127.0.0.1/alive >/dev/null && break; sleep 2; done
 pip install --quiet cryptography >/dev/null 2>&1
 python3 test/emulator/seed-vaultwarden.py http://127.0.0.1 "$VAULT_EMAIL" "$VAULT_PW" "CI Seed Login" || { echo "FAIL: seeding"; docker logs vw | tail -20; exit 1; }
+# sanity-check the seed with the real Bitwarden CLI (diagnostic only; prints counts, never secrets)
+{ npm install --silent --no-progress -g @bitwarden/cli@2025.5.0 >/dev/null 2>&1
+  export BITWARDENCLI_APPDATA_DIR="$OUT_DIR/bwcli" BW_PW="$VAULT_PW"
+  bw config server http://127.0.0.1 >/dev/null 2>&1
+  S=$(bw login "$VAULT_EMAIL" --passwordenv BW_PW --raw 2>&1) && echo "bw login ok" || echo "bw login failed: $(echo "$S" | head -c 200)"
+  [ -n "${S:-}" ] && echo "bw items: $(bw list items --session "$S" 2>&1 | python3 -c 'import sys,json
+try: print(len(json.load(sys.stdin)))
+except Exception as e: print("unreadable", e)')"
+  rm -rf "$OUT_DIR/bwcli"; } > "$OUT_DIR/bw-check.txt" 2>&1
 # release builds allow cleartext only to vaultwarden.app, so the emulator (started with -dns-server $DNS_IP) resolves it via the stub
 sudo DNS_BIND="$DNS_IP" python3 -u test/emulator/dns-stub.py >"$OUT_DIR/dns-stub.log" 2>&1 &
 sleep 1
