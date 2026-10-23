@@ -21,7 +21,9 @@ if ! { command -v adb >/dev/null && adb -e get-state >/dev/null 2>&1; }; then
 fi
 shot() { # screencap to a file on the device, then pull (exec-out piping came back empty on the CI emulator); retry once
   for _ in 1 2 3; do
-    adb -e wait-for-device; adb -e shell screencap -p /sdcard/shot.png && adb -e pull /sdcard/shot.png "$OUT_DIR/$1.png" >/dev/null 2>&1 && [ -s "$OUT_DIR/$1.png" ] && return 0
+    adb -e wait-for-device
+    adb -e shell screencap -p /sdcard/shot.png && adb -e pull /sdcard/shot.png "$OUT_DIR/$1.png" >/dev/null && [ -s "$OUT_DIR/$1.png" ] && return 0
+    echo "shot diag: $(adb devices | tr '\n' ' ')" >&2
     sleep 2
   done
   echo "WARN: screenshot $1 failed" >&2
@@ -48,6 +50,7 @@ enrol_fingerprint() {
 
 signin_selfhosted() {
   $ui wait 'Continue|Log in|Email' 240 || die login-screen "app did not reach the login screen"
+  $ui has 'Create account' && $ui tap '^Log in$|Log in' 15   # onboarding carousel -> email screen
   # point the app at the seeded server: environment menu -> Self-hosted -> server URL -> Save
   $ui tap 'Logging in on|Region|Server|\.com|diegonmarcos' 20 || die env-menu "no environment selector"
   $ui tap 'Self-hosted' 15 || die env-selfhosted "no Self-hosted entry"
