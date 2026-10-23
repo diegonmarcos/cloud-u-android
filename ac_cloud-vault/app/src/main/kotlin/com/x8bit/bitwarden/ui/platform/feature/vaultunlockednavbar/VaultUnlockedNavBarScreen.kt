@@ -1,6 +1,5 @@
 package com.x8bit.bitwarden.ui.platform.feature.vaultunlockednavbar
 
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -43,6 +42,8 @@ import com.x8bit.bitwarden.ui.vault.feature.vault.vaultGraph
  * Top level composable for the Vault Unlocked Screen.
  */
 private var biometricEnrollOffered = false
+private const val BIOMETRIC_ENROLL_HINT =
+    "Add a fingerprint in Android settings to unlock Cloud Vault with it. Your master password still works."
 
 @Suppress("LongParameterList", "LongMethod")
 @Composable
@@ -80,19 +81,27 @@ fun VaultUnlockedNavBarScreen(
     // Offline-first local lock: offer the biometric wrap of the vault key once per process.
     val enrollViewModel: BiometricEnrollViewModel = hiltViewModel()
     val biometricsManager = com.x8bit.bitwarden.ui.platform.composition.LocalBiometricsManager.current
-    val enrollScope = androidx.compose.runtime.rememberCoroutineScope()
+    val enrollContext = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        if (!biometricEnrollOffered && biometricsManager.isBiometricsSupported) {
-            biometricEnrollOffered = true
-            enrollViewModel.cipherIfEnrollmentNeeded()?.let { cipher ->
-                biometricsManager.promptBiometrics(
-                    onSuccess = { enrollScope.launch { enrollViewModel.enroll(it) } },
-                    onCancel = { },
-                    onError = { },
-                    onLockOut = { },
-                    cipher = cipher,
-                )
+        if (biometricEnrollOffered) return@LaunchedEffect
+        biometricEnrollOffered = true
+        if (!biometricsManager.isBiometricsSupported) {
+            // No (strong) fingerprint enrolled: the master password stays the way in.
+            if (enrollViewModel.isEnrollmentNeeded()) {
+                android.widget.Toast
+                    .makeText(enrollContext, BIOMETRIC_ENROLL_HINT, android.widget.Toast.LENGTH_LONG)
+                    .show()
             }
+            return@LaunchedEffect
+        }
+        enrollViewModel.cipherIfEnrollmentNeeded()?.let { cipher ->
+            biometricsManager.promptBiometrics(
+                onSuccess = enrollViewModel::enroll,
+                onCancel = { },
+                onError = { },
+                onLockOut = { },
+                cipher = cipher,
+            )
         }
     }
 

@@ -1,9 +1,14 @@
 package com.x8bit.bitwarden.ui.platform.feature.vaultunlockednavbar
 
 import androidx.lifecycle.ViewModel
+import com.bitwarden.core.data.manager.dispatcher.DispatcherManager
 import com.x8bit.bitwarden.data.auth.repository.AuthRepository
 import com.x8bit.bitwarden.data.platform.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.crypto.Cipher
 import javax.inject.Inject
 
@@ -16,7 +21,16 @@ import javax.inject.Inject
 class BiometricEnrollViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val settingsRepository: SettingsRepository,
+    dispatcherManager: DispatcherManager,
 ) : ViewModel() {
+    // Not the composition's or the view model's scope: leaving the screen right after the fingerprint must not drop the wrap.
+    private val enrollScope = CoroutineScope(SupervisorJob() + dispatcherManager.io)
+
+    /** True when a master-password unlock should be followed by the biometric wrap. */
+    fun isEnrollmentNeeded(): Boolean =
+        authRepository.userStateFlow.value?.activeUserId != null &&
+            !settingsRepository.isUnlockWithBiometricsEnabled
+
     /** A fresh Keystore-backed cipher when biometrics are not wrapped yet, else null. */
     fun cipherIfEnrollmentNeeded(): Cipher? {
         val userId = authRepository.userStateFlow.value?.activeUserId ?: return null
@@ -24,7 +38,11 @@ class BiometricEnrollViewModel @Inject constructor(
         return authRepository.createCipherOrNull(userId = userId)
     }
 
-    suspend fun enroll(cipher: Cipher) {
-        settingsRepository.setupBiometricsKey(cipher = cipher)
+    /** Wraps the user key with the biometric Keystore key, the same call as the Settings toggle. */
+    fun enroll(cipher: Cipher) {
+        enrollScope.launch {
+            val result = settingsRepository.setupBiometricsKey(cipher = cipher)
+            Timber.i("Biometric auto-enrol result: %s", result)
+        }
     }
 }
