@@ -104,8 +104,16 @@ offline
 launch
 sleep 6
 shot offline-open
-touch_finger
-sleep 4
+trace offline-launch
+# the biometric prompt can take a while on the CI emulator: touch the sensor only once it is on screen
+if $ui wait 'Touch the fingerprint sensor|Biometric verification' 40 2>/dev/null; then
+  trace offline-prompt
+  for _ in 1 2 3; do touch_finger; sleep 2; $ui has 'Touch the fingerprint sensor|Biometric verification' || break; done
+else
+  trace offline-no-prompt
+fi
+sleep 3
+trace offline-after-touch
 shot offline-unlocked
 uidump=$(adb -e exec-out uiautomator dump /dev/tty 2>/dev/null)
 if grep -q -i -E "Log in|server" <<<"$uidump" && ! grep -q -i "Search vault\|My vault" <<<"$uidump"; then
