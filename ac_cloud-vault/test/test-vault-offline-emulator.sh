@@ -94,11 +94,25 @@ if [ -n "${OLD_APK:-}" ]; then
   touch_finger; sleep 3; trace after-finger-1; touch_finger; sleep 3; trace after-finger-2
   $ui wait "$item" 90 || die old-vault "seeded vault item not shown after sign-in on the OLD apk"
   shot old-vault
-  # no Settings toggle: the first master-password unlock enrols the fingerprint itself (one prompt, touched above)
+  # no Settings toggle: the first master-password unlock enrols the fingerprint itself (one prompt, touched above).
+  # Cold start proves it. The PREVIOUS Ship build may predate the auto-enrolment: then, and only then, enable it in Settings.
   $ui tap '^Close$' 4 2>/dev/null || true
-  # diagnostic: does the OLD app offer the fingerprint on a cold start before the update?
   launch; sleep 8; trace old-cold-start
-  if $ui has 'Touch the fingerprint sensor|Biometric verification'; then touch_finger; sleep 4; trace old-cold-unlocked; fi
+  if $ui has 'Touch the fingerprint sensor|Biometric verification'; then
+    echo "old app enrolled the fingerprint automatically"
+    touch_finger; sleep 4; trace old-cold-unlocked
+  else
+    echo "old app has no auto-enrolment: enabling biometric unlock in Settings"
+    $ui type "$VAULT_PW"; $ui tap '^Unlock$|Unlock' 15 || die old-unlock "no Unlock button"
+    $ui wait "$item" 60 || die old-unlock-vault "vault not shown after master password unlock"
+    $ui tap '^Close$' 4 2>/dev/null || true
+    $ui tap '^Settings$' 20 || die settings-tab "no Settings tab"
+    $ui tap 'Account security' 20 || die account-security "no Account security entry"
+    $ui tap 'Unlock with biometrics' 20 || die bio-toggle "no 'Unlock with biometrics' switch"
+    $ui wait 'Touch the fingerprint sensor|Biometric verification' 30 || die bio-prompt "no biometric prompt after enabling"
+    for _ in 1 2 3; do touch_finger; sleep 2; $ui has 'Touch the fingerprint sensor|Biometric verification' || break; done
+    trace bio-enabled
+  fi
   adb -e shell am force-stop $pkg
   # update in place: same package + signature, user data kept
   adb -e install -r -d "$NEW_APK" >/dev/null || die install-new "update install (install -r) failed"
