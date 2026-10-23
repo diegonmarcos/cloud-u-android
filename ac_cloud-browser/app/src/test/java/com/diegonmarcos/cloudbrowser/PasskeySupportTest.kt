@@ -25,7 +25,7 @@ class PasskeySupportTest {
 
     @Test fun `the browser never asks WebView for the privileged browser-level WebAuthn mode`() {
         assertEquals(listOf("FOR_APP"), PasskeySupport.Mode.values().map { it.name })
-        val dir = java.io.File("../ab_cloud-libs-shared/libs/browser/src/main")
+        val dir = java.io.File("../../ab_cloud-libs-shared/libs/browser/src/main")
         assertTrue("lib source found", dir.isDirectory)
         val offenders = dir.walkTopDown().filter { it.isFile && it.extension == "kt" }
             .filter { it.readText().contains("SUPPORT_" + "FOR_BROWSER") }.map { it.name }.toList()

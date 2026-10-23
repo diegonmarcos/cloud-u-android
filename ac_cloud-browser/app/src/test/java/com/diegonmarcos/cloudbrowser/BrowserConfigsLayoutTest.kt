@@ -104,6 +104,8 @@ class BrowserConfigsLayoutTest {
         assertEquals("toggle", t.kind); assertEquals("translated", t.checked)
         assertEquals("Summarise page by topics", cfg.menu.item("summarize_topics")!!.label)
         val ids = cfg.menu.items.filter { it.section == "page" }.map { it.id }
-        assertEquals("topics sits right after translate", ids.indexOf("translate") + 1, ids.indexOf("summarize_topics"))
+        // #1141 translate moved up to the second icon row; the topics summary stays in the Page section.
+        assertEquals("icons2", t.section)
+        assertTrue("topics stays in the Page section", "summarize_topics" in ids && "translate" !in ids)
     }
 }
