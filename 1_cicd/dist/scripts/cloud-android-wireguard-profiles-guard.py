@@ -95,7 +95,7 @@ import urllib.error
 import urllib.request
 
 DIST_URL = (
-    "https://raw.githubusercontent.com/diegonmarcos/cloud-infra/main/"
+    "https://raw.githubusercontent.com/diegonmarcos/cloud-t-infra/main/"
     "1_cloud-configs/dist/build-cloud-superapp-diego.json"
 )
 BUILD_JSON = os.path.join("aa_cloud-superapp", "build.json")
