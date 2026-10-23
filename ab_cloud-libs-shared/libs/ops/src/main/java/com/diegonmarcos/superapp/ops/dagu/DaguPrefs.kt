@@ -1,9 +1,9 @@
 package com.diegonmarcos.superapp.ops.dagu
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.diegonmarcos.superapp.ops.BuildConfig
 
 /**
@@ -27,16 +27,7 @@ import com.diegonmarcos.superapp.ops.BuildConfig
 class DaguPrefs(context: Context) {
 
     private val sp: SharedPreferences = try {
-        val masterKey = MasterKey.Builder(context.applicationContext)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context.applicationContext,
-            "dagu_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        SafeEncryptedPrefs.prefs(context.applicationContext, "dagu_prefs")
     } catch (_: Throwable) {
         context.applicationContext.getSharedPreferences(
             "dagu_prefs_fallback", Context.MODE_PRIVATE)

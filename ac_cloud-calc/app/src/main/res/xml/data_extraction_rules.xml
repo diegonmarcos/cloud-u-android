@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup / device-transfer rules (Android 12+). #1106 EncryptedSharedPreferences files are sealed by a Keystore master key that never leaves this device. A restored or
+  transferred copy cannot be decrypted by the new device's key (AEADBadTagException on open), so these files are left out of
+  backups and device transfers; the user signs in again.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="cloud_calc_jev_secret.xml" />
+        <exclude domain="sharedpref" path="safe_encrypted_prefs_reset.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="cloud_calc_jev_secret.xml" />
+        <exclude domain="sharedpref" path="safe_encrypted_prefs_reset.xml" />
+    </device-transfer>
+</data-extraction-rules>

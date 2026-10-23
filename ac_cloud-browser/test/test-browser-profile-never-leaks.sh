@@ -33,7 +33,8 @@ def check(root, ok):
     for f, t in src.items():
         for m in re.finditer(r"Log\.[dviwe]\([^)]*\)", t):
             ok(not re.search(r"profile|identity|address", m.group(0), re.I), "no log line prints the profile (%s)" % os.path.basename(f))
-    ok("EncryptedSharedPreferences.create(" in store and "MasterKey.KeyScheme.AES256_GCM" in store, "the store is encrypted with FleetConfig's MasterKey scheme")
+    safe = open(os.path.join(root, "ab_cloud-libs-shared/libs/crash/src/main/java/com/diegonmarcos/superapp/crash/SafeEncryptedPrefs.kt"), encoding="utf-8").read()
+    ok("SafeEncryptedPrefs.prefs(" in store and "EncryptedSharedPreferences.create(" in safe and "MasterKey.KeyScheme.AES256_GCM" in safe, "the store is encrypted with FleetConfig's MasterKey scheme (through the one safe opener, #1106)")
     ok('const val STORE = "browser_autofill"' in store, "the store is browser_autofill")
     m = json.load(open(os.path.join(root, MANIFEST), encoding="utf-8"))["stores"].get("browser_autofill", {})
     ok(m.get("kind") == "encrypted" and m.get("class") == "secret", "the manifest declares browser_autofill encrypted + secret")

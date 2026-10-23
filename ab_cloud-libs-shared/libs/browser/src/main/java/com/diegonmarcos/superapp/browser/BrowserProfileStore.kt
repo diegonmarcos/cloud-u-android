@@ -1,9 +1,9 @@
 package com.diegonmarcos.superapp.browser
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -23,12 +23,7 @@ import org.json.JSONObject
 class BrowserProfileStore(context: Context) {
     private val sp: SharedPreferences = run {
         val app = context.applicationContext
-        EncryptedSharedPreferences.create(
-            app, STORE,
-            MasterKey.Builder(app).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        SafeEncryptedPrefs.prefs(app, STORE)
     }
 
     fun load(): BrowserProfile {

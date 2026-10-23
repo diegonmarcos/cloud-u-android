@@ -1,9 +1,8 @@
 package com.diegonmarcos.cloudlib.gitsync
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import java.io.File
 
 /**
@@ -14,13 +13,7 @@ import java.io.File
  * it were embedded there, and that file syncs with backups).
  */
 class GitCredentialStore(context: Context) {
-    private val prefs: SharedPreferences = EncryptedSharedPreferences.create(
-        context,
-        "git-sync-credentials",
-        MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
+    private val prefs: SharedPreferences = SafeEncryptedPrefs.prefs(context, FILE)
     private val knownHosts = File(context.filesDir, "git-sync/known_hosts")
 
     fun setSecret(repoId: String, secret: String) = prefs.edit().putString(repoId, secret).apply()
@@ -39,5 +32,10 @@ class GitCredentialStore(context: Context) {
         "https" -> GitAuth.Https(repo.authUsername, prefs.getString(repo.id, "") ?: "")
         "ssh" -> GitAuth.Ssh(repo.sshKeyPath, prefs.getString(repo.id, null), knownHosts.absolutePath)
         else -> GitAuth.None
+    }
+
+    companion object {
+        /** The encrypted prefs file; SafeEncryptedPrefs.wasReset(context, FILE) says its sign-ins were reset (#1106). */
+        const val FILE = "git-sync-credentials"
     }
 }

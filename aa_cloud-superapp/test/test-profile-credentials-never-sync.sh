@@ -69,6 +69,7 @@ SECTABS="app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragmen
 # #587 the sign-in surface (the bearer dialog among it) is the fleet's shared libs:auth.
 AUTH_UI="../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
 PREFS="$PROFILE_DIR/ProfilePrefs.kt"
+SAFE_PREFS="../ab_cloud-libs-shared/libs/crash/src/main/java/com/diegonmarcos/superapp/crash/SafeEncryptedPrefs.kt"
 CONFIGS_PREFS="../ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/settings/ConfigsPrefs.kt"
 WG_PREFS="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardPrefs.kt"
 CONTRACT="docs/profile-sync-contract.md"
@@ -95,7 +96,8 @@ echo "== T2: each credential reuses its EXISTING store, no parallel copy =="
 # into a second place is strictly worse than one held in one place.
 has "$CW" "setAutheliaCredential(who, result.bearer)"      "bearer writes ConfigsPrefs, paired with the address it proved"
 has "$MESH_PORT" "prefs.interfacePrivateKey = t"    "WG key writes WireGuardPrefs"
-has "$CONFIGS_PREFS" "EncryptedSharedPreferences.create"     "ConfigsPrefs is encrypted at rest"
+has "$CONFIGS_PREFS" "SafeEncryptedPrefs.prefs("             "ConfigsPrefs is encrypted at rest (through the one safe opener, #1106)"
+has "$SAFE_PREFS" "EncryptedSharedPreferences.create"        "the safe opener builds an EncryptedSharedPreferences"
 has "$CONFIGS_PREFS" 'K_AUTHELIA_TOKEN = "authelia_token"'   "bearer at the existing auth.authelia_token path"
 has "$WG_PREFS" 'K_IF_PRIVKEY     = "if_privkey"'            "WG key is the tunnel's own stored field"
 # No copy of either credential in the synced profile store.

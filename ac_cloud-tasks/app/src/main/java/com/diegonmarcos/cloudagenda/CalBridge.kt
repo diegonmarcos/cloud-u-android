@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudagenda
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
@@ -10,7 +11,6 @@ import com.diegonmarcos.cloudagenda.agents.DriveScreenshotFeed
 import com.diegonmarcos.cloudagenda.agents.ScreenshotFeed
 import com.diegonmarcos.superapp.core.DataBackendClient
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -403,16 +403,7 @@ class CalBridge(private val ctx: Context) {
             synchronized(this) {
                 cached?.let { return it }
                 val appCtx = ctx.applicationContext
-                val masterKey = MasterKey.Builder(appCtx)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-                val p = EncryptedSharedPreferences.create(
-                    appCtx,
-                    FILE,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-                )
+                val p = SafeEncryptedPrefs.prefs(appCtx, FILE)
                 cached = p
                 return p
             }

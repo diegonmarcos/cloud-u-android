@@ -1,10 +1,10 @@
 package com.diegonmarcos.cloudcode.chat;
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs;
 import android.content.Context;
 import android.content.SharedPreferences;
 
 import androidx.security.crypto.EncryptedSharedPreferences;
-import androidx.security.crypto.MasterKey;
 
 import com.diegonmarcos.superapp.texttools.TextToolsClient;
 
@@ -49,11 +49,7 @@ final class ChatSecrets {
 
     private synchronized SharedPreferences prefs() throws Exception {
         if (prefs == null) {
-            MasterKey key = new MasterKey.Builder(app).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build();
-            prefs = EncryptedSharedPreferences.create(
-                app, PREFS, key,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM);
+            prefs = SafeEncryptedPrefs.prefs(app, PREFS);
         }
         return prefs;
     }

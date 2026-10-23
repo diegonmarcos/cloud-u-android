@@ -27,10 +27,11 @@ java = {f: code(os.path.join(plug, "src", f)) for f in sorted(os.listdir(os.path
 sec = java.get("ChatSecrets.java", "")
 plugin = java.get("CloudChatPlugin.java", "")
 
-check(re.search(r"EncryptedSharedPreferences\.create\(\s*app,\s*PREFS,\s*key,", sec) is not None
-      and "PrefValueEncryptionScheme.AES256_GCM" in sec and "PrefKeyEncryptionScheme.AES256_SIV" in sec
-      and re.search(r"new MasterKey\.Builder\(app\)\.setKeyScheme\(MasterKey\.KeyScheme\.AES256_GCM\)", sec) is not None,
-      "the token is kept in EncryptedSharedPreferences under a Keystore AES-256-GCM master key")
+# #1106 the store is opened through libs:crash SafeEncryptedPrefs, the one opener (EncryptedSharedPreferences under the
+# default Keystore AES-256-GCM master key, AES256_SIV keys / AES256_GCM values) that never throws on a mismatched key.
+check(re.search(r"SafeEncryptedPrefs\.prefs\(\s*app,\s*PREFS\s*\)", sec) is not None
+      and "import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs;" in sec,
+      "the token is kept in EncryptedSharedPreferences under a Keystore AES-256-GCM master key (through SafeEncryptedPrefs)")
 check(re.search(r"getSharedPreferences\(", sec) is None and "putString(TOKEN" in sec,
       "it is written only through the encrypted store (no plain SharedPreferences)")
 logs = [f for f, t in java.items() if re.search(r"\bLog\.[a-z]+\(|System\.(out|err)\.|printStackTrace\(|Logger\.", t)]

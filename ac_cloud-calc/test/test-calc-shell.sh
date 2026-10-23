@@ -33,7 +33,7 @@
 #       build.json::ui.debug_api.clock_group, and never names an op `state` (GET /api/state's key).
 #   C11 #770 the Jev section: every routing tool in build.json::jev names a declared mode (and a
 #       form a mode declares), on_error's fallback_mode and every ask key are modes; the token
-#       is kept in ONE file (decide/JevStore.kt alone touches EncryptedSharedPreferences and
+#       is kept in ONE file (decide/JevStore.kt alone touches SafeEncryptedPrefs (#1106, the encrypted opener) and
 #       revealAiKey); nothing under decide/ or jev/ calls android.util.Log (a token must never
 #       reach logcat); /api/<jev_group>/ documents and answers route and config.
 #   C12 #772 the Sound tools: /api/<sound_group>/ documents and answers generate, analyze and
@@ -254,7 +254,7 @@ for k in (jev.get("ask") or {}):
     if not k.startswith("_") and k != "*" and k not in modes_by_id:
         bad.append("C11 jev ask.%s is not a declared mode" % k)
 dkts = [p for p in kts if os.sep + "decide" + os.sep in p]
-for needle in ("EncryptedSharedPreferences", "revealAiKey"):
+for needle in ("SafeEncryptedPrefs", "revealAiKey"):
     holders = sorted(os.path.relpath(p, src) for p in kts + jkts if needle in code(p))
     if holders != ["decide/JevStore.kt"]:
         bad.append("C11 %s must be used by decide/JevStore.kt alone (the token's one store), found in %s" % (needle, holders))
@@ -462,7 +462,7 @@ mutate jev-tool-no-mode build.json 's.replace("\"mode\": \"units\"", "\"mode\": 
 mutate jev-tool-no-form build.json 's.replace("\"form\": \"dbsum\"", "\"form\": \"dbsun\"")' "names form dbsun"
 mutate jev-fallback-mode build.json 's.replace("\"fallback_mode\": \"standard\"", "\"fallback_mode\": \"basic\"")' "C11 jev route.fallback_mode basic"
 mutate jev-ask-key build.json 's.replace("\"acoustics\": [", "\"acoustix\": [")' "C11 jev ask.acoustix"
-mutate token-second-store "$J/decide/JevFlow.kt" 's + "\nprivate val k = androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV\n"' "C11 EncryptedSharedPreferences must be used by decide/JevStore.kt alone"
+mutate token-second-store "$J/decide/JevFlow.kt" 's + "\nprivate val k = com.diegonmarcos.superapp.crash.SafeEncryptedPrefs\n"' "C11 SafeEncryptedPrefs must be used by decide/JevStore.kt alone"
 mutate token-logged "$J/decide/JevStore.kt" 's.replace("val r = c.revealAiKey(provider)", "val r = c.revealAiKey(provider)\n        android.util.Log.d(\"jev\", r.text.orEmpty())")' "C11 JevStore.kt logs"
 mutate jev-op-dropped "$J/debugapi/JevDebugApi.kt" 's.replace("\"config\" -> config(app).toString()", "")' "C11 /api/<jev_group>/config"
 mutate debug-op-dropped "$J/debugapi/CalcDebugApi.kt" 's.replace("\"modes\" -> modesJson()", "")' "C7 /api/<group>/modes"

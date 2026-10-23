@@ -1,9 +1,8 @@
 package com.diegonmarcos.cloudagenda.data
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 /** The Settings ▸ Appearance choice. */
 enum class ThemeMode(val id: String, val label: String) {
@@ -55,12 +54,7 @@ class TasksPrefs(private val sp: SharedPreferences) {
  */
 class AgentSecrets(context: Context) {
     private val sp: SharedPreferences? = runCatching {
-        val key = MasterKey.Builder(context.applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
-        EncryptedSharedPreferences.create(
-            context.applicationContext, FILE, key,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        SafeEncryptedPrefs.prefs(context.applicationContext, FILE)
     }.getOrNull()
 
     val available: Boolean get() = sp != null

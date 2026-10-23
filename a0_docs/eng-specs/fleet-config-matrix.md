@@ -117,6 +117,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `phone_notif_store` | prefs | device | no | Local buffer (max 50) of captured phone notifications; transient local history not meant to move. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
 | `recent_cloud_tiles` | prefs | device | no | Most-recently-opened cloud tile list (max 12), usage history. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `search_scope_prefs` | prefs | config | yes | The SuperApp search's scope chips as each entry point was last left (scopes_home_star, scopes_home_sheet, scopes_cloud_apps_page: the build.json::ui.search_scopes ids that are on). Absent until the owner taps a chip there, so an entry never touched starts on its defaults. |
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
@@ -165,6 +166,7 @@ Module `ac_c3-morpheus`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfi
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -182,6 +184,7 @@ Module `ac_c3-watchdog`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconfi
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -199,6 +202,7 @@ Module `ac_c3-watchtower`; libs: lib-core, lib-crash, lib-devtools, lib-fleetcon
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `watchtower_cache` | prefs | device | no | TTL cache of GitHub workflow-runs responses per repo (<owner>/<repo>/runs.ts/.body). |
 
@@ -225,6 +229,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_declared_edits` | prefs | config | yes | Cloud Store: the user's edits to the Declared list over the built-in source map — apps declared from Search or Installed (with the rungs they install from) and declared apps removed. The user's app list, so it moves with the phone. |
@@ -261,6 +266,7 @@ Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, l
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `tasks_ai` | prefs | device | no | Cloud Tasks AI panel (libs:ai): the model, Web switch and gateway agent last picked. The chat history itself is the sessions file ai-sessions.json under the app's files dir. |
 | `tasks_prefs` | prefs | config (keys: filter→device, selected_list→device) | yes | Cloud Tasks Settings > Appearance (light / dark / system) and where the user was: the top filter bar's status and tag selection and the list the Tasks page shows. The theme is the setting that moves to a new phone; the filter and the list id name rows of this phone's tasks database and mean nothing elsewhere. |
@@ -294,6 +300,7 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottom
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `tabs` | prefs | config (keys: active_url→device, defaults_seeded_v1→device) | yes | Browser tab groups/active URL are user state; defaults_seeded_v1 is a migration marker. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
@@ -314,6 +321,7 @@ Module `ac_cloud-c3-webserver`; libs: lib-core, lib-crash, lib-devtools, lib-fle
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -331,6 +339,7 @@ Module `ac_cloud-media-center`; libs: lib-core, lib-crash, lib-devtools, lib-fle
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -355,6 +364,7 @@ Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-
 | `gh_feed_cache` | prefs | device | no | 15-minute TTL cache of GitHub commits/workflow-run feeds. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
@@ -379,6 +389,7 @@ Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-da
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -405,6 +416,7 @@ Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `voice_shutter` | prefs | config | yes | cloud-camera voice shutter on/off toggle ('enabled'). |
 
@@ -429,6 +441,7 @@ Module `ac_cloud-chat`; libs: lib-analytics, lib-core, lib-crash, lib-devtools, 
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `secure_pdf_attempts` | encrypted | device | no | Mattermost secure PDF viewer wrong-password attempt counters (encrypted prefs); lockout state. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
@@ -455,6 +468,7 @@ Module `ac_cloud-code`; libs: lib-ai, lib-core, lib-crash, lib-devtools, lib-fle
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -481,6 +495,7 @@ Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-cra
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -506,6 +521,7 @@ Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cras
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -540,6 +556,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 | `mounts-credentials` | encrypted | secret | yes | Encrypted mount passwords and key passphrases keyed by mount id. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -571,6 +588,7 @@ Module `ac_cloud-keyboard`; libs: lib-analytics, lib-autofill, lib-core, lib-cra
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -603,6 +621,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-crash, lib-databacken
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `push_baselines` | prefs | device | no | Sterna new-mail notification baselines (seen ids, last pass timestamp). |
 | `room:SternaDatabase` | room | content | no | Sterna Room mail cache (emails, mailboxes, bodies, FTS, local drafts, snooze); mirror of the server; migrate only the account. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `sterna_account` | prefs | config (keys: accounts→device, current→device, pw_*→device, vault_mail→secret, vault_owner→secret) | yes | Mail accounts as a JSON blob (server, username, protocol, IMAP/SMTP endpoints — the account LINKS) and the current account; each pw_<id> slot is a password or refresh token encrypted with this phone's Keystore, so it never moves — the new phone signs in once per account. vault_mail / vault_owner are the vault bundle's mail section and owner address IN TRANSIT (cockpit derived_settings, applied by server → runtime and the migration): the app consumes them on start (VaultMailImport adds the accounts through AccountStore.add, encrypting each password) and removes them. The accounts JSON and the current id are THIS phone's state: ids key the pw_<id> slots, so a copy from another capture that lands over them leaves every account without a credential (the owner's me@ lost its login that way on 2026-10-08). They stay home; vault_mail is what travels. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `sync_states` | prefs | device | no | JMAP sync cursors (query/email state). |
@@ -647,6 +666,7 @@ Module `ac_cloud-matrix`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconf
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -670,6 +690,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -696,6 +717,7 @@ Module `ac_cloud-gallery`; libs: lib-analytics, lib-core, lib-crash, lib-cropper
 | `gallery_widget_prefs` | prefs | device | no | Per-appWidgetId widget media URI lists; widget ids and content URIs are tied to this install. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `room:InternalDatabase` | room | content | no | Gallery encrypted gallery database: media metadata, albums, favorites, vault index; user data and keyed to this device's Keystore. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `security_flags` | prefs | device | no | gallery flag whether DB is currently encrypted; install state. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `ui_settings` | prefs | config | yes | gallery UI cell/grid size choices for albums and timeline. |
@@ -720,6 +742,7 @@ Module `ac_cloud-myterminal`; libs: lib-analytics, lib-core, lib-crash, lib-devt
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `ide_prefs` | prefs | config (keys: battery_exemption_asked→device) | yes | cloud-myterminal IdePrefs: terminal_backend choice, per-backend ssh host/user (terminal_<backend>_host/_user), dev_api_enabled, the #787 wake_lock_wanted toggle and the pinch-zoom terminal_font_size (px, 6..32; the frontend reads it through the AndroidTerm bridge and migrates its old localStorage myk-term-font-size into it, so "apply all" carries the size to a new phone); all user choices, except battery_exemption_asked, which records that the one-time battery-optimization prompt was shown. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -754,6 +777,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, 
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `timeline_state` | prefs | device | no | Timeline store migration marker (#1114): when the stops, step samples and raw fixes were moved into the one timeline store (maps.db timeline_segments); the store itself is re-derived on the new phone, never migrated. |
 | `tracker_engine` | prefs | config | yes | Tracking engine settings (sources, accurate-fix / cell / motion triggers), its progress counters and the learned step length. |
@@ -781,6 +805,7 @@ Module `ac_cloud-news`; libs: lib-analytics, lib-core, lib-crash, lib-databacken
 | `news_legacy_saved` | prefs | content | no | News legacy saved-articles JSON read once and seeded into the engine; saved items are user data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -804,6 +829,7 @@ Module `ac_cloud-nix-on-droid`; libs: lib-core, lib-crash, lib-devtools, lib-fle
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -834,6 +860,7 @@ Module `ac_cloud-notes`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-d
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -853,6 +880,7 @@ Module `ac_cloud-office`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconf
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -871,6 +899,7 @@ Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `search_agents_state` | file | config | GAP | Cloud Search Agents (#913): the run log and the reports (drafts and their review state, never a message body sent anywhere, never a key), carried whole so a new phone keeps them. The agent settings, profile and templates are keys of the cloud_search prefs store (agents_*). |
 | `search_chat_sessions` | file | config | GAP | Cloud Search's AI chat history file (never a token), carried whole so a new phone keeps the conversations. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
@@ -898,6 +927,7 @@ Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, li
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_declared_edits` | prefs | config | yes | Cloud Store: the user's edits to the Declared list over the built-in source map — apps declared from Search or Installed (with the rungs they install from) and declared apps removed. The user's app list, so it moves with the phone. |
@@ -930,6 +960,7 @@ Module `ac_cloud-termux`; libs: lib-core, lib-crash, lib-devtools, lib-fleetconf
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |
@@ -966,6 +997,7 @@ Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools,
 | `room:PlatformDatabase` | room | device | no | Bitwarden org-event queue (OrganizationEventDao); pending telemetry/sync state. |
 | `room:PrivilegedAppDatabase` | room | config | GAP | Bitwarden user-trusted privileged apps list for passkey/credential provider: a user-made trust choice. |
 | `room:VaultDatabase` | room | content | no | Bitwarden synced vault cache (ciphers, folders, collections); the vault lives on the server, re-synced after login. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `{pkg}.xamarinessentials` | prefs | device | no | Legacy Xamarin SecureStorage values (Keystore-alias wrapped), read once by the legacy migrator; bound to this device. |
 | `{pkg}_encrypted_preferences` | encrypted | device | no | Bitwarden session tokens and user key material (EncryptedSharedPreferences): re-established by signing in on the new phone, never copied — the vault account is the link. |
@@ -990,6 +1022,7 @@ Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cras
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -1007,6 +1040,7 @@ Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-crash, lib-decision
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `text_tools` | prefs | config (keys: seeded_from_keyboard→device, seeded_from_serving_app→device) | yes | Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target language (a language picker, default en), auto_translate_incoming and auto_summary_incoming switches (off by default), summary_language (default en), answer_prompt (the Answer Prediction prompt shared by the composer and the summary box suggested reply; empty means the built-in default). |
 
@@ -1024,6 +1058,7 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-c
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
 | file | class | doc |

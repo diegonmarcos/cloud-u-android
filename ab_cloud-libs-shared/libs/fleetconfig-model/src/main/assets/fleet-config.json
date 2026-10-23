@@ -1555,6 +1555,14 @@
         "ac_cloud-vault"
       ]
     },
+    "safe_encrypted_prefs_reset": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration.",
+      "used_by": [
+        "lib-crash"
+      ]
+    },
     "search_scope_prefs": {
       "kind": "prefs",
       "class": "config",
@@ -2239,6 +2247,10 @@
       "store": "camera_modes",
       "why": "name is the CameraMode enum constant (QR_SCAN, AUTO, FACE_RETOUCH, PORTRAIT, NIGHT, HDR, CAMERA, VIDEO); each mode its own prefs file, all registered above"
     },
+    "fileName@ab_cloud-libs-shared/libs/crash/src/main/java/com/diegonmarcos/superapp/crash/SafeEncryptedPrefs.kt": {
+      "store": "-",
+      "why": "#1106 the safe opener itself: it opens whichever encrypted prefs file its caller names (each caller's store is declared under its own name) and keeps no store of its own besides the reset flag below."
+    },
     "file@ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetConfig.kt": {
       "store": "-",
       "why": "the migration contract itself: it opens exactly the files this manifest declares, by their declared names — it keeps no store of its own."
@@ -2246,10 +2258,6 @@
     "masterKeyAlias@ac_cloud-chat/libraries/@mattermost/secure-pdf-viewer/android/src/main/java/com/mattermost/securepdfviewer/manager/PasswordAttemptStore.kt": {
       "store": "secure_pdf_attempts",
       "why": "PasswordAttemptStore PREF_NAME constant; encrypted prefs, not a key alias"
-    },
-    "masterKeyAlias@ac_cloud-code/src/plugins/auth/src/android/EncryptedPreferenceManager.java": {
-      "store": "acode_auth_secure",
-      "why": "EncryptedSharedPreferences.create(prefName, masterKeyAlias, …) — the old argument order; the scanner reads the alias, the file is prefName (Authenticator passes acode_auth_secure; SftpSecurityStore and RewardPassManager pass their own names, declared with `helper`). It falls back to plain prefs of the same name."
     },
     "name: String@ac_cloud-camera/app/src/main/java/cld/camera/ui/activities/SecureActivity.kt": {
       "store": "-",

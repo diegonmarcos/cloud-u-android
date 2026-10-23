@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.fleetconfig
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
 import java.io.File
@@ -102,12 +103,7 @@ object SetupStores {
                 "prefs" -> app.getSharedPreferences(file, Context.MODE_PRIVATE).takeIf { create || it.all.isNotEmpty() }
                 "encrypted" ->
                     if (!create && !File(app.dataDir, "shared_prefs/$file.xml").isFile) null
-                    else androidx.security.crypto.EncryptedSharedPreferences.create(
-                        app, file,
-                        androidx.security.crypto.MasterKey.Builder(app).setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM).build(),
-                        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                        androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-                    )
+                    else SafeEncryptedPrefs.prefs(app, file)
                 else -> null
             }
         }

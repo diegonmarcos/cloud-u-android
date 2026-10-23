@@ -51,8 +51,11 @@ for i in sorted(icons - branches): bad.append("A1 icon %r is not a branch of Ico
 
 # A2
 sp = code(os.path.join(kt, "data/SecretPrefs.kt"))
+# #1106 SecretPrefs opens the store through libs:crash SafeEncryptedPrefs, which holds the encrypted-prefs schemes.
+safe = code(os.path.join(root, "ab_cloud-libs-shared/libs/crash/src/main/java/com/diegonmarcos/superapp/crash/SafeEncryptedPrefs.kt"))
+if "SafeEncryptedPrefs.prefs(" not in sp: bad.append("A2 SecretPrefs does not use SafeEncryptedPrefs.prefs(")
 for need in ("EncryptedSharedPreferences.create(", "MasterKey.KeyScheme.AES256_GCM", "PrefValueEncryptionScheme.AES256_GCM"):
-    if need not in sp: bad.append("A2 SecretPrefs does not use %s" % need)
+    if need not in safe: bad.append("A2 SafeEncryptedPrefs does not use %s" % need)
 store = re.search(r'PREFS\s*=\s*"([^"]+)"', sp)
 fc = json.loads(read(os.path.join(root, "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json")))
 decl = fc["stores"].get(store.group(1)) if store else None
@@ -134,7 +137,7 @@ PY
   if check "$S/m" >/dev/null 2>&1; then FAILS=$((FAILS + 1)); echo "  FAIL: mutation '$1' stayed green"; else PASS=$((PASS + 1)); echo "  PASS: mutation '$1' is caught"; fi
 }
 mutate "unknown task icon" 'sub(M + "/build.json", "\"icon\": \"translate\"", "\"icon\": \"tranzlate\"")'
-mutate "plain prefs token" 'sub(K + "/data/SecretPrefs.kt", "EncryptedSharedPreferences.create(", "PlainPrefs.create(")'
+mutate "plain prefs token" 'sub(K + "/data/SecretPrefs.kt", "SafeEncryptedPrefs.prefs(", "PlainPrefs.create(")'
 mutate "a log line" 'sub(K + "/data/Catalogue.kt", "    companion object {", "    fun dbg(t: String) = android.util.Log.d(\"tools\", t)\n\n    companion object {")'
 mutate "Account key read" 'sub(K + "/data/AccountStatus.kt", "client.aiRoutingSnapshot() }", "client.revealAiKey(PROVIDER).text }")'
 mutate "vault prints the token" 'D = chr(36); sub(M + "/core/src/main/kotlin/com/diegonmarcos/cloudtoolssmallllms/core/TokenVault.kt", "TokenVault(" + D + "{masked()})", "TokenVault(" + D + "{token()})")'

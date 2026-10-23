@@ -1,8 +1,7 @@
 package com.diegonmarcos.superapp.mail
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -16,16 +15,7 @@ import org.json.JSONObject
  */
 class JmapPrefs(context: Context) {
     private val prefs by lazy {
-        val key = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            "mail_jmap_prefs",
-            key,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        SafeEncryptedPrefs.prefs(context, "mail_jmap_prefs")
     }
 
     var server:   String get() = prefs.getString(K_SERVER, BuildConfig.JMAP_DEFAULT_SERVER) ?: ""

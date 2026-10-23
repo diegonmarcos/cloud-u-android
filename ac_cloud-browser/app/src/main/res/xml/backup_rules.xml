@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Auto Backup rules (Android 11 and below). #1106 EncryptedSharedPreferences files are sealed by a Keystore master key that never leaves this device. A restored or
+  transferred copy cannot be decrypted by the new device's key (AEADBadTagException on open), so these files are left out of
+  backups and device transfers; the user signs in again.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="browser_autofill.xml" />
+    <exclude domain="sharedpref" path="browser_ac_profiles.xml" />
+    <exclude domain="sharedpref" path="browser_ac_secrets.xml" />
+    <exclude domain="sharedpref" path="safe_encrypted_prefs_reset.xml" />
+</full-backup-content>

@@ -1,10 +1,10 @@
 package com.diegonmarcos.cloudcalc.decide
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.diegonmarcos.cloudcalc.BuildConfig
 import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.superapp.decisions.Http
@@ -41,12 +41,7 @@ object JevStore {
     /** The Keystore-backed store; null where no Keystore exists (Robolectric) — then no override can be kept. */
     @Volatile var secrets: (Context) -> SharedPreferences? = { ctx ->
         runCatching {
-            val key = MasterKey.Builder(ctx).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
-            EncryptedSharedPreferences.create(
-                ctx, SECRET_PREFS, key,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-            )
+            SafeEncryptedPrefs.prefs(ctx, SECRET_PREFS)
         }.getOrNull()
     }
 

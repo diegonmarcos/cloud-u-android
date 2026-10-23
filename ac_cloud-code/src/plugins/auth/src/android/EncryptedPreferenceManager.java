@@ -2,10 +2,7 @@ package com.foxdebug.acode.rk.auth;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import androidx.security.crypto.EncryptedSharedPreferences;
-import androidx.security.crypto.MasterKeys;
-import java.io.IOException;
-import java.security.GeneralSecurityException;
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs;
 
 public class EncryptedPreferenceManager {
     private final SharedPreferences sharedPreferences;
@@ -29,26 +26,9 @@ public class EncryptedPreferenceManager {
             String prefName,
             boolean allowPlaintextFallback
     ) {
-        SharedPreferences preferences;
-        try {
-            String masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC);
-
-            // EncryptedSharedPreferences handles encryption of both Keys and Values
-            preferences = EncryptedSharedPreferences.create(
-                    prefName,
-                    masterKeyAlias,
-                    context,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            );
-        } catch (GeneralSecurityException | IOException e) {
-            if (!allowPlaintextFallback) {
-                throw new IllegalStateException("Encrypted preferences are unavailable", e);
-            }
-
-            // Preserve the existing behavior for legacy callers unless strict mode is requested.
-            preferences = context.getSharedPreferences(prefName, Context.MODE_PRIVATE);
-        }
+        // #1106 SafeEncryptedPrefs never throws: a Keystore master key that does not match the file resets the
+        // store instead of crashing, so there is no plaintext fallback to choose (allowPlaintextFallback is kept for callers).
+        SharedPreferences preferences = SafeEncryptedPrefs.prefs(context, prefName);
         sharedPreferences = preferences;
     }
 

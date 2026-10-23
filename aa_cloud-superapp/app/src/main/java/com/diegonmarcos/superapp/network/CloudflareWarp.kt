@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.network
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
 import com.wireguard.crypto.KeyPair
@@ -215,12 +216,7 @@ object CloudflareWarp {
  * interface slot. [factory] lets a test hand plain prefs.
  */
 class CfKeyStore(context: Context, factory: ((Context) -> SharedPreferences)? = null) {
-    private val sp: SharedPreferences = factory?.invoke(context) ?: androidx.security.crypto.EncryptedSharedPreferences.create(
-        context, "cloudflare_keys",
-        androidx.security.crypto.MasterKey.Builder(context).setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM).build(),
-        androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-    )
+    private val sp: SharedPreferences = factory?.invoke(context) ?: SafeEncryptedPrefs.prefs(context, "cloudflare_keys")
 
     private fun reg(p: String): CloudflareWarp.Registration? {
         val id = sp.getString("${p}_id", null) ?: return null

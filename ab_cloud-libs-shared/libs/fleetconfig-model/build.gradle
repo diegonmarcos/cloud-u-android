@@ -52,6 +52,8 @@ dependencies {
     // cipher. compileOnly, the libs:core FleetConfig pattern: only an app that keeps an encrypted
     // store ships the cipher, and opening one in an app that does not is reported for that store alone.
     compileOnly 'androidx.security:security-crypto:1.1.0'
+    // #1106 the one safe way to open an EncryptedSharedPreferences file (never throws on a mismatched Keystore key).
+    implementation project(':libs:crash')
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'androidx.test:core:1.6.1'

@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.browser
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.SystemClock
@@ -10,7 +11,6 @@ import androidx.biometric.BiometricPrompt
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import java.security.KeyStore
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -60,12 +60,9 @@ object AcAndroid {
     fun open(ctx: Context): Holder = cached ?: synchronized(this) { cached ?: build(ctx.applicationContext).also { cached = it } }
 
     private fun build(app: Context): Holder {
-        val master = MasterKey.Builder(app).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
         val kvs = runCatching {
-            val profiles = EncryptedSharedPreferences.create(app, PROFILES_STORE, master,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
-            val secrets = EncryptedSharedPreferences.create(app, SECRETS_STORE, master,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
+            val profiles = SafeEncryptedPrefs.prefs(app, PROFILES_STORE)
+            val secrets = SafeEncryptedPrefs.prefs(app, SECRETS_STORE)
             AcPrefsKv(profiles) to AcPrefsKv(secrets)
         }.getOrNull()
         val keys = AcKeystoreKey()

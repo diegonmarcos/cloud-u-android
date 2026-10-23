@@ -1,10 +1,9 @@
 package com.diegonmarcos.superapp.appstore
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 /**
  * #866 The fleet bearer the Store's Commits / CI-CD feeds send, for a host that
@@ -67,10 +66,7 @@ object FleetBearer {
     /** This app's own entry: encrypted, degrading to plain prefs like DaguPrefs does. */
     class Own(context: Context) {
         private val sp: SharedPreferences = try {
-            val key = MasterKey.Builder(context.applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
-            EncryptedSharedPreferences.create(context.applicationContext, "store_fleet_bearer", key,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
+            SafeEncryptedPrefs.prefs(context.applicationContext, "store_fleet_bearer")
         } catch (_: Throwable) {
             context.applicationContext.getSharedPreferences("store_fleet_bearer_fallback", Context.MODE_PRIVATE)
         }

@@ -74,7 +74,8 @@ def check(root, ok):
     st = json.load(open(os.path.join(root, MANIFEST), encoding="utf-8"))["stores"]
     ok(st.get("browser_ac_profiles", {}).get("kind") == "encrypted" and st["browser_ac_profiles"].get("class") == "secret", "A4 browser_ac_profiles is declared encrypted + secret")
     ok(st.get("browser_ac_secrets", {}).get("kind") == "encrypted" and st["browser_ac_secrets"].get("class") == "device", "A4 browser_ac_secrets is declared encrypted + device (never migrates in the clear)")
-    ok("EncryptedSharedPreferences.create(app, PROFILES_STORE" in andr and "EncryptedSharedPreferences.create(app, SECRETS_STORE" in andr and "MasterKey.KeyScheme.AES256_GCM" in andr and "getSharedPreferences" not in andr, "A4 both stores open with the fleet's MasterKey scheme")
+    safe = open(os.path.join(root, "ab_cloud-libs-shared/libs/crash/src/main/java/com/diegonmarcos/superapp/crash/SafeEncryptedPrefs.kt"), encoding="utf-8").read()
+    ok("SafeEncryptedPrefs.prefs(app, PROFILES_STORE" in andr and "SafeEncryptedPrefs.prefs(app, SECRETS_STORE" in andr and "MasterKey.KeyScheme.AES256_GCM" in safe and "EncryptedSharedPreferences.create(" in safe and "getSharedPreferences" not in andr, "A4 both stores open with the fleet's MasterKey scheme (through the one safe opener, #1106)")
     ok('"AES/GCM/NoPadding"' in sec and sec.count("updateAAD(") == 2 and "GCMParameterSpec(TAG_BITS" in sec and 'aad("login", it.id, "pw")' in sec, "A4 secrets are sealed with AES-GCM, bound to their record")
     ok("AndroidKeyStore" in andr and "KEY_ALGORITHM_AES" in andr and "setKeySize(256)" in andr, "A4 the key is an AES-256 Android Keystore key")
     ok(".put(\"pw\", box.seal(" in sec and ".put(\"num\", box.seal(" in sec and ".put(\"cvc\", box.seal(" in sec and '.put("password"' not in sec and '.put("number"' not in sec, "A4 password, card number and code are written sealed, never as plain fields")
@@ -118,7 +119,7 @@ main("autocomplete wiring", check, [
     ("a secret is stored in the clear", LIBP + "AcSecrets.kt", ".put(\"pw\", box.seal(it.password, aad(\"login\", it.id, \"pw\")))", ".put(\"pw\", it.password)", "written sealed"),
     ("the seal loses its record binding", LIBP + "AcSecrets.kt", "        c.updateAAD(aad.toByteArray(Charsets.UTF_8))\n        val ct", "        val ct", "bound to their record"),
     ("the secrets store becomes secret-class", MANIFEST, '"browser_ac_secrets": {\n      "kind": "encrypted",\n      "class": "device",', '"browser_ac_secrets": {\n      "kind": "encrypted",\n      "class": "secret",', "never migrates in the clear"),
-    ("the store opens unencrypted", LIBP + "AcAndroid.kt", "EncryptedSharedPreferences.create(app, SECRETS_STORE", "app.getSharedPreferences(SECRETS_STORE, 0); EncryptedSharedPreferences.create(app, SECRETS_STORE", "open with the fleet's MasterKey"),
+    ("the store opens unencrypted", LIBP + "AcAndroid.kt", "SafeEncryptedPrefs.prefs(app, SECRETS_STORE", "app.getSharedPreferences(SECRETS_STORE, 0); SafeEncryptedPrefs.prefs(app, SECRETS_STORE", "open with the fleet's MasterKey"),
     ("a phone with no lock shows the secret", LIBP + "AcAndroid.kt", "unavailable(activity)?.let { return onDenied(it) }", "", "refuses instead of showing"),
     ("a log line prints a login", LIBP + "AcStore.kt", "    fun forgetMemory(id: String)", "    fun dump() = android.util.Log.d(\"x\", logins().toString())\n    fun forgetMemory(id: String)", "AcStore.kt logs nothing"),
     ("the vault option is dropped", "ac_cloud-browser/build.json", '"key": "autofill_use_vault",', '"key": "autofill_use_vault_gone",', "autofill_use_vault"),

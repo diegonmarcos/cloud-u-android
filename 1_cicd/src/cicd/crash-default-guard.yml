@@ -34,3 +34,8 @@ jobs:
 
       - name: Every fleet app has the default crash handler
         run: python3 1_cicd/src/scripts/cloud-android-crash-default-guard.py .
+
+      - name: No direct EncryptedSharedPreferences use (the Keystore-mismatch crash of #1106)
+        run: |
+          bash 1_cicd/src/scripts/test/safe-prefs-guard.test.sh
+          python3 1_cicd/src/scripts/cloud-android-safe-prefs-guard.py .

@@ -1,8 +1,8 @@
 package com.diegonmarcos.superapp.settings
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 /**
  * Persisted user-imported configs (WG private keys, mail URLs, SSH key,
@@ -18,16 +18,7 @@ class ConfigsPrefs(context: Context) {
     private val appContext: Context = context.applicationContext ?: context
     private val prefs by lazy {
         factory?.let { return@lazy it(context) }
-        val key = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context,
-            "import_configs",
-            key,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        SafeEncryptedPrefs.prefs(context, "import_configs")
     }
 
     /** #867 This app's own blob, without the read-through to Cloud Account. */

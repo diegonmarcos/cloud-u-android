@@ -1,0 +1,10 @@
+{
+  "_doc": "#1106 files allowed to touch androidx.security.crypto directly (EncryptedSharedPreferences.create / MasterKeys.getOrCreate / MasterKey.Builder). Everything else opens an encrypted prefs file through libs:crash SafeEncryptedPrefs, which never throws when the Keystore master key does not match the file (Cloud Drive crash, AEADBadTagException from GitCredentialStore). Each entry needs a reason.",
+  "allow": {
+    "ab_cloud-libs-shared/libs/crash/src/main/java/com/diegonmarcos/superapp/crash/SafeEncryptedPrefs.kt": "the helper itself",
+    "ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/AccountModel.kt": "EncryptedFile (the account slots), not EncryptedSharedPreferences; AccountStore already treats an unreadable slot as empty",
+    "ac_cloud-gallery/app/src/main/kotlin/com/diegonmarcos/mediacenter/feature_node/data/data_source/KeychainHolder.kt": "EncryptedFile for vault media, not EncryptedSharedPreferences",
+    "ac_cloud-vault/data/src/main/kotlin/com/bitwarden/data/datasource/disk/di/PreferenceModule.kt": "Bitwarden's own module graph (no libs:crash on :data); it already catches the failure and destroys and rebuilds the master key and file",
+    "ac_cloud-chat/libraries/@mattermost/secure-pdf-viewer/android/src/main/java/com/mattermost/securepdfviewer/manager/PasswordAttemptStore.kt": "a vendored React Native library with its own gradle module, outside the fleet's module graph"
+  }
+}

@@ -106,7 +106,15 @@ object DataMigration {
         /** What is kept: small files, never Keystore-encrypted prefs, never caches. */
         fun keep(rel: String, size: Long): Boolean =
             size <= MAX_FILE && ROOTS.any { rel.startsWith("$it/") } &&
-                !rel.contains("/cache/") && !rel.contains("credentials") && !rel.contains("__androidx_security")
+                !rel.contains("/cache/") && !rel.contains("credentials") && !rel.contains("__androidx_security") &&
+                !rel.contains("safe_encrypted_prefs_reset")
+
+        /**
+         * #1106 an EncryptedSharedPreferences file by what it holds, whatever it is called: its keyset is sealed
+         * by a Keystore master key that never travels, so a restored copy only throws AEADBadTagException.
+         */
+        fun isEncryptedPrefs(f: File): Boolean =
+            f.name.endsWith(".xml") && runCatching { f.useLines { l -> l.any { "__androidx_security_crypto_encrypted_prefs" in it } } }.getOrDefault(false)
 
         fun write(dataDir: File, out: File): Int {
             out.parentFile?.mkdirs()
@@ -115,7 +123,7 @@ object DataMigration {
             ZipOutputStream(tmp.outputStream().buffered()).use { z ->
                 dataDir.walkTopDown().filter { it.isFile }.forEach { f ->
                     val rel = f.relativeTo(dataDir).invariantSeparatorsPath
-                    if (!keep(rel, f.length())) return@forEach
+                    if (!keep(rel, f.length()) || isEncryptedPrefs(f)) return@forEach
                     z.putNextEntry(ZipEntry(rel)); f.inputStream().use { it.copyTo(z) }; z.closeEntry(); n++
                 }
             }

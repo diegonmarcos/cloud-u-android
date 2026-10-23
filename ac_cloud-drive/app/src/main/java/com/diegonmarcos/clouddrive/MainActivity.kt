@@ -23,7 +23,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.Modifier
+import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
@@ -192,7 +201,19 @@ class MainActivity : ComponentActivity(), DriveActions {
         }
         val filesState by files.state.collectAsState()
         LaunchedEffect(filesState) { saved.value = filesState.encode() }
-        val git = remember { GitSyncCoordinator(applicationContext, scope) }
+        // #1106 built OFF the main thread: GitCredentialStore opens Keystore-backed prefs (a slow, failure-prone
+        // call that used to run here, inside Compose, and killed the app). SafeEncryptedPrefs never throws; when it
+        // had to reset the store the user is told below.
+        var gitOrNull by remember { mutableStateOf<GitSyncCoordinator?>(null) }
+        var gitReset by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            val (made, reset) = withContext(Dispatchers.IO) {
+                GitSyncCoordinator(applicationContext, scope) to SafeEncryptedPrefs.wasReset(applicationContext, GitCredentialStore.FILE)
+            }
+            gitOrNull = made
+            gitReset = reset
+        }
+        val git = gitOrNull
         val rclone = remember { RcloneCoordinator(applicationContext, scope, prefs) }
         val mirrors = remember { MirrorRunner(scope, prefs) }
         val rcloneVersion by rclone.version.collectAsState()
@@ -204,7 +225,7 @@ class MainActivity : ComponentActivity(), DriveActions {
         var jumpPage by remember { mutableStateOf<String?>(null) }
         val jump: (String, String) -> Unit = { tab, page -> jumpPage = page.ifBlank { null }; jumpTab = tab }
         val openPath: (String) -> Unit = { path -> filesController?.reveal(path); jumpPage = Declarations.PAGE_LOCAL; jumpTab = Declarations.SECTION_EXPLORER }
-        val syncAll: () -> Unit = { git.repos.value.filter { it.autoSync }.forEach { git.syncNow(it) } }
+        val syncAll: () -> Unit = { gitOrNull?.let { g -> g.repos.value.filter { it.autoSync }.forEach { g.syncNow(it) } } }
 
         // #1106 the startup sequence: terminal installed -> started -> $HOME ready -> mounted -> the shell.
         // A failure shows its remedies and "Continue with local files" (degraded mode) instead of a crash.
@@ -212,7 +233,9 @@ class MainActivity : ComponentActivity(), DriveActions {
         LaunchedEffect(startup) { startup.start() }
         val startupState by startup.state.collectAsState()
         var degraded by remember { mutableStateOf(false) }
-        if (startupState is StartupState.Ready || degraded) {
+        if (git == null) {
+            Box(Modifier.fillMaxSize())
+        } else if (startupState is StartupState.Ready || degraded) {
             DriveShell(select = jumpTab, onSelected = { jumpTab = null }) { tabId, _ ->
                 when (tabId) {
                     "explorer" -> ExplorerScreen(jumpPage, onPageConsumed = { jumpPage = null }, local = { FilesScreen(files, this, hasAccess) }, cloud = { VolumesScreen(rclone, prefs, this, openPath) })
@@ -232,6 +255,17 @@ class MainActivity : ComponentActivity(), DriveActions {
                 onRetry = { startup.retry() },
                 onContinueLocal = { degraded = true },
                 onGrantAccess = { requestStorageAccess() },
+            )
+        }
+        if (gitReset) {
+            AlertDialog(
+                onDismissRequest = { SafeEncryptedPrefs.acknowledgeReset(ctx, GitCredentialStore.FILE); gitReset = false },
+                text = { Text(stringResource(R.string.git_sync_sign_in_reset)) },
+                confirmButton = {
+                    TextButton(onClick = { SafeEncryptedPrefs.acknowledgeReset(ctx, GitCredentialStore.FILE); gitReset = false }) {
+                        Text(stringResource(R.string.git_sync_sign_in_reset_ok))
+                    }
+                },
             )
         }
     }

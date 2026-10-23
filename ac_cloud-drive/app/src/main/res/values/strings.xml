@@ -26,6 +26,8 @@
     <string name="chrome_declared">declared</string>
     <string name="chrome_private">private</string>
     <string name="chrome_not_installed">%1$s is not installed</string>
+    <string name="git_sync_sign_in_reset">Git sync sign-in was reset — sign in again</string>
+    <string name="git_sync_sign_in_reset_ok">OK</string>
     <string name="chrome_unknown_tab">Nothing is declared for this tab</string>
 
     <!-- Files -->

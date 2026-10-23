@@ -14,6 +14,7 @@ MANIFEST = "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-co
 # What a mutated copy needs: the app, the shared browser lib, the fleet manifest, cloud-search's declaration.
 COPY = ["ac_cloud-browser", "ab_cloud-libs-shared/libs/browser", MANIFEST,
         "ab_cloud-libs-shared/libs/ai",  # #823 the assistant panel, the consent card and the shared AI contract are libs:ai's
+        "ab_cloud-libs-shared/libs/crash",  # #1106 SafeEncryptedPrefs, the one safe opener the encrypted stores go through
         "ab_cloud-libs-shared/libs/autofill",  # Tier 2 DOM autofill: the Cloud Account SOT contract
         "ac_cloud-search/build.json",  # #802 I8 the Search add-on's declaration
         "aa_cloud-superapp/data/constellation-fleet.json"]  # #802 I10 the vault add-on's package

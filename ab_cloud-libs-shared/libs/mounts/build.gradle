@@ -122,6 +122,8 @@ dependencies {
 
     // Passwords / passphrases at rest (MountCredentialStore), keystore-backed.
     implementation 'androidx.security:security-crypto:1.1.0'
+    // #1106 the one safe way to open an EncryptedSharedPreferences file (never throws on a mismatched Keystore key).
+    implementation project(':libs:crash')
 
     testImplementation 'junit:junit:4.13.2'
     // The real org.json: android.jar's copy is a stub that throws on the JVM.

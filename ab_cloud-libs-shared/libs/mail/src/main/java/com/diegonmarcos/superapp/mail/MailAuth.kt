@@ -1,8 +1,7 @@
 package com.diegonmarcos.superapp.mail
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -66,12 +65,7 @@ interface MailSecretStore {
 /** AndroidX security-crypto: AES-256 GCM at rest, the key in the Android Keystore (same as JmapPrefs). */
 class EncryptedMailSecretStore(context: Context) : MailSecretStore {
     private val prefs by lazy {
-        val key = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
-        EncryptedSharedPreferences.create(
-            context, "mail_auth_prefs", key,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        SafeEncryptedPrefs.prefs(context, "mail_auth_prefs")
     }
     override fun get(key: String): String? = prefs.getString(key, null)
     override fun put(key: String, value: String) { prefs.edit().putString(key, value).apply() }

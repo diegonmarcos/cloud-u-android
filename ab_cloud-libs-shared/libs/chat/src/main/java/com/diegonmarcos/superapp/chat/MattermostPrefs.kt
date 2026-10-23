@@ -1,9 +1,9 @@
 package com.diegonmarcos.superapp.chat
 
+import com.diegonmarcos.superapp.crash.SafeEncryptedPrefs
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 
 /**
  * Mattermost credential + session storage. Backed by
@@ -25,16 +25,7 @@ import androidx.security.crypto.MasterKey
 class MattermostPrefs(context: Context) {
 
     private val sp: SharedPreferences = try {
-        val masterKey = MasterKey.Builder(context.applicationContext)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-        EncryptedSharedPreferences.create(
-            context.applicationContext,
-            "mattermost_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
-        )
+        SafeEncryptedPrefs.prefs(context.applicationContext, "mattermost_prefs")
     } catch (_: Throwable) {
         // Fallback only — see KDoc above for why.
         context.applicationContext.getSharedPreferences(

@@ -91,12 +91,17 @@ class SharedStorePathsTest {
         File(data, "shared_prefs").mkdirs(); File(data, "shared_prefs/cloud-drive-prefs.xml").writeText("<map/>")
         File(data, "shared_prefs/git-sync-credentials.xml").writeText("secret")
         File(data, "cache").mkdirs(); File(data, "cache/x").writeText("c")
+        // #1106 an encrypted prefs file is recognised by its keyset, whatever the file is called
+        File(data, "shared_prefs/import_configs.xml").writeText("<map><string name=\"__androidx_security_crypto_encrypted_prefs_key_keyset__\">x</string></map>")
+        File(data, "shared_prefs/safe_encrypted_prefs_reset.xml").writeText("<map/>")
         val zip = File(tmp.root, "out/data.zip")
         assertEquals(3, DataMigration.Archive.write(data, zip))
         val fresh = tmp.newFolder("fresh")
         assertEquals(3, DataMigration.Archive.read(zip, fresh))
         assertTrue(File(fresh, "files/git-sync/repos.json").isFile)
         assertFalse(File(fresh, "shared_prefs/git-sync-credentials.xml").exists())
+        assertFalse(File(fresh, "shared_prefs/import_configs.xml").exists())
+        assertFalse(File(fresh, "shared_prefs/safe_encrypted_prefs_reset.xml").exists())
         assertFalse(File(fresh, "cache/x").exists())
     }
 }
