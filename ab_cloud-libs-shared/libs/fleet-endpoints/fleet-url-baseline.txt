@@ -45,12 +45,7 @@ ac_cloud-account/build.json	ui.account.forges.*.api	routed	Gitea forge API: Forg
 ac_cloud-browser/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-browser/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-browser/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
-ac_cloud-browser/build.json	ui.browser.default_pinned_tabs.*.url	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
 ac_cloud-browser/build.json	ui.browser.favourites.extra.*.url	link	a link the user opens in the browser or a WebView page; no request is made by the app
-ac_cloud-browser/build.json	ui.browser.local_pinned_tabs.Cloud	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
-ac_cloud-browser/build.json	ui.browser.local_pinned_tabs.Local	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
-ac_cloud-browser/build.json	ui.browser.local_pinned_tabs.Nix	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
-ac_cloud-browser/build.json	ui.browser.local_pinned_tabs.Termux	link	browser pinned tabs; the .app names are this phone's local app pages, not fleet services
 ac_cloud-c3/build.json	ui.c3_ops.base_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-c3/build.json	ui.carried_c3.pages.*.dagu_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-c3/build.json	ui.ntfy.web_base_url	link	web link to the ntfy page
@@ -99,3 +94,4 @@ ac_cloud-vault/build.json	ui.vault_url	routed	the self-hosted vault URL: Cloud V
 ac_cloud-wallet/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-wallet/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-wallet/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+aa_cloud-superapp/build.json	ui.dns.test_names.mesh	link	a mesh name the DNS page test lookup resolves; no HTTP request is made to it

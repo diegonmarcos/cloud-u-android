@@ -16,7 +16,7 @@
     so we need to allow cleartext traffic on them -->
     <domain-config cleartextTrafficPermitted="true">
         <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
-        <domain includeSubdomains="false">vaultwarden.app</domain>
+        <domain includeSubdomains="false">vaultwarden.mesh.diegonmarcos.com</domain>
         <!-- END fleet-mesh-cleartext -->
         <!-- CRL Distribution Servers -->
         <domain includeSubdomains="true">c.lencr.org</domain>

@@ -130,6 +130,6 @@ class FleetEndpointsPublishTest {
         val s = FleetEndpointsContract.parseDecl(java.io.File("../build.json").readText().let { org.json.JSONObject(it).getJSONObject("fleet_endpoints").toString() })
             .single { it.id == "vaultwarden" }
         assertEquals("vault.diegonmarcos.com", s.publicDomain); assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, s.policy)
-        assertEquals("http://vaultwarden.app:8880", s.meshUrl())
+        assertEquals("http://vaultwarden.mesh.diegonmarcos.com:8880", s.meshUrl())
     }
 }
