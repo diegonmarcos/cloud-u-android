@@ -66,6 +66,6 @@ tok = post("/identity/connect/token", {
 e = lambda s: enc(s.encode(), user_key[:32], user_key[32:])
 post("/api/ciphers", {
     "type": 1, "name": e(item), "notes": None, "favorite": False, "organizationId": None, "folderId": None,
-    "reprompt": 0, "login": {"username": e("ci-user"), "password": e("ci-seed-secret"), "uris": []},
+    "reprompt": 0, "encryptedFor": None, "login": {"username": e("ci-user"), "password": e("ci-seed-secret"), "uris": []},
 }, {"Authorization": "Bearer " + tok["access_token"]})
 print("seeded 1 item for", email)
