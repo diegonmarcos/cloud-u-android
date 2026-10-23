@@ -37,7 +37,13 @@ try:  # current Vaultwarden: verification token (returned in the body while mail
     req = urllib.request.Request(base + "/identity/accounts/register/send-verification-email",
                                  json.dumps({"email": email, "name": "CI Seed", "receiveMarketingEmails": False}).encode(),
                                  {"Content-Type": "application/json"})
-    vtoken = json.loads(urllib.request.urlopen(req).read() or b'""')
+    raw = urllib.request.urlopen(req).read().decode().strip()
+    try:
+        vtoken = json.loads(raw)
+    except ValueError:
+        vtoken = raw
+    if not vtoken:
+        raise SystemExit("no verification token returned (mail enabled?)")
     post("/identity/accounts/register/finish", {
         "email": email, "emailVerificationToken": vtoken, "masterPasswordHash": pw_hash, "masterPasswordHint": None,
         "userSymmetricKey": mkkey, "userAsymmetricKeys": keys, "kdf": 0, "kdfIterations": ITER,
