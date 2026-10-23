@@ -16,7 +16,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * The tracker's data for the fleet: `tracker/steps`, `tracker/places` and `tracker/timeline` on the fleet IPC door
+ * The tracker's data for the fleet: `tracker/steps`, `tracker/places`, `tracker/trips` and `tracker/timeline` on the fleet IPC door
  * (<pkg>.fleet, FleetTokenProvider — signature permission CONSTELLATION_DATA, so only a constellation-signed app such
  * as the SuperApp's Boards ▸ ME can ask). Read-only: all ops read the stores the Steps page reads
  * ([StepsRepository]: Health Connect or the engine's own samples; the engine's fixes plus the foreground tracker's GPS
@@ -33,6 +33,7 @@ class TrackerDebugApiProvider : ContentProvider() {
                 AppDebugServer.Op("timeline", "hours=<1..72, default 24>", "the timeline store: ordered move / stop / sleep segments with time, place, steps and distance for the last hours (read-only)"),
                 AppDebugServer.Op("segments", "date=<yyyy-MM-dd, default today>", "contract v1: the day as a gapless list of stay (sleep|idle) and move (mode, distance, steps, speed) segments with places"),
                 AppDebugServer.Op("daily", "days=<1..31, default 7>", "contract v1: per day sleep hours and city, walking / running distance, distance per vehicle, per-mode summary"),
+                AppDebugServer.Op("trips", "days=<30..365, default 90>", "contract v1: consecutive nights away from the home city (most frequent sleep city of the last 90 days, owner-overridable) grouped into trips: cities, dates, nights, distance per vehicle, route"),
                 AppDebugServer.Op("places", "days=<1..31, default 7>", "the places the tracker recorded, per day: stays (centroid, time span, label)"),
             )) { op, q ->
                 val days = (q["days"]?.toIntOrNull() ?: 7).coerceIn(1, 31)
@@ -41,6 +42,7 @@ class TrackerDebugApiProvider : ContentProvider() {
                     "places" -> places(app, days).toString()
                     "segments" -> segments(app, q["date"]).toString()
                     "daily" -> daily(app, days).toString()
+                    "trips" -> trips(app, (q["days"]?.toIntOrNull() ?: 90).coerceIn(30, 365)).toString()
                     "timeline" -> timeline(app, (q["hours"]?.toIntOrNull() ?: 24).coerceIn(1, 72)).toString()
                     else -> null
                 }
@@ -91,6 +93,15 @@ class TrackerDebugApiProvider : ContentProvider() {
             val cs = CorrectionStore(ctx)
             val store = TimelineSync.view(ctx, DayTimeline.dayStart(dates.first(), zone) - 12 * 3_600_000L, nowMs)
             return DayJson.daily(Aggregates.perDay(store, dates, nowMs, zone, cs.all(), cs.memory()))
+        }
+
+        /** `tracker/trips` (contract v1): the last [days] dates grouped into trips by sleep city, home from [HomeStore] else detected. */
+        fun trips(ctx: Context, days: Int, nowMs: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): JSONObject {
+            val today = LocalDate.now(zone)
+            val dates = (days - 1 downTo 0).map { today.minusDays(it.toLong()) }
+            val cs = CorrectionStore(ctx)
+            val store = TimelineSync.view(ctx, DayTimeline.dayStart(dates.first(), zone) - 12 * 3_600_000L, nowMs)
+            return TripsJson.toJson(Trips.group(Aggregates.perDay(store, dates, nowMs, zone, cs.all(), cs.memory()), HomeStore(ctx).get()))
         }
 
         fun places(ctx: Context, days: Int, zone: ZoneId = ZoneId.systemDefault()): JSONObject {

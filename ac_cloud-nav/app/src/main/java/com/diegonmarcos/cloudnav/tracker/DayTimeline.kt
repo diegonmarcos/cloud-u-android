@@ -250,6 +250,7 @@ data class DaySummary(val visits: Int, val byMode: Map<Mode, ModeStat>) {
 
 data class DayStats(
     val date: LocalDate, val sleepMs: Long, val sleepCity: String?, val summary: DaySummary,
+    val sleepLat: Double? = null, val sleepLon: Double? = null,
 ) {
     val walkM: Double get() = summary.byMode[Mode.WALK]?.distanceM ?: 0.0
     val runM: Double get() = summary.byMode[Mode.RUN]?.distanceM ?: 0.0
@@ -278,8 +279,9 @@ object Aggregates {
         val day = DayTimeline.build(store, a, b, corrections, memory)
         val wide = DayTimeline.build(store, a - 12 * 3_600_000L, minOf(e + 12 * 3_600_000L, nowMs), corrections, memory)
         val sleeps = wide.filterIsInstance<DaySeg.Stay>().filter { it.kind == StayKind.SLEEP && it.endMs > a && it.endMs <= e }
-        val city = sleeps.maxByOrNull { it.durationMs }?.place?.let { it.city ?: it.label }
-        DayStats(d, sleeps.sumOf { minOf(it.durationMs, MAX_SLEEP_MS) }, city, summary(day))
+        val longest = sleeps.maxByOrNull { it.durationMs }?.place
+        val city = longest?.let { it.city ?: it.label }
+        DayStats(d, sleeps.sumOf { minOf(it.durationMs, MAX_SLEEP_MS) }, city, summary(day), longest?.lat, longest?.lon)
     }
 }
 

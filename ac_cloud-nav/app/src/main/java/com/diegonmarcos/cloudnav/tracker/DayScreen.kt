@@ -69,12 +69,14 @@ data class DayUi(
     val date: LocalDate, val today: LocalDate, val day: List<DaySeg> = emptyList(), val stats: List<DayStats> = emptyList(),
     val places: List<PlaceTotal> = emptyList(), val cities: List<CityTotal> = emptyList(), val countries: List<CountryTotal> = emptyList(),
     val loading: Boolean = false, val fixes: List<PlaceFix> = emptyList(),
+    val trips: TripsResult = TripsResult(null, false, emptyList()), val homeOverride: String? = null,
 )
 
 class DayActions(
     val onDate: (LocalDate) -> Unit = {}, val onPickDate: () -> Unit = {},
     val onConfirm: (DaySeg.Stay) -> Unit = {}, val onEditPlace: (DaySeg.Stay, String) -> Unit = { _, _ -> },
     val onEditMode: (DaySeg.Move, Mode) -> Unit = { _, _ -> }, val onDelete: (DaySeg) -> Unit = {},
+    val onHome: (String?) -> Unit = {},
     val onSplit: (DaySeg, Long) -> Unit = { _, _ -> }, val onAddVisit: (Long, Long, String) -> Unit = { _, _, _ -> },
 )
 
@@ -106,7 +108,7 @@ fun DayScreen(ui: DayUi, tab: DayTab, onTab: (DayTab) -> Unit, actions: DayActio
         }
         when (tab) {
             DayTab.DAY -> DayTabView(ui, actions, zone)
-            DayTab.TRIPS -> TripsTabView(ui)
+            DayTab.TRIPS -> TripsTabView(ui, actions)
             DayTab.INSIGHTS -> InsightsTabView(ui)
             DayTab.PLACES -> ListTab("Places", "The places you stayed at, by time spent (last 30 days).", ui.places.map { Triple(it.label, listOfNotNull(it.city, it.country).joinToString(", ") + "  ·  " + it.visits + " visits", DayFormat.hours(it.totalMs)) })
             DayTab.CITIES -> ListTab("Cities", "Cities by time spent (last 30 days).", ui.cities.map { Triple(it.city, listOfNotNull(it.country).joinToString(", ") + "  ·  " + it.days + " days", DayFormat.hours(it.totalMs)) })
@@ -291,19 +293,38 @@ private fun AddVisitDialog(range: Pair<Long, Long>, zone: ZoneId, onDismiss: () 
 }
 
 @Composable
-private fun TripsTabView(ui: DayUi) {
+private fun TripsTabView(ui: DayUi, actions: DayActions) {
     val p = LocalKitPalette.current
+    var editHome by remember { mutableStateOf(false) }
+    var open by remember { mutableStateOf<LocalDate?>(null) }
+    if (editHome) NameDialog("Home city", ui.homeOverride ?: ui.trips.home ?: "", { editHome = false }) { editHome = false; actions.onHome(it) }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { KitSectionHeader("Trips", "Where you slept and how far you travelled by vehicle each day (walking excluded).") }
-        items(ui.stats.asReversed(), key = { it.date.toString() }) { d ->
-            KitCard(Modifier.testTag("day:trip:${d.date}")) {
+        item { KitSectionHeader("Trips", "Consecutive nights away from home, grouped by the city you slept in. Vehicle distance only (walking excluded).") }
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("Home: " + (ui.trips.home ?: "unknown") + if (ui.trips.owner) " (set by you)" else " (most slept-in city, 90 days)",
+                    Modifier.weight(1f).testTag("day:trips:home"), color = p.textPrimary, style = MaterialTheme.typography.bodyMedium)
+                TextButton(onClick = { editHome = true }, modifier = Modifier.testTag("day:trips:sethome")) { Text("Set home") }
+                if (ui.trips.owner) TextButton(onClick = { actions.onHome(null) }, modifier = Modifier.testTag("day:trips:autohome")) { Text("Auto") }
+            }
+        }
+        if (ui.trips.trips.isEmpty()) item { Text("No trips in the last 90 days.", color = p.textSecondary) }
+        items(ui.trips.trips.asReversed(), key = { it.start.toString() }) { t ->
+            KitCard(Modifier.testTag("day:trip:${t.start}").clickable { open = if (open == t.start) null else t.start }) {
                 Row(Modifier.fillMaxWidth()) {
-                    Text(d.date.toString(), Modifier.weight(1f), color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
-                    Text(d.sleepCity?.let { "Slept in $it" } ?: "No sleep recorded", color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                    Text(t.cities.joinToString(" › "), Modifier.weight(1f), color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
+                    Text("${t.nights} night" + (if (t.nights == 1) "" else "s"), color = p.accent, style = MaterialTheme.typography.labelLarge)
                 }
-                val v = d.vehicleM
-                Text(if (v.isEmpty()) "No vehicle travel" else v.entries.joinToString("   ") { DayFormat.modeLabel(it.key) + " " + StepsFormat.distance(it.value) },
+                Text(t.start.toString() + " – " + (if (t.ongoing) "now" else t.end.toString()), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(if (t.vehicleM.isEmpty()) "No vehicle travel" else t.vehicleM.entries.joinToString("   ") { DayFormat.modeLabel(it.key) + " " + StepsFormat.distance(it.value) },
                     color = p.textPrimary, style = MaterialTheme.typography.bodySmall)
+                if (open == t.start) {
+                    val model = remember(t) { Trips.route(t) }
+                    Box(Modifier.fillMaxWidth().height(220.dp).clip(MaterialTheme.shapes.medium).background(p.surfaceSelected).testTag("day:trip:map")) {
+                        if (model.isEmpty) Text("No route for this trip", Modifier.align(Alignment.Center), color = p.textSecondary)
+                        else DayRouteMap(model, Modifier.fillMaxSize())
+                    }
+                } else Text("Tap for the route map", color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
             }
         }
     }

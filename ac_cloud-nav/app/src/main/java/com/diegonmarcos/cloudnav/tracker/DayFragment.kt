@@ -41,6 +41,7 @@ class DayFragment : KitComposeFragment() {
             onEditMode = { m, mode -> correct(Edits.editMode(m, mode)) },
             onDelete = { correct(Edits.delete(it)) },
             onSplit = { s, at -> correct(Edits.split(s, at)) },
+            onHome = { HomeStore(requireContext()).set(it); load(ui.date) },
             onAddVisit = { a, b, name ->
                 val near = ui.day.filterIsInstance<DaySeg.Stay>().firstOrNull { it.place?.located == true }?.place
                 correct(Edits.addVisit(a, b, name, near))
@@ -66,7 +67,7 @@ class DayFragment : KitComposeFragment() {
     private fun compute(app: android.content.Context, date: LocalDate, today: LocalDate): DayUi {
         val now = System.currentTimeMillis()
         val cs = CorrectionStore(app); val corrections = cs.all(); val memory = cs.memory()
-        val first = today.minusDays(29)
+        val first = today.minusDays(Trips.HOME_WINDOW_DAYS - 1L)   // 90 days: home detection; the month rankings use the last 30
         val store = TimelineSync.view(app, DayTimeline.dayStart(first, zone) - 12 * 3_600_000L, now)
         val a = DayTimeline.dayStart(date, zone); val b = minOf(DayTimeline.dayStart(date.plusDays(1), zone), now)
         // name the unnamed places of the shown day through the open reverse-geocode provider (cached, rate-limited)
@@ -75,10 +76,12 @@ class DayFragment : KitComposeFragment() {
         val named = namer.name(raw.map { (it as? DaySeg.Stay)?.place })
         var k = 0
         val dayList = raw.map { s -> if (s is DaySeg.Stay) s.copy(place = named[k++]) else s }.let { l -> DayTimeline.fillLinks(l) }
-        val dates = (0..29).map { first.plusDays(it.toLong()) }
+        val dates = (0 until Trips.HOME_WINDOW_DAYS).map { first.plusDays(it.toLong()) }
         val stats = Aggregates.perDay(store, dates, now, zone, corrections, memory)
-        val month = dates.map { d -> DayTimeline.build(store, DayTimeline.dayStart(d, zone), minOf(DayTimeline.dayStart(d.plusDays(1), zone), now), corrections, memory) }
+        val homeSet = HomeStore(app).get()
+        val trips = Trips.group(stats, homeSet)
+        val month = dates.takeLast(30).map { d -> DayTimeline.build(store, DayTimeline.dayStart(d, zone), minOf(DayTimeline.dayStart(d.plusDays(1), zone), now), corrections, memory) }
         val fixes = runCatching { EngineDb.get(app).fixes(a, b) }.getOrDefault(emptyList())
-        return DayUi(date, today, dayList, stats, Rankings.places(month), Rankings.cities(month), Rankings.countries(month), false, fixes)
+        return DayUi(date, today, dayList, stats, Rankings.places(month), Rankings.cities(month), Rankings.countries(month), false, fixes, trips, homeSet)
     }
 }
