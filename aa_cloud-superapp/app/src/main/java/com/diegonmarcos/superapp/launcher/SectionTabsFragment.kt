@@ -155,7 +155,10 @@ class SectionTabsFragment : KitComposeFragment(), Collapsible, BackHandler {
         // What each pane shows, so a recomposition never re-commits the page that is already there.
         val shown = remember { arrayOfNulls<String>(paneCount) }
         remember {
-            activePane = start
+            // One pane on a phone: its host is paneIds[0] whatever tab is selected. A tab index >= paneCount named a host that does
+            // not exist, so tryHandleBack() found no page and the top-right Back arrow popped the whole section (destroying the
+            // WebView and its history) instead of stepping the WebView back (#1062).
+            activePane = if (paneCount > 1) start.coerceAtMost(paneCount - 1) else 0
             lastContentTab = start
             pages.getOrNull(start)?.let {
                 selectedPageId = it.id

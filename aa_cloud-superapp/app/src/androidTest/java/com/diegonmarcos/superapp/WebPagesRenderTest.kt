@@ -40,11 +40,40 @@ class WebPagesRenderTest {
     private fun sh(cmd: String): String =
         android.os.ParcelFileDescriptor.AutoCloseInputStream(ua.executeShellCommand(cmd)).bufferedReader().readText()
 
-    @After fun tearDown() { WebPageFragment.probe = null }
+    @After fun tearDown() { WebPageFragment.probe = null; WebPageFragment.interceptor = null }
 
-    @Test fun a_webAppsEmbedRenders() = check("webapps", "page:cloud/webapps", night = false, embed = true)
-    @Test fun b_webAppsEmbedRendersAtNight() = check("webapps-night", "page:cloud/webapps", night = true, embed = true)
+    // a, b, d, e are GATING and load FIXTURE pages (same URLs, same link structure, served through WebPageFragment.interceptor), so a
+    // github.io or linktree outage cannot fail the build. c loads the LIVE linktree and stays non-gating: it is the live smoke test.
+    @Test fun a_webAppsEmbedRenders() { fixtures(); check("webapps", "page:cloud/webapps", night = false, embed = true) }
+    @Test fun b_webAppsEmbedRendersAtNight() { fixtures(); check("webapps-night", "page:cloud/webapps", night = true, embed = true) }
     @Test fun c_linktreeRenders() = check("linktree", "page:cloud/lnktree", night = false)
+    @Test fun e_linktreeFixtureRenders() { fixtures(); check("linktree-fixture", "page:cloud/lnktree", night = false) }
+
+    private fun html(body: String, head: String = "") =
+        "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content=\"width=device-width,initial-scale=1\">$head" +
+        "<style>body{margin:0;padding:12px;font:16px sans-serif;background:#fff;color:#123}@media(prefers-color-scheme:dark){body{background:#0b0f17;color:#e6e9ef}}" +
+        "h2{background:linear-gradient(90deg,#4c6ef5,#15aabf);color:#fff;padding:6px}li{list-style:none;margin:6px 0;padding:10px;border:1px solid #7a8;border-radius:8px;background:rgba(80,160,120,.25)}a{color:inherit}</style></head><body>$body</body></html>"
+
+    /** Fixture twins of the live cloud-webapps index and the linktree: same hosts and paths, 40 same-origin app links / 30 outbound links. */
+    private fun fixtures() {
+        val apps = (1..40).joinToString("") { "<li><a href=\"cloud-app$it/\">cloud-app$it App $it</a></li>" }
+        val webapps = html("<main><h1>Cloud web apps</h1><p>One independent site per Cloud APK.</p><ul>$apps</ul></main>",
+            "<title>Cloud web apps</title><script>if(/[?&]embed=1/.test(location.search)||navigator.userAgent.indexOf('CloudSuperApp-Embed')>=0)document.documentElement.setAttribute('data-embed','1')</script>")
+        val links = (1..30).joinToString("") { "<li><a href=\"https://example.org/link$it\">Link $it</a></li>" }
+        val linktree = html("<main><h2>Linktree</h2><ul>$links</ul></main>", "<title>Linktree</title>")
+        fun page(h: String, status: Int = 200) = android.webkit.WebResourceResponse("text/html", "utf-8", status, if (status == 200) "OK" else "Not Found", emptyMap(), h.byteInputStream())
+        WebPageFragment.interceptor = { r ->
+            val u = r.url
+            when {
+                u.host == "diegonmarcos.github.io" && u.path.orEmpty().trimEnd('/') == "/cloud-webapps" -> page(webapps)
+                u.host == "diegonmarcos.github.io" && u.path.orEmpty().startsWith("/cloud-webapps/") ->
+                    page(html("<h1>App page</h1><p>${u.path}</p><p>This page is one step deeper in the history.</p>", "<title>App</title>"))
+                u.host == "linktree.diegonmarcos.com" && u.path.orEmpty().trim('/').isEmpty() -> page(linktree)
+                u.host == "diegonmarcos.github.io" || u.host == "linktree.diegonmarcos.com" -> page("", 404)
+                else -> null
+            }
+        }
+    }
 
     /**
      * Back follows the embedded page's history: from the WebApps main page, open an app page (a same-origin link, which must stay
@@ -52,6 +81,7 @@ class WebPagesRenderTest {
      * and press the shell's top-right Back arrow, same result. Only at the main page does Back leave the page.
      */
     @Test fun d_webAppsBackFollowsHistory() {
+        fixtures()
         sh("settings put global adb_wifi_enabled 0")
         val pkg = inst.targetContext.packageName
         sh("appops set $pkg REQUEST_INSTALL_PACKAGES allow")

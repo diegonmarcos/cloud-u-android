@@ -195,6 +195,10 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
                                 if (!url.isNullOrBlank() && url != declaredUrl && url != failed) userNavigated = true
                             }
 
+                            /** Test seam: serves fixture pages for gating emulator tests (null in production). */
+                            override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? =
+                                interceptor?.invoke(request) ?: super.shouldInterceptRequest(view, request)
+
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 backToPreviousPage.isEnabled = view?.canGoBack() == true
                                 refreshing = false
@@ -326,6 +330,9 @@ class WebPageFragment : KitComposeFragment(), BackHandler {
             val a = java.net.URI(declared); val b = java.net.URI(target)
             a.scheme == b.scheme && a.host == b.host && a.port == b.port
         }.getOrDefault(false)
+
+        /** Test seam: answers a request from a local fixture instead of the network; null (production) loads everything live. */
+        @Volatile var interceptor: ((android.webkit.WebResourceRequest) -> android.webkit.WebResourceResponse?)? = null
 
         /** Diagnostics sink (console lines, load errors): logcat always, plus an instrumented test when one listens. */
         @Volatile var probe: ((String) -> Unit)? = null
