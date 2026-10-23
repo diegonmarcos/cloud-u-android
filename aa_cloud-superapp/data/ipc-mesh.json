@@ -2267,6 +2267,16 @@
      "callers": [
       "aa_cloud-superapp"
      ]
+    },
+    {
+     "id": "op:tracker/trips",
+     "kind": "op",
+     "name": "tracker/trips",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/tracker/TrackerDebugApiProvider.kt",
+     "callers": []
     }
    ]
   },
