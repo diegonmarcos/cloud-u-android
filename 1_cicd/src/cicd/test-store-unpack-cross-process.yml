@@ -112,6 +112,9 @@ jobs:
           adb shell dumpsys package "$STORE" | grep -E "TERMINAL_SESSION" | head -3 || true
           adb shell "rm -f $D/unpack-result.json"
           adb logcat -c || true
+          # After a real install the Store holds a foreground service, which lets it start the terminal's service. An adb
+          # broadcast runs it in the background ("Background start not allowed"), so give it the power allowlist exemption.
+          adb shell cmd deviceidle whitelist +"$STORE" || true
           # The Store, a package of its own, starts the unpack as it does after an install.
           adb shell am broadcast --include-stopped-packages -n "$STORE/com.diegonmarcos.superapp.appstore.UnpackTestReceiver" \
             -a com.diegonmarcos.cloud.action.TEST_UNPACK --es pkg "$PKG" || { echo "::error::the Store test receiver did not take the broadcast"; exit 2; }
