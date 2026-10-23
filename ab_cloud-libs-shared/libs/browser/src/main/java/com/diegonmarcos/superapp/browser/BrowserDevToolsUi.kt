@@ -258,5 +258,3 @@ private fun StorageTab(bridge: DevToolsBridge) {
         }
     }
 }
-
-private fun Modifier.horizontalScroll(rememberScrollState()): Modifier = this
