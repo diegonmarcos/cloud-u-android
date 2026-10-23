@@ -10,7 +10,7 @@ for _ in $(seq 1 40); do curl -fs http://127.0.0.1/alive >/dev/null && break; sl
 pip install --quiet cryptography >/dev/null 2>&1
 python3 test/emulator/seed-vaultwarden.py http://127.0.0.1 "$VAULT_EMAIL" "$VAULT_PW" "CI Seed Login" || { echo "FAIL: seeding"; docker logs vw | tail -20; exit 1; }
 # sanity-check the seed with the real Bitwarden CLI (diagnostic only; prints counts, never secrets)
-{ mkdir -p "$HOME/bwcli" && (cd "$HOME/bwcli" && npm init -y >/dev/null 2>&1 && npm install --no-progress --legacy-peer-deps @bitwarden/cli@2025.5.0 2>&1 | tail -3)
+{ mkdir -p "$HOME/bwcli" && (cd "$HOME/bwcli" && npm init -y >/dev/null 2>&1 && npm install --no-progress --legacy-peer-deps @bitwarden/cli@2025.5.0 semver 2>&1 | tail -3)
   bw() { node "$HOME/bwcli/node_modules/@bitwarden/cli/build/bw.js" "$@"; }
   export BITWARDENCLI_APPDATA_DIR="$OUT_DIR/bwcli" BW_PW="$VAULT_PW"
   bw config server http://127.0.0.1 >/dev/null 2>&1
