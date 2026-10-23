@@ -94,13 +94,13 @@ class FleetHostGuardTest {
         val root = repoRoot()
         val decl = org.json.JSONObject(File(root, "ac_cloud-account/build.json").readText()).getJSONObject("fleet_endpoints").toString()
         val jmap = FleetEndpointsContract.parseDecl(decl).single { it.id == "jmap" }
-        assertEquals("http://stalwart.app:${jmap.meshPort}", jmap.meshUrl())
+        assertEquals("http://stalwart.mesh.diegonmarcos.com:${jmap.meshPort}", jmap.meshUrl())
         val router = EndpointRouter(probe = { _, _, _ -> true })
         assertTrue(router.set(jmap.publicUrl(), jmap.meshUrl(), EndpointPolicy.parse(jmap.policy)))
         val url = "${jmap.publicUrl()}/jmap/session".toHttpUrl()
         val (h, routes) = router.plan(url)!!
         assertEquals(listOf(EndpointRoute.MESH, EndpointRoute.PUBLIC), routes)
-        assertEquals("the mesh route lands on the cleartext mesh origin", "http://stalwart.app:${jmap.meshPort}/jmap/session", router.rebase(h, EndpointRoute.MESH, url).toString())
+        assertEquals("the mesh route lands on the cleartext mesh origin", "http://stalwart.mesh.diegonmarcos.com:${jmap.meshPort}/jmap/session", router.rebase(h, EndpointRoute.MESH, url).toString())
         assertEquals("the public route stays https", "${jmap.publicUrl()}/jmap/session", router.rebase(h, EndpointRoute.PUBLIC, url).toString())
     }
 
@@ -121,14 +121,14 @@ class FleetHostGuardTest {
 
     @Test fun `the build config scan reads URL values, not prose, and skips the declaration itself`() {
         val j = org.json.JSONObject("""{"_doc":"see auth.diegonmarcos.com","description":"auth.diegonmarcos.com","fleet_endpoints":{"services":[{"public_domain":"git.diegonmarcos.com"}]},
-            "ui":{"pages":[{"url":"https://git.diegonmarcos.com/x"},{"url":"https://example.org"}],"title":"git.diegonmarcos.com"},"mesh":"http://gitea.app:3002/x"}""")
+            "ui":{"pages":[{"url":"https://git.diegonmarcos.com/x"},{"url":"https://example.org"}],"title":"git.diegonmarcos.com"},"mesh":"http://gitea.mesh.diegonmarcos.com:3002/x"}""")
         assertEquals(setOf("ui.pages.*.url", "mesh"), FleetHostScan.configUrls(j))
     }
 
     @Test fun `the scan flags a fleet host in code and ignores comments, emails and package names`() {
         val s = FleetHostScan.analyse("val u = \"https://git.diegonmarcos.com/api\"")
         assertEquals(listOf("git.diegonmarcos.com"), s.hosts); assertFalse(s.usesTransport)
-        assertEquals(listOf("http://git-proxy-api.app"), FleetHostScan.analyse("const val B = \"http://git-proxy-api.app:8123\"").hosts)
+        assertEquals(listOf("http://git-proxy-api.mesh.diegonmarcos.com"), FleetHostScan.analyse("const val B = \"http://git-proxy-api.mesh.diegonmarcos.com:8123\"").hosts)
         assertTrue(FleetHostScan.analyse("// see https://git.diegonmarcos.com\n/* auth.diegonmarcos.com */ val a = 1").hosts.isEmpty())
         assertTrue(FleetHostScan.analyse("val m = \"me@diegonmarcos.com\"; package com.diegonmarcos.comms.mail").hosts.isEmpty())
         assertTrue(FleetHostScan.analyse("val p = \"com.example.app\"").hosts.isEmpty())
@@ -145,7 +145,7 @@ object FleetHostScan {
     class Hit(val path: String, val hosts: List<String>, val usesTransport: Boolean)
     class Analysis(val hosts: List<String>, val usesTransport: Boolean)
 
-    private val host = Regex("""[A-Za-z0-9-]+\.diegonmarcos\.com\b|https?://[A-Za-z0-9-]+\.app\b""")
+    private val host = Regex("""[A-Za-z0-9-]+\.diegonmarcos\.com\b|https?://[A-Za-z0-9-]+\.mesh\.diegonmarcos\.com\b""")
     private val uses = Regex("""fleetendpoints|FleetHttp|AuthHttp|FleetTransport|FleetHttpSeam""")
 
     private val proseKeys = setOf("comment", "description", "subtitle", "title", "label", "website", "source")

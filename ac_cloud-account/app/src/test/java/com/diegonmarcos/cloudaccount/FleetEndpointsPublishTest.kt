@@ -32,8 +32,8 @@ class FleetEndpointsPublishTest {
     private val other = "com.example.other"
     private val bearer = "tok-FLEET-987654" // gitleaks:allow (a made-up test marker, not a credential)
     private val decl = """{"services":[
-        {"id":"jmap","kind":"mail","mesh_dns":"stalwart.app","mesh_port":2443,"mesh_scheme":"https","public_domain":"jmap.example.org","policy":"mesh_first","health":"/h"},
-        {"id":"me-api","kind":"data","mesh_dns":"cloud-me-api.app","mesh_port":8124,"mesh_scheme":"http","policy":"mesh_only","health":"/me/health"}]}"""
+        {"id":"jmap","kind":"mail","mesh_dns":"stalwart.mesh.diegonmarcos.com","mesh_port":2443,"mesh_scheme":"https","public_domain":"jmap.example.org","policy":"mesh_first","health":"/h"},
+        {"id":"me-api","kind":"data","mesh_dns":"cloud-me-api.mesh.diegonmarcos.com","mesh_port":8124,"mesh_scheme":"http","policy":"mesh_only","health":"/me/health"}]}"""
 
     @Before fun setUp() {
         ctx = ApplicationProvider.getApplicationContext()
@@ -82,8 +82,8 @@ class FleetEndpointsPublishTest {
         AccountVault(ctx).grants.grant(other, FleetEndpointsContract.GRANT_ENDPOINTS)
         val e = published().entries.associateBy { it.service }
         assertEquals(setOf("jmap", "me-api"), e.keys)
-        assertEquals("https://stalwart.app:2443", e.getValue("jmap").mesh); assertEquals("https://jmap.example.org", e.getValue("jmap").public)
-        assertEquals("http://cloud-me-api.app:8124", e.getValue("me-api").mesh); assertEquals("", e.getValue("me-api").public)
+        assertEquals("https://stalwart.mesh.diegonmarcos.com:2443", e.getValue("jmap").mesh); assertEquals("https://jmap.example.org", e.getValue("jmap").public)
+        assertEquals("http://cloud-me-api.mesh.diegonmarcos.com:8124", e.getValue("me-api").mesh); assertEquals("", e.getValue("me-api").public)
         assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, e.getValue("me-api").policy)
     }
 

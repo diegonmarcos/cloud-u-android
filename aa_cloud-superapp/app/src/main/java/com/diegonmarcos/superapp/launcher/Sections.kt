@@ -264,7 +264,7 @@ object Sections {
     data class CloudSub(val label: String, val icon: String, val containers: List<CloudContainer>)
     /** A dashboard entry. When [external] the url is a full link opened
      *  directly with no status light (S3 / Google Workspace / consoles);
-     *  otherwise url is a {name}.app host pinged on [port] + opened as https. */
+     *  otherwise url is a {name}.mesh.diegonmarcos.com host pinged on [port] + opened as https. */
     data class CloudContainer(
         val name: String, val label: String, val url: String,
         val port: Int, val external: Boolean,

@@ -4,7 +4,7 @@
   "container": "languagetool",
   "public_url": "languagetool.diegonmarcos.com",
   "auth_type": "mesh",
-  "private_url": "languagetool.app:8010",
+  "private_url": "languagetool.mesh.diegonmarcos.com:8010",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8010"
  },
@@ -13,7 +13,7 @@
   "container": "c3-infra-api",
   "public_url": "api.diegonmarcos.com/c3-infra-api",
   "auth_type": "bearer",
-  "private_url": "c3-infra-api.app:8081",
+  "private_url": "c3-infra-api.mesh.diegonmarcos.com:8081",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8081"
  },
@@ -22,7 +22,7 @@
   "container": "c3-public-api",
   "public_url": "api.diegonmarcos.com/pub",
   "auth_type": "bearer",
-  "private_url": "c3-public-api.app:8087",
+  "private_url": "c3-public-api.mesh.diegonmarcos.com:8087",
   "vm_name": "oci-E2-f_1",
   "vm_addr": "10.0.0.4:8087"
  },
@@ -31,7 +31,7 @@
   "container": "c3-services-api",
   "public_url": "api.diegonmarcos.com/c3-services-api",
   "auth_type": "bearer",
-  "private_url": "c3-services-api.app:8082",
+  "private_url": "c3-services-api.mesh.diegonmarcos.com:8082",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8082"
  },
@@ -40,7 +40,7 @@
   "container": "cloud-drive-mcp",
   "public_url": "mcp.diegonmarcos.com/cloud-drive-mcp",
   "auth_type": "bearer",
-  "private_url": "drive-mcp.app:3109",
+  "private_url": "drive-mcp.mesh.diegonmarcos.com:3109",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3109"
  },
@@ -49,7 +49,7 @@
   "container": "cloud-infra-mcp",
   "public_url": "mcp.diegonmarcos.com/c3-infra-mcp",
   "auth_type": "bearer",
-  "private_url": "c3-infra-mcp.app:3100",
+  "private_url": "c3-infra-mcp.mesh.diegonmarcos.com:3100",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3100"
  },
@@ -58,7 +58,7 @@
   "container": "cloud-mail-mcp",
   "public_url": "mcp.diegonmarcos.com/mail-mcp",
   "auth_type": "bearer",
-  "private_url": "mail-mcp.app:3103",
+  "private_url": "mail-mcp.mesh.diegonmarcos.com:3103",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3103"
  },
@@ -67,7 +67,7 @@
   "container": "cloud-mattermost-mcp",
   "public_url": "mcp.diegonmarcos.com/mattermost-mcp",
   "auth_type": "bearer",
-  "private_url": "mattermost-mcp.app:3102",
+  "private_url": "mattermost-mcp.mesh.diegonmarcos.com:3102",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3102"
  },
@@ -76,7 +76,7 @@
   "container": "cloud-services-mcp",
   "public_url": "mcp.diegonmarcos.com/c3-services-mcp",
   "auth_type": "bearer",
-  "private_url": "c3-services-mcp.app:3101",
+  "private_url": "c3-services-mcp.mesh.diegonmarcos.com:3101",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3101"
  },
@@ -85,7 +85,7 @@
   "container": "cloud-superapp-mcp",
   "public_url": "mcp.diegonmarcos.com/cloud-superapp-mcp",
   "auth_type": "bearer",
-  "private_url": "superapp-mcp.app:3110",
+  "private_url": "superapp-mcp.mesh.diegonmarcos.com:3110",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3110"
  },
@@ -94,7 +94,7 @@
   "container": "google-personal-mcp",
   "public_url": "mcp.diegonmarcos.com/g-personal",
   "auth_type": "bearer",
-  "private_url": "g-personal-mcp.app:3106",
+  "private_url": "g-personal-mcp.mesh.diegonmarcos.com:3106",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3106"
  },
@@ -103,7 +103,7 @@
   "container": "google-workspace-mcp",
   "public_url": "mcp.diegonmarcos.com/g-workspace",
   "auth_type": "bearer",
-  "private_url": "g-workspace-mcp.app:3104",
+  "private_url": "g-workspace-mcp.mesh.diegonmarcos.com:3104",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3104"
  },
@@ -112,7 +112,7 @@
   "container": "http-to-smtp-proxy-api",
   "public_url": "api.diegonmarcos.com/http-to-smtp-proxy-api",
   "auth_type": "bearer",
-  "private_url": "http-to-smtp-proxy-api.app:8090",
+  "private_url": "http-to-smtp-proxy-api.mesh.diegonmarcos.com:8090",
   "vm_name": "gcp-E2-f_0",
   "vm_addr": "10.0.0.1:8090"
  },
@@ -121,7 +121,7 @@
   "container": "gitea",
   "public_url": "git.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "gitea.app:3002",
+  "private_url": "gitea.mesh.diegonmarcos.com:3002",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3002"
  },
@@ -130,7 +130,7 @@
   "container": "cloud-spec",
   "public_url": "cloud.diegonmarcos.com/spec",
   "auth_type": "bearer",
-  "private_url": "c3-spec.app:3080",
+  "private_url": "c3-spec.mesh.diegonmarcos.com:3080",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3080"
  },
@@ -139,7 +139,7 @@
   "container": "dagu",
   "public_url": "workflows.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "dagu.app:8070",
+  "private_url": "dagu.mesh.diegonmarcos.com:8070",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8070"
  },
@@ -148,7 +148,7 @@
   "container": "dbgate",
   "public_url": "db.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "dbgate.app:8086",
+  "private_url": "dbgate.mesh.diegonmarcos.com:8086",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8086"
  },
@@ -157,7 +157,7 @@
   "container": "matomo-hybrid",
   "public_url": "analytics.diegonmarcos.com/matomo",
   "auth_type": "woauth",
-  "private_url": "matomo.app:8080",
+  "private_url": "matomo.mesh.diegonmarcos.com:8080",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8080"
  },
@@ -166,7 +166,7 @@
   "container": "ntfy",
   "public_url": "rss.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "ntfy.app:8090",
+  "private_url": "ntfy.mesh.diegonmarcos.com:8090",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8090"
  },
@@ -175,7 +175,7 @@
   "container": "openobserve",
   "public_url": "analytics.diegonmarcos.com/openobserve",
   "auth_type": "woauth",
-  "private_url": "openobserve.app:5080",
+  "private_url": "openobserve.mesh.diegonmarcos.com:5080",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:5080"
  },
@@ -184,7 +184,7 @@
   "container": "umami",
   "public_url": "analytics.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "umami.app:3006",
+  "private_url": "umami.mesh.diegonmarcos.com:3006",
   "vm_name": "oci-E2-f_1",
   "vm_addr": "10.0.0.4:3006"
  },
@@ -193,7 +193,7 @@
   "container": "authelia",
   "public_url": "auth.diegonmarcos.com",
   "auth_type": "open",
-  "private_url": "authelia.app:9091",
+  "private_url": "authelia.mesh.diegonmarcos.com:9091",
   "vm_name": "gcp-E2-f_0",
   "vm_addr": "10.0.0.1:9091"
  },
@@ -202,7 +202,7 @@
   "container": "crowdsec",
   "public_url": "crowdsec.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "crowdsec.app:8088",
+  "private_url": "crowdsec.mesh.diegonmarcos.com:8088",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8088"
  },
@@ -211,7 +211,7 @@
   "container": "cloud-cgc-pub-mcp",
   "public_url": "mcp.diegonmarcos.com/cloud-cgc-pub-mcp",
   "auth_type": "bearer",
-  "private_url": "cloud-cgc-pub-mcp.app:3105",
+  "private_url": "cloud-cgc-pub-mcp.mesh.diegonmarcos.com:3105",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3105"
  },
@@ -229,7 +229,7 @@
   "container": "mattermost",
   "public_url": "chat.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "mattermost.app:8065",
+  "private_url": "mattermost.mesh.diegonmarcos.com:8065",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8065"
  },
@@ -238,7 +238,7 @@
   "container": "continuwuity",
   "public_url": "matrix.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "matrix-continuwuity.app:8008",
+  "private_url": "matrix-continuwuity.mesh.diegonmarcos.com:8008",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8008"
  },
@@ -247,7 +247,7 @@
   "container": "matrix-element",
   "public_url": "messenger.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "matrix-element.app:8083",
+  "private_url": "matrix-element.mesh.diegonmarcos.com:8083",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8083"
  },
@@ -256,7 +256,7 @@
   "container": "stalwart",
   "public_url": "jmap.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "stalwart.app:2443",
+  "private_url": "stalwart.mesh.diegonmarcos.com:2443",
   "vm_name": "oci-E2-f_0",
   "vm_addr": "10.0.0.3:2443"
  },
@@ -265,7 +265,7 @@
   "container": "scrappers-api",
   "public_url": "api.diegonmarcos.com",
   "auth_type": "bearer",
-  "private_url": "scrappers-api.app:3020",
+  "private_url": "scrappers-api.mesh.diegonmarcos.com:3020",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3020"
  },
@@ -274,7 +274,7 @@
   "container": "fin-api",
   "public_url": "api.diegonmarcos.com/fin-api",
   "auth_type": "bearer",
-  "private_url": "fin-api.app:8340",
+  "private_url": "fin-api.mesh.diegonmarcos.com:8340",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8340"
  },
@@ -283,7 +283,7 @@
   "container": "photoprism_app",
   "public_url": "photos.diegonmarcos.com",
   "auth_type": "mesh",
-  "private_url": "photoprism.app:3013",
+  "private_url": "photoprism.mesh.diegonmarcos.com:3013",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3013"
  },
@@ -292,7 +292,7 @@
   "container": "playlist-syncer",
   "public_url": "playlist.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "playlist-syncer.app:8090",
+  "private_url": "playlist-syncer.mesh.diegonmarcos.com:8090",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8090"
  },
@@ -301,7 +301,7 @@
   "container": "calendar-radicale",
   "public_url": "cal.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "calendar.app:5232",
+  "private_url": "calendar.mesh.diegonmarcos.com:5232",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:5232"
  },
@@ -310,7 +310,7 @@
   "container": "code-server",
   "public_url": "ide.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "code-server.app:8443",
+  "private_url": "code-server.mesh.diegonmarcos.com:8443",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8443"
  },
@@ -319,7 +319,7 @@
   "container": "contacts-radicale",
   "public_url": "contacts.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "contacts.app:5233",
+  "private_url": "contacts.mesh.diegonmarcos.com:5233",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:5233"
  },
@@ -328,7 +328,7 @@
   "container": "etherpad_app",
   "public_url": "app.diegonmarcos.com/etherpad",
   "auth_type": "woauth",
-  "private_url": "etherpad.app:3012",
+  "private_url": "etherpad.mesh.diegonmarcos.com:3012",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3012"
  },
@@ -337,7 +337,7 @@
   "container": "filebrowser_app",
   "public_url": "app.diegonmarcos.com/filebrowser",
   "auth_type": "woauth",
-  "private_url": "filebrowser.app:3015",
+  "private_url": "filebrowser.mesh.diegonmarcos.com:3015",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3015"
  },
@@ -346,7 +346,7 @@
   "container": "grist_app",
   "public_url": "sheets.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "grist.app:3011",
+  "private_url": "grist.mesh.diegonmarcos.com:3011",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3011"
  },
@@ -355,7 +355,7 @@
   "container": "hedgedoc_app",
   "public_url": "app.diegonmarcos.com/hedgedoc",
   "auth_type": "woauth",
-  "private_url": "hedgedoc.app:3018",
+  "private_url": "hedgedoc.mesh.diegonmarcos.com:3018",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3018"
  },
@@ -364,7 +364,7 @@
   "container": "paca-gateway",
   "public_url": "paca.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "paca.app:8095",
+  "private_url": "paca.mesh.diegonmarcos.com:8095",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8095"
  },
@@ -373,7 +373,7 @@
   "container": "send_app",
   "public_url": "send.diegonmarcos.com",
   "auth_type": "woauth",
-  "private_url": "send.app:3016",
+  "private_url": "send.mesh.diegonmarcos.com:3016",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3016"
  },
@@ -391,7 +391,7 @@
   "container": "alerts-api",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "alerts-api.app:5050",
+  "private_url": "alerts-api.mesh.diegonmarcos.com:5050",
   "vm_name": "oci-E2-f_1",
   "vm_addr": "10.0.0.4:5050"
  },
@@ -400,7 +400,7 @@
   "container": "cloud-vault-mcp",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "vault-mcp.app:3111",
+  "private_url": "vault-mcp.mesh.diegonmarcos.com:3111",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3111"
  },
@@ -526,7 +526,7 @@
   "container": "redis",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "redis.app:6379",
+  "private_url": "redis.mesh.diegonmarcos.com:6379",
   "vm_name": "gcp-E2-f_0",
   "vm_addr": "10.0.0.1:6379"
  },
@@ -535,7 +535,7 @@
   "container": "hickory-dns",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "hickory-dns.app:53",
+  "private_url": "hickory-dns.mesh.diegonmarcos.com:53",
   "vm_name": "gcp-E2-f_0",
   "vm_addr": "10.0.0.1:53"
  },
@@ -544,7 +544,7 @@
   "container": "unbound-dns64",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "unbound-dns64.app:53",
+  "private_url": "unbound-dns64.mesh.diegonmarcos.com:53",
   "vm_name": "oci-E2-f_1",
   "vm_addr": "10.0.0.4:53"
  },
@@ -616,7 +616,7 @@
   "container": "umami-db",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "umami-db.app:5442",
+  "private_url": "umami-db.mesh.diegonmarcos.com:5442",
   "vm_name": "oci-E2-f_1",
   "vm_addr": "10.0.0.4:5442"
  },
@@ -625,7 +625,7 @@
   "container": "umami-setup",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "umami-setup.app",
+  "private_url": "umami-setup.mesh.diegonmarcos.com",
   "vm_name": "oci-E2-f_1",
   "vm_addr": "10.0.0.4"
  },
@@ -643,7 +643,7 @@
   "container": "authelia-redis",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "authelia-redis.app:6380",
+  "private_url": "authelia-redis.mesh.diegonmarcos.com:6380",
   "vm_name": "gcp-E2-f_0",
   "vm_addr": "10.0.0.1:6380"
  },
@@ -661,7 +661,7 @@
   "container": "caddy",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "caddy.app:443",
+  "private_url": "caddy.mesh.diegonmarcos.com:443",
   "vm_name": "gcp-E2-f_0",
   "vm_addr": "10.0.0.1:443"
  },
@@ -679,7 +679,7 @@
   "container": "caddy-public",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "caddy-public.app:443",
+  "private_url": "caddy-public.mesh.diegonmarcos.com:443",
   "vm_name": "oci-E2-f_1",
   "vm_addr": "10.0.0.4:443"
  },
@@ -688,7 +688,7 @@
   "container": "introspect-proxy",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "introspect-proxy.app:4182",
+  "private_url": "introspect-proxy.mesh.diegonmarcos.com:4182",
   "vm_name": "gcp-E2-f_0",
   "vm_addr": "10.0.0.1:4182"
  },
@@ -706,7 +706,7 @@
   "container": "cloud-agi-hermes",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "hermes-agent.app:8642",
+  "private_url": "hermes-agent.mesh.diegonmarcos.com:8642",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8642"
  },
@@ -733,7 +733,7 @@
   "container": "cloud-agi-goose",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "my-ai-api.app:3217",
+  "private_url": "my-ai-api.mesh.diegonmarcos.com:3217",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3217"
  },
@@ -742,7 +742,7 @@
   "container": "cloud-agi-claude",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "my-ai-claude-api.app:3117",
+  "private_url": "my-ai-claude-api.mesh.diegonmarcos.com:3117",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3117"
  },
@@ -751,7 +751,7 @@
   "container": "session-memory",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "session-memory.app:3108",
+  "private_url": "session-memory.mesh.diegonmarcos.com:3108",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3108"
  },
@@ -760,7 +760,7 @@
   "container": "mattermost-postgres",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "mattermost-postgres.app:5435",
+  "private_url": "mattermost-postgres.mesh.diegonmarcos.com:5435",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:5435"
  },
@@ -769,7 +769,7 @@
   "container": "mattermost-bots",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "mattermost-bots.app",
+  "private_url": "mattermost-bots.mesh.diegonmarcos.com",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6"
  },
@@ -778,7 +778,7 @@
   "container": "cloud-webmail",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "webmail.app:3000",
+  "private_url": "webmail.mesh.diegonmarcos.com:3000",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3000"
  },
@@ -796,7 +796,7 @@
   "container": "mautrix-whatsapp",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "matrix-mautrix-whatsapp.app:29318",
+  "private_url": "matrix-mautrix-whatsapp.mesh.diegonmarcos.com:29318",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:29318"
  },
@@ -805,7 +805,7 @@
   "container": "maddy",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "maddy.app",
+  "private_url": "maddy.mesh.diegonmarcos.com",
   "vm_name": "oci-E2-f_0",
   "vm_addr": "10.0.0.3"
  },
@@ -850,7 +850,7 @@
   "container": "etherpad_postgres",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "etherpad-db.app:5436",
+  "private_url": "etherpad-db.mesh.diegonmarcos.com:5436",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:5436"
  },
@@ -859,7 +859,7 @@
   "container": "hedgedoc_postgres",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "hedgedoc-db.app:5439",
+  "private_url": "hedgedoc-db.mesh.diegonmarcos.com:5439",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:5439"
  },
@@ -868,7 +868,7 @@
   "container": "paca-api",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "paca-api.app:8080",
+  "private_url": "paca-api.mesh.diegonmarcos.com:8080",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:8080"
  },
@@ -877,7 +877,7 @@
   "container": "paca-web",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "paca-web.app",
+  "private_url": "paca-web.mesh.diegonmarcos.com",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6"
  },
@@ -886,7 +886,7 @@
   "container": "paca-realtime",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "paca-realtime.app:3001",
+  "private_url": "paca-realtime.mesh.diegonmarcos.com:3001",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3001"
  },
@@ -895,7 +895,7 @@
   "container": "paca-valkey",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "paca-valkey.app:6379",
+  "private_url": "paca-valkey.mesh.diegonmarcos.com:6379",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:6379"
  },
@@ -904,7 +904,7 @@
   "container": "paca-postgres",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "paca-postgres.app:5432",
+  "private_url": "paca-postgres.mesh.diegonmarcos.com:5432",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:5432"
  },
@@ -913,7 +913,7 @@
   "container": "revealmd_app",
   "public_url": "",
   "auth_type": "mesh",
-  "private_url": "revealmd.app:3014",
+  "private_url": "revealmd.mesh.diegonmarcos.com:3014",
   "vm_name": "oci-A1-f_0",
   "vm_addr": "10.0.0.6:3014"
  },

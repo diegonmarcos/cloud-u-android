@@ -80,7 +80,7 @@ for p in d["pairs"]:
     ra = p.get("root_a", "")
     if not ra or ra.startswith("/") or ".." in ra.split("/"): print("    %s: root_a must be relative to shared storage (no device path written down)" % i); bad = 1
     b = p.get("root_b", {})
-    if "host" in b and not re.fullmatch(r"[a-z0-9][a-z0-9-]*\.app", b["host"]): print("    %s: host %r is not a <name>.app mesh name" % (i, b["host"])); bad = 1
+    if "host" in b and not re.fullmatch(r"[a-z0-9][a-z0-9-]*\.mesh\.diegonmarcos\.com", b["host"]): print("    %s: host %r is not a <name>.mesh.diegonmarcos.com mesh name" % (i, b["host"])); bad = 1
     pref = p.get("prefer", d.get("defaults", {}).get("prefer"))
     bk = p.get("backup", d.get("defaults", {}).get("backup", True))
     if pref and not bk: print("    %s: prefer without backup is a silent overwrite" % i); bad = 1

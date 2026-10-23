@@ -62,7 +62,7 @@ class AccountEndpointsSectionTest {
     private val marker = "fleet-SECRET-tok-123"
     private val policies = mutableListOf<EndpointPolicy>()
     private var syncs = 0
-    private val fleet = AccountEndpoint("me@example.org", "https://stalwart.app:2443", "https://jmap.example.org", bearer = marker)
+    private val fleet = AccountEndpoint("me@example.org", "https://stalwart.mesh.diegonmarcos.com:2443", "https://jmap.example.org", bearer = marker)
 
     private fun show(e: AccountEndpoint?, state: EndpointState = EndpointState.MESH, syncing: Boolean = false, message: String = "") = compose.setContent {
         MaterialTheme { AccountEndpointsSection(e, state, syncing, message, { policies += it }, { syncs++ }) }
@@ -70,7 +70,7 @@ class AccountEndpointsSectionTest {
 
     @Test fun `a fleet account shows both endpoints and the bearer masked`() {
         show(fleet)
-        compose.onNodeWithTag(AccountEndpointTags.MESH).assert(hasText("https://stalwart.app:2443"))
+        compose.onNodeWithTag(AccountEndpointTags.MESH).assert(hasText("https://stalwart.mesh.diegonmarcos.com:2443"))
         compose.onNodeWithTag(AccountEndpointTags.PUBLIC).assert(hasText("https://jmap.example.org"))
         compose.onNodeWithTag(AccountEndpointTags.BEARER).assert(hasText(MailEndpointsContract.MASK))
         compose.onNodeWithTag(AccountEndpointTags.CHIP).assert(hasText("Mesh"))

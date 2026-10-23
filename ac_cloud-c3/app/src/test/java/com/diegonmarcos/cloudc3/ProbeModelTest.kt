@@ -14,7 +14,7 @@ import org.junit.Test
 /** The status light: which legs a row has, the green / yellow / red / grey rules, the off-mesh verdict, freshness. */
 class ProbeModelTest {
 
-    private val full = M.Row("app", "gitea", "git.example.com", "woauth", "gitea.app:3002", "vm-a", "10.0.0.6:3002")
+    private val full = M.Row("app", "gitea", "git.example.com", "woauth", "gitea.mesh.diegonmarcos.com:3002", "vm-a", "10.0.0.6:3002")
     private val meshOnly = M.Row("data", "db", "", "mesh", "db.app:5432", "vm-a", "10.0.0.6:5432")
     private val noAddr = M.Row("tools", "cli", "", "mesh", "cli", "local", "")
 
@@ -24,7 +24,7 @@ class ProbeModelTest {
 
     @Test
     fun `a row has the legs it has an address for`() {
-        assertEquals(mapOf(Leg.PUBLIC to "https://git.example.com", Leg.PRIVATE to "http://gitea.app:3002", Leg.DIRECT to "http://10.0.0.6:3002"),
+        assertEquals(mapOf(Leg.PUBLIC to "https://git.example.com", Leg.PRIVATE to "http://gitea.mesh.diegonmarcos.com:3002", Leg.DIRECT to "http://10.0.0.6:3002"),
             ProbeModel.legsOf(full))
         assertEquals(setOf(Leg.PRIVATE, Leg.DIRECT), ProbeModel.legsOf(meshOnly).keys)
         assertEquals("a private name with no address and no VM address has no leg", emptySet<Leg>(), ProbeModel.legsOf(noAddr).keys)

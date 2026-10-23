@@ -18,7 +18,7 @@ class DeclarationModelTest {
          "image":"gitea/gitea:latest","ports":{"container":3002,"env":"PORT","protocol":"http","extra":[{"port":22,"protocol":"tcp","service":"ssh"}]},
          "volumes":["d:/data"],"env":{"env_file":false,"names":["A"],"secret_names":["B_PASSWORD"]},
          "resources":{"memory":"256M"},"healthcheck":"curl x","depends_on":["db"],"read_only":false,
-         "routes":{"public_url":"git.example.com","domain":"git.example.com","base_path":"","auth_tier":"woauth","declared_auth":"two_factor","wg_only":false,"private_url":"gitea.app:3002","dns":"gitea.app"}}
+         "routes":{"public_url":"git.example.com","domain":"git.example.com","base_path":"","auth_tier":"woauth","declared_auth":"two_factor","wg_only":false,"private_url":"gitea.mesh.diegonmarcos.com:3002","dns":"gitea.mesh.diegonmarcos.com"}}
     """.trimIndent()).jsonObject
 
     private fun section(t: String) = DeclarationModel.sections(decl).first { it.title.startsWith(t) }

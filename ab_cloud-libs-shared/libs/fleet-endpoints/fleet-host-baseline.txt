@@ -1,5 +1,5 @@
 # #1093 fleet-host guard baseline (FleetHostGuardTest). One main-source file per line: <path> TAB <why it is allowed>.
-# A file that names a fleet host (a *.diegonmarcos.com host or an http(s)://*.app mesh URL) must go through
+# A file that names a fleet host (a *.diegonmarcos.com host or an http(s)://*.mesh.diegonmarcos.com mesh URL) must go through
 # libs:fleet-endpoints (FleetHttp, FleetTransport, the interceptors or the AuthHttp seam) or be listed here with its reason.
 # The list may only shrink: a listed file that no longer names a fleet host, or now goes through the transport, fails the guard
 # until its line is removed. A NEW file that names a fleet host and is not listed fails it.

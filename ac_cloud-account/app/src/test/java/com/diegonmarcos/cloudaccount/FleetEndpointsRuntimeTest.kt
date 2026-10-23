@@ -29,9 +29,9 @@ import org.robolectric.RobolectricTestRunner
 class FleetEndpointsRuntimeTest {
     private val marker = "tok-SECRET-123456" // gitleaks:allow (a made-up test marker, not a credential)
     private val decl = """{"services":[
-        {"id":"gitea","kind":"git","mesh_dns":"gitea.app","mesh_port":3002,"mesh_scheme":"http","public_domain":"git.example.org","policy":"mesh_first","health":"/api/healthz"},
-        {"id":"auth","kind":"auth","mesh_dns":"authelia.app","mesh_port":9091,"mesh_scheme":"http","public_domain":"auth.example.org","policy":"public_only","health":"/api/health"},
-        {"id":"me-api","kind":"data","mesh_dns":"cloud-me-api.app","mesh_port":8124,"mesh_scheme":"http","policy":"mesh_only","health":"/me/health"}]}"""
+        {"id":"gitea","kind":"git","mesh_dns":"gitea.mesh.diegonmarcos.com","mesh_port":3002,"mesh_scheme":"http","public_domain":"git.example.org","policy":"mesh_first","health":"/api/healthz"},
+        {"id":"auth","kind":"auth","mesh_dns":"authelia.mesh.diegonmarcos.com","mesh_port":9091,"mesh_scheme":"http","public_domain":"auth.example.org","policy":"public_only","health":"/api/health"},
+        {"id":"me-api","kind":"data","mesh_dns":"cloud-me-api.mesh.diegonmarcos.com","mesh_port":8124,"mesh_scheme":"http","policy":"mesh_only","health":"/me/health"}]}"""
     private val services = FleetEndpointsRuntime.services(decl)
     private val up = EndpointRouter(probe = { _, _, _ -> true })
 
@@ -41,19 +41,19 @@ class FleetEndpointsRuntimeTest {
         val bearers = FleetBearers()
         assertEquals(2, FleetEndpointsRuntime.register(services, up, bearers) { marker })
         assertTrue(up.isRegistered("git.example.org")); assertTrue(up.isRegistered("auth.example.org"))
-        assertFalse("a mesh-only service has nothing to fall back to", up.isRegistered("cloud-me-api.app"))
+        assertFalse("a mesh-only service has nothing to fall back to", up.isRegistered("cloud-me-api.mesh.diegonmarcos.com"))
         assertEquals(EndpointPolicy.MESH_FIRST, up.policyOf("git.example.org"))
         assertEquals(EndpointPolicy.PUBLIC_ONLY, up.policyOf("auth.example.org"))
-        assertTrue(up.isMeshHost("gitea.app")); assertTrue(up.isMeshHost("authelia.app"))
+        assertTrue(up.isMeshHost("gitea.mesh.diegonmarcos.com")); assertTrue(up.isMeshHost("authelia.mesh.diegonmarcos.com"))
     }
 
     @Test fun theBearerComesFromItsSourceForADeclaredPublicHostOnly() {
         val bearers = FleetBearers(); var current: String? = marker
         FleetEndpointsRuntime.register(services, up, bearers) { current }
         assertEquals(marker, bearers.forHost("git.example.org")); assertEquals(marker, bearers.forHost("GIT.example.org"))
-        assertNull("the mesh host is not a public host", bearers.forHost("gitea.app"))
+        assertNull("the mesh host is not a public host", bearers.forHost("gitea.mesh.diegonmarcos.com"))
         assertNull("a sibling subdomain is not the declared host", bearers.forHost("other.example.org"))
-        assertNull("a mesh-only service has no public host", bearers.forHost("cloud-me-api.app"))
+        assertNull("a mesh-only service has no public host", bearers.forHost("cloud-me-api.mesh.diegonmarcos.com"))
         current = "rotated"
         assertEquals("a rotated bearer applies at once: nothing was copied", "rotated", bearers.forHost("git.example.org"))
         current = null
@@ -106,11 +106,11 @@ class FleetEndpointsRuntimeTest {
         val checks = mapOf(
             "gitea" to EndpointCheck(true, 200), "auth" to EndpointCheck(false, null), "me-api" to EndpointCheck(false, null))
         val rows = FleetEndpointRows.build(services, emptyMap(), checks).associateBy { it.service.id }
-        assertEquals("mesh gitea.app:3002 up · public git.example.org HTTP 200 · mesh first", endpointDetail(rows.getValue("gitea")))
-        assertEquals("mesh authelia.app:9091 down · public auth.example.org unreachable · public only", endpointDetail(rows.getValue("auth")))
-        assertEquals("mesh cloud-me-api.app:8124 down · public no public endpoint · mesh only", endpointDetail(rows.getValue("me-api")))
+        assertEquals("mesh gitea.mesh.diegonmarcos.com:3002 up · public git.example.org HTTP 200 · mesh first", endpointDetail(rows.getValue("gitea")))
+        assertEquals("mesh authelia.mesh.diegonmarcos.com:9091 down · public auth.example.org unreachable · public only", endpointDetail(rows.getValue("auth")))
+        assertEquals("mesh cloud-me-api.mesh.diegonmarcos.com:8124 down · public no public endpoint · mesh only", endpointDetail(rows.getValue("me-api")))
         val unchecked = FleetEndpointRows.build(services, emptyMap(), emptyMap()).associateBy { it.service.id }
-        assertEquals("mesh gitea.app:3002 · public git.example.org · mesh first", endpointDetail(unchecked.getValue("gitea")))
+        assertEquals("mesh gitea.mesh.diegonmarcos.com:3002 · public git.example.org · mesh first", endpointDetail(unchecked.getValue("gitea")))
         val all = rows.values.joinToString { endpointDetail(it) + it.service }
         assertFalse(all.contains(marker)); assertFalse(all.contains("Bearer"))
     }
@@ -123,8 +123,8 @@ class FleetEndpointsRuntimeTest {
     }
 
     @Test fun theHostAndPortAreWhatTheMeshProbeConnectsTo() {
-        assertEquals("stalwart.app:2443", FleetEndpointRows.hostPort("https://stalwart.app:2443"))
-        assertEquals("gitea.app:80", FleetEndpointRows.hostPort("http://gitea.app"))
+        assertEquals("stalwart.mesh.diegonmarcos.com:2443", FleetEndpointRows.hostPort("https://stalwart.mesh.diegonmarcos.com:2443"))
+        assertEquals("gitea.mesh.diegonmarcos.com:80", FleetEndpointRows.hostPort("http://gitea.mesh.diegonmarcos.com"))
         assertEquals("", FleetEndpointRows.hostPort("nope"))
         assertEquals(FleetEndpointsContract.MASK, FleetEndpointsContract.mask(marker))
     }

@@ -70,7 +70,7 @@ class MailEndpointSyncTest {
 
     private fun ok(json: String) = Bundle().apply { putBoolean(MailEndpointsContract.KEY_OK, true); putString(MailEndpointsContract.KEY_JSON, json) }
     private fun doc(bearer: String?) = MailEndpointsContract.toJson(
-        listOf(MailEndpointsContract.Entry("me@example.org", "jmap", "https://stalwart.app:2443", "https://jmap.example.org", "mesh_first")), bearer)
+        listOf(MailEndpointsContract.Entry("me@example.org", "jmap", "https://stalwart.mesh.diegonmarcos.com:2443", "https://jmap.example.org", "mesh_first")), bearer)
 
     @Before fun setUp() {
         ctx = ApplicationProvider.getApplicationContext()
@@ -123,15 +123,15 @@ class MailEndpointSyncTest {
     @Test fun `the policy words of the two ends are the same set`() {
         assertEquals(MailEndpointsContract.POLICIES.toSet(), EndpointPolicy.entries.map { it.wire }.toSet())
         assertEquals(EndpointPolicy.PUBLIC_ONLY, MailEndpointSync.toPublished(
-            MailEndpointsContract.Entry("a@x.org", "j", "https://m.app", "https://p.example", MailEndpointsContract.POLICY_PUBLIC_ONLY)).policy)
+            MailEndpointsContract.Entry("a@x.org", "j", "https://m.mesh.diegonmarcos.com", "https://p.example", MailEndpointsContract.POLICY_PUBLIC_ONLY)).policy)
     }
 
     @Test fun `no mesh url is written into the app's sources - they arrive from Cloud Account`() {
         val root = generateSequence(File("").absoluteFile) { it.parentFile }.first { File(it, "app/src/main/res/values/strings.xml").isFile }
         val files = listOf("app/src/main", "core").map { File(root, it) }.flatMap { d -> d.walkTopDown().filter { f -> f.isFile && f.extension == "kt" && "/src/main/" in f.path.replace('\\', '/') }.toList() }
         assertTrue("the walk covered the tree", files.size > 100 && files.any { it.name == "MailEndpointSync.kt" })
-        val literal = Regex("\"https?://[A-Za-z0-9.-]+\\.app\\b")
+        val literal = Regex("\"https?://[A-Za-z0-9.-]+\\.mesh\\.diegonmarcos\\.com\\b")
         val offenders = files.filter { literal.containsMatchIn(it.readText()) }.map { it.name }
-        assertEquals("a mesh (<service>.app) URL literal in the sources", emptyList<String>(), offenders)
+        assertEquals("a mesh (<service>.mesh.diegonmarcos.com) URL literal in the sources", emptyList<String>(), offenders)
     }
 }

@@ -213,7 +213,7 @@ internal object GhcrSource : ApkSource {
  * streams the very same release asset (and its sidecars) from GitHub
  * server-side, reachable on the mesh-private name the fleet declares for it
  * (cloud-u-containers infra-api_git-proxy-api build.json: dns
- * git-proxy-api.app, ports.app 8123). A direct wg0 dial needs no credential
+ * git-proxy-api.mesh.diegonmarcos.com, ports.app 8123). A direct wg0 dial needs no credential
  * there — which is the point: the Store's downloader has none.
  *
  * #1093 Tried FIRST (mesh first, like every fleet endpoint); the public legs follow when it is down. The sha256 sidecar is REQUIRED here, never the
@@ -230,7 +230,7 @@ object MeshMirror {
 
     /**
      * The same service by its wg0 address. MEASURED 2026-10-03 from oci-apps:
-     * git-proxy-api.app resolves to the hub (fd0c:1d00::1), which has no
+     * git-proxy-api.mesh.diegonmarcos.com resolves to the hub (fd0c:1d00::1), which has no
      * listener on 8123 and no internal .app route for this service — only
      * 10.0.0.4:8123 (oci-analytics wg0, data/mesh.json oci-E2-f_1, the address
      * the service binds per its compose.nix) answers. Tried second, so the
@@ -298,7 +298,7 @@ object MeshMirror {
         // Both origins live on wg0 and the declared name resolves only through
         // the fleet resolver the tunnel carries, so with the mesh down this leg
         // cannot answer and the row must say THAT — not "cannot resolve
-        // git-proxy-api.app (active resolver: unknown)".
+        // git-proxy-api.mesh.diegonmarcos.com (active resolver: unknown)".
         // A throwing hook means "not known" (null), never a swallowed failure:
         // test-download-resume T4 bans the getOrNull() shape in this file.
         val up: Boolean? = try { meshUp(ctx) } catch (_: Exception) { null }

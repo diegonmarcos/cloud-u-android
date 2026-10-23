@@ -26,7 +26,7 @@ import java.io.IOException
 @RunWith(RobolectricTestRunner::class)
 class AuthHttpRoutingTest {
     private val marker = "tok-SECRET-123456" // gitleaks:allow (a made-up test marker, not a credential)
-    private val decl = """{"services":[{"id":"api","kind":"api","mesh_dns":"c3-public-api.app","mesh_port":8087,"mesh_scheme":"http",
+    private val decl = """{"services":[{"id":"api","kind":"api","mesh_dns":"c3-public-api.mesh.diegonmarcos.com","mesh_port":8087,"mesh_scheme":"http",
         "public_domain":"api.example.org","public_path":"/pub","route_paths":["/health","/analytics"],"policy":"mesh_first","health":"/health"}]}"""
 
     @After fun tearDown() { AuthHttp.transport = null }
@@ -80,13 +80,13 @@ class AuthHttpRoutingTest {
     @Test fun theDeclaredPublicApiRoutesOnlyItsPublicPathsAndIsStillMeshOnlyWhereDeclaredSo() {
         val services = FleetEndpointsContract.parseDecl(java.io.File("../build.json").readText().let { org.json.JSONObject(it).getJSONObject("fleet_endpoints").toString() })
         val api = services.single { it.id == "c3-public-api" }
-        assertEquals("https://c3-public-api.diegonmarcos.com", api.publicUrl()); assertEquals("http://c3-public-api.app:8087", api.meshUrl())
+        assertEquals("https://c3-public-api.diegonmarcos.com", api.publicUrl()); assertEquals("http://c3-public-api.mesh.diegonmarcos.com:8087", api.meshUrl())
         assertEquals(listOf("/health", "/ready", "/analytics"), api.routePaths)
         for (id in listOf("auth-broker", "vaultwarden")) assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, services.single { it.id == id }.policy)
         // #1103/#1104 cloud-me-api: mesh first, then the private tier under its path (the Autocomplete rows GET /me/autocomplete)
         val me = services.single { it.id == "cloud-me-api" }
         assertEquals(FleetEndpointsContract.POLICY_MESH_FIRST, me.policy)
-        assertEquals("https://c3-pvt.diegonmarcos.com/cloud-me-api", me.publicUrl()); assertEquals("http://cloud-me-api.app:8124", me.meshUrl())
+        assertEquals("https://c3-pvt.diegonmarcos.com/cloud-me-api", me.publicUrl()); assertEquals("http://cloud-me-api.mesh.diegonmarcos.com:8124", me.meshUrl())
     }
 
     @Test fun aLibraryBelowTheTransportSendsThroughTheSeamAndAnUnclaimedUrlIsLeftToTheCaller() {

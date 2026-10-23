@@ -54,7 +54,7 @@ class StoreDnsTest {
     }
 
     @Test fun `the Store's download hosts and the mesh leg's origins are routed, nothing else`() {
-        listOf("github.com", "objects.githubusercontent.com", "ghcr.io", "pkg-containers.githubusercontent.com", "git-proxy-api.app")
+        listOf("github.com", "objects.githubusercontent.com", "ghcr.io", "pkg-containers.githubusercontent.com", "git-proxy-api.mesh.diegonmarcos.com")
             .forEach { assertTrue(it, StoreDns.isStoreHost(it)) }
         listOf("example.com", "notgithub.com", "ghcr.io.evil").forEach { assertFalse(it, StoreDns.isStoreHost(it)) }
     }

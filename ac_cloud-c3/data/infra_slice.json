@@ -9,7 +9,7 @@
    "description": "SSO and 2FA authentication portal",
    "vm": "gcp-E2-f_0",
    "domain": "auth.diegonmarcos.com",
-   "dns": "authelia.app",
+   "dns": "authelia.mesh.diegonmarcos.com",
    "port": 9091,
    "images": [
     "authelia/authelia:4.39.15",
@@ -52,7 +52,7 @@
    "description": "OIDC token introspection sidecar for Caddy Bearer auth",
    "vm": "gcp-E2-f_0",
    "domain": null,
-   "dns": "introspect-proxy.app",
+   "dns": "introspect-proxy.mesh.diegonmarcos.com",
    "port": 4182,
    "images": [
     "ghcr.io/diegonmarcos/introspect-proxy:latest"
@@ -68,7 +68,7 @@
    "description": "Caddy reverse proxy + security dashboard (gcp-proxy, wg0 bind)",
    "vm": "gcp-E2-f_0",
    "domain": "proxy.diegonmarcos.com",
-   "dns": "caddy.app",
+   "dns": "caddy.mesh.diegonmarcos.com",
    "port": 443,
    "images": [
     "ghcr.io/diegonmarcos/caddy-l4"
@@ -93,7 +93,7 @@
    "description": "Caddy public-edge L7 allowlist on oci-analytics. Terminates TLS on :8443, serves ONLY the declared-public allowlist (build-caddy-public.json: gh-pages, no-auth subdomains, well-kno",
    "vm": "oci-E2-f_1",
    "domain": null,
-   "dns": "caddy-public.app",
+   "dns": "caddy-public.mesh.diegonmarcos.com",
    "port": 443,
    "images": [
     "ghcr.io/diegonmarcos/caddy-public:latest"
@@ -111,7 +111,7 @@
    "description": "Read-only data-driven control panel for the WireGuard mesh + wstunnel TCP/443 fallback. Mimics Headscale's UI shape but holds zero state and exposes zero mutations — pure observabi",
    "vm": "oci-A1-f_0",
    "domain": "mesh.diegonmarcos.com",
-   "dns": "wireguard-mesh.app",
+   "dns": "wireguard-mesh.mesh.diegonmarcos.com",
    "port": 8080,
    "images": [],
    "health": {
@@ -135,7 +135,7 @@
    "description": "WireGuard-over-TCP/443 fallback for hostile networks (airport / hotel / corporate guest Wi-Fi blocking UDP). Sibling to bb-net_wireguard-mesh (the panel) — this folder owns the wst",
    "vm": "gcp-E2-f_0",
    "domain": "vpn.diegonmarcos.com",
-   "dns": "wireguard-mesh-ws-tunnel.app",
+   "dns": "wireguard-mesh-ws-tunnel.mesh.diegonmarcos.com",
    "port": 8080,
    "images": [
     "ghcr.io/erebe/wstunnel:latest"
@@ -172,7 +172,7 @@
    "description": "Internal DNS server for WireGuard mesh (per-service .app zones)",
    "vm": "gcp-E2-f_0",
    "domain": "dns.internal",
-   "dns": "hickory-dns.app",
+   "dns": "hickory-dns.mesh.diegonmarcos.com",
    "port": 53,
    "images": [
     "hickorydns/hickory-dns:latest"
@@ -188,7 +188,7 @@
    "description": "DNS64 resolver for NAT64 — synthesises AAAA records for IPv4-only names so IPv6-only clients can reach the internet via the Tayga NAT64 translator",
    "vm": "oci-E2-f_1",
    "domain": "dns64.internal",
-   "dns": "unbound-dns64.app",
+   "dns": "unbound-dns64.mesh.diegonmarcos.com",
    "port": 53,
    "images": [
     "ghcr.io/diegonmarcos/unbound-dns64:latest"
@@ -222,7 +222,7 @@
    "description": "Maddy Mail Server (mail.diegonmarcos.com)",
    "vm": "oci-E2-f_0",
    "domain": "mail.diegonmarcos.com",
-   "dns": "maddy.app",
+   "dns": "maddy.mesh.diegonmarcos.com",
    "port": null,
    "images": [
     "ghcr.io/diegonmarcos/maddy:latest"
@@ -273,7 +273,7 @@
    "description": "Stalwart Mail Server — JMAP webmail backend (jmap.diegonmarcos.com)",
    "vm": "oci-E2-f_0",
    "domain": "jmap.diegonmarcos.com",
-   "dns": "stalwart.app",
+   "dns": "stalwart.mesh.diegonmarcos.com",
    "port": 2443,
    "images": [
     "stalwartlabs/stalwart:v0.16.5",
@@ -333,7 +333,7 @@
    "description": "Rust sidecar — IMAP-IDLE pulls from external providers (Gmail, Outlook/Live, …) and delivers into Maddy via SMTP submission (:465 implicit TLS; Maddy dual-writes to Stalwart). Decl",
    "vm": "oci-E2-f_0",
    "domain": "mail-puller.diegonmarcos.com",
-   "dns": "mail-puller.app",
+   "dns": "mail-puller.mesh.diegonmarcos.com",
    "port": null,
    "images": [
     "ghcr.io/diegonmarcos/mail-puller-binaries:latest"
@@ -362,7 +362,7 @@
    "description": "Cloud Webmail — Stalwart-native JMAP webmail with multi-account/multi-server (webmail.diegonmarcos.com); OUR build of bulwarkmail/webmail 1.9.2. Replaces SnappyMail.",
    "vm": "oci-A1-f_0",
    "domain": "webmail.diegonmarcos.com",
-   "dns": "webmail.app",
+   "dns": "webmail.mesh.diegonmarcos.com",
    "port": 3000,
    "images": [
     "ghcr.io/diegonmarcos/cloud-webmail-binaries:latest"
@@ -380,7 +380,7 @@
    "description": "HTTP-to-SMTP bridge sidecar of Caddy on gcp-proxy. CF Worker POSTs JSON email payloads to this container (because GCP blocks outbound TCP/25); container speaks SMTP over WG to madd",
    "vm": "gcp-E2-f_0",
    "domain": "api.diegonmarcos.com/http-to-smtp-proxy-api",
-   "dns": "http-to-smtp-proxy-api.app",
+   "dns": "http-to-smtp-proxy-api.mesh.diegonmarcos.com",
    "port": 8090,
    "images": [],
    "health": null,
@@ -578,385 +578,385 @@
   "description": "Hickory DNS on gcp-proxy (WG IP) + Cloudflare fallback",
   "entries": [
    {
-    "name": "alerts-api.app",
+    "name": "alerts-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.4",
     "service": "alerts-api"
    },
    {
-    "name": "languagetool.app",
+    "name": "languagetool.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "languagetool"
    },
    {
-    "name": "c3-infra-api.app",
+    "name": "c3-infra-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "c3-infra-api"
    },
    {
-    "name": "c3-public-api.app",
+    "name": "c3-public-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.4",
     "service": "c3-public-api"
    },
    {
-    "name": "c3-services-api.app",
+    "name": "c3-services-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "c3-services-api"
    },
    {
-    "name": "drive-mcp.app",
+    "name": "drive-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-drive-mcp"
    },
    {
-    "name": "c3-infra-mcp.app",
+    "name": "c3-infra-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-infra-mcp"
    },
    {
-    "name": "mail-mcp.app",
+    "name": "mail-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-mail-mcp"
    },
    {
-    "name": "mattermost-mcp.app",
+    "name": "mattermost-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-mattermost-mcp"
    },
    {
-    "name": "c3-services-mcp.app",
+    "name": "c3-services-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-services-mcp"
    },
    {
-    "name": "superapp-mcp.app",
+    "name": "superapp-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-superapp-mcp"
    },
    {
-    "name": "vault-mcp.app",
+    "name": "vault-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-vault-mcp"
    },
    {
-    "name": "git-proxy-api.app",
+    "name": "git-proxy-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.4",
     "service": "git-proxy-api"
    },
    {
-    "name": "g-personal-mcp.app",
+    "name": "g-personal-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "google-personal-mcp"
    },
    {
-    "name": "g-workspace-mcp.app",
+    "name": "g-workspace-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "google-workspace-mcp"
    },
    {
-    "name": "http-to-smtp-proxy-api.app",
+    "name": "http-to-smtp-proxy-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.1",
     "service": "http-to-smtp-proxy-api"
    },
    {
-    "name": "gitea.app",
+    "name": "gitea.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "gitea"
    },
    {
-    "name": "redis.app",
+    "name": "redis.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.1",
     "service": "redis"
    },
    {
-    "name": "hickory-dns.app",
+    "name": "hickory-dns.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.1",
     "service": "hickory-dns"
    },
    {
-    "name": "unbound-dns64.app",
+    "name": "unbound-dns64.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.4",
     "service": "unbound-dns64"
    },
    {
-    "name": "c3-spec.app",
+    "name": "c3-spec.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-spec"
    },
    {
-    "name": "dagu.app",
+    "name": "dagu.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "dagu"
    },
    {
-    "name": "dbgate.app",
+    "name": "dbgate.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "dbgate"
    },
    {
-    "name": "matomo.app",
+    "name": "matomo.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "matomo"
    },
    {
-    "name": "ntfy.app",
+    "name": "ntfy.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "ntfy"
    },
    {
-    "name": "openobserve.app",
+    "name": "openobserve.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "openobserve"
    },
    {
-    "name": "umami.app",
+    "name": "umami.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "umami"
    },
    {
-    "name": "umami-db.app",
+    "name": "umami-db.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "umami"
    },
    {
-    "name": "umami-setup.app",
+    "name": "umami-setup.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "umami"
    },
    {
-    "name": "authelia.app",
+    "name": "authelia.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.1",
     "service": "authelia"
    },
    {
-    "name": "authelia-redis.app",
+    "name": "authelia-redis.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.1",
     "service": "authelia"
    },
    {
-    "name": "caddy.app",
+    "name": "caddy.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.1",
     "service": "caddy"
    },
    {
-    "name": "caddy-public.app",
+    "name": "caddy-public.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.4",
     "service": "caddy-public"
    },
    {
-    "name": "crowdsec.app",
+    "name": "crowdsec.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "crowdsec"
    },
    {
-    "name": "introspect-proxy.app",
+    "name": "introspect-proxy.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.1",
     "service": "introspect-proxy"
    },
    {
-    "name": "cloud-cgc-pub-mcp.app",
+    "name": "cloud-cgc-pub-mcp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-cgc-pub-mcp"
    },
    {
-    "name": "hermes-agent.app",
+    "name": "hermes-agent.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "hermes-agent"
    },
    {
-    "name": "my-ai-api.app",
+    "name": "my-ai-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "my-ai-api"
    },
    {
-    "name": "my-ai-claude-api.app",
+    "name": "my-ai-claude-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "my-ai_claude-api"
    },
    {
-    "name": "session-memory.app",
+    "name": "session-memory.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "session-memory"
    },
    {
-    "name": "mattermost.app",
+    "name": "mattermost.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "chat-mattermost"
    },
    {
-    "name": "mattermost-postgres.app",
+    "name": "mattermost-postgres.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "chat-mattermost"
    },
    {
-    "name": "mattermost-bots.app",
+    "name": "mattermost-bots.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "chat-mattermost"
    },
    {
-    "name": "webmail.app",
+    "name": "webmail.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "cloud-webmail"
    },
    {
-    "name": "matrix-continuwuity.app",
+    "name": "matrix-continuwuity.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "matrix-continuwuity"
    },
    {
-    "name": "matrix-element.app",
+    "name": "matrix-element.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "matrix-element"
    },
    {
-    "name": "matrix-mautrix-whatsapp.app",
+    "name": "matrix-mautrix-whatsapp.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "matrix-mautrix-whatsapp"
    },
    {
-    "name": "maddy.app",
+    "name": "maddy.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.3",
     "service": "maddy"
    },
    {
-    "name": "stalwart.app",
+    "name": "stalwart.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.3",
     "service": "stalwart"
    },
    {
-    "name": "scrappers-api.app",
+    "name": "scrappers-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "scrappers-api"
    },
    {
-    "name": "fin-api.app",
+    "name": "fin-api.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "fin-api"
    },
    {
-    "name": "photoprism.app",
+    "name": "photoprism.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "photoprism"
    },
    {
-    "name": "playlist-syncer.app",
+    "name": "playlist-syncer.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "playlist-syncer"
    },
    {
-    "name": "calendar.app",
+    "name": "calendar.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "calendar-radicale"
    },
    {
-    "name": "code-server.app",
+    "name": "code-server.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "code-server"
    },
    {
-    "name": "contacts.app",
+    "name": "contacts.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "contacts-radicale"
    },
    {
-    "name": "etherpad.app",
+    "name": "etherpad.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "etherpad"
    },
    {
-    "name": "etherpad-db.app",
+    "name": "etherpad-db.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "etherpad"
    },
    {
-    "name": "filebrowser.app",
+    "name": "filebrowser.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "filebrowser"
    },
    {
-    "name": "grist.app",
+    "name": "grist.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "grist"
    },
    {
-    "name": "hedgedoc.app",
+    "name": "hedgedoc.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "hedgedoc"
    },
    {
-    "name": "hedgedoc-db.app",
+    "name": "hedgedoc-db.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "hedgedoc"
    },
    {
-    "name": "revealmd.app",
+    "name": "revealmd.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "revealmd"
    },
    {
-    "name": "send.app",
+    "name": "send.mesh.diegonmarcos.com",
     "type": "A",
     "value": "10.0.0.6",
     "service": "send"

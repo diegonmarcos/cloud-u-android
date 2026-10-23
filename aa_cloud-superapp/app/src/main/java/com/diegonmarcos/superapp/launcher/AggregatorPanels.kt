@@ -409,7 +409,7 @@ private val pingGate = Semaphore(8)
 
 /**
  * Live container map. Decodes the baked service inventory, buckets every container by category into the card's groups,
- * draws a TCP-ping status dot per container ({name}.app — green up / red down / grey checking, meaningful only over
+ * draws a TCP-ping status dot per container ({name}.mesh.diegonmarcos.com — green up / red down / grey checking, meaningful only over
  * WireGuard) and opens the container sheet on tap. Provider groups render external consoles (no ping).
  */
 @Composable

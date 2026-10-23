@@ -69,12 +69,12 @@ class VmAddress(unittest.TestCase):
 class BuildRoutes(unittest.TestCase):
     def test_public_then_private_rows_with_all_columns(self):
         pub = [{"name": "gitea", "service": "gitea", "vm": "vm-a", "public_url": "git.example.com",
-                "auth": "two_factor", "private_dns": "gitea.app:3002", "port": 3002, "category": "data"}]
+                "auth": "two_factor", "private_dns": "gitea.mesh.diegonmarcos.com:3002", "port": 3002, "category": "data"}]
         prv = [{"name": "db", "service": "db", "vm": "vm-b", "private_dns": "db.app:5432", "port": 5432, "category": "data"}]
         sv = {"gitea": {"api": {"has_web_ui": True}, "containers": {"app": {"proxy": {"domain": "git.example.com"}}}}}
         rows = r.build_routes(pub, prv, sv, VMS, EDGE)
         self.assertEqual(rows[0], {"category": "data", "container": "gitea", "public_url": "git.example.com",
-                                   "auth_type": "woauth", "private_url": "gitea.app:3002", "vm_name": "vm-a",
+                                   "auth_type": "woauth", "private_url": "gitea.mesh.diegonmarcos.com:3002", "vm_name": "vm-a",
                                    "vm_addr": "10.0.0.6:3002"})
         self.assertEqual(rows[1]["auth_type"], "mesh")
         self.assertEqual(rows[1]["public_url"], "")
@@ -109,7 +109,7 @@ class Declaration(unittest.TestCase):
                                            "environment": {"Z": "secret-value", "A": "also-secret"},
                                            "resources": {"mem": "1G"}, "proxy": {"domain": "git.example.com", "auth": "two_factor"}}}}}
     ROW = {"container": "gitea", "category": "data", "public_url": "git.example.com", "auth_type": "woauth",
-           "private_url": "gitea.app:3002", "vm_name": "vm-a", "vm_addr": "10.0.0.6:3002"}
+           "private_url": "gitea.mesh.diegonmarcos.com:3002", "vm_name": "vm-a", "vm_addr": "10.0.0.6:3002"}
 
     def test_fields_and_no_secret_values(self):
         d = r.build_declaration(self.ROW, self.SV, VMS)

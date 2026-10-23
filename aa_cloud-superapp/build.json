@@ -6522,7 +6522,7 @@
     "dns": {
       "default_preset": "private_only",
       "mesh_zones": ["app", "db", "diegonmarcos.com"],
-      "test_names": { "public": "github.com", "mesh": "maddy.app" },
+      "test_names": { "public": "github.com", "mesh": "maddy.mesh.diegonmarcos.com" },
       "lookup_timeout_ms": 2500,
       "_doc_self_resolvers": "#794 Fleet code that talks DNS ITSELF instead of asking Android's resolver, so the preset in force does not decide where those lookups go. Each entry is inside a tree 1_cicd/src/data/dns-resolver-guard.json allows (that guard fails the build on any other), and the DNS page's Bridges list flags the app `pkg` names with `what` and `how`. Everything else in the fleet resolves through Android: Kotlin/Java code directly, terminal shells through their 127.0.0.1 SystemDnsBridge, bundled binaries through libs:sysdns ResolverProxy.",
       "self_resolvers": [

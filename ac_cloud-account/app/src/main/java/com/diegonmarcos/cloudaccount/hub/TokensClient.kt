@@ -96,7 +96,7 @@ class TokensClient(
     companion object {
         /**
          * The engine's public URL, read from the ONE fleet endpoint declaration (build.json::fleet_endpoints, id `tokens-api`),
-         * never typed here: the request rides the fleet transport (mesh `tokens-api.app` first, then this URL with the bearer).
+         * never typed here: the request rides the fleet transport (mesh `tokens-api.mesh.diegonmarcos.com` first, then this URL with the bearer).
          */
         val BASE: String get() = com.diegonmarcos.superapp.profile.FleetEndpointsRuntime.services().firstOrNull { it.id == "tokens-api" }?.publicUrl().orEmpty()
 

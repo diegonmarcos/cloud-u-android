@@ -32,7 +32,7 @@ class MailEndpointsPublishTest {
     private lateinit var ctx: Context
     private val other = "com.example.other"
     private val bearer = "tok-FLEET-987654"
-    private val decl = """{"services":[{"id":"jmap","mesh_dns":"stalwart.app","mesh_port":2443,"mesh_scheme":"https",
+    private val decl = """{"services":[{"id":"jmap","mesh_dns":"stalwart.mesh.diegonmarcos.com","mesh_port":2443,"mesh_scheme":"https",
         "public_domain":"jmap.example.org","public_scheme":"https","policy":"mesh_first"}]}"""
 
     @Before fun setUp() {
@@ -85,7 +85,7 @@ class MailEndpointsPublishTest {
         val p = MailEndpointsContract.parse(call().getString(MailEndpointsContract.KEY_JSON)!!)!!
         assertEquals(listOf("bot@example.org", "me@example.org"), p.entries.map { it.email }.sorted())
         for (e in p.entries) {
-            assertEquals("https://stalwart.app:2443", e.mesh); assertEquals("https://jmap.example.org", e.public)
+            assertEquals("https://stalwart.mesh.diegonmarcos.com:2443", e.mesh); assertEquals("https://jmap.example.org", e.public)
             assertEquals(MailEndpointsContract.POLICY_MESH_FIRST, e.policy)
         }
     }

@@ -10,8 +10,8 @@ class TelemetryRouteTest {
 
     @Test fun meshIsTriedBeforePublicAndBothCarryTheAppRoute() {
         assertEquals(
-            listOf("http://c3-infra-api.app:8081/apk/clouddrive/logs", "https://c3-pvt.example/c3-infra-api/apk/clouddrive/logs"),
-            TelemetryRoute.urls("http://c3-infra-api.app:8081/", "https://c3-pvt.example/c3-infra-api", "clouddrive"),
+            listOf("http://c3-infra-api.mesh.diegonmarcos.com:8081/apk/clouddrive/logs", "https://c3-pvt.example/c3-infra-api/apk/clouddrive/logs"),
+            TelemetryRoute.urls("http://c3-infra-api.mesh.diegonmarcos.com:8081/", "https://c3-pvt.example/c3-infra-api", "clouddrive"),
         )
     }
 

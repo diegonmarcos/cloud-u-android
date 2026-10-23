@@ -206,7 +206,7 @@ esac
         val closed = java.util.concurrent.atomic.AtomicBoolean(false)
         var target: SshTarget? = null
         val c = calls(bridge = { t, _ -> target = t; UnisonExec.Bridged(41234) { closed.set(true) } })
-        val ssh = JSONObject().put("host", "oci-apps.app").put("port", 22).put("user", "diego").put("key_path", "/k").put("passphrase", "p").put("server_cmd", "unison -server")
+        val ssh = JSONObject().put("host", "oci-apps.mesh.diegonmarcos.com").put("port", 22).put("user", "diego").put("key_path", "/k").put("passphrase", "p").put("server_cmd", "unison -server")
         val text = "root = /a\nroot = socket://127.0.0.1:{PORT}//srv/x\n"
         val extra = listOf("-prefer", "socket://127.0.0.1:{PORT}//srv/x")
         val (lines, _) = finish(c, start(c, "echoargs", text, extra, listOf("/a", "socket://127.0.0.1:{PORT}//srv/x"), ssh).getString("id"))
@@ -215,12 +215,12 @@ esac
         assertTrue(all, all.contains("-prefer socket://127.0.0.1:41234//srv/x"))
         Thread.sleep(150)
         assertTrue("the SSH session ends with the run", closed.get())
-        assertEquals("oci-apps.app", target!!.host); assertEquals("unison -server", target!!.serverCommand)
+        assertEquals("oci-apps.mesh.diegonmarcos.com", target!!.host); assertEquals("unison -server", target!!.serverCommand)
     }
 
     @Test fun aBridgeThatCannotConnectEndsTheRunWithItsSentenceAndRestoresTheArchives() {
-        val c = calls(bridge = { _, _ -> throw java.io.IOException("ssh diego@oci-apps.app:22: Connection refused") })
-        val ssh = JSONObject().put("host", "oci-apps.app").put("user", "diego")
+        val c = calls(bridge = { _, _ -> throw java.io.IOException("ssh diego@oci-apps.mesh.diegonmarcos.com:22: Connection refused") })
+        val ssh = JSONObject().put("host", "oci-apps.mesh.diegonmarcos.com").put("user", "diego")
         val (lines, last) = finish(c, start(c, "clean", ssh = ssh).getString("id"))
         assertTrue(lines.any { it.contains("Connection refused") })
         assertEquals(-1, last.getInt("rc")); assertTrue(last.getBoolean("rolled_back"))
@@ -228,7 +228,7 @@ esac
     }
 
     @Test fun sshNeedsAHostAndAUser() {
-        assertFalse(start(calls(), "clean", ssh = JSONObject().put("host", "oci-apps.app")).getBoolean("ok"))
+        assertFalse(start(calls(), "clean", ssh = JSONObject().put("host", "oci-apps.mesh.diegonmarcos.com")).getBoolean("ok"))
     }
 
     // ── keep both ───────────────────────────────────────────────────────────────────────────

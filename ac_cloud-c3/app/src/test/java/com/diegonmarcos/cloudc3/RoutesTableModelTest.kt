@@ -112,8 +112,8 @@ class RoutesTableModelTest {
 
     @Test
     fun `search matches every column, case-insensitively`() {
-        val r = M.Row("Tools", "Gitea", "git.example.com", "woauth", "gitea.app:3002", "oci-A1-f_0", "10.0.0.6:3002")
-        for (q in listOf("tools", "GITEA", "git.example", "wo", "woauth", "gitea.app", "oci-a1", "10.0.0.6:3002", "  Tools  ", ""))
+        val r = M.Row("Tools", "Gitea", "git.example.com", "woauth", "gitea.mesh.diegonmarcos.com:3002", "oci-A1-f_0", "10.0.0.6:3002")
+        for (q in listOf("tools", "GITEA", "git.example", "wo", "woauth", "gitea.mesh.diegonmarcos.com", "oci-a1", "10.0.0.6:3002", "  Tools  ", ""))
             assertTrue("'$q' should match", M.matches(r, q))
         for (q in listOf("nope", "bearer", "10.0.0.7"))
             assertTrue("'$q' should not match", !M.matches(r, q))
@@ -121,7 +121,7 @@ class RoutesTableModelTest {
 
     @Test
     fun `every word must match some column, so words narrow the search`() {
-        val r = M.Row("tools", "gitea", "git.example.com", "bearer", "gitea.app:1", "oci-a", "10.0.0.6:1")
+        val r = M.Row("tools", "gitea", "git.example.com", "bearer", "gitea.mesh.diegonmarcos.com:1", "oci-a", "10.0.0.6:1")
         assertTrue(M.matches(r, "bearer oci"))
         assertTrue(M.matches(r, "oci bearer"))
         assertTrue(!M.matches(r, "bearer zzz"))
@@ -147,7 +147,7 @@ class RoutesTableModelTest {
     fun `open maps each value to its target`() {
         assertEquals(M.OpenTarget.Url("https://git.example.com"), M.openTarget(Column.PUBLIC_URL, "git.example.com"))
         assertEquals(M.OpenTarget.Url("https://api.example.com/svc"), M.openTarget(Column.PUBLIC_URL, " api.example.com/svc "))
-        assertEquals(M.OpenTarget.Url("http://gitea.app:3002"), M.openTarget(Column.PRIVATE_URL, "gitea.app:3002"))
+        assertEquals(M.OpenTarget.Url("http://gitea.mesh.diegonmarcos.com:3002"), M.openTarget(Column.PRIVATE_URL, "gitea.mesh.diegonmarcos.com:3002"))
         assertEquals(M.OpenTarget.Url("http://10.0.0.6:3002"), M.openTarget(Column.VM_ADDR, "10.0.0.6:3002"))
         assertEquals(M.OpenTarget.Url("http://10.0.0.6"), M.openTarget(Column.VM_ADDR, "10.0.0.6"))
         assertEquals(M.OpenTarget.Container("gitea"), M.openTarget(Column.CONTAINER, "gitea"))

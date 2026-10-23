@@ -3,7 +3,7 @@
 #
 # MEASURED 2026-10-06: "could not download lib-calc: release → DNS: cannot
 # resolve github.com (active resolver: unknown) | ghcr → … (active resolver:
-# unknown) | mesh → DNS: cannot resolve git-proxy-api.app (active resolver:
+# unknown) | mesh → DNS: cannot resolve git-proxy-api.mesh.diegonmarcos.com (active resolver:
 # unknown)" on a phone whose DNS page resolved github.com through the system
 # resolver under "Mirror Android", mesh down. The downloader (plain
 # HttpURLConnection = Android's system resolver, DIRECT) is what the preset
@@ -65,7 +65,7 @@ grep -q 'val up: Boolean? = try { meshUp(ctx) } catch (_: Exception) { null }' "
   && grep -q 'if (up == false)' "$SRC/ApkSource.kt" \
   && grep -q 'throw java.io.IOException("mesh down: ' "$SRC/ApkSource.kt" \
   && ok "a down mesh fails the leg as 'mesh down' before any lookup" \
-  || bad "the mesh leg still resolves git-proxy-api.app with the mesh down"
+  || bad "the mesh leg still resolves git-proxy-api.mesh.diegonmarcos.com with the mesh down"
 grep -q 'MeshMirror.meshUp = { c -> com.diegonmarcos.superapp.network.FleetDns.meshUp(c) }' "$MAIN" \
   && ok "SuperApp hands FleetDns.meshUp to the mesh leg" || bad "SuperApp does not wire MeshMirror.meshUp"
 grep -q 'StoreDns.start(dnsCtx)' "$MAIN" \

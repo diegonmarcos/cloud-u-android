@@ -40,7 +40,7 @@ class AutocompleteSyncTest {
         "urls":[{"label":"Site","value":"https://example.org"}],
         "secrets":[{"label":"Wi-Fi","value":"fake-passphrase"},{"label":"blank","value":""}],
         "passwords":[{"label":"dropped","value":"x"}]}"""
-    private val decl = """{"services":[{"id":"cloud-me-api","kind":"data","mesh_dns":"cloud-me-api.app","mesh_port":8124,"mesh_scheme":"http","policy":"mesh_only","health":"/me/health"}]}"""
+    private val decl = """{"services":[{"id":"cloud-me-api","kind":"data","mesh_dns":"cloud-me-api.mesh.diegonmarcos.com","mesh_port":8124,"mesh_scheme":"http","policy":"mesh_only","health":"/me/health"}]}"""
 
     @Before fun setUp() {
         ctx = ApplicationProvider.getApplicationContext()
@@ -114,12 +114,12 @@ class AutocompleteSyncTest {
     }
 
     @Test fun theSyncGoesToTheDeclaredMeApiOverTheMesh() {
-        assertEquals("http://cloud-me-api.app:8124/me/autocomplete", MeAutocompleteSync.url(decl))
+        assertEquals("http://cloud-me-api.mesh.diegonmarcos.com:8124/me/autocomplete", MeAutocompleteSync.url(decl))
         var asked = ""; var sentAuth = ""
         AccountVault(ctx).putConnection("auth.authelia_token", "tok-AUTHELIA-1")
         MeAutocompleteSync.http = { url, headers -> asked = url; sentAuth = headers["Authorization"].orEmpty(); 200 to meAnswer }
         MeAutocompleteSync.sync(ctx, AccountVault(ctx), decl)
-        assertEquals("http://cloud-me-api.app:8124/me/autocomplete", asked)
+        assertEquals("http://cloud-me-api.mesh.diegonmarcos.com:8124/me/autocomplete", asked)
         assertEquals("the Authelia bearer Account holds goes with the request", "Bearer tok-AUTHELIA-1", sentAuth)
         assertEquals(MeAutocompleteSync.Outcome.NoService, MeAutocompleteSync.sync(ctx, AccountVault(ctx), """{"services":[]}"""))
     }

@@ -80,7 +80,7 @@ class StoreMeshMirrorTest {
 
     @Test fun `a GitHub release-download URL maps onto git-proxy-api's mesh name and port`() {
         assertEquals(
-            "http://git-proxy-api.app:8123/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Wallet.apk",
+            "http://git-proxy-api.mesh.diegonmarcos.com:8123/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Wallet.apk",
             MeshMirror.urlFor("https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Lib-Wallet.apk"))
         assertNull(MeshMirror.urlFor("https://example.com/a.apk"))
         assertNull(MeshMirror.urlFor(""))
@@ -107,7 +107,7 @@ class StoreMeshMirrorTest {
     }
 
     @Test fun `origins are the declared mesh name, then oci-analytics' wg0 address`() {
-        assertEquals(listOf("http://git-proxy-api.app:8123", "http://10.0.0.4:8123"), MeshMirror.bases)
+        assertEquals(listOf("http://git-proxy-api.mesh.diegonmarcos.com:8123", "http://10.0.0.4:8123"), MeshMirror.bases)
     }
 
     @Test fun `a dead first origin falls through to the next one`() {

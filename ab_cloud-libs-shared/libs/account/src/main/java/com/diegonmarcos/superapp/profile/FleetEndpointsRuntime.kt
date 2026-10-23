@@ -96,7 +96,7 @@ object FleetEndpointRows {
             else EndpointRow(s, if (s.hasPublic) routes[s.publicDomain + s.publicPath]?.state() ?: EndpointState.UNKNOWN else EndpointState.UNKNOWN, null, null, false)
         }
 
-    /** `stalwart.app:2443`: the host and the port the mesh probe connects to. Never a path, never a credential. */
+    /** `stalwart.mesh.diegonmarcos.com:2443`: the host and the port the mesh probe connects to. Never a path, never a credential. */
     fun hostPort(url: String): String = url.toHttpUrlOrNull()?.let { "${it.host}:${it.port}" } ?: ""
 
     /** Runs the two checks of every declared service; blocking, call off the main thread. */

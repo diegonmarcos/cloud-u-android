@@ -8,7 +8,7 @@ import org.junit.Test
 /** #1084 profile generation: the .prf is a pure function of the declaration, never hand-written. */
 class UnisonProfileTest {
 
-    private fun pair(extra: String = "", root: String = """{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"}""", defaults: String = "{}") =
+    private fun pair(extra: String = "", root: String = """{"host":"oci-apps.mesh.diegonmarcos.com","user":"diego","path":"/srv/sync/docs"}""", defaults: String = "{}") =
         UnisonConfig.parse("""{"defaults":$defaults,"ignore":["Name .DS_Store","Name *.tmp","Name build"],"pairs":[{"id":"docs","root_a":"Sync/Docs"$extra,"root_b":$root}]}""").pairs.single()
 
     private fun lines(p: UnisonConfig.Pair) = UnisonProfile.generate(p).lines().filter { it.isNotBlank() && !it.startsWith("#") }
@@ -20,7 +20,7 @@ class UnisonProfileTest {
     }
 
     @Test fun aRelativePeerPathUsesASingleSlash() {
-        assertEquals("root = socket://127.0.0.1:{PORT}/sync/docs", lines(pair(root = """{"host":"oci-apps.app","user":"d","path":"sync/docs"}"""))[1])
+        assertEquals("root = socket://127.0.0.1:{PORT}/sync/docs", lines(pair(root = """{"host":"oci-apps.mesh.diegonmarcos.com","user":"d","path":"sync/docs"}"""))[1])
     }
 
     @Test fun aLocalPeerIsItsPlainPath() {

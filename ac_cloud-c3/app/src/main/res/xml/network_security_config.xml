@@ -41,7 +41,7 @@
         <domain>10.0.0.9</domain>
         <domain>10.0.0.10</domain>
 
-        <!-- The mesh's own DNS names (*.app): the AI panel's gateway (my-ai-api.app) and every other
+        <!-- The mesh's own DNS names (*.app): the AI panel's gateway (my-ai-api.mesh.diegonmarcos.com) and every other
              mesh service the fleet names that way. -->
         <domain includeSubdomains="true">app</domain>
 

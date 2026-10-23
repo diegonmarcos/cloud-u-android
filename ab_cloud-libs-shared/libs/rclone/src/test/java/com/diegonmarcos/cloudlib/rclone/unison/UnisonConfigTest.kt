@@ -12,7 +12,7 @@ class UnisonConfigTest {
     private fun decl(pair: String, defaults: String = "{}", ignore: String = "[]") =
         """{"defaults":$defaults,"ignore":$ignore,"pairs":[$pair]}"""
 
-    private val ssh = """{"id":"docs","name":"Docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"}}"""
+    private val ssh = """{"id":"docs","name":"Docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.mesh.diegonmarcos.com","user":"diego","path":"/srv/sync/docs"}}"""
 
     @Test fun aValidSshPairParsesWithTheDeclaredDefaults() {
         val d = UnisonConfig.parse(decl(ssh, defaults = """{"auto":true,"fastcheck":"default","backup":true,"max_backups":5}""", ignore = """["Name .DS_Store","Name *.tmp","Name build"]"""))
@@ -20,7 +20,7 @@ class UnisonConfigTest {
         val p = d.pairs.single()
         assertEquals("docs", p.id)
         assertEquals("/sdcard/Sync/Docs", p.rootA)
-        assertEquals(UnisonConfig.Peer.Ssh("oci-apps.app", 22, "diego", "/srv/sync/docs", "", "unison -server"), p.peer)
+        assertEquals(UnisonConfig.Peer.Ssh("oci-apps.mesh.diegonmarcos.com", 22, "diego", "/srv/sync/docs", "", "unison -server"), p.peer)
         assertEquals(listOf("Name .DS_Store", "Name *.tmp", "Name build"), p.ignore)
         assertNull("no policy = every conflict asks", p.prefer)
         assertTrue(p.backup); assertEquals(5, p.maxBackups); assertEquals("default", p.fastcheck)
@@ -52,9 +52,9 @@ class UnisonConfigTest {
     }
 
     @Test fun aHostThatIsNotAMeshNameIsRefused() {
-        refused(ssh.replace("oci-apps.app", "203.0.113.7"), needle = "<name>.app mesh name")
-        refused(ssh.replace("oci-apps.app", "files.diegonmarcos.com"), needle = "<name>.app mesh name")
-        refused(ssh.replace("oci-apps.app", "OCI_apps.app"), needle = "<name>.app mesh name")
+        refused(ssh.replace("oci-apps.mesh.diegonmarcos.com", "203.0.113.7"), needle = "<name>.app mesh name")
+        refused(ssh.replace("oci-apps.mesh.diegonmarcos.com", "files.diegonmarcos.com"), needle = "<name>.app mesh name")
+        refused(ssh.replace("oci-apps.mesh.diegonmarcos.com", "OCI_apps.app"), needle = "<name>.app mesh name")
     }
 
     @Test fun anAutomaticWinnerWithoutBackupIsASilentOverwriteAndIsRefused() {
@@ -78,7 +78,7 @@ class UnisonConfigTest {
 
     @Test fun oneBadPairNeverHidesTheOthersAndDuplicatesAreRefused() {
         val good = ssh
-        val bad = ssh.replace("\"id\":\"docs\"", "\"id\":\"bad\"").replace("oci-apps.app", "1.2.3.4")
+        val bad = ssh.replace("\"id\":\"docs\"", "\"id\":\"bad\"").replace("oci-apps.mesh.diegonmarcos.com", "1.2.3.4")
         val dup = ssh.replace("Docs\"", "Docs again\"")
         val d = UnisonConfig.parse(decl("$good,$bad,$dup"))
         assertEquals(listOf("docs"), d.pairs.map { it.id })

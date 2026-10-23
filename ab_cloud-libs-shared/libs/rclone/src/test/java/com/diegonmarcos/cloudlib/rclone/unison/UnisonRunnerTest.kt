@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
  */
 class UnisonRunnerTest {
     private val pair = UnisonConfig.parse(
-        """{"ignore":["Name .DS_Store"],"pairs":[{"id":"docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"}}]}"""
+        """{"ignore":["Name .DS_Store"],"pairs":[{"id":"docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.mesh.diegonmarcos.com","user":"diego","path":"/srv/sync/docs"}}]}"""
     ).pairs.single()
     private val local = UnisonConfig.parse(
         """{"pairs":[{"id":"pics","root_a":"DCIM","root_b":{"path":"/storage/1234-ABCD/DCIM"}}]}"""
@@ -74,7 +74,7 @@ class UnisonRunnerTest {
         assertEquals(JSONArray(UnisonProfile.roots(pair)).toString(), start.getJSONArray("roots").toString())
         assertEquals(0, start.getJSONArray("extra").length())
         val ssh = start.getJSONObject("ssh")
-        assertEquals("oci-apps.app", ssh.getString("host")); assertEquals("diego", ssh.getString("user")); assertEquals(22, ssh.getInt("port"))
+        assertEquals("oci-apps.mesh.diegonmarcos.com", ssh.getString("host")); assertEquals("diego", ssh.getString("user")); assertEquals(22, ssh.getInt("port"))
         assertEquals("/storage/emulated/0/keys/id_ed25519", ssh.getString("key_path")); assertEquals("pw", ssh.getString("passphrase"))
         assertEquals("unison -server", ssh.getString("server_cmd"))
         assertEquals(listOf("one.txt"), r.conflicts.map { it.path })
@@ -92,7 +92,7 @@ class UnisonRunnerTest {
         val t = Fake()
         val (r, log) = runSync(t, ssh = { null })
         assertTrue(t.sent.isEmpty())
-        assertTrue(log.any { it.contains("no SSH credentials for oci-apps.app") })
+        assertTrue(log.any { it.contains("no SSH credentials for oci-apps.mesh.diegonmarcos.com") })
         assertEquals(-1, r.rc)
     }
 

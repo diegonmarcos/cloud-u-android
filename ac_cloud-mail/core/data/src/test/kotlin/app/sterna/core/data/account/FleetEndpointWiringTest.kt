@@ -21,7 +21,7 @@ import java.util.Base64
 class FleetEndpointWiringTest {
     private val marker = "fleet-SECRET-tok-123"
     private val pub = "https://jmap.example.org"
-    private val mesh = "https://stalwart.app:2443"
+    private val mesh = "https://stalwart.mesh.diegonmarcos.com:2443"
 
     private class Disk : FleetEndpointStore.Blobs {
         val map = linkedMapOf<String, String>()
@@ -53,7 +53,7 @@ class FleetEndpointWiringTest {
         assertEquals(mesh, e.mesh); assertEquals(pub, e.public); assertEquals(EndpointPolicy.MESH_FIRST, e.policy)
         assertTrue(r.router.isRegistered("jmap.example.org"))
         assertEquals(marker, r.bearers.forHost("jmap.example.org"))
-        assertNull("never on the mesh host", r.bearers.forHost("stalwart.app"))
+        assertNull("never on the mesh host", r.bearers.forHost("stalwart.mesh.diegonmarcos.com"))
     }
 
     @Test fun `an account Cloud Account did not publish keeps its single endpoint and gets no marker`() {

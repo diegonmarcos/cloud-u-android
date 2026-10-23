@@ -12,7 +12,7 @@ import java.net.URL
  * this for free, with zero per-app wiring. POSTs to c3-infra-api's public
  * events ingest:
  *
- *   POST <mesh c3-infra-api.app, then the public c3-pvt path>/apk/{app}/logs   (see [TelemetryRoute])
+ *   POST <mesh c3-infra-api.mesh.diegonmarcos.com, then the public c3-pvt path>/apk/{app}/logs   (see [TelemetryRoute])
  *   { kind: "log"|"debug"|"action"|"probe"|"crash", title?, message?, log?, meta? }
  *
  * 2 MB cap, unauthenticated (same "public path" reasoning as [LogUpload] —
@@ -80,7 +80,7 @@ object Telemetry {
 
     /**
      * Every URL this app tries, in order: its declared override alone, else the per-app route on the mesh origin
-     * (c3-infra-api.app, no auth) and then on the public one (c3-pvt, fleet bearer). Both origins are baked from the
+     * (c3-infra-api.mesh.diegonmarcos.com, no auth) and then on the public one (c3-pvt, fleet bearer). Both origins are baked from the
      * fleet declaration. An override of "" turns telemetry off.
      */
     @JvmStatic

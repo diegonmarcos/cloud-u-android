@@ -218,7 +218,7 @@ class EndpointRoutingTest {
         assertTrue(EndpointRouter.neverReached(IOException("wrapped", ConnectException())))
         assertTrue(EndpointRouter.neverReached(SocketTimeoutException("connect timed out")))
         assertTrue("cleartext refused by the platform is refused before anything is sent",
-            EndpointRouter.neverReached(java.net.UnknownServiceException("CLEARTEXT communication to gitea.app not permitted by network security policy")))
+            EndpointRouter.neverReached(java.net.UnknownServiceException("CLEARTEXT communication to gitea.mesh.diegonmarcos.com not permitted by network security policy")))
         assertFalse(EndpointRouter.neverReached(SocketTimeoutException("timeout")))
         assertFalse(EndpointRouter.neverReached(IOException("unexpected end of stream")))
     }

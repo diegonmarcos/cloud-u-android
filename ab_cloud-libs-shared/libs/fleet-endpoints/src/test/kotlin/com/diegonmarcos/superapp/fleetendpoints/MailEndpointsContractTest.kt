@@ -12,24 +12,24 @@ import org.junit.Test
  * a mask or an entry.
  */
 class MailEndpointsContractTest {
-    private val decl = """{"services":[{"id":"jmap","mesh_dns":"stalwart.app","mesh_port":2443,"mesh_scheme":"https",
+    private val decl = """{"services":[{"id":"jmap","mesh_dns":"stalwart.mesh.diegonmarcos.com","mesh_port":2443,"mesh_scheme":"https",
         "public_domain":"jmap.example.org","public_scheme":"https","policy":"mesh_first"}]}"""
     private val marker = "tok-SECRET-123456"
 
     @Test fun bothEndpointsAreDerivedFromTheDeclaration() {
         val s = MailEndpointsContract.parseDecl(decl).single()
-        assertEquals("https://stalwart.app:2443", s.meshUrl())
+        assertEquals("https://stalwart.mesh.diegonmarcos.com:2443", s.meshUrl())
         assertEquals("https://jmap.example.org", s.publicUrl())
     }
 
     @Test fun theDefaultPortIsNotWrittenOut() {
         val s = MailEndpointsContract.parseDecl(decl.replace("2443", "443")).single()
-        assertEquals("https://stalwart.app", s.meshUrl())
+        assertEquals("https://stalwart.mesh.diegonmarcos.com", s.meshUrl())
     }
 
     @Test fun aDeclarationThatBreaksARuleIsDropped() {
         fun n(t: String) = MailEndpointsContract.parseDecl(t).size
-        assertEquals("a mesh name must be a .app name", 0, n(decl.replace("stalwart.app", "stalwart.example.org")))
+        assertEquals("a mesh name must be a .app name", 0, n(decl.replace("stalwart.mesh.diegonmarcos.com", "stalwart.example.org")))
         assertEquals("the public URL must be https: the bearer travels on it", 0, n(decl.replace("\"public_scheme\":\"https\"", "\"public_scheme\":\"http\"")))
         assertEquals("a policy outside the set", 0, n(decl.replace("mesh_first", "whatever")))
         assertEquals("a public domain is a host, not a URL", 0, n(decl.replace("jmap.example.org", "jmap.example.org/x")))
@@ -45,7 +45,7 @@ class MailEndpointsContractTest {
             "other@example.org" to "",
         ))
         assertEquals(listOf("me@example.org"), e.map { it.email })
-        assertEquals("https://stalwart.app:2443", e.single().mesh)
+        assertEquals("https://stalwart.mesh.diegonmarcos.com:2443", e.single().mesh)
         assertEquals("https://jmap.example.org", e.single().public)
     }
 

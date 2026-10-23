@@ -38,7 +38,7 @@ class FleetEndpointsDeclTest {
         // these entries by ab_cloud-libs-shared/libs/fleet-urls.gradle; a rename here would silently bake an empty URL.
         val byId = services.associateBy { it.id }
         for (id in listOf("authelia", "git-proxy-api", "news", "languagetool")) assertTrue("$id must stay declared", byId.containsKey(id))
-        assertEquals("news-gdelt.app", byId.getValue("news").meshDns)
+        assertEquals("news-gdelt.mesh.diegonmarcos.com", byId.getValue("news").meshDns)
         assertTrue(byId.getValue("news").hasPublic)
     }
 

@@ -284,35 +284,35 @@
     "name": "cloud-backups-binaries-medias",
     "tier": "Standard",
     "region": "eu-marseille-1",
-    "dns": "s3-backups-binaries.app"
+    "dns": "s3-backups-binaries.mesh.diegonmarcos.com"
    },
    {
     "provider": "oci",
     "name": "cloud-backups-db",
     "tier": "Standard",
     "region": "eu-marseille-1",
-    "dns": "s3-backups-db.app"
+    "dns": "s3-backups-db.mesh.diegonmarcos.com"
    },
    {
     "provider": "oci",
     "name": "cloud-backups-media",
     "tier": "Archive",
     "region": "eu-marseille-1",
-    "dns": "s3-backups-media.app"
+    "dns": "s3-backups-media.mesh.diegonmarcos.com"
    },
    {
     "provider": "oci",
     "name": "cloud-backups-non-binaries",
     "tier": "Standard",
     "region": "eu-marseille-1",
-    "dns": "s3-backups-nonbin.app"
+    "dns": "s3-backups-nonbin.mesh.diegonmarcos.com"
    },
    {
     "provider": "oci",
     "name": "my-photos",
     "tier": "Standard",
     "region": "eu-marseille-1",
-    "dns": "s3-photos.app"
+    "dns": "s3-photos.mesh.diegonmarcos.com"
    }
   ],
   "backends": [

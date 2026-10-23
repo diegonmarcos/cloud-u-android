@@ -9,7 +9,7 @@ import org.junit.Test
 /** #1084 conflict handling, part two: what keep-A, keep-B and keep-both ask the engine, and that none of them overwrites silently. */
 class UnisonResolveTest {
     private val pair = UnisonConfig.parse(
-        """{"pairs":[{"id":"docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.app","user":"diego","path":"/srv/sync/docs"},"max_backups":4}]}"""
+        """{"pairs":[{"id":"docs","root_a":"Sync/Docs","root_b":{"host":"oci-apps.mesh.diegonmarcos.com","user":"diego","path":"/srv/sync/docs"},"max_backups":4}]}"""
     ).pairs.single()
     private val rootB = "socket://127.0.0.1:{PORT}//srv/sync/docs"
 

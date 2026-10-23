@@ -14,28 +14,28 @@ import org.junit.Test
 class FleetEndpointsContractTest {
     private val marker = "tok-SECRET-123456" // gitleaks:allow (a made-up test marker, not a credential)
     private val decl = """{"services":[
-        {"id":"jmap","kind":"mail","mesh_dns":"stalwart.app","mesh_port":2443,"mesh_scheme":"https","public_domain":"jmap.example.org","policy":"mesh_first","health":"/.well-known/jmap"},
-        {"id":"gitea","kind":"git","mesh_dns":"gitea.app","mesh_port":3002,"mesh_scheme":"http","public_domain":"git.example.org","policy":"mesh_first","health":"/api/healthz"},
-        {"id":"me-api","kind":"data","mesh_dns":"cloud-me-api.app","mesh_port":8124,"mesh_scheme":"http","policy":"mesh_only","health":"/me/health"}]}"""
+        {"id":"jmap","kind":"mail","mesh_dns":"stalwart.mesh.diegonmarcos.com","mesh_port":2443,"mesh_scheme":"https","public_domain":"jmap.example.org","policy":"mesh_first","health":"/.well-known/jmap"},
+        {"id":"gitea","kind":"git","mesh_dns":"gitea.mesh.diegonmarcos.com","mesh_port":3002,"mesh_scheme":"http","public_domain":"git.example.org","policy":"mesh_first","health":"/api/healthz"},
+        {"id":"me-api","kind":"data","mesh_dns":"cloud-me-api.mesh.diegonmarcos.com","mesh_port":8124,"mesh_scheme":"http","policy":"mesh_only","health":"/me/health"}]}"""
 
     @Test fun bothEndpointsAreDerivedFromTheDeclaration() {
         val s = FleetEndpointsContract.parseDecl(decl).associateBy { it.id }
         assertEquals(listOf("jmap", "gitea", "me-api"), FleetEndpointsContract.parseDecl(decl).map { it.id })
-        assertEquals("https://stalwart.app:2443", s.getValue("jmap").meshUrl())
+        assertEquals("https://stalwart.mesh.diegonmarcos.com:2443", s.getValue("jmap").meshUrl())
         assertEquals("https://jmap.example.org", s.getValue("jmap").publicUrl())
-        assertEquals("http://gitea.app:3002", s.getValue("gitea").meshUrl())
+        assertEquals("http://gitea.mesh.diegonmarcos.com:3002", s.getValue("gitea").meshUrl())
         assertEquals("a mesh-only service has no public URL", "", s.getValue("me-api").publicUrl())
         assertFalse(s.getValue("me-api").hasPublic)
     }
 
     @Test fun theDefaultPortIsNotWrittenOut() {
-        assertEquals("https://stalwart.app", FleetEndpointsContract.parseDecl(decl.replace("2443", "443")).first().meshUrl())
-        assertEquals("http://gitea.app", FleetEndpointsContract.parseDecl(decl.replace("3002", "80")).first { it.id == "gitea" }.meshUrl())
+        assertEquals("https://stalwart.mesh.diegonmarcos.com", FleetEndpointsContract.parseDecl(decl.replace("2443", "443")).first().meshUrl())
+        assertEquals("http://gitea.mesh.diegonmarcos.com", FleetEndpointsContract.parseDecl(decl.replace("3002", "80")).first { it.id == "gitea" }.meshUrl())
     }
 
     @Test fun aDeclarationThatBreaksARuleIsDropped() {
         fun n(t: String) = FleetEndpointsContract.parseDecl(t).size
-        assertEquals("a mesh name must be a .app name", 2, n(decl.replace("stalwart.app", "stalwart.example.org")))
+        assertEquals("a mesh name must be a .app name", 2, n(decl.replace("stalwart.mesh.diegonmarcos.com", "stalwart.example.org")))
         assertEquals("a public URL must be https: the bearer travels on it", 2, n(decl.replace("\"public_domain\":\"jmap.example.org\"", "\"public_domain\":\"jmap.example.org\",\"public_scheme\":\"http\"")))
         assertEquals("a policy outside the set", 2, n(decl.replace("\"mesh_first\",\"health\":\"/.well", "\"whatever\",\"health\":\"/.well")))
         assertEquals("a public domain is a host, not a URL", 2, n(decl.replace("jmap.example.org", "jmap.example.org/x")))
@@ -97,10 +97,10 @@ class FleetEndpointsContractTest {
     }
 
     @Test fun aServiceUnderAPathOfASharedHostCarriesItsBasePathAndTheRoutesItMayTake() {
-        val d = """{"services":[{"id":"api","kind":"api","mesh_dns":"c3-public-api.app","mesh_port":8087,"mesh_scheme":"http",
+        val d = """{"services":[{"id":"api","kind":"api","mesh_dns":"c3-public-api.mesh.diegonmarcos.com","mesh_port":8087,"mesh_scheme":"http",
             "public_domain":"api.example.org","public_path":"/pub/","route_paths":["/health","/analytics"],"policy":"mesh_first","health":"/health"}]}"""
         val s = FleetEndpointsContract.parseDecl(d).single()
-        assertEquals("https://api.example.org/pub", s.publicUrl()); assertEquals("http://c3-public-api.app:8087", s.meshUrl())
+        assertEquals("https://api.example.org/pub", s.publicUrl()); assertEquals("http://c3-public-api.mesh.diegonmarcos.com:8087", s.meshUrl())
         assertEquals(listOf("/health", "/analytics"), s.routePaths)
         val e = FleetEndpointsContract.entries(listOf(s))
         assertEquals(e, FleetEndpointsContract.parse(FleetEndpointsContract.toJson(e, null))!!.entries)

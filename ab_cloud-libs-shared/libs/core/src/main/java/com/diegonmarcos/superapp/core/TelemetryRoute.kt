@@ -5,7 +5,7 @@ import java.io.File
 /**
  * The pure half of crash/log telemetry: WHERE an app's events go and the offline queue they wait in.
  * c3-infra-api serves one declared route per app, `/apk/<name>/logs` (POST ingest, GET read); the mesh origin
- * (`c3-infra-api.app`, no auth) is tried first, then the public origin (c3-pvt, the fleet bearer). Both origins come
+ * (`c3-infra-api.mesh.diegonmarcos.com`, no auth) is tried first, then the public origin (c3-pvt, the fleet bearer). Both origins come
  * from the one fleet declaration (ac_cloud-account/build.json::fleet_endpoints, baked as BuildConfig by build.gradle),
  * nothing is typed here. No Android in this file, so the JVM suite runs it as it is.
  */

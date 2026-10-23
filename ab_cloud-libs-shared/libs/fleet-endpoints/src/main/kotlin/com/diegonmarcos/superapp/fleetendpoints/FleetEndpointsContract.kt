@@ -52,7 +52,7 @@ object FleetEndpointsContract {
         val routePaths: List<String> = emptyList(),
     ) {
         val hasPublic: Boolean get() = publicDomain.isNotEmpty()
-        /** `https://stalwart.app:2443`: an origin, never a path. */
+        /** `https://stalwart.mesh.diegonmarcos.com:2443`: an origin, never a path. */
         fun meshUrl(): String = "$meshScheme://$meshDns" + (if (meshPort > 0 && meshPort != defaultPort(meshScheme)) ":$meshPort" else "") + meshPath
         /** `https://jmap.example.org` (plus the base path, if any), or "" for a mesh-only service. */
         fun publicUrl(): String = if (hasPublic) "$publicScheme://$publicDomain$publicPath" else ""

@@ -9,7 +9,7 @@
 
   Deliberately no cleartextTrafficPermitted attribute on the base config: the default under targetSdk 36 is
   already false, which is exactly the behaviour this file inherits. The ONE exception (#1093) is the fleet's mesh
-  endpoint of the mail service (`stalwart.app`): `.app` hosts are WireGuard-only and WG already encrypts, so the mesh
+  endpoint of the mail service (`stalwart.mesh.diegonmarcos.com`): `.app` hosts are WireGuard-only and WG already encrypts, so the mesh
   is plain HTTP. That entry is GENERATED from ac_cloud-account/build.json::fleet_endpoints (never hand-listed), and a
   public host is never cleartext.
 -->
@@ -23,7 +23,7 @@
 
     <domain-config cleartextTrafficPermitted="true">
         <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
-        <domain includeSubdomains="false">stalwart.app</domain>
+        <domain includeSubdomains="false">stalwart.mesh.diegonmarcos.com</domain>
         <!-- END fleet-mesh-cleartext -->
     </domain-config>
 </network-security-config>

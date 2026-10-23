@@ -4,7 +4,7 @@
 //
 // Source of truth: cloud/a_solutions/<svc>/build.json (git-tracked) for the live
 // container set, its dns + ports.app, and the per-service `api` declaration;
-// data/services_private.json for the DB-container .app:port (db_engine entries).
+// data/services_private.json for the DB-container mesh host:port (db_engine entries).
 //
 // RULE: Infra + User Apps together hold EVERY container exactly once (no dupes).
 // Others = free cross-cut lists (Providers · DBs · MCP & API) that re-reference
@@ -17,6 +17,8 @@ const path = require("path");
 const os = require("os");
 
 const HERE = __dirname;
+// #1123: private mesh names live under the owner's domain, served only by fleet DNS (the public .app TLD is not ours).
+const MESH_SFX = ".mesh.diegonmarcos.com";
 const AROOT = process.env.A_SOLUTIONS || path.join(os.homedir(), "git/cloud-infra/a_solutions");
 
 function listServiceDirs(root) {
@@ -106,15 +108,15 @@ function titleFrom(n) {
 
 function app(n, label) {
     const [dns, port] = APP[n] || APP[n.replace(/tools-/g, "")] || ["", null];
-    const host = dns.endsWith(".app") ? dns : `${n}.app`;
+    const host = dns.endsWith(MESH_SFX) ? dns : `${n}${MESH_SFX}`;
     const e = { name: n, label: label || titleFrom(n), url: host };
     if (port) e.port = port;
     return e;
 }
 
 function db(n, label) {
-    const [h, p] = DBS[n] || [`${n}.app`, null];
-    const host = h.endsWith(".app") ? h : `${n}.app`;
+    const [h, p] = DBS[n] || [`${n}${MESH_SFX}`, null];
+    const host = h.endsWith(MESH_SFX) ? h : `${n}${MESH_SFX}`;
     const e = { name: n, label: label || titleFrom(n), url: host };
     if (p) e.port = p;
     return e;

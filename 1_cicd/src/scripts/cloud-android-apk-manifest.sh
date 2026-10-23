@@ -4,7 +4,7 @@
 # Source of truth: every app module's own build.json (ac_*/ and aa_cloud-superapp/).
 # Output: 2_configs/apk-manifest.json — consumed by cloud-infra's caddy generator
 # (1_cloud-configs/src/derive/cloud-data-config-derive.ts) to emit the per-APK
-# public vhost `cloud-{name}.diegonmarcos.com` and private `cloud-{name}.app`.
+# public vhost `cloud-{name}.diegonmarcos.com` and private `cloud-{name}.mesh.diegonmarcos.com`.
 # There is no hand-maintained APK list: add a module with a build.json and the
 # next run lists it.
 #

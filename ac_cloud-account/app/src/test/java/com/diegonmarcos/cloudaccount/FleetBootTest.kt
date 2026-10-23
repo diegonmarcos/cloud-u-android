@@ -16,7 +16,7 @@ class FleetBootTest {
     private val marker = "tok-SECRET-123456" // gitleaks:allow (a made-up test marker, not a credential)
     private val entries = listOf(
         FleetEndpointsContract.Entry("vaultwarden", "vault", "http://vaultwarden.app:8880", "https://vault.example.org", "mesh_only", "/alive"),
-        FleetEndpointsContract.Entry("me-api", "data", "http://cloud-me-api.app:8124", "", "mesh_only", "/me/health"),
+        FleetEndpointsContract.Entry("me-api", "data", "http://cloud-me-api.mesh.diegonmarcos.com:8124", "", "mesh_only", "/me/health"),
     )
 
     @After fun tearDown() { FleetTransport.router.clear(); FleetTransport.bearers.source = null }
@@ -24,7 +24,7 @@ class FleetBootTest {
     @Test fun onlyAServiceWithAPublicHostIsKeyedAndItKeepsThePolicyAccountPublished() {
         assertEquals(1, FleetBoot.register(entries, marker))
         assertTrue(FleetTransport.router.isRegistered("vault.example.org"))
-        assertFalse(FleetTransport.router.isRegistered("cloud-me-api.app"))
+        assertFalse(FleetTransport.router.isRegistered("cloud-me-api.mesh.diegonmarcos.com"))
         assertEquals(EndpointPolicy.MESH_ONLY, FleetTransport.router.policyOf("vault.example.org"))
         assertTrue(FleetTransport.router.isMeshHost("vaultwarden.app"))
     }

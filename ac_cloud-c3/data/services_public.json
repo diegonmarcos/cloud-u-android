@@ -5,7 +5,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "languagetool.diegonmarcos.com",
     "auth": "none",
-    "private_dns": "languagetool.app:8010",
+    "private_dns": "languagetool.mesh.diegonmarcos.com:8010",
     "port": 8010,
     "category": "tools"
   },
@@ -15,7 +15,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "api.diegonmarcos.com/c3-infra-api",
     "auth": "two_factor",
-    "private_dns": "c3-infra-api.app:8081",
+    "private_dns": "c3-infra-api.mesh.diegonmarcos.com:8081",
     "port": 8081,
     "category": "sec"
   },
@@ -25,7 +25,7 @@
     "vm": "oci-E2-f_1",
     "public_url": "api.diegonmarcos.com/pub",
     "auth": "two_factor",
-    "private_dns": "c3-public-api.app:8087",
+    "private_dns": "c3-public-api.mesh.diegonmarcos.com:8087",
     "port": 8087,
     "category": "obs"
   },
@@ -35,7 +35,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "api.diegonmarcos.com/c3-services-api",
     "auth": "two_factor",
-    "private_dns": "c3-services-api.app:8082",
+    "private_dns": "c3-services-api.mesh.diegonmarcos.com:8082",
     "port": 8082,
     "category": "obs"
   },
@@ -45,7 +45,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/cloud-drive-mcp",
     "auth": "none",
-    "private_dns": "drive-mcp.app:3109",
+    "private_dns": "drive-mcp.mesh.diegonmarcos.com:3109",
     "port": 3109,
     "category": "app"
   },
@@ -55,7 +55,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/c3-infra-mcp",
     "auth": "none",
-    "private_dns": "c3-infra-mcp.app:3100",
+    "private_dns": "c3-infra-mcp.mesh.diegonmarcos.com:3100",
     "port": 3100,
     "category": "sec"
   },
@@ -65,7 +65,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/mail-mcp",
     "auth": "none",
-    "private_dns": "mail-mcp.app:3103",
+    "private_dns": "mail-mcp.mesh.diegonmarcos.com:3103",
     "port": 3103,
     "category": "app"
   },
@@ -75,7 +75,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/mattermost-mcp",
     "auth": "none",
-    "private_dns": "mattermost-mcp.app:3102",
+    "private_dns": "mattermost-mcp.mesh.diegonmarcos.com:3102",
     "port": 3102,
     "category": "app"
   },
@@ -85,7 +85,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/c3-services-mcp",
     "auth": "none",
-    "private_dns": "c3-services-mcp.app:3101",
+    "private_dns": "c3-services-mcp.mesh.diegonmarcos.com:3101",
     "port": 3101,
     "category": "obs"
   },
@@ -95,7 +95,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/cloud-superapp-mcp",
     "auth": "none",
-    "private_dns": "superapp-mcp.app:3110",
+    "private_dns": "superapp-mcp.mesh.diegonmarcos.com:3110",
     "port": 3110,
     "category": "app"
   },
@@ -105,7 +105,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/g-personal",
     "auth": "none",
-    "private_dns": "g-personal-mcp.app:3106",
+    "private_dns": "g-personal-mcp.mesh.diegonmarcos.com:3106",
     "port": 3106,
     "category": "app"
   },
@@ -115,7 +115,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/g-workspace",
     "auth": "none",
-    "private_dns": "g-workspace-mcp.app:3104",
+    "private_dns": "g-workspace-mcp.mesh.diegonmarcos.com:3104",
     "port": 3104,
     "category": "app"
   },
@@ -125,7 +125,7 @@
     "vm": "gcp-E2-f_0",
     "public_url": "api.diegonmarcos.com/http-to-smtp-proxy-api",
     "auth": "bearer",
-    "private_dns": "http-to-smtp-proxy-api.app:8090",
+    "private_dns": "http-to-smtp-proxy-api.mesh.diegonmarcos.com:8090",
     "port": 8090,
     "category": "app"
   },
@@ -135,7 +135,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "git.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "gitea.app:3002",
+    "private_dns": "gitea.mesh.diegonmarcos.com:3002",
     "port": 3002,
     "category": "data"
   },
@@ -145,7 +145,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "cloud.diegonmarcos.com/spec",
     "auth": "two_factor",
-    "private_dns": "c3-spec.app:3080",
+    "private_dns": "c3-spec.mesh.diegonmarcos.com:3080",
     "port": 3080,
     "category": "tools"
   },
@@ -155,7 +155,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "workflows.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "dagu.app:8070",
+    "private_dns": "dagu.mesh.diegonmarcos.com:8070",
     "port": 8070,
     "category": "tools"
   },
@@ -165,7 +165,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "db.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "dbgate.app:8086",
+    "private_dns": "dbgate.mesh.diegonmarcos.com:8086",
     "port": 8086,
     "category": "tools"
   },
@@ -175,7 +175,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "analytics.diegonmarcos.com/matomo",
     "auth": "two_factor",
-    "private_dns": "matomo.app:8080",
+    "private_dns": "matomo.mesh.diegonmarcos.com:8080",
     "port": 8080,
     "category": "tools"
   },
@@ -185,7 +185,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "rss.diegonmarcos.com",
     "auth": "ntfy-3tier",
-    "private_dns": "ntfy.app:8090",
+    "private_dns": "ntfy.mesh.diegonmarcos.com:8090",
     "port": 8090,
     "category": "tools"
   },
@@ -195,7 +195,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "analytics.diegonmarcos.com/openobserve",
     "auth": "two_factor",
-    "private_dns": "openobserve.app:5080",
+    "private_dns": "openobserve.mesh.diegonmarcos.com:5080",
     "port": 5080,
     "category": "tools"
   },
@@ -205,7 +205,7 @@
     "vm": "oci-E2-f_1",
     "public_url": "analytics.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "umami.app:3006",
+    "private_dns": "umami.mesh.diegonmarcos.com:3006",
     "port": 3006,
     "category": "tools"
   },
@@ -215,7 +215,7 @@
     "vm": "gcp-E2-f_0",
     "public_url": "auth.diegonmarcos.com",
     "auth": "bypass",
-    "private_dns": "authelia.app:9091",
+    "private_dns": "authelia.mesh.diegonmarcos.com:9091",
     "port": 9091,
     "category": "sec"
   },
@@ -225,7 +225,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "crowdsec.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "crowdsec.app:8088",
+    "private_dns": "crowdsec.mesh.diegonmarcos.com:8088",
     "port": 8088,
     "category": "sec"
   },
@@ -235,7 +235,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "mcp.diegonmarcos.com/cloud-cgc-pub-mcp",
     "auth": "none",
-    "private_dns": "cloud-cgc-pub-mcp.app:3105",
+    "private_dns": "cloud-cgc-pub-mcp.mesh.diegonmarcos.com:3105",
     "port": 3105,
     "category": "obs"
   },
@@ -255,7 +255,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "chat.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "mattermost.app:8065",
+    "private_dns": "mattermost.mesh.diegonmarcos.com:8065",
     "port": 8065,
     "category": "app"
   },
@@ -265,7 +265,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "matrix.diegonmarcos.com",
     "auth": "none",
-    "private_dns": "matrix-continuwuity.app:8008",
+    "private_dns": "matrix-continuwuity.mesh.diegonmarcos.com:8008",
     "port": 8008,
     "category": "app"
   },
@@ -275,7 +275,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "messenger.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "matrix-element.app:8083",
+    "private_dns": "matrix-element.mesh.diegonmarcos.com:8083",
     "port": 8083,
     "category": "app"
   },
@@ -285,7 +285,7 @@
     "vm": "oci-E2-f_0",
     "public_url": "jmap.diegonmarcos.com",
     "auth": "none",
-    "private_dns": "stalwart.app:2443",
+    "private_dns": "stalwart.mesh.diegonmarcos.com:2443",
     "port": 2443,
     "category": "app"
   },
@@ -295,7 +295,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "api.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "scrappers-api.app:3020",
+    "private_dns": "scrappers-api.mesh.diegonmarcos.com:3020",
     "port": 3020,
     "category": "data"
   },
@@ -305,7 +305,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "api.diegonmarcos.com/fin-api",
     "auth": "two_factor",
-    "private_dns": "fin-api.app:8340",
+    "private_dns": "fin-api.mesh.diegonmarcos.com:8340",
     "port": 8340,
     "category": "fin"
   },
@@ -315,7 +315,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "photos.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "photoprism.app:3013",
+    "private_dns": "photoprism.mesh.diegonmarcos.com:3013",
     "port": 3013,
     "category": "app"
   },
@@ -325,7 +325,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "playlist.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "playlist-syncer.app:8090",
+    "private_dns": "playlist-syncer.mesh.diegonmarcos.com:8090",
     "port": 8090,
     "category": "app"
   },
@@ -335,7 +335,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "cal.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "calendar.app:5232",
+    "private_dns": "calendar.mesh.diegonmarcos.com:5232",
     "port": 5232,
     "category": "app"
   },
@@ -345,7 +345,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "ide.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "code-server.app:8443",
+    "private_dns": "code-server.mesh.diegonmarcos.com:8443",
     "port": 8443,
     "category": "app"
   },
@@ -355,7 +355,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "contacts.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "contacts.app:5233",
+    "private_dns": "contacts.mesh.diegonmarcos.com:5233",
     "port": 5233,
     "category": "app"
   },
@@ -365,7 +365,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "app.diegonmarcos.com/etherpad",
     "auth": "two_factor",
-    "private_dns": "etherpad.app:3012",
+    "private_dns": "etherpad.mesh.diegonmarcos.com:3012",
     "port": 3012,
     "category": "app"
   },
@@ -375,7 +375,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "app.diegonmarcos.com/filebrowser",
     "auth": "two_factor",
-    "private_dns": "filebrowser.app:3015",
+    "private_dns": "filebrowser.mesh.diegonmarcos.com:3015",
     "port": 3015,
     "category": "app"
   },
@@ -385,7 +385,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "sheets.diegonmarcos.com",
     "auth": "none",
-    "private_dns": "grist.app:3011",
+    "private_dns": "grist.mesh.diegonmarcos.com:3011",
     "port": 3011,
     "category": "app"
   },
@@ -395,7 +395,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "app.diegonmarcos.com/hedgedoc",
     "auth": "two_factor",
-    "private_dns": "hedgedoc.app:3018",
+    "private_dns": "hedgedoc.mesh.diegonmarcos.com:3018",
     "port": 3018,
     "category": "app"
   },
@@ -405,7 +405,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "paca.diegonmarcos.com",
     "auth": "two_factor",
-    "private_dns": "paca.app:8095",
+    "private_dns": "paca.mesh.diegonmarcos.com:8095",
     "port": 8095,
     "category": "app"
   },
@@ -415,7 +415,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "send.diegonmarcos.com",
     "auth": "none",
-    "private_dns": "send.app:3016",
+    "private_dns": "send.mesh.diegonmarcos.com:3016",
     "port": 3016,
     "category": "app"
   },

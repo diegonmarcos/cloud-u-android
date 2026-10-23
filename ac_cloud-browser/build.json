@@ -1135,7 +1135,7 @@
           "max_pages": 5,
           "max_rows": 2000,
           "settle_ms": 800,
-          "_doc_remote": "scrappers-api's generic crawl over the WireGuard mesh (cloud-u-containers user-data_scrappers-api main.py: POST /scrape/crawl {url, selector}, synchronous, answers {ok, written, summary.matched}; rows stay on the server). The mesh address is the service's declared container port (cloud-infra build-scrappers-api.json: scrappers-api.app :3020 on oci-apps 10.0.0.6); the public route is behind two-factor Authelia, so the phone uses the mesh.",
+          "_doc_remote": "scrappers-api's generic crawl over the WireGuard mesh (cloud-u-containers user-data_scrappers-api main.py: POST /scrape/crawl {url, selector}, synchronous, answers {ok, written, summary.matched}; rows stay on the server). The mesh address is the service's declared container port (cloud-infra build-scrappers-api.json: scrappers-api.mesh.diegonmarcos.com :3020 on oci-apps 10.0.0.6); the public route is behind two-factor Authelia, so the phone uses the mesh.",
           "remote": {
             "enabled": true,
             "endpoint": "http://10.0.0.6:3020/scrape/crawl",

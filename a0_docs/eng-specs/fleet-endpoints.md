@@ -52,7 +52,7 @@ mesh-only. Declared now: `jmap` (mail), `gitea` (git), `authelia` and `auth-brok
   endpoint is declared `http` on its mesh-only port, and the cleartext allowlist of each app's `network_security_config.xml` is
   GENERATED from the declaration (`1_cicd/src/scripts/cloud-android-fleet-nsc.py`, apps and services in
   `1_cicd/src/data/fleet-nsc.json`), never hand-listed; a public host is never cleartext. `FleetHostGuardTest` holds all three
-  rules. Mail's stalwart mesh endpoint was `https://stalwart.app:2443`; it is now `http://stalwart.app:2080`. That port needs
+  rules. Mail's stalwart mesh endpoint was `https://stalwart.mesh.diegonmarcos.com:2443`; it is now `http://stalwart.mesh.diegonmarcos.com:2080`. That port needs
   the HTTP listener mapped in cloud-u-containers (`user-comm_tools-stalwart` extra_ports, wg0 + wg-public); until it ships the
   mesh probe fails and Mail stays on the public URL with the bearer (the verdict is cached), so nothing breaks.
 - **Contracts live in the JVM lib.** `FleetEndpointsContract` and `MailEndpointsContract` moved into `libs:fleet-endpoints`
@@ -96,7 +96,7 @@ check, which a mesh call would skip, so it stays on the public URL and is never 
 
 - libs:auth reaches the transport through one seam, `AuthHttp.transport` (libs:auth stays free of the dependency, so the
   other apps that link it are unchanged): `ConfigSyncClient.request` (config artifact, vault bundle) and
-  `ProviderStatus.probe` (sign-in probes, e.g. `auth.diegonmarcos.com/api/health` goes to `authelia.app`). Cloud Account installs
+  `ProviderStatus.probe` (sign-in probes, e.g. `auth.diegonmarcos.com/api/health` goes to `authelia.mesh.diegonmarcos.com`). Cloud Account installs
   it in `FleetEndpointsRuntime.start`.
 - libs:account's `ProfileSyncClient` routes through `FleetHttp.exchange` the same way (no redirect followed, as before).
 
@@ -121,7 +121,7 @@ both; any other app is unchanged. What moved:
   declared `authelia` pair routes only `/api/health`. The portal URL is `BuildConfig.FLEET_AUTH_URL`.
 - **libs:updater** tries the git-proxy mesh mirror FIRST (`sourceOrder`: mesh, release, ghcr); its base is
   `BuildConfig.MESH_MIRROR_BASE`, derived from the `git-proxy-api` declaration. A dead mesh costs a 3 s connect, then the public legs run.
-- **libs:news** reads the declared `news` service (mesh `news-gdelt.app:3019`, public `news-gdelt.diegonmarcos.com`, mesh first):
+- **libs:news** reads the declared `news` service (mesh `news-gdelt.mesh.diegonmarcos.com:3019`, public `news-gdelt.diegonmarcos.com`, mesh first):
   default base `BuildConfig.NEWS_API_BASE`, calls over the seam. `topics.json` no longer carries a `base`.
 - **Keyboard / Writer** default LanguageTool URL is `BuildConfig.LANGUAGETOOL_URL` (the declared `languagetool` URL).
 - Build scripts read the declaration through `ab_cloud-libs-shared/libs/fleet-urls.gradle` (`fleetUrl(id)`, `fleetMeshUrl(id)`).
