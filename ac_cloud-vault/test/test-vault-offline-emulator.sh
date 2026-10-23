@@ -94,6 +94,9 @@ if [ -n "${OLD_APK:-}" ]; then
   touch_finger; sleep 3; trace after-finger-1; touch_finger; sleep 3; trace after-finger-2
   $ui wait "$item" 90 || die old-vault "seeded vault item not shown after sign-in on the OLD apk"
   shot old-vault
+  # diagnostic: does the OLD app offer the fingerprint on a cold start before the update?
+  launch; sleep 8; trace old-cold-start
+  if $ui has 'Touch the fingerprint sensor|Biometric verification'; then touch_finger; sleep 4; trace old-cold-unlocked; fi
   adb -e shell am force-stop $pkg
   # update in place: same package + signature, user data kept
   adb -e install -r -d "$NEW_APK" >/dev/null || die install-new "update install (install -r) failed"
