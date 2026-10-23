@@ -28,11 +28,43 @@ class UnpackAfterInstallTest {
     private val defaultStarter = UnpackAfterInstall.starter
     private val defaultLauncher = UnpackAfterInstall.launcher
     private val defaultSender = UnpackAfterInstall.sender
+    private val defaultRetries = UnpackAfterInstall.startRetries
+    private val defaultDelay = UnpackAfterInstall.retryDelayMs
 
     @After fun restore() {
         UnpackAfterInstall.starter = defaultStarter
         UnpackAfterInstall.launcher = defaultLauncher
         UnpackAfterInstall.sender = defaultSender
+        UnpackAfterInstall.startRetries = defaultRetries
+        UnpackAfterInstall.retryDelayMs = defaultDelay
+    }
+
+    /** The fallback tests below run with no retry window; the retry itself is proven in aRefusedStartIsRetriedUntilAndroidAllowsIt. */
+    private fun noRetry() { UnpackAfterInstall.startRetries = 0 }
+
+    @Test fun aRefusedStartIsRetriedUntilAndroidAllowsIt() {
+        var tries = 0; var launched = false
+        UnpackAfterInstall.retryDelayMs = 10
+        UnpackAfterInstall.starter = { _, _ -> ++tries >= 3 }
+        UnpackAfterInstall.launcher = { _, _ -> launched = true; true }
+        UnpackAfterInstall.run(app, "cld.termux")
+        assertEquals(1, tries)
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(100))
+        assertEquals(3, tries)
+        assertFalse("a start that Android allowed on a retry never opens the app", launched)
+        assertEquals(UnpackAfterInstall.UNPACKING, UnpackAfterInstall.resultOf(app, "cld.termux"))
+    }
+
+    @Test fun aStartRefusedForTheWholeWindowOpensTheApp() {
+        var tries = 0; var launched = false
+        UnpackAfterInstall.startRetries = 2; UnpackAfterInstall.retryDelayMs = 10
+        UnpackAfterInstall.starter = { _, _ -> tries++; false }
+        UnpackAfterInstall.launcher = { _, _ -> launched = true; true }
+        UnpackAfterInstall.run(app, "cld.termux")
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200))
+        assertEquals(3, tries)
+        assertTrue(launched)
+        assertEquals("opened to unpack", UnpackAfterInstall.resultOf(app, "cld.termux"))
     }
 
     @Test fun onlyTheTwoTerminalsApply() {
@@ -84,6 +116,7 @@ class UnpackAfterInstallTest {
 
     @Test fun anUnstartableServiceFallsBackToLaunchingTheApp() {
         var launched: String? = null
+        noRetry()
         UnpackAfterInstall.starter = { _, _ -> false }
         UnpackAfterInstall.launcher = { _, pkg -> launched = pkg; true }
         UnpackAfterInstall.run(app, "cld.termux")
@@ -92,6 +125,7 @@ class UnpackAfterInstallTest {
     }
 
     @Test fun neitherWorkingIsReportedNotHidden() {
+        noRetry()
         UnpackAfterInstall.starter = { _, _ -> false }
         UnpackAfterInstall.launcher = { _, _ -> false }
         UnpackAfterInstall.run(app, "cld.termux")

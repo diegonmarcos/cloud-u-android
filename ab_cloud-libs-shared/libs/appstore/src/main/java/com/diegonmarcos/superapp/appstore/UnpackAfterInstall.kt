@@ -88,11 +88,33 @@ object UnpackAfterInstall {
                 record(app, pkg, text(resultCode, data?.getString("error")))
         })
         val intent = Intent(ACTION).setComponent(ComponentName(pkg, SERVICE)).putExtra(EXTRA_RECEIVER, receiver)
+        attempt(app, pkg, intent, 0)
+    }
+
+    /**
+     * Android refuses a background service start while the Store is not yet in the foreground state that allows it
+     * (its install foreground service or the update worker's is still coming up: a Store process started cold for this
+     * hand-off was refused 1.3 s in, 0.5 s before its own foreground service began, #1121 emulator probe). The refusal is
+     * transient, so the start is retried for [startRetries] x [retryDelayMs] before the app is opened instead.
+     */
+    private fun attempt(app: Context, pkg: String, intent: Intent, n: Int) {
         if (starter(app, intent)) return
-        // The service is unavailable (an older build, or Android refused a background start): the
+        if (n < startRetries) {
+            Handler(Looper.getMainLooper()).postDelayed({ attempt(app, pkg, intent, n + 1) }, retryDelayMs)
+            return
+        }
+        // The service is unavailable (an older build, or Android keeps refusing the background start): the
         // app's own first start unpacks, so open it. The result stays "opened" until it is seen.
         record(app, pkg, if (launcher(app, pkg)) "opened to unpack" else "unpack failed: could not start $pkg")
     }
+
+    /** Seam: how many times a refused service start is retried before the app is opened (a JVM test sets 0). */
+    @Volatile
+    var startRetries: Int = 15
+
+    /** Seam: the pause between those retries. */
+    @Volatile
+    var retryDelayMs: Long = 1_000L
 
     /** What the last unpack of [pkg] said, null when none ran from here. */
     fun resultOf(ctx: Context, pkg: String): String? = runCatching {

@@ -24,6 +24,6 @@ class UnpackTestReceiver : BroadcastReceiver() {
 
     companion object {
         const val ACTION = "com.diegonmarcos.cloud.action.TEST_UNPACK"
-        private const val HOLD_MS = 120_000L
+        private const val HOLD_MS = 45_000L   // under the 60 s broadcast limit: a longer goAsync hold is an ANR of the Store
     }
 }
