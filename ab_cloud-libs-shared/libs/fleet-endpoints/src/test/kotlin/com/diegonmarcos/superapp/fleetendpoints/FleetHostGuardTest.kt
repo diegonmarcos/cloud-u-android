@@ -64,7 +64,9 @@ class FleetHostGuardTest {
         }
         // no hand-listed mesh host and no public host in cleartext, in ANY app's config
         val generated = Regex("<!-- BEGIN fleet-mesh-cleartext.*?<!-- END fleet-mesh-cleartext -->", RegexOption.DOT_MATCHES_ALL)
-        val handApp = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*\\.mesh\\.diegonmarcos\\.com\\s*</domain>"); val publicHost = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*diegonmarcos\\.com\\s*</domain>")
+        val handApp = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*\\.mesh\\.diegonmarcos\\.com\\s*</domain>");
+        // a public host is any diegonmarcos.com host that is not in the mesh namespace (#1123: mesh names are <name>.mesh.diegonmarcos.com)
+        val publicHost = Regex("<domain[^>]*>\\s*[A-Za-z0-9.-]*(?<!\\.mesh\\.)diegonmarcos\\.com\\s*</domain>")
         root.listFiles().orEmpty().filter { it.isDirectory && (it.name.startsWith("ac_") || it.name.startsWith("aa_")) }.forEach { app ->
             app.walkTopDown().onEnter { it.name != "build" && it.name != ".git" && it.name != "node_modules" }.filter { it.name == "network_security_config.xml" }.forEach { f ->
                 val rel = f.relativeTo(root).invariantSeparatorsPath
