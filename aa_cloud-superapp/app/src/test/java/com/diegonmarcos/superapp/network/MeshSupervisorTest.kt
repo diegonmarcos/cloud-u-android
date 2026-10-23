@@ -13,8 +13,8 @@ class MeshSupervisorTest {
     private fun input(
         policy: MeshIntent.Policy = MeshIntent.Policy(),
         engine: Boolean = true, up: Boolean = false, key: Boolean = true, consent: Boolean = false,
-        net: Net = Net.WIFI, last: Long = 0L, failures: Int = 0,
-    ) = MeshSupervisor.Input(policy, engine, up, key, consent, net, now, last, failures)
+        net: Net = Net.WIFI, last: Long = 0L, failures: Int = 0, held: String? = null,
+    ) = MeshSupervisor.Input(policy, engine, up, key, consent, net, now, last, failures, held)
 
     @Test fun `the default intent is connected, every start-up condition on`() {
         val p = MeshIntent.Policy()
@@ -80,5 +80,27 @@ class MeshSupervisorTest {
 
     @Test fun `every reason has a sentence`() {
         for (w in Why.values()) assertTrue(w.name, MeshSupervisor.explain(w).isNotBlank())
+    }
+
+    @Test fun `#1124 slot held by another app - no auto-connect, even with consent pending`() {
+        for (consent in listOf(false, true)) {
+            val d = MeshSupervisor.decide(input(held = "Firewall", consent = consent))
+            assertFalse(d.connect); assertEquals(Why.SLOT_HELD, d.why)
+        }
+    }
+
+    @Test fun `#1124 slot free - it auto-connects`() {
+        val d = MeshSupervisor.decide(input(held = null)); assertTrue(d.connect); assertEquals(Why.RECONNECT, d.why)
+    }
+
+    @Test fun `#1124 the Status text names the holder`() {
+        assertEquals("VPN slot held by Firewall", MeshSupervisor.explain(Why.SLOT_HELD, "Firewall"))
+        assertEquals("VPN slot held by another app", MeshSupervisor.explain(Why.SLOT_HELD))
+    }
+
+    @Test fun `#1124 a VPN network owned by another uid is a foreign holder, ours is not`() {
+        assertEquals(10123, MeshSupervisor.foreignOwner(listOf(10001, 10123), 10001))
+        assertEquals(null, MeshSupervisor.foreignOwner(listOf(10001), 10001))
+        assertEquals(null, MeshSupervisor.foreignOwner(emptyList(), 10001))
     }
 }

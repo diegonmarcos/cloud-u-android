@@ -48,7 +48,7 @@ object MeshSupervisor {
 
     enum class Net { WIFI, MOBILE, OTHER, NONE }
 
-    enum class Why { WANTED_OFF, UP, NO_ENGINE, NO_KEY, NO_NETWORK, NET_NOT_ALLOWED, NEEDS_CONSENT, BACKOFF, RECONNECT }
+    enum class Why { WANTED_OFF, UP, NO_ENGINE, NO_KEY, NO_NETWORK, NET_NOT_ALLOWED, SLOT_HELD, NEEDS_CONSENT, BACKOFF, RECONNECT }
 
     data class Input(
         val policy: MeshIntent.Policy,
@@ -61,6 +61,8 @@ object MeshSupervisor {
         val nowMs: Long,
         val lastAttemptMs: Long,
         val failures: Int,
+        /** #1124 Label of another app that holds the single Android VPN slot (e.g. the firewall), else null. */
+        val slotHeldBy: String? = null,
     )
 
     /** [connect] true = bring it up now; [retryAtMs] when the supervisor should look again with no event (backoff), else null. */
@@ -78,6 +80,7 @@ object MeshSupervisor {
         i.net == Net.NONE -> Decision(false, Why.NO_NETWORK)
         i.net == Net.WIFI && !i.policy.onWifi -> Decision(false, Why.NET_NOT_ALLOWED)
         i.net == Net.MOBILE && !i.policy.onMobile -> Decision(false, Why.NET_NOT_ALLOWED)
+        i.slotHeldBy != null -> Decision(false, Why.SLOT_HELD)
         i.consentNeeded -> Decision(false, Why.NEEDS_CONSENT)
         i.lastAttemptMs > 0 && i.nowMs < i.lastAttemptMs + backoffMs(i.failures) ->
             Decision(false, Why.BACKOFF, i.lastAttemptMs + backoffMs(i.failures))
@@ -87,7 +90,11 @@ object MeshSupervisor {
     /** What a reboot does to the owner's intent: with Connect on boot off, a reboot counts as a Disconnect. */
     fun wantedAfterBoot(p: MeshIntent.Policy): Boolean = p.wanted && p.onBoot
 
-    fun explain(w: Why): String = when (w) {
+    /** #1124 The owner uid of every active VPN network is [ours] or not: the first foreign one holds the slot. */
+    fun foreignOwner(ownerUids: List<Int>, ours: Int): Int? = ownerUids.firstOrNull { it != ours }
+
+    fun explain(w: Why, holder: String? = null): String = when (w) {
+        Why.SLOT_HELD -> "VPN slot held by ${holder ?: "another app"}"
         Why.WANTED_OFF -> "disconnected by you - stays down until you tap Connect"
         Why.UP -> "connected"
         Why.NO_ENGINE -> "the WireGuard engine is not installed"

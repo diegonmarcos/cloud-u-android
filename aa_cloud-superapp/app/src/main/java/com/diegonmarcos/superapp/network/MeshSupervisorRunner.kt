@@ -115,6 +115,28 @@ object MeshSupervisorRunner {
         }
     }
 
+    /**
+     * #1124 Label of the other app holding the VPN slot, or null when it is free. Android allows one VPN: an active
+     * VPN network not owned by us (or a non-null VpnService.prepare while a foreign VPN is up) means connecting
+     * automatically would displace it, so the supervisor must not claim it.
+     */
+    fun slotHolder(ctx: Context, ourTunnelUp: Boolean, consentNeeded: Boolean): String? {
+        if (ourTunnelUp) return null
+        val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val vpnCaps = runCatching { cm.allNetworks.mapNotNull { cm.getNetworkCapabilities(it) } }.getOrDefault(emptyList())
+            .filter { it.hasTransport(NetworkCapabilities.TRANSPORT_VPN) }
+        if (vpnCaps.isEmpty()) return null
+        val uids = vpnCaps.map { if (android.os.Build.VERSION.SDK_INT >= 29) it.ownerUid else -1 }
+        val foreign = MeshSupervisor.foreignOwner(uids, android.os.Process.myUid())
+        if (foreign == null) return null
+        if (foreign < 0 && !consentNeeded) return null // owner unknown and prepare() is null: it is ours (or consent is held)
+        val pm = ctx.packageManager
+        val label = runCatching {
+            pm.getNameForUid(foreign)?.let { pkg -> pm.getApplicationLabel(pm.getApplicationInfo(pkg.substringBefore(':'), 0)).toString() }
+        }.getOrNull()
+        return label ?: "another app"
+    }
+
     /** One look at the world and one action. Blocking: never on the main thread. */
     @Synchronized
     fun tick(ctx: Context, force: Boolean = false) {
@@ -131,12 +153,15 @@ object MeshSupervisorRunner {
             up = false
             s.edit().putInt("failures", 0).putLong("last_attempt", 0L).apply()
         }
+        val consentNeeded = installed && runCatching { backend.consentIntent() != null }.getOrDefault(false)
+        val holder = if (installed) slotHolder(ctx, up, consentNeeded) else null
         val d = MeshSupervisor.decide(MeshSupervisor.Input(
             policy = policy, engineInstalled = installed, up = up,
             hasKey = prefs.interfacePrivateKey.isNotBlank(),
-            consentNeeded = installed && runCatching { backend.consentIntent() != null }.getOrDefault(false),
+            consentNeeded = consentNeeded,
             net = netKind(ctx), nowMs = now,
             lastAttemptMs = s.getLong("last_attempt", 0L), failures = s.getInt("failures", 0),
+            slotHeldBy = holder,
         ))
         var retryAt = d.retryAtMs
         if (d.connect) {
@@ -157,7 +182,7 @@ object MeshSupervisorRunner {
                 note(ctx, "reconnect failed (${failure?.message ?: "tunnel stayed down"}) - retry in ${MeshSupervisor.backoffMs(f) / 1000}s")
             }
         } else {
-            note(ctx, MeshSupervisor.explain(d.why))
+            note(ctx, MeshSupervisor.explain(d.why, holder))
             if (d.why == MeshSupervisor.Why.UP) s.edit().putInt("failures", 0).apply()
         }
 
