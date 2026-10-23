@@ -89,7 +89,7 @@ class TimelineViewsShotTest {
             }
             // the store those three pages read: start/sleep, move, stop, move, stop, move, stop - per day, steps conserved
             val segs = db.segmentsBetween(0L, System.currentTimeMillis())
-            val kinds = segs.filter { it.startMs >= t(today.minusDays(1), 0) && it.endMs <= t(today, 0) }.map { it.kind }
+            val kinds = segs.filter { it.startMs >= t(today.minusDays(1), 0) && it.startMs < t(today, 0) }.map { it.kind }
             assertEquals(listOf(TlKind.SLEEP, TlKind.MOVE, TlKind.STOP, TlKind.MOVE, TlKind.STOP, TlKind.MOVE), kinds.take(6))
             assertTrue("a stop per seeded stop", segs.count { it.kind != TlKind.MOVE } >= 6)
             assertTrue("steps conserved: ${segs.sumOf { it.steps }} vs $seeded", Math.abs(segs.sumOf { it.steps } - seeded) <= 5)
