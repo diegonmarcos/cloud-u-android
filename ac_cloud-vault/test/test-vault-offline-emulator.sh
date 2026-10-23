@@ -28,7 +28,13 @@ shot() { # screencap to a file on the device, then pull (exec-out piping came ba
   done
   echo "WARN: screenshot $1 failed" >&2
 }
-die() { shot "fail-$1"; $ui dump "$OUT_DIR/fail-$1.xml"; adb -e logcat -d -t 400 > "$OUT_DIR/fail-$1.logcat" 2>&1; echo "FAIL: $2"; exit 1; }
+prefs_keys() { # key NAMES only (never values) of the app's shared prefs, to see what state the app is in; needs a rootable emulator image
+  adb -e root >/dev/null 2>&1; sleep 2
+  for f in $(adb -e shell "ls /data/data/$pkg/shared_prefs/ 2>/dev/null"); do
+    echo "== $f"; adb -e shell "cat /data/data/$pkg/shared_prefs/$f" | grep -o -E 'name="[^"]*"' | sed -E 's/(userKey|Key|key|token|Token)_?[A-Za-z0-9-]{8,}/\1<id>/' | head -80
+  done
+}
+die() { shot "fail-$1"; prefs_keys > "$OUT_DIR/fail-$1.prefs-keys.txt" 2>&1; $ui dump "$OUT_DIR/fail-$1.xml"; adb -e logcat -d -t 400 > "$OUT_DIR/fail-$1.logcat" 2>&1; echo "FAIL: $2"; exit 1; }
 launch() { adb -e shell am force-stop $pkg; adb -e shell monkey -p $pkg -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; }
 touch_finger() { adb -e emu finger touch 1; }
 offline() { adb -e shell svc wifi disable; adb -e shell svc data disable; adb -e shell cmd connectivity airplane-mode enable; sleep 3; }
