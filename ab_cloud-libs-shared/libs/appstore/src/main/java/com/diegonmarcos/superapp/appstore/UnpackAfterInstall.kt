@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.appstore
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -42,9 +43,12 @@ object UnpackAfterInstall {
     @Volatile
     var starter: (Context, Intent) -> Boolean = { c, i ->
         try {
-            // startService, not startForegroundService: the Store holds its own foreground service for the
-            // length of an install, which allows it; the app's service goes foreground itself.
-            c.startService(i) != null
+            // startForegroundService, not startService: a plain start is refused by the TARGET's own background
+            // restriction ("Background start not allowed", startFg?=false) whatever state the Store is in, because
+            // the freshly installed terminal is idle. A foreground start is checked against the Store's state instead
+            // (it holds a foreground service for the length of an install), and the terminal's UnpackService calls
+            // startForeground at once in onStartCommand, as its own MY_PACKAGE_REPLACED receiver relies on.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) c.startForegroundService(i) != null else c.startService(i) != null
         } catch (_: Throwable) { false }
     }
 

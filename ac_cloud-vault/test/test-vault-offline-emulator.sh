@@ -45,10 +45,11 @@ enrol_fingerprint() {
   sleep 4
   $ui has 'PIN|password|pattern' && { adb -e shell input text 1234; adb -e shell input keyevent 66; sleep 3; }
   for _ in 1 2 3 4 5 6; do
+    $ui tap '^Wait$' 2 2>/dev/null || true   # a slow software-rendered emulator can ANR the launcher or Settings mid-enrolment: keep waiting
     $ui tap '^I agree$|^Agree$' 3 2>/dev/null || $ui tap '^Next$|^Get started$|^Yes$|^Start$|^Done$' 3 2>/dev/null || $ui tap '^More$' 2 2>/dev/null || true
     sleep 1
   done
-  for _ in $(seq 1 14); do touch_finger; sleep 1.2; done
+  for _ in $(seq 1 14); do $ui tap '^Wait$' 1 2>/dev/null || true; touch_finger; sleep 1.2; done
   $ui tap 'Done|Next|Not now|Skip' 6 2>/dev/null || true
   shot enrolled
   adb -e shell input keyevent 3
