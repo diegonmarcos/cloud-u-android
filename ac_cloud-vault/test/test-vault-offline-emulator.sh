@@ -94,6 +94,17 @@ if [ -n "${OLD_APK:-}" ]; then
   touch_finger; sleep 3; trace after-finger-1; touch_finger; sleep 3; trace after-finger-2
   $ui wait "$item" 90 || die old-vault "seeded vault item not shown after sign-in on the OLD apk"
   shot old-vault
+  # the post-login prompt does not turn biometric unlock on: do it in Settings > Account security
+  $ui tap '^Close$' 4 2>/dev/null || true
+  $ui tap '^Settings$' 20 || die settings-tab "no Settings tab"
+  trace settings
+  $ui tap 'Account security' 20 || die account-security "no Account security entry"
+  trace account-security
+  $ui tap 'Unlock with biometrics' 20 || die bio-toggle "no 'Unlock with biometrics' switch"
+  $ui wait 'Touch the fingerprint sensor|Biometric verification' 30 || die bio-prompt "no biometric prompt after enabling"
+  for _ in 1 2 3; do touch_finger; sleep 2; $ui has 'Touch the fingerprint sensor|Biometric verification' || break; done
+  trace bio-enabled
+  shot bio-enabled
   # diagnostic: does the OLD app offer the fingerprint on a cold start before the update?
   launch; sleep 8; trace old-cold-start
   if $ui has 'Touch the fingerprint sensor|Biometric verification'; then touch_finger; sleep 4; trace old-cold-unlocked; fi
