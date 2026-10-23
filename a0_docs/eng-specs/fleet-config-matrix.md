@@ -782,6 +782,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, 
 | `timeline_state` | prefs | device | no | Timeline store migration marker (#1114): when the stops, step samples and raw fixes were moved into the one timeline store (maps.db timeline_segments); the store itself is re-derived on the new phone, never migrated. |
 | `tracker_corrections` | prefs | device | no | The owner's corrections to the Tracker timeline (confirmed visits, edited places and modes, deleted or split segments, added visits). Recorded data tied to the timeline store, never migrated; the store is re-derived on the new phone. |
 | `tracker_engine` | prefs | config | yes | Tracking engine settings (sources, accurate-fix / cell / motion triggers), its progress counters and the learned step length. |
+| `tracker_home` | prefs | device | no | The owner's home-city override for the Trips tab (blank = detect from the most frequent sleep city of the last 90 days). Tied to the timeline store, re-derivable, never migrated. |
 | `tracker_place_addr_v2` | prefs | device | no | Cache of reverse-geocoded addresses and POI name + category (open provider answers by ~11 m grid cell) so a place is asked once; re-fetched on demand. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
