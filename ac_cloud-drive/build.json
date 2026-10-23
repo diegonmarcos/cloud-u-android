@@ -657,7 +657,8 @@
         "name_families": [
           "cloud",
           "diegonmarcos",
-          "front"
+          "front",
+          "z-archived"
         ],
         "public_repos": [
           {
@@ -665,16 +666,12 @@
             "caption": "cloud"
           },
           {
-            "repo": "cloud-t-infra",
-            "caption": "cloud-t-infra"
-          },
-          {
-            "repo": "cloud-u-desktop",
-            "caption": "cloud-u-desktop"
-          },
-          {
             "repo": "cloud-me_data-pub",
             "caption": "cloud-me_data-pub"
+          },
+          {
+            "repo": "cloud-t-infra",
+            "caption": "cloud-t-infra"
           },
           {
             "repo": "cloud-u-android",
@@ -683,6 +680,10 @@
           {
             "repo": "cloud-u-containers",
             "caption": "cloud-u-containers"
+          },
+          {
+            "repo": "cloud-u-desktop",
+            "caption": "cloud-u-desktop"
           },
           {
             "repo": "cloud-u-linux",

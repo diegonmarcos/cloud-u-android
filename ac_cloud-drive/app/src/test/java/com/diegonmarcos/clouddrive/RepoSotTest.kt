@@ -68,14 +68,25 @@ class RepoSotTest {
     }
 
     @Test fun pendingRepositoriesAreDeclaredAndNeverCloneable() {
+        // cloud-webapps and cloud-me-containers were pending_creation when #1073 landed and the registry has since
+        // created them (2026-10-21): the real registry now lists both as created and cloneable...
         for (n in listOf("cloud-webapps", "cloud-me-containers")) {
             val e = decl.byGithub(n)
             assertTrue("$n must be declared in the registry", e != null)
-            assertTrue("$n is not created yet", e!!.pending)
-            assertFalse(decl.cloneable(n))
+            assertFalse("$n is created in the registry", e!!.pending)
+            assertTrue(decl.cloneable(n))
+        }
+        // ...so the pending rule is held on the registry as it was, rebuilt by the same parser: the real entries plus the two as pending.
+        fun pending(n: String) = JsonObject(mapOf("name" to JsonPrimitive(n), "github" to JsonPrimitive(n), "private" to JsonPrimitive(false), "pending" to JsonPrimitive(true), "renamed_from" to JsonArray(emptyList())))
+        val registry = Declarations.parseRepoSot(JsonArray(json.parseToJsonElement(baked()).jsonArray.filter { e -> e.jsonObject["name"]!!.jsonPrimitive.content !in setOf("cloud-webapps", "cloud-me-containers") } + listOf(pending("cloud-webapps"), pending("cloud-me-containers"))).toString())
+        for (n in listOf("cloud-webapps", "cloud-me-containers")) {
+            val e = registry.byGithub(n)
+            assertTrue("$n must be declared in the registry", e != null)
+            assertTrue("$n is pending", e!!.pending)
+            assertFalse(registry.cloneable(n))
         }
         val withPending = Declarations.GitFamilyDecl(family.instances, family.repos + family.repos.first().copy(name = "cloud-webapps", seed = true, private = false))
-        assertEquals("a pending repository is dropped from the family", family.repos.map { it.name }, Declarations.restrictToRegistry(withPending, decl).repos.map { it.name })
+        assertEquals("a pending repository is dropped from the family", family.repos.map { it.name }, Declarations.restrictToRegistry(withPending, registry).repos.map { it.name })
         val unknown = Declarations.GitFamilyDecl(family.instances, family.repos + family.repos.first().copy(name = "not-in-the-registry"))
         assertFalse("an unlisted repository is dropped", Declarations.restrictToRegistry(unknown, decl).repos.any { it.name == "not-in-the-registry" })
     }
