@@ -2216,7 +2216,9 @@
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
      "source": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/tracker/TrackerDebugApiProvider.kt",
-     "callers": []
+     "callers": [
+      "aa_cloud-superapp"
+     ]
     },
     {
      "id": "op:tracker/places",
@@ -2238,7 +2240,9 @@
      "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
      "level": "signature",
      "source": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/tracker/TrackerDebugApiProvider.kt",
-     "callers": []
+     "callers": [
+      "aa_cloud-superapp"
+     ]
     },
     {
      "id": "op:tracker/steps",
