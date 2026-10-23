@@ -36,8 +36,8 @@
    "notes": "The owner's memory + product backlog. cloud-code's Backlog tab reads and writes it HERE, through the shared store (#575 proof case) — no second clone."
   },
   {
-   "name": "cloud-infra",
-   "label": "cloud-infra",
+   "name": "cloud-t-infra",
+   "label": "cloud-t-infra",
    "seed": true,
    "notes": "Infrastructure declarations, keys, CI"
   },

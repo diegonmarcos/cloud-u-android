@@ -303,7 +303,7 @@
             "icon": "brand-github.svg"
           },
           {
-            "url": "https://github.com/diegonmarcos/cloud-infra",
+            "url": "https://github.com/diegonmarcos/cloud-t-infra",
             "title": "Cloud",
             "icon": "brand-github.svg"
           },
@@ -1172,7 +1172,7 @@
             "icon": "world.svg"
           },
           {
-            "url": "https://github.com/diegonmarcos/cloud-infra",
+            "url": "https://github.com/diegonmarcos/cloud-t-infra",
             "title": "Cloud",
             "icon": "database.svg"
           },
@@ -1691,13 +1691,13 @@
           "links": [
             {
               "label": "Solutions - Infra",
-              "url": "https://github.com/diegonmarcos/cloud-infra/tree/main/a_solutions",
+              "url": "https://github.com/diegonmarcos/cloud-t-infra/tree/main/a_solutions",
               "icon": "world.svg",
               "item": 0
             },
             {
               "label": "Solutions - User",
-              "url": "https://github.com/diegonmarcos/cloud-infra/tree/main/1_front-configs",
+              "url": "https://github.com/diegonmarcos/cloud-t-infra/tree/main/1_front-configs",
               "icon": "settings.svg",
               "item": 1
             },
@@ -1709,13 +1709,13 @@
             },
             {
               "label": "Infra",
-              "url": "https://github.com/diegonmarcos/cloud-infra/tree/main/b_infra",
+              "url": "https://github.com/diegonmarcos/cloud-t-infra/tree/main/b_infra",
               "icon": "git-branch.svg",
               "item": 3
             },
             {
               "label": "VPS",
-              "url": "https://github.com/diegonmarcos/cloud-infra/tree/main/c_vps",
+              "url": "https://github.com/diegonmarcos/cloud-t-infra/tree/main/c_vps",
               "icon": "device-desktop.svg",
               "item": 4
             }

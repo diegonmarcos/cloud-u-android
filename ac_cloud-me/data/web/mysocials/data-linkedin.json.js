@@ -52,7 +52,7 @@
    "company": "Career break",
    "dates": "Jan 2024 - Present · 2 yrs 7 mos",
    "location": "Berlin, Berlin, Germany",
-   "description": "@brief\n\"Software Engineering, Computer Science, Product Management and Design\"\n(3 years | 3,024 hours | Berlin and Barcelona)\n\n(https://42berlin.de)\n\n---\n\n@projects\n> https://github.com/diegonmarcos/\n  - https://github.com/diegonmarcos/diegonmarcos.github.io\n  - https://github.com/diegonmarcos/cloud-infra\n  - https://github.com/diegonmarcos/cloud-infra-desktop"
+   "description": "@brief\n\"Software Engineering, Computer Science, Product Management and Design\"\n(3 years | 3,024 hours | Berlin and Barcelona)\n\n(https://42berlin.de)\n\n---\n\n@projects\n> https://github.com/diegonmarcos/\n  - https://github.com/diegonmarcos/diegonmarcos.github.io\n  - https://github.com/diegonmarcos/cloud-t-infra\n  - https://github.com/diegonmarcos/cloud-infra-desktop"
   },
   {
    "title": "Capital Markets Advisor",

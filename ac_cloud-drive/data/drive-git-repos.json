@@ -43,13 +43,14 @@
    "renamed_from": ["cloud-data-my-ai-memory"]
   },
   {
-   "name": "cloud-infra",
-   "label": "cloud-infra",
+   "name": "cloud-t-infra",
+   "label": "cloud-t-infra",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
-   "notes": "Infrastructure declarations, keys, CI"
+   "notes": "Infrastructure declarations, keys, CI",
+   "renamed_from": ["cloud-infra"]
   },
   {
    "name": "cloud-u-desktop",

@@ -47,7 +47,7 @@
       "path": "data/repos.sot.json",
       "url": "https://raw.githubusercontent.com/diegonmarcos/git-repos-master/main/repos.json",
       "schema": "cloud-repos/v1",
-      "sha256": "a334da58983221bae9187f2a9030da017e377afd4be9697fd1ac10c536c782da",
+      "sha256": "3ebd2ac2b71d2535a66fbaaf283fa2e6ef1cfdb3d776fa014109c04059b1b368",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },
@@ -665,8 +665,8 @@
             "caption": "cloud"
           },
           {
-            "repo": "cloud-infra",
-            "caption": "cloud-infra"
+            "repo": "cloud-t-infra",
+            "caption": "cloud-t-infra"
           },
           {
             "repo": "cloud-u-desktop",

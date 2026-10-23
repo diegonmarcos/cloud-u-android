@@ -27,12 +27,6 @@
       "doc": "Large binary artefacts (git-lfs) for cloud-me-data-pvt (was cloud-data)."
     },
     {
-      "name": "cloud-infra",
-      "repo": "diegonmarcos/cloud-infra",
-      "private": false,
-      "doc": "Fleet: services, infra, the derive engine (1_cloud-configs)."
-    },
-    {
       "name": "cloud-me-containers",
       "repo": "diegonmarcos/cloud-me-containers",
       "private": true,
@@ -73,6 +67,12 @@
       "repo": "diegonmarcos/cloud-me_data-pub",
       "private": false,
       "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it."
+    },
+    {
+      "name": "cloud-t-infra",
+      "repo": "diegonmarcos/cloud-t-infra",
+      "private": false,
+      "doc": "Fleet: services, infra, the derive engine (1_cloud-configs). Renamed from cloud-infra 2026-10-23 (#1136)."
     },
     {
       "name": "cloud-u-containers",

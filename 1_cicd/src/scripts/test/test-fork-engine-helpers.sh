@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Plain shell + assert test (matches ~/git/cloud-infra/2_configs/test/*.sh convention:
+# Plain shell + assert test (matches ~/git/cloud-t-infra/2_configs/test/*.sh convention:
 # no framework, source fixture data, assert on resolved values).
 #
 # Proves the fork-engine's hub-vs-hub-less branching is purely data-driven

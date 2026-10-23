@@ -18,7 +18,7 @@ Secrets: none is carried - no key, token, instance id or tfvars value; DKIM publ
 import argparse, json, os, re, sys, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BASE = "https://raw.githubusercontent.com/diegonmarcos/cloud-infra/main/"
+BASE = "https://raw.githubusercontent.com/diegonmarcos/cloud-t-infra/main/"
 PATHS = {
     "consolidated": "1_cloud-configs/dist/_cloud-data-consolidated.json",
     "zone": "c_vps/ba-clo_cloudflare/src/terraform.json",

@@ -61,7 +61,7 @@ jobs:
       - name: Checkout cloud-infra (topology inputs)
         uses: actions/checkout@v4
         with:
-          repository: diegonmarcos/cloud-infra
+          repository: diegonmarcos/cloud-t-infra
           path: .inputs/cloud-infra
 
       - name: Checkout front (linktree input)
