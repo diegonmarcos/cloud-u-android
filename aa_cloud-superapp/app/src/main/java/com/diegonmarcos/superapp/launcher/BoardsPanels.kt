@@ -57,6 +57,8 @@ import com.diegonmarcos.superapp.boards.SleepDay
 import com.diegonmarcos.superapp.boards.StepsBlock
 import com.diegonmarcos.superapp.health.HealthBoardReader
 import com.diegonmarcos.superapp.boards.TaskProject
+import com.diegonmarcos.superapp.boards.TimelineBoard
+import com.diegonmarcos.superapp.boards.TimelineSeg
 import com.diegonmarcos.superapp.boards.ThreadIntents
 import com.diegonmarcos.superapp.boards.Why
 import com.diegonmarcos.superapp.notificationcenter.ReplyActions
@@ -83,6 +85,9 @@ internal object BoardTags {
     const val INBOX = "board:inbox"
     const val STEPS = "board:steps"
     const val PLACES = "board:places"
+    const val TIMELINE = "board:timeline"
+    const val TL_START = "tl:start"
+    fun tlRow(i: Int, kind: String) = "tl:$i:$kind"
     const val PROJECTS = "board:projects"
     const val LOADING = "board:loading"
     fun unavailable(board: String) = "board:unavailable:$board"
@@ -261,7 +266,7 @@ private fun AppGlyph(icon: ImageBitmap?, label: String) {
 }
 
 
-// ── My-PM: MyHealth (steps in km, resting heart rate, sleep) ───────
+// ── ME: MyHealth (steps in km, resting heart rate, sleep) ───────
 
 /** Counts ON_RESUME after the first composition: back from the Health Connect dialog, the board reads again. */
 @Composable
@@ -456,7 +461,7 @@ private fun SleepChart(week: List<SleepDay>) {
     }
 }
 
-// ── My-PM: Navigation/Tracker (places) ─────────────────────────────────────
+// ── ME: places (the older tracker/places card) ─────────────────────────────────────
 
 @Composable
 internal fun BoardPlacesBody(epoch: Int, onOpen: (String) -> Unit) {
@@ -519,6 +524,63 @@ private fun MiniMap(d: PlacesDay, modifier: Modifier) {
         pts.forEachIndexed { i, v -> val o = at(v.lat, v.lon); if (i == 0) path.moveTo(o.x, o.y) else path.lineTo(o.x, o.y) }
         drawPath(path, p.textSecondary, style = Stroke(width = 2f))
         pts.forEach { v -> drawCircle(p.accent, radius = 5f, center = at(v.lat, v.lon)) }
+    }
+}
+
+// ── ME: MyTrips (the last 24 h timeline from Cloud Nav's store) ─────────────
+
+private val TL_HM = DateTimeFormatter.ofPattern("HH:mm")
+
+/** What one timeline row says. Pure, so a JVM test holds the wording. */
+internal data class TlRowText(val title: String, val detail: String, val leading: String)
+
+internal fun tlRowText(s: TimelineSeg, zone: java.time.ZoneId = java.time.ZoneId.systemDefault()): TlRowText {
+    fun hm(ms: Long) = java.time.Instant.ofEpochMilli(ms).atZone(zone).format(TL_HM)
+    val span = hm(s.startMs) + "–" + hm(s.endMs)
+    val mins = ((s.endMs - s.startMs) / 60_000L).coerceAtLeast(0)
+    val dur = if (mins >= 60) "${mins / 60} h ${mins % 60} min" else "$mins min"
+    val place = s.place.ifBlank { if (s.lat != null && s.lon != null) "%.4f, %.4f".format(java.util.Locale.US, s.lat, s.lon) else "unknown place" }
+    val km = if (s.distanceM >= 1000) "%.1f km".format(java.util.Locale.US, s.distanceM / 1000.0) else "${s.distanceM} m"
+    return when (s.kind) {
+        "move" -> TlRowText("Move", "$span · $dur" + (if (s.distanceM > 0) " · $km" else "") + (if (s.steps > 0) " · %,d steps".format(s.steps) else ""), "→")
+        "sleep" -> TlRowText("Sleep · $place", "$span · $dur" + (if (s.steps > 0) " · %,d steps".format(s.steps) else ""), "z")
+        else -> TlRowText("Stop · $place", "$span · $dur" + (if (s.steps > 0) " · %,d steps".format(s.steps) else ""), "•")
+    }
+}
+
+@Composable
+internal fun BoardTimelineBody(epoch: Int, onOpen: (String) -> Unit) {
+    val r = rememberBoardRead(epoch, "timeline") { it.timeline(24) }
+    Column(Modifier.fillMaxWidth().testTag(BoardTags.TIMELINE)) {
+        when (r) {
+            null -> BoardLoading()
+            is Read.Unavailable -> BoardUnavailable("timeline", r, installFix(onOpen, r.why, "extapp:cloud-nav", "Cloud Nav"))
+            is Read.Ok -> TimelineCard(r.value, onOpen)
+        }
+    }
+}
+
+@Composable
+private fun TimelineCard(b: TimelineBoard, onOpen: (String) -> Unit) {
+    val p = LocalKitPalette.current
+    if (b.segments.isEmpty()) {
+        AggStateLine("Nothing on the timeline for the last ${b.hours} h — Cloud Nav has recorded no stop or move", Tone.UNKNOWN)
+        return
+    }
+    val zone = java.time.ZoneId.systemDefault()
+    val steps = b.segments.sumOf { it.steps }
+    val km = b.segments.sumOf { it.distanceM } / 1000.0
+    Column(Modifier.fillMaxWidth().padding(vertical = KitDensity.small / 2).clip(RoundedCornerShape(KitDensity.corner))
+        .background(p.surface).padding(horizontal = KitDensity.rowPadH, vertical = KitDensity.rowPadV)) {
+        Text("Last ${b.hours} h · %,d steps · %.1f km".format(steps, km), color = p.textSecondary, fontSize = KitDensity.caption,
+            modifier = Modifier.padding(bottom = KitDensity.small / 2))
+        KitListRow("Start", secondary = java.time.Instant.ofEpochMilli(b.segments.first().startMs).atZone(zone).format(TL_HM),
+            leading = "◦", tag = BoardTags.TL_START)
+        b.segments.forEachIndexed { i, s ->
+            val t = tlRowText(s, zone)
+            KitListRow(t.title, secondary = t.detail, leading = t.leading, tag = BoardTags.tlRow(i, s.kind),
+                onClick = { onOpen("extapp:cloud-nav") })
+        }
     }
 }
 

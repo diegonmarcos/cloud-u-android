@@ -1247,6 +1247,14 @@
         "lib-maps"
       ]
     },
+    "timeline_state": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "Timeline store migration marker (#1114): when the stops, step samples and raw fixes were moved into the one timeline store (maps.db timeline_segments); the store itself is re-derived on the new phone, never migrated.",
+      "used_by": [
+        "lib-maps"
+      ]
+    },
     "tracker_engine": {
       "kind": "prefs",
       "class": "config",
@@ -3174,6 +3182,13 @@
           "path": "externalFilesDir/trace/trace.log, crashes/",
           "class": "device",
           "doc": "Debug trace and crash dumps."
+        },
+        {
+          "id": "timeline-db",
+          "path": "databases/maps.db (timeline_segments), databases/tracker_engine.db",
+          "store": "timeline_state",
+          "class": "device",
+          "doc": "THE timeline store (#1114): move / stop / sleep segments that Daily, Stops, Steps and the SuperApp's MyTrips read, plus the engine's step samples and fixes it is built from. Recorded data, not configuration: it is re-derived by recording on the new phone, never migrated."
         }
       ]
     },

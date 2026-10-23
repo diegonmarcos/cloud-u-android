@@ -144,6 +144,7 @@ jobs:
             # to /data/local/tmp (survives the post-test uninstall).
             mkdir -p test-out
             adb pull /data/local/tmp/explored.png test-out/ || true
+            for p in daily stops steps; do adb pull /data/local/tmp/tl-$p.png test-out/ || true; done   # #1114: Daily / Stops / Steps over the timeline store
             adb logcat -d > test-out/logcat.txt || true
             adb logcat -d -s ExploredRenderTest:* > test-out/probe.txt || true
             exit $rc

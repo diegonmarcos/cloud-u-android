@@ -12,7 +12,7 @@ data class Stay(val startMs: Long, val endMs: Long, val lat: Double, val lon: Do
 data class StopFix(val startMs: Long, val endMs: Long?, val lat: Double, val lon: Double, val name: String?)
 
 /**
- * The places of a day, for the SuperApp's Boards ▸ My-PM ▸ Nav tracker card (op tracker/places). Pure, so a JVM test
+ * The places of a day, for the SuperApp's Boards ▸ ME ▸ MyTrips places (op tracker/places). Pure, so a JVM test
  * holds it. Consecutive fixes within [RADIUS_M] of the running centroid are one stay; a stay shorter than [MIN_DWELL_MS]
  * is a pass-through and dropped, unless it is the day's only one. Accuracy worse than [MAX_ACCURACY_M] is ignored.
  */

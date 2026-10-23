@@ -78,7 +78,7 @@ internal object AggregatorModel {
     /** Panel kinds whose body answers to Sort/Show and to the pull-down gesture. */
     val REFRESHABLE_KINDS = setOf(
         "mail_accounts", "chat_matrix", "chat_mattermost", "notification_center", "stats", "class_inbox",
-        "board_inbox", "board_steps", "board_places", "board_task_projects",
+        "board_inbox", "board_steps", "board_places", "board_timeline", "board_task_projects",
     )
 
     fun ago(ms: Long): String = when {

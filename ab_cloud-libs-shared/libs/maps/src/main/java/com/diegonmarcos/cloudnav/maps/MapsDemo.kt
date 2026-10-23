@@ -163,6 +163,7 @@ object MapsDemo {
             }
         }
         prefs(ctx).edit().putString(KEY_SEEDED_SIGNATURE, contentSignature()).apply()
+        runCatching { TimelineSync.run(ctx) }   // Daily / Stops / Steps read the timeline store, so the demo must reach it
         return inserted
     }
 

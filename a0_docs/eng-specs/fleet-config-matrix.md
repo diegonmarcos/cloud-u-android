@@ -755,6 +755,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, 
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
+| `timeline_state` | prefs | device | no | Timeline store migration marker (#1114): when the stops, step samples and raw fixes were moved into the one timeline store (maps.db timeline_segments); the store itself is re-derived on the new phone, never migrated. |
 | `tracker_engine` | prefs | config | yes | Tracking engine settings (sources, accurate-fix / cell / motion triggers), its progress counters and the learned step length. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
@@ -762,6 +763,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, 
 | file | class | doc |
 |---|---|---|
 | `externalFilesDir/trace/trace.log, crashes/` | device | Debug trace and crash dumps. |
+| `databases/maps.db (timeline_segments), databases/tracker_engine.db` | device | THE timeline store (#1114): move / stop / sleep segments that Daily, Stops, Steps and the SuperApp's MyTrips read, plus the engine's step samples and fixes it is built from. Recorded data, not configuration: it is re-derived by recording on the new phone, never migrated. |
 
 Coverage: 12 covered, 0 gaps.
 

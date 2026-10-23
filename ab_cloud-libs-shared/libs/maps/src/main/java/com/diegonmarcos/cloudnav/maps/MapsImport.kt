@@ -80,6 +80,7 @@ object MapsImport {
                 db.enrichStop(id, s.place, s.neighborhood, s.city, s.country)
             }
         }
+        runCatching { TimelineSync.run(ctx) }   // the views read the timeline store
         return Result(stops.size, null)
     }
 

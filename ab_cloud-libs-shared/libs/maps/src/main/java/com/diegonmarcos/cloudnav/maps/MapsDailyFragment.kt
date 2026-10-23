@@ -130,7 +130,7 @@ class MapsDailyFragment : KitComposeFragment() {
         // deliberately historical (1987-1992) block precisely so it never
         // collides with real tracked data; a bounded "recent" window would hide
         // it (the bug this avoids — see MapsDemo's doc comment).
-        val daily = remember { computeDailyLocations(MapsDb.get(ctx).stopsBetween(0L, System.currentTimeMillis())) }
+        val daily = remember { computeDailyLocations(TimelineViews.richStops(TimelineSync.view(ctx, 0L, System.currentTimeMillis()))) }
 
         if (daily.isEmpty()) {
             Text(

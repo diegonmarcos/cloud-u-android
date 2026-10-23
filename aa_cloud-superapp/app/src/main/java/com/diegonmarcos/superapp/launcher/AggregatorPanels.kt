@@ -235,6 +235,7 @@ private fun PanelBody(state: AggregatorState, index: Int, panel: Sections.StackP
         "board_inbox" -> BoardInboxBody(state, onOpen)
         "board_steps" -> BoardStepsBody(state.epoch, onOpen)
         "board_places" -> BoardPlacesBody(state.epoch, onOpen)
+        "board_timeline" -> BoardTimelineBody(state.epoch, onOpen)
         "board_task_projects" -> BoardTaskProjectsBody(state.epoch, onOpen)
         "cloud_dashboard" -> CloudDashboard(state, panel, actions)
         else -> AggCaption(panel.subtitle.ifBlank { "Coming soon" })

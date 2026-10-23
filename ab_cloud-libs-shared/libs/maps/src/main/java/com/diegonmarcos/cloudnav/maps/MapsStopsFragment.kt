@@ -54,7 +54,7 @@ class MapsStopsFragment : KitComposeFragment() {
         // All-time when unfiltered — see MapsDailyFragment's comment: a
         // "last N years" bound would hide the deliberately historical
         // (1987-1992) demo dataset.
-        val stops = remember(dayMs) { MapsDb.get(ctx).stopsBetween(fromMs, toMs) }
+        val stops = remember(dayMs) { TimelineViews.richStops(TimelineSync.view(ctx, fromMs, toMs)).filter { it.startedAt in fromMs..toMs }.sortedByDescending { it.startedAt } }
         val dayFmt = remember { SimpleDateFormat("EEE, dd MMM yyyy", Locale.US) }
 
         Column(Modifier.fillMaxSize().background(p.surface)) {

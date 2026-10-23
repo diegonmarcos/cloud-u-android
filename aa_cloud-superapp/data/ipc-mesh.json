@@ -2214,6 +2214,18 @@
      "callers": [
       "aa_cloud-superapp"
      ]
+    },
+    {
+     "id": "op:tracker/timeline",
+     "kind": "op",
+     "name": "tracker/timeline",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/tracker/TrackerDebugApiProvider.kt",
+     "callers": [
+      "aa_cloud-superapp"
+     ]
     }
    ]
   },

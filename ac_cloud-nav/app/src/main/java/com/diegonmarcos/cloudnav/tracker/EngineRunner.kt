@@ -100,6 +100,7 @@ object EngineRunner {
             }
         }
         prefs.state = st
+        runCatching { NavTimelineExtra.tick(ctx, now) }   // #1114: the timeline store follows every pass
     }
 
     private fun granted(ctx: Context, perm: String) = ContextCompat.checkSelfPermission(ctx, perm) == PackageManager.PERMISSION_GRANTED

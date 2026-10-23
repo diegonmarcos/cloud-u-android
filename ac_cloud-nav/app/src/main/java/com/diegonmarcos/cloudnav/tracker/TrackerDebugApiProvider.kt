@@ -5,6 +5,9 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.net.Uri
+import com.diegonmarcos.cloudnav.maps.TimelineJson
+import com.diegonmarcos.cloudnav.maps.TimelineSync
+import com.diegonmarcos.cloudnav.maps.TimelineViews
 import com.diegonmarcos.superapp.devtools.AppDebugServer
 import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
@@ -13,9 +16,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * The tracker's data for the fleet: `tracker/steps` and `tracker/places` on the fleet IPC door
+ * The tracker's data for the fleet: `tracker/steps`, `tracker/places` and `tracker/timeline` on the fleet IPC door
  * (<pkg>.fleet, FleetTokenProvider — signature permission CONSTELLATION_DATA, so only a constellation-signed app such
- * as the SuperApp's Boards ▸ My-PM can ask). Read-only: both ops read the stores the Steps page reads
+ * as the SuperApp's Boards ▸ ME can ask). Read-only: all ops read the stores the Steps page reads
  * ([StepsRepository]: Health Connect or the engine's own samples; the engine's fixes plus the foreground tracker's GPS
  * points) and change nothing. Registered from a provider's onCreate, the ImageDebugApiProvider way, so the route exists
  * before Application code runs. Not a real provider and not exported.
@@ -23,15 +26,18 @@ import java.time.ZoneId
 class TrackerDebugApiProvider : ContentProvider() {
     override fun onCreate(): Boolean {
         val app = context?.applicationContext ?: return false
+        NavTimelineExtra.install(app)   // before any page or op reads the timeline store
         runCatching {
             AppDebugServer.route(GROUP, listOf(
                 AppDebugServer.Op("steps", "days=<1..31, default 7>", "steps today and per day (Health Connect, else this phone's counter) with the source status the Steps page shows"),
+                AppDebugServer.Op("timeline", "hours=<1..72, default 24>", "the timeline store: ordered move / stop / sleep segments with time, place, steps and distance for the last hours (read-only)"),
                 AppDebugServer.Op("places", "days=<1..31, default 7>", "the places the tracker recorded, per day: stays (centroid, time span, label)"),
             )) { op, q ->
                 val days = (q["days"]?.toIntOrNull() ?: 7).coerceIn(1, 31)
                 when (op) {
                     "steps" -> steps(app, days).toString()
                     "places" -> places(app, days).toString()
+                    "timeline" -> timeline(app, (q["hours"]?.toIntOrNull() ?: 24).coerceIn(1, 72)).toString()
                     else -> null
                 }
             }
@@ -56,6 +62,13 @@ class TrackerDebugApiProvider : ContentProvider() {
                 .put("status", ui.status.name)
                 .put("status_line", ui.diag.statusLine)
                 .put("hint", ui.diag.hint ?: "")
+        }
+
+        /** `tracker/timeline`: the last [hours] of THE timeline store, nothing computed here and nothing changed. */
+        fun timeline(ctx: Context, hours: Int, nowMs: Long = System.currentTimeMillis()): JSONObject {
+            val from = nowMs - hours * 3_600_000L
+            val segs = TimelineViews.lastHours(TimelineSync.view(ctx, from, nowMs), nowMs, hours)
+            return TimelineJson.toJson(segs, nowMs, hours)
         }
 
         fun places(ctx: Context, days: Int, zone: ZoneId = ZoneId.systemDefault()): JSONObject {

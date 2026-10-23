@@ -21,6 +21,8 @@ import com.diegonmarcos.superapp.health.HealthBoardReader
 import com.diegonmarcos.superapp.boards.StepsBoard
 import com.diegonmarcos.superapp.boards.StepsDay
 import com.diegonmarcos.superapp.boards.TaskProject
+import com.diegonmarcos.superapp.boards.TimelineBoard
+import com.diegonmarcos.superapp.boards.TimelineSeg
 import com.diegonmarcos.superapp.boards.Why
 import com.diegonmarcos.superapp.uikit.KitPartTags
 import com.diegonmarcos.superapp.ui.KitPageHarness
@@ -45,6 +47,7 @@ import java.time.LocalDate
 class BoardsTest : KitPageHarness() {
 
     private val real = Boards.source
+    private val H = 3_600_000L
     private val opened = mutableListOf<String>()
 
     private class Fake(
@@ -54,6 +57,7 @@ class BoardsTest : KitPageHarness() {
         val health: Read<HealthBoard> = Read.Unavailable(Why.NOT_INSTALLED, "Health Connect is not available on this phone"),
         val places: Read<List<PlacesDay>> = Read.Ok(emptyList()),
         val projects: Read<List<TaskProject>> = Read.Ok(emptyList()),
+        val timeline: Read<TimelineBoard> = Read.Unavailable(Why.NOT_INSTALLED, "Cloud Nav is not installed"),
     ) : BoardsSource {
         var calls = 0
         override fun fleetMail(limit: Int) = mail.also { calls++ }
@@ -61,6 +65,7 @@ class BoardsTest : KitPageHarness() {
         override fun steps(days: Int) = steps.also { calls++ }
         override fun health(days: Int) = health.also { calls++ }
         override fun places(days: Int) = places.also { calls++ }
+        override fun timeline(hours: Int) = timeline.also { calls++ }
         override fun taskProjects() = projects.also { calls++ }
     }
 
@@ -87,6 +92,9 @@ class BoardsTest : KitPageHarness() {
         assertEquals("boards", Sections.byId("infos")?.id)
         assertEquals("boards", Sections.canonicalId("infos"))
         assertEquals("boards" to "my-pm", Sections.canonicalPage("infos", "my-pm"))
+        // #1114: My-PM is now ME; the id and its deep links are kept, and `me` resolves too.
+        assertEquals("boards" to "my-pm", Sections.canonicalPage("boards", "me"))
+        assertEquals("ME", boards.allPages.first { it.id == "my-pm" }.label)
         assertTrue(Sections.all().none { it.label == "Projects" && it.id == "boards" })
     }
 
@@ -98,9 +106,11 @@ class BoardsTest : KitPageHarness() {
         assertEquals("boards" to "tasks", Sections.canonicalPage("infos", "work-pm"))
         assertEquals("boards" to "tasks", Sections.canonicalPage("boards", "cloud"))
         val tasks = boards.stackByPage["tasks"].orEmpty().map { it.kind }
-        assertEquals(listOf("board_task_projects", "calendar_month"), tasks)
-        // The calendar is the same component My-PM shows.
-        assertTrue("calendar_month" in boards.stackByPage["my-pm"].orEmpty().map { it.kind })
+        // #1114: the tasks table moved here from ME, which has no calendar any more.
+        assertEquals(listOf("board_task_projects", "tasks", "calendar_month"), tasks)
+        val me = boards.stackByPage["my-pm"].orEmpty().map { it.kind }
+        assertFalse("ME has no calendar", "calendar_month" in me)
+        assertFalse("the tasks table left ME", "tasks" in me)
     }
 
     @Test fun `no board carries sample numbers`() {
@@ -109,7 +119,7 @@ class BoardsTest : KitPageHarness() {
         assertTrue(panels.none { it.kind == "stats" })
         assertTrue(panels.all { it.rows.isEmpty() })
         val myPm = boards.stackByPage["my-pm"].orEmpty().map { it.kind }
-        assertTrue("board_steps" in myPm && "board_places" in myPm)
+        assertTrue("board_steps" in myPm && "board_timeline" in myPm)
         assertEquals("board_inbox", boards.stackByPage["msgs"].orEmpty().first().kind)
     }
 
@@ -166,6 +176,49 @@ class BoardsTest : KitPageHarness() {
         use(Fake(health = Read.Unavailable(Why.OUTDATED, "Health Connect needs an update before it can be read")))
         showKit { BoardStepsBody(0) { opened += it } }
         waitForText("needs an update")
+    }
+
+    @Test fun `MyTrips draws the last 24 h timeline in order`() {
+        val t = 1_760_000_000_000L
+        use(Fake(timeline = Read.Ok(TimelineBoard(t, 24, listOf(
+            TimelineSeg("stop", t - 20 * H, t - 14 * H, "Home", 40.4, -3.7, 120, 0, "gps"),
+            TimelineSeg("move", t - 14 * H, t - 13 * H, "", 40.41, -3.71, 2100, 1800, ""),
+            TimelineSeg("stop", t - 13 * H, t - 5 * H, "Office, Madrid", 40.42, -3.69, 900, 0, "net"),
+            TimelineSeg("move", t - 5 * H, t - 4 * H, "", 40.4, -3.7, 1500, 1400, ""),
+            TimelineSeg("sleep", t - 4 * H, t - 1 * H, "Home", 40.4, -3.7, 10, 0, "gps"),
+        )))))
+        showKit { BoardTimelineBody(0) { opened += it } }
+        waitFor(KitPartTags.listRow(BoardTags.tlRow(4, "sleep")))
+        compose.onNodeWithTag(KitPartTags.listRow(BoardTags.TL_START)).assertExists()
+        for ((i, k) in listOf("stop", "move", "stop", "move", "sleep").withIndex()) compose.onNodeWithTag(KitPartTags.listRow(BoardTags.tlRow(i, k))).assertExists()
+        compose.onNodeWithText("Stop · Office, Madrid").assertExists()
+        compose.onNodeWithText("Sleep · Home").assertExists()
+        compose.onNodeWithTag(KitPartTags.listRow(BoardTags.tlRow(1, "move"))).performClick()
+        assertEquals(listOf("extapp:cloud-nav"), opened)
+    }
+
+    @Test fun `MyTrips with an empty store is honest`() {
+        use(Fake(timeline = Read.Ok(TimelineBoard(0, 24, emptyList()))))
+        showKit { BoardTimelineBody(0) { opened += it } }
+        waitForText("Nothing on the timeline")
+    }
+
+    @Test fun `MyTrips with Cloud Nav absent shows the reason`() {
+        use(Fake(timeline = Read.Unavailable(Why.NOT_INSTALLED, "Cloud Nav is not installed")))
+        showKit { BoardTimelineBody(0) { opened += it } }
+        waitForText("Cloud Nav is not installed")
+    }
+
+    @Test fun `the tracker timeline wire is parsed and ordered`() {
+        val body = """{"now":100,"hours":24,"segments":[
+            {"kind":"move","start":50,"end":60,"place":"","steps":10,"distance_m":12,"loc_src":""},
+            {"kind":"stop","start":10,"end":50,"place":"Home","lat":1.5,"lon":2.5,"steps":3,"distance_m":0,"loc_src":"net"}]}"""
+        val b = BoardsWire.timeline(body)
+        assertEquals(listOf("stop", "move"), b.segments.map { it.kind })
+        assertEquals(1.5, b.segments[0].lat!!, 0.0)
+        assertEquals(null, b.segments[1].lat)
+        assertEquals("net", b.segments[0].locSrc)
+        assertEquals(24, b.hours)
     }
 
     @Test fun `Navigation and Tracker lists the places per day`() {

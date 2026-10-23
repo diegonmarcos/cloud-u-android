@@ -11,6 +11,8 @@ import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import com.diegonmarcos.cloudnav.maps.MapsDb
+import com.diegonmarcos.cloudnav.maps.TimelineSync
+import com.diegonmarcos.cloudnav.maps.TimelineViews
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -85,7 +87,8 @@ class StepsRepository(private val ctx: Context) {
 
     private fun device(st: SourceStatus, zone: ZoneId, now: Long, dayStart: Long, fixes: List<PlaceFix>, stepM: Double, label: (PlaceFix) -> String,
                        perm: PermState = PermState.UNAVAILABLE, extra: String? = null): StepsUi {
-        val all = EngineDb.get(ctx).slices(now - HISTORY_DAYS * 86_400_000L, now)
+        // #1114: the steps are a view over THE timeline store, not the engine's samples directly
+        val all = TimelineViews.stepSlices(TimelineSync.view(ctx, now - HISTORY_DAYS * 86_400_000L, now)).map { StepSlice(it.startMs, it.endMs, it.count) }
         val prefs = EnginePrefs(ctx)
         val recog = android.os.Build.VERSION.SDK_INT < 29 ||
             androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.ACTIVITY_RECOGNITION) == android.content.pm.PackageManager.PERMISSION_GRANTED

@@ -524,7 +524,7 @@
           "target": "page:communication/my-rss"
         },
         {
-          "label": "Boards My-PM",
+          "label": "Boards ME",
           "icon": "ic_p_sol_personal",
           "target": "page:boards/my-pm"
         },
@@ -2320,9 +2320,10 @@
       },
       {
         "_doc_icons": "Per-mode icons: in Apps mode shows the everyday logs glyph; in Admin mode swaps to the C3-workflows glyph so the ops view reads as the workflows dashboard. Both the bottom-nav item AND the home_groups tile resolve via Section.iconForMode(mode) — single source of truth.",
+        "_doc_me": "My-PM is now ME (2026-10-23, #1114): only the label changed. The page id stays `my-pm` (so `page:boards/my-pm`, `section:boards#my-pm` and every older deep link keep landing) and `page_aliases` adds `me`. ME holds MyBuro/MyFin, MyHealth and MyTrips; the calendar is gone from it and the tasks table moved to Boards ▸ Tasks.",
         "_doc_rename": "Boards (2026-10-17, owner): was `infos`, labelled Projects. `aliases` keeps the old section id resolvable so `section:infos` / `page:infos/<p>` deep links from other apps and older builds still land here; `page_aliases` sends the two removed pages (work-pm, cloud = C3-PM) to Tasks, which replaced them.",
         "aliases": ["infos"],
-        "page_aliases": {"work-pm": "tasks", "cloud": "tasks"},
+        "page_aliases": {"work-pm": "tasks", "cloud": "tasks", "me": "my-pm"},
         "id": "boards",
         "label": "Boards",
         "icon": "ic_pm_boards",
@@ -2337,7 +2338,7 @@
           },
           {
             "id": "my-pm",
-            "label": "My-PM",
+            "label": "ME",
             "icon": "ic_p_sol_personal",
             "facet": true
           },
@@ -2349,19 +2350,8 @@
           }
         ],
         "tabs": true,
-        "_doc_pages": "Boards = what you WORK ON and what ARRIVES, each read live from the app that owns it. Inboxes = unread/recent messages: fleet mail through cloud-mail's signature-guarded agentmail provider, every other app (fleet chat/matrix/ntfy and third-party WhatsApp, Gmail, Telegram…) through the SuperApp's own notification listener, grouped by app. My-PM = calendar, tasks, steps and places, the last two from cloud-nav's tracker over the fleet IPC door (tracker/steps, tracker/places). Tasks = one card per project declared in cloud-tasks (projects/list over the fleet IPC door) plus the same calendar My-PM shows. Work-PM and C3-PM were removed by the owner (2026-10-17); their ids alias to Tasks. No board carries sample numbers: an unreachable source says so.",
+        "_doc_pages": "Boards = what you WORK ON and what ARRIVES, each read live from the app that owns it. Inboxes = unread/recent messages: fleet mail through cloud-mail's signature-guarded agentmail provider, every other app (fleet chat/matrix/ntfy and third-party WhatsApp, Gmail, Telegram…) through the SuperApp's own notification listener, grouped by app. ME (was My-PM) = MyBuro/MyFin, MyHealth (steps, sleep, heart rate) and MyTrips (the last 24 h timeline from cloud-nav, tracker/timeline over the fleet IPC door). Tasks = one card per project declared in cloud-tasks (projects/list over the fleet IPC door), the tasks table and the calendar. Work-PM and C3-PM were removed by the owner (2026-10-17); their ids alias to Tasks. No board carries sample numbers: an unreachable source says so.",
         "stack_my-pm": [
-          {
-            "kind": "calendar_month",
-            "title": "Calendar",
-            "subtitle": "Month view · CalDAV sync pending"
-          },
-          {
-            "_doc": "Tasks panel with an Agenda · Day · ToDo tab strip — single card hosting all three views the user wants in Apps mode. Tab switch is in-process (no fragment swap); each view is a self-contained placeholder until CalDAV / Tasks integration lands.",
-            "kind": "tasks",
-            "title": "Tasks",
-            "subtitle": "Agenda · Day · ToDo"
-          },
           {
             "_doc": "MyBuro/MyFin (was 'Myfin'): the MyBuro group's MyFin card. It lives in Cloud-Me (Buro ▸ Fin); the card only opens the real page. `anchor` is the id, `aliases` the retired ids that still resolve (anchor: deep links).",
             "kind": "open_link",
@@ -2380,23 +2370,16 @@
             "url": "extapp:cloud-nav"
           },
           {
-            "_doc": "Navigation/Tracker (was 'Nav tracker'): the Navigation group's Tracker card, the places cloud-nav recorded per day, op tracker/places. `aliases` are the retired ids that still resolve.",
-            "kind": "board_places",
-            "title": "Navigation/Tracker",
-            "anchor": "navigation/tracker",
-            "aliases": ["nav-tracker", "nav_tracker", "tracker"],
-            "subtitle": "Places · cloud-nav tracker",
+            "_doc": "MyTrips (was 'Navigation/Tracker', #1114): the last 24 h as an ordered timeline (start, move, stop, move, sleep, ...) read from Cloud Nav's ONE timeline store over the fleet IPC door, op tracker/timeline (read-only). The SuperApp only fetches and draws it. `aliases` are the retired ids that still resolve.",
+            "kind": "board_timeline",
+            "title": "MyTrips",
+            "anchor": "mytrips",
+            "aliases": ["navigation/tracker", "nav-tracker", "nav_tracker", "tracker"],
+            "subtitle": "Last 24 h · move · stop · sleep",
             "url": "extapp:cloud-nav"
           }
         ],
-        "tiles_my-pm": [
-          {
-            "id": "calendar",
-            "label": "Calendar",
-            "icon": "ic_calendar",
-            "target": "section:cal"
-          }
-        ],
+        "tiles_my-pm": [],
         "stack_tasks": [
           {
             "_doc": "One card per project declared in cloud-tasks, read from its own database over the fleet IPC door (op projects/list): name, open/done counts, next due item. Tap opens that project in cloud-tasks.",
@@ -2406,7 +2389,13 @@
             "url": "extapp:cloud-tasks"
           },
           {
-            "_doc": "The same calendar component My-PM shows (CalendarMonthFragment).",
+            "_doc": "Tasks table (moved here from ME, #1114): single card hosting the Agenda · Day · ToDo views. Tab switch is in-process (no fragment swap).",
+            "kind": "tasks",
+            "title": "Tasks",
+            "subtitle": "Agenda · Day · ToDo"
+          },
+          {
+            "_doc": "The calendar component (CalendarMonthFragment); it left ME with #1114 and stays here.",
             "kind": "calendar_month",
             "title": "Calendar",
             "subtitle": "Month view"
@@ -5259,7 +5248,7 @@
         "id": "boards-my-pm",
         "section": "boards",
         "page": "my-pm",
-        "label": "Boards · My-PM"
+        "label": "Boards · ME"
       },
       {
         "id": "boards-tasks",

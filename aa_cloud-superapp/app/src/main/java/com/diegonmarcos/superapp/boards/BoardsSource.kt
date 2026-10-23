@@ -21,8 +21,8 @@ import java.util.concurrent.ConcurrentHashMap
  *  - Inboxes: cloud-mail's agentmail provider (signature permission CONSTELLATION_DATA) for fleet mail, and the
  *    SuperApp's own notification listener (PhoneNotificationStore) for every other app — fleet chat / matrix / ntfy
  *    and third-party WhatsApp, Gmail, Telegram… — grouped by app.
- *  - My-PM: cloud-nav's tracker over the fleet IPC door (com.diegonmarcos.cloudnav.fleet, signature-guarded):
- *    `tracker/steps` and `tracker/places`.
+ *  - ME (was My-PM): cloud-nav's tracker over the fleet IPC door (com.diegonmarcos.cloudnav.fleet, signature-guarded):
+ *    `tracker/steps`, `tracker/places` and, for MyTrips, `tracker/timeline`.
  *  - Tasks: cloud-tasks over the same door: `projects/list`.
  *
  * Tests swap [Boards.source] for a fake; the parsers in [BoardsWire] are pure.
@@ -34,6 +34,8 @@ interface BoardsSource {
     /** My-Health: Health Connect read in this app (steps, distance, resting HR, sleep), 30 days ending today. */
     fun health(days: Int = 30): Read<HealthBoard> = Read.Unavailable(Why.FAILED, "Health Connect is not wired to this source")
     fun places(days: Int = 7): Read<List<PlacesDay>>
+    /** MyTrips: the last [hours] of Cloud Nav's ONE timeline store (tracker/timeline). Read-only: the SuperApp stores nothing. */
+    fun timeline(hours: Int = 24): Read<TimelineBoard> = Read.Unavailable(Why.FAILED, "the timeline is not wired to this source")
     fun taskProjects(): Read<List<TaskProject>>
 }
 
@@ -80,6 +82,14 @@ data class StepsBoard(
 data class PlaceVisit(val part: String, val label: String, val lat: Double, val lon: Double, val predicted: Boolean)
 
 data class PlacesDay(val date: LocalDate, val visits: List<PlaceVisit>, val steps: Long)
+
+/** One timeline segment as Cloud Nav's store holds it: [kind] is move | stop | sleep; [place] is empty for a move. */
+data class TimelineSeg(
+    val kind: String, val startMs: Long, val endMs: Long, val place: String,
+    val lat: Double?, val lon: Double?, val steps: Long, val distanceM: Long, val locSrc: String,
+)
+
+data class TimelineBoard(val nowMs: Long, val hours: Int, val segments: List<TimelineSeg>)
 
 data class TaskProject(
     val id: String,
@@ -166,6 +176,18 @@ object BoardsWire {
                 },
             )
         }.sortedByDescending { it.date }
+    }
+
+    fun timeline(body: String): TimelineBoard {
+        val o = JSONObject(body)
+        val arr = o.optJSONArray("segments")
+        val segs = (0 until (arr?.length() ?: 0)).map { i ->
+            val g = arr!!.getJSONObject(i)
+            TimelineSeg(g.optString("kind"), g.getLong("start"), g.getLong("end"), g.optString("place"),
+                if (g.has("lat")) g.getDouble("lat") else null, if (g.has("lon")) g.getDouble("lon") else null,
+                g.optLong("steps"), g.optLong("distance_m"), g.optString("loc_src"))
+        }.sortedBy { it.startMs }
+        return TimelineBoard(o.optLong("now"), o.optInt("hours", 24), segs)
     }
 
     fun projects(body: String): List<TaskProject> {
@@ -260,6 +282,9 @@ class FleetBoardsSource(private val ctx: Context) : BoardsSource {
 
     override fun places(days: Int): Read<List<PlacesDay>> =
         ask(Boards.NAV_PKG, "Cloud Nav", "tracker/places", mapOf("days" to days.toString())) { BoardsWire.places(it) }
+
+    override fun timeline(hours: Int): Read<TimelineBoard> =
+        ask(Boards.NAV_PKG, "Cloud Nav", "tracker/timeline", mapOf("hours" to hours.toString())) { BoardsWire.timeline(it) }
 
     override fun taskProjects(): Read<List<TaskProject>> =
         ask(Boards.TASKS_PKG, "Cloud Tasks", "projects/list", emptyMap()) { BoardsWire.projects(it) }

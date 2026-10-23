@@ -61,6 +61,7 @@ class MapsDb private constructor(ctx: Context) :
             """.trimIndent()
         )
         db.execSQL("CREATE INDEX idx_stops_started_at ON stops(started_at);")
+        createTimeline(db)
         db.execSQL(
             """
             CREATE TABLE places_cache (
@@ -73,7 +74,72 @@ class MapsDb private constructor(ctx: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        // No migrations yet — Push 2 is v1.
+        if (oldVersion < 2) createTimeline(db)   // v2 (#1114): the timeline store; filled by TimelineSync from the older tables
+    }
+
+    private fun createTimeline(db: SQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS timeline_segments (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, start_ms INTEGER NOT NULL, end_ms INTEGER NOT NULL, " +
+                "lat REAL, lon REAL, place TEXT, steps INTEGER NOT NULL DEFAULT 0, distance_m REAL NOT NULL DEFAULT 0, loc_src TEXT, " +
+                "neighborhood TEXT, city TEXT, country TEXT);"
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_timeline_start ON timeline_segments(start_ms);")
+    }
+
+    /** THE timeline store: every segment overlapping fromTs..toTs, oldest first. Daily, Stops, Steps and MyTrips read this. */
+    fun segmentsBetween(fromTs: Long, toTs: Long): List<TlSegment> {
+        val out = mutableListOf<TlSegment>()
+        readableDatabase.rawQuery(
+            "SELECT kind,start_ms,end_ms,lat,lon,place,steps,distance_m,loc_src,neighborhood,city,country FROM timeline_segments " +
+                "WHERE end_ms >= ? AND start_ms <= ? ORDER BY start_ms ASC;",
+            arrayOf(fromTs.toString(), toTs.toString()),
+        ).use { c ->
+            while (c.moveToNext()) out.add(TlSegment(
+                TlKind.parse(c.getString(0)), c.getLong(1), c.getLong(2),
+                if (c.isNull(3)) null else c.getDouble(3), if (c.isNull(4)) null else c.getDouble(4),
+                c.getString(5), c.getLong(6), c.getDouble(7), c.getString(8), c.getString(9), c.getString(10), c.getString(11)))
+        }
+        return out
+    }
+
+    fun segmentCount(): Int = readableDatabase.rawQuery("SELECT COUNT(*) FROM timeline_segments;", null).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+
+    /** Replaces everything that ends at or after [fromMs] with [segs] in one transaction (a rebuild of that window). */
+    fun replaceSegments(fromMs: Long, segs: List<TlSegment>) = runInTransaction {
+        val db = writableDatabase
+        db.delete("timeline_segments", "end_ms >= ?", arrayOf(fromMs.toString()))
+        for (s in segs) db.insert("timeline_segments", null, ContentValues().apply {
+            put("kind", s.kind.name); put("start_ms", s.startMs); put("end_ms", s.endMs)
+            if (s.lat != null) put("lat", s.lat) else putNull("lat")
+            if (s.lon != null) put("lon", s.lon) else putNull("lon")
+            put("place", s.place); put("steps", s.steps); put("distance_m", s.distanceM); put("loc_src", s.locSource)
+            put("neighborhood", s.neighborhood); put("city", s.city); put("country", s.country)
+        })
+    }
+
+    /** Stops that overlap fromTs..toTs (an open stop counts), oldest first: the timeline's input. */
+    fun stopsOverlapping(fromTs: Long, toTs: Long): List<RichStop> {
+        val out = mutableListOf<RichStop>()
+        readableDatabase.rawQuery(
+            "SELECT id,started_at,ended_at,lat,lon,place_name,neighborhood,city,country FROM stops " +
+                "WHERE started_at <= ? AND (ended_at IS NULL OR ended_at >= ?) ORDER BY started_at ASC;",
+            arrayOf(toTs.toString(), fromTs.toString()),
+        ).use { c ->
+            while (c.moveToNext()) out.add(RichStop(c.getLong(0), c.getLong(1), if (c.isNull(2)) null else c.getLong(2),
+                c.getDouble(3), c.getDouble(4), c.getString(5), c.getString(6), c.getString(7), c.getString(8)))
+        }
+        return out
+    }
+
+    /** Raw GPS points fromTs..toTs, oldest first: the timeline's input for move distances. */
+    fun pointsBetween(fromTs: Long, toTs: Long): List<PointRow> {
+        val out = mutableListOf<PointRow>()
+        readableDatabase.rawQuery("SELECT ts,lat,lon,accuracy FROM points WHERE ts BETWEEN ? AND ? ORDER BY ts;",
+            arrayOf(fromTs.toString(), toTs.toString())).use { c ->
+            while (c.moveToNext()) out.add(PointRow(c.getLong(0), c.getDouble(1), c.getDouble(2), if (c.isNull(3)) null else c.getDouble(3).toFloat()))
+        }
+        return out
     }
 
     fun insertPoint(p: PointRow): Long {
@@ -314,6 +380,7 @@ class MapsDb private constructor(ctx: Context) :
         val db = writableDatabase
         db.execSQL("DELETE FROM points;")
         db.execSQL("DELETE FROM stops;")
+        db.execSQL("DELETE FROM timeline_segments;")
         db.execSQL("DELETE FROM places_cache;")
     }
 
@@ -363,7 +430,7 @@ class MapsDb private constructor(ctx: Context) :
 
     companion object {
         private const val DB_NAME = "maps.db"
-        private const val DB_VERSION = 1
+        private const val DB_VERSION = 2
 
         @Volatile private var instance: MapsDb? = null
         fun get(ctx: Context): MapsDb = instance ?: synchronized(this) {
