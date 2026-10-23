@@ -5,7 +5,7 @@ set -uo pipefail
 old=$(realpath "$1"); new=$(realpath "$2"); mkdir -p "$3"; export OUT_DIR=$(realpath "$3")
 cd "$(dirname "$0")/../.."
 export VAULT_EMAIL="ci-seed-$(date +%s)@example.com" VAULT_PW="CiSeed$(date +%s)xYz"
-docker run -d --name vw --network host -e I_REALLY_WANT_VOLATILE_STORAGE=true -e LOG_LEVEL=debug -e EXTENDED_LOGGING=true -e SIGNUPS_ALLOWED=true -e DOMAIN=http://vaultwarden.app vaultwarden/server:1.32.7 >/dev/null || exit 1
+docker run -d --name vw --network host -e I_REALLY_WANT_VOLATILE_STORAGE=true -e LOG_LEVEL=debug -e EXTENDED_LOGGING=true -e SIGNUPS_ALLOWED=true -e DOMAIN=http://vaultwarden.app vaultwarden/server:latest >/dev/null || exit 1
 for _ in $(seq 1 40); do curl -fs http://127.0.0.1/alive >/dev/null && break; sleep 2; done
 pip install --quiet cryptography >/dev/null 2>&1
 python3 test/emulator/seed-vaultwarden.py http://127.0.0.1 "$VAULT_EMAIL" "$VAULT_PW" "CI Seed Login" || { echo "FAIL: seeding"; docker logs vw | tail -20; exit 1; }
