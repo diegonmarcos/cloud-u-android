@@ -107,6 +107,7 @@ object TerminalGit {
         op: String,
         url: String,
         dest: File,
+        depth: Int = 0,
     ): Pair<Intent?, Outcome> {
         val early = decide(
             decl, op,
@@ -117,7 +118,7 @@ object TerminalGit {
         )
         if (early !is Outcome.Sent) return null to early
         val d = decl!!
-        val argv = d.argv(op, url, dest.absolutePath) ?: return null to Outcome.NoSuchOp(op)
+        val argv = d.argv(op, url, dest.absolutePath, depth) ?: return null to Outcome.NoSuchOp(op)
         val intent = Intent(d.action).apply {
             setPackage(d.pkg)
             extras(d, argv, dest).forEach { (k, v) ->
@@ -147,8 +148,9 @@ object TerminalGit {
         op: String,
         url: String,
         dest: File,
+        depth: Int = 0,
     ): Outcome {
-        val (intent, outcome) = plan(ctx, decl, op, url, dest)
+        val (intent, outcome) = plan(ctx, decl, op, url, dest, depth)
         if (intent == null) return outcome
         return runCatching {
             // The terminal's service is a foreground-service starter; startService

@@ -372,6 +372,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                     }
                 }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
             }
+            return record(repo, opId, result, trigger)
+    }
+
+    /** The registry line, the shared history and the debug log for one finished operation; returns [result]. */
+    private fun record(repo: ManagedRepo, opId: String, result: GitOpResult, trigger: String): GitOpResult {
             val now = System.currentTimeMillis() / 1000
             runCatching {
                 registry.upsert(repo.copy(lastSyncEpochSeconds = now, lastSyncSummary = "$opId: ${result.summary}"))
@@ -380,6 +385,66 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             if (result.ok) DriveDebugLog.i(ctx, TAG, "$opId ${repo.name}: ${result.summary}")
             else DriveDebugLog.e(ctx, TAG, "$opId ${repo.name} FAILED: ${result.summary} ${result.details}".trim())
             return result
+    }
+
+    /**
+     * #1138 a compound operation of the repository detail: the three Sync verbs and Repo clean
+     * ([RepoActions.isCompound]), composed in [RepoCompound] on the transport that serves the clone
+     * (git inside cld.termux for the shared store). The confirmation for Repo clean is the page's.
+     */
+    fun runCompound(repo: ManagedRepo, id: String) {
+        if (running.value.containsKey(repo.id) || !RepoActions.isCompound(id)) return
+        running.update { it + (repo.id to Running(repo.id, if (id == RepoActions.SYNC_LOCAL_WINS) Step.PUSHING else Step.PULLING)) }
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                val done = runCatching { RepoCompound.run(ctx, repo, id, authFor(repo)) }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
+                record(repo, id, done, SyncHistory.TRIGGER_MANUAL)
+            }
+            opResults.update { it + (repo.id to result) }
+            running.update { it - repo.id }
+            reread(repo)
+        }
+    }
+
+    // ── #1138 clone settings: persisted, applied by every later clone ──
+
+    /** 0 = clone the full history, 1 = depth 1. */
+    val cloneDepth = MutableStateFlow(0).also { f -> scope.launch(Dispatchers.IO) { f.value = pagePrefs.getInt(KEY_CLONE_DEPTH, 0) } }
+    /** True = clone over SSH, false = Web OAuth (https with the sign-in's token). */
+    val cloneViaSsh = MutableStateFlow(false).also { f -> scope.launch(Dispatchers.IO) { f.value = pagePrefs.getBoolean(KEY_CLONE_SSH, false) } }
+
+    fun setCloneDepth(depth: Int) { cloneDepth.value = depth; scope.launch(Dispatchers.IO) { pagePrefs.edit().putInt(KEY_CLONE_DEPTH, depth).apply() } }
+    fun setCloneViaSsh(ssh: Boolean) { cloneViaSsh.value = ssh; scope.launch(Dispatchers.IO) { pagePrefs.edit().putBoolean(KEY_CLONE_SSH, ssh).apply() } }
+
+    // ── #1138 the repo table's remote facts: cached, refreshed on pull-to-refresh only ──
+
+    val remoteStats = MutableStateFlow<Map<String, RepoRemoteStats.Stats>>(emptyMap())
+        .also { f -> scope.launch(Dispatchers.IO) { f.value = RepoRemoteStats.Cache.load(pagePrefs) } }
+    val refreshingRemote = MutableStateFlow(false)
+
+    /** Re-read the REST facts of [targets] (owner to name), keeping the last good answer of a repository that fails. */
+    fun refreshRemoteStats(targets: List<Pair<String, String>>, extraToken: String = "") {
+        if (!refreshingRemote.compareAndSet(false, true)) return
+        scope.launch {
+            val next = withContext(Dispatchers.IO) {
+                val token = extraToken.ifBlank { declaredToken() }
+                val base = Declarations.sync.git.api.baseUrl
+                val out = remoteStats.value.toMutableMap()
+                targets.distinct().forEach { (owner, name) ->
+                    RepoRemoteStats.fetch(base, owner, name, token).onSuccess { out[RepoRemoteStats.keyOf(owner, name)] = it }
+                        .onFailure { DriveDebugLog.e(ctx, TAG, "remote stats $name: ${it.message}") }
+                }
+                RepoRemoteStats.Cache.save(pagePrefs, out)
+                out
+            }
+            remoteStats.value = next
+            refreshingRemote.value = false
+        }
+    }
+
+    /** The CI/CD run feed of one repository: newest runs as display lines, or the failure sentence. */
+    suspend fun runFeed(owner: String, name: String): Result<List<String>> = withContext(Dispatchers.IO) {
+        RepoRemoteStats.fetchRuns(Declarations.sync.git.api.baseUrl, owner, name, declaredToken())
     }
 
     /**
@@ -440,10 +505,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                     // cloud-shared-store: not in cld.termux's uid -> clone inside it (CLOUD_EXEC).
                     if (StoreGit.useExec(ctx)) {
                         if (StoreGit.isRepository(ctx, dir)) GitOpResult(true, "already cloned")
-                        else StoreGit.clone(ctx, url, dir, token).also { if (!it.ok) error(it.summary + " " + it.details) }
+                        else StoreGit.clone(ctx, url, dir, token, depth = cloneDepth.value.takeIf { it > 0 }).also { if (!it.ok) error(it.summary + " " + it.details) }
                     }
                     else if (GitEngine.isRepository(dir)) GitOpResult(true, "already cloned")
-                    else { GitEngine.clone(ctx, url, dir, auth = authFor(managed)).close(); GitOpResult(true, "cloned into ${dir.name}") }
+                    else { (if (cloneDepth.value > 0) GitEngine.clone(ctx, url, dir, auth = authFor(managed), depth = cloneDepth.value) else GitEngine.clone(ctx, url, dir, auth = authFor(managed))).close(); GitOpResult(true, "cloned into ${dir.name}") }
                 }.getOrElse {
                     val why = it.message ?: it.toString()
                     // #669 a fleet-session clone that fails must name its NEXT STEP —
@@ -494,6 +559,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
         const val PREFS_PAGE = "cloud-drive-prefs"
         const val KEY_AUTO_PULL = "git.auto_pull_on_open"
+        const val KEY_CLONE_DEPTH = "git.clone_depth"
+        const val KEY_CLONE_SSH = "git.clone_ssh"
         const val TRIGGER_OPEN = "open"
         const val AUTO_PULL_GO = "go"
         const val AUTO_PULL_OFF = ""

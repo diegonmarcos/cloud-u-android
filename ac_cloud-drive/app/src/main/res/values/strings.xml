@@ -24,7 +24,6 @@
     <string name="chrome_keep">Keep</string>
     <string name="chrome_ok">OK</string>
     <string name="chrome_declared">declared</string>
-    <string name="chrome_private">private</string>
     <string name="chrome_not_installed">%1$s is not installed</string>
     <string name="git_sync_sign_in_reset">Git sync sign-in was reset — sign in again</string>
     <string name="git_sync_sign_in_reset_ok">OK</string>
@@ -202,7 +201,7 @@
     <string name="sync_empty_title">No repositories yet</string>
     <string name="sync_empty_hint">Clone a declared one below, or add a folder</string>
     <string name="sync_now">Sync now</string>
-    <string name="sync_open">Open</string>
+    <string name="sync_open">Open folder</string>
     <string name="sync_history">History</string>
     <string name="sync_settings">Settings</string>
     <string name="sync_resolve_conflicts">Resolve %1$d conflict(s)</string>
@@ -650,4 +649,45 @@
     <string name="startup_action_log">View log</string>
     <string name="startup_action_local">Continue with local files</string>
     <string name="startup_log_empty">The log is empty.</string>
+
+    <!-- #1138 Sync ▸ Git: the sortable repo table and the grouped repository actions -->
+    <string name="repo_col_name">Name</string>
+    <string name="repo_col_vis">Pvt/Pub</string>
+    <string name="repo_col_size_main">Size main</string>
+    <string name="repo_col_size_total">Size total</string>
+    <string name="repo_col_branches">Branches</string>
+    <string name="repo_col_dirty">Dirty</string>
+    <string name="repo_col_ab">Ahead/Behind</string>
+    <string name="repo_vis_pvt">Pvt</string>
+    <string name="repo_vis_pub">Pub</string>
+    <string name="repo_group_sync">Sync</string>
+    <string name="repo_group_steps">Steps</string>
+    <string name="repo_group_metadata">Metadata</string>
+    <string name="repo_group_goto">Goto</string>
+    <string name="repo_group_workflow">Workflow</string>
+    <string name="repo_group_dangerous">Dangerous</string>
+    <string name="repo_group_clean">Repo clean (local history)</string>
+    <string name="repo_group_others">Others</string>
+    <string name="repo_group_clone">Clone settings</string>
+    <string name="repo_act_sync_no_winner">Sync: no winner</string>
+    <string name="repo_act_sync_remote_wins">Sync: remote wins</string>
+    <string name="repo_act_sync_local_wins">Sync: local wins</string>
+    <string name="repo_act_status">Status</string>
+    <string name="repo_act_auth">Auth</string>
+    <string name="repo_act_remote_url">Remote URL</string>
+    <string name="repo_act_default_branch">Default branch</string>
+    <string name="repo_act_last_sync">Last sync</string>
+    <string name="repo_act_commit_history">Commit history</string>
+    <string name="repo_act_runs">CI/CD runs</string>
+    <string name="repo_act_clean">Keep depth %1$d</string>
+    <string name="repo_act_clone_full">Clone full</string>
+    <string name="repo_act_clone_depth1">Clone depth 1</string>
+    <string name="repo_act_clone_oauth">Via Web OAuth</string>
+    <string name="repo_act_clone_ssh">Via SSH</string>
+    <string name="repo_confirm_clean">Deletes the LOCAL history of %1$s, keeping the last %2$d commit(s) of each branch: fetch --depth, reflog expire, gc. Only this phone changes; the remote is never rewritten.</string>
+    <string name="repo_meta_default_branch">default branch: %1$s</string>
+    <string name="repo_meta_last_sync">last sync: %1$s</string>
+    <string name="repo_runs_none">No workflow runs.</string>
+    <string name="repo_runs_failed">Could not read the run feed (%1$s).</string>
+    <string name="repo_unknown">unknown</string>
 </resources>

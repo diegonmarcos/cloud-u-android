@@ -36,6 +36,9 @@ APP="$ROOT/ac_cloud-drive"
 BJ="$APP/build.json"
 SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
 CARDS="$SRC/sync/GitReposScreen.kt"
+# #1138 the row is a table row now: its cells and the grouped actions live in these two files.
+TABLE_UI="$SRC/sync/RepoTableUi.kt"
+TABLE="$SRC/sync/RepoTable.kt"
 COORD="$SRC/sync/GitSyncCoordinator.kt"
 HIST="$SRC/sync/SyncHistory.kt"
 RC="$SRC/sync/RcloneMountsScreens.kt"
@@ -73,10 +76,10 @@ if grep -qE 'RepoRegistry\(File\(ctx\.filesDir, GitSyncWorker\.REGISTRY_FILE\)\)
 echo "── G2 the card ──"
 g2 "$CARDS" && pass "conflicts in the off colour, a red light, and a Resolve pill that opens the engine" || fail "conflicts are not surfaced on the card"
 for s in sync_now sync_open sync_history sync_settings sync_last sync_never sync_auto sync_manual sync_glance_reading sync_glance_gone sync_glance_unreadable sync_clean sync_changed; do
-    grep -qE "R\.string\.$s\b" "$CARDS" && pass "card prints $s" || fail "card lacks $s"
+    grep -qE "R\.string\.$s\b" "$CARDS" "$TABLE_UI" && pass "card prints $s" || fail "card lacks $s"
 done
 if grep -qE 'StatusLightRow|light = light' "$CARDS" && grep -qE 'tag = DriveTags\.SYNC_REPO_CARD' "$CARDS"; then pass "the card is a DriveCard with a StatusLight and its tag"; else fail "the repo card is not the shared card"; fi
-if grep -qE 'append\(" *↑"\)\.append\(glance\.ahead\)\.append\(" ↓"\)\.append\(glance\.behind\)' "$CARDS" && grep -qE 'if \(glance\.repositoryState != "SAFE"\)' "$CARDS" && grep -qE 'R\.string\.git_meta_branch, glance\?\.branch' "$CARDS"; then pass "the dense row's glance: branch ↑ahead ↓behind clean/changed, state when not SAFE; the upstream is in the Metadata panel (#608)"; else fail "the glance line is incomplete"; fi
+if grep -qE '"↑\$ahead ↓\$behind"' "$TABLE" && grep -qE 'if \(glance\.repositoryState != "SAFE"\)' "$CARDS" && grep -qE 'R\.string\.git_meta_branch, glance\?\.branch' "$CARDS"; then pass "the dense row's glance (#1138 table): ↑ahead ↓behind and the dirty count in their cells, state when not SAFE; the upstream is in the Metadata panel (#608)"; else fail "the glance line is incomplete"; fi
 
 echo "── G3 stepped one-tap sync ──"
 if grep -qE 'enum class Step \{ STAGING, COMMITTING, PULLING, PUSHING \}' "$COORD" && grep -qE 'e\.stageAll\(\)' "$COORD" && grep -qE 'e\.commit\(repo\.syncMessage' "$COORD" && grep -qE 'e\.pull\(rebase = repo\.pullRebase, auth = authFor\(repo\)\)' "$COORD" && grep -qE 'e\.push\(auth = authFor\(repo\)\)' "$COORD"; then pass "stage → commit → pull → push through the engine's verbs, step published"; else fail "the stepped sync is not the engine's four verbs"; fi
@@ -107,7 +110,7 @@ echo "── G7 declared, not cloned (#608: a DENSE ROW, not a card) ──"
 # #669 the declared shape is the FALLBACK for rows with no listing item; a listed row clones
 # its own listing's URL (test-drive-git-auth-chain.sh C10 owns that rule and its mutations).
 if grep -qE 'ifBlank \{ page\.cloneUrl\(name, mode\) \}' "$CARDS" && grep -qE 'Pill\(stringResource\(R\.string\.sync_clone_into_store\), onClone, filled = true\)' "$CARDS"; then pass "a not-cloned row offers Clone into store; the declared URL is composed once, as the no-listing fallback"; else fail "clone-into-store composition missing"; fi
-if grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$CARDS" && grep -qE 'if \(isPrivate\) CapsuleBadge\(stringResource\(R\.string\.chrome_private\)\)' "$CARDS"; then pass "the dense row is tagged and carries the private badge"; else fail "declared cards incomplete"; fi
+if grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$CARDS" && grep -qE 'RepoTable\.visibility\(r\.isPrivate, stringResource\(R\.string\.repo_vis_pvt\)' "$TABLE_UI"; then pass "the dense row is tagged and carries the Pvt/Pub column (#1138; it was a private badge)"; else fail "declared cards incomplete"; fi
 
 echo "── G8 Rclone and Mounts, same language ──"
 if grep -qE 'tag = DriveTags\.SYNC_REMOTE_CARD' "$RC" && grep -qE 'tag = DriveTags\.SYNC_MOUNT_CARD' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_JOB_ROW\)' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_CONNECTION_ROW\)' "$RC"; then pass "remote cards, mount cards, job rows, connection rows are tagged"; else fail "rclone/mounts tree not tagged"; fi

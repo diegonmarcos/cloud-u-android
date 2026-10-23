@@ -120,8 +120,12 @@ object Declarations {
             pkg.isNotBlank() && action.isNotBlank() && command.isNotBlank() && ops.isNotEmpty()
 
         /** The argv for [op] with the declared placeholders filled, or null if [op] is not declared. */
-        fun argv(op: String, url: String, dest: String): List<String>? =
-            ops[op]?.map { it.replace("{url}", url).replace("{dest}", dest) }
+        fun argv(op: String, url: String, dest: String, depth: Int = 0): List<String>? =
+            ops[op]?.map { it.replace("{url}", url).replace("{dest}", dest) }?.let { argv ->
+                // #1138 clone settings: depth N goes right after the declared `clone` word, as two argv items.
+                val at = argv.indexOf("clone")
+                if (op == Declarations.GIT_OP_CLONE && depth > 0 && at >= 0) argv.take(at + 1) + listOf("--depth", depth.toString()) + argv.drop(at + 1) else argv
+            }
     }
 
     data class GitPageDecl(

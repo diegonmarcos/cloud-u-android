@@ -140,6 +140,7 @@ object DriveTags {
     const val SYNC_GIT_SECTION = "sync_git_section"
     const val SYNC_GIT_ROW = "sync_git_row"
     const val SYNC_GIT_OPS = "sync_git_ops"
+    const val SYNC_GIT_TABLE_HEADER = "sync_git_table_header"
     const val SYNC_GIT_LOGIN = "sync_git_login"
     /** #642 the one line that reports what the cloud-terminal git handoff resolved to. */
     const val SYNC_GIT_HANDOFF = "sync_git_handoff"
@@ -343,16 +344,18 @@ fun CapsuleBadge(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** The pill button: accent when [filled], raised surface otherwise. */
+/** The pill button: accent when [filled], error red when [danger], raised surface otherwise. */
 @Composable
-fun Pill(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null, filled: Boolean = false, enabled: Boolean = true) {
+fun Pill(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, icon: ImageVector? = null, filled: Boolean = false, enabled: Boolean = true, danger: Boolean = false) {
     val bg = when {
         !enabled -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        danger -> MaterialTheme.colorScheme.error
         filled -> MaterialTheme.colorScheme.primary
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     val ink = when {
         !enabled -> MaterialTheme.colorScheme.onSurfaceVariant
+        danger -> MaterialTheme.colorScheme.onError
         filled -> MaterialTheme.colorScheme.onPrimary
         else -> MaterialTheme.colorScheme.onSurface
     }

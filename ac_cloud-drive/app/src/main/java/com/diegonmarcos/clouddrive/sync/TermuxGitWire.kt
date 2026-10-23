@@ -21,8 +21,8 @@ object TermuxGitWire {
     /** What to run: [script] in the guest, [stdin] for the credential header, [network] = long-running (detached job). */
     data class Plan(val script: String, val stdin: String = "", val network: Boolean = false)
 
-    /** Verbs that talk to a remote and answer a GitOpResult. */
-    val OPS = setOf("push", "force_push", "fetch", "pull", "force_pull", "sync")
+    /** Verbs that answer a GitOpResult. #1138 adds the compound ones the engine APK has no verb for (RepoCompound sends them). */
+    val OPS = setOf("push", "force_push", "fetch", "pull", "force_pull", "sync", "force_push_lease", "merge_upstream", "stash", "shrink")
 
     private const val FS = "%x1f"
     private const val RS = "%x1e"
@@ -76,6 +76,16 @@ object TermuxGitWire {
             "fetch" -> ok(gAuthed(dir, "fetch ${q(remote)}"), true, header)
             "pull" -> ok(gAuthed(dir, "pull ${if (a.optBoolean("rebase", true)) "--rebase" else "--no-rebase"} ${q(remote)}"), true, header)
             "force_pull" -> ok(gAuthed(dir, "fetch ${q(remote)}") + "; " + g(dir, "reset --hard '@{u}'"), true, header)
+            // #1138 compound sync verbs and the local-only history trim.
+            "force_push_lease" -> ok(gAuthed(dir, "push --force-with-lease ${q(remote)}"), true, header)
+            "merge_upstream" -> ok(gAuthed(dir, "fetch ${q(remote)}") + "; if " +
+                g(dir, "-c user.name=${q(a.optString("name"))} -c user.email=${q(a.optString("email"))} merge --no-edit '@{u}'") + "; then :; else rc=\$?; " +
+                "if [ -f \"\$(git -C ${q(dir)} rev-parse --absolute-git-dir)/MERGE_HEAD\" ]; then " + g(dir, "merge --abort") +
+                "; echo 'merge conflict: merge aborted, nothing changed' >&2; exit 3; fi; exit \$rc; fi", true, header)
+            "stash" -> ok(g(dir, "-c user.name=${q(a.optString("name"))} -c user.email=${q(a.optString("email"))} stash push --include-untracked -m ${q(a.optString("message"))}"))
+            "shrink" -> a.optInt("depth", 0).takeIf { it in 1..1000 }?.let { d ->
+                ok(gAuthed(dir, "fetch --depth $d ${q(remote)}") + "; " + g(dir, "reflog expire --expire=now --all") + "; " + g(dir, "gc --prune=now -q"), true, header)
+            } ?: (null to "bad depth")
             "sync" -> ok("H=\"\$(cat)\"; " + g(dir, "add -A") + "; " + g(dir, "diff --cached --quiet") + " || " +
                 g(dir, "-c user.name=${q(a.optString("name"))} -c user.email=${q(a.optString("email"))} commit -q -m ${q(a.optString("message"))}") + "; " +
                 hdr(dir, "pull ${if (a.optBoolean("rebase", true)) "--rebase" else "--no-rebase"} ${q(remote)}") + "; " + hdr(dir, "push ${q(remote)}"), true, header)
