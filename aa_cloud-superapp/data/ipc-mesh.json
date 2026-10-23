@@ -2209,6 +2209,16 @@
    ],
    "endpoints": [
     {
+     "id": "op:tracker/daily",
+     "kind": "op",
+     "name": "tracker/daily",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/tracker/TrackerDebugApiProvider.kt",
+     "callers": []
+    },
+    {
      "id": "op:tracker/places",
      "kind": "op",
      "name": "tracker/places",
@@ -2219,6 +2229,16 @@
      "callers": [
       "aa_cloud-superapp"
      ]
+    },
+    {
+     "id": "op:tracker/segments",
+     "kind": "op",
+     "name": "tracker/segments",
+     "method": "fleet.ipc.v1",
+     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+     "level": "signature",
+     "source": "ac_cloud-nav/app/src/main/java/com/diegonmarcos/cloudnav/tracker/TrackerDebugApiProvider.kt",
+     "callers": []
     },
     {
      "id": "op:tracker/steps",
