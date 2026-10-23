@@ -359,7 +359,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
-      "unit_test_sources": 22,
+      "unit_test_sources": 23,
       "workflow": "ship-cloud-nix-on-droid.yml"
     },
     "ac_cloud-notes": {
@@ -449,7 +449,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
-      "unit_test_sources": 22,
+      "unit_test_sources": 23,
       "workflow": "ship-cloud-termux.yml"
     },
     "ac_cloud-tools-small-llms": {
@@ -475,8 +475,8 @@
       "shell_testers": 5,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
-      "unit_task_declared": false,
-      "unit_test_sources": 648,
+      "unit_task_declared": true,
+      "unit_test_sources": 650,
       "workflow": "ship-cloud-vault.yml"
     },
     "ac_cloud-vault/web": {

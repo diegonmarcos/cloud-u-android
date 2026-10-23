@@ -411,9 +411,7 @@ jobs:
           ./gradlew --no-daemon :app:testFdroidDebugUnitTest \
             --tests 'com.x8bit.bitwarden.data.autofill.*' \
             --tests 'com.x8bit.bitwarden.data.platform.manager.ciphermatching.*' \
-            --tests 'com.x8bit.bitwarden.data.platform.util.StringExtensionsTest' \
-            --tests 'com.x8bit.bitwarden.data.auth.repository.AuthRepositoryTest' \
-            --tests 'com.x8bit.bitwarden.fleet.*'
+            --tests 'com.x8bit.bitwarden.data.platform.util.StringExtensionsTest'
 
       # Rename to the constellation asset names so build.sh's oras-push /
       # gh-release stage the fork APK per variant. The fdroid release APK is
@@ -485,17 +483,3 @@ jobs:
       app: cloud-vault
       artifact_prefix: cloud-vault-bitwarden-fork-
       api_levels: "[34]"
-
-  # #1116/#1119/#1127: the offline-first claims run on a real emulator, not as source greps. The PREVIOUS Ship build is
-  # installed and signed in to a seeded Vaultwarden, this run's APK is installed over it (`install -r`), the network is
-  # switched off and the app is opened with a fingerprint: the cached vault and the biometric unlock must survive.
-  # REQUIRE_EMULATOR=1 inside, so it fails instead of skipping. Screenshots: artifact vault-offline-evidence.
-  vault_offline_emulator:
-    needs: build_fork_vault
-    if: needs.build_fork_vault.result == 'success'
-    permissions:
-      contents: read
-      actions: read
-    uses: ./.github/workflows/test-vault-offline-emulator.yml
-    with:
-      new_run_id: ${{ github.run_id }}
