@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Registers a throwaway account on a CI Vaultwarden and seeds one login item (client-side crypto, like a Bitwarden
 client). Usage: seed-vaultwarden.py BASE_URL EMAIL MASTER_PASSWORD ITEM_NAME. Prints nothing secret."""
-import base64, hashlib, hmac, json, os, sys, urllib.request, urllib.parse, uuid
+import base64, hashlib, hmac, json, os, sys, urllib.error, urllib.request, urllib.parse, uuid
 from cryptography.hazmat.primitives import hashes, padding, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -32,11 +32,23 @@ user_key = os.urandom(64)
 rsa_key = rsa.generate_private_key(65537, 2048)
 priv = rsa_key.private_bytes(serialization.Encoding.DER, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
 pub = rsa_key.public_key().public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
-post("/identity/accounts/register", {
-    "email": email, "name": "CI Seed", "masterPasswordHash": pw_hash, "masterPasswordHint": None,
-    "key": enc(user_key, sk_enc, sk_mac), "kdf": 0, "kdfIterations": ITER,
-    "keys": {"publicKey": b64(pub), "encryptedPrivateKey": enc(priv, user_key[:32], user_key[32:])},
-})
+mkkey, keys = enc(user_key, sk_enc, sk_mac), {"publicKey": b64(pub), "encryptedPrivateKey": enc(priv, user_key[:32], user_key[32:])}
+try:  # current Vaultwarden: verification token (returned in the body while mail is off), then register/finish
+    req = urllib.request.Request(base + "/identity/accounts/register/send-verification-email",
+                                 json.dumps({"email": email, "name": "CI Seed", "receiveMarketingEmails": False}).encode(),
+                                 {"Content-Type": "application/json"})
+    vtoken = json.loads(urllib.request.urlopen(req).read() or b'""')
+    post("/identity/accounts/register/finish", {
+        "email": email, "emailVerificationToken": vtoken, "masterPasswordHash": pw_hash, "masterPasswordHint": None,
+        "userSymmetricKey": mkkey, "userAsymmetricKeys": keys, "kdf": 0, "kdfIterations": ITER,
+    })
+except urllib.error.HTTPError as ex:
+    if ex.code != 404:
+        raise
+    post("/identity/accounts/register", {  # older Vaultwarden
+        "email": email, "name": "CI Seed", "masterPasswordHash": pw_hash, "masterPasswordHint": None,
+        "key": mkkey, "kdf": 0, "kdfIterations": ITER, "keys": keys,
+    })
 tok = post("/identity/connect/token", {
     "grant_type": "password", "username": email, "password": pw_hash, "scope": "api offline_access",
     "client_id": "web", "deviceType": "9", "deviceName": "ci-seed", "deviceIdentifier": str(uuid.uuid4()),
