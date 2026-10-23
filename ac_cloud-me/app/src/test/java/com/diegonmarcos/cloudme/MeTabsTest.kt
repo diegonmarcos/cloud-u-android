@@ -16,6 +16,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
@@ -103,12 +104,18 @@ class MeTabsTest {
     @Test
     fun `a tap moves the pill and the name together`() {
         showTabs(health[0].id)
-        compose.onNodeWithTag(PageTabsTags.tab(health[5].id)).performClick()
+        compose.onNodeWithTag(PageTabsTags.tab(health[1].id)).performClick()
         compose.waitForIdle()
-        assertEquals(health[5].id, selected)
+        assertEquals(health[1].id, selected)
         assertEquals("the old tab kept its name", 0, nameCount(health[0].id))
-        assertEquals("the new tab shows its name", 1, nameCount(health[5].id))
-        compose.onNodeWithTag(PageTabsTags.tab(health[5].id)).assertIsSelected()
+        assertEquals("the new tab shows its name", 1, nameCount(health[1].id))
+        compose.onNodeWithTag(PageTabsTags.tab(health[1].id)).assertIsSelected()
+        // The strip scrolls rather than clipping: the last tab is reachable and selectable too.
+        compose.onNodeWithTag(PageTabsTags.tab(health.last().id)).performScrollTo().performClick()
+        compose.waitForIdle()
+        assertEquals(health.last().id, selected)
+        assertEquals("the previous tab kept its name", 0, nameCount(health[1].id))
+        assertEquals("the last tab shows its name", 1, nameCount(health.last().id))
     }
 
     @Test
