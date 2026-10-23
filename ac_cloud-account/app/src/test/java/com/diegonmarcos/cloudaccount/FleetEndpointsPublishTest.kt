@@ -126,10 +126,8 @@ class FleetEndpointsPublishTest {
         assertFalse(v.grants.allow(AccountVault.VAULT_PACKAGE, FleetEndpointsContract.GRANT_ENDPOINTS))
     }
 
-    @Test fun theVaultServiceCarriesItsPublicNameButStaysMeshOnlyUntilAPublicHostExists() {
-        val s = FleetEndpointsContract.parseDecl(java.io.File("../build.json").readText().let { org.json.JSONObject(it).getJSONObject("fleet_endpoints").toString() })
-            .single { it.id == "vaultwarden" }
-        assertEquals("vault.diegonmarcos.com", s.publicDomain); assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, s.policy)
-        assertEquals("http://vaultwarden.mesh.diegonmarcos.com:8880", s.meshUrl())
+    @Test fun theVaultHasOneUrlAndIsNotARoutedFleetService() {
+        val services = FleetEndpointsContract.parseDecl(java.io.File("../build.json").readText().let { org.json.JSONObject(it).getJSONObject("fleet_endpoints").toString() })
+        assertTrue("the vault is reached directly at https://vault.diegonmarcos.com, never rewritten onto a mesh name", services.none { it.id == "vaultwarden" || it.kind == "vault" || it.meshDns.startsWith("vaultwarden") })
     }
 }

@@ -5,7 +5,7 @@ set -uo pipefail
 old=$(realpath "$1"); new=$(realpath "$2"); mkdir -p "$3"; export OUT_DIR=$(realpath "$3")
 cd "$(dirname "$0")/../.."
 export VAULT_EMAIL="ci-seed-$(date +%s)@example.com" VAULT_PW="CiSeed$(date +%s)xYz"
-docker run -d --name vw --network host -e I_REALLY_WANT_VOLATILE_STORAGE=true -e LOG_LEVEL=debug -e EXTENDED_LOGGING=true -e SIGNUPS_ALLOWED=true -e DOMAIN=http://vaultwarden.mesh.diegonmarcos.com vaultwarden/server:latest >/dev/null || exit 1
+docker run -d --name vw --network host -e I_REALLY_WANT_VOLATILE_STORAGE=true -e LOG_LEVEL=debug -e EXTENDED_LOGGING=true -e SIGNUPS_ALLOWED=true -e DOMAIN=https://vault.diegonmarcos.com vaultwarden/server:latest >/dev/null || exit 1
 for _ in $(seq 1 40); do curl -fs http://127.0.0.1/alive >/dev/null && break; sleep 2; done
 pip install --quiet cryptography >/dev/null 2>&1
 python3 test/emulator/seed-vaultwarden.py http://127.0.0.1 "$VAULT_EMAIL" "$VAULT_PW" "CI Seed Login" || { echo "FAIL: seeding"; docker logs vw | tail -20; exit 1; }
@@ -19,14 +19,27 @@ python3 test/emulator/seed-vaultwarden.py http://127.0.0.1 "$VAULT_EMAIL" "$VAUL
 try: print(len(json.load(sys.stdin)))
 except Exception as e: print("unreadable", e)')"
   rm -rf "$OUT_DIR/bwcli"; } > "$OUT_DIR/bw-check.txt" 2>&1
-# release builds allow cleartext only to vaultwarden.mesh.diegonmarcos.com, so the emulator (started with -dns-server $DNS_IP) resolves it via the stub
+# the vault has ONE URL, https://vault.diegonmarcos.com, so the emulator test serves it over TLS: a throwaway CA signs a cert for the name,
+# socat terminates TLS on :443 in front of the seeded Vaultwarden (:80), the CA goes into the emulator's user store (the app trusts user CAs),
+# and the DNS stub (the emulator is started with -dns-server $DNS_IP) resolves the name to the host. Release builds permit no cleartext to it.
+T="$OUT_DIR/tls"; mkdir -p "$T"
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$T/ca.key" -out "$T/ca.pem" -days 2 -subj "/CN=ci-vault-test-ca" >/dev/null 2>&1
+openssl req -newkey rsa:2048 -nodes -keyout "$T/srv.key" -out "$T/srv.csr" -subj "/CN=vault.diegonmarcos.com" >/dev/null 2>&1
+printf 'subjectAltName=DNS:vault.diegonmarcos.com\nbasicConstraints=CA:FALSE\nextendedKeyUsage=serverAuth\n' > "$T/ext.cnf"
+openssl x509 -req -in "$T/srv.csr" -CA "$T/ca.pem" -CAkey "$T/ca.key" -CAcreateserial -out "$T/srv.pem" -days 2 -extfile "$T/ext.cnf" >/dev/null 2>&1 || { echo "FAIL: test certificate"; exit 1; }
+cat "$T/srv.pem" "$T/ca.pem" > "$T/chain.pem"
+command -v socat >/dev/null || sudo apt-get install -y -qq socat >/dev/null 2>&1
+sudo socat OPENSSL-LISTEN:443,reuseaddr,fork,cert="$T/chain.pem",key="$T/srv.key",verify=0 TCP:127.0.0.1:80 >"$OUT_DIR/socat.log" 2>&1 &
 sudo DNS_BIND="$DNS_IP" python3 -u test/emulator/dns-stub.py >"$OUT_DIR/dns-stub.log" 2>&1 &
 sleep 1
-adb -e shell "ping -c1 -W3 vaultwarden.mesh.diegonmarcos.com" >"$OUT_DIR/net-check.txt" 2>&1
-for h in 10.0.2.2 vaultwarden.mesh.diegonmarcos.com; do
-  { echo "--- tcp $h:80"; adb -e shell "printf 'GET /alive HTTP/1.0\\r\\nHost: vaultwarden.mesh.diegonmarcos.com\\r\\n\\r\\n' | toybox nc -w 5 $h 80; echo rc=\$?"; } >>"$OUT_DIR/net-check.txt" 2>&1
-done
-{ echo "--- host listeners"; ss -ltn | grep ':80 '; } >>"$OUT_DIR/net-check.txt" 2>&1
+H=$(openssl x509 -in "$T/ca.pem" -subject_hash_old -noout)
+adb -e root >/dev/null 2>&1; adb -e wait-for-device
+adb -e shell "mkdir -p /data/misc/user/0/cacerts-added" && adb -e push "$T/ca.pem" "/data/misc/user/0/cacerts-added/$H.0" >/dev/null 2>&1
+adb -e shell "chmod 644 /data/misc/user/0/cacerts-added/$H.0; restorecon -R /data/misc/user/0/cacerts-added" >/dev/null 2>&1
+rm -f "$T/ca.key" "$T/srv.key"
+adb -e shell "ping -c1 -W3 vault.diegonmarcos.com" >"$OUT_DIR/net-check.txt" 2>&1
+curl -s --cacert "$T/ca.pem" --resolve vault.diegonmarcos.com:443:127.0.0.1 https://vault.diegonmarcos.com/alive >>"$OUT_DIR/net-check.txt" 2>&1 && echo "host tls ok" >>"$OUT_DIR/net-check.txt"
+{ echo "--- host listeners"; ss -ltn | grep -E ':(80|443) '; } >>"$OUT_DIR/net-check.txt" 2>&1
 adb -e logcat -c
 REQUIRE_EMULATOR=1 OLD_APK="$old" NEW_APK="$new" bash test/test-vault-offline-emulator.sh
 rc=$?

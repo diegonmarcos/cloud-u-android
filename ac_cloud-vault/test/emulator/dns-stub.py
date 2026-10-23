@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Answers A queries for vaultwarden.mesh.diegonmarcos.com (and subdomains) with 10.0.2.2 (the emulator's view of the CI host, where the
+"""Answers A queries for vault.diegonmarcos.com (and subdomains) with 10.0.2.2 (the emulator's view of the CI host, where the
 seeded Vaultwarden listens); every other name goes to the host resolver. UDP DNS_BIND:53 (needs root)."""
 import os, socket, struct
 
@@ -17,7 +17,7 @@ while True:
         name, end = name_of(q)
         qtype = struct.unpack(">H", q[end:end + 2])[0]
         print("q", name, qtype, flush=True)
-        ip = "10.0.2.2" if name == "vaultwarden.mesh.diegonmarcos.com" or name.endswith(".vaultwarden.mesh.diegonmarcos.com") else None
+        ip = "10.0.2.2" if name == "vault.diegonmarcos.com" or name.endswith(".vault.diegonmarcos.com") else None
         if ip is None and qtype == 1:
             try:
                 ip = socket.gethostbyname(name)

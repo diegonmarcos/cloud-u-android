@@ -41,7 +41,6 @@
         <domain includeSubdomains="false">news-gdelt.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">stalwart.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">tokens-api.mesh.diegonmarcos.com</domain>
-        <domain includeSubdomains="false">vaultwarden.mesh.diegonmarcos.com</domain>
         <!-- END fleet-mesh-cleartext -->
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>

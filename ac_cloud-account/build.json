@@ -316,7 +316,7 @@
     }
   },
   "fleet_endpoints": {
-    "_doc": "#1093 THE fleet endpoint declaration, declared once (#1090 declared the mail part of it as mail_endpoints). Every fleet service Cloud Account talks to or shows has up to two endpoints, taken from the service's own fleet declaration in cloud-u-containers (`source`): mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. libs:account reads this for four things: (1) Account's own transport (libs:fleet-endpoints: mesh first with a short probe, then the public URL with the fleet bearer, cached, re-probed on a network change), (2) Connect > Status > Endpoints, (3) the `fleet_endpoints` accountdata method that publishes the pairs to the other apps, and (4) the `mail_endpoints` method, which takes the kind=mail services (Cloud Mail). A service that lives under a PATH of a shared host says public_path (and mesh_path when the mesh side differs) and route_paths (the part of it that may be routed). A service with no public_domain is mesh-only (no public route is declared, or the public name is WG-only) and must say policy mesh_only; the bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets and sent on the exact public origin only. policy is the default: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. health is the path Status asks for. Every mesh endpoint is plain http (`.app` is WireGuard-only, WG encrypts) and every public URL https; each app's network_security_config.xml gets its cleartext `.app` entries GENERATED from this list (1_cicd/src/scripts/cloud-android-fleet-nsc.py, data 1_cicd/src/data/fleet-nsc.json, held by FleetHostGuardTest), never hand-listed.",
+    "_doc": "#1093 THE fleet endpoint declaration, declared once (#1090 declared the mail part of it as mail_endpoints). Every fleet service Cloud Account talks to or shows has up to two endpoints, taken from the service's own fleet declaration in cloud-u-containers (`source`): mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. libs:account reads this for four things: (1) Account's own transport (libs:fleet-endpoints: mesh first with a short probe, then the public URL with the fleet bearer, cached, re-probed on a network change), (2) Connect > Status > Endpoints, (3) the `fleet_endpoints` accountdata method that publishes the pairs to the other apps, and (4) the `mail_endpoints` method, which takes the kind=mail services (Cloud Mail). A service that lives under a PATH of a shared host says public_path (and mesh_path when the mesh side differs) and route_paths (the part of it that may be routed). The vault is NOT declared here: it has ONE URL, https://vault.diegonmarcos.com (reachable from a mesh source or with the mTLS client certificate), which Cloud Vault and Cloud Account use directly, so it is never rewritten onto a mesh name and needs no cleartext entry. A service with no public_domain is mesh-only (no public route is declared, or the public name is WG-only) and must say policy mesh_only; the bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets and sent on the exact public origin only. policy is the default: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. health is the path Status asks for. Every mesh endpoint is plain http (`.app` is WireGuard-only, WG encrypts) and every public URL https; each app's network_security_config.xml gets its cleartext `.app` entries GENERATED from this list (1_cicd/src/scripts/cloud-android-fleet-nsc.py, data 1_cicd/src/data/fleet-nsc.json, held by FleetHostGuardTest), never hand-listed.",
     "services": [
       {
         "id": "jmap",
@@ -462,19 +462,6 @@
         "public_scheme": "https",
         "policy": "mesh_first",
         "health": "/me/health"
-      },
-      {
-        "id": "vaultwarden",
-        "kind": "vault",
-        "source": "cloud-u-containers/user-vault_vaultwarden/build.json",
-        "_doc": "vault.diegonmarcos.com is wg_only: true, so it is the name Cloud Vault's server URL carries and a second endpoint only once a bearer-protected public host exists (#1100). Until then the policy is mesh_only: a request for the name is routed onto vaultwarden.mesh.diegonmarcos.com and, with the mesh down, fails as unreachable; it is never sent to the public host. Flip the policy to mesh_first when the public host is live.",
-        "mesh_dns": "vaultwarden.mesh.diegonmarcos.com",
-        "mesh_port": 8880,
-        "mesh_scheme": "http",
-        "public_domain": "vault.diegonmarcos.com",
-        "public_scheme": "https",
-        "policy": "mesh_only",
-        "health": "/alive"
       }
     ]
   },

@@ -90,7 +90,7 @@ ac_cloud-tasks/build.json	diagnostics.log_sink_url	pending	request endpoint read
 ac_cloud-vault/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-vault/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-vault/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
-ac_cloud-vault/build.json	ui.vault_url	routed	the self-hosted vault URL: Cloud Vault routes it mesh first (declared vaultwarden pair)
+ac_cloud-vault/build.json	ui.vault_url	routed	the self-hosted vault URL: the one vault URL, reached directly over TLS (no mesh rewrite)
 ac_cloud-wallet/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-wallet/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-wallet/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints

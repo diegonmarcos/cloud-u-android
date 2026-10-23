@@ -5,7 +5,8 @@
 #      static clients (so they see the real server URL) and NOT in the external client (non-Bitwarden hosts).
 #   F3 the application pulls Cloud Account's published endpoints at start; the bearer is held in memory only
 #      (no prefs, no file, no log), and the manifest queries Cloud Account.
-#   F4 the vault's mesh endpoint is in the GENERATED cleartext block (from the fleet declaration), never the whole .app TLD.
+#   F4 the vault has ONE URL (https://vault.diegonmarcos.com): the GENERATED cleartext block holds no vault host, no cleartext is
+#      permitted to it, and the whole .app TLD is never opened.
 # Each check is then run against planted mutations of the real sources; a mutation that leaves every check green fails.
 set -eu
 APP_DIR="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
@@ -52,7 +53,10 @@ def checks(f):
     need("@Volatile" in v and "private var bearer" in v, "F3 the bearer is not an in-memory field")
     need('<package android:name="com.diegonmarcos.cloudaccount"' in f[MANIFEST], "F3 the manifest does not query Cloud Account")
     x = f[NSC]
-    need("BEGIN fleet-mesh-cleartext" in x and re.search(r'BEGIN fleet-mesh-cleartext[^>]*-->\s*<domain includeSubdomains="false">vaultwarden\.mesh\.diegonmarcos\.com</domain>', x) is not None, "F4 vaultwarden.mesh.diegonmarcos.com is not in the GENERATED cleartext block")
+    blk = re.search(r'BEGIN fleet-mesh-cleartext[^>]*-->(.*?)<!-- END fleet-mesh-cleartext', x, re.S)
+    need(blk is not None, "F4 the GENERATED cleartext block is missing")
+    need(blk is not None and "<domain" not in blk.group(1), "F4 the vault app's generated cleartext block holds a host (the vault is https only)")
+    need(not re.search(r'<domain[^>]*>[^<]*vault[^<]*</domain>', x), "F4 a vault host is listed in the network security config")
     need(not re.search(r'<domain[^>]*>\.?app</domain>|<domain[^>]*>\*\.app</domain>', x), "F4 the whole .app TLD is opened")
     return bad
 
@@ -78,8 +82,9 @@ mutations = {
     "application does not start it": mut(APPCLS, "VaultFleetEndpoints.start(this)", "// removed"),
     "the vault hook runs nothing": mut(VAULTFLEET, "FleetBoot.start(context)", "Unit"),
     "no query for Cloud Account": mut(MANIFEST, '<package android:name="com.diegonmarcos.cloudaccount" />', ""),
-    "no cleartext entry": mut(NSC, '<domain includeSubdomains="false">vaultwarden.mesh.diegonmarcos.com</domain>', ""),
-    "the whole .app TLD opened": mut(NSC, '<domain includeSubdomains="false">vaultwarden.mesh.diegonmarcos.com</domain>', '<domain includeSubdomains="true">app</domain>'),
+    "a vault mesh host in the generated block": mut(NSC, "<!-- END fleet-mesh-cleartext -->", '<domain includeSubdomains="false">vaultwarden.mesh.diegonmarcos.com</domain>\n        <!-- END fleet-mesh-cleartext -->'),
+    "the vault public host cleartext": mut(NSC, "<!-- CRL Distribution Servers -->", '<domain includeSubdomains="false">vault.diegonmarcos.com</domain>'),
+    "the whole .app TLD opened": mut(NSC, "<!-- END fleet-mesh-cleartext -->", '<domain includeSubdomains="true">app</domain>\n        <!-- END fleet-mesh-cleartext -->'),
     "the Android halves are not compiled": mut(APPGRADLE, "libs/fleet-endpoints-android", "libs/fleet-endpoints-androidX"),
 }
 survivors = []

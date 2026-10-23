@@ -5,7 +5,7 @@
 # unlocks with no network, and the vault header says "Offline - last synced".
 #
 # Upgrade mode (OLD_APK and NEW_APK set, CI): enrol a fingerprint, install the OLD apk, sign in to the seeded Vaultwarden
-# (http://vaultwarden.mesh.diegonmarcos.com, resolved to the host by test/emulator/dns-stub.py); the app wraps the key with the fingerprint by itself after that first unlock, then
+# (https://vault.diegonmarcos.com, resolved to the host by test/emulator/dns-stub.py); the app wraps the key with the fingerprint by itself after that first unlock, then
 # `adb install -r` the NEW apk, turn the network OFF and open it with the fingerprint: the cached vault item must show.
 #
 # SKIPs (exit 0) without an emulator, unless REQUIRE_EMULATOR=1 (CI sets it), where a skip is a failure.
@@ -65,7 +65,7 @@ signin_selfhosted() {
   trace s2
   $ui tap 'Self-hosted' 15 || die env-selfhosted "no Self-hosted entry"
   trace s3
-  $ui type "${VAULT_URL:-http://vaultwarden.mesh.diegonmarcos.com}"
+  $ui type "${VAULT_URL:-https://vault.diegonmarcos.com}"
   trace s4
   $ui tap '^Save$|Save' 15 || die env-save "no Save"
   trace s5
