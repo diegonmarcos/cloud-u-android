@@ -37,7 +37,7 @@ class DayScreenTest {
         rule.onNodeWithTag(DayTags.MAP).assertIsDisplayed()
         rule.onNodeWithTag(DayTags.SUMMARY).assertIsDisplayed()
         rule.onNodeWithText("Seestrasse 1, 8000, Zurich, Zurich, Switzerland").assertIsDisplayed()
-        rule.onNode(hasScrollAction()).performScrollToNode(hasText("Cafe Central"))
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Cafe Central"))
         rule.onNodeWithText("Cafe Central").assertExists()
         rule.onNodeWithText("Bahnhofstrasse 14, 8001, Zurich, Zurich, Switzerland").assertExists()
         rule.onNodeWithText("Food and drink", substring = true).assertExists()
