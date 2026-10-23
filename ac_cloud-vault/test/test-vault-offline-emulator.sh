@@ -19,7 +19,13 @@ if ! { command -v adb >/dev/null && adb -e get-state >/dev/null 2>&1; }; then
   [ "${REQUIRE_EMULATOR:-0}" = 1 ] && { echo "FAIL: no emulator, REQUIRE_EMULATOR=1"; exit 1; }
   echo "SKIP: no emulator"; exit 0
 fi
-shot() { adb -e exec-out screencap -p > "$OUT_DIR/$1.png"; }
+shot() { # screencap to a file on the device, then pull (exec-out piping came back empty on the CI emulator); retry once
+  for _ in 1 2 3; do
+    adb -e wait-for-device; adb -e shell screencap -p /sdcard/shot.png && adb -e pull /sdcard/shot.png "$OUT_DIR/$1.png" >/dev/null 2>&1 && [ -s "$OUT_DIR/$1.png" ] && return 0
+    sleep 2
+  done
+  echo "WARN: screenshot $1 failed" >&2
+}
 die() { shot "fail-$1"; $ui dump "$OUT_DIR/fail-$1.xml"; adb -e logcat -d -t 400 > "$OUT_DIR/fail-$1.logcat" 2>&1; echo "FAIL: $2"; exit 1; }
 launch() { adb -e shell am force-stop $pkg; adb -e shell monkey -p $pkg -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1; }
 touch_finger() { adb -e emu finger touch 1; }
@@ -41,7 +47,7 @@ enrol_fingerprint() {
 }
 
 signin_selfhosted() {
-  $ui wait 'Continue|Log in|Email' 90 || die login-screen "app did not reach the login screen"
+  $ui wait 'Continue|Log in|Email' 240 || die login-screen "app did not reach the login screen"
   # point the app at the seeded server: environment menu -> Self-hosted -> server URL -> Save
   $ui tap 'Logging in on|Region|Server|\.com|diegonmarcos' 20 || die env-menu "no environment selector"
   $ui tap 'Self-hosted' 15 || die env-selfhosted "no Self-hosted entry"

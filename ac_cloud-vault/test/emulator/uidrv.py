@@ -7,9 +7,13 @@ def adb(*a):
     return subprocess.run(["adb", "-e", *a], capture_output=True, text=True).stdout
 
 def dump():
-    out = adb("exec-out", "uiautomator", "dump", "/dev/tty")
-    i, j = out.find("<?xml"), out.rfind("</hierarchy>")
-    return out[i:j + len("</hierarchy>")] if i >= 0 and j >= 0 else ""
+    for _ in range(3):
+        out = adb("exec-out", "uiautomator", "dump", "/dev/tty")
+        i, j = out.find("<?xml"), out.rfind("</hierarchy>")
+        if i >= 0 and j >= 0:
+            return out[i:j + len("</hierarchy>")]
+        time.sleep(1)
+    return ""
 
 def nodes():
     try:
@@ -46,6 +50,10 @@ def fail(msg):
     except OSError:
         pass
     print("FAIL: " + msg, file=sys.stderr)
+    try:
+        print("last screen texts: " + " | ".join(filter(None, (n.get("text") or n.get("content-desc") for n in nodes())))[:600], file=sys.stderr)
+    except Exception:
+        pass
     sys.exit(1)
 
 def main():
