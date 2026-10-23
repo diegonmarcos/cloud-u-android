@@ -22,8 +22,12 @@ def expand(prk, info):  # HKDF-Expand, one block
 def post(path, body, headers=None, form=False):
     data = urllib.parse.urlencode(body).encode() if form else json.dumps(body).encode()
     h = {"Content-Type": "application/x-www-form-urlencoded" if form else "application/json", **(headers or {})}
-    with urllib.request.urlopen(urllib.request.Request(base + path, data, h)) as r:
-        return json.loads(r.read() or b"{}")
+    try:
+        with urllib.request.urlopen(urllib.request.Request(base + path, data, h)) as r:
+            return json.loads(r.read() or b"{}")
+    except urllib.error.HTTPError as ex:
+        print("HTTP %s on %s: %s" % (ex.code, path, ex.read().decode(errors="replace")[:600]), file=sys.stderr)  # server message, no secrets
+        raise
 
 mk = hashlib.pbkdf2_hmac("sha256", pw.encode(), email.encode(), ITER, 32)
 pw_hash = b64(hashlib.pbkdf2_hmac("sha256", mk, pw.encode(), 1, 32))
