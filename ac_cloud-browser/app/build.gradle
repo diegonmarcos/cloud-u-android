@@ -129,7 +129,14 @@ buildJson.ui.browser.private_names = [
     owned: servingDecl.endpoints.findAll { it.resolve == 'declared' }.collectEntries { [(it.name): servingDecl.dns.answer] },
     service: ['package': webserverPackage, 'class': keepaliveDecl['service']],
 ]
-def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
+// #1141 the `_doc*` keys are prose for people reading build.json; javac refuses a String constant over 65535 bytes (BuildConfig),
+// and the config had grown to it. The app reads no `_doc` key, so they stay out of the baked copy.
+def stripDocs
+stripDocs = { o ->
+    o instanceof Map ? o.findAll { k, v -> !k.toString().startsWith('_doc') }.collectEntries { k, v -> [(k): stripDocs(v)] }
+        : (o instanceof List ? o.collect { stripDocs(it) } : o)
+}
+def uiBrowserConfigB64 = b64(stripDocs(buildJson.ui.browser ?: [:]))
 // #868 the nav declaration: ui.bottom_nav (the island), ui.sections (what each item opens), ui.default_section.
 def uiBottomNav      = (buildJson.ui.bottom_nav ?: []).join(',')
 def uiSectionsB64    = b64(buildJson.ui.sections ?: [])
