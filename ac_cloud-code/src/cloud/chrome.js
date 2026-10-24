@@ -1,17 +1,25 @@
-// cloud-code app chrome over every cloud panel (Chat replaced Home): a top bar with the hamburger
-// at the left (a drawer of the ACTIVE page's own items) and Profile & Config at the right, plus
-// the bottom sheet the Chat composer's pickers open. Same theme variables as the bottom nav, so
+// cloud-code app chrome over every cloud panel (Chat replaced Home): the drawer of the ACTIVE page's own
+// items (opened by the first row's hamburger, #1158), the bottom sheet the Chat composer's pickers open
+// and the full-screen pages. Same theme variables as the bottom nav, so
 // every Acode theme restyles it; data-dense, one line per row.
 import { el, icon } from "./dom";
 
-/** The bar every cloud panel starts with. [actions] are the page's own icon buttons. */
-export function topBar(title, { onMenu, onProfile, subtitle } = {}, ...actions) {
-	return el("div", { className: "cloud-topbar" },
-		el("button", { className: "cloud-icon-btn", title: "Menu", "aria-label": "Menu", "data-role": "menu", onclick: onMenu }, icon("menu")),
-		el("div", { className: "cloud-topbar-title" }, el("h2", {}, title), subtitle ? el("span", { className: "cloud-muted" }, subtitle) : null),
-		...actions,
-		el("button", { className: "cloud-icon-btn", title: "Profile & Config", "aria-label": "Profile & Config", "data-role": "profile", onclick: onProfile }, icon("account_circle")),
-	);
+let setTitle = null;
+
+/** index.js hands the first row's title setter over once the bars are mounted (#1158). */
+export function bindTitle(fn) {
+	setTitle = fn;
+}
+
+/**
+ * The first row is the app's, not the panel's (#1158: nav-bar-top-first-row, mounted once by bars-dom.js): a panel only
+ * names its title (the AI tab names its agent). [onMenu], [onProfile] and [actions] are the first row's now (the hamburger
+ * drawer lists the page's own items, which is where its former icon buttons live), so this draws nothing and returns an
+ * empty marker for the panel to hold.
+ */
+export function topBar(title, { subtitle } = {}) {
+	if (setTitle) setTitle(subtitle ? `${title} · ${subtitle}` : title);
+	return document.createComment("first row");
 }
 
 let open = null;

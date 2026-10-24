@@ -35,6 +35,13 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
       variant call and no second island; nobody else may reference the variant's symbols. The
       variant itself lives in libs:bottomnav, so the colours, sizes and shape stay the lib's.
 
+  W1-W4  a held app whose UI is a WebView page (Cordova Cloud Code, #1158) cannot call the Compose bars, so
+      it draws the same ones from a declaration (nav-shape.json::web). W1 = N1. W2 its own nav JSON lists the
+      same bottom pages, sub-pages (each with an icon) and default as build.json ui. W3 its bar sizes and
+      colours (nav.json::bars) equal the Kotlin constants of libs:nav-bar-top-first-row, -second-row,
+      -bottom, bottomnav SearchHtmlTokens and theme-background, so the web bars cannot drift from the libs.
+      W4 its sources draw the three bars (markers) and nothing swipes the hamburger open.
+
   N9  page backgrounds: every ui.sections[].background / pages[].background is one of
       nav-shape.json::backgrounds ("dark" default, "light", "theme" = the app's light/dark mode);
       it picks the strip's lib-owned TabSurface. No held app's source names a TabSurface
@@ -259,7 +266,8 @@ def check_variants(root, apps, uis, spec, exempt, bad):
             bad.append(f"N8 {app}: draws BottomNavIsland as well as its variant — one island per app")
 
 
-def check_app(root, app, ui, spec, bad):
+def check_n1(app, ui, spec, bad):
+    """N1: ui.bottom_nav is 2..8 ids, each a ui.sections id, and the default is one of them. Returns (sections, ids)."""
     sections = [s for s in (ui.get("sections") or []) if isinstance(s, dict)]
     ids = {s.get("id") for s in sections}
     bar = ui.get("bottom_nav")
@@ -279,6 +287,13 @@ def check_app(root, app, ui, spec, bad):
         bad.append(f"N1 {app}: build.json ui.sections is missing or empty")
     if ui.get("default_section") not in bar:
         bad.append(f"N1 {app}: ui.default_section {ui.get('default_section')!r} is not one of ui.bottom_nav")
+    return sections, ids
+
+
+def check_app(root, app, ui, spec, bad):
+    sections, ids = check_n1(app, ui, spec, bad)
+    bar = ui.get("bottom_nav")
+    bar = bar if isinstance(bar, list) else []
 
     # N2
     gradles = [p for pat in ("build.gradle*", os.path.join("app", "build.gradle*"), "settings.gradle*")
@@ -343,6 +358,149 @@ def check_app(root, app, ui, spec, bad):
     check_backgrounds(app, sections, spec, code, rel, bad)
 
 
+KT_NUM = re.compile(r"^(-?\d+(?:\.\d+)?)(?:\.(?:dp|sp))?$")
+KT_COLOR = re.compile(r"Color\(\s*(0x[0-9A-Fa-f]{8})\s*\)")
+
+
+def kt_object(text, name):
+    """The body of `object NAME { ... }` (brace-balanced), comments blanked."""
+    m = re.search(r"\bobject\s+%s\s*\{" % re.escape(name), text)
+    if not m:
+        return None
+    depth, i = 1, m.end()
+    while i < len(text) and depth:
+        depth += {"{": 1, "}": -1}.get(text[i], 0)
+        i += 1
+    return text[m.end():i - 1]
+
+
+def kt_consts(body):
+    """{NAME: expression} of every `val NAME: Type = expr` line in an object body."""
+    return {m.group(1): m.group(2).strip() for m in re.finditer(r"\bval\s+(\w+)\s*:\s*\w+\s*=\s*([^\n]+)", body)}
+
+
+def kt_number(expr, consts, others):
+    """A Kotlin dp/sp/int literal, or a reference to a sibling constant / `Object.name` of another object."""
+    m = KT_NUM.match(expr.strip())
+    if m:
+        return float(m.group(1))
+    m = re.match(r"^(?:(\w+)\.)?(\w+)$", expr.strip())
+    if m:
+        pool = consts if not m.group(1) else others.get(m.group(1), {})
+        if m.group(2) in pool:
+            return kt_number(pool[m.group(2)], consts if not m.group(1) else pool, others)
+    return None
+
+
+def check_web(root, app, ui, spec, bad):
+    """Rules W1-W4 for a held app whose UI is a WebView page (Cordova): it cannot call the Compose bars, so it draws the
+    SAME bars from a declaration, and the guard holds that declaration to the libs.
+      W1  N1: build.json ui.bottom_nav / sections / default_section
+      W2  the app's own nav JSON lists the same bottom pages, sub-pages and default as build.json ui
+      W3  its bar numbers and colours equal the Kotlin constants of the shared libs (web.parity)
+      W4  its sources draw the three bars (web.markers)
+    """
+    w = spec["web"]
+    cfg = w["apps"][app]
+    rel = lambda p: os.path.relpath(p, root)
+    sections, ids = check_n1(app, ui, spec, bad)
+    try:
+        nav = json.load(open(os.path.join(root, cfg["nav"])))
+    except (OSError, ValueError) as e:
+        bad.append(f"W2 {app}: {cfg['nav']} is unreadable ({e})")
+        return
+    tabs = nav.get("tabs") or []
+    if [t.get("id") for t in tabs] != (ui.get("bottom_nav") or []):
+        bad.append(f"W2 {app}: {cfg['nav']} tabs {[t.get('id') for t in tabs]} differ from build.json ui.bottom_nav {ui.get('bottom_nav')}")
+    if nav.get("default_tab") != ui.get("default_section"):
+        bad.append(f"W2 {app}: {cfg['nav']} default_tab {nav.get('default_tab')!r} differs from ui.default_section {ui.get('default_section')!r}")
+    by_id = {s.get("id"): s for s in sections}
+    for t in tabs:
+        want = [p.get("id") for p in (by_id.get(t.get("id"), {}).get("pages") or [])]
+        got = [p.get("id") for p in (t.get("pages") or [])]
+        if want != got:
+            bad.append(f"W2 {app}: tab {t.get('id')} sub-pages {got} differ from build.json ui section pages {want}")
+        for p in t.get("pages") or []:
+            if not p.get("icon"):
+                bad.append(f"W2 {app}: sub-page {t.get('id')}/{p.get('id')} declares no icon — the second row always draws one")
+
+    # W3
+    bars = nav.get("bars") or {}
+    files = {}
+    for key, ent in w["parity"].items():
+        path = os.path.join(root, ent["file"])
+        try:
+            files[ent["file"]] = blank_comments(read(path))
+        except OSError:
+            bad.append(f"W3 {app}: the shared lib source {ent['file']} is gone")
+    others = {}
+    for ent in w["parity"].values():
+        text = files.get(ent["file"])
+        for obj in [ent["object"]] + ent.get("also", []):
+            body = kt_object(text or "", obj) if text else None
+            if body is None:
+                for t2 in files.values():
+                    body = kt_object(t2, obj)
+                    if body is not None:
+                        break
+            if body is not None:
+                others[obj] = kt_consts(body)
+    for key, ent in w["parity"].items():
+        text = files.get(ent["file"])
+        if text is None:
+            continue
+        consts = others.get(ent["object"])
+        if consts is None:
+            bad.append(f"W3 {app}: {ent['file']} no longer declares `object {ent['object']}`")
+            continue
+        for js, kt in sorted(ent["map"].items()):
+            want = kt_number(consts.get(kt, ""), consts, others)
+            got = (bars.get(key) or {}).get(js)
+            if want is None:
+                bad.append(f"W3 {app}: {ent['object']}.{kt} is not a number the guard can read")
+            elif got != want:
+                bad.append(f"W3 {app}: {cfg['nav']} bars.{key}.{js} is {got!r} but {ent['object']}.{kt} is {want:g} — change the lib, then the file, never one alone")
+    # colours: ThemeColors DARK/LIGHT fields and SearchHtmlTokens' `fun name(dark)` pairs
+    tf = w["theme_file"]
+    ttext = files.get(tf) or blank_comments(read(os.path.join(root, tf)))
+    tab_selected = KT_COLOR.search(re.search(r"\bval\s+TAB_SELECTED\s*:\s*Color\s*=\s*([^\n]+)", ttext).group(1)).group(1)
+    for mode, name in (("dark", "DARK"), ("light", "LIGHT")):
+        m = re.search(r"\bval\s+%s\s*=\s*ThemeColors\((.*?)\n    \)" % name, ttext, re.S)
+        if not m:
+            bad.append(f"W3 {app}: {tf} no longer declares ThemeColors {name}")
+            continue
+        for fm in re.finditer(r"\b(\w+)\s*=\s*(Color\(\s*0x[0-9A-Fa-f]{8}\s*\)|TAB_SELECTED)", m.group(1)):
+            lit = tab_selected if fm.group(2) == "TAB_SELECTED" else KT_COLOR.search(fm.group(2)).group(1)
+            got = ((bars.get("theme") or {}).get(mode) or {}).get(fm.group(1))
+            if (got or "").upper().replace("0X", "0x") != lit.upper().replace("0X", "0x"):
+                bad.append(f"W3 {app}: {cfg['nav']} bars.theme.{mode}.{fm.group(1)} is {got!r} but {tf} {name} has {lit}")
+    st = w["bottom_colors_file"]
+    stext = blank_comments(read(os.path.join(root, st)))
+    for js in ("fill", "border", "accent", "idle"):
+        fm = re.search(r"fun\s+%s\(dark: Boolean\):\s*Color\s*=\s*if \(dark\)\s*(Color\([^)]*\))\s*else\s*(Color\([^)]*\))" % js, stext)
+        if not fm:
+            bad.append(f"W3 {app}: {st} no longer declares SearchHtmlTokens.{js}(dark)")
+            continue
+        for mode, lit in (("dark", fm.group(1)), ("light", fm.group(2))):
+            hexv = KT_COLOR.search(lit).group(1)
+            got = ((bars.get("bottom_colors") or {}).get(mode) or {}).get(js)
+            if (got or "").upper().replace("0X", "0x") != hexv.upper().replace("0X", "0x"):
+                bad.append(f"W3 {app}: {cfg['nav']} bars.bottom_colors.{mode}.{js} is {got!r} but {st} {js}() has {hexv}")
+
+    # W4
+    srcs = "\n".join(blank_comments(read(os.path.join(root, f))) for f in w["sources"] if os.path.isfile(os.path.join(root, f)))
+    for marker in w["markers"]:
+        if marker not in srcs:
+            bad.append(f"W4 {app}: no source of {', '.join(w['sources'])} draws `{marker}` — the shared bars are not on screen")
+    for f in w["forbidden"]:
+        for p in w["sources"]:
+            pp = os.path.join(root, p)
+            if os.path.isfile(pp) and re.search(f["re"], read(pp)):
+                bad.append(f"W4 {app}: {p} {f['why']}")
+    check_backgrounds(app, sections, spec, {}, rel, bad)
+
+
+
 def declared_backgrounds(nodes, where=""):
     """(path, value) for every `background` key in sections/pages, to any depth."""
     for n in nodes or []:
@@ -374,6 +532,7 @@ def main(argv):
     root = os.path.abspath(argv[0] if argv else ".")
     spec = json.load(open(os.path.join(root, DATA)))
     exempt = spec.get("exempt") or {}
+    web_apps = {k: v for k, v in ((spec.get("web") or {}).get("apps") or {}).items() if not k.startswith("_")}
     bad = []
 
     # N0
@@ -404,7 +563,10 @@ def main(argv):
                     bad.append(f"N6 {app}: passes N1-N5 but is still exempt — it migrated; delete its entry in {DATA}")
             continue
         checked += 1
-        check_app(root, app, ui, spec, bad)
+        if app in web_apps:
+            check_web(root, app, ui, spec, bad)
+        else:
+            check_app(root, app, ui, spec, bad)
 
     uis = {}
     for app in apps:
@@ -413,6 +575,14 @@ def main(argv):
         except (OSError, ValueError):
             pass
     check_variants(root, apps, uis, spec, exempt, bad)
+
+    for app, cfg in sorted(web_apps.items()):
+        if app not in apps:
+            bad.append(f"N6 {app}: a web app in {DATA} but there is no such app (a[ac]_*/build.json)")
+        if app in exempt:
+            bad.append(f"N6 {app}: a web app but also exempt — a web app is held to N1 + W1-W4")
+        if len(str(cfg.get("reason", "")).strip()) < spec["min_reason_chars"]:
+            bad.append(f"N6 {app}: a web app needs a reason of at least {spec['min_reason_chars']} characters (why it is not drawn by the Compose libs)")
 
     for app, why in sorted(exempt.items()):
         if app not in apps:

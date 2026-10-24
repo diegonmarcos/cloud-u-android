@@ -44,6 +44,11 @@ on:
       - "1_cicd/src/scripts/cloud-android-nav-shape-guard.py"
       - "1_cicd/src/scripts/test/nav-shape-guard.test.sh"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-bottom/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**"
+      - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ac_cloud-code/src/cloud/**"
       - "ac_cloud-notes/packages/frontend/apps/android/App/**"
     # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]

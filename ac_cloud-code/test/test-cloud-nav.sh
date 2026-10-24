@@ -27,6 +27,19 @@ while IFS= read -r line; do
 done <<< "$nav_out"
 [ "$checks" -ge 15 ] || fail "the nav driver made only $checks checks — it is not seeing the module"
 
+# ── #1158 the shared bars (first row, second row, bottom bar, gradient), through the real bars.js ──
+bars_out="$(node "$ROOT/test/cloud_bars.mjs" "$ROOT" 2>&1)"
+status=$?
+[ "$status" -eq 0 ] || fail "bars driver crashed (exit $status): $bars_out"
+bchecks=0
+while IFS= read -r line; do
+  case "$line" in
+    "CHECK ok "*)  ok "${line#CHECK ok }"; bchecks=$((bchecks + 1)) ;;
+    "CHECK bad "*) fail "${line#CHECK bad }"; bchecks=$((bchecks + 1)) ;;
+  esac
+done <<< "$bars_out"
+[ "$bchecks" -ge 40 ] || fail "the bars driver made only $bchecks checks — it is not seeing the module"
+
 # ── the seam: Acode is touched in exactly one place for the nav ────────────
 main="$ROOT/src/main.js"
 imports="$(grep -c '^import mountCloudNav from "./cloud";$' "$main")"

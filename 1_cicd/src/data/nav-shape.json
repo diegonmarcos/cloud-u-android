@@ -81,6 +81,94 @@
     }
   },
   "variant_symbols": ["SearchHtmlIsland", "SearchHtmlTokens", "NavStyle.SearchHtml"],
+  "web": {
+    "_doc": "#1158 WEB APPS: a held app whose whole UI is one WebView page (Cordova) cannot call the Compose bars (the Android project is generated at build time, no Compose, and a native host would stack a second window over its editor), so it draws the SAME bars from a declaration instead: its own nav JSON (`nav`: tabs, sub-pages with icons, default_tab, and `bars` = the libs' sizes and colours) next to build.json::ui. The guard (check_web, rules W1-W4 in the script header) holds that declaration to build.json::ui and to the libs' Kotlin constants, so the web bars cannot drift. `parity[key].map` is {nav.json bars key: Kotlin constant name in `object`}; theme_file and bottom_colors_file give the colour tables; sources/markers/forbidden are what W4 reads. Adding an app here needs a reason a reviewer can disagree with (min_reason_chars).",
+    "apps": {
+      "ac_cloud-code": {
+        "reason": "Cordova WebView over the vendored Acode editor (#562, #1158): the Android project is generated at build time without Compose, so the shared bars are drawn in the page from src/cloud/nav.json and held equal to the libs here.",
+        "nav": "ac_cloud-code/src/cloud/nav.json"
+      }
+    },
+    "parity": {
+      "first_row": {
+        "file": "ab_cloud-libs-shared/libs/nav-bar-top-first-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+        "object": "TopFirstRowSpec",
+        "map": {
+          "height": "HEIGHT",
+          "icon_target": "ICON_TARGET",
+          "icon": "ICON",
+          "icons_right": "ICONS_RIGHT",
+          "island_radius": "ISLAND_RADIUS",
+          "island_pad_h": "ISLAND_PAD_H",
+          "island_pad_v": "ISLAND_PAD_V",
+          "title_sp": "TITLE_SP"
+        }
+      },
+      "second_row": {
+        "file": "ab_cloud-libs-shared/libs/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt",
+        "object": "SecondRowSpec",
+        "map": {
+          "tab_height": "TAB_HEIGHT",
+          "icon": "ICON",
+          "label": "LABEL",
+          "strip_radius": "STRIP_RADIUS",
+          "tab_radius": "TAB_RADIUS",
+          "tab_min_width": "TAB_MIN_WIDTH",
+          "selected_pad_h": "SELECTED_PAD_H",
+          "idle_pad_h": "IDLE_PAD_H",
+          "strip_pad_v": "STRIP_PAD_V",
+          "side": "SIDE",
+          "top_inset": "TOP_INSET",
+          "bottom_inset": "BOTTOM_INSET"
+        }
+      },
+      "bottom": {
+        "file": "ab_cloud-libs-shared/libs/nav-bar-bottom/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt",
+        "object": "BottomSpec",
+        "map": {
+          "cell": "CELL",
+          "icon": "ICON",
+          "label": "LABEL",
+          "height": "HEIGHT",
+          "radius": "RADIUS",
+          "collapsed_height": "COLLAPSED_HEIGHT",
+          "collapsed_cell": "COLLAPSED_CELL",
+          "side_gutter": "SIDE_GUTTER",
+          "bottom_margin": "BOTTOM_MARGIN",
+          "max_width": "MAX_WIDTH",
+          "inner_pad": "INNER_PAD",
+          "lift": "LIFT",
+          "label_bottom": "LABEL_BOTTOM"
+        }
+      },
+      "search_tokens": {
+        "file": "ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/BottomNavSearchHtml.kt",
+        "object": "SearchHtmlTokens",
+        "map": {}
+      }
+    },
+    "theme_file": "ab_cloud-libs-shared/libs/theme-background/src/main/kotlin/com/diegonmarcos/superapp/themebg/ThemeBackground.kt",
+    "bottom_colors_file": "ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/BottomNavSearchHtml.kt",
+    "sources": [
+      "ac_cloud-code/src/cloud/bars-dom.js",
+      "ac_cloud-code/src/cloud/chrome.js"
+    ],
+    "markers": [
+      "id: \"cloud-top1\"",
+      "id: \"cloud-top2\"",
+      "id: \"cloud-nav\"",
+      "cloud-island",
+      "cloud-subtab",
+      "cloud-dropdown",
+      "collapseStep("
+    ],
+    "forbidden": [
+      {
+        "re": "touchstart|touchmove|touchend|swipe",
+        "why": "handles a touch/swipe: the hamburger opens by tap only (no edge-swipe)"
+      }
+    ]
+  },
   "exempt": {
     "ac_c3-morpheus": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
     "ac_c3-watchdog": "Single screen (#868 nav plan, Batch D): nothing to navigate between.",
@@ -88,7 +176,6 @@
     "ac_cloud-c3-webserver": "Exempt by class: Tauri app with no native screens (owner decision #816: Rust and web, not Kotlin); its five pages (Pages, API, Home, Files, Configs) are web pages of server/ui/shell.html that draw their own bottom tabs from the app route table, like Cloud Media Center's; test-c3-webserver.sh T7 guards the structure.",
     "ac_cloud-media-center": "Exempt by class: Tauri app with no native screens; its seven pages are static web/ pages that draw their own bottom tabs, like Cloud Code's web nav.",
     "ac_cloud-chat": "Exempt by class (#868 nav plan): fork of an upstream chat client; navigation is the upstream's.",
-    "ac_cloud-code": "Exempt by class (#868 nav plan): fork of an upstream code editor; navigation is the upstream's.",
     "ac_cloud-contacts": "Single WebView page (#868 decided 2026-10-06): the app hosts one web page with no native pages to navigate between; revisit if it gains native screens.",
     "ac_cloud-keyboard": "Exempt by class (#868 nav plan): input method; the keyboard is the UI and has no bottom navigation.",
     "ac_cloud-matrix": "Exempt by class (#868 nav plan): fork of an upstream Matrix client; navigation is the upstream's.",

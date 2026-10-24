@@ -1,61 +1,295 @@
-// cloud-code bottom nav + panels (#562). Colours are Acode's own theme
-// variables, so every Acode theme restyles the bar with the editor.
+// cloud-code bars + panels (#562, #1158). The bars are the fleet's shared navigation (#1154) drawn in the
+// page: sizes and colours are the --cb-* custom properties bars-dom.js sets from nav.json::bars (the libs'
+// own constants, dp = px), so nothing below restates a number of the design. Panels and the editor keep to
+// the space between the rows (--cloud-top-h) and the bar (--cloud-nav-h); both change on scroll-collapse.
+
+$ease: 0.22s ease;
 
 body.cloud-nav {
+  // The shared page gradient (libs:theme-background) replaces the flat Acode colour behind the cloud panels.
+  background: linear-gradient(180deg, var(--cb-top), var(--cb-bottom)) fixed;
+
   // Every Acode page (wc-page, the editor's #root included) is position:fixed at
-  // height:100%; give the bar its own strip instead of drawing over the editor.
+  // height:100%; give the bars their own strips instead of drawing over the editor.
   wc-page {
-    height: calc(100% - var(--cloud-nav-h)) !important;
+    top: var(--cloud-top-h) !important;
+    height: calc(100% - var(--cloud-top-h) - var(--cloud-nav-h)) !important;
+    transition: top $ease, height $ease;
   }
 }
 
-#cloud-nav {
+// ── first row (libs:nav-bar-top-first-row): plain icons, centred title island ──
+#cloud-top1 {
   position: fixed;
+  top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: var(--cloud-nav-h);
+  height: var(--cb-first-row-height);
+  z-index: 110;
   display: flex;
-  z-index: 109; // above wc-page (108), below Acode's dialogs and toasts
-  background-color: var(--primary-color);
-  border-top: 1px solid var(--border-color);
+  align-items: center;
+  transition: transform $ease, opacity $ease;
 
-  .cloud-tab {
-    flex: 1 1 0;
-    min-width: 0;
+  .cloud-slot {
+    // equal slots keep the island on the row's exact centre
+    width: calc(var(--cb-first-row-icon-target) * var(--cb-first-row-icons-right));
     display: flex;
-    flex-direction: column;
+    align-items: center;
+  }
+
+  .cloud-slot-right {
+    justify-content: flex-end;
+  }
+
+  .cloud-plain {
+    width: var(--cb-first-row-icon-target);
+    height: var(--cb-first-row-icon-target);
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    padding: 0;
     border: none;
-    background: none;
-    color: var(--primary-text-color);
-    opacity: 0.7;
+    background: none; // plain: no circle behind a glyph
+    color: var(--cb-ink);
 
     .icon {
-      font-size: var(--cloud-nav-icon);
-    }
-
-    .cloud-tab-label {
-      font-size: var(--cloud-nav-label);
-      white-space: nowrap; // never truncate or wrap: fit() switches to compact instead
-    }
-
-    &.active {
-      opacity: 1;
-      color: var(--active-color);
+      font-size: var(--cb-first-row-icon);
     }
   }
 
-  &.compact .cloud-tab:not(.active) .cloud-tab-label {
+  .cloud-island-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    justify-content: center;
+    position: relative;
+  }
+
+  .cloud-island {
+    max-width: 100%;
+    padding: var(--cb-first-row-island-pad-v) var(--cb-first-row-island-pad-h);
+    border: 1px solid var(--cb-islandBorder);
+    border-radius: var(--cb-first-row-island-radius);
+    background: var(--cb-island);
+    color: var(--cb-onIsland);
+    font-size: var(--cb-first-row-title-sp);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+
+  .cloud-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 160px;
+    max-width: 92vw;
+    padding: 6px 0;
+    border: 1px solid var(--cb-islandBorder);
+    border-radius: 12px;
+    background: var(--cb-island);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+
+    &[hidden] {
+      display: none;
+    }
+
+    .cloud-dropdown-item {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      background: none;
+      color: var(--cb-onIsland);
+      text-align: left;
+      font-size: 14px;
+
+      &.selected {
+        color: var(--cb-accentOnIsland);
+        font-weight: 700;
+      }
+    }
+  }
+}
+
+// ── second row (libs:nav-bar-top-second-row): small icon pills, name on the selected one ──
+#cloud-top2 {
+  position: fixed;
+  top: var(--cb-first-row-height);
+  left: 0;
+  right: 0;
+  z-index: 110;
+  box-sizing: border-box;
+  padding: var(--cb-second-row-top-inset) var(--cb-second-row-side) var(--cb-second-row-bottom-inset);
+  transition: top $ease, padding $ease;
+
+  &[hidden] {
     display: none;
+  }
+
+  .cloud-strip {
+    display: flex;
+    justify-content: space-evenly; // one tab centred; several spaced evenly, borders included
+    align-items: center;
+    overflow-x: auto;
+    padding: var(--cb-second-row-strip-pad-v) 0;
+    border: 1px solid var(--cb-islandBorder);
+    border-radius: var(--cb-second-row-strip-radius);
+    background: var(--cb-tabStrip);
+    scrollbar-width: none;
+  }
+
+  .cloud-subtab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 6px;
+    min-width: var(--cb-second-row-tab-min-width);
+    height: var(--cb-second-row-tab-height);
+    padding: 0 var(--cb-second-row-idle-pad-h);
+    border: none;
+    border-radius: var(--cb-second-row-tab-radius); // a rounded rectangle, never a circle
+    background: none;
+    color: var(--cb-inkDim);
+    transition: height $ease;
+
+    .cloud-subtab-icon {
+      font-size: var(--cb-second-row-icon);
+    }
+
+    .cloud-subtab-label {
+      font-size: var(--cb-second-row-label);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    &.active {
+      padding: 0 var(--cb-second-row-selected-pad-h);
+      background: var(--cb-tabSelected);
+      color: var(--cb-onTabSelected);
+    }
+  }
+}
+
+// ── bottom bar (libs:nav-bar-bottom): Cloud Search's glass pill and coloured selection ──
+#cloud-nav {
+  position: fixed;
+  left: var(--cb-bottom-side-gutter);
+  right: var(--cb-bottom-side-gutter);
+  bottom: var(--cb-bottom-bottom-margin);
+  max-width: var(--cb-bottom-max-width);
+  margin: 0 auto;
+  height: var(--cb-bottom-height);
+  box-sizing: border-box;
+  padding: 0 var(--cb-bottom-inner-pad);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 109; // above wc-page (108), below Acode's dialogs and toasts
+  border: 1px solid var(--cb-bottom-border);
+  border-radius: var(--cb-bottom-radius);
+  background: var(--cb-bottom-fill);
+  backdrop-filter: blur(12px);
+  transition: height $ease;
+
+  .cloud-tab {
+    position: relative;
+    flex: 0 1 var(--cb-bottom-cell);
+    min-width: 0;
+    height: var(--cb-bottom-cell);
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: var(--cb-bottom-idle);
+    transition: height $ease;
+
+    .cloud-tab-icon {
+      display: block;
+      font-size: var(--cb-bottom-icon);
+      transition: transform $ease, color $ease;
+    }
+
+    .cloud-tab-label {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: var(--cb-bottom-label-bottom);
+      font-size: var(--cb-bottom-label);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0; // the label rises in under the selected item only
+      transform: translateY(8px);
+      transition: opacity $ease, transform $ease;
+    }
+
+    &.active {
+      color: var(--cb-bottom-accent);
+
+      .cloud-tab-icon {
+        transform: translateY(calc(-1 * var(--cb-bottom-lift)));
+      }
+
+      .cloud-tab-label {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  }
+}
+
+// ── scrolled down: the first row goes, the other two shrink (nav.json::bars.collapse) ──
+body.cloud-collapsed {
+  #cloud-top1 {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #cloud-top2 {
+    top: 0;
+    padding-top: var(--cb-collapse-second-inset);
+    padding-bottom: var(--cb-collapse-second-inset);
+
+    .cloud-subtab {
+      height: var(--cb-collapse-second-tab-height);
+
+      .cloud-subtab-icon {
+        font-size: var(--cb-collapse-second-icon);
+      }
+
+      .cloud-subtab-label {
+        display: none;
+      }
+    }
+  }
+
+  #cloud-nav {
+    height: var(--cb-bottom-collapsed-height);
+
+    .cloud-tab {
+      height: var(--cb-bottom-collapsed-cell);
+
+      .cloud-tab-icon {
+        transform: none;
+      }
+
+      .cloud-tab-label {
+        display: none;
+      }
+    }
   }
 }
 
 .cloud-panel {
   position: fixed;
-  top: 0;
+  top: var(--cloud-top-h);
   left: 0;
   right: 0;
   bottom: var(--cloud-nav-h);
@@ -63,9 +297,10 @@ body.cloud-nav {
   overflow-y: auto;
   padding: 0 12px 12px;
   box-sizing: border-box;
-  background-color: var(--secondary-color);
+  background-color: transparent; // the shared page gradient shows through
   color: var(--secondary-text-color);
   user-select: text;
+  transition: top $ease, bottom $ease;
 
   &[hidden] {
     display: none;

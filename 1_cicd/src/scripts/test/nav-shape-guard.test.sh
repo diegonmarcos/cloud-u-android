@@ -72,6 +72,7 @@ import json, sys
 d = json.load(open(sys.argv[1]))
 d["exempt"] = {"ac_cloud-old": "Batch Z (synthetic): this fixture app has not migrated yet."}
 d["variants"] = {"_doc": "synthetic: no app is a declared exception until a test makes it one"}
+d["web"] = dict(d["web"], apps={})
 json.dump(d, open(sys.argv[2], "w"))
 PY
     cat > "$T/$FIX/build.json" <<'J'
@@ -100,7 +101,7 @@ K
 
 # mutate <label> <file> <python-edit-of-s> <expected-substring>
 mutate() {
-    stage
+    ${STAGE:-stage}
     local before after out rc
     before="$(cat "$T/$2")"
     python3 -c "import re,json,sys; p=sys.argv[1]; s=open(p).read(); $3; open(p,'w').write(s)" "$T/$2"
@@ -224,6 +225,50 @@ n8 "a variant for an app that is gone" "N8 ac_cloud-gone: a variant" \
     "p=os.path.join(t,data); d=json.load(open(p)); d['variants']['ac_cloud-gone']=d['variants'][fix]; json.dump(d,open(p,'w'))"
 mutate "the lib loses the variant" "$LIB/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/BottomNavSearchHtml.kt" \
     "s=s.replace('fun SearchHtmlIsland(','fun Gone(')" "N0 $LIB: BottomNavSearchHtml.kt no longer declares"
+
+# ── W1-W4 (#1158): a WebView app draws the same bars from a declaration the guard holds to the libs ──
+web_stage() {   # the synthetic fleet plus the REAL Cloud Code declaration, its web sources and the lib files the parity reads
+    stage
+    python3 - "$ROOT" "$T" "$DATA" <<'PY'
+import json, os, shutil, sys
+root, t, data = sys.argv[1:4]
+real = json.load(open(os.path.join(root, data)))
+p = os.path.join(t, data); d = json.load(open(p)); d["web"] = real["web"]; json.dump(d, open(p, "w"))
+w = real["web"]
+files = [w["apps"]["ac_cloud-code"]["nav"], "ac_cloud-code/build.json", *w["sources"], w["theme_file"], w["bottom_colors_file"], *[e["file"] for e in w["parity"].values()]]
+for f in files:
+    dst = os.path.join(t, f); os.makedirs(os.path.dirname(dst), exist_ok=True); shutil.copy(os.path.join(root, f), dst)
+PY
+}
+STAGE=web_stage
+web_stage
+out="$(python3 "$GUARD" "$T")"; rc=$?
+if [ "$rc" -eq 0 ] && grep -q "held to" <<<"$out"; then ok "the real Cloud Code web declaration passes W1-W4 in the synthetic fleet ($(tail -1 <<<"$out"))"
+else fail "the real Cloud Code web declaration is red (rc=$rc)"; printf '%s\n' "$out" | grep FAIL; fi
+NAVJ=ac_cloud-code/src/cloud/nav.json
+LIBSRC=ab_cloud-libs-shared/libs
+mutate "a web app's second-row tab height drifts from the lib" "$NAVJ" "$(J "d['bars']['second_row']['tab_height']=40")" "W3 ac_cloud-code: $NAVJ bars.second_row.tab_height is 40 but SecondRowSpec.TAB_HEIGHT is 36"
+mutate "a web app's bottom cell drifts from the lib"           "$NAVJ" "$(J "d['bars']['bottom']['cell']=52")" "bars.bottom.cell is 52 but BottomSpec.CELL is 56"
+mutate "a web app's first-row icon drifts from the lib"        "$NAVJ" "$(J "d['bars']['first_row']['icon']=20")" "bars.first_row.icon is 20 but TopFirstRowSpec.ICON is 24"
+mutate "a web app's selected-tab colour drifts from the lib"   "$NAVJ" "$(J "d['bars']['theme']['dark']['tabSelected']='0xFF000000'")" "bars.theme.dark.tabSelected is '0xFF000000'"
+mutate "a web app's page gradient drifts from the lib"         "$NAVJ" "$(J "d['bars']['theme']['light']['top']='0xFFFFFFFF'")" "bars.theme.light.top is '0xFFFFFFFF'"
+mutate "a web app's bottom accent drifts from the lib"         "$NAVJ" "$(J "d['bars']['bottom_colors']['dark']['accent']='0xFF123456'")" "bars.bottom_colors.dark.accent is '0xFF123456'"
+mutate "the lib changes the second row; the web app did not follow" "$LIBSRC/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt" \
+    "s=s.replace('val TAB_HEIGHT: Dp = 36.dp','val TAB_HEIGHT: Dp = 30.dp')" "SecondRowSpec.TAB_HEIGHT is 30"
+mutate "the lib changes the bar's gutter (through SearchHtmlTokens); the web app did not follow" "$LIB/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/BottomNavSearchHtml.kt" \
+    "s=s.replace('val sideGutter: Dp = 16.dp','val sideGutter: Dp = 12.dp')" "BottomSpec.SIDE_GUTTER is 12"
+mutate "the lib loses a spec object the web app is held to"     "$LIBSRC/nav-bar-bottom/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt" \
+    "s=s.replace('object BottomSpec','object Gone')" "no longer declares \`object BottomSpec\`"
+mutate "a web app's tab list differs from build.json ui"        "$NAVJ" "$(J "d['tabs'].pop()")" "W2 ac_cloud-code: $NAVJ tabs"
+mutate "a web app's default differs from build.json ui"         "$NAVJ" "$(J "d['default_tab']='backlog'")" "W2 ac_cloud-code: $NAVJ default_tab 'backlog'"
+mutate "a web sub-page has no icon"                             "$NAVJ" "$(J "del d['tabs'][0]['pages'][0]['icon']")" "W2 ac_cloud-code: sub-page backlog/sts declares no icon"
+mutate "a web sub-page that build.json does not declare"        "$NAVJ" "$(J "d['tabs'][0]['pages'].pop()")" "W2 ac_cloud-code: tab backlog sub-pages"
+mutate "a web app's bar ids are too few (N1)"                   "ac_cloud-code/build.json" "$(J "d['ui']['bottom_nav']=['ai']")" "N1 ac_cloud-code: ui.bottom_nav has 1 ids"
+mutate "the second row is no longer drawn"                      "ac_cloud-code/src/cloud/bars-dom.js" "s=s.replace('id: \"cloud-top2\"','id: \"other\"')" "W4 ac_cloud-code: no source of ac_cloud-code/src/cloud/bars-dom.js"
+mutate "the hamburger gets an edge-swipe"                       "ac_cloud-code/src/cloud/bars-dom.js" "s+='\ndocument.addEventListener(\"touchstart\", () => {});\n'" "the hamburger opens by tap only"
+mutate "a web app without a reason"                             "$DATA" "$(J "d['web']['apps']['ac_cloud-code']['reason']='tbd'")" "N6 ac_cloud-code: a web app needs a reason"
+mutate "a web app that is also exempt"                          "$DATA" "$(J "d['exempt']['ac_cloud-code']='Batch Z (synthetic): exempt and a web app at once.'")" "N6 ac_cloud-code: a web app but also exempt"
+unset STAGE
 
 echo
 [ "$FAILURES" -eq 0 ] && echo "nav-shape-guard.test: OK" || { echo "nav-shape-guard.test: $FAILURES FAILED"; exit 1; }

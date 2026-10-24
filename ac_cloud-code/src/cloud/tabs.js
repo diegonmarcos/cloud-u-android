@@ -16,6 +16,7 @@ export function buildTabs(nav, views) {
 		label: t.label,
 		icon: t.icon,
 		view: t.view,
+		pages: t.pages || [],
 	}));
 	const seen = new Set();
 	for (const t of tabs) {
@@ -23,6 +24,9 @@ export function buildTabs(nav, views) {
 		seen.add(t.id);
 		if (!views.includes(t.view))
 			throw new Error(`tab ${t.id}: no renderer for view ${t.view}`);
+		const pageIds = new Set(t.pages.map((p) => p.id));
+		if (pageIds.size !== t.pages.length) throw new Error(`tab ${t.id}: duplicate sub-page id`);
+		for (const p of t.pages) if (!p.icon || !p.label) throw new Error(`tab ${t.id} page ${p.id}: a sub-page declares its name and icon`);
 	}
 	if (!seen.has(nav.default_tab))
 		throw new Error(`default_tab ${nav.default_tab} is not a tab`);

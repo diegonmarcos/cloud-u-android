@@ -6,7 +6,33 @@
       "id": "backlog",
       "label": "Backlog",
       "icon": "notes",
-      "view": "backlog"
+      "view": "backlog",
+      "pages": [
+        {
+          "id": "sts",
+          "label": "Status",
+          "icon": "check_circle_outline",
+          "file": "P-Backlog-sts.md"
+        },
+        {
+          "id": "prj",
+          "label": "Project",
+          "icon": "folder",
+          "file": "P-Backlog-prj.md"
+        },
+        {
+          "id": "pry",
+          "label": "Priority",
+          "icon": "priority_high",
+          "file": "P-Backlog-pry.md"
+        },
+        {
+          "id": "eff",
+          "label": "Effort",
+          "icon": "zap",
+          "file": "P-Backlog-eff.md"
+        }
+      ]
     },
     {
       "id": "editor",
@@ -30,7 +56,21 @@
       "id": "agents",
       "label": "Agents",
       "icon": "brain",
-      "view": "agents"
+      "view": "agents",
+      "pages": [
+        {
+          "id": "bat",
+          "label": "Batches",
+          "icon": "documents",
+          "file": "P-Backlog-bat.md"
+        },
+        {
+          "id": "mdl",
+          "label": "Models",
+          "icon": "extension",
+          "file": "P-Backlog-mdl.md"
+        }
+      ]
     },
     {
       "id": "browser",
@@ -429,5 +469,104 @@
   "myterminal": {
     "_doc": "THE ONE PLACE the MyTerminal target is named (#562). It is a fleet application id, never a package: tools/resolve-targets.py reads the sibling app whose build.json::name equals it and derives the package (android.application_id) and the launcher activity (its manifest) into src/cloud/targets.gen.json at build time. #561 renamed cloud-ide to cloud-myterminal; if a later rename happens, this one value moves and the resolver fails the build loudly until it does.",
     "target": "cloud-myterminal"
+  },
+  "_doc_pages": "#1158 SECOND ROW. tabs[].pages are the sub-pages of a bottom page, drawn by bars-dom.js as the shared second row (libs:nav-bar-top-second-row) when a tab has two or more. Cloud Code's only sub-pages are the views the backlog engine already emits as dist files (P-Backlog-<id>.md): Backlog = status, project, priority, effort; Agents = batches, models. The first page's file is the tab's own nav.<tab>.entry. `icon` is a class of Acode's icon font (the tester proves each exists).",
+  "superapp": {
+    "_doc": "#1158 the first row's AI icon hands over to the SuperApp, whose assistant it is (extapp:cloud-superapp/ai, as every app without an assistant of its own does). A fleet application id, resolved by tools/resolve-targets.py like MyTerminal and Cloud Account (Profile = chat.account.app).",
+    "target": "cloud-superapp"
+  },
+  "bars": {
+    "_doc": "#1158 THE SHARED DESIGN OF #1154 AS DATA. This app is a Cordova WebView with no Compose (see index.js), so the shared Compose libs cannot draw its bars; bars-dom.js draws the same bars from these numbers (dp = CSS px) and colours (Kotlin ARGB literals, 0xAARRGGBB). Every value equals the lib constant it is named for and the nav-shape guard (rule W) reads the Kotlin and fails on drift: first_row = libs:nav-bar-top-first-row TopFirstRowSpec, second_row = libs:nav-bar-top-second-row SecondRowSpec, bottom = libs:nav-bar-bottom BottomSpec (+ libs:bottomnav SearchHtmlTokens), theme = libs:theme-background ThemeBackground. Change the lib, then this file, never this file alone.",
+    "first_row": {
+      "height": 52,
+      "icon_target": 44,
+      "icon": 24,
+      "icons_right": 3,
+      "island_radius": 20,
+      "island_pad_h": 14,
+      "island_pad_v": 7,
+      "title_sp": 13
+    },
+    "second_row": {
+      "tab_height": 36,
+      "icon": 16,
+      "label": 9,
+      "strip_radius": 14,
+      "tab_radius": 10,
+      "tab_min_width": 40,
+      "selected_pad_h": 12,
+      "idle_pad_h": 8,
+      "strip_pad_v": 4,
+      "side": 8,
+      "top_inset": 10,
+      "bottom_inset": 10
+    },
+    "bottom": {
+      "cell": 56,
+      "icon": 24,
+      "label": 12,
+      "height": 64,
+      "radius": 32,
+      "collapsed_height": 48,
+      "collapsed_cell": 40,
+      "side_gutter": 16,
+      "bottom_margin": 20,
+      "max_width": 440,
+      "inner_pad": 8,
+      "lift": 6,
+      "label_bottom": 4
+    },
+    "bottom_colors": {
+      "dark": {
+        "fill": "0xB30F172A",
+        "border": "0x1AFFFFFF",
+        "accent": "0xFF0A84FF",
+        "idle": "0xFF94A3B8"
+      },
+      "light": {
+        "fill": "0x99FFFFFF",
+        "border": "0x66FFFFFF",
+        "accent": "0xFF007AFF",
+        "idle": "0xFF5A5A5E"
+      }
+    },
+    "theme": {
+      "dark": {
+        "top": "0xFF0F172A",
+        "bottom": "0xFF1E293B",
+        "ink": "0xFFF8FAFC",
+        "inkDim": "0xFF94A3B8",
+        "island": "0xFF0A0F1A",
+        "onIsland": "0xFFFFFFFF",
+        "islandBorder": "0x1AFFFFFF",
+        "accent": "0xFF0A84FF",
+        "accentOnIsland": "0xFF7CB9FF",
+        "tabSelected": "0xFF7C3AED",
+        "onTabSelected": "0xFFFFFFFF",
+        "tabStrip": "0x14FFFFFF"
+      },
+      "light": {
+        "top": "0xFFE0EAFC",
+        "bottom": "0xFFCFDEF3",
+        "ink": "0xFF0F172A",
+        "inkDim": "0xFF475569",
+        "island": "0xFF1F2937",
+        "onIsland": "0xFFFFFFFF",
+        "islandBorder": "0x33FFFFFF",
+        "accent": "0xFF007AFF",
+        "accentOnIsland": "0xFF7CB9FF",
+        "tabSelected": "0xFF6D28D9",
+        "onTabSelected": "0xFFFFFFFF",
+        "tabStrip": "0x0F000000"
+      }
+    },
+    "collapse": {
+      "_doc": "Scroll down past threshold_px hides the first row and shrinks both bars: the bottom bar to bottom.collapsed_height with icons only, the second row to tab_height / inset here; scroll up (or the top of the list) restores them. Scrolls within settle_ms of a change are ignored, so the resize of the page cannot read as a scroll back.",
+      "threshold_px": 12,
+      "settle_ms": 350,
+      "second_tab_height": 28,
+      "second_inset": 4,
+      "second_icon": 14
+    }
   }
 }

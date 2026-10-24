@@ -1,20 +1,25 @@
 // cloud-code — the 7-tab bottom nav over Acode (#562).
 //
-// WHY THIS IS NOT THE FLEET'S COMPOSE NAV. #565 made ab_cloud-libs-shared
-// libs:bottomnav the one bottom nav for NATIVE apps. This app is a Cordova web
-// shell: its whole UI is DOM inside one WebView, so a Compose view cannot sit in
-// it without a second Android window stacked over the editor. The declared
-// exception is therefore to build the bar in Acode's own UI layer — its theme
-// variables, its icon font, its fileSystem / markdown / browser / openFolder —
-// so it looks and behaves like the rest of Acode. It keeps #565's behaviour
-// rule: a label is never truncated (see tabs.js::fitLabels).
+// WHY THE FLEET'S BARS ARE DRAWN IN THE PAGE AND NOT HOSTED NATIVELY. #565 made ab_cloud-libs-shared
+// libs:bottomnav the one bottom nav for NATIVE apps, and #1154 moved the fleet to the shared Compose
+// bars (nav-bar-top-first-row, nav-bar-top-second-row, nav-bar-bottom, theme-background). This app is a
+// Cordova web shell: its whole UI is DOM inside one WebView, and the Android project is GENERATED at
+// build time (no committed gradle module, no Compose plugin; see build-extras.gradle), so hosting the
+// WebView inside a Compose Activity would mean replacing Cordova's activity in a generated project and
+// putting a second window over the editor. #1158 therefore draws the SAME bars in the page, from the
+// same declaration and the libs' own numbers (nav.json::bars, held equal to the Kotlin constants by the
+// nav-shape guard), in Acode's own UI layer (its icon font, fileSystem / markdown / browser /
+// openFolder). Labels are never truncated: the bottom bar shows the name of the selected tab only.
 //
 // Mounted from main.js::loadApp with ONE call (search "cloud-code seam").
 // Editor = Acode untouched: selecting it only hides these panels.
 //
-// App chrome (Chat replaced Home): every cloud panel opens with chrome.js::topBar — the
-// hamburger at the left opens a drawer of the ACTIVE page's own items (each page registers its
-// provider in MENUS; tabs.js::menuFor picks the active one), Profile & Config at the right.
+// App chrome (#1158, the fleet's shared navigation of #1154): bars-dom.js draws the first row (plain
+// hamburger, title island with the hierarchy dropdown, AI / Profile / Configs), the second row (the
+// tab's sub-pages) and the bottom bar from nav.json::bars, on the shared page gradient. The hamburger
+// opens a drawer of the ACTIVE page's own items (each page registers its provider in MENUS;
+// tabs.js::menuFor picks the active one). AI hands over to the SuperApp, Profile to Cloud Account,
+// Configs opens Profile & Config (this app's settings).
 
 import "./cloud.scss";
 import fsOperation from "fileSystem";
@@ -26,10 +31,12 @@ import markdownIt from "markdown-it";
 import DOMPurify from "dompurify";
 import nav from "./nav.json";
 import targets from "./targets.gen.json";
-import { buildTabs, fitLabels, menuFor, select } from "./tabs";
+import { buildTabs, menuFor, select } from "./tabs";
+import { mountBars } from "./bars-dom";
+import { pageOfFile } from "./bars";
 import { listAgents, listRepos } from "./seams";
 import { el } from "./dom";
-import { drawer, topBar } from "./chrome";
+import { bindTitle, drawer, topBar } from "./chrome";
 import { openProfile } from "./profile";
 import { chatDrawer, renderChat } from "./chat/view";
 
@@ -47,8 +54,33 @@ function store(key, value) {
 // ACTIVE tab's provider through tabs.js::menuFor). A page that registers none shows an empty drawer.
 const MENUS = {};
 
+// Sub-pages (the second row): the page each tab shows, and the loader its renderer registered for a pick.
+const LOADERS = {};
+const PAGE = {};
+
+function pageFileOf(tabId, fallback) {
+	const t = tabs.find((x) => x.id === tabId);
+	const p = t && t.pages.find((x) => x.id === PAGE[tabId]);
+	return p ? p.file : fallback;
+}
+
+// A page was loaded in place (a dist link followed): the second row follows it.
+function selectedPage(tabId, pageId) {
+	PAGE[tabId] = pageId;
+	if (bars && state.active === tabId) bars.setPage(pageId);
+}
+
+function pickPage(tabId, pageId) {
+	if (tabId !== state.active) return showTab(tabId, pageId);
+	const t = tabs.find((x) => x.id === tabId);
+	const p = t.pages.find((x) => x.id === pageId);
+	PAGE[tabId] = pageId;
+	bars.setPage(pageId);
+	if (p && LOADERS[tabId]) LOADERS[tabId](p.file);
+}
+
 const chrome = {
-	bar: (title, subtitle, ...actions) => topBar(title, { onMenu: openMenu, onProfile: openProfile, subtitle }, ...actions),
+	bar: (title, subtitle) => topBar(title, { subtitle }),
 	showTab: (id) => showTab(id),
 };
 
@@ -58,8 +90,8 @@ function openMenu() {
 	drawer(tab ? tab.label : "Menu", got.items, ...(got.extra || []));
 }
 
-function panelHeader(title, ...actions) {
-	return chrome.bar(title, null, ...actions);
+function panelHeader(title) {
+	return chrome.bar(title, null);
 }
 
 // ── #575 THE ONE shared repo store ──────────────────────────────────────────
@@ -89,6 +121,7 @@ async function renderBacklogView(panel, title, entry, ...extra) {
 	async function load(file) {
 		body.textContent = `Loading ${file} …`;
 		current = file;
+		selectedPage(panel.dataset.tab, pageOfFile(tabs.find((t) => t.id === panel.dataset.tab), file));
 		try {
 			const text = await fsOperation(dir, file).readFile("utf8");
 			body.innerHTML = DOMPurify.sanitize(md.render(text));
@@ -151,7 +184,7 @@ async function renderBacklogView(panel, title, entry, ...extra) {
 			showTab("editor");
 		},
 	});
-	panel.replaceChildren(panelHeader(title, edit, repo, change), body, ...extra);
+	panel.replaceChildren(panelHeader(title), body, ...extra);
 	MENUS[panel.dataset.tab] = () => ({ items: [
 		{ id: "reload", label: "Reload", icon: "refresh", run: () => load(current) },
 		{ id: "entry", label: `Back to ${entry}`, icon: "home", run: () => load(entry) },
@@ -159,7 +192,8 @@ async function renderBacklogView(panel, title, entry, ...extra) {
 		{ id: "repo", label: "Open the repository", icon: "git", run: () => repo.click() },
 		{ id: "folder", label: "Backlog folder", icon: "folder_open", run: () => change.click() },
 	] });
-	await load(entry);
+	LOADERS[panel.dataset.tab] = load;
+	await load(pageFileOf(panel.dataset.tab, entry));
 }
 
 function renderBacklog(panel) {
@@ -181,7 +215,7 @@ async function renderRepos(panel) {
 			renderRepos(panel);
 		},
 	});
-	panel.replaceChildren(panelHeader("Repos", change), el("p", { className: "cloud-muted" }, root), list);
+	panel.replaceChildren(panelHeader("Repos"), el("p", { className: "cloud-muted" }, root), list);
 	MENUS[panel.dataset.tab] = () => ({ items: [
 		{ id: "rescan", label: "Rescan", icon: "refresh", run: () => renderRepos(panel) },
 		{ id: "root", label: "Repos root folder", icon: "folder_open", run: () => change.click() },
@@ -268,10 +302,9 @@ const LAUNCH = { myterminal: launchMyTerminal };
 let tabs = [];
 let state = { active: nav.default_tab, showPanel: null };
 const panels = {};
-const buttons = {};
-let $bar;
+let bars = null;
 
-function showTab(id) {
+function showTab(id, pageId) {
 	const tab = tabs.find((t) => t.id === id);
 	const next = select(state, tab, LAUNCH_VIEWS);
 	if (next.launch) {
@@ -279,46 +312,45 @@ function showTab(id) {
 		return;
 	}
 	state = next;
-	for (const [tid, b] of Object.entries(buttons)) b.classList.toggle("active", tid === state.active);
+	// undefined keeps the page the tab last showed; null (the dropdown's bottom page) goes to its first.
+	if (pageId !== undefined) PAGE[id] = pageId;
+	if (PAGE[id] == null && tab.pages.length) PAGE[id] = tab.pages[0].id;
+	bars.setTab(tab, PAGE[id]);
 	for (const [tid, p] of Object.entries(panels)) p.hidden = tid !== state.showPanel;
 	if (state.showPanel) {
 		const view = VIEWS[tab.view];
 		view(panels[tab.id]).catch((err) => toast(String(err?.message || err)));
 	}
-	fit();
 }
 
-function fit() {
-	// Measure in full mode (compact hides labels, which would measure 0), then
-	// decide; compact is only ever the device's verdict.
-	$bar.classList.remove("compact");
-	const measured = Object.values(buttons).map((b) => {
-		const label = b.querySelector(".cloud-tab-label");
-		return { labelPx: label.scrollWidth, tabPx: b.clientWidth };
-	});
-	$bar.classList.toggle("compact", fitLabels(measured) === "compact");
+// The first row's right-hand icons. AI and Profile hand over to fleet apps (resolved like MyTerminal, from the
+// fleet's own declarations); a missing app is a toast, never a crash.
+function launchApp(t) {
+	system.launchApp(t.package, t.activity, null, () => {}, () => toast(`${t.id} is not installed (${t.package})`));
 }
 
 export default function mount() {
 	tabs = buildTabs(nav, Object.keys(VIEWS));
 	document.body.classList.add("cloud-nav");
-	document.documentElement.style.setProperty("--cloud-nav-h", `${nav.nav.height_px}px`);
-	document.documentElement.style.setProperty("--cloud-nav-label", `${nav.nav.label_font_px}px`);
-	document.documentElement.style.setProperty("--cloud-nav-icon", `${nav.nav.icon_font_px}px`);
-	$bar = el("nav", { id: "cloud-nav", role: "tablist" });
+	bars = mountBars({
+		nav,
+		tabs,
+		on: {
+			onTab: (id, page) => showTab(id, page),
+			onPage: (id, page) => pickPage(id, page),
+			onMenu: openMenu,
+			onAi: () => launchApp(targets.superapp),
+			onProfile: () => launchApp(targets.chat.account),
+			onConfigs: openProfile,
+		},
+	});
+	bindTitle((text) => bars.setTitle(text));
 	for (const t of tabs) {
-		buttons[t.id] = el("button", { className: "cloud-tab", role: "tab", "data-tab": t.id, onclick: () => showTab(t.id) },
-			el("span", { className: `icon ${t.icon}` }),
-			el("span", { className: "cloud-tab-label" }, t.label),
-		);
-		$bar.append(buttons[t.id]);
 		if (VIEWS[t.view]) {
 			panels[t.id] = el("section", { className: "cloud-panel", "data-tab": t.id });
 			panels[t.id].hidden = true;
 			document.body.append(panels[t.id]);
 		}
 	}
-	document.body.append($bar);
-	window.addEventListener("resize", fit);
 	showTab(nav.default_tab);
 }

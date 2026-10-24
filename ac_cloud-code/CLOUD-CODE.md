@@ -103,29 +103,49 @@ tiles duplicated the bar; its Configs card, the all-files grant, moved to Profil
 
 ### Fit (measured, not assumed)
 
-7 tabs at the 360 px narrowest viewport is 51.4 px per tab, above the 48 px
-touch floor (`tabs.js::clearsTouchFloor`, asserted by the tester). The label
-"MyTerminal" at 10 px is wider than its tab, so labels are never truncated
-(#565's rule). `fit()` measures every label against its own tab on the device, and
-on any overflow the bar goes compact: icons everywhere, label only on the
-active tab.
+Seven tabs on the 360 px narrowest viewport are 44.6 px cells in the shared bar (the fleet's
+crowded-bar floor is 44, nav-shape N1; `bars.js::cellsClear`, asserted by `cloud_bars.mjs`). The
+bottom bar names only the selected tab (Cloud Search's rule), so a label is never truncated (#565's
+rule). The older per-tab check (`tabs.js::clearsTouchFloor`, 51.4 px at 48) stays in the tester.
 
-### Why not the fleet's Compose bottom nav (declared #565 exception)
+### The shared bars (#1158, the fleet's #1154 design)
 
-`libs:bottomnav` is the one nav for **native** apps. This app is a Cordova web
-shell, and its entire UI is DOM in a single WebView. A Compose view would need a
-second Android window stacked over the editor. So the bar is built in Acode's own UI
-layer: its theme variables, icon font, `fileSystem`, markdown-it, browser plugin
-and `openFolder`. It follows the same behavioural rule (never truncate a label).
+The fleet's default navigation is drawn in the page by `src/cloud/bars-dom.js` from `nav.json`,
+on the shared page gradient:
+
+- **First row** (`libs:nav-bar-top-first-row`): plain hamburger (tap only, no edge-swipe) opening
+  the active page's drawer; the title as a centred island whose tap opens the hierarchy dropdown
+  (the bottom page, then its sub-pages); plain AI (sparkles), Profile and Configs (vertical dots).
+  AI hands over to the SuperApp (`extapp:cloud-superapp/ai`), Profile to Cloud Account
+  (`extapp:cloud-account`), Configs opens Profile & Config, this app's settings.
+- **Second row** (`libs:nav-bar-top-second-row`): the page's sub-pages as small icon pills, the name
+  on the selected one, violet rounded-rectangle selection. Backlog: Status, Project, Priority, Effort;
+  Agents: Batches, Models (the views the backlog engine already emits). Pages with fewer than two
+  sub-pages have no second row.
+- **Bottom bar** (`libs:nav-bar-bottom`): Cloud Search's glass pill, accent-coloured selection, the
+  icon lifts and the name rises in.
+- **Scroll down** hides the first row and shrinks the other two; scroll up or the top restores them
+  (`bars.js::collapseStep`).
+
+Sizes and colours are `nav.json::bars`, equal to the libs' Kotlin constants; the nav-shape guard
+(rule W) fails when either side drifts, and holds `nav.json` to `build.json::ui`.
+
+### Why not the fleet's Compose bars hosted natively (declared #565 exception, re-decided in #1158)
+
+The shared libs are Compose. This app is a Cordova web shell whose Android project is generated at
+build time (no committed gradle module, no Compose plugin) and whose entire UI is DOM in a single
+WebView, so hosting the WebView in a Compose Activity would replace Cordova's activity in a
+generated project and stack a second window over the editor. So the same bars are drawn in
+Acode's own UI layer (icon font, `fileSystem`, markdown-it, browser plugin, `openFolder`) from the
+same declaration and the libs' numbers.
 
 ## App chrome
 
-Every cloud panel opens with `src/cloud/chrome.js::topBar`: the **hamburger** (left) opens a
+The first row is the app's (see The shared bars): its **hamburger** opens a
 drawer of the ACTIVE page's own items (each renderer registers its provider in
-`index.js::MENUS`; `tabs.js::menuFor` picks the active tab's and never another's), and
-**Profile & Config** (right). Same theme variables as the bar, data-dense rows. libs:ui-kit's
-top bar and drawer are Compose, so they cannot sit in this WebView (the #565 exception above);
-this follows their shape: menu left, title, account right.
+`index.js::MENUS`; `tabs.js::menuFor` picks the active tab's and never another's), including the
+actions the old per-panel top bar held. `src/cloud/chrome.js::topBar` only names a panel's title
+(the AI tab names its agent). Data-dense rows.
 
 - Chat's drawer: New chat, Chats (history: Pinned / Today / Previous 7 days / Older), Search
   chats, Pinned, Export this chat (opens it as Markdown in an editor tab), Rename, Delete.

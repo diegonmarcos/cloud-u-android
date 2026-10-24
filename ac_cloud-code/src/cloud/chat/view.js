@@ -169,7 +169,7 @@ function draw() {
 	if (!S.panel) return;
 	const s = current();
 	const a = agent();
-	S.panel.querySelector(".cloud-topbar")?.replaceWith(S.chrome.bar(a ? a.label : "AI", M.title(s)));
+	if (!S.panel.hidden) S.chrome.bar(a ? a.label : "AI", M.title(s)); // the island belongs to the tab on screen
 	drawMessages();
 	drawControls();
 }
