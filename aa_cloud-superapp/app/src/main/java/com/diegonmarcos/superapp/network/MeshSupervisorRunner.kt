@@ -99,8 +99,11 @@ object MeshSupervisorRunner {
     fun lastNote(ctx: Context): String = sp(ctx).getString("note", "").orEmpty()
 
     private fun note(ctx: Context, s: String) {
+        val changed = lastNote(ctx) != s
         sp(ctx).edit().putString("note", s).apply()
         Log.i(TAG, s)
+        // #1153 the supervisor's decisions (reconnects, retries, why it stopped) go to the journal the Logs section reads
+        if (changed) com.diegonmarcos.superapp.network.mesh.MeshEventLog.log(ctx, "supervisor", s)
     }
 
     fun netKind(ctx: Context): MeshSupervisor.Net {

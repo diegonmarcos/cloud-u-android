@@ -27,6 +27,9 @@ class MeshStore(
     val host: MeshHost,
     private val clock: () -> Long = System::currentTimeMillis,
     private val exec: (Runnable) -> Unit = defaultExec,
+    /** #1153 The persisted, process-shared journal file; null keeps the journal in memory (tests). */
+    journalFile: java.io.File? = null,
+    private val reachIo: MeshReach.Io = MeshReach.SystemIo,
 ) {
     // ── observable state ──
     var snapshot by mutableStateOf<MeshSnapshot?>(null)
@@ -68,7 +71,14 @@ class MeshStore(
     val view = mutableStateMapOf<String, String>().also { m ->
         for (c in decl.pages.flatMap { it.controls }) if (c.engine.startsWith("view.") && c.kind in setOf("choice", "switch")) m[c.id] = c.default
     }
-    val journal = MeshJournal(decl.logCap)
+    val journal = MeshJournal(decl.logCap, journalFile)
+    /** #1153 The last Reachability run, and the Logs level filter (all | warn | error). */
+    var reach by mutableStateOf<List<MeshReach.Result>>(emptyList())
+    var logLevel by mutableStateOf("all")
+    private var seenStatic = false
+    private var lastAo: Boolean? = null
+    private var lastPath = ""
+    private var lastDns = ""
 
     private val th = Thresholds(decl.handshakeFreshS, decl.handshakeStaleS)
     private var prev: MeshSnapshot? = null
@@ -89,6 +99,26 @@ class MeshStore(
         if (events.isNotEmpty()) { journal.addAll(events); journalRev++ }
         snapshot = snap
         refreshStatic()
+        logChanges(snap)
+    }
+
+    /** #1153 What changed in the engine's surroundings since the last poll: Always-on, the transport rung, the DNS in effect. */
+    private fun logChanges(snap: MeshSnapshot) {
+        val ao = aoView.on
+        val path = transport?.path.orEmpty()
+        val dns = snap.cfg.dnsInEffect
+        fun note(kind: String, text: String) { journal.add(LogEvent(clock(), kind, text)); journalRev++ }
+        if (!seenStatic) {
+            seenStatic = true
+            note("engine", "page open: profile ${snap.cfg.activeProfile.substringAfterLast('/').ifBlank { "none" }}, " +
+                "always-on ${ao ?: "unknown"}, transport ${path.ifBlank { "unknown" }}, DNS ${dns.ifBlank { "unknown" }}")
+        } else {
+            if (ao != lastAo) note("engine", "always-on ${lastAo ?: "unknown"} -> ${ao ?: "unknown"}")
+            if (path != lastPath) note("transport", "path ${lastPath.ifBlank { "unknown" }} -> ${path.ifBlank { "unknown" }}" +
+                (transport?.detail?.takeIf { it.isNotBlank() }?.let { ": $it" } ?: ""))
+            if (dns != lastDns) note("dns", "DNS in effect: ${dns.ifBlank { "unknown" }}")
+        }
+        lastAo = ao; lastPath = path; lastDns = dns
     }
 
     private fun refreshStatic() {
@@ -204,11 +234,16 @@ class MeshStore(
             perform("test fallbacks") {
                 val r = port.testFallbacks()
                 probes = r
+                for (pr in r) journal.add(LogEvent(clock(), if (pr.ok == false) "warn" else "probe",
+                    "${pr.id} ${when (pr.ok) { true -> "pass"; false -> "FAIL"; null -> "n/a" }}: ${pr.detail}"))
                 "${r.count { it.ok == true }} of ${r.size} pass" + r.filter { it.ok == false }.joinToString("") { " · ${it.id} fails" }
             }
         },
+        "reach.run" to { _, _ -> runReach() },
+        "clipboard.all" to { _, _ -> host.copy("mesh status", reportText()); notice = "whole status copied (private keys are never included)" },
+        "export.all" to { _, _ -> host.exportText("cloud-mesh-status.txt", reportText()) },
+        "log.level" to { a, _ -> logLevel = if (a in setOf("all", "warn", "error")) a else "all"; journalRev++ },
         "view.sort" to { a, _ -> view["peer_sort"] = a },
-        "view.topology" to { a, _ -> view["topology"] = a },
         "view.routeFilter" to { a, _ -> view["route_filter"] = a },
         "view.diff" to { a, _ -> diffFor = if (diffFor == a) null else a },
         "view.qr" to { a, _ -> qrFor = if (qrFor == a) null else a },
@@ -249,6 +284,20 @@ class MeshStore(
         if (h == null) { notice = "no engine call named $engineId"; return }
         h(arg, index)
     }
+
+    /** #1153 DNS + TCP :443 + HTTPS for each declared mesh URL; every result lands in the journal. */
+    fun runReach() {
+        if (decl.reachHosts.isEmpty()) { notice = "reachability: no mesh URLs declared"; return }
+        perform("reachability") {
+            val r = MeshReach.run(decl.reachHosts, reachIo, nowMs = clock)
+            reach = r
+            for (x in r) journal.add(LogEvent(clock(), if (x.ok) "reach" else "warn", MeshReach.text(listOf(x))))
+            "${r.count { it.ok }} of ${r.size} reachable"
+        }
+    }
+
+    /** #1153 The whole Status page as text (Copy all / Export all). */
+    fun reportText(): String = MeshReport.build(snapshot, dnsPreset, provider, transport, probes, reach, journal.list(), clock())
 
     /** The Cloud preset after the owner confirmed replacing their settings. */
     fun confirmCloudPreset() { confirmCloud = false; perform("provider") { port.applyCloudPreset() } }

@@ -37,6 +37,26 @@ private fun StatusRow(id: String, store: MeshStore, s: MeshSnapshot) {
     val cfg = s.cfg
     val tag = MeshTags.row(id)
     when (id) {
+        "export" -> Row(
+            Modifier.testTag(tag).padding(bottom = MeshDensity.dp(MeshDensity.S6)),
+            horizontalArrangement = Arrangement.spacedBy(MeshDensity.dp(MeshDensity.S6)),
+        ) {
+            for (cid in listOf("status_copy_all", "status_export_all")) store.decl.page("status")?.control(cid)?.let { c ->
+                MButton(declLabel("ctl", c.id, c.label), { store.run(c.engine) }, Modifier.testTag(MeshTags.control(c.id)))
+            }
+        }
+        "reachability" -> {
+            MHeader(stringResource(R.string.mesh_row_reachability))
+            if (store.reach.isEmpty()) MText(stringResource(R.string.mesh_reach_none, store.decl.reachHosts.size), Modifier.testTag(tag), size = MeshDensity.T_META, muted = true)
+            store.reach.forEachIndexed { i, r ->
+                MText(r.host, Modifier.testTag(if (i == 0) tag else "mesh:reach:${r.host}"), size = MeshDensity.T_BODY, bold = true, mono = true)
+                for (st in r.steps) KvRow(st.id, stringResource(probeVerdict(st.ok)) + " · ${st.ms} ms · " + st.detail, tag = "mesh:reach:${r.host}:${st.id}")
+            }
+            store.decl.page("status")?.control("reach_run")?.let { c ->
+                MButton(declLabel("ctl", c.id, c.label), { store.run(c.engine) },
+                    Modifier.testTag(MeshTags.control(c.id)).padding(vertical = MeshDensity.dp(MeshDensity.S4)), enabled = !store.busy)
+            }
+        }
         "vpn" -> VpnControls(store, s, tag)
         "state" -> {
             val word = when {

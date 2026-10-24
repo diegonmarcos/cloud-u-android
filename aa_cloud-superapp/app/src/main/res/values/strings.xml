@@ -552,7 +552,7 @@
     <string name="mesh_key_stored">stored - type a new key to replace it</string>
     <string name="mesh_key_paste">paste a base64 key</string>
     <string name="mesh_key_text">The key is masked and never shown or exported by this page; its public half is on Status.</string>
-    <string name="mesh_log_text">Fills while this page is open and when you act here: the engine has no event stream to replay.</string>
+    <string name="mesh_log_text">Persisted on this phone (bounded, survives restarts): tunnel and peer changes, transport switches, DNS and reachability results, supervisor decisions and your actions, stamped.</string>
     <string name="mesh_log_empty">Nothing yet.</string>
     <string name="mesh_qr_label">QR</string>
     <string name="mesh_row_transport">Path to the hubs</string>
@@ -603,4 +603,12 @@
     <string name="mesh_ctl_cf_warp_register">Use WARP</string>
     <string name="mesh_ctl_cf_warp_forget">Forget WARP device</string>
     <string name="mesh_ctl_cf_one_enrol">Enrol in Cloudflare One</string>
+    <string name="mesh_row_reachability">Reachability</string>
+    <string name="mesh_reach_none">Not run yet: %1$d private mesh URLs are tested (DNS, TCP 443, HTTPS).</string>
+    <string name="mesh_ctl_status_copy_all">Copy all</string>
+    <string name="mesh_ctl_status_export_all">Export all</string>
+    <string name="mesh_ctl_reach_run">Run again</string>
+    <string name="mesh_opt_warn">Warnings</string>
+    <string name="mesh_opt_error">Errors</string>
+    <string name="mesh_ctl_log_level">Level</string>
 </resources>

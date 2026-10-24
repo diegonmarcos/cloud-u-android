@@ -35,7 +35,7 @@ class MeshDeclTest {
     }
 
     @Test fun `the guard - every control the page had before is still declared and reachable from a tab`() {
-        assertTrue("the guard list is empty", d.previousControls.size >= 37)
+        assertTrue("the guard list is empty", d.previousControls.size >= 36)
         val declared = d.pages.flatMap { it.controls }.map { it.id }.toSet()
         assertEquals("previous controls that are no longer declared", emptyList<String>(), d.previousControls.filter { it !in declared })
         assertEquals("previous controls no tab reaches", emptyList<String>(), d.previousControls.filter { it !in d.reachableControls })
@@ -45,7 +45,7 @@ class MeshDeclTest {
 
     @Test fun `the guard names the exact controls the page shipped with`() {
         assertEquals(
-            listOf("peer_sort", "topology", "peer_add", "peer_remove", "peer_copy"),
+            listOf("peer_sort", "peer_add", "peer_remove", "peer_copy", "provider"),
             d.previousControls.take(5),
         )
         for (id in listOf("connect", "reconnect", "auto_boot", "auto_wifi", "auto_mobile", "kill_switch", "vpn_settings", "dns_preset", "mtu", "keepalive",
@@ -82,8 +82,9 @@ class MeshDeclTest {
     }
 
     @Test fun `#1120 Status opens with the VPN row - Connect, Disconnect, Reconnect and the Always-on switch`() {
-        assertEquals("vpn", d.page("status")!!.rows.first())
-        assertEquals(listOf("vpn_connect", "vpn_disconnect", "vpn_reconnect", "vpn_always_on"), d.page("status")!!.controls.map { it.id })
+        // #1153 Copy all / Export all sit above the VPN row
+        assertEquals(listOf("export", "vpn"), d.page("status")!!.rows.take(2))
+        assertEquals(listOf("status_copy_all", "status_export_all", "reach_run", "vpn_connect", "vpn_disconnect", "vpn_reconnect", "vpn_always_on"), d.page("status")!!.controls.map { it.id })
         assertEquals("alwayson.set", d.control("vpn_always_on")!!.engine)
         assertEquals("switch", d.control("vpn_always_on")!!.kind)
     }
@@ -112,5 +113,23 @@ class MeshDeclTest {
         val p = MeshDecl.parse("""{"default_page":"b","poll_ms":10,"pages":[{"id":"a","label":"A"},{"id":"b","controls":[{"id":"x","kind":"number","min":1,"max":9,"default":5,"engine":"e"}]}]}""")
         assertEquals("b", p.startPage.id); assertEquals(250L, p.pollMs)
         assertEquals("5", p.control("x")!!.default); assertEquals(9L, p.control("x")!!.max)
+    }
+
+    @Test fun `#1153 Reachability follows DNS and probes three declared mesh URLs`() {
+        val rows = d.page("status")!!.rows
+        assertEquals(rows.indexOf("dns") + 1, rows.indexOf("reachability"))
+        assertEquals(3, d.reachHosts.size)
+        assertTrue(d.reachHosts.all { it.endsWith(".mesh.diegonmarcos.com") })
+        assertTrue("an auth service is probed", d.reachHosts.any { it.startsWith("auth") })
+        assertEquals("reach.run", d.control("reach_run")!!.engine)
+    }
+
+    @Test fun `#1153 the fleet topology has no show-hide switch any more`() {
+        assertEquals(null, d.control("topology"))
+        assertTrue("view.topology" !in ids)
+        assertEquals("clipboard.all", d.control("status_copy_all")!!.engine)
+        assertEquals("export.all", d.control("status_export_all")!!.engine)
+        assertEquals(listOf("all", "warn", "error"), d.control("log_level")!!.choices)
+        assertTrue("the log keeps a bounded ring of at least 500 lines", d.logCap >= 500)
     }
 }

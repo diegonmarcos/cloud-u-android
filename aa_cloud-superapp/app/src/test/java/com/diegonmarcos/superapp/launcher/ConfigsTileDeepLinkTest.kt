@@ -10,10 +10,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * #1095 Cloud > Apps > Configs > SuperApp opens the Configs page, not Home. The tile's target is the
- * shell's own `section:config` grammar (ShellActivity.routeTarget: canonicalId -> goSection), so the
- * guard is the declared tile plus the two lookups routeTarget makes on that string: the id resolves
- * to the Configs section, and that section has pages to show.
+ * #1153 (supersedes #1095) Cloud > Apps > Configs > SuperApp launches the real app as its own task, so
+ * split screen can keep the Configs page open beside it. The tile's target is the `app://<package>` grammar
+ * ShellActivity.handleTarget resolves to the package's launcher intent with NEW_TASK | LAUNCH_ADJACENT, and
+ * the activity it lands on is resizeable.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -25,23 +25,25 @@ class ConfigsTileDeepLinkTest {
     }
 
     @Test
-    fun `C1 the SuperApp tile in the Configs row targets the Configs section`() {
-        assertEquals("section:config", superAppTile().target)
+    fun `C1 the SuperApp tile in the Configs row launches the app package as its own task`() {
+        assertEquals("app://com.diegonmarcos.superapp", superAppTile().target)
     }
 
     @Test
-    fun `C2 the shell resolves that target to the Configs section with pages`() {
-        val id = Sections.canonicalId(superAppTile().target.removePrefix("section:"))
-        assertEquals("config", id)
-        val section = Sections.byId(id)
-        assertNotNull("the shell would open no section", section)
-        assertTrue("Configs has no pages to show", section!!.pages.any { !it.hidden })
+    fun `C2 the shell launches app targets with NEW_TASK and LAUNCH_ADJACENT, onto a resizeable activity`() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
+            .first { java.io.File(it, "aa_cloud-superapp/app/src/main/AndroidManifest.xml").exists() }
+        val shell = java.io.File(root, "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt").readText()
+        assertTrue("app: targets lose NEW_TASK", "FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT" in shell)
+        val manifest = java.io.File(root, "aa_cloud-superapp/app/src/main/AndroidManifest.xml").readText()
+        val main = manifest.substringAfter("android:name=\".MainActivity\"").substringBefore(">")
+        assertTrue("MainActivity must be resizeable for split screen", "android:resizeableActivity=\"true\"" in main)
     }
 
     @Test
-    fun `C3 no Cloud Apps tile relaunches the app at Home any more`() {
-        val relaunch = Sections.byId("cloud")!!.tileGroups.flatMap { it.tiles }
-            .filter { it.target.startsWith("app://com.diegonmarcos.superapp") }
-        assertTrue("tiles still relaunch SuperApp at Home: ${relaunch.map { it.id }}", relaunch.isEmpty())
+    fun `C3 the Configs row has exactly one app launch tile, the other tiles open pages in the launcher`() {
+        val row = Sections.byId("cloud")!!.tileGroups.first { it.title == "Configs" }.tiles.filter { !it.separator }
+        assertEquals(listOf("cloud-superapp"), row.filter { it.target.startsWith("app://") }.map { it.id })
+        assertTrue("a Configs tile has an empty target: ${row.filter { it.target.isBlank() }.map { it.id }}", row.none { it.target.isBlank() })
     }
 }

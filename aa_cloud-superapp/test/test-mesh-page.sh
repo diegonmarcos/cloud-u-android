@@ -192,12 +192,13 @@ def check(root):
             if "mesh_tab_" + x["id"] not in have: P.append("T10 tab %s has no mesh_tab_%s in %s" % (x["id"], x["id"], loc))
     reach = {c["id"] for p in pages if p["id"] in placed for c in p.get("controls", [])}
     prev = decl.get("previous_controls", [])
-    if len(prev) < 37: P.append("T10 the guard lists %d controls, fewer than the 37 the page shipped with" % len(prev))
+    # #1153 the Fleet topology show/hide switch was removed on purpose (the topology is always shown): 36 remain
+    if len(prev) < 36: P.append("T10 the guard lists %d controls, fewer than the 36 the page ships with" % len(prev))
     for c in prev:
         if c not in {x["id"] for x in controls}: P.append("T10 control %s was removed (it is in previous_controls)" % c)
         elif c not in reach: P.append("T10 control %s is declared but no tab reaches it" % c)
     for c in controls:
-        if c["id"] not in prev and not c["id"].startswith(("cf_", "vpn_")): P.append("T10 control %s is new and neither Cloudflare nor the #1120 Status VPN row: list it in previous_controls only if it is old" % c["id"])
+        if c["id"] not in prev and not c["id"].startswith(("cf_", "vpn_", "status_", "reach_", "log_level")): P.append("T10 control %s is new and neither Cloudflare nor the #1120 Status VPN row: list it in previous_controls only if it is old" % c["id"])
     cf = decl.get("cloudflare", {})
     if "waiting_on" not in cf.get("one", {}) or "team" not in cf.get("one", {}): P.append("T10 cloudflare.one lacks team / waiting_on")
 

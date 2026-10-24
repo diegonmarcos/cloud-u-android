@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.network.mesh
 
 import android.app.Application
+import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
@@ -169,4 +170,14 @@ class MeshPageComposeTest : KitPageHarness() {
 
     private fun androidx.compose.ui.test.junit4.ComposeContentTestRule.onAllNodesWithTextCount(t: String) =
         onAllNodes(androidx.compose.ui.test.hasText(t, substring = true)).fetchSemanticsNodes().size
+
+    @Test fun `#1153 peers always shows the fleet topology and status offers Copy all, Export all and Run again`() {
+        val store = showStore()
+        compose.onNodeWithTag(MeshTags.control("status_copy_all")).assertExists()
+        compose.onNodeWithTag(MeshTags.control("status_export_all")).assertExists()
+        compose.onNodeWithTag(MeshTags.control("reach_run")).assertExists()
+        open(store, "peers")
+        compose.onNodeWithTag("mesh:topology").performScrollTo().assertExists()
+        compose.onNodeWithTag(MeshTags.control("topology")).assertDoesNotExist()
+    }
 }

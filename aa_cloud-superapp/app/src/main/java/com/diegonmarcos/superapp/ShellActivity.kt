@@ -1569,7 +1569,9 @@ open class ShellActivity : AppCompatActivity(),
             val fallback = if (u.isOpaque) null else u.getQueryParameter("fallback")
             val launch = pkg?.let { packageManager.getLaunchIntentForPackage(it) }
             if (launch != null) {
-                launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                // #1153 NEW_TASK gives the app its own task; LAUNCH_ADJACENT puts it beside this one when the
+                // window is split (ignored outside multi-window), so the Configs page can stay open next to it.
+                launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT)
                 runCatching {
                     val label = runCatching {
                         packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()

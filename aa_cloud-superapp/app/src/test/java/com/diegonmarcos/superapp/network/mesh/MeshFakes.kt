@@ -107,4 +107,6 @@ class FakeHost : MeshHost {
     override fun exportConf() { events += "exportConf" }
     override fun exportProfiles() { events += "exportProfiles" }
     override fun openCustomTab(url: String) { events += "tab:$url" }
+    var exported: Pair<String, String>? = null
+    override fun exportText(name: String, text: String) { events += "export:$name"; exported = name to text }
 }

@@ -133,9 +133,9 @@ class MeshStoreTest {
 
     @Test fun `view controls are state, seeded from the declaration`() {
         val s = store()
-        assertEquals("config", s.view["peer_sort"]); assertEquals("all", s.view["route_filter"]); assertEquals("false", s.view["topology"])
-        s.run("view.sort", "traffic"); s.run("view.routeFilter", "nat64"); s.run("view.topology", "true")
-        assertEquals("traffic", s.view["peer_sort"]); assertEquals("nat64", s.view["route_filter"]); assertEquals("true", s.view["topology"])
+        assertEquals("config", s.view["peer_sort"]); assertEquals("all", s.view["route_filter"]); assertNull("#1153 no topology switch", s.view["topology"])
+        s.run("view.sort", "traffic"); s.run("view.routeFilter", "nat64")
+        assertEquals("traffic", s.view["peer_sort"]); assertEquals("nat64", s.view["route_filter"])
         s.run("view.diff", "v4-split"); assertEquals("v4-split", s.diffFor); s.run("view.diff", "v4-split"); assertNull(s.diffFor)
     }
 
@@ -192,5 +192,101 @@ class MeshStoreTest {
     @Test fun `a pending apply is surfaced`() {
         val port = FakePort(up = true); port.pendingApply = true; val s = store(port); s.poll()
         assertTrue(s.pending)
+    }
+
+    // ── #1153 reachability, copy/export all, the persisted log ──
+
+    private class FakeIo(val failDns: Set<String> = emptySet(), val failTcp: Set<String> = emptySet(), val code: Int = 200) : MeshReach.Io {
+        var t = 0L
+        override fun resolve(host: String): List<String> { if (host in failDns) error("NXDOMAIN"); return listOf("10.0.0.7") }
+        override fun connect(address: String, port: Int, timeoutMs: Int) { if (address == "10.0.0.9" || failTcp.isNotEmpty()) error("refused") }
+        override fun https(url: String, timeoutMs: Int) = code
+    }
+
+    @Test fun `reachability reports dns, tcp and https per URL with ms and logs each result`() {
+        val s = MeshStore(FakePort(up = true), MeshDecl.baked, FakeHost(), clock = { now.also { now += 7 } }, exec = { it.run() }, reachIo = FakeIo())
+        s.poll(); s.run("reach.run")
+        assertEquals(MeshDecl.baked.reachHosts, s.reach.map { it.host })
+        for (r in s.reach) { assertEquals(listOf("dns", "tcp", "https"), r.steps.map { it.id }); assertTrue(r.ok); assertTrue(r.steps.all { it.ms >= 0 }) }
+        assertEquals(3, s.journal.list().count { it.kind == "reach" })
+        assertTrue(s.notice.contains("3 of 3 reachable"))
+    }
+
+    @Test fun `a failing step is shown failed and the later steps are skipped, logged as a warning`() {
+        val bad = MeshDecl.baked.reachHosts.first()
+        val s = MeshStore(FakePort(up = true), MeshDecl.baked, FakeHost(), clock = { now }, exec = { it.run() }, reachIo = FakeIo(failDns = setOf(bad)))
+        s.poll(); s.run("reach.run")
+        val r = s.reach.first { it.host == bad }
+        assertEquals(listOf(false, false, false), r.steps.map { it.ok })
+        assertTrue(r.steps[1].detail.startsWith("skipped"))
+        assertEquals(2, s.reach.count { it.ok })
+        assertTrue(s.journal.list().any { it.kind == "warn" && bad in it.text })
+        assertEquals(MeshJournal.levelOf("warn"), "warn")
+    }
+
+    @Test fun `an HTTP 5xx fails the https step, a 401 passes it`() {
+        assertTrue(MeshReach.probe("h", FakeIo(code = 401), 100) { 0L }.ok)
+        val r = MeshReach.probe("h", FakeIo(code = 502), 100) { 0L }
+        assertFalse(r.ok); assertEquals("https", r.steps.last().id); assertEquals("HTTP 502", r.steps.last().detail)
+    }
+
+    @Test fun `copy all and export all carry the whole status and never a private or pre-shared key`() {
+        val port = FakePort(up = true); val host = FakeHost()
+        port.peers[0] = port.peers[0].copy(presharedKey = "PSKSECRETVALUE")
+        val s = MeshStore(port, MeshDecl.baked, host, clock = { now }, exec = { it.run() }, reachIo = FakeIo())
+        s.poll(); s.run("reach.run")
+        s.journal.add(LogEvent(now, "action", "private key = SUPERSECRETKEY123="))
+        s.run("clipboard.all"); s.run("export.all")
+        assertEquals(host.clip, host.exported!!.second)
+        assertEquals("cloud-mesh-status.txt", host.exported!!.first)
+        val t = host.clip
+        for (needle in listOf("== Tunnel", "== Peers", "== DNS", "== Reachability", "== Log", "public key", "KEY-HUB", "gcp-proxy", MeshDecl.baked.reachHosts.first()))
+            assertTrue("missing $needle", needle in t)
+        assertFalse(t.contains("PSKSECRETVALUE")); assertFalse(t.contains("SUPERSECRETKEY123"))
+        assertTrue(t.contains("[redacted]"))
+    }
+
+    @Test fun `the journal persists in a file, survives a new instance, and a second writer shows up in the screen's log`() {
+        val f = java.io.File.createTempFile("mesh-journal", ".log"); f.delete()
+        try {
+            val screen = MeshStore(FakePort(up = true), MeshDecl.baked, FakeHost(), clock = { now }, exec = { it.run() }, journalFile = f)
+            // another component (the supervisor / a boot receiver / the engine side) appends to the same file
+            MeshJournal(MeshEventLog.CAP, f).add(LogEvent(5L, "supervisor", "reconnected after Wi-Fi change\nsecond line\tTab"))
+            val seen = screen.journal.list()
+            assertEquals("reconnected after Wi-Fi change\nsecond line\tTab", seen.single { it.kind == "supervisor" }.text)
+            screen.poll()
+            // app restart: a brand-new store over the same file still has both
+            val again = MeshStore(FakePort(up = true), MeshDecl.baked, FakeHost(), clock = { now }, exec = { it.run() }, journalFile = f)
+            assertTrue(again.journal.list().any { it.kind == "supervisor" })
+            assertTrue(again.journal.list().any { it.kind == "engine" && it.text.startsWith("page open") })
+            again.run("log.clear"); assertTrue(MeshJournal(10, f).list().isEmpty())
+        } finally { f.delete() }
+    }
+
+    @Test fun `the journal file is bounded`() {
+        val f = java.io.File.createTempFile("mesh-journal", ".log"); f.delete()
+        try {
+            val j = MeshJournal(50, f)
+            repeat(6000) { j.add(LogEvent(it.toLong(), "info", "line $it " + "x".repeat(60))) }
+            assertTrue(f.length() <= MeshJournal.MAX_BYTES + 200)
+            val l = j.list(); assertEquals(50, l.size); assertEquals(5999L, l.last().atMs)
+        } finally { f.delete() }
+    }
+
+    @Test fun `the level filter hides lower levels, and engine surroundings changes are journalled`() {
+        val port = FakePort(up = true); val s = store(port); s.poll()
+        s.journal.add(LogEvent(1, "error", "boom")); s.journal.add(LogEvent(2, "stale", "peer stale"))
+        val all = s.journal.list()
+        s.run("log.level", "error"); assertEquals(listOf("error"), all.filter { MeshJournal.shows(it, s.logLevel) }.map { it.kind }.distinct())
+        s.run("log.level", "warn"); assertEquals(setOf("error", "stale"), all.filter { MeshJournal.shows(it, s.logLevel) }.map { it.kind }.toSet())
+        s.run("log.level", "bogus"); assertEquals("all", s.logLevel)
+        port.aoOn = true; s.poll()
+        assertTrue(s.journal.list().any { it.kind == "engine" && it.text.startsWith("always-on") })
+    }
+
+    @Test fun `testing fallbacks journals every probe, a failed one as a warning`() {
+        val s = store(); s.poll(); s.run("transport.test")
+        val probe = s.journal.list().filter { it.kind == "probe" || it.kind == "warn" }
+        assertEquals(3, probe.size); assertTrue(probe.any { it.kind == "warn" && it.text.startsWith("dns FAIL") })
     }
 }

@@ -69,6 +69,8 @@ object MeshDecl {
         /** #1074 Every control id the page had before the reorganisation; the guard that none silently disappears. */
         val previousControls: List<String> = emptyList(),
         val cloudflare: com.diegonmarcos.superapp.network.CloudflareWarp.Decl = com.diegonmarcos.superapp.network.CloudflareWarp.Decl.parse(null),
+        /** #1153 The private mesh hosts the Reachability test probes (DNS, TCP :443, HTTPS). */
+        val reachHosts: List<String> = emptyList(),
     ) {
         fun tab(id: String?): Tab? = tabs.firstOrNull { it.id == id }
         /** The tab the strip opens on: the declared default, else the first. */
@@ -96,6 +98,7 @@ object MeshDecl {
             latencyEveryTicks = o.optInt("latency_every_ticks", 5).coerceAtLeast(1),
             latencyTimeoutMs = o.optInt("latency_timeout_ms", 1200).coerceAtLeast(100),
             logCap = o.optInt("log_cap", 200).coerceAtLeast(10),
+            reachHosts = o.optJSONArray("reach_hosts").strings(),
             handshakeFreshS = hs.optLong("fresh_s", 150L),
             handshakeStaleS = hs.optLong("stale_s", 300L),
             nat64Marker = o.optString("nat64_marker"),

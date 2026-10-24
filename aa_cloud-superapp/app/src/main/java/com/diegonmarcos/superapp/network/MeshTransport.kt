@@ -192,7 +192,13 @@ object MeshTransport {
 
     fun plan(ctx: Context): Plan? = Plan.parse(WgState.prefs(ctx).transportPlan)
 
-    private fun save(ctx: Context, p: Plan?) { WgState.prefs(ctx).transportPlan = p?.toJson().orEmpty(); ensured = null }
+    private fun save(ctx: Context, p: Plan?) {
+        val before = WgState.prefs(ctx).transportPlan
+        WgState.prefs(ctx).transportPlan = p?.toJson().orEmpty(); ensured = null
+        // #1153 a switch between the UDP rungs and the TLS-443 relay is an event the Logs section shows
+        if (p != null && p.toJson() != before) com.diegonmarcos.superapp.network.mesh.MeshEventLog.log(ctx, "transport",
+            "path ${Plan.parse(before)?.path?.label ?: "none"} -> ${p.path.label}: ${p.detail}")
+    }
 
     /**
      * The config a bring-up uses: [cfg] with the endpoints the last connect chose. A relay plan whose

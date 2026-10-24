@@ -125,6 +125,8 @@ interface MeshHost {
     fun exportProfiles()
     /** #1074 Open [url] in a Custom Tab (the Cloudflare One team login). */
     fun openCustomTab(url: String)
+    /** #1153 Save [text] as a file the owner picks (Storage Access Framework), suggested [name]. */
+    fun exportText(name: String, text: String) {}
 }
 
 /** #1074 What is registered with Cloudflare: [warp] a WARP device exists, [one] a Cloudflare One device exists, [active] the profile name that is the tunnel when it is a Cloudflare one. */

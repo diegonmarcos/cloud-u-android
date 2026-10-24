@@ -60,14 +60,8 @@ fun MeshPeersPage(store: MeshStore, modifier: Modifier = Modifier, embedded: Boo
             MButton(declLabel("ctl", c.id, c.label), { store.run(c.engine) },
                 Modifier.padding(top = MeshDensity.dp(MeshDensity.S8)).testTag(MeshTags.control(c.id)))
         }
-        page?.control("topology")?.let { c ->
-            SwitchLine(
-                declLabel("ctl", c.id, c.label), store.view[c.id] == "true",
-                { store.run(c.engine, it.toString()) },
-                Modifier.padding(top = MeshDensity.dp(MeshDensity.S8)).testTag(MeshTags.control(c.id)),
-            )
-            if (store.view[c.id] == "true") MeshTopology()
-        }
+        // #1153 The fleet topology is always shown: the show/hide switch is gone.
+        MeshTopology()
     }
 }
 

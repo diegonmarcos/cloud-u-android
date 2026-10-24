@@ -241,16 +241,93 @@ object MeshReducer {
     }
 }
 
-/** The journal: newest last, capped; the page prints it, copies it, clears it. */
-class MeshJournal(private val cap: Int) {
+/**
+ * The journal: newest last, capped; the page prints it, copies it, clears it.
+ *
+ * #1153 With a [file] it is PERSISTED and shared: every add is one appended line, every read parses the file,
+ * so the ring survives an app restart and any process or component of the app that opens the same file
+ * (the supervisor, the boot receiver, a worker) writes into the very log the screen reads. Without a file
+ * it is the old in-memory ring (tests, previews). The file is bounded: past [MAX_BYTES] it is compacted to
+ * the newest [cap] lines.
+ */
+class MeshJournal(private val cap: Int, private val file: java.io.File? = null) {
     private val lines = ArrayDeque<LogEvent>()
 
-    @Synchronized fun add(e: LogEvent) { lines.addLast(e); while (lines.size > cap) lines.removeFirst() }
+    @Synchronized fun add(e: LogEvent) {
+        val f = file
+        if (f == null) { lines.addLast(e); while (lines.size > cap) lines.removeFirst(); return }
+        runCatching {
+            f.parentFile?.mkdirs()
+            java.io.FileOutputStream(f, true).use { it.write((encode(e) + "\n").toByteArray(Charsets.UTF_8)) }
+            if (f.length() > MAX_BYTES) compact(f)
+        }
+    }
     @Synchronized fun addAll(es: List<LogEvent>) { es.forEach(::add) }
-    @Synchronized fun clear() = lines.clear()
-    @Synchronized fun list(): List<LogEvent> = lines.toList()
+    @Synchronized fun clear() { lines.clear(); file?.let { runCatching { it.writeText("") } } }
+    @Synchronized fun list(): List<LogEvent> {
+        val f = file ?: return lines.toList()
+        return runCatching { if (f.exists()) f.readLines(Charsets.UTF_8).mapNotNull(::decode).takeLast(cap) else emptyList() }.getOrDefault(emptyList())
+    }
     fun text(tz: TimeZone = TimeZone.getDefault()): String =
         list().joinToString("\n") { "${MeshFormat.clock(it.atMs, tz)} ${it.kind.padEnd(9)} ${it.text}" }
+
+    private fun compact(f: java.io.File) {
+        val keep = f.readLines(Charsets.UTF_8).takeLast(cap)
+        val tmp = java.io.File(f.path + ".tmp")
+        tmp.writeText(keep.joinToString("\n", postfix = "\n"), Charsets.UTF_8)
+        if (!tmp.renameTo(f)) { f.writeText(tmp.readText(Charsets.UTF_8), Charsets.UTF_8); tmp.delete() }
+    }
+
+    companion object {
+        const val MAX_BYTES = 256L * 1024
+
+        /** error | warn | info: what the Logs level filter keys on. */
+        fun levelOf(kind: String): String = when (kind) {
+            "error" -> "error"
+            "stale", "warn" -> "warn"
+            else -> "info"
+        }
+
+        /** Whether [e] shows at filter [level] (all | warn = warn and error | error). */
+        fun shows(e: LogEvent, level: String): Boolean = when (level) {
+            "error" -> levelOf(e.kind) == "error"
+            "warn" -> levelOf(e.kind) != "info"
+            else -> true
+        }
+
+        internal fun encode(e: LogEvent): String =
+            "${e.atMs}\t${e.kind.replace('\t', ' ').replace('\n', ' ')}\t" +
+                e.text.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
+
+        internal fun decode(line: String): LogEvent? {
+            val a = line.split('\t', limit = 3)
+            if (a.size < 3) return null
+            val at = a[0].toLongOrNull() ?: return null
+            val sb = StringBuilder()
+            var i = 0
+            val t = a[2]
+            while (i < t.length) {
+                val c = t[i]
+                if (c == '\\' && i + 1 < t.length) {
+                    sb.append(when (t[i + 1]) { 'n' -> '\n'; 't' -> '\t'; else -> t[i + 1] }); i += 2
+                } else { sb.append(c); i++ }
+            }
+            return LogEvent(at, a[1], sb.toString())
+        }
+    }
+}
+
+/**
+ * #1153 The one journal file of the app. Every component, in whatever process the app runs it, appends to
+ * `files/mesh-journal.log`; the Logs section reads that same file. Failures never escape: logging is
+ * never the reason a connect fails.
+ */
+object MeshEventLog {
+    const val CAP = 1000
+    fun file(ctx: android.content.Context): java.io.File = java.io.File(ctx.applicationContext.filesDir, "mesh-journal.log")
+    fun log(ctx: android.content.Context, kind: String, text: String, nowMs: Long = System.currentTimeMillis()) {
+        runCatching { MeshJournal(CAP, file(ctx)).add(LogEvent(nowMs, kind, text)) }
+    }
 }
 
 // ── routes ────────────────────────────────────────────────────────────────

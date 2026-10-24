@@ -39,7 +39,8 @@ class WireGuardFragment : KitComposeFragment() {
     private val prefs: WireGuardPrefs get() = WgState.prefs(requireContext())
 
     private val store: MeshStore by lazy {
-        MeshStore(AndroidMeshPort(requireContext()), MeshDecl.baked, host).also { s ->
+        MeshStore(AndroidMeshPort(requireContext()), MeshDecl.baked, host,
+            journalFile = com.diegonmarcos.superapp.network.mesh.MeshEventLog.file(requireContext())).also { s ->
             arguments?.getString(ARG_PAGE)?.let { a -> (s.decl.tab(a) ?: s.decl.tabOf(a))?.let { s.tab = it.id } }
         }
     }
@@ -88,7 +89,21 @@ class WireGuardFragment : KitComposeFragment() {
             else report("connect") { prefs.tunnelEnabled = false; error("VPN consent denied") }
         }
 
+    /** #1153 Export all: the text waits here while the owner picks where the file goes. */
+    private var pendingExport: String = ""
+    private val exportAllLauncher: ActivityResultLauncher<String> =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("text/plain")) { uri ->
+            uri ?: return@registerForActivityResult
+            val text = pendingExport; pendingExport = ""
+            val resolver = requireContext().contentResolver
+            report("export status") {
+                resolver.openOutputStream(uri)?.use { out -> out.write(text.toByteArray()) } ?: error("could not write the file")
+                "saved the whole status (no private keys)"
+            }
+        }
+
     private val host = object : MeshHost {
+        override fun exportText(name: String, text: String) { pendingExport = text; exportAllLauncher.launch(name) }
         override fun requestConsent(intent: Intent, then: () -> Unit) { afterConsent = then; vpnConsentLauncher.launch(intent) }
 
         override fun copy(label: String, text: String) {

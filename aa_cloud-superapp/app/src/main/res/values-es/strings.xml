@@ -457,7 +457,7 @@
     <string name="mesh_key_stored">guardada - escribe una nueva para reemplazarla</string>
     <string name="mesh_key_paste">pega una clave en base64</string>
     <string name="mesh_key_text">La clave se oculta y esta página nunca la muestra ni la exporta; su mitad pública está en Estado.</string>
-    <string name="mesh_log_text">Se llena mientras esta página está abierta y cuando actúas aquí: el motor no tiene un flujo de eventos que reproducir.</string>
+    <string name="mesh_log_text">Se guarda en este teléfono (acotado, sobrevive a reinicios): cambios de túnel y pares, cambios de transporte, resultados de DNS y alcance, decisiones del supervisor y tus acciones, con hora.</string>
     <string name="mesh_log_empty">Nada aún.</string>
     <string name="mesh_qr_label">QR</string>
     <string name="mesh_row_transport">Ruta a los hubs</string>
@@ -508,4 +508,12 @@
     <string name="mesh_ctl_cf_warp_register">Usar WARP</string>
     <string name="mesh_ctl_cf_warp_forget">Olvidar dispositivo WARP</string>
     <string name="mesh_ctl_cf_one_enrol">Inscribir en Cloudflare One</string>
+    <string name="mesh_row_reachability">Alcance</string>
+    <string name="mesh_reach_none">Aún sin ejecutar: se prueban %1$d URL privadas de la malla (DNS, TCP 443, HTTPS).</string>
+    <string name="mesh_ctl_status_copy_all">Copiar todo</string>
+    <string name="mesh_ctl_status_export_all">Exportar todo</string>
+    <string name="mesh_ctl_reach_run">Repetir</string>
+    <string name="mesh_opt_warn">Avisos</string>
+    <string name="mesh_opt_error">Errores</string>
+    <string name="mesh_ctl_log_level">Nivel</string>
 </resources>
