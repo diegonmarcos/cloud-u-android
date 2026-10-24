@@ -139,7 +139,7 @@ private fun healthFragment(o: JSONObject): Fragment = HealthFragment.newInstance
  * would keep running with no view to draw on).
  */
 @Composable
-private fun HostedFragment(key: String, modifier: Modifier, create: () -> Fragment) {
+internal fun HostedFragment(key: String, modifier: Modifier, create: () -> Fragment) {
     val activity = LocalContext.current.findFragmentActivity()
     val containerId = remember(key) { View.generateViewId() }
     DisposableEffect(containerId) {

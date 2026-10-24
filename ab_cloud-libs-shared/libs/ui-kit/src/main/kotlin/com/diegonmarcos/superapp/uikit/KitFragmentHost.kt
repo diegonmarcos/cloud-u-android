@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -26,15 +27,21 @@ import androidx.fragment.app.commitNow
 @Composable
 fun KitFragmentHost(containerId: Int, modifier: Modifier = Modifier, tag: String? = null, create: () -> Fragment) {
     val activity = LocalContext.current.findFragmentActivity()
-    AndroidView(
-        modifier = modifier,
-        factory = { ctx -> FragmentContainerView(ctx).apply { id = containerId } },
-        update = { container ->
-            // Added to the container VIEW, not looked up by id: this runs before the container is attached to the window.
-            val fm = activity.supportFragmentManager
-            if (fm.findFragmentById(containerId) == null) fm.commitNow { add(container, create(), tag) }
-        },
-    )
+    // One AndroidView per containerId. Without the key a new id reached `update` on the OLD container
+    // (factory runs once), findFragmentById(newId) was always null, and every recomposition added another
+    // fragment: ~400 of them overflowed the saved-state Bundle (TransactionTooLargeException).
+    key(containerId) {
+        AndroidView(
+            modifier = modifier,
+            factory = { ctx -> FragmentContainerView(ctx).apply { id = containerId } },
+            update = { container ->
+                // Added to the container VIEW, not looked up by id: this runs before the container is attached to the window.
+                // Looked up by the container's OWN id, so at most one fragment ever lives in it.
+                val fm = activity.supportFragmentManager
+                if (fm.findFragmentById(container.id) == null) fm.commitNow { add(container, create(), tag) }
+            },
+        )
+    }
 }
 
 /** The saved state to hand FragmentActivity.onCreate when the page is a [KitFragmentHost]. */
