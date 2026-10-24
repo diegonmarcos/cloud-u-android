@@ -58,6 +58,14 @@ class DrivePrefs(context: Context) {
         val next = if (isBookmarked(path)) _snapshot.value.bookmarks - path else _snapshot.value.bookmarks + path
         edit { putString(KEY_BOOKMARKS, next.joinToString("\n")) }
     }
+    /** #1149 a folder was renamed: every bookmark at or under it follows. [rule] maps an old path to its new one or null (unchanged). Returns how many moved. */
+    fun repointBookmarks(rule: (String) -> String?): Int {
+        val current = _snapshot.value.bookmarks
+        val next = current.map { rule(it) ?: it }
+        val moved = next.indices.count { next[it] != current[it] }
+        if (moved > 0) edit { putString(KEY_BOOKMARKS, next.distinct().joinToString("\n")) }
+        return moved
+    }
     fun removeBookmark(path: String) = edit { putString(KEY_BOOKMARKS, (_snapshot.value.bookmarks - path).joinToString("\n")) }
 
     /** The remembered SAF grant (the OS keeps the permission itself; this is the URI and its display name). */

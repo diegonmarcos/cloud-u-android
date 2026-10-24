@@ -98,7 +98,7 @@ class DriveScreenshotTest {
             compose.runOnUiThread { shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300)) }
             compose.waitForIdle()
         }
-        compose.onNodeWithTag(TopBarTags.SETTINGS).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.CONFIGS).assertIsDisplayed()
         compose.onNodeWithTag(DriveTags.WEBSERVER_OPEN).assertIsDisplayed()
 
         val root = compose.activity.findViewById<View>(android.R.id.content)
@@ -111,10 +111,10 @@ class DriveScreenshotTest {
         val density = compose.density.density
         assertEquals("A37 density: 450 dpi", 2.8125f, density, 0.01f)
         val bar = compose.onNodeWithTag(TopBarTags.BAR).fetchSemanticsNode().boundsInRoot
-        val button = compose.onNodeWithTag(TopBarTags.SETTINGS).fetchSemanticsNode().boundsInRoot
+        val button = compose.onNodeWithTag(TopBarTags.CONFIGS).fetchSemanticsNode().boundsInRoot
         val strip = compose.onNodeWithTag(DriveTags.CONFIGS_STRIP).fetchSemanticsNode().boundsInRoot
         assertTrue("the bar is dense: ${bar.height / density}dp", bar.height / density <= 56.5f)
-        assertTrue("Settings is the top-right control: $button in $bar", button.right > bar.right - 12 * density && button.top >= bar.top)
+        assertTrue("Configs (three dots) is the top-right control: $button in $bar", button.right > bar.right - 12 * density && button.top >= bar.top)
         assertTrue("the strip sits under the bar: $strip vs $bar", strip.top >= bar.bottom)
         val order = Declarations.configs.pages.map { it.id }
         assertEquals(listOf("general", "webserver", "backups", "others"), order)

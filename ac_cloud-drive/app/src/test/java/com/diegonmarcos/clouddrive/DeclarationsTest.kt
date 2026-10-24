@@ -45,14 +45,16 @@ class DeclarationsTest {
         ui["default_section"]!!.jsonPrimitive.content,
     )
     private fun configs() = Declarations.ConfigsDecl(Declarations.pagesOf(nav(), "configs"))
-    private fun sync() = Declarations.parseSync(section("sync"), Declarations.pagesOf(nav(), "sync"))
+    private fun sync() = Declarations.parseSync(section("sync"), nav().sections.filter { it.id in Declarations.SYNC_SECTIONS }.map { Declarations.PageDecl(it.id, it.label, it.icon) })
     private fun volumes() = Declarations.parseVolumes(section("volumes"), Declarations.classesOf(nav()))
 
     @Test fun tabsDeclareTheOwnersNavOrder() {
         val tabs = Declarations.tabsOf(nav())
-        // Owner restructure: Files → Explorer, Volumes' slot → Manage, Agents and AI beside them; Home, Sync, Configs unchanged.
-        assertEquals(listOf("explorer", "manage", "sync", "home", "agents", "ai", "configs"), tabs.map { it.id })
-        assertEquals(listOf("Explorer", "Manage", "Sync", "Home", "Agents", "AI", "Configs"), tabs.map { it.label })
+        // #1149 the owner's bottom nav: Explorer, Manager, Agents, Home, Git, Rsync, Mounts. AI and Configs left it for the top bar.
+        assertEquals(listOf("explorer", "manage", "agents", "home", "git", "rsync", "mounts"), tabs.map { it.id })
+        assertEquals(listOf("Explorer", "Manage", "Agents", "Home", "Git", "Rsync", "Mounts"), tabs.map { it.label })
+        assertTrue("AI and Configs are sections the top bar opens, not island items", tabs.none { it.id == "ai" || it.id == "configs" } && nav().section("ai") != null && nav().section("configs") != null)
+        assertEquals(emptyList<String>(), nav().problems())
         assertTrue(tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
         assertEquals("explorer", nav().default()?.id)
         assertTrue(tabs.map { it.id }.contains(nav().default()?.id))
@@ -90,16 +92,35 @@ class DeclarationsTest {
         assertEquals(Declarations.WebserverDecl("com.diegonmarcos.cloudwebserver", ".MainActivity", "http://localhost:8002"), baked)
         assertNull(Declarations.parseWebserver(""))
         assertEquals(listOf("account", "configs"), ui["top_bar"]!!.jsonObject["settings"]!!.jsonArray.map { it.jsonPrimitive.content })
+        // #1149 hamburger at the left (drawer), AI / Profile / Configs as three inline buttons at the right.
+        val bar = com.diegonmarcos.superapp.bottomnav.TopBarDecl.parse(ui["top_bar"].toString())!!
+        assertTrue(bar.drawer && bar.inlineActions)
+        assertEquals(emptyList<String>(), bar.problems())
     }
 
     @Test fun syncPagesAndPeriods() {
         val sync = sync()
-        // #609 the three sub-pages moved back out of Configs, in declared order.
-        assertEquals(listOf("git", "rclone", "mounts"), sync.pages.map { it.id })
+        // #1149 the former Sync pages are bottom-nav sections: Git (Me, Cloud), Rsync, Mounts.
+        assertEquals(listOf("git", "rsync", "mounts"), sync.pages.map { it.id })
+        assertEquals(listOf("me", "cloud"), nav().section("git")!!.pages.map { it.id })
+        assertNull(nav().section("sync"))
         assertTrue(sync.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
         assertTrue(sync.gitPeriodsMinutes.isNotEmpty())
         assertTrue("every period is at or above WorkManager's floor", sync.gitPeriodsMinutes.all { it >= 15 })
         assertEquals(sync.gitPeriodsMinutes.sorted(), sync.gitPeriodsMinutes)
+    }
+
+    @Test fun cloudListAndGitHostsAreDeclared() {
+        val text = section("sync")
+        val cloud = com.diegonmarcos.clouddrive.sync.GitHostsDecl.parseCloud(text)
+        assertEquals("diegonmarcos", cloud.owner)
+        assertEquals("cloud", cloud.namePrefix)
+        assertEquals("https://api.github.com/users/diegonmarcos/repos?type=owner&sort=full_name&per_page=100&page=2", cloud.url("https://api.github.com", 2))
+        val hosts = com.diegonmarcos.clouddrive.sync.GitHostsDecl.parseHosts(text)
+        assertEquals(listOf("gitlab", "bitbucket", "codeberg", "azure"), hosts.map { it.id })
+        assertTrue(hosts.all { it.kind in com.diegonmarcos.clouddrive.sync.GitHosts.KINDS && it.apiBase.startsWith("https://") })
+        assertEquals("https://dev.azure.com/acme/_apis/git/repositories?api-version=7.1&page=1", hosts.single { it.id == "azure" }.reposUrl("acme", 1))
+        assertTrue(hosts.all { IconCatalog.knows(it.icon) })
     }
 
     @Test fun volumesAreReachableUnderExplorerCloud() {
@@ -255,8 +276,9 @@ class DeclarationsTest {
         listOf("GitSync", "RSync").forEach { label ->
             val tile = apps.single { it.label == label }
             assertEquals("a routed tile carries no package", "", tile.packageName)
-            assertEquals("sync", tile.routeTab)
-            assertTrue("$label routes to a declared sub-page (${tile.routePage})", tile.routePage in pageIds)
+            assertTrue("$label routes to a declared Sync section (${tile.routeTab})", tile.routeTab in pageIds)
+            val sectionPages = nav().section(tile.routeTab)!!.pages.map { it.id }
+            assertTrue("$label routes to a declared sub-page or none (${tile.routePage})", tile.routePage.isBlank() || tile.routePage in sectionPages)
         }
         assertTrue("an ordinary tile has no route", apps.filter { it.routeTab.isBlank() }.size >= 5)
         val connections = Declarations.parseConnections(File(data, "drive-connections.json").readText())

@@ -2,6 +2,7 @@ package com.diegonmarcos.clouddrive
 
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.clouddrive.sync.GitHostsDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import java.util.Base64
 import kotlinx.serialization.json.Json
@@ -311,7 +312,13 @@ object Declarations {
     val topBar: TopBarDecl? by lazy { TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64) }
     val webserver: WebserverDecl? by lazy { parseWebserver(decode(BuildConfig.UI_WEBSERVER_B64)) }
     val configs: ConfigsDecl by lazy { ConfigsDecl(pagesOf(nav, "configs")) }
-    val sync: SyncDecl by lazy { parseSync(decode(BuildConfig.UI_SYNC_B64), pagesOf(nav, "sync")) }
+    /** #1149 the former Sync pages are bottom-nav sections now: [SYNC_SECTIONS], in nav order. */
+    val sync: SyncDecl by lazy { parseSync(decode(BuildConfig.UI_SYNC_B64), nav.sections.filter { it.id in SYNC_SECTIONS }.map { PageDecl(it.id, it.label, it.icon) }) }
+    /** #1149 Git > Cloud's public list (ui.sync.cloud_list) and Git > Me's extra hosts (ui.sync.git_hosts). */
+    val cloudList: GitHostsDecl.CloudListDecl by lazy { GitHostsDecl.parseCloud(decode(BuildConfig.UI_SYNC_B64)) }
+    val gitHosts: List<GitHostsDecl.GitHostDecl> by lazy { GitHostsDecl.parseHosts(decode(BuildConfig.UI_SYNC_B64)) }
+    /** #1149 every section the shell can show: the bottom-nav ones plus the ones the top bar opens (AI, Configs). */
+    fun routable(id: String): Boolean = nav.section(id) != null
     val files: FilesDecl by lazy { parseFiles(decode(BuildConfig.UI_FILES_B64)) }
     val volumes: VolumesDecl by lazy { parseVolumes(decode(BuildConfig.UI_VOLUMES_B64), classesOf(nav)) }
     val constellation: List<ConstellationAppDecl> by lazy { parseConstellation(decode(BuildConfig.UI_CONSTELLATION_B64)) }
@@ -377,8 +384,15 @@ object Declarations {
     const val PAGE_DATA = "data"
     const val SECTION_AGENTS = "agents"
     const val SECTION_AI = "ai"
+    const val SECTION_CONFIGS = "configs"
+    /** #1149 the former Sync pages, now bottom-nav sections of their own. */
+    const val SECTION_GIT = "git"
+    const val SECTION_RSYNC = "rsync"
+    const val SECTION_MOUNTS = "mounts"
+    val SYNC_SECTIONS = listOf(SECTION_GIT, SECTION_RSYNC, SECTION_MOUNTS)
+    const val PAGE_ME = "me"
 
-    /** #609 the Sync strip: Git/Rclone/Mounts ([pages], ui.sections[sync].pages). #608 carries the Git page too. */
+    /** #609 the Sync destinations: Git/Rsync/Mounts ([pages]; #1149 their own bottom-nav sections). #608 carries the Git page too. */
     fun parseSync(text: String, pages: List<PageDecl> = emptyList()): SyncDecl {
         val o = element(text) as? JsonObject ?: return SyncDecl(pages, emptyList(), EMPTY_GIT_PAGE)
         val periods = (o["git_periods_minutes"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }?.filter { it >= 15 } ?: emptyList()

@@ -67,6 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.clouddrive.BuildConfig
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
+import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.EngineActivity
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.SharedStore
@@ -135,11 +136,33 @@ import kotlinx.coroutines.withContext
  * and the same registry the first-run seed uses.
  */
 @OptIn(ExperimentalMaterial3Api::class)
+/** #1149 which sub-page of Git this screen is: Me (sign-in, my repositories, parentless folders) or Cloud (the public cloud* list). */
+enum class GitView { ME, CLOUD }
+
+/** #1149 Cloud's live public list: loading, the filtered repositories, or why there are none (the declared set then stands in). */
+private data class CloudPublic(val loading: Boolean = false, val loaded: Boolean = false, val repos: List<GitHubRepos.Repo> = emptyList(), val error: String = "")
+
 @Composable
-fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextRunMinutes: Long?, modifier: Modifier = Modifier) {
+fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextRunMinutes: Long?, modifier: Modifier = Modifier, view: GitView = GitView.ME, prefs: DrivePrefs? = null) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val page = Declarations.sync.git
+    // #1149 Cloud: the live PUBLIC cloud* list (no sign-in); the declared set stands in when the network refuses.
+    var cloudPublic by remember { mutableStateOf(CloudPublic()) }
+    LaunchedEffect(view) {
+        if (view == GitView.CLOUD) {
+            cloudPublic = CloudPublic(loading = true)
+            val r = withContext(Dispatchers.IO) { CloudRepos.fetch(page.api.baseUrl, Declarations.cloudList) }
+            cloudPublic = r.fold(
+                onSuccess = { CloudPublic(loaded = true, repos = it.repos) },
+                onFailure = { CloudPublic(loaded = true, error = it.message ?: it.javaClass.simpleName) },
+            )
+        }
+    }
+    val publicRows = if (cloudPublic.repos.isNotEmpty()) cloudPublic.repos.map { Declarations.GitPublicRepoDecl(it.name, it.name) } else page.publicRepos
+    // #1149 Me: the declared hosts beyond GitHub and Cloud git (token sign-in, their own listings).
+    val hostsState = remember { GitHostsState(ctx.applicationContext, scope) }
+    LaunchedEffect(view) { if (view == GitView.ME) hostsState.restore() }
     val repos by coordinator.repos.collectAsState()
     val glances by coordinator.glances.collectAsState()
     val running by coordinator.running.collectAsState()
@@ -217,6 +240,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // a credential — and a cleanly complete pass draws nothing.
     val seedTally = remember { StoreSeedWorker.lastReport(ctx).trim().lines().lastOrNull().orEmpty() }
     val clonedByName = repos.associateBy { File(it.path).name }
+    // #1149 where Parentless looks: the store's git folder and the folder every registered clone sits in.
+    val parentRoots = remember(repos) { (listOf(SharedStore.gitRoot()) + repos.mapNotNull { File(it.path).parentFile }).distinctBy { it.absolutePath } }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
 
     // #1138 one table row of one repository: the cached remote facts and the local glance, no network here.
@@ -226,8 +251,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
     // Pull-to-refresh re-reads the REST facts of every repository the table lists (GitHub-listed or declared; the fleet's own git is not GitHub).
     fun refreshTargets(): List<Pair<String, String>> {
-        val named = page.publicRepos.map { it.name }.toSet() + listing.repos.map { it.name }.toSet()
-        return page.publicRepos.map { page.owner to it.name } +
+        val named = publicRows.map { it.name }.toSet() + listing.repos.map { it.name }.toSet()
+        return publicRows.map { page.owner to it.name } +
             listing.repos.map { it.owner.ifBlank { page.owner } to it.name } +
             repos.map { File(it.path).name }.filter { it !in named }.map { page.owner to it }
     }
@@ -669,7 +694,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 Text(stringResource(R.string.git_seed_retry))
             }
         }
-        item {
+        if (view == GitView.ME) item {
             Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Commit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(DriveMetrics.pad))
@@ -687,7 +712,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
         // #850 THE PAGE'S PULL ACTIONS: force pull every clone (asks first — it is the
         // declared destructive verb), and the persisted Auto pull on open (Wi-Fi only).
-        item {
+        if (view == GitView.ME) item {
             Column(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_PULL_ALL).padding(horizontal = DriveMetrics.sectionInset)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Pill(stringResource(R.string.git_force_pull_all), { confirmPullAll = true }, icon = Icons.Filled.Sync, enabled = bulk?.finished != false && repos.isNotEmpty())
@@ -730,15 +755,28 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             }
         }
 
+        // #1149 Cloud's one-line state: the live list's count, or why the declared set stands in.
+        if (view == GitView.CLOUD) item {
+            Text(
+                when {
+                    cloudPublic.loading || !cloudPublic.loaded -> stringResource(R.string.git_cloud_loading)
+                    cloudPublic.error.isNotBlank() -> stringResource(R.string.git_cloud_failed, cloudPublic.error)
+                    else -> stringResource(R.string.git_cloud_count, Declarations.cloudList.owner, Declarations.cloudList.namePrefix, cloudPublic.repos.size)
+                },
+                Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         // THE TWO DECLARED SECTIONS, in declared order. The dispatch on a section id is the
         // ONE place Kotlin names them; test-drive-git-page.sh diffs it both ways.
-        page.sections.forEach { section ->
+        // #1149 Me draws the personal section, Cloud the public one.
+        page.sections.filter { (it.id == Declarations.GIT_SECTION_PUBLIC) == (view == GitView.CLOUD) }.forEach { section ->
             when (section.id) {
                 "public" -> {
                     item {
-                        SectionHeader(section.label, count = page.publicRepos.size)
+                        SectionHeader(section.label, count = publicRows.size)
                     }
-                    items(RepoTable.sort(page.publicRepos, sortColumn, sortAscending) { tableRow(it.name, page.owner, false) }, key = { "pub-" + it.name }) { decl ->
+                    items(RepoTable.sort(publicRows, sortColumn, sortAscending) { tableRow(it.name, page.owner, false) }, key = { "pub-" + it.name }) { decl ->
                         val cloned = clonedByName[decl.name]
                         GitRepoRow(
                             name = decl.label, repoName = decl.name, cells = tableRow(decl.name, page.owner, false), scroll = tableScroll, fork = false,
@@ -840,6 +878,56 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                             }
                         }
                     }
+                    // #1149 THE OTHER HOSTS (GitLab, Bitbucket, Codeberg/Gitea, Azure DevOps): a token card each, and once
+                    // signed in the account's repositories in the same sortable table, Clone when no local folder matches.
+                    Declarations.gitHosts.forEach { host ->
+                        val hs = hostsState.hosts[host.id] ?: GitHostsState.Host()
+                        item(key = "host-card-" + host.id) {
+                            GitHostCard(
+                                decl = host, state = hs,
+                                onSignIn = { u, t -> hostsState.signIn(host, u, t) },
+                                onSignOut = { hostsState.signOut(host) },
+                                onRefresh = { hostsState.refresh(host) },
+                                onOpenTokenPage = { actions.openUrl(host.tokenUrl) },
+                            )
+                        }
+                        if (hs.signedIn && hs.loaded && hs.error.isBlank()) {
+                            item(key = "host-head-" + host.id) { SectionHeader(host.label, count = hs.repos.size) }
+                            items(RepoTable.sort(hs.repos, sortColumn, sortAscending) { tableRow(it.name, it.owner, it.private) }, key = { "host-" + host.id + "-" + it.owner + "/" + it.name }) { hr ->
+                                val cloned = clonedByName[hr.name]
+                                val key = "host-" + host.id + "-" + hr.name
+                                GitRepoRow(
+                                    name = hr.name, repoName = hr.name, cells = tableRow(hr.name, hr.owner, hr.private), scroll = tableScroll, fork = hr.fork,
+                                    repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
+                                    cloning = hr.name in cloning, expanded = expanded == key,
+                                    onToggle = { expanded = if (expanded == key) "" else key },
+                                    onClone = {
+                                        scope.launch {
+                                            val token = withContext(Dispatchers.IO) { hostsState.tokenOf(host.id) }
+                                            if (hr.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, hr.name)
+                                            else if (token.isBlank()) handoff = ctx.getString(R.string.git_host_no_token, host.label)
+                                            else coordinator.cloneInto(
+                                                name = hr.name, url = hr.cloneUrl, authKind = GitSyncCoordinator.AUTH_HTTPS,
+                                                username = GitHosts.cloneUser(host, hs.user), token = token,
+                                            )
+                                        }
+                                    },
+                                )
+                                if (expanded == key && cloned != null) {
+                                    GitRepoOpsBox(
+                                        repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
+                                        running = running[cloned.id], glance = glances[cloned.id], fmt = fmt,
+                                        coordinator = coordinator, actions = actions,
+                                        repoName = hr.name, owner = hr.owner.ifBlank { page.owner }, remote = remoteStats[RepoRemoteStats.keyOf(hr.owner.ifBlank { page.owner }, hr.name)],
+                                        cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned },
+                                    )
+                                }
+                                Hairline()
+                            }
+                        }
+                    }
+                    // #1149 LOCAL REPOS PARENTLESS: folders holding a .git that are not named like their origin.
+                    if (prefs != null) item(key = "parentless") { ParentlessPanel(parentRoots, prefs) { coordinator.refresh(force = true) } }
                 }
                 else -> item { EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "") }
             }
@@ -848,8 +936,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         // Any clone the store holds that neither section named — a folder added through the
         // engine itself. Shown, never hidden: a repository the page cannot see is one the
         // scheduler still syncs.
-        val named = page.publicRepos.map { it.name }.toSet() + listing.repos.map { it.name }.toSet()
-        val others = repos.filter { File(it.path).name !in named }
+        val named = listing.repos.map { it.name }.toSet() + cloudListing.repos.map { it.name }.toSet() + hostsState.hosts.values.flatMap { h -> h.repos.map { it.name } }.toSet()
+        val others = if (view == GitView.ME) repos.filter { File(it.path).name !in named } else emptyList()
         if (others.isNotEmpty()) {
             item { SectionHeader(stringResource(R.string.git_section_other), count = others.size) }
             items(RepoTable.sort(others, sortColumn, sortAscending) { tableRow(File(it.path).name, page.owner, null) }, key = { "other-" + it.id }) { repo ->
@@ -873,9 +961,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 Hairline()
             }
         }
-        if (repos.isEmpty() && page.publicRepos.isEmpty()) item { EmptyState(Icons.Filled.Commit, stringResource(R.string.sync_empty_title), stringResource(R.string.sync_empty_hint)) }
+        if (view == GitView.ME && repos.isEmpty()) item { EmptyState(Icons.Filled.Commit, stringResource(R.string.sync_empty_title), stringResource(R.string.sync_empty_hint)) }
 
-        item {
+        if (view == GitView.ME) item {
             SectionHeader(stringResource(R.string.sync_history_section), count = events.size, action = if (showHistory) stringResource(R.string.chrome_close) else stringResource(R.string.sync_history)) { showHistory = !showHistory }
         }
         if (showHistory) {

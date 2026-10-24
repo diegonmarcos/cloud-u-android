@@ -4,7 +4,19 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
@@ -13,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -20,6 +33,7 @@ import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.appTopBarLabels
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
@@ -46,7 +60,7 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
     var reselectTick by rememberSaveable { mutableStateOf(0) }
     val entries = Declarations.nav.islandEntries { IconCatalog.painter(it) }
     LaunchedEffect(select) {
-        if (select != null && tabs.any { it.id == select }) selected = select
+        if (select != null && Declarations.routable(select)) selected = select
         if (select != null) onSelected()
     }
 
@@ -58,10 +72,15 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
             onSelect = { entry -> if (entry.id == selected) reselectTick++ else selected = entry.id },
             modifier = Modifier.testTag(DriveTags.SHELL),
         ) {
+            // #1149 the hamburger's left side menu: every destination, the two the top bar also opens included.
+            TopBarDrawer { close ->
+                Declarations.nav.bottomSections().forEach { sec -> DrawerRow(sec.label, sec.icon, selected == sec.id, DriveTags.drawerItem(sec.id)) { selected = sec.id; close() } }
+                Declarations.nav.sections.filter { sec -> sec.id !in tabs.map { it.id } }.forEach { sec -> DrawerRow(sec.label, sec.icon, selected == sec.id, DriveTags.drawerItem(sec.id)) { selected = sec.id; close() } }
+            }
             Box(Modifier.fillMaxSize().testTag(DriveTags.CONTENT)) {
                 AnimatedContent(targetState = selected, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "drive_tab") { id ->
                     Box(Modifier.fillMaxSize().testTag(DriveTags.tab(id))) {
-                        if (tabs.any { it.id == id }) content(id, reselectTick)
+                        if (Declarations.routable(id)) content(id, reselectTick)
                         else EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
                     }
                 }
@@ -79,7 +98,8 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
                 decl = topBar,
                 title = stringResource(R.string.app_name),
                 onAccount = rememberAccountLauncher(),
-                onConfigs = { if (tabs.any { it.id == CONFIGS_TAB }) selected = CONFIGS_TAB },
+                onConfigs = { if (Declarations.routable(CONFIGS_TAB)) selected = CONFIGS_TAB },
+                onAi = { if (Declarations.routable(AI_TAB)) selected = AI_TAB },
                 labels = labels,
                 content = host,
             )
@@ -87,4 +107,18 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
     }
 }
 
-private const val CONFIGS_TAB = "configs"
+private const val CONFIGS_TAB = Declarations.SECTION_CONFIGS
+private const val AI_TAB = Declarations.SECTION_AI
+
+/** One row of the side menu: the declared glyph and label; the open destination is bold. */
+@Composable
+private fun DrawerRow(label: String, icon: String, current: Boolean, tag: String, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = DriveMetrics.tap).clickable(onClick = onClick).padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.gap).testTag(tag),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(IconCatalog.vectorOrDefault(icon), contentDescription = null, Modifier.size(DriveMetrics.glyphIcon))
+        Spacer(Modifier.width(DriveMetrics.padWide))
+        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = if (current) FontWeight.Bold else FontWeight.Normal)
+    }
+}

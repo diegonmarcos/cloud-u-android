@@ -8,10 +8,12 @@
 # Webserver section that opens cloud-c3-webserver. This pins the structure, not the look (the
 # look is DriveScreenshotTest's PNG at the owner's A37 density):
 #
-#   W1  ui.top_bar declares exactly the Settings dropdown [account, configs] (libs:bottomnav's bar,
-#       no hamburger, no AI), and the shell draws it with AppTopBarScaffold, the fleet's
-#       rememberAccountLauncher and an onConfigs that selects the Configs tab - no copy of the
-#       bar and no cloudaccount literal of its own. Profile is the dropdown's account label.
+#   W1  ui.top_bar (#1149) declares the hamburger (drawer), the inline actions and [account, configs]
+#       (libs:bottomnav's bar: AI sparkles, Profile avatar, Configs three dots, no Settings dropdown),
+#       and the shell draws it with AppTopBarScaffold, the fleet's rememberAccountLauncher, an
+#       onConfigs that selects the Configs tab, an onAi that selects the AI tab and a TopBarDrawer
+#       side menu - no copy of the bar and no cloudaccount literal of its own. Profile is the
+#       account label.
 #   W2  ui.sections[configs].pages is general, webserver, backups, others - in that order -
 #       and ConfigsScreen dispatches "webserver" to WebserverPage.
 #   W3  ui.webserver resolves: its fleet id is in the constellation manifest, the activity is the
@@ -52,9 +54,9 @@ ui = json.load(open(sys.argv[1]))["ui"]
 shell = open(sys.argv[2], encoding="utf-8").read()
 bad = 0
 tb = ui.get("top_bar") or {}
-if tb != {"settings": ["account", "configs"]}:
-    print("    ui.top_bar is %s, not {settings: [account, configs]}" % tb); bad = 1
-for needle in ("AppTopBarScaffold(", "rememberAccountLauncher()", "onConfigs = {", "R.string.top_bar_profile"):
+if tb != {"drawer": True, "inline_actions": True, "settings": ["account", "configs"]}:
+    print("    ui.top_bar is %s, not {drawer, inline_actions, settings: [account, configs]}" % tb); bad = 1
+for needle in ("AppTopBarScaffold(", "rememberAccountLauncher()", "onConfigs = {", "onAi = {", "TopBarDrawer {", "R.string.top_bar_profile"):
     if needle not in shell:
         print("    DriveShell lacks %s" % needle); bad = 1
 if not re.search(r'onConfigs = \{.*selected = ', shell):
@@ -123,7 +125,7 @@ w5() {
     grep -q 'qualifiers = "w384dp-h832dp-450dpi"' "$1" && grep -q 'configs-webserver@a37.png' "$1" && grep -q 'build/drive-screens' "$1"
 }
 
-w1 "$BJ" "$SHELL_KT" && pass "W1 the shell draws the Settings dropdown (Profile, Configs) with the fleet's bar" || fail "W1 the header Settings button is not the fleet bar with Profile and Configs"
+w1 "$BJ" "$SHELL_KT" && pass "W1 the shell draws the fleet's bar: hamburger menu, AI, Profile, Configs" || fail "W1 the header is not the fleet bar with hamburger, AI, Profile and Configs"
 w2 "$BJ" "$CONFIGS_KT" && pass "W2 Configs reads General, Webserver, Backups, Others" || fail "W2 Configs sections are not in the owner's order"
 w3 "$BJ" "$FLEET" "$WS_BJ" "$WS_MANIFEST" && pass "W3 ui.webserver resolves to c3-webserver's package, activity and port" || fail "W3 ui.webserver does not resolve"
 w4 "$PAGE_KT" && pass "W4 explicit launch with the localhost and install-note fallbacks" || fail "W4 the Webserver launch is not explicit or lacks its fallback"
@@ -137,7 +139,7 @@ w2 "$TMP/rev.json" "$CONFIGS_KT" >/dev/null && fail "M: reversed Configs order p
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["webserver"]["fallback_url"]="http://localhost:9"; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/port.json"
 w3 "$TMP/port.json" "$FLEET" "$WS_BJ" "$WS_MANIFEST" >/dev/null && fail "M: a wrong port passed W3" || pass "M: fallback port off runtime.port → W3 RED"
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["top_bar"]["settings"]=["configs"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/nobar.json"
-w1 "$TMP/nobar.json" "$SHELL_KT" >/dev/null && fail "M: a dropdown without Profile passed W1" || pass "M: dropdown without Profile → W1 RED"
+w1 "$TMP/nobar.json" "$SHELL_KT" >/dev/null && fail "M: a bar without Profile passed W1" || pass "M: bar without Profile → W1 RED"
 sed 's/\.setComponent(/.setPackage(/' "$PAGE_KT" > "$TMP/implicit.kt"
 w4 "$TMP/implicit.kt" >/dev/null && fail "M: a non-explicit launch passed W4" || pass "M: launch without a component → W4 RED"
 w1 "$BJ" "$SHELL_KT" && w2 "$BJ" "$CONFIGS_KT" && w3 "$BJ" "$FLEET" "$WS_BJ" "$WS_MANIFEST" && w4 "$PAGE_KT" && pass "M: the unmutated tree is still green" || fail "M: the unmutated tree is red"

@@ -348,4 +348,55 @@ class AppTopBarTest {
         compose.onNodeWithTag("page_body").assertIsDisplayed()
         compose.onNodeWithTag(itemTag("two"), useUnmergedTree = true).assertIsDisplayed()
     }
+
+    // ── #1149 inline actions: AI, Profile and Configs as three round buttons ──────────────────
+
+    private val inline = TopBarDecl(drawer = true, settings = listOf("account", "configs"), inlineActions = true)
+
+    @Test
+    fun `inline_actions is read from build json and a bar that declares only it is valid`() {
+        val d = TopBarDecl.fromBuildConfig(b64("""{"drawer":true,"inline_actions":true,"settings":["account","configs"]}"""))
+        assertEquals(inline, d)
+        assertTrue(d!!.problems().isEmpty())
+        assertTrue(TopBarDecl(inlineActions = true).problems().isEmpty())
+        assertFalse(TopBarDecl.parse("""{"drawer":true}""")!!.inlineActions)
+    }
+
+    @Test
+    fun `inline draws the hamburger at the left and AI, Profile, Configs at the right in that order with no Settings button`() {
+        show(inline)
+        assertTrue(exists(TopBarTags.MENU))
+        assertFalse("no Settings dropdown button", exists(TopBarTags.SETTINGS))
+        val bar = compose.onNodeWithTag(TopBarTags.BAR).fetchSemanticsNode().boundsInRoot
+        val x = listOf(TopBarTags.AI, TopBarTags.ACCOUNT, TopBarTags.CONFIGS).map { compose.onNodeWithTag(it).fetchSemanticsNode().boundsInRoot }
+        assertTrue("AI, Profile, Configs run left to right: $x", x.zipWithNext().all { (a, b) -> a.right <= b.left })
+        assertTrue("all three sit in the right half: $x", x.all { it.left > bar.width / 2 && it.right <= bar.right })
+        assertTrue(compose.onNodeWithTag(TopBarTags.MENU).fetchSemanticsNode().boundsInRoot.right < bar.width / 2)
+    }
+
+    @Test
+    fun `inline Profile and Configs call the host and AI calls onAi when given`() {
+        var ai = 0
+        compose.setContent {
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                AppTopBarScaffold(decl = inline, title = "Cloud Drive", onAccount = { accountTaps++ }, onConfigs = { configsTaps++ }, onAi = { ai++ }, content = {})
+            }
+        }
+        compose.waitForIdle()
+        val a = accountTaps; val c = configsTaps
+        tap(TopBarTags.ACCOUNT); tap(TopBarTags.CONFIGS); tap(TopBarTags.AI)
+        assertEquals(a + 1, accountTaps)
+        assertEquals(c + 1, configsTaps)
+        assertEquals(1, ai)
+        assertFalse("onAi given: no anchored panel", exists(TopBarTags.AI_PANEL))
+    }
+
+    @Test
+    fun `inline entries follow settings and AI opens the panel when the host gives no onAi`() {
+        show(TopBarDecl(drawer = true, settings = listOf("configs"), inlineActions = true))
+        assertFalse(exists(TopBarTags.ACCOUNT))
+        assertTrue(exists(TopBarTags.CONFIGS))
+        tap(TopBarTags.AI)
+        assertTrue(exists(TopBarTags.AI_PANEL))
+    }
 }

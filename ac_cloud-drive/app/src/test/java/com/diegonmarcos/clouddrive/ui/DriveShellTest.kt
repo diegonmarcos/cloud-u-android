@@ -109,39 +109,57 @@ class DriveShellTest {
     }
 
     @Test
-    fun `round Settings button sits at the top right and its dropdown offers Profile and Configs`() {
+    fun `bottom nav is Explorer, Manager, Agents, Home, Git, Rsync, Mounts in that order and AI and Configs are not on it`() {
+        assertEquals(listOf("explorer", "manage", "agents", "home", "git", "rsync", "mounts"), Declarations.tabs.map { it.id })
         compose.setContent { DriveTheme { DriveShell { id, _ -> Text("content:$id") } } }
-        val settings = compose.onNodeWithTag(TopBarTags.SETTINGS)
-        settings.assertIsDisplayed()
-        val bar = compose.onNodeWithTag(TopBarTags.BAR).fetchSemanticsNode().boundsInRoot
-        val button = settings.fetchSemanticsNode().boundsInRoot
-        val island = compose.onNodeWithTag(BottomNavTags.ISLAND).fetchSemanticsNode().boundsInRoot
-        assertTrue("Settings is in the right half of the bar: $button in $bar", button.left > bar.width / 2 && button.right <= bar.right)
-        assertTrue("the bar is the first row, above the island: $bar vs $island", bar.top < island.top)
-        compose.onAllNodesWithTag(TopBarTags.settingsItem("account")).assertCountEquals(0)
-        settings.performClick()
-        compose.waitForIdle()
-        compose.onNodeWithTag(TopBarTags.settingsItem("account")).assertIsDisplayed()
-        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).assertIsDisplayed()
-        compose.onNodeWithText("Profile").assertIsDisplayed()
+        Declarations.tabs.forEach { compose.onNodeWithTag(BottomNavTags.item(it.id)).assertIsDisplayed() }
+        compose.onAllNodesWithTag(BottomNavTags.item("configs")).assertCountEquals(0)
+        compose.onAllNodesWithTag(BottomNavTags.item("ai")).assertCountEquals(0)
     }
 
     @Test
-    fun `Profile launches Cloud Account and Configs selects the Configs tab`() {
+    fun `top bar has the hamburger at the left and AI, Profile, Configs at the right in that order`() {
         compose.setContent { DriveTheme { DriveShell { id, _ -> Text("content:$id") } } }
-        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
+        val bar = compose.onNodeWithTag(TopBarTags.BAR).fetchSemanticsNode().boundsInRoot
+        val island = compose.onNodeWithTag(BottomNavTags.ISLAND).fetchSemanticsNode().boundsInRoot
+        val menu = compose.onNodeWithTag(TopBarTags.MENU).fetchSemanticsNode().boundsInRoot
+        val right = listOf(TopBarTags.AI, TopBarTags.ACCOUNT, TopBarTags.CONFIGS).map { compose.onNodeWithTag(it).also { n -> n.assertIsDisplayed() }.fetchSemanticsNode().boundsInRoot }
+        assertTrue("the hamburger is in the left half of the bar: $menu in $bar", menu.right < bar.width / 2)
+        assertTrue("AI, Profile, Configs run left to right: $right", right.zipWithNext().all { (a, b) -> a.right <= b.left })
+        assertTrue("all three are in the right half: $right in $bar", right.all { it.left > bar.width / 2 && it.right <= bar.right })
+        assertTrue("the bar is the first row, above the island: $bar vs $island", bar.top < island.top)
+        compose.onAllNodesWithTag(TopBarTags.SETTINGS).assertCountEquals(0)
+    }
+
+    @Test
+    fun `the hamburger opens the side menu with every destination and a tap on one opens it`() {
+        compose.setContent { DriveTheme { DriveShell { id, _ -> Text("content:$id") } } }
+        compose.onAllNodesWithTag(TopBarTags.DRAWER).assertCountEquals(0)
+        compose.onNodeWithTag(TopBarTags.MENU).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(TopBarTags.settingsItem("account")).performClick()
+        compose.onNodeWithTag(TopBarTags.DRAWER).assertIsDisplayed()
+        Declarations.nav.sections.forEach { compose.onNodeWithTag(DriveTags.drawerItem(it.id)).assertIsDisplayed() }
+        compose.onNodeWithTag(DriveTags.drawerItem("git")).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("content:git").assertIsDisplayed()
+        compose.onNodeWithTag(BottomNavTags.item("git")).assertIsSelected()
+        compose.onAllNodesWithTag(TopBarTags.DRAWER).assertCountEquals(0)
+    }
+
+    @Test
+    fun `Profile launches Cloud Account, Configs opens the Configs page and AI opens the AI page`() {
+        compose.setContent { DriveTheme { DriveShell { id, _ -> Text("content:$id") } } }
+        compose.onNodeWithTag(TopBarTags.ACCOUNT).performClick()
         compose.waitForIdle()
         val started = shadowOf(compose.activity).nextStartedActivity
         assertEquals(AccountLaunch.ACTION_OPEN, started.action)
         assertEquals(AccountLaunch.PKG, started.`package`)
-        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
-        compose.waitForIdle()
-        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
+        compose.onNodeWithTag(TopBarTags.CONFIGS).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("content:configs").assertIsDisplayed()
-        compose.onNodeWithTag(BottomNavTags.item("configs")).assertIsSelected()
+        compose.onNodeWithTag(TopBarTags.AI).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("content:ai").assertIsDisplayed()
     }
 
     @Test

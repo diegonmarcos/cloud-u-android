@@ -43,16 +43,15 @@
       "label": "GitSync",
       "icon": "🔀",
       "route": {
-        "tab": "sync",
-        "page": "git"
+        "tab": "git",
+        "page": "me"
       }
     },
     {
       "label": "RSync",
       "icon": "🔁",
       "route": {
-        "tab": "sync",
-        "page": "rclone"
+        "tab": "rsync"
       }
     },
     {

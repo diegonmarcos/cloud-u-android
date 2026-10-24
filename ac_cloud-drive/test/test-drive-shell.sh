@@ -16,7 +16,7 @@
 #   D1  ui.bottom_nav declared, unique, default_section among them; the ids Kotlin dispatches
 #       (MainActivity `when (tabId)`) equal the declared ids in both directions.
 #   D2  ui.sections[configs].pages ↔ ConfigsScreen's `when (id)`, both directions.
-#   D2s #609 ui.sections[sync].pages ↔ SyncScreen's `when (id)`, both directions, and the
+#   D2s #1149 ui.sections[git].pages (Me, Cloud) ↔ GitPageScreen's `when (id)` in SyncScreen.kt, both directions, and the
 #       per-repository git periods (moved here from ui.configs at #609).
 #   D3  every declared icon name (tabs, pages, sections, places, filters, default) is
 #       a name in IconCatalog's `when`; the catalog has no dead name either.
@@ -107,8 +107,12 @@ if any(not t.get("label") or not t.get("icon") for t in tabs): print("    a tab 
 m = re.search(r"when \(tabId\) \{(.*?)\n\s*\}", main, re.S)
 if not m: print("    MainActivity has no `when (tabId)` dispatch"); sys.exit(1)
 dispatched = re.findall(r'^\s*"([a-z_]+)" ->', m.group(1), re.M)
-if sorted(dispatched) != sorted(ids):
-    print("    declared %s vs dispatched %s" % (ids, dispatched)); sys.exit(1)
+# #1149 the island holds the bottom_nav sections; the top bar opens the other two (AI, Configs). Every section is dispatched, none twice.
+extra = sorted(set(secs) - set(ids))
+if extra != ["ai", "configs"]:
+    print("    sections outside ui.bottom_nav are %s, not exactly the two the top bar opens (ai, configs)" % extra); sys.exit(1)
+if sorted(dispatched) != sorted(secs):
+    print("    declared %s vs dispatched %s" % (sorted(secs), sorted(dispatched))); sys.exit(1)
 PYTHON
 }
 
@@ -125,14 +129,14 @@ if sorted(dispatched) != sorted(ids): print("    declared %s vs dispatched %s" %
 PYTHON
 }
 
-# d2s <build.json> <SyncScreen.kt> : #609 the Sync strip, the mirror of d2
+# d2s <build.json> <SyncScreen.kt> : #1149 the Git strip (Me, Cloud), the mirror of d2
 d2s() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, re, sys
 bj = json.load(open(sys.argv[1])); src = open(sys.argv[2], encoding="utf-8").read()
-ids = [p.get("id") for p in next(s for s in bj["ui"]["sections"] if s["id"] == "sync")["pages"]]
+ids = [p.get("id") for p in next(s for s in bj["ui"]["sections"] if s["id"] == "git")["pages"]]
 m = re.search(r"when \(id\) \{(.*?)\n\s*\}", src, re.S)
-if not m: print("    SyncScreen has no `when (id)` dispatch"); sys.exit(1)
+if not m: print("    GitPageScreen has no `when (id)` dispatch"); sys.exit(1)
 dispatched = re.findall(r'^\s*"([a-z_]+)" ->', m.group(1), re.M)
 if sorted(dispatched) != sorted(ids): print("    declared %s vs dispatched %s" % (ids, dispatched)); sys.exit(1)
 periods = bj["ui"]["sync"].get("git_periods_minutes", [])
@@ -163,8 +167,8 @@ if grep -qE 'BuildConfig\.UI_DEFAULT_SECTION' "$DECL" && grep -qE 'Declarations\
 echo "── D2 configs pages: declared ↔ dispatched ──"
 d2 "$BJ" "$CONFIGS" && pass "ui.sections[configs].pages dispatch matches" || fail "configs pages: declaration and dispatch disagree"
 
-echo "── D2s sync pages: declared ↔ dispatched (#609) ──"
-d2s "$BJ" "$SYNC_KT" && pass "ui.sections[sync].pages dispatch matches; periods at or above the floor" || fail "sync pages: declaration and dispatch disagree"
+echo "── D2s git pages: declared ↔ dispatched (#1149) ──"
+d2s "$BJ" "$SYNC_KT" && pass "ui.sections[git].pages dispatch matches; periods at or above the floor" || fail "git pages: declaration and dispatch disagree"
 
 echo "── D3 icons from declarations ──"
 d3 "$BJ" "$CATALOG" && pass "every declared icon name is in IconCatalog's vocabulary" || fail "an icon is declared that the catalog does not know"
@@ -176,7 +180,7 @@ for f in UI_SECTIONS_B64 UI_BOTTOM_NAV UI_DEFAULT_SECTION UI_SYNC_B64 UI_FILES_B
     if grep -qE "buildConfigField \"String\", *\"$f\"" "$GRADLE" && grep -qE "BuildConfig\.$f" "$DECL"; then pass "$f baked and decoded"; else fail "$f not baked in build.gradle or not read in Declarations.kt"; fi
 done
 if grep -qE 'throw new GradleException\("build\.json::ui\.bottom_nav / ui\.sections must declare' "$GRADLE"; then pass "a missing ui.bottom_nav / ui.sections fails the build"; else fail "build.gradle does not refuse a missing ui.bottom_nav / ui.sections"; fi
-if grep -qE 'throw new GradleException\("build\.json::ui\.sections\[sync\]\.pages must declare' "$GRADLE"; then pass "a missing ui.sections[sync].pages fails the build"; else fail "build.gradle does not refuse a missing ui.sections[sync].pages"; fi
+if grep -qE 'throw new GradleException\("build\.json::ui\.sections\[git\]\.pages must declare' "$GRADLE"; then pass "a missing ui.sections[git].pages fails the build"; else fail "build.gradle does not refuse a missing ui.sections[git].pages"; fi
 OTHER_BLOBS="$(grep -rlE 'BuildConfig\.[A-Z_]+_B64' "$SRC" | grep -v 'Declarations.kt' | grep -v 'EngineActivity.kt' || true)"
 if [ -z "$OTHER_BLOBS" ]; then pass "no screen reads a BuildConfig blob directly"; else fail "BuildConfig blobs read outside Declarations/EngineActivity:"; printf '%s\n' "$OTHER_BLOBS" | sed 's/^/        /'; fi
 
@@ -258,8 +262,10 @@ import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]
 bad = 0
 tabs = ui["bottom_nav"]
-if tabs != ["explorer", "manage", "sync", "home", "agents", "ai", "configs"]:
-    print("    ui.bottom_nav is %s, not the owner's order explorer/manage/sync/home/agents/ai/configs" % tabs); bad = 1
+if tabs != ["explorer", "manage", "agents", "home", "git", "rsync", "mounts"]:
+    print("    ui.bottom_nav is %s, not the owner's order explorer/manage/agents/home/git/rsync/mounts (#1149)" % tabs); bad = 1
+if ui.get("top_bar", {}).get("drawer") is not True or ui["top_bar"].get("inline_actions") is not True:
+    print("    ui.top_bar is not the hamburger plus inline AI / Profile / Configs (#1149)"); bad = 1
 if "backups" in ui:
     print("    ui still carries a top-level backups block: it moved into ui.configs at #603"); bad = 1
 cfg_pages = next(s for s in ui["sections"] if s["id"] == "configs")["pages"]
@@ -268,12 +274,14 @@ if pages != ["general", "webserver", "backups", "others"]:
     print("    ui.configs.pages is %s, not the owner's order general/webserver/backups/others (#609 moved git/rclone/mounts to ui.sync)" % pages); bad = 1
 if any(not p.get("label") or not p.get("icon") for p in cfg_pages):
     print("    a Configs sub-page lacks a label or an icon"); bad = 1
-sync_sec = next(s for s in ui["sections"] if s["id"] == "sync").get("pages", [])
+if any(s["id"] == "sync" for s in ui["sections"]):
+    print("    a `sync` section is declared again: Git, Rsync and Mounts are bottom-nav sections of their own (#1149)"); bad = 1
+sync_sec = next(s for s in ui["sections"] if s["id"] == "git").get("pages", [])
 sync_pages = [p["id"] for p in sync_sec]
-if sync_pages != ["git", "rclone", "mounts"]:
-    print("    ui.sections[sync].pages is %s, not git/rclone/mounts (#609)" % sync_pages); bad = 1
+if sync_pages != ["me", "cloud"]:
+    print("    ui.sections[git].pages is %s, not me/cloud (#1149)" % sync_pages); bad = 1
 if any(not p.get("label") or not p.get("icon") for p in sync_sec):
-    print("    a Sync sub-page lacks a label or an icon"); bad = 1
+    print("    a Git sub-page lacks a label or an icon"); bad = 1
 sections = [x["id"] for x in ui["files"]["sections"]]
 if len(sections) != 3 or "emulated" not in sections or "terminal" not in sections:
     print("    ui.files.sections is %s: #603 declares Emulated, the store's own section and the Terminal root" % sections); bad = 1
@@ -299,23 +307,23 @@ if any(not r.get("public") for r in seeded): print("    a seeded repository does
 sys.exit(0)
 PYTHON
 }
-d11_structure "$BJ" && pass "five tabs in the #609 order; three Configs sub-pages and three Sync sub-pages in order; two Files sections with the store in its own" || fail "the #603/#609 structure is not what build.json declares"
+d11_structure "$BJ" && pass "seven tabs in the #1149 order; Configs sub-pages in order; Git has Me and Cloud; two Files sections with the store in its own" || fail "the #603/#609 structure is not what build.json declares"
 d11_seed "$REPOS" && pass "the store's seed set is public repositories only" || fail "the seed set is not public-only"
 if grep -qE 'buildConfigField "boolean", "SEED_ENABLED"' "$GRADLE" && grep -qE 'buildConfigField "int", +"SEED_DEPTH"' "$GRADLE" && grep -qE 'GitEngine\.clone\(applicationContext, url, dir, auth = auth, depth = BuildConfig\.SEED_DEPTH\)' "$SEED"; then pass "the seed is declared (storage.seed -> SEED_ENABLED/SEED_DEPTH) and cloned SHALLOW through the engine"; else fail "the first-run seed is not wired to the declaration"; fi
 if grep -qE 'GitEngine\.isRepository\(dir\)' "$SEED" && grep -qE 'RepoRegistry\(File\(applicationContext\.filesDir, GitSyncWorker\.REGISTRY_FILE\)\)' "$SEED"; then pass "seeding skips a clone that exists and registers into the SAME registry the Git page reads"; else fail "the seed does not reuse the one registry"; fi
 if grep -qE 'org\.eclipse\.jgit' "$SEED"; then fail "the seed talks to JGit directly - libs:git-sync is the engine"; else pass "the seed goes through libs:git-sync, never a second git"; fi
-python3 - "$APPS_JSON" "$BJ" <<'PYTHON' && pass "the Apps grid carries GitSync and RSync as in-app routes into declared Sync pages" || fail "the Apps grid does not route GitSync / RSync into Sync"
+python3 - "$APPS_JSON" "$BJ" <<'PYTHON' && pass "the Apps grid carries GitSync and RSync as in-app routes into the Git and Rsync pages" || fail "the Apps grid does not route GitSync / RSync into the Git / Rsync pages"
 import json, sys
 apps = json.load(open(sys.argv[1]))["apps"]
 ui = json.load(open(sys.argv[2]))["ui"]
-tabs = ui["bottom_nav"]; pages = [p["id"] for p in next(s for s in ui["sections"] if s["id"] == "sync")["pages"]]
+tabs = ui["bottom_nav"]; secs = {s["id"]: [p["id"] for p in s.get("pages", [])] for s in ui["sections"]}
 bad = 0
 for want in ("GitSync", "RSync"):
     tile = next((a for a in apps if a.get("label") == want), None)
     if tile is None: print("    no %s tile" % want); bad = 1; continue
     route = tile.get("route") or {}
-    if route.get("tab") != "sync": print("    %s routes to tab %r, not the #609 Sync tab" % (want, route.get("tab"))); bad = 1
-    if route.get("page") not in pages: print("    %s routes to page %r, which ui.sections[sync].pages does not declare" % (want, route.get("page"))); bad = 1
+    if route.get("tab") not in ("git", "rsync", "mounts") or route.get("tab") not in tabs: print("    %s routes to tab %r, not a former Sync page of the bottom nav (#1149)" % (want, route.get("tab"))); bad = 1
+    elif route.get("page") is not None and route.get("page") not in secs[route["tab"]]: print("    %s routes to page %r, which ui.sections[%s].pages does not declare" % (want, route.get("page"), route["tab"])); bad = 1
     if tile.get("package"): print("    %s declares a package: it is an in-app route, not an installed app" % want); bad = 1
 sys.exit(bad)
 PYTHON
@@ -360,17 +368,17 @@ d12_rsync() {
 import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]; apps = json.load(open(sys.argv[2]))["apps"]
 bad = 0
-page = next((p for p in next(s for s in ui["sections"] if s["id"] == "sync")["pages"] if p.get("id") == "rclone"), None)
+page = next((s for s in ui["sections"] if s["id"] == "rsync"), None)
 if page is None:
-    print("    ui.sections[sync].pages has no `rclone` page: the id is the dispatch and must not change"); sys.exit(1)
+    print("    ui.sections has no `rsync` section: the id is the dispatch and must not change (#1149)"); sys.exit(1)
 if page.get("label") != "Rsync":
     print("    the rclone sub-page is labelled %r, not 'Rsync' (#604)" % page.get("label")); bad = 1
 tile = next((a for a in apps if a.get("label") == "RSync"), None)
 if tile is None:
     print("    no RSync tile in the Apps grid"); sys.exit(1)
 route = tile.get("route") or {}
-if (route.get("tab"), route.get("page")) != ("sync", "rclone"):
-    print("    Apps ▸ RSync routes to %r, not {sync, rclone} (#604 moved it off Backups; #609 moved the page to Sync)" % route); bad = 1
+if (route.get("tab"), route.get("page")) != ("rsync", None):
+    print("    Apps ▸ RSync routes to %r, not {rsync} (#604 moved it off Backups; #1149 made Rsync a bottom-nav page)" % route); bad = 1
 sys.exit(bad)
 PYTHON
 }
@@ -429,7 +437,7 @@ for required in "$VOLUMES_KT" "$RULES_JSON" "$REMOTES_JSON" "$CONN_JSON"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 d12_classes "$BJ" "$VOLUMES_KT" && pass "four volume classes in the #604 order, dispatched by VolumesScreen; their filters are declared too" || fail "the #604 volume classes are not what build.json declares"
-d12_rsync "$BJ" "$APPS_JSON" && pass "Configs ▸ Rsync keeps the id 'rclone' and the Apps tile routes there" || fail "the Rclone→Rsync rename or the RSync route is not done"
+d12_rsync "$BJ" "$APPS_JSON" && pass "Rsync is a bottom-nav section labelled Rsync and the Apps tile routes there" || fail "the Rclone→Rsync rename or the RSync route is not done"
 d12_rules "$RULES_JSON" "$REMOTES_JSON" && pass "the declared sync rules are mappable, and the default one is /ya_mnt_sync-a37 ⇄ Google Drive, manual" || fail "the declared sync rules are not what #604 asked for"
 d12_machines "$BJ" "$CONN_JSON" && pass "every connection's machine kind is a class that renders it" || fail "a connection would vanish between Cloud-Containers and Cloud-Machines"
 for f in UI_VOLUMES_B64 UI_CONSTELLATION_B64 SYNC_RULES_B64; do
@@ -487,15 +495,20 @@ echo "== M mutation-proof =="
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["bottom_nav"]=b["ui"]["bottom_nav"][1:]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-files.json"
 d1 "$TMP/no-files.json" "$MAIN" >/dev/null && fail "D1 passed a declaration that dropped a tab (tester is vacuous)" || pass "a tab dropped from ui.bottom_nav → D1 RED"
+sed 's/^\( *\)"mounts" -> MountsPageScreen/\1"mountz" -> MountsPageScreen/' "$MAIN" > "$TMP/main.kt"
+cmp -s "$MAIN" "$TMP/main.kt" && fail "the dispatch mutation changed nothing (tester is stale)"
+d1 "$BJ" "$TMP/main.kt" >/dev/null && fail "D1 passed a misdispatched tab (tester is vacuous)" || pass "a tab id misspelt in MainActivity → D1 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["bottom_nav"][2],b["ui"]["bottom_nav"][3]=b["ui"]["bottom_nav"][3],b["ui"]["bottom_nav"][2]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/swapped-nav.json"
+d11_structure "$TMP/swapped-nav.json" >/dev/null && fail "D11 passed a reordered bottom nav (tester is vacuous)" || pass "two tabs swapped in ui.bottom_nav → D11 RED"
 grep -v '"folder" -> Icons.Filled.Folder' "$CATALOG" > "$TMP/no-folder.kt"
 cmp -s "$CATALOG" "$TMP/no-folder.kt" && fail "the catalog mutation changed nothing (tester is stale)"
 d3 "$BJ" "$TMP/no-folder.kt" >/dev/null && fail "D3 passed a catalog without the folder glyph (tester is vacuous)" || pass "a glyph dropped from IconCatalog → D3 RED"
 sed 's/"backups" -> BackupsScreen/"backup" -> BackupsScreen/' "$CONFIGS" > "$TMP/configs.kt"
 cmp -s "$CONFIGS" "$TMP/configs.kt" && fail "the configs mutation changed nothing (tester is stale)"
 d2 "$BJ" "$TMP/configs.kt" >/dev/null && fail "D2 passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in ConfigsScreen → D2 RED"
-sed 's/"git" -> GitReposScreen/"gits" -> GitReposScreen/' "$SYNC_KT" > "$TMP/sync.kt"
+sed 's/"me" -> GitReposScreen/"mee" -> GitReposScreen/' "$SYNC_KT" > "$TMP/sync.kt"
 cmp -s "$SYNC_KT" "$TMP/sync.kt" && fail "the sync mutation changed nothing (tester is stale)"
-d2s "$BJ" "$TMP/sync.kt" >/dev/null && fail "D2s passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in SyncScreen → D2s RED"
+d2s "$BJ" "$TMP/sync.kt" >/dev/null && fail "D2s passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in GitPageScreen → D2s RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [r.update(seed=True) for r in d["repos"] if r.get("private")]; json.dump(d,open(sys.argv[2],"w"))' "$REPOS" "$TMP/seed-private.json"
 d11_seed "$TMP/seed-private.json" >/dev/null && fail "D11 passed a PRIVATE repository marked for seeding (tester is vacuous)" || pass "a private repository marked seed → D11 RED"
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [p.update(pages=p["pages"][1:]) for s in b["ui"]["sections"] if s["id"]=="explorer" for p in s["pages"] if p["id"]=="cloud"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-constellation.json"

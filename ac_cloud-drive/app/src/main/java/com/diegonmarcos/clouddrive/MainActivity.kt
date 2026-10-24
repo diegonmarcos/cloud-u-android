@@ -52,7 +52,9 @@ import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.clouddrive.home.HomeScreen
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
-import com.diegonmarcos.clouddrive.sync.SyncScreen
+import com.diegonmarcos.clouddrive.sync.GitPageScreen
+import com.diegonmarcos.clouddrive.sync.MountsPageScreen
+import com.diegonmarcos.clouddrive.sync.RsyncPageScreen
 import com.diegonmarcos.clouddrive.startup.StartupGate
 import com.diegonmarcos.clouddrive.startup.StartupGuard
 import com.diegonmarcos.superapp.crash.CrashReports
@@ -242,8 +244,10 @@ class MainActivity : ComponentActivity(), DriveActions {
                     "manage" -> ManageScreen(this, prefs, onShowInExplorer = openPath, page = jumpPage, onPageConsumed = { jumpPage = null })
                     "agents" -> AgentsScreen()
                     "ai" -> AiScreen()
-                    "home" -> HomeScreen(git, this, onOpenFiles = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_LOCAL) }, onOpenVolumes = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_CLOUD) }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
-                    "sync" -> SyncScreen(git, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
+                    "home" -> HomeScreen(git, this, onOpenFiles = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_LOCAL) }, onOpenVolumes = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_CLOUD) }, onOpenSync = { jumpTab = Declarations.SECTION_GIT }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
+                    "git" -> GitPageScreen(git, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
+                    "rsync" -> RsyncPageScreen(rclone, prefs, this)
+                    "mounts" -> MountsPageScreen(rclone, prefs, this)
                     "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
                     else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)
                 }

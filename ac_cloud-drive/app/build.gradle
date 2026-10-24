@@ -275,8 +275,16 @@ def navPages = { String id -> uiDecl.sections.find { it.id == id }?.pages }
 if (!(navPages('configs') instanceof List) || navPages('configs').isEmpty()) {
     throw new GradleException("build.json::ui.sections[configs].pages must declare the Configs strip (#603)")
 }
-if (!(navPages('sync') instanceof List) || navPages('sync').isEmpty()) {
-    throw new GradleException("build.json::ui.sections[sync].pages must declare the Sync strip (#609)")
+if (!(navPages('git') instanceof List) || navPages('git').isEmpty()) {
+    throw new GradleException("build.json::ui.sections[git].pages must declare the Git strip, Me and Cloud (#1149)")
+}
+['git', 'rsync', 'mounts'].each { sid ->
+    if (!uiDecl.bottom_nav.contains(sid) || !uiDecl.sections.any { it.id == sid }) {
+        throw new GradleException("build.json::ui.bottom_nav / ui.sections must declare the ${sid} page, a former Sync page (#1149)")
+    }
+}
+if (!(uiDecl.sync?.cloud_list?.owner ?: '').toString() || !(uiDecl.sync?.cloud_list?.name_prefix ?: '').toString()) {
+    throw new GradleException("build.json::ui.sync.cloud_list must declare the Git > Cloud public list: owner and name_prefix (#1149)")
 }
 // #608 the Sync ▸ Git page is declared whole (ui.sync.git): its two sections, the personal
 // split, the login ways, the GitHub endpoint, the remote modes, the per-repository operations

@@ -21,8 +21,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -94,13 +96,14 @@ public fun AppTopBarScaffold(
     controller: AppTopBarController = rememberAppTopBarController(),
     labels: AppTopBarLabels = appTopBarLabels(),
     colors: AppTopBarColors = appTopBarColors(),
+    onAi: (() -> Unit)? = null,
     aiPanel: @Composable (close: () -> Unit) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(LocalAppTopBar provides controller) {
         Box(modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
-                AppTopBar(decl, title, controller, onAccount, onConfigs, labels = labels, colors = colors, aiPanel = aiPanel)
+                AppTopBar(decl, title, controller, onAccount, onConfigs, labels = labels, colors = colors, onAi = onAi, aiPanel = aiPanel)
                 Box(Modifier.weight(1f).fillMaxWidth()) { content() }
             }
             if (decl.drawer && controller.drawerOpen) DrawerOverlay(controller, labels, colors)
@@ -119,6 +122,7 @@ public fun AppTopBar(
     modifier: Modifier = Modifier,
     labels: AppTopBarLabels = appTopBarLabels(),
     colors: AppTopBarColors = appTopBarColors(),
+    onAi: (() -> Unit)? = null,
     aiPanel: @Composable (close: () -> Unit) -> Unit = {},
 ) {
     Box(modifier.fillMaxWidth().height(BAR_HEIGHT).background(colors.container).testTag(TopBarTags.BAR)) {
@@ -127,16 +131,28 @@ public fun AppTopBar(
                 controller.openDrawer()
             }
         }
+        val inline = decl.inlineActions
         Text(
             title,
-            Modifier.align(Alignment.Center).padding(horizontal = TITLE_CLEARANCE).testTag(TopBarTags.TITLE).semantics { heading() },
+            (if (inline) Modifier.align(Alignment.CenterStart).padding(start = INLINE_TITLE_START, end = INLINE_TITLE_END)
+            else Modifier.align(Alignment.Center).padding(horizontal = TITLE_CLEARANCE)).testTag(TopBarTags.TITLE).semantics { heading() },
             color = colors.onContainer,
             style = MaterialTheme.typography.titleLarge,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
+            textAlign = if (inline) TextAlign.Start else TextAlign.Center,
         )
-        Row(Modifier.align(Alignment.CenterEnd).padding(end = EDGE), verticalAlignment = Alignment.CenterVertically) {
+        if (inline) {
+            // #1149 AI, Profile and Configs as three round buttons; no Settings dropdown.
+            Row(Modifier.align(Alignment.CenterEnd).padding(end = EDGE), verticalAlignment = Alignment.CenterVertically) {
+                Box {
+                    CircleButton(Icons.Filled.AutoAwesome, labels.ai, TopBarTags.AI, colors) { if (onAi != null) onAi() else controller.toggleAi() }
+                    if (onAi == null && controller.aiOpen) AiPopup(controller, labels, colors, aiPanel)
+                }
+                if (TopBarSettings.ACCOUNT in decl.settings) CircleButton(Icons.Filled.AccountCircle, labels.account, TopBarTags.ACCOUNT, colors) { onAccount() }
+                if (TopBarSettings.CONFIGS in decl.settings) CircleButton(Icons.Filled.MoreVert, labels.configs, TopBarTags.CONFIGS, colors) { onConfigs() }
+            }
+        } else Row(Modifier.align(Alignment.CenterEnd).padding(end = EDGE), verticalAlignment = Alignment.CenterVertically) {
             if (decl.ai) {
                 Box {
                     CircleButton(Icons.Filled.AutoAwesome, labels.ai, TopBarTags.AI, colors) { controller.toggleAi() }
@@ -278,6 +294,9 @@ public object TopBarTags {
     public const val TITLE: String = "topbar_title"
     public const val AI: String = "topbar_ai"
     public const val SETTINGS: String = "topbar_settings"
+    /** #1149 the inline Profile and Configs buttons ([TopBarDecl.inlineActions]). */
+    public const val ACCOUNT: String = "topbar_account"
+    public const val CONFIGS: String = "topbar_configs"
     public const val DRAWER: String = "topbar_drawer"
     public const val SCRIM: String = "topbar_scrim"
     public const val AI_PANEL: String = "topbar_ai_panel"
@@ -288,6 +307,9 @@ private val BAR_HEIGHT: Dp = 56.dp
 private val EDGE: Dp = 4.dp
 /** Room kept clear on BOTH sides of the title: the hamburger on the left, the two buttons on the right. */
 private val TITLE_CLEARANCE: Dp = 108.dp
+/** #1149 inline actions: the title starts after the hamburger and stops before the three buttons. */
+private val INLINE_TITLE_START: Dp = 56.dp
+private val INLINE_TITLE_END: Dp = 152.dp
 
 /** A 48dp target holding a 36dp circle: the touch floor without a heavier look. */
 @Composable

@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,21 +52,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * #609 SYNC: the strip build.json::ui.sync.pages moved back out of Configs — Git ·
- * Rclone (Rsync) · Mounts, the mirror of #603's move the other way. The strip is
- * tabs inside the tab, not a stack — back leaves the app. Every one of the three is
- * a screen that already existed (#567): this file routes, it does not draw a card.
+ * #1149 the former Sync tab is three bottom-nav pages: Git (two sub-pages, Me and Cloud, drawn by libs:bottomnav's
+ * PageTabs over ui.sections[git].pages), Rsync and Mounts (a screen each, #567's engines' surfaces). This file routes,
+ * it does not draw a card; each page keeps the island with the terminal action it always had.
  *
- * The dispatch on a page id is the ONE place Kotlin names them; test-drive-shell.sh
- * diffs it against the declaration in both directions.
- *
- * [page] is a DECLARED page id another screen asked for (an Apps tile's route); it is
+ * GitPageScreen's dispatch on a page id is the ONE place Kotlin names them; test-drive-shell.sh diffs it against the
+ * declaration in both directions. [page] is a DECLARED page id another screen asked for (an Apps tile's route); it is
  * applied once and [onPageConsumed] clears the request.
  */
 @Composable
-fun SyncScreen(
+fun GitPageScreen(
     git: GitSyncCoordinator,
-    rclone: RcloneCoordinator,
     prefs: DrivePrefs,
     actions: DriveActions,
     page: String? = null,
@@ -73,7 +70,7 @@ fun SyncScreen(
     modifier: Modifier = Modifier,
 ) {
     val ctx = LocalContext.current
-    val pages = Declarations.sync.pages
+    val pages = Declarations.navPages(Declarations.SECTION_GIT)
     var current by rememberSaveable { mutableStateOf(pages.firstOrNull()?.id ?: "") }
     LaunchedEffect(page) {
         if (page != null && pages.any { it.id == page }) current = page
@@ -96,22 +93,41 @@ fun SyncScreen(
 
     Column(modifier.fillMaxSize()) {
         ToolbarIsland(
-            title = stringResource(R.string.sync_tab_title),
+            title = Declarations.nav.section(Declarations.SECTION_GIT)?.label.orEmpty(),
             subtitle = pages.firstOrNull { it.id == current }?.label,
-            actions = {
-                TerminalIslandAction(actions, ::say)
-            },
+            actions = { TerminalIslandAction(actions, ::say) },
         )
-        // #868 the strip is libs:bottomnav's PageTabs over ui.sections[sync].pages.
-        PageTabs(pages = Declarations.navPages("sync"), selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
-        AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "sync_page", modifier = Modifier.weight(1f)) { id ->
+        // #868 the strip is libs:bottomnav's PageTabs over ui.sections[git].pages.
+        PageTabs(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
+        AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "git_page", modifier = Modifier.weight(1f)) { id ->
             when (id) {
-                "git" -> GitReposScreen(git, actions, nextRun)
-                "rclone" -> RcloneSyncScreen(rclone, prefs, actions, ::say)
-                "mounts" -> MountsSyncScreen(rclone, prefs, actions, ::say)
+                "me" -> GitReposScreen(git, actions, nextRun, view = GitView.ME, prefs = prefs)
+                "cloud" -> GitReposScreen(git, actions, nextRun, view = GitView.CLOUD, prefs = prefs)
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
             }
         }
+        SnackbarHost(snackbar)
+    }
+}
+
+/** Rsync (libs:rclone's surface): the island with the terminal action over [RcloneSyncScreen]. */
+@Composable
+fun RsyncPageScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveActions, modifier: Modifier = Modifier) =
+    SyncSurface(Declarations.SECTION_RSYNC, actions, modifier) { say -> RcloneSyncScreen(rclone, prefs, actions, say) }
+
+/** Mounts (libs:mounts' surface): the island with the terminal action over [MountsSyncScreen]. */
+@Composable
+fun MountsPageScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveActions, modifier: Modifier = Modifier) =
+    SyncSurface(Declarations.SECTION_MOUNTS, actions, modifier) { say -> MountsSyncScreen(rclone, prefs, actions, say) }
+
+@Composable
+private fun SyncSurface(sectionId: String, actions: DriveActions, modifier: Modifier, body: @Composable (say: (String) -> Unit) -> Unit) {
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
+    Column(modifier.fillMaxSize()) {
+        ToolbarIsland(title = Declarations.nav.section(sectionId)?.label.orEmpty(), subtitle = null, actions = { TerminalIslandAction(actions, ::say) })
+        Box(Modifier.weight(1f)) { body(::say) }
         SnackbarHost(snackbar)
     }
 }

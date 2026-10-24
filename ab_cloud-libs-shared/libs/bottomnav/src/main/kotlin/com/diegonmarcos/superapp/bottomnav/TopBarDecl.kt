@@ -22,6 +22,9 @@ public object TopBarSettings {
  *   drawer    a hamburger at the left opens a side drawer whose content the CURRENT PAGE supplies ([TopBarDrawer])
  *   ai        a circular AI button at the right opens the shared libs:ai chat in an anchored panel
  *   settings  a circular Settings button at the right opens a dropdown of these entries ([TopBarSettings])
+ *   inline_actions  (#1149) replaces the Settings dropdown by three round buttons at the right: AI (sparkles), Profile
+ *             (circled avatar, when `settings` names account) and Configs (vertical dots, when it names configs); the
+ *             title then sits at the left beside the hamburger. AI is the host's [onAi] (the AI panel when it gives none).
  *
  * The title in the middle is the app's own name (build.json::name, declared once: the host passes it, the declaration restates none). An app bakes `UI_TOP_BAR_B64` (base64 of the object's JSON)
  * into BuildConfig and [AppTopBarScaffold] draws exactly what it declares. No `top_bar` = no bar: [fromBuildConfig]
@@ -32,10 +35,11 @@ public data class TopBarDecl(
     val drawer: Boolean = false,
     val ai: Boolean = false,
     val settings: List<String> = emptyList(),
+    val inlineActions: Boolean = false,
 ) {
     /** What is wrong with this declaration (empty = valid), the same rules the guard states at build time. */
     public fun problems(): List<String> = buildList {
-        if (!drawer && !ai && settings.isEmpty()) add("ui.top_bar declares nothing: no drawer, no ai, no settings")
+        if (!drawer && !ai && settings.isEmpty() && !inlineActions) add("ui.top_bar declares nothing: no drawer, no ai, no settings")
         settings.filter { it !in TopBarSettings.KNOWN }
             .forEach { add("ui.top_bar.settings id '$it' is not one of ${TopBarSettings.KNOWN}") }
         if (settings.toSet().size != settings.size) add("ui.top_bar.settings repeats an id")
@@ -49,6 +53,7 @@ public data class TopBarDecl(
                 drawer = o["drawer"] == true,
                 ai = o["ai"] == true,
                 settings = (o["settings"] as? List<*>)?.filterIsInstance<String>() ?: emptyList(),
+                inlineActions = o["inline_actions"] == true,
             )
         }.getOrNull()
 

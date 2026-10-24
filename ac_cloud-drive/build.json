@@ -63,9 +63,9 @@
   },
   "ui": {
     "_doc": "#868 THE NAVIGATION IS ONE DECLARATION (libs:bottomnav's NavDecl): ui.bottom_nav = the island's ids, ui.sections[] = each one's label/icon and its `pages` (the strip PageTabs draws), ui.default_section = where the app opens. Volumes' four classes, Sync's three pages and Configs' three pages are those `pages` now (they were the keys ui.volumes.classes, ui.sync.pages and ui.configs.pages; ui.tabs and ui.default_tab are gone). #603/#609 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.bottom_nav, SyncScreen renders ui.sections[sync].pages, ConfigsScreen renders ui.sections[configs].pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_SECTIONS_B64 / UI_BOTTOM_NAV / UI_DEFAULT_SECTION / UI_SYNC_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs) with files/volumes/home/apps/configs, moving Sync's three pages and Backups into Configs. #609 REVERSED HALF OF THAT: Apps stopped being a tab (its grid moved into Home, ui.home below) and the freed slot is now Sync, carrying Git/Rclone/Mounts back out of Configs into their own tab — the five tabs are now files/volumes/home/sync/configs. #608 REDESIGNED THE SYNC ▸ GIT SUB-PAGE and declared it whole in ui.sync.git below: two sections (the owner's PUBLIC cloud*/front* set, which needs no login, and Personal, which signs in through libs:auth for the `repo` scope and splits the account's own listing into Public and Private), one DENSE row per repository, and fourteen per-repository operations collapsed behind each row's disclosure — every one of them a verb of libs:git-sync, force push and force pull included.",
-    "bottom_nav": ["explorer", "manage", "sync", "home", "agents", "ai", "configs"],
+    "bottom_nav": ["explorer", "manage", "agents", "home", "git", "rsync", "mounts"],
     "default_section": "explorer",
-    "top_bar": {"settings": ["account", "configs"]},
+    "top_bar": {"drawer": true, "inline_actions": true, "settings": ["account", "configs"]},
     "webserver": {
       "_doc": "Configs ▸ Webserver opens cloud-c3-webserver's own page (the Tauri app's MainActivity) through an explicit component intent: `fleet` is the app's id in the constellation fleet manifest (the package is resolved there, never typed), `activity` its launcher activity, `fallback_url` where its server answers when the app is not installed. The port is ac_cloud-c3-webserver/build.json::runtime.port; test-drive-webserver-section.sh fails when the two differ.",
       "fleet": "c3-webserver",
@@ -149,27 +149,34 @@
         "icon": "home"
       },
       {
-        "id": "sync",
-        "label": "Sync",
-        "icon": "sync",
-        "_doc": "#609 the strip inside the NEW Sync island — ONE declaration, three sub-pages, in this order. Git, Rclone (LABELLED Rsync — #604's rename stands) and Mounts moved back OUT of ui.sections[configs].pages into their own tab, the mirror of #603's move the other way: all three are an ENGINE'S OWN surface (libs:git-sync, libs:rclone, libs:mounts) and belong beside each other, not folded into general settings. SyncScreen dispatches on the id, the ONE place Kotlin names them; test/test-drive-shell.sh diffs it against this declaration in both directions.",
+        "id": "git",
+        "label": "Git",
+        "icon": "commit",
+        "_doc": "#1149 the former Sync > Git page is a bottom-nav page of its own with two sub-pages drawn by PageTabs. Me: sign in to the Git hosts (ui.sync.git.hosts, plus the GitHub and Cloud git ways), the signed-in account's repositories in the #1138 table with Clone when no local folder matches, and the Local Repos Parentless table (a folder holding .git whose name differs from its origin URL's basename: Rename, Rename all). Cloud: the PUBLIC cloud* repositories of the owner, listed live over GitHub REST (ui.sync.git.cloud_list) with no sign-in, with Clone. GitPageScreen dispatches on the page id, the ONE place Kotlin names them; test-drive-shell.sh diffs it against this declaration in both directions.",
         "pages": [
           {
-            "id": "git",
-            "label": "Git",
-            "icon": "commit"
+            "id": "me",
+            "label": "Me",
+            "icon": "person"
           },
           {
-            "id": "rclone",
-            "label": "Rsync",
-            "icon": "sync"
-          },
-          {
-            "id": "mounts",
-            "label": "Mounts",
-            "icon": "lan"
+            "id": "cloud",
+            "label": "Cloud",
+            "icon": "cloud"
           }
         ]
+      },
+      {
+        "id": "rsync",
+        "label": "Rsync",
+        "icon": "sync",
+        "_doc": "#1149 the former Sync > Rsync page (libs:rclone's surface, RcloneSyncScreen) as a bottom-nav page. #604's rename stands: the label is Rsync."
+      },
+      {
+        "id": "mounts",
+        "label": "Mounts",
+        "icon": "lan",
+        "_doc": "#1149 the former Sync > Mounts page (libs:mounts' surface, MountsSyncScreen) as a bottom-nav page."
       },
       {
         "id": "configs",
@@ -464,6 +471,15 @@
       }
     },
     "sync": {
+      "_doc_cloud_list": "#1149 Sync > Git > Cloud: the PUBLIC cloud* repositories of `owner`, listed live over the GitHub REST route `path` (api base: ui.sync.git.api.base_url) with NO credential, then filtered to public repositories whose name starts with `name_prefix`. CloudRepos.filter is the rule; when the network refuses, the page shows the declared public_repos set and says so.",
+      "cloud_list": {"owner": "diegonmarcos", "name_prefix": "cloud", "path": "/users/{owner}/repos?type=owner&sort=full_name&per_page=100", "max_pages": 4},
+      "_doc_git_hosts": "#1149 Sync > Git > Me: the hosts beyond the GitHub and Cloud-git ways, in render order. `kind` picks the listing parser and the auth header (GitHosts: gitlab, gitea for Codeberg and any Gitea-compatible host, bitbucket, azure). The credential is a personal access token (an app password for Bitbucket) the user pastes, kept in libs:git-sync's GitCredentialStore (SafeEncryptedPrefs): no OAuth client is registered for this app and none is invented. `needs_user` asks for a user name (Azure DevOps: the organisation, substituted for {user} in api_base); `clone_user` is the HTTPS user a clone presents when the host fixes one. The self-hosted Cloud Gitea keeps its own way (ui.sync.git.ways, the fleet rung).",
+      "git_hosts": [
+        {"id": "gitlab", "label": "GitLab", "icon": "code", "kind": "gitlab", "api_base": "https://gitlab.com/api/v4", "repos_path": "/projects?membership=true&simple=true&order_by=path&sort=asc&per_page=100", "token_url": "https://gitlab.com/-/user_settings/personal_access_tokens", "needs_user": false, "clone_user": "oauth2", "max_pages": 4},
+        {"id": "bitbucket", "label": "Bitbucket", "icon": "cloud", "kind": "bitbucket", "api_base": "https://api.bitbucket.org/2.0", "repos_path": "/repositories?role=member&pagelen=100", "token_url": "https://bitbucket.org/account/settings/app-passwords/", "needs_user": true, "user_label": "Username", "max_pages": 4},
+        {"id": "codeberg", "label": "Codeberg", "icon": "public", "kind": "gitea", "api_base": "https://codeberg.org/api/v1", "repos_path": "/user/repos?limit=50", "token_url": "https://codeberg.org/user/settings/applications", "needs_user": true, "user_label": "Username", "max_pages": 4},
+        {"id": "azure", "label": "Azure DevOps", "icon": "dns", "kind": "azure", "api_base": "https://dev.azure.com/{user}", "repos_path": "/_apis/git/repositories?api-version=7.1", "token_url": "https://dev.azure.com/", "needs_user": true, "user_label": "Organisation", "clone_user": "pat", "max_pages": 1}
+      ],
       "git_periods_minutes": [
         15,
         30,

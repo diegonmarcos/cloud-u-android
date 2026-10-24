@@ -187,7 +187,6 @@
     <string name="home_containers_summary">%1$d declared · %2$d reachable</string>
 
     <!-- Sync tab strip (#609) -->
-    <string name="sync_tab_title">Sync</string>
 
     <!-- Sync (GitSync/Rclone/Mounts cards) -->
     <string name="sync_store">Store</string>
@@ -690,4 +689,33 @@
     <string name="repo_runs_none">No workflow runs.</string>
     <string name="repo_runs_failed">Could not read the run feed (%1$s).</string>
     <string name="repo_unknown">unknown</string>
+    <!-- #1149 Sync > Git > Me: hosts beyond GitHub and Cloud git; Local Repos Parentless; Cloud (public list) -->
+    <string name="git_host_repos">%1$s · %2$d repositories</string>
+    <string name="git_host_signed_in">Signed in as %1$s</string>
+    <string name="git_host_signed_out">Signed out. Paste a personal access token (an app password for Bitbucket).</string>
+    <string name="git_host_user">User name</string>
+    <string name="git_host_token">Access token</string>
+    <string name="git_host_get_token">Get a token</string>
+    <string name="git_host_sign_out">Sign out</string>
+    <string name="git_host_truncated">Showing the first %1$d repositories; the listing is longer.</string>
+    <string name="git_host_no_token">No token is stored for %1$s: sign in again.</string>
+    <string name="parentless_title">Local repos parentless</string>
+    <string name="parentless_hint">Folders with a .git whose name is not the name of their origin repository.</string>
+    <string name="parentless_empty">None: every local repository folder is named like its origin.</string>
+    <string name="parentless_row">origin: %1$s</string>
+    <string name="parentless_rename">Rename folder to match repo name</string>
+    <string name="parentless_rename_all">Rename all</string>
+    <string name="parentless_confirm_title">Rename folders?</string>
+    <string name="parentless_confirm_body">%1$d folder(s) will be renamed to their repository name. Saved paths and bookmarks follow. A rename whose target already exists is refused; nothing is overwritten.</string>
+    <string name="parentless_confirm_more">… and %1$d more</string>
+    <string name="parentless_confirm_go">Rename</string>
+    <string name="parentless_renamed">Renamed %1$s → %2$s</string>
+    <string name="parentless_refused_exists">Refused: %2$s already exists, %1$s was not renamed</string>
+    <string name="parentless_missing">%1$s is gone, nothing renamed</string>
+    <string name="parentless_invalid">%1$s: %2$s is not a usable folder name</string>
+    <string name="parentless_failed">Could not rename %1$s to %2$s</string>
+    <string name="parentless_refs">Updated %1$d repo path(s), %2$d sync job(s), %3$d bookmark(s)</string>
+    <string name="git_cloud_loading">Listing the public repositories…</string>
+    <string name="git_cloud_failed">Could not list from GitHub (%1$s). Showing the declared public set.</string>
+    <string name="git_cloud_count">Public repositories of %1$s starting with %2$s: %3$d</string>
 </resources>

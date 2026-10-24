@@ -172,7 +172,7 @@ object GitHubRepos {
         var complete = true
         var page = 1
         while (page <= api.maxPages) {
-            val batch = get(api.reposUrl(page), token).getOrElse { return Result.failure(it) }
+            val batch = get(api.reposUrl(page), mapOf("Authorization" to "Bearer $token", "Accept" to "application/vnd.github+json")).getOrElse { return Result.failure(it) }
             val parsed = parse(batch)
             all += parsed
             if (parsed.isEmpty()) break
@@ -185,7 +185,8 @@ object GitHubRepos {
         return Result.success(Page(unique, complete))
     }
 
-    private fun get(url: String, token: String): Result<String> {
+    /** One GET with the given request [headers] (the token rides only there). #1149 internal: the other hosts and the unauthenticated Cloud list use it too. */
+    internal fun get(url: String, headers: Map<String, String>): Result<String> {
         // #1106 never a socket on the UI thread.
         if (com.diegonmarcos.clouddrive.startup.StartupGuard.onMainThread()) return Result.failure(IllegalStateException("not asked from the main thread"))
         var conn: HttpURLConnection? = null
@@ -194,8 +195,7 @@ object GitHubRepos {
                 requestMethod = "GET"
                 connectTimeout = CONNECT_TIMEOUT_MS
                 readTimeout = READ_TIMEOUT_MS
-                setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("Authorization", "Bearer $token")
+                headers.forEach { (k, v) -> setRequestProperty(k, v) }
                 setRequestProperty("User-Agent", USER_AGENT)
             }
             val code = conn.responseCode
