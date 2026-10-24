@@ -514,7 +514,7 @@ Coverage: 5 covered, 2 gaps — contacts_vcards, file:system ContactsContract pr
 
 ## cloud-dialer — `com.diegonmarcos.comms.dialer`
 
-Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-ui-kit.
+Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-kit.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

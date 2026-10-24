@@ -200,10 +200,17 @@ dependencies {
     implementation(project(":libs:ui-kit"))
     // #868 the bottom nav: one island for the whole fleet, declared in build.json::ui.
     implementation(project(":libs:bottomnav"))
+    // #1164 the shared navigation: first row (Profile -> Cloud Account), second row, bottom nav, page background.
+    implementation(project(":libs:nav-bar-bottom"))
+    implementation(project(":libs:nav-bar-top-first-row"))
+    implementation(project(":libs:nav-bar-top-second-row"))
+    implementation(project(":libs:theme-background"))
     implementation(platform("androidx.compose:compose-bom:2025.11.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.animation:animation")
+    implementation("androidx.activity:activity-compose:1.9.3")
     implementation(libs.fossify.commons)
     implementation(libs.indicator.fast.scroll)
     implementation(libs.autofit.text.view)

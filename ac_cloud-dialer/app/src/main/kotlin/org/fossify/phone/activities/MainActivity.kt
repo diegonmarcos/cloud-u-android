@@ -11,9 +11,35 @@ import android.os.Bundle
 import android.os.Handler
 import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.ColorUtils
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.viewpager.widget.ViewPager
+import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
+import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.HierarchyEntry
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
 import com.google.android.material.snackbar.Snackbar
 import org.fossify.commons.dialogs.ChangeViewTypeDialog
 import org.fossify.commons.dialogs.ConfirmationDialog
@@ -39,6 +65,7 @@ import org.fossify.phone.fragments.FavoritesFragment
 import org.fossify.phone.fragments.MyViewPagerFragment
 import org.fossify.phone.fragments.RecentsFragment
 import org.fossify.phone.fragments.SmsFragment
+import org.fossify.phone.nav.ChromeScrollHooks
 import org.fossify.phone.nav.DialerNav
 import org.fossify.phone.helpers.HOME_TAB_INDEX
 import org.fossify.phone.helpers.OPEN_DIAL_PAD_AT_LAUNCH
@@ -49,9 +76,22 @@ import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
 
+/**
+ * Cloud Dialer's main screen on the shared nav pattern (#1164): the first row (Profile top-right opens Cloud Account), the
+ * bottom nav (sections from build.json::ui), the page background and the scroll-collapse are the shared libs'
+ * ([NavBarTopFirstRowScaffold] around [NavBarBottomHost]); the Fossify View pages (search menu, pager, dialpad button) are hosted
+ * inside it and their scroll feeds the one collapse connection ([ChromeScrollHooks]).
+ */
 class MainActivity : SimpleActivity() {
     override var isSearchBarEnabled = true
-    
+
+    /** The section the pager shows, and the sections whose page is on screen (Settings > Manage shown tabs). */
+    private val selectedSection = mutableStateOf("")
+    private val shownSections = mutableStateOf<List<String>>(emptyList())
+
+    /** The shared chrome's collapse connection, set by the composition; the View pages' scroll ends in it. */
+    @Volatile private var collapseTarget: BottomNavCollapse? = null
+
     private val binding by viewBinding(ActivityMainBinding::inflate)
 
     private var launchedDialer = false
@@ -64,7 +104,7 @@ class MainActivity : SimpleActivity() {
         super.onCreate(savedInstanceState)
         // #868 the window every app of the fleet wears (edge-to-edge, transparent bars), then the layout.
         FleetChrome.apply(this)
-        setContentView(binding.root)
+        setContent { DialerShell() }
         appLaunched(BuildConfig.APPLICATION_ID)
         org.fossify.phone.updater.Updater.start(this)
         setupOptionsMenu()
@@ -334,7 +374,7 @@ class MainActivity : SimpleActivity() {
         })
 
         // selecting the proper tab sometimes glitches, add an extra selector to make sure we have it right
-        binding.mainNavIsland.post {
+        binding.viewPager.post {
             Handler().postDelayed({
                 var wantedTab = getDefaultTab()
 
@@ -365,7 +405,7 @@ class MainActivity : SimpleActivity() {
     /** The pager landed on [position]: move the island's pill there and do what opening that page means. */
     private fun onTabSelected(position: Int) {
         val tab = visibleTabs().getOrNull(position) ?: return
-        binding.mainNavIsland.selectedId = tab.sectionId
+        selectedSection.value = tab.sectionId
         getAllFragments().forEach {
             it?.finishActMode()
         }
@@ -379,7 +419,52 @@ class MainActivity : SimpleActivity() {
         refreshMenuItems()
     }
 
-    /** A tap on the island: show that section's page. */
+    @Composable
+    private fun DialerShell() {
+        val sectionId = selectedSection.value
+        val shown = DialerNav.shown(shownSections.value)
+        val dark = ColorUtils.calculateLuminance(getProperBackgroundColor()) < 0.5
+        NavBarTopFirstRowScaffold(
+            title = DialerNav.decl.section(sectionId)?.label ?: getString(R.string.app_launcher_name),
+            // The title island lists the sections on screen (each a single page), so a pick shows that page.
+            hierarchy = shown.map { HierarchyEntry(it.id, it.label, 0, it.id, selected = it.id == sectionId) },
+            onNavigate = { e -> selectSection(e.sectionId) },
+            onAccount = rememberAccountLauncher(),
+            onConfigs = { launchSettings() },
+            onAi = rememberSuperAppAiLauncher(),
+            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+            dark = dark,
+        ) {
+            TopBarDrawer { close ->
+                shown.forEach { sec ->
+                    Text(
+                        sec.label,
+                        Modifier.fillMaxWidth().clickable { selectSection(sec.id); close() }.padding(horizontal = 20.dp, vertical = 14.dp),
+                    )
+                }
+            }
+            NavBarBottomHost(
+                entries = shown.map { BottomNavEntry(it.id, it.label, painterResource(DialerNav.icon(it.icon))) },
+                selectedId = sectionId,
+                onSelect = { selectSection(it.id) },
+                dark = dark,
+            ) {
+                val collapse = LocalNavChromeCollapse.current
+                SideEffect { collapseTarget = collapse }
+                AndroidView(
+                    factory = {
+                        // The shell's chrome owns the window insets (status bar above, nav bar below), so the Fossify pages get none.
+                        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, _ -> WindowInsetsCompat.CONSUMED }
+                        ChromeScrollHooks.install(binding.root) { delta -> collapseTarget?.onScrollDelta(delta) }
+                        binding.root
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+    }
+
+    /** A tap on the bottom nav: show that section's page. */
     private fun selectSection(sectionId: String) {
         val index = visibleTabs().indexOfFirst { it.sectionId == sectionId }
         if (index >= 0) {
@@ -390,11 +475,8 @@ class MainActivity : SimpleActivity() {
     private fun setupTabs() {
         binding.viewPager.adapter = null
         val tabs = visibleTabs()
-        binding.mainNavIsland.apply {
-            items = DialerNav.items(tabs.map { it.sectionId })
-            onSelect = { sectionId -> selectSection(sectionId) }
-            selectedId = tabs.getOrNull(binding.viewPager.currentItem)?.sectionId ?: tabs.firstOrNull()?.sectionId
-        }
+        shownSections.value = DialerNav.shown(tabs.map { it.sectionId }).map { it.id }
+        selectedSection.value = tabs.getOrNull(binding.viewPager.currentItem)?.sectionId ?: tabs.firstOrNull()?.sectionId.orEmpty()
 
         storedShowTabs = config.showTabs
         storedStartNameWithSurname = config.startNameWithSurname

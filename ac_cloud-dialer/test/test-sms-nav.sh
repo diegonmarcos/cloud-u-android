@@ -5,9 +5,10 @@
 #   2. the bar is within the island's 2..8 items and ui.default_section is on it
 #   3. the app compiles libs:bottomnav (gradle + settings + build.json::modules) and bakes the
 #      declaration (UI_BOTTOM_NAV / UI_SECTIONS_B64 / UI_DEFAULT_SECTION)
-#   4. the main layout draws the island (BottomNavIslandView) and no TabLayout of its own
+#   4. the main layout holds the pager only: no island and no TabLayout of its own (#1164: the bottom nav is the shared Compose one)
 #   5. every section has a pager page (DialerTab) and the SMS page is a Compose host
-#   6. the main activity wears the fleet window (FleetChrome.apply) and selects pages from the island
+#   6. the main activity wears the fleet window (FleetChrome.apply), hosts the pages inside the shared first row + bottom nav
+#      (NavBarTopFirstRowScaffold, NavBarBottomHost; Profile launches Cloud Account) and selects pages from the nav
 #
 # The central half (nav-shape.json no longer exempts this app, so N1-N9 hold it) is the
 # nav-shape-guard workflow's; this tester is the app-local half. MUTATION: each requirement is
@@ -59,8 +60,11 @@ def check(root):
         if field not in gradle:
             bad.append("app/build.gradle.kts does not bake " + field)
     layout = read(root, "app/src/main/res/layout/activity_main.xml")
-    if "com.diegonmarcos.superapp.bottomnav.BottomNavIslandView" not in layout:
-        bad.append("activity_main.xml does not draw the BottomNavIslandView")
+    if "BottomNavIslandView" in layout:
+        bad.append("activity_main.xml draws an island of its own (the bottom nav is the shared Compose one)")
+    for lib in ("nav-bar-bottom", "nav-bar-top-first-row", "nav-bar-top-second-row", "theme-background"):
+        if not re.search(r'implementation\(project\(":libs:%s"\)\)' % lib, gradle):
+            bad.append("app/build.gradle.kts does not compile libs:" + lib)
     if re.search(r"TabLayout|BottomNavigationView|NavigationBarView", layout):
         bad.append("activity_main.xml draws a nav widget of its own")
     tabs = read(root, K + "helpers/Constants.kt")
@@ -74,8 +78,9 @@ def check(root):
     main = read(root, K + "activities/MainActivity.kt")
     if "FleetChrome.apply(" not in main:
         bad.append("MainActivity does not call FleetChrome.apply(")
-    if "mainNavIsland" not in main or "DialerNav.items" not in main:
-        bad.append("MainActivity does not drive the island from DialerNav")
+    for tok in ("NavBarTopFirstRowScaffold(", "NavBarBottomHost(", "rememberAccountLauncher()", "DialerNav.shown"):
+        if tok not in main:
+            bad.append("MainActivity does not use " + tok)
     if re.search(r"\bTabLayout\b", main):
         bad.append("MainActivity names a TabLayout")
     nav = read(root, K + "nav/DialerNav.kt")
@@ -126,12 +131,16 @@ MUT = [
     ("settings no longer includes libs:bottomnav", "settings.gradle.kts", lambda s: s.replace('include(":libs:bottomnav")', "")),
     ("the app stops compiling libs:bottomnav", "app/build.gradle.kts", lambda s: s.replace('implementation(project(":libs:bottomnav"))', "")),
     ("the app stops baking UI_SECTIONS_B64", "app/build.gradle.kts", lambda s: s.replace("UI_SECTIONS_B64", "UI_SOMETHING")),
-    ("the layout loses the island", "app/src/main/res/layout/activity_main.xml", lambda s: s.replace("BottomNavIslandView", "View")),
+    ("the layout draws its own island again", "app/src/main/res/layout/activity_main.xml", lambda s: s.replace("</androidx.coordinatorlayout.widget.CoordinatorLayout>", '<com.diegonmarcos.superapp.bottomnav.BottomNavIslandView android:layout_width="match_parent" android:layout_height="wrap_content" /></androidx.coordinatorlayout.widget.CoordinatorLayout>')),
+    ("the app stops compiling libs:nav-bar-bottom", "app/build.gradle.kts", lambda s: s.replace('implementation(project(":libs:nav-bar-bottom"))', "")),
+    ("MainActivity stops using the shared first row", K + "activities/MainActivity.kt", lambda s: s.replace("NavBarTopFirstRowScaffold(", "OtherScaffold(")),
+    ("MainActivity stops using the shared bottom nav", K + "activities/MainActivity.kt", lambda s: s.replace("NavBarBottomHost(", "OtherHost(")),
+    ("Profile stops launching Cloud Account", K + "activities/MainActivity.kt", lambda s: s.replace("rememberAccountLauncher()", "{}")),
     ("the layout grows a TabLayout", "app/src/main/res/layout/activity_main.xml", lambda s: s.replace("</androidx.coordinatorlayout.widget.CoordinatorLayout>", '<com.google.android.material.tabs.TabLayout android:layout_width="match_parent" android:layout_height="wrap_content" /></androidx.coordinatorlayout.widget.CoordinatorLayout>')),
     ("the SMS pager page is dropped", K + "helpers/Constants.kt", lambda s: s.replace('sectionId = "sms"', 'sectionId = "other"')),
     ("the SMS page stops being a Compose host", "app/src/main/res/layout/fragment_sms.xml", lambda s: s.replace("ComposeView", "FrameLayout")),
     ("MainActivity drops the fleet window", K + "activities/MainActivity.kt", lambda s: s.replace("FleetChrome.apply(", "noChrome(")),
-    ("MainActivity stops driving the island from the declaration", K + "activities/MainActivity.kt", lambda s: s.replace("DialerNav.items", "emptyList<Any>")),
+    ("MainActivity stops driving the nav from the declaration", K + "activities/MainActivity.kt", lambda s: s.replace("DialerNav.shown", "emptyList<Any>")),
     ("MainActivity names a TabLayout again", K + "activities/MainActivity.kt", lambda s: s + "\nprivate val legacy = com.google.android.material.tabs.TabLayout::class\n"),
 ]
 for label, rel, fn in MUT:

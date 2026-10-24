@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    #1164 the bottom nav, the first row and the page background are the shared Compose libs' (MainActivity hosts this layout
+    inside NavBarTopFirstRowScaffold + NavBarBottomHost); this layout holds the search menu, the pager and the dialpad button.
+-->
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main_coordinator"
@@ -22,7 +26,7 @@
             android:id="@+id/view_pager"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@+id/main_nav_island"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
         <org.fossify.commons.views.MyFloatingActionButton
@@ -38,19 +42,9 @@
             android:src="@drawable/ic_dialpad_vector"
             app:backgroundTint="@color/color_primary"
             app:shapeAppearanceOverlay="@style/DialerFabShape"
-            app:layout_constraintBottom_toTopOf="@+id/main_nav_island"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:rippleColor="@color/pressed_item_foreground" />
-
-        <!--
-            #868 the bottom nav: libs:bottomnav's island (build.json::ui declares its items). It floats,
-            so the pager and the dialpad button sit above the room it takes.
-        -->
-        <com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
-            android:id="@+id/main_nav_island"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
