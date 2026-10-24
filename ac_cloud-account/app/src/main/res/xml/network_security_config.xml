@@ -38,6 +38,7 @@
         <domain includeSubdomains="false">git-proxy-api.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">gitea.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">languagetool.mesh.diegonmarcos.com</domain>
+        <domain includeSubdomains="false">my-ai-api.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">news-gdelt.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">stalwart.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">tokens-api.mesh.diegonmarcos.com</domain>
