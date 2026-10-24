@@ -44,7 +44,7 @@ class NetworkGroupTest {
         assertEquals("Resources", g.label)
         assertEquals(g, NotifyGroups.groupOf(DataBadgeService.BADGE_ID))
         assertEquals(g, NotifyGroups.groupOf(BatteryBadgeService.BADGE_ID))
-        assertEquals(listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID, BatteryBadgeService.BADGE_ID), g.members)
+        assertEquals(listOf(NetworkBadgeService.BADGE_ID, DataBadgeService.BADGE_ID, BatteryBadgeService.BADGE_ID, AiBadgeService.BADGE_ID), g.members)
     }
 
     @Test fun `attach puts both under one group key and posts one summary`() {

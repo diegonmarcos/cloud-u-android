@@ -1,0 +1,189 @@
+package com.diegonmarcos.superapp.notificationcenter
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import android.os.PowerManager
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.MainActivity
+import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.ops.dagu.DaguPrefs
+import com.diegonmarcos.superapp.profile.AccountData
+import java.util.concurrent.Executors
+
+/**
+ * #1151 The persistent "AI" badge of the Resources group: Claude's 5-hour session and weekly used % with their reset
+ * times, and OpenRouter's balance and spend (24h, 7 days, month) in dollars and millions of tokens. Everything comes from
+ * c3-infra-api `GET /ai/usage` through [AiUsageClient] (mesh first, then public with the fleet bearer) and is worded by
+ * [AiUsageModel]; nothing here computes a figure.
+ *
+ * Refresh: on start, when the screen comes on, on the Refresh button, and every [TICK_MS] while the screen is on (the
+ * tick stops with the screen). A failed read keeps the last good figures on the card and says why; data older than
+ * [AiUsageModel.STALE_MS] is marked stale. Without POST_NOTIFICATIONS (Android 13+) it posts and reads nothing.
+ */
+class AiBadgeService : Service() {
+
+    private val main = Handler(Looper.getMainLooper())
+    private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "ai-badge").apply { isDaemon = true } }
+    private var receiver: BroadcastReceiver? = null
+    private var pending: Runnable? = null
+    @Volatile private var lastReadMs = 0L
+
+    private val tick = object : Runnable {
+        override fun run() {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            if (!pm.isInteractive) return // the screen-on receiver restarts the tick
+            requestRefresh(force = false)
+            main.postDelayed(this, TICK_MS)
+        }
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        ensureChannel(this)
+        startForeground(NOTIF_ID, build(drawCached("")))
+        val r = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                main.removeCallbacks(tick)
+                if (intent.action == Intent.ACTION_SCREEN_ON) {
+                    requestRefresh(force = false)
+                    main.postDelayed(tick, TICK_MS)
+                }
+            }
+        }
+        receiver = r
+        val filter = IntentFilter(Intent.ACTION_SCREEN_ON).apply { addAction(Intent.ACTION_SCREEN_OFF) }
+        ContextCompat.registerReceiver(this, r, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        requestRefresh(force = true)
+        main.postDelayed(tick, TICK_MS)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        requestRefresh(force = intent?.action == ACTION_REFRESH)
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        receiver?.let { runCatching { unregisterReceiver(it) } }
+        main.removeCallbacks(tick)
+        pending?.let(main::removeCallbacks)
+        worker.shutdownNow()
+        NotifyGroups.release(this, BADGE_ID)
+        super.onDestroy()
+    }
+
+    /** Coalesce a burst into one read, at most one per [MIN_GAP_MS] unless the owner forced it. */
+    private fun requestRefresh(force: Boolean) = main.post {
+        if (pending != null) return@post
+        val wait = if (force) 0L else (MIN_GAP_MS - (System.currentTimeMillis() - lastReadMs)).coerceIn(0L, MIN_GAP_MS)
+        val r = Runnable { pending = null; runCatching { worker.execute { refreshNow() } } }
+        pending = r
+        main.postDelayed(r, wait)
+    }
+
+    // ── worker thread ────────────────────────────────────────────────────
+
+    private fun refreshNow() {
+        if (!NetworkBadgeService.canPost(this)) return
+        lastReadMs = System.currentTimeMillis()
+        var note = ""
+        val out = runCatching { AiUsageClient.fetch(BuildConfig.UI_C3_OPS_BASE_URL, bearer(this), AiUsageClient.fleetTransport, AiUsageClient.plainTransport) }
+            .getOrElse { AiUsageClient.Outcome.Failed(it.javaClass.simpleName) }
+        when (out) {
+            is AiUsageClient.Outcome.Ok -> {
+                if (AiUsageModel.parse(out.body) != null) {
+                    prefs(this).edit().putString(KEY_BODY, out.body).putLong(KEY_AT, lastReadMs).apply()
+                } else note = "unreadable reply"
+            }
+            is AiUsageClient.Outcome.Failed -> note = out.reason
+        }
+        runCatching { (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIF_ID, build(drawCached(note))) }
+    }
+
+    private fun drawCached(note: String): AiUsageModel.Card {
+        val p = prefs(this)
+        val snap = p.getString(KEY_BODY, null)?.let(AiUsageModel::parse)
+        return AiUsageModel.card(snap, p.getLong(KEY_AT, 0L), System.currentTimeMillis(), note)
+    }
+
+    // ── drawing ──────────────────────────────────────────────────────────
+
+    private fun build(card: AiUsageModel.Card): Notification {
+        val pinned = BadgeServices.pinned(this, BADGE_ID)
+        val open = PendingIntent.getActivity(
+            this, RC_OPEN,
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val refresh = PendingIntent.getService(
+            this, RC_REFRESH, Intent(this, AiBadgeService::class.java).setAction(ACTION_REFRESH),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val b = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_stat_notify)
+            .setColor(0xFF0A0A0A.toInt())
+            .setContentTitle(card.title)
+            .setContentText(card.text)
+            .setSubText("Cloud SA - AI")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(card.expanded))
+            .setContentIntent(open)
+            .setOngoing(pinned)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .apply {
+                card.progress?.let { setProgress(100, it, false) }
+                if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@AiBadgeService, NOTIF_ID))
+            }
+        BadgeModel.add(b, BadgeModel.Action("refresh", R.drawable.ic_act_refresh, "Refresh", refresh))
+        return NotifyGroups.attach(this, b, BADGE_ID).build()
+            .apply { if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT }
+    }
+
+    companion object {
+        const val NOTIF_ID = 7719
+        const val CHANNEL_ID = "ai_usage"
+        /** This badge's id in build.json::ui.notification_center.producers. */
+        const val BADGE_ID = "ai_usage"
+
+        private const val ACTION_REFRESH = "com.diegonmarcos.superapp.notificationcenter.AI_REFRESH"
+        private const val RC_OPEN = 0x4151
+        private const val RC_REFRESH = 0x4152
+        private const val MIN_GAP_MS = 20_000L
+        private const val TICK_MS = 5 * 60_000L
+        private const val PREFS = "ai_usage_badge"
+        private const val KEY_BODY = "last_body"
+        private const val KEY_AT = "last_at_ms"
+
+        private fun prefs(ctx: Context) = ctx.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+        /** The fleet bearer this device holds (Cloud Account's fleet.bearer, else the Dagu login); "" when none. Never logged. */
+        private fun bearer(ctx: Context): String = AccountData.secret(ctx, "fleet.bearer").trim()
+            .ifEmpty { runCatching { DaguPrefs(ctx).bearerToken }.getOrDefault("") }
+
+        fun ensureChannel(ctx: Context) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (nm.getNotificationChannel(CHANNEL_ID) != null) return
+            nm.createNotificationChannel(
+                NotificationChannel(CHANNEL_ID, "AI usage", NotificationManager.IMPORTANCE_LOW).apply {
+                    description = "Claude session and weekly used %, OpenRouter balance and spend."
+                    setShowBadge(false)
+                },
+            )
+        }
+    }
+}

@@ -73,6 +73,12 @@
       "why": "G5 Data badge (Network group): a foreground service re-posting data usage (today, month, top apps) when the screen comes on or on Refresh."
     },
     {
+      "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/AiBadgeService.kt",
+      "kind": "badge",
+      "notify_calls": 1,
+      "why": "AI usage badge (Resources group): a foreground service re-posting Claude session and weekly used % and OpenRouter spend from c3-infra-api when the screen comes on, every 5 minutes while it is on, or on Refresh."
+    },
+    {
       "path": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/notificationcenter/NetworkBadgeService.kt",
       "kind": "badge",
       "notify_calls": 1,

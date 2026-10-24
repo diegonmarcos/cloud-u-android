@@ -70,6 +70,7 @@ class NotifyCardParityTest {
         "markets_prices" -> generic(b, b.instruments.take(4).mapIndexed { i, ins ->
             BadgeModel.Action(BadgeModel.idOf(ins.label), R.drawable.ic_p_markets_prices, ins.label, pi(i)) })
         "myhealth" -> generic(b, listOf(BadgeModel.Action("grant-access", R.drawable.ic_act_key, "Grant access", pi(1))))
+        "ai_usage" -> generic(b, listOf(BadgeModel.Action("refresh", R.drawable.ic_act_refresh, "Refresh", pi(1))))
         "battery_status", "fleet_alerts" -> generic(b, emptyList())
         else -> throw AssertionError("badge '${b.id}' has no notification in NotifyCardParityTest: add it, so its card is proven equal")
     }

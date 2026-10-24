@@ -9053,7 +9053,7 @@
         {
           "id": "network",
           "label": "Resources",
-          "members": ["network_mesh", "network_data", "battery_status"]
+          "members": ["network_mesh", "network_data", "battery_status", "ai_usage"]
         },
         {
           "id": "live",
@@ -9366,6 +9366,39 @@
             "notifications"
           ],
           "shows": "Time to full or empty (est), level, status, plug, current, voltage, temperature, health, cycles, capacity, time and % since last charge.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            }
+          ]
+        },
+        {
+          "id": "ai_usage",
+          "card": {"rank": 11, "kind": "text", "accent": "#D97757"},
+          "label": "AI",
+          "subtitle": "AI usage at a glance (#1151): Claude 5-hour session used % and weekly all-models used % with their reset times, then the OpenRouter balance in dollars and the spend of the last day, 7 days and this month, each in dollars and millions of tokens. Read from c3-infra-api GET /ai/usage (mesh first, then the public address with the fleet bearer): Claude Code pushes its rate limits there from the statusLine poster, OpenRouter is fetched server-side. Read on start, when the screen comes on and every 5 minutes while it is on, and on Refresh. Data older than 15 minutes is marked stale.",
+          "icon": "ic_stat_notify",
+          "surface": "system_notification",
+          "channel": "ai_usage",
+          "owner": "notificationcenter/AiBadgeService.kt",
+          "shows_badge": false,
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.notificationcenter.AiBadgeService",
+          "requires": [
+            "notifications"
+          ],
+          "shows": "Claude session and weekly used % with resets; OpenRouter balance and spend (24h, 7d, month) in $ and M tokens; stale marker.",
           "customization": [
             {
               "key": "enabled",
