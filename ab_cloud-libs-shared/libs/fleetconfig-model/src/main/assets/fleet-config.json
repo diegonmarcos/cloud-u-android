@@ -2044,6 +2044,7 @@
       "doc": "libs:ai's chat history file (text and attachment names, never a token), carried whole so a new phone keeps the conversations.",
       "used_by": [
         "ac_cloud-drive",
+        "ac_cloud-superintel",
         "ac_cloud-tools-small-llms"
       ]
     },
@@ -3665,6 +3666,33 @@
         "lib-ui-kit"
       ],
       "items": []
+    },
+    "superintel": {
+      "package": "com.diegonmarcos.cloudsuperintel",
+      "module": "ac_cloud-superintel",
+      "schema_version": 1,
+      "libs": [
+        "lib-ai",
+        "lib-bottomnav",
+        "lib-core",
+        "lib-crash",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-model-catalogue",
+        "lib-nav-bar-bottom",
+        "lib-nav-bar-top-first-row",
+        "lib-nav-bar-top-second-row",
+        "lib-theme-background"
+      ],
+      "items": [
+        {
+          "id": "ai-sessions",
+          "path": "filesDir/ai-sessions.json",
+          "class": "config",
+          "doc": "The chat history of the sessions drawer (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store",
+          "store": "ai_sessions"
+        }
+      ]
     },
     "tools-small-llms": {
       "package": "com.diegonmarcos.cloudtoolssmallllms",

@@ -75,6 +75,11 @@ oras)
     done
     verify_visibility
     ;;
+login)
+    # Only the registry login, for a step that pushes through the app's own script (an APK's build.sh oras-push stamps
+    # the code-identity annotation the in-app updater compares). The token is the workflow's GITHUB_TOKEN, as everywhere here.
+    printf '%s' "$P_TOKEN" | oras login ghcr.io -u "${P_ACTOR:-github-actions}" --password-stdin
+    ;;
 release)
     : "${P_TAG:?tag required}" "${P_FILE:?file required}"
     export GH_TOKEN="$P_TOKEN"

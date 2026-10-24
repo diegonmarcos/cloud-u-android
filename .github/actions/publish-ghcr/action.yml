@@ -9,7 +9,7 @@ description: >-
 
 inputs:
   kind:
-    description: "image (docker buildx, multi-arch) | oras (OCI artifact, e.g. an APK) | release (gh release upload)"
+    description: "image (docker buildx, multi-arch) | oras (OCI artifact, e.g. an APK) | login (oras login only, for an app script that pushes itself) | release (gh release upload)"
     required: true
   name:
     description: "image/oras: package name under ghcr.io/<owner>/ (e.g. cloud-notes-web)"

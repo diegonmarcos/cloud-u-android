@@ -49,8 +49,9 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-vault | `com.diegonmarcos.cloudvault` | 3 | 1 | 75% |
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 6 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
+| cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 2 | 2 | 50% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 6 | 2 | 75% |
-| **fleet** | | **259** | **50** | **83%** |
+| **fleet** | | **261** | **52** | **83%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -1051,6 +1052,25 @@ Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-crash, lib-decision
 | `text_tools` | prefs | config (keys: seeded_from_keyboard→device, seeded_from_serving_app→device) | yes | Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target language (a language picker, default en), auto_translate_incoming and auto_summary_incoming switches (off by default), summary_language (default en), answer_prompt (the Answer Prediction prompt shared by the composer and the summary box suggested reply; empty means the built-in default). |
 
 Coverage: 3 covered, 0 gaps.
+
+## cloud-superintel — `com.diegonmarcos.cloudsuperintel`
+
+Module `ac_cloud-superintel`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `ai_sessions` | file | config | GAP | libs:ai's chat history file (text and attachment names, never a token), carried whole so a new phone keeps the conversations. |
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
+
+| file | class | doc |
+|---|---|---|
+| `filesDir/ai-sessions.json` | config | The chat history of the sessions drawer (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
+
+Coverage: 2 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 
 ## cloud-tools-small-llms — `com.diegonmarcos.cloudtoolssmallllms`
 

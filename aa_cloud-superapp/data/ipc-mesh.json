@@ -326,6 +326,7 @@
      "office",
      "search",
      "store",
+     "superintel",
      "tasks",
      "termux",
      "tools-small-llms",
@@ -557,6 +558,7 @@
      "office",
      "search",
      "store",
+     "superintel",
      "tasks",
      "termux",
      "tools-small-llms",
@@ -680,6 +682,7 @@
      "office",
      "search",
      "store",
+     "superintel",
      "tasks",
      "termux",
      "tools-small-llms",
@@ -1191,6 +1194,7 @@
       "office",
       "search",
       "store",
+      "superintel",
       "tasks",
       "termux",
       "tools-small-llms",
@@ -2589,6 +2593,20 @@
      ]
     }
    ]
+  },
+  {
+   "id": "superintel",
+   "pkg": "com.diegonmarcos.cloudsuperintel",
+   "label": "cloud-superintel",
+   "kind": "app",
+   "dir": "ac_cloud-superintel",
+   "door": true,
+   "libs": [
+    "core",
+    "devtools",
+    "fleetconfig-model"
+   ],
+   "endpoints": []
   },
   {
    "id": "tasks",

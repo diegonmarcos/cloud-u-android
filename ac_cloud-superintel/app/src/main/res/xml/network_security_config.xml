@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HTTPS everywhere except the WireGuard mesh: the fleet agent gateway (my-ai-api) is http on its mesh address
+     (WireGuard encrypts the hop, assets/ai/ai.json gateway.mesh_only), whose name libs/ai/ai-gateway.gradle bakes from
+     the fleet catalogue. Loopback stays cleartext for the fleet debug server libs:devtools runs on 127.0.0.1. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">mesh.diegonmarcos.com</domain>
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

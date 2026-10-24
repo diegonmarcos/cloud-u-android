@@ -2854,12 +2854,11 @@
             "title": "AGI",
             "tiles": [
               {
-                "_doc": "#779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). #803: the owner moved SuperApp to the Configs row, so AGI now STARTS with Search: Search, AI Chat, Code, Tools, MyTerminal, Terminal (B-LLM and S-LLM removed, Tools in S-LLM's place, 2026-10-13). GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3) — #803 the Phosphor shooting-star in the mockup's .ai-nav-icon gradient (Cloud Search's app/tools/phosphor.json::launcher generates it; Phosphor is MIT, recorded in ac_cloud-search/NOTICE.md). `tint: false` keeps that gradient: every other tile glyph is drawn white, which would flatten this one to a silhouette (test-agi-tiles.sh T6).",
-                "id": "search",
-                "label": "Search",
-                "icon": "ic_cloud_search",
-                "tint": false,
-                "target": "extapp:cloud-search"
+                "_doc": "#1162 SI, Cloud SuperIntel (ac_cloud-superintel, com.diegonmarcos.cloudsuperintel): the Gemini-style chat app (sessions drawer, model picker, streaming, markdown) over the fleet AI contract. Opened through ui.external_apps[cloud-superintel]; not installed = the #249 placeholder and the tap installs it. First tile of the AGI row, right before AI (the Claude bot).",
+                "id": "si",
+                "label": "SI",
+                "icon": "ic_si",
+                "target": "extapp:cloud-superintel"
               },
               {
                 "_doc": "AI (id ai-chat, formerly ai-tlg-claude in Cloud > Apps > Inboxes labelled 'AI Claude'; moved to AGI right after Search and renamed by the owner, 2026-10-14). It opens the hosted Telegram agent Claude (@Cloud_agent_claude_bot); the launch target is unchanged. The left edge menu's first sector (onehand.handles[left].gestures.top_outer) opens this exact bot URI and draws this tile's label and glyph: the launcher-onehand build derives its action catalogue from the tiles and FAILS the build on a sector that resolves to no tile (test-onehand-sector-resolution.sh, test-onehand-edge-order.sh T5). The old id is mapped in ui.retired_tile_ids for saved tile refs. AI Hermes and AI Goose left with the B-LLM folder.",
@@ -2869,6 +2868,20 @@
                 "target": "intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
               },
               {
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Research Code, like the Data Apps and Me rows; the AGI row reads SI AI | Research Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "id": "agi-sep-1",
+                "label": "|",
+                "separator": true
+              },
+              {
+                "_doc": "#1162 the caption is now Research (Cloud Search renamed Cloud Research; id, package and extapp target stay search / cloud-search so installed copies update). #779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). #803: the owner moved SuperApp to the Configs row, so AGI now STARTS with Search: Search, AI Chat, Code, Tools, MyTerminal, Terminal (B-LLM and S-LLM removed, Tools in S-LLM's place, 2026-10-13). GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3) — #803 the Phosphor shooting-star in the mockup's .ai-nav-icon gradient (Cloud Search's app/tools/phosphor.json::launcher generates it; Phosphor is MIT, recorded in ac_cloud-search/NOTICE.md). `tint: false` keeps that gradient: every other tile glyph is drawn white, which would flatten this one to a silhouette (test-agi-tiles.sh T6).",
+                "id": "search",
+                "label": "Research",
+                "icon": "ic_cloud_search",
+                "tint": false,
+                "target": "extapp:cloud-search"
+              },
+              {
                 "_doc": "#599 follow-up to #571/#562: last surviving 'IDE' identity string in this file, renamed to match cloud-code (ac_cloud-code, applicationId com.diegonmarcos.code, our Acode build) opened through ui.external_apps[cloud-code]. The APK is often not installed yet, so GroupedTilesFragment draws this tile as the #249 placeholder (ic_app_not_installed + 'Not installed') and the tap installs it from the constellation Store's own release asset. icon ic_ide is kept as the resource filename (cloud-code's launcher foreground copied verbatim from ac_cloud-code/res/android/drawable/ic_launcher_foreground.xml, the same way Writer/Camera/Drive carry theirs) — ic_code is already taken by the MyTerminal tile above, so only the id/label rebrand here, not the drawable filename.",
                 "id": "code",
                 "label": "Code",
@@ -2876,11 +2889,23 @@
                 "target": "extapp:cloud-code"
               },
               {
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Research Code, like the Data Apps and Me rows; the AGI row reads SI AI | Research Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "id": "agi-sep-2",
+                "label": "|",
+                "separator": true
+              },
+              {
                 "_doc": "Tools - hands off to the standalone Cloud Tools Small LLMs app (ac_cloud-tools-small-llms, com.diegonmarcos.cloudtoolssmallllms, read from ITS android.application_id and app/build.gradle namespace): an AI chat that does quick text jobs with small, cheap OpenRouter models only, a router (Jev, else a small JSON model) picking the task and its worker. It REPLACES the S-LLM folder in S-LLM's place (the owner, 2026-10-13), and the B-LLM folder (the three hosted Telegram agents) is gone from the row, so AGI reads Search, AI Chat, Code, Tools, MyTerminal, Terminal (test-agi-tiles.sh T1). target=extapp:cloud-tools-small-llms -> launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-tools-small-llms].install_apk_url. icon ic_tools_small_llms is that app's launcher foreground, byte for byte (test-agi-tiles.sh T3); Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so the drawable's existence is pinned there too.",
                 "id": "tools-small-llms",
                 "label": "Tools",
                 "icon": "ic_tools_small_llms",
                 "target": "extapp:cloud-tools-small-llms"
+              },
+              {
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Research Code, like the Data Apps and Me rows; the AGI row reads SI AI | Research Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "id": "agi-sep-3",
+                "label": "|",
+                "separator": true
               },
               {
                 "_doc": "#571. MyTerminal opens cloud-myterminal's own applicationId (com.diegonmarcos.ide, kept by the #561 rename so installs survive). The forkless extapp:cloud-myterminal resolves to hub_package; it used to name the '/files' fork, a separate APK the rename did not make the app.",
@@ -8383,6 +8408,15 @@
         "hub_package": "com.diegonmarcos.cloudsearch",
         "install_package": "com.diegonmarcos.cloudsearch",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Search.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#1162 Cloud SuperIntel, SI (ac_cloud-superintel, published by ship-cloud-superintel.yml). Added for the Cloud > Apps > AGI 'SI' tile: every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ac_cloud-superintel/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map. folder=prod_ai ('@AI') is the taxonomy half of the same record, as for Cloud Search.",
+        "id": "cloud-superintel",
+        "folder": "prod_ai",
+        "hub_package": "com.diegonmarcos.cloudsuperintel",
+        "install_package": "com.diegonmarcos.cloudsuperintel",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-SuperIntel.apk",
         "forks": {}
       },
       {
