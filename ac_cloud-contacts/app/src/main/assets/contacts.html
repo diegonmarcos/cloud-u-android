@@ -47,6 +47,9 @@
             overscroll-behavior-y: none;
         }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
+        /* #1164 inside the app the shared native bars own navigation: the page's own bottom bar is hidden. */
+        .native-nav .bottom-nav { display: none; }
+        .native-nav .panel-scroll-pad { padding-bottom: 24px; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
         .app-container {
@@ -234,6 +237,19 @@
         .stack-row-label { color: var(--text-dim); }
         .stack-row-value { color: var(--text-faint); font-variant-numeric: tabular-nums; }
     </style>
+<script>
+/* #1164 in the native shell (window.Native) the shared bars replace this page's bottom nav, and the page's scroll
+   (any scroller: the window or an inner container) is reported to the shell so reading down hides the first row. */
+if (window.Native) {
+    document.documentElement.classList.add('native-nav');
+    window.addEventListener('scroll', function (ev) {
+        var t = ev.target, y = (t === document || t === document.documentElement) ? window.scrollY : t.scrollTop;
+        var d = y - (t.__navLast || 0);
+        t.__navLast = y;
+        if (d !== 0 && window.NavChrome) window.NavChrome.onScroll(d);
+    }, true);
+}
+</script>
 </head>
 <body class="antialiased">
 

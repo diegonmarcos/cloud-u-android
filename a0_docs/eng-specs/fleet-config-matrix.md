@@ -487,7 +487,7 @@ Coverage: 8 covered, 5 gaps — code_chat_sessions, file:filesDir or app storage
 
 ## cloud-contacts — `com.diegonmarcos.cloudcontacts`
 
-Module `ac_cloud-contacts`; libs: lib-analytics, lib-contacts, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-updater.
+Module `ac_cloud-contacts`; libs: lib-analytics, lib-bottomnav, lib-contacts, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

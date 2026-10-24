@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    // #1164 the chrome is Compose (the shared nav libs); the page itself stays a WebView.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 def gradleScriptStartMs = System.currentTimeMillis()
@@ -124,6 +126,16 @@ def buildAvgSecs    = buildHistorySecs.isEmpty() ? -1L : (buildHistorySecs.sum()
 def buildLastSecs   = buildHistorySecs.isEmpty() ? -1L : (buildHistorySecs[0] as long)
 def buildSampleSize = buildHistorySecs.size()
 
+// #868 the navigation is ONE declaration (build.json::ui), drawn by the shared nav libs and read at runtime through
+// libs:bottomnav's NavDecl. Baked whole, so the APK needs no network to draw its chrome.
+def uiDecl = buildJson.ui ?: [:]
+if (!(uiDecl.sections instanceof List) || uiDecl.sections.isEmpty() || !(uiDecl.bottom_nav instanceof List) || uiDecl.bottom_nav.isEmpty()) {
+    throw new GradleException("build.json::ui.bottom_nav / ui.sections must declare the shell's navigation (#868)")
+}
+def uiSectionsB64    = b64(uiDecl.sections)
+def uiBottomNav      = uiDecl.bottom_nav.join(',')
+def uiDefaultSection = (uiDecl.default_section ?: uiDecl.bottom_nav[0]).toString()
+
 android {
     namespace 'com.diegonmarcos.cloudcontacts'
     compileSdk 36
@@ -157,10 +169,16 @@ android {
         buildConfigField "long",   "STACK_BUILD_AVG_SECS",    "${buildAvgSecs}L"
         buildConfigField "long",   "STACK_BUILD_LAST_SECS",   "${buildLastSecs}L"
         buildConfigField "int",    "STACK_BUILD_SAMPLE",      "${buildSampleSize}"
+        buildConfigField "String", "UI_SECTIONS_B64",    "\"${uiSectionsB64}\""
+        buildConfigField "String", "UI_BOTTOM_NAV",      "\"${uiBottomNav}\""
+        buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures {
+        buildConfig = true
+        compose = true
+    }
 
     // ONE shared Cloud-constellation key — same key as SuperApp/Nav/Comms/Wallet/IDE.
     signingConfigs {
@@ -194,11 +212,27 @@ dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
     implementation project(':libs:updater')
+    // #1164 the shared navigation: first row (Profile -> Cloud Account), second row, bottom nav, page background.
+    implementation project(':libs:bottomnav')
+    implementation project(':libs:nav-bar-bottom')
+    implementation project(':libs:nav-bar-top-first-row')
+    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:theme-background')
     implementation project(':libs:contacts')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'
+
+    // The Compose toolchain of the chrome: the same BOM the libraries pin (compose-bom-guard).
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.animation:animation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-core'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
