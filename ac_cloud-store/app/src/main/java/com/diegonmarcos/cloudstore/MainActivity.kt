@@ -29,16 +29,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.diegonmarcos.superapp.ai.AiFleetChatPanel
 import com.diegonmarcos.superapp.adbdebug.AdbShellHost
-import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavSection
-import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.compose.AndroidFragment
@@ -72,7 +73,7 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
-        // #896 this host draws the child-page strips (build.json::ui sections[].pages) with libs:bottomnav's PageTabs.
+        // #896 this host draws the child-page strips (build.json::ui sections[].pages) with libs:nav-bar-top-second-row's NavBarTopSecondRow.
         StorePages.hostDrawsStrip = true
         requested = tabFrom(intent)
         setContent {
@@ -130,7 +131,7 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
             else if (selected == TAB_PHONE) NAV.section(TAB_PHONE)?.let { choose(TAB_PHONE, pageOf(it)) }
         }
         val shell: @androidx.compose.runtime.Composable () -> Unit = {
-            BottomNavHost(
+            NavBarBottomHost(
                 entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
                 selectedId = selected,
                 onSelect = { selected = it.id },
@@ -144,7 +145,7 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
                 // A section with child pages gets the fleet's strip (Phone: Installed | Declared, Feed:
                 // Commits | CI-CD); the page below reads the choice (Phone from StorePages, Feed from here).
                 if (section != null && section.pages.size > 1) {
-                    PageTabs(section.pages, pageOf(section), onSelect = { choose(section.id, it.id) }, underTopChrome = false)
+                    NavBarTopSecondRow(section.pages, pageOf(section), onSelect = { choose(section.id, it.id) }, underTopChrome = false)
                 }
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 val shown = Modifier.fillMaxSize()
@@ -162,9 +163,13 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
             BatteryPrompt()   // #1078 once, while the app is still battery-optimized
             val topBar = TOP_BAR
-            if (topBar == null) shell() else AppTopBarScaffold(
-                decl = topBar,
-                title = getString(R.string.app_name),
+            // #1154 the first row is libs:nav-bar-top-first-row's: the open section's name is the island, whose dropdown lists the
+            // section and its pages (the same tree the drawer shows); a pick of a page opens it on the section's strip.
+            val openSection = NAV.section(selected)
+            if (topBar == null) shell() else NavBarTopFirstRowScaffold(
+                title = openSection?.label ?: getString(R.string.app_name),
+                hierarchy = openSection?.let { titleHierarchy(it, it.takeIf { s -> s.pages.size > 1 }?.let { s -> pageOf(s) }) }.orEmpty(),
+                onNavigate = { e -> selected = e.sectionId; if (e.depth > 0) choose(e.sectionId, e.id) },
                 onAccount = rememberAccountLauncher(),
                 onConfigs = { selected = TAB_SETTINGS },
                 aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) },

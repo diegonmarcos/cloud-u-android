@@ -6,8 +6,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
-import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottom
 
 /**
  * #648 cloud-c3's bottom nav: libs:bottomnav's island fed from build.json::ui.bottom_nav (#868, through NavDecl).
@@ -23,7 +23,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavViewItem
  * not tabs of their own, so the pill always moves and never has to stay behind.
  *
  * 2026-10-16 owner decision: all apps must be Compose — the shell draws the island as the
- * [BottomNavIsland] composable, the same one the browser, me and wallet shells use.
+ * [NavBarBottom] composable (libs:nav-bar-bottom, #1154), the same one the browser, me and wallet shells use.
  */
 object C3BottomNav {
 
@@ -51,10 +51,11 @@ object C3BottomNav {
     fun Island(selectedId: String?, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
         val ctx = LocalContext.current
         val entries = items(ctx).map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
-        BottomNavIsland(
+        NavBarBottom(
             entries = entries,
             selectedId = pillFor(selectedId),
             onSelect = { e -> if (e.id != selectedId) onOpen(e.id) },
+            dark = true,
             modifier = modifier,
         )
     }

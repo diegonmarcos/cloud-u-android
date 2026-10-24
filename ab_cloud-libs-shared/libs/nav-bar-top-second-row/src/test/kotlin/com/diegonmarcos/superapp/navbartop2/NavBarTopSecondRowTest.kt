@@ -89,4 +89,23 @@ class NavBarTopSecondRowTest {
         assertTrue("a rounded rectangle, not a circle: radius below half the tab height", SecondRowSpec.TAB_RADIUS.value < SecondRowSpec.TAB_HEIGHT.value / 2)
         assertTrue(c.tabSelected != Color.Gray && c.tabSelected.alpha == 1f)
     }
+
+    @Test fun `a request from the title dropdown selects the page, or the container that holds it and waits`() {
+        val requests = SubPageRequests()
+        val tree = listOf(NavPage("a", "A"), NavPage("box", "Box", pages = listOf(NavPage("deep", "Deep"))))
+        val picked = mutableListOf<String>()
+        compose.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(LocalSubPageRequests provides requests) {
+                NavBarTopSecondRow(tree, "a", { picked += it.id }, dark = true)
+            }
+        }
+        compose.runOnUiThread { requests.request("a") }
+        compose.waitForIdle()
+        assertEquals("the selected page asked for again selects nothing and clears the request", emptyList<String>(), picked)
+        assertEquals(null, requests.pending)
+        compose.runOnUiThread { requests.request("deep") }
+        compose.waitForIdle()
+        assertEquals("the container holding the page is selected", listOf("box"), picked)
+        assertEquals("the request waits for the strip one level down", "deep", requests.pending)
+    }
 }

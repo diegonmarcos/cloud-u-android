@@ -23,7 +23,7 @@
 #   D4  the declarations are BAKED (build.gradle → UI_*_B64 from buildJson.ui with
 #       a hard error on a missing block) and decoded once (Declarations.kt).
 #   D5  libs:bottomnav is declared, depended on, linked, and DriveShell draws
-#       BottomNavHost (the island, its collapse and its insets) with the declared entries.
+#       NavBarBottomHost (libs:nav-bar-bottom: the bar, its collapse and its insets) with the declared entries.
 #   D6  the WebView shell is gone: no drive.html, no tailwind.js, no FilesBridge,
 #       no Material Views widget, no WebView and no JavascriptInterface at all; no
 #       AppCompatActivity anywhere (2026-10-15 owner decision: all apps must be Compose,
@@ -172,7 +172,7 @@ d2s "$BJ" "$SYNC_KT" && pass "ui.sections[git].pages dispatch matches; periods a
 
 echo "── D3 icons from declarations ──"
 d3 "$BJ" "$CATALOG" && pass "every declared icon name is in IconCatalog's vocabulary" || fail "an icon is declared that the catalog does not know"
-if grep -qE 'IconCatalog\.painter\(it\)' "$SHELL_KT" && grep -qE 'PageTabs\(' "$CONFIGS" && grep -qE 'PageTabs\(' "$SYNC_KT"; then pass "the shell resolves the declared icon names through the catalog and the strips are libs:bottomnav's PageTabs over the declared pages"; else fail "a screen does not resolve its icons through IconCatalog, or a strip is not PageTabs"; fi
+if grep -qE 'IconCatalog\.painter\(it\)' "$SHELL_KT" && grep -qE 'NavBarTopSecondRow\(' "$CONFIGS" && grep -qE 'NavBarTopSecondRow\(' "$SYNC_KT"; then pass "the shell resolves the declared icon names through the catalog and the strips are libs:nav-bar-top-second-row's NavBarTopSecondRow over the declared pages"; else fail "a screen does not resolve its icons through IconCatalog, or a strip is not NavBarTopSecondRow"; fi
 if grep -rqE '"ic_[a-z_]+"' "$SRC"; then fail "a drawable name is typed in Kotlin"; else pass "no drawable-name literal in Kotlin"; fi
 
 echo "── D4 baked once, decoded once ──"
@@ -187,7 +187,7 @@ if [ -z "$OTHER_BLOBS" ]; then pass "no screen reads a BuildConfig blob directly
 echo "── D5 the fleet island ──"
 if python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); m=b["modules"]; sys.exit(0 if "libs:bottomnav" in m and "libs:bottomnav" in m["app"]["depends_on"] and m["libs:bottomnav"].get("dir","").endswith("libs/bottomnav") else 1)' "$BJ"; then pass "libs:bottomnav declared and depended on"; else fail "libs:bottomnav missing from build.json modules / app.depends_on"; fi
 if grep -qE "implementation project\(':libs:bottomnav'\)" "$GRADLE"; then pass "libs:bottomnav linked"; else fail "libs:bottomnav not linked in app/build.gradle"; fi
-if grep -qE 'BottomNavHost\(' "$SHELL_KT" && grep -qE 'entries = Declarations\.nav\.islandEntries \{ IconCatalog\.painter\(it\) \}' "$SHELL_KT"; then pass "DriveShell draws the island from the declared tabs, on the fleet's host (which owns the scroll-collapse)"; else fail "DriveShell does not draw BottomNavIsland from Declarations.tabs"; fi
+if grep -qE 'NavBarBottomHost\(' "$SHELL_KT" && grep -qE 'entries = Declarations\.nav\.islandEntries \{ IconCatalog\.painter\(it\) \}' "$SHELL_KT"; then pass "DriveShell draws the island from the declared tabs, on the fleet's host (which owns the scroll-collapse)"; else fail "DriveShell does not draw NavBarBottomHost from Declarations.tabs"; fi
 if grep -qE 'setContent \{ DriveTheme \{ Root\(\) \} \}' "$MAIN" && grep -qE 'class MainActivity : ComponentActivity\(\), DriveActions' "$MAIN"; then pass "MainActivity is a Compose host implementing DriveActions"; else fail "MainActivity is not the Compose host"; fi
 
 echo "── D6 the WebView shell is gone ──"

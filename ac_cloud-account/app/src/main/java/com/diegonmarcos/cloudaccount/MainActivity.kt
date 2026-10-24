@@ -42,13 +42,13 @@ import com.diegonmarcos.cloudaccount.hub.LocalDeviceAuth
 import com.diegonmarcos.cloudaccount.hub.SecretsProvidersPage
 import com.diegonmarcos.cloudaccount.hub.TokensPage
 import com.diegonmarcos.cloudaccount.hub.SystemDeviceAuth
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
-import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.profile.AccountConnectPage
 import com.diegonmarcos.superapp.profile.FleetEndpointsPage
 import com.diegonmarcos.superapp.profile.AuthProvidersPage
@@ -78,7 +78,7 @@ import com.diegonmarcos.superapp.updater.Updater
 
 /**
  * Cloud Account: the five sections of build.json::ui.bottom_nav (Personal Info, Configs, Data, Connect, Activity), drawn
- * by libs:bottomnav (island + PageTabs) from the baked NavDecl. A section's pages are its top strip; a page with pages
+ * by libs:nav-bar-bottom (bar) and libs:nav-bar-top-second-row (strips) from the baked NavDecl. A section's pages are its top strip; a page with pages
  * of its own (Autocomplete, Android, Secrets, Backups, Devices, Status, Authentication providers) gets a second strip
  * under it, so every leaf is at most two taps from the island. Every leaf (section, page) is mapped to ONE composable
  * in [Page]; nothing is drawn in two places. The page starts below the top chrome through the one `statusBarsPadding`
@@ -142,7 +142,7 @@ class MainActivity : AppCompatActivity() {
         val asked = requested.value
         LaunchedEffect(asked) { if (asked != null) { selected = asked.first; selectedPage = asked.second; requested.value = null } }
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
-            BottomNavHost(
+            NavBarBottomHost(
                 entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
                 selectedId = selected,
                 onSelect = { selected = it.id; selectedPage = null },
@@ -166,7 +166,7 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun Strips(section: NavSection, path: List<NavPage>, select: (String) -> Unit) {
         if (section.pages.size > 1) {
-            PageTabs(
+            NavBarTopSecondRow(
                 pages = section.pages,
                 selectedId = path.firstOrNull()?.id,
                 onSelect = { p -> select(p.leaf().id) },
@@ -175,7 +175,7 @@ class MainActivity : AppCompatActivity() {
             )
         }
         val container = path.firstOrNull()?.takeIf { it.pages.size > 1 } ?: return
-        PageTabs(
+        NavBarTopSecondRow(
             pages = container.pages,
             selectedId = path.getOrNull(1)?.id ?: container.leaf().id,
             onSelect = { p -> select(p.leaf().id) },

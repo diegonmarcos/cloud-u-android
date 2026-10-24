@@ -7,6 +7,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -30,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.CollectionItemInfo
@@ -48,6 +51,8 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlTokens
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
+import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
+import com.diegonmarcos.superapp.themebg.themeBackground
 
 /**
  * The bottom nav's numbers and colours (#1154): Cloud Search's look (glass pill, hairline, accent-coloured selection
@@ -150,5 +155,37 @@ public fun NavBarBottom(
                 }
             }
         }
+    }
+}
+
+/** The content slot of [NavBarBottomHost]: the SAME tag libs:bottomnav's BottomNavHost gives its content. */
+public const val NAV_BAR_BOTTOM_CONTENT_TAG: String = "bottomnav_content"
+
+/**
+ * The fleet's bottom-nav host (#1154), the successor of libs:bottomnav's BottomNavHost: [content] above the bar on the shared
+ * page gradient (libs:theme-background), ending where the bar's clearance begins, and scrolling the content collapses the bar
+ * to icons ([BottomNavCollapse], consuming nothing). What a tap does is the app's. [dark] picks the shared palette; the fleet's
+ * apps are dark launchers, so it defaults to dark.
+ */
+@Composable
+public fun NavBarBottomHost(
+    entries: List<BottomNavEntry>,
+    selectedId: String?,
+    onSelect: (BottomNavEntry) -> Unit,
+    modifier: Modifier = Modifier,
+    dark: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val collapse = rememberBottomNavCollapse()
+    val insets = bottomNavInsets()
+    Column(modifier.fillMaxSize().themeBackground(dark)) {
+        // The bar clears the bottom system bar itself, so the content must not clear it a second time (consumed for the content ONLY).
+        Box(
+            Modifier.weight(1f).fillMaxWidth()
+                .consumeWindowInsets(insets.only(WindowInsetsSides.Bottom))
+                .nestedScroll(collapse)
+                .testTag(NAV_BAR_BOTTOM_CONTENT_TAG),
+        ) { content() }
+        NavBarBottom(entries, selectedId, onSelect, dark, collapsed = collapse.collapsed)
     }
 }

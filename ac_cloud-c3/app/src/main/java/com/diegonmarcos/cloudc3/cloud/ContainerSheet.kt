@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.cloudc3.R
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.ops.dagu.DaguPrefs
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.CoroutineScope
@@ -115,7 +115,7 @@ object ContainerSheet {
             Header(target.label, containerName, vm)
             // #868 the sheet's two tabs are libs:bottomnav's pill strip, not a TabLayout. A sheet has
             // no toolbar above it, so the strip adds no status-bar inset of its own.
-            PageTabs(
+            NavBarTopSecondRow(
                 pages = listOf(NavPage("infos", "Infos"), NavPage("actions", "Actions")),
                 selectedId = tab,
                 onSelect = { page -> tab = page.id },

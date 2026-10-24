@@ -23,6 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +87,24 @@ public object SecondRowTags {
 }
 
 /**
+ * A sub-page asked for from OUTSIDE the strip (the first row's hierarchy dropdown). The strip of the page shown selects it when
+ * it holds it, or the tab that contains it (a container) and leaves the request pending for the strip one level down, so
+ * a pick of "Buro > Fin > Accounts" walks the strips without any app state being hoisted.
+ */
+public class SubPageRequests {
+    public var pending: String? by mutableStateOf(null)
+        private set
+    public fun request(pageId: String) { pending = pageId }
+    public fun consume() { pending = null }
+}
+
+/** The enclosing [SubPageRequests]; null outside libs:nav-bar-top-first-row's scaffold (a strip then ignores requests). */
+public val LocalSubPageRequests = staticCompositionLocalOf<SubPageRequests?> { null }
+
+/** [id] is this page or sits anywhere below it. */
+internal fun NavPage.holds(id: String): Boolean = this.id == id || pages.any { it.holds(id) }
+
+/**
  * THE second top row of every app (#1154): the sub-pages of the bottom nav's page as small tabs. The free width is
  * shared SpaceEvenly, so one tab sits centred and several have equal gaps between them and to both borders. The
  * selected tab is a rounded rectangle filled with the SuperApp violet ([ThemeColors.tabSelected]) and shows its
@@ -97,13 +120,21 @@ public fun NavBarTopSecondRow(
     dark: Boolean = true,
     onReselect: (NavPage) -> Unit = {},
     /** True: the strip clears the status bar and cutout (it sits at the very top of the window). */
-    underTopChrome: Boolean = false,
+    underTopChrome: Boolean = true,
     flushTop: Boolean = false,
     /** A page that is light (a white sheet): draws the light palette whatever [dark] says. Null = [dark]'s. */
     surface: TabSurface? = null,
     iconFor: @Composable (NavPage) -> Painter? = { null },
 ) {
     if (pages.isEmpty()) return
+    val requests = LocalSubPageRequests.current
+    val pending = requests?.pending
+    LaunchedEffect(pending, pages, selectedId) {
+        val want = pending ?: return@LaunchedEffect
+        val target = pages.firstOrNull { it.holds(want) } ?: return@LaunchedEffect
+        if (target.id == want) { requests?.consume(); if (target.id != selectedId) onSelect(target) }
+        else if (target.id != selectedId) onSelect(target)
+    }
     val palette = when (surface) {
         TabSurface.Light -> ThemeBackground.colors(false)
         TabSurface.Dark -> ThemeBackground.colors(true)

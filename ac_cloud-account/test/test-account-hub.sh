@@ -4,7 +4,7 @@
 # Holds that:
 #  1. build.json::ui.bottom_nav is personal, configs, data, connect, activity (#1081), default personal; the
 #     strips (Autocomplete, Android, Secrets, Backups, Devices, Status, Authentication providers) are declared as
-#     a page's own pages, every section declares its background, and MainActivity draws a second PageTabs for them
+#     a page's own pages, every section declares its background, and MainActivity draws a second NavBarTopSecondRow for them
 #     through NavDecl.stripSurface;
 #  2. every old (section, page) id - the five islands, the four of 2026-10-13 and of 2026-10-14 - has its place in
 #     HubNav.LEGACY, every LEGACY target is a declared leaf, and MainActivity's go() and OPEN-intent deep links
@@ -69,7 +69,7 @@ ma = code(rd(f"{K}/MainActivity.kt"))
 ok("HubNav.resolve(s, p)" in ma, "MainActivity's go() resolves old ids", "go() does not go through HubNav.resolve")
 ok("requested.value = deepLink(intent)" in ma and "override fun onNewIntent(" in ma and "return HubNav.resolve(s, intent" in ma,
    "OPEN intent extras (section, page) deep-link through HubNav.resolve, at launch and on a new intent", "an OPEN intent cannot deep-link, or bypasses HubNav")
-ok(ma.count("PageTabs(") >= 2 and ma.count("stripSurface(") >= 2 and "pageId = container.id" in ma and "p.leaf().id" in ma, "MainActivity draws the top strip and the second strip, each on its declared surface, a container pill opening its first leaf", "the second strip or its surface is missing")
+ok(ma.count("NavBarTopSecondRow(") >= 2 and ma.count("stripSurface(") >= 2 and "pageId = container.id" in ma and "p.leaf().id" in ma, "MainActivity draws the top strip and the second strip, each on its declared surface, a container pill opening its first leaf", "the second strip or its surface is missing")
 ok("LocalDeviceAuth provides deviceAuth" in ma and "SystemDeviceAuth(this)" in ma, "MainActivity provides the device auth", "no device auth provided")
 
 pg = code(rd(f"{K}/hub/HubPages.kt"))

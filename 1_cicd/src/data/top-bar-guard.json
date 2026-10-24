@@ -18,6 +18,7 @@
   "wiring": {
     "bake": "UI_TOP_BAR_B64",
     "scaffold": "AppTopBarScaffold(",
+    "scaffold_alt": ["NavBarTopFirstRowScaffold("],
     "ai": ["AiFleetChatPanel(", "AiChatPage("],
     "settings": {
       "account": ["rememberAccountLauncher(", "AccountLaunch."],

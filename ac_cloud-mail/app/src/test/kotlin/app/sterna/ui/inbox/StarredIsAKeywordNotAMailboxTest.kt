@@ -90,7 +90,7 @@ class StarredIsAKeywordNotAMailboxTest {
     // ── the drawer entry ──────────────────────────────────────────────────────────────────────
 
     /**
-     * The Starred row must sit BELOW the "Unread" view entry and ABOVE the All|Unread `PageTabs` strip.
+     * The Starred row must sit BELOW the "Unread" view entry and ABOVE the All|Unread `NavBarTopSecondRow` strip.
      *
      * Both halves matter. Below Unread puts it last of the views and so directly against the folder
      * list, where Gmail puts Starred. Above the strip is what makes its behaviour under the Unread
@@ -102,7 +102,7 @@ class StarredIsAKeywordNotAMailboxTest {
         val lines = codeLines(INBOX_SCREEN)
         val unreadView = lines.indexOfFirst { "R.string.inbox_drawer_inbox" in it }
         val starred = lines.indexOfFirst { "R.string.folder_flagged" in it }
-        val tabs = lines.indexOfFirst { "PageTabs(" in it }
+        val tabs = lines.indexOfFirst { "NavBarTopSecondRow(" in it }
         assertTrue("the Inbox entry is gone from the drawer", unreadView >= 0)
         assertTrue("the Starred entry is gone from the drawer", starred >= 0)
         assertTrue("the All|Unread tabs are gone from the drawer", tabs >= 0)

@@ -35,7 +35,7 @@ import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.clouddrive.sync.MountsSyncScreen
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
@@ -202,7 +202,7 @@ private fun ClassStrip(
     SectionHeader(label, count = classes.size)
     // #868 the class pills are libs:bottomnav's PageTabs (the class ids are ui.sections[volumes].pages).
     Row(Modifier.fillMaxWidth().padding(end = DriveMetrics.padWide), verticalAlignment = Alignment.CenterVertically) {
-        PageTabs(
+        NavBarTopSecondRow(
             pages = classes.map { NavPage(it.id, it.label, it.icon) },
             selectedId = current,
             onSelect = { onPick(it.id) },

@@ -98,6 +98,8 @@ dependencies {
     implementation project(':libs:core')
     // #868 the page-tab strip (PageTabsView): the Timeline host's Explored | Daily | Stops row.
     implementation project(':libs:bottomnav')
+    // #1154 MapsPageStrip draws the fleet's second row (the Timeline host and Configs strips).
+    implementation project(':libs:nav-bar-top-second-row')
     // The fleet's Compose kit: CloudKitTheme + KitPalette + KitComposeFragment, the base of every page here.
     // api: the pages ARE KitComposeFragments, so a host that names one needs the kit's class.
     api project(':libs:ui-kit')

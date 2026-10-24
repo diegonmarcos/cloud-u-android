@@ -58,7 +58,7 @@ ok(sorted(consts.values()) == sorted(PAGES), f"ConfigsPages names exactly the de
 when = re.search(r'when \(page\) \{(.*?)\n        \}', cp, re.S)
 arms = re.findall(r'ConfigsPages\.(\w+) ->', when.group(1)) if when else []
 ok(sorted(arms + ["SOURCES"]) == sorted(consts) and "else -> SourcesPage()" in cp, "ConfigsPage opens one body per declared page (Sources is the default)", f"ConfigsPage's when() opens {arms}, not every declared page")
-ok("if (selected == TAB_SETTINGS) section?.let { ConfigsPage(pageOf(it)) }" in ma and "PageTabs(section.pages" in ma and "SettingsPage" not in ma,
+ok("if (selected == TAB_SETTINGS) section?.let { ConfigsPage(pageOf(it)) }" in ma and "NavBarTopSecondRow(section.pages" in ma and "SettingsPage" not in ma,
    "MainActivity hosts ConfigsPage for the open page under the declared PageTabs strip", "MainActivity does not host ConfigsPage under the declared strip (or still draws the old SettingsPage)")
 
 # C3

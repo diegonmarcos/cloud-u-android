@@ -53,7 +53,7 @@ PY
     && ok "T2 the settings section still draws the Configs page (ConfigsPage, with its declared pages)" || bad "T2 MainActivity no longer draws ConfigsPage for the settings section"
   printf '%s' "$ma" | grep -q 'StorePages.select(TAB_PHONE, StorePhoneFragment.PAGE_SEARCH)' && printf '%s' "$ma" | grep -q 'selected == TAB_PHONE || selected == TAB_SEARCH' && printf '%s' "$ma" | grep -q '"search" -> Icons.Filled.Search' \
     && ok "T2 Search is its own island item hosted by the Phone fragment's search page (no second copy), with its own icon" || bad "T2 MainActivity does not host the Search section on StorePhoneFragment's search page"
-  printf '%s' "$ma" | grep -q 'AppTopBarScaffold(' && printf '%s' "$ma" | grep -q 'TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)' \
+  printf '%s' "$ma" | grep -q 'NavBarTopFirstRowScaffold(' && printf '%s' "$ma" | grep -q 'TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)' \
     && ok "T3 MainActivity draws the declared bar with the shared AppTopBarScaffold" || bad "T3 MainActivity does not feed AppTopBarScaffold from the baked TopBarDecl"
   printf '%s' "$ma" | grep -q 'onAccount = rememberAccountLauncher()' \
     && ok "T3 Account launches Cloud Account through the shared launcher" || bad "T3 Account is not the shared rememberAccountLauncher()"
@@ -120,7 +120,7 @@ ac_cloud-store/build.json|s.replace('"access"\n    ],\n    "top_bar"', '"access"
 ac_cloud-store/build.json|s.replace('"id": "settings",', '"id": "settingz",')
 ac_cloud-store/build.json|s.replace('"storeUnitTests"', '":app:testDebugUnitTest"')
 ac_cloud-store/build.json|s.replace('"libs:ai",\n        "libs:model-catalogue"\n      ]', '"libs:model-catalogue"\n      ]')
-$APP/MainActivity.kt|s.replace('AppTopBarScaffold(', 'AppTopBarScaffoldx(')
+$APP/MainActivity.kt|s.replace('NavBarTopFirstRowScaffold(', 'NavBarTopFirstRowScaffoldx(')
 $APP/MainActivity.kt|s.replace('onAccount = rememberAccountLauncher()', 'onAccount = { }')
 $APP/MainActivity.kt|s.replace('onConfigs = { selected = TAB_SETTINGS }', 'onConfigs = { }')
 $APP/MainActivity.kt|s.replace('aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) }', 'aiPanel = { }')

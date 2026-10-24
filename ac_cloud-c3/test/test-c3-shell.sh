@@ -336,7 +336,7 @@ if "AppCompatActivity" not in mc:
 if "supportFragmentManager" not in mc:
     bad.append("MainActivity never touches supportFragmentManager — it is not a fragment host, "
                "and the pages this app exists to show ARE fragments")
-for sym in ("BottomNavIsland", "BottomNavViewItem"):
+for sym in ("NavBarBottom", "BottomNavViewItem"):
     if sym not in nc:
         bad.append("C3BottomNav does not use the shared %s — libs:bottomnav's own island "
                    "is the one every fleet shell draws, not a fork" % sym)
@@ -456,7 +456,7 @@ for dirpath, _d, files in os.walk(srcdir):
             t = open(os.path.join(dirpath, f), encoding="utf-8").read()
             t = re.sub(r"/\*.*?\*/", "", t, flags=re.S)
             code += re.sub(r"//[^\n]*", "", t) + "\n"
-for needle, why in (("AppTopBarScaffold(", "never draws the shared top bar"),
+for needle, why in (("NavBarTopFirstRowScaffold(", "never draws the shared top bar"),
                     ("AiFleetChatPanel(", "the AI button has no shared chat behind it"),
                     ("rememberAccountLauncher(", "Settings > Account launches nothing"),
                     ("onConfigs =", "Settings > Configs opens nothing"),

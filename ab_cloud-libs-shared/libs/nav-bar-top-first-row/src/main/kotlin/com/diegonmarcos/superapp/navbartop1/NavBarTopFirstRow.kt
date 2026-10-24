@@ -22,6 +22,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,8 @@ import com.diegonmarcos.superapp.bottomnav.rememberAppTopBarController
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
+import com.diegonmarcos.superapp.navbartop2.LocalSubPageRequests
+import com.diegonmarcos.superapp.navbartop2.SubPageRequests
 import com.diegonmarcos.superapp.themebg.ThemeBackground
 import com.diegonmarcos.superapp.themebg.ThemeColors
 
@@ -236,6 +239,9 @@ public fun NavBarTopFirstRowScaffold(
     dark: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val requests = remember { SubPageRequests() }
+    // A pick below the bottom page asks the strips of the page it opens to select it (the app only switches the page).
+    val navigate: (HierarchyEntry) -> Unit = { e -> if (e.depth > 0) requests.request(e.id); onNavigate(e) }
     AppTopBarScaffold(
         decl = TopBarDecl(drawer = true, settings = TopBarSettings.KNOWN, inlineActions = true),
         title = title,
@@ -249,12 +255,12 @@ public fun NavBarTopFirstRowScaffold(
         barVisible = barVisible,
         topRow = { c ->
             NavBarTopFirstRow(
-                title, ThemeBackground.colors(dark), labels, hierarchy, onNavigate,
+                title, ThemeBackground.colors(dark), labels, hierarchy, navigate,
                 onMenu = { c.openDrawer() },
                 onAi = { if (onAi != null) onAi() else c.toggleAi() },
                 onProfile = onAccount, onConfigs = onConfigs, avatar = avatar,
             )
         },
-        content = content,
+        content = { CompositionLocalProvider(LocalSubPageRequests provides requests, content = content) },
     )
 }

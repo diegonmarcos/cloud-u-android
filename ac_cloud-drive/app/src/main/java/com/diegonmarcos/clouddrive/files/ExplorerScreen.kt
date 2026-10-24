@@ -22,7 +22,7 @@ import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.EmptyState
 import com.diegonmarcos.clouddrive.ui.IconCatalog
 import com.diegonmarcos.clouddrive.ui.topIslandInsets
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 
 /**
  * EXPLORER (was Files): two sub-pages from ui.sections[explorer].pages, drawn by the fleet's
@@ -48,7 +48,7 @@ fun ExplorerScreen(
         if (page != null) onPageConsumed()
     }
     Column(modifier.fillMaxSize().testTag(DriveTags.EXPLORER)) {
-        PageTabs(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.EXPLORER_STRIP))
+        NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.EXPLORER_STRIP))
         // The strip already cleared the status bar; the page's own top island must not clear it twice.
         Box(Modifier.weight(1f).consumeWindowInsets(topIslandInsets()).testTag(DriveTags.explorerPage(current))) {
             when (current) {

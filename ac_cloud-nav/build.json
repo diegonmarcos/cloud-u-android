@@ -62,6 +62,10 @@
         "libs:maps",
         "libs:updater",
         "libs:bottomnav",
+        "libs:nav-bar-bottom",
+        "libs:nav-bar-top-first-row",
+        "libs:nav-bar-top-second-row",
+        "libs:theme-background",
         "libs:ui-kit"
       ]
     },
@@ -101,6 +105,26 @@
       "type": "library",
       "_doc": "2026-10-15 owner decision: all apps must be Compose. Shared BY REFERENCE: the fleet's Compose kit (CloudKitTheme + KitPalette + KitComposeFragment) that libs:maps' pages, and then the app's own, are built on. libs:maps `api`s it.",
       "dir": "../ab_cloud-libs-shared/libs/ui-kit"
+    },
+    "libs:nav-bar-bottom": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-first-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-second-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
     },
     "libs:bottomnav": {
       "_doc_dir": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE. MainActivity draws the bar with BottomNavHost (Compose); the app's TimelineFragment (Explored/Daily/Stops from libs:maps, Steps from the app) and Configs draw their strips with PageTabsView.",

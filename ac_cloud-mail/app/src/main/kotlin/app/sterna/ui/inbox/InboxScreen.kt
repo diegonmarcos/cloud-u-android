@@ -119,7 +119,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -2083,12 +2083,12 @@ private fun DrawerContent(
                 // reader cannot see from outside the sheet must not be able to greet them, weeks
                 // later, as a folder list with folders missing from it.
                 var folderTab by remember { mutableStateOf(FolderTab.ALL) }
-                // The fleet's pill strip (libs:bottomnav PageTabs, #868). In a sheet: no live top inset.
+                // The fleet's pill strip (libs:nav-bar-top-second-row, #868). In a sheet: no live top inset.
                 val folderTabs = listOf(
                     NavPage(FolderTab.ALL.name, stringResource(R.string.inbox_folders_tab_all)),
                     NavPage(FolderTab.UNREAD.name, stringResource(R.string.inbox_folders_tab_unread)),
                 )
-                PageTabs(
+                NavBarTopSecondRow(
                     pages = folderTabs,
                     selectedId = folderTab.name,
                     onSelect = { folderTab = FolderTab.valueOf(it.id) },

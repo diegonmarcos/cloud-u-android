@@ -3,21 +3,21 @@ package com.diegonmarcos.cloudnav.maps
 import android.content.Context
 import android.os.Bundle
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabsView
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRowView
 
 /**
- * #868 the one place a Maps / Cloud-Nav page draws its tab strip: libs:bottomnav's [PageTabsView]
- * (the fleet's pill strip), fed a section's declared `pages`. Replaces the Material TabLayouts the
+ * #868 the one place a Maps / Cloud-Nav page draws its tab strip: libs:nav-bar-top-second-row's [NavBarTopSecondRowView]
+ * (the fleet's second row, #1154), fed a section's declared `pages`. Replaces the Material TabLayouts the
  * Timeline host and Configs used to build by hand.
  *
  * The strip sits INSIDE a content host the shell already pads for the status bar, so it adds no
- * top inset of its own ([PageTabsView.underTopChrome] false).
+ * top inset of its own ([NavBarTopSecondRowView.underTopChrome] false).
  */
 object MapsPageStrip {
 
     /** A strip over [pages] with [selectedId] lit. A tap moves the pill, then calls [onSelect]. */
-    fun create(ctx: Context, pages: List<NavPage>, selectedId: String?, onSelect: (NavPage) -> Unit): PageTabsView =
-        PageTabsView(ctx).also { v ->
+    fun create(ctx: Context, pages: List<NavPage>, selectedId: String?, onSelect: (NavPage) -> Unit): NavBarTopSecondRowView =
+        NavBarTopSecondRowView(ctx).also { v ->
             v.pages = pages
             v.selectedId = selectedId
             v.underTopChrome = false

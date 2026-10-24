@@ -25,7 +25,7 @@ import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.clouddrive.backups.BackupsScreen
 import com.diegonmarcos.clouddrive.backups.MirrorRunner
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
@@ -69,7 +69,7 @@ fun ConfigsScreen(
     Column(modifier.fillMaxSize()) {
         ToolbarIsland(title = stringResource(R.string.configs_title), subtitle = pages.firstOrNull { it.id == current }?.label)
         // #868 the strip is libs:bottomnav's PageTabs over ui.sections[configs].pages.
-        PageTabs(pages = Declarations.navPages("configs"), selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.CONFIGS_STRIP), underTopChrome = false)
+        NavBarTopSecondRow(pages = Declarations.navPages("configs"), selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.CONFIGS_STRIP), underTopChrome = false)
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "configs_page", modifier = Modifier.weight(1f)) { id ->
             when (id) {
                 "backups" -> BackupsScreen(mirrors, prefs)

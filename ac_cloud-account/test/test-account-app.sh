@@ -151,7 +151,7 @@ PY
   local bg; bg="$(cat "$A/app/build.gradle")"
   printf '%s' "$bg" | grep -q 'UI_BOTTOM_NAV' && printf '%s' "$bg" | grep -q 'UI_SECTIONS_B64' && printf '%s' "$bg" | grep -q "project(':libs:bottomnav')" && ok "build.gradle bakes the declaration and links libs:bottomnav" || bad "build.gradle does not bake UI_BOTTOM_NAV/UI_SECTIONS_B64 or link libs:bottomnav"
   local ma; ma="$(strip "$MA")"
-  printf '%s' "$ma" | grep -q 'BottomNavHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && [ "$(printf '%s' "$ma" | grep -c 'PageTabs(')" -ge 2 ] && ok "MainActivity draws the island, the page strip and the second strip from the baked NavDecl" || bad "MainActivity does not feed the shared island/strips from NavDecl"
+  printf '%s' "$ma" | grep -q 'NavBarBottomHost(' && printf '%s' "$ma" | grep -q 'NavDecl.fromBuildConfig(' && printf '%s' "$ma" | grep -q 'islandEntries' && [ "$(printf '%s' "$ma" | grep -c 'NavBarTopSecondRow(')" -ge 2 ] && ok "MainActivity draws the island, the page strip and the second strip from the baked NavDecl" || bad "MainActivity does not feed the shared island/strips from NavDecl"
   python3 - "$A/build.json" "$MA" <<'PY' && ok "every declared section is a branch of MainActivity's Page() and every page branch names a declared page" || bad "MainActivity's Page() and build.json::ui.sections disagree"
 import json, re, sys
 ui = json.load(open(sys.argv[1], encoding='utf-8'))['ui']
@@ -254,7 +254,7 @@ mutate "SuperApp never copies" super/App.kt 'AccountData.migrate(applicationCont
 mutate "Account entry loses its action" build.json '"action": "extapp:cloud-account",' '' || M=$((M+1))
 mutate "package name drifts" lib/profile/AccountData.kt 'const val PKG = "com.diegonmarcos.cloudaccount"' 'const val PKG = "com.diegonmarcos.account"' || M=$((M+1))
 mutate "OPEN action dropped" acc/app/src/main/AndroidManifest.xml '<action android:name="com.diegonmarcos.cloudaccount.OPEN" />' '' || M=$((M+1))
-mutate "island replaced by a plain box" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'BottomNavHost(' 'Box(' || M=$((M+1))
+mutate "island replaced by a plain box" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'NavBarBottomHost(' 'Box(' || M=$((M+1))
 mutate "island no longer fed by NavDecl" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'NavDecl.fromBuildConfig(' 'NavDeclx.fromBuildConfig(' || M=$((M+1))
 mutate "a section leaves build.json" acc/build.json '"data",
       "connect"' '"connect"' || M=$((M+1))
@@ -279,7 +279,7 @@ mutate "diff drops a secret fingerprint" lib/profile/ProfilesPages.kt 'if (secre
 mutate "Drift tile says n/a again" lib/profile/AccountPages.kt 'runCatching { profilesDriftCount(ctx, model) }' 'runCatching { 0 }' || M=$((M+1))
 mutate "tabs op stops answering the islands" lib/profile/AccountDebugApi.kt 'AccountHost.nav?.invoke()?.let { o.put("islands", it) }' 'Unit' || M=$((M+1))
 mutate "token filed before the read" lib/profile/ConnectWays.kt 'if (o.ok && file)' 'if (file)' || M=$((M+1))
-mutate "the strip is dropped" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'PageTabs(' 'Column(' || M=$((M+1))
+mutate "the strip is dropped" acc/app/src/main/java/com/diegonmarcos/cloudaccount/MainActivity.kt 'NavBarTopSecondRow(' 'Column(' || M=$((M+1))
 mutate "hand-off embeds a page again" super/apps/AccountHandoff.kt 'if (installed) OpenCloudAccount() else InstallCloudAccount()' 'OpenCloudAccount()' || M=$((M+1))
 mutate "gradle stops baking the sections" acc/app/build.gradle '"UI_SECTIONS_B64"' '"UI_SECTIONS"' || M=$((M+1))
 

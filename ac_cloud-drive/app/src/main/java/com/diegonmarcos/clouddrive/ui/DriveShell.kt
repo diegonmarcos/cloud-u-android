@@ -31,12 +31,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.R
-import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.appTopBarLabels
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 
 /**
  * #579 the shell (cloud-drive-redesign.md §2): the tab content above the fleet's
@@ -66,7 +67,7 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
 
     // The fleet's own host: the page above the island, the scroll collapse and the inset handling.
     val host: @Composable () -> Unit = {
-        BottomNavHost(
+        NavBarBottomHost(
             entries = entries,
             selectedId = selected,
             onSelect = { entry -> if (entry.id == selected) reselectTick++ else selected = entry.id },
@@ -87,16 +88,20 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
             }
         }
     }
-    // The fleet's first row (libs:bottomnav AppTopBar, ui.top_bar): the round Settings button at the top right,
+    // The fleet's first row (libs:nav-bar-top-first-row, declared by ui.top_bar): the round Settings button at the top right,
     // a dropdown of Profile (Cloud Account) and Configs (this app's Configs tab). It owns the top inset, which the
     // pages' own toolbar islands then find already consumed.
     val topBar = Declarations.topBar
     if (topBar == null) host() else {
         val labels = appTopBarLabels().let { it.copy(account = stringResource(R.string.top_bar_profile)) }
         Box(Modifier.fillMaxSize().windowInsetsPadding(topIslandInsets())) {
-            AppTopBarScaffold(
-                decl = topBar,
-                title = stringResource(R.string.app_name),
+            // #1154 the first row is libs:nav-bar-top-first-row's: plain icons, the open page's title as the island, whose dropdown
+            // is the open destination's tree (the same one the side menu lists); a pick below it asks the destination's second row.
+            val section = Declarations.nav.section(selected)
+            NavBarTopFirstRowScaffold(
+                title = section?.label ?: stringResource(R.string.app_name),
+                hierarchy = section?.let { titleHierarchy(it, null) }.orEmpty(),
+                onNavigate = { e -> if (Declarations.routable(e.sectionId)) selected = e.sectionId },
                 onAccount = rememberAccountLauncher(),
                 onConfigs = { if (Declarations.routable(CONFIGS_TAB)) selected = CONFIGS_TAB },
                 onAi = { if (Declarations.routable(AI_TAB)) selected = AI_TAB },

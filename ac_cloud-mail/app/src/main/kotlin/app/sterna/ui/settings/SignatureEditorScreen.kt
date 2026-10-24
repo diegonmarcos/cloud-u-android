@@ -90,7 +90,7 @@ import app.sterna.ui.mailNav
 import app.sterna.ui.components.IconButton
 import app.sterna.ui.theme.LocalSternaDarkTheme
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import app.sterna.core.data.account.SignatureTransfer
 import app.sterna.core.data.account.StoredSignature
 import app.sterna.core.data.text.looksLikeHtml
@@ -383,7 +383,7 @@ internal fun SignatureEditorScreen(
                             NavPage(PANE_PREVIEW.toString(), stringResource(R.string.sigedit_preview)),
                             NavPage(PANE_SPLIT.toString(), stringResource(R.string.sigedit_split)),
                         )
-                        PageTabs(
+                        NavBarTopSecondRow(
                             pages = pages,
                             selectedId = pane.toString(),
                             onSelect = { pane = it.id.toInt() },

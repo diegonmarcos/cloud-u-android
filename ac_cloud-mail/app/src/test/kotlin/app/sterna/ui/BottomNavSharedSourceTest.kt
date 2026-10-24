@@ -25,10 +25,10 @@ class BottomNavSharedSourceTest {
         val mailBar = codeLines("app/src/main/kotlin/app/sterna/ui/MailBottomNav.kt")
         assertTrue(
             "MailBottomNav must draw the bar through the shared module " +
-                "(com.diegonmarcos.superapp.bottomnav.BottomNavHost). The item TABLE is mail's " +
-                "(#868 moved it here); the island that draws it must stay the one in libs:bottomnav.",
-            mailBar.contains("import com.diegonmarcos.superapp.bottomnav.BottomNavHost") &&
-                mailBar.any { it.startsWith("BottomNavHost(") },
+                "(com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost). The item TABLE is mail's " +
+                "(#868 moved it here); the island that draws it must stay the one in libs:nav-bar-bottom.",
+            mailBar.contains("import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost") &&
+                mailBar.any { it.startsWith("NavBarBottomHost(") },
         )
         // The bar must actually be drawn on the destinations it owns, not merely declared.
         assertTrue(

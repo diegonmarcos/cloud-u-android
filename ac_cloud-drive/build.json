@@ -804,6 +804,10 @@
         "libs:rclone",
         "libs:mounts",
         "libs:bottomnav",
+        "libs:nav-bar-bottom",
+        "libs:nav-bar-top-first-row",
+        "libs:nav-bar-top-second-row",
+        "libs:theme-background",
         "libs:auth",
         "libs:disk",
         "libs:shizuku-adb-debug-tools",
@@ -896,6 +900,26 @@
       "_doc_dir": "#587 THE sign-in of the fleet, the SAME module cloud-superapp's Profile > Connect hosts, shared BY REFERENCE like every module here: Configs > Sign in offers the four declared ways (Authelia bearer, Authelia web-auth, GitHub, Google) from ONE declaration (ab_cloud-libs-shared/build.json::auth) and hands this app the consolidated artifact; DriveAuthApply then writes only the DRIVE-relevant sections (auth.applies below).",
       "dir": "../ab_cloud-libs-shared/libs/auth",
       "type": "library"
+    },
+    "libs:nav-bar-bottom": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-first-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-second-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
     },
     "libs:bottomnav": {
       "_doc_dir": "#579 THE fleet bottom-nav island (#565): the five tabs are drawn by the same Compose declaration superapp, mail, wallet and me render — one geometry, one pill, one collapse rule. Shared BY REFERENCE like every other module here.",

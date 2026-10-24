@@ -98,6 +98,10 @@
         "libs:core",
         "libs:updater",
         "libs:bottomnav",
+        "libs:nav-bar-bottom",
+        "libs:nav-bar-top-first-row",
+        "libs:nav-bar-top-second-row",
+        "libs:theme-background",
         "libs:ops",
         "libs:ui-kit",
         "libs:ai"
@@ -130,6 +134,26 @@
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:nav-bar-bottom": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-first-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-second-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
     },
     "libs:bottomnav": {
       "_doc_dir": "THE fleet bottom-nav island (#565/#579): the five tabs are drawn by the same Compose declaration superapp, mail, wallet, me and drive render — one geometry, one pill, one collapse rule. Shared BY REFERENCE like every other module here. This app reuses the four shared symbols (BottomNavEntry, BottomNavIsland, bottomNavInsets, rememberBottomNavCollapse) and declares its OWN five entries from ui.tabs; it deliberately does NOT reuse bottomnav's `bottomNavItems`, which is cloud-mail's item table and merely lives in that module.",

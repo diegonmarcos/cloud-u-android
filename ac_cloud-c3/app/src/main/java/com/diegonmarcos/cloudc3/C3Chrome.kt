@@ -18,9 +18,10 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
 import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 
 /** Test tags of the shell's chrome. */
 object C3Tags {
@@ -30,7 +31,7 @@ object C3Tags {
 }
 
 /**
- * The shell's chrome: the fleet's shared [AppTopBarScaffold] (libs:bottomnav; ui.top_bar declares what it shows) over
+ * The shell's chrome: the fleet's shared first row ([NavBarTopFirstRowScaffold], libs:nav-bar-top-first-row; ui.top_bar declares that it shows) over
  * the page and the bottom island. The scaffold draws the hamburger, the title, the AI button and the Settings
  * dropdown; this file only FEEDS it: the AI panel and the Account launch come from the host ([aiPanel], [onAccount]),
  * Settings > Configs is [onConfigs], and the drawer is the full tree of the declared nav ([DrawerTree]).
@@ -62,9 +63,13 @@ fun C3Chrome(
     if (decl == null) {
         Box(modifier.fillMaxSize()) { body() }
     } else {
-        AppTopBarScaffold(
-            decl = decl,
-            title = stringResource(R.string.app_name),
+        // #1154 the first row is libs:nav-bar-top-first-row's: the open section's name is the island, whose dropdown lists the
+        // section and its pages (the drawer's tree); a pick opens that place like a drawer row does.
+        val section = Declarations.nav.section(selectedTab)
+        NavBarTopFirstRowScaffold(
+            title = section?.label ?: stringResource(R.string.app_name),
+            hierarchy = section?.let { titleHierarchy(it, selectedPage) }.orEmpty(),
+            onNavigate = { e -> onOpen(C3Nav.Target(e.sectionId, e.id.takeIf { e.depth > 0 })) },
             onAccount = onAccount,
             onConfigs = { onConfigs() },
             aiPanel = aiPanel,

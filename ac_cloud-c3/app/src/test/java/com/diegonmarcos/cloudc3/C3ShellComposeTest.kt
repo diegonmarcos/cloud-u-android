@@ -82,9 +82,11 @@ class C3ShellComposeTest {
         assertEquals(listOf("account", "configs"), decl.settings)
         assertTrue(decl.problems().isEmpty())
         show()
-        for (tag in listOf(TopBarTags.BAR, TopBarTags.MENU, TopBarTags.TITLE, TopBarTags.AI, TopBarTags.SETTINGS)) {
+        // #1154 spec change: AI, Profile and Configs are three plain icons (no Settings dropdown any more)
+        for (tag in listOf(TopBarTags.BAR, TopBarTags.MENU, TopBarTags.TITLE, TopBarTags.AI, TopBarTags.ACCOUNT, TopBarTags.CONFIGS)) {
             compose.onNodeWithTag(tag).assertIsDisplayed()
         }
+        assertFalse(exists(TopBarTags.SETTINGS))
         compose.onNodeWithTag("page_body").assertIsDisplayed()
     }
 
@@ -97,15 +99,24 @@ class C3ShellComposeTest {
     }
 
     @Test
-    fun `Settings offers Account and Configs, and each is wired`() {
+    fun `Profile and Configs are plain icons and each is wired`() {
         show()
-        tap(TopBarTags.SETTINGS)
-        assertTrue(exists(TopBarTags.settingsItem("account")) && exists(TopBarTags.settingsItem("configs")))
-        tap(TopBarTags.settingsItem("account"))
+        tap(TopBarTags.ACCOUNT)
         assertEquals(1, accounts)
-        tap(TopBarTags.SETTINGS)
-        tap(TopBarTags.settingsItem("configs"))
+        tap(TopBarTags.CONFIGS)
         assertEquals(1, configs)
+    }
+
+    @Test
+    fun `the title island lists the open section's tree and a pick opens that place`() {
+        val start = C3Nav.start(Declarations.nav, Declarations.aliases)!!.section
+        show(start)
+        val section = Declarations.nav.section(start)!!
+        tap(TopBarTags.TITLE)
+        compose.onNodeWithTag(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.entry(section.id)).assertIsDisplayed()
+        val page = section.pages.firstOrNull() ?: return
+        tap(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.entry(page.id))
+        assertEquals(C3Nav.Target(section.id, page.id), opened.last())
     }
 
     // ── the island ───────────────────────────────────────────────────────────────────────

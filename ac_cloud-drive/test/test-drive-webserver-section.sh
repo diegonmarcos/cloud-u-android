@@ -10,7 +10,7 @@
 #
 #   W1  ui.top_bar (#1149) declares the hamburger (drawer), the inline actions and [account, configs]
 #       (libs:bottomnav's bar: AI sparkles, Profile avatar, Configs three dots, no Settings dropdown),
-#       and the shell draws it with AppTopBarScaffold, the fleet's rememberAccountLauncher, an
+#       and the shell draws it with NavBarTopFirstRowScaffold, the fleet's rememberAccountLauncher, an
 #       onConfigs that selects the Configs tab, an onAi that selects the AI tab and a TopBarDrawer
 #       side menu - no copy of the bar and no cloudaccount literal of its own. Profile is the
 #       account label.
@@ -56,7 +56,7 @@ bad = 0
 tb = ui.get("top_bar") or {}
 if tb != {"drawer": True, "inline_actions": True, "settings": ["account", "configs"]}:
     print("    ui.top_bar is %s, not {drawer, inline_actions, settings: [account, configs]}" % tb); bad = 1
-for needle in ("AppTopBarScaffold(", "rememberAccountLauncher()", "onConfigs = {", "onAi = {", "TopBarDrawer {", "R.string.top_bar_profile"):
+for needle in ("NavBarTopFirstRowScaffold(", "rememberAccountLauncher()", "onConfigs = {", "onAi = {", "TopBarDrawer {", "R.string.top_bar_profile"):
     if needle not in shell:
         print("    DriveShell lacks %s" % needle); bad = 1
 if not re.search(r'onConfigs = \{.*selected = ', shell):

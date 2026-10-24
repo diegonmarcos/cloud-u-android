@@ -17,8 +17,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import app.sterna.R
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
 import com.diegonmarcos.superapp.bottomnav.rememberLeaveOnce
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 
 /**
  * Mail's seven items as the island draws them, from the declaration ([mailNav], build.json::ui): the
@@ -31,7 +31,7 @@ internal fun mailEntries(): List<BottomNavEntry> = mailNav.bottomSections().map 
 }
 
 /**
- * cloud-mail's bottom nav (#465): [bottomNavItems] on the shared host. DESTINATION items navigate
+ * cloud-mail's bottom nav (#465): [bottomNavItems] on the shared host (libs:nav-bar-bottom, #1154). DESTINATION items navigate
  * and move the selected pill. LAUNCH items hand off to another app and leave the pill where it is.
  */
 @Composable
@@ -44,13 +44,15 @@ fun BottomNavBar(nav: NavController, currentRoute: String, content: @Composable 
     val selected = bottomNavItems.firstOrNull {
         it.action == BottomNavAction.DESTINATION && it.route == currentRoute
     }?.id
-    BottomNavHost(
+    NavBarBottomHost(
         entries = mailEntries(),
         selectedId = selected,
         onSelect = { entry ->
             val item = bottomNavItems.first { it.id == entry.id }
             onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "")
         },
+        // Mail has a light mode: the shared page background follows it.
+        dark = app.sterna.ui.theme.LocalSternaDarkTheme.current,
         content = content,
     )
 }

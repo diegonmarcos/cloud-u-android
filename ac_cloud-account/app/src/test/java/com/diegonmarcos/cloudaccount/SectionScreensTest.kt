@@ -27,8 +27,8 @@ import com.diegonmarcos.cloudaccount.hub.ConnectionsPage
 import com.diegonmarcos.cloudaccount.hub.LocalDeviceAuth
 import com.diegonmarcos.cloudaccount.hub.SecretsProvidersPage
 import com.diegonmarcos.cloudaccount.hub.TokensPage
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.profile.AccountHost
 import com.diegonmarcos.superapp.profile.AccountModel
@@ -147,15 +147,15 @@ class SectionScreensTest(private val section: String, private val page: String) 
             CompositionLocalProvider(LocalDeviceAuth provides com.diegonmarcos.cloudaccount.hub.DeviceAuth { _, done -> done(false) }) {
                 Surface(Modifier.fillMaxSize()) {
                     Box(Modifier.fillMaxSize().statusBarsPadding()) {
-                        BottomNavHost(
+                        NavBarBottomHost(
                             entries = nav.islandEntries { rememberVectorPainter(Icons.Filled.Star) },
                             selectedId = section, onSelect = {},
                         ) {
                             Column(Modifier.fillMaxSize()) {
-                                if (sec.pages.size > 1) PageTabs(sec.pages, path.firstOrNull()?.id, onSelect = {}, underTopChrome = false,
+                                if (sec.pages.size > 1) NavBarTopSecondRow(sec.pages, path.firstOrNull()?.id, onSelect = {}, underTopChrome = false,
                                     surface = nav.stripSurface(sec.id, darkTheme = true))
                                 val container = path.firstOrNull()?.takeIf { it.pages.size > 1 }
-                                if (container != null) PageTabs(container.pages, page, onSelect = {}, underTopChrome = false,
+                                if (container != null) NavBarTopSecondRow(container.pages, page, onSelect = {}, underTopChrome = false,
                                     surface = nav.stripSurface(sec.id, darkTheme = true, pageId = container.id))
                                 PageFor(go)
                             }

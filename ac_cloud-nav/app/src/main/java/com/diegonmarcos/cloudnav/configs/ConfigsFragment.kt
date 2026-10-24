@@ -20,12 +20,12 @@ import com.diegonmarcos.cloudnav.maps.MapsConfigFragment
 import com.diegonmarcos.cloudnav.maps.MapsPageStrip
 import com.diegonmarcos.cloudnav.tracker.TrackerEngineFragment
 import com.diegonmarcos.cloudnav.tracker.TrackerInk
-import com.diegonmarcos.superapp.bottomnav.PageTabsView
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRowView
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
 import com.diegonmarcos.superapp.uikit.KitPalette
 
 /**
- * Configs tab. Six sub-pages on a PageTabsView strip (#868: build.json ui.sections[configs].pages):
+ * Configs tab. Six sub-pages on a NavBarTopSecondRowView strip (#868: build.json ui.sections[configs].pages):
  *   • Tracker — the tracking engine ([TrackerEngineFragment]); its "Foreground tracker, calibration and
  *               export" button opens libs:maps' tracker controls ([MapsConfigFragment] section=tracker).
  *   • APIs    — Search / Reverse-geocoder / POI provider pickers + API keys
@@ -35,7 +35,7 @@ import com.diegonmarcos.superapp.uikit.KitPalette
  *   • Layers  — per-layer visual settings, e.g. Terrain exaggeration ([LayersConfigFragment]).
  *   • About   — the device/app/permissions/battery/memory/network page ([DevControlFragment]).
  *
- * Compose (the strip is PageTabsView through AndroidView; the pages are child fragments). A settings
+ * Compose (the strip is NavBarTopSecondRowView through AndroidView; the pages are child fragments). A settings
  * page, not a search surface — no search bar.
  */
 class ConfigsFragment : KitComposeFragment() {
@@ -62,7 +62,7 @@ class ConfigsFragment : KitComposeFragment() {
                 factory = { c ->
                     MapsPageStrip.create(c, pages, current) { page -> legacyTracker = false; current = page.id; nonce++ }
                 },
-                update = { tabs: PageTabsView -> if (tabs.selectedId != current) tabs.selectedId = current },
+                update = { tabs: NavBarTopSecondRowView -> if (tabs.selectedId != current) tabs.selectedId = current },
             )
             FragmentHost(childFragmentManager, R.id.nav_host_configs, Triple(current, nonce, legacyTracker), Modifier.weight(1f)) { pageFragment(current) }
         }

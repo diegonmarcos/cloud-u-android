@@ -68,7 +68,7 @@ import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import com.diegonmarcos.clouddrive.ui.topIslandInsets
 import com.diegonmarcos.cloudlib.disk.AppSizes
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -89,7 +89,7 @@ fun ManageScreen(actions: DriveActions, prefs: DrivePrefs, onShowInExplorer: (St
         if (page != null) onPageConsumed()
     }
     Column(modifier.fillMaxSize().testTag(DriveTags.MANAGE)) {
-        PageTabs(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.MANAGE_STRIP))
+        NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gap).testTag(DriveTags.MANAGE_STRIP))
         Box(Modifier.weight(1f).consumeWindowInsets(topIslandInsets()).testTag(DriveTags.managePage(current))) {
             when (current) {
                 "apps" -> AppsPage(prefs)

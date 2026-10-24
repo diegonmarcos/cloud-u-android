@@ -13,7 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.cloudc3.R
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
 import com.diegonmarcos.superapp.uikit.KitPalette
 
@@ -67,7 +67,7 @@ abstract class PagedFragment : KitComposeFragment() {
             // picker is chrome that cannot be used. #868 the strip is libs:bottomnav's; the
             // section sits under the shell's own inset padding, so the strip adds none.
             if (declared.size > 1) {
-                PageTabs(
+                NavBarTopSecondRow(
                     pages = declared,
                     selectedId = selected,
                     onSelect = { selected = it.id },

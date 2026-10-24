@@ -46,11 +46,11 @@ BN="$UI/BottomNav.kt"; MB="$UI/MailBottomNav.kt"
 has "$BN" 'NavDecl.fromBuildConfig(' "BottomNav.kt reads the declaration through NavDecl"
 grep -q 'BottomNavItem(id = "' <<<"$(code "$BN")" && bad "BottomNav.kt still carries a literal item table" || ok "no literal BottomNavItem table in Kotlin"
 has "$MB" 'mailNav.bottomSections()' "the island entries come from the declared bottom sections"
-has "$MB" 'BottomNavHost(' "the bar is still the shared BottomNavHost"
+has "$MB" 'NavBarBottomHost(' "the bar is still the shared NavBarBottomHost"
 
 echo "== N5: no private tab widget =="
 if grep -rqE '\b(TabRow|ScrollableTabRow|PrimaryTabRow|TabLayout|NavigationBar)\b *[({]' "$APP/app/src/main" --include=*.kt; then bad "a hand-rolled tab/nav widget is back in app/src/main"; else ok "no TabRow/TabLayout/NavigationBar in app/src/main"; fi
-has "$UI/inbox/InboxScreen.kt" 'PageTabs(' "the folder drawer's All|Unread strip is the shared PageTabs"
+has "$UI/inbox/InboxScreen.kt" 'NavBarTopSecondRow(' "the folder drawer's All|Unread strip is the shared NavBarTopSecondRow"
 
 echo
 echo "passed=$PASS failed=$FAIL"

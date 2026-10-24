@@ -26,7 +26,7 @@ import com.diegonmarcos.cloudnav.routes.RoutesFragment
 import com.diegonmarcos.cloudnav.tracker.NavDeepLink
 import com.diegonmarcos.cloudnav.tracker.TrackerInk
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitFragmentHostState
@@ -34,7 +34,7 @@ import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 /**
  * Cloud Nav shell — minimal Google-Maps-style chrome, in Compose:
  *   • a content area that hosts one page fragment (each page draws its own search UI)
- *   • bottom nav island (libs:bottomnav's BottomNavHost): Routes · Navigation · Places · Explored · Tracker
+ *   • bottom nav island (libs:nav-bar-bottom's NavBarBottomHost): Routes · Navigation · Places · Explored · Tracker
  *
  * Sections + default section are data-driven from build.json::ui.* (decoded
  * by [NavConfig.decl], libs:bottomnav's NavDecl). The shell deliberately owns NO search bar — Routes does
@@ -112,13 +112,13 @@ class MainActivity : AppCompatActivity() {
         outState.putString(KEY_TAB, currentTab)
     }
 
-    /** The island is libs:bottomnav's, fed by NavDecl (#868). The app only says which fragment a
+    /** The bar is libs:nav-bar-bottom's, fed by NavDecl (#868). The app only says which fragment a
      *  section opens; the island's look is the lib's, the same in every app. The page sits above it. */
     @Composable
     private fun NavShell() {
         val ctx = LocalContext.current
         val entries = NavConfig.decl.viewItems { Icons.nav(ctx, it) }.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
-        BottomNavHost(entries, currentTab, { e -> if (e.id != currentTab) switchTo(e.id) }) {
+        NavBarBottomHost(entries, currentTab, { e -> if (e.id != currentTab) switchTo(e.id) }) {
             FragmentHost(supportFragmentManager, R.id.nav_host_main, currentTab to tabNonce, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
                 fragmentForSection(currentTab)
             }

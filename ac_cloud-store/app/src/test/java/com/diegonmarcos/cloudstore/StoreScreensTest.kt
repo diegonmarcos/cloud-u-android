@@ -36,9 +36,9 @@ import com.diegonmarcos.superapp.appstore.StoreCloudFragment
 import com.diegonmarcos.superapp.appstore.StorePages
 import com.diegonmarcos.superapp.appstore.StorePhoneFragment
 import com.diegonmarcos.superapp.appstore.BuildConfig as StoreBuild
-import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import com.diegonmarcos.superapp.updater.Fleet
@@ -143,13 +143,13 @@ class StoreScreensTest(private val section: String, private val shot: String) {
         KitDenseMaterial(darkColorScheme()) {
             Surface(Modifier.fillMaxSize()) {
                 Box(Modifier.fillMaxSize().statusBarsPadding()) {
-                    AppTopBarScaffold(decl = topBar!!, title = "Cloud Store", onAccount = {}, onConfigs = {}) {
-                        BottomNavHost(
+                    NavBarTopFirstRowScaffold(title = "Cloud Store", hierarchy = emptyList(), onNavigate = {}, onAccount = {}, onConfigs = {}) {
+                        NavBarBottomHost(
                             entries = nav.islandEntries { rememberVectorPainter(Icons.Filled.Star) },
                             selectedId = section, onSelect = {},
                         ) {
                             Column(Modifier.fillMaxSize()) {
-                                if (sec.pages.size > 1) PageTabs(sec.pages, page, onSelect = {}, underTopChrome = false)
+                                if (sec.pages.size > 1) NavBarTopSecondRow(sec.pages, page, onSelect = {}, underTopChrome = false)
                                 Box(Modifier.weight(1f).fillMaxWidth()) { PageFor() }
                             }
                         }

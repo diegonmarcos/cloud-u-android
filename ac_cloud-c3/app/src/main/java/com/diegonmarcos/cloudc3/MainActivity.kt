@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
+import com.diegonmarcos.superapp.themebg.themeBackground
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.commit
 import com.diegonmarcos.cloudc3.cloud.C3HealthFragment
@@ -95,7 +96,7 @@ class MainActivity : AppCompatActivity(),
     @Composable
     private fun Shell() {
         Column(
-            Modifier.fillMaxSize().background(colorResource(R.color.c3_background))
+            Modifier.fillMaxSize().themeBackground(dark = true)
                 // READ, never consume (#477): top and sides only; the island takes the bottom.
                 .windowInsetsPadding(
                     WindowInsets.systemBars.union(WindowInsets.displayCutout)
