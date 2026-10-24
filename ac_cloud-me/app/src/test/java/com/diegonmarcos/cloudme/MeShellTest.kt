@@ -159,7 +159,8 @@ class MeShellTest {
         compose.onNodeWithTag(PAGE).performTouchInput { swipeUp() }
         compose.waitForIdle()
         assertTrue("scrolling down left the top row on screen", !barShown())
-        assertEquals("scrolling down left the nav labels", 0, navLabels())
+        // #1159 scrolled down only the selected item keeps its label; the others fold away.
+        assertTrue("scrolling down left the non-selected nav labels (${navLabels()} of $labels)", navLabels() <= 1 && navLabels() < labels)
 
         compose.onNodeWithTag(PAGE).performTouchInput { swipeDown() }
         compose.waitForIdle()

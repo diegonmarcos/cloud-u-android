@@ -199,7 +199,8 @@ class MeBottomNavTest {
         compose.onNodeWithTag(PAGE_TAG).performTouchInput { swipeUp() }
         compose.waitForIdle()
 
-        assertEquals("labels survived the collapse", 0, labelCount())
+        // #1159: scrolled down only the selected item keeps its label.
+        assertEquals("the non-selected labels survived the collapse", 1, labelCount())
         val collapsed = bounds(BottomNavTags.ISLAND).height
         assertTrue(
             "the collapse did not shrink the island: $expanded px expanded, $collapsed px collapsed",
@@ -209,7 +210,7 @@ class MeBottomNavTest {
         compose.onNodeWithTag(PAGE_TAG).performTouchInput { swipeDown() }
         compose.waitForIdle()
 
-        assertFalse("scrolling up left the bar without its labels", labelCount() == 0)
+        assertFalse("scrolling up left the bar without its labels", labelCount() <= 1)
         assertEquals("the labels did not come back", bar.size, labelCount())
     }
 

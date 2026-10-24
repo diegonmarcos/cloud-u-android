@@ -5,8 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.assertDoesNotExist
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.performClick
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.navbarbottom.BottomSpec
