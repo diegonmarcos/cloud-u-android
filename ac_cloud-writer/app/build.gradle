@@ -153,8 +153,12 @@ dependencies {
     implementation project(':core')
     // #800 the fleet UI kit (empty state, section headers), drawn inside this app's theme by ui.KitBridge.
     implementation project(':libs:ui-kit')
-    // #868 the fleet's bottom island + page-tab strips + NavDecl: MainActivity's one NavBar and the Tools strip.
+    // #868 NavDecl, and #1164 the shared nav: first row (Profile -> Cloud Account), second row, bottom nav, page background.
     implementation project(':libs:bottomnav')
+    implementation project(':libs:nav-bar-bottom')
+    implementation project(':libs:nav-bar-top-first-row')
+    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:theme-background')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'

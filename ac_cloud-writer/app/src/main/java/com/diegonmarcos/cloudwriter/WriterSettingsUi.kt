@@ -3,6 +3,7 @@ package com.diegonmarcos.cloudwriter
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -26,10 +28,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,13 @@ import com.diegonmarcos.cloudwriter.ui.BlockGap
 import com.diegonmarcos.cloudwriter.ui.CloudWriterTheme
 import com.diegonmarcos.cloudwriter.ui.PageGutter
 import com.diegonmarcos.cloudwriter.ui.SectionHeader
+import com.diegonmarcos.cloudwriter.ui.WriterTheme
+import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
 
 /**
  * The shape of a cloud-writer configuration page, and the rows it is built from.
@@ -96,49 +104,68 @@ abstract class WriterSettingsActivity : AppCompatActivity() {
     @Composable
     protected abstract fun PageContent()
 
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FleetChrome.apply(this)
         title = pageTitle()
         setContent {
             CloudWriterTheme {
-                Scaffold(
-                    topBar = {
-                        LargeTopAppBar(
-                            title = { Text(pageTitle()) },
-                            // TOP RIGHT, SO `actions` AND NOT `navigationIcon`. The owner asked for
-                            // the back button where his thumb already is, and `navigationIcon` is
-                            // the top-LEFT slot — putting it there would have answered a different
-                            // request. Every configuration page in this application is built on
-                            // this bar, so the four of them get the button from this one place: a
-                            // per-page copy is four chances to forget one, which is the defect being
-                            // fixed here rather than a style to be repeated.
-                            actions = {
+                // #1164 the same shell as MainActivity's: the shared first row, bottom nav, page background and scroll-collapse.
+                val dark = WriterTheme.isDark()
+                val entries = WriterNav.decl.bottomSections().map { sec ->
+                    BottomNavEntry(sec.id, sec.label, rememberVectorPainter(WriterNav.icon(sec.icon)))
+                }
+                NavBarTopFirstRowScaffold(
+                    title = pageTitle(),
+                    hierarchy = emptyList(),
+                    onNavigate = {},
+                    onAccount = rememberAccountLauncher(),
+                    onConfigs = { openSection(WriterNav.SETTINGS) },
+                    onAi = rememberSuperAppAiLauncher(),
+                    modifier = Modifier.fillMaxSize().statusBarsPadding(),
+                    dark = dark,
+                ) {
+                    NavBarBottomHost(
+                        entries = entries,
+                        selectedId = WriterNav.TOOLS,
+                        onSelect = { e -> if (e.id == WriterNav.TOOLS) finish() else openSection(e.id) },
+                        dark = dark,
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            // TOP RIGHT, as before: the back button sits where the thumb already is. Every configuration
+                            // page of this application is built on this one base, so all of them get it from this place.
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.End) {
                                 IconButton(onClick = { finish() }) {
                                     Icon(
                                         Icons.AutoMirrored.Filled.ArrowBack,
                                         contentDescription = stringResource(R.string.page_back),
                                     )
                                 }
-                            },
-                        )
-                    },
-                ) { insets ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(insets)
-                            .verticalScroll(rememberScrollState()),
-                    ) {
-                        PageContent()
-                        // The last row of a settings page sat flush against the navigation bar
-                        // before; a page that ends exactly at the edge reads as a page that has
-                        // been cut off.
-                        Spacer(Modifier.height(BlockGap * 2))
+                            }
+                            PageContent()
+                            // The last row of a settings page sat flush against the navigation bar
+                            // before; a page that ends exactly at the edge reads as a page that has
+                            // been cut off.
+                            Spacer(Modifier.height(BlockGap * 2))
+                        }
                     }
                 }
             }
         }
+    }
+
+    /** A bottom-nav item pressed on a tool page: the main screen at that section (the tool page closes). */
+    private fun openSection(id: String) {
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                .putExtra(MainActivity.EXTRA_SECTION, id)
+                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        )
+        finish()
     }
 
     // ── the rows, one per keyboard preference widget ─────────────────────────

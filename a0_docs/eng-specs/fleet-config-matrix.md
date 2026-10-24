@@ -1040,7 +1040,7 @@ Coverage: 6 covered, 0 gaps.
 
 ## cloud-writer — `com.diegonmarcos.cloudwriter`
 
-Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-crash, lib-decisions, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-text-tools, lib-ui-kit.
+Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-crash, lib-decisions, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-kit.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

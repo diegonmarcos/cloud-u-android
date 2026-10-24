@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -90,18 +92,15 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -113,6 +112,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
@@ -138,14 +138,17 @@ import com.diegonmarcos.cloudwriter.ui.PageGutter
 import com.diegonmarcos.cloudwriter.ui.SectionHeader
 import com.diegonmarcos.cloudwriter.ui.WriterTheme
 import com.diegonmarcos.cloudwriter.ui.asValue
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
-import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
-import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
+import com.diegonmarcos.superapp.themebg.themeBackground
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.cloudwriter.ui.insertAtCaret
 import com.diegonmarcos.superapp.uikit.KitEmptyState
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
@@ -223,12 +226,26 @@ class MainActivity : AppCompatActivity() {
         store = DocStore(ListenEngine.docsDir(this))
 
         adoptSharedText(intent)
+        openRequestedSection(intent)
 
         setContent {
             CloudWriterTheme {
-                Surface(color = MaterialTheme.colorScheme.background) { App() }
+                Surface(color = Color.Transparent, contentColor = MaterialTheme.colorScheme.onBackground) { App() }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openRequestedSection(intent)
+    }
+
+    /** #1164 a bottom-nav item pressed on a tool page (WriterSettingsActivity) asks for its section; the editor is reopened by its own item only. */
+    private fun openRequestedSection(from: Intent?) {
+        val id = from?.getStringExtra(EXTRA_SECTION) ?: return
+        from.removeExtra(EXTRA_SECTION)
+        if (id != WriterNav.WRITER) goSection(id)
     }
 
     override fun onStart() {
@@ -356,32 +373,74 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun App() {
         BackHandler(enabled = screen.value != Screen.DOCS) { back() }
-        when (screen.value) {
-            Screen.DOCS -> DocsScreen()
-            Screen.EDITOR -> EditorScreen()
-            Screen.CONFIGS -> ConfigsScreen()
-            Screen.TOOLS -> ToolsScreen()
-        }
+        WriterShell()
         result.value?.let { ResultDialog(it) }
         confirmDelete.value?.let { DeleteDialog(it) }
     }
 
     /**
-     * #868 THE bar: libs:bottomnav's island, fed by build.json::ui through [WriterNav.decl]. One
-     * composable, handed to the bottomBar of every screen that shows it (Documents, Tools,
-     * Settings); [current] is the declared section the screen is.
+     * #1164 THE one shell of the app: the shared first row (title island with the section's pages, Profile top-right launches
+     * Cloud Account), the shared bottom nav (libs:nav-bar-bottom, fed by build.json::ui through [WriterNav.decl]), the shared page
+     * background and the shared scroll-collapse (a page scrolled down hides the first row and compacts the rows, up restores).
+     * Documents, Tools and Settings are the content of the host; the editor, whose own format and tool bars take the bottom
+     * bar's place, is the content of the first-row scaffold alone.
      */
     @Composable
-    private fun NavBar(current: String, collapse: BottomNavCollapse) {
+    private fun WriterShell() {
+        val current = screen.value
+        val dark = WriterTheme.isDark()
+        val sectionId = when (current) {
+            Screen.DOCS -> WriterNav.DOCUMENTS
+            Screen.EDITOR -> WriterNav.WRITER
+            Screen.TOOLS -> WriterNav.TOOLS
+            Screen.CONFIGS -> WriterNav.SETTINGS
+        }
+        val section = WriterNav.decl.section(sectionId)
+        val title = when (current) {
+            Screen.DOCS -> stringResource(R.string.app_name)
+            Screen.EDITOR -> Markdown.title(field.value.text).ifBlank { stringResource(R.string.doc_untitled) }
+            Screen.TOOLS -> stringResource(R.string.nav_tools)
+            Screen.CONFIGS -> stringResource(R.string.configs_title)
+        }
         val entries = WriterNav.decl.bottomSections().map { s ->
             BottomNavEntry(s.id, sectionLabel(s.id, s.label), rememberVectorPainter(WriterNav.icon(s.icon)))
         }
-        BottomNavIsland(
-            entries = entries,
-            selectedId = current,
-            onSelect = { e -> if (e.id != current) goSection(e.id) },
-            collapsed = collapse.collapsed,
-        )
+        NavBarTopFirstRowScaffold(
+            title = title,
+            hierarchy = section?.let { titleHierarchy(it, if (current == Screen.TOOLS) toolsPage.value.ifBlank { null } else null) }.orEmpty(),
+            onNavigate = { e -> goSection(e.sectionId); if (e.depth > 0 && e.sectionId == WriterNav.TOOLS) toolsPage.value = e.id },
+            onAccount = rememberAccountLauncher(),
+            onConfigs = { if (screen.value != Screen.CONFIGS) { saveNow(); openConfigs() } },
+            onAi = rememberSuperAppAiLauncher(),
+            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+            dark = dark,
+        ) {
+            TopBarDrawer { close ->
+                WriterNav.decl.bottomSections().forEach { s ->
+                    Text(
+                        sectionLabel(s.id, s.label),
+                        Modifier.fillMaxWidth().clickable { goSection(s.id); close() }.padding(horizontal = 20.dp, vertical = 14.dp),
+                    )
+                }
+            }
+            if (current == Screen.EDITOR) {
+                Box(Modifier.fillMaxSize().themeBackground(dark)) { EditorScreen() }
+            } else {
+                NavBarBottomHost(
+                    entries = entries,
+                    selectedId = sectionId,
+                    onSelect = { e -> if (e.id != sectionId) goSection(e.id) },
+                    dark = dark,
+                ) {
+                    when (current) {
+                        Screen.DOCS -> DocsScreen()
+                        Screen.TOOLS -> ToolsScreen()
+                        Screen.CONFIGS -> ConfigsScreen()
+                        Screen.EDITOR -> Unit
+                    }
+                }
+            }
+        }
     }
 
     /** The localized label of a declared section; the declared English one for an id with no string. */
@@ -396,36 +455,16 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun DocsScreen() {
-        val collapse = rememberBottomNavCollapse()
-        Scaffold(
-            topBar = {
-                LargeTopAppBar(
-                    title = { Text(stringResource(R.string.app_name)) },
-                    actions = {
-                        ThemeMenu()
-                        IconButton(onClick = { openConfigs() }) {
-                            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.action_configs))
-                        }
-                    },
-                )
-            },
-            bottomBar = { NavBar(WriterNav.DOCUMENTS, collapse) },
-            floatingActionButton = {
-                ExtendedFloatingActionButton(
-                    text = { Text(stringResource(R.string.doc_new)) },
-                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    onClick = { newDoc() },
-                )
-            },
-        ) { insets ->
+        Box(Modifier.fillMaxSize()) {
             Column(
-                modifier = Modifier.fillMaxSize().padding(insets).nestedScroll(collapse).padding(horizontal = PageGutter),
+                modifier = Modifier.fillMaxSize().padding(horizontal = PageGutter),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = query.value,
                     onValueChange = { query.value = it; reloadDocs() },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.weight(1f),
                     singleLine = true,
                     placeholder = { Text(stringResource(R.string.doc_search_hint)) },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
@@ -437,6 +476,8 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                 )
+                    ThemeMenu()
+                }
                 StatusCard()
                 val list = docs.value
                 if (list.isEmpty()) {
@@ -456,6 +497,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+            ExtendedFloatingActionButton(
+                text = { Text(stringResource(R.string.doc_new)) },
+                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                onClick = { newDoc() },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            )
         }
     }
 
@@ -567,18 +614,14 @@ class MainActivity : AppCompatActivity() {
         }
         val listening = ListenEngine.state.value.running
         var menu by remember { mutableStateOf(false) }
-        val title = Markdown.title(v.text).ifBlank { stringResource(R.string.doc_untitled) }
 
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    navigationIcon = {
-                        IconButton(onClick = { back() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                        }
-                    },
-                    actions = {
+        // #1164 the title is the shared first row's; this row keeps the editor's own actions (back, outline, find, Listen, more).
+        Column(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { back() }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                }
+                Spacer(Modifier.weight(1f))
                         IconButton(onClick = { outlineOpen.value = true }) {
                             Icon(Icons.Filled.Toc, contentDescription = stringResource(R.string.editor_outline))
                         }
@@ -629,19 +672,8 @@ class MainActivity : AppCompatActivity() {
                                 )
                             }
                         }
-                    },
-                )
-            },
-            bottomBar = {
-                Column(Modifier.imePadding()) {
-                    if (listening || listenOpen.value) ListenPanel(askMic)
-                    HorizontalDivider()
-                    FormatBar()
-                    ToolBar()
-                }
-            },
-        ) { insets ->
-            Column(Modifier.fillMaxSize().padding(insets)) {
+            }
+            Column(Modifier.fillMaxWidth().weight(1f)) {
                 if (findOpen.value) FindBar(matches)
                 report.value?.let { line ->
                     Text(
@@ -681,6 +713,12 @@ class MainActivity : AppCompatActivity() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = PageGutter, vertical = 4.dp),
                 )
+            }
+            Column(Modifier.navigationBarsPadding().imePadding()) {
+                if (listening || listenOpen.value) ListenPanel(askMic)
+                HorizontalDivider()
+                FormatBar()
+                ToolBar()
             }
         }
         if (outlineOpen.value) OutlineSheet(v.text, focus)
@@ -942,42 +980,25 @@ class MainActivity : AppCompatActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun ConfigsScreen() {
-        val collapse = rememberBottomNavCollapse()
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text(stringResource(R.string.configs_title)) },
-                    navigationIcon = {
-                        IconButton(onClick = { back() }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
-                        }
-                    },
-                )
-            },
-            bottomBar = { NavBar(WriterNav.SETTINGS, collapse) },
-        ) { insets ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(insets)
-                    .nestedScroll(collapse)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = PageGutter),
-                verticalArrangement = Arrangement.spacedBy(BlockGap),
-            ) {
-                StatusCard()
-                KitBridge { KitSectionHeader(stringResource(R.string.theme_title), stringResource(R.string.theme_summary)) }
-                ChoiceRow(
-                    stringResource(R.string.theme_title),
-                    null,
-                    themes(),
-                    WriterTheme.current(this@MainActivity),
-                    WriterTheme.SYSTEM,
-                ) { WriterTheme.set(this@MainActivity, it) }
-                ModelSection()
-                NoteText(stringResource(R.string.token_note))
-                Spacer(Modifier.height(BlockGap))
-            }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = PageGutter),
+            verticalArrangement = Arrangement.spacedBy(BlockGap),
+        ) {
+            StatusCard()
+            KitBridge { KitSectionHeader(stringResource(R.string.theme_title), stringResource(R.string.theme_summary)) }
+            ChoiceRow(
+                stringResource(R.string.theme_title),
+                null,
+                themes(),
+                WriterTheme.current(this@MainActivity),
+                WriterTheme.SYSTEM,
+            ) { WriterTheme.set(this@MainActivity, it) }
+            ModelSection()
+            NoteText(stringResource(R.string.token_note))
+            Spacer(Modifier.height(BlockGap))
         }
     }
 
@@ -1143,19 +1164,15 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * #868 The Tools section: its declared pages (build.json ui.sections[tools].pages) are a
-     * PageTabs strip (libs:bottomnav), and the selected page is the card that opens it. The five
+     * NavBarTopSecondRow strip (libs:nav-bar-top-second-row), and the selected page is the card that opens it. The five
      * used to be a column of cards under Configs; they are the app's tool pages, so they have a
      * section of their own. Which declared id a [Page] is comes from its activity, WriterNav.pageId.
      */
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun ToolsScreen() {
-        val collapse = rememberBottomNavCollapse()
-        Scaffold(
-            topBar = { TopAppBar(title = { Text(stringResource(R.string.nav_tools)) }) },
-            bottomBar = { NavBar(WriterNav.TOOLS, collapse) },
-        ) { insets ->
-            Column(Modifier.fillMaxSize().padding(insets).nestedScroll(collapse)) {
+        run {
+            Column(Modifier.fillMaxSize()) {
                 val tools = listOf(
                     Page(
                         R.string.settings_screen_enhance,
@@ -1192,8 +1209,9 @@ class MainActivity : AppCompatActivity() {
                     tools.firstOrNull { WriterNav.pageId(it.screen) == p.id }?.let { p.copy(label = stringResource(it.label)) } ?: p
                 }
                 val selected = declared.firstOrNull { it.id == toolsPage.value } ?: declared.firstOrNull()
-                PageTabs(
+                NavBarTopSecondRow(
                     pages = declared,
+                    dark = WriterTheme.isDark(),
                     selectedId = selected?.id,
                     onSelect = { toolsPage.value = it.id },
                     underTopChrome = false,
@@ -1394,7 +1412,10 @@ class MainActivity : AppCompatActivity() {
             .onFailure { say(getString(R.string.export_failed, it.message ?: it.javaClass.simpleName)) }
     }
 
-    private companion object {
-        const val SAVE_DELAY_MS = 500L
+    companion object {
+        private const val SAVE_DELAY_MS = 500L
+
+        /** The ui.sections id a tool page's bottom nav asks the main screen to open. */
+        const val EXTRA_SECTION = "section"
     }
 }

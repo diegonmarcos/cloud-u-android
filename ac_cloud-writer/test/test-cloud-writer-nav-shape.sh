@@ -6,11 +6,12 @@
 # What this certifies, statically (the nav is data, the bar and the strips are libs:bottomnav's):
 #   S1 build.json::ui is ONE declaration: bottom_nav = documents|writer|tools|settings, default_section
 #      documents, and the Tools section carries the five tool pages (enhance|translation|grammar|
-#      ai_routing|routes) that the Tools screen draws as a PageTabs strip.
+#      ai_routing|routes) that the Tools screen draws as a second-row strip.
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
-#   S3 MainActivity's ONE NavBar is libs:bottomnav's BottomNavIsland fed by WriterNav.decl (NavDecl),
-#      handed to the bottomBar of the Documents, Tools and Settings scaffolds.
-#   S4 the Tools screen draws its strip with PageTabs, and each declared page opens its own activity.
+#   S3 MainActivity's ONE shell (#1164) is the shared first row (NavBarTopFirstRowScaffold, Profile ->
+#      Cloud Account) around libs:nav-bar-bottom's NavBarBottomHost fed by WriterNav.decl (NavDecl); the
+#      Documents, Tools and Settings screens are the host's content (no per-screen scaffold).
+#   S4 the Tools screen draws its strip with NavBarTopSecondRow, and each declared page opens its own activity.
 #   S5 no hand-rolled nav widget in the app (nav-shape-guard N3).
 # Each check is then run against planted mutations of the real sources; a mutation that leaves
 # every check green fails this tester.
@@ -48,12 +49,14 @@ CFG = json.loads(r'''{
  ],
  "must": {
   "app/src/main/java/com/diegonmarcos/cloudwriter/MainActivity.kt": [
-   "BottomNavIsland(",
-   "PageTabs(",
+   "NavBarTopFirstRowScaffold(",
+   "NavBarBottomHost(",
+   "NavBarTopSecondRow(",
+   "rememberAccountLauncher()",
    "WriterNav.decl",
-   "NavBar(WriterNav.DOCUMENTS, collapse)",
-   "NavBar(WriterNav.TOOLS, collapse)",
-   "NavBar(WriterNav.SETTINGS, collapse)",
+   "DocsScreen()",
+   "ToolsScreen()",
+   "ConfigsScreen()",
    "TextEnhanceActivity::class.java",
    "TranslationActivity::class.java",
    "GrammarCheckActivity::class.java",
@@ -66,22 +69,28 @@ CFG = json.loads(r'''{
  },
  "mustnot": {
   "app/src/main/java/com/diegonmarcos/cloudwriter/MainActivity.kt": [
-   "fun PagesSection"
+   "fun PagesSection",
+   "(?<![A-Za-z])Scaffold\\s*\\(",
+   "\\bLargeTopAppBar\\b"
   ]
  },
  "mutate_host": "app/src/main/java/com/diegonmarcos/cloudwriter/MainActivity.kt",
  "must_token_mutations": [
   [
    "app/src/main/java/com/diegonmarcos/cloudwriter/MainActivity.kt",
-   "BottomNavIsland("
+   "NavBarTopFirstRowScaffold("
   ],
   [
    "app/src/main/java/com/diegonmarcos/cloudwriter/MainActivity.kt",
-   "PageTabs("
+   "NavBarBottomHost("
   ],
   [
    "app/src/main/java/com/diegonmarcos/cloudwriter/MainActivity.kt",
-   "NavBar(WriterNav.TOOLS, collapse)"
+   "NavBarTopSecondRow("
+  ],
+  [
+   "app/src/main/java/com/diegonmarcos/cloudwriter/MainActivity.kt",
+   "rememberAccountLauncher()"
   ],
   [
    "app/src/main/java/com/diegonmarcos/cloudwriter/WriterNav.kt",
@@ -168,6 +177,8 @@ def checks(f):
         need("the old nav key ui.%s is gone (one declaration, not two)" % old, old not in ui)
     gradle = "\n".join(code(f[g]) for g in CFG["gradles"])
     need("N2 the app compiles project(':libs:bottomnav')", re.search(r"project\(\s*['\"]:libs:bottomnav['\"]", gradle) is not None)
+    for lib in ("nav-bar-bottom", "nav-bar-top-first-row", "nav-bar-top-second-row", "theme-background"):
+        need("N2 the app compiles project(':libs:%s')" % lib, re.search(r"project\(\s*['\"]:libs:%s['\"]" % lib, gradle) is not None)
     need("N2 build.json::modules declares libs:bottomnav", "libs:bottomnav" in mods)
     for field in ("UI_BOTTOM_NAV", "UI_SECTIONS_B64", "UI_DEFAULT_SECTION"):
         need("N4 gradle bakes %s" % field, field in gradle)
