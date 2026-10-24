@@ -603,7 +603,7 @@ Coverage: 5 covered, 0 gaps.
 
 ## cloud-mail — `com.diegonmarcos.comms.mail`
 
-Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater.
+Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-updater, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -680,7 +680,7 @@ Coverage: 2 covered, 9 gaps — datastore:elementx_featureflag, datastore:elemen
 
 ## cloud-me — `com.diegonmarcos.cloudme`
 
-Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-ui-kit, lib-updater.
+Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-ui-kit, lib-updater, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
