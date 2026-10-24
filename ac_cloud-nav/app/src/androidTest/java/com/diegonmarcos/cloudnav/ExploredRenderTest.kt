@@ -97,6 +97,10 @@ class ExploredRenderTest {
                         }
                     }
                     android.util.Log.i("MapPins", "probe pinSource=$pinSource fillSource=$fillSource")
+                    scenario.onActivity { act ->
+                        fun tree(f: androidx.fragment.app.Fragment): String = f.javaClass.simpleName + "(v=" + (f.view != null) + ",r=" + f.isResumed + ")" + f.childFragmentManager.fragments.joinToString(",", "[", "]") { tree(it) }
+                        android.util.Log.i("MapPins", "tree " + act.supportFragmentManager.fragments.joinToString(" ") { tree(it) })
+                    }
                     if (pinSource > 0 && fillSource > 0) break
                     Thread.sleep(1000)
                 }
