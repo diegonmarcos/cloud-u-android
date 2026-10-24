@@ -18,7 +18,18 @@ import androidx.navigation.NavController
 import app.sterna.R
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.rememberLeaveOnce
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 
 /**
  * Mail's seven items as the island draws them, from the declaration ([mailNav], build.json::ui): the
@@ -44,17 +55,39 @@ fun BottomNavBar(nav: NavController, currentRoute: String, content: @Composable 
     val selected = bottomNavItems.firstOrNull {
         it.action == BottomNavAction.DESTINATION && it.route == currentRoute
     }?.id
-    NavBarBottomHost(
-        entries = mailEntries(),
-        selectedId = selected,
-        onSelect = { entry ->
-            val item = bottomNavItems.first { it.id == entry.id }
-            onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "")
-        },
-        // Mail has a light mode: the shared page background follows it.
+    val tap: (BottomNavEntry) -> Unit = { entry ->
+        val item = bottomNavItems.first { it.id == entry.id }
+        onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "")
+    }
+    val openSection = mailNav.section(selected)
+    val account = com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher()
+    val ai = rememberSuperAppAiLauncher()
+    val entries = mailEntries()
+    // #1154 the first row: AI hands over to the SuperApp, Profile is Cloud Account, Configs is Mail's settings.
+    NavBarTopFirstRowScaffold(
+        title = stringResource(itemDescription(selected ?: "home")),
+        hierarchy = openSection?.let { titleHierarchy(it, null) }.orEmpty(),
+        onNavigate = { e -> entries.firstOrNull { it.id == e.sectionId }?.let(tap) },
+        onAccount = account,
+        onConfigs = { if (currentRoute != "settings") nav.currentBackStackEntry?.navigateOnce { nav.navigate("settings") } },
+        onAi = ai,
         dark = app.sterna.ui.theme.LocalSternaDarkTheme.current,
-        content = content,
-    )
+        modifier = Modifier.statusBarsPadding(),
+    ) {
+        TopBarDrawer { close ->
+            entries.forEach { e ->
+                Text(e.label, Modifier.fillMaxWidth().clickable { tap(e); close() }.padding(horizontal = 20.dp, vertical = 14.dp))
+            }
+        }
+        NavBarBottomHost(
+            entries = entries,
+            selectedId = selected,
+            onSelect = tap,
+            // Mail has a light mode: the shared page background follows it.
+            dark = app.sterna.ui.theme.LocalSternaDarkTheme.current,
+            content = content,
+        )
+    }
 }
 
 /** One item tapped. A destination navigates, and a launch hands off without moving the selection. */

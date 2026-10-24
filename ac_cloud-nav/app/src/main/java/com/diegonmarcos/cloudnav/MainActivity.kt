@@ -3,7 +3,12 @@ package com.diegonmarcos.cloudnav
 import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -26,7 +31,12 @@ import com.diegonmarcos.cloudnav.routes.RoutesFragment
 import com.diegonmarcos.cloudnav.tracker.NavDeepLink
 import com.diegonmarcos.cloudnav.tracker.TrackerInk
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitFragmentHostState
@@ -118,9 +128,28 @@ class MainActivity : AppCompatActivity() {
     private fun NavShell() {
         val ctx = LocalContext.current
         val entries = NavConfig.decl.viewItems { Icons.nav(ctx, it) }.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
-        NavBarBottomHost(entries, currentTab, { e -> if (e.id != currentTab) switchTo(e.id) }) {
-            FragmentHost(supportFragmentManager, R.id.nav_host_main, currentTab to tabNonce, Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
-                fragmentForSection(currentTab)
+        val section = NavConfig.decl.section(currentTab)
+        val ai = rememberSuperAppAiLauncher()
+        // #1154 the first row: AI hands over to the SuperApp, Profile opens Cloud Account, Configs is this app's Configs section. A pick of a
+        // page below a section opens the section (its pages are fragments with their own strip state).
+        NavBarTopFirstRowScaffold(
+            title = section?.label ?: getString(R.string.app_name),
+            hierarchy = section?.let { titleHierarchy(it, null) }.orEmpty(),
+            onNavigate = { e -> if (e.sectionId != currentTab) switchTo(e.sectionId) },
+            onAccount = rememberAccountLauncher(),
+            onConfigs = { if (currentTab != "configs") switchTo("configs") },
+            onAi = ai,
+            modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars),
+        ) {
+            TopBarDrawer { close ->
+                NavConfig.decl.sections.forEach { sec ->
+                    Text(sec.label, Modifier.fillMaxWidth().clickable { if (sec.id != currentTab) switchTo(sec.id); close() }.padding(horizontal = 20.dp, vertical = 14.dp))
+                }
+            }
+            NavBarBottomHost(entries, currentTab, { e -> if (e.id != currentTab) switchTo(e.id) }) {
+                FragmentHost(supportFragmentManager, R.id.nav_host_main, currentTab to tabNonce, Modifier.fillMaxSize()) {
+                    fragmentForSection(currentTab)
+                }
             }
         }
     }

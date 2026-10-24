@@ -5,9 +5,11 @@ import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -47,7 +49,11 @@ import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.profile.AccountConnectPage
 import com.diegonmarcos.superapp.profile.FleetEndpointsPage
@@ -141,7 +147,26 @@ class MainActivity : AppCompatActivity() {
         val go: (String, String) -> Unit = { s, p -> HubNav.resolve(s, p).let { (ns, np) -> selected = ns; selectedPage = np } }
         val asked = requested.value
         LaunchedEffect(asked) { if (asked != null) { selected = asked.first; selectedPage = asked.second; requested.value = null } }
-        Box(Modifier.fillMaxSize().statusBarsPadding()) {
+        val openSection = NAV.section(selected)
+        val ai = rememberSuperAppAiLauncher()
+        // #1154 the first row: AI hands over to the SuperApp, Profile is this app's own Personal Info section, Configs its Configs section.
+        NavBarTopFirstRowScaffold(
+            title = openSection?.label ?: getString(R.string.app_name),
+            hierarchy = openSection?.let { titleHierarchy(it, selectedPage) }.orEmpty(),
+            onNavigate = { e -> selected = e.sectionId; selectedPage = e.id.takeIf { e.depth > 0 } },
+            onAccount = { selected = "personal"; selectedPage = null },
+            onConfigs = { selected = "configs"; selectedPage = null },
+            onAi = ai,
+            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+        ) {
+            TopBarDrawer { close ->
+                NAV.bottomSections().forEach { sec ->
+                    androidx.compose.material3.Text(
+                        sec.label,
+                        Modifier.fillMaxWidth().clickable { selected = sec.id; selectedPage = null; close() }.padding(horizontal = 20.dp, vertical = 14.dp),
+                    )
+                }
+            }
             NavBarBottomHost(
                 entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
                 selectedId = selected,

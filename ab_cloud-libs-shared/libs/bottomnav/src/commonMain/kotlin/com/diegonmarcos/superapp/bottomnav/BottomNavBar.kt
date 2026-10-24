@@ -143,6 +143,7 @@ public fun bottomNavInsets(): WindowInsets = WindowInsets.systemBars.union(Windo
  * system-bar clearance, the press feedback and the haptics are all this module's, so an app cannot
  * draw a different island. See [FleetChrome] for the colours and the window.
  */
+@Deprecated("#1154: use libs:nav-bar-bottom NavBarBottom; this alias is kept for one release and is removed after it.")
 @Composable
 public fun BottomNavIsland(
     entries: List<BottomNavEntry>,
@@ -476,6 +477,7 @@ public fun rememberBottomNavCollapse(): BottomNavCollapse = remember { BottomNav
  * icons (#532). What a tap DOES is the app's: [onSelect] gets the tapped entry. cloud-mail's
  * item table and its launch hand-offs live in cloud-mail (it was the first consumer, #565).
  */
+@Deprecated("#1154: use libs:nav-bar-bottom NavBarBottomHost; this alias is kept for one release and is removed after it.")
 @Composable
 public fun BottomNavHost(
     entries: List<BottomNavEntry>,

@@ -84,6 +84,7 @@ import androidx.compose.ui.unit.sp
  * the host dispatches and which it should NOT make [selectedId] - and [onReselect] for the
  * selected one. [selectedId] only MOVES the pill; it never calls back.
  */
+@Deprecated("#1154: use libs:nav-bar-top-second-row NavBarTopSecondRow; this alias is kept for one release and is removed after it.")
 @Composable
 public fun PageTabs(
     pages: List<NavPage>,
