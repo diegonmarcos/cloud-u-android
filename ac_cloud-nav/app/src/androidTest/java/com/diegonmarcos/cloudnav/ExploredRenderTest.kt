@@ -62,12 +62,11 @@ class ExploredRenderTest {
         }
 
         try {
-            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            ActivityScenario.launch<MainActivity>(android.content.Intent(ctx, MainActivity::class.java).putExtra("shortcut_action", "page:explored/maps")).use { scenario ->
                 // #1156: the app's Explored section is now Trips | Maps; libs:maps' own Explored page (the choropleth + pins under test)
                 // is no longer a nav page. It is mounted where the old Timeline host had it: as the child page of the section, reached
                 // through the real island and strip.
-                compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_explored").fetchSemanticsNodes().isNotEmpty() }
-                compose.onNodeWithTag("bottomnav_item_explored").performClick()
+                // The launch deep-links to Explored > Maps, so the Day dashboards (network lookups of their own) are never started here.
                 compose.waitUntil(30_000) { compose.onAllNodesWithTag(PageTabsTags.tab("maps")).fetchSemanticsNodes().isNotEmpty() }
                 scenario.onActivity { act ->
                     val host = act.supportFragmentManager.fragments.filterIsInstance<ExploredFragment>().first()
