@@ -1,4 +1,6 @@
-# Cloud Search — what it reads, what it reuses, and why
+# Cloud Research (was Cloud Search until #1162) — what it reads, what it reuses, and why
+
+The app is branded Cloud Research (launcher, store, tile). Its identifiers keep the old name on purpose: directory `ac_cloud-search`, fleet id `search` / `cloud-search`, applicationId `com.diegonmarcos.cloudsearch`, GHCR image and APK asset `Cloud-Search*.apk`. Renaming any of them would install as a second app (a new applicationId cannot update the old one) and break the Store's update path.
 
 ## Data sources (build.json::search.sources is the one declaration)
 
