@@ -78,6 +78,9 @@ class TimelineViewsShotTest {
                 fun mount(f: androidx.fragment.app.Fragment) =
                     scenario.onActivity { act -> act.supportFragmentManager.beginTransaction().replace(R.id.nav_host_main, f).commitNow() }
                 compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_tracker").fetchSemanticsNodes().isNotEmpty() }
+                // the shell adds its default page asynchronously: let that land first, or it would be added over the mounted page
+                var shellPage = false
+                compose.waitUntil(30_000) { scenario.onActivity { act -> act.supportFragmentManager.executePendingTransactions(); shellPage = act.supportFragmentManager.fragments.isNotEmpty() }; shellPage }
 
                 mount(MapsDailyFragment.newInstance())
                 compose.waitUntil(30_000) { compose.onAllNodesWithText("Office", substring = true).fetchSemanticsNodes().isNotEmpty() }

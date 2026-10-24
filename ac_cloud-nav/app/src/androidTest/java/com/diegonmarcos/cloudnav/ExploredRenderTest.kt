@@ -66,6 +66,9 @@ class ExploredRenderTest {
                 // #1156: the app's Explored section is now Trips | Maps; libs:maps' own Explored page (the choropleth + pins under test)
                 // is no longer a nav page, so it is mounted straight into the shell's page container.
                 compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_explored").fetchSemanticsNodes().isNotEmpty() }
+                // the shell adds its default page asynchronously: let that land first, or it would be added over the mounted page
+                var shellPage = false
+                compose.waitUntil(30_000) { scenario.onActivity { act -> act.supportFragmentManager.executePendingTransactions(); shellPage = act.supportFragmentManager.fragments.isNotEmpty() }; shellPage }
                 scenario.onActivity { act ->
                     act.supportFragmentManager.beginTransaction().replace(R.id.nav_host_main, MapsExploredFragment.newInstance()).commitNow()
                 }
