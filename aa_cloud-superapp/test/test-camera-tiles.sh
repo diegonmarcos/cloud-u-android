@@ -159,7 +159,7 @@ echo "== T4: the Camera tile's icon resolves to a drawable that exists =="
 ICON="$(jq -r '
   .ui.sections[] | select(.id == "cloud")
   | .tile_groups[] | select(.title == "Tools Primary")
-  | .tiles[-1] | .icon // ""' "$BJ")"
+  | .tiles[] | select(.target == "extapp:cloud-camera") | .icon // ""' "$BJ")"
 if [ -n "$ICON" ] && [ -f "$APP/app/src/main/res/drawable/$ICON.xml" ]; then
   USERS="$(jq -r --arg i "$ICON" '[ .. | objects | select((.icon // "") == $i) ] | length' "$BJ")"
   [ "$USERS" = "1" ] \
