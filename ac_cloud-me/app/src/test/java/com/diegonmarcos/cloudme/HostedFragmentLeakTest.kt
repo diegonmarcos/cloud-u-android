@@ -71,7 +71,10 @@ class HostedFragmentLeakTest {
         assertTrue("fragments after 60 switches: ${fm.fragments.size}", fm.fragments.size <= 1)
 
         val saved = Bundle()
-        compose.runOnUiThread { compose.activity.savedStateRegistry.performSave(saved) }
+        compose.runOnUiThread {
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
+                .callActivityOnSaveInstanceState(compose.activity, saved)
+        }
         val parcel = Parcel.obtain()
         parcel.writeBundle(saved)
         val size = parcel.dataSize()
