@@ -90,7 +90,7 @@ class NavBarBottomTest {
         assertEquals(BottomSpec.HEIGHT.value, bar.height, 0.5f)
         val cell = compose.onNodeWithTag(BottomTags.item("mail")).fetchSemanticsNode().boundsInRoot
         assertEquals(BottomSpec.CELL.value, cell.width, 0.5f)
-        val icon = compose.onNodeWithTag(BottomTags.icon("mail")).fetchSemanticsNode().boundsInRoot
+        val icon = compose.onNodeWithTag(BottomTags.icon("mail"), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertEquals(BottomSpec.ICON.value, icon.width, 0.5f)
         compose.onNodeWithTag(BottomTags.item("mail")).performClick()
         assertEquals("mail", picked)
