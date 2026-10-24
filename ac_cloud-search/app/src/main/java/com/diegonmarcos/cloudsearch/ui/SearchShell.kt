@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -50,11 +51,18 @@ import com.diegonmarcos.cloudsearch.core.Filters
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.data.Account
 import com.diegonmarcos.cloudsearch.data.Services
-import com.diegonmarcos.superapp.bottomnav.SearchHtmlIsland
 import com.diegonmarcos.superapp.bottomnav.NavDecl
-import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.BottomTags
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.HierarchyEntry
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.TopFirstRowTags
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.ai.AiChatState
 import com.diegonmarcos.superapp.ai.AiTags
 import kotlinx.coroutines.CoroutineScope
@@ -177,9 +185,11 @@ object Tags {
     const val WEB_STRIP = "search_web_strip"
     const val CHAT_STRIP = "search_chat_strip"
     fun agentLink(id: String) = "search_agent_link_$id"
-    const val MENU = "search_menu"
-    const val ISLAND = "search_island"
-    const val PROFILE = "search_profile"
+    /** #1161 the first row is libs:nav-bar-top-first-row's: its tags are the row's own. */
+    const val MENU = TopFirstRowTags.MENU
+    const val ISLAND = TopFirstRowTags.ISLAND
+    const val PROFILE = TopFirstRowTags.PROFILE
+    const val CONFIGS = TopFirstRowTags.CONFIGS
     const val PROFILE_MENU = "search_profile_menu"
     const val CATEGORIES = "search_categories"
     const val FILTERS = "search_filters"
@@ -208,8 +218,8 @@ object Tags {
     const val THINGS_RADIUS = "search_things_radius"
     const val THINGS_APPLY = "search_things_apply"
     fun thingsRow(osm: String) = "search_things_row_$osm"
-    /** libs:bottomnav's island item tag (BottomNavBar.itemTag, internal to the lib). */
-    fun nav(id: String) = "bottomnav_item_$id"
+    /** libs:nav-bar-bottom's item tag. */
+    fun nav(id: String) = BottomTags.item(id)
     /** A sub-page pill of the page-tab strip. */
     fun subpage(id: String) = PageTabsTags.tab(id)
     fun page(kind: String) = "search_page_$kind"
@@ -228,40 +238,19 @@ object Tags {
 fun SearchShell(state: SearchState) {
     CompositionLocalProvider(LocalState provides state) {
         SearchTheme(state.dark) {
-            val g = LocalGlass.current
-            val v = state.v()
-            Box(Modifier.fillMaxSize().background(g.background).testTag(Tags.SHELL)) {
-                Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).imePadding()) {
-                    // The page under the chrome: it pads itself by contentTop / contentBottom.
-                    if (state.saved) SavedPage()
-                    else when (state.section) {
-                        "chat" -> ChatSection(state, v)
-                        "agents" -> AgentsSection(state)
-                        "reports" -> ReportsSection(state)
-                        in state.verticalSections -> VerticalsSection(state, state.section, v)
-                        else -> {
-                            val sub = state.subpageOf(v)
-                            key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
-                        }
-                    }
-                    TopBar(state, v, Modifier.align(Alignment.TopCenter))
-                    // The keyboard takes the bottom of the screen; the nav returns when it closes.
-                    // #868 the nav is build.json::ui's, drawn by libs:bottomnav. Cloud Search is the ONE app the
-                    // owner asked to keep his mockup's .bottom-nav (ui.style = "search-html", nav-shape.json::variants):
-                    // a variant of the lib, not a nav of its own. This box already clears the system bars.
-                    if (!imeOpen()) {
-                        SearchHtmlIsland(
-                            entries = NAV.islandEntries { painterResource(IconCatalog.res(it)) },
-                            selectedId = if (state.saved) null else state.section,
-                            onSelect = { state.openSection(it.id) },
-                            dark = state.dark,
-                            modifier = Modifier.align(Alignment.BottomCenter),
-                            gradientIds = NAV.bottomSections().filter { IconCatalog.gradient(it.icon) }.map { it.id }.toSet(),
-                        )
-                    }
+            Box(Modifier.fillMaxSize().testTag(Tags.SHELL)) {
+                // #1161 the shared nav pattern: libs:nav-bar-bottom's bar and page background, libs:nav-bar-top-first-row's
+                // row (Profile top-right opens Cloud Account), libs:nav-bar-top-second-row's strips, one scroll-collapse.
+                NavBarBottomHost(
+                    entries = NAV.islandEntries { painterResource(IconCatalog.res(it)) },
+                    selectedId = if (state.saved) null else state.section,
+                    onSelect = { state.openSection(it.id) },
+                    modifier = Modifier.imePadding(),
+                    dark = state.dark,
+                ) {
+                    Box(Modifier.fillMaxSize().statusBarsPadding()) { Chrome(state, state.v()) }
                 }
                 Scrim(state.menu != null) { state.menu = null }
-                SideMenu(state.menu == Menu.CATEGORIES, Tags.CATEGORIES) { Categories(state) }
                 SideMenu(state.menu == Menu.FILTERS, Tags.FILTERS) { FiltersMenu(state) }
                 SideMenu(state.menu == Menu.SESSIONS, Tags.SESSIONS_MENU) { SessionsMenu(state) }
                 Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
@@ -272,47 +261,83 @@ fun SearchShell(state: SearchState) {
     }
 }
 
-/** .top-nav: menu · the dynamic island · profile. */
+/** The first row over the page; the hamburger's drawer lists the categories (every vertical) and Saved Items. */
 @Composable
-private fun TopBar(state: SearchState, v: SearchConfig.Vertical, modifier: Modifier) {
-    Row(
-        modifier.fillMaxWidth().padding(top = Metrics.topOffset, start = Metrics.gutter, end = Metrics.gutter),
-        verticalAlignment = Alignment.CenterVertically,
+private fun Chrome(state: SearchState, v: SearchConfig.Vertical) {
+    val g = LocalGlass.current
+    val section = NAV.section(state.section)
+    val text = when {
+        state.busy > 0 || state.chat.sending || state.agentsModel.running != null -> stringResource(R.string.island_busy)
+        state.saved -> stringResource(R.string.saved_items)
+        state.section == "chat" && state.chatPage != state.chatVertical -> stringResource(R.string.cloud_title)
+        state.section == "chat" || state.section in state.verticalSections -> v.title
+        else -> section?.label ?: v.title
+    }
+    val pageId = when {
+        state.section == "chat" -> state.chatPage
+        state.section == "agents" -> state.agentsPage
+        state.section in state.verticalSections -> state.vertical
+        else -> null
+    }
+    NavBarTopFirstRowScaffold(
+        title = text,
+        hierarchy = if (state.saved) emptyList() else section?.let { titleHierarchy(it, pageId) }.orEmpty(),
+        onNavigate = { e -> navigateTo(state, e) },
+        onAccount = rememberAccountLauncher(),
+        // Configs (the vertical dots) opens what the old Profile popover held: the AI token, theme, city.
+        onConfigs = { state.toggle(Menu.PROFILE) },
+        // AI opens the assistant page (the Search page under Chat).
+        onAi = { state.openSection("chat"); state.chatPage = state.chatVertical },
+        dark = state.dark,
     ) {
-        IconBtn(R.drawable.ph_list, stringResource(R.string.menu), Tags.MENU) { state.toggle(Menu.CATEGORIES) }
-        Spacer(Modifier.weight(1f))
-        val section = NAV.section(state.section)
-        val text = when {
-            state.busy > 0 || state.chat.sending || state.agentsModel.running != null -> stringResource(R.string.island_busy)
-            state.saved -> stringResource(R.string.saved_items)
-            state.section == "chat" && state.chatPage != state.chatVertical -> stringResource(R.string.cloud_title)
-            state.section == "chat" || state.section in state.verticalSections -> v.title
-            else -> section?.label ?: v.title
+        TopBarDrawer { close ->
+            Column(Modifier.fillMaxWidth().background(g.menu).padding(Metrics.gutter).testTag(Tags.CATEGORIES), verticalArrangement = Arrangement.spacedBy(Metrics.gap)) {
+                Categories(state, close)
+            }
         }
-        val onVertical = state.section in state.verticalSections || (state.section == "chat" && state.chatPage == state.chatVertical)
-        val icon = if (onVertical) v.icon else section?.icon ?: v.icon
-        Island(if (state.saved) IconCatalog.SAVED else icon, text, Modifier.testTag(Tags.ISLAND))
-        Spacer(Modifier.weight(1f))
-        IconBtn(R.drawable.ph_user, stringResource(R.string.profile), Tags.PROFILE) { state.toggle(Menu.PROFILE) }
+        // The page under the chrome: it pads itself a little (Metrics.contentTop / contentBottom).
+        if (state.saved) SavedPage()
+        else when (state.section) {
+            "chat" -> ChatSection(state, v)
+            "agents" -> AgentsSection(state)
+            "reports" -> ReportsSection(state)
+            in state.verticalSections -> VerticalsSection(state, state.section, v)
+            else -> {
+                val sub = state.subpageOf(v)
+                key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
+            }
+        }
+    }
+}
+
+/** A pick in the title dropdown: the bottom page, or one of its pages (a vertical, a Chat or Agents page). */
+private fun navigateTo(state: SearchState, e: HierarchyEntry) {
+    if (e.depth == 0) { state.openSection(e.sectionId); return }
+    if (e.depth > 1) return
+    when {
+        e.sectionId == "chat" -> { state.openSection("chat"); state.chatPage = e.id }
+        e.sectionId == "agents" -> { state.openSection("agents"); state.agentsPage = e.id }
+        e.sectionId in state.verticalSections -> state.open(e.id)
     }
 }
 
 /** #913b Me (personal) and LLC (commercial): a strip of the section's verticals (ui.sections[].pages) over the selected vertical's page. */
 @Composable
 private fun VerticalsSection(state: SearchState, section: String, v: SearchConfig.Vertical) {
-    Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().padding(top = Metrics.stripShift)) {
-            val sub = state.subpageOf(v)
-            key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
-        }
-        Box(Modifier.align(Alignment.TopStart).padding(top = Metrics.stripTop).testTag(Tags.WEB_STRIP)) {
-            PageTabs(
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.testTag(Tags.WEB_STRIP)) {
+            NavBarTopSecondRow(
                 pages = NAV.section(section)?.pages.orEmpty(),
                 selectedId = state.vertical,
                 onSelect = { state.open(it.id) },
+                dark = state.dark,
                 underTopChrome = false,
                 surface = NAV.stripSurface(section, state.dark),
             )
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            val sub = state.subpageOf(v)
+            key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
         }
     }
 }
@@ -323,21 +348,22 @@ private fun VerticalsSection(state: SearchState, section: String, v: SearchConfi
  */
 @Composable
 private fun ChatSection(state: SearchState, v: SearchConfig.Vertical) {
-    Box(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxSize().padding(top = Metrics.stripShift)) {
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.testTag(Tags.CHAT_STRIP)) {
+            NavBarTopSecondRow(
+                pages = NAV.section("chat")?.pages.orEmpty(),
+                selectedId = state.chatPage,
+                onSelect = { state.chatPage = it.id },
+                dark = state.dark,
+                underTopChrome = false,
+                surface = NAV.stripSurface("chat", state.dark),
+            )
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
             if (state.chatPage == state.chatVertical) {
                 val sub = state.subpageOf(v)
                 key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
             } else CloudPage(state, state.chatPage)
-        }
-        Box(Modifier.align(Alignment.TopStart).padding(top = Metrics.stripTop).testTag(Tags.CHAT_STRIP)) {
-            PageTabs(
-                pages = NAV.section("chat")?.pages.orEmpty(),
-                selectedId = state.chatPage,
-                onSelect = { state.chatPage = it.id },
-                underTopChrome = false,
-                surface = NAV.stripSurface("chat", state.dark),
-            )
         }
     }
 }
@@ -360,16 +386,17 @@ private fun Page(v: SearchConfig.Vertical, kind: String) {
 
 /** The hamburger menu: Categories (every vertical) and Saved Items. */
 @Composable
-private fun Categories(state: SearchState) {
+private fun Categories(state: SearchState, close: () -> Unit) {
     val g = LocalGlass.current
     MenuTitle(stringResource(R.string.drawer_title))
     state.cfg.verticals.forEach { v ->
-        MenuItem(v.title, Tags.drawer(v.id), icon = { DeclaredIcon(v.icon, Metrics.icon, g.text) }) { state.open(v.id) }
+        MenuItem(v.title, Tags.drawer(v.id), icon = { DeclaredIcon(v.icon, Metrics.icon, g.text) }) { state.open(v.id); close() }
     }
     Hairline(Modifier.padding(vertical = Metrics.gutter))
     MenuItem(stringResource(R.string.saved_items), Tags.drawer("saved"), icon = { Ph(R.drawable.ph_star, Metrics.icon, g.text) }) {
         state.saved = true
         state.menu = null
+        close()
     }
 }
 

@@ -73,12 +73,7 @@
   },
   "styles": ["fleet", "search-html"],
   "variants": {
-    "_doc": "N8 THE declared exceptions to the fleet's island look. An app named here draws the lib's variant (ui.style = its style, the island through the variant's call) instead of BottomNavIsland; nobody else may declare a style other than fleet or reference the variant's symbols, so every other app stays locked to SuperApp's island (N7). Adding an entry needs the OWNER's explicit request, named in the reason; the variant lives in libs:bottomnav, never in the app.",
-    "ac_cloud-search": {
-      "style": "search-html",
-      "call": "SearchHtmlIsland(",
-      "reason": "Owner's explicit request (2026-10): Cloud Search keeps the bottom nav of his own HTML mockup (cloud-search-mockup.html .bottom-nav, #797) that #868/#913 replaced with the fleet island; drawn by libs:bottomnav's SearchHtmlIsland, not by the app."
-    }
+    "_doc": "N8 THE declared exceptions to the fleet's island look. An app named here draws the lib's variant (ui.style = its style, the island through the variant's call) instead of BottomNavIsland; nobody else may declare a style other than fleet or reference the variant's symbols, so every other app stays locked to SuperApp's island (N7). No app is a declared exception today: Cloud Search left its search-html variant for the shared nav pattern (#1161). Adding an entry needs the OWNER's explicit request, named in the reason; the variant lives in libs:bottomnav, never in the app."
   },
   "variant_symbols": ["SearchHtmlIsland", "SearchHtmlTokens", "NavStyle.SearchHtml"],
   "web": {

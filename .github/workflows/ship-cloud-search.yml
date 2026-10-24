@@ -51,7 +51,11 @@ on:
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/model-catalogue/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-bottom/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
+      - "ab_cloud-libs-shared/libs/theme-background/**"
       - "ac_cloud-search/**"
       - "!ac_cloud-search/web/**"
 permissions:

@@ -27,14 +27,14 @@
 #   S9  (#797) the Phosphor icon set is one list: app/tools/phosphor.json, the generated
 #       res/drawable/ph_*.xml (each carrying the generator's header) and every R.drawable.ph_* the
 #       Kotlin names agree, both ways.
-#   S10 (#797, #868) Cloud Search draws its OWN chrome (the owner's mockup: glass theme, top bar), so
-#       the fleet kit (libs:ui-kit) is not linked or imported; its bottom nav and sub-page strips are
-#       the fleet's: libs:bottomnav is linked, Glass.kt draws no BottomNav/SubNav, SearchShell draws
-#       BottomNavIsland and the vertical pages PageTabs from the NavDecl build.json::ui bakes, the app
-#       bakes UI_BOTTOM_NAV/UI_SECTIONS_B64/UI_DEFAULT_SECTION/UI_STYLE. The island is the lib's declared
-#       search-html variant (the owner's mockup .bottom-nav, nav-shape.json::variants), SearchHtmlIsland. #913: the island is Web Search, Cloud
-#       Search, Chat, Agents, Reports; Web Search's pages are search.verticals (less the assistant), each
-#       with its subpages one strip lower, Chat is the assistant vertical, and every section icon is a
+#   S10 (#797, #868, #1161) Cloud Search draws its OWN glass theme and pages, so the fleet kit (libs:ui-kit)
+#       is not linked or imported; its chrome is the fleet's shared nav pattern: libs:bottomnav is linked
+#       (NavDecl), Glass.kt draws no BottomNav/SubNav, SearchShell draws NavBarBottomHost (libs:nav-bar-bottom),
+#       NavBarTopFirstRowScaffold (libs:nav-bar-top-first-row, Profile on the fleet Account launcher) and the
+#       strips with NavBarTopSecondRow (libs:nav-bar-top-second-row) from the NavDecl build.json::ui bakes, the app
+#       bakes UI_BOTTOM_NAV/UI_SECTIONS_B64/UI_DEFAULT_SECTION/UI_STYLE (style fleet: the search-html variant is gone).
+#       #913: the island is Me, LLC, Chat, Agents, Reports; Me's and LLC's pages are search.verticals (less the
+#       assistant), each with its subpages one strip lower, Chat is the assistant vertical, and every section icon is a
 #       branch of IconCatalog.
 #   S11 (#803) the app icon is the mockup's central nav icon: res/drawable/ic_launcher_foreground.xml
 #       and ic_launcher_monochrome.xml are exactly what app/tools/phosphor2vd.py makes of
@@ -236,23 +236,25 @@ for p in kts:
 glass = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/Glass.kt"))
 if re.search(r"fun\s+(BottomNav|SubNav)\b", glass):
     bad.append("S10 Glass.kt draws its own BottomNav/SubNav — the bar is libs:bottomnav's BottomNavIsland, the strip its PageTabs")
-# The island is the lib's declared search-html variant (the owner's mockup bar; nav-shape.json::variants), fed by the baked NavDecl.
-if not re.search(r"SearchHtmlIsland\(\s*entries = NAV\.islandEntries", shell):
-    bad.append("S10 SearchShell does not draw SearchHtmlIsland from the baked NavDecl (NAV.islandEntries)")
-if re.search(r"\bBottomNavIsland\s*\(", shell):
-    bad.append("S10 SearchShell also draws the fleet BottomNavIsland - one island, the declared variant")
+# #1161 the bar is libs:nav-bar-bottom's NavBarBottomHost (the shared pattern, no variant), fed by the baked NavDecl.
+if not re.search(r"NavBarBottomHost\(\s*entries = NAV\.islandEntries", shell):
+    bad.append("S10 SearchShell does not draw NavBarBottomHost from the baked NavDecl (NAV.islandEntries)")
+if re.search(r"\b(BottomNavIsland|SearchHtmlIsland)\s*\(", shell):
+    bad.append("S10 SearchShell also draws BottomNavIsland / SearchHtmlIsland - one bar, the shared NavBarBottomHost")
+if not re.search(r"NavBarTopFirstRowScaffold\(", shell) or "rememberAccountLauncher()" not in shell:
+    bad.append("S10 SearchShell does not draw the shared first row (NavBarTopFirstRowScaffold) with Profile on the fleet Account launcher")
 if "NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION, BuildConfig.UI_STYLE)" not in shell:
     bad.append("S10 SearchShell's NAV is not NavDecl.fromBuildConfig of the four baked fields")
-if (bj.get("ui") or {}).get("style") != "search-html":
-    bad.append("S10 build.json ui.style is not search-html - the owner's mockup bar is the declared exception")
+if (bj.get("ui") or {}).get("style") not in (None, "", "fleet"):
+    bad.append("S10 build.json ui.style is not fleet - Cloud Search wears the shared nav pattern (#1161), no variant")
 vpages = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/VerticalPages.kt"))
-if not re.search(r"PageTabs\(\s*pages = NAV\.section\(state\.sectionOf\(v\.id\)\)\?\.page\(v\.id\)", vpages):
-    bad.append("S10 the vertical pages do not draw their sub-pages with PageTabs from the vertical's page in the NavDecl")
-if not re.search(r"PageTabs\(\s*pages = NAV\.section\(section\)", shell) or not re.search(r"in state\.verticalSections -> VerticalsSection\(state, state\.section, v\)", shell):
-    bad.append("S10 SearchShell does not draw Me's and LLC's verticals with PageTabs from NAV.section(section)")
-# #913b Chat holds Search and the fleet searches that were the Cloud page: its strip is PageTabs, its pages dispatch to CloudPage.
-if not re.search(r"PageTabs\(\s*pages = NAV\.section\(\"chat\"\)", shell) or "else CloudPage(state, state.chatPage)" not in shell:
-    bad.append("S10 SearchShell does not draw Chat's strip (Search + Apps, Messages, Code) with PageTabs and CloudPage")
+if not re.search(r"NavBarTopSecondRow\(\s*pages = NAV\.section\(state\.sectionOf\(v\.id\)\)\?\.page\(v\.id\)", vpages):
+    bad.append("S10 the vertical pages do not draw their sub-pages with NavBarTopSecondRow from the vertical's page in the NavDecl")
+if not re.search(r"NavBarTopSecondRow\(\s*pages = NAV\.section\(section\)", shell) or not re.search(r"in state\.verticalSections -> VerticalsSection\(state, state\.section, v\)", shell):
+    bad.append("S10 SearchShell does not draw Me's and LLC's verticals with NavBarTopSecondRow from NAV.section(section)")
+# #913b Chat holds Search and the fleet searches that were the Cloud page: its strip is NavBarTopSecondRow, its pages dispatch to CloudPage.
+if not re.search(r"NavBarTopSecondRow\(\s*pages = NAV\.section\(\"chat\"\)", shell) or "else CloudPage(state, state.chatPage)" not in shell:
+    bad.append("S10 SearchShell does not draw Chat's strip (Search + Apps, Messages, Code) with NavBarTopSecondRow and CloudPage")
 cloudp = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/CloudPages.kt"))
 for kind, fn in (("messages", "MessagesPage"), ("code", "CodePage")):
     if not re.search(r'"%s" -> %s\(state, cloud\)' % (kind, fn), cloudp):
@@ -444,17 +446,17 @@ mutate fleet-nav-unlinked build.json 's.replace("\"libs:text-tools\",\n        \
 mutate fleet-kit-linked build.json 's.replace("\"libs:text-tools\",\n        \"libs:bottomnav\",", "\"libs:text-tools\",\n        \"libs:bottomnav\",\n        \"libs:ui-kit\",")' "S10 build.json links libs:ui-kit"
 mutate fleet-kit-imported "$J/ui/SearchTheme.kt" 's.replace("import com.diegonmarcos.cloudsearch.R\n", "import com.diegonmarcos.cloudsearch.R\nimport com.diegonmarcos.superapp.uikit.KitCard\n")' "S10 SearchTheme.kt imports the fleet uikit"
 mutate own-nav-back "$J/ui/Glass.kt" 's + "\n@androidx.compose.runtime.Composable\nfun BottomNav() {}\n"' "S10 Glass.kt draws its own BottomNav/SubNav"
-mutate island-dropped "$J/ui/SearchShell.kt" 's.replace("SearchHtmlIsland(\n                            entries = NAV.islandEntries", "NavRail(\n                            entries = NAV.islandEntries")' "S10 SearchShell does not draw SearchHtmlIsland"
-mutate fleet-island-back "$J/ui/SearchShell.kt" 's + "\nfun again() { BottomNavIsland(entries = e, selectedId = null, onSelect = {}) }\n"' "S10 SearchShell also draws the fleet BottomNavIsland"
-mutate style-undeclared build.json 's.replace("\"style\": \"search-html\",", "\"style\": \"fleet\",")' "S10 build.json ui.style is not search-html"
+mutate island-dropped "$J/ui/SearchShell.kt" 's.replace("NavBarBottomHost(\n                    entries = NAV.islandEntries", "NavRail(\n                    entries = NAV.islandEntries")' "S10 SearchShell does not draw NavBarBottomHost"
+mutate fleet-island-back "$J/ui/SearchShell.kt" 's + "\nfun again() { BottomNavIsland(entries = e, selectedId = null, onSelect = {}) }\n"' "S10 SearchShell also draws BottomNavIsland"
+mutate style-undeclared build.json 's.replace("\"default_section\": \"chat\"", "\"style\": \"search-html\",\n    \"default_section\": \"chat\"")' "S10 build.json ui.style is not fleet"
 mutate style-not-baked app/build.gradle 's.replace("\"UI_STYLE\"", "\"UI_STYL\"")' "S10 app/build.gradle does not bake UI_STYLE"
-mutate strip-dropped "$J/ui/VerticalPages.kt" 's.replace("PageTabs(\n                pages = NAV.section(state.sectionOf", "SubNav(\n                pages = NAV.section(state.sectionOf")' "S10 the vertical pages do not draw their sub-pages with PageTabs"
-mutate web-strip-dropped "$J/ui/SearchShell.kt" 's.replace("PageTabs(\n                pages = NAV.section(section)", "SubNav(\n                pages = NAV.section(section)")' "S10 SearchShell does not draw Me's and LLC's"
-mutate chat-strip-dropped "$J/ui/SearchShell.kt" 's.replace("PageTabs(\n                pages = NAV.section(\"chat\")", "SubNav(\n                pages = NAV.section(\"chat\")")' "S10 SearchShell does not draw Chat's strip"
+mutate strip-dropped "$J/ui/VerticalPages.kt" 's.replace("NavBarTopSecondRow(\n                pages = NAV.section(state.sectionOf", "SubNav(\n                pages = NAV.section(state.sectionOf")' "S10 the vertical pages do not draw their sub-pages with NavBarTopSecondRow"
+mutate web-strip-dropped "$J/ui/SearchShell.kt" 's.replace("NavBarTopSecondRow(\n                pages = NAV.section(section)", "SubNav(\n                pages = NAV.section(section)")' "S10 SearchShell does not draw Me's and LLC's"
+mutate chat-strip-dropped "$J/ui/SearchShell.kt" 's.replace("NavBarTopSecondRow(\n                pages = NAV.section(\"chat\")", "SubNav(\n                pages = NAV.section(\"chat\")")' "S10 SearchShell does not draw Chat's strip"
 mutate cloud-page-unreachable "$J/ui/SearchShell.kt" 's.replace("else CloudPage(state, state.chatPage)", "else Unit")' "S10 SearchShell does not draw Chat's strip"
 mutate messages-unreachable "$J/ui/CloudPages.kt" 's.replace("\"messages\" -> MessagesPage(state, cloud)", "\"messagez\" -> MessagesPage(state, cloud)")' "S10 CloudPage does not open messages"
 mutate ask-lands-elsewhere "$J/ui/SearchShell.kt" 's.replace("openSection(\"chat\")\n        chatPage = chatVertical", "openSection(\"chat\")")' "S10 SearchState.ask does not open Chat on Search"
-mutate vertical-in-both build.json 's.replace("\"id\": \"commercial\",\n            \"label\": \"Commercial\"\n          }", "\"id\": \"commercial\",\n            \"label\": \"Commercial\"\n          },\n          {\n            \"id\": \"house\",\n            \"label\": \"House\"\n          }")' "S10 ui.sections[me] and [llc] pages are not search.verticals"
+mutate vertical-in-both build.json 's.replace("\"id\": \"commercial\",\n            \"label\": \"Commercial\",\n            \"icon\": \"account_balance\"\n          }", "\"id\": \"commercial\",\n            \"label\": \"Commercial\",\n            \"icon\": \"account_balance\"\n          },\n          {\n            \"id\": \"house\",\n            \"label\": \"House\"\n          }")' "S10 ui.sections[me] and [llc] pages are not search.verticals"
 mutate chat-section-dropped build.json 's.replace("\"id\": \"chat\",\n        \"label\": \"AI\"", "\"id\": \"chats\",\n        \"label\": \"AI\"")' "S10 ui.sections are not exactly the island"
 mutate section-icon-misspelt build.json 's.replace("\"icon\": \"agents\"", "\"icon\": \"agentz\"")' "S3 ui.sections agents icon"
 mutate agents-page-dropped build.json 's.replace("\"id\": \"runs\",\n            \"label\": \"Runs\"", "\"id\": \"run\",\n            \"label\": \"Runs\"")' "S10 ui.sections[agents] pages"

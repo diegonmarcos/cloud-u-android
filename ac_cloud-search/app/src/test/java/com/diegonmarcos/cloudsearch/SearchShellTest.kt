@@ -227,38 +227,26 @@ class SearchShellTest {
     }
 
     /**
-     * The owner's mockup bar (ui.style = "search-html", nav-shape.json::variants), restored as a variant of
-     * libs:bottomnav: it renders with the mockup's geometry at 360 dp, every label fits its 50 dp cell whichever
-     * item is selected (the fleet island's two-word labels once sent the lib's label fitting into a layout
-     * loop that never settled), and the active item is the only one that shows its label.
+     * #1161 the shared nav pattern: the first row (hamburger, title island, AI, Profile top-right, Configs), the bottom nav of
+     * the five declared sections (each item shows its label at rest) and the second row of the section's pages, with the
+     * search field of the page still there and typeable.
      */
-    @Test fun theMockupBottomNavRendersAndItsLabelsFit() {
+    @Test fun theSharedNavPatternRendersWithTheSearchFieldInside() {
         launch()
-        assertEquals(com.diegonmarcos.superapp.bottomnav.NavStyle.SearchHtml, com.diegonmarcos.cloudsearch.ui.NAV.style)
-        waitFor("bottomnav_island")
-        val bounds = { tag: String -> compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot }
-        val island = bounds("bottomnav_island")
-        assertEquals("the mockup's .bottom-nav is 60 dp high", 60f, island.height, 0.5f)
+        assertEquals(com.diegonmarcos.superapp.bottomnav.NavStyle.Fleet, com.diegonmarcos.cloudsearch.ui.NAV.style)
+        waitFor(Tags.nav("me"))
+        compose.onNodeWithTag(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.ROW).assertExists()
+        for (tag in listOf(Tags.MENU, Tags.ISLAND, Tags.PROFILE, Tags.CONFIGS)) compose.onNodeWithTag(tag).assertExists()
         val ids = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
         assertEquals(listOf("me", "llc", "chat", "agents", "reports"), ids)
-        for (selected in ids) {
-            compose.onNodeWithTag(Tags.nav(selected)).performClick()
-            compose.waitForIdle()
-            for (id in ids) {
-                val cell = bounds(Tags.nav(id))
-                assertEquals("cell $id is the mockup's 50 dp circle", 50f, cell.width, 0.5f)
-                val label = bounds("bottomnav_label_$id")
-                assertTrue("label $id fits its cell with $selected selected: $label in $cell", label.left >= cell.left - 0.5f && label.right <= cell.right + 0.5f)
-                val out = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
-                compose.onNodeWithTag("bottomnav_label_$id", useUnmergedTree = true).fetchSemanticsNode()
-                    .config[androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult].action!!.invoke(out)
-                assertTrue("label $id is wider than its cell with $selected selected", out.single().size.width <= cell.width)
-                assertFalse("label $id is ellipsized with $selected selected", out.single().isLineEllipsized(0))
-            }
-            assertEquals(selected, state.section)
-        }
-        // The fleet island is not drawn beside it: one bar, 5 cells.
-        assertEquals(1, compose.onAllNodesWithTag("bottomnav_island", useUnmergedTree = true).fetchSemanticsNodes().size)
+        compose.onNodeWithTag(com.diegonmarcos.superapp.navbarbottom.BottomTags.BAR).assertExists()
+        for (id in ids) compose.onNodeWithTag(Tags.nav(id)).assertExists()
+        openVertical("house")
+        waitFor(Tags.WEB_STRIP)
+        for (v in listOf("house", "jobs", "groceries", "things")) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        waitFor(Tags.SEARCH_BOX)
+        compose.onNodeWithTag(Tags.SEARCH_BOX).performTextInput("Wohnung")
+        compose.onNodeWithTag(Tags.SEARCH_BOX).assertTextContains("Wohnung", substring = true)
     }
 
     /** The five destinations route, and each shows its top tabs (Me's and LLC's verticals, Chat's Search + fleet searches, Agents'). */
@@ -285,7 +273,7 @@ class SearchShellTest {
     @Test fun themeToggleFlipsAndIsRemembered() {
         launch()
         val before = state.dark
-        compose.onNodeWithTag(Tags.PROFILE).performClick()
+        compose.onNodeWithTag(Tags.CONFIGS).performClick()
         waitFor(Tags.THEME)
         compose.onNodeWithTag(Tags.THEME).performClick()
         compose.runOnIdle { assertEquals(!before, state.dark) }
@@ -485,7 +473,7 @@ class SearchShellTest {
 
     @Test fun thingsSettingsKeepTheCityAndClampTheRadius() {
         launch()
-        compose.onNodeWithTag(Tags.PROFILE).performClick()
+        compose.onNodeWithTag(Tags.CONFIGS).performClick()
         waitFor(Tags.THINGS_CITY)
         compose.onNodeWithTag(Tags.THINGS_CITY).performTextInput(" Köln ")
         compose.onNodeWithTag(Tags.THINGS_RADIUS).performTextInput("500")

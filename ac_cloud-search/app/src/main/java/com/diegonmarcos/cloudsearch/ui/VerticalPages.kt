@@ -45,7 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.cloudsearch.R
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.cloudsearch.core.Analysis
 import com.diegonmarcos.cloudsearch.core.Calculators
 import com.diegonmarcos.cloudsearch.core.FeedItem
@@ -116,10 +116,11 @@ fun LazyListScope.pageHeader(state: SearchState, v: SearchConfig.Vertical) {
                 }
             }
             // #868 the fleet's page-tab strip, from build.json::ui.sections[].pages.
-            if (v.subpages.size > 1) PageTabs(
+            if (v.subpages.size > 1) NavBarTopSecondRow(
                 pages = NAV.section(state.sectionOf(v.id))?.page(v.id)?.pages.orEmpty(),
                 selectedId = state.subpageOf(v),
                 onSelect = { state.showSubpage(v, it.id) },
+                dark = state.dark,
                 underTopChrome = false,
                 // The vertical's sub-strip: its page's background, else its section's ("theme" in build.json).
                 surface = NAV.stripSurface(state.sectionOf(v.id), state.dark, v.id),

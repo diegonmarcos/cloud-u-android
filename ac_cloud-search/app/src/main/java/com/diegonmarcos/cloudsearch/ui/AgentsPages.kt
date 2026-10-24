@@ -45,7 +45,7 @@ import com.diegonmarcos.cloudsearch.core.agents.ReportItem
 import com.diegonmarcos.cloudsearch.core.agents.RunRecord
 import com.diegonmarcos.cloudsearch.core.agents.Template
 import com.diegonmarcos.cloudsearch.data.Account
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -96,11 +96,12 @@ private val listPadding = PaddingValues(start = Metrics.gutter, end = Metrics.gu
 /** The Agents section: a strip of its four pages over the selected one (Agents opens the list, or the agent tapped). */
 @Composable
 fun AgentsSection(state: SearchState) {
-    Column(Modifier.fillMaxSize().padding(top = Metrics.stripTop)) {
-        PageTabs(
+    Column(Modifier.fillMaxSize()) {
+        NavBarTopSecondRow(
             pages = NAV.section("agents")?.pages.orEmpty(),
             selectedId = state.agentsPage,
             onSelect = { if (it.id == state.agentsPage) state.agentOpen = null; state.agentsPage = it.id },
+            dark = state.dark,
             underTopChrome = false,
             surface = NAV.stripSurface("agents", state.dark),
         )

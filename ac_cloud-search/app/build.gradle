@@ -182,6 +182,10 @@ dependencies {
     // glass theme, top bar; Phosphor icons in res/drawable). #868 its bottom nav and sub-page strips
     // are the fleet's: libs:bottomnav (BottomNavIsland, PageTabs), declared by build.json::ui.
     implementation project(':libs:bottomnav')
+    implementation project(':libs:nav-bar-bottom')
+    implementation project(':libs:nav-bar-top-first-row')
+    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:theme-background')
     // The fleet Account's OpenRouter token, read over the ITextTools binder (a contract lib).
     implementation project(':libs:text-tools')
     // Everything computed or parsed: plain JVM, mutation-tested on its own (core/build.gradle).

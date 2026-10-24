@@ -109,6 +109,10 @@
         "libs:core",
         "libs:text-tools",
         "libs:bottomnav",
+        "libs:nav-bar-bottom",
+        "libs:nav-bar-top-first-row",
+        "libs:nav-bar-top-second-row",
+        "libs:theme-background",
         "libs:ai",
         "search-core",
         "libs:model-catalogue"
@@ -153,6 +157,26 @@
       "_doc": "#868 the fleet's bottom island (BottomNavIsland) and page-tab strip (PageTabs), and NavDecl, which reads ui.bottom_nav/ui.sections as baked into BuildConfig.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
+    },
+    "libs:nav-bar-bottom": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
+      "type": "library",
+      "_doc": "#1161 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-first-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+      "type": "library",
+      "_doc": "#1161 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-second-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+      "type": "library",
+      "_doc": "#1161 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1161 shared navigation and theme design, shared BY REFERENCE."
     },
     "libs:model-catalogue": {
       "_doc": "The model catalogue (Chat > Search > the model chip): the curated selection (its assets models/catalogue.json, merged into this app's), the OpenRouter pricing repository, the section filter and the Compose page, moved out of this app (search-core models/, app models/) so Cloud Code's Chat shows the same catalogue (A0 Code only) from one implementation. This app supplies the theme, the words, the network door and the cache dir (models/ModelCatalogueSource.kt, models/ModelCataloguePage.kt).",
@@ -2597,62 +2621,66 @@
           {
             "id": "house",
             "label": "House",
+            "icon": "home",
             "pages": [
               {
                 "id": "listing",
                 "label": "Listing",
-                "icon": ""
+                "icon": "description"
               },
               {
                 "id": "analysis",
                 "label": "Analysis",
-                "icon": ""
+                "icon": "insights"
               },
               {
                 "id": "feed",
                 "label": "Feed",
-                "icon": ""
+                "icon": "rss_feed"
               },
               {
                 "id": "calculators",
                 "label": "Calculators",
-                "icon": ""
+                "icon": "table_chart"
               }
             ]
           },
           {
             "id": "jobs",
             "label": "Jobs",
+            "icon": "work",
             "pages": [
               {
                 "id": "listing",
                 "label": "Listing",
-                "icon": ""
+                "icon": "description"
               },
               {
                 "id": "analysis",
                 "label": "Analysis",
-                "icon": ""
+                "icon": "insights"
               },
               {
                 "id": "feed",
                 "label": "Feed",
-                "icon": ""
+                "icon": "rss_feed"
               },
               {
                 "id": "calculators",
                 "label": "Calculators",
-                "icon": ""
+                "icon": "table_chart"
               }
             ]
           },
           {
             "id": "groceries",
-            "label": "Groceries"
+            "label": "Groceries",
+            "icon": "restaurant"
           },
           {
             "id": "things",
-            "label": "Things"
+            "label": "Things",
+            "icon": "inventory_2"
           }
         ]
       },
@@ -2664,19 +2692,23 @@
         "pages": [
           {
             "id": "commercial",
-            "label": "Commercial"
+            "label": "Commercial",
+            "icon": "account_balance"
           },
           {
             "id": "business",
-            "label": "Business"
+            "label": "Business",
+            "icon": "rocket_launch"
           },
           {
             "id": "suppliers",
-            "label": "Suppliers"
+            "label": "Suppliers",
+            "icon": "inventory_2"
           },
           {
             "id": "services",
-            "label": "Services"
+            "label": "Services",
+            "icon": "build"
           }
         ]
       },
@@ -2688,19 +2720,23 @@
         "pages": [
           {
             "id": "search",
-            "label": "Search"
+            "label": "Search",
+            "icon": "search"
           },
           {
             "id": "apps",
-            "label": "Apps"
+            "label": "Apps",
+            "icon": "apps"
           },
           {
             "id": "messages",
-            "label": "Messages"
+            "label": "Messages",
+            "icon": "forum"
           },
           {
             "id": "code",
-            "label": "Code"
+            "label": "Code",
+            "icon": "code"
           }
         ]
       },
@@ -2712,19 +2748,23 @@
         "pages": [
           {
             "id": "agents",
-            "label": "Agents"
+            "label": "Agents",
+            "icon": "smart_toy"
           },
           {
             "id": "runs",
-            "label": "Runs"
+            "label": "Runs",
+            "icon": "schedule"
           },
           {
             "id": "templates",
-            "label": "Templates"
+            "label": "Templates",
+            "icon": "description"
           },
           {
             "id": "settings",
-            "label": "Settings"
+            "label": "Settings",
+            "icon": "settings"
           }
         ]
       },
@@ -2735,12 +2775,12 @@
         "pages": [
           {
             "id": "reports",
-            "label": "Reports"
+            "label": "Reports",
+            "icon": "assessment"
           }
         ]
       }
     ],
-    "style": "search-html",
     "default_section": "chat"
   },
   "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
