@@ -67,7 +67,8 @@ class TasksPageTest {
         launch()
         compose.onNodeWithTag(TopBarTags.MENU).assertIsDisplayed()
         compose.onNodeWithTag(TopBarTags.AI).assertIsDisplayed()
-        compose.onNodeWithTag(TopBarTags.SETTINGS).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.ACCOUNT).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.CONFIGS).assertIsDisplayed()
         compose.onNodeWithTag(BottomNavTags.item("tasks")).assertIsDisplayed()
         compose.onNodeWithTag(BottomNavTags.item("calendar")).assertIsDisplayed()
         compose.onNodeWithTag(BottomNavTags.item("settings")).assertDoesNotExist()
@@ -224,17 +225,16 @@ class TasksPageTest {
 
     // ── Profile, Settings, theme, agent ─────────────────────────────────────────────────────────────────
 
-    @Test fun `the Settings button offers Account and Configs`() {
+    @Test fun `Profile and Configs are plain icons in the first row (#1154)`() {
         launch()
-        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
-        compose.onNodeWithTag(TopBarTags.settingsItem("account")).assertIsDisplayed()
-        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.ACCOUNT).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.CONFIGS).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.SETTINGS).assertDoesNotExist()
     }
 
     @Test fun `Settings then Configs opens the declared strip, and the Tasks island item returns`() {
         launch()
-        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
-        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
+        compose.onNodeWithTag(TopBarTags.CONFIGS).performClick()
         compose.waitForIdle()
         for (id in listOf("appearance", "agent", "inbox", "feeds")) compose.onNodeWithTag(PageTabsTags.tab(id)).assertExists()
         compose.onNodeWithTag(SettingsTags.APPEARANCE).assertIsDisplayed()
@@ -245,8 +245,7 @@ class TasksPageTest {
 
     @Test fun `choosing Dark in Appearance is saved`() {
         val env = launch()
-        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
-        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
+        compose.onNodeWithTag(TopBarTags.CONFIGS).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(KitPartTags.segment(SettingsTags.THEME, "dark")).performClick()
         compose.waitForIdle()
@@ -258,8 +257,7 @@ class TasksPageTest {
 
     @Test fun `the Agent page saves its declaration and says no backend is deployed after a run that found none`() {
         val env = launch()
-        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
-        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
+        compose.onNodeWithTag(TopBarTags.CONFIGS).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(PageTabsTags.tab("agent")).performClick()
         compose.waitForIdle()

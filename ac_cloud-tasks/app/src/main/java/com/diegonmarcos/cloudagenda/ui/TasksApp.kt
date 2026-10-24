@@ -40,14 +40,15 @@ import com.diegonmarcos.superapp.ai.AiChatState
 import com.diegonmarcos.superapp.ai.AiModel
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.cloudagenda.R
-import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
-import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.coroutines.Dispatchers
@@ -136,7 +137,7 @@ fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (
     val content: @Composable () -> Unit = {
         Column(Modifier.fillMaxSize()) {
             if (pages.size > 1) {
-                PageTabs(
+                NavBarTopSecondRow(
                     pages = pages, selectedId = page, onSelect = { pageOf[section] = it.id },
                     underTopChrome = false, surface = nav.stripSurface(section, dark, page),
                 )
@@ -157,15 +158,18 @@ fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (
         }
     }
 
-    BottomNavHost(
+    NavBarBottomHost(
         entries = nav.islandEntries { IconCatalog.painter(it) },
         selectedId = if (onIsland) section else null,
         onSelect = { entry -> go(entry.id) },
+        dark = dark,
     ) {
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
-            if (topBar == null) content() else AppTopBarScaffold(
-                decl = topBar,
+            // #1157 the first row is libs:nav-bar-top-first-row's (Profile top-right launches Cloud Account, the title island lists the section and its pages).
+            if (topBar == null) content() else NavBarTopFirstRowScaffold(
                 title = stringResource(R.string.app_name),
+                hierarchy = current?.let { titleHierarchy(it, page) }.orEmpty(),
+                onNavigate = { e -> go(e.sectionId); if (e.depth > 0) pageOf[e.sectionId] = e.id },
                 onAccount = rememberAccountLauncher(),
                 onConfigs = { if (section != Ids.SETTINGS) returnTo = section; go(Ids.SETTINGS) },
                 aiPanel = { AiPanel(env.chat) },

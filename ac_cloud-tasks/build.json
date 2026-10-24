@@ -41,6 +41,10 @@
         "libs:core",
         "libs:updater",
         "libs:bottomnav",
+        "libs:nav-bar-bottom",
+        "libs:nav-bar-top-first-row",
+        "libs:nav-bar-top-second-row",
+        "libs:theme-background",
         "libs:ui-kit",
         "libs:ai"
       ]
@@ -82,6 +86,26 @@
       "_doc": "#868 the fleet's bottom island (BottomNavIsland) and page-tab strip (PageTabs), and NavDecl, which reads ui.bottom_nav/ui.sections as baked into BuildConfig.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
+    },
+    "libs:nav-bar-bottom": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
+      "type": "library",
+      "_doc": "#1157 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-first-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+      "type": "library",
+      "_doc": "#1157 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-second-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+      "type": "library",
+      "_doc": "#1157 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1157 shared navigation and theme design, shared BY REFERENCE."
     },
     "libs:ui-kit": {
       "_doc": "The Compose kit: CloudKitTheme and the palette roles every page paints with, the settings rows, chips, segmented picks and banners. Shared BY REFERENCE.",
@@ -216,7 +240,8 @@
         "pages": [
           {
             "id": "tasks",
-            "label": "Tasks"
+            "label": "Tasks",
+            "icon": "checklist"
           }
         ]
       },
@@ -228,15 +253,18 @@
         "pages": [
           {
             "id": "events",
-            "label": "Events"
+            "label": "Events",
+            "icon": "event"
           },
           {
             "id": "calendar",
-            "label": "Calendar"
+            "label": "Calendar",
+            "icon": "calendar_month"
           },
           {
             "id": "invites",
-            "label": "Invites"
+            "label": "Invites",
+            "icon": "mark_email_unread"
           }
         ]
       },
@@ -248,19 +276,23 @@
         "pages": [
           {
             "id": "appearance",
-            "label": "Appearance"
+            "label": "Appearance",
+            "icon": "palette"
           },
           {
             "id": "agent",
-            "label": "Agent"
+            "label": "Agent",
+            "icon": "smart_toy"
           },
           {
             "id": "inbox",
-            "label": "Inbox"
+            "label": "Inbox",
+            "icon": "inbox"
           },
           {
             "id": "feeds",
-            "label": "Feeds"
+            "label": "Feeds",
+            "icon": "rss_feed"
           }
         ]
       }

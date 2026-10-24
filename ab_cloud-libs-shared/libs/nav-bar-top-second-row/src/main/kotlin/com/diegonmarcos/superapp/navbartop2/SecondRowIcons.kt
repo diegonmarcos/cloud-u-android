@@ -12,6 +12,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 public object SecondRowIcons {
     private val table: Map<String, ImageVector> by lazy {
         mapOf(
+        "event" to Icons.Outlined.Event,
+        "calendar_month" to Icons.Outlined.CalendarMonth,
+        "palette" to Icons.Outlined.Palette,
         "inbox" to Icons.Outlined.Inbox,
         "rss_feed" to Icons.Outlined.RssFeed,
         "checklist" to Icons.Outlined.Checklist,
