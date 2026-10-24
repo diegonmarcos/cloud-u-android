@@ -19,8 +19,11 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class SubPageIconGuardTest {
     private val apps = listOf(
-        "ac_cloud-mail", "ac_cloud-me", "ac_cloud-drive", "ac_cloud-nav", "ac_cloud-account", "ac_cloud-store", "ac_cloud-c3", "ac_cloud-tasks", "ac_cloud-contacts", "ac_cloud-news", "ac_cloud-writer", "ac_cloud-search", "ac_cloud-browser", "ac_cloud-dialer", "ac_cloud-tools-small-llms", "ac_cloud-calc", "ac_cloud-superintel",
+        "ac_cloud-mail", "ac_cloud-me", "ac_cloud-drive", "ac_cloud-nav", "ac_cloud-account", "ac_cloud-store", "ac_cloud-c3", "ac_cloud-tasks", "ac_cloud-contacts", "ac_cloud-news", "ac_cloud-writer", "ac_cloud-search", "ac_cloud-browser", "ac_cloud-dialer",
     )
+
+    /** Apps whose bottom bar draws from the catalog (#1160) but that declare few or no sub-pages: held on their section icons only. */
+    private val barOnlyApps = listOf("ac_cloud-tools-small-llms", "ac_cloud-calc", "ac_cloud-superintel")
 
     private fun buildJson(app: String): File {
         var dir: File? = File("").absoluteFile
@@ -49,7 +52,8 @@ class SubPageIconGuardTest {
     }
 
     @Test fun `every bottom-bar section icon of every app is in the shared catalog (#1160)`() {
-        for (app in apps) {
+        for (app in apps + barOnlyApps) {
+            assertEquals("$app: icon-less declarations", emptyList<String>(), decl(app).iconProblems())
             val unknown = decl(app).sections.filterNot { com.diegonmarcos.superapp.uiicons.UiIcons.has(it.icon) }.map { "${it.id}='${it.icon}'" }
             assertEquals("$app: sections whose icon libs:ui-icons does not hold", emptyList<String>(), unknown)
         }
