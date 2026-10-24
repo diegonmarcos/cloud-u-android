@@ -34,6 +34,20 @@ class AiChatState(private val host: AiHost) {
     fun fresh() { session = host.newSession(model, System.currentTimeMillis()); error = null; citations = emptyList(); streaming = "" }
     fun open(s: AiSession) { session = s; error = null; citations = emptyList(); streaming = ""; if (s.model.isNotBlank()) model = s.model }
 
+    /** Renames a stored session; the open one follows. A blank title is ignored. */
+    fun rename(id: String, title: String) {
+        val t = title.trim()
+        if (t.isEmpty()) return
+        host.renameSession(id, t)
+        if (session.id == id) session = session.copy(title = t)
+    }
+
+    /** Deletes a stored session; deleting the open one starts a fresh chat. */
+    fun remove(id: String) {
+        host.deleteSession(id)
+        if (session.id == id) fresh()
+    }
+
     /** The user's answer to the waiting consent card. */
     fun decide(allow: Boolean) {
         val d = decision
@@ -95,6 +109,12 @@ object AiTags {
     const val WEB = "ai_web_toggle"
     const val AGENT = "ai_agent"
     const val SESSIONS = "ai_sessions"
+    const val DRAWER = "ai_drawer"
+    const val DRAWER_NEW = "ai_drawer_new"
+    fun rename(id: String) = "ai_session_rename_$id"
+    fun delete(id: String) = "ai_session_delete_$id"
+    const val RENAME_FIELD = "ai_rename_field"
+    const val RENAME_SAVE = "ai_rename_save"
     const val CONSENT = "ai_consent"
     const val CONSENT_ALLOW = "ai_consent_allow"
     const val CONSENT_DENY = "ai_consent_deny"

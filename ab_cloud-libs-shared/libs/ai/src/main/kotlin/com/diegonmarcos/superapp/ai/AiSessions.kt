@@ -12,6 +12,8 @@ interface AiSessionStore {
     fun all(): List<AiSession>
     fun put(s: AiSession)
     fun delete(id: String)
+    /** Gives a stored session a new title (the sessions drawer's Rename); the order and the messages stay. */
+    fun rename(id: String, title: String) { all().firstOrNull { it.id == id }?.let { put(it.copy(title = title)) } }
 }
 
 /** Sessions for the life of the process (Cloud Browser: the conversation outlives closing the page, not the app). */

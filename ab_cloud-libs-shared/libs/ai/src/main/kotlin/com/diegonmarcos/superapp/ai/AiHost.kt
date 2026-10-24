@@ -25,6 +25,9 @@ interface AiHost {
     fun pickAgent(id: String) {}
     /** The stored sessions, newest first (the page's Sessions list). */
     fun sessions(): List<AiSession> = emptyList()
+    /** Renames / deletes a stored session (the sessions drawer); a host with no store ignores both. */
+    fun renameSession(id: String, title: String) {}
+    fun deleteSession(id: String) {}
 }
 
 /** The small choices a host remembers. */
@@ -89,6 +92,8 @@ class AiStandardHost(
     override fun agent(): String = prefs.agent
     override fun pickAgent(id: String) { prefs.agent = id }
     override fun sessions(): List<AiSession> = store.all()
+    override fun renameSession(id: String, title: String) = store.rename(id, title)
+    override fun deleteSession(id: String) = store.delete(id)
 
     override fun send(session: AiSession, text: String, model: String, web: Boolean, now: Long, sink: AiSink): AiOutcome {
         val asked = session.copy(

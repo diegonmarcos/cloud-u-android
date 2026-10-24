@@ -131,6 +131,10 @@ data class AiStrings(
     val consentTitle: String = "Allow this action?",
     val allow: String = "Allow",
     val deny: String = "Deny",
+    val rename: String = "Rename",
+    val delete: String = "Delete",
+    val cancel: String = "Cancel",
+    val save: String = "Save",
 )
 
 /** The icons the page draws, by name; the consumer maps each to its own icon set (or keeps the default glyphs). */
@@ -176,6 +180,8 @@ data class AiTheme(
     val strings: AiStrings = AiStrings(),
     val icon: @Composable (name: String, size: Dp, tint: Color, description: String?) -> Unit = AiIcons.glyph,
     val engineField: @Composable (engine: AiEngine, value: String, onValue: (String) -> Unit, placeholder: String, tag: String, onSearch: () -> Unit) -> Unit = AiDefaultEngineField,
+    /** True: the assistant's answers are drawn as Markdown ([AiMarkdownText]); false (the default) keeps plain text. */
+    val markdown: Boolean = false,
 )
 
 /** The page in the app's Material colour scheme (Cloud Drive, Cloud Tools Small LLMs): no tokens of its own. */
@@ -394,7 +400,8 @@ private fun Bubble(msg: AiMsg, max: Dp, theme: AiTheme) {
     } else {
         Row(horizontalArrangement = Arrangement.spacedBy(m.bubblePadV)) {
             AiAvatar(theme)
-            Text(msg.content, color = c.text, style = theme.type.style(theme.type.chat), modifier = Modifier.padding(top = m.chipGap))
+            if (theme.markdown) AiMarkdownText(msg.content, theme, Modifier.weight(1f, fill = false).padding(top = m.chipGap))
+            else Text(msg.content, color = c.text, style = theme.type.style(theme.type.chat), modifier = Modifier.padding(top = m.chipGap))
         }
     }
 }
