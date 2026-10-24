@@ -98,6 +98,7 @@
         "libs:core",
         "libs:updater",
         "libs:bottomnav",
+        "libs:ui-icons",
         "libs:nav-bar-bottom",
         "libs:nav-bar-top-first-row",
         "libs:nav-bar-top-second-row",
@@ -159,6 +160,11 @@
       "_doc_dir": "THE fleet bottom-nav island (#565/#579): the five tabs are drawn by the same Compose declaration superapp, mail, wallet, me and drive render — one geometry, one pill, one collapse rule. Shared BY REFERENCE like every other module here. This app reuses the four shared symbols (BottomNavEntry, BottomNavIsland, bottomNavInsets, rememberBottomNavCollapse) and declares its OWN five entries from ui.tabs; it deliberately does NOT reuse bottomnav's `bottomNavItems`, which is cloud-mail's item table and merely lives in that module.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
+    },
+    "libs:ui-icons": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-icons",
+      "type": "library",
+      "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
     },
     "libs:ops": {
       "_doc_dir": "Shared BY REFERENCE like every other module here. Carries DaguFragment (the native Dagu DAG list page:c3/dagu opens in the SuperApp) and DaguPrefs, the ONE store of the Authelia bearer the ops routes need. Its build.gradle reads THIS repository's build.json first (consumer-wins) for ui.sections[c3].pages[dagu].dagu_default_server, which is why the verbatim c3 section below is also the lib's config.",

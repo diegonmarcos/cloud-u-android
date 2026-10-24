@@ -26,3 +26,7 @@ private object NoHaptics : NavHaptics {
 internal fun platformNavHaptics(): NavHaptics = NoHaptics
 
 internal fun TextStyle.withPlatformFontPadding(): TextStyle = this
+
+/** #1160 a browser page has no soft keyboard to make way for. */
+@Composable
+internal fun platformImeVisible(): Boolean = false

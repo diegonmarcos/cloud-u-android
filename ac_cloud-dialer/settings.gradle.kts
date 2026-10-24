@@ -51,6 +51,9 @@ include(":libs:ui-kit")
 project(":libs:ui-kit").projectDir = file("../ab_cloud-libs-shared/libs/ui-kit")
 include(":libs:bottomnav")
 project(":libs:bottomnav").projectDir = file("../ab_cloud-libs-shared/libs/bottomnav")
+// #1160 the nav icon catalog libs:bottomnav draws every glyph from.
+include(":libs:ui-icons")
+project(":libs:ui-icons").projectDir = file("../ab_cloud-libs-shared/libs/ui-icons")
 // #1164 the shared navigation: first row (Profile -> Cloud Account), second row, bottom nav, page background.
 include(":libs:nav-bar-bottom")
 project(":libs:nav-bar-bottom").projectDir = file("../ab_cloud-libs-shared/libs/nav-bar-bottom")

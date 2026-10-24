@@ -45,6 +45,9 @@ project(":libs:crash").projectDir = file("../ab_cloud-libs-shared/libs/crash")
 // #868 the fleet's bottom island + page-tab strips + NavDecl: ui/ModeNav.kt is the mode switcher.
 include(":libs:bottomnav")
 project(":libs:bottomnav").projectDir = file("../ab_cloud-libs-shared/libs/bottomnav")
+// #1160 the nav icon catalog libs:bottomnav draws every glyph from.
+include(":libs:ui-icons")
+project(":libs:ui-icons").projectDir = file("../ab_cloud-libs-shared/libs/ui-icons")
 // Gradle 9 fails outright on a project directory that does not exist, and the
 // implicit ':libs' container resolves to <root>/libs which this app does not
 // have. Point it at the shared root, exactly as gallery does; the leaf

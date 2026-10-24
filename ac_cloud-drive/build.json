@@ -804,6 +804,7 @@
         "libs:rclone",
         "libs:mounts",
         "libs:bottomnav",
+        "libs:ui-icons",
         "libs:nav-bar-bottom",
         "libs:nav-bar-top-first-row",
         "libs:nav-bar-top-second-row",
@@ -925,6 +926,11 @@
       "_doc_dir": "#579 THE fleet bottom-nav island (#565): the five tabs are drawn by the same Compose declaration superapp, mail, wallet and me render — one geometry, one pill, one collapse rule. Shared BY REFERENCE like every other module here.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
+    },
+    "libs:ui-icons": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-icons",
+      "type": "library",
+      "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
     },
     "libs:disk": {
       "_doc_dir": "#813 THE Disk Management engine: volumes, storage map, huge files, duplicates, per-app sizes, cache/temp clean and memory behind DiskEngine (contract DiskContract.VERSION), rendered by home/DiskScreen.kt and answered on /api/disk/*. #763 class pinned (1_cicd/src/data/lib-classes.json): it reads and deletes under THIS app's grants (usage access, all-files access), so it is compiled in here and ships no APK of its own.",

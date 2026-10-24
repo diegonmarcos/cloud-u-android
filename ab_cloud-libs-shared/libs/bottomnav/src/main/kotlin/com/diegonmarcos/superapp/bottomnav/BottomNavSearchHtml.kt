@@ -118,67 +118,69 @@ public fun SearchHtmlIsland(
     )
     // As the fleet's island: an app's MaterialTheme text style must not reach the labels.
     CompositionLocalProvider(LocalTextStyle provides TextStyle.Default) {
-        // The system bars are READ, never consumed (#477): a shell that already cleared them adds none.
-        Box(
-            modifier.fillMaxWidth()
-                .windowInsetsPadding(bottomNavInsets().only(WindowInsetsSides.Bottom))
-                .padding(bottom = t.bottomMargin, start = t.sideGutter, end = t.sideGutter),
-            contentAlignment = Alignment.BottomCenter,
-        ) {
-            Row(
-                Modifier.widthIn(max = t.maxWidth).fillMaxWidth().height(t.height)
-                    .testTag(TAG_ISLAND)
-                    .clip(shape).background(t.fill(dark)).border(t.hairline, t.border(dark), shape)
-                    .padding(horizontal = t.innerPad)
-                    // TalkBack: a tab list of N, as on the fleet's island.
-                    .selectableGroup()
-                    .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = entries.size) },
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically,
+        if (!navHiddenByIme()) {
+            // The system bars are READ, never consumed (#477): a shell that already cleared them adds none.
+            Box(
+                modifier.fillMaxWidth()
+                    .windowInsetsPadding(bottomNavInsets().only(WindowInsetsSides.Bottom))
+                    .padding(bottom = t.bottomMargin, start = t.sideGutter, end = t.sideGutter),
+                contentAlignment = Alignment.BottomCenter,
             ) {
-                entries.forEachIndexed { index, e ->
-                    val on = e.id == selectedId
-                    val ink = if (on) t.accent(dark) else t.idle(dark)
-                    val source = remember { MutableInteractionSource() }
-                    val focused by source.collectIsFocusedAsState()
-                    val lift by animateDpAsState(if (on) -t.lift else 0.dp, label = "search_nav_lift")
-                    val label by animateFloatAsState(if (on) 1f else 0f, label = "search_nav_label")
-                    Box(
-                        Modifier.size(t.cell).clip(CircleShape)
-                            .testTag(itemTag(e.id))
-                            // Keyboard / D-pad / switch focus only; touch never shows it.
-                            .then(if (focused) Modifier.border(SearchHtmlTokens.focusRing, ink, CircleShape) else Modifier)
-                            .selectable(
-                                selected = on,
-                                interactionSource = source,
-                                indication = FleetIndication,
-                                role = Role.Tab,
-                                onClick = { onSelect(e) },
-                            )
-                            .semantics {
-                                collectionItemInfo = CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = index, columnSpan = 1)
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(Modifier.offset(y = lift)) {
-                            val iconMod = Modifier.size(t.iconSize).testTag(iconTag(e.id))
-                            if (e.id in gradientIds) {
-                                val brush = Brush.linearGradient(t.gradient)
-                                Icon(
-                                    e.icon, contentDescription = null, tint = Color.White,
-                                    modifier = iconMod
-                                        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                                        .drawWithContent { drawContent(); drawRect(brush, blendMode = BlendMode.SrcAtop) },
+                Row(
+                    Modifier.widthIn(max = t.maxWidth).fillMaxWidth().height(t.height)
+                        .testTag(TAG_ISLAND)
+                        .clip(shape).background(t.fill(dark)).border(t.hairline, t.border(dark), shape)
+                        .padding(horizontal = t.innerPad)
+                        // TalkBack: a tab list of N, as on the fleet's island.
+                        .selectableGroup()
+                        .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = entries.size) },
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    entries.forEachIndexed { index, e ->
+                        val on = e.id == selectedId
+                        val ink = if (on) t.accent(dark) else t.idle(dark)
+                        val source = remember { MutableInteractionSource() }
+                        val focused by source.collectIsFocusedAsState()
+                        val lift by animateDpAsState(if (on) -t.lift else 0.dp, label = "search_nav_lift")
+                        val label by animateFloatAsState(if (on) 1f else 0f, label = "search_nav_label")
+                        Box(
+                            Modifier.size(t.cell).clip(CircleShape)
+                                .testTag(itemTag(e.id))
+                                // Keyboard / D-pad / switch focus only; touch never shows it.
+                                .then(if (focused) Modifier.border(SearchHtmlTokens.focusRing, ink, CircleShape) else Modifier)
+                                .selectable(
+                                    selected = on,
+                                    interactionSource = source,
+                                    indication = FleetIndication,
+                                    role = Role.Tab,
+                                    onClick = { onSelect(e) },
                                 )
-                            } else Icon(e.icon, contentDescription = null, tint = ink, modifier = iconMod)
+                                .semantics {
+                                    collectionItemInfo = CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = index, columnSpan = 1)
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(Modifier.offset(y = lift)) {
+                                val iconMod = Modifier.size(t.iconSize).testTag(iconTag(e.id))
+                                if (e.id in gradientIds) {
+                                    val brush = Brush.linearGradient(t.gradient)
+                                    Icon(
+                                        e.icon, contentDescription = null, tint = Color.White,
+                                        modifier = iconMod
+                                            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                                            .drawWithContent { drawContent(); drawRect(brush, blendMode = BlendMode.SrcAtop) },
+                                    )
+                                } else Icon(e.icon, contentDescription = null, tint = if (e.tinted) ink else Color.Unspecified, modifier = iconMod)
+                            }
+                            Text(
+                                e.label, color = ink, style = labelStyle, textAlign = TextAlign.Center,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = t.labelBottom)
+                                    .testTag(labelTag(e.id))
+                                    .graphicsLayer { alpha = label; translationY = (1f - label) * 8.dp.toPx() },
+                            )
                         }
-                        Text(
-                            e.label, color = ink, style = labelStyle, textAlign = TextAlign.Center,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = t.labelBottom)
-                                .testTag(labelTag(e.id))
-                                .graphicsLayer { alpha = label; translationY = (1f - label) * 8.dp.toPx() },
-                        )
                     }
                 }
             }

@@ -57,6 +57,11 @@
       "_doc": "#868 the fleet's bottom island + page-tab strips + NavDecl, shared BY REFERENCE: ui/ModeNav.kt draws the camera mode switcher with them (the hand-rolled snapping TabLayout is gone).",
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav"
+    },
+    "libs:ui-icons": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-icons",
+      "type": "library",
+      "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
     }
   },
   "android": {

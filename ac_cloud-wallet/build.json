@@ -50,6 +50,7 @@
         "libs:wallet",
         "libs:updater",
         "libs:bottomnav",
+        "libs:ui-icons",
         "libs:ui-kit"
       ]
     },
@@ -81,6 +82,11 @@
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library",
       "_doc": "#531/#533 THE bottom nav of the fleet, in Compose, shared BY REFERENCE. libs:wallet's WalletBottomNav draws the wallet's top-level tabs on it, at the bottom; the old top WalletTabStrip is gone."
+    },
+    "libs:ui-icons": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-icons",
+      "type": "library",
+      "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
     },
     "libs:ui-kit": {
       "type": "library",

@@ -19,7 +19,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class SubPageIconGuardTest {
     private val apps = listOf(
-        "ac_cloud-mail", "ac_cloud-me", "ac_cloud-drive", "ac_cloud-nav", "ac_cloud-account", "ac_cloud-store", "ac_cloud-c3", "ac_cloud-tasks", "ac_cloud-contacts", "ac_cloud-news", "ac_cloud-writer", "ac_cloud-search", "ac_cloud-browser", "ac_cloud-dialer",
+        "ac_cloud-mail", "ac_cloud-me", "ac_cloud-drive", "ac_cloud-nav", "ac_cloud-account", "ac_cloud-store", "ac_cloud-c3", "ac_cloud-tasks", "ac_cloud-contacts", "ac_cloud-news", "ac_cloud-writer", "ac_cloud-search", "ac_cloud-browser", "ac_cloud-dialer", "ac_cloud-tools-small-llms", "ac_cloud-calc", "ac_cloud-superintel",
     )
 
     private fun buildJson(app: String): File {
@@ -41,10 +41,17 @@ class SubPageIconGuardTest {
         for (app in apps) assertEquals("$app: icon-less declarations", emptyList<String>(), decl(app).iconProblems())
     }
 
-    @Test fun `every sub-page icon of every app is one the second row draws`() {
+    @Test fun `every sub-page icon of every app is one the catalog holds (the second row draws it from there)`() {
         for (app in apps) {
             val unknown = decl(app).sections.flatMap { s -> s.allPages().filter { !SecondRowIcons.has(it.icon) }.map { "${s.id}/${it.id}='${it.icon}'" } }
             assertEquals("$app: sub-pages whose icon SecondRowIcons does not hold", emptyList<String>(), unknown)
+        }
+    }
+
+    @Test fun `every bottom-bar section icon of every app is in the shared catalog (#1160)`() {
+        for (app in apps) {
+            val unknown = decl(app).sections.filterNot { com.diegonmarcos.superapp.uiicons.UiIcons.has(it.icon) }.map { "${it.id}='${it.icon}'" }
+            assertEquals("$app: sections whose icon libs:ui-icons does not hold", emptyList<String>(), unknown)
         }
     }
 

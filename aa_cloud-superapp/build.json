@@ -239,6 +239,7 @@
         "libs:launcher-onehand",
         "libs:launcher-zoomies",
         "libs:bottomnav",
+        "libs:ui-icons",
         "libs:auth",
         "libs:ui-kit",
         "libs:account",
@@ -259,6 +260,11 @@
       "type": "library",
       "depends_on": [],
       "comment": "THE bottom nav of the fleet, in Compose, shared BY REFERENCE (#565/#531). The shell hosts it through BottomNavIslandView in activity_main; ShellBottomNav feeds it ui.bottom_nav. There is no private nav left in this tree."
+    },
+    "libs:ui-icons": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-icons",
+      "type": "library",
+      "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
     },
     "libs:ui-kit": {
       "dir": "../ab_cloud-libs-shared/libs/ui-kit",

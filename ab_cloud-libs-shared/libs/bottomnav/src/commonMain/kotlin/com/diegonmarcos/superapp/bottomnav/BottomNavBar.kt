@@ -121,7 +121,27 @@ import kotlin.math.roundToInt
 
 /** One nav item as the bar draws it: a stable id, the label (also the collapsed bar's
  *  accessible name), and the glyph. */
-public data class BottomNavEntry(val id: String, val label: String, val icon: Painter)
+public data class BottomNavEntry(
+    val id: String,
+    val label: String,
+    val icon: Painter,
+    /** False = a brand icon (#1160, libs:ui-icons UiIcon.tinted): drawn in its own colours, not the bar's ink. */
+    val tinted: Boolean = true,
+)
+
+/**
+ * #1160 test seam of [navHiddenByIme]: null (the default) asks the platform whether the soft keyboard is showing; a test provides
+ * true / false to stand for it. An app never provides this.
+ */
+public val LocalNavImeVisible: androidx.compose.runtime.ProvidableCompositionLocal<Boolean?> =
+    androidx.compose.runtime.compositionLocalOf { null }
+
+/**
+ * #1160 true while the soft keyboard is showing. EVERY shared bottom nav (this island, the search variant, libs:nav-bar-bottom)
+ * is not drawn then, and its host stops reserving room for it: the keyboard HIDES the bar, it never lifts it above itself.
+ */
+@Composable
+public fun navHiddenByIme(): Boolean = LocalNavImeVisible.current ?: platformImeVisible()
 
 /** The one pill shape. The island and the selected capsule both use it, so the two stadiums
  *  can never drift apart. 50% = half the shorter side, a true semicircle at any size. */
@@ -181,7 +201,7 @@ internal fun BottomNavIslandImpl(
     // spacing) would leak into the labels through LocalTextStyle, and its colours through the
     // scheme. Both are replaced by the fleet's.
     CompositionLocalProvider(LocalTextStyle provides TextStyle.Default) {
-        IslandContent(entries, selectedId, onSelect, modifier, collapsed, insets, itemModifier)
+        if (!navHiddenByIme()) IslandContent(entries, selectedId, onSelect, modifier, collapsed, insets, itemModifier)
     }
 }
 
@@ -293,7 +313,7 @@ private fun IslandContent(
                         entry.icon,
                         // With the label hidden, the icon has to carry the item's name.
                         contentDescription = if (collapsed) entry.label else null,
-                        tint = ink,
+                        tint = if (entry.tinted) ink else Color.Unspecified,
                         modifier = Modifier
                             .then(if (plan.fitted) Modifier.padding(vertical = iconSlotPad) else Modifier)
                             .size(cellIcon)
@@ -498,7 +518,7 @@ public fun BottomNavHost(
             Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .consumeWindowInsets(insets.only(WindowInsetsSides.Bottom))
+                .then(if (navHiddenByIme()) Modifier else Modifier.consumeWindowInsets(insets.only(WindowInsetsSides.Bottom)))
                 .nestedScroll(collapse)
                 .testTag(TAG_CONTENT),
         ) { content() }

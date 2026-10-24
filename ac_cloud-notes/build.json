@@ -44,6 +44,11 @@
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     },
+    "libs:ui-icons": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-icons",
+      "type": "library",
+      "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
+    },
     "libs:ai": {
       "_doc_dir": "The top bar's AI panel (and the Search > Ask page): the fleet's AI chat (libs:ai) over the fleet agent gateway (my-ai-api, mesh only). Shared BY REFERENCE. This app holds no OpenRouter token and reads none (decisions-use guard D5): the gateway holds the fleet key. Its mesh address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle (ext.aiFleetRoot names the repository root: this Android project is nested).",
       "type": "library",

@@ -2,7 +2,7 @@ package com.diegonmarcos.superapp.bottomnav
 
 /*
  * THE PLATFORM SEAM (#876). The libs are com.android.library, not Kotlin Multiplatform, so there
- * is no expect/actual: the four functions below are declared by NAME here (as the contract) and
+ * is no expect/actual: the functions below are declared by NAME here (as the contract) and
  * DEFINED once per platform, in the one source tree that platform compiles:
  *
  *   Android  libs/bottomnav/src/main/.../NavPlatformAndroid.kt   (resources, dynamic palette,
@@ -16,5 +16,6 @@ package com.diegonmarcos.superapp.bottomnav
  *   internal fun platformNavTokens(): NavTokens                 @Composable
  *   internal fun platformBarMotion(key: Any?): Boolean          @Composable
  *   internal fun platformNavHaptics(): NavHaptics               @Composable
+ *   internal fun platformImeVisible(): Boolean                  @Composable  (#1160: the keyboard is up)
  *   internal fun TextStyle.withPlatformFontPadding(): TextStyle
  */

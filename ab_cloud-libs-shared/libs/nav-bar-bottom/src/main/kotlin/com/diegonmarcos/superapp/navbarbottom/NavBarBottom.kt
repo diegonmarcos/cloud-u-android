@@ -53,6 +53,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlTokens
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
+import com.diegonmarcos.superapp.bottomnav.navHiddenByIme
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 import com.diegonmarcos.superapp.themebg.themeBackground
 
@@ -112,6 +113,8 @@ public fun NavBarBottom(
     /** Scrolled down (BottomNavCollapse, #1159): the non-selected labels fold away and the bar shrinks; the selected label stays. */
     collapsed: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
 ) {
+    // #1160 the keyboard HIDES the bar (it used to be lifted above it); the host gives the room back to the content.
+    if (navHiddenByIme()) return
     Box(
         modifier.fillMaxWidth()
             .windowInsetsPadding(bottomNavInsets().only(WindowInsetsSides.Bottom))
@@ -146,7 +149,7 @@ public fun NavBarBottom(
                         contentAlignment = Alignment.Center,
                     ) {
                         Box(Modifier.offset(y = lift)) {
-                            Icon(e.icon, contentDescription = null, tint = ink, modifier = Modifier.size(BottomSpec.ICON).testTag(BottomTags.icon(e.id)))
+                            Icon(e.icon, contentDescription = null, tint = if (e.tinted) ink else Color.Unspecified, modifier = Modifier.size(BottomSpec.ICON).testTag(BottomTags.icon(e.id)))
                         }
                         // The label fades with the state and leaves the tree once faded out (a hidden label is not a node).
                         if (show > 0f) Text(
@@ -191,7 +194,7 @@ public fun NavBarBottomHost(
         // The bar clears the bottom system bar itself, so the content must not clear it a second time (consumed for the content ONLY).
         Box(
             Modifier.weight(1f).fillMaxWidth()
-                .consumeWindowInsets(insets.only(WindowInsetsSides.Bottom))
+                .then(if (navHiddenByIme()) Modifier else Modifier.consumeWindowInsets(insets.only(WindowInsetsSides.Bottom)))
                 .then(if (inherited == null) Modifier.nestedScroll(own) else Modifier)
                 .testTag(NAV_BAR_BOTTOM_CONTENT_TAG),
         ) { content() }

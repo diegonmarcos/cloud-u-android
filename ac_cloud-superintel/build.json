@@ -114,6 +114,7 @@
       "depends_on": [
         "libs:core",
         "libs:bottomnav",
+        "libs:ui-icons",
         "libs:nav-bar-bottom",
         "libs:nav-bar-top-first-row",
         "libs:nav-bar-top-second-row",
@@ -145,6 +146,11 @@
       "_doc": "#868 the fleet's NavDecl (ui.bottom_nav/ui.sections baked into BuildConfig), the top-bar scaffold's drawer and the scroll collapse, shared BY REFERENCE.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
       "type": "library"
+    },
+    "libs:ui-icons": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-icons",
+      "type": "library",
+      "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
     },
     "libs:ai": {
       "_doc": "The fleet's AI chat (libs:ai): the page, the sessions drawer panel (new, rename, delete), the Markdown answers, the streaming and the shared contract. The backend is the fleet agent gateway (my-ai-api, mesh only; its address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle); no token is held or read here (decisions-use guard D5).",

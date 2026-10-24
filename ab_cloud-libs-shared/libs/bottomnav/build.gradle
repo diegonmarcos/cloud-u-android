@@ -86,6 +86,8 @@ kotlin {
 }
 
 dependencies {
+    // #1160 the nav icon catalog: navEntry() / catalogEntries() draw every nav glyph from it.
+    api project(':libs:ui-icons')
     // Compose UI + Material3 + the extended icon set the island draws, and the
     // navigation-compose NavController that drives destination moves. Pinned to
     // the same BOM and versions cloud-mail's app module links, so this lib
