@@ -108,7 +108,7 @@ sub = re.findall(r'^    \w+\("[^"]+", "(\w+)"\)', tabs.split('enum class Tickets
 if [x['id'] for x in secs.get('events', {}).get('pages', [])] != sub:
     p.append('ui.sections[events].pages %r != TicketsSubTab pages %r' % ([x['id'] for x in secs.get('events', {}).get('pages', [])], sub))
 if re.search(r'enum class WalletNavItem', tabs): p.append('WalletNavItem is back: the bar is a Kotlin list again')
-if 'val entries = nav.islandEntries {' not in tabs: p.append('WalletBottomNav does not feed the island from NavDecl.islandEntries')
+if 'val entries = nav.islandEntries()' not in tabs: p.append('WalletBottomNav does not feed the island from NavDecl.islandEntries')
 if 'val nav: NavDecl' not in host or 'fun PageStrip(' not in host: p.append('WalletHost lost nav / PageStrip')
 if '(ctx as? WalletHost)?.nav' not in frag or 'nav.default()' not in frag: p.append('WalletScreen does not read the host NavDecl and its default section')
 if 'NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)' not in act: p.append('MainActivity does not bake the NavDecl from BuildConfig')

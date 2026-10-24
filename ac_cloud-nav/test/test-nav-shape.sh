@@ -66,7 +66,7 @@ CFG = json.loads(r'''{
   "app/src/main/java/com/diegonmarcos/cloudnav/MainActivity.kt": [
    "NavBarBottomHost",
    "NavConfig.decl",
-   "viewItems",
+   "islandEntries()",
    "ExploredFragment()",
    "TrackerFragment()"
   ],

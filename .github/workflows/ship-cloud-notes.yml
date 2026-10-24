@@ -59,6 +59,7 @@ on:
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/model-catalogue/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ac_cloud-notes/**"
       - "!ac_cloud-notes/web/**"
 permissions:

@@ -124,9 +124,14 @@ declared_icons += [("calculator", k, c.get("icon")) for k, c in S["calculators"]
 for kind, ident, icon in declared_icons:
     if icon not in icons:
         bad.append("S3 %s %s icon %r has no IconCatalog branch — it would draw the fallback" % (kind, ident, icon))
+# #1160 the island draws its glyphs from the fleet's catalog (libs:ui-icons), not from this app's IconCatalog
+uic_path = sys.argv[3]
+uic_names = set(re.findall(r'"([\w-]+)" to ', code(uic_path))) if os.path.isfile(uic_path) else set()
+if not uic_names:
+    bad.append("S3 the libs:ui-icons catalog (%s) holds no names — this tester is unrun, not passing" % uic_path)
 for x in (bj.get("ui") or {}).get("sections") or []:
-    if x.get("icon") not in icons:
-        bad.append("S3 ui.sections %s icon %r has no IconCatalog branch — the island would draw the fallback" % (x.get("id"), x.get("icon")))
+    if x.get("icon") not in uic_names:
+        bad.append("S3 ui.sections %s icon %r is not in the libs:ui-icons catalog — the island would draw the fallback" % (x.get("id"), x.get("icon")))
 colors = set(re.findall(r'<color name="([\w]+)"', open(os.path.join(app, "app", "src", "main", "res", "values", "colors.xml"), encoding="utf-8").read()))
 declared_colors = [("engine", e["id"], e.get("accent")) for e in S["engines"]]
 declared_colors += [("vertical", v["id"], v.get("chart_color")) for v in S["verticals"] if v.get("analysis", "none") != "none"]
@@ -398,7 +403,8 @@ PY
 
 FAILURES=0
 echo "── S1-S13 against the tree ──"
-if python3 "$CHECK" "$APP" "$LIB"; then echo "  PASS  S1-S13"; else FAILURES=$((FAILURES + 1)); fi
+UIC="$APP/../ab_cloud-libs-shared/libs/ui-icons/src/main/kotlin/com/diegonmarcos/superapp/uiicons/UiIcons.kt"
+if python3 "$CHECK" "$APP" "$LIB" "$UIC"; then echo "  PASS  S1-S13"; else FAILURES=$((FAILURES + 1)); fi
 
 # ── mutations: each must go red, for the right reason ─────────────────────────
 WORK="$(mktemp -d)"
@@ -418,7 +424,7 @@ open(p, "w", encoding="utf-8").write(t)
 PY
     then echo "  VOID  MUT $name: the edit did not land — the mutation targets text that moved"; FAILURES=$((FAILURES + 1)); return; fi
     local out
-    out="$(python3 "$CHECK" "$copy" "$copy/ai" 2>&1)"
+    out="$(python3 "$CHECK" "$copy" "$copy/ai" "$UIC" 2>&1)"
     if [ $? -eq 0 ]; then
         echo "  FAIL  MUT $name: the check passed a broken tree"; FAILURES=$((FAILURES + 1))
     elif [[ "$out" != *"$want"* ]]; then

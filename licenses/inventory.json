@@ -221,6 +221,7 @@
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
     "ab_cloud-libs-shared/libs/sysdns",
     "ab_cloud-libs-shared/libs/text-tools",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater",
     "ab_cloud-libs-shared/libs/webserver"
@@ -282,6 +283,7 @@
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
     "ab_cloud-libs-shared/libs/text-tools",
     "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater"
    ]
@@ -300,7 +302,12 @@
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/model-catalogue",
+    "ab_cloud-libs-shared/libs/nav-bar-bottom",
+    "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+    "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
     "ab_cloud-libs-shared/libs/text-tools",
+    "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater",
     "ac_cloud-search/core"
@@ -323,6 +330,7 @@
     "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
     "ab_cloud-libs-shared/libs/ops",
     "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater"
    ]
@@ -350,7 +358,8 @@
     "ab_cloud-libs-shared/libs/ml-l-image",
     "ab_cloud-libs-shared/libs/ml-l-sound",
     "ab_cloud-libs-shared/libs/model-catalogue",
-    "ab_cloud-libs-shared/libs/text-tools"
+    "ab_cloud-libs-shared/libs/text-tools",
+    "ab_cloud-libs-shared/libs/ui-icons"
    ]
   },
   "ac_cloud-camera": {
@@ -362,7 +371,8 @@
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/ml-l-image",
-    "ab_cloud-libs-shared/libs/ml-l-sound"
+    "ab_cloud-libs-shared/libs/ml-l-sound",
+    "ab_cloud-libs-shared/libs/ui-icons"
    ]
   },
   "ac_cloud-chat": {
@@ -389,6 +399,7 @@
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/analytics",
+    "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/contacts",
     "ab_cloud-libs-shared/libs/core",
     "ab_cloud-libs-shared/libs/crash",
@@ -396,6 +407,11 @@
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
+    "ab_cloud-libs-shared/libs/nav-bar-bottom",
+    "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+    "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+    "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/updater"
    ]
   },
@@ -408,6 +424,11 @@
     "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
+    "ab_cloud-libs-shared/libs/nav-bar-bottom",
+    "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+    "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+    "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit"
    ]
   },
@@ -439,6 +460,7 @@
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
     "ab_cloud-libs-shared/libs/sysdns",
     "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/updater"
    ]
   },
@@ -478,6 +500,7 @@
     "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
     "ab_cloud-libs-shared/libs/text-tools",
     "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/updater"
    ]
   },
@@ -507,6 +530,7 @@
     "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
     "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
     "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater"
    ]
@@ -546,6 +570,7 @@
     "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
     "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
     "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater"
    ]
@@ -554,12 +579,18 @@
    "app_licence": "LicenseRef-NoLicenseGranted",
    "links_shared_modules": [
     "ab_cloud-libs-shared/libs/analytics",
+    "ab_cloud-libs-shared/libs/bottomnav",
     "ab_cloud-libs-shared/libs/core",
     "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/databackend",
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
+    "ab_cloud-libs-shared/libs/nav-bar-bottom",
+    "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+    "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+    "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/updater"
    ]
   },
@@ -572,7 +603,8 @@
     "ab_cloud-libs-shared/libs/crash",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
-    "ab_cloud-libs-shared/libs/model-catalogue"
+    "ab_cloud-libs-shared/libs/model-catalogue",
+    "ab_cloud-libs-shared/libs/ui-icons"
    ]
   },
   "ac_cloud-search": {
@@ -585,7 +617,12 @@
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/model-catalogue",
+    "ab_cloud-libs-shared/libs/nav-bar-bottom",
+    "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+    "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
     "ab_cloud-libs-shared/libs/text-tools",
+    "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ac_cloud-search/core"
    ]
   },
@@ -608,6 +645,7 @@
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools",
     "ab_cloud-libs-shared/libs/sysdns",
     "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater"
    ]
@@ -625,7 +663,8 @@
     "ab_cloud-libs-shared/libs/nav-bar-bottom",
     "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
     "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
-    "ab_cloud-libs-shared/libs/theme-background"
+    "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons"
    ]
   },
   "ac_cloud-tasks": {
@@ -641,6 +680,11 @@
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/model-catalogue",
+    "ab_cloud-libs-shared/libs/nav-bar-bottom",
+    "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+    "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+    "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater"
    ]
@@ -667,6 +711,7 @@
     "ab_cloud-libs-shared/libs/fleetconfig-model",
     "ab_cloud-libs-shared/libs/model-catalogue",
     "ab_cloud-libs-shared/libs/text-tools",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ac_cloud-tools-small-llms/core"
    ]
   },
@@ -679,7 +724,8 @@
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleet-endpoints",
     "ab_cloud-libs-shared/libs/fleet-endpoints-android",
-    "ab_cloud-libs-shared/libs/fleetconfig-model"
+    "ab_cloud-libs-shared/libs/fleetconfig-model",
+    "ab_cloud-libs-shared/libs/ui-icons"
    ]
   },
   "ac_cloud-wallet": {
@@ -692,6 +738,7 @@
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit",
     "ab_cloud-libs-shared/libs/updater",
     "ab_cloud-libs-shared/libs/wallet"
@@ -707,7 +754,12 @@
     "ab_cloud-libs-shared/libs/decisions-link",
     "ab_cloud-libs-shared/libs/devtools",
     "ab_cloud-libs-shared/libs/fleetconfig-model",
+    "ab_cloud-libs-shared/libs/nav-bar-bottom",
+    "ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+    "ab_cloud-libs-shared/libs/nav-bar-top-second-row",
     "ab_cloud-libs-shared/libs/text-tools",
+    "ab_cloud-libs-shared/libs/theme-background",
+    "ab_cloud-libs-shared/libs/ui-icons",
     "ab_cloud-libs-shared/libs/ui-kit"
    ]
   }
@@ -3030,12 +3082,15 @@
     "ac_cloud-browser/app/build.gradle",
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
+    "ac_cloud-contacts/app/build.gradle",
+    "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-keyboard/app/build.gradle",
     "ac_cloud-mail/gradle/libs.versions.toml",
     "ac_cloud-matrix/gradle/libs.versions.toml",
     "ac_cloud-me/app/build.gradle",
+    "ac_cloud-news/app/build.gradle",
     "ac_cloud-nix-on-droid/app/build.gradle",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle",
@@ -3336,8 +3391,11 @@
    "declared_in": [
     "ab_cloud-libs-shared/libs/health/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
+    "ac_cloud-contacts/app/build.gradle",
+    "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
+    "ac_cloud-news/app/build.gradle",
     "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-vault/gradle/libs.versions.toml"
    ],
@@ -3382,6 +3440,7 @@
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/build.gradle",
     "ab_cloud-libs-shared/libs/theme-background/build.gradle",
     "ab_cloud-libs-shared/libs/translate/build.gradle",
+    "ab_cloud-libs-shared/libs/ui-icons/build.gradle",
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/updater/build.gradle",
     "ab_cloud-libs-shared/libs/voice/build.gradle",
@@ -3390,6 +3449,7 @@
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-camera/app/build.gradle.kts",
+    "ac_cloud-contacts/app/build.gradle",
     "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
@@ -3397,6 +3457,7 @@
     "ac_cloud-me/app/build.gradle",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
+    "ac_cloud-news/app/build.gradle",
     "ac_cloud-nix-on-droid/app/build.gradle",
     "ac_cloud-search/app/build.gradle",
     "ac_cloud-store/app/build.gradle",
@@ -3495,6 +3556,7 @@
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/build.gradle",
     "ab_cloud-libs-shared/libs/theme-background/build.gradle",
     "ab_cloud-libs-shared/libs/translate/build.gradle",
+    "ab_cloud-libs-shared/libs/ui-icons/build.gradle",
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/updater/build.gradle",
     "ab_cloud-libs-shared/libs/voice/build.gradle",
@@ -3503,6 +3565,7 @@
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-camera/app/build.gradle.kts",
+    "ac_cloud-contacts/app/build.gradle",
     "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
@@ -3511,6 +3574,7 @@
     "ac_cloud-me/app/build.gradle",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
+    "ac_cloud-news/app/build.gradle",
     "ac_cloud-nix-on-droid/app/build.gradle",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle",
@@ -3556,6 +3620,8 @@
   "maven:androidx.compose.material:material-icons-core": {
    "kind": "maven",
    "declared_in": [
+    "ac_cloud-contacts/app/build.gradle",
+    "ac_cloud-news/app/build.gradle",
     "ac_cloud-tasks/app/build.gradle"
    ],
    "scope": "shipped",
@@ -3575,6 +3641,7 @@
     "ab_cloud-libs-shared/libs/nav-bar-top-second-row/build.gradle",
     "ab_cloud-libs-shared/libs/rclone/build.gradle",
     "ab_cloud-libs-shared/libs/theme-background/build.gradle",
+    "ab_cloud-libs-shared/libs/ui-icons/build.gradle",
     "ac_cloud-account/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
@@ -3656,6 +3723,7 @@
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/build.gradle",
     "ab_cloud-libs-shared/libs/theme-background/build.gradle",
     "ab_cloud-libs-shared/libs/translate/build.gradle",
+    "ab_cloud-libs-shared/libs/ui-icons/build.gradle",
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/updater/build.gradle",
     "ab_cloud-libs-shared/libs/voice/build.gradle",
@@ -3664,6 +3732,7 @@
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-camera/app/build.gradle.kts",
+    "ac_cloud-contacts/app/build.gradle",
     "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
@@ -3672,6 +3741,7 @@
     "ac_cloud-me/app/build.gradle",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
+    "ac_cloud-news/app/build.gradle",
     "ac_cloud-nix-on-droid/app/build.gradle",
     "ac_cloud-search/app/build.gradle",
     "ac_cloud-store/app/build.gradle",
@@ -3866,6 +3936,7 @@
     "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/build.gradle",
     "ab_cloud-libs-shared/libs/theme-background/build.gradle",
     "ab_cloud-libs-shared/libs/translate/build.gradle",
+    "ab_cloud-libs-shared/libs/ui-icons/build.gradle",
     "ab_cloud-libs-shared/libs/ui-kit/build.gradle",
     "ab_cloud-libs-shared/libs/updater/build.gradle",
     "ab_cloud-libs-shared/libs/voice/build.gradle",
@@ -3875,6 +3946,7 @@
     "ac_cloud-c3/app/build.gradle",
     "ac_cloud-calc/app/build.gradle",
     "ac_cloud-camera/app/build.gradle.kts",
+    "ac_cloud-contacts/app/build.gradle",
     "ac_cloud-dialer/app/build.gradle.kts",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-keyboard/app/build.gradle",
@@ -3883,6 +3955,7 @@
     "ac_cloud-me/app/build.gradle",
     "ac_cloud-myterminal/hub/build.gradle",
     "ac_cloud-nav/app/build.gradle",
+    "ac_cloud-news/app/build.gradle",
     "ac_cloud-nix-on-droid/app/build.gradle",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-search/app/build.gradle",
@@ -4004,6 +4077,7 @@
     "ab_cloud-libs-shared/libs/text-tools/build.gradle",
     "ab_cloud-libs-shared/libs/theme-background/build.gradle",
     "ab_cloud-libs-shared/libs/translate/build.gradle",
+    "ab_cloud-libs-shared/libs/ui-icons/build.gradle",
     "ab_cloud-libs-shared/libs/updater/build.gradle",
     "ab_cloud-libs-shared/libs/voice/build.gradle",
     "ab_cloud-libs-shared/libs/wallet/build.gradle",
@@ -4318,9 +4392,11 @@
     "ab_cloud-libs-shared/libs/git-sync/build.gradle",
     "ab_cloud-libs-shared/libs/mounts/build.gradle",
     "ab_cloud-libs-shared/libs/rclone/build.gradle",
+    "ac_cloud-contacts/app/build.gradle",
     "ac_cloud-drive/app/build.gradle",
     "ac_cloud-gallery/gradle/libs.versions.toml",
     "ac_cloud-mail/gradle/libs.versions.toml",
+    "ac_cloud-news/app/build.gradle",
     "ac_cloud-notes/packages/frontend/apps/android/App/gradle/libs.versions.toml",
     "ac_cloud-tasks/app/build.gradle",
     "ac_cloud-vault/gradle/libs.versions.toml"

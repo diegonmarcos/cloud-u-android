@@ -40,14 +40,19 @@ on:
       - "*/src-tauri/gen/android/app/src/main/**"
       - "*/src/main/**"
       - "1_cicd/src/cicd/nav-shape-guard.yml"
+      - "1_cicd/src/data/nav-icons.json"
       - "1_cicd/src/data/nav-shape.json"
+      - "1_cicd/src/scripts/cloud-android-nav-icons-guard.py"
       - "1_cicd/src/scripts/cloud-android-nav-shape-guard.py"
+      - "1_cicd/src/scripts/test/nav-icons-guard.test.sh"
       - "1_cicd/src/scripts/test/nav-shape-guard.test.sh"
+      - "ab_cloud-libs-shared/libs/*/src/main/**"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/nav-bar-bottom/**"
       - "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**"
       - "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ac_cloud-code/src/cloud/**"
       - "ac_cloud-notes/packages/frontend/apps/android/App/**"
     # ── end MANAGED-GUARD-TRIGGERS ──
@@ -73,3 +78,8 @@ jobs:
         run: python3 1_cicd/src/scripts/cloud-android-nav-shape-guard.py
       - name: The guard still fails on each way an app can grow a second nav
         run: bash 1_cicd/src/scripts/test/nav-shape-guard.test.sh
+      # #1160 every nav-bar icon comes from the one catalog (libs:ui-icons), none from a material icon an app picked
+      - name: Every nav item's icon comes from the libs:ui-icons catalog
+        run: python3 1_cicd/src/scripts/cloud-android-nav-icons-guard.py
+      - name: The nav-icons guard still fails on each way an app can pick its own icon
+        run: bash 1_cicd/src/scripts/test/nav-icons-guard.test.sh

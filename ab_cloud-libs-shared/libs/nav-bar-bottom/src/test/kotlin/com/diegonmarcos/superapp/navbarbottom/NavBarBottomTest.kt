@@ -22,6 +22,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertExists
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.diegonmarcos.superapp.bottomnav.LocalNavImeVisible
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
@@ -122,5 +130,41 @@ class NavBarBottomTest {
         compose.onNodeWithTag("page").performTouchInput { swipeDown() }
         compose.waitForIdle()
         assertEquals("labels return on scroll up", 1, labelsOf("mail"))
+    }
+
+    @Test fun `the keyboard hides the bar and the page takes its room (#1160)`() {
+        var ime by mutableStateOf(false)
+        compose.setContent {
+            val entries = listOf(
+                BottomNavEntry("home", "Home", rememberVectorPainter(Icons.Filled.Home)),
+                BottomNavEntry("mail", "Mail", rememberVectorPainter(Icons.Filled.Mail)),
+            )
+            CompositionLocalProvider(LocalNavImeVisible provides ime) {
+                NavBarBottomHost(entries, "home", {}) { Box(Modifier.fillMaxSize().testTag("page")) }
+            }
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag(BottomTags.BAR).assertExists()
+        val withBar = compose.onNodeWithTag("page").fetchSemanticsNode().boundsInRoot.height
+        ime = true
+        compose.waitForIdle()
+        compose.onNodeWithTag(BottomTags.BAR).assertDoesNotExist()
+        compose.onNodeWithTag(BottomTags.item("mail")).assertDoesNotExist()
+        assertTrue("the page grows into the freed room", compose.onNodeWithTag("page").fetchSemanticsNode().boundsInRoot.height > withBar)
+        ime = false
+        compose.waitForIdle()
+        compose.onNodeWithTag(BottomTags.BAR).assertExists()
+    }
+
+    @Test fun `a brand entry is drawn untinted and stays on the bar (#1160)`() {
+        compose.setContent {
+            val entries = listOf(
+                BottomNavEntry("home", "Home", rememberVectorPainter(Icons.Filled.Home)),
+                BottomNavEntry("ai", "Assistant", rememberVectorPainter(Icons.Filled.Mail), tinted = false),
+            )
+            NavBarBottom(entries, "home", {}, dark = true)
+        }
+        compose.onNodeWithTag(BottomTags.icon("ai"), useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(BottomTags.item("ai")).assertExists()
     }
 }

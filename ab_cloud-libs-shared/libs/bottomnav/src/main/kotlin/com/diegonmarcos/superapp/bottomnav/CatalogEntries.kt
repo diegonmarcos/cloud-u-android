@@ -13,7 +13,11 @@ import com.diegonmarcos.superapp.uiicons.UiIcons
 public fun navEntry(id: String, label: String, icon: String): BottomNavEntry =
     BottomNavEntry(id, label, UiIcons.painter(icon), tinted = UiIcons.isTinted(icon))
 
-/** The island's items for a Compose host, every glyph from the catalog (see [navEntry]); [label] lets an app localise one. */
+/**
+ * The island's items for a Compose host, every glyph from the catalog (see [navEntry]). This is the form an app calls; the
+ * other overload, `islandEntries { name -> Painter }`, lets the caller pick glyphs itself and is for the wasm pages only
+ * (the nav-icons guard bans it in an Android app's sources). An app that localises a label builds its items with [navEntry].
+ */
 @Composable
-public fun NavDecl.catalogEntries(label: (NavSection) -> String = { it.label }): List<BottomNavEntry> =
-    bottomSections().map { navEntry(it.id, label(it), it.icon) }
+public fun NavDecl.islandEntries(): List<BottomNavEntry> =
+    bottomSections().map { navEntry(it.id, it.label, it.icon) }

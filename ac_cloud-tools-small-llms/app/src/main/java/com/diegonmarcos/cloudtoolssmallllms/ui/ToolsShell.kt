@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.testTag
 import com.diegonmarcos.cloudtoolssmallllms.Decl
 import com.diegonmarcos.superapp.bottomnav.BottomNavHost
@@ -33,7 +32,7 @@ import androidx.compose.foundation.layout.width
  */
 @Composable
 fun ToolsShell(model: ToolsModel) {
-    val entries = Decl.nav.islandEntries { rememberVectorPainter(IconCatalog.vector(it)) }
+    val entries = Decl.nav.islandEntries()
     BottomNavHost(
         entries = entries,
         selectedId = model.section,

@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.annotation.DrawableRes
 import androidx.compose.material3.Icon
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.NavDecl
@@ -89,17 +88,6 @@ internal fun walletTabOf(sectionId: String): WalletTab? = WalletTab.entries.firs
 internal fun walletSubTabOf(pageId: String): TicketsSubTab =
     TicketsSubTab.entries.firstOrNull { it.page == pageId } ?: TicketsSubTab.Events
 
-/** The declared icon name → the wallet's drawable. */
-@DrawableRes
-internal fun walletIcon(name: String): Int = when (name) {
-    "ids" -> R.drawable.ic_tab_ids
-    "pay" -> R.drawable.ic_tab_pay
-    "me" -> R.drawable.ic_tab_me
-    "vcards" -> R.drawable.ic_tab_vcards
-    "events" -> R.drawable.ic_tab_events
-    else -> R.drawable.ic_tab_config
-}
-
 /**
  * [nav]'s bar on the shared island. A destination tap moves the pill; Me launches cloud-me
  * and the pill stays on the tab you are still on. Config lights no item.
@@ -113,7 +101,7 @@ internal fun WalletBottomNav(
     modifier: Modifier = Modifier,
     collapsed: Boolean = false,
 ) {
-    val entries = nav.islandEntries { painterResource(walletIcon(it)) }
+    val entries = nav.islandEntries()
     // The island is the fleet's, in the fleet's colours: nothing about it is the wallet's to set.
     BottomNavIsland(
         entries = entries,

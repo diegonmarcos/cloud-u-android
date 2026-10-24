@@ -51,8 +51,8 @@ PY
   local ma; ma="$(strip "$MA")"
   printf '%s' "$ma" | grep -q 'if (selected == TAB_SETTINGS) section?.let { ConfigsPage(pageOf(it)) }' \
     && ok "T2 the settings section still draws the Configs page (ConfigsPage, with its declared pages)" || bad "T2 MainActivity no longer draws ConfigsPage for the settings section"
-  printf '%s' "$ma" | grep -q 'StorePages.select(TAB_PHONE, StorePhoneFragment.PAGE_SEARCH)' && printf '%s' "$ma" | grep -q 'selected == TAB_PHONE || selected == TAB_SEARCH' && printf '%s' "$ma" | grep -q '"search" -> Icons.Filled.Search' \
-    && ok "T2 Search is its own island item hosted by the Phone fragment's search page (no second copy), with its own icon" || bad "T2 MainActivity does not host the Search section on StorePhoneFragment's search page"
+  printf '%s' "$ma" | grep -q 'StorePages.select(TAB_PHONE, StorePhoneFragment.PAGE_SEARCH)' && printf '%s' "$ma" | grep -q 'selected == TAB_PHONE || selected == TAB_SEARCH' && python3 -c 'import json,sys; s={x["id"]:x for x in json.load(open(sys.argv[1]))["ui"]["sections"]}; sys.exit(0 if s["search"]["icon"]=="search" and "\"search\" to" in open(sys.argv[2]).read() else 1)' "$BJ" "$ROOT/ab_cloud-libs-shared/libs/ui-icons/src/main/kotlin/com/diegonmarcos/superapp/uiicons/UiIcons.kt" \
+    && ok "T2 Search is its own island item hosted by the Phone fragment's search page (no second copy), with its own icon (the catalog's search glyph)" || bad "T2 MainActivity does not host the Search section on StorePhoneFragment's search page"
   printf '%s' "$ma" | grep -q 'NavBarTopFirstRowScaffold(' && printf '%s' "$ma" | grep -q 'TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)' \
     && ok "T3 MainActivity draws the declared bar with the shared AppTopBarScaffold" || bad "T3 MainActivity does not feed AppTopBarScaffold from the baked TopBarDecl"
   printf '%s' "$ma" | grep -q 'onAccount = rememberAccountLauncher()' \

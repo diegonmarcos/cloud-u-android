@@ -2,21 +2,12 @@ package app.sterna.ui
 
 import android.widget.Toast
 import androidx.compose.runtime.Composable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChatBubble
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Mail
-import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.TaskAlt
-import androidx.compose.material.icons.filled.Contacts
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavController
 import app.sterna.R
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.navEntry
 import com.diegonmarcos.superapp.bottomnav.rememberLeaveOnce
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,7 +29,7 @@ import com.diegonmarcos.superapp.navbartop1.titleHierarchy
  */
 @Composable
 internal fun mailEntries(): List<BottomNavEntry> = mailNav.bottomSections().map {
-    BottomNavEntry(it.id, stringResource(itemDescription(it.id)), rememberVectorPainter(iconFor(it.icon)))
+    navEntry(it.id, stringResource(itemDescription(it.id)), it.icon)
 }
 
 /**
@@ -156,16 +147,4 @@ internal fun itemDescription(id: String): Int = when (id) {
     "tasks" -> R.string.nav_bar_tasks
     "contacts" -> R.string.nav_bar_contacts
     else -> R.string.nav_bar_home
-}
-
-/** The glyph for each of mail's items. The data model stays icon-free. */
-private fun iconFor(id: String): ImageVector = when (id) {
-    "mail" -> Icons.Filled.Mail
-    "chat" -> Icons.Filled.ChatBubble
-    "home" -> Icons.Filled.Home
-    "rss" -> Icons.Filled.RssFeed
-    "video" -> Icons.Filled.Videocam
-    "tasks" -> Icons.Filled.TaskAlt
-    "contacts" -> Icons.Filled.Contacts
-    else -> Icons.Filled.Home
 }

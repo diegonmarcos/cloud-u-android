@@ -59,7 +59,7 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
     val tabs = Declarations.tabs
     var selected by rememberSaveable { mutableStateOf(Declarations.defaultTab.takeIf { d -> tabs.any { it.id == d } } ?: tabs.firstOrNull()?.id ?: "") }
     var reselectTick by rememberSaveable { mutableStateOf(0) }
-    val entries = Declarations.nav.islandEntries { IconCatalog.painter(it) }
+    val entries = Declarations.nav.islandEntries()
     LaunchedEffect(select) {
         if (select != null && Declarations.routable(select)) selected = select
         if (select != null) onSelected()

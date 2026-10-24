@@ -29,16 +29,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavChromeScroll
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottom
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
@@ -164,19 +163,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * The island: ui.bottom_nav through [NavDecl], the icon of a section its `ic_nav_<icon>`
-     * drawable. A tap on Search / Configs asks the live host to draw that page over itself; a tap
+     * The island: ui.bottom_nav through [NavDecl], the icon of a section its libs:ui-icons catalog glyph. A tap on Search / Configs asks the live host to draw that page over itself; a tap
      * on Browser closes whatever is open. The island's look is the lib's.
      */
     @androidx.compose.runtime.Composable
     private fun Island() {
-        val items = remember {
-            decl.viewItems { icon ->
-                @Suppress("DiscouragedApi")
-                resources.getIdentifier("ic_nav_$icon", "drawable", packageName)
-            }
-        }
-        val entries = items.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
+        val entries = decl.islandEntries()
         NavBarBottom(
             entries = entries,
             selectedId = selectedId,

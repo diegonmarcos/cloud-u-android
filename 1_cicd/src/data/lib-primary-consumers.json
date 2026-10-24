@@ -13,6 +13,7 @@
     "autofill": "ac_cloud-account",
     "bottomnav": "aa_cloud-superapp",
     "theme-background": "ac_cloud-mail",
+    "ui-icons": "ac_cloud-mail",
     "nav-bar-top-first-row": "ac_cloud-mail",
     "nav-bar-top-second-row": "ac_cloud-mail",
     "nav-bar-bottom": "ac_cloud-mail",

@@ -52,7 +52,7 @@ CFG = json.loads(r'''{
    "openAddress()",
    "openMenu()",
    "NavDecl.fromBuildConfig",
-   "viewItems",
+   "islandEntries()",
    "openSearch()",
    "openSettings()",
    "host.openTabs()",

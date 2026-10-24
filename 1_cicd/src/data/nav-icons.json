@@ -1,0 +1,28 @@
+{
+  "_doc": "#1160 the nav-icons guard's declarations (1_cicd/src/scripts/cloud-android-nav-icons-guard.py). catalog: where the one icon catalog lives. semantic: names it must hold. entry_points: the only calls that build nav items in an Android source. lib_apps: a shared lib that holds an app's nav declaration, mapped to the app whose build.json declares the icons. exceptions: a nav declaration file that may not draw its glyphs from the catalog, each with the reason; an exception for a file that no longer exists, or that already passes, is stale and fails (it cannot outlive its reason).",
+  "catalog": "ab_cloud-libs-shared/libs/ui-icons/src/main/kotlin/com/diegonmarcos/superapp/uiicons/UiIcons.kt",
+  "semantic": [
+    "inbox",
+    "profile",
+    "configs",
+    "ai",
+    "assistant",
+    "search",
+    "settings",
+    "home"
+  ],
+  "brand": [
+    "assistant"
+  ],
+  "definers": [
+    "ab_cloud-libs-shared/libs/bottomnav/",
+    "ab_cloud-libs-shared/libs/ui-icons/"
+  ],
+  "exceptions": {
+    "ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/ui/platform/feature/vaultunlockednavbar/FleetNavScaffold.kt": "Bitwarden fork: each tab's label, icon and route stay the upstream VaultUnlockedNavBarTab's (a patched upstream file); it is on the legacy BottomNavHost until the fork's tabs move to the catalog.",
+    "ac_cloud-notes/packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/NativeNav.kt": "Capacitor/WebView shell: the island is a View host fed drawable resource ids (BottomNavIslandView.viewItems), not a Compose entry list."
+  },
+  "lib_apps": {
+    "ab_cloud-libs-shared/libs/wallet/": "ac_cloud-wallet"
+  }
+}

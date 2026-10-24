@@ -40,6 +40,7 @@ on:
       - "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**"
       - "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ac_cloud-dialer/**"
       - "!ac_cloud-dialer/web/**"

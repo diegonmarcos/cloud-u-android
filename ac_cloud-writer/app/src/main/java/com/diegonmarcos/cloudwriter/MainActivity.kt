@@ -115,7 +115,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontStyle
@@ -138,7 +137,7 @@ import com.diegonmarcos.cloudwriter.ui.PageGutter
 import com.diegonmarcos.cloudwriter.ui.SectionHeader
 import com.diegonmarcos.cloudwriter.ui.WriterTheme
 import com.diegonmarcos.cloudwriter.ui.asValue
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.navEntry
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
@@ -403,7 +402,7 @@ class MainActivity : AppCompatActivity() {
             Screen.CONFIGS -> stringResource(R.string.configs_title)
         }
         val entries = WriterNav.decl.bottomSections().map { s ->
-            BottomNavEntry(s.id, sectionLabel(s.id, s.label), rememberVectorPainter(WriterNav.icon(s.icon)))
+            navEntry(s.id, sectionLabel(s.id, s.label), s.icon)
         }
         NavBarTopFirstRowScaffold(
             title = title,

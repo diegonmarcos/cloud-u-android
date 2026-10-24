@@ -23,6 +23,7 @@
     "nav-bar-top-first-row": { "class": "gui", "why": "#1154 shared navigation + theme: the first top row in Compose." },
     "nav-bar-top-second-row": { "class": "gui", "why": "#1154 shared navigation + theme: the second top row in Compose." },
     "theme-background": { "class": "gui", "why": "#1154 shared navigation + theme: the page background and colour roles." },
+    "ui-icons": { "class": "gui", "why": "#1160 shared navigation icon catalog: name to ImageVector for every nav bar." },
     "browser":                 { "class": "gui",      "why": "cloud-browser's feature module (activity + web views)." },
     "cal":                     { "class": "engine",   "why": "Cloud-Lib-Cal; cloud-me binds it (IDataBackend)." },
     "calc":                    { "class": "engine",   "why": "#767 Cloud-Lib-Calc: libqalculate as a pinned libqalc.so behind CalcBackendService; cloud-calc binds it." },

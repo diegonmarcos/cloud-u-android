@@ -40,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -242,7 +241,7 @@ fun SearchShell(state: SearchState) {
                 // #1161 the shared nav pattern: libs:nav-bar-bottom's bar and page background, libs:nav-bar-top-first-row's
                 // row (Profile top-right opens Cloud Account), libs:nav-bar-top-second-row's strips, one scroll-collapse.
                 NavBarBottomHost(
-                    entries = NAV.islandEntries { painterResource(IconCatalog.res(it)) },
+                    entries = NAV.islandEntries(),
                     selectedId = if (state.saved) null else state.section,
                     onSelect = { state.openSection(it.id) },
                     modifier = Modifier.imePadding(),

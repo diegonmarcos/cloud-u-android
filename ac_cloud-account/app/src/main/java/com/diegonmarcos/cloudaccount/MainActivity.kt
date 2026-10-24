@@ -15,12 +15,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Key
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -30,8 +24,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import com.diegonmarcos.cloudaccount.autofill.AutofillProfilesPage
 import com.diegonmarcos.cloudaccount.autofill.AutofillRulesPage
@@ -48,8 +40,8 @@ import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
-import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
@@ -168,7 +160,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             NavBarBottomHost(
-                entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
+                entries = NAV.islandEntries(),
                 selectedId = selected,
                 onSelect = { selected = it.id; selectedPage = null },
             ) {
@@ -287,13 +279,5 @@ class MainActivity : AppCompatActivity() {
             return HubNav.resolve(s, intent?.getStringExtra(EXTRA_PAGE)?.trim()?.ifEmpty { null })
         }
 
-        /** The declared icon name → the glyph the island draws. */
-        private fun iconFor(name: String): ImageVector = when (name) {
-            "data" -> Icons.Filled.Key
-            "connect" -> Icons.Filled.Share
-            "activity" -> Icons.Filled.Notifications
-            "configs" -> Icons.Filled.Settings
-            else -> Icons.Filled.AccountCircle
-        }
     }
 }

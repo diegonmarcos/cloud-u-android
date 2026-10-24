@@ -61,6 +61,7 @@ on:
       - "ab_cloud-libs-shared/libs/fleet-endpoints-android/**"
       - "ab_cloud-libs-shared/libs/fleet-endpoints/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ac_cloud-vault/**"
       - "!ac_cloud-vault/web/**"
 permissions:

@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.ColorUtils
@@ -31,7 +30,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.viewpager.widget.ViewPager
 import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.navEntry
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
@@ -444,7 +443,7 @@ class MainActivity : SimpleActivity() {
                 }
             }
             NavBarBottomHost(
-                entries = shown.map { BottomNavEntry(it.id, it.label, painterResource(DialerNav.icon(it.icon))) },
+                entries = shown.map { navEntry(it.id, it.label, it.icon) },
                 selectedId = sectionId,
                 onSelect = { selectSection(it.id) },
                 dark = dark,

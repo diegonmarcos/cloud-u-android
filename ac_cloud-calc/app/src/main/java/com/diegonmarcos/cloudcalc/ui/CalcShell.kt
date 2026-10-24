@@ -27,7 +27,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.cloudcalc.Declarations
@@ -54,7 +53,7 @@ import androidx.activity.compose.BackHandler
 @Composable
 fun CalcShell(api: CalcApi, state: CalcState) {
     CompositionLocalProvider(LocalCalcApi provides api, LocalCalcState provides state) {
-        val entries = Declarations.nav.islandEntries { rememberVectorPainter(IconCatalog.vector(it)) }
+        val entries = Declarations.nav.islandEntries()
         // The fleet's own host: the page above the island, the scroll collapse, the inset handling.
         val host: @Composable () -> Unit = {
             BottomNavHost(

@@ -38,7 +38,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,7 +46,7 @@ import com.diegonmarcos.cloudwriter.ui.CloudWriterTheme
 import com.diegonmarcos.cloudwriter.ui.PageGutter
 import com.diegonmarcos.cloudwriter.ui.SectionHeader
 import com.diegonmarcos.cloudwriter.ui.WriterTheme
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.navEntry
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
@@ -113,7 +112,7 @@ abstract class WriterSettingsActivity : AppCompatActivity() {
                 // #1164 the same shell as MainActivity's: the shared first row, bottom nav, page background and scroll-collapse.
                 val dark = WriterTheme.isDark()
                 val entries = WriterNav.decl.bottomSections().map { sec ->
-                    BottomNavEntry(sec.id, sec.label, rememberVectorPainter(WriterNav.icon(sec.icon)))
+                    navEntry(sec.id, sec.label, sec.icon)
                 }
                 NavBarTopFirstRowScaffold(
                     title = pageTitle(),

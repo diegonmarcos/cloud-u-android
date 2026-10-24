@@ -159,7 +159,7 @@ fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (
     }
 
     NavBarBottomHost(
-        entries = nav.islandEntries { IconCatalog.painter(it) },
+        entries = nav.islandEntries(),
         selectedId = if (onIsland) section else null,
         onSelect = { entry -> go(entry.id) },
         dark = dark,

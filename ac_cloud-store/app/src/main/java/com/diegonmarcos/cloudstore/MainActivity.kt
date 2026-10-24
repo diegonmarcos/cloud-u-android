@@ -18,15 +18,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cloud
-import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.diegonmarcos.superapp.ai.AiFleetChatPanel
 import com.diegonmarcos.superapp.adbdebug.AdbShellHost
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
@@ -34,8 +25,8 @@ import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
-import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
@@ -132,7 +123,7 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
         }
         val shell: @androidx.compose.runtime.Composable () -> Unit = {
             NavBarBottomHost(
-                entries = NAV.islandEntries { rememberVectorPainter(iconFor(it)) },
+                entries = NAV.islandEntries(),
                 selectedId = selected,
                 onSelect = { selected = it.id },
             ) {
@@ -218,14 +209,5 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
         /** build.json::ui.top_bar as baked into BuildConfig: what the first row draws (null = the app declares no top bar). */
         val TOP_BAR: TopBarDecl? by lazy { TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64) }
 
-        /** The declared icon name → the glyph the island draws. */
-        private fun iconFor(name: String): ImageVector = when (name) {
-            "cloud" -> Icons.Filled.Cloud
-            "phone" -> Icons.Filled.PhoneAndroid
-            "search" -> Icons.Filled.Search
-            "feed" -> Icons.Filled.RssFeed
-            "access" -> Icons.Filled.Security
-            else -> Icons.Filled.Settings
-        }
     }
 }

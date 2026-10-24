@@ -22,7 +22,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -38,13 +37,12 @@ import com.diegonmarcos.superapp.ai.AiStrings
 import com.diegonmarcos.superapp.ai.AiTheme
 import com.diegonmarcos.superapp.ai.materialAiTheme
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
-import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
-import com.diegonmarcos.superapp.navbartop2.SecondRowIcons
 import com.diegonmarcos.superapp.themebg.themeBackground
 
 /** The test tags the shell is driven by. */
@@ -83,7 +81,7 @@ fun SiShell() {
     val sec = nav.section(section)
     val pageId = page?.takeIf { p -> sec?.pages?.any { it.id == p } == true } ?: sec?.pages?.firstOrNull()?.id
     val theme = siAiTheme()
-    val entries = nav.islandEntries { rememberVectorPainter(SecondRowIcons.vector(it)) }
+    val entries = nav.islandEntries()
     fun open(sectionId: String, pageId: String?) { section = sectionId; page = pageId }
 
     Box(Modifier.fillMaxSize().themeBackground(dark = true).windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))) {

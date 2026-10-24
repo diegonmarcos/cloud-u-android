@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.navEntry
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottom
 
@@ -49,12 +47,7 @@ fun MeBottomBar(
     modifier: Modifier = Modifier,
     collapsed: Boolean = false,
 ) {
-    val ctx = LocalContext.current
-    val entries = Sections.bottom().map {
-        @Suppress("DiscouragedApi")
-        val icon = ctx.resources.getIdentifier(it.icon, "drawable", ctx.packageName)
-        BottomNavEntry(it.id, it.label, painterResource(icon))
-    }
+    val entries = Sections.bottom().map { navEntry(it.id, it.label, it.icon) }
     NavBarBottom(
         entries = entries,
         selectedId = MeBottomNav.pillFor(selectedSectionId),

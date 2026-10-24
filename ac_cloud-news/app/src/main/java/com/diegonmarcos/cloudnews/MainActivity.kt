@@ -21,18 +21,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
-import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.HierarchyEntry
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
-import com.diegonmarcos.superapp.navbartop2.SecondRowIcons
 import com.diegonmarcos.superapp.updater.Updater
 
 /**
@@ -113,7 +111,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             NavBarBottomHost(
-                entries = NAV.islandEntries { rememberVectorPainter(SecondRowIcons.vector(it)) },
+                entries = NAV.islandEntries(),
                 selectedId = section,
                 onSelect = { go(it.id) },
             ) {

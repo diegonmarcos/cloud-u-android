@@ -22,7 +22,7 @@ public class UiIcon(public val vector: ImageVector, public val tinted: Boolean =
  * THE icon catalog of the fleet's navigation (#1160): a declared icon name (a Material symbol in snake_case, a semantic name
  * such as `profile` / `configs` / `ai`, or a name an app declared before the catalog existed) to its glyph. It is the single
  * source of every nav-bar icon in every app on the shared nav libs; an app's nav declaration reaches it through
- * libs:bottomnav's `catalogEntries()` / `navEntry()` and never names a material icon itself (the nav-icons guard).
+ * libs:bottomnav's `islandEntries()` / `navEntry()` and never names a material icon itself (the nav-icons guard).
  *
  * A nav item ALWAYS draws a glyph: a name this table does not hold draws [FALLBACK] (never a letter or nothing), and [has] is
  * what the guard tests hold every declaration to. Add a name here, once, and every app has it.
@@ -257,6 +257,11 @@ public object UiIcons {
         "calendar" to Icons.Outlined.DateRange,
         "costs" to Icons.Outlined.Payments,
         "documents" to Icons.Outlined.Description,
+        "ids" to Icons.Outlined.Badge,
+        "pay" to Icons.Outlined.Payments,
+        "vcards" to Icons.Outlined.Contacts,
+        "events" to Icons.Outlined.ConfirmationNumber,
+        "config" to Icons.Outlined.Settings,
         "writer" to Icons.Outlined.Edit,
         )
     }

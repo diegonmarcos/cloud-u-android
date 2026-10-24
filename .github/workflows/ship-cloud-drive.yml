@@ -73,6 +73,7 @@ on:
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       - "ab_cloud-libs-shared/libs/sysdns/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-drive/**"
       - "!ac_cloud-drive/web/**"

@@ -90,11 +90,16 @@
       ]
     },
     "nav-shape-guard.yml": {
-      "_doc": "#868: every app's build.json and gradle scripts (N1/N2/N4 bake), the sources of the apps that are NOT exempt (N3/N4/N5; none today, declared so the first migrated app is already covered), and libs:bottomnav's NavDecl/PageTabs/PageTabsView (N0).",
+      "_doc": "#868 (+#1160 nav icons: every nav declaration's sources and the icon catalog): every app's build.json and gradle scripts (N1/N2/N4 bake), the sources of the apps that are NOT exempt (N3/N4/N5; none today, declared so the first migrated app is already covered), and libs:bottomnav's NavDecl/PageTabs/PageTabsView (N0).",
       "paths": [
         "1_cicd/src/data/nav-shape.json",
         "1_cicd/src/scripts/cloud-android-nav-shape-guard.py",
         "1_cicd/src/scripts/test/nav-shape-guard.test.sh",
+        "1_cicd/src/data/nav-icons.json",
+        "1_cicd/src/scripts/cloud-android-nav-icons-guard.py",
+        "1_cicd/src/scripts/test/nav-icons-guard.test.sh",
+        "ab_cloud-libs-shared/libs/*/src/main/**",
+        "ab_cloud-libs-shared/libs/ui-icons/**",
         "*/build.json",
         "*/build.gradle",
         "*/build.gradle.kts",

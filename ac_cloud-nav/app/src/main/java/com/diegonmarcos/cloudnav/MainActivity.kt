@@ -21,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.res.painterResource
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.cloudnav.configs.ConfigsFragment
 import com.diegonmarcos.superapp.updater.Updater
@@ -30,7 +29,6 @@ import com.diegonmarcos.cloudnav.routes.NavigationFragment
 import com.diegonmarcos.cloudnav.routes.RoutesFragment
 import com.diegonmarcos.cloudnav.tracker.NavDeepLink
 import com.diegonmarcos.cloudnav.tracker.TrackerInk
-import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
@@ -38,6 +36,7 @@ import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 
@@ -127,7 +126,7 @@ class MainActivity : AppCompatActivity() {
     @Composable
     private fun NavShell() {
         val ctx = LocalContext.current
-        val entries = NavConfig.decl.viewItems { Icons.nav(ctx, it) }.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
+        val entries = NavConfig.decl.islandEntries()
         val section = NavConfig.decl.section(currentTab)
         val ai = rememberSuperAppAiLauncher()
         // #1154 the first row: AI hands over to the SuperApp, Profile opens Cloud Account, Configs is this app's Configs section. A pick of a
