@@ -102,7 +102,7 @@ object ContainerSheet {
                 Text(if (vm.isBlank()) containerName else "$containerName · $vm", color = DIM, fontSize = 12.sp)
             }
             // The shared pill strip (libs:bottomnav); in a sheet, so no live top inset.
-            PageTabs(pages = listOf(NavPage("infos", "Infos"), NavPage("actions", "Actions")), selectedId = tab,
+            PageTabs(pages = listOf(NavPage("infos", "Infos", "info"), NavPage("actions", "Actions", "bolt")), selectedId = tab,
                 onSelect = { tab = it.id }, underTopChrome = false)
             Column(Modifier.fillMaxWidth().height(420.dp).verticalScroll(rememberScrollState()).testTag("container:pane:$tab")) {
                 if (tab == "infos") Infos(containerName, vm, service, pub, priv)

@@ -2085,8 +2085,8 @@ private fun DrawerContent(
                 var folderTab by remember { mutableStateOf(FolderTab.ALL) }
                 // The fleet's pill strip (libs:nav-bar-top-second-row, #868). In a sheet: no live top inset.
                 val folderTabs = listOf(
-                    NavPage(FolderTab.ALL.name, stringResource(R.string.inbox_folders_tab_all)),
-                    NavPage(FolderTab.UNREAD.name, stringResource(R.string.inbox_folders_tab_unread)),
+                    NavPage(FolderTab.ALL.name, stringResource(R.string.inbox_folders_tab_all), "inbox"),
+                    NavPage(FolderTab.UNREAD.name, stringResource(R.string.inbox_folders_tab_unread), "mark_email_unread"),
                 )
                 NavBarTopSecondRow(
                     pages = folderTabs,

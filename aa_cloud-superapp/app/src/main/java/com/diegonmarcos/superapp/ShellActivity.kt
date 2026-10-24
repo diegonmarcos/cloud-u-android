@@ -950,8 +950,8 @@ open class ShellActivity : AppCompatActivity(),
 
     private fun setDrawerTabs(sectionLabel: String, index: Int) {
         drawerTabs.pages = listOf(
-            NavPage(DRAWER_TAB_HOME, getString(R.string.drawer_tab_home)),
-            NavPage(DRAWER_TAB_SECTION, sectionLabel),
+            NavPage(DRAWER_TAB_HOME, getString(R.string.drawer_tab_home), "home"),
+            NavPage(DRAWER_TAB_SECTION, sectionLabel, "apps"),
         )
         drawerTabs.selectedId = if (index == 0) DRAWER_TAB_HOME else DRAWER_TAB_SECTION
     }

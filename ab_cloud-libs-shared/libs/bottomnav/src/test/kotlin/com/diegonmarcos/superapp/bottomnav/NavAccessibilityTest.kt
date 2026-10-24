@@ -797,8 +797,8 @@ class NavAccessibilityTest {
         /** The new maximum: Cloud Code's seven plus one. */
         val EIGHT = CLOUD_CODE + Triple("notes", "Notes", Icons.Filled.Inbox)
 
-        val THREE = listOf(NavPage("cloud", "Cloud"), NavPage("phone", "Phone"), NavPage("labs", "Labs"))
-        val WITH_LAUNCH = listOf(NavPage("observ", "Observ"), NavPage("topology", "Topology"), NavPage("wd", "Watchdog", action = "extapp:wd"))
-        val MANY = (1..6).map { NavPage("p$it", "Page $it") }
+        val THREE = listOf(NavPage("cloud", "Cloud", "cloud"), NavPage("phone", "Phone", "smartphone"), NavPage("labs", "Labs", "build"))
+        val WITH_LAUNCH = listOf(NavPage("observ", "Observ", "visibility"), NavPage("topology", "Topology", "account_tree"), NavPage("wd", "Watchdog", "security", action = "extapp:wd"))
+        val MANY = (1..6).map { NavPage("p$it", "Page $it", "folder") }
     }
 }

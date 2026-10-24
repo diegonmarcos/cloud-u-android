@@ -10,7 +10,7 @@ import com.diegonmarcos.superapp.bottomnav.NavPage
 class TrackerFragment : PagedSectionFragment() {
     override val section = "tracker"
     override val containerId = R.id.nav_host_tracker
-    override val fallbackPages = listOf(NavPage(PAGE_TIMELINE, "Timeline"), NavPage(PAGE_STEPS, "Steps"), NavPage(PAGE_SLEEP, "Sleep"))
+    override val fallbackPages = listOf(NavPage(PAGE_TIMELINE, "Timeline", "timeline"), NavPage(PAGE_STEPS, "Steps", "directions_walk"), NavPage(PAGE_SLEEP, "Sleep", "bedtime"))
 
     override fun pageFragment(id: String): Fragment = when (id) {
         PAGE_STEPS -> TrackerStepsFragment()

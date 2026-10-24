@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
@@ -32,7 +33,6 @@ fun MeShell(
     onOpenPage: (sectionId: String, pageId: String) -> Unit = { s, _ -> onOpen(s) },
     content: @Composable () -> Unit,
 ) {
-    val collapse = rememberBottomNavCollapse()
     val settings = Sections.settings()
     val hierarchy = Sections.byId(selectedSectionId)?.let { titleHierarchy(it.nav, currentPageId) }.orEmpty()
     NavBarTopFirstRowScaffold(
@@ -43,12 +43,13 @@ fun MeShell(
         onConfigs = { settings.lastOrNull()?.let { onOpen(it.id) } },
         modifier = modifier,
         onAi = { onTarget(MeTopBar.AI_TARGET) },
-        barVisible = !collapse.collapsed,
         dark = true,
     ) {
         MeDrawer(onOpen)
         Column(Modifier.fillMaxSize()) {
             banner()
+            // #1157 the ONE chrome connection of the shared first-row scaffold (it also hides the top row and compacts the second row).
+            val collapse = LocalNavChromeCollapse.current ?: rememberBottomNavCollapse()
             MeBody(selectedSectionId, onOpen, onTarget, Modifier.weight(1f), collapse = collapse, content = content)
         }
     }

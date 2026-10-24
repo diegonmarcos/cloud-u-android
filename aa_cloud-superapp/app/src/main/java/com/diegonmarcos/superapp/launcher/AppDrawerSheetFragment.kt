@@ -63,7 +63,7 @@ class AppDrawerSheetFragment : KitComposeFragment(), BackHandler {
         val click = { id: String -> (activity as? TileGridFragment.TileClickListener)?.onTileClicked(id); Unit }
         val session = remember { SearchSession(this, SearchEntry.HOME_SHEET).also { search = it } }
         Column(Modifier.fillMaxSize().background(LocalKitPalette.current.surface).testTag(TAG_SHEET)) {
-            PageTabs(tabs.map { NavPage(it.id, it.label) }, selected,
+            PageTabs(tabs.map { NavPage(it.id, it.label, "apps") }, selected,
                 onSelect = { page -> selected = page.id; Haptics.tap(view) }, underTopChrome = false)
             // Search — the SuperApp's one search: the same slim bar, chips, per-type sections and engine as Cloud ▸
             // Apps and the Home star, placed between the pills and the body so it serves whichever tab is showing.

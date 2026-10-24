@@ -5,6 +5,8 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.assertDoesNotExist
+import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.performClick
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.navbarbottom.BottomSpec
@@ -40,7 +42,7 @@ class NavBarTopSecondRowTest {
         }
     }).around(compose)
 
-    private fun pages(n: Int) = (1..n).map { NavPage("p$it", "Page $it") }
+    private fun pages(n: Int) = (1..n).map { NavPage("p$it", "Page $it", "folder") }
 
     private fun show(n: Int, selected: String = "p1", onSelect: (NavPage) -> Unit = {}) =
         compose.setContent { NavBarTopSecondRow(pages(n), selected, onSelect, dark = true) }
@@ -53,6 +55,25 @@ class NavBarTopSecondRowTest {
         assertTrue("label stays legible", SecondRowSpec.LABEL.value >= 8f)
         assertTrue("the whole strip is shorter than the whole bar",
             SecondRowSpec.TAB_HEIGHT.value + 2 * SecondRowSpec.STRIP_PAD_V.value < BottomSpec.HEIGHT.value)
+    }
+
+    @Test fun `every tab renders its icon (never a letter) and, at rest, its name`() {
+        show(3)
+        for (i in 1..3) {
+            val icon = compose.onNodeWithTag(SecondRowTags.icon("p$i"), useUnmergedTree = true).fetchSemanticsNode()
+            assertTrue("p$i icon node is a glyph, not text", !icon.config.contains(androidx.compose.ui.semantics.SemanticsProperties.Text))
+            compose.onNodeWithTag(SecondRowTags.label("p$i"), useUnmergedTree = true).assertExists()
+        }
+    }
+
+    @Test fun `compact keeps only the selected name and shortens the tab, the icons stay`() {
+        compose.setContent { NavBarTopSecondRow(pages(3), "p2", {}, dark = true, compact = true) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(SecondRowTags.label("p2"), useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(SecondRowTags.label("p1"), useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithTag(SecondRowTags.label("p3"), useUnmergedTree = true).assertDoesNotExist()
+        for (i in 1..3) compose.onNodeWithTag(SecondRowTags.icon("p$i"), useUnmergedTree = true).assertExists()
+        assertEquals(SecondRowSpec.COMPACT_TAB_HEIGHT.value, compose.onNodeWithTag(SecondRowTags.tab("p1")).fetchSemanticsNode().boundsInRoot.height, 0.5f)
     }
 
     @Test fun `the rendered tab is the declared height`() {
@@ -92,7 +113,7 @@ class NavBarTopSecondRowTest {
 
     @Test fun `a request from the title dropdown selects the page, or the container that holds it and waits`() {
         val requests = SubPageRequests()
-        val tree = listOf(NavPage("a", "A"), NavPage("box", "Box", pages = listOf(NavPage("deep", "Deep"))))
+        val tree = listOf(NavPage("a", "A", "home"), NavPage("box", "Box", "inventory_2", pages = listOf(NavPage("deep", "Deep", "folder"))))
         val picked = mutableListOf<String>()
         compose.setContent {
             androidx.compose.runtime.CompositionLocalProvider(LocalSubPageRequests provides requests) {

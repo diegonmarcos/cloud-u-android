@@ -106,9 +106,9 @@ class MapsTimelineTabsFragment : KitComposeFragment(), TimelineHost {
 
         /** What a host that declares no pages shows: the three views, in order. */
         val DEFAULT_PAGES = listOf(
-            NavPage(PAGE_EXPLORED, "Explored"),
-            NavPage(PAGE_DAILY, "Daily"),
-            NavPage(PAGE_STOPS, "Stops"),
+            NavPage(PAGE_EXPLORED, "Explored", "explore"),
+            NavPage(PAGE_DAILY, "Daily", "schedule"),
+            NavPage(PAGE_STOPS, "Stops", "place"),
         )
 
         fun newInstance(pages: List<NavPage> = DEFAULT_PAGES) =

@@ -28,15 +28,18 @@ object MapsPageStrip {
     fun toArgs(pages: List<NavPage>): Bundle = Bundle().apply {
         putStringArray(ARG_IDS, pages.map { it.id }.toTypedArray())
         putStringArray(ARG_LABELS, pages.map { it.label }.toTypedArray())
+        putStringArray(ARG_ICONS, pages.map { it.icon }.toTypedArray())
     }
 
     /** The pages [toArgs] stored, else [fallback] (a host the shell did not feed). */
     fun fromArgs(args: Bundle?, fallback: List<NavPage>): List<NavPage> {
         val ids = args?.getStringArray(ARG_IDS) ?: return fallback
         val labels = args.getStringArray(ARG_LABELS) ?: return fallback
-        return ids.mapIndexed { i, id -> NavPage(id, labels.getOrElse(i) { id }) }.ifEmpty { fallback }
+        val icons = args.getStringArray(ARG_ICONS)
+        return ids.mapIndexed { i, id -> NavPage(id, labels.getOrElse(i) { id }, icons?.getOrNull(i)?.takeIf { it.isNotBlank() } ?: fallback.firstOrNull { it.id == id }?.icon ?: "tab") }.ifEmpty { fallback }
     }
 
     private const val ARG_IDS = "page_ids"
+    private const val ARG_ICONS = "page_icons"
     private const val ARG_LABELS = "page_labels"
 }

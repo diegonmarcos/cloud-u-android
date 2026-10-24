@@ -353,7 +353,7 @@ class FleetParityTest {
     fun `an app's MaterialTheme cannot change one pixel or bound of the tab strip, on either surface`() {
         val hostile = lightColorScheme(primary = Color.Red, onSurface = Color.Green, surface = Color.Blue, background = Color.Magenta)
         val loud = Typography(labelLarge = TextStyle(fontFamily = FontFamily.Serif, lineHeight = 40.sp, letterSpacing = 4.sp))
-        val pages = listOf(NavPage("cloud", "Cloud"), NavPage("phone", "Phone"), NavPage("labs", "Labs"))
+        val pages = listOf(NavPage("cloud", "Cloud", "cloud"), NavPage("phone", "Phone", "smartphone"), NavPage("labs", "Labs", "build"))
         var themed by mutableStateOf(false)
         var surface by mutableStateOf(TabSurface.Dark)
         compose.setContent {

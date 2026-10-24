@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.bottomnav.AppTopBarController
 import com.diegonmarcos.superapp.bottomnav.AppTopBarLabels
+import com.diegonmarcos.superapp.bottomnav.NavChromeScroll
 import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
 import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarSettings
@@ -242,25 +243,28 @@ public fun NavBarTopFirstRowScaffold(
     val requests = remember { SubPageRequests() }
     // A pick below the bottom page asks the strips of the page it opens to select it (the app only switches the page).
     val navigate: (HierarchyEntry) -> Unit = { e -> if (e.depth > 0) requests.request(e.id); onNavigate(e) }
-    AppTopBarScaffold(
-        decl = TopBarDecl(drawer = true, settings = TopBarSettings.KNOWN, inlineActions = true),
-        title = title,
-        onAccount = onAccount,
-        onConfigs = onConfigs,
-        modifier = modifier,
-        controller = controller,
-        labels = labels,
-        onAi = onAi,
-        aiPanel = aiPanel,
-        barVisible = barVisible,
-        topRow = { c ->
-            NavBarTopFirstRow(
-                title, ThemeBackground.colors(dark), labels, hierarchy, navigate,
-                onMenu = { c.openDrawer() },
-                onAi = { if (onAi != null) onAi() else c.toggleAi() },
-                onProfile = onAccount, onConfigs = onConfigs, avatar = avatar,
-            )
-        },
-        content = { CompositionLocalProvider(LocalSubPageRequests provides requests, content = content) },
-    )
+    // #1157 scrolling the page down hides this row and compacts the second row and the bottom nav; up restores all three.
+    NavChromeScroll { collapse ->
+        AppTopBarScaffold(
+            decl = TopBarDecl(drawer = true, settings = TopBarSettings.KNOWN, inlineActions = true),
+            title = title,
+            onAccount = onAccount,
+            onConfigs = onConfigs,
+            modifier = modifier,
+            controller = controller,
+            labels = labels,
+            onAi = onAi,
+            aiPanel = aiPanel,
+            barVisible = barVisible && !collapse.collapsed,
+            topRow = { c ->
+                NavBarTopFirstRow(
+                    title, ThemeBackground.colors(dark), labels, hierarchy, navigate,
+                    onMenu = { c.openDrawer() },
+                    onAi = { if (onAi != null) onAi() else c.toggleAi() },
+                    onProfile = onAccount, onConfigs = onConfigs, avatar = avatar,
+                )
+            },
+            content = { CompositionLocalProvider(LocalSubPageRequests provides requests, content = content) },
+        )
+    }
 }

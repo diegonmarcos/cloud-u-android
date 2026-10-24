@@ -175,11 +175,11 @@
         "icon": "explored",
         "pages": [
           {
-            "id": "trips",
+            "id": "trips", "icon": "luggage",
             "label": "Trips"
           },
           {
-            "id": "maps",
+            "id": "maps", "icon": "map",
             "label": "Maps"
           }
         ]
@@ -190,15 +190,15 @@
         "icon": "timeline",
         "pages": [
           {
-            "id": "timeline",
+            "id": "timeline", "icon": "timeline",
             "label": "Timeline"
           },
           {
-            "id": "steps",
+            "id": "steps", "icon": "directions_walk",
             "label": "Steps"
           },
           {
-            "id": "sleep",
+            "id": "sleep", "icon": "bedtime",
             "label": "Sleep"
           }
         ]
@@ -209,27 +209,27 @@
         "icon": "configs",
         "pages": [
           {
-            "id": "tracker",
+            "id": "tracker", "icon": "my_location",
             "label": "Tracker"
           },
           {
-            "id": "apis",
+            "id": "apis", "icon": "api",
             "label": "APIs"
           },
           {
-            "id": "update",
+            "id": "update", "icon": "update",
             "label": "Update"
           },
           {
-            "id": "cache",
+            "id": "cache", "icon": "cached",
             "label": "Cache"
           },
           {
-            "id": "layers",
+            "id": "layers", "icon": "layers",
             "label": "Layers"
           },
           {
-            "id": "about",
+            "id": "about", "icon": "info",
             "label": "About"
           }
         ]

@@ -116,7 +116,7 @@ object ContainerSheet {
             // #868 the sheet's two tabs are libs:bottomnav's pill strip, not a TabLayout. A sheet has
             // no toolbar above it, so the strip adds no status-bar inset of its own.
             NavBarTopSecondRow(
-                pages = listOf(NavPage("infos", "Infos"), NavPage("actions", "Actions")),
+                pages = listOf(NavPage("infos", "Infos", "info"), NavPage("actions", "Actions", "bolt")),
                 selectedId = tab,
                 onSelect = { page -> tab = page.id },
                 underTopChrome = false,

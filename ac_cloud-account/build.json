@@ -509,37 +509,37 @@
             "_doc": "The person and this phone (libs:account AccountProfilePage): picture, name, device card, the four profile tiles, Backup / Restore / Migrate, About. Was Home > Account.",
             "id": "me",
             "label": "Me",
-            "icon": "personal"
+            "icon": "account_circle"
           },
           {
             "_doc": "Payment and identity: new in #1081. Nothing is stored here; the page opens Cloud Wallet (cards, passes) and Cloud Vault (ID documents).",
             "id": "wallet",
             "label": "Wallet",
-            "icon": "personal"
+            "icon": "account_balance_wallet"
           },
           {
             "_doc": "The non-secret autofill Source of Truth (a0_docs/eng-specs/autofill-3-tier.md), served by AutofillSotProvider behind AUTOFILL_PROFILE_READ/WRITE. Was Profiles > Autofill; ID documents are not here: Cloud Vault.",
             "id": "autocomplete",
             "label": "Autocomplete",
-            "icon": "personal",
+            "icon": "auto_fix_high",
             "pages": [
               {
                 "_doc": "Profiles (name parts, birth date, nationality) with their typed addresses, phones, emails and links.",
                 "id": "personal",
                 "label": "Personal",
-                "icon": "personal"
+                "icon": "person"
               },
               {
                 "_doc": "Per-site form mapping rules and the default profile per site or country domain.",
                 "id": "sites",
                 "label": "Sites",
-                "icon": "personal"
+                "icon": "language"
               },
               {
                 "_doc": "Labelled multi-line free-text blocks Cloud Keyboard and Cloud Browser offer (never auto-filled).",
                 "id": "snippets",
                 "label": "Snippets",
-                "icon": "personal"
+                "icon": "content_paste"
               }
             ]
           }
@@ -555,35 +555,35 @@
             "_doc": "PUBLIC, no secret value on any page of this section (a guard test enforces it). Make this phone match the loaded profile (was the Setup strip) plus the privileged channel.",
             "id": "android",
             "label": "Android",
-            "icon": "configs",
+            "icon": "android",
             "pages": [
               {
                 "id": "runbook",
                 "label": "Runbook",
-                "icon": "configs"
+                "icon": "menu_book"
               },
               {
                 "_doc": "The fleet app inventory: install what is missing through Cloud Store, capture what is here (libs:account AppsPage).",
                 "id": "apps",
                 "label": "Install",
-                "icon": "configs"
+                "icon": "apps"
               },
               {
                 "_doc": "Fleet push: the settings the profile pushes to each app, counts and names only (libs:account FleetSetupTab). Was Configs > Setup > Push (id `configs`).",
                 "id": "push",
                 "label": "Push",
-                "icon": "configs"
+                "icon": "notifications"
               },
               {
                 "id": "perms",
                 "label": "Perms",
-                "icon": "configs"
+                "icon": "admin_panel_settings"
               },
               {
                 "_doc": "THE page for the privileged channel (libs:shizuku-adb-debug-tools AdbShellPage), the same one the SuperApp and Cloud Store draw.",
                 "id": "adb-shell",
                 "label": "ADB Shell",
-                "icon": "configs"
+                "icon": "terminal"
               }
             ]
           },
@@ -591,13 +591,13 @@
             "_doc": "New in #1081: the declared desktop-class devices, OS and Home Manager, public fields only (libs:account PublicConfig).",
             "id": "desktop",
             "label": "Desktop",
-            "icon": "configs"
+            "icon": "desktop_windows"
           },
           {
             "_doc": "New in #1081: the declared containers, public fields only, and the way to Cloud C3.",
             "id": "c3",
             "label": "C3",
-            "icon": "configs"
+            "icon": "cloud"
           }
         ]
       },
@@ -611,36 +611,36 @@
             "_doc": "PRIVATE. Masked by default; reveal and copy only behind device auth.",
             "id": "secrets",
             "label": "Secrets",
-            "icon": "data",
+            "icon": "key",
             "pages": [
               {
                 "_doc": "THE token list: SSH keys, tokens, passwords and logins grouped per provider. Masked; reveal and copy behind device auth; copy auto-clears; edit/rotate/delete; per-provider Setup.",
                 "id": "providers",
                 "label": "Providers",
-                "icon": "data"
+                "icon": "hub"
               },
               {
                 "_doc": "Was Secrets > Fleet keys (id `secrets`).",
                 "id": "keys",
                 "label": "Fleet keys",
-                "icon": "data"
+                "icon": "vpn_key"
               },
               {
                 "_doc": "Fleet token manager: every bearer token the fleet has emitted (Authelia JWTs and engine-minted ft_ tokens), reveal and copy behind device auth, generate (name, audience, scopes, expiry), revoke. Talks to cloud-u-containers infra-sec_tokens-api (tokens-api.mesh.diegonmarcos.com, c3-pvt.diegonmarcos.com/tokens-api), owner-only. Private: a Data page, never a Configs one.",
                 "id": "tokens",
                 "label": "Tokens",
-                "icon": "data"
+                "icon": "token"
               },
               {
                 "id": "grants",
                 "label": "Grants",
-                "icon": "data"
+                "icon": "verified_user"
               },
               {
                 "_doc": "THE importer: personal data and tokens, masked review before saving. Was Home > Import.",
                 "id": "import",
                 "label": "Import",
-                "icon": "data"
+                "icon": "file_upload"
               }
             ]
           },
@@ -648,19 +648,19 @@
             "_doc": "The runtime databases and the encrypted bundle; links to Cloud Drive > Backups.",
             "id": "backups",
             "label": "Backups",
-            "icon": "data",
+            "icon": "backup",
             "pages": [
               {
                 "_doc": "New in #1081: this app's runtime databases and stores (names and sizes), auto-backup mode, and the way to Cloud Drive.",
                 "id": "databases",
                 "label": "Databases",
-                "icon": "data"
+                "icon": "storage"
               },
               {
                 "_doc": "The encrypted account bundle: import and export. Was Secrets > Bundle.",
                 "id": "bundle",
                 "label": "Bundle",
-                "icon": "data"
+                "icon": "inventory_2"
               }
             ]
           },
@@ -668,29 +668,29 @@
             "_doc": "Every owner device the vault declares, with live mesh status, and the per-device profile files (was Profiles > Phone).",
             "id": "devices",
             "label": "Devices",
-            "icon": "data",
+            "icon": "devices",
             "pages": [
               {
                 "_doc": "New in #1081: declared devices with this phone's live tunnel and a probe of each other one.",
                 "id": "mesh",
                 "label": "Mesh",
-                "icon": "data"
+                "icon": "lan"
               },
               {
                 "_doc": "Per-device profile files in the vault. Was Profiles > Phone > Devices.",
                 "id": "files",
                 "label": "Files",
-                "icon": "data"
+                "icon": "folder"
               },
               {
                 "id": "working",
                 "label": "Working",
-                "icon": "data"
+                "icon": "edit_note"
               },
               {
                 "id": "diff",
                 "label": "Diff",
-                "icon": "data"
+                "icon": "compare_arrows"
               }
             ]
           }
@@ -706,25 +706,25 @@
             "_doc": "Where the account is connected.",
             "id": "status",
             "label": "Status",
-            "icon": "connect",
+            "icon": "insights",
             "pages": [
               {
                 "_doc": "Credential tiles, a status banner with the next action, one row per provider and Setup all. Was Home > Connections.",
                 "id": "connections",
                 "label": "Providers",
-                "icon": "connect"
+                "icon": "link"
               },
               {
                 "_doc": "Per fleet app: account/config state, its profile and its own Setup. Was Profiles > Apps.",
                 "id": "apps",
                 "label": "Apps",
-                "icon": "connect"
+                "icon": "apps"
               },
               {
                 "_doc": "#1093 Every fleet service Account talks to, with the state of both its endpoints (mesh, public), the route a request takes and the masked fleet bearer. Declared once in fleet_endpoints (libs:account FleetEndpointsPage).",
                 "id": "endpoints",
                 "label": "Endpoints",
-                "icon": "connect"
+                "icon": "dns"
               }
             ]
           },
@@ -732,25 +732,25 @@
             "_doc": "How this account signs in.",
             "id": "auth",
             "label": "Authentication providers",
-            "icon": "connect",
+            "icon": "lock",
             "pages": [
               {
                 "_doc": "#1083 The four sign-in providers (Authelia, Google, GitHub, Cloudflare) with live status and a Sign in action each; Authelia is the hub that accepts the other three. Declared once in ab_cloud-libs-shared/build.json auth.sign_in.providers (libs:account AuthProvidersPage).",
                 "id": "hub",
                 "label": "Providers",
-                "icon": "connect"
+                "icon": "hub"
               },
               {
                 "_doc": "Sign in to the vault: the declared forge ways and the offline file. Was Home > Connect.",
                 "id": "signin",
                 "label": "Sign in",
-                "icon": "connect"
+                "icon": "login"
               },
               {
                 "_doc": "This app's own settings: device id, default forge, auto-backup, fleet token, debug API, version. Fits no section of its own; filed here for the forge and token.",
                 "id": "settings",
                 "label": "Settings",
-                "icon": "connect"
+                "icon": "settings"
               }
             ]
           }
@@ -766,7 +766,7 @@
             "_doc": "New in #1081: the on-device log of what the account did (libs:account ActivityFeed), newest first.",
             "id": "activity",
             "label": "Activity",
-            "icon": "activity"
+            "icon": "history"
           }
         ]
       }

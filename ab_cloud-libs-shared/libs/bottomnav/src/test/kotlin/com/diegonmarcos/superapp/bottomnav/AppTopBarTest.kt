@@ -331,7 +331,7 @@ class AppTopBarTest {
                         onSelect = {},
                     ) {
                         Column {
-                            PageTabs(listOf(NavPage("a", "Alpha"), NavPage("b", "Beta")), "a", onSelect = {}, underTopChrome = false)
+                            PageTabs(listOf(NavPage("a", "Alpha", "home"), NavPage("b", "Beta", "folder")), "a", onSelect = {}, underTopChrome = false)
                             Text("page", Modifier.testTag("page_body"))
                         }
                     }

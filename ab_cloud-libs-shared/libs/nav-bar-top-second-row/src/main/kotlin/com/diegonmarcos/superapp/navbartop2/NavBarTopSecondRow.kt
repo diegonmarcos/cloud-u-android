@@ -1,5 +1,11 @@
 package com.diegonmarcos.superapp.navbartop2
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,6 +55,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.bottomnav.TabSurface
@@ -63,6 +72,8 @@ import com.diegonmarcos.superapp.themebg.ThemeColors
  */
 public object SecondRowSpec {
     public val TAB_HEIGHT: Dp = 36.dp
+    /** Scrolled down (#1157): icons only, a shorter tab. */
+    public val COMPACT_TAB_HEIGHT: Dp = 28.dp
     public val ICON: Dp = 16.dp
     public val LABEL: TextUnit = 9.sp
     public const val SCALE_MAX: Float = 0.75f
@@ -107,8 +118,8 @@ internal fun NavPage.holds(id: String): Boolean = this.id == id || pages.any { i
 /**
  * THE second top row of every app (#1154): the sub-pages of the bottom nav's page as small tabs. The free width is
  * shared SpaceEvenly, so one tab sits centred and several have equal gaps between them and to both borders. The
- * selected tab is a rounded rectangle filled with the SuperApp violet ([ThemeColors.tabSelected]) and shows its
- * name next to its glyph; the others are bare glyphs. [iconFor] gives a page's glyph (null = its initial).
+ * selected tab is a rounded rectangle filled with the SuperApp violet ([ThemeColors.tabSelected]); every tab shows its
+ * name next to its glyph (#1159), and scrolled down only the selected one does. [iconFor] may override a page's glyph; by default it is the page's declared icon (SecondRowIcons).
  */
 @Composable
 public fun NavBarTopSecondRow(
@@ -125,6 +136,8 @@ public fun NavBarTopSecondRow(
     /** A page that is light (a white sheet): draws the light palette whatever [dark] says. Null = [dark]'s. */
     surface: TabSurface? = null,
     iconFor: @Composable (NavPage) -> Painter? = { null },
+    /** Scrolled down (#1159): only the selected tab keeps its name and every tab is shorter. Default: the chrome's shared scroll state. */
+    compact: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
 ) {
     if (pages.isEmpty()) return
     val requests = LocalSubPageRequests.current
@@ -147,6 +160,7 @@ public fun NavBarTopSecondRow(
     val strip = RoundedCornerShape(SecondRowSpec.STRIP_RADIUS)
     val tab = RoundedCornerShape(SecondRowSpec.TAB_RADIUS)
     val scroll = rememberScrollState()
+    val tabHeight by animateDpAsState(if (compact) SecondRowSpec.COMPACT_TAB_HEIGHT else SecondRowSpec.TAB_HEIGHT, label = "secondrow_tab_height")
     BoxWithConstraints(modifier.fillMaxWidth().padding(top = top, bottom = SecondRowSpec.BOTTOM_INSET, start = SecondRowSpec.SIDE, end = SecondRowSpec.SIDE)) {
     Row(
         Modifier.fillMaxWidth()
@@ -163,9 +177,11 @@ public fun NavBarTopSecondRow(
     ) {
         pages.forEachIndexed { i, page ->
             val on = page.id == selectedId
+            // #1159 at rest EVERY tab shows its name; scrolled down only the selected one does, and the tab is shorter.
+            val named = !compact || on
             val ink = if (on) palette.onTabSelected else palette.inkDim
             Row(
-                Modifier.defaultMinSize(minWidth = SecondRowSpec.TAB_MIN_WIDTH).height(SecondRowSpec.TAB_HEIGHT)
+                Modifier.defaultMinSize(minWidth = SecondRowSpec.TAB_MIN_WIDTH).height(tabHeight)
                     .clip(tab)
                     .then(if (on) Modifier.background(palette.tabSelected, tab) else Modifier)
                     .clickable(role = Role.Tab) { if (on) onReselect(page) else onSelect(page) }
@@ -180,17 +196,15 @@ public fun NavBarTopSecondRow(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val painter = iconFor(page)
-                if (painter != null) {
-                    Icon(painter, null, Modifier.size(SecondRowSpec.ICON).testTag(SecondRowTags.icon(page.id)), tint = ink)
-                } else {
-                    Text(page.label.take(1).uppercase(), Modifier.testTag(SecondRowTags.icon(page.id)), color = ink,
-                        fontSize = SecondRowSpec.LABEL, fontWeight = FontWeight.Bold)
-                }
-                if (on) {
+                // #1157 a tab ALWAYS draws its icon: the host's painter, else the declared Material symbol (never a letter).
+                val painter = iconFor(page) ?: rememberVectorPainter(SecondRowIcons.vector(page.icon))
+                Icon(painter, null, Modifier.size(SecondRowSpec.ICON).testTag(SecondRowTags.icon(page.id)), tint = ink)
+                AnimatedVisibility(
+                    named, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally(),
+                ) {
                     Text(
                         page.label, Modifier.padding(start = 6.dp).testTag(SecondRowTags.label(page.id)),
-                        color = ink, fontSize = SecondRowSpec.LABEL, fontWeight = FontWeight.Bold,
+                        color = ink, fontSize = SecondRowSpec.LABEL, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
                         maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
                     )
                 }

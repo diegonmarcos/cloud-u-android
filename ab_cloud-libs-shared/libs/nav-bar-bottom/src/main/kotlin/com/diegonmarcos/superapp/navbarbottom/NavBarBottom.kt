@@ -1,5 +1,8 @@
 package com.diegonmarcos.superapp.navbarbottom
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -50,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlTokens
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
@@ -66,9 +70,9 @@ public object BottomSpec {
     public val LABEL: TextUnit = 12.sp
     public val HEIGHT: Dp = 64.dp
     public val RADIUS: Dp = 32.dp
-    /** Scrolled down: the labels fold away and the bar and its cells shrink to icons only. */
-    public val COLLAPSED_HEIGHT: Dp = 48.dp
-    public val COLLAPSED_CELL: Dp = 40.dp
+    /** Scrolled down (#1159): the labels of the non-selected items fold away and the bar and its cells shrink; the selected item keeps its label. */
+    public val COLLAPSED_HEIGHT: Dp = 52.dp
+    public val COLLAPSED_CELL: Dp = 44.dp
     public val SIDE_GUTTER: Dp = SearchHtmlTokens.sideGutter
     public val BOTTOM_MARGIN: Dp = SearchHtmlTokens.bottomMargin
     public val MAX_WIDTH: Dp = 440.dp
@@ -108,8 +112,8 @@ public fun NavBarBottom(
     onSelect: (BottomNavEntry) -> Unit,
     dark: Boolean,
     modifier: Modifier = Modifier,
-    /** Scrolled down (BottomNavCollapse): the selected item's label folds away too, leaving icons only. */
-    collapsed: Boolean = false,
+    /** Scrolled down (BottomNavCollapse, #1159): the non-selected labels fold away and the bar shrinks; the selected label stays. */
+    collapsed: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
 ) {
     Box(
         modifier.fillMaxWidth()
@@ -134,8 +138,9 @@ public fun NavBarBottom(
                 entries.forEachIndexed { index, e ->
                     val on = e.id == selectedId
                     val ink = if (on) BottomSpec.selectedInk(dark) else BottomSpec.idleInk(dark)
-                    val lift by animateDpAsState(if (on && !collapsed) -BottomSpec.LIFT else 0.dp, label = "navbottom_lift")
-                    val show by animateFloatAsState(if (on) 1f else 0f, label = "navbottom_label")
+                    // #1159 at rest EVERY item shows its label; scrolled down only the selected one does.
+                    val labelled = !collapsed || on
+                    val lift by animateDpAsState(if (labelled) -BottomSpec.LIFT else 0.dp, label = "navbottom_lift")
                     Box(
                         Modifier.size(cell, cellHeight).clip(CircleShape).testTag(BottomTags.item(e.id))
                             .selectable(selected = on, role = Role.Tab, onClick = { onSelect(e) })
@@ -145,13 +150,16 @@ public fun NavBarBottom(
                         Box(Modifier.offset(y = lift)) {
                             Icon(e.icon, contentDescription = null, tint = ink, modifier = Modifier.size(BottomSpec.ICON).testTag(BottomTags.icon(e.id)))
                         }
-                        if (!collapsed) Text(
-                            e.label, color = ink, fontSize = BottomSpec.LABEL, fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = BottomSpec.LABEL_BOTTOM)
-                                .testTag(BottomTags.label(e.id))
-                                .graphicsLayer { alpha = show; translationY = (1f - show) * 8.dp.toPx() },
-                        )
+                        AnimatedVisibility(
+                            labelled, Modifier.align(Alignment.BottomCenter),
+                            enter = fadeIn(), exit = fadeOut(),
+                        ) {
+                            Text(
+                                e.label, color = ink, fontSize = BottomSpec.LABEL, fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(bottom = BottomSpec.LABEL_BOTTOM).testTag(BottomTags.label(e.id)),
+                            )
+                        }
                     }
                 }
             }
@@ -177,16 +185,21 @@ public fun NavBarBottomHost(
     dark: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val collapse = rememberBottomNavCollapse()
+    // #1157 one connection for the whole chrome: an outer scaffold's, else this host's own (provided to everything inside).
+    val inherited = LocalNavChromeCollapse.current
+    val own = rememberBottomNavCollapse()
+    val collapse = inherited ?: own
     val insets = bottomNavInsets()
+    androidx.compose.runtime.CompositionLocalProvider(LocalNavChromeCollapse provides collapse) {
     Column(modifier.fillMaxSize().themeBackground(dark)) {
         // The bar clears the bottom system bar itself, so the content must not clear it a second time (consumed for the content ONLY).
         Box(
             Modifier.weight(1f).fillMaxWidth()
                 .consumeWindowInsets(insets.only(WindowInsetsSides.Bottom))
-                .nestedScroll(collapse)
+                .then(if (inherited == null) Modifier.nestedScroll(own) else Modifier)
                 .testTag(NAV_BAR_BOTTOM_CONTENT_TAG),
         ) { content() }
         NavBarBottom(entries, selectedId, onSelect, dark, collapsed = collapse.collapsed)
+    }
     }
 }

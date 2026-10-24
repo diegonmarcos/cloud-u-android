@@ -12,7 +12,7 @@ import com.diegonmarcos.superapp.bottomnav.NavPage
 class ExploredFragment : PagedSectionFragment() {
     override val section = "explored"
     override val containerId = R.id.nav_host_timeline
-    override val fallbackPages = listOf(NavPage(PAGE_TRIPS, "Trips"), NavPage(PAGE_MAPS, "Maps"))
+    override val fallbackPages = listOf(NavPage(PAGE_TRIPS, "Trips", "luggage"), NavPage(PAGE_MAPS, "Maps", "map"))
 
     override fun pageFragment(id: String): Fragment = when (id) {
         PAGE_MAPS -> ExploredMapsFragment()

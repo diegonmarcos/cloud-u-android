@@ -347,11 +347,11 @@
         "icon": "phone",
         "pages": [
           {
-            "id": "installed",
+            "id": "installed", "icon": "download_done",
             "label": "Installed"
           },
           {
-            "id": "declared",
+            "id": "declared", "icon": "checklist",
             "label": "Declared"
           }
         ]
@@ -368,11 +368,11 @@
         "icon": "feed",
         "pages": [
           {
-            "id": "commits",
+            "id": "commits", "icon": "code",
             "label": "Commits"
           },
           {
-            "id": "cicd",
+            "id": "cicd", "icon": "build",
             "label": "CI-CD"
           }
         ]
@@ -383,23 +383,23 @@
         "icon": "access",
         "pages": [
           {
-            "id": "mesh",
+            "id": "mesh", "icon": "lan",
             "label": "Apps Mesh"
           },
           {
-            "id": "ipc",
+            "id": "ipc", "icon": "swap_horiz",
             "label": "IPC"
           },
           {
-            "id": "identity",
+            "id": "identity", "icon": "fingerprint",
             "label": "Identity"
           },
           {
-            "id": "android",
+            "id": "android", "icon": "android",
             "label": "Android Perms"
           },
           {
-            "id": "cloud",
+            "id": "cloud", "icon": "cloud",
             "label": "Cloud Perms"
           }
         ]
@@ -410,23 +410,23 @@
         "icon": "settings",
         "pages": [
           {
-            "id": "sources",
+            "id": "sources", "icon": "storage",
             "label": "Sources"
           },
           {
-            "id": "adb",
+            "id": "adb", "icon": "terminal",
             "label": "ADB Shell"
           },
           {
-            "id": "ai",
+            "id": "ai", "icon": "auto_awesome",
             "label": "AI"
           },
           {
-            "id": "notifications",
+            "id": "notifications", "icon": "notifications",
             "label": "Notifications"
           },
           {
-            "id": "about",
+            "id": "about", "icon": "info",
             "label": "About"
           }
         ]

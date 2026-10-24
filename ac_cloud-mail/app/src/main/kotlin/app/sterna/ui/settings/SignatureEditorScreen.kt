@@ -379,9 +379,9 @@ internal fun SignatureEditorScreen(
                 Column(Modifier.fillMaxSize()) {
                     if (!wide) {
                         val pages = listOf(
-                            NavPage(PANE_SOURCE.toString(), stringResource(R.string.sigedit_source)),
-                            NavPage(PANE_PREVIEW.toString(), stringResource(R.string.sigedit_preview)),
-                            NavPage(PANE_SPLIT.toString(), stringResource(R.string.sigedit_split)),
+                            NavPage(PANE_SOURCE.toString(), stringResource(R.string.sigedit_source), "code"),
+                            NavPage(PANE_PREVIEW.toString(), stringResource(R.string.sigedit_preview), "visibility"),
+                            NavPage(PANE_SPLIT.toString(), stringResource(R.string.sigedit_split), "vertical_split"),
                         )
                         NavBarTopSecondRow(
                             pages = pages,

@@ -110,14 +110,17 @@ class NavBarBottomTest {
         val content = compose.onNodeWithTag(NAV_BAR_BOTTOM_CONTENT_TAG).fetchSemanticsNode().boundsInRoot
         val bar = compose.onNodeWithTag(BottomTags.BAR).fetchSemanticsNode().boundsInRoot
         assertTrue("page ($content) runs under the bar ($bar)", content.bottom <= bar.top + 1f)
-        val labels = { compose.onAllNodesWithTag(BottomTags.label("home"), useUnmergedTree = true).fetchSemanticsNodes().size }
+        val labelsOf = { id: String -> compose.onAllNodesWithTag(BottomTags.label(id), useUnmergedTree = true).fetchSemanticsNodes().size }
+        val labels = { labelsOf("home") }
+        assertEquals("#1159 at rest every item shows its label", 1, labelsOf("mail"))
         assertEquals(1, labels())
         compose.onNodeWithTag("page").performTouchInput { swipeUp() }
         compose.waitForIdle()
-        assertEquals("labels survive the collapse", 0, labels())
+        assertEquals("the selected label survives the collapse", 1, labels())
+        assertEquals("the non-selected labels fold away", 0, labelsOf("mail"))
         assertTrue("the collapse shrinks the bar", compose.onNodeWithTag(BottomTags.BAR).fetchSemanticsNode().boundsInRoot.height < BottomSpec.HEIGHT.value - 1f)
         compose.onNodeWithTag("page").performTouchInput { swipeDown() }
         compose.waitForIdle()
-        assertEquals("labels return on scroll up", 1, labels())
+        assertEquals("labels return on scroll up", 1, labelsOf("mail"))
     }
 }

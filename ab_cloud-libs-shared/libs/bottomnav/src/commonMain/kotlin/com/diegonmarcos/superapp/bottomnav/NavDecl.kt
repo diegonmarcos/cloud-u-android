@@ -88,7 +88,8 @@ public enum class NavStyle(public val declared: String) {
 public data class NavPage(
     val id: String,
     val label: String,
-    val icon: String = "",
+    /** Required (#1157): a Material symbol name; no nav item is declared without an icon. */
+    val icon: String,
     /** Non-blank: a LAUNCH tab (it leaves the page for [action]) rather than a destination. */
     val action: String = "",
     val pages: List<NavPage> = emptyList(),
@@ -102,7 +103,8 @@ public data class NavPage(
 public data class NavSection(
     val id: String,
     val label: String,
-    val icon: String = "",
+    /** Required (#1157): no nav item is declared without an icon. */
+    val icon: String,
     val pages: List<NavPage> = emptyList(),
     /** What this section's tab strip is drawn over ([PageBackground.Dark] unless declared). */
     val background: PageBackground = PageBackground.Dark,
@@ -156,6 +158,14 @@ public class NavDecl(
         if (bottomNav.size > MAX_BOTTOM) add("ui.bottom_nav has ${bottomNav.size} ids, the island holds at most $MAX_BOTTOM")
         bottomNav.filter { it !in index }.forEach { add("ui.bottom_nav id '$it' is not a ui.sections id") }
         if (defaultSection.isNotBlank() && defaultSection !in bottomNav) add("ui.default_section '$defaultSection' is not one of ui.bottom_nav")
+    }
+
+    /** Every section and page, at any depth, whose declaration carries no icon (#1157; empty = valid). */
+    public fun iconProblems(): List<String> = buildList {
+        for (s in sections) {
+            if (s.icon.isBlank()) add("section '${s.id}' has no icon")
+            for (p in flatten(s.pages)) if (p.icon.isBlank()) add("page '${s.id}/${p.id}' has no icon")
+        }
     }
 
     /** Where the app opens: the declared default, else the first bar section, else the first section. */

@@ -45,7 +45,7 @@ class NavBarTopFirstRowTest {
     private val labels = AppTopBarLabels("Menu", "Close", "Drawer", "AI", "AI panel", "Settings", "Profile", "Configs")
     private val section = NavSection(
         "files", "Files", "folder",
-        listOf(NavPage("recent", "Recent"), NavPage("shared", "Shared", pages = listOf(NavPage("links", "Links")))),
+        listOf(NavPage("recent", "Recent", "history"), NavPage("shared", "Shared", "groups", pages = listOf(NavPage("links", "Links", "link")))),
     )
 
     @Test fun `hierarchy lists the bottom page then its sub-pages depth first, the current path selected`() {

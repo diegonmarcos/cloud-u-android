@@ -40,7 +40,7 @@
         "background": "theme",
         "pages": [
           {
-            "id": "inbox",
+            "id": "inbox", "icon": "inbox",
             "label": "Inbox"
           }
         ]
@@ -51,7 +51,7 @@
         "icon": "rss",
         "pages": [
           {
-            "id": "rss",
+            "id": "rss", "icon": "rss_feed",
             "label": "News"
           }
         ]
@@ -62,7 +62,7 @@
         "icon": "tasks",
         "pages": [
           {
-            "id": "tasks",
+            "id": "tasks", "icon": "checklist",
             "label": "Tasks",
             "action": "launch:com.diegonmarcos.cloudagenda"
           }
@@ -74,7 +74,7 @@
         "icon": "home",
         "pages": [
           {
-            "id": "home",
+            "id": "home", "icon": "home",
             "label": "Home"
           }
         ]
@@ -85,7 +85,7 @@
         "icon": "chat",
         "pages": [
           {
-            "id": "chat",
+            "id": "chat", "icon": "chat",
             "label": "Chat",
             "action": "launch:com.diegonmarcos.comms.chat"
           }
@@ -97,7 +97,7 @@
         "icon": "video",
         "pages": [
           {
-            "id": "whatsapp",
+            "id": "whatsapp", "icon": "forum",
             "label": "WhatsApp Business",
             "action": "launch:com.whatsapp.w4b"
           }
@@ -109,7 +109,7 @@
         "icon": "contacts",
         "pages": [
           {
-            "id": "contacts",
+            "id": "contacts", "icon": "contacts",
             "label": "Contacts",
             "action": "launch:com.diegonmarcos.cloudcontacts"
           }
