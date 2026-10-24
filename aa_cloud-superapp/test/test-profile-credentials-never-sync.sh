@@ -241,9 +241,9 @@ hasnt_code "$SYNC" "credential"    "ProfileSync never reads the credential pair"
 
 echo "== T10: the Account page strip, and the mailed 2FA code is never stored =="
 # What must survive the move is WHERE each field is stored, not where it is drawn. The strip is the fleet's shared
-# libs:bottomnav PageTabs (Cloud Account's MainActivity), and the pages are plain composables: no child-fragment
+# NavBarTopSecondRow (Cloud Account's MainActivity), and the pages are plain composables: no child-fragment
 # machinery, which swaps panes into fixed host ids and leaves one blank after a redraw.
-has "$ACCT_MAIN" "PageTabs("                    "the page strip is the fleet's shared libs:bottomnav PageTabs"
+has "$ACCT_MAIN" "NavBarTopSecondRow("             "the page strip is the fleet's shared NavBarTopSecondRow (#1154 moved it off PageTabs)"
 hasnt_acct "childFragmentManager"               "the pages use no child fragments"
 hasnt_acct "SectionTabsFragment"                "no second tab mechanism"
 hasnt_acct "R.id.section_pane"                  "no pane host ids are borrowed"
