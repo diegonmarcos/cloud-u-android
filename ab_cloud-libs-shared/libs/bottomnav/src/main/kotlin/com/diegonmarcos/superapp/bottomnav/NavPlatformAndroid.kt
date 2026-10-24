@@ -3,9 +3,8 @@ package com.diegonmarcos.superapp.bottomnav
 import android.content.Context
 import android.os.PowerManager
 import android.provider.Settings
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
@@ -129,7 +128,10 @@ internal fun platformNavHaptics(): NavHaptics {
 internal fun TextStyle.withPlatformFontPadding(): TextStyle =
     copy(platformStyle = PlatformTextStyle(includeFontPadding = true))
 
-/** #1160 the soft keyboard is showing: the bottom nav hides while it is (see [navHiddenByIme]). */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * #1160 the soft keyboard is showing: the bottom nav hides while it is (see [navHiddenByIme]). Read from the IME inset's height,
+ * not from WindowInsets.isImeVisible: that flag starts true until the first insets dispatch, so a window that never receives
+ * insets (a test host, a fresh composition) would hide the bar for nothing.
+ */
 @Composable
-internal fun platformImeVisible(): Boolean = WindowInsets.isImeVisible
+internal fun platformImeVisible(): Boolean = WindowInsets.ime.getBottom(LocalDensity.current) > 0
