@@ -1950,6 +1950,8 @@ open class ShellActivity : AppCompatActivity(),
             // so it resolved to nothing and snacked "No app handles".
             actionType == "open_camera" -> openCamera()
             actionType == "open_screenshots" -> openScreenshots()
+            // Cloud > Apps > Primary Tools "Light" (#1155): flip the default light now, open the Light page.
+            actionType == "light" -> com.diegonmarcos.superapp.light.Light.tileTap(this)
             // The Data Manager (libs:datamanager), the dialog Configs > About > Data Usage
             // opens; the Data badge's button lands here.
             actionType == "open_data_manager" -> runCatching {

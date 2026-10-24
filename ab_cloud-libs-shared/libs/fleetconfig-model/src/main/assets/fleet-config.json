@@ -1179,6 +1179,14 @@
         "aa_cloud-superapp"
       ]
     },
+    "light_prefs": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "#1155 the Light tool's settings: default light (rear/front/both), mode (spotlight/flashing) and strobe rate (capped at 3 Hz), rear and front intensity, timer on/duration, keep-on. Preferences of the user, so they move with the phone.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
+    },
     "gateway_auth": {
       "kind": "prefs",
       "class": "secret",

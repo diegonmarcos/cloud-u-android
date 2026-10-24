@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Light tool tile glyph (#1155): a flashlight. Hand-drawn, tinted like ic_nav. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="?android:attr/textColorPrimary">
+    <path android:fillColor="@android:color/white" android:pathData="M8,2h8v4l-2,3v13a1,1 0,0 1,-1 1h-2a1,1 0,0 1,-1 -1v-13l-2,-3zM12,10.5a1.5,1.5 0,1 0,0 3a1.5,1.5 0,1 0,0 -3z" />
+</vector>

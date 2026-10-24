@@ -278,7 +278,7 @@ want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Projects W", "Con
 assert titles == want, (titles, "!=", want)
 g = {x["title"]: [t.get("label") for t in x["tiles"]] for x in cloud["tile_groups"]}
 assert g["Me"] == ["Me", "|", "MySocials", "MyBuro", "MyHealth", "MyStudy", "MyTrips"], g["Me"]
-assert g["Tools Primary"][-2:] == ["Vault", "Account"], g["Tools Primary"]
+assert g["Tools Primary"][-3:] == ["Vault", "Light", "Account"], g["Tools Primary"]  # #1155 order
 assert "Vault" not in g["Data Apps"] and "Me" not in g["Tools Primary"], g
 assert "Account" in g["Configs"], "Account must stay in Configs (intentional duplicate)"
 ids = [t["id"] for x in cloud["tile_groups"] for t in x["tiles"] if t.get("id")]

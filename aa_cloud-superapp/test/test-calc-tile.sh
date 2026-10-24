@@ -18,11 +18,11 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: jq required" >&2; exit 2; }
 
 GROUP='.ui.sections[] | select(.id == "cloud") | .tile_groups[] | select(.title == "Tools Primary")'
 
-echo "== T1: Calc sits in Cloud ▸ Tools Primary, immediately before Writer =="
+echo "== T1: Calc sits in Cloud ▸ Tools Primary, immediately before Keyboard (#1155 order) =="
 eq "one tile with id 'calc' in that group" "$(jq -r "[$GROUP | .tiles[] | select(.id == \"calc\")] | length" "$BJ")" "1"
 IDS="$(jq -r "[$GROUP | .tiles[].id] | join(\",\")" "$BJ")"
 NEXT="$(jq -r "[$GROUP | .tiles[].id] as \$t | (\$t | index(\"calc\")) as \$i | if \$i == null then \"\" else \$t[\$i+1] end" "$BJ")"
-eq "the tile right after calc is writer (order: $IDS)" "$NEXT" "writer"
+eq "the tile right after calc is keyboard (order: $IDS)" "$NEXT" "keyboard"
 eq "its target hands off to the app" "$(jq -r "$GROUP | .tiles[] | select(.id == \"calc\") | .target" "$BJ")" "extapp:cloud-calc"
 eq "the PHONE page's Tools Primary was not touched" \
    "$(jq -r '[.ui.sections[] | select(.id == "phone") | .phone_app_groups[] | select(.title == "Tools Primary") | .packages[] | tostring | select(test("cloudcalc"))] | length' "$BJ")" "0"

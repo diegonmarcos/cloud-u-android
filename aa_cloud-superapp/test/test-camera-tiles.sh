@@ -106,7 +106,9 @@ echo "== T1: Camera sits at the owner's declared place in Cloud ▸ Apps ▸ Too
 # #324 then lifted C3 out of this row into the new "Configs" group, so Camera is
 # the tail again — by subtraction this time, not by decree. Pinning the whole row
 # is what caught that move, which is the point of pinning the whole row.
-WANT_ROW="Me,Wallet,Keyboard,Calc,Writer,Browser,Navigation,Camera"
+# #1155: the owner named the nine primary tools in a new order (test-primary-tools-order.sh);
+# Account, the intentional duplicate, follows them.
+WANT_ROW="Browser,Navigation,Camera,Calc,Keyboard,Writer,Wallet,Vault,Light,Account"
 GOT_ROW="$(jq -r '
   .ui.sections[] | select(.id == "cloud")
   | .tile_groups[] | select(.title == "Tools Primary")

@@ -15,7 +15,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 48 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 49 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 2 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 2 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 2 | 0 | 100% |
@@ -50,7 +50,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 6 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 6 | 2 | 75% |
-| **fleet** | | **258** | **50** | **83%** |
+| **fleet** | | **259** | **50** | **83%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -101,6 +101,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `launcher_profile_prefs` | prefs | config | yes | Selected launcher profile preset (personal/work/guest). |
 | `launcher_settings` | prefs | config | yes | Launcher settings: screensaver, scale, brightness, eye intensity, screensaver timeout, animation/one-hand/control toggles, and the icons-per-row steppers grid_cols_cloud and grid_cols_phone (4..8; absent until the owner moves a stepper, so a phone that never chose follows the shipped default and a chosen value migrates with the phone). |
 | `launcher_theme_prefs` | prefs | config | yes | Selected launcher theme (cloud / cloud_minimalist_black). |
+| `light_prefs` | prefs | config | yes | #1155 the Light tool's settings: default light (rear/front/both), mode (spotlight/flashing) and strobe rate (capped at 3 Hz), rear and front intensity, timer on/duration, keep-on. Preferences of the user, so they move with the phone. |
 | `mail_auth_prefs` | encrypted | secret | yes | Cloud Mail's per-account gateway credentials (Authelia in front of the JMAP server): one encrypted JSON blob per account, key auth:<email>, holding the auth mode (none / bearer / authelia), the pasted bearer token and the captured authelia_session cookie. Credentials: shown masked, never logged, replayed only to the account's own domain. |
 | `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
 | `markets_last_good` | prefs | device | no | Last good Yahoo price per symbol (price\|asOf\|savedAt) for the Markets badge, so a killed process still shows the last rate; refetched on the next poll. |
@@ -156,7 +157,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 48 covered, 0 gaps.
+Coverage: 49 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
