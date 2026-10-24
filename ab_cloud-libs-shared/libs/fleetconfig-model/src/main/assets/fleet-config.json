@@ -2089,6 +2089,14 @@
         "aa_cloud-superapp"
       ]
     },
+    "ai_usage_badge": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "SuperApp AI usage badge: the last usage reply body (body) and when it was read (at), shown at once while the card refreshes; a cache re-fetched from the C3 ops endpoint on the new phone, never migrated.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
+    },
     "permissions_asked": {
       "kind": "prefs",
       "class": "device",

@@ -16,12 +16,13 @@ let bad = 0;
 const check = (id, ok, msg) => { if (!ok) bad++; console.log(JSON.stringify({ id, ok: !!ok, msg })); };
 const profile = mkdtempSync(join(tmpdir(), 'c3ws-resp-'));
 const chrome = spawn(chromeBin, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', '--hide-scrollbars',
-  '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: 'ignore' });
+  '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'], { stdio: ['ignore', 'ignore', 'pipe'] });
+let chromeErr = ''; chrome.stderr.on('data', (d) => { chromeErr = (chromeErr + d).slice(-600); });
 const finish = (code) => { try { chrome.kill('SIGKILL'); } catch {} process.exit(code); };
 process.on('uncaughtException', (e) => { check('RUN', false, 'crashed: ' + (e && e.stack || e)); finish(1); });
 let port = 0;
-for (let i = 0; i < 100 && !port; i++) { await sleep(100); try { port = parseInt(readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0], 10); } catch {} }
-if (!port) { check('RUN', false, 'Chrome did not open a DevTools port'); finish(1); }
+for (let i = 0; i < 400 && !port; i++) { await sleep(100); try { port = parseInt(readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0], 10); } catch {} }
+if (!port) { check('RUN', false, 'Chrome did not open a DevTools port in 40s (exit ' + chrome.exitCode + '): ' + chromeErr.replace(/\s+/g, ' ')); finish(1); }
 const page = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((t) => t.type === 'page');
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
