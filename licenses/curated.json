@@ -370,6 +370,12 @@
    "what": "Cloud Store app (#865, the Store split out of cloud-superapp)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
+  "ac_cloud-superintel": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud SuperIntel app (Gemini-style AI chat over the fleet agent gateway)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
   "ac_cloud-tools-small-llms": {
    "licence": "LicenseRef-NoLicenseGranted",
    "kind": "own",
