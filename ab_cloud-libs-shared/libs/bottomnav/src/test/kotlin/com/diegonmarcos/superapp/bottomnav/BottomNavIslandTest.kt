@@ -565,6 +565,6 @@ class BottomNavIslandTest {
          *  (#673's scroll-collapse driver is a ViewTreeObserver listener; FleetChrome.kt is the
          *  window chrome and the haptics, which are platform calls by nature). Adding a file here is
          *  a deliberate architectural decision, which is why it is a list and not a wildcard. */
-        val INTEROP = setOf("BottomNavIslandView.kt", "PageTabsView.kt", "FleetChrome.kt")
+        val INTEROP = setOf("BottomNavIslandView.kt", "PageTabsView.kt", "FleetChrome.kt", "ChromeWebScroll.kt")
     }
 }
