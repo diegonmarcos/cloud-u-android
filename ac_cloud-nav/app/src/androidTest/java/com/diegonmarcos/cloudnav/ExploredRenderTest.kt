@@ -64,20 +64,21 @@ class ExploredRenderTest {
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 // #1156: the app's Explored section is now Trips | Maps; libs:maps' own Explored page (the choropleth + pins under test)
-                // is no longer a nav page, so it is mounted straight into the shell's page container.
+                // is no longer a nav page. It is mounted where the old Timeline host had it: as the child page of the section, reached
+                // through the real island and strip.
                 compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_explored").fetchSemanticsNodes().isNotEmpty() }
-                // the shell adds its default page asynchronously: let that land first, or it would be added over the mounted page
-                var shellPage = false
-                compose.waitUntil(30_000) { scenario.onActivity { act -> act.supportFragmentManager.executePendingTransactions(); shellPage = act.supportFragmentManager.fragments.isNotEmpty() }; shellPage }
+                compose.onNodeWithTag("bottomnav_item_explored").performClick()
+                compose.waitUntil(30_000) { compose.onAllNodesWithTag(PageTabsTags.tab("maps")).fetchSemanticsNodes().isNotEmpty() }
                 scenario.onActivity { act ->
-                    act.supportFragmentManager.beginTransaction().replace(R.id.nav_host_main, MapsExploredFragment.newInstance()).commitNow()
+                    val host = act.supportFragmentManager.fragments.filterIsInstance<ExploredFragment>().first()
+                    host.childFragmentManager.executePendingTransactions()
+                    host.childFragmentManager.beginTransaction().replace(R.id.nav_host_timeline, MapsExploredFragment.newInstance()).commitNow()
                 }
 
                 fun explored(): MapsExploredFragment? = run {
                     var found: MapsExploredFragment? = null
                     scenario.onActivity { act ->
                         found = act.supportFragmentManager.fragments
-                            .let { top -> top + top.flatMap { it.childFragmentManager.fragments } }
                             .flatMap { it.childFragmentManager.fragments }
                             .flatMap { listOf(it) + it.childFragmentManager.fragments }
                             .filterIsInstance<MapsExploredFragment>().firstOrNull()
