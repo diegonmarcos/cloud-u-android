@@ -44,14 +44,18 @@ class FleetDnsTest {
         for (p in publics) {
             assertTrue("${p.id} declares no primary", p.servers.isNotEmpty())
             assertTrue("${p.id} declares no fallback", p.fallback.isNotEmpty())
-            assertEquals(p.id, (p.servers + p.fallback).distinct(), servers(p.id))
-            assertTrue("${p.id} leaked the fleet resolver", servers(p.id).none { it in FLEET })
+            // #1152 the fleet resolvers lead (mesh names are NXDOMAIN publicly), then the preset's own
+            assertEquals(p.id, (FLEET + p.servers + p.fallback).distinct(), servers(p.id))
+            assertEquals(p.id, FLEET, servers(p.id).take(FLEET.size))
+            assertEquals(p.id, (p.servers + p.fallback).distinct(), down(p.id))
         }
     }
 
-    @Test fun mirrorPutsNoServerOnTheVpn() {
+    @Test fun mirrorPutsOnlyTheFleetResolversOnTheVpn() {
         val m = d.presets.single { it.kind == FleetDns.KIND_MIRROR }
-        assertEquals(emptyList<String>(), servers(m.id))
+        assertEquals(FLEET, servers(m.id))
+        // no fleet resolver declared: Mirror stays empty (Android's own)
+        assertEquals(emptyList<String>(), servers(m.id, fleet = emptyList()))
         // control: the same call on a public preset is not empty
         assertTrue(servers(publics.first().id).isNotEmpty())
     }
@@ -106,6 +110,28 @@ class FleetDnsTest {
         assertEquals(preset, FleetDns.upstreamsFor(d, d.testPublic, true, preset, FLEET))
     }
 
+    /** #1152 every exportable mesh profile (split and full) routes its own DNS servers through a peer. */
+    @Test fun everyMeshProfileRoutesItsFleetResolversThroughThePeers() {
+        val profiles = WireGuardProfiles.mesh
+        assertTrue("no mesh profiles baked", profiles.any { it.id == "v4-split" } && profiles.any { it.id.endsWith("full") })
+        for (pr in profiles) {
+            val dns = FleetDns.splitServers(pr.dns)
+            assertTrue("${pr.id} has no DNS", dns.isNotEmpty())
+            val nets = pr.peers.flatMap { FleetDns.splitServers(it.allowedIps) }.map { InetNetwork.parse(it) }
+            for (s in dns) {
+                val ip = java.math.BigInteger(1, InetAddress.getByName(s).address)
+                val bytes = InetAddress.getByName(s).address.size
+                val covered = nets.any { n ->
+                    val nb = n.address.address
+                    if (nb.size != bytes) return@any false
+                    val shift = bytes * 8 - n.mask
+                    java.math.BigInteger(1, nb).shiftRight(shift) == ip.shiftRight(shift)
+                }
+                assertTrue("${pr.id}: DNS $s is not inside any peer's AllowedIPs", covered)
+            }
+        }
+    }
+
     // ── #751 the mesh-down tunnel ───────────────────────────────────────
 
     private fun down(id: String, fb: List<String> = emptyList(), fleet: List<String> = FLEET) =
@@ -116,7 +142,7 @@ class FleetDnsTest {
         FleetDns.meshDownConfig(d, down(id, fb), FLEET, self, sink)
 
     @Test fun withoutTheMeshEachPresetKeepsWhatItCanStillReach() {
-        for (p in publics) assertEquals(p.id, servers(p.id), down(p.id))
+        for (p in publics) assertEquals(p.id, (p.servers + p.fallback).distinct(), down(p.id))
         val first = publics.first()
         // the fleet resolver is behind the mesh: Private with fallbacks is its fallbacks alone
         assertEquals((first.servers + first.fallback).distinct(), down(privateFb.id, listOf(first.id)))

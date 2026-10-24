@@ -148,15 +148,28 @@ object FleetDns {
     fun splitServers(csv: String): List<String> = csv.split(',', ' ', '\n', '\t').map { it.trim() }.filter { it.isNotEmpty() }
 
     /**
-     * The ordered DNS server list the VPN carries for [presetId]. Mirror is
-     * EMPTY on purpose: a VPN with no DNS server leaves Android on the
-     * underlying network's resolver and its Private DNS. Private presets put the
+     * The ordered DNS server list the VPN carries for [presetId] while the mesh
+     * is up. Mirror and the public presets lead with the fleet resolvers (#1152:
+     * mesh names are NXDOMAIN publicly); Mirror alone is otherwise empty, which
+     * leaves Android on the underlying network's resolver. Private presets put the
      * fleet resolver first and — only when the preset allows it — the user's
      * ordered fallbacks after it; an unavailable or non-public fallback is
      * never used. A private preset with no fleet resolver THROWS: an empty list
      * would silently become Mirror, and Private-only must fail loudly instead.
      */
     fun vpnServers(d: Decl, presetId: String?, fallbacks: List<String>, fleetResolvers: List<String>): List<String> {
+        val p = effective(d, presetId)
+        return when (p.kind) {
+            // #1152 Public DNS answers NXDOMAIN for the mesh namespace, so while the mesh is up
+            // Mirror and the public presets still carry the fleet resolvers first (routed through
+            // the tunnel; hickory forwards every other name upstream). Mesh-down is unchanged.
+            KIND_MIRROR, KIND_PUBLIC -> fleetResolvers + presetServers(d, presetId, fallbacks, fleetResolvers)
+            else -> presetServers(d, presetId, fallbacks, fleetResolvers)
+        }.distinct()
+    }
+
+    /** What the preset alone names (no fleet resolver forced in): the mesh-down list's base. */
+    private fun presetServers(d: Decl, presetId: String?, fallbacks: List<String>, fleetResolvers: List<String>): List<String> {
         val p = effective(d, presetId)
         return when (p.kind) {
             KIND_MIRROR -> emptyList()
@@ -184,7 +197,7 @@ object FleetDns {
      * fail as the preset promises. Public presets and Mirror are unchanged.
      */
     fun meshDownServers(d: Decl, presetId: String?, fallbacks: List<String>, fleetResolvers: List<String>): List<String> {
-        val all = vpnServers(d, presetId, fallbacks, fleetResolvers)
+        val all = presetServers(d, presetId, fallbacks, fleetResolvers)
         return all.filter { it !in fleetResolvers }.ifEmpty { all }
     }
 
