@@ -1,0 +1,64 @@
+// libs:nav-bar-top-first-row: the first top row of every app: hamburger, centred title island with the hierarchy dropdown, AI / Profile / Configs.
+// Part of the shared navigation + theme design (#1154). Built like libs:bottomnav (same toolchain, same
+// compose BOM) so it compiles under whichever AGP the consuming app uses. TESTED through the consumer:
+// the unit task of an app that links it (cloud-mail's testReleaseUnitTest) runs src/test/ here.
+plugins {
+    id 'com.android.library'
+}
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
+}
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+android {
+    namespace 'com.diegonmarcos.superapp.navbartop1'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'failed', 'standardOut'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    api project(':libs:bottomnav')
+    api project(':libs:theme-background')
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.core:core-ktx:1.15.0'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'androidx.activity:activity-compose:1.9.3'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
+}

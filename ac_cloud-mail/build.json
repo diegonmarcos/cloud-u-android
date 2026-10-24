@@ -177,6 +177,26 @@
       "_doc": "The bottom-navigation island, shared BY REFERENCE from ab_cloud-libs-shared/libs/. THE ONE declaration of the nav's items, icons, labels and selected-destination contract lives here (#493). This app's SternaApp renders libs:bottomnav.BottomNavBar against its own NavHost; there is NO private nav copy left in this tree. A new Compose app that wants a bottom nav adds this same module instead of writing a fifth copy.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     },
+    "libs:theme-background": {
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE from ab_cloud-libs-shared/libs/.",
+      "dir": "../ab_cloud-libs-shared/libs/theme-background"
+    },
+    "libs:nav-bar-top-first-row": {
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE from ab_cloud-libs-shared/libs/.",
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row"
+    },
+    "libs:nav-bar-top-second-row": {
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE from ab_cloud-libs-shared/libs/.",
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row"
+    },
+    "libs:nav-bar-bottom": {
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE from ab_cloud-libs-shared/libs/.",
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom"
+    },
     "libs:core": {
       "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ - settings.gradle points projectDir here instead of at a local copy, so a fix lands in every consuming app at build time and copies cannot drift.",
       "_doc": "Pulled in by :libs:updater, which needs its NotificationStore to surface an install result. Also merges the signature-level CONSTELLATION_DATA permission into this app's manifest, which is what makes the constellation's same-key trust on by default.",

@@ -40,7 +40,11 @@ on:
       - "ab_cloud-libs-shared/libs/fleet-endpoints/**"
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/ml-l-image/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-bottom/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
+      - "ab_cloud-libs-shared/libs/theme-background/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-mail/**"
 permissions:
