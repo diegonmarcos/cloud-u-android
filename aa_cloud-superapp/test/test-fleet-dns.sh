@@ -165,7 +165,7 @@ n_addr=$(echo "$lits" | head -1); hits=$(echo "$lits" | tail -n +2 | grep . || t
   || { bad "resolver literals in Kotlin:"; echo "$hits" | sed 's/^/      /'; }
 
 echo "== D5: the behaviour guards exist =="
-for t in eachPublicPresetIsItsServersThenItsFallback mirrorPutsNoServerOnTheVpn \
+for t in eachPublicPresetIsItsServersThenItsFallback mirrorPutsOnlyTheFleetResolversOnTheVpn \
          privateOnlyIsTheFleetResolverAndNothingElse privateWithFallbacksIsFleetFirstThenTheChosenFallbackInOrder \
          anUnavailablePresetIsNeverChosenNorUsedAsAFallback aPrivatePresetWithNoFleetResolverFailsLoudly \
          meshNamesGoToTheFleetResolverWhileTheMeshIsUp; do

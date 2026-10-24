@@ -239,7 +239,7 @@ class MeshStore(
                 "${r.count { it.ok == true }} of ${r.size} pass" + r.filter { it.ok == false }.joinToString("") { " · ${it.id} fails" }
             }
         },
-        "reach.run" to { _, _ -> runReach() },
+        "reach.run" to { _, _ -> perform("reachability") { reachNow() } },
         "clipboard.all" to { _, _ -> host.copy("mesh status", reportText()); notice = "whole status copied (private keys are never included)" },
         "export.all" to { _, _ -> host.exportText("cloud-mesh-status.txt", reportText()) },
         "log.level" to { a, _ -> logLevel = if (a in setOf("all", "warn", "error")) a else "all"; journalRev++ },
@@ -286,14 +286,12 @@ class MeshStore(
     }
 
     /** #1153 DNS + TCP :443 + HTTPS for each declared mesh URL; every result lands in the journal. */
-    fun runReach() {
-        if (decl.reachHosts.isEmpty()) { notice = "reachability: no mesh URLs declared"; return }
-        perform("reachability") {
-            val r = MeshReach.run(decl.reachHosts, reachIo, nowMs = clock)
-            reach = r
-            for (x in r) journal.add(LogEvent(clock(), if (x.ok) "reach" else "warn", MeshReach.text(listOf(x))))
-            "${r.count { it.ok }} of ${r.size} reachable"
-        }
+    private fun reachNow(): String {
+        check(decl.reachHosts.isNotEmpty()) { "no mesh URLs are declared" }
+        val r = MeshReach.run(decl.reachHosts, reachIo, nowMs = clock)
+        reach = r
+        for (x in r) journal.add(LogEvent(clock(), if (x.ok) "reach" else "warn", MeshReach.text(listOf(x))))
+        return "${r.count { it.ok }} of ${r.size} reachable"
     }
 
     /** #1153 The whole Status page as text (Copy all / Export all). */
