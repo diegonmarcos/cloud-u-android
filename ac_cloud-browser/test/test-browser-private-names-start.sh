@@ -38,8 +38,11 @@ PY
   has "$lib/PrivateNames.kt" 'fun ladder\(' || r=1
   has "$lib/PrivateNames.kt" 'ownedAddress\(name\)\?\.let' || r=1
   # the page must not send a private name to the system resolver: loadUrl of a matched name stays behind the ladder
+  # the viewport moved into ViewModePlan (BrowserDevTools.kt): the page applies the plan's flag, and the plan keeps it true
   ! grep -nE 'useWideViewPort = false' "$lib/BrowserHostFragment.kt" >/dev/null || r=1
-  has "$lib/BrowserHostFragment.kt" 'useWideViewPort = true' || r=1
+  has "$lib/BrowserHostFragment.kt" 'useWideViewPort = plan\.wideViewPort' || r=1
+  ! grep -nE 'wideViewPort = false' "$lib/BrowserDevTools.kt" >/dev/null || r=1
+  has "$lib/BrowserDevTools.kt" 'ViewModePlan\(ua, wideViewPort = true' || r=1
   return $r
 }
 
@@ -48,10 +51,10 @@ if check "$REPO"; then ok "the owned names, the keep-alive service, the retry an
 # mutations: each planted defect must turn the check red
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 mutate() { # mutate <title> <file relative to repo> <python replace old> <new>
-  local t="$WORK/r$RANDOM"; mkdir -p "$t/ac_cloud-c3-webserver" "$t/ac_cloud-browser/app/src/main" "$t/ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser"
+  NSEQ=$((${NSEQ:-0} + 1)); local t="$WORK/r$$_$NSEQ"; mkdir -p "$t/ac_cloud-c3-webserver" "$t/ac_cloud-browser/app/src/main" "$t/ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser"
   cp "$REPO/ac_cloud-c3-webserver/build.json" "$t/ac_cloud-c3-webserver/"
   cp "$REPO/ac_cloud-browser/app/build.gradle" "$t/ac_cloud-browser/app/"; cp "$REPO/ac_cloud-browser/app/src/main/AndroidManifest.xml" "$t/ac_cloud-browser/app/src/main/"
-  cp "$LIB/BrowserHostFragment.kt" "$LIB/PrivateNames.kt" "$t/ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/"
+  cp "$LIB/BrowserHostFragment.kt" "$LIB/BrowserDevTools.kt" "$LIB/PrivateNames.kt" "$t/ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/"
   python3 - "$t/$2" "$3" "$4" <<'PY' || { bad "mutation '$1' did not apply"; return; }
 import sys
 p, old, new = sys.argv[1:4]; s = open(p).read(); n = s.replace(old, new, 1)
@@ -68,11 +71,8 @@ mutate "the service is not baked into the browser" ac_cloud-browser/app/build.gr
 mutate "the webserver package is not queryable" ac_cloud-browser/app/src/main/AndroidManifest.xml '${webserverPackage}' 'x.y'
 mutate "the page stops starting the service"  $BR/BrowserHostFragment.kt 'resolveAsync(url, start = { startPrivateNamesService' 'resolveAsync(url, start = { false; startPrivateNamesServiceX'
 mutate "the owned rung is removed from the ladder" $BR/PrivateNames.kt 'ownedAddress(name)?.let' 'null?.let'
-mutate "the mobile view ignores the viewport again" $BR/BrowserHostFragment.kt 's.useWideViewPort = true
-            s.loadWithOverviewMode = true
-            wv.setInitialScale(0)' 's.useWideViewPort = false
-            s.loadWithOverviewMode = false
-            wv.setInitialScale(0)'
+mutate "the mobile view ignores the viewport again" $BR/BrowserDevTools.kt 'ViewModePlan(ua, wideViewPort = true' 'ViewModePlan(ua, wideViewPort = false'
+mutate "the page stops applying the plan's viewport" $BR/BrowserHostFragment.kt 's.useWideViewPort = plan.wideViewPort' 's.useWideViewPort = false'
 
 [ "$fails" -eq 0 ] || { echo "private-names start: $fails check(s) FAILED"; exit 1; }
 echo "private-names start: all assertions passed"
