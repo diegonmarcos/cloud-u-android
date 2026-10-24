@@ -3054,7 +3054,11 @@
         "lib-fleetconfig-model",
         "lib-ml-l-image",
         "lib-text-tools",
-        "lib-updater"
+        "lib-updater",
+        "lib-nav-bar-bottom",
+        "lib-nav-bar-top-first-row",
+        "lib-nav-bar-top-second-row",
+        "lib-theme-background"
       ],
       "items": [
         {
@@ -3125,7 +3129,11 @@
         "lib-fleetconfig-model",
         "lib-health",
         "lib-ui-kit",
-        "lib-updater"
+        "lib-updater",
+        "lib-nav-bar-bottom",
+        "lib-nav-bar-top-first-row",
+        "lib-nav-bar-top-second-row",
+        "lib-theme-background"
       ],
       "items": [
         {
