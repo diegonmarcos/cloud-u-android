@@ -147,7 +147,7 @@ ROWS = {
     # #1092: the row is "Me" (was "Projects Me"), placed right after Data Apps. The Me app leads, one rule,
     # then MySocials, MyBuro, MyHealth, MyStudy, MyTrips as the owner ordered. Agenda left the row (it is
     # reachable inside the Me app); the old rules projects-me-sep-0/1/2 went with the old layout.
-    "Me": ["me", "me-sep-1", "mysocials", "myburo", "myhealth", "mystudy", "mytrips"],
+    "Me": ["tools-account", "me", "me-sep-1", "mysocials", "myburo", "myhealth", "mystudy", "mytrips"],
     # Four named boards and no rule — task 311 removed PM Boards, PM C3 and the
     # "|" between them. The rule had marked the board LIST off from the named
     # boards; with the list gone there are no longer two kinds of destination in
@@ -164,6 +164,7 @@ ROWS = {
 TARGETS = {
     # The Me app itself: launches Cloud-Me at its front door (no #page fragment). #1092 dropped the Agenda
     # tile from this row, so its deep link is no longer pinned here.
+    "tools-account": "page:config/profile",
     "me":        "extapp:cloud-me",
     "mysocials": "https://diegonmarcos.github.io/mySocials/",
     # A board uuid, baked in at build time because paca's projects table has no
@@ -269,7 +270,7 @@ for gone in ("myprojects", "myfin"):
 PY
 
 echo "== T6 (#1092): Cloud ▸ Apps row order, Vault and Account in Tools Primary =="
-python3 - "$BJ" <<'PY' && ok "rows Inboxes, Tools Primary, Data Apps, Me, AGI, Projects W, Configs; Vault+Account in Tools Primary; Account kept in Configs" || bad "Cloud ▸ Apps row order or the Vault/Account placement drifted"
+python3 - "$BJ" <<'PY' && ok "rows Inboxes, Tools Primary, Data Apps, Me, AGI, Projects W, Configs; Vault in Tools Primary; Account leads Me, before the Me tile; Account kept in Configs" || bad "Cloud ▸ Apps row order or the Vault/Account placement drifted"
 import json, sys
 d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
@@ -277,8 +278,8 @@ titles = [g["title"] for g in cloud["tile_groups"]]
 want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Projects W", "Configs"]
 assert titles == want, (titles, "!=", want)
 g = {x["title"]: [t.get("label") for t in x["tiles"]] for x in cloud["tile_groups"]}
-assert g["Me"] == ["Me", "|", "MySocials", "MyBuro", "MyHealth", "MyStudy", "MyTrips"], g["Me"]
-assert g["Tools Primary"][-3:] == ["Vault", "Light", "Account"], g["Tools Primary"]  # #1155 order
+assert g["Me"] == ["Account", "Me", "|", "MySocials", "MyBuro", "MyHealth", "MyStudy", "MyTrips"], g["Me"]
+assert g["Tools Primary"][-3:] == ["Wallet", "Vault", "Light"] and "Account" not in g["Tools Primary"], g["Tools Primary"]  # #1155 order; Account moved to Me, before the Me tile
 assert "Vault" not in g["Data Apps"] and "Me" not in g["Tools Primary"], g
 assert "Account" in g["Configs"], "Account must stay in Configs (intentional duplicate)"
 ids = [t["id"] for x in cloud["tile_groups"] for t in x["tiles"] if t.get("id")]
