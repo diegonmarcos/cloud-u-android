@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
 import com.diegonmarcos.cloudc3.R
+import com.diegonmarcos.cloudc3.pages.ApiFleetLive
+import com.diegonmarcos.cloudc3.pages.ContainersSource
 import com.diegonmarcos.cloudc3.pages.c3KitPalette
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
 import com.diegonmarcos.superapp.uikit.KitPalette
@@ -248,7 +250,11 @@ class C3StackFragment : KitComposeFragment() {
         // opening it again does not refetch.
         when (panel.kind) {
             "feed" -> LaunchedEffect(index) { feedItems[index] = loadFeed(ctx, panel) }
-            "cloud_dashboard" -> LaunchedEffect(index) { pingAll(panel) }
+            "cloud_dashboard" -> {
+                // #1148 the live document first (the Table page reads the same one), then the lights for what it lists.
+                LaunchedEffect(index) { ContainersSource.refresh(ApiFleetLive(ctx.applicationContext)) }
+                LaunchedEffect(index, ContainersSource.version) { pingAll(panel) }
+            }
             "notification_center" -> LaunchedEffect(index, refreshKey) { pollPanel(ctx, panel, forced = refreshKey == forcedKey) }
             else -> Unit
         }
@@ -1193,13 +1199,13 @@ class C3StackFragment : KitComposeFragment() {
     }
 
     /** kind=cloud_dashboard — live container map. Decodes the baked service inventory
-     *  (data/cloud_services.json → BuildConfig.CLOUD_SERVICES_B64), buckets every
+     *  (containers-declared.json via ContainersSource: the API copy, else the baked one), buckets every
      *  container by category into the card's dashGroups, draws a TCP-ping status dot per
      *  container (green up / red down / grey checking, meaningful only over WireGuard) and
      *  opens [ContainerSheet] on tap. Provider groups render external consoles (no ping). */
     @Composable
     private fun CloudDashboard(index: Int, panel: Stacks.StackPanel) {
-        val dash = remember { Stacks.cloudServices() }
+        val dash = remember(ContainersSource.version) { Stacks.cloudServices() }
         val cols = Stacks.tileColumns()
         val wanted = panel.dashGroupIds.ifEmpty { dash.groups.map { it.id } }
         val groups = dash.groups.filter { it.id in wanted }

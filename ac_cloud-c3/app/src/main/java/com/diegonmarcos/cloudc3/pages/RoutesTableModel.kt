@@ -12,10 +12,11 @@ import kotlinx.serialization.json.contentOrNull
  */
 object RoutesTableModel {
 
-    /** The seven columns, in the owner's order. [key] is the row field and the column's test tag. */
+    /** The columns, in the owner's order (Group and Category first). [key] is the row field and the column's test tag. */
     enum class Column(val key: String) {
         /** The status light (first column): sorted by [ProbeModel.rank], never a text cell. */
         STATUS("status"),
+        GROUP("group"),
         CATEGORY("category"),
         CONTAINER("container"),
         PUBLIC_URL("public_url"),
@@ -46,12 +47,17 @@ object RoutesTableModel {
         val privateUrl: String,
         val vmName: String,
         val vmAddr: String,
+        /** Infra Apps / Cloud Apps / Project Apps (the document's group). */
+        val group: String = "",
+        /** Every metadata field of the declared container, for the More view. */
+        val meta: List<Pair<String, String>> = emptyList(),
     ) {
         /** Identity of a row for the probe cache. */
         val key: String get() = "$container|$publicUrl|$privateUrl"
 
         fun text(c: Column): String = when (c) {
             Column.STATUS -> ""
+            Column.GROUP -> group
             Column.CATEGORY -> category
             Column.CONTAINER -> container
             Column.PUBLIC_URL -> publicUrl
@@ -149,6 +155,7 @@ object RoutesTableModel {
             Column.CONTAINER -> OpenTarget.Container(v)
             Column.VM_NAME -> OpenTarget.Vm(v)
             Column.CATEGORY -> OpenTarget.Category(v)
+            Column.GROUP -> null
             Column.AUTH_TYPE, Column.STATUS -> null
         }
     }

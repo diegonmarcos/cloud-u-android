@@ -3,13 +3,15 @@ package com.diegonmarcos.cloudc3.cloud
 import android.content.Context
 import android.util.Base64
 import com.diegonmarcos.cloudc3.BuildConfig
+import com.diegonmarcos.cloudc3.pages.ContainersModel
+import com.diegonmarcos.cloudc3.pages.ContainersSource
 import org.json.JSONArray
 
 /**
  * #648 the stack-declaration models and parsers, MOVED from the SuperApp's Sections.kt
  * with the pages that read them, trimmed to exactly what the carried c3 surface uses:
  * the [StackPanel] shape (with its tiles, repos, anchors, dashboard groups, ntfy scopes),
- * the cloud-dashboard inventory (data/cloud_services.json → BuildConfig.CLOUD_SERVICES_B64),
+ * the cloud-dashboard inventory (containers-declared.json via ContainersSource, #1148),
  * the wg-mesh/v1 snapshot (data/mesh.json → BuildConfig.MESH_JSON_B64), and [iconResFor].
  * Field names, `optString` defaults and parse order are the SuperApp's, because this is a
  * copy and the declarations it parses are byte-identical to the ones that shipped.
@@ -140,7 +142,6 @@ object Stacks {
     @Volatile private var cachedTopology: List<StackPanel>? = null
     @Volatile private var cachedObserv:   List<StackPanel>? = null
     @Volatile private var cachedMesh:     Mesh?             = null
-    @Volatile private var cachedDash:     CloudDash?        = null
 
     /** stack_topology of the carried c3 section — the Topology page's panels. */
     fun stackTopology(): List<StackPanel> =
@@ -228,47 +229,17 @@ object Stacks {
         return out
     }
 
-    /** Decode the curated container inventory baked into BuildConfig.CLOUD_SERVICES_B64.
-     *  Cached after first parse — same parse as the SuperApp's Sections.cloudServices(). */
-    fun cloudServices(): CloudDash {
-        cachedDash?.let { return it }
-        val raw = runCatching {
-            String(Base64.decode(BuildConfig.CLOUD_SERVICES_B64, Base64.DEFAULT))
-        }.getOrDefault("{}")
-        val o = runCatching { org.json.JSONObject(raw) }.getOrDefault(org.json.JSONObject())
-        val groups = mutableListOf<CloudGroup>()
-        o.optJSONArray("groups")?.let { ga ->
-            for (i in 0 until ga.length()) {
-                val g = ga.optJSONObject(i) ?: continue
-                val subs = mutableListOf<CloudSub>()
-                g.optJSONArray("subgroups")?.let { sa ->
-                    for (j in 0 until sa.length()) {
-                        val s = sa.optJSONObject(j) ?: continue
-                        val cs = mutableListOf<CloudContainer>()
-                        s.optJSONArray("containers")?.let { ca ->
-                            for (k in 0 until ca.length()) {
-                                val c = ca.optJSONObject(k) ?: continue
-                                val nm = c.optString("name"); if (nm.isBlank()) continue
-                                cs += CloudContainer(nm, c.optString("label", nm), c.optString("url"),
-                                    c.optInt("port", -1), c.optBoolean("external", false),
-                                    c.optString("link", ""))
-                            }
-                        }
-                        subs += CloudSub(s.optString("label"), s.optString("icon"), cs)
-                    }
-                }
-                val provs = mutableListOf<DashProvider>()
-                g.optJSONArray("providers")?.let { pa ->
-                    for (j in 0 until pa.length()) {
-                        val pr = pa.optJSONObject(j) ?: continue
-                        val l = pr.optString("label"); if (l.isNotBlank()) provs += DashProvider(l, pr.optString("url"))
-                    }
-                }
-                groups += CloudGroup(g.optString("id"), g.optString("label"), g.optString("icon"), subs, provs)
-            }
-        }
-        return CloudDash(groups).also { cachedDash = it }
-    }
+    /** #1148 the container dashboards: the SAME document as the Table page (ContainersSource), one card per group, one
+     *  sub-table per category, in the document's order. Not cached: the live copy may replace the baked one. */
+    fun cloudServices(): CloudDash = dashOf(ContainersSource.current())
+
+    fun dashOf(c: ContainersModel.Catalog): CloudDash = CloudDash(c.groups.map { g ->
+        CloudGroup(g.id, g.label, "", g.categories.map { cat ->
+            CloudSub(cat.label, "", cat.names.mapNotNull { c.entry(it) }.map { e ->
+                CloudContainer(e.name, e.name, e.dns, e.port ?: -1, false, "")
+            })
+        }, emptyList())
+    })
 
     /** The wg-mesh/v1 snapshot — same parse as the SuperApp's Sections.mesh(). */
     fun mesh(): Mesh {

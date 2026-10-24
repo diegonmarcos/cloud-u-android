@@ -86,19 +86,17 @@ import json, os, sys
 app = sys.argv[1]
 rel = app + "/app/src/main/java/com/diegonmarcos/cloudc3"
 bad = []
-cs = json.load(open(app + "/data/cloud_services.json", encoding="utf-8"))
-groups = {g["id"]: g for g in cs["groups"]}
-dbs, infra_names = set(), set()
+cs = json.load(open(app + "/data/containers_declared.json", encoding="utf-8"))
+# #1148: Containers read ONE document, containers-declared.json (groups infra / cloud / project, every container once).
+# Every database container (category Ops-dBs-*) lives in the Infra Apps group, never on the Infra pages of this app.
+dbs = {c["name"] for c in cs["containers"] if c["category"].startswith("Ops-dBs")}
+if not dbs: bad.append("no container is filed under Ops-dBs-* any more - the guard has nothing to guard (Containers lost its Dbs)")
+for c in cs["containers"]:
+    if c["category"].startswith("Ops-dBs") and c["group"] != "Infra Apps":
+        bad.append("DB container %r is in group %r, not Infra Apps" % (c["name"], c["group"]))
 for g in cs["groups"]:
-    for s in g.get("subgroups") or []:
-        for c in s.get("containers") or []:
-            if g["id"] == "infra": infra_names.add(c["name"])
-            if s["label"] in ("Databases", "DBs"): dbs.add(c["name"])
-if not dbs: bad.append("no container is filed under Databases any more - the guard has nothing to guard (Containers lost its Dbs)")
-for n in sorted(dbs - infra_names - {c["name"] for g in cs["groups"] if g["id"] == "user" for s in g.get("subgroups") or [] for c in s.get("containers") or []}):
-    bad.append("DB container %r is in no Containers dashboard group (Infra Apps / User Apps)" % n)
-for g in ("providers", "dbs", "mcpapi"):
-    if g in groups: bad.append("data/cloud_services.json carries the cross-cut group %r: it holds DB / API / VM lists that belong to Containers and the fleet declarations" % g)
+    if g["id"] not in ("infra", "cloud", "project"):
+        bad.append("containers_declared.json carries the group %r: only Infra Apps, Cloud Apps and Project Apps exist" % g["id"])
 slice_text = open(app + "/data/fleet_slice.json", encoding="utf-8").read()
 sl = json.loads(slice_text)
 if set(sl["storage"]) != {"buckets", "backends"}: bad.append("fleet_slice.storage holds %s, not just buckets and backends" % sorted(sl["storage"]))

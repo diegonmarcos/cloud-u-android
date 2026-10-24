@@ -98,6 +98,7 @@ object RoutesTags {
     const val DECL_RAW = "routes_decl_raw"
     const val DECL_COPY = "routes_decl_copy"
     const val DECL_BACK = "routes_decl_back"
+    const val DECL_META = "routes_decl_meta"
     fun light(i: Int) = "routes_light_$i"
     fun more(i: Int) = "routes_more_$i"
     fun lightChip(id: String) = "routes_lightchip_$id"
@@ -129,12 +130,12 @@ class PrefsRoutesStateStore(context: Context) : RoutesStateStore {
 
 private val widths = mapOf(
     Col.STATUS to 56.dp,
-    Col.CATEGORY to 76.dp, Col.CONTAINER to 150.dp, Col.PUBLIC_URL to 250.dp, Col.AUTH_TYPE to 84.dp,
+    Col.GROUP to 84.dp, Col.CATEGORY to 140.dp, Col.CONTAINER to 150.dp, Col.PUBLIC_URL to 250.dp, Col.AUTH_TYPE to 84.dp,
     Col.PRIVATE_URL to 190.dp, Col.VM_NAME to 100.dp, Col.VM_ADDR to 130.dp,
 )
 private val headers = mapOf(
     Col.STATUS to "Status",
-    Col.CATEGORY to "Category", Col.CONTAINER to "Container", Col.PUBLIC_URL to "Public URL", Col.AUTH_TYPE to "Auth Type",
+    Col.GROUP to "Group", Col.CATEGORY to "Category", Col.CONTAINER to "Container", Col.PUBLIC_URL to "Public URL", Col.AUTH_TYPE to "Auth Type",
     Col.PRIVATE_URL to "Private URL", Col.VM_NAME to "VM Name", Col.VM_ADDR to "VM IP:PORT",
 )
 
@@ -391,6 +392,17 @@ fun DeclarationPage(row: RoutesTableModel.Row, decl: JsonObject?, onBack: () -> 
                 .testTag(RoutesTags.DECL_COPY), color = c.primary, style = MaterialTheme.typography.labelLarge)
         }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
+            // #1148 every metadata field of the declared container (group, category, image, host ... ), from the same document as the table.
+            if (row.meta.isNotEmpty()) {
+                Text("Metadata", Modifier.padding(top = 4.dp, bottom = 4.dp).testTag(RoutesTags.DECL_META), color = c.primary,
+                    style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                row.meta.forEach { (k, v) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp).testTag("routes_meta_$k")) {
+                        Text(k, Modifier.width(120.dp), color = c.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        Text(v.ifBlank { "-" }, Modifier.weight(1f), color = c.onSurface, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
             when {
                 decl == null -> Text("No declaration is carried for ${row.container}.", color = c.onSurface, style = MaterialTheme.typography.bodyMedium)
                 raw -> Text(DeclarationModel.raw(decl), Modifier.testTag("routes_decl_rawtext"), color = c.onSurface,
@@ -506,9 +518,12 @@ class RoutesTableFragment : KitComposeFragment() {
         val ctx = LocalContext.current
         var container by remember { mutableStateOf<String?>(null) }
         val store = remember { PrefsRoutesStateStore(ctx) }
+        // The SAME document the Topology page reads (ContainersSource); the API copy replaces the baked one when it answers.
+        val version = ContainersSource.version
+        LaunchedEffect(Unit) { ContainersSource.refresh(ApiFleetLive(ctx.applicationContext)) }
         val initial = remember { store.load() }
         RoutesTableScreen(
-            rows = remember { Declarations.routes },
+            rows = remember(version) { ContainersModel.rows(ContainersSource.current()) },
             initial = initial,
             onState = store::save,
             prober = remember { NetProber(ctx) },

@@ -30,18 +30,11 @@ object FleetFixtures {
 
     fun rawSlice(): JsonObject = Json.parseToJsonElement(sliceText()).jsonObject
 
-    /** Container names of every subgroup the dashboards call Databases: the containers that must NOT appear under Infra. */
+    /** Container names of every database container (category Ops-dBs-*) in the Containers document: they must NOT appear under Infra. */
     fun dbContainerNames(): Set<String> {
-        val root = Json.parseToJsonElement(File(moduleDir(), "data/cloud_services.json").readText()).jsonObject
-        val out = mutableSetOf<String>()
-        (root["groups"] as JsonArray).forEach { g ->
-            (g.jsonObject["subgroups"] as? JsonArray)?.forEach { s ->
-                val label = s.jsonObject["label"]!!.jsonPrimitive.content
-                if (label == "Databases" || label == "DBs") {
-                    (s.jsonObject["containers"] as JsonArray).forEach { out += it.jsonObject["name"]!!.jsonPrimitive.content }
-                }
-            }
-        }
-        return out
+        val root = Json.parseToJsonElement(File(moduleDir(), "data/containers_declared.json").readText()).jsonObject
+        return (root["containers"] as JsonArray).map { it.jsonObject }
+            .filter { it["category"]!!.jsonPrimitive.content.startsWith("Ops-dBs") }
+            .map { it["name"]!!.jsonPrimitive.content }.toSet()
     }
 }

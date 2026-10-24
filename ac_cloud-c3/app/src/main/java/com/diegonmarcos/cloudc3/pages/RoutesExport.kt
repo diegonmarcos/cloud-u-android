@@ -9,7 +9,7 @@ object RoutesExport {
     /** The shown columns' header texts; keep in step with the screen's headers. */
     val HEADERS: Map<RoutesTableModel.Column, String> = mapOf(
         RoutesTableModel.Column.STATUS to "Status",
-        RoutesTableModel.Column.CATEGORY to "Category", RoutesTableModel.Column.CONTAINER to "Container",
+        RoutesTableModel.Column.GROUP to "Group", RoutesTableModel.Column.CATEGORY to "Category", RoutesTableModel.Column.CONTAINER to "Container",
         RoutesTableModel.Column.PUBLIC_URL to "Public URL", RoutesTableModel.Column.AUTH_TYPE to "Auth Type",
         RoutesTableModel.Column.PRIVATE_URL to "Private URL", RoutesTableModel.Column.VM_NAME to "VM Name",
         RoutesTableModel.Column.VM_ADDR to "VM IP:PORT",
