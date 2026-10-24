@@ -124,6 +124,8 @@ public object SecondRowIcons {
         "speed" to Icons.Outlined.Speed,
         "person_add" to Icons.Outlined.PersonAdd,
         "history" to Icons.Outlined.History,
+        "play_circle" to Icons.Outlined.PlayCircle,
+        "bookmark" to Icons.Outlined.Bookmark,
         // Drawable-style names the Me, C3 and Drive declarations already use (enforced by those apps' own tests), as Material glyphs.
         "ic_p_health_body" to Icons.Outlined.AccessibilityNew,
         "ic_p_health_vitals" to Icons.Outlined.MonitorHeart,

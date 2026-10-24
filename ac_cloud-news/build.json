@@ -30,6 +30,31 @@
     "log_sink_stream": "cloud-news"
   },
   "modules": {
+    "libs:bottomnav": {
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library",
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-bottom": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
+      "type": "library",
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-first-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+      "type": "library",
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-second-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+      "type": "library",
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE."
+    },
     "libs:decisions-link": {
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/decisions-link"
@@ -38,6 +63,11 @@
     "app": {
       "type": "application",
       "depends_on": [
+        "libs:bottomnav",
+        "libs:nav-bar-bottom",
+        "libs:nav-bar-top-first-row",
+        "libs:nav-bar-top-second-row",
+        "libs:theme-background",
         "libs:core",
         "libs:updater"
       ]
@@ -167,6 +197,79 @@
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
     }
+  },
+  "ui": {
+    "_doc": "#1164 THE navigation declaration (libs:bottomnav NavDecl) of the news.html WebView shell: ui.bottom_nav is the shared bottom nav, each section is one tab of the web UI and a tap runs its switchTab(). The first row (Profile top-right opens Cloud Account) and the scroll-collapse are the shared libs'; the WebView's scroll feeds the one collapse connection.",
+    "bottom_nav": [
+      "media",
+      "events",
+      "feed",
+      "saved",
+      "configs"
+    ],
+    "default_section": "feed",
+    "sections": [
+      {
+        "id": "media",
+        "label": "Media",
+        "icon": "play_circle",
+        "pages": [
+          {
+            "id": "media",
+            "label": "Media",
+            "icon": "play_circle"
+          }
+        ]
+      },
+      {
+        "id": "events",
+        "label": "Events",
+        "icon": "event",
+        "pages": [
+          {
+            "id": "events",
+            "label": "Events",
+            "icon": "event"
+          }
+        ]
+      },
+      {
+        "id": "feed",
+        "label": "Feed",
+        "icon": "rss_feed",
+        "pages": [
+          {
+            "id": "feed",
+            "label": "Feed",
+            "icon": "rss_feed"
+          }
+        ]
+      },
+      {
+        "id": "saved",
+        "label": "Saved",
+        "icon": "bookmark",
+        "pages": [
+          {
+            "id": "saved",
+            "label": "Saved",
+            "icon": "bookmark"
+          }
+        ]
+      },
+      {
+        "id": "configs",
+        "label": "Configs",
+        "icon": "settings",
+        "pages": [
+          {
+            "id": "configs",
+            "label": "Configs",
+            "icon": "settings"
+          }
+        ]
+      }
+    ]
   },
   "web": {
     "_doc": "#876 Cloud News as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-news-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-news-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: this app declares no bottom-nav island, so the page is one dense list of mock data. The APK's own ship ignores this directory.",

@@ -7,14 +7,49 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.bottomnav.NavDecl
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.HierarchyEntry
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
+import com.diegonmarcos.superapp.navbartop2.SecondRowIcons
 import com.diegonmarcos.superapp.updater.Updater
 
+/**
+ * Cloud News: the shared nav pattern (#1164) around the news.html WebView. The first row (Profile top-right opens Cloud
+ * Account), the bottom nav and the page background are the shared libs'; the sections are build.json::ui (Media, Events, Feed,
+ * Saved, Configs) and a tap runs the page's own switchTab(). The page's bottom bar is hidden in the shell (news.html,
+ * `native-nav`), and its scroll is wired into the one chrome collapse ([ChromeWebView]).
+ */
 class MainActivity : AppCompatActivity() {
+    private lateinit var webView: WebView
+    private val scrollFeed = ChromeScrollFeed()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val webView = WebView(this)
-        setContentView(webView)
+        FleetChrome.apply(this)
+        webView = WebView(this)
+        webView.setOnScrollChangeListener { _, _, y, _, oldY -> scrollFeed.onDelta((y - oldY).toFloat()) }
         webView.webViewClient = WebViewClient()
         // Without this the entire UI is a black box: the whole app is one
         // WebView, so a JS error or a diagnostic console.log went nowhere and
@@ -45,7 +80,52 @@ class MainActivity : AppCompatActivity() {
         // links are therefore handed to the system browser via
         // NewsBridge.openExternal(), never opened in this WebView.
         webView.addJavascriptInterface(NewsBridge(this), "NewsBridge")
+        webView.addJavascriptInterface(scrollFeed, "NavChrome")
         webView.loadUrl("file:///android_asset/news.html")
+        setContent { NewsShell() }
         Updater.start(this)
+    }
+
+    @Composable
+    private fun NewsShell() {
+        var section by remember { mutableStateOf(NAV.default()?.id ?: "feed") }
+        val go: (String) -> Unit = { id ->
+            section = id
+            webView.evaluateJavascript("switchTab('$id')", null)
+        }
+        val current = NAV.section(section)
+        NavBarTopFirstRowScaffold(
+            title = current?.label ?: getString(R.string.app_name),
+            // The title island lists the five sections (each a single page), so a pick switches the page's tab.
+            hierarchy = NAV.bottomSections().map { HierarchyEntry(it.id, it.label, 0, it.id, selected = it.id == section) },
+            onNavigate = { e -> go(e.sectionId) },
+            onAccount = rememberAccountLauncher(),
+            onConfigs = { go("configs") },
+            onAi = rememberSuperAppAiLauncher(),
+            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+        ) {
+            TopBarDrawer { close ->
+                NAV.bottomSections().forEach { sec ->
+                    Text(
+                        sec.label,
+                        Modifier.fillMaxWidth().clickable { go(sec.id); close() }.padding(horizontal = 20.dp, vertical = 14.dp),
+                    )
+                }
+            }
+            NavBarBottomHost(
+                entries = NAV.islandEntries { rememberVectorPainter(SecondRowIcons.vector(it)) },
+                selectedId = section,
+                onSelect = { go(it.id) },
+            ) {
+                ChromeWebView(webView, scrollFeed)
+            }
+        }
+    }
+
+    companion object {
+        /** build.json::ui as baked into BuildConfig: the bottom nav's items (Media, Events, Feed, Saved, Configs) and their sections. */
+        val NAV: NavDecl by lazy {
+            NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
+        }
     }
 }
