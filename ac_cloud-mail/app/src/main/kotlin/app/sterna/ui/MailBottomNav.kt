@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
+import app.sterna.ui.theme.MailMetrics
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
@@ -76,7 +76,7 @@ fun BottomNavBar(nav: NavController, currentRoute: String, content: @Composable 
     ) {
         TopBarDrawer { close ->
             entries.forEach { e ->
-                Text(e.label, Modifier.fillMaxWidth().clickable { tap(e); close() }.padding(horizontal = 20.dp, vertical = 14.dp))
+                Text(e.label, Modifier.fillMaxWidth().clickable { tap(e); close() }.padding(horizontal = MailMetrics.s12, vertical = MailMetrics.s12))
             }
         }
         NavBarBottomHost(
