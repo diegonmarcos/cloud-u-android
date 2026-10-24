@@ -2,6 +2,7 @@ package app.cloudnotes.pro
 
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import com.diegonmarcos.superapp.bottomnav.ChromeWebScroll
 import com.getcapacitor.Bridge
 import com.getcapacitor.BridgeWebViewClient
 
@@ -21,5 +22,11 @@ internal class CloudNotesWebViewClient(
             )
         }
         return shouldOverride
+    }
+
+    // #1164 the page's inner scrollers feed the chrome's one scroll-collapse (the WebView's own scroll is hooked by ChromeWebScroll.attach).
+    override fun onPageFinished(view: WebView, url: String?) {
+        super.onPageFinished(view, url)
+        ChromeWebScroll.inject(view)
     }
 }

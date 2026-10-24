@@ -13,14 +13,15 @@ import org.junit.Test
  */
 class ChromeScrollGuardTest {
     private val apps = listOf(
-        "ac_cloud-mail", "ac_cloud-me", "ac_cloud-drive", "ac_cloud-nav", "ac_cloud-account", "ac_cloud-store", "ac_cloud-c3", "ac_cloud-tasks", "ac_cloud-contacts", "ac_cloud-news", "ac_cloud-writer", "ac_cloud-search", "ac_cloud-browser", "ac_cloud-dialer", "ac_cloud-superintel",
+        "ac_cloud-mail", "ac_cloud-me", "ac_cloud-drive", "ac_cloud-nav", "ac_cloud-account", "ac_cloud-store", "ac_cloud-c3", "ac_cloud-tasks", "ac_cloud-contacts", "ac_cloud-news", "ac_cloud-writer", "ac_cloud-search", "ac_cloud-browser", "ac_cloud-dialer", "ac_cloud-superintel", "ac_cloud-notes",
     )
 
     private fun sources(app: String): List<File> {
         var dir: File? = File("").absoluteFile
         while (dir != null) {
-            val root = File(dir, "$app/app/src/main")
-            if (root.isDirectory) return root.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+            // Cloud Notes is a Capacitor project: its Android app sits under the vendored tree.
+            val root = listOf("$app/app/src/main", "$app/packages/frontend/apps/android/App/app/src/main").map { File(dir, it) }.firstOrNull { it.isDirectory }
+            if (root != null) return root.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
             dir = dir.parentFile
         }
         throw AssertionError("$app/app/src/main not found above ${File("").absolutePath}")
@@ -50,6 +51,7 @@ class ChromeScrollGuardTest {
         "ac_cloud-dialer" to "ChromeScrollHooks.install(",
         "ac_cloud-tasks" to "ChromeWebScroll.attach(",
         "ac_cloud-me" to "ChromeWebScroll.attach(",
+        "ac_cloud-notes" to "ChromeWebScroll.attach(",
     )
 
     /** Apps whose WebViews are secondary screens (own Activity, dialog, editor or print helper), never the page under the chrome. */

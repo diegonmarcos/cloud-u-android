@@ -1,18 +1,18 @@
 package app.cloudnotes.pro
 
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
-import androidx.compose.foundation.background
+import android.webkit.WebView
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -20,20 +20,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.compose.ui.viewinterop.AndroidView
 import com.diegonmarcos.superapp.ai.AiFleetChatPanel
-import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
-import com.diegonmarcos.superapp.bottomnav.NavDecl
-import com.diegonmarcos.superapp.bottomnav.TopBarDecl
+import com.diegonmarcos.superapp.bottomnav.ChromeWebScroll
+import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.navEntry
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import org.json.JSONArray
-import kotlin.math.roundToInt
 
 /** One page the editor reports for the drawer's tree: its id and title. */
 internal data class DrawerDoc(val id: String, val title: String)
@@ -53,18 +53,15 @@ internal object DrawerDocs {
 }
 
 /**
- * Cloud Notes' first row: libs:bottomnav's AppTopBar (declared in build.json::ui.top_bar, read as
- * [TopBarDecl]): hamburger with the doc tree / workspace drawer, the title, AI (libs:ai's shared
- * chat) and Settings (Account launches Cloud Account, Configs opens Cloud Notes's own settings through
- * the web bridge). The Compose layer sits over the editor and passes every touch it does not use
- * through; it reports its height (status bar included) so [NativeNav] can place the page strip
- * and the WebView below it: this is the ONE source of the top inset.
+ * Cloud Notes' one shell (#1164), the shared nav scaffold every migrated app uses: the first row (hamburger with the doc tree /
+ * section drawer, the section title island with its pages, AI = libs:ai's shared chat, Profile top-right launching Cloud Account,
+ * Configs asking the web half to open Cloud Notes's own settings), the second row (the open section's pages), the shared bottom
+ * nav (build.json::ui) and the shared page background. The editor WebView (with the open-file button, in [Content]'s container) is the content; its scroll (and its inner scrollers')
+ * feeds the ONE chrome collapse through [ChromeWebScroll], so reading down hides the first row and compacts the other two.
+ * The shell owns every inset: the web half adds no status-bar or system-bar padding of its own (setup.ts).
  */
-internal class NativeTopBar(
-    private val decl: TopBarDecl,
-    private val title: String,
-    private val nav: NativeNav,
-    private val navDecl: NavDecl,
+internal class NotesShell(
+    val nav: NativeNav,
     private val gatewayUrl: String,
     private val run: (String) -> Unit,
 ) {
@@ -81,52 +78,60 @@ internal class NativeTopBar(
 
     fun host(): Host = Host()
 
-    fun attach(parent: CoordinatorLayout, onTopHeight: (Int) -> Unit) {
-        val view = ComposeView(parent.context).apply {
-            setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) { Bar(onTopHeight) }
-            }
-        }
-        parent.addView(
-            view,
-            CoordinatorLayout.LayoutParams(
-                CoordinatorLayout.LayoutParams.MATCH_PARENT,
-                CoordinatorLayout.LayoutParams.MATCH_PARENT,
-            ),
-        )
-    }
-
     @Composable
-    private fun Bar(onTopHeight: (Int) -> Unit) {
-        Box(Modifier.fillMaxSize()) {
-            AppTopBarScaffold(
-                decl = decl,
-                title = title,
+    fun Content(container: ViewGroup, web: WebView) {
+        val dark = true
+        val section = nav.decl.section(nav.sectionId)
+        val entries = nav.decl.bottomSections().map { navEntry(it.id, it.label, it.icon) }
+        MaterialTheme(colorScheme = darkColorScheme()) {
+            NavBarTopFirstRowScaffold(
+                title = section?.label ?: nav.sectionId,
+                hierarchy = section?.let { titleHierarchy(it, nav.pageId) }.orEmpty(),
+                onNavigate = { e -> if (e.depth > 0) nav.openPage(e.sectionId, e.id) else nav.open(e.sectionId) },
                 onAccount = rememberAccountLauncher(),
                 onConfigs = { run(NativeNavScript.openSettings()) },
-                modifier = Modifier.statusBarsPadding(),
                 aiPanel = { AiFleetChatPanel(gatewayUrl) },
+                modifier = Modifier.fillMaxSize().statusBarsPadding(),
+                dark = dark,
             ) {
                 TopBarDrawer { close -> Drawer(close) }
-                // The content slot starts where the bar ends: its top IS the top stack's height.
-                Box(
-                    Modifier.fillMaxSize().onGloballyPositioned {
-                        onTopHeight(it.positionInRoot().y.roundToInt())
-                    },
-                )
+                NavBarBottomHost(
+                    entries = entries,
+                    selectedId = nav.sectionId,
+                    onSelect = { e -> nav.open(e.id) },
+                    dark = dark,
+                ) {
+                    Column(Modifier.fillMaxSize()) {
+                        NavBarTopSecondRow(
+                            pages = section?.pages.orEmpty(),
+                            selectedId = nav.pageId,
+                            onSelect = { nav.openPage(it) },
+                            dark = dark,
+                            underTopChrome = false,
+                            surface = nav.decl.stripSurface(nav.sectionId, dark),
+                        )
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
+                            val collapse = LocalNavChromeCollapse.current
+                            AndroidView(
+                                factory = { (container.parent as? ViewGroup)?.removeView(container); container },
+                                modifier = Modifier.fillMaxSize(),
+                                update = { ChromeWebScroll.attach(web, collapse) },
+                            )
+                            // Search > Ask: the fleet's shared AI chat (libs:ai) over the editor, between the second row and the bottom nav.
+                            if (nav.askShown) {
+                                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) { AiFleetChatPanel(gatewayUrl) }
+                            }
+                        }
+                    }
+                }
             }
-            // The status bar's own backdrop, so the bar reads as one surface with it.
-            Box(
-                Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars)
-                    .background(MaterialTheme.colorScheme.surface),
-            )
         }
     }
 
     @Composable
     private fun ColumnScope.Drawer(close: () -> Unit) {
         Eyebrow("Notes")
-        navDecl.bottomSections().forEach { s ->
+        nav.decl.bottomSections().forEach { s ->
             NavigationDrawerItem(
                 label = { Text(s.label) },
                 selected = s.id == nav.sectionId,

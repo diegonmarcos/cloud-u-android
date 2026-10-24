@@ -4,11 +4,13 @@ import android.content.ComponentCallbacks2
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import app.cloudnotes.pro.plugin.CloudNotesThemePlugin
@@ -23,7 +25,6 @@ import app.cloudnotes.pro.utils.dp2px
 import app.cloudnotes.pro.utils.px2dp
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.superapp.bottomnav.NavDecl
-import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import com.getcapacitor.BridgeActivity
 import com.getcapacitor.BridgeWebChromeClient
 import com.getcapacitor.WebViewListener
@@ -79,41 +80,21 @@ class MainActivity : BridgeActivity(), CloudNotesThemePlugin.Callback {
         setupNativeNav()
     }
 
-    // #868: the fleet bottom island + page tabs (libs:bottomnav) replace the editor's own
-    // tab bar; the web half hides its tabs once it sees cloudNotesNativeNav (setup.ts).
+    // #1164: the shared nav scaffold (first row, second row, bottom nav, page background, scroll-collapse) is the activity's
+    // content and the Capacitor layout (editor WebView + open-file button) sits inside it. The web half hides its own tabs once
+    // it sees cloudNotesNativeNav and adds no system-bar padding (setup.ts).
     private fun setupNativeNav() {
         val decl = NavDecl.fromBuildConfig(
             BuildConfig.UI_SECTIONS_B64,
             BuildConfig.UI_BOTTOM_NAV,
             BuildConfig.UI_DEFAULT_SECTION,
         )
-        val parent = bridge.webView.parent as CoordinatorLayout
+        val container = bridge.webView.parent as CoordinatorLayout
         val run: (String) -> Unit = { js -> bridge.webView.post { bridge.webView.evaluateJavascript(js, null) } }
-        val nav = NativeNav(
-            decl = decl,
-            webView = bridge.webView,
-            gatewayUrl = BuildConfig.AI_GATEWAY_URL,
-            icon = { name ->
-                @Suppress("DiscouragedApi")
-                resources.getIdentifier("ic_nav_$name", "drawable", packageName)
-            },
-            run = run,
-        )
-        nav.attach(parent)
-        // The fleet's first row (libs:bottomnav AppTopBar, build.json::ui.top_bar). It reports its
-        // height, status bar included, and NativeNav places the strip and the WebView below it.
-        TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)?.let { topDecl ->
-            val topBar = NativeTopBar(
-                decl = topDecl,
-                title = applicationInfo.loadLabel(packageManager).toString(),
-                nav = nav,
-                navDecl = decl,
-                gatewayUrl = BuildConfig.AI_GATEWAY_URL,
-                run = run,
-            )
-            bridge.webView.addJavascriptInterface(topBar.host(), "CloudNotesHost")
-            topBar.attach(parent) { px -> nav.setTopInset(px) }
-        }
+        val shell = NotesShell(NativeNav(decl, run), BuildConfig.AI_GATEWAY_URL, run)
+        bridge.webView.addJavascriptInterface(shell.host(), "CloudNotesHost")
+        (container.parent as? ViewGroup)?.removeView(container)
+        setContentView(ComposeView(this).apply { setContent { shell.Content(container, bridge.webView) } })
     }
 
     // #469: the ONE feature over upstream — open a file from emulated storage.
@@ -123,7 +104,7 @@ class MainActivity : BridgeActivity(), CloudNotesThemePlugin.Callback {
         val fab = FloatingActionButton(this).apply {
             layoutParams = CoordinatorLayout.LayoutParams(dp2px(52), dp2px(52)).apply {
                 gravity = Gravity.END or Gravity.BOTTOM
-                updateMargins(0, 0, dp2px(24), dp2px(86))
+                updateMargins(0, 0, dp2px(24), dp2px(24))
             }
             customSize = dp2px(52)
             setImageResource(R.drawable.ic_open_file)

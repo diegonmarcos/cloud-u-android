@@ -5,17 +5,17 @@ import './proxy';
 
 import { viewportRuntimeConfig } from '@blocksuite/cloud-notes/std/gfx';
 
-// The Compose shell draws the bottom nav (libs:bottomnav); the web's own tabs hide.
+// The Compose shell draws the bottom nav (libs:nav-bar-bottom); the web's own tabs hide.
 (window as unknown as { cloudNotesNativeNav?: boolean }).cloudNotesNativeNav =
   true;
 
-// ONE source of the top inset: the Compose shell's top bar owns the status bar and
-// places the WebView below it, so the web half must not pad for the status bar a
-// second time (SafeArea reads --safe-area-inset-top, which Capacitor's SystemBars
-// fills with the status bar height). !important beats the injected inline value.
+// ONE source of the system-bar insets: the Compose shell's first row owns the status bar and its
+// bottom nav clears the navigation bar, and the WebView sits between them, so the web half must not
+// pad for either a second time (SafeArea reads --safe-area-inset-*, which Capacitor's SystemBars
+// fills with the bar heights). !important beats the injected inline value.
 {
   const style = document.createElement('style');
-  style.textContent = ':root{--safe-area-inset-top:0px !important}';
+  style.textContent = ':root{--safe-area-inset-top:0px !important;--safe-area-inset-bottom:0px !important}';
   document.documentElement.appendChild(style);
 }
 

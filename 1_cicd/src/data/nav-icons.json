@@ -19,8 +19,7 @@
     "ab_cloud-libs-shared/libs/ui-icons/"
   ],
   "exceptions": {
-    "ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/ui/platform/feature/vaultunlockednavbar/FleetNavScaffold.kt": "Bitwarden fork: each tab's label, icon and route stay the upstream VaultUnlockedNavBarTab's (a patched upstream file); it is on the legacy BottomNavHost until the fork's tabs move to the catalog.",
-    "ac_cloud-notes/packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/NativeNav.kt": "Capacitor/WebView shell: the island is a View host fed drawable resource ids (BottomNavIslandView.viewItems), not a Compose entry list."
+    "ac_cloud-vault/app/src/main/kotlin/com/x8bit/bitwarden/ui/platform/feature/vaultunlockednavbar/FleetNavScaffold.kt": "Bitwarden fork: each tab's label, icon and route stay the upstream VaultUnlockedNavBarTab's (a patched upstream file); it is on the legacy BottomNavHost until the fork's tabs move to the catalog."
   },
   "lib_apps": {
     "ab_cloud-libs-shared/libs/wallet/": "ac_cloud-wallet"

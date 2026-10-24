@@ -44,6 +44,26 @@
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     },
+    "libs:nav-bar-bottom": {
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE: Cloud Notes' shell (NotesShell) is the first row, second row, bottom nav and page background of the fleet.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom"
+    },
+    "libs:nav-bar-top-first-row": {
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE: Cloud Notes' shell (NotesShell) is the first row, second row, bottom nav and page background of the fleet.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row"
+    },
+    "libs:nav-bar-top-second-row": {
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE: Cloud Notes' shell (NotesShell) is the first row, second row, bottom nav and page background of the fleet.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row"
+    },
+    "libs:theme-background": {
+      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE: Cloud Notes' shell (NotesShell) is the first row, second row, bottom nav and page background of the fleet.",
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/theme-background"
+    },
     "libs:ui-icons": {
       "dir": "../ab_cloud-libs-shared/libs/ui-icons",
       "type": "library",
@@ -71,7 +91,7 @@
     }
   },
   "ui": {
-    "_doc_nav": "#868 THE NAVIGATION IS ONE DECLARATION, drawn by libs:bottomnav (island = ui.bottom_nav, top tabs = ui.sections[].pages via PageTabsView). Cloud Notes is 'Miro + Notion + Obsidian' in one app (a0_docs/eng-specs/cloud-notes-hybrid.md); the five bottom items are the five ways in: Home (recent, daily note) | Pages (Notion-style docs: all, tags, collections, new) | Canvas (Miro-style edgeless boards) | Graph (Obsidian-style: global, local, tags) | Search (find, ask/AI). Only ids live here: the web half (core/src/mobile/components/native-nav-routes.ts) maps every `<section>/<page>` to a Cloud Notes workbench route or action, and test/test-nav-routes.sh fails if the two drift. A page with a non-blank `action` is a LAUNCH tab (creates something) and leaves the strip where it was. Settings/Profile are not a bottom item: they are the top bar's Settings dropdown (top_bar below), so the island keeps five equal cells.",
+    "_doc_nav": "#868 THE NAVIGATION IS ONE DECLARATION, drawn by the shared nav scaffold of #1164 (bottom nav = ui.bottom_nav, second row = ui.sections[].pages; NotesShell). Cloud Notes is 'Miro + Notion + Obsidian' in one app (a0_docs/eng-specs/cloud-notes-hybrid.md); the five bottom items are the five ways in: Home (recent, daily note) | Pages (Notion-style docs: all, tags, collections, new) | Canvas (Miro-style edgeless boards) | Graph (Obsidian-style: global, local, tags) | Search (find, ask/AI). Only ids live here: the web half (core/src/mobile/components/native-nav-routes.ts) maps every `<section>/<page>` to a Cloud Notes workbench route or action, and test/test-nav-routes.sh fails if the two drift. A page with a non-blank `action` is a LAUNCH tab (creates something) and leaves the strip where it was. Settings/Profile are not a bottom item: they are the first row's Configs and Profile icons (Profile launches Cloud Account, extapp:cloud-account), so the bar keeps five equal cells. Every section and page declares a libs:ui-icons catalog icon (SubPageIconGuardTest).",
     "bottom_nav": [
       "home",
       "pages",
@@ -80,15 +100,6 @@
       "search"
     ],
     "default_section": "home",
-    "top_bar": {
-      "_doc": "THE first row (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger whose drawer is Cloud Notes' own (NativeTopBar: the five sections and the editor's pages, pushed by the web half through window.CloudNotesHost.setDocs), the title (the launcher label), AI (libs:ai's shared chat) and Settings (Account launches Cloud Account; Configs asks the web half, through the cloud-notes:open-settings event, to open Cloud Notes's own settings dialog). The status-bar inset is owned HERE: NativeTopBar reports its height and NativeNav puts the page strip and the WebView below it; the web half adds no status-bar padding of its own (setup.ts). No app draws its own copy of this row (cloud-android-top-bar-guard).",
-      "drawer": true,
-      "ai": true,
-      "settings": [
-        "account",
-        "configs"
-      ]
-    },
     "sections": [
       {
         "id": "home",
@@ -97,70 +108,81 @@
         "pages": [
           {
             "id": "recent",
-            "label": "Recent"
+            "label": "Recent",
+            "icon": "history"
           },
           {
             "id": "daily",
-            "label": "Daily"
+            "label": "Daily",
+            "icon": "calendar_month"
           }
         ]
       },
       {
         "id": "pages",
         "label": "Pages",
-        "icon": "pages",
+        "icon": "description",
         "pages": [
           {
             "id": "all",
-            "label": "All"
+            "label": "All",
+            "icon": "description"
           },
           {
             "id": "tags",
-            "label": "Tags"
+            "label": "Tags",
+            "icon": "bookmark"
           },
           {
             "id": "collections",
-            "label": "Collections"
+            "label": "Collections",
+            "icon": "folder"
           },
           {
             "id": "new",
             "label": "New page",
-            "action": "launch"
+            "action": "launch",
+            "icon": "edit"
           }
         ]
       },
       {
         "id": "canvas",
         "label": "Canvas",
-        "icon": "canvas",
+        "icon": "palette",
         "pages": [
           {
             "id": "boards",
-            "label": "Boards"
+            "label": "Boards",
+            "icon": "layers"
           },
           {
             "id": "new",
             "label": "New board",
-            "action": "launch"
+            "action": "launch",
+            "icon": "edit"
           }
         ]
       },
       {
         "id": "graph",
         "label": "Graph",
-        "icon": "graph",
+        "icon": "hub",
         "pages": [
           {
             "id": "global",
-            "label": "Global"
+            "label": "Global",
+            "icon": "hub"
           },
           {
             "id": "local",
-            "label": "Local"
+            "label": "Local",
+            "icon": "my_location"
           },
           {
             "id": "tags",
-            "label": "Tags"
+            "label": "Tags",
+            "icon": "bookmark"
           }
         ]
       },
@@ -171,11 +193,13 @@
         "pages": [
           {
             "id": "search",
-            "label": "Search"
+            "label": "Search",
+            "icon": "search"
           },
           {
             "id": "ask",
-            "label": "Ask"
+            "label": "Ask",
+            "icon": "auto_awesome"
           }
         ]
       }
