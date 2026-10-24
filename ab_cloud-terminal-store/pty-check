@@ -48,7 +48,17 @@ tail3() { print -rn -- "${out//$'\r'/}" | tr -c '[:print:]\n' . | grep -v '^$' |
 # teardown does: hanging up a claude TUI under proot raced the shell's own exit (a run printed
 # `ok claude-tui` and still exited non-zero), so the signals the hang-up can raise are ignored,
 # the pty is closed here, and the status is the verdict's, not the trap's.
-finish() { trap '' HUP PIPE TERM; unfunction TRAPEXIT 2>/dev/null; zpty -d 2>/dev/null; exit $1 }
+# Teardown order: ignore every signal the hang-up can raise (HUP from the pty closing, PIPE from a write to the dead
+# pty, TERM/INT/QUIT from the proot wrapper), close the pty (zpty -d signals the child), then reap whatever is still
+# ours so no late SIGCHLD or job report reaches the verdict; the status is $1 and nothing after it.
+finish() {
+    local rc=$1
+    trap '' HUP PIPE TERM INT QUIT
+    unfunction TRAPEXIT 2>/dev/null
+    zpty -d 2>/dev/null
+    wait 2>/dev/null
+    exit $rc
+}
 ok()   { print -r -- "ok   $name ($(elapsed)s)"; finish 0 }
 fail() {
     print -r -- "FAIL $name: $1 | $(tail3)"
