@@ -5,7 +5,7 @@
 #
 #   C1 build.json::ui.browser.settings_sections declares the pages (= the top tabs), in order; every setting
 #      names one of them and every page holds a setting, a global row or a native block;
-#   C2 ui.sections[configs].pages is the SAME list (ids and order): the tabs libs:bottomnav PageTabs draws;
+#   C2 ui.sections[configs].pages is the SAME list (ids and order): the tabs libs:nav-bar-top-second-row draws;
 #   C3 each page is drawn on its own (BrowserConfigsPageScreen): its settings, then its rows, then its native
 #      blocks, from libs:ui-kit's rows and a chip row per enum; the host swaps the page when a tab is picked;
 #   C4 the page is Compose (no View screen added: the compose ratchet counts it).
@@ -40,7 +40,7 @@ def check(root, ok):
         ok(t in held, "C1 page `%s` holds something" % t)
     nav = [s for s in bj["ui"]["sections"] if s["id"] == "configs"][0]
     ok([p["id"] for p in nav.get("pages", [])] == topics, "C2 the configs section's tabs are the settings pages, in order")
-    ok("PageTabs(" in main_act and "openConfigsPage(" in main_act and "host.openConfigsPage(id)" in main_act, "C2 the shell draws the tabs with PageTabs and swaps the page")
+    ok("NavBarTopSecondRow(" in main_act and "openConfigsPage(" in main_act and "host.openConfigsPage(id)" in main_act, "C2 the shell draws the tabs with NavBarTopSecondRow and swaps the page")
     ok("fun openConfigsPage(" in frag and "val configsPageIds" in frag, "C2 the host opens a page by id")
     ok("catalogue.settings.filter { it.section == pageId }" in screen and "BrowserSettingRow(s, v)" in screen, "C3 a page draws the settings of its own id")
     ok("rows.forEach" in screen and "native()" in screen, "C3 then its rows and its native blocks")
@@ -55,7 +55,7 @@ SC = LIB + "/BrowserConfigsScreen.kt"
 main("configs layout", check, [
     ("a page is dropped from the declaration", BJ, '"id": "payment",\n          "label": "Payment"', '"id": "payment_gone",\n          "label": "Payment"', "declared, in order"),
     ("a setting lands on no page", BJ, '"label": "Tab strip",\n          "section": "tabs"', '"label": "Tab strip",\n          "section": "nowhere"', "sits on a declared page"),
-    ("the nav tabs lose a page", BJ, '"id": "about",\n            "label": "About"\n          }\n        ]', '"id": "about",\n            "label": "About"\n          }\n        , {"id": "extra", "label": "Extra"}]', "tabs are the settings pages"),
+    ("the nav tabs lose a page", BJ, '"id": "about",\n            "label": "About",\n            "icon": "info"\n          }\n        ]', '"id": "about",\n            "label": "About",\n            "icon": "info"\n          }\n        , {"id": "extra", "label": "Extra"}]', "tabs are the settings pages"),
     ("the page ignores its id", SC, "catalogue.settings.filter { it.section == pageId }", "catalogue.settings.filter { true }", "settings of its own id"),
     ("native blocks are not drawn", SC, "        native()\n", "", "native blocks"),
     ("enums become a list again", LIB + "/BrowserSheets.kt", "FilterChip(selected", "androidx.compose.material3.Text(selected", "chip row"),

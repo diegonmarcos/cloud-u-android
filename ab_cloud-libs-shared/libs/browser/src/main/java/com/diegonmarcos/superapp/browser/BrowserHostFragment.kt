@@ -205,6 +205,20 @@ class BrowserHostFragment : Fragment() {
     /** True while the tab switcher is what is on screen (no sheet or page over it): the island's Tabs pill. */
     val isTabsOpen: Boolean get() = mode is Mode.GRID && overlays.isEmpty()
 
+    /**
+     * #1164 the host app draws the URL bar and the page menu itself, in the shared first row (libs:nav-bar-top-first-row):
+     * set, the page screen leaves out its own bar row. The host reads [addressDisplay], opens the address overlay with
+     * [openAddress], the menu sheet with [openMenu] and runs a declared menu action with [act].
+     */
+    var externalBar by mutableStateOf(false)
+    /** The address as the bar shows it (the engine's hint while empty); empty until the host is up. */
+    val addressDisplay: String get() = runCatching { addressValue.text.ifEmpty { "Search ${engine().label}, or type a URL" } }.getOrDefault("")
+    fun openAddress() { suggestState.visible = false; addressOpen = true }
+    fun openMenu() = showMenuSheet()
+    fun act(id: String) = runAction(id)
+    /** #1164 the page scrolled by this many px (> 0: reading down); the host feeds the shared chrome's scroll-collapse with it. */
+    var onWebScroll: ((Float) -> Unit)? = null
+
     /** #868 the host shell's nav island follows the screen: called whenever the last overlay (the
      *  Search page, Settings, a sheet) is gone, so the island can put its pill back on the page. */
     var onOverlaysClosed: (() -> Unit)? = null
@@ -1070,7 +1084,8 @@ class BrowserHostFragment : Fragment() {
             // #886 the tab comes back where it was: its saved back stack when WebView can restore it,
             // else the page it last COMMITTED (never the url it was first opened with).
             // New text arrives as the reader scrolls: translate it too while a translation is on.
-            setOnScrollChangeListener { _, _, _, _, _ ->
+            setOnScrollChangeListener { _, _, y, _, oldY ->
+                onWebScroll?.invoke((y - oldY).toFloat())
                 if (translator.active) { ui.removeCallbacks(translateMore); ui.postDelayed(translateMore, 700) }
             }
             if (tab.isPrivate || !BrowserWebState.restore(ctx, this, tabKey)) loadResolved(url)
@@ -1858,7 +1873,7 @@ class BrowserHostFragment : Fragment() {
     @Composable
     private fun DetailBody(sc: Screen.Detail) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().background(Color(0xCC1A0033)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!externalBar) Row(Modifier.fillMaxWidth().background(Color(0xCC1A0033)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 BarButton("‹") { runAction("back") }
                 BarButton("›") { runAction("forward") }
                 // Address bar: a plain field. Its suggestions are the Compose panel over the page (below), so

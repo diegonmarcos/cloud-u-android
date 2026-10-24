@@ -143,6 +143,8 @@ public fun NavBarTopFirstRow(
     modifier: Modifier = Modifier,
     /** Replaces the default round avatar glyph, e.g. the signed-in user's picture. */
     avatar: (@Composable () -> Unit)? = null,
+    /** #1164 a host whose title IS an input (Cloud Browser's address): a tap on the island calls this instead of opening the dropdown. */
+    onTitleClick: (() -> Unit)? = null,
 ) {
     var open by remember { mutableStateOf(false) }
     Row(
@@ -158,7 +160,7 @@ public fun NavBarTopFirstRow(
                 Text(
                     title,
                     Modifier.clip(shape).background(colors.island, shape).border(1.dp, colors.islandBorder, shape)
-                        .clickable(enabled = hierarchy.isNotEmpty(), role = Role.Button) { open = true }
+                        .clickable(enabled = hierarchy.isNotEmpty() || onTitleClick != null, role = Role.Button) { if (onTitleClick != null) onTitleClick() else open = true }
                         .padding(horizontal = TopFirstRowSpec.ISLAND_PAD_H, vertical = TopFirstRowSpec.ISLAND_PAD_V)
                         .testTag(TopFirstRowTags.ISLAND)
                         .semantics { heading() },
@@ -238,6 +240,8 @@ public fun NavBarTopFirstRowScaffold(
     avatar: (@Composable () -> Unit)? = null,
     /** The app's light/dark mode: picks the shared palette (libs:theme-background). An app passes no colour. */
     dark: Boolean = true,
+    /** #1164 see [NavBarTopFirstRow]'s onTitleClick. */
+    onTitleClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val requests = remember { SubPageRequests() }
@@ -261,7 +265,7 @@ public fun NavBarTopFirstRowScaffold(
                     title, ThemeBackground.colors(dark), labels, hierarchy, navigate,
                     onMenu = { c.openDrawer() },
                     onAi = { if (onAi != null) onAi() else c.toggleAi() },
-                    onProfile = onAccount, onConfigs = onConfigs, avatar = avatar,
+                    onProfile = onAccount, onConfigs = onConfigs, avatar = avatar, onTitleClick = onTitleClick,
                 )
             },
             content = { CompositionLocalProvider(LocalSubPageRequests provides requests, content = content) },

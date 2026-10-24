@@ -18,7 +18,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.diegonmarcos.superapp.bottomnav.NavDecl
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.browser.BrowserConfig
 import com.diegonmarcos.superapp.browser.BrowserConfigsPageScreen
@@ -41,7 +41,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * #900 Configs is a section of TOP TABS, one per category, drawn by libs:bottomnav PageTabs from the SHIPPED declaration:
+ * #900 Configs is a section of TOP TABS, one per category, drawn by libs:nav-bar-top-second-row from the SHIPPED declaration:
  * the order, the sideways scroll, the selection, and each page drawing only its own settings and rows.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -74,7 +74,7 @@ class BrowserConfigsTabsUiTest {
 
     private fun showTabs() {
         compose.setContent { CloudKitTheme(palette) { Box(Modifier.fillMaxSize()) {
-            PageTabs(decl.section("configs")!!.pages, selected, onSelect = { selected = it.id; taps += it.id }, underTopChrome = false)
+            NavBarTopSecondRow(decl.section("configs")!!.pages, selected, onSelect = { selected = it.id; taps += it.id }, underTopChrome = false)
         } } }
         compose.waitForIdle()
     }

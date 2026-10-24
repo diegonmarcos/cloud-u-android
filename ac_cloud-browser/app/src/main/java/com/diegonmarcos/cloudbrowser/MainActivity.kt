@@ -4,8 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,20 +17,33 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.fragment.app.commit
+import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
-import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
+import com.diegonmarcos.superapp.bottomnav.NavChromeScroll
 import com.diegonmarcos.superapp.bottomnav.NavDecl
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottom
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.themebg.themeBackground
 import com.diegonmarcos.superapp.browser.BrowserHostFragment
 import com.diegonmarcos.superapp.browser.BrowserSearchPageHost
 import com.diegonmarcos.superapp.browser.MhtmlOpener
@@ -36,6 +51,7 @@ import com.diegonmarcos.superapp.uikit.CloudKitTheme
 import com.diegonmarcos.superapp.uikit.KitFragmentHost
 import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 import com.diegonmarcos.superapp.uikit.KitPalette
+import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import com.diegonmarcos.superapp.updater.UpdateOverlayFragment
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
@@ -58,6 +74,11 @@ import com.diegonmarcos.superapp.updater.Updater
  * PageTabs, one per config category, declared in ui.sections[configs].pages), and the pill follows the host: it
  * goes back to Browser (or Tabs, when the switcher is showing) the moment the last overlay closes.
  *
+ * #1164 the chrome is the fleet's shared nav pattern: libs:nav-bar-top-first-row's row (the URL bar is its title island, a tap
+ * opens the host's address overlay; the page menu with Dev Tools is its Configs icon; Profile top-right opens Cloud Account),
+ * libs:nav-bar-top-second-row's tabs for Configs, libs:nav-bar-bottom's bar on libs:theme-background, and the WebView's scroll
+ * fed to the one shared scroll-collapse (BrowserHostFragment.onWebScroll -> BottomNavCollapse.onScrollDelta).
+ *
  * 2026-10-16 owner decision: all apps must be Compose. The shell is a Compose screen under CloudKitTheme
  * (libs:ui-kit): the host fragment sits in a KitFragmentHost and the island is libs:bottomnav's
  * BottomNavIsland composable.
@@ -70,6 +91,13 @@ class MainActivity : AppCompatActivity() {
     private var selectedId by mutableStateOf<String?>(null)
     /** #900 the Configs top tab showing (a ui.sections[configs].pages id), while Configs is the island's item. */
     private var configsPage by mutableStateOf<String?>(null)
+    /** #1164 the live host fragment (Compose state: the first row reads its address). */
+    private var hostFragment by mutableStateOf<BrowserHostFragment?>(null)
+    /** #1164 the shared chrome's scroll-collapse; the WebView's scroll listener feeds it. */
+    private var chromeCollapse: BottomNavCollapse? = null
+    private var scrollAcc = 0f
+    /** The link or saved page that started this activity, handed to the host fragment once. */
+    private var pendingOpenUrl: String? = null
     private val decl: NavDecl by lazy {
         NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
     }
@@ -80,12 +108,20 @@ class MainActivity : AppCompatActivity() {
         FleetChrome.apply(this)
         supportFragmentManager.addFragmentOnAttachListener { _, f ->
             // The pill follows the host: Tabs while the tab switcher is what is showing, else Browser.
-            if (f is BrowserHostFragment) f.onOverlaysClosed = {
-                selectedId = decl.section(if (f.isTabsOpen) "tabs" else "browser")?.id
+            if (f is BrowserHostFragment) {
+                f.externalBar = true
+                f.onWebScroll = { d -> onWebScroll(d) }
+                f.onOverlaysClosed = {
+                    selectedId = decl.section(if (f.isTabsOpen) "tabs" else "browser")?.id
+                    chromeCollapse?.onScrollDelta(-1f)
+                }
+                hostFragment = f
             }
         }
         selectedId = decl.default()?.id
-        fun show(openUrl: String?) = setContent {
+        fun show(openUrl: String?) {
+            pendingOpenUrl = openUrl
+            setContent {
             val palette = KitPalette(
                 surface = colorResource(R.color.browser_surface),
                 surfaceSelected = colorResource(R.color.browser_selected),
@@ -99,21 +135,19 @@ class MainActivity : AppCompatActivity() {
                 // While the keyboard is up the island would sit between it and the page, taking the room the
                 // address suggestions need; it comes back the moment the keyboard goes.
                 val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-                Column(
-                    Modifier.fillMaxSize().background(colorResource(R.color.browser_bg))
-                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
-                        .imePadding(),
-                ) {
-                    // #900 Configs is a section of top tabs (one per config category), sideways-scrolling when they do not fit.
-                    if (selectedId == "configs") {
-                        val tabs = remember { decl.section("configs")?.pages.orEmpty() }
-                        PageTabs(tabs, configsPage, onSelect = { pg -> openConfigsPage(pg.id) }, underTopChrome = false)
+                // #1157 one scroll connection for the whole chrome: the first row, the tabs and the bar read it.
+                NavChromeScroll { collapse ->
+                    SideEffect { chromeCollapse = collapse }
+                    Column(
+                        Modifier.fillMaxSize().themeBackground(true)
+                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal))
+                            .imePadding(),
+                    ) {
+                        Box(Modifier.weight(1f).fillMaxWidth()) { Chrome() }
+                        if (!imeVisible) Island()
                     }
-                    KitFragmentHost(R.id.fragment_container, Modifier.weight(1f).fillMaxWidth()) {
-                        BrowserHostFragment.newInstance(openUrl, BuildConfig.UI_BROWSER_CONFIG_B64)
-                    }
-                    if (!imeVisible) Island()
                 }
+            }
             }
         }
         // A link or saved page (.mhtml / .mht) that started this activity opens once; a recreation brings the
@@ -143,11 +177,67 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val entries = items.map { BottomNavEntry(it.id, it.label, painterResource(it.icon)) }
-        BottomNavIsland(
+        NavBarBottom(
             entries = entries,
             selectedId = selectedId,
             onSelect = { e -> if (e.id != selectedId || e.id != decl.default()?.id) openSection(e.id) },
+            dark = true,
         )
+    }
+
+    /**
+     * The first row over the page. The title island is the URL bar while a page is showing (a tap opens the host's address
+     * overlay) and the section's name otherwise (on Configs it lists the config pages); the page menu, Dev Tools included,
+     * is the row's Configs icon; AI opens the Search page; the hamburger's drawer holds the page actions.
+     */
+    @Composable
+    private fun Chrome() {
+        val host = hostFragment
+        val section = selectedId?.let { decl.section(it) }
+        val onPage = selectedId == "browser"
+        val title = if (onPage) host?.addressDisplay.orEmpty().ifEmpty { section?.label.orEmpty() } else section?.label.orEmpty()
+        NavBarTopFirstRowScaffold(
+            title = title,
+            hierarchy = if (selectedId == "configs") section?.let { titleHierarchy(it, configsPage) }.orEmpty() else emptyList(),
+            onNavigate = { e -> if (e.depth == 0) openSection(e.sectionId) else openConfigsPage(e.id) },
+            onAccount = rememberAccountLauncher(),
+            onConfigs = { hostFragment?.openMenu() },
+            onAi = { openSection("search") },
+            dark = true,
+            onTitleClick = if (onPage) ({ hostFragment?.openAddress() }) else null,
+        ) {
+            TopBarDrawer { close ->
+                val p = LocalKitPalette.current
+                for ((id, label) in listOf("back" to "Back", "forward" to "Forward", "reload" to "Reload", "new_tab" to "New tab", "new_private_tab" to "New private tab")) {
+                    Text(
+                        label, color = p.textPrimary, style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.fillMaxWidth().clickable { hostFragment?.act(id); close() }.padding(horizontal = 20.dp, vertical = 14.dp)
+                            .testTag("drawer_action_$id"),
+                    )
+                }
+            }
+            Column(Modifier.fillMaxSize()) {
+                // #900 Configs is a section of top tabs (one per config category), sideways-scrolling when they do not fit.
+                if (selectedId == "configs") {
+                    val tabs = remember { decl.section("configs")?.pages.orEmpty() }
+                    NavBarTopSecondRow(tabs, configsPage, onSelect = { pg -> openConfigsPage(pg.id) }, dark = true, underTopChrome = false)
+                }
+                KitFragmentHost(R.id.fragment_container, Modifier.weight(1f).fillMaxWidth()) {
+                    BrowserHostFragment.newInstance(pendingOpenUrl, BuildConfig.UI_BROWSER_CONFIG_B64)
+                }
+            }
+        }
+    }
+
+    /**
+     * The WebView scrolled by [delta] px (> 0: reading down). Small moves and the jitter of the page resizing under the
+     * row are ignored: the shared collapse follows a deliberate scroll of about 48 px either way.
+     */
+    private fun onWebScroll(delta: Float) {
+        if (delta == 0f) return
+        if (scrollAcc != 0f && (scrollAcc > 0f) != (delta > 0f)) scrollAcc = 0f
+        scrollAcc += delta
+        if (scrollAcc > 48f || scrollAcc < -48f) { chromeCollapse?.onScrollDelta(scrollAcc); scrollAcc = 0f }
     }
 
     private fun openSection(id: String) {

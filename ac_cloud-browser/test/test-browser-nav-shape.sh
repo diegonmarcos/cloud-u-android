@@ -6,9 +6,9 @@
 # What this certifies, statically (the nav is data, the bar and the strips are libs:bottomnav's):
 #   S1 build.json::ui is ONE declaration: bottom_nav = favourites|tabs|browser|search|configs, default_section browser
 #      (the web tabs, address bar and every overlay stay libs:browser's own UI: no pages; #900 Configs alone has pages, its
-#      13 top tabs, drawn by PageTabs in MainActivity: test-browser-page-menu.sh holds their ids and order).
+#      13 top tabs, drawn by NavBarTopSecondRow in MainActivity: test-browser-page-menu.sh holds their ids and order).
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
-#   S3 MainActivity (a Compose screen) draws the bar with libs:bottomnav's BottomNavIsland fed by NavDecl,
+#   S3 MainActivity (a Compose screen) draws the bar with libs:nav-bar-bottom's NavBarBottom fed by NavDecl, under the shared first row (#1164),
 #      below the host fragment, not a BottomNavigationView.
 #   S4 Search and Configs are the HOST's own pages (BrowserHostFragment.openSearch/openSettings,
 #      the public doors onto its private pages) and the pill follows the host's overlays (onOverlaysClosed).
@@ -42,7 +42,15 @@ CFG = json.loads(r'''{
  ],
  "must": {
   "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt": [
-   "BottomNavIsland(",
+   "NavBarBottom(",
+   "NavBarTopFirstRowScaffold(",
+   "NavBarTopSecondRow(",
+   "NavChromeScroll",
+   "rememberAccountLauncher()",
+   "onWebScroll",
+   "onScrollDelta",
+   "openAddress()",
+   "openMenu()",
    "NavDecl.fromBuildConfig",
    "viewItems",
    "openSearch()",
@@ -57,6 +65,11 @@ CFG = json.loads(r'''{
   "../ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt": [
    "fun openSearch()",
    "fun openSettings()",
+   "var externalBar",
+   "var onWebScroll",
+   "fun openAddress()",
+   "fun openMenu()",
+   "val addressDisplay",
    "fun dismissOverlays()",
    "fun openTabs()",
    "fun openFavourites()",
@@ -69,7 +82,19 @@ CFG = json.loads(r'''{
  "must_token_mutations": [
   [
    "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt",
-   "BottomNavIsland("
+   "NavBarBottom("
+  ],
+  [
+   "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt",
+   "NavBarTopFirstRowScaffold("
+  ],
+  [
+   "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt",
+   "onScrollDelta"
+  ],
+  [
+   "../ab_cloud-libs-shared/libs/browser/src/main/java/com/diegonmarcos/superapp/browser/BrowserHostFragment.kt",
+   "var onWebScroll"
   ],
   [
    "app/src/main/java/com/diegonmarcos/cloudbrowser/MainActivity.kt",

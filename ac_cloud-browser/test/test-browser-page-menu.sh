@@ -8,7 +8,7 @@
 #   P2 every row the owner listed for the page or domain is there, each with its runAction branch;
 #   P3 every global thing that left the dropdown is a Configs row (or an add-on global row) on a declared page;
 #   P4 the nav: bottom_nav is Fav | Tabs | Browser | Search | Configs and Configs' tabs are, in order, the
-#      13 categories, drawn by PageTabs in the shell (nav-shape guard N5);
+#      13 categories, drawn by NavBarTopSecondRow in the shell (nav-shape guard N5);
 #   P5 every setting maps to exactly one Configs page (none dropped: the count is the pre-#900 count plus the new ones).
 set -eu
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
@@ -71,7 +71,7 @@ def check(root, ok):
     ok([p["label"] for p in nav["pages"]] == ["General", "Search", "Privacy & Security", "Site settings", "Autocomplete", "Passwords", "Payment",
         "Downloads", "Appearance", "Tabs", "Sync & Vault", "Advanced", "About"], "P4 with the owner's names")
     act = src.get(APP + "/MainActivity.kt", "")
-    ok("PageTabs(" in act and 'decl.section("configs")' in act, "P4 the shell draws them with PageTabs from the declaration")
+    ok("NavBarTopSecondRow(" in act and 'decl.section("configs")' in act, "P4 the shell draws them with NavBarTopSecondRow from the declaration")
     keys = {s["key"]: s for s in b["settings"]}
     for k in BEFORE:
         ok(k in keys, "P5 setting `%s` is still declared" % k)
