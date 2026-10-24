@@ -39,7 +39,15 @@ launch() { adb -e shell am force-stop $pkg; adb -e shell monkey -p $pkg -c andro
 touch_finger() { adb -e emu finger touch 1; }
 offline() { adb -e shell svc wifi disable; adb -e shell svc data disable; adb -e shell cmd connectivity airplane-mode enable; sleep 3; }
 
-enrol_fingerprint() {
+# 0 unless dumpsys positively says no fingerprint is enrolled (an unrecognised dump counts as enrolled: the app decides then).
+fingerprint_enrolled() {
+  local d; d=$(adb -e shell dumpsys fingerprint 2>/dev/null)
+  grep -q '"count":[1-9]' <<<"$d" && return 0
+  grep -q '"count":0' <<<"$d" && return 1
+  return 0
+}
+
+enrol_fingerprint_once() {
   adb -e shell locksettings set-pin 1234 >/dev/null 2>&1
   adb -e shell am start -a android.settings.BIOMETRIC_ENROLL >/dev/null 2>&1
   sleep 4
@@ -53,6 +61,17 @@ enrol_fingerprint() {
   $ui tap 'Done|Next|Not now|Skip' 6 2>/dev/null || true
   shot enrolled
   adb -e shell input keyevent 3
+}
+
+# The enrolment is driven through Settings on a software-rendered emulator and sometimes does not finish; the app then
+# (correctly) hides "Unlock with biometrics" (BiometricManager reports NOT_SUPPORTED). Repeat until the sensor has an enrolment.
+enrol_fingerprint() {
+  for attempt in 1 2 3; do
+    enrol_fingerprint_once
+    fingerprint_enrolled && return 0
+    echo "fingerprint enrolment attempt $attempt left no enrolled print: retrying" >&2
+  done
+  die enrol "no fingerprint enrolled on the emulator after 3 attempts"
 }
 
 trace() { echo "[$1] $($ui texts)" >> "$OUT_DIR/steps.txt"; }

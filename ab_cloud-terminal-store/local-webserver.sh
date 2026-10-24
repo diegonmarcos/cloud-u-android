@@ -34,9 +34,11 @@ cloud_webserver_listening() {
         case "$_cw_d" in 10) _cw_d=A ;; 11) _cw_d=B ;; 12) _cw_d=C ;; 13) _cw_d=D ;; 14) _cw_d=E ;; 15) _cw_d=F ;; esac
         _cw_hex="$_cw_d$_cw_hex"
     done
+    # Android's grep when it exists; any other host (CI runs this under a glibc sh) uses PATH's.
+    if [ -x /system/bin/grep ]; then _cw_grep=/system/bin/grep; else _cw_grep=grep; fi
     for _cw_f in ${CLOUD_WEBSERVER_PROC_NET:-/proc/net/tcp /proc/net/tcp6}; do
         [ -r "$_cw_f" ] || continue
-        /system/bin/grep -qiE "^ *[0-9]+: [0-9A-F]+:$_cw_hex [0-9A-F]+:[0-9A-F]+ 0A " "$_cw_f" && return 0
+        "$_cw_grep" -qiE "^ *[0-9]+: [0-9A-F]+:$_cw_hex [0-9A-F]+:[0-9A-F]+ 0A " "$_cw_f" && return 0
     done
     return 1
 }
