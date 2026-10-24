@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -334,11 +335,13 @@ fun SearchDropdown(c: SearchController, surface: Color, cb: SearchCallbacks) {
 internal fun HitIcon(hit: SearchHit, modifier: Modifier = Modifier) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val p = LocalKitPalette.current
-    val app = remember(hit) {
-        hit.phoneApp?.let { runCatching { ctx.packageManager.getApplicationIcon(it.component.packageName) }.getOrNull() }
+    val pkg = hit.phoneApp?.component?.packageName
+    // Through AppIconCache (memory first, the binder call off the main thread), never PackageManager directly.
+    val app by produceState<android.graphics.drawable.Drawable?>(pkg?.let { com.diegonmarcos.superapp.ui.AppIconCache.cached(it) }, pkg) {
+        if (pkg != null && value == null) value = withContext(Dispatchers.IO) { com.diegonmarcos.superapp.ui.AppIconCache.load(ctx, pkg) }
     }
-    if (app != null) {
-        androidx.compose.foundation.Image(app.toBitmap(96, 96).asImageBitmap(), null, modifier)
+    app?.let { d ->
+        androidx.compose.foundation.Image(d.toBitmap(96, 96).asImageBitmap(), null, modifier)
         return
     }
     val res = remember(hit) {
