@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.recovery.RecoveryPalette
@@ -46,7 +47,8 @@ class LightActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(kitComposeView(RecoveryPalette.kit) { LightScreen(engine, tick) })
+        val screen: ComposeView = kitComposeView(RecoveryPalette.kit) { LightScreen(engine, tick) }   // a Compose host, not a View screen
+        setContentView(screen)
     }
 
     override fun onStart() { super.onStart(); engine.addListener(onChange); applyWindow() }
