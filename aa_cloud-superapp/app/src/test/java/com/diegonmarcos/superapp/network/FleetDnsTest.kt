@@ -233,7 +233,7 @@ class FleetDnsTest {
 
     @Test fun aPresetIsInEffectOnlyWhenAndroidResolvesWithExactlyItsServers() {
         val pub = publics.first().id
-        val want = servers(pub)
+        val want = down(pub) // the mesh is down in these calls: the preset's own servers
         assertTrue("the order is Android's business", verdict(pub, true, false, "UP", android(want.reversed(), true)).ok)
         assertFalse("a VPN carrying other servers", verdict(pub, true, false, "UP", android(want.drop(1), true)).ok)
         assertFalse("the right servers, but not on the VPN", verdict(pub, true, false, "UP", android(want, false)).ok)
@@ -242,6 +242,10 @@ class FleetDnsTest {
         assertTrue(up.why, up.ok)
         assertEquals(FLEET, up.promised)
         assertFalse(verdict(privateOnly.id, false, true, "STANDBY", android(NET, false)).ok)
+        // #1152 a public preset with the mesh up promises the fleet resolvers first, so it is only in effect carrying them
+        val pubUp = verdict(pub, true, true, "UP", android(servers(pub), true))
+        assertTrue(pubUp.why, pubUp.ok); assertEquals(servers(pub), pubUp.promised)
+        assertFalse("public servers alone no longer satisfy the promise", verdict(pub, true, true, "UP", android(down(pub), true)).ok)
     }
 
     @Test fun onlyMissingConsentAsksForConsent() {
@@ -273,11 +277,11 @@ class FleetDnsTest {
 
     @Test fun strictPrivateDnsBypassesAnyPresetAndSaysSo() {
         val pub = publics.first().id
-        val v = verdict(pub, true, false, "UP", android(servers(pub), true, mode = "hostname", spec = "dot.example"))
+        val v = verdict(pub, true, false, "UP", android(down(pub), true, mode = "hostname", spec = "dot.example"))
         assertFalse(v.ok)
         assertTrue(v.why, "dot.example" in v.why)
         // control: Automatic with the same servers is in effect
-        assertTrue(verdict(pub, true, false, "UP", android(servers(pub), true)).ok)
+        assertTrue(verdict(pub, true, false, "UP", android(down(pub), true)).ok)
     }
 
     @Test fun aPrivatePresetWithNoFleetResolverIsRedNotAndroidsOwn() {
