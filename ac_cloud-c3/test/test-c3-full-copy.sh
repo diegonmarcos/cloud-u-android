@@ -20,7 +20,7 @@
 #   T3  the COPY MANIFEST: every enumerated source artifact of the SuperApp c3 surface
 #       has its (name-adapted) counterpart file in this app — a lost file is a red, not
 #       a claim.
-#   T4  the DATA travelled and is BAKED: cloud_services.json / mesh.json / ui.ntfy parse
+#   T4  the DATA travelled and is BAKED: containers_declared.json / mesh.json / ui.ntfy parse
 #       non-empty, and app/build.gradle bakes each BuildConfig blob the carried pages
 #       decode.
 #   T5  every tile TARGET in the two stacks resolves: anchor: to a declared anchor,
@@ -177,7 +177,7 @@ manifest = [
     ("res/xml/network_security_config.xml", R + "/xml/network_security_config.xml", "10.0.0.6"),
     ("data/services_public.json",           "data/services_public.json",        "public_url"),
     ("data/services_private.json",          "data/services_private.json",       "private_dns"),
-    ("data/cloud_services.json",            "data/cloud_services.json",         "groups"),
+    ("data/containers_declared.json",       "data/containers_declared.json",    "groups"),
     ("data/mesh.json",                      "data/mesh.json",                   "transports"),
 ]
 drawables = ["ic_p_c3_stack", "ic_p_c3_health", "ic_p_c3_workflows", "ic_p_c3_reports",
@@ -215,17 +215,16 @@ import json, sys
 app = sys.argv[1]
 bad = []
 try:
-    cs = json.load(open(app + "/data/cloud_services.json", encoding="utf-8"))
+    cs = json.load(open(app + "/data/containers_declared.json", encoding="utf-8"))
     ids = [g.get("id") for g in (cs.get("groups") or [])]
-    for g in ("infra", "user"):
+    for g in ("infra", "cloud", "project"):
         if g not in ids:
-            bad.append("data/cloud_services.json has no group %r — a dashboard card would render empty" % g)
-    for g in ("providers", "dbs", "mcpapi"):
-        if g in ids:
-            bad.append("data/cloud_services.json carries the cross-cut group %r again - the Infra section reads the fleet "
-                       "declarations (data/fleet_slice.json) and a literal VM/DB list here is a second copy (test-c3-infra.sh T3)" % g)
+            bad.append("data/containers_declared.json has no group %r - a dashboard card would render empty" % g)
+    for g in ids:
+        if g not in ("infra", "cloud", "project"):
+            bad.append("data/containers_declared.json carries the group %r: only Infra Apps, Cloud Apps and Project Apps exist (#1148)" % g)
 except Exception as e:
-    bad.append("data/cloud_services.json does not parse: %s" % e)
+    bad.append("data/containers_declared.json does not parse: %s" % e)
 try:
     mesh = json.load(open(app + "/data/mesh.json", encoding="utf-8"))
     if not mesh.get("nodes") or not mesh.get("transports"):
@@ -235,11 +234,11 @@ except Exception as e:
 import re
 gradle = open(app + "/app/build.gradle", encoding="utf-8").read()
 for field in ("UI_STACK_TOPOLOGY_B64", "UI_STACK_OBSERV_B64", "UI_NTFY_B64",
-              "UI_TILE_COLUMNS", "CLOUD_SERVICES_B64", "MESH_JSON_B64",
+              "UI_TILE_COLUMNS", "CONTAINERS_DECLARED_B64", "MESH_JSON_B64",
               "SERVICES_PUBLIC_B64", "SERVICES_PRIVATE_B64"):
     # The buildConfigField CALL, not the name appearing in a comment: a comment that
     # remembers a bake is exactly what would keep this green after the bake was dropped.
-    if not re.search(r'buildConfigField\s+"(?:String|int)",\s*"%s"' % field, gradle):
+    if not re.search(r'buildConfigField\s+"(?:String(?:\[\])?|int)",\s*"%s"' % field, gradle):
         bad.append("app/build.gradle never bakes %s — the declaration exists and the phone "
                    "would decode an empty blob that looks exactly like a working one (#276)" % field)
 for b in bad: print("    " + b)
@@ -354,7 +353,7 @@ m_hollow_file() { printf 'package com.diegonmarcos.cloudc3.cloud\n' > "$1/app/sr
 m_unbake()      { python3 - "$1/app/build.gradle" <<'PY'
 import sys
 p=sys.argv[1]; s=open(p).read(); b=s
-s=s.replace('        buildConfigField "String", "CLOUD_SERVICES_B64",    "\\"${cloudServicesB64}\\""\n','')
+s=s.replace('        buildConfigField "String[]", "CONTAINERS_DECLARED_B64", containersDeclaredB64Array\n','')
 assert s!=b
 open(p,"w").write(s)
 PY

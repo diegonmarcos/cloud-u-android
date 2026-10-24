@@ -10,9 +10,9 @@
 #
 #   T1  the declaration, the dispatch and the screens agree: the declared Infra pages are exactly InfraSections.ALL, each
 #       has an arm in InfraSectionScreen, there is no Stack / Dbs / API page and no stack_infra left anywhere.
-#   T2  NO DB CONTAINER UNDER INFRA. Every container the dashboards file under Databases is still declared under
-#       Containers (Infra Apps) and appears nowhere in the Infra sources, the slice or the Infra declaration; the
-#       cross-cut groups providers / dbs / mcpapi are gone from data/cloud_services.json.
+#   T2  NO DB CONTAINER UNDER INFRA. Every container filed under Ops-dBs-* in the one Containers document
+#       (data/containers_declared.json, #1148) is in the Infra Apps group and appears nowhere in the Infra sources, the
+#       slice or the Infra declaration; the document has only the groups infra / cloud / project.
 #   T3  NO SECOND LITERAL COPY OF THE FLEET. Every fact in data/fleet_slice.json (VM ids and aliases, public / WireGuard
 #       addresses, regions, sizes, bucket names, device models, A/AAAA targets) is absent from every hand-authored file of
 #       the section: its Kotlin, its tests, its generator, this tester, the Infra part of build.json. data/ holds only
@@ -32,7 +32,7 @@ FAILURES=0
 pass() { echo "  PASS  $1"; }
 fail() { echo "  FAIL  $1"; FAILURES=$((FAILURES + 1)); }
 command -v python3 >/dev/null 2>&1 || { echo "ERROR python3 absent - a verdict from a missing tool is not a verdict"; exit 1; }
-for f in build.json data/fleet_slice.json data/gen_fleet_slice.py data/cloud_services.json "$REL/pages/InfraPages.kt" "$REL/pages/FleetModel.kt" app/build.gradle; do
+for f in build.json data/fleet_slice.json data/gen_fleet_slice.py data/containers_declared.json "$REL/pages/InfraPages.kt" "$REL/pages/FleetModel.kt" app/build.gradle; do
     [ -f "$APP/$f" ] || { echo "ERROR missing $APP/$f - unrun, not passing"; exit 1; }
 done
 
@@ -152,7 +152,7 @@ for where, t in texts.items():
 # data/ holds generated or carried files only
 generated = set(re.findall(r'os\.path\.join\(HERE, "([a-z_]+\.json)"\)', open(app + "/data/gen_infra_slice.py", encoding="utf-8").read())) | \
             set(re.findall(r'os\.path\.join\(HERE, "([a-z_]+\.json)"\)', open(app + "/data/gen_fleet_slice.py", encoding="utf-8").read()))
-carried = {"mesh.json", "services_public.json", "services_private.json", "cloud_services.json"}   # SuperApp-generated copies, pre-existing
+carried = {"mesh.json", "services_public.json", "services_private.json", "containers_declared.json"}   # carried copies: the SuperApp's, and the configs-sync data repo's containers-declared.json
 generated |= {"routes.json", "declarations.json", "infra_slice.json"}                                # gen_infra_slice.py's outputs
 for f in os.listdir(app + "/data"):
     if f.endswith(".json") and f not in generated and f not in carried:
@@ -267,19 +267,19 @@ PY
 m_db_in_slice()   { python3 - "$1" <<'PY'
 import json, sys
 app = sys.argv[1]
-cs = json.load(open(app + "/data/cloud_services.json"))
-db = [c["name"] for g in cs["groups"] for s in g["subgroups"] if s["label"] == "Databases" for c in s["containers"]][0]
+cs = json.load(open(app + "/data/containers_declared.json"))
+db = [c["name"] for c in cs["containers"] if c["category"].startswith("Ops-dBs")][0]
 sl = json.load(open(app + "/data/fleet_slice.json"))
 sl["storage"]["backends"].append({"id": db, "label": db})
 json.dump(sl, open(app + "/data/fleet_slice.json", "w"), indent=1)
 PY
 }
-m_dbs_group()     { pyjson "$1/data/cloud_services.json" 'd["groups"].append({"id":"dbs","label":"DBs","subgroups":[]})'; }
+m_dbs_group()     { pyjson "$1/data/containers_declared.json" 'd["groups"].append({"id":"dbs","label":"DBs","categories":[]})'; }
 m_db_in_kotlin()  { python3 - "$1" <<'PY'
 import json, sys
 app = sys.argv[1]
-cs = json.load(open(app + "/data/cloud_services.json"))
-db = [c["name"] for g in cs["groups"] for s in g["subgroups"] if s["label"] == "Databases" for c in s["containers"]][0]
+cs = json.load(open(app + "/data/containers_declared.json"))
+db = [c["name"] for c in cs["containers"] if c["category"].startswith("Ops-dBs")][0]
 open(app + "/app/src/main/java/com/diegonmarcos/cloudc3/pages/InfraPages.kt", "a").write('\n// ' + db + '\n')
 PY
 }
