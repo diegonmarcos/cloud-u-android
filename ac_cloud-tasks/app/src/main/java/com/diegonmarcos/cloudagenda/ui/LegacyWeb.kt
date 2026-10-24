@@ -20,6 +20,8 @@ import com.diegonmarcos.cloudagenda.CalBridge
 @Composable
 fun LegacyWeb(tab: String, modifier: Modifier = Modifier) {
     val wanted = rememberUpdatedState(tab)
+    // #1164 the page's scroll (its .app-main container included) feeds the shell's one chrome collapse.
+    val collapse = com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse.current
     AndroidView(
         modifier = modifier,
         factory = { ctx ->
@@ -31,13 +33,14 @@ fun LegacyWeb(tab: String, modifier: Modifier = Modifier) {
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView, url: String) {
                         view.tag = true
+                        com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(view)
                         show(view, wanted.value)
                     }
                 }
                 loadUrl("file:///android_asset/tasks.html")
             }
         },
-        update = { view -> if (view.tag == true) show(view, tab) },
+        update = { view -> com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(view, collapse); if (view.tag == true) show(view, tab) },
     )
 }
 

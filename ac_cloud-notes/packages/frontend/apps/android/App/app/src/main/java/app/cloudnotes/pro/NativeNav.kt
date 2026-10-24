@@ -112,6 +112,8 @@ internal class NativeNav(
                 CoordinatorLayout.LayoutParams.WRAP_CONTENT,
             ).apply { gravity = Gravity.BOTTOM },
         )
+        // #1164 the editor WebView's scroll compacts the island (the shared View driver; it hooks the WebView and any page swapped in).
+        island.collapseOnScrollIn(parent)
         // The Ask page ends where the island starts.
         island.addOnLayoutChangeListener { v, _, top, _, bottom, _, _, _, _ ->
             (ask.layoutParams as? CoordinatorLayout.LayoutParams)?.let {

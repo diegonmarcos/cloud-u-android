@@ -56,7 +56,7 @@ fun Context.kitComposeView(palette: KitPalette, content: @Composable () -> Unit)
 
 /**
  * A host (the SuperApp shell) that wants to know when a page scrolls - to collapse its bottom nav - sets [connection] once;
- * every [KitComposeFragment] page then reports its nested scrolls to it. Null (the default, and every other app) = no sink.
+ * every [KitComposeFragment] page then reports its nested scrolls to it. Null (the default) = the page reports through the View parents' nested scroll instead (KitPage).
  * Compose pages move no View's scrollY, so a host that only watches View scroll offsets never sees them.
  */
 object KitScroll {
@@ -67,9 +67,11 @@ object KitScroll {
 /** [content] with the host's scroll sink around it, if there is one. */
 @Composable
 fun KitPage(content: @Composable () -> Unit) {
-    val sink = KitScroll.connection
-    if (sink == null) content()
-    else androidx.compose.foundation.layout.Box(
+    // No host sink: this page is a Fragment's own ComposeView, a separate composition whose LocalNavChromeCollapse is empty and
+    // whose nested scrolls stop at the View boundary. The interop connection hands them to the View parents, and the hosting
+    // AndroidView/AndroidFragment (a NestedScrollingParent) passes them to the host composition's chrome collapse.
+    val sink = KitScroll.connection ?: androidx.compose.ui.input.nestedscroll.rememberNestedScrollInteropConnection()
+    androidx.compose.foundation.layout.Box(
         androidx.compose.ui.Modifier.nestedScroll(sink),
     ) { content() }
 }

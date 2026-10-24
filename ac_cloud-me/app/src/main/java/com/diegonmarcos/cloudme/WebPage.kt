@@ -46,8 +46,11 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
     val web = remember { mutableStateOf<WebView?>(null) }
     BackHandler(enabled = canGoBack) { web.value?.goBack() }
 
+    // #1164 the page's scroll feeds the shell's one chrome collapse (first row, second row, bottom nav).
+    val collapse = com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse.current
     AndroidView(
         modifier = modifier.fillMaxSize(),
+        update = { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(it, collapse) },
         factory = { ctx ->
             WebView(ctx).apply {
                 settings.javaScriptEnabled = true          // the pages hydrate from PORTAL_DATA
@@ -62,6 +65,7 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
                 settings.allowFileAccessFromFileURLs = true
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
+                        view?.let { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(it) }
                         view?.saveState(saved)
                         canGoBack = view?.canGoBack() == true
                     }
