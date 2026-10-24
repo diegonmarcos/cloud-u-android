@@ -262,6 +262,8 @@ mutate "the lib loses a spec object the web app is held to"     "$LIBSRC/nav-bar
 mutate "a web app's tab list differs from build.json ui"        "$NAVJ" "$(J "d['tabs'].pop()")" "W2 ac_cloud-code: $NAVJ tabs"
 mutate "a web app's default differs from build.json ui"         "$NAVJ" "$(J "d['default_tab']='backlog'")" "W2 ac_cloud-code: $NAVJ default_tab 'backlog'"
 mutate "a web sub-page has no icon"                             "$NAVJ" "$(J "del d['tabs'][0]['pages'][0]['icon']")" "W2 ac_cloud-code: sub-page backlog/sts declares no icon"
+mutate "a web sub-page icon that differs from build.json ui"      "$NAVJ" "$(J "d['tabs'][0]['pages'][0]['icon']='folder_open'")" "W2 ac_cloud-code: sub-page backlog/sts icon 'folder_open' differs from build.json ui"
+mutate "a web tab icon that differs from build.json ui"           "$NAVJ" "$(J "d['tabs'][0]['icon']='home'")" "W2 ac_cloud-code: tab backlog icon 'home' differs"
 mutate "a web sub-page that build.json does not declare"        "$NAVJ" "$(J "d['tabs'][0]['pages'].pop()")" "W2 ac_cloud-code: tab backlog sub-pages"
 mutate "a web app's bar ids are too few (N1)"                   "ac_cloud-code/build.json" "$(J "d['ui']['bottom_nav']=['ai']")" "N1 ac_cloud-code: ui.bottom_nav has 1 ids"
 mutate "the second row is no longer drawn"                      "ac_cloud-code/src/cloud/bars-dom.js" "s=s.replace('id: \"cloud-top2\"','id: \"other\"')" "W4 ac_cloud-code: no source of ac_cloud-code/src/cloud/bars-dom.js"

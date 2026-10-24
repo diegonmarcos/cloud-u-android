@@ -67,17 +67,23 @@ let st = { collapsed: false, acc: 0, quietUntil: 0 };
 st = B.collapseStep(st, { dy: 8, atTop: false, now: 1000 }, c);
 out(!st.collapsed, "a small scroll down does not collapse");
 st = B.collapseStep(st, { dy: 8, atTop: false, now: 1010 }, c);
-out(st.collapsed, "scrolling down past the threshold hides the first row and shrinks the bars");
+out(st.collapsed, "scrolling down past the threshold hides the first row and compacts the other two");
 const quiet = B.collapseStep(st, { dy: -40, atTop: false, now: 1020 }, c);
 out(quiet.collapsed, "a scroll right after a change (the page resizing) is ignored");
 st = B.collapseStep(st, { dy: -20, atTop: false, now: 1010 + c.settle_ms + 1 }, c);
-out(!st.collapsed, "scrolling up restores them");
+out(!st.collapsed, "scrolling up restores all three");
 let down = B.collapseStep({ collapsed: false, acc: 0, quietUntil: 0 }, { dy: 30, atTop: false, now: 5000 }, c);
 down = B.collapseStep(down, { dy: 0, atTop: true, now: 5000 + c.settle_ms + 1 }, c);
 out(!down.collapsed, "reaching the top restores them");
 const full = B.clearance(bars, { collapsed: false, secondRow: true }), small = B.clearance(bars, { collapsed: true, secondRow: true });
-out(full.top === 52 + 10 + 10 + 8 + 36 && small.top < full.top - 52 && small.bottom === bars.bottom.collapsed_height + bars.bottom.bottom_margin && small.bottom < full.bottom, `collapsed: top ${full.top} -> ${small.top}, bottom ${full.bottom} -> ${small.bottom}`);
+const sr = bars.second_row;
+out(full.top === bars.first_row.height + sr.top_inset + sr.bottom_inset + sr.strip_pad_v * 2 + sr.tab_height
+	&& small.top === sr.top_inset + sr.bottom_inset + sr.strip_pad_v * 2 + sr.compact_tab_height
+	&& small.bottom === bars.bottom.collapsed_height + bars.bottom.bottom_margin && small.bottom < full.bottom,
+	`collapsed: top ${full.top} -> ${small.top} (no first row, compact tabs), bottom ${full.bottom} -> ${small.bottom}`);
+out(sr.compact_tab_height < sr.tab_height && bars.bottom.collapsed_height < bars.bottom.height && bars.bottom.collapsed_cell < bars.bottom.cell, "scrolled down, the second row's tabs and the bottom bar are shorter");
 out(B.clearance(bars, { collapsed: false, secondRow: false }).top === bars.first_row.height, "no second row: the page clears the first row only");
+out(/\.cloud-subtab-label/.test(scss) && /selected-only/.test(scss) && /body\.cloud-collapsed/.test(scss), "scrolled down only the selected item keeps its name (second row and bottom bar)");
 
 // ── light/dark ──
 out(B.isDark("#313131", false) && !B.isDark("rgb(255, 255, 255)", true) && B.isDark("", true) && !B.isDark("var(--x)", false), "dark/light follows the page colour Acode paints, the system mode otherwise");
@@ -89,5 +95,5 @@ out(/ai: "wand-sparkles"/.test(dom) && /profile: "account_circle"/.test(dom) && 
 out(/onAi: \(\) => launchApp\(targets\.superapp\)/.test(index) && /onProfile: \(\) => launchApp\(targets\.chat\.account\)/.test(index) && /onConfigs: openProfile/.test(index), "AI -> the SuperApp, Profile -> Cloud Account, Configs -> Cloud Code's settings");
 out(nav.superapp?.target === "cloud-superapp" && nav.chat?.account?.app === "cloud-account", "the AI and Profile targets are fleet ids (cloud-superapp, cloud-account), resolved at build time");
 out(/linear-gradient\(180deg, var\(--cb-top\), var\(--cb-bottom\)\)/.test(scss), "the page gradient is the theme-background top -> bottom");
-out(/position: absolute;[\s\S]{0,450}opacity: 0;/.test(scss.slice(scss.indexOf("#cloud-nav"))) && /&\.active \{[\s\S]{0,400}var\(--cb-bottom-accent\)/.test(scss), "bottom selection: accent colour, the label rises in under the selected item only");
+out(/&\.active \{\s*color: var\(--cb-bottom-accent\)/.test(scss) && /color: var\(--cb-bottom-idle\)/.test(scss) && /translateY\(calc\(-1 \* var\(--cb-bottom-lift\)\)\)/.test(scss), "bottom bar: the selected item takes the accent colour, the others the idle ink, icons lifted over their names");
 out(!/\.cloud-subtab[^{]*\{[^}]*border-radius:\s*(50%|999)/.test(scss), "the selected second-row tab is never a circle or a full pill");

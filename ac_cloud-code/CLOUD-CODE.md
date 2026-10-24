@@ -105,8 +105,8 @@ tiles duplicated the bar; its Configs card, the all-files grant, moved to Profil
 
 Seven tabs on the 360 px narrowest viewport are 44.6 px cells in the shared bar (the fleet's
 crowded-bar floor is 44, nav-shape N1; `bars.js::cellsClear`, asserted by `cloud_bars.mjs`). The
-bottom bar names only the selected tab (Cloud Search's rule), so a label is never truncated (#565's
-rule). The older per-tab check (`tabs.js::clearsTouchFloor`, 51.4 px at 48) stays in the tester.
+bottom bar names every tab when the names fit their cells and only the selected tab when one would not
+(`fit()`, measured on the device), so a label is never truncated (#565's rule). The older per-tab check (`tabs.js::clearsTouchFloor`, 51.4 px at 48) stays in the tester.
 
 ### The shared bars (#1158, the fleet's #1154 design)
 
@@ -118,14 +118,14 @@ on the shared page gradient:
   (the bottom page, then its sub-pages); plain AI (sparkles), Profile and Configs (vertical dots).
   AI hands over to the SuperApp (`extapp:cloud-superapp/ai`), Profile to Cloud Account
   (`extapp:cloud-account`), Configs opens Profile & Config, this app's settings.
-- **Second row** (`libs:nav-bar-top-second-row`): the page's sub-pages as small icon pills, the name
-  on the selected one, violet rounded-rectangle selection. Backlog: Status, Project, Priority, Effort;
+- **Second row** (`libs:nav-bar-top-second-row`): the page's sub-pages as small icon pills with their
+  names, violet rounded-rectangle selection. Backlog: Status, Project, Priority, Effort;
   Agents: Batches, Models (the views the backlog engine already emits). Pages with fewer than two
   sub-pages have no second row.
-- **Bottom bar** (`libs:nav-bar-bottom`): Cloud Search's glass pill, accent-coloured selection, the
-  icon lifts and the name rises in.
-- **Scroll down** hides the first row and shrinks the other two; scroll up or the top restores them
-  (`bars.js::collapseStep`).
+- **Bottom bar** (`libs:nav-bar-bottom`): Cloud Search's glass pill, accent-coloured selection, every
+  item an icon over its name.
+- **Scroll down** hides the first row and compacts the other two (shorter tabs and bar, only the
+  selected item keeps its name); scroll up or the top restores all three (`bars.js::collapseStep`).
 
 Sizes and colours are `nav.json::bars`, equal to the libs' Kotlin constants; the nav-shape guard
 (rule W) fails when either side drifts, and holds `nav.json` to `build.json::ui`.

@@ -4,11 +4,14 @@
 // constants, held by the nav-shape guard); this file only creates the elements and wires the events.
 //
 //   #cloud-top1  first row   plain hamburger | title island + hierarchy dropdown | AI, Profile, Configs
-//   #cloud-top2  second row  smaller icon pills, the name on the selected one, violet selection
-//   #cloud-nav   bottom bar  Cloud Search-style pill, coloured selection, lifted icon, rising label
-// The page gradient is on <body>; scrolling down hides the first row and shrinks the other two.
+//   #cloud-top2  second row  smaller icon pills with their names, violet selection
+//   #cloud-nav   bottom bar  Cloud Search-style pill, coloured selection, an icon and its name per item
+// The page gradient is on <body>; scrolling down hides the first row and compacts the other two (only the
+// selected item keeps its name). A bottom name that would not fit its cell is never truncated: then the bar
+// names the selected item only (tabs.js::fitLabels).
 import { el, icon } from "./dom";
 import { cssVars, clearance, collapseStep, isDark, pagesOf, secondRowShown, titleHierarchy } from "./bars";
+import { fitLabels } from "./tabs";
 
 const ICONS = { menu: "menu", ai: "wand-sparkles", profile: "account_circle", configs: "more_vert" };
 const IGNORE_SCROLL = "#cloud-top1, #cloud-top2, #cloud-nav, .cloud-dropdown, .cloud-overlay";
@@ -63,12 +66,22 @@ export function mountBars({ nav, tabs, on }) {
 		document.body.classList.toggle("cloud-light", !dark);
 	}
 
+	// Names for every item when they all fit their cells, else the selected one only (measured here, never assumed).
+	function fit() {
+		if (collapse.collapsed) return;
+		$nav.classList.remove("compact");
+		const measured = Object.values(cells).map((b) => ({ labelPx: b.querySelector(".cloud-tab-label").scrollWidth, tabPx: b.clientWidth }));
+		$nav.classList.toggle("compact", fitLabels(measured) === "compact");
+	}
+
 	function layout() {
 		const c = clearance(bars, { collapsed: collapse.collapsed, secondRow: !$top2.hidden });
 		root.style.setProperty("--cloud-top-h", `${c.top}px`);
 		root.style.setProperty("--cloud-nav-h", `${c.bottom}px`);
 		document.body.classList.toggle("cloud-collapsed", collapse.collapsed);
+		fit();
 	}
+	window.addEventListener("resize", fit);
 
 	function drawStrip() {
 		const pages = pagesOf(tab);
@@ -78,7 +91,7 @@ export function mountBars({ nav, tabs, on }) {
 			return el("button", {
 				className: `cloud-subtab${on_ ? " active" : ""}`, role: "tab", "aria-selected": on_ ? "true" : "false", "aria-label": p.label,
 				"data-page": p.id, onclick: () => (on_ ? null : on.onPage(tab.id, p.id)),
-			}, el("span", { className: `icon cloud-subtab-icon ${p.icon}` }), on_ ? el("span", { className: "cloud-subtab-label" }, p.label) : null);
+			}, el("span", { className: `icon cloud-subtab-icon ${p.icon}` }), el("span", { className: "cloud-subtab-label" }, p.label));
 		}));
 	}
 

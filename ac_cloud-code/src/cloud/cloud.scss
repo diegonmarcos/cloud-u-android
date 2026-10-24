@@ -163,7 +163,7 @@ body.cloud-nav {
 
     .cloud-subtab-label {
       font-size: var(--cb-second-row-label);
-      font-weight: 700;
+      font-weight: 500;
       white-space: nowrap;
     }
 
@@ -171,11 +171,29 @@ body.cloud-nav {
       padding: 0 var(--cb-second-row-selected-pad-h);
       background: var(--cb-tabSelected);
       color: var(--cb-onTabSelected);
+
+      .cloud-subtab-label {
+        font-weight: 700;
+      }
     }
   }
 }
 
 // ── bottom bar (libs:nav-bar-bottom): Cloud Search's glass pill and coloured selection ──
+// At rest every item shows its icon (lifted) and its name; `.compact` (a name would not fit) and the scrolled-down
+// state keep the name of the selected item only.
+@mixin selected-only {
+  .cloud-tab:not(.active) {
+    .cloud-tab-icon {
+      transform: none;
+    }
+
+    .cloud-tab-label {
+      display: none;
+    }
+  }
+}
+
 #cloud-nav {
   position: fixed;
   left: var(--cb-bottom-side-gutter);
@@ -211,6 +229,7 @@ body.cloud-nav {
     .cloud-tab-icon {
       display: block;
       font-size: var(--cb-bottom-icon);
+      transform: translateY(calc(-1 * var(--cb-bottom-lift)));
       transition: transform $ease, color $ease;
     }
 
@@ -224,27 +243,19 @@ body.cloud-nav {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      opacity: 0; // the label rises in under the selected item only
-      transform: translateY(8px);
-      transition: opacity $ease, transform $ease;
     }
 
     &.active {
       color: var(--cb-bottom-accent);
-
-      .cloud-tab-icon {
-        transform: translateY(calc(-1 * var(--cb-bottom-lift)));
-      }
-
-      .cloud-tab-label {
-        opacity: 1;
-        transform: none;
-      }
     }
+  }
+
+  &.compact {
+    @include selected-only;
   }
 }
 
-// ── scrolled down: the first row goes, the other two shrink (nav.json::bars.collapse) ──
+// ── scrolled down: the first row goes, the other two compact (nav.json::bars.collapse) ──
 body.cloud-collapsed {
   #cloud-top1 {
     transform: translateY(-100%);
@@ -254,17 +265,11 @@ body.cloud-collapsed {
 
   #cloud-top2 {
     top: 0;
-    padding-top: var(--cb-collapse-second-inset);
-    padding-bottom: var(--cb-collapse-second-inset);
 
     .cloud-subtab {
-      height: var(--cb-collapse-second-tab-height);
+      height: var(--cb-second-row-compact-tab-height);
 
-      .cloud-subtab-icon {
-        font-size: var(--cb-collapse-second-icon);
-      }
-
-      .cloud-subtab-label {
+      &:not(.active) .cloud-subtab-label {
         display: none;
       }
     }
@@ -275,15 +280,9 @@ body.cloud-collapsed {
 
     .cloud-tab {
       height: var(--cb-bottom-collapsed-cell);
-
-      .cloud-tab-icon {
-        transform: none;
-      }
-
-      .cloud-tab-label {
-        display: none;
-      }
     }
+
+    @include selected-only;
   }
 }
 

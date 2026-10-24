@@ -421,9 +421,15 @@ def check_web(root, app, ui, spec, bad):
         got = [p.get("id") for p in (t.get("pages") or [])]
         if want != got:
             bad.append(f"W2 {app}: tab {t.get('id')} sub-pages {got} differ from build.json ui section pages {want}")
+        sec = by_id.get(t.get("id"), {})
+        if sec.get("icon") != t.get("icon"):
+            bad.append(f"W2 {app}: tab {t.get('id')} icon {t.get('icon')!r} differs from build.json ui section icon {sec.get('icon')!r}")
+        ui_pages = {p.get("id"): p for p in sec.get("pages") or []}
         for p in t.get("pages") or []:
             if not p.get("icon"):
                 bad.append(f"W2 {app}: sub-page {t.get('id')}/{p.get('id')} declares no icon — the second row always draws one")
+            elif ui_pages.get(p.get("id"), {}).get("icon") != p.get("icon"):
+                bad.append(f"W2 {app}: sub-page {t.get('id')}/{p.get('id')} icon {p.get('icon')!r} differs from build.json ui ({ui_pages.get(p.get('id'), {}).get('icon')!r})")
 
     # W3
     bars = nav.get("bars") or {}

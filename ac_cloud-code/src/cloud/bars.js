@@ -98,7 +98,7 @@ export function pageOfFile(tab, file) {
 }
 
 /**
- * Scroll-collapse (the shared rule): scrolling DOWN past threshold_px hides the first row and shrinks both bars,
+ * Scroll-collapse (the shared rule): scrolling DOWN past threshold_px hides the first row and compacts the second row and the bottom bar,
  * scrolling UP past it, or reaching the top, restores them. A change is followed by a quiet period (settle_ms): the
  * page resizes with the bars, and that resize must not read as a scroll back (it would flicker at the end of a list).
  * @param {{collapsed:boolean, acc:number, quietUntil:number}} st
@@ -116,12 +116,13 @@ export function collapseStep(st, ev, cfg) {
 	return { ...st, acc };
 }
 
-/** Heights the page must clear: the rows above it and the bar below it (the bar's bottom margin included). */
+/**
+ * Heights the page must clear: the rows above it and the bar below it (the bar's bottom margin included). Scrolled down
+ * (collapsed) the first row is gone, the second row's tabs are compact and the bottom bar is shorter.
+ */
 export function clearance(bars, { collapsed, secondRow }) {
-	const f = bars.first_row, s = bars.second_row, b = bars.bottom, c = bars.collapse;
+	const f = bars.first_row, s = bars.second_row, b = bars.bottom;
 	const first = collapsed ? 0 : f.height;
-	const second = !secondRow ? 0
-		: collapsed ? c.second_inset * 2 + s.strip_pad_v * 2 + c.second_tab_height
-			: s.top_inset + s.bottom_inset + s.strip_pad_v * 2 + s.tab_height;
+	const second = secondRow ? s.top_inset + s.bottom_inset + s.strip_pad_v * 2 + (collapsed ? s.compact_tab_height : s.tab_height) : 0;
 	return { top: first + second, bottom: (collapsed ? b.collapsed_height : b.height) + b.bottom_margin };
 }

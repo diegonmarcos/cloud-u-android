@@ -109,6 +109,7 @@
         "object": "SecondRowSpec",
         "map": {
           "tab_height": "TAB_HEIGHT",
+          "compact_tab_height": "COMPACT_TAB_HEIGHT",
           "icon": "ICON",
           "label": "LABEL",
           "strip_radius": "STRIP_RADIUS",

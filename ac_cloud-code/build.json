@@ -127,19 +127,23 @@
         "pages": [
           {
             "id": "sts",
-            "label": "Status"
+            "label": "Status",
+            "icon": "check_circle_outline"
           },
           {
             "id": "prj",
-            "label": "Project"
+            "label": "Project",
+            "icon": "folder"
           },
           {
             "id": "pry",
-            "label": "Priority"
+            "label": "Priority",
+            "icon": "priority_high"
           },
           {
             "id": "eff",
-            "label": "Effort"
+            "label": "Effort",
+            "icon": "zap"
           }
         ]
       },
@@ -165,11 +169,13 @@
         "pages": [
           {
             "id": "bat",
-            "label": "Batches"
+            "label": "Batches",
+            "icon": "documents"
           },
           {
             "id": "mdl",
-            "label": "Models"
+            "label": "Models",
+            "icon": "extension"
           }
         ]
       },

@@ -476,7 +476,7 @@
     "target": "cloud-superapp"
   },
   "bars": {
-    "_doc": "#1158 THE SHARED DESIGN OF #1154 AS DATA. This app is a Cordova WebView with no Compose (see index.js), so the shared Compose libs cannot draw its bars; bars-dom.js draws the same bars from these numbers (dp = CSS px) and colours (Kotlin ARGB literals, 0xAARRGGBB). Every value equals the lib constant it is named for and the nav-shape guard (rule W) reads the Kotlin and fails on drift: first_row = libs:nav-bar-top-first-row TopFirstRowSpec, second_row = libs:nav-bar-top-second-row SecondRowSpec, bottom = libs:nav-bar-bottom BottomSpec (+ libs:bottomnav SearchHtmlTokens), theme = libs:theme-background ThemeBackground. Change the lib, then this file, never this file alone.",
+    "_doc": "#1158 THE SHARED DESIGN OF #1154 AS DATA. This app is a Cordova WebView with no Compose (see index.js), so the shared Compose libs cannot draw its bars; bars-dom.js draws the same bars from these numbers (dp = CSS px) and colours (Kotlin ARGB literals, 0xAARRGGBB). Every value equals the lib constant it is named for and the nav-shape guard (rule W) reads the Kotlin and fails on drift: first_row = libs:nav-bar-top-first-row TopFirstRowSpec, second_row = libs:nav-bar-top-second-row SecondRowSpec, bottom = libs:nav-bar-bottom BottomSpec (+ libs:bottomnav SearchHtmlTokens), theme = libs:theme-background ThemeBackground. Change the lib, then this file, never this file alone. At rest every bottom item and every second-row tab shows its name; scrolled down only the selected one does (#1159). A bottom label that would not fit its cell is never truncated: the bar then names the selected item only (tabs.js::fitLabels, #565).",
     "first_row": {
       "height": 52,
       "icon_target": 44,
@@ -499,7 +499,8 @@
       "strip_pad_v": 4,
       "side": 8,
       "top_inset": 10,
-      "bottom_inset": 10
+      "bottom_inset": 10,
+      "compact_tab_height": 28
     },
     "bottom": {
       "cell": 56,
@@ -507,8 +508,8 @@
       "label": 12,
       "height": 64,
       "radius": 32,
-      "collapsed_height": 48,
-      "collapsed_cell": 40,
+      "collapsed_height": 52,
+      "collapsed_cell": 44,
       "side_gutter": 16,
       "bottom_margin": 20,
       "max_width": 440,
@@ -561,12 +562,9 @@
       }
     },
     "collapse": {
-      "_doc": "Scroll down past threshold_px hides the first row and shrinks both bars: the bottom bar to bottom.collapsed_height with icons only, the second row to tab_height / inset here; scroll up (or the top of the list) restores them. Scrolls within settle_ms of a change are ignored, so the resize of the page cannot read as a scroll back.",
+      "_doc": "Scroll down past threshold_px hides the first row and compacts the second row (tabs of second_row.compact_tab_height, only the selected one keeps its name) and the bottom bar (bottom.collapsed_height, only the selected item keeps its label); scroll up (or the top of the list) restores all three (libs:bottomnav NavChromeScroll, #1157/#1159). Scrolls within settle_ms of a change are ignored, so the resize of the page cannot read as a scroll back. threshold_px and settle_ms are this app's: the lib's rule is its own scroll connection.",
       "threshold_px": 12,
-      "settle_ms": 350,
-      "second_tab_height": 28,
-      "second_inset": 4,
-      "second_icon": 14
+      "settle_ms": 350
     }
   }
 }
