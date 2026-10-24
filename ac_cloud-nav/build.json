@@ -109,22 +109,22 @@
     }
   },
   "ui": {
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. A section's `pages` are its tab strip (PageTabsView): Timeline = Explored/Daily/Stops/Steps, Configs = Tracker/APIs/Update/Cache/Layers/About. A section id maps to a Fragment in MainActivity.fragmentForSection(); a section icon maps to R.drawable.ic_nav_<icon>; a page id maps to the child fragment its host fragment shows.",
+    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, ui.sections[] what each item opens, ui.default_section where the app opens. A section's `pages` are its tab strip (PageTabsView): Explored = Trips/Maps, Tracker = Timeline/Steps/Sleep (#1156), Configs = Tracker/APIs/Update/Cache/Layers/About (a section, no longer in the island: the top bar opens it). A section id maps to a Fragment in MainActivity.fragmentForSection(); a section icon maps to R.drawable.ic_nav_<icon>; a page id maps to the child fragment its host fragment shows.",
     "deep_links": [
       {
-        "id": "timeline-steps",
-        "target": "page:timeline/steps",
+        "id": "tracker-steps",
+        "target": "page:tracker/steps",
         "intent_extra": "shortcut_action",
-        "from_superapp": "extapp:cloud-nav#page:timeline/steps",
-        "_doc": "Timeline > Steps. Handled by MainActivity.deepLinkOf (NavDeepLink.parse) cold and warm; the SuperApp Health notify badge sends it through launchExternalApp, which carries the part after # as the shortcut_action extra."
+        "from_superapp": "extapp:cloud-nav#page:tracker/steps",
+        "_doc": "Tracker > Steps. Handled by MainActivity.deepLinkOf (NavDeepLink.parse) cold and warm; the SuperApp Health notify badge sends it through launchExternalApp, which carries the part after # as the shortcut_action extra."
       }
     ],
     "bottom_nav": [
       "routes",
       "navigation",
       "places",
-      "timeline",
-      "configs"
+      "explored",
+      "tracker"
     ],
     "sections": [
       {
@@ -146,29 +146,36 @@
         "pages": []
       },
       {
-        "id": "timeline",
-        "label": "Timeline",
+        "id": "explored",
+        "label": "Explored",
+        "icon": "explored",
+        "pages": [
+          {
+            "id": "trips",
+            "label": "Trips"
+          },
+          {
+            "id": "maps",
+            "label": "Maps"
+          }
+        ]
+      },
+      {
+        "id": "tracker",
+        "label": "Tracker",
         "icon": "timeline",
         "pages": [
           {
-            "id": "explored",
-            "label": "Explored"
-          },
-          {
-            "id": "daily",
-            "label": "Daily"
-          },
-          {
-            "id": "stops",
-            "label": "Stops"
+            "id": "timeline",
+            "label": "Timeline"
           },
           {
             "id": "steps",
             "label": "Steps"
           },
           {
-            "id": "day",
-            "label": "Day"
+            "id": "sleep",
+            "label": "Sleep"
           }
         ]
       },

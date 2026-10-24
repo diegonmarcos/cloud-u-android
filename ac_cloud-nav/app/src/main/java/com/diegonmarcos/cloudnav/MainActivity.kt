@@ -34,7 +34,7 @@ import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 /**
  * Cloud Nav shell — minimal Google-Maps-style chrome, in Compose:
  *   • a content area that hosts one page fragment (each page draws its own search UI)
- *   • bottom nav island (libs:bottomnav's BottomNavHost): Routes · Navigation · Places · Timeline · Configs
+ *   • bottom nav island (libs:bottomnav's BottomNavHost): Routes · Navigation · Places · Explored · Tracker
  *
  * Sections + default section are data-driven from build.json::ui.* (decoded
  * by [NavConfig.decl], libs:bottomnav's NavDecl). The shell deliberately owns NO search bar — Routes does
@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
         switchTo(TAB_PLACES)
     }
 
-    /** `shortcut_action` = `page:<section>/<page>`, e.g. the SuperApp's Health badge: page:timeline/steps. */
+    /** `shortcut_action` = `page:<section>/<page>`, e.g. the SuperApp's Health badge: page:tracker/steps. */
     private fun deepLinkOf(intent: Intent?): NavDeepLink.Target? =
         NavDeepLink.parse(intent?.getStringExtra("shortcut_action"))?.takeIf { NavConfig.decl.section(it.section) != null }
 
@@ -138,9 +138,16 @@ class MainActivity : AppCompatActivity() {
         // Consume a pending geo: location once, so a hand-off from another app
         // lands on the map at that point / runs that search.
         "places"     -> pendingGeo?.let { g -> pendingGeo = null; PlacesFragment.forGeo(g) } ?: PlacesFragment()
-        "timeline"   -> TimelineFragment().also { f -> pendingPage?.let { pg -> pendingPage = null; f.arguments = Bundle().apply { putString(TimelineFragment.ARG_PAGE, pg) } } }
+        "explored"   -> ExploredFragment().withPendingPage()
+        "tracker"    -> TrackerFragment().withPendingPage()
+        // Configs left the island (#1156, it lives in the top bar); still a declared section, reached by page:configs[/<page>] links.
         "configs"    -> ConfigsFragment()
         else         -> RoutesFragment()
+    }
+
+    /** A deep link's page, consumed once by the section it names. */
+    private fun PagedSectionFragment.withPendingPage() = also { f ->
+        pendingPage?.let { pg -> pendingPage = null; f.arguments = Bundle().apply { putString(PagedSectionFragment.ARG_PAGE, pg) } }
     }
 
     private companion object {

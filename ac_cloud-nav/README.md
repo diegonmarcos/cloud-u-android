@@ -27,9 +27,11 @@ nav with five tabs:
 |-----|----------|--------------|
 | **Routes** | `routes.RoutesFragment` | Live MapLibre map + multi-stop route panel (start = your location). |
 | **Navigation** | `routes.NavigationFragment` | Driving view + turn-by-turn banner. |
-| **Timeline** | `maps.MapsTimelineTabsFragment` | Tracker data by day / by stop (lifted from libs:maps). |
 | **Places** | `places.PlacesFragment` | Browse POIs by category (Bars, Beaches, Gyms, ATMs, …). |
-| **Configs** | `configs.ConfigsFragment` | Tracker settings (`MapsConfigFragment`) + the extensive **About** page (`DevControlFragment`). |
+| **Explored** | `ExploredFragment` | Trips (Day, Trips, Places, Cities, World, Insights) and Maps (pins, routes, visited areas on OSM). |
+| **Tracker** | `TrackerFragment` | Raw data from the tracker provider: Timeline (every STAY / MOVE), Steps per day, Sleep per day. |
+
+Configs (`configs.ConfigsFragment`: tracker settings, APIs, Update, Cache, Layers, the **About** page) left the island (#1156); it stays a declared section, opened from the top bar.
 
 Tabs, search islands and place categories are **data-driven** from
 `build.json::ui.*` (decoded by `NavConfig`) — adding one is a build.json edit,

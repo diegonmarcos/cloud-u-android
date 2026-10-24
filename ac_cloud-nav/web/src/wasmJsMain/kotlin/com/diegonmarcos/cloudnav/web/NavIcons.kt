@@ -34,6 +34,10 @@ internal object NavIcons {
         "timeline",
         "M12,2a10,10 0 1,0 0,20a10,10 0 1,0 0,-20zM12,4a8,8 0 1,1 0,16a8,8 0 1,1 0,-16zM11,7h2v5.2l3.6,2.1l-1,1.7L11,13z",
     )
+    private val explored = glyph(
+        "explored",
+        "M12,10.9a1.1,1.1 0 1,0 0,2.2a1.1,1.1 0 1,0 0,-2.2zM12,2a10,10 0 1,0 0,20a10,10 0 1,0 0,-20zM14.19,14.19L6,18l3.81,-8.19L18,6z",
+    )
     private val settings = glyph(
         "settings",
         "M19,12a7,7 0 1,1 -14,0a7,7 0 1,1 14,0zM15.5,12a3.5,3.5 0 1,0 -7,0a3.5,3.5 0 1,0 7,0z" +
@@ -45,6 +49,7 @@ internal object NavIcons {
         "navigation" -> navigation
         "places" -> places
         "timeline" -> timeline
+        "explored" -> explored
         else -> settings
     }
 }

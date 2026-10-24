@@ -16,7 +16,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * Timeline > Day: the Trip dashboards over THE timeline store (Day, Trips, Insights, Places, Cities, World), read through
+ * Explored > Trips: the Trip dashboards over THE timeline store (Day first, then Trips, Places, Cities, World, Insights), read through
  * the same [DayTimeline] / [Aggregates] the fleet door serves. Owner corrections go to [CorrectionStore] and the list is rebuilt.
  */
 class DayFragment : KitComposeFragment() {

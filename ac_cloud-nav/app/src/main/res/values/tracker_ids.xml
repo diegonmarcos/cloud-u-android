@@ -2,6 +2,7 @@
 <resources>
     <!-- Containers of the child pages inside the Compose Timeline and Configs hosts. -->
     <item name="nav_host_timeline" type="id"/>
+    <item name="nav_host_tracker" type="id"/>
     <item name="nav_host_configs" type="id"/>
     <!-- The page container of the Compose shell (MainActivity). -->
     <item name="nav_host_main" type="id"/>

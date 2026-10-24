@@ -25,7 +25,7 @@ import org.junit.runner.RunWith
  * counts (querySourceFeatures), the exact signal that string-geojson pins failed
  * (0 features):
  *
- *   seed 228-city demo → Timeline → Explored → poll until:
+ *   seed 228-city demo → libs:maps Explored (mounted in the shell) → poll until:
  *     • the native pin SOURCE reports > 0 features (pins render, no overlay), and
  *     • the Countries fill SOURCE reports > 0 features (choropleth renders), and
  *     • switching to PLACES yields far MORE pins than CITY (684 > 228).
@@ -63,15 +63,18 @@ class ExploredRenderTest {
 
         try {
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-                compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_timeline").fetchSemanticsNodes().isNotEmpty() }
-                compose.onNodeWithTag("bottomnav_item_timeline").performClick()
-                compose.waitUntil(30_000) { compose.onAllNodesWithTag(PageTabsTags.tab("explored")).fetchSemanticsNodes().isNotEmpty() }
-                compose.onNodeWithTag(PageTabsTags.tab("explored")).performClick()
+                // #1156: the app's Explored section is now Trips | Maps; libs:maps' own Explored page (the choropleth + pins under test)
+                // is no longer a nav page, so it is mounted straight into the shell's page container.
+                compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_explored").fetchSemanticsNodes().isNotEmpty() }
+                scenario.onActivity { act ->
+                    act.supportFragmentManager.beginTransaction().replace(R.id.nav_host_main, MapsExploredFragment.newInstance()).commitNow()
+                }
 
                 fun explored(): MapsExploredFragment? = run {
                     var found: MapsExploredFragment? = null
                     scenario.onActivity { act ->
                         found = act.supportFragmentManager.fragments
+                            .let { top -> top + top.flatMap { it.childFragmentManager.fragments } }
                             .flatMap { it.childFragmentManager.fragments }
                             .flatMap { listOf(it) + it.childFragmentManager.fragments }
                             .filterIsInstance<MapsExploredFragment>().firstOrNull()

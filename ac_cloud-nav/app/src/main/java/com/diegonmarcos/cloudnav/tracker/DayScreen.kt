@@ -52,7 +52,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.Locale
 
-enum class DayTab(val label: String) { DAY("Day"), TRIPS("Trips"), INSIGHTS("Insights"), PLACES("Places"), CITIES("Cities"), WORLD("World") }
+enum class DayTab(val label: String) { DAY("Day"), TRIPS("Trips"), PLACES("Places"), CITIES("Cities"), WORLD("World"), INSIGHTS("Insights") }
 
 object DayTags {
     const val PREV = "day:prev"; const val NEXT = "day:next"; const val PICK = "day:pick"; const val ADD = "day:add"; const val MAP = "day:map"

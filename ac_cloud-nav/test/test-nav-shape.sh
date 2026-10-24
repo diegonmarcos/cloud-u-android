@@ -4,13 +4,13 @@
 # ╚══════════════════════════════════════════════════════════════════╝
 #
 # What this certifies, statically (the nav is data, the bar and the strips are libs:bottomnav's):
-#   S1 build.json::ui is ONE declaration: bottom_nav = the five sections, default_section routes,
-#      Timeline carries Explored|Daily|Stops|Steps|Day and Configs Tracker|APIs|Update|Cache|Layers|About as
+#   S1 build.json::ui is ONE declaration: bottom_nav = the five island sections (Configs replaced by Tracker, #1156), default_section routes,
+#      Explored carries Trips|Maps, Tracker carries Timeline|Steps|Sleep (#1156) and Configs, no longer in the island, keeps Tracker|APIs|Update|Cache|Layers|About as
 #      its pages; the old nav_tabs / default_tab keys are gone.
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
 #   S3 MainActivity (Compose) draws the bar with libs:bottomnav's BottomNavHost fed by NavConfig.decl (NavDecl),
 #      not a BottomNavigationView, and no layout XML shell remains.
-#   S4 the Timeline host (the app's TimelineFragment, which hosts the Steps page) and Configs draw their strips with PageTabsView, not a TabLayout.
+#   S4 the Explored / Tracker hosts (PagedSectionFragment) and Configs draw their strips with PageTabsView, not a TabLayout.
 #   S5 no hand-rolled nav widget anywhere in the app or libs:maps (nav-shape-guard N3).
 # Each check is then run against planted mutations of the real sources; a mutation that leaves
 # every check green fails this tester.
@@ -27,17 +27,19 @@ CFG = json.loads(r'''{
   "routes",
   "navigation",
   "places",
-  "timeline",
-  "configs"
+  "explored",
+  "tracker"
  ],
  "default": "routes",
  "pages": {
-  "timeline": [
-   "explored",
-   "daily",
-   "stops",
+  "explored": [
+   "trips",
+   "maps"
+  ],
+  "tracker": [
+   "timeline",
    "steps",
-   "day"
+   "sleep"
   ],
   "configs": [
    "tracker",
@@ -65,7 +67,8 @@ CFG = json.loads(r'''{
    "BottomNavHost",
    "NavConfig.decl",
    "viewItems",
-   "TimelineFragment()"
+   "ExploredFragment()",
+   "TrackerFragment()"
   ],
   "app/src/main/java/com/diegonmarcos/cloudnav/NavConfig.kt": [
    "NavDecl.fromBuildConfig"
@@ -74,10 +77,18 @@ CFG = json.loads(r'''{
    "MapsPageStrip.create",
    "PageTabsView"
   ],
-  "app/src/main/java/com/diegonmarcos/cloudnav/TimelineFragment.kt": [
+  "app/src/main/java/com/diegonmarcos/cloudnav/PagedSectionFragment.kt": [
    "MapsPageStrip.create",
-   "StepsFragment()",
    "NavConfig.decl"
+  ],
+  "app/src/main/java/com/diegonmarcos/cloudnav/ExploredFragment.kt": [
+   "DayFragment()",
+   "ExploredMapsFragment()"
+  ],
+  "app/src/main/java/com/diegonmarcos/cloudnav/TrackerFragment.kt": [
+   "TrackerTimelineFragment()",
+   "TrackerStepsFragment()",
+   "TrackerSleepFragment()"
   ],
   "../ab_cloud-libs-shared/libs/maps/src/main/java/com/diegonmarcos/cloudnav/maps/MapsTimelineTabsFragment.kt": [
    "MapsPageStrip.create"
@@ -114,8 +125,12 @@ CFG = json.loads(r'''{
    "NavDecl.fromBuildConfig"
   ],
   [
-   "app/src/main/java/com/diegonmarcos/cloudnav/TimelineFragment.kt",
-   "StepsFragment()"
+   "app/src/main/java/com/diegonmarcos/cloudnav/PagedSectionFragment.kt",
+   "MapsPageStrip.create"
+  ],
+  [
+   "app/src/main/java/com/diegonmarcos/cloudnav/TrackerFragment.kt",
+   "TrackerStepsFragment()"
   ]
  ]
 }''')

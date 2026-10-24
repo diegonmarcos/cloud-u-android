@@ -12,7 +12,7 @@
 #     shared island and tab strip (libs:bottomnav's test tags: bottomnav_island, bottomnav_item_,
 #     pagetabs_strip) - a page whose shell silently stopped being the fleet's island goes red;
 #     that nav-nav.json is build.json::ui as it stands - the same island (routes, navigation, places,
-#     timeline, configs) and the same child pages (Timeline: explored|daily|stops|steps, Configs:
+#     explored, tracker) and the same child pages (Explored: trips|maps, Tracker: timeline|steps|sleep, Configs:
 #     tracker|apis|update|cache|layers|about) the Android shell draws, so the page cannot show a stale nav;
 #     the module also holds the shell's honest placeholder ("lives in the Android app");
 #  4. it names no Android: the app's own JS glue carries no `android.` platform name and no
@@ -120,7 +120,7 @@ mutant "a wasm that is not wasm"        'printf "<html>404</html>" > "$W/d/bbbb2
 mutant "no nav declaration"             'rm "$W/d/composeResources/com.diegonmarcos.cloudnav.web.generated/files/nav-nav.json"' "no nav-nav.json with a bottom_nav"
 mutant "a nav declaration with no bar"  'printf "{}" > "$W/d/composeResources/com.diegonmarcos.cloudnav.web.generated/files/nav-nav.json"' "no nav-nav.json with a bottom_nav"
 mutant "a stale nav declaration (the old two-item island)" 'jq -c ".bottom_nav = [\"routes\",\"places\"]" "$W/d/composeResources/com.diegonmarcos.cloudnav.web.generated/files/nav-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudnav.web.generated/files/nav-nav.json"' "nav-nav.json is not build.json::ui"
-mutant "a nav declaration without Timeline's child pages" 'jq -c "(.sections[] | select(.id == \"timeline\") | .pages) = []" "$W/d/composeResources/com.diegonmarcos.cloudnav.web.generated/files/nav-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudnav.web.generated/files/nav-nav.json"' "nav-nav.json is not build.json::ui"
+mutant "a nav declaration without Explored's child pages" 'jq -c "(.sections[] | select(.id == \"explored\") | .pages) = []" "$W/d/composeResources/com.diegonmarcos.cloudnav.web.generated/files/nav-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudnav.web.generated/files/nav-nav.json"' "nav-nav.json is not build.json::ui"
 mutant "no island in the page"          'printf "\0asm\1\0\0\0" > "$W/d/bbbb2222.wasm"'                  "the island string 'bottomnav_island'"
 mutant "no page-tab strip in the page"  'printf "\0asm\1\0\0\0bottomnav_island bottomnav_item_" > "$W/d/bbbb2222.wasm"' "the island string 'pagetabs_strip'"
 mutant "over the size budget"           'head -c $(( (BUDGET_MB + 1) * 1048576 )) /dev/zero > "$W/d/cloud-nav.js.map"' "over the ${BUDGET_MB} MB budget"

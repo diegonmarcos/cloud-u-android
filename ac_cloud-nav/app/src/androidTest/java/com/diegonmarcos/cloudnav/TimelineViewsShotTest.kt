@@ -10,7 +10,9 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.diegonmarcos.cloudnav.maps.MapsDb
+import com.diegonmarcos.cloudnav.maps.MapsDailyFragment
 import com.diegonmarcos.cloudnav.maps.MapsDemo
+import com.diegonmarcos.cloudnav.maps.MapsStopsFragment
 import com.diegonmarcos.cloudnav.maps.TimelineState
 import com.diegonmarcos.cloudnav.maps.TlKind
 import com.diegonmarcos.cloudnav.tracker.EngineDb
@@ -25,7 +27,7 @@ import java.time.ZoneId
 
 /**
  * #1114 evidence: the OLD tables (stops, step samples) are seeded exactly as the trackers wrote them, the app migrates them into
- * THE timeline store on first view, and Timeline > Daily / Stops / Steps are drawn over it. Each page is screenshotted to
+ * THE timeline store on first view, and Daily / Stops (libs:maps pages) and Tracker > Steps are drawn over it. Each page is screenshotted to
  * /data/local/tmp/tl-<page>.png (test-cloud-nav.yml pulls them into the uploaded evidence).
  */
 @RunWith(AndroidJUnit4::class)
@@ -70,19 +72,23 @@ class TimelineViewsShotTest {
         assertEquals("nothing in the store before the first view", 0, db.segmentCount())
 
         try {
-            ActivityScenario.launch(MainActivity::class.java).use {
-                compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_timeline").fetchSemanticsNodes().isNotEmpty() }
-                compose.onNodeWithTag("bottomnav_item_timeline").performClick()
-                compose.waitUntil(30_000) { compose.onAllNodesWithTag(PageTabsTags.tab("daily")).fetchSemanticsNodes().isNotEmpty() }
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                // #1156: Daily and Stops are libs:maps' pages and no longer nav pages; they are mounted straight into the shell's page
+                // container. Steps is the app's Tracker > Steps page, reached through the real island and strip.
+                fun mount(f: androidx.fragment.app.Fragment) =
+                    scenario.onActivity { act -> act.supportFragmentManager.beginTransaction().replace(R.id.nav_host_main, f).commitNow() }
+                compose.waitUntil(30_000) { compose.onAllNodesWithTag("bottomnav_item_tracker").fetchSemanticsNodes().isNotEmpty() }
 
-                compose.onNodeWithTag(PageTabsTags.tab("daily")).performClick()
+                mount(MapsDailyFragment.newInstance())
                 compose.waitUntil(30_000) { compose.onAllNodesWithText("Office", substring = true).fetchSemanticsNodes().isNotEmpty() }
                 shot("daily")
 
-                compose.onNodeWithTag(PageTabsTags.tab("stops")).performClick()
+                mount(MapsStopsFragment.newInstance(null))
                 compose.waitUntil(30_000) { compose.onAllNodesWithText("Gym", substring = true).fetchSemanticsNodes().isNotEmpty() }
                 shot("stops")
 
+                compose.onNodeWithTag("bottomnav_item_tracker").performClick()
+                compose.waitUntil(30_000) { compose.onAllNodesWithTag(PageTabsTags.tab("steps")).fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag(PageTabsTags.tab("steps")).performClick()
                 compose.waitForIdle()
                 shot("steps")

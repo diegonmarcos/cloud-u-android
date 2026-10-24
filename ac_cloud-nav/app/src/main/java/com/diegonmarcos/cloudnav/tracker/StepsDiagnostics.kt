@@ -52,16 +52,20 @@ object StepsDiagnostics {
     }
 }
 
-/** Cloud Nav deep link: `page:<section>/<page>` (the SuperApp sends `extapp:cloud-nav#page:timeline/steps`). */
+/** Cloud Nav deep link: `page:<section>/<page>` (the SuperApp sends `extapp:cloud-nav#page:tracker/steps`). */
 object NavDeepLink {
-    const val STEPS = "page:timeline/steps"
+    const val STEPS = "page:tracker/steps"
     data class Target(val section: String, val page: String?)
+
+    /** The Steps page lived under Timeline before #1156; a SuperApp build that still sends the old link lands on the same page. */
+    private val LEGACY = mapOf("timeline" to "tracker")
 
     fun parse(raw: String?): Target? {
         val t = raw?.trim() ?: return null
         if (!t.startsWith("page:")) return null
         val body = t.removePrefix("page:").takeIf { it.isNotBlank() } ?: return null
         val parts = body.split("/", limit = 2)
-        return Target(parts[0], parts.getOrNull(1)?.takeIf { it.isNotBlank() })
+        val page = parts.getOrNull(1)?.takeIf { it.isNotBlank() }
+        return if (parts[0] in LEGACY && page == "steps") Target(LEGACY.getValue(parts[0]), page) else Target(parts[0], page)
     }
 }

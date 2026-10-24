@@ -43,12 +43,14 @@ class StepsDiagnosticsTest {
             StepsDiagnostics.statusLine("x", PermState.DENIED, null, emptySet(), ZoneId.of("UTC")))
     }
 
-    @Test fun deepLinkResolvesToTimelineSteps() {
-        assertEquals(NavDeepLink.Target("timeline", "steps"), NavDeepLink.parse(NavDeepLink.STEPS))
+    @Test fun deepLinkResolvesToTrackerSteps() {
+        assertEquals(NavDeepLink.Target("tracker", "steps"), NavDeepLink.parse(NavDeepLink.STEPS))
+        // the pre-#1156 link of an older SuperApp lands on the same page
+        assertEquals(NavDeepLink.Target("tracker", "steps"), NavDeepLink.parse("page:timeline/steps"))
         assertEquals(NavDeepLink.Target("places", null), NavDeepLink.parse("page:places"))
         assertNull(NavDeepLink.parse("https://x"))
         assertNull(NavDeepLink.parse("page:"))
         assertNull(NavDeepLink.parse(null))
-        assertNotNull(NavDeepLink.parse(" page:timeline/steps "))
+        assertNotNull(NavDeepLink.parse(" page:tracker/steps "))
     }
 }

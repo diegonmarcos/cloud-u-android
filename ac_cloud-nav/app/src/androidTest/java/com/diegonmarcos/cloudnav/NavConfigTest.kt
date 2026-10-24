@@ -25,7 +25,7 @@ class NavConfigTest {
 
     @Test fun bottom_nav_matches_buildjson_order() {
         assertEquals(
-            listOf("routes", "navigation", "places", "timeline", "configs"),
+            listOf("routes", "navigation", "places", "explored", "tracker"),
             NavConfig.decl.bottomSections().map { it.id },
         )
     }
@@ -34,8 +34,9 @@ class NavConfigTest {
         assertEquals("routes", NavConfig.decl.default()?.id)
     }
 
-    @Test fun timeline_and_configs_carry_their_strips() {
-        assertEquals(listOf("explored", "daily", "stops", "steps", "day"), NavConfig.decl.section("timeline")?.pages?.map { it.id })
+    @Test fun explored_tracker_and_configs_carry_their_strips() {
+        assertEquals(listOf("trips", "maps"), NavConfig.decl.section("explored")?.pages?.map { it.id })
+        assertEquals(listOf("timeline", "steps", "sleep"), NavConfig.decl.section("tracker")?.pages?.map { it.id })
         assertEquals(
             listOf("tracker", "apis", "update", "cache", "layers", "about"),
             NavConfig.decl.section("configs")?.pages?.map { it.id },
