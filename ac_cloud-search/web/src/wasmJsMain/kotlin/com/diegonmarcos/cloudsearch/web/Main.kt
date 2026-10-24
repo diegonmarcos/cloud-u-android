@@ -73,7 +73,7 @@ private fun NavScreen() {
     }
     val decl = nav
     if (decl == null) {
-        Box(Modifier.fillMaxSize().padding(12.dp)) { KitEmptyState(null, "Loading Cloud Search…") }
+        Box(Modifier.fillMaxSize().padding(12.dp)) { KitEmptyState(null, "Loading Cloud Research…") }
     } else {
         NavShell(decl)
     }

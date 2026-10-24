@@ -12,7 +12,7 @@
     <string name="no_renderer">No page draws subpages of kind %1$s.</string>
 
     <string name="fleet_account">Fleet Account</string>
-    <string name="version">Cloud Search · build %1$s</string>
+    <string name="version">Cloud Research · build %1$s</string>
     <string name="token_title">OpenRouter token (for AI chat)</string>
     <string name="token_blurb">Managed by the fleet Account (SuperApp ▸ Profile). Read when you send a message, never stored by this app.</string>
     <string name="token_check">Check</string>
