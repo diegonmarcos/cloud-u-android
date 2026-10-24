@@ -471,27 +471,6 @@ public class BottomNavCollapse : NestedScrollConnection {
 @Composable
 public fun rememberBottomNavCollapse(): BottomNavCollapse = remember { BottomNavCollapse() }
 
-/**
- * The ONE scroll connection of an app's chrome (#1157): scrolling the page down hides the first row and compacts the second
- * row and the bottom nav, scrolling up restores all three. The shared scaffolds ([NavChromeScroll]) provide it; the bars read it.
- */
-public val LocalNavChromeCollapse: androidx.compose.runtime.ProvidableCompositionLocal<BottomNavCollapse?> =
-    androidx.compose.runtime.staticCompositionLocalOf { null }
-
-/**
- * Owns the chrome's scroll connection unless an outer host already does: [content] gets it, and everything inside (the
- * first row, the second row, the bottom nav, and any scrollable page) is wired to the same one.
- */
-@Composable
-public fun NavChromeScroll(modifier: Modifier = Modifier, content: @Composable (BottomNavCollapse) -> Unit) {
-    val inherited = LocalNavChromeCollapse.current
-    if (inherited != null) { content(inherited); return }
-    val own = rememberBottomNavCollapse()
-    androidx.compose.runtime.CompositionLocalProvider(LocalNavChromeCollapse provides own) {
-        Box(modifier.fillMaxSize().nestedScroll(own)) { content(own) }
-    }
-}
-
 // ── the host: a screen ABOVE the island, scroll-collapsing it (#534) ──
 
 /**

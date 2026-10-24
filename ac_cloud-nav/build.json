@@ -175,12 +175,14 @@
         "icon": "explored",
         "pages": [
           {
-            "id": "trips", "icon": "luggage",
-            "label": "Trips"
+            "id": "trips",
+            "label": "Trips",
+            "icon": "luggage"
           },
           {
-            "id": "maps", "icon": "map",
-            "label": "Maps"
+            "id": "maps",
+            "label": "Maps",
+            "icon": "map"
           }
         ]
       },
@@ -190,16 +192,19 @@
         "icon": "timeline",
         "pages": [
           {
-            "id": "timeline", "icon": "timeline",
-            "label": "Timeline"
+            "id": "timeline",
+            "label": "Timeline",
+            "icon": "timeline"
           },
           {
-            "id": "steps", "icon": "directions_walk",
-            "label": "Steps"
+            "id": "steps",
+            "label": "Steps",
+            "icon": "directions_walk"
           },
           {
-            "id": "sleep", "icon": "bedtime",
-            "label": "Sleep"
+            "id": "sleep",
+            "label": "Sleep",
+            "icon": "bedtime"
           }
         ]
       },
@@ -209,28 +214,34 @@
         "icon": "configs",
         "pages": [
           {
-            "id": "tracker", "icon": "my_location",
-            "label": "Tracker"
+            "id": "tracker",
+            "label": "Tracker",
+            "icon": "my_location"
           },
           {
-            "id": "apis", "icon": "api",
-            "label": "APIs"
+            "id": "apis",
+            "label": "APIs",
+            "icon": "api"
           },
           {
-            "id": "update", "icon": "update",
-            "label": "Update"
+            "id": "update",
+            "label": "Update",
+            "icon": "update"
           },
           {
-            "id": "cache", "icon": "cached",
-            "label": "Cache"
+            "id": "cache",
+            "label": "Cache",
+            "icon": "cached"
           },
           {
-            "id": "layers", "icon": "layers",
-            "label": "Layers"
+            "id": "layers",
+            "label": "Layers",
+            "icon": "layers"
           },
           {
-            "id": "about", "icon": "info",
-            "label": "About"
+            "id": "about",
+            "label": "About",
+            "icon": "info"
           }
         ]
       }

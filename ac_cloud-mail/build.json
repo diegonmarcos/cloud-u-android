@@ -40,8 +40,9 @@
         "background": "theme",
         "pages": [
           {
-            "id": "inbox", "icon": "inbox",
-            "label": "Inbox"
+            "id": "inbox",
+            "label": "Inbox",
+            "icon": "inbox"
           }
         ]
       },
@@ -51,8 +52,9 @@
         "icon": "rss",
         "pages": [
           {
-            "id": "rss", "icon": "rss_feed",
-            "label": "News"
+            "id": "rss",
+            "label": "News",
+            "icon": "rss_feed"
           }
         ]
       },
@@ -62,8 +64,9 @@
         "icon": "tasks",
         "pages": [
           {
-            "id": "tasks", "icon": "checklist",
+            "id": "tasks",
             "label": "Tasks",
+            "icon": "checklist",
             "action": "launch:com.diegonmarcos.cloudagenda"
           }
         ]
@@ -74,8 +77,9 @@
         "icon": "home",
         "pages": [
           {
-            "id": "home", "icon": "home",
-            "label": "Home"
+            "id": "home",
+            "label": "Home",
+            "icon": "home"
           }
         ]
       },
@@ -85,8 +89,9 @@
         "icon": "chat",
         "pages": [
           {
-            "id": "chat", "icon": "chat",
+            "id": "chat",
             "label": "Chat",
+            "icon": "chat",
             "action": "launch:com.diegonmarcos.comms.chat"
           }
         ]
@@ -97,8 +102,9 @@
         "icon": "video",
         "pages": [
           {
-            "id": "whatsapp", "icon": "forum",
+            "id": "whatsapp",
             "label": "WhatsApp Business",
+            "icon": "forum",
             "action": "launch:com.whatsapp.w4b"
           }
         ]
@@ -109,8 +115,9 @@
         "icon": "contacts",
         "pages": [
           {
-            "id": "contacts", "icon": "contacts",
+            "id": "contacts",
             "label": "Contacts",
+            "icon": "contacts",
             "action": "launch:com.diegonmarcos.cloudcontacts"
           }
         ]

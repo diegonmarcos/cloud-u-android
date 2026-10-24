@@ -347,12 +347,14 @@
         "icon": "phone",
         "pages": [
           {
-            "id": "installed", "icon": "download_done",
-            "label": "Installed"
+            "id": "installed",
+            "label": "Installed",
+            "icon": "download_done"
           },
           {
-            "id": "declared", "icon": "checklist",
-            "label": "Declared"
+            "id": "declared",
+            "label": "Declared",
+            "icon": "checklist"
           }
         ]
       },
@@ -368,12 +370,14 @@
         "icon": "feed",
         "pages": [
           {
-            "id": "commits", "icon": "code",
-            "label": "Commits"
+            "id": "commits",
+            "label": "Commits",
+            "icon": "code"
           },
           {
-            "id": "cicd", "icon": "build",
-            "label": "CI-CD"
+            "id": "cicd",
+            "label": "CI-CD",
+            "icon": "build"
           }
         ]
       },
@@ -383,24 +387,29 @@
         "icon": "access",
         "pages": [
           {
-            "id": "mesh", "icon": "lan",
-            "label": "Apps Mesh"
+            "id": "mesh",
+            "label": "Apps Mesh",
+            "icon": "lan"
           },
           {
-            "id": "ipc", "icon": "swap_horiz",
-            "label": "IPC"
+            "id": "ipc",
+            "label": "IPC",
+            "icon": "swap_horiz"
           },
           {
-            "id": "identity", "icon": "fingerprint",
-            "label": "Identity"
+            "id": "identity",
+            "label": "Identity",
+            "icon": "fingerprint"
           },
           {
-            "id": "android", "icon": "android",
-            "label": "Android Perms"
+            "id": "android",
+            "label": "Android Perms",
+            "icon": "android"
           },
           {
-            "id": "cloud", "icon": "cloud",
-            "label": "Cloud Perms"
+            "id": "cloud",
+            "label": "Cloud Perms",
+            "icon": "cloud"
           }
         ]
       },
@@ -410,24 +419,29 @@
         "icon": "settings",
         "pages": [
           {
-            "id": "sources", "icon": "storage",
-            "label": "Sources"
+            "id": "sources",
+            "label": "Sources",
+            "icon": "storage"
           },
           {
-            "id": "adb", "icon": "terminal",
-            "label": "ADB Shell"
+            "id": "adb",
+            "label": "ADB Shell",
+            "icon": "terminal"
           },
           {
-            "id": "ai", "icon": "auto_awesome",
-            "label": "AI"
+            "id": "ai",
+            "label": "AI",
+            "icon": "auto_awesome"
           },
           {
-            "id": "notifications", "icon": "notifications",
-            "label": "Notifications"
+            "id": "notifications",
+            "label": "Notifications",
+            "icon": "notifications"
           },
           {
-            "id": "about", "icon": "info",
-            "label": "About"
+            "id": "about",
+            "label": "About",
+            "icon": "info"
           }
         ]
       }

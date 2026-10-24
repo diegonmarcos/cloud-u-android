@@ -64,11 +64,13 @@ else:
     t = code(strip)
     if "SecondRowTags.icon(" not in t:
         bad("tab-style", "the icon pill does not draw an icon for every tab")
-    m = re.search(r"if \(on\) \{\s*Text\(\s*page\.label", t)
-    if not m:
-        bad("tab-style", "the tab name is not drawn inside `if (on)` - it must show on the selected tab only")
-    if len(re.findall(r"page\.label", t)) != len(re.findall(r"if \(on\) \{\s*Text\(\s*page\.label", t)) + len(re.findall(r"contentDescription = page\.label|page\.label\.take", t)):
-        bad("tab-style", "an unselected tab draws its name")
+    # #1159 (owner, supersedes #1144's selected-only name): at rest EVERY tab shows its name, scrolled down (compact) only the selected one.
+    if "val named = !compact || on" not in t:
+        bad("tab-style", "the tab name is not gated by `named = !compact || on` - every tab shows it at rest, only the selected one when compact")
+    if not re.search(r"AnimatedVisibility\(\s*named", t):
+        bad("tab-style", "the tab name is not drawn inside AnimatedVisibility(named)")
+    if len(re.findall(r"page\.label", t)) != len(re.findall(r"AnimatedVisibility\(\s*named,[^{]*\{\s*Text\(\s*page\.label", t)) + len(re.findall(r"contentDescription = page\.label", t)):
+        bad("tab-style", "a tab draws its name outside the `named` gate")
 if "iconFor" not in code(tabs):
     bad("tab-style", "the second row does not take iconFor (icon-only pills)")
 sec = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/SectionScreen.kt"))
@@ -272,7 +274,7 @@ only() { # <check id>: nothing but that id is red in the real tree
   [ -z "$r" ]
 }
 for t in "nav-order|the bar reads Health, Study, Achieves, Profile, House, Work, Buro" \
-         "tab-style|page tabs are icon-only pills that show the name of the selected tab only" \
+         "tab-style|page tabs show every name at rest and only the selected name when scrolled down (#1159)" \
          "settings|the top bar is the fleet AppTopBar: hamburger, AI, Profile, Configs, no dropdown" \
          "achieves|Achieves renders the owner's text (B1, B2, B3, region table with its link)" \
          "no-drawer|no swipe-to-open drawer handler anywhere (shell, the lib top bar, Profile page, resources)" \
@@ -298,7 +300,7 @@ mutant() { # id description sh-command-run-in-copy
 }
 BJ='python3 - "$@"'
 mutant nav-order "bar order swapped" "python3 -c \"import json;d=json.load(open('build.json'));b=d['ui']['bottom_nav'];b[0],b[1]=b[1],b[0];json.dump(d,open('build.json','w'))\""
-mutant tab-style "selected-only name drawn on every tab" "sed -i 's/if (on) {/if (true) {/' ../ab_cloud-libs-shared/libs/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt"
+mutant tab-style "name drawn on every tab even when compact" "sed -i 's/val named = !compact || on/val named = true/' ../ab_cloud-libs-shared/libs/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt"
 mutant tab-style "SectionScreen back to text pills" "sed -i 's/iconFor = /xxx = /' app/src/main/java/com/diegonmarcos/cloudme/SectionScreen.kt"
 mutant settings "Settings entries reduced to one" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['settings']=['configs'];json.dump(d,open('build.json','w'))\""
 mutant settings "a dropdown comes back" "echo 'val x = DropdownMenu' >> app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"

@@ -1,8 +1,5 @@
 package com.diegonmarcos.superapp.navbarbottom
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -141,6 +138,7 @@ public fun NavBarBottom(
                     // #1159 at rest EVERY item shows its label; scrolled down only the selected one does.
                     val labelled = !collapsed || on
                     val lift by animateDpAsState(if (labelled) -BottomSpec.LIFT else 0.dp, label = "navbottom_lift")
+                    val show by animateFloatAsState(if (labelled) 1f else 0f, label = "navbottom_label")
                     Box(
                         Modifier.size(cell, cellHeight).clip(CircleShape).testTag(BottomTags.item(e.id))
                             .selectable(selected = on, role = Role.Tab, onClick = { onSelect(e) })
@@ -150,16 +148,14 @@ public fun NavBarBottom(
                         Box(Modifier.offset(y = lift)) {
                             Icon(e.icon, contentDescription = null, tint = ink, modifier = Modifier.size(BottomSpec.ICON).testTag(BottomTags.icon(e.id)))
                         }
-                        AnimatedVisibility(
-                            labelled, Modifier.align(Alignment.BottomCenter),
-                            enter = fadeIn(), exit = fadeOut(),
-                        ) {
-                            Text(
-                                e.label, color = ink, fontSize = BottomSpec.LABEL, fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(bottom = BottomSpec.LABEL_BOTTOM).testTag(BottomTags.label(e.id)),
-                            )
-                        }
+                        // The label fades with the state and leaves the tree once faded out (a hidden label is not a node).
+                        if (show > 0f) Text(
+                            e.label, color = ink, fontSize = BottomSpec.LABEL, fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = BottomSpec.LABEL_BOTTOM)
+                                .testTag(BottomTags.label(e.id))
+                                .graphicsLayer { alpha = show },
+                        )
                     }
                 }
             }
