@@ -37,6 +37,8 @@ data class SearchHit(
     val copyValue: String? = null,
     val target: String? = null,
     val intent: Intent? = null,
+    /** Catalog drawable name of a cloud app's icon (resolved by the host); null = none, the row draws a fallback. */
+    val iconName: String? = null,
 )
 
 /** Just enough to launch an installed app through LauncherApps. A component

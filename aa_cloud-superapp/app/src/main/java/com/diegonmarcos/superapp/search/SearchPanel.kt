@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,6 +33,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -39,6 +42,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.uikit.KitDensity
 import com.diegonmarcos.superapp.uikit.KitSearchBar
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
@@ -214,13 +218,14 @@ private fun SectionHeader(text: String, tag: String) {
 
 /** A dense row: glyph, label, crumb; no background and no alpha of its own. */
 @Composable
-private fun ResultRow(glyph: String, label: String, crumb: String, tag: String, onTap: () -> Unit) {
+private fun ResultRow(glyph: String, label: String, crumb: String, tag: String, hit: SearchHit? = null, onTap: () -> Unit) {
     val p = LocalKitPalette.current
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onTap).padding(horizontal = 12.dp, vertical = 4.dp).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(glyph, color = p.textSecondary, fontSize = KitDensity.body, modifier = Modifier.width(22.dp))
+        if (hit != null) HitIcon(hit, Modifier.padding(end = 8.dp).size(28.dp))
+        else Text(glyph, color = p.textSecondary, fontSize = KitDensity.body, modifier = Modifier.width(22.dp))
         Column(Modifier.weight(1f)) {
             Text(label, color = p.textPrimary, fontSize = KitDensity.body, maxLines = 1, overflow = TextOverflow.Ellipsis)
             if (crumb.isNotBlank()) Text(crumb, color = p.textSecondary, fontSize = KitDensity.caption, maxLines = 1,
@@ -265,7 +270,7 @@ fun SearchResults(c: SearchController, surface: Color, cb: SearchCallbacks, modi
         } else {
             for (s in sections) {
                 item(key = "h:${s.scope.id}") { SectionHeader("${s.scope.section} · ${s.total}", SearchPanelTags.section(s.scope.id)) }
-                items(s.hits) { hit -> ResultRow(glyph(s.scope.kind), hit.label, hit.crumb, SearchPanelTags.row(s.scope.id)) { cb.onHit(hit) } }
+                items(s.hits) { hit -> ResultRow(glyph(s.scope.kind), hit.label, hit.crumb, SearchPanelTags.row(s.scope.id), hit) { cb.onHit(hit) } }
             }
             for (n in notices) item { Line(n, SearchPanelTags.NOTICE) }
             if (sections.isEmpty()) {
@@ -319,4 +324,25 @@ fun SearchDropdown(c: SearchController, surface: Color, cb: SearchCallbacks) {
         if (!c.commandMode) SearchScopeChips(c, Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
         if (typing) SearchResults(c, surface, cb, Modifier.weight(1f))
     }
+}
+
+/**
+ * A result row's icon: an installed phone app draws its PackageManager icon, a cloud app its catalog icon
+ * ([SearchHit.iconName]); anything else, or an icon that cannot be resolved, draws [R.drawable.ic_link_tile].
+ */
+@Composable
+internal fun HitIcon(hit: SearchHit, modifier: Modifier = Modifier) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val p = LocalKitPalette.current
+    val app = remember(hit) {
+        hit.phoneApp?.let { runCatching { ctx.packageManager.getApplicationIcon(it.component.packageName) }.getOrNull() }
+    }
+    if (app != null) {
+        androidx.compose.foundation.Image(app.toBitmap(96, 96).asImageBitmap(), null, modifier)
+        return
+    }
+    val res = remember(hit) {
+        hit.iconName?.let { Sections.iconResFor(ctx, it) }?.takeIf { it != 0 } ?: com.diegonmarcos.superapp.R.drawable.ic_link_tile
+    }
+    androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(res), null, modifier, tint = p.textSecondary)
 }

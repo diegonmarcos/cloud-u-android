@@ -60,13 +60,13 @@ object SuperappSearchIndex {
     private fun cloudApps(scopeId: String): List<SearchHit> {
         val out = mutableListOf<SearchHit>()
         for (sec in Sections.all().filter { !it.isMasterIndex }) {
-            out += SearchHit(sec.label, "Section", scopeId, target = "section:${sec.id}")
+            out += SearchHit(sec.label, "Section", scopeId, target = "section:${sec.id}", iconName = sec.iconName)
             // EVERY `tiles_<x>` list, not a hardcoded shared/apps/admin three:
             // tilesByPage keys on the suffix, so a section that renames a page
             // (Cloud: tiles_admin -> tiles_c3) keeps its tiles searchable
             // instead of quietly dropping them out of the index.
             for (tile in sec.tilesByPage.values.flatten()) {
-                out += SearchHit(tile.label, "${sec.label} · Tile", scopeId, target = tile.target)
+                out += SearchHit(tile.label, "${sec.label} · Tile", scopeId, target = tile.target, iconName = tile.iconName)
             }
         }
         // The grouped rows a section page draws (Cloud ▸ Apps' Quickmarks: a folder's entries
@@ -75,7 +75,7 @@ object SuperappSearchIndex {
         for (sec in Sections.all().filter { !it.isMasterIndex }) {
             for (group in sec.tileGroups) for (tile in group.destinations) {
                 if (tile.target.isBlank() || !seen.add(tile.target)) continue
-                out += SearchHit(tile.label, "${sec.label} · ${group.title}", scopeId, target = tile.target)
+                out += SearchHit(tile.label, "${sec.label} · ${group.title}", scopeId, target = tile.target, iconName = tile.iconName)
             }
         }
         for (act in Sections.homeActions()) {

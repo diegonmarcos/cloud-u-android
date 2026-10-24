@@ -29,7 +29,8 @@ enum class SearchEntry(val id: String, private val defaultKinds: Set<String>) {
     CLOUD_APPS_PAGE("cloud_apps_page", setOf(CLOUD_APPS, PHONE_APPS, CLOUD_CONFIGS, PHONE_CONFIGS)),
     HOME_SHEET("home_sheet", setOf(CLOUD_APPS, PHONE_APPS, CLOUD_CONFIGS, PHONE_CONFIGS)),
     HOME_STAR("home_star", setOf(BROWSER_FAV, BROWSER_HISTORY, BROWSER_WEB, CLOUD_CONFIGS, PHONE_CONFIGS)),
-    CONFIGS_PAGE("configs_page", setOf(CONFIGS));
+    CONFIGS_PAGE("configs_page", setOf(CONFIGS)),
+    PHONE_APPS_PAGE("phone_apps_page", setOf(PHONE_APPS, PHONE_CONFIGS));
 
     /** The chips this entry offers: the app's [declared] scopes, but Configs' own two. */
     fun scopesOf(declared: List<SearchScope>): List<SearchScope> =

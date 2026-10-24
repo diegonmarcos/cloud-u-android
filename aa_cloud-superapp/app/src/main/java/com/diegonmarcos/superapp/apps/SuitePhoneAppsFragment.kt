@@ -4,6 +4,10 @@ import com.diegonmarcos.superapp.settings.redrawOnGridColumns
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.launcher.AppInstall
 import com.diegonmarcos.superapp.launcher.AppLongPressMenu
+import com.diegonmarcos.superapp.launcher.BackHandler
+import com.diegonmarcos.superapp.search.SearchEntry
+import com.diegonmarcos.superapp.search.SearchFrame
+import com.diegonmarcos.superapp.search.SearchSession
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ui.snack
@@ -111,7 +115,17 @@ import kotlinx.coroutines.withContext
  * and Smart Folders are produced after the first frame, Smart Folders off the main thread and collapsed at
  * birth (#261).
  */
-class SuitePhoneAppsFragment : KitComposeFragment() {
+class SuitePhoneAppsFragment : KitComposeFragment(), BackHandler {
+
+    /** Phone ▸ Apps' search: the same shared SearchFrame/SearchSession Cloud ▸ Apps mounts. */
+    private var search: SearchSession? = null
+
+    override fun tryHandleBack(): Boolean = search?.handleBack() == true
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        search = null
+    }
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,7 +161,8 @@ class SuitePhoneAppsFragment : KitComposeFragment() {
 
     @Composable
     override fun Content() {
-        SuitePhoneAppsBody()
+        val session = remember { SearchSession(this, SearchEntry.PHONE_APPS_PAGE).also { search = it } }
+        SearchFrame(session, "Search", Modifier.fillMaxSize()) { SuitePhoneAppsBody() }
     }
 
     companion object {
