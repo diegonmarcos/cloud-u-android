@@ -5,9 +5,9 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -61,6 +62,18 @@ class MainActivity : AppCompatActivity() {
     /** Bumped on every open(), so reopening a section starts it afresh, as a new fragment did. */
     private var openSeq by mutableIntStateOf(0)
 
+    /** Bumped when a permission answer may have changed (a dialog answered, or the app settings left). */
+    private var permTick by mutableIntStateOf(0)
+
+    /**
+     * The ONE permission launcher, registered with the activity (not in a composable, which would register a new
+     * key per composition and bloat the saved state). The Configs rows and the start-up prompt both go through it.
+     */
+    private val permissionRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { answers ->
+        Permissions.markAsked(this, answers.keys)
+        permTick++
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Health and Fin are re-added by KitFragmentHost once Compose has a container for them.
         super.onCreate(KitFragmentHostState.withoutFragments(savedInstanceState))
@@ -86,8 +99,19 @@ class MainActivity : AppCompatActivity() {
                 tileInk = colorResource(R.color.me_on_primary),
             )
             CloudKitTheme(palette) {
-                CompositionLocalProvider(LocalMeTarget provides { onTarget(it) }) { Shell() }
+                val hooks = MePermissions(
+                    request = { permissionRequest.launch(arrayOf(it)) },
+                    openSettings = { Permissions.openSettings(this@MainActivity) },
+                    tick = permTick,
+                )
+                CompositionLocalProvider(LocalMeTarget provides { onTarget(it) }, LocalMePermissions provides hooks) { Shell() }
             }
+        }
+
+        // Required permissions: ONE system prompt for those never asked for; the rest get the banner (Permissions.gate).
+        if (savedInstanceState == null) {
+            Permissions.gate(Permissions.states(this)).ask.takeIf { it.isNotEmpty() }
+                ?.let { permissionRequest.launch(it.toTypedArray()) }
         }
 
         // Self-update from GHCR: the periodic check plus a one-shot shortly
@@ -127,6 +151,11 @@ class MainActivity : AppCompatActivity() {
         outState.putString(STATE_SECTION, currentSection)
     }
 
+    override fun onResume() {
+        super.onResume()
+        permTick++ // back from the app settings: re-read what is granted
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         UpdateProgress.setListener(null)
@@ -142,25 +171,19 @@ class MainActivity : AppCompatActivity() {
         BackHandler(enabled = currentSection != null && currentSection != home && home != null) {
             home?.let { open(it) }
         }
-        // No drawer and no edge-swipe handler anywhere in this shell (ticket #1144): a small downward
-        // scroll on Profile used to open the left menu. The page owns every touch it receives.
-        Column(
-            Modifier.fillMaxSize().background(colorResource(R.color.me_bg))
+        // The left menu opens by tapping the hamburger only; there is no edge-swipe handler anywhere in this
+        // shell (ticket #1144: a small downward scroll on Profile used to open it). The page owns every touch.
+        val missing = remember(permTick) { Permissions.gate(Permissions.states(this)).banner }
+        MeShell(
+            title = Sections.byId(currentSection)?.label ?: stringResource(R.string.app_name),
+            selectedSectionId = currentSection,
+            onOpen = { open(it) },
+            onTarget = { onTarget(it) },
+            modifier = Modifier.fillMaxSize().background(colorResource(R.color.me_bg))
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
+            banner = { PermissionBanner(missing) },
         ) {
-            MeTopBar(
-                title = Sections.byId(currentSection)?.label ?: stringResource(R.string.app_name),
-                currentSectionId = currentSection,
-                onOpen = { open(it) },
-            )
-            MeBody(
-                selectedSectionId = currentSection,
-                onOpen = { open(it) },
-                onTarget = { onTarget(it) },
-                modifier = Modifier.weight(1f),
-            ) {
-                currentSection?.let { id -> key(id, openSeq) { SectionScreen(id, currentPage) } }
-            }
+            currentSection?.let { id -> key(id, openSeq) { SectionScreen(id, currentPage) } }
         }
     }
 

@@ -9,6 +9,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
@@ -82,9 +83,9 @@ fun MeBody(
     onOpen: (String) -> Unit,
     onTarget: (String) -> Unit,
     modifier: Modifier = Modifier,
+    collapse: BottomNavCollapse = rememberBottomNavCollapse(),
     content: @Composable () -> Unit,
 ) {
-    val collapse = rememberBottomNavCollapse()
     Column(modifier) {
         Box(Modifier.weight(1f).fillMaxWidth().nestedScroll(collapse).testTag(MeBottomNav.CONTENT_TAG)) {
             content()

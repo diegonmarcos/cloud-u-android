@@ -180,9 +180,9 @@ for s in secs:
 bar = [by_id[i] for i in bar_ids if i in by_id]
 
 # Mirror NavDecl.bottomSections() — the order is the declared order. Diego's
-# #1144 ask: Health, Study, Achieves, Profile, Home, Work, Buro, left to right.
+# #1144 ask: Health, Study, Achieves, Profile, House, Work, Buro, left to right.
 bar_order = [s.get("label") for s in bar]
-EXPECTED_BAR_ORDER = ["Health", "Study", "Achieves", "Profile", "Home", "Work", "Buro"]
+EXPECTED_BAR_ORDER = ["Health", "Study", "Achieves", "Profile", "House", "Work", "Buro"]
 if bar_order != EXPECTED_BAR_ORDER:
     bad.append(f"bottom bar order is {bar_order}, expected {EXPECTED_BAR_ORDER}")
 
@@ -260,13 +260,15 @@ def strings(o):
     elif isinstance(o, list):
         for v in o:          yield from strings(v)
 
-# Every route the SuperApp actually ships, plus the one Home > Summary was
-# built to answer. The literal is here on purpose: it is the contract this app
+# Every route the SuperApp actually ships, plus the House Management page that
+# replaced Home > Summary (#1150). The literal is here on purpose: it is the contract this app
 # publishes, and it has to hold on the day the SuperApp side is written as much
 # as on the day after.
 routes = {s.split("#", 1)[1] for s in strings(json.load(open(SUPERAPP)))
           if s.startswith("extapp:cloud-me#") and "#" in s}
-routes.add("page:home/pm")
+routes.add("page:house/manage")
+routes.add("page:me/tasks")
+routes.add("page:achieves/trips")
 
 bad = [why for _, why in map(resolve, sorted(routes)) if why]
 for b in bad:

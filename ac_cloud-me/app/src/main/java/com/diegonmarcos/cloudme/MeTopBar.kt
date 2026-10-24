@@ -1,64 +1,60 @@
 package com.diegonmarcos.cloudme
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-/** Test tags of the top bar; [entry] is one visible Settings entry. */
-object MeTopBar {
-    const val TITLE = "me:topbar:title"
-    fun entry(sectionId: String) = "me:settings:$sectionId"
-}
+import com.diegonmarcos.superapp.bottomnav.TopBarDecl
+import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
+import com.diegonmarcos.superapp.bottomnav.TopBarSettings
 
 /**
- * The bar at the top of every page: the section's title on the left and, at the right, the Settings
- * entries (`ui.settings`: Profile and Configs) as two VISIBLE entries, each an icon with its name.
- * They replace the Settings dropdown (a gear that hid its entries behind a tap) and the hamburger: Cloud Me
- * has no drawer and no swipe-from-the-edge gesture of any kind, so a page scrolls freely under a thumb
- * that drifts sideways. An entry opens its section through [onOpen]; the one on screen is lit.
+ * The first row of every page is libs:bottomnav's AppTopBar (ticket #1150), in its inline-actions form: a hamburger at
+ * the left that opens the left side menu BY TAP ONLY, and icons without labels at the right: AI (sparkles),
+ * Profile (round avatar) and Configs (vertical dots). There is no edge-swipe anywhere (#1144 removed one that
+ * hijacked scrolling; MeShellTest holds that). Profile and Configs open Cloud Me's own sections (`ui.settings`), not
+ * Cloud Account, so the declaration is built here rather than in build.json::ui.top_bar.
  */
+object MeTopBar {
+    val decl = TopBarDecl(
+        drawer = true,
+        settings = listOf(TopBarSettings.ACCOUNT, TopBarSettings.CONFIGS),
+        inlineActions = true,
+    )
+
+    /** The AI button hands over to the SuperApp, whose assistant it is; Cloud Me links no chat of its own. */
+    const val AI_TARGET = "extapp:cloud-superapp/ai"
+
+    fun drawerItem(sectionId: String) = "me:drawer:$sectionId"
+}
+
+/** The left side menu: every section of the app, the bar's and the Settings entries'. A tap opens it and closes the menu. */
 @Composable
-fun MeTopBar(title: String, currentSectionId: String?, onOpen: (String) -> Unit, modifier: Modifier = Modifier) {
+fun MeDrawer(onOpen: (String) -> Unit) {
     val ctx = LocalContext.current
-    Row(modifier.fillMaxWidth().height(56.dp).padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, Modifier.weight(1f).testTag(MeTopBar.TITLE), color = colorResource(R.color.me_text), fontSize = 20.sp, maxLines = 1)
-        for (s in Sections.settings()) {
-            val on = s.id == currentSectionId
+    TopBarDrawer { close ->
+        for (s in Sections.all()) {
             @Suppress("DiscouragedApi")
             val icon = ctx.resources.getIdentifier(s.icon, "drawable", ctx.packageName)
-            val ink = colorResource(if (on) R.color.me_primary else R.color.me_text_dim)
             Row(
-                Modifier.padding(start = 6.dp).height(40.dp).clip(RoundedCornerShape(50))
-                    .background(colorResource(if (on) R.color.me_surface_high else R.color.me_surface))
-                    .clickable { onOpen(s.id) }
-                    .semantics { role = Role.Button; selected = on }
-                    .padding(horizontal = 12.dp)
-                    .testTag(MeTopBar.entry(s.id)),
+                Modifier.fillMaxWidth().clickable { onOpen(s.id); close() }.padding(horizontal = 20.dp, vertical = 14.dp)
+                    .testTag(MeTopBar.drawerItem(s.id)),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (icon != 0) Icon(painterResource(icon), null, Modifier.size(18.dp), tint = ink)
-                Text(s.label, Modifier.padding(start = if (icon != 0) 6.dp else 0.dp), color = ink, fontSize = 13.sp, maxLines = 1)
+                if (icon != 0) Icon(painterResource(icon), null, Modifier.size(22.dp), tint = colorResource(R.color.me_text_dim))
+                Text(s.label, Modifier.padding(start = 16.dp), color = colorResource(R.color.me_text), fontSize = 16.sp, maxLines = 1)
             }
         }
     }

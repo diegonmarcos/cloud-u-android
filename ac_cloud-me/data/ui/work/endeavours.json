@@ -1,0 +1,44 @@
+[
+  {
+    "kind": "note",
+    "title": "Endeavours",
+    "body": "2 own ventures, newest first."
+  },
+  {
+    "kind": "cards",
+    "items": [
+      {
+        "title": "Product Engineer Manager",
+        "subtitle": "LEAF.Y · Self-employed",
+        "accent": "#7E57C2",
+        "meta": [
+          {
+            "label": "Dates",
+            "value": "Nov 2025 - Present"
+          },
+          {
+            "label": "Location",
+            "value": "Berlin, Germany"
+          }
+        ],
+        "body": "| L E A F .Y 🌿 S T U D I O S |\n\"W h e r e  E d g e  T e c h n o l o g y  m e e t s  D e s i g n \"\n\n@brief\n\"Designing the products of tomorrow in Web3, AR, Unix and Godot environments with the leverage of AI into fine delivered designs\"\n\n> https://diegonmarcos.github.io/leafy\n\n---\n\n@projects\n- 20 Vue and Svelte Front-End Developments\n- 2 Enterprise Cloud Infrastructure Design and Implementation\n- 1 Management Dashboard Application"
+      },
+      {
+        "title": "Capital Markets Advisor",
+        "subtitle": "Nexus Ventures & Solutions · Full-time",
+        "accent": "#7E57C2",
+        "meta": [
+          {
+            "label": "Dates",
+            "value": "Dec 2021 - Present"
+          },
+          {
+            "label": "Location",
+            "value": "Remote"
+          }
+        ],
+        "body": "| NEXUS PARTNERS • NEXUS VENTURES • NEXUS SOLUTIONS |\n\"Capital meets Architecture\"\n\n@brief\n\"Structuring deals and distribution with investors focused on the middle market\"\n\n> https://nexus.diegonmarcos.com\n\n---\n\n@projects\n- Margate Backed Securities Operation for one Real Estate Entripse\n- Raising Funds for 3 startups\n- Strategic Consulting for 2 startups\n- Outsourced Financial and Business Analyst for 1 startup\n- Partners: DHGP Capital, Engage Capital, Phi Capital"
+      }
+    ]
+  }
+]

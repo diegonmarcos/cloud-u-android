@@ -182,7 +182,7 @@ TARGETS = {
     "myburo":    "extapp:cloud-me#page:buro/summary",
     "myhealth":  "extapp:cloud-me#page:health/body",
     "mystudy":   "extapp:cloud-me#page:study/cv",
-    "mytrips":   "extapp:cloud-me#page:home/trips",
+    "mytrips":   "extapp:cloud-me#page:achieves/trips",
 }
 
 def kind(tile):

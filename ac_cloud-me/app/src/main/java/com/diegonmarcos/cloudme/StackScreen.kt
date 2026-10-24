@@ -1,11 +1,7 @@
 package com.diegonmarcos.cloudme
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
-import android.util.Base64
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,9 +24,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import coil.imageLoader
 import coil.request.ImageRequest
 import com.diegonmarcos.superapp.updater.Updater
@@ -347,29 +340,8 @@ private fun AboutCard(o: JSONObject) {
 
 @Composable
 private fun PermissionsCard(o: JSONObject) {
-    val ctx = LocalContext.current
-    // Bumped when the system dialog answers, so the rows re-read what is granted.
-    var answered by remember { mutableIntStateOf(0) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { answered++ }
-    MeCard {
-        o.optString("title").takeIf { it.isNotBlank() }?.let { CardTitle(it) }
-        o.optString("subtitle").takeIf { it.isNotBlank() }?.let { Dim(it) }
-        val perms = remember {
-            runCatching {
-                JSONArray(String(Base64.decode(BuildConfig.UI_PERMISSIONS_RUNTIME_B64, Base64.DEFAULT)))
-            }.getOrDefault(JSONArray())
-        }
-        if (perms.length() == 0) Dim("None declared.")
-        for (i in 0 until perms.length()) {
-            val p = perms.optJSONObject(i) ?: continue
-            val perm = p.optString("perm")
-            val granted = answered >= 0 &&
-                ContextCompat.checkSelfPermission(ctx, perm) == PackageManager.PERMISSION_GRANTED
-            ActionRow(p.optString("label"), if (granted) "granted" else "grant") {
-                if (!granted) launcher.launch(perm)
-            }
-        }
-    }
+    // The rows, the requests and the settings link are PermissionsList's; the one launcher lives in MainActivity.
+    MeCard { PermissionsList(o.optString("title"), o.optString("subtitle")) }
 }
 
 // ── small helpers ────────────────────────────────────────────────

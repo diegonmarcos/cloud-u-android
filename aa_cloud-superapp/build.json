@@ -2839,7 +2839,7 @@
                 "id": "mytrips",
                 "label": "MyTrips",
                 "icon": "ic_map_pin",
-                "target": "extapp:cloud-me#page:home/trips"
+                "target": "extapp:cloud-me#page:achieves/trips"
               }
             ]
           },

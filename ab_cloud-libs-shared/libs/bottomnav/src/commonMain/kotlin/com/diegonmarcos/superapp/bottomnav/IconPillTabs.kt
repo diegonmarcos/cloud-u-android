@@ -51,9 +51,11 @@ import androidx.compose.ui.unit.sp
  * (this is [PageTabs]' `iconFor` mode, not a second widget): idle tabs are a bare glyph in the idle ink,
  * the selected tab wears the selected fill and stroke with its glyph and its label side by side.
  *
- * The row fills the width and spreads its tabs; when the selected name leaves too little room for the
- * icons the row scrolls rather than clipping a tab. Every tab is a 44dp-high target announced as a Tab
- * with its declared label, so an icon-only tab is still named for TalkBack.
+ * Smaller than the bottom nav (hierarchy: these are the children of the selected nav page): [TAB_HEIGHT],
+ * [TAB_ICON], [TAB_LABEL_SP]. The row fills the width and shares the free space EVENLY (space-evenly): one tab
+ * sits centred, N tabs have equal gaps between them and to both borders. When the selected name leaves too
+ * little room the row scrolls rather than clipping a tab. Every tab is announced as a Tab with its
+ * declared label, so an icon-only tab is still named for TalkBack.
  */
 @Composable
 internal fun IconPillStrip(
@@ -86,11 +88,12 @@ internal fun IconPillStrip(
                 .background(colors.idleFill, capsule)
                 .border(tokens.tabsPillStroke, colors.idleStroke, capsule)
                 .horizontalScroll(scroll)
-                .padding(tokens.tabsStripPadding)
-                .widthIn(min = maxWidth - tokens.tabsStripPadding * 2 - 2.dp)
+                // Vertical padding only: the free width is shared by SpaceEvenly, so the gap to each border equals the gap between tabs.
+                .padding(vertical = tokens.tabsStripPadding)
+                .widthIn(min = maxWidth)
                 .selectableGroup()
                 .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = pages.size) },
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             pages.forEachIndexed { i, page ->
@@ -99,8 +102,8 @@ internal fun IconPillStrip(
                 val source = rememberSource()
                 Row(
                     Modifier
-                        .defaultMinSize(minWidth = 44.dp)
-                        .heightIn(min = 44.dp)
+                        .defaultMinSize(minWidth = TAB_MIN_WIDTH)
+                        .heightIn(min = TAB_HEIGHT)
                         .clip(CircleShape)
                         .then(if (on) Modifier.background(colors.selectedFill, CircleShape).border(tokens.tabsPillStroke, colors.selectedStroke, CircleShape) else Modifier)
                         .clickable(interactionSource = source, indication = FleetIndication) {
@@ -112,25 +115,25 @@ internal fun IconPillStrip(
                             contentDescription = page.label
                             collectionItemInfo = CollectionItemInfo(rowIndex = 0, rowSpan = 1, columnIndex = i, columnSpan = 1)
                         }
-                        .padding(horizontal = if (on) 14.dp else 10.dp)
+                        .padding(horizontal = if (on) 12.dp else 8.dp)
                         .testTag(PageTabsTags.tab(page.id)),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     val painter = iconFor(page)
                     if (painter != null) {
-                        Icon(painter, null, Modifier.size(24.dp).testTag(PageTabsTags.icon(page.id)), tint = ink)
+                        Icon(painter, null, Modifier.size(TAB_ICON).testTag(PageTabsTags.icon(page.id)), tint = ink)
                     } else {
                         // No glyph declared: the initial stands in, so a tab is never blank.
                         Text(page.label.take(1).uppercase(), Modifier.testTag(PageTabsTags.icon(page.id)), color = ink,
-                            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold))
+                            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold))
                     }
                     if (on) {
                         Text(
                             page.label,
-                            Modifier.padding(start = 8.dp).testTag(PageTabsTags.label(page.id)),
+                            Modifier.padding(start = 6.dp).testTag(PageTabsTags.label(page.id)),
                             color = ink,
-                            style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                            style = TextStyle(fontSize = TAB_LABEL_SP.sp, fontWeight = FontWeight.Bold),
                             maxLines = 1,
                             softWrap = false,
                             overflow = TextOverflow.Ellipsis,
@@ -141,6 +144,13 @@ internal fun IconPillStrip(
         }
     }
 }
+
+// Sub-page tabs are the CHILDREN of the bottom-nav page, so they are drawn smaller than the nav: a 32dp
+// target (the nav's collapsed item is 36dp, its icon 24dp, its label 12sp), an 18dp glyph, an 11sp name.
+internal val TAB_HEIGHT = 32.dp
+internal val TAB_MIN_WIDTH = 36.dp
+internal val TAB_ICON = 18.dp
+internal const val TAB_LABEL_SP = 11
 
 @Composable
 private fun rememberSource(): MutableInteractionSource = androidx.compose.runtime.remember { MutableInteractionSource() }

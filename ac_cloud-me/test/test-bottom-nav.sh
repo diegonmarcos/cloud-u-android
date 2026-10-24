@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tester (#531): Cloud Me's bottom bar is libs:bottomnav's Compose island, the
 # stock Material BottomNavigationView is gone, and the bar reads
-# Health | Study | Achieves | Profile | Home | Work | Buro (#1144, was #504). Structure only: the
+# Health | Study | Achieves | Profile | House | Work | Buro (#1144, was #504). Structure only: the
 # rendered order, pill, tap routing, clearance and scroll-collapse are MEASURED on
 # the real shell body (MeBody) by app/src/test/.../MeBottomNavTest (CI tests.unit).
 set -u
@@ -20,12 +20,12 @@ def code(f):
     t = open(os.path.join(d, f), encoding='utf-8').read()
     t = re.sub(r'/\*.*?\*/', '', t, flags=re.S)
     return re.sub(r'(?m)^\s*//.*$', '', t)
-nav, act = code('MeBottomNav.kt'), code('MainActivity.kt')
+nav, act, shell = code('MeBottomNav.kt'), code('MainActivity.kt'), code('MeShell.kt')
 p = []
 if not re.search(r'\bBottomNavIsland\s*\(', nav):
     p.append('MeBottomNav.kt does not draw libs:bottomnav BottomNavIsland')
-if not re.search(r'\bMeBody\s*\(', act):
-    p.append('MainActivity does not lay the section out through MeBody (content above the island)')
+if not re.search(r'\bMeShell\s*\(', act) or not re.search(r'\bMeBody\s*\(', shell):
+    p.append('MainActivity does not lay the section out through MeShell > MeBody (content above the island)')
 if os.path.exists(os.path.join(sys.argv[2], 'layout', 'activity_main.xml')):
     p.append('activity_main.xml is back: the shell is Compose')
 print('; '.join(p) or 'OK')
@@ -49,7 +49,7 @@ print('; '.join(hits) or 'OK')
 PY
 )" "the stock BottomNavigationView is gone"
 
-echo "== T3: the bar sections, in order, are Health | Study | Achieves | Profile | Home | Work | Buro (#1144) =="
+echo "== T3: the bar sections, in order, are Health | Study | Achieves | Profile | House | Work | Buro (#1144) =="
 check "$(python3 - "$APP/build.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -57,7 +57,7 @@ d = json.load(open(sys.argv[1]))
 secs = {s['id']: s for s in d['ui']['sections']}
 ids = d['ui'].get('bottom_nav', [])
 got = [secs[i]['label'] for i in ids if i in secs]
-want = ['Health', 'Study', 'Achieves', 'Profile', 'Home', 'Work', 'Buro']
+want = ['Health', 'Study', 'Achieves', 'Profile', 'House', 'Work', 'Buro']
 p = []
 if len(got) != len(ids):
     p.append('ui.bottom_nav names an id that is not a ui.sections id')

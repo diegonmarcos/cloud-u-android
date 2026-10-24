@@ -8,10 +8,11 @@ the public profile, travel, study — and health.
 
 ```
 ┌────────┬───────┬──────────┬─────────┬──────┬──────┬──────┐
-│ Health │ Study │ Achieves │ Profile │ Home │ Work │ Buro │   ← bottom nav
-└────────┴───────┴──────────┴─────────┴──────┴──────┴──────┘
-  top right: Profile · Configs   (two visible entries, no drawer, no edge swipe)
-  page tabs: Samsung Health pills — icon only, the selected one also shows its name
+│ Health │ Study │ Achieves │ Profile │ House │ Work │ Buro │   ← bottom nav
+└────────┴───────┴──────────┴─────────┴───────┴──────┴──────┘
+  top bar: ☰ left menu (tap only, no edge swipe) · right: AI · Profile · Configs (icons only)
+  scrolling down hides the top bar and collapses the nav labels; scrolling up restores both
+  page tabs: smaller than the nav, icon only (the selected one also shows its name), spaced evenly
 ```
 
 ## What it stores
@@ -24,7 +25,8 @@ Almost nothing. That is the design.
 | Buro → IDs | Cloud Wallet (the card deck) |
 | Buro → Account | Cloud Account (launch tab, `extapp:cloud-account`) |
 | Buro → Accounting | `libs:fin`, from `build.json::ui.myfin_mock` |
-| Agenda | `libs:cal` — CalDAV events + VTODOs, read locally |
+| Profile → Tasks | the cal engine — CalDAV events + VTODOs, read locally (Day, Subject, Calendar) |
+| House | House Management: empty states until a source exists |
 | Me | `libs:wallet` — the same Me tab Cloud Wallet shows |
 | Health | `libs:health` — Health Connect, on-device only |
 | Study, Work | `data/regen-study.py` from the bundled LinkedIn profile data (no LinkedIn API) |

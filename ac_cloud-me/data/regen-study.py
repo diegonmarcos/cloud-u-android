@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""data/web/mysocials/data-linkedin.json.js -> data/ui/study/{cv,roadmap}.json + data/ui/work/employed.json
+"""data/web/mysocials/data-linkedin.json.js -> data/ui/study/{cv,roadmap}.json + data/ui/work/{employed,endeavours}.json
 
-Study (CV, Roadmap) and Work (Employed Endeavours) are the owner's public LinkedIn
+Study (CV, Roadmap) and Work (Employed, Endeavours) are the owner's public LinkedIn
 profile, already bundled for Profile > Professional. There is no LinkedIn API, so
 the bundle is the one source: when the profile changes, refresh that bundle, then
 run this. Nothing is typed twice.
@@ -19,6 +19,8 @@ SRC = os.path.join(HERE, "web", "mysocials", "data-linkedin.json.js")
 UI = os.path.join(HERE, "ui")
 REF_YEAR = 2026
 BREAK = "Career break"  # not employment: kept on the CV, left out of Work
+# Endeavours (Work > Endeavours) are the roles at ventures the owner runs himself; every other role is Employed.
+ENDEAVOURS = ("LEAF.Y", "Nexus Ventures")
 
 
 def load():
@@ -83,12 +85,19 @@ def build(d):
         if nxt else {"kind": "note", "title": "Nothing scheduled", "body": "No course on the profile runs past this year."},
     ]
     jobs = [e for e in d["experience"] if not e["company"].startswith(BREAK)]
+    own = [e for e in jobs if e["company"].startswith(ENDEAVOURS)]
+    employed = [e for e in jobs if e not in own]
     work = [
-        {"kind": "note", "title": "Employed Endeavours",
-         "body": f"{len(jobs)} roles, newest first. Career breaks are on the CV, not here."},
-        {"kind": "cards", "items": [job_card(e, body=True) for e in jobs]},
+        {"kind": "note", "title": "Employed",
+         "body": f"{len(employed)} roles, newest first. Own ventures are under Endeavours; career breaks are on the CV, not here."},
+        {"kind": "cards", "items": [job_card(e, body=True) for e in employed]},
     ]
-    return {"study/cv.json": cv, "study/roadmap.json": roadmap, "work/employed.json": work}
+    endeavours = [
+        {"kind": "note", "title": "Endeavours",
+         "body": f"{len(own)} own ventures, newest first."},
+        {"kind": "cards", "items": [job_card(e, body=True) for e in own]},
+    ]
+    return {"study/cv.json": cv, "study/roadmap.json": roadmap, "work/employed.json": work, "work/endeavours.json": endeavours}
 
 
 def main(argv):

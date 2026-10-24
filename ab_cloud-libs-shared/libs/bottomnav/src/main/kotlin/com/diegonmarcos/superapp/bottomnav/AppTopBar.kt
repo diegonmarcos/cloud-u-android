@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.bottomnav
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -98,12 +99,16 @@ public fun AppTopBarScaffold(
     colors: AppTopBarColors = appTopBarColors(),
     onAi: (() -> Unit)? = null,
     aiPanel: @Composable (close: () -> Unit) -> Unit = {},
+    /** False slides the row away (a host hides it while its page scrolls down, with [BottomNavCollapse]); true shows it. */
+    barVisible: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(LocalAppTopBar provides controller) {
         Box(modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
-                AppTopBar(decl, title, controller, onAccount, onConfigs, labels = labels, colors = colors, onAi = onAi, aiPanel = aiPanel)
+                AnimatedVisibility(barVisible, Modifier.testTag(TopBarTags.BAR_SLOT)) {
+                    AppTopBar(decl, title, controller, onAccount, onConfigs, labels = labels, colors = colors, onAi = onAi, aiPanel = aiPanel)
+                }
                 Box(Modifier.weight(1f).fillMaxWidth()) { content() }
             }
             if (decl.drawer && controller.drawerOpen) DrawerOverlay(controller, labels, colors)
@@ -290,6 +295,8 @@ public fun appTopBarColors(): AppTopBarColors {
 /** Test tags of the bar's parts, for a host's compose tests. */
 public object TopBarTags {
     public const val BAR: String = "topbar"
+    /** The slot [AppTopBarScaffold] folds away when `barVisible` is false. */
+    public const val BAR_SLOT: String = "topbar_slot"
     public const val MENU: String = "topbar_menu"
     public const val TITLE: String = "topbar_title"
     public const val AI: String = "topbar_ai"

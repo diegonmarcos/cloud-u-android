@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "fragment",
+    "id": "tasks",
+    "title": "Tasks",
+    "subtitle": "Day, Subject and Calendar views over the calendar engine"
+  }
+]

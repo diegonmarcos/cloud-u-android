@@ -30,7 +30,7 @@
         "title": "Travel",
         "subtitle": "Flights · stays · local transport",
         "accent": "#42A5F5",
-        "target": "page:home/trips"
+        "target": "page:achieves/trips"
       },
       {
         "title": "Study",

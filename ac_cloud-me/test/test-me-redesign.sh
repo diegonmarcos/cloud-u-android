@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Tester (#1144): Cloud Me's seven-section bar, the Samsung Health page tabs, the two visible Settings entries,
-# the Achieves text, the removed edge-swipe drawer, the Account launch and the removed Wallet link.
+# Tester (#1144, #1150): Cloud Me's seven-section bar, the Samsung Health page tabs, the fleet top bar (hamburger,
+# AI, Profile, Configs), the Achieves text, the tap-only side menu (no edge-swipe), the Account launch and the removed
+# Wallet link, plus the Work / House / Tasks page shapes.
 # Structure and data only; the RENDERED strip, bar and top bar are measured by app/src/test/.../MeTabsTest.
 # Every check is proven red by its own mutation of a copy of the tree (the tail of this file).
 set -u
@@ -46,8 +47,8 @@ def strings(o):
         for v in o: yield from strings(v)
 
 # ---- N1 nav order
-want_ids = ["health", "study", "achieves", "me", "home", "work", "buro"]
-want_labels = ["Health", "Study", "Achieves", "Profile", "Home", "Work", "Buro"]
+want_ids = ["health", "study", "achieves", "me", "house", "work", "buro"]
+want_labels = ["Health", "Study", "Achieves", "Profile", "House", "Work", "Buro"]
 if ui.get("bottom_nav") != want_ids:
     bad("nav-order", f"ui.bottom_nav is {ui.get('bottom_nav')}, wanted {want_ids}")
 if [secs[i]["label"] for i in ui.get("bottom_nav", []) if i in secs] != want_labels:
@@ -80,18 +81,20 @@ for s in secs.values():
             if not p.get("icon") or p["icon"] not in drawables:
                 bad("tab-style", f"tab {s['id']}/{p['id']} has no drawable icon ({p.get('icon')!r}); an icon-only tab would be blank")
 
-# ---- N3 settings: two visible entries, Profile and Configs, no dropdown
+# ---- N3 top bar: the fleet's AppTopBar, inline actions; ui.settings names the sections Profile and Configs open
 st = ui.get("settings")
 if st != ["me", "configs"] or [secs[i]["label"] for i in (st or []) if i in secs] != ["Profile", "Configs"]:
     bad("settings", f"ui.settings is {st}; wanted the sections Profile and Configs, in that order")
 for p in kt(MAIN):
-    if re.search(r"\bDropdownMenu\b|\bAppTopBar(Scaffold)?\b|Icons\.Filled\.Settings", code(p)):
-        bad("settings", f"{os.path.relpath(p, app)} draws a Settings dropdown")
-top = os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MeTopBar.kt")
-if not os.path.exists(top) or "Sections.settings()" not in code(top):
-    bad("settings", "MeTopBar does not draw the ui.settings entries")
-if "MeTopBar(" not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MainActivity.kt")):
-    bad("settings", "MainActivity does not draw MeTopBar")
+    if re.search(r"\bDropdownMenu\b|Icons\.Filled\.Settings|Icons\.[A-Za-z.]*\.Menu\b", code(p)):
+        bad("settings", f"{os.path.relpath(p, app)} draws a Settings dropdown or its own hamburger")
+bar_src = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MeTopBar.kt"))
+if not re.search(r"inlineActions\s*=\s*true", bar_src) or not re.search(r"drawer\s*=\s*true", bar_src):
+    bad("settings", "MeTopBar does not declare the hamburger and the inline AI / Profile / Configs icons")
+if "AppTopBarScaffold(" not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MeShell.kt")):
+    bad("settings", "MeShell does not draw the fleet top bar (AppTopBarScaffold)")
+if "MeShell(" not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MainActivity.kt")):
+    bad("settings", "MainActivity does not draw MeShell")
 
 # ---- N4 achieves: the owner's text, byte for byte
 ach = {}
@@ -100,9 +103,9 @@ for pid in ("personal", "pursuits", "international"):
     ach[pid] = json.load(open(f, encoding="utf-8")) if os.path.exists(f) else []
     if not ach[pid]:
         bad("achieves", f"data/ui/achieves/{pid}.json is missing or empty")
-if [p["id"] for p in secs.get("achieves", {}).get("pages", [])] != ["personal", "pursuits", "international"] or \
-   [p["label"] for p in secs.get("achieves", {}).get("pages", [])] != ["Personal", "Personal Pursuits", "International Experience"]:
-    bad("achieves", "Achieves pages are not Personal, Personal Pursuits, International Experience")
+if [p["id"] for p in secs.get("achieves", {}).get("pages", [])] != ["personal", "pursuits", "international", "trips"] or \
+   [p["label"] for p in secs.get("achieves", {}).get("pages", [])] != ["Personal", "Personal Pursuits", "International Experience", "Trips"]:
+    bad("achieves", "Achieves pages are not Personal, Personal Pursuits, International Experience, Trips")
 EXPECT = {
  "personal": [
   "B1) Personal",
@@ -177,6 +180,29 @@ for r, _, fs in os.walk(os.path.join(MAIN, "res")):
         if "drawer" in f.lower() or "hamburger" in f.lower():
             bad("no-drawer", f"resource {f} is a drawer leftover")
 
+# the lib's side menu opens by tap: no drag / swipe API in the top bar that draws it
+lib_bar = os.path.join(libs, "bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/AppTopBar.kt")
+if os.path.exists(lib_bar):
+    m = re.search(r"detectHorizontalDragGestures|detectDragGestures|\bswipeable\b|\banchoredDraggable\b|\bdraggable\b|GestureDetector|gesturesEnabled", code(lib_bar))
+    if m:
+        bad("no-drawer", f"the lib AppTopBar carries `{m.group(0)}`: the side menu must open by tap only")
+
+# ---- N7a House replaces Home; Agenda / Todo are one Tasks page under Profile; Trips is under Achieves
+if "home" in secs:
+    bad("pages", "the Home section is back; it is House (House Management)")
+if [p["id"] for p in secs.get("house", {}).get("pages", [])] != ["manage"]:
+    bad("pages", "House is not the single House Management page")
+if [p["id"] for p in secs.get("me", {}).get("pages", [])] != ["professional", "personal", "tasks"]:
+    bad("pages", "Profile pages are not Professional, Personal, Tasks")
+for gone in ("agenda", "todo", "pm"):
+    if any(p["id"] == gone for p in pages(secs.get("house", {}).get("pages"))):
+        bad("pages", f"House still carries {gone}")
+if os.path.isdir(os.path.join(app, "data/ui/home")):
+    bad("pages", "data/ui/home is back")
+blob_all = "".join(open(os.path.join(r, f), encoding="utf-8").read() for r, _, fs in os.walk(os.path.join(app, "data/ui")) for f in fs if f.endswith(".json"))
+if "page:home/" in blob_all:
+    bad("pages", "a page still targets page:home/...")
+
 # ---- N6 Account: renamed from Vault and launching Cloud Account
 buro = secs["buro"]
 acct = [p for p in buro["pages"] if p["id"] == "account"]
@@ -220,12 +246,12 @@ if "extapp:cloud-wallet" in blob:
 want_pages = {
     "health": ["Body Composition", "HR stats", "Sleep", "Blood Test", "Nutrition Plan", "Workout Plan", "Activities"],
     "study": ["CV", "Roadmap"],
-    "work": ["Employed Endeavours"],
+    "work": ["Employed", "Endeavours"],
 }
 for sid, labels in want_pages.items():
     if [p["label"] for p in secs.get(sid, {}).get("pages", [])] != labels:
         bad("pages", f"{sid} pages are not {labels}")
-for sid, pg in (("study", "cv"), ("study", "roadmap"), ("work", "employed")):
+for sid, pg in (("study", "cv"), ("study", "roadmap"), ("work", "employed"), ("work", "endeavours"), ("house", "manage"), ("me", "tasks"), ("achieves", "trips")):
     f = os.path.join(app, f"data/ui/{sid}/{pg}.json")
     if not os.path.exists(f) or not json.load(open(f, encoding="utf-8")):
         bad("pages", f"data/ui/{sid}/{pg}.json is missing or empty")
@@ -242,14 +268,14 @@ only() { # <check id>: nothing but that id is red in the real tree
   local r; r="$(check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | cut -f1 | sort -u | grep -x "$1" || true)"
   [ -z "$r" ]
 }
-for t in "nav-order|the bar reads Health, Study, Achieves, Profile, Home, Work, Buro" \
+for t in "nav-order|the bar reads Health, Study, Achieves, Profile, House, Work, Buro" \
          "tab-style|page tabs are icon-only pills that show the name of the selected tab only" \
-         "settings|Settings is two visible entries, Profile and Configs, with no dropdown" \
+         "settings|the top bar is the fleet AppTopBar: hamburger, AI, Profile, Configs, no dropdown" \
          "achieves|Achieves renders the owner's text (B1, B2, B3, region table with its link)" \
-         "no-drawer|no swipe-to-open drawer handler anywhere (shell, Profile page, resources)" \
+         "no-drawer|no swipe-to-open drawer handler anywhere (shell, the lib top bar, Profile page, resources)" \
          "account|Buro > Account launches Cloud Account through extapp, Vault is gone" \
          "no-wallet|the Wallet link is gone" \
-         "pages|Health, Study and Work pages are declared with their data"; do
+         "pages|Health, Study, Work, House, Tasks and Trips pages are declared with their data"; do
   id="${t%%|*}"; name="${t#*|}"
   if only "$id"; then ok "$name"; else bad "$name"; check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | grep "^$id" | sed 's/^/        /'; fi
 done
@@ -259,7 +285,7 @@ W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 mkdir -p "$W/base/ac_cloud-me" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src"
 cp -r "$APP/build.json" "$APP/app" "$APP/data" "$W/base/ac_cloud-me/" 2>/dev/null
 rm -rf "$W/base/ac_cloud-me/app/build"
-cp -r "$APP/../ab_cloud-libs-shared/libs/bottomnav/src/commonMain" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src/"
+cp -r "$APP/../ab_cloud-libs-shared/libs/bottomnav/src/commonMain" "$APP/../ab_cloud-libs-shared/libs/bottomnav/src/main" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src/"
 mutant() { # id description sh-command-run-in-copy
   local id="$1" desc="$2" cmd="$3" d="$W/m"
   rm -rf "$d"; cp -r "$W/base" "$d"
@@ -272,6 +298,10 @@ mutant tab-style "selected-only name drawn on every tab" "sed -i 's/if (on) {/if
 mutant tab-style "SectionScreen back to text pills" "sed -i 's/iconFor = /xxx = /' app/src/main/java/com/diegonmarcos/cloudme/SectionScreen.kt"
 mutant settings "Settings entries reduced to one" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['settings']=['configs'];json.dump(d,open('build.json','w'))\""
 mutant settings "a dropdown comes back" "echo 'val x = DropdownMenu' >> app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"
+mutant no-drawer "a drag handler is back in the lib top bar" "echo 'val d = detectHorizontalDragGestures' >> ../ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/AppTopBar.kt"
+mutant settings "the top bar loses its inline actions" "sed -i 's/inlineActions = true/inlineActions = false/' app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"
+mutant pages "the Home section is back" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'home','label':'Home','pages':[]});json.dump(d,open('build.json','w'))\""
+mutant pages "Tasks page dropped from Profile" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].pop() for s in d['ui']['sections'] if s['id']=='me'];json.dump(d,open('build.json','w'))\""
 mutant achieves "one owner sentence altered" "sed -i 's/Aikido, Yoga and Meditation\\./Aikido and Yoga./' data/ui/achieves/personal.json"
 mutant achieves "NomadMania link dropped" "sed -i 's#https://nomadmania.com/profile/73889#https://example.com#' data/ui/achieves/international.json"
 mutant no-drawer "the drawer is back in the shell" "echo 'val d = ModalNavigationDrawer' >> app/src/main/java/com/diegonmarcos/cloudme/MainActivity.kt"
