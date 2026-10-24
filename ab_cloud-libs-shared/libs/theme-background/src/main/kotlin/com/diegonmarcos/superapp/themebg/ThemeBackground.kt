@@ -29,6 +29,8 @@ public data class ThemeColors(
     val onIsland: Color,
     val islandBorder: Color,
     val accent: Color,
+    /** A readable accent for text ON the [island] surface (the plain [accent] is 3.6:1 there in light mode). */
+    val accentOnIsland: Color,
     val tabSelected: Color,
     val onTabSelected: Color,
     val tabStrip: Color,
@@ -65,7 +67,7 @@ public object ThemeBackground {
         top = Color(0xFF0F172A), bottom = Color(0xFF1E293B),
         ink = Color(0xFFF8FAFC), inkDim = Color(0xFF94A3B8),
         island = Color(0xFF0A0F1A), onIsland = Color(0xFFFFFFFF), islandBorder = Color(0x1AFFFFFF),
-        accent = Color(0xFF0A84FF),
+        accent = Color(0xFF0A84FF), accentOnIsland = Color(0xFF7CB9FF),
         tabSelected = TAB_SELECTED, onTabSelected = Color(0xFFFFFFFF), tabStrip = Color(0x14FFFFFF),
     )
 
@@ -74,7 +76,7 @@ public object ThemeBackground {
         top = Color(0xFFE0EAFC), bottom = Color(0xFFCFDEF3),
         ink = Color(0xFF0F172A), inkDim = Color(0xFF475569),
         island = Color(0xFF1F2937), onIsland = Color(0xFFFFFFFF), islandBorder = Color(0x33FFFFFF),
-        accent = Color(0xFF007AFF),
+        accent = Color(0xFF007AFF), accentOnIsland = Color(0xFF7CB9FF),
         tabSelected = Color(0xFF6D28D9), onTabSelected = Color(0xFFFFFFFF), tabStrip = Color(0x0F000000),
     )
 }

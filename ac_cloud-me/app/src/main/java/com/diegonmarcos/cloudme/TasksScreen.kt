@@ -82,7 +82,7 @@ fun TasksScreen(modifier: Modifier = Modifier) {
 fun TasksContent(items: List<TaskItem>, notice: String?, modifier: Modifier = Modifier, today: Long = System.currentTimeMillis()) {
     var view by rememberSaveable { mutableStateOf(TasksView.DAY) }
     var day by remember { mutableLongStateOf(TasksModel.startOfDay(today)) }
-    Column(modifier.fillMaxSize().background(colorResource(R.color.me_bg)).verticalScroll(rememberScrollState())
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())
         .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 28.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             for (v in TasksView.entries) {

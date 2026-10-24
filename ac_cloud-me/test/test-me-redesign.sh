@@ -55,23 +55,24 @@ if [secs[i]["label"] for i in ui.get("bottom_nav", []) if i in secs] != want_lab
     bad("nav-order", f"the bar labels are not {want_labels}")
 
 # ---- N2 tab style: icon-only, the selected one also shows its name
-strip = os.path.join(libs, "bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/IconPillTabs.kt")
-tabs = os.path.join(libs, "bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/PageTabs.kt")
+# #1154 the strip is libs:nav-bar-top-second-row's (the owner moved the second row out of libs:bottomnav)
+strip = os.path.join(libs, "nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt")
+tabs = strip
 if not os.path.exists(strip):
-    bad("tab-style", "libs:bottomnav has no IconPillTabs.kt")
+    bad("tab-style", "libs:nav-bar-top-second-row has no NavBarTopSecondRow.kt")
 else:
     t = code(strip)
-    if "PageTabsTags.icon(" not in t:
+    if "SecondRowTags.icon(" not in t:
         bad("tab-style", "the icon pill does not draw an icon for every tab")
     m = re.search(r"if \(on\) \{\s*Text\(\s*page\.label", t)
     if not m:
         bad("tab-style", "the tab name is not drawn inside `if (on)` - it must show on the selected tab only")
     if len(re.findall(r"page\.label", t)) != len(re.findall(r"if \(on\) \{\s*Text\(\s*page\.label", t)) + len(re.findall(r"contentDescription = page\.label|page\.label\.take", t)):
         bad("tab-style", "an unselected tab draws its name")
-if "iconFor" not in code(tabs) or "IconPillStrip(" not in code(tabs):
-    bad("tab-style", "PageTabs does not route iconFor to the icon pills")
+if "iconFor" not in code(tabs):
+    bad("tab-style", "the second row does not take iconFor (icon-only pills)")
 sec = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/SectionScreen.kt"))
-i = sec.find("PageTabs(")
+i = sec.find("NavBarTopSecondRow(")
 if i < 0 or not re.search(r"\biconFor\s*=", sec[i:i + 2500]):
     bad("tab-style", "SectionScreen draws its strips without iconFor (no icon-only pills)")
 drawables = {n[:-4] for n in os.listdir(os.path.join(MAIN, "res/drawable")) if n.endswith(".xml")}
@@ -91,8 +92,8 @@ for p in kt(MAIN):
 bar_src = code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MeTopBar.kt"))
 if not re.search(r"inlineActions\s*=\s*true", bar_src) or not re.search(r"drawer\s*=\s*true", bar_src):
     bad("settings", "MeTopBar does not declare the hamburger and the inline AI / Profile / Configs icons")
-if "AppTopBarScaffold(" not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MeShell.kt")):
-    bad("settings", "MeShell does not draw the fleet top bar (AppTopBarScaffold)")
+if "NavBarTopFirstRowScaffold(" not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MeShell.kt")):
+    bad("settings", "MeShell does not draw the fleet first row (NavBarTopFirstRowScaffold)")
 if "MeShell(" not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MainActivity.kt")):
     bad("settings", "MainActivity does not draw MeShell")
 
@@ -182,7 +183,9 @@ for r, _, fs in os.walk(os.path.join(MAIN, "res")):
 
 # the lib's side menu opens by tap: no drag / swipe API in the top bar that draws it
 lib_bar = os.path.join(libs, "bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/AppTopBar.kt")
-if os.path.exists(lib_bar):
+lib_row = os.path.join(libs, "nav-bar-top-first-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt")
+for lib_bar in (lib_bar, lib_row):
+  if os.path.exists(lib_bar):
     m = re.search(r"detectHorizontalDragGestures|detectDragGestures|\bswipeable\b|\banchoredDraggable\b|\bdraggable\b|GestureDetector|gesturesEnabled", code(lib_bar))
     if m:
         bad("no-drawer", f"the lib AppTopBar carries `{m.group(0)}`: the side menu must open by tap only")
@@ -283,6 +286,7 @@ done
 echo "== mutations: each check must go red on its own break =="
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 mkdir -p "$W/base/ac_cloud-me" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src"
+for l in nav-bar-top-second-row nav-bar-top-first-row; do mkdir -p "$W/base/ab_cloud-libs-shared/libs/$l/src"; cp -r "$APP/../ab_cloud-libs-shared/libs/$l/src/main" "$W/base/ab_cloud-libs-shared/libs/$l/src/"; done
 cp -r "$APP/build.json" "$APP/app" "$APP/data" "$W/base/ac_cloud-me/" 2>/dev/null
 rm -rf "$W/base/ac_cloud-me/app/build"
 cp -r "$APP/../ab_cloud-libs-shared/libs/bottomnav/src/commonMain" "$APP/../ab_cloud-libs-shared/libs/bottomnav/src/main" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src/"
@@ -294,7 +298,7 @@ mutant() { # id description sh-command-run-in-copy
 }
 BJ='python3 - "$@"'
 mutant nav-order "bar order swapped" "python3 -c \"import json;d=json.load(open('build.json'));b=d['ui']['bottom_nav'];b[0],b[1]=b[1],b[0];json.dump(d,open('build.json','w'))\""
-mutant tab-style "selected-only name drawn on every tab" "sed -i 's/if (on) {/if (true) {/' ../ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/IconPillTabs.kt"
+mutant tab-style "selected-only name drawn on every tab" "sed -i 's/if (on) {/if (true) {/' ../ab_cloud-libs-shared/libs/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt"
 mutant tab-style "SectionScreen back to text pills" "sed -i 's/iconFor = /xxx = /' app/src/main/java/com/diegonmarcos/cloudme/SectionScreen.kt"
 mutant settings "Settings entries reduced to one" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['settings']=['configs'];json.dump(d,open('build.json','w'))\""
 mutant settings "a dropdown comes back" "echo 'val x = DropdownMenu' >> app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"

@@ -4,7 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.CollectionItemInfo
@@ -36,6 +45,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
+import com.diegonmarcos.superapp.bottomnav.TabSurface
+import com.diegonmarcos.superapp.themebg.ThemeBackground
 import com.diegonmarcos.superapp.themebg.ThemeColors
 
 /**
@@ -56,14 +68,17 @@ public object SecondRowSpec {
     public val SELECTED_PAD_H: Dp = 12.dp
     public val IDLE_PAD_H: Dp = 8.dp
     public val STRIP_PAD_V: Dp = 4.dp
-    public val SIDE: Dp = 16.dp
+    public val SIDE: Dp = 8.dp
+    public val TOP_INSET: Dp = 10.dp
+    public val BOTTOM_INSET: Dp = 10.dp
 }
 
+/** The strip's test tags: the SAME strings as libs:bottomnav's [PageTabsTags], so an app's tests that find a tab by them still do. */
 public object SecondRowTags {
-    public const val STRIP: String = "navtop2_strip"
-    public fun tab(id: String): String = "navtop2_tab_$id"
-    public fun icon(id: String): String = "navtop2_icon_$id"
-    public fun label(id: String): String = "navtop2_label_$id"
+    public const val STRIP: String = PageTabsTags.STRIP
+    public fun tab(id: String): String = PageTabsTags.tab(id)
+    public fun icon(id: String): String = PageTabsTags.icon(id)
+    public fun label(id: String): String = PageTabsTags.label(id)
 }
 
 /**
@@ -77,18 +92,39 @@ public fun NavBarTopSecondRow(
     pages: List<NavPage>,
     selectedId: String?,
     onSelect: (NavPage) -> Unit,
-    colors: ThemeColors,
     modifier: Modifier = Modifier,
+    /** The app's light/dark mode: picks the shared palette (libs:theme-background). An app passes no colour. */
+    dark: Boolean = true,
+    onReselect: (NavPage) -> Unit = {},
+    /** True: the strip clears the status bar and cutout (it sits at the very top of the window). */
+    underTopChrome: Boolean = false,
+    flushTop: Boolean = false,
+    /** A page that is light (a white sheet): draws the light palette whatever [dark] says. Null = [dark]'s. */
+    surface: TabSurface? = null,
     iconFor: @Composable (NavPage) -> Painter? = { null },
 ) {
     if (pages.isEmpty()) return
+    val palette = when (surface) {
+        TabSurface.Light -> ThemeBackground.colors(false)
+        TabSurface.Dark -> ThemeBackground.colors(true)
+        null -> ThemeBackground.colors(dark)
+    }
+    val density = LocalDensity.current
+    val live = WindowInsets.statusBars.union(WindowInsets.displayCutout)
+    val liveTop = if (underTopChrome && !flushTop) live.getTop(density) else 0
+    val top = (if (flushTop) 0.dp else SecondRowSpec.TOP_INSET) + with(density) { liveTop.toDp() }
     val strip = RoundedCornerShape(SecondRowSpec.STRIP_RADIUS)
     val tab = RoundedCornerShape(SecondRowSpec.TAB_RADIUS)
+    val scroll = rememberScrollState()
+    BoxWithConstraints(modifier.fillMaxWidth().padding(top = top, bottom = SecondRowSpec.BOTTOM_INSET, start = SecondRowSpec.SIDE, end = SecondRowSpec.SIDE)) {
     Row(
-        modifier.fillMaxWidth().padding(horizontal = SecondRowSpec.SIDE)
+        Modifier.fillMaxWidth()
             .testTag(SecondRowTags.STRIP)
-            .clip(strip).background(colors.tabStrip, strip).border(1.dp, colors.islandBorder, strip)
+            .clip(strip).background(palette.tabStrip, strip).border(1.dp, palette.islandBorder, strip)
+            // A crowded row scrolls rather than clipping a tab; the free width of a roomy one is shared SpaceEvenly.
+            .horizontalScroll(scroll)
             .padding(vertical = SecondRowSpec.STRIP_PAD_V)
+            .widthIn(min = maxWidth)
             .selectableGroup()
             .semantics { collectionInfo = CollectionInfo(rowCount = 1, columnCount = pages.size) },
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -96,12 +132,12 @@ public fun NavBarTopSecondRow(
     ) {
         pages.forEachIndexed { i, page ->
             val on = page.id == selectedId
-            val ink = if (on) colors.onTabSelected else colors.inkDim
+            val ink = if (on) palette.onTabSelected else palette.inkDim
             Row(
                 Modifier.defaultMinSize(minWidth = SecondRowSpec.TAB_MIN_WIDTH).height(SecondRowSpec.TAB_HEIGHT)
                     .clip(tab)
-                    .then(if (on) Modifier.background(colors.tabSelected, tab) else Modifier)
-                    .clickable(role = Role.Tab) { onSelect(page) }
+                    .then(if (on) Modifier.background(palette.tabSelected, tab) else Modifier)
+                    .clickable(role = Role.Tab) { if (on) onReselect(page) else onSelect(page) }
                     .semantics {
                         role = Role.Tab
                         selected = on
@@ -129,5 +165,6 @@ public fun NavBarTopSecondRow(
                 }
             }
         }
+    }
     }
 }

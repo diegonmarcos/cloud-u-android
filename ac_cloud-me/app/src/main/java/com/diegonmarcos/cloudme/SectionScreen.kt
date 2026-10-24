@@ -19,7 +19,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.commit
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.fin.MyFinDashboardFragment
 import com.diegonmarcos.superapp.health.HealthFragment
 import com.diegonmarcos.superapp.uikit.KitFragmentHost
@@ -69,19 +69,20 @@ fun SectionScreen(sectionId: String, requestedPage: String?, modifier: Modifier 
             // control rather than as a navigation aid. Configs is shaped that
             // way on purpose: a settings screen is a list you scroll.
             if (siblings.size > 1) {
-                PageTabs(
+                NavBarTopSecondRow(
                     pages = siblings,
                     selectedId = chain.getOrNull(level)?.id,
                     onSelect = { tab ->
                         // A launch tab (Buro > Account) leaves for its action and the strip keeps
                         // pointing at the page the user comes back to.
-                        if (tab.action.isNotBlank()) { onTarget(tab.action); return@PageTabs }
+                        if (tab.action.isNotBlank()) { onTarget(tab.action); return@NavBarTopSecondRow }
                         // A container tab has no content of its own; tapping one opens the child
                         // you were last on — which is what staying on the chain means — or its
                         // first child. Tapping a leaf opens the leaf.
                         val stillBelow = section.path(pageId).any { it.id == tab.id }
                         pageId = if (stillBelow) pageId else section.page(tab.id)?.leaf()?.id
                     },
+                    dark = true,
                     underTopChrome = false,
                     // The Samsung Health strip (#1144): icon-only pills, the selected one also shows its name.
                     iconFor = { p -> pageIcon(ctx, p.icon)?.let { painterResource(it) } },

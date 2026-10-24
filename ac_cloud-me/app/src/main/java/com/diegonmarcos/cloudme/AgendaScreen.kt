@@ -90,7 +90,7 @@ fun AgendaScreen(mode: AgendaMode, modifier: Modifier = Modifier) {
     }
 
     Column(
-        modifier.fillMaxSize().background(colorResource(R.color.me_bg)).verticalScroll(rememberScrollState())
+        modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 28.dp),
     ) {
         when (val s = state) {

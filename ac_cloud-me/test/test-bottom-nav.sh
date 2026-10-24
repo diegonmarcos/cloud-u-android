@@ -12,7 +12,7 @@ ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 check() { if [ "$1" = "OK" ]; then ok "$2"; else bad "$2: $1"; fi; }
 
-echo "== T1: the shell hosts the shared island (BottomNavIsland) in MeBody =="
+echo "== T1: the shell hosts the shared island (libs:nav-bar-bottom's NavBarBottom, #1154) in MeBody =="
 check "$(python3 - "$MAIN/java/com/diegonmarcos/cloudme" "$MAIN/res" <<'PY'
 import os, re, sys
 d = sys.argv[1]
@@ -22,15 +22,15 @@ def code(f):
     return re.sub(r'(?m)^\s*//.*$', '', t)
 nav, act, shell = code('MeBottomNav.kt'), code('MainActivity.kt'), code('MeShell.kt')
 p = []
-if not re.search(r'\bBottomNavIsland\s*\(', nav):
-    p.append('MeBottomNav.kt does not draw libs:bottomnav BottomNavIsland')
+if not re.search(r'\bNavBarBottom\s*\(', nav):
+    p.append('MeBottomNav.kt does not draw libs:nav-bar-bottom NavBarBottom')
 if not re.search(r'\bMeShell\s*\(', act) or not re.search(r'\bMeBody\s*\(', shell):
     p.append('MainActivity does not lay the section out through MeShell > MeBody (content above the island)')
 if os.path.exists(os.path.join(sys.argv[2], 'layout', 'activity_main.xml')):
     p.append('activity_main.xml is back: the shell is Compose')
 print('; '.join(p) or 'OK')
 PY
-)" "the island is libs:bottomnav's BottomNavIsland, drawn by MeBody under MainActivity"
+)" "the bar is libs:nav-bar-bottom's NavBarBottom, drawn by MeBody under MainActivity"
 
 echo "== T2: no Material bottom-navigation class in any source or layout =="
 check "$(python3 - "$MAIN" <<'PY'

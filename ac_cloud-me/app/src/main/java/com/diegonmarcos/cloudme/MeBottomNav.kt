@@ -11,11 +11,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
-import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottom
 
 /**
- * Cloud Me's bottom nav: libs:bottomnav's island fed from [Sections.bottom] (#531).
+ * Cloud Me's bottom nav: libs:nav-bar-bottom's bar (#1154, Cloud Search's coloured selection) fed from [Sections.bottom] (#531).
  *
  * The stock Material BottomNavigationView is gone; the bar is the fleet's one Compose island.
  * What stays Cloud Me's own is small: WHICH sections (the bar sections of build.json, in
@@ -55,7 +55,7 @@ fun MeBottomBar(
         val icon = ctx.resources.getIdentifier(it.icon, "drawable", ctx.packageName)
         BottomNavEntry(it.id, it.label, painterResource(icon))
     }
-    BottomNavIsland(
+    NavBarBottom(
         entries = entries,
         selectedId = MeBottomNav.pillFor(selectedSectionId),
         onSelect = { e ->
@@ -66,6 +66,7 @@ fun MeBottomBar(
                 else -> onOpen(e.id)
             }
         },
+        dark = true,
         modifier = modifier,
         collapsed = collapsed,
     )

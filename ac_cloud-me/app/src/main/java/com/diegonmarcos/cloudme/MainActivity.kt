@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
+import com.diegonmarcos.superapp.themebg.themeBackground
 import androidx.compose.ui.res.stringResource
 import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.bottomnav.FleetChrome
@@ -179,7 +180,9 @@ class MainActivity : AppCompatActivity() {
             selectedSectionId = currentSection,
             onOpen = { open(it) },
             onTarget = { onTarget(it) },
-            modifier = Modifier.fillMaxSize().background(colorResource(R.color.me_bg))
+            currentPageId = currentPage,
+            onOpenPage = { section, page -> open(section, page) },
+            modifier = Modifier.fillMaxSize().themeBackground(dark = true)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)),
             banner = { PermissionBanner(missing) },
         ) {

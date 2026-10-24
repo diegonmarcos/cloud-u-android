@@ -101,13 +101,24 @@ public fun AppTopBarScaffold(
     aiPanel: @Composable (close: () -> Unit) -> Unit = {},
     /** False slides the row away (a host hides it while its page scrolls down, with [BottomNavCollapse]); true shows it. */
     barVisible: Boolean = true,
+    /**
+     * #1154 the row seam: when set, THIS draws the first row instead of [AppTopBar] (the hamburger/AI/panel state stays the
+     * [controller]'s, the drawer overlay and the AI popup stay this scaffold's). libs:nav-bar-top-first-row fills it; an app
+     * calls that lib's scaffold, never this parameter.
+     */
+    topRow: (@Composable (AppTopBarController) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(LocalAppTopBar provides controller) {
         Box(modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize()) {
                 AnimatedVisibility(barVisible, Modifier.testTag(TopBarTags.BAR_SLOT)) {
-                    AppTopBar(decl, title, controller, onAccount, onConfigs, labels = labels, colors = colors, onAi = onAi, aiPanel = aiPanel)
+                    if (topRow != null) {
+                        Box {
+                            topRow(controller)
+                            if (controller.aiOpen) AiPopup(controller, labels, colors, aiPanel)
+                        }
+                    } else AppTopBar(decl, title, controller, onAccount, onConfigs, labels = labels, colors = colors, onAi = onAi, aiPanel = aiPanel)
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) { content() }
             }

@@ -72,7 +72,7 @@ fun FilesScreen(block: JSONObject, modifier: Modifier = Modifier) {
         return labels[bare] ?: bare.replace('_', ' ').replace('-', ' ').replaceFirstChar { it.uppercase() }
     }
 
-    Column(modifier.fillMaxSize().background(colorResource(R.color.me_bg))) {
+    Column(modifier.fillMaxSize()) {
         val crumb = (listOf(label(root.substringAfterLast('/'))) +
             path.split('/').filter { it.isNotEmpty() }.map { label(it) })
             .joinToString("  ›  ")

@@ -40,6 +40,7 @@ class ThemeBackgroundTest {
         for (dark in listOf(true, false)) {
             val c = ThemeBackground.colors(dark)
             assertTrue(ThemeBackground.contrast(c.onIsland, c.island) >= 7.0)
+            assertTrue("accent text on the island dark=$dark", ThemeBackground.contrast(c.accentOnIsland, c.island) >= 4.5)
             assertTrue("island is gray-ish, not coloured", spread(c.island) < 0.2f)
         }
         val d = ThemeBackground.colors(true)

@@ -41,9 +41,17 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.bottomnav.AppTopBarController
 import com.diegonmarcos.superapp.bottomnav.AppTopBarLabels
+import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
+import com.diegonmarcos.superapp.bottomnav.TopBarDecl
+import com.diegonmarcos.superapp.bottomnav.TopBarSettings
+import com.diegonmarcos.superapp.bottomnav.appTopBarLabels
+import com.diegonmarcos.superapp.bottomnav.rememberAppTopBarController
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
+import com.diegonmarcos.superapp.bottomnav.TopBarTags
+import com.diegonmarcos.superapp.themebg.ThemeBackground
 import com.diegonmarcos.superapp.themebg.ThemeColors
 
 /** Every number of the first row, in one place; NavBarTopFirstRowTest measures against these. */
@@ -64,13 +72,17 @@ public object TopFirstRowSpec {
     public fun islandMaxWidth(rowWidth: Dp): Dp = (rowWidth - SLOT * 2).coerceAtLeast(0.dp)
 }
 
+/**
+ * The row's test tags. They are the SAME strings as libs:bottomnav's [TopBarTags] (the row this one replaces), so an
+ * app's tests that find the hamburger, the title or an action by [TopBarTags] still find it.
+ */
 public object TopFirstRowTags {
-    public const val ROW: String = "navtop1_row"
-    public const val MENU: String = "navtop1_menu"
-    public const val ISLAND: String = "navtop1_island"
-    public const val AI: String = "navtop1_ai"
-    public const val PROFILE: String = "navtop1_profile"
-    public const val CONFIGS: String = "navtop1_configs"
+    public const val ROW: String = TopBarTags.BAR
+    public const val MENU: String = TopBarTags.MENU
+    public const val ISLAND: String = TopBarTags.TITLE
+    public const val AI: String = TopBarTags.AI
+    public const val PROFILE: String = TopBarTags.ACCOUNT
+    public const val CONFIGS: String = TopBarTags.CONFIGS
     public const val DROPDOWN: String = "navtop1_dropdown"
     public fun entry(id: String): String = "navtop1_entry_$id"
 }
@@ -153,7 +165,10 @@ public fun NavBarTopFirstRow(
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                 )
-                DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.testTag(TopFirstRowTags.DROPDOWN)) {
+                DropdownMenu(
+                    expanded = open, onDismissRequest = { open = false }, containerColor = colors.island,
+                    modifier = Modifier.testTag(TopFirstRowTags.DROPDOWN),
+                ) {
                     hierarchy.forEach { e ->
                         DropdownMenuItem(
                             text = {
@@ -161,7 +176,7 @@ public fun NavBarTopFirstRow(
                                     e.label,
                                     Modifier.padding(start = 16.dp * e.depth),
                                     fontWeight = if (e.selected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (e.selected) colors.accent else colors.ink,
+                                    color = if (e.selected) colors.accentOnIsland else colors.onIsland,
                                 )
                             },
                             onClick = { open = false; onNavigate(e) },
@@ -196,4 +211,50 @@ private fun PlainIcon(icon: ImageVector, label: String, tag: String, colors: The
     ) {
         Icon(icon, contentDescription = null, tint = colors.ink, modifier = Modifier.size(TopFirstRowSpec.ICON))
     }
+}
+
+/**
+ * The fleet's top-bar scaffold with THIS row drawn in it (#1154): libs:bottomnav's scaffold keeps the side drawer (opened by
+ * tapping the hamburger only), the AI popup and the hide-on-scroll slot; the row is [NavBarTopFirstRow]. [onAi] null opens
+ * the scaffold's own AI popup ([aiPanel]); otherwise it is the host's. Profile and Configs are the host's ([onAccount], [onConfigs]).
+ */
+@Composable
+public fun NavBarTopFirstRowScaffold(
+    title: String,
+    hierarchy: List<HierarchyEntry>,
+    onNavigate: (HierarchyEntry) -> Unit,
+    onAccount: () -> Unit,
+    onConfigs: () -> Unit,
+    modifier: Modifier = Modifier,
+    labels: AppTopBarLabels = appTopBarLabels(),
+    controller: AppTopBarController = rememberAppTopBarController(),
+    onAi: (() -> Unit)? = null,
+    aiPanel: @Composable (close: () -> Unit) -> Unit = {},
+    barVisible: Boolean = true,
+    avatar: (@Composable () -> Unit)? = null,
+    /** The app's light/dark mode: picks the shared palette (libs:theme-background). An app passes no colour. */
+    dark: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    AppTopBarScaffold(
+        decl = TopBarDecl(drawer = true, settings = TopBarSettings.KNOWN, inlineActions = true),
+        title = title,
+        onAccount = onAccount,
+        onConfigs = onConfigs,
+        modifier = modifier,
+        controller = controller,
+        labels = labels,
+        onAi = onAi,
+        aiPanel = aiPanel,
+        barVisible = barVisible,
+        topRow = { c ->
+            NavBarTopFirstRow(
+                title, ThemeBackground.colors(dark), labels, hierarchy, onNavigate,
+                onMenu = { c.openDrawer() },
+                onAi = { if (onAi != null) onAi() else c.toggleAi() },
+                onProfile = onAccount, onConfigs = onConfigs, avatar = avatar,
+            )
+        },
+        content = content,
+    )
 }

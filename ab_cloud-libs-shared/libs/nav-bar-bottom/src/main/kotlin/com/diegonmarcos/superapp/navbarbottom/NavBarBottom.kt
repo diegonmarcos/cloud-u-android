@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlTokens
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
 
@@ -59,6 +60,9 @@ public object BottomSpec {
     public val LABEL: TextUnit = 12.sp
     public val HEIGHT: Dp = 64.dp
     public val RADIUS: Dp = 32.dp
+    /** Scrolled down: the labels fold away and the bar and its cells shrink to icons only. */
+    public val COLLAPSED_HEIGHT: Dp = 48.dp
+    public val COLLAPSED_CELL: Dp = 40.dp
     public val SIDE_GUTTER: Dp = SearchHtmlTokens.sideGutter
     public val BOTTOM_MARGIN: Dp = SearchHtmlTokens.bottomMargin
     public val MAX_WIDTH: Dp = 440.dp
@@ -77,17 +81,19 @@ public object BottomSpec {
     public fun border(dark: Boolean): Color = SearchHtmlTokens.border(dark)
 }
 
+/** The bar's test tags: the SAME strings as libs:bottomnav's [BottomNavTags] island, so an app's tests that find an item by them still do. */
 public object BottomTags {
-    public const val BAR: String = "navbottom_bar"
-    public fun item(id: String): String = "navbottom_item_$id"
-    public fun icon(id: String): String = "navbottom_icon_$id"
-    public fun label(id: String): String = "navbottom_label_$id"
+    public const val BAR: String = BottomNavTags.ISLAND
+    public fun item(id: String): String = BottomNavTags.item(id)
+    public fun icon(id: String): String = BottomNavTags.icon(id)
+    public fun label(id: String): String = BottomNavTags.label(id)
 }
 
 /**
  * THE bottom nav of every app (#1154). Selection is Cloud Search's: the selected item's icon and label take the
  * accent colour, the icon lifts and the label rises in; the others stay in the idle ink. There is no gray circle.
- * The bar is a rounded glass pill; its cells shrink evenly when more than fit at [BottomSpec.CELL].
+ * The bar is a rounded glass pill; its cells shrink evenly when more than fit at [BottomSpec.CELL]. [collapsed] drops
+ * the labels (the scroll-collapse of the old island).
  */
 @Composable
 public fun NavBarBottom(
@@ -96,6 +102,8 @@ public fun NavBarBottom(
     onSelect: (BottomNavEntry) -> Unit,
     dark: Boolean,
     modifier: Modifier = Modifier,
+    /** Scrolled down (BottomNavCollapse): the selected item's label folds away too, leaving icons only. */
+    collapsed: Boolean = false,
 ) {
     Box(
         modifier.fillMaxWidth()
@@ -106,8 +114,10 @@ public fun NavBarBottom(
         val shape = RoundedCornerShape(BottomSpec.RADIUS)
         BoxWithConstraints(Modifier.widthIn(max = BottomSpec.MAX_WIDTH).fillMaxWidth()) {
             val cell = BottomSpec.cellWidth(maxWidth, entries.size)
+            val barHeight by animateDpAsState(if (collapsed) BottomSpec.COLLAPSED_HEIGHT else BottomSpec.HEIGHT, label = "navbottom_height")
+            val cellHeight = if (collapsed) BottomSpec.COLLAPSED_CELL else BottomSpec.CELL
             Row(
-                Modifier.fillMaxWidth().height(BottomSpec.HEIGHT).testTag(BottomTags.BAR)
+                Modifier.fillMaxWidth().height(barHeight).testTag(BottomTags.BAR)
                     .clip(shape).background(BottomSpec.fill(dark)).border(1.dp, BottomSpec.border(dark), shape)
                     .padding(horizontal = BottomSpec.INNER_PAD)
                     .selectableGroup()
@@ -118,10 +128,10 @@ public fun NavBarBottom(
                 entries.forEachIndexed { index, e ->
                     val on = e.id == selectedId
                     val ink = if (on) BottomSpec.selectedInk(dark) else BottomSpec.idleInk(dark)
-                    val lift by animateDpAsState(if (on) -BottomSpec.LIFT else 0.dp, label = "navbottom_lift")
+                    val lift by animateDpAsState(if (on && !collapsed) -BottomSpec.LIFT else 0.dp, label = "navbottom_lift")
                     val show by animateFloatAsState(if (on) 1f else 0f, label = "navbottom_label")
                     Box(
-                        Modifier.size(cell, BottomSpec.CELL).clip(CircleShape).testTag(BottomTags.item(e.id))
+                        Modifier.size(cell, cellHeight).clip(CircleShape).testTag(BottomTags.item(e.id))
                             .selectable(selected = on, role = Role.Tab, onClick = { onSelect(e) })
                             .semantics { collectionItemInfo = CollectionItemInfo(0, 1, index, 1) },
                         contentAlignment = Alignment.Center,
@@ -129,7 +139,7 @@ public fun NavBarBottom(
                         Box(Modifier.offset(y = lift)) {
                             Icon(e.icon, contentDescription = null, tint = ink, modifier = Modifier.size(BottomSpec.ICON).testTag(BottomTags.icon(e.id)))
                         }
-                        Text(
+                        if (!collapsed) Text(
                             e.label, color = ink, fontSize = BottomSpec.LABEL, fontWeight = FontWeight.Medium,
                             textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = BottomSpec.LABEL_BOTTOM)

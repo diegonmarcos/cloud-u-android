@@ -43,7 +43,7 @@ class NavBarTopSecondRowTest {
     private fun pages(n: Int) = (1..n).map { NavPage("p$it", "Page $it") }
 
     private fun show(n: Int, selected: String = "p1", onSelect: (NavPage) -> Unit = {}) =
-        compose.setContent { NavBarTopSecondRow(pages(n), selected, onSelect, ThemeBackground.colors(true)) }
+        compose.setContent { NavBarTopSecondRow(pages(n), selected, onSelect, dark = true) }
 
     @Test fun `it is clearly smaller than the bottom nav in height, icon and font`() {
         val max = SecondRowSpec.SCALE_MAX
