@@ -75,8 +75,8 @@ class LightActivity : ComponentActivity() {
 @Composable
 private fun Big(label: String, tag: String, on: Boolean? = null, onClick: () -> Unit) {
     val m = Modifier.fillMaxWidth().heightIn(min = 72.dp).testTag(tag)
-    if (on == true) Button(onClick, m) { Text(label, fontSize = 20.sp) }
-    else OutlinedButton(onClick, m) { Text(label, fontSize = 20.sp) }
+    if (on == true) Button(onClick = onClick, modifier = m, content = { Text(label, fontSize = 20.sp) })
+    else OutlinedButton(onClick = onClick, modifier = m, content = { Text(label, fontSize = 20.sp) })
 }
 
 @Composable
@@ -84,7 +84,7 @@ private fun Pick(labels: List<String>, selected: Int, tag: String, pick: (Int) -
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         labels.forEachIndexed { i, l ->
             val m = Modifier.weight(1f).heightIn(min = 64.dp).testTag("$tag-$i")
-            if (i == selected) Button({ pick(i) }, m) { Text(l) } else OutlinedButton({ pick(i) }, m) { Text(l) }
+            if (i == selected) Button(onClick = { pick(i) }, modifier = m, content = { Text(l) }) else OutlinedButton(onClick = { pick(i) }, modifier = m, content = { Text(l) })
         }
     }
 }
@@ -99,8 +99,9 @@ private fun LightScreen(e: LightEngine, tick: Int) {
     if (st.frontOn) {
         // Front light: a full white screen (dark during the off half of a strobe), one big way out.
         Box(Modifier.fillMaxSize().background(if (st.lit) Color.White else Color.Black).testTag("light-front-screen")) {
-            Button({ e.setFront(false) }, Modifier.align(Alignment.BottomCenter).padding(24.dp).fillMaxWidth().heightIn(min = 80.dp).testTag("light-front-off"),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)) { Text("Front light off", fontSize = 22.sp, color = Color.White) }
+            Button(onClick = { e.setFront(false) }, modifier = Modifier.align(Alignment.BottomCenter).padding(24.dp).fillMaxWidth().heightIn(min = 80.dp).testTag("light-front-off"),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
+                content = { Text("Front light off", fontSize = 22.sp, color = Color.White) })
         }
         return
     }
@@ -135,9 +136,9 @@ private fun LightScreen(e: LightEngine, tick: Int) {
         }
         if (s.timerOn) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton({ e.update { it.copy(timerMinutes = it.timerMinutes - 1) } }, Modifier.heightIn(min = 64.dp).testTag("light-timer-minus")) { Text("-", fontSize = 24.sp) }
+                OutlinedButton(onClick = { e.update { it.copy(timerMinutes = it.timerMinutes - 1) } }, modifier = Modifier.heightIn(min = 64.dp).testTag("light-timer-minus"), content = { Text("-", fontSize = 24.sp) })
                 Text("${s.timerMinutes} min", Modifier.weight(1f), color = MaterialTheme.colorScheme.onBackground, fontSize = 20.sp)
-                OutlinedButton({ e.update { it.copy(timerMinutes = it.timerMinutes + 1) } }, Modifier.heightIn(min = 64.dp).testTag("light-timer-plus")) { Text("+", fontSize = 24.sp) }
+                OutlinedButton(onClick = { e.update { it.copy(timerMinutes = it.timerMinutes + 1) } }, modifier = Modifier.heightIn(min = 64.dp).testTag("light-timer-plus"), content = { Text("+", fontSize = 24.sp) })
             }
             if (st.timerRunning) {
                 val left = ((st.timerEndAt - now) / 1000).coerceAtLeast(0)

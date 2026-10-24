@@ -180,7 +180,7 @@ class LightEngine(private val torch: Torch, private val clock: LightClock, priva
 
     private fun startStrobe() {
         if (strobeTok != null) return
-        val half = (500f / LightLimits.clampHz(settings.strobeHz)).toLong()
+        val half = Math.ceil(500.0 / LightLimits.clampHz(settings.strobeHz)).toLong()   // rounded UP: never faster than the cap
         strobeTok = clock.postDelayed(half, object : Runnable {
             override fun run() {
                 strobeTok = null
