@@ -70,7 +70,7 @@ fun KitPage(content: @Composable () -> Unit) {
     // No host sink: this page is a Fragment's own ComposeView, a separate composition whose LocalNavChromeCollapse is empty and
     // whose nested scrolls stop at the View boundary. The interop connection hands them to the View parents, and the hosting
     // AndroidView/AndroidFragment (a NestedScrollingParent) passes them to the host composition's chrome collapse.
-    val sink = KitScroll.connection ?: androidx.compose.ui.input.nestedscroll.rememberNestedScrollInteropConnection()
+    val sink = KitScroll.connection ?: androidx.compose.ui.platform.rememberNestedScrollInteropConnection()
     androidx.compose.foundation.layout.Box(
         androidx.compose.ui.Modifier.nestedScroll(sink),
     ) { content() }
