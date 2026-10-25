@@ -12,7 +12,9 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
@@ -81,7 +83,7 @@ class NavSideMenuTest {
         compose.onNodeWithTag(SideMenuTags.rail("sent"), useUnmergedTree = true).assertTextEquals("Sen")
         compose.onNodeWithTag(SideMenuTags.label("sent"), useUnmergedTree = true).assertDoesNotExist()
         val w = compose.onNodeWithTag(SideMenuTags.MENU).fetchSemanticsNode().boundsInRoot.width
-        assertEquals(SideMenuSpec.RAIL_WIDTH.value, w, 1.5f)
+        assertEquals("the rail box is RAIL_WIDTH less the left gutter", SideMenuSpec.RAIL_WIDTH.value - SideMenuSpec.SIDE.value, w, 1.5f)
     }
 
     @Test fun `away draws nothing`() {
@@ -143,7 +145,8 @@ class NavSideMenuTest {
         val dock = compose.onNodeWithTag(SideMenuTags.DOCK).fetchSemanticsNode().boundsInRoot
         assertEquals("the docked part is the rail", SideMenuSpec.RAIL_WIDTH.value, dock.width, 1.5f)
         // the scrim folds the menu back to the rail
-        compose.onNodeWithTag(SideMenuTags.SCRIM).performClick()
+        // a tap on the scrim, to the right of the menu (the menu itself covers the left part of it)
+        compose.onNodeWithTag(SideMenuTags.SCRIM).performTouchInput { click(androidx.compose.ui.geometry.Offset(width - 8f, height / 2f)) }
         compose.waitForIdle()
         compose.onNodeWithTag(SideMenuTags.OVERLAY).assertDoesNotExist()
     }
