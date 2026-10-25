@@ -23,7 +23,14 @@ import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.Surface
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -86,6 +93,8 @@ public object TopFirstRowSpec {
     public const val TITLE_SP: Int = 13
     /** The most height the app's actions area of the dropdown takes; longer content scrolls inside it. */
     public val ACTIONS_MAX_HEIGHT: Dp = 360.dp
+    public val DROPDOWN_WIDTH: Dp = 280.dp
+    public val DROPDOWN_MAX_HEIGHT: Dp = 520.dp
 
     /** The widest the title island may be on a row of [rowWidth]: what the right slot leaves. */
     public fun islandMaxWidth(rowWidth: Dp): Dp = (rowWidth - SLOT).coerceAtLeast(0.dp)
@@ -201,10 +210,18 @@ public fun NavBarTopFirstRow(
                         BreadcrumbText(nav.labels, colors.onIsland)
                     }
                 }
-                DropdownMenu(
-                    expanded = open, onDismissRequest = { open = false }, containerColor = colors.island,
-                    modifier = Modifier.testTag(TopFirstRowTags.DROPDOWN),
+                // A Popup, not material's DropdownMenu: that sizes its content by INTRINSIC width, which a page's actions
+                // (a LazyColumn, BoxWithConstraints) cannot answer, and it crashed them.
+                if (open) Popup(
+                    popupPositionProvider = remember { BelowAnchor },
+                    onDismissRequest = { open = false },
+                    properties = PopupProperties(focusable = true),
                 ) {
+                  Surface(
+                    color = colors.island, shape = RoundedCornerShape(12.dp), shadowElevation = 8.dp,
+                    modifier = Modifier.width(TopFirstRowSpec.DROPDOWN_WIDTH).heightIn(max = TopFirstRowSpec.DROPDOWN_MAX_HEIGHT).testTag(TopFirstRowTags.DROPDOWN),
+                  ) {
+                  Column(Modifier.verticalScroll(rememberScrollState())) {
                     // line 1: the path, each segment a tap to that ancestor
                     Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
                         nav.crumbs.forEachIndexed { i, c ->
@@ -242,6 +259,8 @@ public fun NavBarTopFirstRow(
                         // verticalScroll / LazyColumn then has a finite height instead of crashing.
                         Column(Modifier.heightIn(max = TopFirstRowSpec.ACTIONS_MAX_HEIGHT).testTag(TopFirstRowTags.ACTIONS)) { extra { open = false } }
                     }
+                  }
+                  }
                 }
             }
         }
@@ -371,4 +390,10 @@ public fun BreadcrumbLeaf(text: String?) {
         state.text = text
         onDispose { if (state.text == text) state.text = null }
     }
+}
+
+/** The dropdown sits under the title, kept inside the window horizontally. */
+private object BelowAnchor : PopupPositionProvider {
+    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset =
+        IntOffset(anchorBounds.left.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)), anchorBounds.bottom)
 }
