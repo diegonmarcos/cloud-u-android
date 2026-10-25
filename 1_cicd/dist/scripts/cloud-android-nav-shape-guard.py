@@ -519,7 +519,36 @@ def declared_backgrounds(nodes, where=""):
         yield from declared_backgrounds(n.get("pages"), here)
 
 
+def check_second_rows(app, sections, bad):
+    """N10: ui.sections[].second_row is one_row|many_rows; groups (ui.sections[].groups) only with many_rows, each with an
+    id and pages, group ids unique, and a page id in one group only."""
+    for s in sections or []:
+        if not isinstance(s, dict):
+            continue
+        sid, mode, groups = s.get("id"), s.get("second_row", "one_row"), s.get("groups")
+        if mode not in ("one_row", "many_rows"):
+            bad.append(f"N10 {app}: ui.sections {sid} declares second_row {mode!r}, not one_row or many_rows")
+        if groups is None:
+            continue
+        if mode != "many_rows":
+            bad.append(f"N10 {app}: ui.sections {sid} declares groups but second_row is not many_rows")
+        ids, seen = [], set()
+        for g in groups if isinstance(groups, list) else []:
+            gid = g.get("id") if isinstance(g, dict) else None
+            if not gid or not (g.get("pages") if isinstance(g, dict) else None):
+                bad.append(f"N10 {app}: ui.sections {sid} has a group with no id or no pages")
+                continue
+            ids.append(gid)
+            for pid in page_ids(g["pages"]):
+                if pid in seen:
+                    bad.append(f"N10 {app}: ui.sections {sid} page {pid!r} is in two groups")
+                seen.add(pid)
+        if len(ids) != len(set(ids)):
+            bad.append(f"N10 {app}: ui.sections {sid} repeats a group id")
+
+
 def check_backgrounds(app, sections, spec, code, rel, bad):
+    check_second_rows(app, sections, bad)
     allowed = spec["backgrounds"]
     found = list(declared_backgrounds(sections))
     for where, value in found:

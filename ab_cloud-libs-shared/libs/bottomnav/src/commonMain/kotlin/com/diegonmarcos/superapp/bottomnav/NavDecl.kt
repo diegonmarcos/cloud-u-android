@@ -84,6 +84,24 @@ public enum class NavStyle(public val declared: String) {
     }
 }
 
+/**
+ * How a section's second top row is drawn (`ui.sections[].second_row`). [OneRow] (the default): the pages as one strip of
+ * chips. [ManyRows]: one row per page GROUP, each [group label as an index dropdown] | [that group's page icons].
+ */
+public enum class SecondRowMode(public val declared: String) {
+    OneRow("one_row"),
+    ManyRows("many_rows");
+
+    public companion object {
+        /** A declared `second_row`; blank is [OneRow], anything unknown is null (a declaration problem). */
+        public fun of(text: String?): SecondRowMode? =
+            if (text.isNullOrBlank()) OneRow else entries.firstOrNull { it.declared == text.trim() }
+    }
+}
+
+/** A named group of a section's pages (`ui.sections[].groups[]`): one row of the [SecondRowMode.ManyRows] second row. */
+public data class NavGroup(val id: String, val label: String, val pages: List<NavPage>)
+
 /** A tab. [pages] is non-empty only for a container tab, which holds a strip of its own. */
 public data class NavPage(
     val id: String,
@@ -108,7 +126,17 @@ public data class NavSection(
     val pages: List<NavPage> = emptyList(),
     /** What this section's tab strip is drawn over ([PageBackground.Dark] unless declared). */
     val background: PageBackground = PageBackground.Dark,
+    /** `second_row`: one strip of chips ([SecondRowMode.OneRow], today's) or one row per group. */
+    val rows: SecondRowMode = SecondRowMode.OneRow,
+    /** `groups`: when declared, [pages] is their pages in order (so every page-list consumer still sees all of them). */
+    val groups: List<NavGroup> = emptyList(),
 ) {
+    /**
+     * The rows of the many-rows second row: the declared [groups], else ONE group named like the section holding all
+     * [pages] (a section that opts in without declaring groups); empty when it has no pages.
+     */
+    public fun rowGroups(): List<NavGroup> = groups.ifEmpty { if (pages.isEmpty()) emptyList() else listOf(NavGroup(id, label, pages)) }
+
     /**
      * The strip [TabSurface] for this section's top strip ([pageId] null) or for the sub-strip of the
      * container page [pageId]: the nearest declared background on the path, else the section's.
@@ -231,8 +259,14 @@ public class NavDecl(
 
         private fun section(o: Map<*, *>): NavSection? {
             val id = o.text("id").ifBlank { return null }
-            return NavSection(id, o.text("label", id), o.text("icon"), pages(o["pages"]),
-                PageBackground.of(o.text("background")) ?: PageBackground.Dark)
+            val groups = (o["groups"] as? List<*>)?.mapNotNull { g ->
+                val go = g as? Map<*, *> ?: return@mapNotNull null
+                val gid = go.text("id").ifBlank { return@mapNotNull null }
+                NavGroup(gid, go.text("label", gid), pages(go["pages"]))
+            }.orEmpty()
+            return NavSection(id, o.text("label", id), o.text("icon"), if (groups.isEmpty()) pages(o["pages"]) else groups.flatMap { it.pages },
+                PageBackground.of(o.text("background")) ?: PageBackground.Dark,
+                SecondRowMode.of(o.text("second_row")) ?: SecondRowMode.OneRow, groups)
         }
 
         private fun pages(a: Any?): List<NavPage> =

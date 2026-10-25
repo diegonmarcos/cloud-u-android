@@ -176,40 +176,60 @@ public fun NavBarTopSecondRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         pages.forEachIndexed { i, page ->
-            val on = page.id == selectedId
-            // #1159 at rest EVERY tab shows its name; scrolled down only the selected one does, and the tab is shorter.
-            val named = !compact || on
-            val ink = if (on) palette.onTabSelected else palette.inkDim
-            Row(
-                Modifier.defaultMinSize(minWidth = SecondRowSpec.TAB_MIN_WIDTH).height(tabHeight)
-                    .clip(tab)
-                    .then(if (on) Modifier.background(palette.tabSelected, tab) else Modifier)
-                    .clickable(role = Role.Tab) { if (on) onReselect(page) else onSelect(page) }
-                    .semantics {
-                        role = Role.Tab
-                        selected = on
-                        contentDescription = page.label
-                        collectionItemInfo = CollectionItemInfo(0, 1, i, 1)
-                    }
-                    .padding(horizontal = if (on) SecondRowSpec.SELECTED_PAD_H else SecondRowSpec.IDLE_PAD_H)
-                    .testTag(SecondRowTags.tab(page.id)),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // #1157 a tab ALWAYS draws its icon: the host's painter, else the declared Material symbol (never a letter).
-                val painter = iconFor(page) ?: rememberVectorPainter(SecondRowIcons.vector(page.icon))
-                Icon(painter, null, Modifier.size(SecondRowSpec.ICON).testTag(SecondRowTags.icon(page.id)), tint = ink)
-                AnimatedVisibility(
-                    named, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally(),
-                ) {
-                    Text(
-                        page.label, Modifier.padding(start = 6.dp).testTag(SecondRowTags.label(page.id)),
-                        color = ink, fontSize = SecondRowSpec.LABEL, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
-                        maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            SecondRowTab(
+                page, i, pages.size, page.id == selectedId,
+                // #1159 at rest EVERY tab shows its name; scrolled down only the selected one does, and the tab is shorter.
+                named = !compact || page.id == selectedId,
+                palette = palette, tabHeight = tabHeight, tab = tab, iconFor = iconFor,
+                onClick = { if (page.id == selectedId) onReselect(page) else onSelect(page) },
+            )
         }
     }
+    }
+}
+
+/** One tab of a strip: its icon, its name when [named], the selected one a filled rounded rectangle. Shared by every second-row mode. */
+@Composable
+internal fun SecondRowTab(
+    page: NavPage,
+    index: Int,
+    count: Int,
+    on: Boolean,
+    named: Boolean,
+    palette: ThemeColors,
+    tabHeight: Dp,
+    tab: androidx.compose.ui.graphics.Shape,
+    iconFor: @Composable (NavPage) -> Painter?,
+    onClick: () -> Unit,
+) {
+    val ink = if (on) palette.onTabSelected else palette.inkDim
+    Row(
+        Modifier.defaultMinSize(minWidth = SecondRowSpec.TAB_MIN_WIDTH).height(tabHeight)
+            .clip(tab)
+            .then(if (on) Modifier.background(palette.tabSelected, tab) else Modifier)
+            .clickable(role = Role.Tab, onClick = onClick)
+            .semantics {
+                role = Role.Tab
+                selected = on
+                contentDescription = page.label
+                collectionItemInfo = CollectionItemInfo(0, 1, index, 1)
+            }
+            .padding(horizontal = if (on) SecondRowSpec.SELECTED_PAD_H else SecondRowSpec.IDLE_PAD_H)
+            .testTag(SecondRowTags.tab(page.id)),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // #1157 a tab ALWAYS draws its icon: the host's painter, else the declared Material symbol (never a letter).
+        val painter = iconFor(page) ?: rememberVectorPainter(SecondRowIcons.vector(page.icon))
+        Icon(painter, null, Modifier.size(SecondRowSpec.ICON).testTag(SecondRowTags.icon(page.id)), tint = ink)
+        AnimatedVisibility(
+            named, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally(),
+        ) {
+            Text(
+                page.label, Modifier.padding(start = 6.dp).testTag(SecondRowTags.label(page.id)),
+                color = ink, fontSize = SecondRowSpec.LABEL, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }

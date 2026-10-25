@@ -168,6 +168,10 @@ mutate "an unknown section background"           "$FIX/build.json" "$(J "d['ui']
 mutate "an unknown page background"              "$FIX/build.json" "$(J "d['ui']['sections'][0]['pages'][1]['background']='grey'")" "N9 $FIX: ui.sections a/p2 declares background 'grey'"
 mutate "a surface chosen in code"                "$KT" "s+='\nval x = TabSurface.Light\n'" "N9 $FIX: $KT:6 names TabSurface.Light"
 mutate "a theme background no strip reads"       "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" "N9 $FIX: declares a light/theme page background but no source calls stripSurface("
+# N10: the second row's mode and page groups
+mutate "an unknown second_row"                   "$FIX/build.json" "$(J "d['ui']['sections'][0]['second_row']='three_rows'")" "N10 $FIX: ui.sections a declares second_row 'three_rows'"
+mutate "groups without many_rows"                "$FIX/build.json" "$(J "d['ui']['sections'][0]['groups']=[{'id':'g','label':'G','pages':[{'id':'x','label':'X','icon':'i'}]}]")" "N10 $FIX: ui.sections a declares groups but second_row is not many_rows"
+mutate "a page in two groups"                    "$FIX/build.json" "$(J "d['ui']['sections'][0].update(second_row='many_rows', groups=[{'id':'g','label':'G','pages':[{'id':'x','label':'X','icon':'i'}]},{'id':'h','label':'H','pages':[{'id':'x','label':'X','icon':'i'}]}])")" "N10 $FIX: ui.sections a page 'x' is in two groups"
 green  "a theme background read through stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" \
     "$KT" "s=s.replace('PageTabs(pages, null, {});','PageTabs(pages, null, {}, surface = nav.stripSurface(\"a\", dark));')"
 green  "an explicit dark background with no stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='dark'")"

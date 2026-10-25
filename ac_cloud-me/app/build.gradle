@@ -79,7 +79,7 @@ checkPages = { sectionId, pages, dir ->
         }
     }
 }
-(buildJson.ui.sections ?: []).each { s -> checkPages(s.id, s.pages ?: [], s.id) }
+(buildJson.ui.sections ?: []).each { s -> checkPages(s.id, (s.pages ?: []) + ((s.groups ?: []).collectMany { g -> g.pages ?: [] }), s.id) }
 def uiSectionsB64     = b64(buildJson.ui.sections ?: [])
 // #868 the bar is ONE declaration: ui.bottom_nav (ids, in order) + ui.default_section, read at
 // runtime through libs:bottomnav's NavDecl together with UI_SECTIONS_B64.

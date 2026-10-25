@@ -1,0 +1,192 @@
+package com.diegonmarcos.superapp.navbartop2
+
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
+import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
+import com.diegonmarcos.superapp.bottomnav.NavGroup
+import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.NavSection
+import com.diegonmarcos.superapp.bottomnav.SecondRowMode
+import com.diegonmarcos.superapp.bottomnav.TabSurface
+import com.diegonmarcos.superapp.themebg.ThemeBackground
+
+/** Test tags of the many-rows second row; one set per group id. */
+public object SecondRowGroupTags {
+    public fun row(groupId: String): String = "navtop2_group_$groupId"
+    /** The group label that opens the index dropdown. */
+    public fun index(groupId: String): String = "navtop2_group_index_$groupId"
+    public fun divider(groupId: String): String = "navtop2_group_divider_$groupId"
+    public fun item(pageId: String): String = "navtop2_group_item_$pageId"
+    public const val DROPDOWN: String = "navtop2_group_dropdown"
+}
+
+/** The most the index dropdown grows before it scrolls (its list is plain rows, so the scroll is the only one in it). */
+public val SecondRowGroupDropdownMax: Dp = 320.dp
+
+/**
+ * THE second top row of an app, in the mode its section declares (`ui.sections[].second_row`):
+ *  - [SecondRowMode.OneRow] (default): [NavBarTopSecondRow] over the section's pages, as before;
+ *  - [SecondRowMode.ManyRows]: ONE ROW PER GROUP ([NavSection.rowGroups]): the group's label as a clickable index dropdown
+ *    listing that group's pages, a "|" divider, then that group's pages as horizontally scrollable icon chips (the selected
+ *    one highlighted and named). Rows compact with the shared scroll collapse like [NavBarTopSecondRow].
+ * [selectedId] is the shown page's id (a leaf); a pick from the chips or the dropdown calls [onSelect].
+ */
+@Composable
+public fun NavBarTopSecondRows(
+    section: NavSection,
+    selectedId: String?,
+    onSelect: (NavPage) -> Unit,
+    modifier: Modifier = Modifier,
+    dark: Boolean = true,
+    onReselect: (NavPage) -> Unit = {},
+    underTopChrome: Boolean = true,
+    flushTop: Boolean = false,
+    surface: TabSurface? = null,
+    iconFor: @Composable (NavPage) -> Painter? = { null },
+    compact: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
+) {
+    if (section.rows == SecondRowMode.OneRow) {
+        NavBarTopSecondRow(section.pages, selectedId, onSelect, modifier, dark, onReselect, underTopChrome, flushTop, surface, iconFor, compact)
+        return
+    }
+    val groups = section.rowGroups()
+    if (groups.isEmpty()) return
+    // A page asked for from the first row's dropdown: select it when one of the groups holds it.
+    val requests = LocalSubPageRequests.current
+    val pending = requests?.pending
+    LaunchedEffect(pending, groups) {
+        val want = pending ?: return@LaunchedEffect
+        val target = groups.firstNotNullOfOrNull { g -> g.pages.firstOrNull { it.holds(want) } } ?: return@LaunchedEffect
+        requests?.consume()
+        if (target.id != selectedId) onSelect(target)
+    }
+    val palette = when (surface) {
+        TabSurface.Light -> ThemeBackground.colors(false)
+        TabSurface.Dark -> ThemeBackground.colors(true)
+        null -> ThemeBackground.colors(dark)
+    }
+    val density = LocalDensity.current
+    val live = WindowInsets.statusBars.union(WindowInsets.displayCutout)
+    val liveTop = if (underTopChrome && !flushTop) live.getTop(density) else 0
+    val top = (if (flushTop) 0.dp else SecondRowSpec.TOP_INSET) + with(density) { liveTop.toDp() }
+    val strip = RoundedCornerShape(SecondRowSpec.STRIP_RADIUS)
+    val tab = RoundedCornerShape(SecondRowSpec.TAB_RADIUS)
+    val tabHeight by animateDpAsState(if (compact) SecondRowSpec.COMPACT_TAB_HEIGHT else SecondRowSpec.TAB_HEIGHT, label = "secondrows_tab_height")
+    Column(modifier.fillMaxWidth().padding(top = top, start = SecondRowSpec.SIDE, end = SecondRowSpec.SIDE)) {
+        groups.forEach { g ->
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = SecondRowSpec.BOTTOM_INSET).testTag(SecondRowGroupTags.row(g.id))
+                    .clip(strip).background(palette.tabStrip, strip).border(1.dp, palette.islandBorder, strip)
+                    .padding(vertical = SecondRowSpec.STRIP_PAD_V),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                GroupIndex(g, selectedId, onSelect, palette.island, palette.onIsland, palette.accentOnIsland, tabHeight)
+                Text("|", Modifier.testTag(SecondRowGroupTags.divider(g.id)), color = palette.inkDim)
+                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
+                    g.pages.forEachIndexed { i, page ->
+                        val on = page.id == selectedId
+                        SecondRowTab(
+                            page, i, g.pages.size, on, named = on, palette = palette, tabHeight = tabHeight, tab = tab, iconFor = iconFor,
+                            onClick = { if (on) onReselect(page) else onSelect(page) },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The group label: a tap opens the dropdown listing the group's pages (a bounded, plain list: its own scroll is the only one). */
+@Composable
+private fun GroupIndex(
+    group: NavGroup,
+    selectedId: String?,
+    onSelect: (NavPage) -> Unit,
+    surface: androidx.compose.ui.graphics.Color,
+    ink: androidx.compose.ui.graphics.Color,
+    accent: androidx.compose.ui.graphics.Color,
+    height: Dp,
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Box(
+            Modifier.height(height).clip(RoundedCornerShape(SecondRowSpec.TAB_RADIUS))
+                .clickable(role = Role.Button) { open = true }
+                .padding(horizontal = SecondRowSpec.SELECTED_PAD_H)
+                .testTag(SecondRowGroupTags.index(group.id)),
+            contentAlignment = Alignment.Center,
+        ) { Text(group.label + " \u25BE", color = ink, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+        if (open) Popup(
+            popupPositionProvider = remember { BelowAnchor },
+            onDismissRequest = { open = false },
+            properties = PopupProperties(focusable = true),
+        ) {
+            Surface(
+                color = surface, shape = RoundedCornerShape(12.dp), shadowElevation = 8.dp,
+                modifier = Modifier.width(240.dp).heightIn(max = SecondRowGroupDropdownMax).testTag(SecondRowGroupTags.DROPDOWN),
+            ) {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    group.pages.forEach { p ->
+                        val on = p.id == selectedId
+                        Text(
+                            p.label,
+                            Modifier.fillMaxWidth().clickable(role = Role.Button) { open = false; onSelect(p) }
+                                .padding(horizontal = 16.dp, vertical = 12.dp).testTag(SecondRowGroupTags.item(p.id)),
+                            color = if (on) accent else ink,
+                            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+private object BelowAnchor : PopupPositionProvider {
+    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize): IntOffset =
+        IntOffset(anchorBounds.left.coerceIn(0, (windowSize.width - popupContentSize.width).coerceAtLeast(0)), anchorBounds.bottom)
+}
