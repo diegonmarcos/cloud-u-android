@@ -79,24 +79,25 @@ private fun NewsPage(state: SearchState) {
     LaunchedEffect(topic.id) {
         result = withContext(Dispatchers.IO) { state.services.fleet.news(cfg, topic) }
     }
-    val r = result
-    val status = when {
-        r == null -> stringResource(R.string.research_loading)
-        r.kind == FleetCalls.Kind.OK -> stringResource(R.string.research_count, r.items.size, r.via)
-        r.kind == FleetCalls.Kind.EMPTY -> stringResource(R.string.research_empty)
-        r.kind == FleetCalls.Kind.NOTE -> stringResource(R.string.research_note, r.detail)
-        else -> stringResource(R.string.research_unavailable, r.detail)
-    }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = Metrics.gutter, end = Metrics.gutter, top = Metrics.small, bottom = Metrics.contentBottom),
         verticalArrangement = Arrangement.spacedBy(Metrics.small),
     ) {
+        // The status is read INSIDE the item, from the state itself: an item that only captured it would not follow the answer.
         item {
+            val r = result
+            val status = when {
+                r == null -> stringResource(R.string.research_loading)
+                r.kind == FleetCalls.Kind.OK -> stringResource(R.string.research_count, r.items.size, r.via)
+                r.kind == FleetCalls.Kind.EMPTY -> stringResource(R.string.research_empty)
+                r.kind == FleetCalls.Kind.NOTE -> stringResource(R.string.research_note, r.detail)
+                else -> stringResource(R.string.research_unavailable, r.detail)
+            }
             ChipRow { cfg.topics.forEach { t -> Chip(t.label, ResearchTags.topic(t.id), selected = t.id == topic.id) { state.newsTopic = t.id } } }
             Text(status, Modifier.testTag(ResearchTags.STATUS), color = g.text2, style = Type.style(Type.tiny))
         }
-        items(r?.items.orEmpty().withIndex().toList(), key = { it.value.url }) { (i, a) ->
+        items(result?.items.orEmpty().withIndex().toList(), key = { it.value.url }) { (i, a) ->
             GlassCard(Modifier.testTag(ResearchTags.article(i)), onClick = { Browser.open(ctx, a.url) }) {
                 Text(a.title, color = g.text, style = Type.style(Type.body, FontWeight.SemiBold), maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Text(a.domain + " · " + a.seen, color = g.text2, style = Type.style(Type.tiny), maxLines = 1)

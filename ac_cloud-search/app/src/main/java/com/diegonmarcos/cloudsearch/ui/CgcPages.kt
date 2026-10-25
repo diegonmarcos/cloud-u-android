@@ -111,7 +111,6 @@ private fun CgcPage(state: SearchState, cfg: CgcConfig, ix: CgcConfig.Index, m: 
         }
     }
     fun openNode(n: CgcNode) { relations(scope, m, fleet, cfg, ix, n) }
-    val shown: FleetCalls.Result<*>? = if (graph) m.nodes else m.hits
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = Metrics.gutter, end = Metrics.gutter, top = Metrics.small, bottom = Metrics.contentBottom),
@@ -128,6 +127,8 @@ private fun CgcPage(state: SearchState, cfg: CgcConfig, ix: CgcConfig.Index, m: 
                     Chip(stringResource(R.string.cgc_search), CgcTags.SEARCH, accent = true) { run() }
                 }
                 ChipRow { ix.repos.forEach { r -> Chip(r, CgcTags.repo(r), selected = r == m.repo) { m.repo = r } } }
+                // Read here, in the item, from the state itself: an item that only captured the answer would not follow it.
+                val shown: FleetCalls.Result<*>? = if (graph) m.nodes else m.hits
                 Text(statusLine(ix, shown, m.busy, graph), Modifier.testTag(CgcTags.STATUS), color = g.text2, style = Type.style(Type.tiny))
                 if (ix.needsAccount && shown == null) Text(stringResource(R.string.cgc_account_hint), color = g.text2, style = Type.style(Type.tiny))
             }
