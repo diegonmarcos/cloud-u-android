@@ -51,14 +51,31 @@ esac
     @Test fun policyAllowsTheDeclaredVerbsAndRefusesTheRest() {
         for (v in ArgPolicy.VERBS) assertNull(v, ArgPolicy.refusal(listOf(v, "a:b")))
         assertNotNull(ArgPolicy.refusal(emptyList()))
-        assertNotNull(ArgPolicy.refusal(listOf("serve", "http", "a:")))
-        assertNotNull(ArgPolicy.refusal(listOf("config", "show")))
+        assertNotNull(ArgPolicy.refusal(listOf("serve", "http", "a:", "--addr", "127.0.0.1:8080")))
+        assertNotNull(ArgPolicy.refusal(listOf("mount", "a:", "/mnt/x")))
+        assertNotNull(ArgPolicy.refusal(listOf("rcd")))
         assertNotNull("a flag that repoints the config", ArgPolicy.refusal(listOf("lsjson", "--config", "/x", "a:")))
         assertNotNull("the same with =", ArgPolicy.refusal(listOf("lsjson", "--config=/x", "a:")))
         assertNotNull(ArgPolicy.refusal(listOf("copy", "--password-command", "sh -c id", "a:", "b:")))
         assertNotNull(ArgPolicy.refusal(listOf("sync", "--rc", "a:", "b:")))
         assertNotNull(ArgPolicy.refusal(listOf("sync", "--rc-addr=0.0.0.0:5572", "a:", "b:")))
         assertNull("an ordinary flag passes", ArgPolicy.refusal(listOf("sync", "--exclude", "*.tmp", "--use-json-log", "a:", "b:")))
+    }
+
+    @Test fun theConfigVerbsAreAClosedListWithClosedSubcommands() {
+        for (ok in listOf(
+            listOf("config", "providers"), listOf("config", "create", "r", "drive", "scope=drive", "--non-interactive"),
+            listOf("config", "update", "r", "a=b"), listOf("config", "show", "r"), listOf("config", "delete", "r"),
+            listOf("lsd", "r:"), listOf("about", "r:", "--json"), listOf("authorize", "drive"), listOf("listremotes"),
+            listOf("backend", "drives", "r:"), listOf("serve", "webdav", "r:", "--addr", "127.0.0.1:8181"), listOf("serve", "webdav", "r:", "--addr=localhost:8181"),
+        )) assertNull(ok.toString(), ArgPolicy.refusal(ok))
+        for (bad in listOf(
+            listOf("config"), listOf("config", "edit"), listOf("config", "touch"), listOf("config", "file"), listOf("config", "password", "r", "pass", "x"), listOf("config", "dump"),
+            listOf("backend", "command", "r:"), listOf("backend"), listOf("serve"), listOf("serve", "sftp", "r:", "--addr", "127.0.0.1:1"),
+            listOf("serve", "webdav", "r:"), listOf("serve", "webdav", "r:", "--addr", "0.0.0.0:8181"), listOf("serve", "webdav", "r:", "--addr=:8181"),
+            listOf("serve", "webdav", "r:", "--addr", "127.0.0.1:8181", "--addr", "0.0.0.0:1"), listOf("config", "create", "r", "drive", "--config", "/x"),
+            listOf("serve", "webdav", "r:", "--addr", "127.0.0.1:8181", "--rc"),
+        )) assertNotNull(bad.toString(), ArgPolicy.refusal(bad))
     }
 
     @Test fun sharedStorageIsRecognisedOnPathsOnly() {

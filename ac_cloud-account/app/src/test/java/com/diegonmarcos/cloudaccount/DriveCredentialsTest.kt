@@ -137,4 +137,17 @@ class DriveCredentialsTest {
         vault.grants.revoke(other, D.GRANT_WRITE)
         assertFalse("a revoked write grant is honoured at once", put("""{"remove_mount":"nas"}""").getBoolean(AccountData.KEY_OK)); assertEquals(1, store.mounts().size)
     }
+
+    @Test fun theUnisonPairsNeedTheWriteGrantToStoreAndTheirOwnGrantToRead() {
+        val pairs = """{"pairs":[{"id":"docs","name":"Docs","root_a":"Documents","root_b":{"path":"/storage/x/D"}}]}"""
+        val body = org.json.JSONObject().put("unison", pairs).toString()
+        assertFalse("no grant, no write", put(body).getBoolean(AccountData.KEY_OK)); assertEquals("", store.unison())
+        vault.grants.grant(other, D.GRANT_READ); vault.grants.grant(other, D.GRANT_WRITE)
+        assertTrue(put(body).getBoolean(AccountData.KEY_OK)); assertEquals(pairs, store.unison())
+        assertNull("the read grant alone does not show the pairs", published().unison)
+        vault.grants.grant(other, D.GRANT_UNISON)
+        assertEquals(pairs, published().unison)
+        assertFalse("not a pair list", put(org.json.JSONObject().put("unison", "{}").toString()).getBoolean(AccountData.KEY_OK)); assertEquals(pairs, store.unison())
+        assertTrue("a phone already seeded at v6 gets the unison grant from v7", AccountVault.DEFAULT_GRANTS.getValue(AccountVault.DRIVE_PACKAGE).contains(D.GRANT_UNISON))
+    }
 }

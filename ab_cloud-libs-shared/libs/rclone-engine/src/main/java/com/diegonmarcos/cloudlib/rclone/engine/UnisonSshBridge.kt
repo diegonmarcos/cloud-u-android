@@ -20,6 +20,8 @@ internal class SshTarget(
     val password: String,
     /** The command the peer runs: the pinned unison in server mode, e.g. "unison -server". */
     val serverCommand: String,
+    /** #1173 the private key as TEXT (Cloud Account owns it and hands it over with the call): preferred over [keyPath], never written to disk here. */
+    val keyPem: String = "",
 )
 
 /**
@@ -58,7 +60,10 @@ internal object UnisonSshBridge {
             ssh.connectTimeout = 15_000
             ssh.timeout = 30_000
             ssh.connect(t.host, t.port)
-            if (t.keyPath.isNotBlank()) {
+            if (t.keyPem.isNotBlank()) {
+                val finder = if (t.passphrase.isEmpty()) null else net.schmizz.sshj.userauth.password.PasswordUtils.createOneOff(t.passphrase.toCharArray())
+                ssh.authPublickey(t.user, ssh.loadKeys(t.keyPem, null, finder))
+            } else if (t.keyPath.isNotBlank()) {
                 val kp = if (t.passphrase.isEmpty()) ssh.loadKeys(t.keyPath) else ssh.loadKeys(t.keyPath, t.passphrase)
                 ssh.authPublickey(t.user, kp)
             } else ssh.authPassword(t.user, t.password)

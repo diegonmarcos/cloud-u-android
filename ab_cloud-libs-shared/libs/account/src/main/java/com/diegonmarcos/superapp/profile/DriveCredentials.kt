@@ -55,6 +55,15 @@ class DriveCredentialStore(private val vault: AccountVault) {
         return true
     }
 
+    /** #1173 the Unison pair list (JSON text), "" when none is held. */
+    fun unison(): String = vault.connection(C.P_UNISON)?.toString().orEmpty()
+
+    fun putUnison(text: String): Boolean {
+        if (!C.validUnison(text)) return false
+        vault.putConnection(C.P_UNISON, text)
+        return true
+    }
+
     fun removeMount(name: String) { val all = obj(C.P_MOUNTS); all.remove(name); vault.putConnection(C.P_MOUNTS, all) }
 
     // ── the ed25519 key ──────────────────────────────────────────────────
@@ -118,7 +127,8 @@ object DriveCredentialsPublisher {
         return Bundle().apply {
             putBoolean(C.KEY_OK, true)
             putString(C.KEY_JSON, C.toJson(store.remotes(), store.publicKey(), store.fingerprint(), store.sshHosts(), store.privateKey(), store.mounts(),
-                rcloneSecrets = may(C.GRANT_RCLONE), sshPrivate = may(C.GRANT_SSH_PRIVATE), mountSecrets = may(C.GRANT_MOUNTS)))
+                rcloneSecrets = may(C.GRANT_RCLONE), sshPrivate = may(C.GRANT_SSH_PRIVATE), mountSecrets = may(C.GRANT_MOUNTS),
+                unison = if (may(C.GRANT_UNISON)) store.unison() else ""))
         }
     }
 
@@ -130,6 +140,7 @@ object DriveCredentialsPublisher {
             is C.Put.MountWrite -> store.putMount(op.mount)
             is C.Put.RemoveRemote -> { store.removeRemote(op.name); true }
             is C.Put.RemoveMount -> { store.removeMount(op.name); true }
+            is C.Put.UnisonWrite -> store.putUnison(op.text)
             null -> false
         }
         return Bundle().apply { putBoolean(C.KEY_OK, ok); if (!ok) putString(C.KEY_ERROR, "not stored: unusable name, type or fields") }

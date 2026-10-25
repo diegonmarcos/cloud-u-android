@@ -29,17 +29,22 @@ object DriveCredentialsContract {
     const val GRANT_MOUNTS = "drive.mounts"
     /** The one write door: a granted package (Cloud Drive's `rclone config` flow) stores or removes a remote or a mount; the ssh key is never written by a caller. */
     const val GRANT_WRITE = "drive.write"
-    val GRANTS = listOf(GRANT_READ, GRANT_RCLONE, GRANT_SSH_PRIVATE, GRANT_MOUNTS, GRANT_WRITE)
+    /** #1173 the Folders Sync (Unison) pairs: no secret in them (hosts, paths, policy), but they are the owner's, so they have their own grant. */
+    const val GRANT_UNISON = "drive.unison"
+    val GRANTS = listOf(GRANT_READ, GRANT_RCLONE, GRANT_SSH_PRIVATE, GRANT_MOUNTS, GRANT_WRITE, GRANT_UNISON)
 
     /**
      * [METHOD_PUT], `arg` = the JSON body: `{"rclone":{"name","type","fields":{…}}}`, `{"mount":{"name","kind","remote","host","user","port","path","mountpoint","password"}}`,
-     * `{"remove_rclone":"name"}` or `{"remove_mount":"name"}`. Answers `ok` (and `error` in words, never an echo of a value).
+     * `{"remove_rclone":"name"}`, `{"remove_mount":"name"}` or (#1173) `{"unison":"<{\"pairs\":[…]} text>"}`. Answers `ok` (and `error` in words, never an echo of a value).
      */
     const val METHOD_PUT = "drive_credentials_put"
 
     /** Vault paths (`section.key`) the page writes and the publisher reads. */
     const val P_RCLONE = "drive.rclone"
     const val P_MOUNTS = "drive.mounts"
+    /** #1173 the Unison pairs, as one JSON text `{"pairs":[…]}` (Cloud Drive's own parser validates each pair). */
+    const val P_UNISON = "drive.unison"
+    const val MAX_UNISON_BYTES = 64 * 1024
     const val P_SSH_PRIVATE = "ssh.ed25519.private"
     const val P_SSH_PUBLIC = "ssh.ed25519.public"
     const val P_SSH_FINGERPRINT = "ssh.ed25519.fingerprint"
@@ -100,9 +105,10 @@ object DriveCredentialsContract {
      */
     fun toJson(
         remotes: List<Remote>, publicKey: String, fingerprint: String, hosts: List<SshHost>, privateKey: String, mounts: List<Mount>,
-        rcloneSecrets: Boolean, sshPrivate: Boolean, mountSecrets: Boolean,
+        rcloneSecrets: Boolean, sshPrivate: Boolean, mountSecrets: Boolean, unison: String = "",
     ): String = JSONObject().also { o ->
         o.put("v", VERSION)
+        if (unison.isNotBlank()) o.put("unison", unison)
         o.put("rclone", JSONArray().also { a -> for (r in remotes) a.put(JSONObject().put("name", r.name).put("type", r.type).put("auth", r.auth).put("scope", r.scope).put("has_secret", r.hasSecret)) })
         if (rcloneSecrets) o.put("rclone_config", rcloneConfig(remotes))
         o.put("ssh", JSONObject().put("public", publicKey).put("fingerprint", fingerprint)
@@ -118,7 +124,13 @@ object DriveCredentialsContract {
         data class MountWrite(val mount: Mount) : Put()
         data class RemoveRemote(val name: String) : Put()
         data class RemoveMount(val name: String) : Put()
+        /** #1173 the whole Unison pair list, replacing the held one. */
+        data class UnisonWrite(val text: String) : Put()
     }
+
+    /** A Unison pair list is a JSON object with a `pairs` array, under [MAX_UNISON_BYTES]; anything else is not stored. */
+    fun validUnison(text: String): Boolean =
+        text.toByteArray().size <= MAX_UNISON_BYTES && runCatching { JSONObject(text).optJSONArray("pairs") != null }.getOrDefault(false)
 
     /** The body of [METHOD_PUT] as one operation, or null when it is none of the four (or has no usable name). */
     fun parsePut(text: String?): Put? {
@@ -134,6 +146,7 @@ object DriveCredentialsContract {
                     m.optString("path"), m.optString("mountpoint"), m.optString("password")))
             }
         }
+        if (o.has("unison")) return o.optString("unison").takeIf { validUnison(it) }?.let { Put.UnisonWrite(it) }
         o.optString("remove_rclone").takeIf { validName(it) }?.let { return Put.RemoveRemote(it) }
         o.optString("remove_mount").takeIf { validName(it) }?.let { return Put.RemoveMount(it) }
         return null
@@ -146,6 +159,8 @@ object DriveCredentialsContract {
         val sshConfig: String get() = json.optJSONObject("ssh")?.optString("config").orEmpty()
         val rcloneConfig: String? get() = json.optString("rclone_config").takeIf { json.has("rclone_config") }
         val privateKey: String? get() = json.optJSONObject("ssh")?.optString("private")?.takeIf { it.isNotEmpty() }
+        /** #1173 the held Unison pair list (JSON text), or null when none is held or the caller lacks [GRANT_UNISON]. */
+        val unison: String? get() = json.optString("unison").takeIf { json.has("unison") && it.isNotBlank() }
         override fun toString() = "DrivePublished(remotes=$remotes, ssh=${publicKey.isNotEmpty()}, secrets=${rcloneConfig != null || privateKey != null})"
     }
 

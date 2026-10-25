@@ -11,7 +11,7 @@ import java.io.File
  * A PUBLISHED CONTRACT (engine CONTRACT 2): the fields below may only grow.
  *   unison_start      {profile, profile_text, extra[], roots[], ssh?}  -> {id}
  *       profile_text may hold {PORT} (the loopback port of the SSH bridge) and {BACKUPS} (this
- *       engine's central backup dir for the pair); ssh = {host, port, user, key_path, passphrase,
+ *       engine's central backup dir for the pair); ssh = {host, port, user, key_path, key_pem (#1173, the key as text), passphrase,
  *       password, server_cmd}; extra = the flags UnisonPolicy allows.
  *   unison_poll       {id, cursor}                                      -> {lines[], cursor, done, rc?, rolled_back?}
  *   unison_cancel     {id}                                              -> {}
@@ -45,7 +45,7 @@ internal class UnisonCalls(
         if (ssh != null) {
             val target = SshTarget(
                 host = ssh.optString("host"), port = ssh.optInt("port", 22), user = ssh.optString("user"),
-                keyPath = ssh.optString("key_path"), passphrase = ssh.optString("passphrase"), password = ssh.optString("password"),
+                keyPath = ssh.optString("key_path"), keyPem = ssh.optString("key_pem"), passphrase = ssh.optString("passphrase"), password = ssh.optString("password"),
                 serverCommand = ssh.optString("server_cmd", "unison -server").ifBlank { "unison -server" },
             )
             if (target.host.isBlank() || target.user.isBlank()) return fail("unison_start: ssh needs host and user")

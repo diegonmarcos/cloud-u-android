@@ -24,7 +24,7 @@ class UnisonRunner(
     private val clock: () -> Long = { System.currentTimeMillis() },
 ) {
     /** What the engine needs to reach a peer; handed over for one call and not stored there. */
-    data class SshAccess(val keyPath: String = "", val passphrase: String = "", val password: String = "")
+    data class SshAccess(val keyPath: String = "", val passphrase: String = "", val password: String = "", val keyPem: String = "")
 
     class Handle internal constructor(private val stop: () -> Unit, private val exit: CountDownLatch, private val result: () -> UnisonOutput.Result) {
         private val cancelledFlag = AtomicBoolean(false)
@@ -47,7 +47,7 @@ class UnisonRunner(
             val access = ssh(pair) ?: return null
             req.put("ssh", JSONObject()
                 .put("host", peer.host).put("port", peer.port).put("user", peer.user)
-                .put("key_path", access.keyPath).put("passphrase", access.passphrase).put("password", access.password)
+                .put("key_path", access.keyPath).put("key_pem", access.keyPem).put("passphrase", access.passphrase).put("password", access.password)
                 .put("server_cmd", peer.serverCommand))
         }
         return req

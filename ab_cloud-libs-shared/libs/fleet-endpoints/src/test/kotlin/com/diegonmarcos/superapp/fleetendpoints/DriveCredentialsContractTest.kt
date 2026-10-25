@@ -79,4 +79,16 @@ class DriveCredentialsContractTest {
         assertEquals(D.Put.RemoveMount("nas"), D.parsePut("""{"remove_mount":"nas"}"""))
         assertNull(D.parsePut("""{"rclone":{"name":"bad name"}}""")); assertNull(D.parsePut("nope")); assertNull(D.parsePut(null)); assertNull(D.parsePut("{}"))
     }
+
+    @Test fun theUnisonPairsAreAnOwnLayerAndOnlyAValidListIsAPutOperation() {
+        val pairs = """{"pairs":[{"id":"docs","name":"Docs","root_a":"Documents","root_b":{"path":"/storage/x/D"}}]}"""
+        assertTrue(D.GRANT_UNISON in D.GRANTS)
+        val j = JSONObject(D.toJson(remotes, "k", "f", hosts, "PRIV", mounts, true, true, true, unison = pairs))
+        assertEquals(pairs, j.getString("unison"))
+        assertFalse("no unison key without the layer", JSONObject(D.toJson(remotes, "k", "f", hosts, "PRIV", mounts, true, true, true)).has("unison"))
+        assertEquals(pairs, D.parse(D.toJson(remotes, "k", "f", hosts, "PRIV", mounts, false, false, false, unison = pairs))!!.unison)
+        assertNull(D.parse(D.toJson(remotes, "k", "f", hosts, "PRIV", mounts, false, false, false))!!.unison)
+        assertEquals(D.Put.UnisonWrite(pairs), D.parsePut(JSONObject().put("unison", pairs).toString()))
+        for (bad in listOf("nope", "{}", """{"pairs":"x"}""", "x".repeat(D.MAX_UNISON_BYTES + 1))) assertNull(bad.take(20), D.parsePut(JSONObject().put("unison", bad).toString()))
+    }
 }

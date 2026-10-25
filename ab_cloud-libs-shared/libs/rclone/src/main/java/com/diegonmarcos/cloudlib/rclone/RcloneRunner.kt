@@ -153,6 +153,13 @@ class RcloneRunner(
 
     class Staged(val args: List<String>, val prepare: () -> String?, val finish: (Int) -> String?)
 
+    /**
+     * #1173 any verb the engine allows, as a streaming job: every line to [onLine], the exit code to [onExit]
+     * (-2 cancelled, -1 the engine could not run it). For the ones that wait on the user or run until stopped
+     * (`authorize`, `serve webdav`); a rewritten rclone.conf is kept like for every other run.
+     */
+    fun stream(args: List<String>, onLine: (String) -> Unit, onExit: (Int) -> Unit): Handle = startArgs(args, {}, onLine, onExit)
+
     private fun startArgs(jobArgs: List<String>, onStats: (RcloneStats) -> Unit, onLine: (String) -> Unit, onExit: (Int) -> Unit): Handle {
         val args = jobArgs + listOf("--use-json-log", "--stats", "1s", "--stats-log-level", "NOTICE", "-v")
         val exit = java.util.concurrent.CountDownLatch(1)
