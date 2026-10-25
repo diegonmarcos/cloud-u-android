@@ -292,6 +292,8 @@ class SearchShellTest {
         waitFor(Tags.drawer("saved"))
         compose.onNodeWithTag(Tags.drawer("saved")).performScrollTo().performClick()
         waitFor(Tags.SAVED)
+        // the title path ends with the page; while a search still runs the island says Searching, so wait for the settled title
+        compose.waitUntil(30_000) { compose.onAllNodesWithTag(Tags.ISLAND).fetchSemanticsNodes().any { n -> n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.any { it.text.contains("Saved Items") } == true } }
         compose.onNodeWithTag(Tags.ISLAND).assertTextContains("Saved Items", substring = true)
         openVertical("house")
         compose.runOnIdle { assertFalse(state.saved); assertEquals("house", state.vertical) }
