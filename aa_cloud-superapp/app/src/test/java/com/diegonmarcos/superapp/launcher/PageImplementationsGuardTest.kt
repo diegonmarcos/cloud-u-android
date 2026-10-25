@@ -53,7 +53,7 @@ class PageImplementationsGuardTest {
     /** (section, page) pairs routed by `sectionId == "s" && pageId == "p" -> <class>` with the class named on the branch. */
     private fun routed(): List<Triple<String, String, String>> {
         val out = mutableListOf<Triple<String, String, String>>()
-        val re = Regex("""sectionId == "([a-z0-9]+)"\s*&&\s*\(?pageId == "([a-z0-9-]+)"[^\n]*?->\s*([^\n]*(?:\n\s+[^\n]*)?)""")
+        val re = Regex("""sectionId == "([a-z0-9]+)"\s*&&\s*\(?pageId == "([a-z0-9-]+)"[^\n]*?->\s*(?=([^\n]*(?:\n[^\n]*)?))""")
         for (m in re.findAll(routing)) out += Triple(m.groupValues[1], m.groupValues[2], m.groupValues[3])
         return out
     }
