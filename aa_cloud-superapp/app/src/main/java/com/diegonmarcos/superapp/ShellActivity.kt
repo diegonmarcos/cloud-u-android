@@ -715,6 +715,7 @@ open class ShellActivity : AppCompatActivity(),
                     vX: Float, vY: Float,
                 ): Boolean {
                     if (e1 == null) return false
+                    Trace.i(TAG, "fling dx=${e2.x - e1.x} dy=${e2.y - e1.y} vY=$vY section=$currentSection backStack=${supportFragmentManager.backStackEntryCount}")
                     // Drawer (left pane) open → it owns ALL gestures inside
                     // it (vertical scroll of its menu, horizontal swipe-to-
                     // close). Don't fight it with cycle-section or
@@ -809,6 +810,7 @@ open class ShellActivity : AppCompatActivity(),
         // build.json declares these prefixed ("action:open_home_apps_phone");
         // the Configs picker (HomeSwipePrefs.ACTIONS) stores them bare. Strip
         // once so both vocabularies hit the same branches.
+        Trace.i(TAG, "home swipe action=$action")
         when (val a = action.removePrefix("action:")) {
             "open_last_superapp_page" -> {
                 val last = runCatching {
