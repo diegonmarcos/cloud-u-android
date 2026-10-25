@@ -2007,12 +2007,13 @@
     "cloud_tools_small_llms": {
       "kind": "prefs",
       "class": "content",
-      "doc": "Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check.",
+      "doc": "Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the AI chat's backend (backend: openrouter or local), the local runtime usage (local_usage: calls as tokens and time, no cost; the user's content), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check.",
       "used_by": [
         "ac_cloud-tools-small-llms"
       ],
       "keys": {
         "router": "config",
+        "backend": "config",
         "workers": "config",
         "jev_listed": "device",
         "jev_price_in": "device",
@@ -3792,6 +3793,20 @@
           "path": "SharedPreferences cloud_tools_small_llms:ledger",
           "class": "content",
           "doc": "Every priced call (time, dollars, task, model): the day and month totals on Costs.",
+          "store": "cloud_tools_small_llms"
+        },
+        {
+          "id": "backend",
+          "path": "SharedPreferences cloud_tools_small_llms:backend (default openrouter)",
+          "class": "config",
+          "doc": "The AI chat's backend: openrouter (cloud, paid, models with an openrouter_id) or local (a Store runtime, models Loaded there).",
+          "store": "cloud_tools_small_llms"
+        },
+        {
+          "id": "local-usage",
+          "path": "SharedPreferences cloud_tools_small_llms:local_usage",
+          "class": "content",
+          "doc": "Every chat call served by a local runtime (time, model, estimated tokens, duration; no cost): the Local usage section on Costs.",
           "store": "cloud_tools_small_llms"
         },
         {

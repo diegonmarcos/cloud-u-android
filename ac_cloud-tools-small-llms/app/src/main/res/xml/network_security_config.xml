@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- HTTPS only: this app talks to openrouter.ai and nothing else. Loopback stays cleartext for
-     the fleet debug server libs:devtools runs on 127.0.0.1. -->
+<!-- HTTPS everywhere except the WireGuard mesh: the fleet agent gateway (my-ai-api) is http on its mesh address
+     (WireGuard encrypts the hop, assets/ai/ai.json gateway.mesh_only), whose host libs/ai/ai-gateway.gradle bakes from
+     the fleet catalogue. openrouter.ai (the catalogue's prices, the key test) stays https. The Store's fleet Ollama host
+     is not declared in fleet_endpoints yet, so it has no cleartext entry here. Loopback stays cleartext for the fleet debug server libs:devtools runs on 127.0.0.1. -->
 <network-security-config>
     <base-config cleartextTrafficPermitted="false">
         <trust-anchors>
@@ -8,6 +10,9 @@
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="true">
+        <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
+        <domain includeSubdomains="false">my-ai-api.mesh.diegonmarcos.com</domain>
+        <!-- END fleet-mesh-cleartext -->
         <domain includeSubdomains="false">localhost</domain>
         <domain includeSubdomains="false">127.0.0.1</domain>
     </domain-config>

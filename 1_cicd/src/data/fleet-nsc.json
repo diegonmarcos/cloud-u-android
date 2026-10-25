@@ -3,6 +3,7 @@
   "declaration": "ac_cloud-account/build.json",
   "apps": [
     {"nsc": "ac_cloud-superintel/app/src/main/res/xml/network_security_config.xml", "services": ["ai-gateway"]},
+    {"nsc": "ac_cloud-tools-small-llms/app/src/main/res/xml/network_security_config.xml", "services": ["ai-gateway"]},
     { "nsc": "ac_cloud-account/app/src/main/res/xml/network_security_config.xml", "services": "*" },
     { "nsc": "ac_cloud-mail/app/src/main/res/xml/network_security_config.xml", "services": ["jmap"] },
     { "nsc": "ac_cloud-vault/app/src/main/res/xml/network_security_config.xml", "services": [] },
