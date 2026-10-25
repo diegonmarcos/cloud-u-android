@@ -864,9 +864,11 @@ open class ShellActivity : AppCompatActivity(),
     }
 
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
-        if (::navSwipeGesture.isInitialized &&
-            starGestureGate.admits(ev.actionMasked == android.view.MotionEvent.ACTION_DOWN, ev.x, ev.y))
-            navSwipeGesture.onTouchEvent(ev)
+        val admitted = ::navSwipeGesture.isInitialized &&
+            starGestureGate.admits(ev.actionMasked == android.view.MotionEvent.ACTION_DOWN, ev.x, ev.y)
+        if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN || ev.actionMasked == android.view.MotionEvent.ACTION_UP)
+            Trace.i(TAG, "touch ${ev.actionMasked} x=${ev.x} y=${ev.y} detector=$admitted")
+        if (admitted) navSwipeGesture.onTouchEvent(ev)
         return super.dispatchTouchEvent(ev)
     }
 
