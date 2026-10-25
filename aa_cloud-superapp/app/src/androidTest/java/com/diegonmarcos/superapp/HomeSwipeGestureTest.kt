@@ -12,6 +12,8 @@ import androidx.test.runner.lifecycle.Stage
 import com.diegonmarcos.superapp.launcher.GroupedTilesFragment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -26,6 +28,16 @@ import org.junit.runner.RunWith
 class HomeSwipeGestureTest {
     private val inst: Instrumentation = InstrumentationRegistry.getInstrumentation()
     private val ctx get() = inst.targetContext
+
+    /** The screensaver (idle 10 s) is a full-screen focusable overlay of this app: on a slow emulator it covers Home before
+     *  the first swipe and takes every touch (run 40245015198: the focused window was the app's own overlay, not the
+     *  activity). A swipe test needs the Home screen in front, so the idle timeout is off for the test and restored after. */
+    private var savedScreensaver = 0
+    @Before fun screensaverOff() {
+        val prefs = com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx)
+        savedScreensaver = prefs.screensaverTimeout; prefs.screensaverTimeout = 0
+    }
+    @After fun screensaverRestore() { com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).screensaverTimeout = savedScreensaver }
 
     /** startActivitySync waits for the main thread to go idle, which the animated Home never does: start it and poll. */
     private fun launchHome(): ShellActivity {
