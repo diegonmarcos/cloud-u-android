@@ -55,6 +55,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -160,6 +162,7 @@ public fun titleHierarchy(section: NavSection, currentPageId: String?): List<Hie
  * whatever the page declared through [extra] (the app's non-navigation actions); and plain AI (sparkles), Profile (round
  * avatar) and Configs (vertical dots) icons at the right. No icon sits inside a circle.
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 public fun NavBarTopFirstRow(
     title: String,
@@ -218,6 +221,8 @@ public fun NavBarTopFirstRow(
                     onDismissRequest = { open = false },
                     properties = PopupProperties(focusable = true),
                 ) {
+                  // The popup is its own window: the runtime nav walk (cloud-android-nav-walk.py) finds the entries by tag.
+                  Box(Modifier.semantics { testTagsAsResourceId = true }) {
                   Surface(
                     color = colors.island, shape = RoundedCornerShape(12.dp), shadowElevation = 8.dp,
                     modifier = Modifier.width(TopFirstRowSpec.DROPDOWN_WIDTH).heightIn(max = TopFirstRowSpec.DROPDOWN_MAX_HEIGHT).testTag(TopFirstRowTags.DROPDOWN),
@@ -260,6 +265,7 @@ public fun NavBarTopFirstRow(
                         // LazyColumn then measures instead of crashing, and the popup's scroll reaches all of it.
                         Column(Modifier.heightIn(max = TopFirstRowSpec.ACTIONS_MAX_HEIGHT).testTag(TopFirstRowTags.ACTIONS)) { extra { open = false } }
                     }
+                  }
                   }
                   }
                 }
@@ -318,6 +324,7 @@ private fun PlainIcon(icon: ImageVector, label: String, tag: String, colors: The
  * puts in TopBarDrawer is listed at the end of the title dropdown); the row is [NavBarTopFirstRow]. [onAi] null opens
  * the scaffold's own AI popup ([aiPanel]); otherwise it is the host's. Profile and Configs are the host's ([onAccount], [onConfigs]).
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 public fun NavBarTopFirstRowScaffold(
     title: String,
@@ -355,7 +362,8 @@ public fun NavBarTopFirstRowScaffold(
             title = title,
             onAccount = onAccount,
             onConfigs = onConfigs,
-            modifier = modifier,
+            // Every test tag under the scaffold (the bars and the page) is a resource id for UiAutomator: the runtime nav walk reads them.
+            modifier = modifier.semantics { testTagsAsResourceId = true },
             controller = controller,
             labels = labels,
             onAi = onAi,

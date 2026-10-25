@@ -1,0 +1,113 @@
+{
+  "_doc": "The apps the runtime nav walk (1_cicd/src/cicd/test-nav-runtime.yml, driver 1_cicd/src/scripts/cloud-android-nav-walk.py) drives: every app on the shared nav libs. `ship` is its Ship workflow (the walk waits for that workflow's run of the same commit and tests the APK it built, else the APK on the rolling `latest` release), `artifact` the prefix of the APK artifact that run uploads, `asset` the release asset's base name (the walk prefers `<asset>-x86_64.apk`). An app on the shared bars that is not listed here is not walked: ChromeScrollGuardTest's app list and this one must name the same apps (the workflow's plan job fails otherwise).",
+  "apps": [
+    {
+      "app": "ac_cloud-news",
+      "ship": "ship-cloud-news.yml",
+      "artifact": "Cloud-News-",
+      "asset": "Cloud-News"
+    },
+    {
+      "app": "ac_cloud-store",
+      "ship": "ship-cloud-store.yml",
+      "artifact": "Cloud-Store-",
+      "asset": "Cloud-Store"
+    },
+    {
+      "app": "ac_cloud-account",
+      "ship": "ship-cloud-account.yml",
+      "artifact": "Cloud-Account-",
+      "asset": "Cloud-Account"
+    },
+    {
+      "app": "ac_cloud-superintel",
+      "ship": "ship-cloud-superintel.yml",
+      "artifact": "Cloud-SuperIntel-",
+      "asset": "Cloud-SuperIntel"
+    },
+    {
+      "app": "ac_cloud-tools-small-llms",
+      "ship": "ship-cloud-tools-small-llms.yml",
+      "artifact": "Cloud-Tools-Small-LLMs-",
+      "asset": "Cloud-Tools-Small-LLMs"
+    },
+    {
+      "app": "ac_cloud-writer",
+      "ship": "ship-cloud-writer.yml",
+      "artifact": "Cloud-Writer-",
+      "asset": "Cloud-Writer"
+    },
+    {
+      "app": "ac_cloud-browser",
+      "ship": "ship-cloud-browser.yml",
+      "artifact": "Cloud-Browser-",
+      "asset": "Cloud-Browser"
+    },
+    {
+      "app": "ac_cloud-contacts",
+      "ship": "ship-cloud-contacts.yml",
+      "artifact": "Cloud-Contacts-",
+      "asset": "Cloud-Contacts"
+    },
+    {
+      "app": "ac_cloud-nav",
+      "ship": "ship-cloud-nav.yml",
+      "artifact": "Cloud-Nav-",
+      "asset": "Cloud-Nav"
+    },
+    {
+      "app": "ac_cloud-dialer",
+      "ship": "ship-cloud-dialer.yml",
+      "artifact": "cloud-comms-dialer-",
+      "asset": "cloud-comms-dialer"
+    },
+    {
+      "app": "ac_cloud-notes",
+      "ship": "ship-cloud-notes.yml",
+      "artifact": "cloud-notes-arm64-v8a-",
+      "asset": "Cloud-Notes"
+    },
+    {
+      "app": "ac_cloud-mail",
+      "ship": "ship-cloud-mail.yml",
+      "artifact": "cloud-comms-mail-",
+      "asset": "cloud-comms-mail"
+    },
+    {
+      "app": "ac_cloud-me",
+      "ship": "ship-cloud-me.yml",
+      "artifact": "Cloud-Me-",
+      "asset": "Cloud-Me"
+    },
+    {
+      "app": "ac_cloud-c3",
+      "ship": "ship-cloud-c3.yml",
+      "artifact": "Cloud-C3-",
+      "asset": "Cloud-C3"
+    },
+    {
+      "app": "ac_cloud-tasks",
+      "ship": "ship-cloud-tasks.yml",
+      "artifact": "Cloud-Tasks-",
+      "asset": "Cloud-Tasks"
+    },
+    {
+      "app": "ac_cloud-drive",
+      "ship": "ship-cloud-drive.yml",
+      "artifact": "Cloud-Drive-",
+      "asset": "Cloud-Drive"
+    },
+    {
+      "app": "ac_cloud-search",
+      "ship": "ship-cloud-search.yml",
+      "artifact": "Cloud-Search-",
+      "asset": "Cloud-Search"
+    },
+    {
+      "app": "ac_cloud-calc",
+      "ship": "ship-cloud-calc.yml",
+      "artifact": "Cloud-Calc-",
+      "asset": "Cloud-Calc"
+    }
+  ]
+}

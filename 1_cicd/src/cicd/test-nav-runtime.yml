@@ -1,0 +1,227 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → nav runtime walk (emulator: every page of every app on the      ║
+# ║ shared nav bars)                                                       ║
+# ║                                                                        ║
+# ║ The static guards passed pages that did not collapse and pages that    ║
+# ║ crashed. This launches each app on a REAL emulator, walks EVERY        ║
+# ║ section and page its build.json::ui declares, and on each page asserts ║
+# ║ no crash, the title dropdown (breadcrumb) opens and closes, and a      ║
+# ║ swipe up collapses the chrome (first row gone, non-selected bottom     ║
+# ║ labels gone, bars shrunk) when the page scrolls, and a swipe down      ║
+# ║ restores it. Per-app, per-page results are the `nav-walk-<app>`        ║
+# ║ artifacts and the run summary. Driver:                                 ║
+# ║ 1_cicd/src/scripts/cloud-android-nav-walk.py; apps:                    ║
+# ║ 1_cicd/src/data/nav-walk-apps.json.                                    ║
+# ║                                                                        ║
+# ║ WHICH APK. The walk waits for each app's Ship run of the same commit   ║
+# ║ and tests the APK that run built; when that run did not build (the     ║
+# ║ publish gate saw unchanged source, or Ship was not triggered) it tests ║
+# ║ the APK on the rolling `latest` release, which is that same source.    ║
+# ║ A Ship run that FAILED fails the walk of that app: there is nothing    ║
+# ║ to drive and the red must not hide.                                    ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → nav runtime walk (emulator, every app on the shared nav)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: "Apps to walk: 'all' or a comma list of directory names (ac_cloud-calc,ac_cloud-drive)"
+        required: false
+        default: "all"
+  push:
+    branches: [main]
+    paths:
+      - "1_cicd/src/cicd/test-nav-runtime.yml"
+      - "1_cicd/src/scripts/cloud-android-nav-walk.py"
+      - "1_cicd/src/data/nav-walk-apps.json"
+      # the shared nav libs
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-bottom/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**"
+      - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
+      - "ab_cloud-libs-shared/libs/ui-kit/**"
+      # every app's nav declaration and shell/nav/ui sources
+      - "ac_cloud-*/build.json"
+      - "ac_cloud-*/app/src/main/**/ui/**"
+      - "ac_cloud-*/app/src/main/**/*Shell*.kt"
+      - "ac_cloud-*/app/src/main/**/*Nav*.kt"
+      - "ac_cloud-*/app/src/main/**/Declarations.kt"
+      - "ac_cloud-*/app/src/main/**/MainActivity.kt"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: test-nav-runtime-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: The walked apps are exactly the apps ChromeScrollGuardTest holds
+        run: |
+          set -eu
+          want=$(grep -m1 -A1 'private val apps = listOf' ab_cloud-libs-shared/libs/nav-bar-top-first-row/src/test/kotlin/com/diegonmarcos/superapp/navbartop1/ChromeScrollGuardTest.kt | grep -o 'ac_cloud-[a-z0-9-]*' | sort -u)
+          have=$(jq -r '.apps[].app' 1_cicd/src/data/nav-walk-apps.json | sort -u)
+          if [ "$want" != "$have" ]; then
+            echo "::error::nav-walk-apps.json and ChromeScrollGuardTest name different apps"
+            diff <(echo "$want") <(echo "$have") || true
+            exit 1
+          fi
+      - name: Matrix
+        id: m
+        env:
+          APPS: ${{ github.event_name == 'workflow_dispatch' && inputs.apps || 'all' }}
+        run: |
+          set -eu
+          if [ "$APPS" = all ]; then
+            jq -c '.apps' 1_cicd/src/data/nav-walk-apps.json > m.json
+          else
+            jq -c --arg l "$APPS" '[.apps[] | select(.app as $a | ($l | split(",") | map(gsub(" ";"")) | index($a)))]' 1_cicd/src/data/nav-walk-apps.json > m.json
+          fi
+          [ "$(jq length m.json)" -gt 0 ] || { echo "::error::no app matches '$APPS'"; exit 1; }
+          echo "matrix={\"include\":$(cat m.json)}" >> "$GITHUB_OUTPUT"
+
+  walk:
+    needs: plan
+    name: "Walk ${{ matrix.app }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get the APK under test (this commit's Ship run, else the release)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          SHIP: ${{ matrix.ship }}
+          PREFIX: ${{ matrix.artifact }}
+          ASSET: ${{ matrix.asset }}
+        run: |
+          set -u
+          mkdir -p apk
+          found=""
+          for i in $(seq 1 100); do
+            row=$(gh run list -R "$REPO" -w "$SHIP" -c "$SHA" -L 1 --json status,conclusion,databaseId --jq '.[0] // empty | "\(.status) \(.conclusion) \(.databaseId)"' || true)
+            if [ -z "$row" ]; then
+              # no Ship run for this commit: it was not triggered (no watched path moved). Give it three minutes to appear.
+              [ "$i" -ge 6 ] && break
+              sleep 30; continue
+            fi
+            set -- $row
+            if [ "$1" != completed ]; then echo "Ship run $3 is $1 ($i)"; sleep 30; continue; fi
+            if [ "$2" != success ]; then
+              echo "::error title=$SHIP failed on this commit::run $3 concluded $2: nothing to walk, and the red must not hide"
+              exit 1
+            fi
+            found="$3"; break
+          done
+          if [ -n "$found" ]; then
+            gh run download "$found" -R "$REPO" -p "${PREFIX}*" -D apk || echo "run $found uploaded no APK (publish gate: source unchanged)"
+          fi
+          if ! find apk -name '*.apk' | grep -q .; then
+            echo "walking the APK on the rolling release"
+            gh release download latest -R "$REPO" -p "${ASSET}-x86_64.apk" -D apk 2>/dev/null \
+              || gh release download latest -R "$REPO" -p "${ASSET}.apk" -D apk
+          fi
+          find apk -name '*.apk' | sort > apks.txt; cat apks.txt
+          pick=""
+          for want in x86_64 universal arm64 ''; do
+            pick=$(grep -i -- "$want" apks.txt | head -1 || true)
+            [ -n "$pick" ] && break
+          done
+          [ -n "$pick" ] || { echo "::error::no APK for ${{ matrix.app }}"; exit 1; }
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          echo "APK under test: $pick ($("$aapt2" dump packagename "$pick"))"
+          cp "$pick" app-under-test.apk
+          echo "PKG=$("$aapt2" dump packagename "$pick")" >> "$GITHUB_ENV"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Write the walk script
+        run: |
+          cat > walk.sh <<'EOF'
+          #!/bin/bash
+          set -u
+          mkdir -p walk-out
+          adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard || true
+          adb install -r -g app-under-test.apk || { echo "::error::adb install failed"; exit 2; }
+          rc=0
+          python3 1_cicd/src/scripts/cloud-android-nav-walk.py --app "$APP" --build-json "$APP/build.json" --pkg "$PKG" --out walk-out || rc=$?
+          adb logcat -d -v threadtime > walk-out/logcat.txt || true
+          exit $rc
+          EOF
+          chmod +x walk.sh
+
+      - name: Boot emulator + walk
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          APP: ${{ matrix.app }}
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./walk.sh
+
+      - name: Per-page results in the run summary
+        if: always()
+        run: |
+          [ -f walk-out/report.md ] && cat walk-out/report.md >> "$GITHUB_STEP_SUMMARY" || echo "### ${{ matrix.app }}: no report (the walk never started)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload evidence (report, screenshots and UI dumps of failures, logcat)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nav-walk-${{ matrix.app }}
+          path: walk-out
+          if-no-files-found: warn
+          retention-days: 30
+
+  report:
+    needs: walk
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: nav-walk-ac_cloud-*
+          path: results
+      - name: Per-app table
+        run: |
+          {
+            echo "## Nav runtime walk: per app"
+            echo
+            echo "| app | pages | passed | failed | skipped | scrolled | fixed |"
+            echo "|---|---|---|---|---|---|---|"
+            for f in results/*/report.json; do
+              [ -f "$f" ] || continue
+              jq -r '[.app, (.results|length), ([.results[]|select(.status=="PASS")]|length), ([.results[]|select(.status=="FAIL")]|length), ([.results[]|select(.status=="SKIP")]|length), ([.results[]|select(.checks.scroll=="scrolled")]|length), ([.results[]|select(.checks.scroll=="fixed")]|length)] | "| " + (map(tostring)|join(" | ")) + " |"' "$f"
+            done
+          } | tee report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nav-walk-report
+          path: |
+            report.md
+            results/**/report.json
+            results/**/report.md
