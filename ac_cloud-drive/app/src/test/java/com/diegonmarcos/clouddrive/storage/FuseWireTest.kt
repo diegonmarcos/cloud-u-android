@@ -46,7 +46,9 @@ class FuseWireTest {
     @Test fun `the probe only looks, it never mounts`() {
         val p = FuseWire.probe()
         assertTrue("/dev/fuse" in p && "/proc/filesystems" in p)
-        for (bad in listOf("mount ", "rclone mount", " -o ", "mknod")) assertFalse(bad, bad in p)
+        // a command position is the start, or after ; & | : none of them may be a mount, an unmount or a device node (the tool NAMES in the `for` list are fine)
+        assertFalse(p, Regex("""(^|[;&|]\s*)(mount|umount|mknod|fusermount3?\s+-u|rclone\s+mount|sshfs\s)""").containsMatchIn(p))
+        assertTrue("it asks command -v for each tool", "command -v" in p)
     }
 
     private val rc = Spec("gd", Kind.RCLONE, "gdrive:Docs", "/root/mnt/gd", "writes")
