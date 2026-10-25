@@ -60,3 +60,14 @@ Cloud Me used to compile `libs:cal`, which bakes its subscription list from
 `build.json::engines.cal`) instead of compiling it, and the engine bakes the
 one list in `ac_cloud-tasks/data/calendars.json` when lib-apks builds it, so
 the symlink went with the module.
+
+## `health/` — the declared content of Health
+
+`health/health_*.json` ship as assets (`assets.srcDirs += ../data/health`) and are read by
+`health/HealthContent.kt`: `health_home.json` (home cluster cards), `health_formulas.json`
+(every coefficient: BMR, TDEE multipliers, sauna loss, gut-flow curve, circadian points),
+`health_plan.json` (the timeline, objectives, biomarker targets, culinary methods, absorption
+rules; the matrix, shopping list, overlays and dossier are DERIVED from it) and
+`health_workout.json`. The user's own entries are not here: they live in the SharedPreferences
+store `health_user`, declared in fleet-config.json as a migrating `config` store. Health Connect
+readings are never stored; the trackers read them live and show an empty state when there are none.

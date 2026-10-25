@@ -2838,7 +2838,7 @@
                 "id": "myhealth",
                 "label": "MyHealth",
                 "icon": "ic_heart",
-                "target": "extapp:cloud-me#page:health/body"
+                "target": "extapp:cloud-me#page:health/home"
               },
               {
                 "_doc": "MyStudy — Cloud-Me's Projects > Studying page. The fragment is `projects/studying` and not `projects/study`, because the id the router resolves is the page's own declared id (ac_cloud-me/build.json::ui.sections[projects].pages[id=studying]) and not the label on the tile: Cloud-Me's Section.page() flattens a section's whole strip tree into one id list, so guessing at the id is how a tile lands on the app's front door and looks like it half-worked. test-dashboard-cross-app-deeplink.sh T3 walks that flattened tree and fails if this ever stops resolving.",
@@ -4557,7 +4557,7 @@
         ]
       },
       {
-        "_doc": "MyHealth — the PAGES are GONE: the Compose surface moved to Cloud-Me (Projects > Health), so there is one Health screen in the constellation instead of two copies of the same Health Connect reader, and the Cloud > Dashboard tile deep-links into it (extapp:cloud-me#page:health/body). This entry survives because libs:health/build.gradle looks the metric taxonomy up by SECTION ID — `ui.sections.find { it.id == 'health' }.metrics` — and Configs > Permissions still reads the result as HealthMetrics.allPermissions to count and request the 34 Health Connect grants. Deleting the section would silently turn that row into '0 / 0'. A pageless section is legal (Sections.kt: `optJSONArray(\"pages\")` tolerates absent) and with no pages, no module and bottom_nav:false it is reachable from nothing.",
+        "_doc": "MyHealth — the PAGES are GONE: the Compose surface moved to Cloud-Me (Projects > Health), so there is one Health screen in the constellation instead of two copies of the same Health Connect reader, and the Cloud > Dashboard tile deep-links into it (extapp:cloud-me#page:health/home). This entry survives because libs:health/build.gradle looks the metric taxonomy up by SECTION ID — `ui.sections.find { it.id == 'health' }.metrics` — and Configs > Permissions still reads the result as HealthMetrics.allPermissions to count and request the 34 Health Connect grants. Deleting the section would silently turn that row into '0 / 0'. A pageless section is legal (Sections.kt: `optJSONArray(\"pages\")` tolerates absent) and with no pages, no module and bottom_nav:false it is reachable from nothing.",
         "_doc_metrics": "Data-driven metric taxonomy — read by libs:health (UI_HEALTH_METRICS_B64) and by Configs > Permissions. Each metric maps to one-or-more Health Connect record types via `records` (matched at runtime by class simple-name) + the perm subset via `perm_keys`. This is now the SuperApp's only stake in Health: the pages that used to render these tiles live in Cloud-Me, which declares its own copy of this list for the same reason (its libs:health reads its own build.json).",
         "id": "health",
         "label": "MyHealth",

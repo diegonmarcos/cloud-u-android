@@ -1,0 +1,14 @@
+{
+  "_doc": "Trackers > Workout plan: the training programme the owner wrote. A day lists exercises; the page logs completion and load per exercise per date into the user data store.",
+  "days": [
+    {
+      "id": "pull",
+      "label": "Pull Day",
+      "exercises": [
+        {"id": "deadlift", "name": "Deadlifts", "scheme": "3 x 5", "note": "RPE 8", "load": true},
+        {"id": "weighted_pullups", "name": "Weighted pull-ups", "scheme": "4 x 8", "note": "", "load": true},
+        {"id": "zone2", "name": "Zone 2 cardio", "scheme": "30 min", "note": "", "load": false}
+      ]
+    }
+  ]
+}

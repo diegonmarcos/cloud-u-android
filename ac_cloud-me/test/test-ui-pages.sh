@@ -124,6 +124,10 @@ for t in {o["target"] for o in list(walk(secs)) + blocks
 # Health > Gym makes that unacceptable: there, the drawing of the movement IS
 # the content, and a silently missing one is an exercise shipped blank.
 drawables = {n[:-4] for n in os.listdir("app/src/main/res/drawable") if n.endswith(".xml")}
+# An icon is an app drawable OR a name of the shared catalog (libs:ui-icons); Health's page icons are catalog names.
+_cat = "../ab_cloud-libs-shared/libs/ui-icons/src/main/kotlin/com/diegonmarcos/superapp/uiicons/UiIcons.kt"
+if os.path.isfile(_cat):
+    drawables |= set(re.findall(r'"([a-z0-9_]+)"\s+to\s', open(_cat, encoding="utf-8").read()))
 for icon in sorted({o["icon"] for o in list(walk(secs)) + blocks
                     if isinstance(o.get("icon"), str) and o["icon"]}):
     if icon not in drawables:

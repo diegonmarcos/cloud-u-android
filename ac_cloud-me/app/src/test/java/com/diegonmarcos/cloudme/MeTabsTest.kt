@@ -77,7 +77,11 @@ class MeTabsTest {
                     selectedId = selected,
                     onSelect = { selected = it.id },
                     underTopChrome = false,
-                    iconFor = { p -> painterResource(ctx.resources.getIdentifier(p.icon, "drawable", ctx.packageName)) },
+                    iconFor = { p ->
+                        // A tab icon is an app drawable, or (Health's pages) a name of libs:ui-icons.
+                        val id = ctx.resources.getIdentifier(p.icon, "drawable", ctx.packageName)
+                        if (id != 0) painterResource(id) else androidx.compose.ui.graphics.vector.rememberVectorPainter(com.diegonmarcos.superapp.uiicons.UiIcons.vector(p.icon))
+                    },
                 )
             }
         }
@@ -89,7 +93,7 @@ class MeTabsTest {
 
     @Test
     fun `every tab is an icon and only the selected tab shows its name`() {
-        assertEquals(7, health.size)
+        assertEquals(18, health.size)
         showTabs(health[2].id)
         for (p in health) {
             compose.onAllNodesWithTag(PageTabsTags.icon(p.id), useUnmergedTree = true).assertCountEquals(1)

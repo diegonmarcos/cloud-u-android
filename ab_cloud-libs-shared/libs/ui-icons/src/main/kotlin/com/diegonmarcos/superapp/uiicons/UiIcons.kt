@@ -263,6 +263,19 @@ public object UiIcons {
         "events" to Icons.Outlined.ConfirmationNumber,
         "config" to Icons.Outlined.Settings,
         "writer" to Icons.Outlined.Edit,
+        // Cloud Me > Health plan pages.
+        "health_bio" to Icons.Outlined.MonitorWeight,
+        "health_circadian" to Icons.Outlined.NightsStay,
+        "health_biomarkers" to Icons.Outlined.Biotech,
+        "health_objectives" to Icons.Outlined.Flag,
+        "health_matrix" to Icons.Outlined.GridOn,
+        "health_culinary" to Icons.Outlined.LocalDining,
+        "health_clash" to Icons.Outlined.Science,
+        "health_thermal" to Icons.Outlined.Thermostat,
+        "health_hemo" to Icons.Outlined.WaterDrop,
+        "health_shop" to Icons.Outlined.ShoppingCart,
+        "health_dossier" to Icons.Outlined.Summarize,
+        "health_timeline" to Icons.Outlined.Timeline,
         )
     }
 

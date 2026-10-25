@@ -65,8 +65,8 @@ else:
     if "SecondRowTags.icon(" not in t:
         bad("tab-style", "the icon pill does not draw an icon for every tab")
     # #1159 (owner, supersedes #1144's selected-only name): at rest EVERY tab shows its name, scrolled down (compact) only the selected one.
-    if "val named = !compact || on" not in t:
-        bad("tab-style", "the tab name is not gated by `named = !compact || on` - every tab shows it at rest, only the selected one when compact")
+    if "named = !compact || page.id == selectedId" not in t:
+        bad("tab-style", "the tab name is not gated by `named = !compact || page.id == selectedId` - every tab shows it at rest, only the selected one when compact")
     if not re.search(r"AnimatedVisibility\(\s*named", t):
         bad("tab-style", "the tab name is not drawn inside AnimatedVisibility(named)")
     if len(re.findall(r"page\.label", t)) != len(re.findall(r"AnimatedVisibility\(\s*named,[^{]*\{\s*Text\(\s*page\.label", t)) + len(re.findall(r"contentDescription = page\.label", t)):
@@ -78,6 +78,10 @@ i = sec.find("NavBarTopSecondRow(")
 if i < 0 or not re.search(r"\biconFor\s*=", sec[i:i + 2500]):
     bad("tab-style", "SectionScreen draws its strips without iconFor (no icon-only pills)")
 drawables = {n[:-4] for n in os.listdir(os.path.join(MAIN, "res/drawable")) if n.endswith(".xml")}
+# A tab icon is an app drawable OR a name of the shared catalog (libs:ui-icons), which the second row draws when no drawable exists.
+_cat = os.path.join(app, "../ab_cloud-libs-shared/libs/ui-icons/src/main/kotlin/com/diegonmarcos/superapp/uiicons/UiIcons.kt")
+if os.path.isfile(_cat):
+    drawables |= set(re.findall(r'"([a-z0-9_]+)"\s+to\s', open(_cat, encoding="utf-8").read()))
 for s in secs.values():
     if len(s.get("pages", [])) > 1 or any(len(p.get("pages", [])) > 1 for p in pages(s.get("pages"))):
         for p in pages(s["pages"]):
@@ -249,7 +253,7 @@ if "extapp:cloud-wallet" in blob:
 
 # ---- N8 the new section pages
 want_pages = {
-    "health": ["Body Composition", "HR stats", "Sleep", "Blood Test", "Nutrition Plan", "Workout Plan", "Activities"],
+    "health": ["Index", "Anthropometrics", "Circadian", "Biomarkers", "Timeline", "Objectives", "Matrix", "Culinary", "Absorption clash", "Thermal", "Hemodynamics", "Supermarket", "Dossier", "Workout plan", "Activities", "Body comp", "HR & HRV", "Sleep"],
     "study": ["CV", "Roadmap"],
     "work": ["Employed", "Endeavours"],
 }
@@ -300,7 +304,7 @@ mutant() { # id description sh-command-run-in-copy
 }
 BJ='python3 - "$@"'
 mutant nav-order "bar order swapped" "python3 -c \"import json;d=json.load(open('build.json'));b=d['ui']['bottom_nav'];b[0],b[1]=b[1],b[0];json.dump(d,open('build.json','w'))\""
-mutant tab-style "name drawn on every tab even when compact" "sed -i 's/val named = !compact || on/val named = true/' ../ab_cloud-libs-shared/libs/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt"
+mutant tab-style "name drawn on every tab even when compact" "sed -i 's/named = !compact || page.id == selectedId/named = true/' ../ab_cloud-libs-shared/libs/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt"
 mutant tab-style "SectionScreen back to text pills" "sed -i 's/iconFor = /xxx = /' app/src/main/java/com/diegonmarcos/cloudme/SectionScreen.kt"
 mutant settings "Settings entries reduced to one" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['settings']=['configs'];json.dump(d,open('build.json','w'))\""
 mutant settings "a dropdown comes back" "echo 'val x = DropdownMenu' >> app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"

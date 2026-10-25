@@ -1,0 +1,86 @@
+{
+  "_doc": "The owner's chrono-nutrition plan as data. `timeline` is the single source: the Timeline, Matrix, Circadian overlay, Absorption check, Hemodynamics gaps, Supermarket list and Dossier are all derived from it. Item `qty` is per day; `days_per_week` scales it to the weekly list; `pack` is the shop's unit the weekly total is rounded UP to.",
+  "days_per_week": 7,
+  "timeline": [
+    {
+      "id": "lunch", "time": "12:30", "kind": "meal", "window": "Lunch", "title": "Meal 1: Lunch (Calcium Window)",
+      "body": "Greek yogurt and oats. Take the multivitamin and omega-3 here.", "rule": "Isolate calcium", "fat": false,
+      "items": [
+        {"id": "yogurt", "name": "Greek yogurt / skyr", "qty": 350, "unit": "g", "role": "protein", "tags": ["calcium", "zinc"], "category": "Dairy", "pack": {"size": 350, "unit": "g", "label": "tub"}},
+        {"id": "oats", "name": "Rolled oats", "qty": 80, "unit": "g", "role": "side", "tags": [], "category": "Dry goods", "pack": {"size": 500, "unit": "g", "label": "bag"}}
+      ],
+      "supplements": [
+        {"id": "az", "name": "Doppelherz A-Z", "qty": 1, "unit": "tablet", "category": "Supplements", "pack": {"size": 60, "unit": "tablet", "label": "box"}},
+        {"id": "omega3", "name": "Omega-3", "qty": 1, "unit": "capsule", "category": "Supplements", "pack": {"size": 120, "unit": "capsule", "label": "bottle"}}
+      ]
+    },
+    {
+      "id": "prelift", "time": "17:00", "kind": "meal", "window": "Pre-lift", "title": "Meal 2: Pre-workout (fast gastric)",
+      "body": "Whey isolate and a banana. Zero fat to speed digestion.", "rule": "Zero fat", "fat": false,
+      "items": [
+        {"id": "whey", "name": "Whey isolate", "qty": 30, "unit": "g", "role": "protein", "tags": [], "category": "Supplements", "pack": {"size": 1000, "unit": "g", "label": "tub"}},
+        {"id": "banana", "name": "Banana", "qty": 1, "unit": "piece", "role": "side", "tags": [], "category": "Fruit", "pack": {"size": 1, "unit": "piece", "label": "piece"}}
+      ],
+      "supplements": []
+    },
+    {
+      "id": "train", "time": "18:30", "kind": "training", "window": "Training", "title": "Train and sauna",
+      "body": "Hydrate with electrolytes.", "rule": "Hydrate", "fat": false,
+      "items": [], "supplements": []
+    },
+    {
+      "id": "dinner", "time": "21:00", "kind": "meal", "window": "Dinner", "title": "Meal 3: Dinner (zero dairy)",
+      "body": "Chicken or tofu with rice. Take creatine here.", "rule": "Zero dairy", "fat": true,
+      "items": [
+        {"id": "chicken", "name": "Chicken breast / thighs (or firm tofu)", "qty": 250, "unit": "g", "role": "protein", "tags": ["heme_iron", "zinc"], "category": "Protein", "pack": {"size": 500, "unit": "g", "label": "pack"}},
+        {"id": "rice", "name": "Jasmine rice / potatoes", "qty": 140, "unit": "g", "role": "side", "tags": [], "category": "Dry goods", "pack": {"size": 1000, "unit": "g", "label": "bag"}}
+      ],
+      "supplements": [
+        {"id": "creatine", "name": "Creatine", "qty": 5, "unit": "g", "category": "Supplements", "pack": {"size": 300, "unit": "g", "label": "tub"}}
+      ]
+    },
+    {
+      "id": "bed", "time": "22:45", "kind": "bed", "window": "Bedtime", "title": "Bedtime",
+      "body": "Chelated magnesium.", "rule": "NMDA block", "fat": false,
+      "items": [],
+      "supplements": [
+        {"id": "magnesium", "name": "Chelated magnesium", "qty": 1, "unit": "capsule", "category": "Supplements", "pack": {"size": 60, "unit": "capsule", "label": "bottle"}}
+      ]
+    }
+  ],
+  "objectives": [
+    {"id": "calcium", "title": "Calcium cordoning", "body": "Dairy is restricted to lunch to prevent iron and zinc blocking at dinner.", "applies": ["lunch", "dinner"]},
+    {"id": "gastric", "title": "Gastric clearance", "body": "Whey isolate pre-workout prevents blood pooling in the GI tract.", "applies": ["prelift", "train"]},
+    {"id": "nmda", "title": "NMDA block", "body": "Magnesium is replaced heavily at bedtime.", "applies": ["bed"]},
+    {"id": "hydration", "title": "Electrolyte replacement", "body": "Sauna and training sodium loss is replaced with electrolytes.", "applies": ["train"]}
+  ],
+  "biomarkers": [
+    {"id": "ferritin", "label": "Ferritin", "unit": "ng/mL", "min": 75, "note": "Goal above 75 ng/mL. Crucial for oxygen transport."},
+    {"id": "zinc", "label": "Plasma zinc", "unit": "ug/dL", "min": 90, "max": 130, "note": "Goal 90 to 130 ug/dL. Protected by the zero-dairy dinner."},
+    {"id": "rbc_mg", "label": "RBC magnesium", "unit": "mg/dL", "min": 5.8, "note": "Goal above 5.8 mg/dL. Replaced heavily at bedtime."}
+  ],
+  "culinary": [
+    {"id": "legumes", "method": "Soak, then boil legumes and grains", "nutrient": "Iron and zinc", "effect": "Soaking and cooking lowers phytate, which binds minerals in the gut.", "how": "Soak overnight, discard the water, boil until soft."},
+    {"id": "vitc", "method": "Pair plant iron with vitamin C", "nutrient": "Iron", "effect": "Vitamin C keeps non-heme iron soluble so it is absorbed.", "how": "Add lemon juice, peppers or citrus to rice, tofu and pulses."},
+    {"id": "tomato", "method": "Cook tomatoes with a little fat", "nutrient": "Lycopene", "effect": "Heat breaks cell walls and fat carries the carotenoid across the gut wall.", "how": "Simmer in olive oil rather than eating raw."},
+    {"id": "fish", "method": "Cook oily fish gently", "nutrient": "Omega-3", "effect": "Long, dry, hot cooking oxidises the fats; steaming or baking keeps them.", "how": "Steam or bake at moderate heat instead of deep frying."},
+    {"id": "meat", "method": "Keep heme-iron meat away from dairy", "nutrient": "Iron and zinc", "effect": "Calcium competes with iron and zinc at the same gut transporter.", "how": "Cook chicken for dinner, dairy stays at lunch."},
+    {"id": "rice", "method": "Cook and cool rice, reheat to steaming", "nutrient": "Resistant starch", "effect": "Cooling converts some starch to resistant starch.", "how": "Cook ahead, refrigerate quickly, reheat until steaming hot."}
+  ],
+  "clash": {
+    "_doc": "Absorption clash rules, evaluated in order, first match wins. `protein_has_any` / `cofactor_has_any` match the tags of the chosen protein source and co-factor; the last rule is the default.",
+    "proteins": [
+      {"id": "chicken", "label": "Chicken breast", "tags": ["heme_iron", "zinc"]},
+      {"id": "yogurt", "label": "Greek yogurt", "tags": ["calcium", "zinc"]}
+    ],
+    "cofactors": [
+      {"id": "none", "label": "None / vegetables", "tags": []},
+      {"id": "cheese", "label": "Cheese / milk", "tags": ["calcium"]}
+    ],
+    "rules": [
+      {"level": "antagonism", "title": "Antagonism detected", "text": "Calcium heavily blocks duodenal absorption of iron and zinc.", "protein_has_any": ["heme_iron", "zinc"], "cofactor_has_any": ["calcium"]},
+      {"level": "suboptimal", "title": "Sub-optimal", "text": "Yogurt blocks its own trace minerals, so keep it to the lunch window.", "protein_has_any": ["calcium"], "cofactor_has_any": []},
+      {"level": "synergy", "title": "Optimal synergy", "text": "Transporter sites are clear. Heme iron and zinc from meat absorb freely.", "protein_has_any": [], "cofactor_has_any": []}
+    ]
+  }
+}

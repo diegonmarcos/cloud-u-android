@@ -1,8 +1,7 @@
 [
   {
     "kind": "fragment",
-    "id": "health",
-    "page": "metric",
-    "metric": "activity"
+    "id": "healthpage",
+    "page": "activities"
   }
 ]

@@ -1,13 +1,7 @@
 [
   {
     "kind": "fragment",
-    "id": "health",
-    "page": "metric",
-    "metric": "vitals",
-    "records": [
-      "HeartRateRecord",
-      "RestingHeartRateRecord",
-      "HeartRateVariabilityRmssdRecord"
-    ]
+    "id": "healthpage",
+    "page": "hr"
   }
 ]

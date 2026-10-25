@@ -35,7 +35,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 5 | 0 | 100% |
 | cloud-mail | `com.diegonmarcos.comms.mail` | 10 | 2 | 83% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 2 | 9 | 18% |
-| cloud-me | `com.diegonmarcos.cloudme` | 4 | 0 | 100% |
+| cloud-me | `com.diegonmarcos.cloudme` | 6 | 0 | 100% |
 | cloud-gallery | `com.diegonmarcos.mediacenter` | 5 | 1 | 83% |
 | cloud-myterminal | `com.diegonmarcos.ide` | 7 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 12 | 0 | 100% |
@@ -51,7 +51,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 2 | 2 | 50% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 8 | 2 | 80% |
-| **fleet** | | **263** | **52** | **83%** |
+| **fleet** | | **265** | **52** | **83%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -691,6 +691,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
+| `health_user` | prefs | config | yes | #1180 Cloud Me > Health user data, one JSON string under 'data': saved body measurements, lab results, ticked plan events and shopping items, the workout log, chosen activity level, sleep target and dossier choices. Your own entries, so they move with the phone; Health Connect readings are never copied in (the trackers read them live). |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `permissions_asked` | prefs | device | no | Cloud Me: one boolean per runtime permission, set once the system dialog has been shown for it, so the start-up prompt is never repeated; the new phone asks afresh, so it never migrates. |
@@ -701,9 +702,9 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 
 | file | class | doc |
 |---|---|---|
-| `-` | device | keeps no configuration of its own; uses libs:core, libs:updater, libs:analytics, libs:health (Health Connect) and binds the cal engine. |
+| `assets/health_*.json (from ac_cloud-me/data/health)` | config | #1180 Cloud Me > Health declared content (plan, formulas, home clusters, workout programme) is baked from git into the build, so a new phone gets it by installing the same build; the user's own entries are the health_user store. |
 
-Coverage: 4 covered, 0 gaps.
+Coverage: 6 covered, 0 gaps.
 
 ## cloud-gallery — `com.diegonmarcos.mediacenter`
 

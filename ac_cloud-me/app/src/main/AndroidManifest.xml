@@ -52,6 +52,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Health > Dossier: the exported PDF is handed to the fleet's PDF reader (Cloud Drive) through this provider. -->
+        <provider
+            android:name="com.diegonmarcos.cloudme.health.HealthFileProvider"
+            android:authorities="${applicationId}.health.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/health_file_paths" />
+        </provider>
+
         <receiver
             android:name="com.diegonmarcos.superapp.updater.PackageInstallerReceiver"
             android:exported="false" />

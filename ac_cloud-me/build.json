@@ -346,7 +346,7 @@
     "default_section": "me",
     "sections": [
       {
-        "_doc": "Health \u2014 a bar section of its own (it was a shortcut into Projects > Health). Seven pages in the Samsung Health strip: Body Composition, HR stats, Sleep and Activities are ONE metric of the taxonomy below each, drawn by libs:health's metric page from Health Connect (on-device only); Nutrition Plan and Workout Plan are the plans the owner wrote (the old Planner note and the Gym programme); Blood Test has no source yet and says so. The metric taxonomy stays here because libs:health's build.gradle looks it up by SECTION ID (`ui.sections[id=health].metrics`).",
+        "_doc": "Health \u2014 a bar section of its own (it was a shortcut into Projects > Health). Two page groups (Plan: index and 12 plan pages; Trackers: 5) on the many_rows nav mode, the groups referencing the flat pages list by id. Every page is drawn by the app's own Compose HealthPage from data/health/*.json (the declared plan, formulas and workout) and the user's entries (SharedPreferences health_user, a declared fleet-config store); the trackers read Health Connect live and say so when it is empty. The metric taxonomy stays here because libs:health's build.gradle looks it up by SECTION ID (`ui.sections[id=health].metrics`).",
         "_doc_metrics": "Data-driven metric taxonomy \u2014 read by SummaryPage / TimelinePage / ConfigsPage to render the per-metric tiles + drill-downs. Each metric maps to one-or-more Health Connect record types via `records` (matched at runtime by class simple-name) + the perm subset via `perm_keys`. Add a metric = one entry here + tile icon. Removing a metric here removes it from all 3 top-level pages.",
         "id": "health",
         "nav_mode": "many_rows",
@@ -478,39 +478,128 @@
         ],
         "pages": [
           {
-            "id": "body",
-            "label": "Body Composition",
-            "icon": "ic_p_health_body"
+            "id": "home",
+            "label": "Index",
+            "icon": "home"
           },
           {
-            "id": "hr",
-            "label": "HR stats",
-            "icon": "ic_p_health_vitals"
+            "id": "bio",
+            "label": "Anthropometrics",
+            "icon": "health_bio"
           },
           {
-            "id": "sleep",
-            "label": "Sleep",
-            "icon": "ic_p_health_sleep"
+            "id": "circadian",
+            "label": "Circadian",
+            "icon": "health_circadian"
           },
           {
-            "id": "blood",
-            "label": "Blood Test",
-            "icon": "ic_p_blood"
+            "id": "biomarkers",
+            "label": "Biomarkers",
+            "icon": "health_biomarkers"
           },
           {
-            "id": "nutrition",
-            "label": "Nutrition Plan",
-            "icon": "ic_p_health_nutrition"
+            "id": "timeline",
+            "label": "Timeline",
+            "icon": "timeline"
+          },
+          {
+            "id": "objectives",
+            "label": "Objectives",
+            "icon": "health_objectives"
+          },
+          {
+            "id": "matrix",
+            "label": "Matrix",
+            "icon": "health_matrix"
+          },
+          {
+            "id": "culinary",
+            "label": "Culinary",
+            "icon": "health_culinary"
+          },
+          {
+            "id": "clash",
+            "label": "Absorption clash",
+            "icon": "health_clash"
+          },
+          {
+            "id": "thermal",
+            "label": "Thermal",
+            "icon": "health_thermal"
+          },
+          {
+            "id": "hemo",
+            "label": "Hemodynamics",
+            "icon": "health_hemo"
+          },
+          {
+            "id": "shop",
+            "label": "Supermarket",
+            "icon": "health_shop"
+          },
+          {
+            "id": "dossier",
+            "label": "Dossier",
+            "icon": "health_dossier"
           },
           {
             "id": "workout",
-            "label": "Workout Plan",
+            "label": "Workout plan",
             "icon": "ic_gym"
           },
           {
             "id": "activities",
             "label": "Activities",
             "icon": "ic_p_health_activity"
+          },
+          {
+            "id": "bodycomp",
+            "label": "Body comp",
+            "icon": "ic_p_health_body"
+          },
+          {
+            "id": "hr",
+            "label": "HR & HRV",
+            "icon": "ic_p_health_vitals"
+          },
+          {
+            "id": "sleep",
+            "label": "Sleep",
+            "icon": "ic_p_health_sleep"
+          }
+        ],
+        "groups": [
+          {
+            "id": "plan",
+            "label": "Plan",
+            "icon": "health_timeline",
+            "pages": [
+              "home",
+              "bio",
+              "circadian",
+              "biomarkers",
+              "timeline",
+              "objectives",
+              "matrix",
+              "culinary",
+              "clash",
+              "thermal",
+              "hemo",
+              "shop",
+              "dossier"
+            ]
+          },
+          {
+            "id": "trackers",
+            "label": "Trackers",
+            "icon": "monitor_heart",
+            "pages": [
+              "workout",
+              "activities",
+              "bodycomp",
+              "hr",
+              "sleep"
+            ]
           }
         ]
       },

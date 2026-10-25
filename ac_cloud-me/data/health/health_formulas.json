@@ -1,0 +1,48 @@
+{
+  "_doc": "Every formula and coefficient the Health pages compute with. The Kotlin only evaluates these shapes (HealthFormulas); changing a constant here changes the app, so each one carries its source.",
+  "anthropometrics": {
+    "_doc": "LBM = mass * (1 - bf/100); FFMI = LBM / height_m^2; BMR = base + per_lbm * LBM (Katch-McArdle form); TDEE = BMR * the selected activity multiplier.",
+    "bmr": {"base": 370, "per_lbm": 21.6},
+    "default_activity": "hard_training",
+    "activity": [
+      {"id": "sedentary", "label": "Sedentary", "multiplier": 1.2},
+      {"id": "light", "label": "Light training", "multiplier": 1.375},
+      {"id": "moderate", "label": "Moderate training", "multiplier": 1.55},
+      {"id": "hard_training", "label": "Hard training", "multiplier": 1.57},
+      {"id": "very_hard", "label": "Very hard training", "multiplier": 1.725}
+    ],
+    "ffmi_bands": [
+      {"max": 18, "label": "Below average"},
+      {"max": 20, "label": "Average"},
+      {"max": 22, "label": "Above average"},
+      {"max": 25, "label": "Excellent"},
+      {"max": 1000, "label": "Exceptional"}
+    ]
+  },
+  "thermal": {
+    "_doc": "Sauna sodium chloride loss per minute (owner's protocol constant); sodium is 39.34 % of NaCl by mass; fluid to replace is 150 % of the mass lost (1 kg = 1 L).",
+    "nacl_mg_per_min": 47.5,
+    "na_fraction_of_nacl": 0.3934,
+    "salt_g_per_teaspoon": 6,
+    "fluid_replace_ratio": 1.5,
+    "min_minutes": 10,
+    "max_minutes": 45,
+    "step_minutes": 5
+  },
+  "hemodynamics": {
+    "_doc": "Splanchnic (gut) blood flow as % of resting against exertion as % of VO2max: a piecewise-linear reference from the exercise-physiology literature (Rowell). A meal inside min_gap_min of training, or a fatty one inside fat_gap_min, is flagged.",
+    "curve": [[0, 100], [50, 70], [70, 40], [100, 20]],
+    "min_gap_min": 60,
+    "fat_gap_min": 120
+  },
+  "circadian": {
+    "_doc": "Cortisol reference points (minutes after midnight, nmol/L) of the owner's plan; the curve is interpolated linearly and wraps at 24 h.",
+    "series": [
+      {"id": "cortisol", "label": "Cortisol", "unit": "nmol/L", "points": [[420, 95], [750, 45], [1020, 30], [1260, 25], [1380, 12]]}
+    ]
+  },
+  "sleep": {
+    "_doc": "Health Connect sleep stage codes drawn on Recovery > Sleep.",
+    "stage_labels": {"deep": "Deep", "rem": "REM", "light": "Light", "awake": "Awake"}
+  }
+}

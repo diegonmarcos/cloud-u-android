@@ -124,6 +124,7 @@ private fun PageContent(section: Section, page: Page, modifier: Modifier) {
             // Both are declared here rather than in Kotlin so that narrowing a
             // page, or adding another one, stays a JSON edit.
             "health" -> HostedFragment("${section.id}/${page.id}", modifier) { healthFragment(single) }
+            "healthpage" -> com.diegonmarcos.cloudme.health.HealthPage(single.optString("page"), modifier)
             "fin" -> HostedFragment("${section.id}/${page.id}", modifier) { MyFinDashboardFragment() }
             "agenda" -> AgendaScreen(AgendaMode.EVENTS, modifier)
             "todo" -> AgendaScreen(AgendaMode.TODOS, modifier)

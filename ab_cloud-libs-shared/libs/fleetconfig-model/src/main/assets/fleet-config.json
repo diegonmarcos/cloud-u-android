@@ -1053,6 +1053,14 @@
         "lib-health"
       ]
     },
+    "health_user": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "#1180 Cloud Me > Health user data, one JSON string under 'data': saved body measurements, lab results, ticked plan events and shopping items, the workout log, chosen activity level, sleep target and dossier choices. Your own entries, so they move with the phone; Health Connect readings are never copied in (the trackers read them live).",
+      "used_by": [
+        "ac_cloud-me"
+      ]
+    },
     "home_swipe_prefs": {
       "kind": "prefs",
       "class": "config",
@@ -3189,10 +3197,11 @@
       ],
       "items": [
         {
-          "id": "none",
-          "path": "-",
-          "class": "device",
-          "doc": "keeps no configuration of its own; uses libs:core, libs:updater, libs:analytics, libs:health (Health Connect) and binds the cal engine."
+          "id": "health-content",
+          "path": "assets/health_*.json (from ac_cloud-me/data/health)",
+          "class": "config",
+          "doc": "#1180 Cloud Me > Health declared content (plan, formulas, home clusters, workout programme) is baked from git into the build, so a new phone gets it by installing the same build; the user's own entries are the health_user store.",
+          "via": "install"
         }
       ]
     },

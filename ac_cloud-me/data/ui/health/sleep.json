@@ -1,8 +1,7 @@
 [
   {
     "kind": "fragment",
-    "id": "health",
-    "page": "metric",
-    "metric": "sleep"
+    "id": "healthpage",
+    "page": "sleep"
   }
 ]
