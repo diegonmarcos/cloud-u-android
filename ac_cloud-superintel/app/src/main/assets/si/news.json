@@ -1,0 +1,21 @@
+{
+  "_doc": "THE NEWS TAB'S DECLARED BEHAVIOUR (Perplexity Discover-style). backend: the fleet's news-gdelt service (cloud-u-containers user-news_news-gdelt): GET {base}/articles?q=<query>&limit=<n> returns {query,count,articles:[{url,title,seendate,socialimage,domain,language,sourcecountry,tone}]} from a GDELT cache; {base} is baked from ac_cloud-news/data/topics.json::api.base (the fleet's one news endpoint) as BuildConfig.NEWS_BASE_URL. It has no summaries, so the card and story summaries are written by the AI gateway from the fetched headlines only, and shown as AI summaries; no story is ever invented, and an unreachable backend shows an empty state. topics: id (also the build.json::ui page id), label, icon, queries (GDELT queries; a feed merges them). 'foryou' merges the topics listed in mix. cluster_similarity: headlines whose word overlap reaches it are one story, its sources count the distinct domains.",
+  "version": 1,
+  "backend": { "articles_path": "/articles", "limit": 60, "timeout_ms": 20000, "refresh_seconds": 300 },
+  "cluster_similarity": 0.5,
+  "story_sources_max": 8,
+  "summary": {
+    "card": "Summarise this news story in one sentence of at most 30 words, using only these headlines. Reply with the sentence only.\n{{headlines}}",
+    "story": "Synthesise these headlines about one news story into a short briefing of 3 to 5 sentences. Use only what the headlines say, do not add facts, and cite the headline numbers like [1].\n{{headlines}}"
+  },
+  "topics": [
+    { "id": "foryou", "label": "For you", "icon": "star", "mix": ["tech", "science", "finance", "world"], "queries": [] },
+    { "id": "tech", "label": "Tech", "icon": "computer", "queries": ["technology sourcelang:english", "artificial intelligence sourcelang:english"] },
+    { "id": "science", "label": "Science", "icon": "insights", "queries": ["science research sourcelang:english"] },
+    { "id": "finance", "label": "Finance", "icon": "payments", "queries": ["finance markets sourcelang:english"] },
+    { "id": "world", "label": "World", "icon": "public", "queries": ["geopolitics sourcelang:english"] },
+    { "id": "health", "label": "Health", "icon": "monitor_heart", "queries": ["health medicine sourcelang:english"] },
+    { "id": "sports", "label": "Sports", "icon": "emoji_events", "queries": ["sports sourcelang:english"] },
+    { "id": "arts", "label": "Arts", "icon": "palette", "queries": ["arts culture sourcelang:english"] }
+  ]
+}

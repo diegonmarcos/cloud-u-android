@@ -46,6 +46,8 @@ def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toStr
 apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
 if (!buildJson.ui?.bottom_nav || !buildJson.ui?.sections)
     throw new GradleException("build.json::ui.bottom_nav / ui.sections missing — the island would draw nothing (#868)")
+// The news backend is the fleet's one (ac_cloud-news/data/topics.json::api.base, the news-gdelt service); assets/si/news.json declares what is asked of it.
+def newsBase = new groovy.json.JsonSlurper().parse(file('../../ac_cloud-news/data/topics.json')).api.base
 def uiSectionsB64    = b64(buildJson.ui.sections)
 def uiBottomNav      = buildJson.ui.bottom_nav.join(',')
 def uiDefaultSection = (buildJson.ui.default_section ?: buildJson.ui.bottom_nav[0]).toString()
@@ -79,6 +81,7 @@ android {
         buildConfigField "String", "UI_BOTTOM_NAV",      "\"${uiBottomNav}\""
         buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         buildConfigField "String", "AI_GATEWAY_URL",     "\"${aiGatewayUrl}\""
+        buildConfigField "String", "NEWS_BASE_URL",      "\"${newsBase}\""
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
@@ -146,5 +149,7 @@ dependencies {
     // themes.xml's parent, Theme.Material3.Dark.NoActionBar, lives here.
     implementation 'com.google.android.material:material:1.12.0'
 
+    // Android's own org.json at runtime; the real library for the JVM suite.
+    testImplementation 'org.json:json:20240303'
     testImplementation 'junit:junit:4.13.2'
 }

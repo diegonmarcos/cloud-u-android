@@ -121,4 +121,5 @@ object AiTags {
     fun agent(id: String) = "ai_agent_$id"
     fun engine(id: String) = "ai_engine_$id"
     fun session(id: String) = "ai_session_$id"
+    fun suggestion(text: String) = "ai_suggestion_$text"
 }

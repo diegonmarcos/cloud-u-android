@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.ai
 
 import com.diegonmarcos.superapp.modelcatalogue.AgentCatalogue
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
@@ -75,6 +76,8 @@ class AiStandardHost(
     private val opener: (String) -> Unit = {},
     /** Words for the gateway agent's failure ("Hermes (fleet agent gateway, mesh only): ..."). */
     private val gatewayNote: String = "fleet agent gateway, mesh only",
+    /** A standing system prompt (a persona chat): sent first on every request, never stored in the session. */
+    private val system: String = "",
 ) : AiHost {
     override var model: String
         get() = prefs.model
@@ -107,7 +110,11 @@ class AiStandardHost(
         if (backend == null) return AiOutcome(asked, "no AI backend is configured", emptyList())
         val via = agent?.let { "${it.label} ($gatewayNote)" }
         val nativeWeb = agent == null && web && runCatching { models().firstOrNull { it.id == model }?.nativeWeb }.getOrNull() == true
-        val reply = converse(backend, AiRequest(model, asked.messages, web, nativeWeb, agent, tools), sink)
+        val wire = if (system.isBlank()) null else JSONArray().put(JSONObject().put("role", "system").put("content", system)).also { a ->
+            val h = AiProtocol.messages(asked.messages, cfg.historyTurns)
+            for (i in 0 until h.length()) a.put(h.get(i))
+        }
+        val reply = converse(backend, AiRequest(model, asked.messages, web, nativeWeb, agent, tools, wire), sink)
         val answer = reply.text
         if (answer == null || (answer.isEmpty() && reply.error == null)) {
             val why = reply.error ?: "no choices in the answer"
@@ -121,7 +128,7 @@ class AiStandardHost(
     /** One model call, or the bounded tool loop when tools are offered. */
     private fun converse(backend: AiBackend, req: AiRequest, sink: AiSink): AiReply {
         if (tools.isEmpty()) return backend.chat(req, sink::delta)
-        val wire = AiProtocol.messages(req.messages, cfg.historyTurns)
+        val wire = req.wire ?: AiProtocol.messages(req.messages, cfg.historyTurns)
         var last = AiReply(null, error = "no answer")
         repeat(cfg.maxToolRounds) {
             last = backend.chat(AiRequest(req.model, req.messages, req.web, req.nativeWeb, req.agent, tools, wire, false), sink::delta)

@@ -12,3 +12,19 @@ agent pickers, answers streaming in, replies drawn as Markdown.
   OpenRouter models. Its address is baked from the fleet catalogue (`libs/ai/ai-gateway.gradle`); this app holds no token and the repository
   holds none.
 * Package `com.diegonmarcos.cloudsuperintel`, tile `SI` in Cloud > Apps > AGI (`SI AI | Research Code | Tools | MyTerminal Terminal`).
+
+## Sections (bottom nav: Notebook, SI, News)
+
+* **SI**: one persona chat per entry of `app/src/main/assets/si/personas.json` (SI router, Scientist, CTO, Doctor, Lawyer, Asset Manager, Wiki AI), each
+  with its declared system prompt (sent on every request through `AiStandardHost(system=)`, never stored), suggested prompts, agent, preferred models
+  and Web switch. The second row and `build.json::ui` carry the same ids; `test/test-superintel-app.sh` holds them in step.
+* **Notebook** (`assets/si/notebook.json`): sources (notes, web pages, text files from any storage through the system picker) kept on the phone;
+  answers come only from them, with `[n]` citations and the passage shown. No passage that holds enough of the question's terms = the model is not
+  called and the answer is "This is not in your sources."; an answer without a valid citation is replaced by the same line. Retrieval is BM25 on
+  the phone because the fleet gateway (my-ai-api) has no embeddings or rerank endpoint. Studio: summary, FAQ and study notes over the sources.
+  PDF text extraction is not available yet.
+* **News** (`assets/si/news.json`): Discover-style topic feeds (For you, Tech, Science, Finance, World, Health, Sports, Arts) from the fleet's
+  news-gdelt service (`ac_cloud-news/data/topics.json::api.base`, baked as `BuildConfig.NEWS_BASE_URL`); headlines about one event are merged into
+  a story with its source count; the card and story summaries are written by the gateway from those headlines only. An unreachable backend shows an
+  empty state, never invented stories. The follow-up box drops its question, with the story's sources, into the SI chat box.
+* JVM tests (`app/src/test`): personas from data, notebook refusal and citation checks, news parsing and grouping.

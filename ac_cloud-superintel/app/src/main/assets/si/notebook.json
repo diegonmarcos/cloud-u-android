@@ -1,0 +1,18 @@
+{
+  "_doc": "THE NOTEBOOK'S DECLARED BEHAVIOUR (source-grounded Q&A, NotebookLM-style). retrieval: no embedding or rerank endpoint exists on the fleet gateway (my-ai-api serves chat completions, models, MCP and sessions only), so passages are chunked and ranked on the phone with BM25 over the user's own sources; chunk_chars/overlap_chars cut each source, top_k passages go to the model, min_coverage is the share of the question's distinct terms a passage must contain to be evidence (BM25 only orders them). No passage that qualifies = the model is NOT called and the refusal is returned. grounding: the system prompt the model gets with the numbered passages; it must cite [n] after every claim or answer exactly the refusal line; an answer with no valid citation is replaced by the refusal. generators: one prompt per studio output, run over the first max_source_chars of the sources only.",
+  "version": 1,
+  "retrieval": { "chunk_chars": 900, "overlap_chars": 150, "top_k": 6, "min_coverage": 0.5, "k1": 1.5, "b": 0.75 },
+  "refusal": "This is not in your sources.",
+  "grounding": {
+    "system": "You answer ONLY from the numbered passages the user supplies. Rules: use no outside knowledge, not even common knowledge; cite the passage number in square brackets, like [2], after every claim; if the passages do not contain the answer, reply with exactly: {{refusal}}\nDo not guess, do not extend, do not answer from memory.",
+    "user": "PASSAGES\n{{passages}}\n\nQUESTION\n{{question}}"
+  },
+  "generators": {
+    "max_source_chars": 24000,
+    "system": "You work ONLY from the sources below. Use no outside knowledge. Cite sources as [n] where n is the source number. If the sources are too thin, say {{refusal}}",
+    "summary": { "label": "Summary", "prompt": "Write a concise summary of the sources: the main points as short bullets, each with its [n] citation." },
+    "faq": { "label": "FAQ", "prompt": "Write an FAQ of 5 to 8 questions a reader of these sources would ask, each followed by an answer taken only from the sources, with [n] citations." },
+    "notes": { "label": "Study notes", "prompt": "Write structured study notes: headings, key terms with definitions, and key facts, each fact with its [n] citation." }
+  },
+  "sources": { "url_max_chars": 200000, "doc_mime": ["text/plain", "text/markdown", "text/html", "text/csv", "application/json"] }
+}

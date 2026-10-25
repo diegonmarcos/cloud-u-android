@@ -8,7 +8,7 @@
   },
   "name": "cloud-superintel",
   "display_name": "Cloud SuperIntel",
-  "description": "Cloud SuperIntel (SI, #1162) - the fleet's Gemini-style AI chat as its own app: a chat screen, a left side drawer listing the sessions (new chat, rename, delete), a model selector and an agent picker, answers streaming in, replies drawn as Markdown. The page, the sessions, the streaming and the Markdown are libs:ai's (shared with Cloud Drive's AI tab, Cloud Code's chat and the SuperApp assistant), so the look is the fleet's AI default; this app adds only the shell: the shared first row (Profile at the top right opens Cloud Account), the second row with icons, the bottom nav, the shared page gradient and the shared scroll collapse. Backends: the fleet agent gateway (my-ai-api on the mesh: Claude through claude-superset-api on oci-apps, Hermes, Goose, OpenClaw and the OpenRouter models), the address baked from the fleet catalogue; no token is held or read by this app (decisions-use guard D5) and none is in the repository. Dark is the default theme (#336); English is the base language (#299).",
+  "description": "Cloud SuperIntel (SI, #1162) - the fleet's Gemini-style AI chat as its own app, now with three sections (Notebook: source-grounded Q&A with citations and an explicit not-in-your-sources answer; SI: one chat per declared persona; News: Discover-style topic feeds from the fleet's news-gdelt backend): a chat screen, a left side drawer listing the sessions (new chat, rename, delete), a model selector and an agent picker, answers streaming in, replies drawn as Markdown. The page, the sessions, the streaming and the Markdown are libs:ai's (shared with Cloud Drive's AI tab, Cloud Code's chat and the SuperApp assistant), so the look is the fleet's AI default; this app adds only the shell: the shared first row (Profile at the top right opens Cloud Account), the second row with icons, the bottom nav, the shared page gradient and the shared scroll collapse. Backends: the fleet agent gateway (my-ai-api on the mesh: Claude through claude-superset-api on oci-apps, Hermes, Goose, OpenClaw and the OpenRouter models), the address baked from the fleet catalogue; no token is held or read by this app (decisions-use guard D5) and none is in the repository. Dark is the default theme (#336); English is the base language (#299).",
   "category": "android",
   "android": {
     "application_id": "com.diegonmarcos.cloudsuperintel",
@@ -194,34 +194,151 @@
       ]
     },
     "unit": {
-      "_doc": "`gradle test`: libs:ai's JVM suite (the Markdown reader, the sessions rename and delete, the wire cases) runs in the Ship workflow of the apps that host it; this app has no JVM module of its own.",
+      "_doc": "`gradle test`: this app's JVM suite in app/src/test (the persona list read from assets/si/personas.json, the notebook's grounding and refusal, the news feed parsing) plus libs:ai's.",
       "task": "test",
-      "enabled": false
+      "enabled": true
     }
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl) of Cloud SuperIntel: two sections on the bottom nav. Chat has two sub-pages on the second row (Chat, Models); Settings has two (Backend, About). Every icon is a Material symbol name SecondRowIcons resolves. The Profile icon at the top right of the first row opens extapp:cloud-account; the sessions drawer is the hamburger's.",
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl) of Cloud SuperIntel: three sections on the bottom nav, Notebook, SI and News, and Settings behind the first row. Notebook (Notebooks, Sources, Chat, Studio), SI (one persona chat per entry of assets/si/personas.json) and News (one topic feed per entry of assets/si/news.json) are second-row pages; the SI and News page ids ARE those data files' ids (test-superintel-app.sh holds them in step). Settings has Models, Backend, About. Every icon is a Material symbol name SecondRowIcons resolves. The Profile icon at the top right of the first row opens extapp:cloud-account; the sessions drawer is the hamburger's.",
     "bottom_nav": [
-      "chat",
-      "settings"
+      "notebook",
+      "si",
+      "news"
     ],
-    "default_section": "chat",
+    "default_section": "si",
     "sections": [
       {
-        "id": "chat",
-        "label": "Chat",
-        "icon": "chat",
+        "id": "notebook",
+        "label": "Notebook",
+        "icon": "menu_book",
         "pages": [
           {
-            "id": "chat",
+            "id": "nb_notebooks",
+            "label": "Notebooks",
+            "icon": "folder",
+            "pages": []
+          },
+          {
+            "id": "nb_sources",
+            "label": "Sources",
+            "icon": "description",
+            "pages": []
+          },
+          {
+            "id": "nb_chat",
             "label": "Chat",
             "icon": "chat",
             "pages": []
           },
           {
-            "id": "models",
-            "label": "Models",
-            "icon": "layers",
+            "id": "nb_studio",
+            "label": "Studio",
+            "icon": "edit_note",
+            "pages": []
+          }
+        ]
+      },
+      {
+        "id": "si",
+        "label": "SI",
+        "icon": "auto_awesome",
+        "pages": [
+          {
+            "id": "si",
+            "label": "SI",
+            "icon": "auto_awesome",
+            "pages": []
+          },
+          {
+            "id": "scientist",
+            "label": "Scientist",
+            "icon": "psychology",
+            "pages": []
+          },
+          {
+            "id": "cto",
+            "label": "CTO",
+            "icon": "code",
+            "pages": []
+          },
+          {
+            "id": "doctor",
+            "label": "Doctor",
+            "icon": "monitor_heart",
+            "pages": []
+          },
+          {
+            "id": "lawyer",
+            "label": "Lawyer",
+            "icon": "account_balance",
+            "pages": []
+          },
+          {
+            "id": "assets",
+            "label": "Asset Manager",
+            "icon": "trending_up",
+            "pages": []
+          },
+          {
+            "id": "wiki",
+            "label": "Wiki AI",
+            "icon": "menu_book",
+            "pages": []
+          }
+        ]
+      },
+      {
+        "id": "news",
+        "label": "News",
+        "icon": "rss_feed",
+        "pages": [
+          {
+            "id": "foryou",
+            "label": "For you",
+            "icon": "star",
+            "pages": []
+          },
+          {
+            "id": "tech",
+            "label": "Tech",
+            "icon": "computer",
+            "pages": []
+          },
+          {
+            "id": "science",
+            "label": "Science",
+            "icon": "insights",
+            "pages": []
+          },
+          {
+            "id": "finance",
+            "label": "Finance",
+            "icon": "payments",
+            "pages": []
+          },
+          {
+            "id": "world",
+            "label": "World",
+            "icon": "public",
+            "pages": []
+          },
+          {
+            "id": "health",
+            "label": "Health",
+            "icon": "monitor_heart",
+            "pages": []
+          },
+          {
+            "id": "sports",
+            "label": "Sports",
+            "icon": "emoji_events",
+            "pages": []
+          },
+          {
+            "id": "arts",
+            "label": "Arts",
+            "icon": "palette",
             "pages": []
           }
         ]
@@ -231,6 +348,12 @@
         "label": "Settings",
         "icon": "settings",
         "pages": [
+          {
+            "id": "models",
+            "label": "Models",
+            "icon": "layers",
+            "pages": []
+          },
           {
             "id": "backend",
             "label": "Backend",

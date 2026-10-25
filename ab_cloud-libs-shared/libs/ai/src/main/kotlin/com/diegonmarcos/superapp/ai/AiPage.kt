@@ -218,6 +218,8 @@ fun AiChatPage(
     sessionsList: Boolean = false,
     /** False hides the Model chip (an app whose backend picks the model itself: Cloud Tools Small LLMs' router). */
     showModel: Boolean = true,
+    /** Suggested prompts under the greeting (a persona chat's): a tap fills the input, nothing is sent until the user does. */
+    suggestions: List<String> = emptyList(),
     /** The app's own controls just above the input (Cloud Tools Small LLMs' task row). */
     aboveInput: @Composable ColumnScope.() -> Unit = {},
     header: @Composable RowScope.() -> Unit = {},
@@ -234,7 +236,7 @@ fun AiChatPage(
             if (showModel) ModelSelect(chat, theme, onModel)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (chat.session.messages.isEmpty() && !chat.sending) Welcome(engines, query, chat.host(), theme)
+            if (chat.session.messages.isEmpty() && !chat.sending) Welcome(engines, query, chat.host(), theme, suggestions) { chat.draft = it }
             else Conversation(chat, theme)
         }
         chat.consent?.let { req ->
@@ -321,7 +323,7 @@ fun AiConsentCard(
 
 /** #initial-search-view: the greeting and the engine boxes; it gives way once a message is sent. */
 @Composable
-private fun Welcome(engines: List<AiEngine>, query: (AiEngine, String) -> String?, host: AiHost, theme: AiTheme) {
+private fun Welcome(engines: List<AiEngine>, query: (AiEngine, String) -> String?, host: AiHost, theme: AiTheme, suggestions: List<String>, onSuggest: (String) -> Unit) {
     val c = theme.colors
     val m = theme.metrics
     val s = theme.strings
@@ -335,6 +337,13 @@ private fun Welcome(engines: List<AiEngine>, query: (AiEngine, String) -> String
         }
         Text(s.hello, style = TextStyle(brush = c.ai, fontSize = theme.type.greeting, fontWeight = FontWeight.Bold), textAlign = TextAlign.Center)
         Text(s.helloSub, color = c.text2, style = theme.type.style(theme.type.greetingSub), textAlign = TextAlign.Center)
+        suggestions.forEach { q ->
+            Text(
+                q, color = c.text, style = theme.type.style(theme.type.chat),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(m.cardRadius)).background(c.field)
+                    .clickable { onSuggest(q) }.padding(m.cardPad).testTag(AiTags.suggestion(q)),
+            )
+        }
         // .search-container: one box per declared engine, in declared order.
         if (engines.isNotEmpty()) Column(Modifier.padding(top = m.gap), verticalArrangement = Arrangement.spacedBy(m.engineGap)) {
             engines.forEachIndexed { i, e ->
