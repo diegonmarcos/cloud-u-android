@@ -21,6 +21,7 @@ import com.diegonmarcos.cloudcalc.ui.CalcTheme
 import com.diegonmarcos.cloudcalc.ui.DrawerTags
 import com.diegonmarcos.cloudcalc.ui.SheetTags
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.navbartop1.TopFirstRowTags
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -68,9 +69,9 @@ class SheetShellTest {
     private val state = CalcState(null)
     private fun launch() = compose.setContent { CalcTheme { CalcShell(NoEngine, state) } }
 
-    @Test fun `the bar is Calc, Sheet, AI, Measure, JEV left to right`() {
+    @Test fun `the bar is Calc, Sheet, AI, Measure, Toolkit left to right`() {
         launch()
-        val ids = listOf("calculator", "sheet", "ai", "measure", "jev")
+        val ids = listOf("calculator", "sheet", "ai", "measure", "toolkit")
         assertEquals(ids, Declarations.sections.map { it.id })
         val lefts = ids.map { compose.onNodeWithTag(BottomNavTags.item(it)).getBoundsInRoot().left }
         assertEquals("left to right", lefts.sorted(), lefts)
@@ -144,11 +145,19 @@ class SheetShellTest {
         assertTrue(compose.onAllNodesWithTag(TopFirstRowTags.DROPDOWN).fetchSemanticsNodes().isEmpty())
     }
 
-    @Test fun `Jev has Ask only now, and the Sheet and AI pages are reachable from the bar`() {
+    @Test fun `Ask Jev is the AI section's second page, and the Sheet and AI pages are reachable from the bar`() {
         launch()
-        compose.onNodeWithTag(BottomNavTags.item("jev")).performClick()
+        assertTrue("the old Jev section is gone from the bar", compose.onAllNodesWithTag(BottomNavTags.item("jev")).fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithTag(BottomNavTags.item("ai")).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("ai", "ask"), Declarations.tabsOf("ai").map { it.id })
+        compose.onNodeWithTag(PageTabsTags.tab("ask")).performClick()
         compose.waitForIdle()
         assertEquals("ask", state.tab)
+        compose.onNodeWithTag(BottomNavTags.item("toolkit")).performClick()
+        compose.waitForIdle()
+        assertEquals(listOf("light", "recorder", "tracker", "clock"), Declarations.tabsOf("toolkit").map { it.id })
+        assertEquals("light", state.tab)
         compose.onNodeWithTag(BottomNavTags.item("sheet")).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(SheetTags.ROOT).assertExists()

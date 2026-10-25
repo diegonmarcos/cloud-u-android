@@ -34,7 +34,7 @@ class DeclarationsTest {
     @Test fun `sections parse, match what gradle baked, and every page sits in one`() {
         val sections = Declarations.sectionsOf(nav)
         assertEquals(sections, Declarations.sections)
-        assertEquals("the island is the declared bottom_nav, at most five", listOf("calculator", "sheet", "ai", "measure", "jev"), sections.map { it.id })
+        assertEquals("the island is the declared bottom_nav, at most five", listOf("calculator", "sheet", "ai", "measure", "toolkit"), sections.map { it.id })
         assertTrue(sections.size <= 5)
         assertEquals(sections.size, sections.map { it.id }.toSet().size)
         tabs.forEach { t -> assertTrue("tab ${t.id} names section ${t.section}", nav.sections.any { it.id == t.section }) }
@@ -43,8 +43,8 @@ class DeclarationsTest {
         assertEquals(sections.first().id, Declarations.sectionOf("no-such-tab"))
     }
 
-    @Test fun `the bar reads Calc, Sheet, AI, Measure, JEV and Configs is the one page off it`() {
-        assertEquals(listOf("Calc", "Sheet", "AI", "Measure", "JEV"), Declarations.sections.map { it.label })
+    @Test fun `the bar reads Calc, Sheet, AI, Measure, Toolkit and Configs is the one page off it`() {
+        assertEquals(listOf("Calc", "Sheet", "AI", "Measure", "Toolkit"), Declarations.sections.map { it.label })
         val configs = Declarations.configsTab
         assertEquals("configs", configs?.id)
         assertTrue("Configs is not on the bar", Declarations.sections.none { it.id == configs?.section })
@@ -124,6 +124,43 @@ class DeclarationsTest {
                 }
             }
         }
+    }
+
+    @Test fun `Clock moved from Measure to Toolkit and the new pages' modes carry what their renderers read`() {
+        assertEquals(listOf("sensors", "phone", "camera"), Declarations.tabsOf("measure").map { it.id })
+        assertEquals(listOf("light", "recorder", "tracker", "clock"), Declarations.tabsOf("toolkit").map { it.id })
+        assertEquals(listOf("ai", "ask"), Declarations.tabsOf("ai").map { it.id })
+        assertEquals("the clock modes did not move or duplicate", listOf("world", "alarms", "timers", "stopwatch", "interval", "bedtime"), Declarations.modesOf("clock").map { it.id })
+        fun spec(id: String) = JSONObject(Declarations.mode(id)!!.spec)
+        // the Sensors page: every sensor group has its mode, and every tool mode names real sensors
+        val catalog = com.diegonmarcos.cloudcalc.sensors.SensorDecl.catalog
+        val shown = modes.filter { it.kind == "sensor_group" }.map { JSONObject(it.spec).getString("group") }.toSet()
+        assertEquals(catalog.groups().toSet(), shown)
+        listOf("gravity", "accelerometer", "field").forEach { assertTrue("compass $it", catalog.sensor(spec("sx_compass").getString(it)) != null) }
+        assertTrue(catalog.sensor(spec("sx_seismo").getString("sensor")) != null)
+        assertTrue(catalog.sensor(spec("sx_metal").getString("sensor")) != null)
+        listOf("sx_compass" to "band", "sx_seismo" to "band", "sx_metal" to "band").forEach { (id, k) -> assertTrue("$id band", spec(id).getString(k) in catalog.bands) }
+        assertTrue(spec("sx_seismo").getInt("window") > 1)
+        assertTrue(spec("sx_metal").getInt("baseline_samples") > 1)
+        assertEquals(listOf("mm", "in"), spec("sx_ruler").getJSONArray("units").let { a -> (0 until a.length()).map { a.getString(it) } })
+        // Toolkit
+        spec("recorder").let { assertTrue(it.getInt("sample_rate") >= 8000 && it.getInt("max_minutes") > 0 && it.getString("dir").isNotBlank()) }
+        spec("tracker").let { t ->
+            assertEquals("nav", t.getString("fleet"))
+            assertEquals("shortcut_action", t.getString("extra"))
+            assertTrue((0 until t.getJSONArray("pages").length()).all { t.getJSONArray("pages").getJSONObject(it).getString("target").startsWith("page:tracker/") })
+        }
+        assertEquals("a mode without a spec parses to an empty object", "{}", Declarations.mode("standard")!!.spec)
+    }
+
+    @Test fun `every tracker deep link is one Cloud Navigation declares`() {
+        val nav = File("../../ac_cloud-nav/build.json")
+        if (!nav.exists()) return   // the repository's other apps are not part of this app's checkout
+        val pages = JSONObject(nav.readText()).getJSONObject("ui").getJSONArray("sections").let { a ->
+            (0 until a.length()).map { a.getJSONObject(it) }.first { it.getString("id") == "tracker" }.getJSONArray("pages")
+        }.let { p -> (0 until p.length()).map { p.getJSONObject(it).getString("id") } }
+        val links = JSONObject(Declarations.mode("tracker")!!.spec).getJSONArray("pages")
+        (0 until links.length()).map { links.getJSONObject(it).getString("target").removePrefix("page:tracker/") }.forEach { assertTrue("Cloud Navigation has no Tracker page $it", it in pages) }
     }
 
     @Test fun `every expression keypad can evaluate and clear`() {

@@ -276,6 +276,10 @@ public object UiIcons {
         "health_shop" to Icons.Outlined.ShoppingCart,
         "health_dossier" to Icons.Outlined.Summarize,
         "health_timeline" to Icons.Outlined.Timeline,
+        // Cloud Calc > Toolkit and Measure > Sensors pages.
+        "flashlight_on" to Icons.Outlined.FlashlightOn,
+        "keyboard_voice" to Icons.Outlined.KeyboardVoice,
+        "sensors" to Icons.Outlined.Sensors,
         )
     }
 

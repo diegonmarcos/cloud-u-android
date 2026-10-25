@@ -34,9 +34,9 @@ internal object CalcIcons {
         "measure",
         "M3,17h18v4H3zM5,17v-3h2v3zM9,17v-2h2v2zM13,17v-3h2v3zM17,17v-2h2v2z",
     )
-    private val jev = glyph(
-        "jev",
-        "M15,12a3,3 0 1,1 -6,0a3,3 0 1,1 6,0zM12,2a10,10 0 1,0 0,20a10,10 0 1,0 0,-20zM12,4a8,8 0 1,1 0,16a8,8 0 1,1 0,-16z",
+    private val toolkit = glyph(
+        "toolkit",
+        "M22.7,19l-9.1,-9.1c0.9,-2.3 0.4,-5 -1.5,-6.9 -2,-2 -5,-2.4 -7.4,-1.3L9,6 6,9 1.6,4.7C0.4,7.1 0.9,10.1 2.9,12.1c1.9,1.9 4.6,2.4 6.9,1.5l9.1,9.1c0.4,0.4 1,0.4 1.4,0l2.3,-2.3c0.5,-0.4 0.5,-1.1 0.1,-1.4z",
     )
     private val settings = glyph(
         "settings",
@@ -55,7 +55,7 @@ internal object CalcIcons {
         "table_chart" -> sheet
         "auto_awesome" -> ai
         "speed" -> measure
-        "psychology" -> jev
+        "build" -> toolkit
         else -> settings
     }
 }

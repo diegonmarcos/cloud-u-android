@@ -123,7 +123,8 @@
         "libs:ml-l-image",
         "libs:ml-l-sound",
         "sheet",
-        "libs:ai"
+        "libs:ai",
+        "libs:light"
       ]
     },
     "sheet": {
@@ -159,6 +160,11 @@
     "libs:ai": {
       "_doc_dir": "The AI page: the fleet's AI chat (libs:ai) over the fleet agent gateway (my-ai-api, mesh only) and OpenRouter with the fleet Account's token, which this app already reads for Jev (decide/JevStore.kt). Shared BY REFERENCE. The gateway's mesh address is baked as BuildConfig.AI_GATEWAY_URL by libs/ai/ai-gateway.gradle.",
       "dir": "../ab_cloud-libs-shared/libs/ai",
+      "type": "library"
+    },
+    "libs:light": {
+      "_doc": "Toolkit > Light: the Light tool (#1155) shared BY REFERENCE with the SuperApp's Primary Tools Light. LightPanel is the page, Light.engine the one engine; the torch service is merged from the lib's manifest. A `gui` lib (1_cicd/src/data/lib-classes.json).",
+      "dir": "../ab_cloud-libs-shared/libs/light",
       "type": "library"
     },
     "libs:model-catalogue": {
@@ -623,10 +629,811 @@
       "enabled": true
     }
   },
+  "_doc_sensors": "THE ONE declaration of the Measure > Sensors page and its derived tools. sensors: every measurement the phone can make - id, source (sensor = a SensorManager sensor of android_type, gnss, battery_temperature, battery_voltage, wifi, cell, nfc), unit and the units it converts to, display (scalar, vector with axes, rotation, event, trigger, state, gnss, presence), the permission it needs at run time (asked for only when its Allow button is tapped), raw_scale (platform value x raw_scale = the declared unit) and derived: quantities worked out by the named formula `fn` (measure/.../SensorMath.kt Formulas) from the sensor's values (`inputs` picks by index) plus the first value of each `needs` sensor, optionally put into words by a `bands` table. conversions: to = from x factor + offset. The app enumerates SensorManager at run time: a declared sensor the phone lacks is listed as not on this device, never with a value; a sensor the phone has that is not declared is listed under All sensors. Parsed and validated by measure/Sensors.kt (an unknown formula, band, unit or source fails the build).",
+  "sensors": {
+    "conversions": [
+      {
+        "from": "m/s²",
+        "to": "g",
+        "factor": 0.10197162129779283
+      },
+      {
+        "from": "rad/s",
+        "to": "°/s",
+        "factor": 57.29577951308232
+      },
+      {
+        "from": "µT",
+        "to": "G",
+        "factor": 0.01
+      },
+      {
+        "from": "hPa",
+        "to": "kPa",
+        "factor": 0.1
+      },
+      {
+        "from": "hPa",
+        "to": "mmHg",
+        "factor": 0.750061683
+      },
+      {
+        "from": "hPa",
+        "to": "inHg",
+        "factor": 0.0295299830714
+      },
+      {
+        "from": "lx",
+        "to": "fc",
+        "factor": 0.09290304
+      },
+      {
+        "from": "cm",
+        "to": "in",
+        "factor": 0.39370078740157477
+      },
+      {
+        "from": "°C",
+        "to": "°F",
+        "factor": 1.8,
+        "offset": 32
+      },
+      {
+        "from": "°C",
+        "to": "K",
+        "factor": 1,
+        "offset": 273.15
+      },
+      {
+        "from": "m/s",
+        "to": "km/h",
+        "factor": 3.6
+      },
+      {
+        "from": "m/s",
+        "to": "mph",
+        "factor": 2.2369362920544
+      },
+      {
+        "from": "m/s",
+        "to": "kn",
+        "factor": 1.9438444924406
+      },
+      {
+        "from": "mV",
+        "to": "V",
+        "factor": 0.001
+      },
+      {
+        "from": "m",
+        "to": "ft",
+        "factor": 3.280839895013123
+      }
+    ],
+    "bands": {
+      "light_level": [
+        {
+          "max": 10,
+          "label": "Very dark"
+        },
+        {
+          "max": 50,
+          "label": "Dim"
+        },
+        {
+          "max": 300,
+          "label": "Indoor"
+        },
+        {
+          "max": 1000,
+          "label": "Bright indoor or overcast"
+        },
+        {
+          "max": 10000,
+          "label": "Daylight"
+        },
+        {
+          "max": null,
+          "label": "Direct sun"
+        }
+      ],
+      "proximity_state": [
+        {
+          "max": 3,
+          "label": "Near"
+        },
+        {
+          "max": null,
+          "label": "Far"
+        }
+      ],
+      "offbody": [
+        {
+          "max": 0.5,
+          "label": "Off body"
+        },
+        {
+          "max": null,
+          "label": "On body"
+        }
+      ],
+      "compass8": [
+        {
+          "max": 22.5,
+          "label": "N"
+        },
+        {
+          "max": 67.5,
+          "label": "NE"
+        },
+        {
+          "max": 112.5,
+          "label": "E"
+        },
+        {
+          "max": 157.5,
+          "label": "SE"
+        },
+        {
+          "max": 202.5,
+          "label": "S"
+        },
+        {
+          "max": 247.5,
+          "label": "SW"
+        },
+        {
+          "max": 292.5,
+          "label": "W"
+        },
+        {
+          "max": 337.5,
+          "label": "NW"
+        },
+        {
+          "max": null,
+          "label": "N"
+        }
+      ],
+      "shake_class": [
+        {
+          "max": 0.05,
+          "label": "Still"
+        },
+        {
+          "max": 0.3,
+          "label": "Light vibration"
+        },
+        {
+          "max": 1,
+          "label": "Noticeable"
+        },
+        {
+          "max": 3,
+          "label": "Strong"
+        },
+        {
+          "max": null,
+          "label": "Severe"
+        }
+      ],
+      "metal_class": [
+        {
+          "max": 5,
+          "label": "Nothing nearby"
+        },
+        {
+          "max": 20,
+          "label": "Weak disturbance"
+        },
+        {
+          "max": 60,
+          "label": "Possible metal"
+        },
+        {
+          "max": null,
+          "label": "Strong metal or a magnet"
+        }
+      ]
+    },
+    "sensors": [
+      {
+        "id": "accelerometer",
+        "label": "Accelerometer",
+        "group": "motion",
+        "source": "sensor",
+        "android_type": 1,
+        "unit": "m/s²",
+        "display": "vector",
+        "axes": [
+          "x",
+          "y",
+          "z"
+        ],
+        "decimals": 2,
+        "units": [
+          "m/s²",
+          "g"
+        ],
+        "derived": [
+          {
+            "id": "total",
+            "label": "Total acceleration",
+            "fn": "g_force",
+            "unit": "g",
+            "decimals": 2
+          }
+        ]
+      },
+      {
+        "id": "gyroscope",
+        "label": "Gyroscope",
+        "group": "motion",
+        "source": "sensor",
+        "android_type": 4,
+        "unit": "rad/s",
+        "display": "vector",
+        "axes": [
+          "x",
+          "y",
+          "z"
+        ],
+        "decimals": 3,
+        "units": [
+          "rad/s",
+          "°/s"
+        ],
+        "derived": [
+          {
+            "id": "rate",
+            "label": "Rotation rate",
+            "fn": "norm",
+            "unit": "rad/s",
+            "decimals": 3
+          }
+        ]
+      },
+      {
+        "id": "gravity",
+        "label": "Gravity",
+        "group": "motion",
+        "source": "sensor",
+        "android_type": 9,
+        "unit": "m/s²",
+        "display": "vector",
+        "axes": [
+          "x",
+          "y",
+          "z"
+        ],
+        "decimals": 2,
+        "units": [
+          "m/s²",
+          "g"
+        ],
+        "derived": [
+          {
+            "id": "tilt",
+            "label": "Tilt from flat",
+            "fn": "tilt_deg",
+            "unit": "°",
+            "decimals": 1
+          }
+        ]
+      },
+      {
+        "id": "linear_acceleration",
+        "label": "Linear acceleration",
+        "group": "motion",
+        "source": "sensor",
+        "android_type": 10,
+        "unit": "m/s²",
+        "display": "vector",
+        "axes": [
+          "x",
+          "y",
+          "z"
+        ],
+        "decimals": 2,
+        "units": [
+          "m/s²",
+          "g"
+        ],
+        "derived": [
+          {
+            "id": "magnitude",
+            "label": "Magnitude",
+            "fn": "norm",
+            "unit": "m/s²",
+            "decimals": 2
+          }
+        ]
+      },
+      {
+        "id": "rotation_vector",
+        "label": "Rotation vector",
+        "group": "motion",
+        "source": "sensor",
+        "android_type": 11,
+        "unit": "",
+        "display": "rotation",
+        "axes": [
+          "x",
+          "y",
+          "z",
+          "cos"
+        ],
+        "decimals": 3,
+        "derived": [
+          {
+            "id": "azimuth",
+            "label": "Azimuth",
+            "fn": "azimuth_deg",
+            "unit": "°",
+            "decimals": 0
+          },
+          {
+            "id": "pitch",
+            "label": "Pitch",
+            "fn": "pitch_deg",
+            "unit": "°",
+            "decimals": 0
+          },
+          {
+            "id": "roll",
+            "label": "Roll",
+            "fn": "roll_deg",
+            "unit": "°",
+            "decimals": 0
+          }
+        ]
+      },
+      {
+        "id": "game_rotation_vector",
+        "label": "Game rotation vector",
+        "group": "motion",
+        "source": "sensor",
+        "android_type": 15,
+        "unit": "",
+        "display": "rotation",
+        "axes": [
+          "x",
+          "y",
+          "z",
+          "cos"
+        ],
+        "decimals": 3,
+        "derived": [
+          {
+            "id": "azimuth",
+            "label": "Azimuth (no magnetometer)",
+            "fn": "azimuth_deg",
+            "unit": "°",
+            "decimals": 0
+          },
+          {
+            "id": "pitch",
+            "label": "Pitch",
+            "fn": "pitch_deg",
+            "unit": "°",
+            "decimals": 0
+          },
+          {
+            "id": "roll",
+            "label": "Roll",
+            "fn": "roll_deg",
+            "unit": "°",
+            "decimals": 0
+          }
+        ]
+      },
+      {
+        "id": "magnetometer",
+        "label": "Magnetometer",
+        "group": "motion",
+        "source": "sensor",
+        "android_type": 2,
+        "unit": "µT",
+        "display": "vector",
+        "axes": [
+          "x",
+          "y",
+          "z"
+        ],
+        "decimals": 1,
+        "units": [
+          "µT",
+          "G"
+        ],
+        "derived": [
+          {
+            "id": "strength",
+            "label": "Field strength",
+            "fn": "norm",
+            "unit": "µT",
+            "decimals": 1
+          }
+        ]
+      },
+      {
+        "id": "gnss",
+        "label": "GPS / GNSS",
+        "group": "position",
+        "source": "gnss",
+        "unit": "m/s",
+        "display": "gnss",
+        "axes": [
+          "Latitude",
+          "Longitude",
+          "Altitude",
+          "Accuracy",
+          "Speed",
+          "Bearing",
+          "Satellites used",
+          "Satellites in view"
+        ],
+        "axis_units": [
+          "°",
+          "°",
+          "m",
+          "m",
+          "m/s",
+          "°",
+          "",
+          ""
+        ],
+        "axis_decimals": [5, 5, 0, 0, 1, 0, 0, 0],
+        "decimals": 1,
+        "permission": "ACCESS_FINE_LOCATION",
+        "units": [
+          "m/s",
+          "km/h",
+          "mph",
+          "kn"
+        ]
+      },
+      {
+        "id": "pressure",
+        "label": "Barometer",
+        "group": "position",
+        "source": "sensor",
+        "android_type": 6,
+        "unit": "hPa",
+        "display": "scalar",
+        "decimals": 1,
+        "units": [
+          "hPa",
+          "kPa",
+          "mmHg",
+          "inHg"
+        ],
+        "derived": [
+          {
+            "id": "altitude",
+            "label": "Altitude (standard sea-level pressure)",
+            "fn": "altitude_from_pressure",
+            "unit": "m",
+            "decimals": 0,
+            "args": {
+              "sea_level_hpa": 1013.25
+            }
+          }
+        ]
+      },
+      {
+        "id": "ambient_light",
+        "label": "Ambient light",
+        "group": "environment",
+        "source": "sensor",
+        "android_type": 5,
+        "unit": "lx",
+        "display": "scalar",
+        "decimals": 0,
+        "units": [
+          "lx",
+          "fc"
+        ],
+        "derived": [
+          {
+            "id": "level",
+            "label": "Light level",
+            "fn": "identity",
+            "unit": "lx",
+            "decimals": 0,
+            "band": "light_level"
+          }
+        ]
+      },
+      {
+        "id": "proximity",
+        "label": "Proximity",
+        "group": "environment",
+        "source": "sensor",
+        "android_type": 8,
+        "unit": "cm",
+        "display": "scalar",
+        "decimals": 1,
+        "units": [
+          "cm",
+          "in"
+        ],
+        "derived": [
+          {
+            "id": "state",
+            "label": "Object",
+            "fn": "identity",
+            "unit": "cm",
+            "decimals": 1,
+            "band": "proximity_state"
+          }
+        ]
+      },
+      {
+        "id": "ambient_temperature",
+        "label": "Ambient temperature",
+        "group": "environment",
+        "source": "sensor",
+        "android_type": 13,
+        "unit": "°C",
+        "display": "scalar",
+        "decimals": 1,
+        "units": [
+          "°C",
+          "°F",
+          "K"
+        ]
+      },
+      {
+        "id": "humidity",
+        "label": "Humidity",
+        "group": "environment",
+        "source": "sensor",
+        "android_type": 12,
+        "unit": "%",
+        "display": "scalar",
+        "decimals": 0,
+        "derived": [
+          {
+            "id": "dew_point",
+            "label": "Dew point",
+            "fn": "dew_point",
+            "unit": "°C",
+            "decimals": 1,
+            "needs": [
+              "ambient_temperature"
+            ]
+          },
+          {
+            "id": "heat_index",
+            "label": "Heat index",
+            "fn": "heat_index",
+            "unit": "°C",
+            "decimals": 1,
+            "needs": [
+              "ambient_temperature"
+            ]
+          },
+          {
+            "id": "absolute",
+            "label": "Absolute humidity",
+            "fn": "absolute_humidity",
+            "unit": "g/m³",
+            "decimals": 1,
+            "needs": [
+              "ambient_temperature"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "step_counter",
+        "label": "Step counter",
+        "group": "activity",
+        "source": "sensor",
+        "android_type": 19,
+        "unit": "steps",
+        "display": "scalar",
+        "decimals": 0,
+        "permission": "ACTIVITY_RECOGNITION",
+        "_doc": "Steps since the phone last booted, as the platform counts them.",
+        "derived": [
+          {
+            "id": "distance",
+            "label": "Distance (0.75 m stride)",
+            "fn": "scale",
+            "unit": "m",
+            "decimals": 0,
+            "args": {
+              "factor": 0.75
+            }
+          },
+          {
+            "id": "energy",
+            "label": "Energy (0.04 kcal a step)",
+            "fn": "scale",
+            "unit": "kcal",
+            "decimals": 0,
+            "args": {
+              "factor": 0.04
+            }
+          }
+        ]
+      },
+      {
+        "id": "step_detector",
+        "label": "Step detector",
+        "group": "activity",
+        "source": "sensor",
+        "android_type": 18,
+        "unit": "steps",
+        "display": "event",
+        "decimals": 0,
+        "permission": "ACTIVITY_RECOGNITION"
+      },
+      {
+        "id": "significant_motion",
+        "label": "Significant motion",
+        "group": "activity",
+        "source": "sensor",
+        "android_type": 17,
+        "unit": "",
+        "display": "trigger"
+      },
+      {
+        "id": "stationary_detect",
+        "label": "Stationary detect",
+        "group": "activity",
+        "source": "sensor",
+        "android_type": 29,
+        "unit": "",
+        "display": "trigger"
+      },
+      {
+        "id": "motion_detect",
+        "label": "Motion detect",
+        "group": "activity",
+        "source": "sensor",
+        "android_type": 30,
+        "unit": "",
+        "display": "trigger"
+      },
+      {
+        "id": "pick_up_gesture",
+        "label": "Pick-up gesture",
+        "group": "activity",
+        "source": "sensor",
+        "android_type": 25,
+        "unit": "",
+        "display": "trigger"
+      },
+      {
+        "id": "heart_rate",
+        "label": "Heart rate",
+        "group": "activity",
+        "source": "sensor",
+        "android_type": 21,
+        "unit": "bpm",
+        "display": "scalar",
+        "decimals": 0,
+        "permission": "BODY_SENSORS"
+      },
+      {
+        "id": "offbody_detect",
+        "label": "Off-body detect",
+        "group": "activity",
+        "source": "sensor",
+        "android_type": 34,
+        "unit": "",
+        "display": "state",
+        "decimals": 0,
+        "derived": [
+          {
+            "id": "worn",
+            "label": "Worn",
+            "fn": "identity",
+            "unit": "",
+            "decimals": 0,
+            "band": "offbody"
+          }
+        ]
+      },
+      {
+        "id": "hinge_angle",
+        "label": "Hinge angle",
+        "group": "device",
+        "source": "sensor",
+        "android_type": 36,
+        "unit": "°",
+        "display": "scalar",
+        "decimals": 0
+      },
+      {
+        "id": "battery_temperature",
+        "label": "Battery temperature",
+        "group": "device",
+        "source": "battery_temperature",
+        "unit": "°C",
+        "display": "scalar",
+        "decimals": 1,
+        "raw_scale": 0.1,
+        "units": [
+          "°C",
+          "°F",
+          "K"
+        ],
+        "_doc": "BatteryManager reports tenths of a degree Celsius; raw_scale brings it to the declared unit."
+      },
+      {
+        "id": "battery_voltage",
+        "label": "Battery voltage",
+        "group": "device",
+        "source": "battery_voltage",
+        "unit": "mV",
+        "display": "scalar",
+        "decimals": 0,
+        "units": [
+          "mV",
+          "V"
+        ]
+      },
+      {
+        "id": "wifi_signal",
+        "label": "Wi-Fi signal",
+        "group": "device",
+        "source": "wifi",
+        "unit": "dBm",
+        "display": "scalar",
+        "decimals": 0,
+        "derived": [
+          {
+            "id": "quality",
+            "label": "Signal quality",
+            "fn": "signal_percent",
+            "unit": "%",
+            "decimals": 0,
+            "args": {
+              "min": -100.0,
+              "max": -50.0
+            }
+          }
+        ]
+      },
+      {
+        "id": "cell_signal",
+        "label": "Cellular signal",
+        "group": "device",
+        "source": "cell",
+        "unit": "dBm",
+        "display": "scalar",
+        "decimals": 0,
+        "derived": [
+          {
+            "id": "quality",
+            "label": "Signal quality",
+            "fn": "signal_percent",
+            "unit": "%",
+            "decimals": 0,
+            "args": {
+              "min": -120.0,
+              "max": -70.0
+            }
+          }
+        ]
+      },
+      {
+        "id": "nfc",
+        "label": "NFC",
+        "group": "device",
+        "source": "nfc",
+        "unit": "",
+        "display": "presence"
+      }
+    ]
+  },
   "ui": {
     "_doc": "EVERY list this app renders. app/build.gradle bakes ui.* into BuildConfig as base64 JSON and Declarations.kt decodes it once; no tab id, mode id, key or form is spelled in Kotlin.",
     "_doc_sections": "#868 THE ONE navigation declaration (libs:bottomnav's NavDecl), INVERTED from #770: ui.bottom_nav is the island's section ids in display order, ui.sections[] are Calculator, Measure and Jev, each with `pages` - the ten tabs (what #770 called ui.tabs), drawn as the section's top PageTabs strip - and ui.default_section is where the app opens (its first page). Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. A page shows the modes whose `tab` is its id, in ui.modes order, as the sub-strip under the page strip. test/test-calc-shell.sh fails on a section with no page, a page with no mode and a mode naming no page.",
-    "bottom_nav": ["calculator", "sheet", "ai", "measure", "jev"],
+    "bottom_nav": ["calculator", "sheet", "ai", "measure", "toolkit"],
     "default_section": "calculator",
     "sections": [
       {
@@ -682,6 +1489,11 @@
             "id": "ai",
             "label": "AI",
             "icon": "auto_awesome"
+          },
+          {
+            "id": "ask",
+            "label": "Ask Jev",
+            "icon": "ask"
           }
         ]
       },
@@ -696,9 +1508,9 @@
             "icon": "mic"
           },
           {
-            "id": "clock",
-            "label": "Clock",
-            "icon": "clock"
+            "id": "phone",
+            "label": "Sensors",
+            "icon": "sensors"
           },
           {
             "id": "camera",
@@ -708,14 +1520,29 @@
         ]
       },
       {
-        "id": "jev",
-        "label": "JEV",
-        "icon": "psychology",
+        "id": "toolkit",
+        "label": "Toolkit",
+        "icon": "build",
         "pages": [
           {
-            "id": "ask",
-            "label": "Ask",
-            "icon": "ask"
+            "id": "light",
+            "label": "Light",
+            "icon": "flashlight_on"
+          },
+          {
+            "id": "recorder",
+            "label": "Voice Recorder",
+            "icon": "keyboard_voice"
+          },
+          {
+            "id": "tracker",
+            "label": "Tracker",
+            "icon": "timeline"
+          },
+          {
+            "id": "clock",
+            "label": "Clock",
+            "icon": "clock"
           }
         ]
       },
@@ -1931,6 +2758,193 @@
         "history": {
           "max_entries": 200
         }
+      },
+      {
+        "id": "light",
+        "label": "Light",
+        "icon": "flashlight_on",
+        "tab": "light",
+        "kind": "light",
+        "_doc": "The flashlight and screen light, strobe (capped at 3 flashes a second), timer and Keep-on service: libs:light's LightPanel, the SAME page and engine the SuperApp's Primary Tools Light opens (#1155). No code of its own here. The torch needs no permission."
+      },
+      {
+        "id": "recorder",
+        "label": "Voice Recorder",
+        "icon": "keyboard_voice",
+        "tab": "recorder",
+        "kind": "recorder",
+        "spec": {
+          "sample_rate": 16000,
+          "max_minutes": 60,
+          "dir": "recordings"
+        },
+        "_doc": "Record, play, list, rename-free delete and share voice memos. Recordings are 16-bit mono WAV files in this app's own storage (spec.dir under filesDir); Share hands the file to any app through the system share sheet (Cloud Drive is one), nothing is uploaded by this app. The microphone is asked for through MicGate when this page opens; denied shows the reason and an Allow button."
+      },
+      {
+        "id": "tracker",
+        "label": "Tracker",
+        "icon": "timeline",
+        "tab": "tracker",
+        "kind": "tracker_link",
+        "spec": {
+          "fleet": "nav",
+          "extra": "shortcut_action",
+          "pages": [
+            {
+              "label": "Timeline",
+              "target": "page:tracker/timeline",
+              "icon": "timeline"
+            },
+            {
+              "label": "Steps",
+              "target": "page:tracker/steps",
+              "icon": "directions_walk"
+            },
+            {
+              "label": "Sleep",
+              "target": "page:tracker/sleep",
+              "icon": "bedtime"
+            }
+          ]
+        },
+        "_doc": "Not reimplemented: a deep link into Cloud Navigation's Tracker section (its ui.deep_links, `page:<section>/<page>` in the shortcut_action extra, handled by MainActivity.deepLinkOf). The package comes from the constellation fleet manifest (spec.fleet) and is baked into BuildConfig.TRACKER_PACKAGE and the manifest <queries>; with Cloud Navigation not installed the page says so and offers nothing to tap."
+      },
+      {
+        "id": "sx_motion",
+        "label": "Motion",
+        "short": "Motion",
+        "icon": "speed",
+        "tab": "phone",
+        "kind": "sensor_group",
+        "spec": {
+          "group": "motion"
+        },
+        "_doc": "Accelerometer, gyroscope, gravity, linear acceleration, rotation vector (azimuth/pitch/roll), magnetometer: every one the phone has, live, from build.json::sensors; the rest are listed as not on this device."
+      },
+      {
+        "id": "sx_position",
+        "label": "Position",
+        "short": "Position",
+        "icon": "timeline",
+        "tab": "phone",
+        "kind": "sensor_group",
+        "spec": {
+          "group": "position"
+        },
+        "_doc": "GNSS (location, speed, satellites; asks for location when you tap Allow) and the barometer with the altitude worked out of it."
+      },
+      {
+        "id": "sx_environment",
+        "label": "Environment",
+        "short": "Env",
+        "icon": "event",
+        "tab": "phone",
+        "kind": "sensor_group",
+        "spec": {
+          "group": "environment"
+        },
+        "_doc": "Ambient light (lux meter), proximity, ambient temperature and humidity with dew point, heat index and absolute humidity."
+      },
+      {
+        "id": "sx_activity",
+        "label": "Activity",
+        "short": "Activity",
+        "icon": "directions_walk",
+        "tab": "phone",
+        "kind": "sensor_group",
+        "spec": {
+          "group": "activity"
+        },
+        "_doc": "Step counter and detector (with distance, energy and cadence), significant motion and the other motion triggers, heart rate, off-body. Steps need Activity recognition and heart rate needs Body sensors: each is asked for when you tap Allow on its card."
+      },
+      {
+        "id": "sx_device",
+        "label": "Device",
+        "short": "Device",
+        "icon": "memory",
+        "tab": "phone",
+        "kind": "sensor_group",
+        "spec": {
+          "group": "device"
+        },
+        "_doc": "Hinge angle, battery temperature and voltage, Wi-Fi and cellular signal strength, NFC."
+      },
+      {
+        "id": "sx_all",
+        "label": "All sensors",
+        "short": "All",
+        "icon": "apps",
+        "tab": "phone",
+        "kind": "sensor_all",
+        "_doc": "SensorManager.getSensorList(TYPE_ALL), exactly what the phone reports: name, vendor, type, range, resolution, power; the ones the catalog has no card for (vendor sensors) are listed here and nowhere else."
+      },
+      {
+        "id": "sx_compass",
+        "label": "Compass",
+        "short": "Compass",
+        "icon": "explore",
+        "tab": "phone",
+        "kind": "sensor_compass",
+        "spec": {
+          "gravity": "gravity",
+          "accelerometer": "accelerometer",
+          "field": "magnetometer",
+          "band": "compass8"
+        },
+        "_doc": "Tilt-compensated heading from gravity (else the accelerometer) and the magnetometer, magnetic north, with the field strength. A phone without both says so."
+      },
+      {
+        "id": "sx_seismo",
+        "label": "Seismometer",
+        "short": "Quake",
+        "icon": "graphic_eq",
+        "tab": "phone",
+        "kind": "sensor_seismo",
+        "spec": {
+          "sensor": "accelerometer",
+          "window": 150,
+          "band": "shake_class"
+        },
+        "_doc": "Vibration from the accelerometer: RMS and peak of the magnitude about its own mean over the last `window` samples, in words from the shake_class band. Indicative only; it is a phone, not a seismograph."
+      },
+      {
+        "id": "sx_metal",
+        "label": "Metal detector",
+        "short": "Metal",
+        "icon": "bolt",
+        "tab": "phone",
+        "kind": "sensor_metal",
+        "spec": {
+          "sensor": "magnetometer",
+          "baseline_samples": 25,
+          "band": "metal_class"
+        },
+        "_doc": "The magnetic field strength against a baseline taken away from metal (the first `baseline_samples` readings after Reset): the change in microtesla and what it suggests."
+      },
+      {
+        "id": "sx_ruler",
+        "label": "Ruler",
+        "short": "Ruler",
+        "icon": "straighten",
+        "tab": "phone",
+        "kind": "ruler",
+        "spec": {
+          "units": [
+            "mm",
+            "in"
+          ]
+        },
+        "_doc": "An on-screen ruler drawn to the screen's real pixel density (DisplayMetrics.ydpi), millimetres or inches."
+      },
+      {
+        "id": "sx_protractor",
+        "label": "Protractor",
+        "short": "Angle",
+        "icon": "calculate",
+        "tab": "phone",
+        "kind": "protractor",
+        "spec": {},
+        "_doc": "Drag the arm: the angle from the base line, and the supplement. Bubble level and inclinometer are Measure > Camera > Level."
       }
     ],
     "_doc_debug_api": "The routes this app adds to the fleet debug API (libs:devtools AppDebugServer), so a calculation can be checked with the screen locked: /api/calc/eval?expr=&mode= evaluates through the bound engine with that mode's options, /api/calc/modes lists ui.modes, /api/calc/info is the engine handshake + engine info. #768 the Clock section registers a second group, build.json::ui.debug_api.clock_group (/api/clock/*), so alarms and timers can be checked and driven with the screen locked: status (every alarm, timer, the stopwatch, interval, sleep timer and what is ringing, each with its planned wakeup and whether AlarmManager really holds a PendingIntent for it, plus canScheduleExactAlarms and the system's next alarm clock), timer_start?seconds=&label= / timer_cancel?id= (a real timer through the same engine the screen uses), alarm_add?time=HH:MM&days=&label= / alarm_delete?id=, dismiss?key=. The op is `status`, not `state`: 1_cicd/src/data/update-ack-guard.json owns the `state` branch key of every `when (op)` route table for GET /api/state. #770 a third group, build.json::ui.debug_api.jev_group (/api/jev/*): route?q= (the routing decision, the chosen tool and its result as computed by this app; a timer only starts with run=1; never the token) and config (the routing table in force, whether it is the default or the user's edit, the models per use, and where the token comes from - masked). #772 the Sound tools register build.json::ui.debug_api.sound_group (/api/sound/*), a loopback self-test with the screen locked: generate?f=440&ms=500 (&kind, wave, f2, amp) plays a guarded tone and keeps its samples; analyze?ms=1000 records the microphone (source=mic, the default) or re-reads the last generated buffer (source=generator, no microphone at all) and reports the detected frequency, note, level and events; status reports the permission, the last generation, the history session and the saved sessions. A recording from a background app is silenced by Android, and analyze says so (silenced: true) rather than reporting a frequency of nothing.",

@@ -25,7 +25,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 2 | 0 | 100% |
 | cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 2 | 0 | 100% |
 | cloud-c3 | `com.diegonmarcos.cloudc3` | 8 | 0 | 100% |
-| cloud-calc | `com.diegonmarcos.cloudcalc` | 12 | 0 | 100% |
+| cloud-calc | `com.diegonmarcos.cloudcalc` | 13 | 0 | 100% |
 | cloud-camera | `cld.camera` | 9 | 0 | 100% |
 | cloud-chat | `com.diegonmarcos.comms.chat` | 6 | 0 | 100% |
 | cloud-code | `com.diegonmarcos.code` | 8 | 5 | 61% |
@@ -51,11 +51,11 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 2 | 2 | 50% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 8 | 2 | 80% |
-| **fleet** | | **267** | **52** | **83%** |
+| **fleet** | | **268** | **52** | **83%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
-Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-crash, lib-databackend, lib-datamanager, lib-decisions-link, lib-devtools, lib-firewall, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-icons, lib-ui-kit, lib-updater, lib-webserver.
+Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-crash, lib-databackend, lib-datamanager, lib-decisions-link, lib-devtools, lib-firewall, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-light, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-icons, lib-ui-kit, lib-updater, lib-webserver.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -102,7 +102,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `launcher_profile_prefs` | prefs | config | yes | Selected launcher profile preset (personal/work/guest). |
 | `launcher_settings` | prefs | config | yes | Launcher settings: screensaver, scale, brightness, eye intensity, screensaver timeout, animation/one-hand/control toggles, and the icons-per-row steppers grid_cols_cloud and grid_cols_phone (4..8; absent until the owner moves a stepper, so a phone that never chose follows the shipped default and a chosen value migrates with the phone). |
 | `launcher_theme_prefs` | prefs | config | yes | Selected launcher theme (cloud / cloud_minimalist_black). |
-| `light_prefs` | prefs | config | yes | #1155 the Light tool's settings: default light (rear/front/both), mode (spotlight/flashing) and strobe rate (capped at 3 Hz), rear and front intensity, timer on/duration, keep-on. Preferences of the user, so they move with the phone. |
+| `light_prefs` | prefs | config | yes | #1155 the Light tool's settings: default light (rear/front/both), mode (spotlight/flashing) and strobe rate (capped at 3 Hz), rear and front intensity, timer on/duration, keep-on. Preferences of the user, so they move with the phone. Kept by libs:light, so every app that compiles it (the SuperApp, Cloud Calc's Toolkit > Light) carries it. |
 | `mail_auth_prefs` | encrypted | secret | yes | Cloud Mail's per-account gateway credentials (Authelia in front of the JMAP server): one encrypted JSON blob per account, key auth:<email>, holding the auth mode (none / bearer / authelia), the pasted bearer token and the captured authelia_session cookie. Credentials: shown masked, never logged, replayed only to the account's own domain. |
 | `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
 | `markets_last_good` | prefs | device | no | Last good Yahoo price per symbol (price\|asOf\|savedAt) for the Markets badge, so a killed process still shows the last rate; refetched on the next poll. |
@@ -377,7 +377,7 @@ Coverage: 8 covered, 0 gaps.
 
 ## cloud-calc — `com.diegonmarcos.cloudcalc`
 
-Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-ml-l-image, lib-ml-l-sound, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-icons.
+Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-light, lib-ml-l-image, lib-ml-l-sound, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-icons.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -391,6 +391,7 @@ Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-da
 | `cloud_sound_identification` | prefs | config | yes | #798 the chosen sound identification route (on-device YAMNet vs a remote decision model), per app; the declaration's default_route until the user picks one. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `light_prefs` | prefs | config | yes | #1155 the Light tool's settings: default light (rear/front/both), mode (spotlight/flashing) and strobe rate (capped at 3 Hz), rear and front intensity, timer on/duration, keep-on. Preferences of the user, so they move with the phone. Kept by libs:light, so every app that compiles it (the SuperApp, Cloud Calc's Toolkit > Light) carries it. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
@@ -404,7 +405,7 @@ Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-da
 | `filesDir/sound/*.csv|*.wav` | content | Saved sound-measure sessions. |
 | `filesDir/camera/last.jpg` | device | Last captured measure photo. |
 
-Coverage: 12 covered, 0 gaps.
+Coverage: 13 covered, 0 gaps.
 
 ## cloud-camera — `cld.camera`
 

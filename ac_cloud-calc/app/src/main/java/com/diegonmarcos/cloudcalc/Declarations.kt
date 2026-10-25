@@ -76,6 +76,8 @@ object Declarations {
         /** A data_converter's own units (build.json::ui.modes[].unit_sets), exact factors, no engine. */
         val unitSets: List<UnitSet> = emptyList(),
         val transfer: Transfer? = null,
+        /** The mode's own `spec` object as JSON: what a Toolkit or Sensors mode reads (its group, sensor ids, limits, deep-link pages); "{}" when it declares none. */
+        val spec: String = "{}",
     )
 
     val nav: NavDecl by lazy {
@@ -154,6 +156,7 @@ object Declarations {
                     u.getJSONArray("units").objects().map { DataUnit(it.getString("name"), it.getString("label"), java.math.BigDecimal(it.getString("factor"))) },
                 )
             },
+            spec = (m.optJSONObject("spec") ?: JSONObject()).toString(),
             transfer = m.optJSONObject("transfer")?.let { t ->
                 val d = t.optJSONObject("default") ?: JSONObject()
                 Transfer(

@@ -91,10 +91,14 @@ object Light {
         }
     }
 
-    /** The Cloud > Apps > Primary Tools "Light" tile (`action:light`): flip the default light now, then open the page. */
+    /**
+     * The Cloud > Apps > Primary Tools "Light" tile (`action:light`): flip the default light now, then open the host's Light page, the activity
+     * that answers [LightService.ACTION_OPEN] (the SuperApp's LightActivity). A host with no such activity only flips the light.
+     */
     fun tileTap(ctx: Context) {
         engine(ctx).quickTap()
-        ctx.startActivity(Intent(ctx, LightActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP))
+        val page = Intent(LightService.ACTION_OPEN).setPackage(ctx.packageName).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        if (page.resolveActivity(ctx.packageManager) != null) ctx.startActivity(page)
     }
 }
 
@@ -108,7 +112,7 @@ class LightService : Service() {
         nm.createNotificationChannel(NotificationChannel(CHANNEL, "Light", NotificationManager.IMPORTANCE_LOW))
         val off = PendingIntent.getService(this, 1, Intent(this, LightService::class.java).setAction(ACTION_OFF),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val open = PendingIntent.getActivity(this, 2, Intent(this, LightActivity::class.java),
+        val open = PendingIntent.getActivity(this, 2, openIntent(),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = Notification.Builder(this, CHANNEL).setSmallIcon(android.R.drawable.ic_lock_idle_low_battery)
             .setContentTitle("Light is on").setContentText("Tap to open, or switch it off")
@@ -119,7 +123,15 @@ class LightService : Service() {
         return START_NOT_STICKY
     }
 
+    /** The host's Light page when it answers [ACTION_OPEN] (the SuperApp's LightActivity), else the host app's launcher screen. */
+    private fun openIntent(): Intent {
+        val page = Intent(ACTION_OPEN).setPackage(packageName)
+        return if (page.resolveActivity(packageManager) != null) page
+        else packageManager.getLaunchIntentForPackage(packageName) ?: page
+    }
+
     companion object {
+        const val ACTION_OPEN = "com.diegonmarcos.superapp.light.OPEN"
         const val ACTION_OFF = "com.diegonmarcos.superapp.light.OFF"
         private const val CHANNEL = "light"
         private const val NOTIF_ID = 1155

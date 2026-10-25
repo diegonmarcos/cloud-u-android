@@ -390,22 +390,20 @@
             android:taskAffinity="${applicationId}.recovery"
             android:excludeFromRecents="false" />
 
-        <!-- Light tool (#1155): the Light page (rear torch / front white screen) and the foreground service that
-             keeps a lit torch alive past the page for a running timer or Keep on, with an Off action. -->
+        <!-- Light tool (#1155): the Light page (rear torch / front white screen). The foreground service that keeps a lit
+             torch alive past the page (timer or Keep on, with an Off action) is libs:light's, manifest-merged. -->
         <activity
             android:name=".light.LightActivity"
             android:exported="false"
             android:label="Light"
             android:launchMode="singleTop"
-            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode|density" />
-        <service
-            android:name=".light.LightService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Keeps the flashlight lit after leaving the Light page while a timer runs or Keep on is set, with an Off action" />
-        </service>
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize|uiMode|density">
+            <!-- libs:light's Light.tileTap and the Off-action service's notification open the page through this action. -->
+            <intent-filter>
+                <action android:name="com.diegonmarcos.superapp.light.OPEN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <!-- PowerStateReceiver moved to :libs:battery (manifest-merged). -->
 

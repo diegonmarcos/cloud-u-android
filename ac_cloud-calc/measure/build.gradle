@@ -1,4 +1,4 @@
-// :measure — the Camera tools' maths (#772) as a plain-JVM module: reference-object scaling of a
+// :measure — the Camera tools' maths (#772) and the Sensors catalog's parse, conversions and formulas as a plain-JVM module: reference-object scaling of a
 // photo (a known length → millimetres per pixel → lengths, paths and areas), the AR route's 3-D
 // geometry (distance, path, polygon area, height), the inclinometer (tilt, pitch, roll and the
 // edge angle from the gravity vector, against a stored zero) and the numbers OCR hands the
@@ -21,6 +21,9 @@ kotlin {
 }
 
 dependencies {
+    // Android's own org.json at runtime (the sensor catalog parse); the real library for the JVM suite and PIT.
+    compileOnly 'org.json:json:20240303'
+    testImplementation 'org.json:json:20240303'
     testImplementation 'junit:junit:4.13.2'
 }
 

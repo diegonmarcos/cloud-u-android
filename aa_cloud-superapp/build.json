@@ -235,6 +235,7 @@
         "libs:shizuku-adb-debug-tools",
         "libs:firewall",
         "libs:battery",
+        "libs:light",
         "libs:datamanager",
         "libs:launcher-onehand",
         "libs:launcher-zoomies",
@@ -429,6 +430,11 @@
         "libs:ui-kit"
       ],
       "comment": "Battery/energy engine + its dialogs, extracted from app so it sits as a sibling of libs:firewall. Tier-1 (no-root): BatteryManager/sysfs correlation. Tier-2 (privileged): ShizukuEnergy reads `dumpsys batterystats` via the Shizuku user-service (IUserService/ShizukuUserService) now consolidated into libs:shizuku-adb-debug-tools — hence the lib→lib dep (not lib→app). Consumed by app/devcontrol (the About UI). Also the 'battery-manager' for per-app energy ranking (EnergyWatchdog.perAppEstimate) feeding the Phone 'Top Battery' smart folder. THE battery Source of Truth lives here too: BatteryRepository (reads + records into battery_sot.db on battery events and the 15-min tick) → BatteryTruth.compute (one report) → BatteryRows (the words); the Battery badge, the home-screen battery popup and Configs ▸ About ▸ Battery (page:config/battery) all draw that report."
+    },
+    "libs:light": {
+      "dir": "../ab_cloud-libs-shared/libs/light",
+      "type": "library",
+      "comment": "The Light tool (#1155) shared by reference: LightModel (rules, plain Kotlin), LightAndroid (torch, clock, prefs, the Off-action foreground service, manifest-merged) and LightPanel (the Compose page). The SuperApp's LightActivity and Cloud Calc's Toolkit > Light page both draw LightPanel over the one Light engine; the engine's rules are tested in app/src/test/.../light/LightEngineTest.kt."
     },
     "libs:datamanager": {
       "dir": "../ab_cloud-libs-shared/libs/datamanager",

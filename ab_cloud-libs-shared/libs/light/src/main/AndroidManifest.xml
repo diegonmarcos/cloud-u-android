@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Light tool (#1155): the foreground service that keeps a lit torch alive past the page for a running timer or
+         Keep on, with an Off action. The torch itself needs no permission. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <application>
+        <service
+            android:name="com.diegonmarcos.superapp.light.LightService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the flashlight lit after leaving the Light page while a timer runs or Keep on is set, with an Off action" />
+        </service>
+    </application>
+</manifest>

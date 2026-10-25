@@ -87,14 +87,14 @@ private suspend fun <T> io(block: () -> T): T = withContext(Dispatchers.IO) { bl
  * opens and never anywhere else in the calculator.
  */
 @Composable
-fun MicGate(content: @Composable () -> Unit) {
+fun MicGate(why: Int = R.string.mic_needed, content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     var granted by remember { mutableStateOf(Mic.granted(ctx)) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     LaunchedEffect(Unit) { if (!granted) launcher.launch(Manifest.permission.RECORD_AUDIO) }
     if (granted) content()
     else Column(Modifier.fillMaxSize().padding(CalcMetrics.gutter)) {
-        Text(stringResource(R.string.mic_needed))
+        Text(stringResource(why))
         Button(onClick = { launcher.launch(Manifest.permission.RECORD_AUDIO) }) { Text(stringResource(R.string.mic_allow)) }
     }
 }

@@ -34,10 +34,29 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- Measure > Sensors (build.json::sensors). Each runtime permission is requested only when the tapped card says why and the
+         user taps Allow (ui/SensorScreens.kt): location for GPS / GNSS, activity recognition for the step counter and detector,
+         body sensors for heart rate. Wi-Fi and network state are normal permissions (signal strength; no SSID or location is read);
+         NFC only tells whether the adapter is on. A phone without any of these still installs the app. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.sensor.heartrate" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <queries>
         <!-- The calc ENGINE (build.json::engines.calc): without this line it is invisible on
              API 30+ and Calc would say "install it" with it installed. -->
         <package android:name="${calcEnginePackage}" />
+        <!-- Toolkit > Tracker: Cloud Navigation, so its launch intent is visible on API 30+ (build.json::ui.modes[tracker]). -->
+        <package android:name="${trackerPackage}" />
         <!-- Jev's Listen (speech-to-text): without this line the system recognizer is invisible on API 30+. -->
         <intent>
             <action android:name="android.speech.RecognitionService" />
@@ -119,6 +138,15 @@
                 <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
+
+        <!-- Toolkit > Voice Recorder: Share hands a recording to another app (Cloud Drive, Mail, Chat) as a content URI. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Registers /api/calc/* on the fleet debug server. Not exported, not a real provider. -->
         <provider

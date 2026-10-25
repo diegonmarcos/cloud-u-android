@@ -1067,6 +1067,8 @@ dependencies {
     // libs:battery — battery/energy engine + dialogs (extracted from app).
     // Depends on libs:shizuku-adb-debug-tools (Tier-2 privileged read).
     implementation project(':libs:battery')
+    // libs:light - the Light tool (rules, torch service, LightPanel page), shared with Cloud Calc's Toolkit > Light.
+    implementation project(':libs:light')
     // libs:datamanager — per-app usage + network DATA providers (feeds the
     // Phone smart folders + Suite/Phone Active Apps). Sibling of libs:battery.
     implementation project(':libs:datamanager')

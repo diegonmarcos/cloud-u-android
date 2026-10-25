@@ -117,6 +117,16 @@ fun ModeScreen(mode: Declarations.Mode) {
             "jev_routing" -> JevRoutingMode(mode)
             "jev_models" -> JevModelsMode(mode)
             "jev_test" -> JevTestMode(mode)
+            "light" -> LightMode(mode)
+            "recorder" -> RecorderMode(mode)
+            "tracker_link" -> TrackerLinkMode(mode)
+            "sensor_group" -> SensorGroupMode(mode)
+            "sensor_all" -> SensorAllMode(mode)
+            "sensor_compass" -> SensorCompassMode(mode)
+            "sensor_seismo" -> SensorSeismoMode(mode)
+            "sensor_metal" -> SensorMetalMode(mode)
+            "ruler" -> RulerMode(mode)
+            "protractor" -> ProtractorMode(mode)
             else -> Text(stringResource(R.string.unknown_kind, mode.kind), Modifier.padding(CalcMetrics.gutter))
         }
     }

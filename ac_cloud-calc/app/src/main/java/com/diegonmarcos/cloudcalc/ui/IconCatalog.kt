@@ -2,6 +2,13 @@ package com.diegonmarcos.cloudcalc.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.FlashlightOn
+import androidx.compose.material.icons.filled.KeyboardVoice
+import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Bolt
@@ -60,6 +67,15 @@ object IconCatalog {
         "graphic_eq" -> Icons.Filled.GraphicEq
         "table_chart" -> Icons.Filled.TableChart
         "auto_awesome" -> Icons.Filled.AutoAwesome
+        "build" -> Icons.Filled.Build
+        "flashlight_on" -> Icons.Filled.FlashlightOn
+        "keyboard_voice" -> Icons.Filled.KeyboardVoice
+        "sensors" -> Icons.Filled.Sensors
+        "timeline" -> Icons.Filled.Timeline
+        "directions_walk" -> Icons.Filled.DirectionsWalk
+        "explore" -> Icons.Filled.Explore
+        "bedtime" -> Icons.Filled.Bedtime
+        "apps" -> Icons.Filled.Apps
         else -> fallback
     }
 }

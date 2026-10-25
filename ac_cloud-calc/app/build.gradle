@@ -73,6 +73,16 @@ if (buildJson.camera == null) throw new GradleException("build.json::camera miss
 def cameraConfigB64 = b64(buildJson.camera)
 def cameraGroup   = (buildJson.ui.debug_api?.camera_group ?: '').toString()
 def imageGroup    = (buildJson.ui.debug_api?.image_group ?: '').toString()
+// THE Measure > Sensors catalog (build.json::sensors), baked whole; measure/Sensors.kt parses and validates it on the phone.
+if (buildJson.sensors == null) throw new GradleException("build.json::sensors missing — Measure > Sensors would have no catalog")
+def sensorsConfigB64 = b64(buildJson.sensors)
+// The Toolkit > Tracker deep link's target app (build.json::ui.modes[tracker].spec.fleet): its package comes from the
+// constellation fleet manifest, for BuildConfig AND the manifest's <queries> (an unqueried package reads as "not installed").
+def trackerSpec = buildJson.ui.modes.find { it.kind == 'tracker_link' }?.spec
+if (trackerSpec == null) throw new GradleException("build.json::ui.modes has no tracker_link mode with a spec — Toolkit > Tracker would link to nothing")
+def trackerFleet = new groovy.json.JsonSlurper().parse(new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')).apps.find { it.id == trackerSpec.fleet }
+if (trackerFleet == null) throw new GradleException("build.json::ui.modes[tracker_link].spec.fleet '${trackerSpec.fleet}' is not in the constellation fleet manifest")
+def trackerPackage = trackerFleet.package.toString()
 if (!cameraGroup || !imageGroup) throw new GradleException("build.json::ui.debug_api.camera_group / image_group missing — /api/camera and /api/image would register under no name")
 if (!soundGroup) throw new GradleException("build.json::ui.debug_api.sound_group missing — /api/sound/* would register under no name")
 
@@ -145,13 +155,15 @@ android {
         buildConfigField "String", "SOUND_CONFIG_B64", "\"${soundConfigB64}\""
         buildConfigField "String", "DEBUG_API_SOUND_GROUP", "\"${soundGroup}\""
         buildConfigField "String", "CAMERA_CONFIG_B64", "\"${cameraConfigB64}\""
+        buildConfigField "String", "SENSORS_CONFIG_B64", "\"${sensorsConfigB64}\""
+        buildConfigField "String", "TRACKER_PACKAGE", "\"${trackerPackage}\""
         buildConfigField "String", "DEBUG_API_CAMERA_GROUP", "\"${cameraGroup}\""
         buildConfigField "String", "DEBUG_API_IMAGE_GROUP", "\"${imageGroup}\""
         buildConfigField "String", "AI_GATEWAY_URL",  "\"${aiGatewayUrl}\""
         buildConfigField "String", "CALC_ENGINE_PACKAGE",      "\"${calcEnginePackage}\""
         buildConfigField "String", "CALC_ENGINE_ACTION",       "\"${calcEngineAction}\""
         buildConfigField "int",    "CALC_ENGINE_MIN_CONTRACT", "${calcEngineMinContract}"
-        manifestPlaceholders = [calcEnginePackage: calcEnginePackage]
+        manifestPlaceholders = [calcEnginePackage: calcEnginePackage, trackerPackage: trackerPackage]
         buildConfigField "String", "UI_STACK_LANGUAGES_JSON_B64",  "\"${stackLanguagesB64}\""
         buildConfigField "String", "UI_STACK_FRAMEWORKS_JSON_B64", "\"${b64([])}\""
         buildConfigField "String", "UI_STACK_FOLDER_TREE_B64",     "\"${"—".bytes.encodeBase64().toString()}\""
@@ -232,6 +244,8 @@ dependencies {
     implementation project(':sheet')
     // The AI page: the fleet's AI chat over the agent gateway and OpenRouter. It brings libs:model-catalogue along.
     implementation project(':libs:ai')
+    // Toolkit > Light: the Light tool (rules, torch service, LightPanel page) shared with the SuperApp's Primary Tools Light.
+    implementation project(':libs:light')
     // The Sound tools' maths (#772): plain JVM, mutation-tested on its own (sound/build.gradle).
     implementation project(':sound')
     // #772 the Decisions client (Http, Decision) the Jev and Sound screens hold; shared with the image engine.
