@@ -1,4 +1,9 @@
 [
-  {"kind": "profile_record", "schema": "dd", "store": "profile_dd_user",
-   "_doc": "Shareholder due-diligence dossier (KYC, UBO, record certificates, tax, screening). Schema ships as an asset (labels only); the owner's values are imported from the private store and kept on the device. Private stack only."}
+  {
+    "kind": "fragment",
+    "id": "web",
+    "url": "mysocials/dd.html",
+    "inject": "dd",
+    "_doc": "Shareholder due-diligence dossier: the page itself (public SCHEMA only, front-media b_Media/mySocials/dd.html). The owner's values are imported from the private store (cloud-me-data-pvt, profiles/dd.data.json) into the on-device store profile_dd_user and injected into the WebView by WebPage after load; they are never in this repo. Private stack only."
+  }
 ]

@@ -1,9 +1,12 @@
 package com.diegonmarcos.cloudme
 
 import android.os.Bundle
+import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -12,6 +15,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import org.json.JSONObject
 
@@ -34,10 +38,18 @@ import org.json.JSONObject
  * and stays a WebView, hosted by AndroidView; Back walks its own history first and the page's
  * state survives a recreation.
  * `{"kind":"fragment","id":"web","url":"mysocials/linkedin.html"}`
+ *
+ * Profile > Social, Health and DD are the same kind of page (front-media b_Media/mySocials). Health and DD
+ * add `"inject":"health"|"dd"`: the bundled page is the public SCHEMA only and reads "Locked — sign in";
+ * once the page has loaded, the owner's values from the on-device store (imported from the private repo
+ * cloud-me-data-pvt, profiles/<id>.data.json) are handed to `window.CloudMeProfile.inject(...)`. The values
+ * never ship in assets. `CloudMeBridge.importData()` lets the page ask for that import.
  */
 @Composable
 fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
     val url = block.optString("url")
+    val inject = block.optString("inject")
+    val ctx = LocalContext.current
     /** The page's WebView state (history, scroll), refreshed whenever a page finishes loading. */
     val saved = rememberSaveable { Bundle() }
     // Back walks the page's own history before it leaves the section — the
@@ -45,6 +57,17 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
     var canGoBack by mutableStateOf(false)
     val web = remember { mutableStateOf<WebView?>(null) }
     BackHandler(enabled = canGoBack) { web.value?.goBack() }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null || inject.isBlank()) return@rememberLauncherForActivityResult
+        runCatching {
+            val schema = loadSchema(ctx, inject)!!
+            val data = JSONObject(ctx.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() })
+            if (ProfileRecord.validate(schema, data).isEmpty()) {
+                ProfileStore.save(ctx, if (inject == "health") ProfileStore.HEALTH else ProfileStore.DD, data)
+                web.value?.let { pushProfile(it, ctx, inject) }
+            }
+        }
+    }
 
     // #1164 the page's scroll feeds the shell's one chrome collapse (first row, second row, bottom nav).
     val collapse = com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse.current
@@ -66,6 +89,7 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView?, url: String?) {
                         view?.let { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(it) }
+                        view?.let { if (inject.isNotBlank()) pushProfile(it, ctx, inject) }
                         view?.saveState(saved)
                         canGoBack = view?.canGoBack() == true
                     }
@@ -74,6 +98,9 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
                         canGoBack = view?.canGoBack() == true
                     }
                 }
+                if (inject.isNotBlank()) addJavascriptInterface(object {
+                    @JavascriptInterface fun importData() { post { picker.launch(arrayOf("application/json", "text/plain", "*/*")) } }
+                }, "CloudMeBridge")
                 setBackgroundColor(0xFF0B0414.toInt())
                 web.value = this
                 if (!saved.isEmpty) restoreState(saved) else loadUrl("file:///android_asset/$url")
@@ -81,4 +108,10 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
         },
         onRelease = { it.stopLoading(); it.destroy() },
     )
+}
+
+/** Hands the stored values of Health/DD to the loaded page; a page with nothing stored stays locked. */
+private fun pushProfile(view: WebView, ctx: android.content.Context, id: String) {
+    val doc = runCatching { ProfileStore.load(ctx, if (id == "health") ProfileStore.HEALTH else ProfileStore.DD) }.getOrNull() ?: return
+    view.evaluateJavascript("window.CloudMeProfile&&window.CloudMeProfile.inject(${JSONObject.quote(doc.toString())})", null)
 }

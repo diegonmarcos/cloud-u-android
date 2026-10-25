@@ -1,5 +1,9 @@
 [
-  {"kind": "profile_record", "schema": "health", "store": "profile_health_user",
-   "_doc": "Health record, pre-surgery workup layout. Schema ships as an asset (labels only); the owner's values are imported from the private store and kept on the device. Private stack only."},
-  {"kind": "link", "label": "Open Cloud Me Health (vitals, labs, plan)", "url": "section:health"}
+  {
+    "kind": "fragment",
+    "id": "web",
+    "url": "mysocials/health.html",
+    "inject": "health",
+    "_doc": "Health record: the page itself (public SCHEMA only, front-media b_Media/mySocials/health.html). The owner's values are imported from the private store (cloud-me-data-pvt, profiles/health.data.json) into the on-device store profile_health_user and injected into the WebView by WebPage after load; they are never in this repo. Private stack only."
+  }
 ]

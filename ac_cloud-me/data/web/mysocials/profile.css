@@ -1,0 +1,19 @@
+/* Shared by health.html and dd.html (record pages) and social.html. Plain CSS, copied as is by build.json. */
+:root{--bg:#0b0414;--card:#161022;--ink:#f3eefa;--dim:#9b8fb3;--line:#2a2140;--accent:#a06bff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,sans-serif;max-width:720px;margin-inline:auto;padding:12px}
+h1{font-size:1.3rem;margin:4px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.card h2{font-size:1rem;margin:0 0 6px}
+.dim{color:var(--dim)}
+.lock{border-color:#8d6e00}
+.row{display:flex;gap:8px;justify-content:space-between;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.row small{color:var(--dim);display:block;font-size:.78rem}
+.row .v{font-size:.9rem;word-break:break-word}
+.row .v.empty{color:var(--dim);font-style:italic}
+.chip{flex:none;color:#fff;border-radius:999px;padding:2px 9px;font-size:.72rem;background:#8d6e00}
+.chip.verified{background:#2e7d32}.chip.expired{background:#c62828}.chip.declared{background:#1565c0}.chip.locked{background:#555}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+button.act{margin-top:10px;padding:8px 14px;border:0;border-radius:10px;background:var(--accent);color:#fff;font:inherit;cursor:pointer}
+@media print{body{background:#fff;color:#000;max-width:none}.card{background:#fff;border-color:#bbb;break-inside:avoid}.dim,.row small{color:#444}button.act{display:none}}

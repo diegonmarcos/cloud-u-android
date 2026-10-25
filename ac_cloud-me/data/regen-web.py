@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""front-diegonmarcos/b-Media/mySocials/dist → data/web/mysocials/
+"""front-media/b_Media/mySocials/dist → data/web/mysocials/
 
 Profile does not reimplement the LinkedIn and Instagram layouts — it ships the
 real pages and renders them. Anything else is an approximation that drifts the
@@ -15,13 +15,16 @@ guessed and nothing unreferenced is carried.
 import filecmp, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DIST = os.path.normpath(os.path.join(
-    HERE, "..", "..", "..", "front-diegonmarcos", "b-Media", "mySocials", "dist"))
+DIST = os.environ.get("MYSOCIALS_DIST") or os.path.normpath(os.path.join(
+    HERE, "..", "..", "..", "front-media", "b_Media", "mySocials", "dist"))
 OUT = os.path.join(HERE, "web", "mysocials")
 
-# The two pages Profile shows. Their dependencies are read out of the HTML, so
-# adding a third page here is a one-line change.
-PAGES = ["linkedin.html", "instagram-diegocnmarcos_.html"]
+# The pages Profile shows: Professional (linkedin), Personal (instagram), Social, Health and DD. Their
+# dependencies are read out of the HTML, so adding another page here is a one-line change. Health and DD
+# carry the public SCHEMA only; their values are injected by WebPage after sign-in (never in this bundle).
+PAGES = ["linkedin.html", "instagram-diegocnmarcos_.html", "social.html", "health.html", "dd.html"]
+# Files a page names in its data rather than in a src/href attribute.
+EXTRA = [r"social-photo-\d+\.jpg"]
 
 LOCAL_REF = re.compile(r'(?:src|href)="(?!https?://|#|mailto:)([^"]+)"')
 
@@ -37,6 +40,9 @@ def wanted():
                 continue
             if os.path.isfile(os.path.join(DIST, ref)):
                 files.add(ref)
+    for f in os.listdir(DIST):
+        if any(re.fullmatch(x, f) for x in EXTRA):
+            files.add(f)
     return sorted(files)
 
 

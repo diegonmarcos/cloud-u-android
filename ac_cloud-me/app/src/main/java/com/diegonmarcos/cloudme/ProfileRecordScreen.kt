@@ -56,7 +56,7 @@ object ProfileStore {
 }
 
 /** The assets `profiles/<id>.schema.json`; null when the asset is lost (the page then says so). */
-private fun loadSchema(ctx: Context, id: String): JSONObject? =
+internal fun loadSchema(ctx: Context, id: String): JSONObject? =
     runCatching { JSONObject(ctx.assets.open("profiles/$id.schema.json").bufferedReader().use { it.readText() }) }.getOrNull()
 
 /**

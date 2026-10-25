@@ -2,7 +2,8 @@
 # Guard: Profile > Health and Profile > DD hold special-category data. This repo is PUBLIC, so it may carry their
 # SCHEMAS (labels only) and nothing else. Fails if a values file (`*.data.json`, or anything named health/dd with
 # data/values/record in a json name) appears anywhere in the repo, if a schema carries a value, status or expiry,
-# or if a Health/DD page file carries anything but a profile_record block and links. The owner's values live in the
+# or if a Health/DD page file carries anything but a profile_record block, a web fragment (url + inject only) and links,
+# or if the bundled web pages (data/web/mysocials/data-profile-*.json.js, the schema as the page reads it) carry a value. The owner's values live in the
 # private repo cloud-me-data-pvt (profiles/<id>.data.json) and on the device. It plants each violation in a scratch
 # copy first and requires RED, then checks the real tree.
 set -euo pipefail
@@ -41,10 +42,26 @@ for pid in ("health", "dd"):
     f = os.path.join(app, f"data/ui/me/{pid}.json")
     if os.path.exists(f):
         for b in json.load(open(f)):
-            if b.get("kind") not in ("profile_record", "link", "note", "section_title"):
+            if b.get("kind") not in ("profile_record", "fragment", "link", "note", "section_title"):
                 bad.append(f"me/{pid}.json: block kind {b.get('kind')} may carry data")
             if b.get("kind") == "profile_record" and set(b) - {"kind", "schema", "store", "_doc"}:
                 bad.append(f"me/{pid}.json: profile_record carries extra keys {sorted(set(b) - {'kind','schema','store','_doc'})}")
+            if b.get("kind") == "fragment" and set(b) - {"kind", "id", "url", "inject", "_doc"}:
+                bad.append(f"me/{pid}.json: fragment carries extra keys {sorted(set(b) - {'kind','id','url','inject','_doc'})}")
+wd = os.path.join(app, "data/web/mysocials")
+for n in sorted(os.listdir(wd)) if os.path.isdir(wd) else []:
+    if re.match(r"data-profile-[a-z]+\.json\.js$", n):
+        txt = open(os.path.join(wd, n), encoding="utf-8").read()
+        try: o = json.loads(txt[txt.index("] = ") + 4: txt.rindex(";\n})();")])
+        except Exception: bad.append(f"{n}: unreadable"); continue
+        def wk(o):
+            if isinstance(o, dict):
+                for k, v in o.items():
+                    if k in ("value", "values", "status", "expires"): bad.append(f"web/{n}: bundled schema carries a '{k}' key")
+                    wk(v)
+            elif isinstance(o, list):
+                for v in o: wk(v)
+        wk(o)
 for b in sorted(bad): print("FAIL:", b)
 sys.exit(1 if bad else 0)
 PY
@@ -61,6 +78,8 @@ plant "a health values file" 'echo "{}" > data/health.data.json'
 plant "a dd values file" 'mkdir -p data/profiles && echo "{}" > data/profiles/dd.data.json'
 plant "a value inside a schema" 'sed -i "0,/\"label\"/s//\"value\": \"x\", \"label\"/" data/profiles/profiles/health.schema.json'
 plant "a non-schema file next to the schemas" 'echo "{}" > data/profiles/profiles/health.json'
+plant "a value inside the bundled web schema" 'sed -i "0,/\"label\"/s//\"value\": \"x\", \"label\"/" data/web/mysocials/data-profile-dd.json.js'
+plant "a fragment carrying data" 'echo "[{\"kind\":\"fragment\",\"id\":\"web\",\"url\":\"x\",\"values\":{}}]" > data/ui/me/health.json'
 plant "a stack block carrying data" 'echo "[{\"kind\":\"stats\",\"rows\":[]}]" > data/ui/me/dd.json'
 
 if check "$ROOT" "$APP"; then echo "  PASS: no Health/DD values in this public repo"; else echo "  FAIL: see above"; fails=$((fails+1)); fi
