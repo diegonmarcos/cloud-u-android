@@ -85,7 +85,7 @@ public enum class NavStyle(public val declared: String) {
 }
 
 /**
- * How a section's second top row is drawn (`ui.sections[].second_row`). [OneRow] (the default): the pages as one strip of
+ * How a section's second top row is drawn (`ui.sections[].nav_mode`). [OneRow] (the default): the pages as one strip of
  * chips. [ManyRows]: one row per page GROUP, each [group label as an index dropdown] | [that group's page icons].
  */
 public enum class SecondRowMode(public val declared: String) {
@@ -99,8 +99,11 @@ public enum class SecondRowMode(public val declared: String) {
     }
 }
 
-/** A named group of a section's pages (`ui.sections[].groups[]`): one row of the [SecondRowMode.ManyRows] second row. */
-public data class NavGroup(val id: String, val label: String, val pages: List<NavPage>)
+/**
+ * A named group of a section's pages (`ui.sections[].groups[]` = `{id, label, icon, pages:[page ids]}`): one row of the
+ * [SecondRowMode.ManyRows] second row. [pages] are the section's own flat pages the ids refer to, in the group's order.
+ */
+public data class NavGroup(val id: String, val label: String, val pages: List<NavPage>, val icon: String = "")
 
 /** A tab. [pages] is non-empty only for a container tab, which holds a strip of its own. */
 public data class NavPage(
@@ -126,16 +129,20 @@ public data class NavSection(
     val pages: List<NavPage> = emptyList(),
     /** What this section's tab strip is drawn over ([PageBackground.Dark] unless declared). */
     val background: PageBackground = PageBackground.Dark,
-    /** `second_row`: one strip of chips ([SecondRowMode.OneRow], today's) or one row per group. */
+    /** `nav_mode`: one strip of chips ([SecondRowMode.OneRow], today's) or one row per group. */
     val rows: SecondRowMode = SecondRowMode.OneRow,
-    /** `groups`: when declared, [pages] is their pages in order (so every page-list consumer still sees all of them). */
+    /** `groups`: the page groups of [SecondRowMode.ManyRows]; they only reference [pages], which stays the one flat list. */
     val groups: List<NavGroup> = emptyList(),
 ) {
     /**
-     * The rows of the many-rows second row: the declared [groups], else ONE group named like the section holding all
-     * [pages] (a section that opts in without declaring groups); empty when it has no pages.
+     * The rows of the many-rows second row: the declared [groups]; pages no group names (the guard rejects that) go in a
+     * trailing group named like the section so none is unreachable; with no groups, ONE group holding all [pages].
      */
-    public fun rowGroups(): List<NavGroup> = groups.ifEmpty { if (pages.isEmpty()) emptyList() else listOf(NavGroup(id, label, pages)) }
+    public fun rowGroups(): List<NavGroup> {
+        val named = groups.flatMap { g -> g.pages.map { it.id } }.toSet()
+        val rest = pages.filter { it.id !in named }
+        return groups + (if (rest.isEmpty()) emptyList() else listOf(NavGroup(id, label, rest, icon)))
+    }
 
     /**
      * The strip [TabSurface] for this section's top strip ([pageId] null) or for the sub-strip of the
@@ -259,14 +266,16 @@ public class NavDecl(
 
         private fun section(o: Map<*, *>): NavSection? {
             val id = o.text("id").ifBlank { return null }
+            val flat = pages(o["pages"])
+            val byId = flat.associateBy { it.id }
             val groups = (o["groups"] as? List<*>)?.mapNotNull { g ->
                 val go = g as? Map<*, *> ?: return@mapNotNull null
                 val gid = go.text("id").ifBlank { return@mapNotNull null }
-                NavGroup(gid, go.text("label", gid), pages(go["pages"]))
+                NavGroup(gid, go.text("label", gid), (go["pages"] as? List<*>).orEmpty().mapNotNull { byId[it as? String] }, go.text("icon"))
             }.orEmpty()
-            return NavSection(id, o.text("label", id), o.text("icon"), if (groups.isEmpty()) pages(o["pages"]) else groups.flatMap { it.pages },
+            return NavSection(id, o.text("label", id), o.text("icon"), flat,
                 PageBackground.of(o.text("background")) ?: PageBackground.Dark,
-                SecondRowMode.of(o.text("second_row")) ?: SecondRowMode.OneRow, groups)
+                SecondRowMode.of(o.text("nav_mode")) ?: SecondRowMode.OneRow, groups)
         }
 
         private fun pages(a: Any?): List<NavPage> =

@@ -169,9 +169,10 @@ mutate "an unknown page background"              "$FIX/build.json" "$(J "d['ui']
 mutate "a surface chosen in code"                "$KT" "s+='\nval x = TabSurface.Light\n'" "N9 $FIX: $KT:6 names TabSurface.Light"
 mutate "a theme background no strip reads"       "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" "N9 $FIX: declares a light/theme page background but no source calls stripSurface("
 # N10: the second row's mode and page groups
-mutate "an unknown second_row"                   "$FIX/build.json" "$(J "d['ui']['sections'][0]['second_row']='three_rows'")" "N10 $FIX: ui.sections a declares second_row 'three_rows'"
-mutate "groups without many_rows"                "$FIX/build.json" "$(J "d['ui']['sections'][0]['groups']=[{'id':'g','label':'G','pages':[{'id':'x','label':'X','icon':'i'}]}]")" "N10 $FIX: ui.sections a declares groups but second_row is not many_rows"
-mutate "a page in two groups"                    "$FIX/build.json" "$(J "d['ui']['sections'][0].update(second_row='many_rows', groups=[{'id':'g','label':'G','pages':[{'id':'x','label':'X','icon':'i'}]},{'id':'h','label':'H','pages':[{'id':'x','label':'X','icon':'i'}]}])")" "N10 $FIX: ui.sections a page 'x' is in two groups"
+mutate "an unknown nav_mode"                     "$FIX/build.json" "$(J "d['ui']['sections'][0]['nav_mode']='three_rows'")" "N10 $FIX: ui.sections a declares nav_mode 'three_rows'"
+mutate "groups without many_rows"                "$FIX/build.json" "$(J "d['ui']['sections'][0]['groups']=[{'id':'g','label':'G','icon':'i','pages':['p1']}]")" "N10 $FIX: ui.sections a declares groups but nav_mode is not many_rows"
+mutate "a page in two groups"                    "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='many_rows', groups=[{'id':'g','label':'G','icon':'i','pages':['p1','p2']},{'id':'h','label':'H','icon':'i','pages':['p2']}])")" "N10 $FIX: ui.sections a page 'p2' is in two groups"
+mutate "a page in no group"                      "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='many_rows', groups=[{'id':'g','label':'G','icon':'i','pages':['p1']}])")" "N10 $FIX: ui.sections a many_rows: page 'p2' is in no group"
 green  "a theme background read through stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" \
     "$KT" "s=s.replace('PageTabs(pages, null, {});','PageTabs(pages, null, {}, surface = nav.stripSurface(\"a\", dark));')"
 green  "an explicit dark background with no stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='dark'")"

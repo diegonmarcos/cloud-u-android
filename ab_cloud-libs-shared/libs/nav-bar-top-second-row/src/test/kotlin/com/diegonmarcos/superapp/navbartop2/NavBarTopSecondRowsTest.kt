@@ -48,26 +48,30 @@ class NavBarTopSecondRowsTest {
     }).around(compose)
 
     private fun p(id: String) = NavPage(id, "Page $id", "folder")
-    private val plan = NavGroup("plan", "Plan", (1..12).map { p("a$it") })
-    private val trackers = NavGroup("trackers", "Trackers", (1..5).map { p("t$it") })
+    private val plan = NavGroup("plan", "Plan", (1..12).map { p("a$it") }, "ic")
+    private val trackers = NavGroup("trackers", "Trackers", (1..5).map { p("t$it") }, "ic")
     private val health = NavSection("health", "Health", "heart", plan.pages + trackers.pages, rows = SecondRowMode.ManyRows, groups = listOf(plan, trackers))
 
-    @Test fun `the declaration reads second_row and groups, and pages is every group's pages in order`() {
-        val json = """[{"id":"health","label":"Health","icon":"heart","second_row":"many_rows","groups":[
-            {"id":"plan","label":"Plan","pages":[{"id":"a1","label":"A1","icon":"i"},{"id":"a2","label":"A2","icon":"i"}]},
-            {"id":"trackers","label":"Trackers","pages":[{"id":"t1","label":"T1","icon":"i"}]}]},
+    @Test fun `the declaration reads nav_mode and groups that reference the section's flat pages`() {
+        val json = """[{"id":"health","label":"Health","icon":"heart","nav_mode":"many_rows",
+            "pages":[{"id":"a1","label":"A1","icon":"i"},{"id":"a2","label":"A2","icon":"i"},{"id":"t1","label":"T1","icon":"i"}],
+            "groups":[{"id":"trackers","label":"Trackers","icon":"g","pages":["t1"]},{"id":"plan","label":"Plan","icon":"g","pages":["a2","a1"]}]},
             {"id":"me","label":"Me","icon":"i","pages":[{"id":"x","label":"X","icon":"i"}]}]"""
         val d = NavDecl.parse(json)
         val h = d.section("health")!!
         assertEquals(SecondRowMode.ManyRows, h.rows)
-        assertEquals(listOf("plan", "trackers"), h.groups.map { it.id })
-        assertEquals(listOf("a1", "a2", "t1"), h.pages.map { it.id })
-        assertEquals(listOf("a1", "a2", "t1"), h.allPages().map { it.id })
+        assertEquals("pages stays the flat list", listOf("a1", "a2", "t1"), h.pages.map { it.id })
+        assertEquals(listOf("trackers", "plan"), h.groups.map { it.id })
+        assertEquals("group order is the declared id order", listOf("a2", "a1"), h.groups[1].pages.map { it.id })
+        assertEquals("g", h.groups[0].icon)
         val me = d.section("me")!!
         assertEquals("one_row is the default", SecondRowMode.OneRow, me.rows)
-        assertTrue(me.groups.isEmpty())
         assertEquals("no groups: one group named like the section", listOf("me"), me.rowGroups().map { it.id })
-        assertEquals(SecondRowMode.OneRow, SecondRowMode.of("nonsense").let { it ?: SecondRowMode.OneRow })
+        assertEquals(null, SecondRowMode.of("nonsense"))
+        // a page no group names still gets a row (the guard rejects the declaration, the phone keeps it reachable)
+        val loose = NavSection("s", "S", "i", listOf(p("u"), p("v")), rows = SecondRowMode.ManyRows, groups = listOf(NavGroup("g", "G", listOf(p("u")))))
+        assertEquals(listOf("g", "s"), loose.rowGroups().map { it.id })
+        assertEquals(listOf("v"), loose.rowGroups().last().pages.map { it.id })
     }
 
     @Test fun `many_rows draws one row per group, each label | its icon chips, selected highlighted`() {

@@ -349,7 +349,7 @@
         "_doc": "Health \u2014 a bar section of its own (it was a shortcut into Projects > Health). Seven pages in the Samsung Health strip: Body Composition, HR stats, Sleep and Activities are ONE metric of the taxonomy below each, drawn by libs:health's metric page from Health Connect (on-device only); Nutrition Plan and Workout Plan are the plans the owner wrote (the old Planner note and the Gym programme); Blood Test has no source yet and says so. The metric taxonomy stays here because libs:health's build.gradle looks it up by SECTION ID (`ui.sections[id=health].metrics`).",
         "_doc_metrics": "Data-driven metric taxonomy \u2014 read by SummaryPage / TimelinePage / ConfigsPage to render the per-metric tiles + drill-downs. Each metric maps to one-or-more Health Connect record types via `records` (matched at runtime by class simple-name) + the perm subset via `perm_keys`. Add a metric = one entry here + tile icon. Removing a metric here removes it from all 3 top-level pages.",
         "id": "health",
-        "second_row": "many_rows",
+        "nav_mode": "many_rows",
         "label": "Health",
         "icon": "ic_nav_health",
         "metrics": [

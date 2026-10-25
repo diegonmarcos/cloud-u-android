@@ -520,31 +520,39 @@ def declared_backgrounds(nodes, where=""):
 
 
 def check_second_rows(app, sections, bad):
-    """N10: ui.sections[].second_row is one_row|many_rows; groups (ui.sections[].groups) only with many_rows, each with an
-    id and pages, group ids unique, and a page id in one group only."""
+    """N10: ui.sections[].nav_mode is one_row|many_rows; groups ({id,label,icon,pages:[page ids]}) only with many_rows;
+    in many_rows every page of the section is in exactly one group, a group names only the section's pages, ids unique."""
     for s in sections or []:
         if not isinstance(s, dict):
             continue
-        sid, mode, groups = s.get("id"), s.get("second_row", "one_row"), s.get("groups")
+        sid, mode, groups = s.get("id"), s.get("nav_mode", "one_row"), s.get("groups")
         if mode not in ("one_row", "many_rows"):
-            bad.append(f"N10 {app}: ui.sections {sid} declares second_row {mode!r}, not one_row or many_rows")
-        if groups is None:
+            bad.append(f"N10 {app}: ui.sections {sid} declares nav_mode {mode!r}, not one_row or many_rows")
+        if groups is None and mode != "many_rows":
             continue
         if mode != "many_rows":
-            bad.append(f"N10 {app}: ui.sections {sid} declares groups but second_row is not many_rows")
-        ids, seen = [], set()
+            bad.append(f"N10 {app}: ui.sections {sid} declares groups but nav_mode is not many_rows")
+            continue
+        flat = [p.get("id") for p in s.get("pages") or [] if isinstance(p, dict)]
+        ids, seen = [], []
         for g in groups if isinstance(groups, list) else []:
             gid = g.get("id") if isinstance(g, dict) else None
-            if not gid or not (g.get("pages") if isinstance(g, dict) else None):
-                bad.append(f"N10 {app}: ui.sections {sid} has a group with no id or no pages")
+            names = g.get("pages") if isinstance(g, dict) else None
+            if not gid or not names or not all(isinstance(n, str) for n in names):
+                bad.append(f"N10 {app}: ui.sections {sid} has a group with no id, or pages that are not a list of page ids")
                 continue
             ids.append(gid)
-            for pid in page_ids(g["pages"]):
+            for pid in names:
+                if pid not in flat:
+                    bad.append(f"N10 {app}: ui.sections {sid} group {gid!r} names page {pid!r}, which is not in the section's pages")
                 if pid in seen:
                     bad.append(f"N10 {app}: ui.sections {sid} page {pid!r} is in two groups")
-                seen.add(pid)
+                seen.append(pid)
         if len(ids) != len(set(ids)):
             bad.append(f"N10 {app}: ui.sections {sid} repeats a group id")
+        for pid in flat:
+            if pid not in seen:
+                bad.append(f"N10 {app}: ui.sections {sid} many_rows: page {pid!r} is in no group")
 
 
 def check_backgrounds(app, sections, spec, code, rel, bad):
