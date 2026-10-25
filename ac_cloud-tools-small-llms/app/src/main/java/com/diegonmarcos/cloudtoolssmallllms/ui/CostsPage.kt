@@ -17,6 +17,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.cloudtoolssmallllms.R
 import com.diegonmarcos.cloudtoolssmallllms.core.Costs
@@ -62,6 +63,21 @@ fun CostsPage(model: ToolsModel) {
             }
         }
         if (l.entries.isNotEmpty()) item { TextButton(onClick = { model.clearLedger() }) { Text(stringResource(R.string.costs_clear)) } }
+        // Local runtime calls cost nothing: kept as calls, tokens (an estimate) and time.
+        val local = model.localCalls
+        item { Text(stringResource(R.string.costs_local), style = MaterialTheme.typography.titleSmall, modifier = Modifier.testTag(Tags.LOCAL_USAGE)) }
+        if (local.isEmpty()) item { Text(stringResource(R.string.costs_local_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        else {
+            item { Text(stringResource(R.string.costs_local_total, local.size, local.sumOf { it.tokens }, local.sumOf { it.ms } / 1000), style = MaterialTheme.typography.labelMedium) }
+            items(local.groupBy { it.model }.entries.toList(), key = { "l-" + it.key }) { (m, calls) ->
+                Row(Modifier.fillMaxWidth()) {
+                    Text(m, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1.4f), maxLines = 1)
+                    Text(stringResource(R.string.costs_calls, calls.size), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    Text(stringResource(R.string.costs_local_row, calls.sumOf { it.tokens }, calls.sumOf { it.ms } / 1000), style = MaterialTheme.typography.labelSmall)
+                }
+            }
+            item { TextButton(onClick = { model.clearLocalUsage() }) { Text(stringResource(R.string.costs_local_clear)) } }
+        }
     }
 }
 
@@ -74,3 +90,6 @@ private fun Total(label: String, value: String, modifier: Modifier) {
 }
 
 private const val HISTORY_ROWS = 200
+
+/** "mistralai/mistral-small-3.2-24b-instruct" -> "mistral-small-3.2-24b-instruct": a model id without its provider. */
+fun short(model: String): String = model.substringAfter('/').ifBlank { model }

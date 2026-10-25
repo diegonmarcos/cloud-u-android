@@ -6,6 +6,12 @@
          libs:decisions' UrlHttp on Android's resolver so the SuperApp's DNS menu applies. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Cloud Account (Profile) and Cloud Store (Store section) are opened by package-pinned intents. -->
+    <queries>
+        <package android:name="com.diegonmarcos.cloudaccount" />
+        <package android:name="com.diegonmarcos.cloudstore" />
+    </queries>
+
     <application
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"

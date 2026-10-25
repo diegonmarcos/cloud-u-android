@@ -27,11 +27,11 @@ class MainActivity : ComponentActivity() {
         shared(intent)
     }
 
-    /** Share > Tools of plain text: into the AI tab's input, on the AI page; nothing is sent until the user does. */
+    /** Share > Tools of plain text: into the Chat input, on the Chat page; nothing is sent until the user does. */
     private fun shared(i: Intent?) {
         if (i?.action != Intent.ACTION_SEND) return
         val text = i.getStringExtra(Intent.EXTRA_TEXT)?.takeIf { it.isNotBlank() } ?: return
         model.chat.draft = text
-        model.section = Decl.nav.default()?.id ?: model.section
+        model.section = Decl.SECTION_AI; model.page = null
     }
 }

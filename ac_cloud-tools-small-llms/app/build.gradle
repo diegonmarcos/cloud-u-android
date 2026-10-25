@@ -34,6 +34,9 @@ def buildTimestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'")
     format(new java.util.Date())
 }
 
+// The fleet agent gateway's address is baked from the fleet catalogue by libs/ai/ai-gateway.gradle (aiGatewayUrl).
+apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
+
 def logSinkUrl    = (buildJson.diagnostics?.log_sink_url    ?: '')
 def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-tools-small-llms')
 
@@ -75,6 +78,7 @@ android {
         }
         buildConfigField "String", "GIT_SHORT_SHA",      "\"${shortSha}\""
         buildConfigField "String", "BUILD_TIMESTAMP",    "\"${buildTimestamp}\""
+        buildConfigField "String", "AI_GATEWAY_URL",     "\"${aiGatewayUrl}\""
         buildConfigField "String", "LOG_SINK_URL",       "\"${logSinkUrl}\""
         buildConfigField "String", "LOG_SINK_STREAM",    "\"${logSinkStream}\""
         buildConfigField "String", "UI_SECTIONS_B64",    "\"${uiSectionsB64}\""
@@ -128,6 +132,12 @@ dependencies {
     implementation project(':libs:core')
     // The fleet's bottom-nav island; this app supplies its own entries from ui.bottom_nav.
     implementation project(':libs:bottomnav')
+    // The shared bars (#1154, #1157): first row (Profile top right), second row, bottom nav, page gradient; icons from the catalog (#1160).
+    implementation project(':libs:nav-bar-bottom')
+    implementation project(':libs:nav-bar-top-first-row')
+    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:theme-background')
+    implementation project(':libs:ui-icons')
     // Every decision and every number: plain JVM, mutation-tested on its own (core/build.gradle).
     implementation project(':tools-core')
     // The Decisions API client and its Http door (UrlHttp over Android's resolver, so the fleet DNS menu applies).

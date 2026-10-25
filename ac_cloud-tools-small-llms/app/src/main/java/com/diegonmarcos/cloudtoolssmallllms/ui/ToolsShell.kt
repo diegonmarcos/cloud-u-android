@@ -4,7 +4,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -13,42 +21,100 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import com.diegonmarcos.cloudtoolssmallllms.Decl
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
+import androidx.compose.ui.res.stringResource
+import com.diegonmarcos.cloudtoolssmallllms.R
+import com.diegonmarcos.superapp.ai.AiChatPage
+import com.diegonmarcos.superapp.ai.AiStrings
+import com.diegonmarcos.superapp.ai.AiTheme
+import com.diegonmarcos.superapp.ai.materialAiTheme
 import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.themebg.themeBackground
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 
 /**
- * The shell (#868): the fleet's bottom island carries the four sections build.json::ui.bottom_nav
- * declares - AI, Tasks, Costs, Settings - and each draws one page above it.
+ * The shell: the fleet's shared bars (#1154, #1157) - the first row (Profile at the top right opens Cloud Account, the
+ * gear opens Settings), the second row with the view icons of S-Models and M-Models, the bottom nav, the page gradient
+ * and the one scroll collapse the scaffold owns - around the page build.json::ui declares for the section.
  */
 @Composable
 fun ToolsShell(model: ToolsModel) {
-    val entries = Decl.nav.islandEntries()
-    BottomNavHost(
-        entries = entries,
-        selectedId = model.section,
-        onSelect = { model.section = it.id },
-        modifier = Modifier.testTag(Tags.SHELL),
-    ) {
-        Box(Modifier.fillMaxSize()) {
-            when (model.section) {
-                "tasks" -> TasksPage(model)
-                "costs" -> CostsPage(model)
-                "settings" -> SettingsPage(model)
-                else -> AiTab(model)
+    val nav = Decl.nav
+    val sec = nav.section(model.section)
+    val pageId = model.page?.takeIf { p -> sec?.pages?.any { it.id == p } == true } ?: sec?.pages?.firstOrNull()?.id
+    val entries = nav.islandEntries()
+    val theme = toolsAiTheme()
+    LaunchedEffect(Unit) { model.refreshStore() }
+    fun open(sectionId: String, page: String?) { model.section = sectionId; model.page = page }
+
+    Box(Modifier.fillMaxSize().themeBackground(dark = true).windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))) {
+        NavBarTopFirstRowScaffold(
+            title = sec?.label ?: stringResource(R.string.app_name),
+            hierarchy = sec?.let { titleHierarchy(it, pageId) }.orEmpty(),
+            onNavigate = { e -> open(e.sectionId, if (e.depth == 0) null else e.id) },
+            onAccount = rememberAccountLauncher(),
+            onConfigs = { open(Decl.SECTION_SETTINGS, null) },
+            onAi = { open(Decl.SECTION_AI, null) },
+            dark = true,
+        ) {
+            NavBarBottomHost(
+                entries = entries,
+                selectedId = model.section,
+                onSelect = { open(it.id, null) },
+                modifier = Modifier.testTag(Tags.SHELL),
+            ) {
+                Column(Modifier.fillMaxSize()) {
+                    if (sec != null && sec.pages.isNotEmpty()) NavBarTopSecondRow(
+                        pages = sec.pages, selectedId = pageId, onSelect = { model.page = it.id },
+                        modifier = Modifier.fillMaxWidth().testTag(Tags.SECOND_ROW), underTopChrome = false,
+                    )
+                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                        when (model.section) {
+                            Decl.SECTION_APPS -> AppsPage(model, pageId ?: Decl.PAGE_APPS_GRID)
+                            Decl.SECTION_MODELS -> ModelsPage(model.models, pageId ?: Decl.PAGE_SMALL, model.view) { model.view = it }
+                            Decl.SECTION_AI -> AiChatPage(model.chat, theme, Modifier.imePadding().testTag(Tags.CHAT), header = {
+                                Chip(stringResource(R.string.backend_openrouter), selected = model.backend == ToolsModel.OPENROUTER, tag = Tags.BACKEND_OPENROUTER) { model.chooseBackend(ToolsModel.OPENROUTER) }
+                                Spacer(Modifier.width(ToolsMetrics.small))
+                                Chip(stringResource(R.string.backend_local), selected = model.backend == ToolsModel.LOCAL, tag = Tags.BACKEND_LOCAL) { model.chooseBackend(ToolsModel.LOCAL) }
+                                if (model.backend == ToolsModel.LOCAL && model.pickerRows().isEmpty()) {
+                                    Spacer(Modifier.width(ToolsMetrics.small))
+                                    Chip(stringResource(R.string.backend_load_in_store), icon = "tasks") { open(Decl.SECTION_STORE, Decl.PAGE_LOADED) }
+                                }
+                            })
+                            Decl.SECTION_STORE -> StorePage(model, pageId ?: Decl.PAGE_INSTALLED)
+                            Decl.SECTION_COSTS -> CostsPage(model)
+                            Decl.SECTION_SETTINGS -> SettingsPage(model)
+                            else -> {}
+                        }
+                    }
+                }
             }
         }
     }
 }
+
+/** The Chat page's look: the fleet AI default (Material colours) in this app's words. */
+@Composable
+fun toolsAiTheme(): AiTheme = materialAiTheme(AiStrings(
+    title = stringResource(R.string.app_name),
+    hello = stringResource(R.string.chat_empty_title), helloSub = stringResource(R.string.chat_empty_body),
+    askAnything = stringResource(R.string.chat_hint), send = stringResource(R.string.chat_send),
+    thinking = stringResource(R.string.chat_working), chatError = stringResource(R.string.chat_failed),
+))
 
 /** A small rounded chip: the data-dense control every page uses (task, model, cost, choices). */
 @Composable
@@ -71,12 +137,44 @@ fun Chip(text: String, selected: Boolean = false, icon: String? = null, tag: Str
 /** The test tags the pages are driven by. */
 object Tags {
     const val SHELL = "tools_shell"
-    const val INPUT = "tools_input"
-    const val SEND = "tools_send"
+    const val SECOND_ROW = "tools_second_row"
+    const val CHAT = "tools_chat"
+    const val APPS = "tools_apps"
+    const val APPS_LIST = "tools_apps_list"
+    const val APP_TOTALS = "tools_app_totals"
+    fun appRow(id: String) = "tools_app_row_$id"
+    fun category(id: String) = "tools_app_category_$id"
+    const val APP_DETAIL = "tools_app_detail"
+    const val PHONE_BADGE = "tools_app_phone"
+    const val TRY_IN_AI = "tools_app_try_in_ai"
+    const val MACRO = "tools_models_macro"
+    fun app(id: String) = "tools_app_$id"
+    fun view(id: String) = "tools_models_view_$id"
+    fun macro(id: String) = "tools_models_macro_$id"
+    const val TABLE = "tools_models_table"
+    const val GRID = "tools_models_grid"
+    const val DETAIL = "tools_models_detail"
+    const val OVERHEAD = "tools_models_overhead"
+    const val STORE = "tools_store"
+    const val STORE_REFRESH = "tools_store_refresh"
+    const val STORE_ERROR = "tools_store_error"
+    const val STORE_INSTALL = "tools_store_install"
+    const val STORE_UNINSTALL = "tools_store_uninstall"
+    const val STORE_LOAD = "tools_store_load"
+    const val STORE_UNLOAD = "tools_store_unload"
+    const val FITS = "tools_store_fits"
+    const val BACKEND_OPENROUTER = "tools_backend_openrouter"
+    const val BACKEND_LOCAL = "tools_backend_local"
+    const val LOCAL_USAGE = "tools_local_usage"
+    fun stepBackend(i: Int) = "tools_app_step_backend_$i"
+    fun location(id: String) = "tools_store_loc_$id"
+    fun store(loc: String, model: String) = "tools_store_${loc}_$model"
+    fun bits(b: Int) = "tools_store_bits_$b"
+    fun header(id: String) = "tools_models_header_$id"
+    fun row(model: String) = "tools_models_row_$model"
+    fun card(model: String) = "tools_models_card_$model"
     const val TOKEN = "tools_token"
     const val TOKEN_SAVE = "tools_token_save"
     const val TOKEN_TEST = "tools_token_test"
-    fun task(id: String) = "tools_task_$id"
-    fun answer(i: Int) = "tools_answer_$i"
     fun router(id: String) = "tools_router_$id"
 }

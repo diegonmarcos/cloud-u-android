@@ -17,4 +17,20 @@ object Decl {
     val nav: NavDecl by lazy {
         NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
     }
+
+    /** The section and page ids Kotlin dispatches on; test-tools-app.sh diffs them against build.json::ui in both directions. */
+    const val SECTION_APPS = "apps"
+    const val SECTION_MODELS = "models"
+    const val SECTION_AI = "ai"
+    const val SECTION_STORE = "store"
+    const val SECTION_COSTS = "costs"
+    const val SECTION_SETTINGS = "settings"
+    const val PAGE_APPS_GRID = "apps_grid"
+    const val PAGE_APPS_LIST = "apps_list"
+    const val PAGE_SMALL = "small"
+    const val PAGE_MEDIUM = "medium"
+    const val PAGE_RETRIEVAL = "retrieval"
+    const val PAGE_INSTALLED = "installed"
+    const val PAGE_LOADED = "loaded"
+    const val PAGE_ALL = "all"
 }

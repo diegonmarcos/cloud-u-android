@@ -1,32 +1,74 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- English is the fleet's base language (#299). app_name comes from build.json::name. -->
-    <string name="chat_hint">Paste text, say what to do…</string>
+    <string name="chat_hint">Ask one of the models…</string>
     <string name="chat_send">Send</string>
-    <string name="chat_task_auto">Auto</string>
-    <string name="chat_task_picker">Task</string>
-    <string name="chat_empty_title">Small, cheap models for quick text jobs</string>
-    <string name="chat_empty_body">Type or paste a request. A router picks the task and the small model that does it best; every answer shows its task, model and cost.</string>
-    <string name="chat_no_token">No OpenRouter token yet - add yours in Settings.</string>
+    <string name="chat_empty_title">Chat with the small and medium models</string>
+    <string name="chat_empty_body">Pick a model from the list above, grouped by macro task; answers go through the fleet agent gateway and are recorded in Costs.</string>
     <string name="chat_working">Working…</string>
-    <string name="chat_router_unsure">Not sure what you want - pick a task:</string>
-    <string name="chat_pick_other">Other task…</string>
     <string name="chat_failed">Failed: %1$s</string>
     <string name="chat_clear">Clear chat</string>
     <string name="chat_copy">Copy</string>
     <string name="chat_copied">Copied</string>
-    <string name="chip_cost">%1$s · %2$s · %3$s</string>
-    <string name="chip_router">router %1$s %2$s</string>
-    <string name="chip_confidence">%1$d%%</string>
 
-    <string name="tasks_title">What I can do</string>
-    <string name="tasks_prices_as_of">Prices as of %1$s · estimate = %2$d in / %3$d out tokens</string>
-    <string name="tasks_example">e.g. %1$s</string>
-    <string name="tasks_price">%1$s in · %2$s out /1M</string>
-    <string name="tasks_estimate">~%1$s per call</string>
-    <string name="tasks_try">Try</string>
-    <string name="tasks_unpriced">not priced by the catalogue</string>
-    <string name="tasks_problems">Catalogue gaps: %1$s</string>
+
+    <string name="models_count">%1$d models</string>
+    <string name="models_overhead">RAM figures assume about %1$d%% overhead on top of the weights (KV cache, engine, activations). Sizes in GB, approximate.</string>
+    <string name="col_role">Role</string>
+    <string name="col_macro">Macro</string>
+    <string name="col_task">Task</string>
+    <string name="view_table">Table</string>
+    <string name="view_grid">Grid</string>
+    <string name="view_detail">Details</string>
+    <string name="view_macro">Macro</string>
+    <string name="app_steps_ram">%1$d steps</string>
+    <string name="app_total_ram">Total %1$s GB RAM at 4-bit</string>
+    <string name="app_totals">4-bit RAM %1$s GB · 16-bit disk %2$s GB · %3$d models</string>
+    <string name="app_totals_compact">%1$s GB RAM · %2$s GB disk · %3$d models</string>
+    <string name="app_models_used">Models: %1$s</string>
+    <string name="app_phone_icon">📱</string>
+    <string name="app_escalation_mark">↑ %1$s</string>
+    <string name="app_phone_yes">Phone-capable</string>
+    <string name="app_phone_no">Needs a bigger machine</string>
+    <string name="app_try_in_ai">Try in AI: %1$s</string>
+    <string name="app_alternatives">One of these runs</string>
+    <string name="app_escalation">Escalation: only when the step before is not enough</string>
+    <string name="apps_back">All apps</string>
+    <string name="col_model">Model</string>
+    <string name="col_params">Params</string>
+    <string name="col_disk">16-bit disk</string>
+    <string name="col_ram16">16-bit RAM</string>
+    <string name="col_ram8">8-bit RAM</string>
+    <string name="col_ram4">4-bit RAM</string>
+    <string name="card_params_ram">%1$s · %2$s GB at 4-bit</string>
+    <string name="detail_memory">16-bit: %1$s GB disk, %2$s GB RAM · 8-bit: %3$s GB RAM · 4-bit: %4$s GB RAM</string>
+    <string name="detail_quant">Quantization: 4-bit needs about %1$s GB RAM, 8-bit about %2$s GB.</string>
+
+
+    <string name="store_refresh">Refresh</string>
+    <string name="store_busy">Working: %1$s</string>
+    <string name="store_none">Nothing here yet.</string>
+    <string name="store_free">Free: %1$s GB disk · %2$s GB RAM</string>
+    <string name="store_unreachable">Runtime unreachable: %1$s</string>
+    <string name="store_no_engine">No on-device engine yet: this phone reports its free disk and RAM, but cannot install or load models.</string>
+    <string name="store_not_installed">Not installed</string>
+    <string name="store_installed">Installed · %1$s GB · %2$s</string>
+    <string name="store_loaded">Loaded · %1$s GB RAM</string>
+    <string name="store_need">Needs at %1$d-bit: %2$s GB disk · %3$s GB RAM</string>
+    <string name="store_fits">Fits</string>
+    <string name="store_no_fit">Does not fit</string>
+    <string name="store_install">Install</string>
+    <string name="store_uninstall">Uninstall</string>
+    <string name="store_load">Load</string>
+    <string name="store_unload">Unload</string>
+    <string name="backend_openrouter">OpenRouter</string>
+    <string name="backend_local">Local</string>
+    <string name="backend_load_in_store">Load a model in Store</string>
+    <string name="costs_local">Local usage (free)</string>
+    <string name="costs_local_empty">No local calls yet.</string>
+    <string name="costs_local_total">%1$d calls · ~%2$d tokens · %3$d s</string>
+    <string name="costs_local_row">~%1$d tokens · %2$d s</string>
+    <string name="costs_local_clear">Clear local usage</string>
 
     <string name="costs_title">Costs</string>
     <string name="costs_today">Today</string>

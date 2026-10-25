@@ -1,8 +1,14 @@
 {
-  "launcher_icon": {"_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.", "glyph": "build", "category": "agi", "res": "app/src/main/res", "tile": "ic_tools_small_llms"},
+  "launcher_icon": {
+    "_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.",
+    "glyph": "build",
+    "category": "agi",
+    "res": "app/src/main/res",
+    "tile": "ic_tools_small_llms"
+  },
   "name": "cloud-tools-small-llms",
   "display_name": "Cloud Tools Small LLMs",
-  "description": "Cloud Tools Small LLMs - an AI chat that does simple, direct text jobs with small, cheap models only, calling OpenRouter directly with the user's own token. A router reads each request and names the task (Jev, TypeSafe's decision model on OpenRouter's Decisions API, while it is listed; else a small JSON chat model), and one small worker model per task answers it with a fixed prompt: translate, summarize, rewrite, fix grammar, extract, classify, reply drafts, explain simply, quick maths, JSON/CSV fix, regex/command, titles and hashtags, sentiment, keywords, Q&A on pasted text. Every answer shows its task, model and actual cost (from OpenRouter's usage, router included); Costs keeps the day and month totals; Tasks lists what it can do with each worker's $/1M and the estimated cost of a typical call, priced by the shared libs:model-catalogue. The token lives in EncryptedSharedPreferences and is shown masked; of the fleet Account's key only whether it holds one is shown (decisions-use guard D5). English is the base language (#299); dark is the default theme (#336).",
+  "description": "Cloud Tools Small LLMs - an AI chat that does simple, direct text jobs with small, cheap models only, calling OpenRouter directly with the user's own token. A router reads each request and names the task (Jev, TypeSafe's decision model on OpenRouter's Decisions API, while it is listed; else a small JSON chat model), and one small worker model per task answers it with a fixed prompt: translate, summarize, rewrite, fix grammar, extract, classify, reply drafts, explain simply, quick maths, JSON/CSV fix, regex/command, titles and hashtags, sentiment, keywords, Q&A on pasted text. Every answer shows its task, model and actual cost (from OpenRouter's usage, router included); Costs keeps the day and month totals. Sections: Apps (an icon grid of applications buildable from the models, each with its pipeline), Models (the owner's small, medium and retrieval model tables from app/src/main/assets/tools-models.json as a sortable table, an icon grid, descriptive cards or cards grouped by macro task), AI (the shared libs:ai chat over the fleet agent gateway, its model picker listing only the chat models, grouped by macro; every call recorded in Costs), Store and Costs. English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "android": {
     "application_id": "com.diegonmarcos.cloudtoolssmallllms",
@@ -113,7 +119,11 @@
         "libs:ai",
         "libs:decisions",
         "libs:text-tools",
-        "tools-core"
+        "tools-core",
+        "libs:nav-bar-bottom",
+        "libs:nav-bar-top-first-row",
+        "libs:nav-bar-top-second-row",
+        "libs:theme-background"
       ]
     },
     "tools-core": {
@@ -152,7 +162,7 @@
       "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
     },
     "libs:ai": {
-      "_doc": "The fleet's AI chat (libs:ai): the AI tab's page, the session store and the shared contract. This app brings its OWN backend (the router -> worker flow of :tools-core, wrapped by ToolsModel as an AiBackend), so the gateway and OpenRouter backends of the lib are not used here; the token stays the user's own, pasted in Settings.",
+      "_doc": "The fleet's AI chat (libs:ai): the Chat section's page, the session store and the shared contract. Answers go through the fleet agent gateway (AiGatewayBackend, address baked by libs/ai/ai-gateway.gradle); the model picker lists only the models of app/src/main/assets/tools-models.json. No token is held for the chat.",
       "dir": "../ab_cloud-libs-shared/libs/ai",
       "type": "library"
     },
@@ -170,6 +180,26 @@
       "_doc": "The ITextTools binder (a `contract` lib): Settings asks the fleet Account, key-free, through aiRoutingSnapshot whether it answers and whether it holds an OpenRouter key (key_present, key_hint). The key itself is never read here (decisions-use guard D5); every call is paid with the token pasted in Settings.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools",
       "type": "library"
+    },
+    "libs:nav-bar-bottom": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-first-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-second-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
     }
   },
   "web": {
@@ -496,26 +526,90 @@
     ]
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): four sections on the island, each one page.",
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl): Apps, Models, AI, Store, Costs on the bottom nav; Store (the model store and runtime manager) has Installed, Loaded and All on the second row; Settings is reached from the first row's gear. Models has Small, Medium and Retrieval on the second row, each with a Table / Grid / Details / Macro view switcher, all over app/src/main/assets/tools-models.json; Apps (second row Grid | List) is what those models build: an icon grid, or a list grouped by category with each pipeline and its totals. The Profile icon at the top right of the first row opens extapp:cloud-account.",
     "bottom_nav": [
+      "apps",
+      "models",
       "ai",
-      "tasks",
-      "costs",
-      "settings"
+      "store",
+      "costs"
     ],
-    "default_section": "ai",
+    "default_section": "models",
     "sections": [
+      {
+        "id": "apps",
+        "label": "Apps",
+        "icon": "apps",
+        "pages": [
+          {
+            "id": "apps_grid",
+            "label": "Grid",
+            "icon": "apps",
+            "pages": []
+          },
+          {
+            "id": "apps_list",
+            "label": "List",
+            "icon": "checklist",
+            "pages": []
+          }
+        ]
+      },
+      {
+        "id": "models",
+        "label": "Models",
+        "icon": "memory",
+        "pages": [
+          {
+            "id": "small",
+            "label": "Small",
+            "icon": "bolt",
+            "pages": []
+          },
+          {
+            "id": "medium",
+            "label": "Medium",
+            "icon": "layers",
+            "pages": []
+          },
+          {
+            "id": "retrieval",
+            "label": "Retrieval",
+            "icon": "search",
+            "pages": []
+          }
+        ]
+      },
       {
         "id": "ai",
         "label": "AI",
-        "icon": "chat",
+        "icon": "ai",
         "pages": []
       },
       {
-        "id": "tasks",
-        "label": "Tasks",
-        "icon": "tasks",
-        "pages": []
+        "id": "store",
+        "label": "Store",
+        "icon": "inventory_2",
+        "pages": [
+          {
+            "id": "installed",
+            "label": "Installed",
+            "icon": "download_done",
+            "pages": []
+          },
+          {
+            "id": "loaded",
+            "label": "Loaded",
+            "icon": "bolt",
+            "pages": []
+          },
+          {
+            "id": "all",
+            "label": "All",
+            "icon": "apps",
+            "pages": []
+          }
+        ]
       },
       {
         "id": "costs",

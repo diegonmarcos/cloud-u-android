@@ -1,0 +1,113 @@
+package com.diegonmarcos.cloudtoolssmallllms.data
+
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+
+/** One row of assets/tools-models.json: a model, its role, macro task and memory figures (GB, approximate). */
+data class ModelRow(
+    val role: String,
+    val model: String,
+    val params: String,
+    val diskFp16: Double,
+    val ramFp16: Double,
+    val ramQ8: Double,
+    val ramQ4: Double,
+    val tier: String,
+    val macro: String,
+    val chat: Boolean,
+    val task: String?,
+    val openrouterId: String?,
+) {
+    /** Parameters in billions, for sorting ("0.36B" -> 0.36). */
+    val paramsB: Double get() = params.removeSuffix("B").toDoubleOrNull() ?: 0.0
+
+    /** The id the gateway is sent: OpenRouter's when the data names it, else the model's own name. */
+    val wireId: String get() = openrouterId ?: model
+}
+
+/** What a role is for and its icon name (a libs:ui-icons catalog name). */
+data class RoleInfo(val icon: String, val purpose: String)
+
+/** A macro task: the group a model belongs to (Retrieval, Gatekeeping, ...). */
+data class Macro(val id: String, val label: String, val icon: String, val blurb: String)
+
+/** One step of an app's pipeline: a macro task and the model ids that run it. */
+/** [alternatives]: run ONE of [models]; [escalation]: runs only when the earlier step is not enough; [note] describes a step that is no model (a deeplink). */
+data class Step(val macro: String, val models: List<String>, val backend: String?, val alternatives: Boolean, val escalation: Boolean, val note: String?)
+
+/** A runtime the Store manages: kind "device" (this phone) or "ollama" (a fleet host at [url]). */
+data class Location(val id: String, val label: String, val kind: String, val url: String?)
+
+/** An app category of the Apps list (Search & Knowledge, Documents & Vision, ...). */
+data class AppCategory(val id: String, val label: String, val icon: String)
+
+/** An application buildable from the models: [pipeline] is its ordered steps. */
+data class AppDef(val id: String, val category: String, val name: String, val icon: String, val description: String, val pipeline: List<Step>)
+
+/**
+ * THE model data of the app, decoded once from assets/tools-models.json: the Models section, the AI chat's model
+ * picker, the Apps section and the overhead assumption all read it. No model, role, macro or app is spelled in Kotlin.
+ */
+class ModelsData(json: String) {
+    private val root = JSONObject(json)
+    val overheadPct: Int = root.getInt("overhead_pct")
+    val overheadNote: String = root.getString("overhead_note")
+    val phoneBudgetQ4: Double = root.getDouble("phone_budget_gb_q4")
+    val phoneEachQ4: Double = root.getDouble("phone_each_gb_q4")
+    val rows: List<ModelRow> = list(root.getJSONArray("models")) {
+        ModelRow(
+            it.getString("role"), it.getString("model"), it.getString("params"), it.getDouble("disk_gb_fp16"),
+            it.getDouble("ram_gb_fp16"), it.getDouble("ram_gb_q8"), it.getDouble("ram_gb_q4"), it.getString("tier"),
+            it.getString("macro"), it.getBoolean("chat"), it.optString("task").ifBlank { null }, it.optString("openrouter_id").ifBlank { null },
+        )
+    }
+    val macros: List<Macro> = list(root.getJSONArray("macros")) { Macro(it.getString("id"), it.getString("label"), it.getString("icon"), it.getString("blurb")) }
+    val locations: List<Location> = list(root.getJSONArray("locations")) { Location(it.getString("id"), it.getString("label"), it.getString("kind"), it.optString("url").ifBlank { null }) }
+    val quantTags: Map<Int, String> = root.getJSONObject("quant_tags").let { o -> o.keys().asSequence().associate { it.toInt() to o.getString(it) } }
+    val appCategories: List<AppCategory> = list(root.getJSONArray("app_categories")) { AppCategory(it.getString("id"), it.getString("label"), it.getString("icon")) }
+    val apps: List<AppDef> = list(root.getJSONArray("apps")) { a ->
+        AppDef(a.getString("id"), a.getString("category"), a.getString("name"), a.getString("icon"), a.getString("description"),
+            list(a.getJSONArray("pipeline")) { s -> Step(s.getString("macro"), strings(s.getJSONArray("models")), s.optString("backend").ifBlank { null }, s.optBoolean("alternatives"), s.optBoolean("escalation"), s.optString("note").ifBlank { null }) })
+    }
+
+    /** The rows of a Models page: "small" / "medium" without retrieval models, "retrieval" = every retrieval model. */
+    fun page(id: String): List<ModelRow> = if (id == "retrieval") rows.filter { it.macro == "retrieval" } else rows.filter { it.tier == id && it.macro != "retrieval" }
+
+    /** The backend a step runs on: its own declaration, else local when the whole app is phone-capable, else OpenRouter. */
+    fun backend(a: AppDef, s: Step): String = s.backend ?: if (phoneCapable(a)) "local" else "openrouter"
+
+    /** The chat picker's models, in macro order: only rows with chat = true. */
+    fun chatRows(): List<ModelRow> = macros.flatMap { m -> rows.filter { it.chat && it.macro == m.id } }
+
+    fun macro(id: String): Macro? = macros.firstOrNull { it.id == id }
+    fun row(model: String): ModelRow? = rows.firstOrNull { it.model == model }
+    fun role(name: String): RoleInfo = root.getJSONObject("roles").optJSONObject(name)?.let { RoleInfo(it.getString("icon"), it.getString("purpose")) } ?: RoleInfo("memory", "")
+    fun guidance(tier: String): String = root.getJSONObject("quant_guidance").optString(tier)
+
+    /** The models a step needs in memory: all of them, or only the largest of its alternatives. */
+    private fun stepModels(s: Step): List<ModelRow> {
+        val rs = s.models.mapNotNull { row(it) }
+        return if (s.alternatives) listOfNotNull(rs.maxByOrNull { it.ramQ4 }) else rs
+    }
+
+    /** The distinct models of an app's pipeline (the largest alternative of a step). */
+    fun appModels(a: AppDef): List<ModelRow> = a.pipeline.flatMap { stepModels(it) }.distinctBy { it.model }
+
+    /** Total 4-bit RAM of an app's distinct models. */
+    fun appRamQ4(a: AppDef): Double = appModels(a).sumOf { it.ramQ4 }
+
+    /** Total 16-bit disk of an app's distinct models. */
+    fun appDiskFp16(a: AppDef): Double = appModels(a).sumOf { it.diskFp16 }
+
+    /** True when the pipeline fits the phone at 4-bit: the total within the budget and no model above the per-model limit. */
+    fun phoneCapable(a: AppDef): Boolean = appRamQ4(a) <= phoneBudgetQ4 && a.pipeline.flatMap { it.models }.mapNotNull { row(it) }.all { it.ramQ4 <= phoneEachQ4 }
+
+    private fun <T> list(a: JSONArray, f: (JSONObject) -> T): List<T> = List(a.length()) { f(a.getJSONObject(it)) }
+    private fun strings(a: JSONArray): List<String> = List(a.length()) { a.getString(it) }
+
+    companion object {
+        const val ASSET = "tools-models.json"
+        fun load(ctx: Context): ModelsData = ModelsData(ctx.assets.open(ASSET).bufferedReader().use { it.readText() })
+    }
+}
