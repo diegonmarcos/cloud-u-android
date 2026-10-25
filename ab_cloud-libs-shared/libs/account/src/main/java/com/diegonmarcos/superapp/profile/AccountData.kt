@@ -26,9 +26,8 @@ import org.json.JSONObject
  *
  * [Provider] is the way out: `<package>.accountdata`, exported behind CONSTELLATION_DATA (the
  * fleet's signature permission, as FleetConfigProvider is) and re-checked in call(), because the
- * framework does not permission-check call() by itself. Four methods, [METHOD_EXPORT], (#874)
- * [METHOD_SECRET], (#1090) [METHOD_MAIL_ENDPOINTS], (#1093) [METHOD_FLEET_ENDPOINTS] and (#1103) [AutocompletePublisher.METHOD]; everything else a ContentProvider can do is refused. It only ever READS: nothing a
- * caller sends is written.
+ * framework does not permission-check call() by itself. Six methods, [METHOD_EXPORT], (#874)
+ * [METHOD_SECRET], (#1090) [METHOD_MAIL_ENDPOINTS], (#1093) [METHOD_FLEET_ENDPOINTS], [METHOD_DRIVE_CREDENTIALS], [METHOD_DRIVE_CREDENTIALS_PUT] and (#1103) [AutocompletePublisher.METHOD]; everything else a ContentProvider can do is refused. It READS, except [METHOD_DRIVE_CREDENTIALS_PUT] (a granted package stores or removes an rclone remote or a mount). 
  *
  * Limits, on purpose: the copy is one-way (Cloud Account -> SuperApp) and never overwrites a
  * store the receiver already holds, so a SuperApp that kept working before Cloud Account arrived
@@ -46,6 +45,10 @@ object AccountData {
     const val METHOD_MAIL_ENDPOINTS = com.diegonmarcos.superapp.fleetendpoints.MailEndpointsContract.METHOD
     /** #1093 every declared fleet service's mesh + public endpoint, and to a package also granted `fleet.bearer`, the bearer. */
     const val METHOD_FLEET_ENDPOINTS = com.diegonmarcos.superapp.fleetendpoints.FleetEndpointsContract.METHOD
+    /** The Drive / Git credentials Cloud Drive (and any granted app) takes from Account: rclone remotes, the ed25519 key, mounts. */
+    const val METHOD_DRIVE_CREDENTIALS = com.diegonmarcos.superapp.fleetendpoints.DriveCredentialsContract.METHOD
+    /** Cloud Drive stores or removes an rclone remote or a mount (`arg` = the JSON body); needs the `drive.write` grant. */
+    const val METHOD_DRIVE_CREDENTIALS_PUT = com.diegonmarcos.superapp.fleetendpoints.DriveCredentialsContract.METHOD_PUT
     /** #874 the grant that lets another package take [METHOD_EXPORT] (SuperApp's one-shot copy). */
     const val GRANT_EXPORT = "account.export"
 
@@ -236,6 +239,19 @@ object AccountData {
                     val vault = AccountVault(ctx)
                     if (who != ctx.packageName && !vault.grants.allow(who, AutocompletePublisher.GRANT)) error("no grant for $who")
                     else runCatching { AutocompletePublisher.publish(vault) }.getOrElse { error(it.javaClass.simpleName) }
+                }
+                // The Drive / Git credentials (rclone remotes, the ed25519 key, mounts): `drive.credentials` for the public layer, a grant per secret layer
+                METHOD_DRIVE_CREDENTIALS -> {
+                    val who = caller(ctx)
+                    val vault = AccountVault(ctx)
+                    if (who != ctx.packageName && !vault.grants.allow(who, com.diegonmarcos.superapp.fleetendpoints.DriveCredentialsContract.GRANT_READ)) error("no grant for $who")
+                    else runCatching { DriveCredentialsPublisher.publish(ctx, who, vault) }.getOrElse { error(it.javaClass.simpleName) }
+                }
+                METHOD_DRIVE_CREDENTIALS_PUT -> {
+                    val who = caller(ctx)
+                    val vault = AccountVault(ctx)
+                    if (who != ctx.packageName && !vault.grants.allow(who, com.diegonmarcos.superapp.fleetendpoints.DriveCredentialsContract.GRANT_WRITE)) error("no grant for $who")
+                    else runCatching { DriveCredentialsPublisher.put(ctx, arg, vault) }.getOrElse { error(it.javaClass.simpleName) }
                 }
                 METHOD_FLEET_ENDPOINTS -> {
                     val who = caller(ctx)

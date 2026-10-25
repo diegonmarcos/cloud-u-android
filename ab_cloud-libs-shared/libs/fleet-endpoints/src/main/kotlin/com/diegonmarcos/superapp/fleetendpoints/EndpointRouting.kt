@@ -26,7 +26,7 @@ object FleetHeaders {
 
 /**
  * #1090/#1093 Endpoint routing for the fleet's services, ONE component for Cloud Mail and Cloud Account. A fleet
- * service has TWO endpoints, both derived from the service's fleet declaration: the mesh URL (`<service>.app`,
+ * service has TWO endpoints, both derived from the service's fleet declaration: the mesh URL (`<service>.mesh.diegonmarcos.com`,
  * private, reached over the WireGuard mesh) and the public URL (reached with the fleet bearer). Everything else
  * (a plain IMAP/JMAP provider, GitHub) has one endpoint and is never touched here.
  *
@@ -87,7 +87,7 @@ class EndpointRouter(
 ) {
     /**
      * One endpoint pair. [mesh] and [public] are origins, optionally with a base path: the public one may be a PATH under
-     * a shared host (`https://api.example.org/pub`) that the mesh service serves from its root (`http://svc.app:8087`).
+     * a shared host (`https://api.example.org/pub`) that the mesh service serves from its root (`http://svc.mesh.diegonmarcos.com:8087`).
      * [only] narrows the pair to those paths (relative to the base): the rest of the host is not this service's.
      */
     private class Entry(val mesh: HttpUrl, val public: HttpUrl, @Volatile var policy: EndpointPolicy, val only: List<String>) {

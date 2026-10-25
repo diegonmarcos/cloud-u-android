@@ -39,7 +39,9 @@ object FleetBoot {
     fun register(entries: List<FleetEndpointsContract.Entry>, bearerToken: String): Int {
         bearer = bearerToken.ifBlank { null }
         return FleetRegistry.register(
-            pairs = entries.filter { it.public.isNotEmpty() }.map { EndpointPair(it.public, it.mesh, it.policy, it.only) },
+            // An mTLS entry (the vault) is never rewritten onto the mesh by the router and never gets the bearer; an SSO one is routed but gets no bearer.
+            pairs = entries.filter { it.public.isNotEmpty() && it.auth != FleetEndpointsContract.AUTH_MTLS }
+                .map { EndpointPair(it.public, it.mesh, it.policy, it.only, bearer = it.auth == FleetEndpointsContract.AUTH_BEARER) },
             router = FleetTransport.router,
             bearers = FleetTransport.bearers,
             bearer = { bearer },

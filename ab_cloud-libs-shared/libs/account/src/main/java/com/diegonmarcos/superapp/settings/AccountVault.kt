@@ -217,11 +217,15 @@ class AccountVault(context: Context) {
             ),
             // #1103 Cloud Keyboard's own Autocomplete store is filled from here (never from the network, never from Cloud Vault).
             5 to mapOf(KEYBOARD_PACKAGE to listOf(com.diegonmarcos.superapp.profile.AutocompletePublisher.GRANT)),
+            // Cloud Drive takes its endpoints and bearer, and the Drive / Git credentials (rclone remotes, the ssh key, mounts) from here; revocable per layer in Secrets.
+            6 to mapOf(DRIVE_PACKAGE to listOf(FleetEndpointsContract.GRANT_ENDPOINTS, FleetEndpointsContract.GRANT_BEARER) +
+                com.diegonmarcos.superapp.fleetendpoints.DriveCredentialsContract.GRANTS),
         )
+        const val DRIVE_PACKAGE = "com.diegonmarcos.clouddrive"
         const val KEYBOARD_PACKAGE = "com.diegonmarcos.cloudkeyboard"
         const val VAULT_PACKAGE = "com.diegonmarcos.cloudvault"
         const val MAIL_PACKAGE = "com.diegonmarcos.comms.mail"
-        const val SEED_VERSION = 5
+        const val SEED_VERSION = 6
         val DEFAULT_GRANTS: Map<String, List<String>> = DEFAULT_GRANTS_BY_VERSION.values
             .fold(emptyMap<String, List<String>>()) { acc, m -> acc + m.mapValues { (k, v) -> acc[k].orEmpty() + v } }
 

@@ -41,7 +41,9 @@ object FleetEndpointsRuntime {
         bearer: () -> String?,
     ): Int {
         return FleetRegistry.register(
-            services.filter { it.hasPublic }.map { EndpointPair(it.publicUrl(), it.meshUrl(), it.policy, it.routePaths) },
+            // The vault (mTLS) is never rewritten onto a mesh name: Cloud Vault itself tries the mesh, then the public URL with its certificate.
+            services.filter { it.hasPublic && it.auth != FleetEndpointsContract.AUTH_MTLS }
+                .map { EndpointPair(it.publicUrl(), it.meshUrl(), it.policy, it.routePaths, bearer = it.auth == FleetEndpointsContract.AUTH_BEARER) },
             router, bearers, bearer)
     }
 

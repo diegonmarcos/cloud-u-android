@@ -176,4 +176,6 @@ dependencies {
         exclude group: 'com.jcraft', module: 'jsch'
     }
     implementation 'com.github.mwiede:jsch:0.2.17'
+    // ed25519 key generation for Setup > Drive: jsch uses the JDK's EdDSA only on Java 15+ / newer Android, BouncyCastle everywhere (DriveCredentialStore picks it).
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
 }

@@ -14,8 +14,8 @@ import com.diegonmarcos.superapp.settings.AccountVault
 object FleetEndpointsPublisher {
     fun publish(ctx: Context, caller: String, vault: AccountVault = AccountVault(ctx)): Bundle {
         val entries = FleetEndpointsContract.entries(FleetEndpointsContract.parseDecl(AccountHost.fleetEndpointsDecl()))
-        // The bearer is for the public path, so it is only worth sending when some service has one.
-        val mayHaveBearer = entries.any { it.public.isNotEmpty() } &&
+        // The bearer is for the public path of a bearer service (never the vault's mTLS or Authelia's SSO host), so it is only worth sending when some service has one.
+        val mayHaveBearer = entries.any { it.public.isNotEmpty() && it.auth == FleetEndpointsContract.AUTH_BEARER } &&
             (caller == ctx.packageName || vault.grants.allow(caller, FleetEndpointsContract.GRANT_BEARER))
         val bearer = if (mayHaveBearer) vault.connection(FleetEndpointsContract.GRANT_BEARER)?.toString().orEmpty() else ""
         return Bundle().apply {

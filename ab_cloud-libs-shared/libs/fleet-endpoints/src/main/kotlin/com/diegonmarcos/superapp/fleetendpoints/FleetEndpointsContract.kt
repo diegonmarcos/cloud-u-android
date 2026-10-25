@@ -7,7 +7,7 @@ import org.json.JSONObject
  * #1093 THE FLEET ENDPOINT CONTRACT: how each fleet service is reached, declared once, read by Cloud Account itself
  * (its own transport and Connect ▸ Status) and published by it to the other apps. A service has up to two
  * endpoints, both derived from the ONE declaration (Account's build.json::fleet_endpoints, itself taken from the
- * service's fleet declaration in cloud-u-containers): the mesh URL (`<service>.app`, private) and, where the
+ * service's fleet declaration in cloud-u-containers): the mesh URL (`<service>.mesh.diegonmarcos.com`, private, WireGuard) and, where the
  * service declares one, the public URL (reached with the fleet bearer). Nothing is typed or hard-coded in an app.
  *
  * The router that acts on this is libs:fleet-endpoints (plain JVM, shared by Cloud Mail and Cloud Account). This is
@@ -34,6 +34,12 @@ object FleetEndpointsContract {
     const val POLICY_PUBLIC_ONLY = "public_only"
     val POLICIES = listOf(POLICY_MESH_FIRST, POLICY_MESH_ONLY, POLICY_PUBLIC_ONLY)
 
+    /** How a PUBLIC endpoint is authenticated: the fleet bearer (default), the per-device mTLS client certificate (the vault) or an Authelia SSO session. */
+    const val AUTH_BEARER = "bearer"
+    const val AUTH_MTLS = "mtls"
+    const val AUTH_SSO = "sso"
+    val AUTHS = listOf(AUTH_BEARER, AUTH_MTLS, AUTH_SSO)
+
     /** What a secret looks like on screen and in a log: fixed width, so it leaks neither value nor length. */
     const val MASK = "••••••••"
     fun mask(secret: String): String = if (secret.isEmpty()) "" else MASK
@@ -50,6 +56,10 @@ object FleetEndpointsContract {
         val meshPath: String = "",
         /** Paths (relative to the base) this service serves; empty = all of them. The rest of a shared host is not its. */
         val routePaths: List<String> = emptyList(),
+        /** One of [AUTHS]: only [AUTH_BEARER] ever receives the fleet bearer. */
+        val auth: String = AUTH_BEARER,
+        /** Other public host names of the same service (Authelia's `sso.` / `account.` names). */
+        val aliases: List<String> = emptyList(),
     ) {
         val hasPublic: Boolean get() = publicDomain.isNotEmpty()
         /** `https://stalwart.mesh.diegonmarcos.com:2443`: an origin, never a path. */
@@ -62,7 +72,7 @@ object FleetEndpointsContract {
 
     /**
      * The declaration (`{"services":[{id, kind, mesh_dns, mesh_port, mesh_scheme, public_domain, public_scheme, policy,
-     * health}]}`). A service that breaks a rule is dropped, not guessed at: the mesh name must be a `.app` name (mesh
+     * health}]}`). A service that breaks a rule is dropped, not guessed at: the mesh name must be a `.mesh.diegonmarcos.com` name (mesh
      * naming rule), a public URL must be https (the bearer travels on it) and a bare host, the policy one of
      * [POLICIES], and a service with no public URL can only be mesh-only. A service that lives under a PATH of a shared
      * host declares `public_path` (and `mesh_path` when its mesh side differs, usually ""), and `route_paths` when only
@@ -89,8 +99,11 @@ object FleetEndpointsContract {
             if (domain.isEmpty() && (publicPath.isNotEmpty() || routes.isNotEmpty())) return@mapNotNull null
             if (domain.isEmpty() && policy != POLICY_MESH_ONLY) return@mapNotNull null
             if (domain.isNotEmpty() && publicScheme != "https") return@mapNotNull null
+            val auth = o.optString("auth", AUTH_BEARER).ifBlank { AUTH_BEARER }
+            val aliases = o.optJSONArray("aliases")?.let { r -> (0 until r.length()).map { r.optString(it).trim().lowercase() } }.orEmpty()
+            if (auth !in AUTHS || aliases.any { it.isEmpty() || '/' in it || ':' in it || ' ' in it } || (domain.isEmpty() && aliases.isNotEmpty())) return@mapNotNull null
             Service(id, o.optString("kind").trim().ifEmpty { "service" }, meshScheme, dns, o.optInt("mesh_port", 0),
-                publicScheme, domain, policy, health, publicPath, meshPath, routes)
+                publicScheme, domain, policy, health, publicPath, meshPath, routes, auth, aliases)
         }.distinctBy { it.id }
     }
 
@@ -110,10 +123,12 @@ object FleetEndpointsContract {
     data class Entry(
         val service: String, val kind: String, val mesh: String, val public: String, val policy: String, val health: String,
         val only: List<String> = emptyList(),
+        val auth: String = AUTH_BEARER,
+        val aliases: List<String> = emptyList(),
     )
 
     fun entries(services: List<Service>): List<Entry> =
-        services.map { Entry(it.id, it.kind, it.meshUrl(), it.publicUrl(), it.policy, it.health, it.routePaths) }
+        services.map { Entry(it.id, it.kind, it.meshUrl(), it.publicUrl(), it.policy, it.health, it.routePaths, it.auth, it.aliases) }
 
     /** The published document; the bearer only when [bearer] is non-blank (the caller was granted it). */
     fun toJson(entries: List<Entry>, bearer: String?): String = JSONObject().also { o ->
@@ -121,7 +136,7 @@ object FleetEndpointsContract {
         o.put("services", JSONArray().also { a ->
             for (e in entries) a.put(JSONObject().put("service", e.service).put("kind", e.kind)
                 .put("mesh", e.mesh).put("public", e.public).put("policy", e.policy).put("health", e.health)
-                .put("only", JSONArray(e.only)))
+                .put("only", JSONArray(e.only)).put("auth", e.auth).put("aliases", JSONArray(e.aliases)))
         })
         if (!bearer.isNullOrBlank()) o.put("bearer", bearer.trim())
     }.toString()
@@ -143,7 +158,9 @@ object FleetEndpointsContract {
             if (pub.isNotEmpty() && !pub.startsWith("https://")) return@mapNotNull null
             Entry(e.optString("service"), e.optString("kind"), mesh, pub,
                 e.optString("policy").takeIf { it in POLICIES } ?: POLICY_MESH_FIRST, e.optString("health").ifBlank { "/" },
-                e.optJSONArray("only")?.let { r -> (0 until r.length()).map { r.optString(it) } }.orEmpty())
+                e.optJSONArray("only")?.let { r -> (0 until r.length()).map { r.optString(it) } }.orEmpty(),
+                e.optString("auth").takeIf { it in AUTHS } ?: AUTH_BEARER,
+                e.optJSONArray("aliases")?.let { r -> (0 until r.length()).map { r.optString(it) } }.orEmpty())
         }
         return Published(list, o.optString("bearer"))
     }

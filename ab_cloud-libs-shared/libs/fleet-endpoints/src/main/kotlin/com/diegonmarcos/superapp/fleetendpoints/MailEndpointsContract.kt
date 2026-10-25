@@ -7,7 +7,7 @@ import org.json.JSONObject
  * #1090 THE MAIL ENDPOINT CONTRACT: Cloud Account is the source of truth for how each fleet mail
  * account is reached, Cloud Mail reads it. Two endpoints per account, both derived from the ONE
  * declaration (Account's build.json::mail_endpoints, itself taken from the mail service's fleet
- * declaration): the mesh URL (`<service>.app`, private) and the public URL (reached with the fleet
+ * declaration): the mesh URL (`<service>.mesh.diegonmarcos.com`, private) and the public URL (reached with the fleet
  * bearer). Nothing here is typed or hard-coded in Mail.
  *
  * Wire: `content://<account package>.accountdata`, method [METHOD], JSON under [KEY_JSON]:
