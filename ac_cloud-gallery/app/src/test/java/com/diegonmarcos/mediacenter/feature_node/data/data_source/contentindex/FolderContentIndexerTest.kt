@@ -10,6 +10,7 @@ package com.diegonmarcos.mediacenter.feature_node.data.data_source.contentindex
 
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -41,6 +42,8 @@ class FolderContentIndexerTest {
         override suspend fun byMediaId(mediaId: Long) = rows[mediaId]
         override suspend fun forAlbum(albumId: Long) = rows.values.filter { it.albumId == albumId }
         override suspend fun countForAlbum(albumId: Long) = rows.values.count { it.albumId == albumId }
+        override fun countFlow() = flowOf(rows.size)
+        override fun withTextFlow() = flowOf(rows.values.filter { !it.ocrText.isNullOrEmpty() })
         override suspend fun upsert(entity: MediaContentIndexEntity) {
             rows[entity.mediaId] = entity
             upserts.add(entity)
