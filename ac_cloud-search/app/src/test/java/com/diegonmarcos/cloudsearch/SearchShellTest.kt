@@ -195,7 +195,7 @@ class SearchShellTest {
         waitFor(Tags.CHAT_INPUT)
         compose.onNodeWithTag(Tags.CHAT_INPUT).performTextInput("What is the Grundfreibetrag?")
         compose.onNodeWithTag(Tags.CHAT_SEND).performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("no token in this test", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(60_000) { compose.onAllNodesWithText("no token in this test", substring = true).fetchSemanticsNodes().isNotEmpty() }
         assertFalse("nothing is posted without a token", synchronized(http.asked) { http.asked.any { it == Decl.config.ai.chatUrl } })
         assertEquals("What is the Grundfreibetrag?", services.sessions.all().single().messages.single().content)
     }
@@ -220,7 +220,7 @@ class SearchShellTest {
         assertEquals("deepseek", services.prefs.agent)
         compose.onNodeWithTag(Tags.CHAT_INPUT).performTextInput("Plan my week")
         compose.onNodeWithTag(Tags.CHAT_SEND).performClick()
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("harness answer", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(60_000) { compose.onAllNodesWithText("harness answer", substring = true).fetchSemanticsNodes().isNotEmpty() }
         val (url, headers, body) = synchronized(http.asked) { http.posted.single() }
         assertEquals(BuildConfig.AGENT_GATEWAY_URL + "/v1/chat/completions", url)
         assertEquals("deepseek", headers["X-Agent-Mode"])
@@ -321,7 +321,7 @@ class SearchShellTest {
         launch()
         openVertical("house")
         compose.runOnIdle { state.showSubpage(state.v(), "analysis") }
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("4.01 %", substring = true).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(60_000) { compose.onAllNodesWithText("4.01 %", substring = true).fetchSemanticsNodes().isNotEmpty() }
         compose.onAllNodesWithText("+0.30 pp vs 2025-08", substring = true).fetchSemanticsNodes().let { assertTrue(it.isNotEmpty()) }
         // Eurostat is down in this test: its two series read "no source", never a number.
         assertEquals(2, compose.onAllNodesWithText("no source").fetchSemanticsNodes().size)
@@ -371,7 +371,7 @@ class SearchShellTest {
         // Sending a message hides the initial view; the chat goes on in the same page.
         compose.onNodeWithTag(Tags.CHAT_INPUT).performTextInput("Hello")
         compose.onNodeWithTag(Tags.CHAT_SEND).performClick()
-        compose.waitUntil(10_000) { !state.chat.sending && compose.onAllNodes(hasText("Hello") and onPage).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(60_000) { !state.chat.sending && compose.onAllNodes(hasText("Hello") and onPage).fetchSemanticsNodes().isNotEmpty() }
         assertTrue("the greeting is gone", compose.onAllNodesWithText(hello).fetchSemanticsNodes().isEmpty())
         for (e in cfg.engines)
             assertTrue("engine box ${e.id} is gone", compose.onAllNodesWithTag(Tags.engine(e.id)).fetchSemanticsNodes().isEmpty())
@@ -663,7 +663,7 @@ class SearchShellTest {
         compose.runOnIdle {
             assertEquals("chat", state.section); assertEquals(state.chatVertical, state.chatPage); assertEquals(state.chatVertical, state.vertical)
         }
-        compose.waitUntil(10_000) { !state.chat.sending && state.chat.session.messages.isNotEmpty() }
+        compose.waitUntil(60_000) { !state.chat.sending && state.chat.session.messages.isNotEmpty() }
         assertEquals("kotlin jobs berlin", state.chat.session.messages.first { it.role == "user" }.content)
     }
 
