@@ -25,7 +25,7 @@ class HealthContentTest {
         val gs = healthSection().getJSONArray("groups")
         return (0 until gs.length()).associate { i ->
             val g = gs.getJSONObject(i)
-            g.getString("id") to (0 until g.getJSONArray("pages").length()).map { g.getJSONArray("pages").getJSONObject(it).getString("id") }
+            g.getString("id") to (0 until g.getJSONArray("pages").length()).map { g.getJSONArray("pages").getString(it) }
         }
     }
 
@@ -40,14 +40,16 @@ class HealthContentTest {
 
     @Test fun `Health declares the Plan and Trackers groups on the many rows second row, every page once`() {
         val s = healthSection()
-        assertEquals("many_rows", s.getString("second_row"))
-        assertTrue("the old flat pages list is gone", !s.has("pages"))
+        assertEquals("many_rows", s.getString("nav_mode"))
+        val flat = s.getJSONArray("pages").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") } }
         val groups = groupPages()
         assertEquals(listOf("plan", "trackers"), groups.keys.toList())
         assertEquals(listOf("bio", "circadian", "biomarkers", "timeline", "objectives", "matrix", "culinary", "clash", "thermal", "hemo", "shop", "dossier"), groups.getValue("plan").drop(1))
         assertEquals(listOf("workout", "activities", "bodycomp", "hr", "sleep"), groups.getValue("trackers"))
         val all = groups.values.flatten()
         assertEquals("a page is in two groups", all.size, all.toSet().size)
+        assertEquals("every flat page is in exactly one group", flat.toSet(), all.toSet())
+        for (g in 0 until s.getJSONArray("groups").length()) assertTrue("group icon", s.getJSONArray("groups").getJSONObject(g).getString("icon").isNotBlank())
     }
 
     @Test fun `every declared page has a stack file that hosts the Health page of its own id`() {
