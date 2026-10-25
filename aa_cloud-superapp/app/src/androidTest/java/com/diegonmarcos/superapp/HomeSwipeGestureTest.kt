@@ -1,6 +1,5 @@
 package com.diegonmarcos.superapp
 
-import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import android.os.SystemClock
@@ -8,6 +7,8 @@ import android.view.InputDevice
 import android.view.MotionEvent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import com.diegonmarcos.superapp.launcher.GroupedTilesFragment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -26,13 +27,21 @@ class HomeSwipeGestureTest {
     private val inst: Instrumentation = InstrumentationRegistry.getInstrumentation()
     private val ctx get() = inst.targetContext
 
+    /** startActivitySync waits for the main thread to go idle, which the animated Home never does: start it and poll. */
     private fun launchHome(): ShellActivity {
         val i = Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        val a: Activity = inst.startActivitySync(i)
-        val shell = a as ShellActivity
-        assertTrue("never reached the Home root", until(60_000) { onMain { shell.currentSection == "home" && shell.supportFragmentManager.backStackEntryCount == 0 } })
-        inst.waitForIdleSync()
-        return shell
+        ctx.startActivity(i)
+        var shell: ShellActivity? = null
+        assertTrue("MainActivity never resumed", until(60_000) {
+            shell = onMain {
+                ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(Stage.RESUMED).firstOrNull { it is ShellActivity } as ShellActivity?
+            }
+            shell != null
+        })
+        val sh = shell!!
+        assertTrue("never reached the Home root", until(60_000) { onMain { sh.currentSection == "home" && sh.supportFragmentManager.backStackEntryCount == 0 } })
+        SystemClock.sleep(1_500)
+        return sh
     }
 
     private fun <T> onMain(f: () -> T): T {
