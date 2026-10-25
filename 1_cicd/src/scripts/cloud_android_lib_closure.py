@@ -41,6 +41,8 @@ SKIP = {".git", "build", ".gradle", "node_modules", ".cxx", "test", "tests"}
 # DEPENDENCY, never settings' `project(':libs:x').projectDir = …`
 DEP = re.compile(r"""(?:\bapi|[iI]mplementation)\b["')\s]*,?\s*\(?\s*project\(\s*['"]:libs:([\w-]+)['"]""")
 INCLUDE = re.compile(r"""include\b[^\n]*""")
+# `for (n in listOf("a", "b")) { include(":libs:$n") }` -- a settings loop includes each listed lib (Gallery's nav bars)
+INCLUDE_LOOP = re.compile(r"""for\s*\(\s*(\w+)\s+in\s+listOf\(([^)]*)\)\s*\)\s*\{?\s*include\(\s*["']:libs:\$\{?\1\}?["']""")
 INCLUDED_LIB = re.compile(r"""['"]:libs:([\w-]+)['"]""")
 PATH_REF = re.compile(re.escape(SHARED_LIBS) + r"/([\w-]+)")
 # In JSON only a value that IS a path (nothing else in the string) counts ("source": "../ab_cloud-libs-shared/
@@ -137,6 +139,8 @@ def included(root, app):
             if _code(line):
                 for inc in INCLUDE.findall(line):
                     found.update(INCLUDED_LIB.findall(inc))
+        for _var, items in INCLUDE_LOOP.findall(read(s)):
+            found.update(re.findall(r"""["']([\w-]+)["']""", items))
     return found or None
 
 
