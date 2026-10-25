@@ -226,7 +226,9 @@ public class AppTopBarController {
     public var settingsOpen: Boolean by mutableStateOf(false)
         private set
 
-    internal var drawerContent: TopBarDrawerContent? by mutableStateOf<TopBarDrawerContent?>(null)
+    /** What the page said through [TopBarDrawer]; public so libs:nav-bar-top-first-row can list it in the title dropdown (no hamburger there). */
+    public var drawerContent: TopBarDrawerContent? by mutableStateOf<TopBarDrawerContent?>(null)
+        internal set
 
     public fun openDrawer() { drawerOpen = true; aiOpen = false; settingsOpen = false }
     public fun closeDrawer() { drawerOpen = false }

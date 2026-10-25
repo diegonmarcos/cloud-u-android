@@ -65,7 +65,8 @@ class TasksPageTest {
 
     @Test fun `the shell draws the top row and the declared island, and opens on Tasks`() {
         launch()
-        compose.onNodeWithTag(TopBarTags.MENU).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.MENU).assertDoesNotExist()
+        compose.onNodeWithTag(TopBarTags.TITLE).assertIsDisplayed()
         compose.onNodeWithTag(TopBarTags.AI).assertIsDisplayed()
         compose.onNodeWithTag(TopBarTags.ACCOUNT).assertIsDisplayed()
         compose.onNodeWithTag(TopBarTags.CONFIGS).assertIsDisplayed()
@@ -83,13 +84,13 @@ class TasksPageTest {
         subRows().assertCountEquals(6)
     }
 
-    // ── the hamburger drawer ────────────────────────────────────────────────────────────────────────────
+    // ── the title dropdown (the former hamburger drawer) ────────────────────────────────────────────────────────────────────────────
 
     @Test fun `the drawer lists projects collapsed, expands to lists, and a list tap switches the page`() {
         val env = launch()
         val project = env.controller.snapshot.projects.first()
         val lists = env.controller.snapshot.listsOf(project.id)
-        compose.onNodeWithTag(TopBarTags.MENU).performClick()
+        compose.onNodeWithTag(TopBarTags.TITLE).performClick()
         compose.onNodeWithTag(DrawerTags.project(project.id)).assertIsDisplayed()
         compose.onNodeWithTag(DrawerTags.list(lists[0].id)).assertDoesNotExist()
         compose.onNodeWithTag(DrawerTags.list(lists[1].id)).assertDoesNotExist()
@@ -106,7 +107,7 @@ class TasksPageTest {
 
     @Test fun `the drawer offers New project through a name dialog`() {
         val env = launch()
-        compose.onNodeWithTag(TopBarTags.MENU).performClick()
+        compose.onNodeWithTag(TopBarTags.TITLE).performClick()
         compose.onNodeWithTag(DrawerTags.ADD_PROJECT).performClick()
         compose.onNodeWithTag(DrawerTags.NAME_INPUT).assertIsDisplayed()
         compose.onNodeWithTag(DrawerTags.NAME_OK).assertIsNotEnabled()

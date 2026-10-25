@@ -35,6 +35,20 @@ class ChromeScrollGuardTest {
         }
     }
 
+    @Test fun `no app and not the row itself brings the hamburger back`() {
+        val menu = Regex("""TopFirstRowTags\.MENU|\.openDrawer\(\)""")
+        for (app in apps) {
+            val hits = sources(app).filter { menu.containsMatchIn(it.readText()) }.map { it.name }
+            assertEquals("$app draws or wires a hamburger (the first row has none; drawer content goes through TopBarDrawer into the title dropdown)", emptyList<String>(), hits)
+        }
+        var dir: File? = File("").absoluteFile
+        while (dir != null && !File(dir, "ab_cloud-libs-shared/libs/nav-bar-top-first-row/src/main").isDirectory) dir = dir.parentFile
+        val row = File(dir ?: throw AssertionError("first-row lib not found"), "ab_cloud-libs-shared/libs/nav-bar-top-first-row/src/main").walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }.joinToString("\n") { it.readText() }
+        assertTrue("the first row draws a Menu icon again", !Regex("""Icons\.\w+\.Menu\b""").containsMatchIn(row))
+        assertTrue("the first row takes an onMenu again", "onMenu" !in row)
+    }
+
     @Test fun `no app hides the first row from its own state`() {
         val own = Regex("""barVisible\s*=\s*[^\n]*collapse""", RegexOption.IGNORE_CASE)
         for (app in apps) {

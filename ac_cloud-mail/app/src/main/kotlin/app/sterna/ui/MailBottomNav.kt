@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import app.sterna.ui.theme.MailMetrics
-import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.rememberSuperAppAiLauncher
@@ -57,7 +56,8 @@ fun BottomNavBar(nav: NavController, currentRoute: String, content: @Composable 
     // #1154 the first row: AI hands over to the SuperApp, Profile is Cloud Account, Configs is Mail's settings.
     NavBarTopFirstRowScaffold(
         title = stringResource(itemDescription(selected ?: "home")),
-        hierarchy = openSection?.let { titleHierarchy(it, null) }.orEmpty(),
+        hierarchy = openSection?.let { sec -> titleHierarchy(sec, sec.pages.firstOrNull { it.id == currentRoute }?.id) }.orEmpty(),
+        sections = mailNav.bottomSections(),
         onNavigate = { e -> entries.firstOrNull { it.id == e.sectionId }?.let(tap) },
         onAccount = account,
         onConfigs = { if (currentRoute != "settings") nav.currentBackStackEntry?.navigateOnce { nav.navigate("settings") } },
@@ -65,11 +65,6 @@ fun BottomNavBar(nav: NavController, currentRoute: String, content: @Composable 
         dark = app.sterna.ui.theme.LocalSternaDarkTheme.current,
         modifier = Modifier.statusBarsPadding(),
     ) {
-        TopBarDrawer { close ->
-            entries.forEach { e ->
-                Text(e.label, Modifier.fillMaxWidth().clickable { tap(e); close() }.padding(horizontal = MailMetrics.s12, vertical = MailMetrics.s12))
-            }
-        }
         NavBarBottomHost(
             entries = entries,
             selectedId = selected,

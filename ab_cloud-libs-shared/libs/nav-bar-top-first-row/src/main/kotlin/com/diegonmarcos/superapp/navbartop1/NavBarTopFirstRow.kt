@@ -3,7 +3,11 @@ package com.diegonmarcos.superapp.navbartop1
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,14 +19,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.ProvidableCompositionLocal
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,12 +39,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -65,29 +76,33 @@ public object TopFirstRowSpec {
     public val ICON_TARGET: Dp = 44.dp
     public val ICON: Dp = 24.dp
     public const val ICONS_RIGHT: Int = 3
-    /** Left and right slots are the same width so the title island sits on the row's exact centre. */
+    /** The right slot (AI, Profile, Configs); the title takes the rest of the row, from the left edge. */
     public val SLOT: Dp = ICON_TARGET * ICONS_RIGHT
     public val ISLAND_RADIUS: Dp = 20.dp
     public val ISLAND_PAD_H: Dp = 14.dp
     public val ISLAND_PAD_V: Dp = 7.dp
     public const val TITLE_SP: Int = 13
 
-    /** The widest the island may be on a row of [rowWidth]: what is left between the two equal slots. */
-    public fun islandMaxWidth(rowWidth: Dp): Dp = (rowWidth - SLOT * 2).coerceAtLeast(0.dp)
+    /** The widest the title island may be on a row of [rowWidth]: what the right slot leaves. */
+    public fun islandMaxWidth(rowWidth: Dp): Dp = (rowWidth - SLOT).coerceAtLeast(0.dp)
 }
 
 /**
  * The row's test tags. They are the SAME strings as libs:bottomnav's [TopBarTags] (the row this one replaces), so an
- * app's tests that find the hamburger, the title or an action by [TopBarTags] still find it.
+ * app's tests that find the title or an action by [TopBarTags] still find it.
  */
 public object TopFirstRowTags {
     public const val ROW: String = TopBarTags.BAR
-    public const val MENU: String = TopBarTags.MENU
     public const val ISLAND: String = TopBarTags.TITLE
     public const val AI: String = TopBarTags.AI
     public const val PROFILE: String = TopBarTags.ACCOUNT
     public const val CONFIGS: String = TopBarTags.CONFIGS
     public const val DROPDOWN: String = "navtop1_dropdown"
+    /** The chevron that opens the dropdown when a tap on the title does something else (onTitleClick). */
+    public const val MORE: String = "navtop1_more"
+    public const val SEPARATOR_PAGES: String = "navtop1_sep_pages"
+    public const val SEPARATOR_ACTIONS: String = "navtop1_sep_actions"
+    public fun crumb(index: Int): String = "navtop1_crumb_$index"
     public fun entry(id: String): String = "navtop1_entry_$id"
 }
 
@@ -124,10 +139,11 @@ public fun titleHierarchy(section: NavSection, currentPageId: String?): List<Hie
 }
 
 /**
- * THE first row of every app (#1154): a plain hamburger at the left (it opens the side menu by tap; there is no
- * edge-swipe), the page title as an island at the centre (a rounded darker-gray box; a tap opens the hierarchy
- * dropdown of the page shown, bottom page then sub-pages, tap to navigate), and plain AI (sparkles), Profile
- * (round avatar) and Configs (vertical dots) icons at the right. No icon sits inside a circle.
+ * THE first row of every app (#1154): no hamburger; the title at the LEFT as a breadcrumb path ("{App} / {Section} / {Page}",
+ * [titleNav]) in a rounded darker-gray box, truncated from the left with an ellipsis when long; a tap opens the dropdown:
+ * the path with each segment tappable, a separator, the siblings and children of the page shown, and (second separator)
+ * whatever the page declared through [extra] (the app's non-navigation actions); and plain AI (sparkles), Profile (round
+ * avatar) and Configs (vertical dots) icons at the right. No icon sits inside a circle.
  */
 @Composable
 public fun NavBarTopFirstRow(
@@ -136,51 +152,77 @@ public fun NavBarTopFirstRow(
     labels: AppTopBarLabels,
     hierarchy: List<HierarchyEntry>,
     onNavigate: (HierarchyEntry) -> Unit,
-    onMenu: () -> Unit,
     onAi: () -> Unit,
     onProfile: () -> Unit,
     onConfigs: () -> Unit,
     modifier: Modifier = Modifier,
     /** Replaces the default round avatar glyph, e.g. the signed-in user's picture. */
     avatar: (@Composable () -> Unit)? = null,
-    /** #1164 a host whose title IS an input (Cloud Browser's address): a tap on the island calls this instead of opening the dropdown. */
+    /** #1164 a host whose title IS an input (Cloud Browser's address): a tap on the title calls this and shows the title as is; a chevron beside it opens the dropdown. */
     onTitleClick: (() -> Unit)? = null,
+    /** The app's name, the first segment of the path (default: the installed app's label). */
+    appName: String = defaultAppName(),
+    /** The app's bottom sections: the siblings of a section, and where the app segment goes (its first). */
+    sections: List<NavSection> = emptyList(),
+    /** A last path segment that is not a page, e.g. the open message's subject. */
+    leaf: String? = null,
+    /** Non-navigation actions of the app, listed under the dropdown's second separator. */
+    extra: (@Composable ColumnScope.(close: () -> Unit) -> Unit)? = null,
 ) {
     var open by remember { mutableStateOf(false) }
+    val nav = remember(appName, title, hierarchy, sections, leaf) { titleNav(appName, title, hierarchy, sections, leaf) }
     Row(
         modifier.fillMaxWidth().height(TopFirstRowSpec.HEIGHT).testTag(TopFirstRowTags.ROW),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.width(TopFirstRowSpec.SLOT), contentAlignment = Alignment.CenterStart) {
-            PlainIcon(Icons.Filled.Menu, labels.menu, TopFirstRowTags.MENU, colors, onMenu)
-        }
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+        Box(Modifier.weight(1f).padding(start = TopFirstRowSpec.ISLAND_PAD_H / 2), contentAlignment = Alignment.CenterStart) {
             val shape = RoundedCornerShape(TopFirstRowSpec.ISLAND_RADIUS)
             Box {
-                Text(
-                    title,
+                Row(
                     Modifier.clip(shape).background(colors.island, shape).border(1.dp, colors.islandBorder, shape)
-                        .clickable(enabled = hierarchy.isNotEmpty() || onTitleClick != null, role = Role.Button) { if (onTitleClick != null) onTitleClick() else open = true }
+                        .clickable(role = Role.Button) { if (onTitleClick != null) onTitleClick() else open = true }
                         .padding(horizontal = TopFirstRowSpec.ISLAND_PAD_H, vertical = TopFirstRowSpec.ISLAND_PAD_V)
                         .testTag(TopFirstRowTags.ISLAND)
                         .semantics { heading() },
-                    color = colors.onIsland,
-                    fontSize = TopFirstRowSpec.TITLE_SP.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (onTitleClick != null) {
+                        Text(title, color = colors.onIsland, fontSize = TopFirstRowSpec.TITLE_SP.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Start)
+                        Icon(
+                            Icons.Filled.ArrowDropDown, contentDescription = labels.drawer, tint = colors.onIsland,
+                            modifier = Modifier.size(TopFirstRowSpec.ICON).clickable(role = Role.Button) { open = true }.testTag(TopFirstRowTags.MORE),
+                        )
+                    } else {
+                        BreadcrumbText(nav.labels, colors.onIsland)
+                    }
+                }
                 DropdownMenu(
                     expanded = open, onDismissRequest = { open = false }, containerColor = colors.island,
                     modifier = Modifier.testTag(TopFirstRowTags.DROPDOWN),
                 ) {
-                    hierarchy.forEach { e ->
+                    // line 1: the path, each segment a tap to that ancestor
+                    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                        nav.crumbs.forEachIndexed { i, c ->
+                            if (i > 0) Text(" / ", color = colors.onIsland, fontSize = TopFirstRowSpec.TITLE_SP.sp)
+                            val target = c.target
+                            Text(
+                                c.label,
+                                (if (target != null) Modifier.clickable(role = Role.Button) { open = false; onNavigate(target) } else Modifier)
+                                    .testTag(TopFirstRowTags.crumb(i)),
+                                color = if (i == nav.crumbs.lastIndex) colors.accentOnIsland else colors.onIsland,
+                                fontSize = TopFirstRowSpec.TITLE_SP.sp,
+                                fontWeight = if (i == nav.crumbs.lastIndex) FontWeight.Bold else FontWeight.Normal,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                    if (nav.related.isNotEmpty()) HorizontalDivider(Modifier.testTag(TopFirstRowTags.SEPARATOR_PAGES), color = colors.islandBorder)
+                    nav.related.forEach { e ->
                         DropdownMenuItem(
                             text = {
                                 Text(
                                     e.label,
-                                    Modifier.padding(start = 16.dp * e.depth),
+                                    Modifier.padding(start = 16.dp * (e.depth - nav.currentDepth).coerceAtLeast(0)),
                                     fontWeight = if (e.selected) FontWeight.Bold else FontWeight.Normal,
                                     color = if (e.selected) colors.accentOnIsland else colors.onIsland,
                                 )
@@ -188,6 +230,10 @@ public fun NavBarTopFirstRow(
                             onClick = { open = false; onNavigate(e) },
                             modifier = Modifier.testTag(TopFirstRowTags.entry(e.id)),
                         )
+                    }
+                    if (extra != null) {
+                        HorizontalDivider(Modifier.testTag(TopFirstRowTags.SEPARATOR_ACTIONS), color = colors.islandBorder)
+                        extra { open = false }
                     }
                 }
             }
@@ -206,6 +252,27 @@ public fun NavBarTopFirstRow(
     }
 }
 
+/** The installed app's label: the first segment of the path unless the host names it. */
+@Composable
+public fun defaultAppName(): String {
+    val ctx = LocalContext.current
+    return remember(ctx) { ctx.applicationInfo.loadLabel(ctx.packageManager).toString() }
+}
+
+/** The path on one line, cut from the LEFT ("... / Inbox / Subject") to the width the row leaves it. */
+@Composable
+private fun BreadcrumbText(labels: List<String>, color: androidx.compose.ui.graphics.Color) {
+    val measurer = rememberTextMeasurer()
+    val style = TextStyle(fontSize = TopFirstRowSpec.TITLE_SP.sp, fontWeight = FontWeight.SemiBold)
+    BoxWithConstraints {
+        val maxPx = constraints.maxWidth
+        val line = if (constraints.hasBoundedWidth) {
+            fitCrumbs(labels) { measurer.measure(it, style, maxLines = 1, softWrap = false).size.width <= maxPx }
+        } else labels.joinToString(" / ")
+        Text(line, color = color, style = style, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Start)
+    }
+}
+
 /** A bare glyph in a [TopFirstRowSpec.ICON_TARGET] touch target: no circle, no fill. */
 @Composable
 private fun PlainIcon(icon: ImageVector, label: String, tag: String, colors: ThemeColors, onClick: () -> Unit) {
@@ -220,8 +287,8 @@ private fun PlainIcon(icon: ImageVector, label: String, tag: String, colors: The
 }
 
 /**
- * The fleet's top-bar scaffold with THIS row drawn in it (#1154): libs:bottomnav's scaffold keeps the side drawer (opened by
- * tapping the hamburger only), the AI popup and the hide-on-scroll slot; the row is [NavBarTopFirstRow]. [onAi] null opens
+ * The fleet's top-bar scaffold with THIS row drawn in it (#1154): libs:bottomnav's scaffold keeps the AI popup and the hide-on-scroll slot (there is no hamburger: what a page
+ * puts in TopBarDrawer is listed at the end of the title dropdown); the row is [NavBarTopFirstRow]. [onAi] null opens
  * the scaffold's own AI popup ([aiPanel]); otherwise it is the host's. Profile and Configs are the host's ([onAccount], [onConfigs]).
  */
 @Composable
@@ -242,15 +309,22 @@ public fun NavBarTopFirstRowScaffold(
     dark: Boolean = true,
     /** #1164 see [NavBarTopFirstRow]'s onTitleClick. */
     onTitleClick: (() -> Unit)? = null,
+    /** The first path segment (default: the installed app's label). */
+    appName: String = defaultAppName(),
+    /** The app's bottom sections: siblings of a section, and where a tap on the app segment goes. */
+    sections: List<NavSection> = emptyList(),
+    /** A last path segment that is not a page; a page may also set it with [BreadcrumbLeaf]. */
+    leaf: String? = null,
     content: @Composable () -> Unit,
 ) {
     val requests = remember { SubPageRequests() }
+    val leafState = remember { BreadcrumbLeafState() }
     // A pick below the bottom page asks the strips of the page it opens to select it (the app only switches the page).
     val navigate: (HierarchyEntry) -> Unit = { e -> if (e.depth > 0) requests.request(e.id); onNavigate(e) }
     // #1157 scrolling the page down hides this row and compacts the second row and the bottom nav; up restores all three.
     NavChromeScroll { collapse ->
         AppTopBarScaffold(
-            decl = TopBarDecl(drawer = true, settings = TopBarSettings.KNOWN, inlineActions = true),
+            decl = TopBarDecl(drawer = false, settings = TopBarSettings.KNOWN, inlineActions = true),
             title = title,
             onAccount = onAccount,
             onConfigs = onConfigs,
@@ -261,14 +335,33 @@ public fun NavBarTopFirstRowScaffold(
             aiPanel = aiPanel,
             barVisible = barVisible && !collapse.collapsed,
             topRow = { c ->
+                val slot = c.drawerContent
                 NavBarTopFirstRow(
                     title, ThemeBackground.colors(dark), labels, hierarchy, navigate,
-                    onMenu = { c.openDrawer() },
                     onAi = { if (onAi != null) onAi() else c.toggleAi() },
                     onProfile = onAccount, onConfigs = onConfigs, avatar = avatar, onTitleClick = onTitleClick,
+                    appName = appName, sections = sections, leaf = leaf ?: leafState.text,
+                    extra = if (slot != null) ({ close -> slot(close) }) else null,
                 )
             },
-            content = { CompositionLocalProvider(LocalSubPageRequests provides requests, content = content) },
+            content = { CompositionLocalProvider(LocalSubPageRequests provides requests, LocalBreadcrumbLeaf provides leafState, content = content) },
         )
+    }
+}
+
+/** The path's last, page-less segment (an open message's subject), set by whichever page shows it. */
+public class BreadcrumbLeafState {
+    public var text: String? by mutableStateOf(null)
+}
+
+public val LocalBreadcrumbLeaf: ProvidableCompositionLocal<BreadcrumbLeafState> = compositionLocalOf { BreadcrumbLeafState() }
+
+/** Call from a page while it shows [text] (e.g. the open message's subject): the title path ends with it, and it clears when the page leaves. */
+@Composable
+public fun BreadcrumbLeaf(text: String?) {
+    val state = LocalBreadcrumbLeaf.current
+    DisposableEffect(state, text) {
+        state.text = text
+        onDispose { if (state.text == text) state.text = null }
     }
 }

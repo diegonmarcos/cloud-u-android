@@ -185,7 +185,6 @@ object Tags {
     const val CHAT_STRIP = "search_chat_strip"
     fun agentLink(id: String) = "search_agent_link_$id"
     /** #1161 the first row is libs:nav-bar-top-first-row's: its tags are the row's own. */
-    const val MENU = TopFirstRowTags.MENU
     const val ISLAND = TopFirstRowTags.ISLAND
     const val PROFILE = TopFirstRowTags.PROFILE
     const val CONFIGS = TopFirstRowTags.CONFIGS
@@ -260,7 +259,7 @@ fun SearchShell(state: SearchState) {
     }
 }
 
-/** The first row over the page; the hamburger's drawer lists the categories (every vertical) and Saved Items. */
+/** The first row over the page; the title dropdown lists, after the path, the categories (every vertical) and Saved Items. */
 @Composable
 private fun Chrome(state: SearchState, v: SearchConfig.Vertical) {
     val g = LocalGlass.current

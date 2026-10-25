@@ -31,7 +31,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * The shell's chrome, DRIVEN: the shared top bar over the page and the island, with this repository's own baked
- * declarations. The page is a stub, so what is asserted is the chrome: the bar (hamburger, title, AI, Settings),
+ * declarations. The page is a stub, so what is asserted is the chrome: the bar (title, no hamburger, AI, Settings),
  * the drawer tree, the start page and the island's order.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -83,10 +83,11 @@ class C3ShellComposeTest {
         assertTrue(decl.problems().isEmpty())
         show()
         // #1154 spec change: AI, Profile and Configs are three plain icons (no Settings dropdown any more)
-        for (tag in listOf(TopBarTags.BAR, TopBarTags.MENU, TopBarTags.TITLE, TopBarTags.AI, TopBarTags.ACCOUNT, TopBarTags.CONFIGS)) {
+        for (tag in listOf(TopBarTags.BAR, TopBarTags.TITLE, TopBarTags.AI, TopBarTags.ACCOUNT, TopBarTags.CONFIGS)) {
             compose.onNodeWithTag(tag).assertIsDisplayed()
         }
         assertFalse(exists(TopBarTags.SETTINGS))
+        assertFalse("no hamburger: the drawer moved into the title dropdown", exists(TopBarTags.MENU))
         compose.onNodeWithTag("page_body").assertIsDisplayed()
     }
 
@@ -150,41 +151,41 @@ class C3ShellComposeTest {
         assertEquals("home", Declarations.defaultTab)
     }
 
-    // ── the drawer ───────────────────────────────────────────────────────────────────────
+    // ── the title dropdown (the former drawer) ───────────────────────────────────────────────────────────────────────
 
     @Test
-    fun `the drawer is the full tree of every section and page, tappable`() {
+    fun `the title dropdown ends with the full tree of every section and page, tappable`() {
         show()
-        assertFalse(exists(TopBarTags.DRAWER))
-        tap(TopBarTags.MENU)
-        compose.onNodeWithTag(TopBarTags.DRAWER).assertIsDisplayed()
+        assertFalse(exists(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.DROPDOWN))
+        tap(TopBarTags.TITLE)
+        compose.onNodeWithTag(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.DROPDOWN).assertIsDisplayed()
         for (s in Declarations.nav.sections) {
-            assertTrue("section ${s.id} in the drawer", exists(C3Tags.drawerSection(s.id)))
-            for (p in s.allPages()) assertTrue("page ${s.id}/${p.id} in the drawer", exists(C3Tags.drawerPage(s.id, p.id)))
+            assertTrue("section ${s.id} in the dropdown", exists(C3Tags.drawerSection(s.id)))
+            for (p in s.allPages()) assertTrue("page ${s.id}/${p.id} in the dropdown", exists(C3Tags.drawerPage(s.id, p.id)))
         }
     }
 
     @Test
-    fun `a drawer page opens its section and page, and closes the drawer`() {
+    fun `a tree page opens its section and page, and closes the dropdown`() {
         show()
-        tap(TopBarTags.MENU)
+        tap(TopBarTags.TITLE)
         tap(C3Tags.drawerPage("containers", "table"))
         assertEquals(listOf(C3Nav.Target("containers", "table")), opened)
-        assertFalse("the drawer closes after a tap", exists(TopBarTags.DRAWER))
+        assertFalse("the dropdown closes after a tap", exists(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.DROPDOWN))
     }
 
     @Test
-    fun `a drawer section header opens the section`() {
+    fun `a tree section header opens the section`() {
         show()
-        tap(TopBarTags.MENU)
+        tap(TopBarTags.TITLE)
         tap(C3Tags.drawerSection("ops"))
         assertEquals(listOf(C3Nav.Target("ops")), opened)
     }
 
     @Test
-    fun `Configs is reachable from the drawer though it is off the island`() {
+    fun `Configs is reachable from the title dropdown though it is off the island`() {
         show()
-        tap(TopBarTags.MENU)
+        tap(TopBarTags.TITLE)
         assertTrue(exists(C3Tags.drawerSection("configs")))
     }
 }

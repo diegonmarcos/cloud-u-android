@@ -27,6 +27,7 @@ import com.diegonmarcos.clouddrive.configs.WebserverPage
 import com.diegonmarcos.superapp.bottomnav.AccountLaunch
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
+import com.diegonmarcos.superapp.navbartop1.TopFirstRowTags
 import java.io.File
 import java.nio.file.Files
 import kotlinx.coroutines.CoroutineScope
@@ -118,13 +119,14 @@ class DriveShellTest {
     }
 
     @Test
-    fun `top bar has the hamburger at the left and AI, Profile, Configs at the right in that order`() {
+    fun `top bar has no hamburger, the title at the left and AI, Profile, Configs at the right in that order`() {
         compose.setContent { DriveTheme { DriveShell { id, _ -> Text("content:$id") } } }
         val bar = compose.onNodeWithTag(TopBarTags.BAR).fetchSemanticsNode().boundsInRoot
         val island = compose.onNodeWithTag(BottomNavTags.ISLAND).fetchSemanticsNode().boundsInRoot
-        val menu = compose.onNodeWithTag(TopBarTags.MENU).fetchSemanticsNode().boundsInRoot
+        compose.onAllNodesWithTag(TopBarTags.MENU).assertCountEquals(0)
+        val title = compose.onNodeWithTag(TopBarTags.TITLE).fetchSemanticsNode().boundsInRoot
         val right = listOf(TopBarTags.AI, TopBarTags.ACCOUNT, TopBarTags.CONFIGS).map { compose.onNodeWithTag(it).also { n -> n.assertIsDisplayed() }.fetchSemanticsNode().boundsInRoot }
-        assertTrue("the hamburger is in the left half of the bar: $menu in $bar", menu.right < bar.width / 2)
+        assertTrue("the title starts in the left half of the bar: $title in $bar", title.left < bar.width / 2)
         assertTrue("AI, Profile, Configs run left to right: $right", right.zipWithNext().all { (a, b) -> a.right <= b.left })
         assertTrue("all three are in the right half: $right in $bar", right.all { it.left > bar.width / 2 && it.right <= bar.right })
         assertTrue("the bar is the first row, above the island: $bar vs $island", bar.top < island.top)
@@ -132,18 +134,18 @@ class DriveShellTest {
     }
 
     @Test
-    fun `the hamburger opens the side menu with every destination and a tap on one opens it`() {
+    fun `the title dropdown lists every destination and a tap on one opens it`() {
         compose.setContent { DriveTheme { DriveShell { id, _ -> Text("content:$id") } } }
-        compose.onAllNodesWithTag(TopBarTags.DRAWER).assertCountEquals(0)
-        compose.onNodeWithTag(TopBarTags.MENU).performClick()
+        compose.onAllNodesWithTag(TopFirstRowTags.DROPDOWN).assertCountEquals(0)
+        compose.onNodeWithTag(TopBarTags.TITLE).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(TopBarTags.DRAWER).assertIsDisplayed()
+        compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertIsDisplayed()
         Declarations.nav.sections.forEach { compose.onNodeWithTag(DriveTags.drawerItem(it.id)).assertIsDisplayed() }
         compose.onNodeWithTag(DriveTags.drawerItem("git")).performClick()
         compose.waitForIdle()
         compose.onNodeWithText("content:git").assertIsDisplayed()
         compose.onNodeWithTag(BottomNavTags.item("git")).assertIsSelected()
-        compose.onAllNodesWithTag(TopBarTags.DRAWER).assertCountEquals(0)
+        compose.onAllNodesWithTag(TopFirstRowTags.DROPDOWN).assertCountEquals(0)
     }
 
     @Test

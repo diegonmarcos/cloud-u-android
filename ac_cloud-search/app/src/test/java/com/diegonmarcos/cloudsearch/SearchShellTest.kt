@@ -227,7 +227,7 @@ class SearchShellTest {
     }
 
     /**
-     * #1161 the shared nav pattern: the first row (hamburger, title island, AI, Profile top-right, Configs), the bottom nav of
+     * #1161 the shared nav pattern: the first row (no hamburger, breadcrumb title, AI, Profile top-right, Configs), the bottom nav of
      * the five declared sections (each item shows its label at rest) and the second row of the section's pages, with the
      * search field of the page still there and typeable.
      */
@@ -236,7 +236,8 @@ class SearchShellTest {
         assertEquals(com.diegonmarcos.superapp.bottomnav.NavStyle.Fleet, com.diegonmarcos.cloudsearch.ui.NAV.style)
         waitFor(Tags.nav("me"))
         compose.onNodeWithTag(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.ROW).assertExists()
-        for (tag in listOf(Tags.MENU, Tags.ISLAND, Tags.PROFILE, Tags.CONFIGS)) compose.onNodeWithTag(tag).assertExists()
+        for (tag in listOf(Tags.ISLAND, Tags.PROFILE, Tags.CONFIGS)) compose.onNodeWithTag(tag).assertExists()
+        compose.onNodeWithTag(com.diegonmarcos.superapp.bottomnav.TopBarTags.MENU).assertDoesNotExist()
         val ids = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
         assertEquals(listOf("me", "llc", "chat", "agents", "reports"), ids)
         compose.onNodeWithTag(com.diegonmarcos.superapp.navbarbottom.BottomTags.BAR).assertExists()
@@ -280,13 +281,13 @@ class SearchShellTest {
         assertEquals(!before, services.prefs.dark)
     }
 
-    @Test fun theMenuOpensEveryCategoryAndSavedItems() {
+    @Test fun theTitleDropdownOpensEveryCategoryAndSavedItems() {
         launch()
-        compose.onNodeWithTag(Tags.MENU).performClick()
+        compose.onNodeWithTag(Tags.ISLAND).performClick()
         waitFor(Tags.drawer("jobs"))
         compose.onNodeWithTag(Tags.drawer("jobs")).performClick()
         compose.runOnIdle { assertEquals("jobs", state.vertical); assertEquals(null, state.menu) }
-        compose.onNodeWithTag(Tags.MENU).performClick()
+        compose.onNodeWithTag(Tags.ISLAND).performClick()
         waitFor(Tags.drawer("saved"))
         compose.onNodeWithTag(Tags.drawer("saved")).performClick()
         waitFor(Tags.SAVED)

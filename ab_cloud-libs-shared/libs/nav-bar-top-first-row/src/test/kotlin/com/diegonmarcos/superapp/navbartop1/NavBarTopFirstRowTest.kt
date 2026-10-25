@@ -2,6 +2,9 @@ package com.diegonmarcos.superapp.navbartop1
 
 import android.content.ComponentName
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -57,51 +60,80 @@ class NavBarTopFirstRowTest {
         assertTrue("bottom page selected on its own", titleHierarchy(section, "files").first().selected)
     }
 
-    @Test fun `island max width leaves two equal slots`() {
-        assertEquals(360.dp - TopFirstRowSpec.SLOT * 2, TopFirstRowSpec.islandMaxWidth(360.dp))
+    @Test fun `island max width leaves the right slot`() {
+        assertEquals(360.dp - TopFirstRowSpec.SLOT, TopFirstRowSpec.islandMaxWidth(360.dp))
         assertEquals(0.dp, TopFirstRowSpec.islandMaxWidth(50.dp))
         assertEquals(TopFirstRowSpec.ICON_TARGET * 3, TopFirstRowSpec.SLOT)
     }
 
-    private fun show(onNavigate: (HierarchyEntry) -> Unit = {}, onMenu: () -> Unit = {}) {
+    private fun show(
+        onNavigate: (HierarchyEntry) -> Unit = {},
+        extra: (@androidx.compose.runtime.Composable androidx.compose.foundation.layout.ColumnScope.(() -> Unit) -> Unit)? = null,
+        leaf: String? = null,
+    ) {
         compose.setContent {
             NavBarTopFirstRow(
                 "Files", ThemeBackground.colors(true), labels, titleHierarchy(section, "recent"),
-                onNavigate, onMenu, {}, {}, {},
+                onNavigate, {}, {}, {}, appName = "Cloud Files", sections = listOf(section, other), leaf = leaf, extra = extra,
             )
         }
     }
 
-    @Test fun `the island is centred and the plain icons sit left and right`() {
+    private val other = NavSection("tools", "Tools", "build", listOf(NavPage("a", "A", "a")))
+
+    @Test fun `no hamburger, the title is left aligned and the plain icons sit at the right`() {
         show()
+        compose.onNodeWithTag("topbar_menu").assertDoesNotExist()
         val row = compose.onNodeWithTag(TopFirstRowTags.ROW).fetchSemanticsNode().boundsInRoot
         val island = compose.onNodeWithTag(TopFirstRowTags.ISLAND).fetchSemanticsNode().boundsInRoot
-        val rowCentre = (row.left + row.right) / 2
-        val islandCentre = (island.left + island.right) / 2
-        assertEquals("island centre vs row centre", rowCentre, islandCentre, 1.5f)
-        val menu = compose.onNodeWithTag(TopFirstRowTags.MENU).fetchSemanticsNode().boundsInRoot
+        assertTrue("title starts at the left edge: ${island.left} in ${row.left}", island.left - row.left < TopFirstRowSpec.ICON_TARGET.value)
+        assertTrue("title is not centred", (island.left + island.right) / 2 < (row.left + row.right) / 2)
         val configs = compose.onNodeWithTag(TopFirstRowTags.CONFIGS).fetchSemanticsNode().boundsInRoot
-        assertTrue(menu.right <= island.left && configs.left >= island.right)
+        assertTrue(island.right <= configs.left)
         val ai = compose.onNodeWithTag(TopFirstRowTags.AI).fetchSemanticsNode().boundsInRoot
         val profile = compose.onNodeWithTag(TopFirstRowTags.PROFILE).fetchSemanticsNode().boundsInRoot
         assertTrue("AI, Profile, Configs left to right", ai.right <= profile.left + 0.5f && profile.right <= configs.left + 0.5f)
         // Plain icons: each target is exactly the declared touch size, i.e. no larger circle/pill around it.
-        assertEquals(TopFirstRowSpec.ICON_TARGET.value, menu.width, 0.5f)
+        assertEquals(TopFirstRowSpec.ICON_TARGET.value, configs.width, 0.5f)
     }
 
-    @Test fun `tapping the title opens the hierarchy and a tap navigates`() {
+    @Test fun `tapping the title opens the path line, the siblings and the children, and a tap navigates`() {
         var picked: HierarchyEntry? = null
         show(onNavigate = { picked = it })
         compose.onNodeWithTag(TopFirstRowTags.ISLAND).performClick()
-        compose.onNodeWithTag(TopFirstRowTags.entry("links")).assertIsDisplayed()
+        // path: Cloud Files / Files / Recent, each segment tappable
+        for (i in 0..2) compose.onNodeWithTag(TopFirstRowTags.crumb(i)).assertIsDisplayed()
+        compose.onNodeWithTag(TopFirstRowTags.crumb(3)).assertDoesNotExist()
+        // siblings of Recent: Recent and Shared; Recent has no children; the grandchild "links" is not listed
+        compose.onNodeWithTag(TopFirstRowTags.entry("shared")).assertIsDisplayed()
+        compose.onNodeWithTag(TopFirstRowTags.entry("links")).assertDoesNotExist()
         compose.onNodeWithTag(TopFirstRowTags.entry("shared")).performClick()
         assertEquals("shared", picked?.id)
     }
 
-    @Test fun `the hamburger is a tap and calls the side menu`() {
-        var menus = 0
-        show(onMenu = { menus++ })
-        compose.onNodeWithTag(TopFirstRowTags.MENU).performClick()
-        assertEquals(1, menus)
+    @Test fun `a tap on a path segment navigates to that ancestor`() {
+        var picked: HierarchyEntry? = null
+        show(onNavigate = { picked = it })
+        compose.onNodeWithTag(TopFirstRowTags.ISLAND).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.crumb(1)).performClick()
+        assertEquals("the section segment goes to the section", "files", picked?.id)
+        assertEquals(0, picked?.depth)
+        compose.onNodeWithTag(TopFirstRowTags.ISLAND).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.crumb(0)).performClick()
+        assertEquals("the app segment goes to the app's first section", "files", picked?.id)
+    }
+
+    @Test fun `the open message ends the path, is not a link, and the app's actions come under a second separator`() {
+        var ran = 0
+        show(leaf = "Hello", extra = { close ->
+            androidx.compose.material3.Text("Reload", Modifier.testTag("act_reload").clickable { ran++; close() })
+        })
+        compose.onNodeWithTag(TopFirstRowTags.ISLAND).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.crumb(3)).assertIsDisplayed()
+        compose.onNodeWithTag(TopFirstRowTags.SEPARATOR_PAGES).assertIsDisplayed()
+        compose.onNodeWithTag(TopFirstRowTags.SEPARATOR_ACTIONS).assertIsDisplayed()
+        compose.onNodeWithTag("act_reload").performClick()
+        assertEquals(1, ran)
+        compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertDoesNotExist()
     }
 }

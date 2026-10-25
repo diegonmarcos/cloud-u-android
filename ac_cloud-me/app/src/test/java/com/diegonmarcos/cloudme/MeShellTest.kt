@@ -47,8 +47,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * #1150 the shell's top row, MEASURED in [MeShell] (the very composable MainActivity draws):
- *  - a hamburger at the left, and AI, Profile and Configs at the right as ICONS (no label text);
- *  - the left menu opens by TAPPING the hamburger and by nothing else: an edge swipe does not open it (#1144);
+ *  - no hamburger, the title at the left, and AI, Profile and Configs at the right as ICONS (no label text);
+ *  - the former left menu is the end of the title dropdown, opened by TAPPING the title and by nothing else: an edge swipe does not open it (#1144);
  *  - scrolling the page down hides the top row and collapses the bottom-nav labels to icons, scrolling up brings both back.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -97,7 +97,7 @@ class MeShellTest {
     @Test
     fun `the right side is three icons without labels and each one acts`() {
         show()
-        compose.onNodeWithTag(TopBarTags.MENU).assertIsDisplayed()
+        compose.onNodeWithTag(TopBarTags.MENU).assertDoesNotExist()
         for (tag in listOf(TopBarTags.AI, TopBarTags.ACCOUNT, TopBarTags.CONFIGS)) compose.onNodeWithTag(tag).assertIsDisplayed()
         compose.onNodeWithTag(TopBarTags.SETTINGS).assertDoesNotExist()
         // icons only: none of the three draws its name as text (the title is the only text in the bar)
@@ -127,17 +127,17 @@ class MeShellTest {
     }
 
     @Test
-    fun `the left menu opens by tapping the hamburger, lists every section and closes on a pick`() {
+    fun `the former left menu is in the title dropdown, lists every section and closes on a pick`() {
         show()
-        compose.onNodeWithTag(TopBarTags.DRAWER).assertDoesNotExist()
-        compose.onNodeWithTag(TopBarTags.MENU).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertDoesNotExist()
+        compose.onNodeWithTag(TopBarTags.TITLE).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(TopBarTags.DRAWER).assertIsDisplayed()
+        compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertIsDisplayed()
         for (s in Sections.all()) compose.onNodeWithTag(MeTopBar.drawerItem(s.id)).assertExists()
         compose.onNodeWithTag(MeTopBar.drawerItem("house")).performClick()
         compose.waitForIdle()
         assertEquals(listOf("house"), opened)
-        compose.onNodeWithTag(TopBarTags.DRAWER).assertDoesNotExist()
+        compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertDoesNotExist()
     }
 
     @Test
