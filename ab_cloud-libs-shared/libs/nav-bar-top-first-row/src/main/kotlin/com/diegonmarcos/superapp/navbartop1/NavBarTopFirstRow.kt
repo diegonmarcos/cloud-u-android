@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -82,6 +84,8 @@ public object TopFirstRowSpec {
     public val ISLAND_PAD_H: Dp = 14.dp
     public val ISLAND_PAD_V: Dp = 7.dp
     public const val TITLE_SP: Int = 13
+    /** The most height the app's actions area of the dropdown takes; longer content scrolls inside it. */
+    public val ACTIONS_MAX_HEIGHT: Dp = 360.dp
 
     /** The widest the title island may be on a row of [rowWidth]: what the right slot leaves. */
     public fun islandMaxWidth(rowWidth: Dp): Dp = (rowWidth - SLOT).coerceAtLeast(0.dp)
@@ -102,6 +106,7 @@ public object TopFirstRowTags {
     public const val MORE: String = "navtop1_more"
     public const val SEPARATOR_PAGES: String = "navtop1_sep_pages"
     public const val SEPARATOR_ACTIONS: String = "navtop1_sep_actions"
+    public const val ACTIONS: String = "navtop1_actions"
     public fun crumb(index: Int): String = "navtop1_crumb_$index"
     public fun entry(id: String): String = "navtop1_entry_$id"
 }
@@ -233,7 +238,9 @@ public fun NavBarTopFirstRow(
                     }
                     if (extra != null) {
                         HorizontalDivider(Modifier.testTag(TopFirstRowTags.SEPARATOR_ACTIONS), color = colors.islandBorder)
-                        extra { open = false }
+                        // The menu's own column scrolls (unbounded height), so a page's actions get a BOUNDED box: its own
+                        // verticalScroll / LazyColumn then has a finite height instead of crashing.
+                        Column(Modifier.heightIn(max = TopFirstRowSpec.ACTIONS_MAX_HEIGHT).testTag(TopFirstRowTags.ACTIONS)) { extra { open = false } }
                     }
                 }
             }

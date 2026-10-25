@@ -3,6 +3,8 @@ package com.diegonmarcos.superapp.navbartop1
 import android.content.ComponentName
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertIsDisplayed
@@ -135,5 +137,22 @@ class NavBarTopFirstRowTest {
         compose.onNodeWithTag("act_reload").performClick()
         assertEquals(1, ran)
         compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertDoesNotExist()
+    }
+
+    @Test fun `actions with their own scrolling stay bounded and do not crash the dropdown`() {
+        show(extra = { close ->
+            // a page's own verticalScroll column, and a LazyColumn: both need a finite height
+            androidx.compose.foundation.layout.Column(Modifier.testTag("act_scroll").verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                repeat(60) { androidx.compose.material3.Text("Row $it", Modifier.clickable { close() }) }
+            }
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.testTag("act_lazy")) {
+                items(60) { androidx.compose.material3.Text("Lazy $it") }
+            }
+        })
+        compose.onNodeWithTag(TopFirstRowTags.ISLAND).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.ACTIONS).assertIsDisplayed()
+        val h = compose.onNodeWithTag(TopFirstRowTags.ACTIONS).fetchSemanticsNode().boundsInRoot.height
+        assertTrue("the actions area is bounded: $h", h <= TopFirstRowSpec.ACTIONS_MAX_HEIGHT.value + 1f)
+        compose.onNodeWithTag("act_lazy").assertExists()
     }
 }
