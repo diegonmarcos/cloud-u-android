@@ -7,6 +7,8 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import com.diegonmarcos.superapp.bottomnav.NavDecl
@@ -92,7 +94,8 @@ class NavBarTopSecondRowsTest {
         assertTrue("index | chips", idx.right <= div.left + 0.5f && div.right <= chip.left + 0.5f)
         compose.onNodeWithTag(SecondRowTags.tab("t2")).assertIsSelected()
         compose.onNodeWithTag(SecondRowTags.label("t2"), useUnmergedTree = true).assertExists()
-        compose.onNodeWithTag(SecondRowTags.label("t1"), useUnmergedTree = true).assertDoesNotExist()
+        // DEFAULT state: every page shows its name, not only the selected one
+        compose.onNodeWithTag(SecondRowTags.label("t1"), useUnmergedTree = true).assertExists()
         // the plan row's 12 chips scroll sideways instead of clipping the row
         assertTrue("the row stays inside the screen", plan.right <= 360f)
     }
@@ -127,5 +130,45 @@ class NavBarTopSecondRowsTest {
         compose.onNodeWithTag(SecondRowGroupTags.row("plan")).assertDoesNotExist()
         compose.onNodeWithTag(SecondRowGroupTags.index("plan")).assertDoesNotExist()
         compose.onNodeWithTag(SecondRowTags.label("a2"), useUnmergedTree = true).assertExists()
+    }
+
+    @Test fun `all group rows share ONE box`() {
+        compose.setContent { NavBarTopSecondRows(health, "t2", {}, dark = true, underTopChrome = false) }
+        compose.onAllNodesWithTag(SecondRowGroupTags.BOX).assertCountEquals(1)
+        val box = compose.onNodeWithTag(SecondRowGroupTags.BOX).fetchSemanticsNode().boundsInRoot
+        for (g in listOf("plan", "trackers")) {
+            val r = compose.onNodeWithTag(SecondRowGroupTags.row(g)).fetchSemanticsNode().boundsInRoot
+            assertTrue("row $g sits inside the shared box", r.left >= box.left - 0.5f && r.right <= box.right + 0.5f && r.top >= box.top - 0.5f && r.bottom <= box.bottom + 0.5f)
+        }
+    }
+
+    @Test fun `the divider is column-aligned across rows by the widest group label`() {
+        val long = NavGroup("long", "A much longer group label", (1..3).map { p("l$it") }, "ic")
+        val short = NavGroup("short", "Hi", (1..3).map { p("s$it") }, "ic")
+        val sec = NavSection("x", "X", "heart", long.pages + short.pages, rows = SecondRowMode.ManyRows, groups = listOf(long, short))
+        compose.setContent { NavBarTopSecondRows(sec, "l1", {}, dark = true, underTopChrome = false) }
+        val a = compose.onNodeWithTag(SecondRowGroupTags.divider("long")).fetchSemanticsNode().boundsInRoot
+        val b = compose.onNodeWithTag(SecondRowGroupTags.divider("short")).fetchSemanticsNode().boundsInRoot
+        assertEquals("dividers share one x", a.left, b.left, 0.5f)
+        val ia = compose.onNodeWithTag(SecondRowGroupTags.index("long")).fetchSemanticsNode().boundsInRoot
+        val ib = compose.onNodeWithTag(SecondRowGroupTags.index("short")).fetchSemanticsNode().boundsInRoot
+        assertEquals("label columns are equally wide", ia.width, ib.width, 0.5f)
+    }
+
+    @Test fun `the label column is the max of the measured labels`() {
+        assertEquals(120, groupLabelColumnWidth(listOf(40, 120, 80)))
+        assertEquals(0, groupLabelColumnWidth(emptyList()))
+    }
+
+    @Test fun `shrunk folds the non-selected names, hidden removes the rows`() {
+        compose.setContent { NavBarTopSecondRows(health, "a1", {}, dark = true, underTopChrome = false, compact = true) }
+        compose.onNodeWithTag(SecondRowTags.label("a1"), useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag(SecondRowTags.label("a2"), useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test fun `hidden removes the whole box`() {
+        compose.setContent { NavBarTopSecondRows(health, "a1", {}, dark = true, underTopChrome = false, hidden = true) }
+        compose.waitForIdle()
+        compose.onNodeWithTag(SecondRowGroupTags.BOX).assertDoesNotExist()
     }
 }

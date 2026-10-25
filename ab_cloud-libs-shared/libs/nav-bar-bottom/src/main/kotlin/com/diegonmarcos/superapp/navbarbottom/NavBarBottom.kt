@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlTokens
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
@@ -115,9 +116,12 @@ public fun NavBarBottom(
     modifier: Modifier = Modifier,
     /** Scrolled down (BottomNavCollapse, #1159): the non-selected labels fold away and the bar shrinks; the selected label stays. */
     collapsed: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
+    /** HIDDEN scroll state (a downward drag in progress): the whole bar is away. Default: the chrome's shared state. */
+    hidden: Boolean = LocalNavChromeCollapse.current?.hidden ?: false,
 ) {
     // #1160 the keyboard HIDES the bar (it used to be lifted above it); the host gives the room back to the content.
     if (navHiddenByIme()) return
+    ChromeBarVisibility(hidden = hidden) {
     Box(
         // the bar exposes its tags as resource ids wherever it is hosted (the runtime nav walk, cloud-android-nav-walk.py, reads them)
         modifier.semantics { testTagsAsResourceId = true }.fillMaxWidth()
@@ -167,6 +171,7 @@ public fun NavBarBottom(
                 }
             }
         }
+    }
     }
 }
 

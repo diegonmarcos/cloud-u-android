@@ -15,6 +15,7 @@ import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -473,20 +474,63 @@ internal fun collapseFor(collapsed: Boolean, delta: Float): Boolean = when {
  * uses [BottomNavIslandView.collapseOnScrollIn] instead. Both apply [collapseFor].
  */
 public class BottomNavCollapse : NestedScrollConnection {
-    public var collapsed: Boolean by mutableStateOf(false)
+    /** The chrome's three-state scroll machine ([ChromeScrollState]); [collapsed] and the other views derive from it. */
+    public var state: ChromeScrollState by mutableStateOf(ChromeScrollState.Default)
         private set
 
-    /** A host that measures its own scroll (a WebView's scroll-change listener): [delta] > 0 is the content travelling UP the screen (reading down). */
-    public fun onScrollDelta(delta: Float) { collapsed = collapseFor(collapsed, delta) }
+    /** Any state but DEFAULT: the bars' non-selected labels are folded away (they are hidden outright while [hidden]). */
+    public val collapsed: Boolean get() = state != ChromeScrollState.Default
+
+    /** HIDDEN: a downward drag is in progress, every bar is away. */
+    public val hidden: Boolean get() = state == ChromeScrollState.Hidden
+
+    /** The first row is shown only at DEFAULT. */
+    public val firstRowVisible: Boolean get() = state == ChromeScrollState.Default
+
+    /** A host that measures its own scroll (a WebView's scroll-change listener, no touch state): [delta] > 0 is the content travelling UP the screen (reading down); it settles straight to SHRUNK. */
+    public fun onScrollDelta(delta: Float) { state = chromeScrollOnDelta(state, delta, dragging = false) }
+
+    /** A host that knows its finger state (a View shell with a touch listener) feeds the drag and the release itself. */
+    public fun onDragDelta(delta: Float) { state = chromeScrollOnDelta(state, delta, dragging = true) }
+
+    public fun onRelease() { state = chromeScrollOnRelease(state) }
 
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
         // Negated: a nested-scroll y goes negative as the content travels down, which is the same
-        // gesture a View shell measures as a RISING scroll offset. One rule, [collapseFor], so the
-        // Compose and View hosts cannot collapse on different definitions (#673).
-        collapsed = collapseFor(collapsed, -available.y)
+        // gesture a View shell measures as a RISING scroll offset. One rule, [chromeScrollOnDelta], so the
+        // Compose and View hosts cannot collapse on different definitions (#673). A finger-driven scroll is a drag; a fling/settle is not.
+        state = chromeScrollOnDelta(state, -available.y, dragging = source == NestedScrollSource.UserInput)
         return Offset.Zero
     }
+
+    override suspend fun onPreFling(available: Velocity): Velocity {
+        // The finger is up: HIDDEN settles to SHRUNK (the fling then keeps it there), DEFAULT stays DEFAULT.
+        state = chromeScrollOnRelease(state)
+        return Velocity.Zero
+    }
 }
+
+/**
+ * The chrome's scroll states (spec: three-state machine). DEFAULT: every bar full. HIDDEN: a downward drag is in progress, ALL bars
+ * (first row, second row, bottom nav, side rail) are away. SHRUNK: the finger lifted after a downward scroll, the first row stays
+ * away and the second row, bottom nav and rail return shrunk (non-selected names hidden). Any upward scroll goes back to DEFAULT.
+ */
+public enum class ChromeScrollState { Default, Hidden, Shrunk }
+
+/** The machine's step on a scroll [delta] (> 0: reading down). [dragging]: the finger is on the screen. */
+public fun chromeScrollOnDelta(state: ChromeScrollState, delta: Float, dragging: Boolean): ChromeScrollState = when {
+    delta < 0f -> ChromeScrollState.Default
+    delta > 0f -> when {
+        dragging -> ChromeScrollState.Hidden
+        state == ChromeScrollState.Hidden -> ChromeScrollState.Hidden
+        else -> ChromeScrollState.Shrunk
+    }
+    else -> state
+}
+
+/** The machine's step when the finger lifts (drag end / fling start): HIDDEN becomes SHRUNK. */
+public fun chromeScrollOnRelease(state: ChromeScrollState): ChromeScrollState =
+    if (state == ChromeScrollState.Hidden) ChromeScrollState.Shrunk else state
 
 @Composable
 public fun rememberBottomNavCollapse(): BottomNavCollapse = remember { BottomNavCollapse() }

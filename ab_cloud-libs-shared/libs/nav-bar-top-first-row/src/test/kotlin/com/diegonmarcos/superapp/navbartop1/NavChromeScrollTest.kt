@@ -111,4 +111,31 @@ class NavChromeScrollTest {
         assertEquals(restTab, h(SecondRowTags.tab("p1")), 1f)
         assertEquals(restBar, h(BottomTags.BAR), 1f)
     }
+
+    @Test fun `while the finger drags down every bar is hidden, on release the second row and bottom nav return shrunk, up restores`() {
+        show()
+        compose.waitForIdle()
+        compose.onNodeWithTag("page").performTouchInput {
+            down(center)
+            repeat(8) { moveBy(androidx.compose.ui.geometry.Offset(0f, -60f)) }
+        }
+        compose.waitForIdle()
+        assertEquals("HIDDEN: first row away", 0, count(TopBarTags.BAR_SLOT))
+        assertEquals("HIDDEN: second row away", 0, count(SecondRowTags.STRIP))
+        assertEquals("HIDDEN: bottom nav away", 0, count(BottomTags.BAR))
+
+        compose.onNodeWithTag("page").performTouchInput { up() }
+        compose.waitForIdle()
+        assertEquals("SHRUNK: first row stays away", 0, count(TopBarTags.BAR_SLOT))
+        assertEquals("SHRUNK: second row is back", 1, count(SecondRowTags.STRIP))
+        assertEquals("SHRUNK: bottom nav is back", 1, count(BottomTags.BAR))
+        assertEquals(1, count(SecondRowTags.label("p1"))); assertEquals(0, count(SecondRowTags.label("p2")))
+        assertEquals(1, count(BottomTags.label("home"))); assertEquals(0, count(BottomTags.label("mail")))
+
+        compose.onNodeWithTag("page").performTouchInput { swipeDown() }
+        compose.waitForIdle()
+        assertEquals("DEFAULT: first row back", 1, count(TopBarTags.BAR_SLOT))
+        assertEquals(1, count(SecondRowTags.label("p2")))
+        assertEquals(1, count(BottomTags.label("mail")))
+    }
 }

@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
@@ -141,6 +142,8 @@ public fun NavBarTopSecondRow(
     iconFor: @Composable (NavPage) -> Painter? = { null },
     /** Scrolled down (#1159): only the selected tab keeps its name and every tab is shorter. Default: the chrome's shared scroll state. */
     compact: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
+    /** HIDDEN scroll state (a downward drag in progress): the whole row is away. Default: the chrome's shared state. */
+    hidden: Boolean = LocalNavChromeCollapse.current?.hidden ?: false,
 ) {
     if (pages.isEmpty()) return
     val requests = LocalSubPageRequests.current
@@ -164,6 +167,7 @@ public fun NavBarTopSecondRow(
     val tab = RoundedCornerShape(SecondRowSpec.TAB_RADIUS)
     val scroll = rememberScrollState()
     val tabHeight by animateDpAsState(if (compact) SecondRowSpec.COMPACT_TAB_HEIGHT else SecondRowSpec.TAB_HEIGHT, label = "secondrow_tab_height")
+    ChromeBarVisibility(hidden = hidden) {
     BoxWithConstraints(modifier.semantics { testTagsAsResourceId = true }.fillMaxWidth().padding(top = top, bottom = SecondRowSpec.BOTTOM_INSET, start = SecondRowSpec.SIDE, end = SecondRowSpec.SIDE)) {
     Row(
         Modifier.fillMaxWidth()
@@ -187,6 +191,7 @@ public fun NavBarTopSecondRow(
                 onClick = { if (page.id == selectedId) onReselect(page) else onSelect(page) },
             )
         }
+    }
     }
     }
 }

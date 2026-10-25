@@ -36,7 +36,10 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -46,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
+import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.NavGroup
 import com.diegonmarcos.superapp.bottomnav.NavPage
@@ -61,6 +65,8 @@ public object SecondRowGroupTags {
     public fun index(groupId: String): String = "navtop2_group_index_$groupId"
     public fun divider(groupId: String): String = "navtop2_group_divider_$groupId"
     public fun item(pageId: String): String = "navtop2_group_item_$pageId"
+    /** The ONE surface all group rows share. */
+    public const val BOX: String = "navtop2_groups_box"
     public const val DROPDOWN: String = "navtop2_group_dropdown"
 }
 
@@ -88,9 +94,10 @@ public fun NavBarTopSecondRows(
     surface: TabSurface? = null,
     iconFor: @Composable (NavPage) -> Painter? = { null },
     compact: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
+    hidden: Boolean = LocalNavChromeCollapse.current?.hidden ?: false,
 ) {
     if (section.rows == SecondRowMode.OneRow) {
-        NavBarTopSecondRow(section.pages, selectedId, onSelect, modifier, dark, onReselect, underTopChrome, flushTop, surface, iconFor, compact)
+        NavBarTopSecondRow(section.pages, selectedId, onSelect, modifier, dark, onReselect, underTopChrome, flushTop, surface, iconFor, compact, hidden)
         return
     }
     val groups = section.rowGroups()
@@ -116,29 +123,48 @@ public fun NavBarTopSecondRows(
     val strip = RoundedCornerShape(SecondRowSpec.STRIP_RADIUS)
     val tab = RoundedCornerShape(SecondRowSpec.TAB_RADIUS)
     val tabHeight by animateDpAsState(if (compact) SecondRowSpec.COMPACT_TAB_HEIGHT else SecondRowSpec.TAB_HEIGHT, label = "secondrows_tab_height")
-    Column(modifier.fillMaxWidth().padding(top = top, start = SecondRowSpec.SIDE, end = SecondRowSpec.SIDE)) {
-        groups.forEach { g ->
-            Row(
-                Modifier.fillMaxWidth().padding(bottom = SecondRowSpec.BOTTOM_INSET).testTag(SecondRowGroupTags.row(g.id))
-                    .clip(strip).background(palette.tabStrip, strip).border(1.dp, palette.islandBorder, strip)
-                    .padding(vertical = SecondRowSpec.STRIP_PAD_V),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                GroupIndex(g, selectedId, onSelect, palette.island, palette.onIsland, palette.accentOnIsland, tabHeight)
-                Text("|", Modifier.testTag(SecondRowGroupTags.divider(g.id)), color = palette.inkDim)
-                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
-                    g.pages.forEachIndexed { i, page ->
-                        val on = page.id == selectedId
-                        SecondRowTab(
-                            page, i, g.pages.size, on, named = on, palette = palette, tabHeight = tabHeight, tab = tab, iconFor = iconFor,
-                            onClick = { if (on) onReselect(page) else onSelect(page) },
-                        )
+    // Column-aligned "|": the label column is as wide as the WIDEST group label (measured), so the dividers line up like a table column.
+    val measurer = rememberTextMeasurer()
+    val labelWidthPx = groupLabelColumnWidth(groups.map { measurer.measure(groupIndexText(it), GroupLabelStyle, maxLines = 1, softWrap = false).size.width })
+    val labelWidth = with(density) { labelWidthPx.toDp() } + SecondRowSpec.SELECTED_PAD_H * 2
+    ChromeBarVisibility(hidden = hidden) {
+    Column(modifier.fillMaxWidth().padding(top = top, bottom = SecondRowSpec.BOTTOM_INSET, start = SecondRowSpec.SIDE, end = SecondRowSpec.SIDE)) {
+        // ONE shared surface for every group row (not a box per row).
+        Column(
+            Modifier.fillMaxWidth().testTag(SecondRowGroupTags.BOX)
+                .clip(strip).background(palette.tabStrip, strip).border(1.dp, palette.islandBorder, strip)
+                .padding(vertical = SecondRowSpec.STRIP_PAD_V),
+        ) {
+            groups.forEach { g ->
+                Row(Modifier.fillMaxWidth().testTag(SecondRowGroupTags.row(g.id)), verticalAlignment = Alignment.CenterVertically) {
+                    GroupIndex(g, selectedId, onSelect, palette.island, palette.onIsland, palette.accentOnIsland, tabHeight, labelWidth)
+                    Text("|", Modifier.testTag(SecondRowGroupTags.divider(g.id)), color = palette.inkDim)
+                    Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
+                        g.pages.forEachIndexed { i, page ->
+                            val on = page.id == selectedId
+                            SecondRowTab(
+                                page, i, g.pages.size, on,
+                                // Default state: EVERY page shows its name; only the HIDDEN/SHRUNK states fold the non-selected ones.
+                                named = !compact || on,
+                                palette = palette, tabHeight = tabHeight, tab = tab, iconFor = iconFor,
+                                onClick = { if (on) onReselect(page) else onSelect(page) },
+                            )
+                        }
                     }
                 }
             }
         }
     }
+    }
 }
+
+/** The text of a group's index label (name and the dropdown caret). */
+internal fun groupIndexText(group: NavGroup): String = group.label + " \u25BE"
+
+/** The label column's width: the widest measured label, so every row's "|" sits at the same x. */
+public fun groupLabelColumnWidth(labelWidthsPx: List<Int>): Int = labelWidthsPx.maxOrNull() ?: 0
+
+private val GroupLabelStyle = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
 
 /** The group label: a tap opens the dropdown listing the group's pages (a bounded, plain list: its own scroll is the only one). */
 @Composable
@@ -150,16 +176,17 @@ private fun GroupIndex(
     ink: androidx.compose.ui.graphics.Color,
     accent: androidx.compose.ui.graphics.Color,
     height: Dp,
+    width: Dp,
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
         Box(
-            Modifier.height(height).clip(RoundedCornerShape(SecondRowSpec.TAB_RADIUS))
+            Modifier.width(width).height(height).clip(RoundedCornerShape(SecondRowSpec.TAB_RADIUS))
                 .clickable(role = Role.Button) { open = true }
-                .padding(horizontal = SecondRowSpec.SELECTED_PAD_H)
+                
                 .testTag(SecondRowGroupTags.index(group.id)),
             contentAlignment = Alignment.Center,
-        ) { Text(group.label + " \u25BE", color = ink, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+        ) { Text(groupIndexText(group), color = ink, style = GroupLabelStyle, maxLines = 1, softWrap = false) }
         if (open) Popup(
             popupPositionProvider = remember { BelowAnchor },
             onDismissRequest = { open = false },

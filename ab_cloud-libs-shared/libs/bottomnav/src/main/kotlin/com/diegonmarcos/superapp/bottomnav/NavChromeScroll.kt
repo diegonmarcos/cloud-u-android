@@ -29,3 +29,21 @@ public fun NavChromeScroll(modifier: Modifier = Modifier, content: @Composable (
         Box(modifier.fillMaxSize().nestedScroll(own)) { content(own) }
     }
 }
+
+/**
+ * Slides a bar away while the chrome is HIDDEN (a downward drag in progress) and back otherwise; the bar leaves the tree
+ * and its row/column gives its room to the page. [hidden] defaults to the chrome's shared state.
+ */
+@Composable
+public fun ChromeBarVisibility(
+    modifier: Modifier = Modifier,
+    hidden: Boolean = LocalNavChromeCollapse.current?.hidden ?: false,
+    content: @Composable () -> Unit,
+) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = !hidden,
+        modifier = modifier,
+        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+    ) { content() }
+}
