@@ -8,6 +8,8 @@
     <!-- Profile at the top right opens Cloud Account (com.diegonmarcos.cloudaccount.OPEN, libs:bottomnav AccountLaunch). -->
     <queries>
         <package android:name="com.diegonmarcos.cloudaccount" />
+        <!-- FleetNews: the fleet bearer for the public news route is read from Cloud Account / SuperApp providers. -->
+        <package android:name="com.diegonmarcos.superapp" />
     </queries>
 
     <application

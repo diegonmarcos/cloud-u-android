@@ -6,13 +6,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.net.URLEncoder
 
 /** What a feed fetch ended with: the [stories], or [error] when the backend could not be reached (an honest empty state, never invented stories). */
 data class Feed(val stories: List<Story>, val error: String? = null)
 
 /**
- * The News tab's data: the fleet's news-gdelt service (BuildConfig.NEWS_BASE_URL, baked from ac_cloud-news/data/topics.json::api.base),
+ * The News tab's data: the fleet's news-gdelt service (BuildConfig.NEWS_MESH_URL, then NEWS_PUBLIC_URL with the fleet bearer: [FleetNews], baked from the fleet_endpoints `news` entry),
  * parsed by [News]; the card and story summaries are the gateway's, from the fetched headlines only. Feeds and summaries are
  * cached in memory for the process.
  */
@@ -30,7 +29,7 @@ object SiNews {
         val articles = ArrayList<Article>()
         var error: String? = null
         for (q in News.queries(topic, cfg.topics)) {
-            val r = runCatching { AiUrlHttp.get(News.url(BuildConfig.NEWS_BASE_URL, cfg, q) { URLEncoder.encode(it, "UTF-8") }, emptyMap(), cfg.timeoutMs) }
+            val r = runCatching { FleetNews.get(ctx, cfg, q) { AiUrlHttp.get(it.first, it.second, cfg.timeoutMs) } }
             val http = r.getOrNull()
             if (http == null) {
                 error = r.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName }

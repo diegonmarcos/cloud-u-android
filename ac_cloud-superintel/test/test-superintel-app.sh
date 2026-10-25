@@ -77,6 +77,7 @@ for dp, dn, fn in os.walk(os.path.join(app, "app/src/main")):
         if f.endswith((".kt", ".java")):
             t = code(os.path.join(dp, f))
             for pat in (r"revealAiKey", r"EncryptedSharedPreferences", r"sk-or-[A-Za-z0-9]", r"android\.util\.Log", r"Authorization"):
+                if pat == "Authorization" and f == "FleetNews.kt": continue   # the one declared place the fleet bearer is read on use and sent to the public origin; never stored or logged
                 if re.search(pat, t): bad.append("B4 %s matches %s: this app holds and logs no token" % (f, pat))
 
 # B5
@@ -86,8 +87,9 @@ if "android.intent.action.SEND" not in manifest or "ACTION_SEND" not in main: ba
 if bj["android"]["application_id"] != "com.diegonmarcos.cloudsuperintel": bad.append("B5 application_id drifted")
 
 # B6
-if "NEWS_BASE_URL" not in script: bad.append("B6 the app's build script does not bake NEWS_BASE_URL")
-if "BuildConfig.NEWS_BASE_URL" not in code(os.path.join(kt, "SiNews.kt")): bad.append("B6 SiNews does not read BuildConfig.NEWS_BASE_URL")
+if "NEWS_MESH_URL" not in script or "fleetMeshUrl('news')" not in script: bad.append("B6 the app's build script does not bake NEWS_MESH_URL from the fleet news entry")
+if "topics.json" in script: bad.append("B6 the app's build script reads topics.json for the news address: it is declared in fleet_endpoints")
+if "BuildConfig.NEWS_MESH_URL" not in code(os.path.join(kt, "FleetNews.kt")): bad.append("B6 FleetNews does not read BuildConfig.NEWS_MESH_URL")
 nb = data("notebook.json")
 if not nb["refusal"].strip() or "{{refusal}}" not in nb["grounding"]["system"]: bad.append("B6 the notebook declares no refusal line in its grounding prompt")
 notebook_kt = code(os.path.join(kt, "Notebook.kt"))
@@ -126,7 +128,8 @@ mutant "markdown off"                  "sed -i 's/markdown = true/markdown = fal
 mutant "bottom nav loses News"          "python3 -c \"import json;p='build.json';d=json.load(open(p));d['ui']['bottom_nav']=['notebook','si'];json.dump(d,open(p,'w'))\"" "B1 the bottom nav must be"
 mutant "persona page not in data"      "sed -i 's/\"id\": \"cto\"/\"id\": \"cto2\"/' app/src/main/assets/si/personas.json"  "B1 the SI pages are not exactly"
 mutant "news topic not in ui"          "sed -i 's/\"id\": \"arts\"/\"id\": \"arts2\"/' app/src/main/assets/si/news.json"  "B1 the News pages are not exactly"
-mutant "news address not baked"        "sed -i 's/NEWS_BASE_URL/NOPE/g' $SCRIPT"                               "B6 the app's build script does not bake NEWS_BASE_URL"
+mutant "news address not baked"        "sed -i 's/NEWS_MESH_URL/NOPE/g' $SCRIPT"                               "B6 the app's build script does not bake NEWS_MESH_URL"
+mutant "stale topics.json read creeps in" "echo \"def x = file('../../ac_cloud-news/data/topics.json')\" >> $SCRIPT"  "B6 the app's build script reads topics.json"
 mutant "refusal line dropped"          "sed -i 's/exactly: {{refusal}}/exactly: nothing/' app/src/main/assets/si/notebook.json"  "B6 the notebook declares no refusal"
 mutant "article spelled in Kotlin"     "echo 'val x = Article(\"https://a\", \"t\", \"\", \"\", \"d\")' >> $KT/SiNews.kt"  "B6 SiNews.kt spells a news article"
 mutant "token read creeps in"          "echo 'val x = revealAiKey' >> $KT/SiAi.kt"                             "B4 SiAi.kt matches revealAiKey"

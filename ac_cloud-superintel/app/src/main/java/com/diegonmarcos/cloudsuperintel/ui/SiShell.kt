@@ -132,7 +132,7 @@ fun SiShell() {
                             }
                             else -> when (pageId) {
                                 Decl.PAGE_MODELS -> TextPage(R.string.models_title, stringResource(R.string.models_body)) { AiSettingsPickers(chat, theme) }
-                                Decl.PAGE_BACKEND -> TextPage(R.string.backend_title, stringResource(R.string.backend_body) + "\n\n" + stringResource(R.string.backend_gateway, BuildConfig.AI_GATEWAY_URL) + "\n" + stringResource(R.string.backend_news, BuildConfig.NEWS_BASE_URL))
+                                Decl.PAGE_BACKEND -> TextPage(R.string.backend_title, stringResource(R.string.backend_body) + "\n\n" + stringResource(R.string.backend_gateway, BuildConfig.AI_GATEWAY_URL) + "\n" + stringResource(R.string.backend_news, BuildConfig.NEWS_MESH_URL))
                                 Decl.PAGE_ABOUT -> TextPage(R.string.about_title, stringResource(R.string.about_body, BuildConfig.VERSION_NAME, BuildConfig.GIT_SHORT_SHA))
                             }
                         }

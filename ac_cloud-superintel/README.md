@@ -25,7 +25,7 @@ agent pickers, answers streaming in, replies drawn as Markdown.
   reranker score floor keeps grounding strict) and BM25 on the phone otherwise. A PDF source is turned into text by the same service (POST /pdf, mesh
   only; off the mesh the file is refused). Studio: summary, FAQ and study notes over the sources.
 * **News** (`assets/si/news.json`): Discover-style topic feeds (For you, Tech, Science, Finance, World, Health, Sports, Arts) from the fleet's
-  news-gdelt service (`ac_cloud-news/data/topics.json::api.base`, baked as `BuildConfig.NEWS_BASE_URL`); headlines about one event are merged into
+  news-gdelt service (the `news` entry of `ac_cloud-account/build.json::fleet_endpoints`: mesh first, public + fleet bearer after it; baked as `BuildConfig.NEWS_MESH_URL` / `NEWS_PUBLIC_URL`); headlines about one event are merged into
   a story with its source count; the card and story summaries are written by the gateway from those headlines only. An unreachable backend shows an
   empty state, never invented stories. The follow-up box drops its question, with the story's sources, into the SI chat box.
 * JVM tests (`app/src/test`): personas from data, notebook refusal and citation checks, news parsing and grouping.
