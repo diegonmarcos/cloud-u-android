@@ -81,8 +81,8 @@ public fun Modifier.chromeScroll(collapse: BottomNavCollapse): Modifier =
                 val event = awaitPointerEvent(PointerEventPass.Initial)
                 val change = event.changes.firstOrNull() ?: continue
                 when {
-                    event.changes.none { it.pressed } -> { if (down) collapse.onRelease(); down = false }
-                    !down -> { down = true; startX = change.position.x; startY = change.position.y }
+                    event.changes.none { it.pressed } -> { if (down) { collapse.onFinger(false); collapse.onRelease() }; down = false }
+                    !down -> { down = true; collapse.onFinger(true); startX = change.position.x; startY = change.position.y }
                     else -> {
                         val dy = change.position.y - startY
                         val dx = change.position.x - startX

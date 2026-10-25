@@ -49,4 +49,23 @@ class ChromeScrollStateTest {
         c.onScrollDelta(3f)
         assertEquals("a host without touch state settles straight to SHRUNK", s, c.state)
     }
+
+    @Test fun `with a touch watcher a user-input scroll without a finger shrinks instead of hiding`() {
+        val c = BottomNavCollapse()
+        c.onFinger(false)
+        c.onPreScroll(androidx.compose.ui.geometry.Offset(0f, -20f), androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput)
+        assertEquals("an injected scroll (accessibility, a test) settles to SHRUNK", s, c.state)
+        c.restore()
+        c.onFinger(true)
+        c.onPreScroll(androidx.compose.ui.geometry.Offset(0f, -20f), androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput)
+        assertEquals("a scroll with the finger down is a drag", h, c.state)
+        c.onFinger(false); c.onRelease()
+        assertEquals(s, c.state)
+    }
+
+    @Test fun `without a touch watcher a user-input scroll is a drag`() {
+        val c = BottomNavCollapse()
+        c.onPreScroll(androidx.compose.ui.geometry.Offset(0f, -20f), androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput)
+        assertEquals(h, c.state)
+    }
 }

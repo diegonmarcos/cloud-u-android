@@ -495,6 +495,14 @@ public class BottomNavCollapse : NestedScrollConnection {
 
     public fun onRelease() { state = chromeScrollOnRelease(state) }
 
+    // Once a host watches the raw touch ([onFinger]), a scroll counts as a DRAG only while the finger is down: a scroll a service
+    // injects (an accessibility action, a test's semantics scroll) arrives as "user input" with no finger and must not hide the bars for good.
+    private var fingerTracked = false
+    private var fingerDown = false
+
+    /** The host's touch watcher: the finger went [down] on the page, or lifted. */
+    public fun onFinger(down: Boolean) { fingerTracked = true; fingerDown = down }
+
     /** A scroll UP by any means: everything comes back. */
     public fun restore() { state = ChromeScrollState.Default }
 
@@ -502,7 +510,7 @@ public class BottomNavCollapse : NestedScrollConnection {
         // Negated: a nested-scroll y goes negative as the content travels down, which is the same
         // gesture a View shell measures as a RISING scroll offset. One rule, [chromeScrollOnDelta], so the
         // Compose and View hosts cannot collapse on different definitions (#673). A finger-driven scroll is a drag; a fling/settle is not.
-        state = chromeScrollOnDelta(state, -available.y, dragging = source == NestedScrollSource.UserInput)
+        state = chromeScrollOnDelta(state, -available.y, dragging = source == NestedScrollSource.UserInput && (!fingerTracked || fingerDown))
         return Offset.Zero
     }
 
