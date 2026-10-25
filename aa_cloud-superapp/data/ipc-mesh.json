@@ -1217,8 +1217,7 @@
      "callers": [
       "account",
       "search",
-      "store",
-      "superintel"
+      "store"
      ]
     },
     {
@@ -1308,8 +1307,7 @@
       "keyboard",
       "mail",
       "search",
-      "store",
-      "superintel"
+      "store"
      ]
     },
     {
