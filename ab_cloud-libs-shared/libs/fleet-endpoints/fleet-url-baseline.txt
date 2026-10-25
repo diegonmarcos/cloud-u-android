@@ -15,7 +15,6 @@ aa_cloud-superapp/build.json	ui.mail_accounts.*.server	pending	request endpoint 
 aa_cloud-superapp/build.json	ui.ntfy.web_base_url	link	web link to the ntfy page
 aa_cloud-superapp/build.json	ui.profile_sync.url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 aa_cloud-superapp/build.json	ui.sections.*.jmap_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
-aa_cloud-superapp/build.json	ui.sections.*.pages.*.action	link	a link the user opens in the browser or a WebView page; no request is made by the app
 aa_cloud-superapp/build.json	ui.sections.*.pages.*.dagu_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 aa_cloud-superapp/build.json	ui.sections.*.pages.*.mattermost_default_server	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 aa_cloud-superapp/build.json	ui.sections.*.pages.*.url	link	a link the user opens in the browser or a WebView page; no request is made by the app
