@@ -66,6 +66,7 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
     }
 
     // The fleet's own host: the page above the island, the scroll collapse and the inset handling.
+    // Every page below scrolls inside it; DriveChromeCollapseTest proves at runtime that a swipe collapses and restores the chrome.
     val host: @Composable () -> Unit = {
         NavBarBottomHost(
             entries = entries,
