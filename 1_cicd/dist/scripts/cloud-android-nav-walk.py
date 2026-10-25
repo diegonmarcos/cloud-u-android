@@ -8,9 +8,10 @@ for each, checks what the owner keeps finding by hand:
 
   P1 no crash: the process is alive, the app owns the foreground and logcat holds no FATAL EXCEPTION for it.
   P2 the first row's title dropdown (the breadcrumb) opens, lists the page, and closes again.
-  P3 swipe up on the content. If the page scrolled (its content moved) the chrome MUST have collapsed: the first row is
-     gone, every non-selected bottom label is gone, the bottom bar is shorter (and the second row's tabs, when the page
-     has one). Swipe down: all of it is back. A page that did not scroll (nothing moved, nothing collapsed) is reported
+  P3 drag up on the content and HOLD the finger down: if the page scrolled the chrome MUST be HIDDEN (first row, second
+     row and bottom bar all gone: the three-state scroll machine's HIDDEN). Lift the finger: SHRUNK (the first row stays
+     gone, every non-selected bottom label is gone, the bottom bar is shorter, and so are the second row's tabs when the
+     page has one). Swipe down: DEFAULT, all of it is back. A page that did not scroll (nothing moved, nothing collapsed) is reported
      `fixed` and only has to leave the chrome intact: a page that scrolls but leaves the chrome expanded FAILS.
   P4 the pick landed: after choosing the page in the dropdown the title path ends in its label.
 
@@ -92,11 +93,21 @@ def dump(tries=8, _depth=0):
 ANRS = [0]
 
 
+def anr_evidence(pkg=""):
+    """Say WHY a "not responding" dialog came: the system's own ANR line, its CPU load (an overloaded emulator shows a load far above its
+    cores) and the app's main-thread frames, so real main-thread work can be told from a slow emulator."""
+    out = shell("logcat -d -b main,system,events -v brief 2>/dev/null | grep -E 'ANR in|Reason:|Load:|am_anr' | tail -6", timeout=60).strip()
+    traces = shell("cat /data/anr/anr_* 2>/dev/null | grep -A12 '\"main\" prio' | head -16", timeout=60).strip()
+    cores = shell("nproc").strip()
+    print("  ANR evidence (emulator cores %s):\n    %s\n    main thread: %s" % (cores, out.replace("\n", "\n    ") or "none in logcat", traces.replace("\n", "\n    ") or "no /data/anr trace"), flush=True)
+
+
 def dismiss_emulator_prompt(nodes):
     """The emulator's own "Allow wireless debugging on this network?" dialog covers any app that starts after the network comes up."""
     wait = find(nodes, "aerr_wait")
     if wait is not None and ANRS[0] < 40:  # an emulator under load reports "not responding": wait it out, and count it in the report
         ANRS[0] += 1
+        anr_evidence()
         tap(wait)
         time.sleep(3.0)
         return True
@@ -159,6 +170,10 @@ def tap(n):
 
 def swipe(x, y1, y2, ms=350):
     shell("input swipe %d %d %d %d %d" % (x, y1, x, y2, ms))
+
+
+def motion(action, x, y):
+    shell("input motionevent %s %d %d" % (action, x, y))
 
 
 def settle(s=0.9):
@@ -384,10 +399,18 @@ class Walk:
         sig0 = self.signature(nodes, top, bottom)
         x = self.w // 2
         y1, y2 = int(top + (bottom - top) * 0.8), int(top + (bottom - top) * 0.2)
-        for _ in range(2):
-            swipe(x, y1, y2)
-            settle(0.5)
-        settle(0.9)
+        # HIDDEN: drag up and keep the finger on the screen; everything must be gone while it is down
+        motion("DOWN", x, y1)
+        steps = 8
+        for i in range(1, steps + 1):
+            motion("MOVE", x, y1 + (y2 - y1) * i // steps)
+            time.sleep(0.05)
+        settle(0.8)
+        held = dump() or []
+        motion("UP", x, y2)
+        settle(0.5)
+        swipe(x, y1, y2)
+        settle(1.2)
         nodes2 = dump()
         if nodes2 is None:
             fails.append("P3 the UI could not be read after scrolling")
@@ -398,6 +421,12 @@ class Walk:
         sig1 = self.signature(nodes2, *self.content_box(nodes2)) if after["row"] else None
         if collapsed:
             checks["scroll"] = "scrolled"
+            h = self.chrome(held)
+            if h["row"] or find(held, ISLAND) is not None or h["items"] or find(held, STRIP) is not None or h["tabs"]:
+                fails.append("P3 hidden: while the finger is down every bar must be away (first row %s, bottom items %d, second-row tabs %d)" % (h["row"], h["items"], h["tabs"]))
+            checks["states"] = "default>hidden>shrunk"
+            if not after["items"]:
+                fails.append("P3 shrunk: after the finger lifted the bottom bar did not come back")
             if len(after["labels"]) > 1:
                 fails.append("P3 scrolled: the first row hid but non-selected bottom labels stayed (%s)" % ", ".join(sorted(after["labels"])))
             if after["bar_h"] >= before["bar_h"]:
