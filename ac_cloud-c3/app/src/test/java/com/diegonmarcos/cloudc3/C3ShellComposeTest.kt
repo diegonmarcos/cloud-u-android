@@ -12,6 +12,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
 import org.junit.Assert.assertEquals
@@ -69,6 +70,8 @@ class C3ShellComposeTest {
         compose.waitForIdle()
     }
 
+    /** A row inside the title dropdown's own scroll: brought into view first. */
+    private fun tapIn(tag: String) { compose.onNodeWithTag(tag).performScrollTo().performClick(); compose.waitForIdle() }
     private fun tap(tag: String) { compose.onNodeWithTag(tag).performClick(); compose.waitForIdle() }
     private fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
 
@@ -169,7 +172,7 @@ class C3ShellComposeTest {
     fun `a tree page opens its section and page, and closes the dropdown`() {
         show()
         tap(TopBarTags.TITLE)
-        tap(C3Tags.drawerPage("containers", "table"))
+        tapIn(C3Tags.drawerPage("containers", "table"))
         assertEquals(listOf(C3Nav.Target("containers", "table")), opened)
         assertFalse("the dropdown closes after a tap", exists(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.DROPDOWN))
     }
@@ -178,7 +181,7 @@ class C3ShellComposeTest {
     fun `a tree section header opens the section`() {
         show()
         tap(TopBarTags.TITLE)
-        tap(C3Tags.drawerSection("ops"))
+        tapIn(C3Tags.drawerSection("ops"))
         assertEquals(listOf(C3Nav.Target("ops")), opened)
     }
 

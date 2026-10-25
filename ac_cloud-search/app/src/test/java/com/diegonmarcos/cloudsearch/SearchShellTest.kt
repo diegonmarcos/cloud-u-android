@@ -13,6 +13,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -285,11 +286,11 @@ class SearchShellTest {
         launch()
         compose.onNodeWithTag(Tags.ISLAND).performClick()
         waitFor(Tags.drawer("jobs"))
-        compose.onNodeWithTag(Tags.drawer("jobs")).performClick()
+        compose.onNodeWithTag(Tags.drawer("jobs")).performScrollTo().performClick()
         compose.runOnIdle { assertEquals("jobs", state.vertical); assertEquals(null, state.menu) }
         compose.onNodeWithTag(Tags.ISLAND).performClick()
         waitFor(Tags.drawer("saved"))
-        compose.onNodeWithTag(Tags.drawer("saved")).performClick()
+        compose.onNodeWithTag(Tags.drawer("saved")).performScrollTo().performClick()
         waitFor(Tags.SAVED)
         compose.onNodeWithTag(Tags.ISLAND).assertTextContains("Saved Items", substring = true)
         openVertical("house")
