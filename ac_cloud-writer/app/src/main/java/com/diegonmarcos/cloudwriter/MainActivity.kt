@@ -422,21 +422,19 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
             }
-            if (current == Screen.EDITOR) {
-                Box(Modifier.fillMaxSize().themeBackground(dark)) { EditorScreen() }
-            } else {
-                NavBarBottomHost(
-                    entries = entries,
-                    selectedId = sectionId,
-                    onSelect = { e -> if (e.id != sectionId) goSection(e.id) },
-                    dark = dark,
-                ) {
-                    when (current) {
-                        Screen.DOCS -> DocsScreen()
-                        Screen.TOOLS -> ToolsScreen()
-                        Screen.CONFIGS -> ConfigsScreen()
-                        Screen.EDITOR -> Unit
-                    }
+            // The editor sits under the same bar as every other screen (the walk, and a user, reach Tools and Settings from an open
+            // document); the bar steps aside by itself while the keyboard is up.
+            NavBarBottomHost(
+                entries = entries,
+                selectedId = sectionId,
+                onSelect = { e -> if (e.id != sectionId) goSection(e.id) },
+                dark = dark,
+            ) {
+                when (current) {
+                    Screen.DOCS -> DocsScreen()
+                    Screen.TOOLS -> ToolsScreen()
+                    Screen.CONFIGS -> ConfigsScreen()
+                    Screen.EDITOR -> EditorScreen()
                 }
             }
         }

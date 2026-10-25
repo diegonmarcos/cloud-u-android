@@ -8,6 +8,8 @@ import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 
 /**
  * The ONE scroll connection of an app's chrome (#1157): scrolling the page down hides the first row and compacts the second
@@ -40,7 +42,7 @@ public fun NavChromeScroll(modifier: Modifier = Modifier, content: @Composable (
         onDispose { if (root.getTag(CHROME_SINK_TAG) === own) root.setTag(CHROME_SINK_TAG, null) }
     }
     CompositionLocalProvider(LocalNavChromeCollapse provides own) {
-        Box(modifier.fillMaxSize().nestedScroll(own)) { content(own) }
+        Box(modifier.fillMaxSize().chromeScroll(own)) { content(own) }
     }
 }
 
@@ -61,3 +63,32 @@ public fun ChromeBarVisibility(
         exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
     ) { content() }
 }
+
+/**
+ * The chrome's scroll wiring for the box that holds the page: the nested-scroll connection, plus a watcher of the raw touch that
+ * consumes nothing. The watcher is what makes the machine independent of how a page scrolls (a Fragment, a WebView, a View list):
+ * the finger LIFTING is the release (HIDDEN becomes SHRUNK), and a finger dragging DOWN the screen is a scroll up, which restores
+ * DEFAULT even when the page has nothing left to scroll and so reports no delta.
+ */
+public fun Modifier.chromeScroll(collapse: BottomNavCollapse): Modifier =
+    this.nestedScroll(collapse).pointerInput(collapse) {
+        val slop = viewConfiguration.touchSlop
+        awaitPointerEventScope {
+            var down = false
+            var startX = 0f
+            var startY = 0f
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val change = event.changes.firstOrNull() ?: continue
+                when {
+                    event.changes.none { it.pressed } -> { if (down) collapse.onRelease(); down = false }
+                    !down -> { down = true; startX = change.position.x; startY = change.position.y }
+                    else -> {
+                        val dy = change.position.y - startY
+                        val dx = change.position.x - startX
+                        if (dy > slop && dy > kotlin.math.abs(dx)) collapse.restore()
+                    }
+                }
+            }
+        }
+    }

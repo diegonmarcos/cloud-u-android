@@ -56,6 +56,7 @@ import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlTokens
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
+import com.diegonmarcos.superapp.bottomnav.chromeScroll
 import com.diegonmarcos.superapp.bottomnav.navHiddenByIme
 import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 import com.diegonmarcos.superapp.themebg.themeBackground
@@ -204,7 +205,7 @@ public fun NavBarBottomHost(
         Box(
             Modifier.weight(1f).fillMaxWidth()
                 .then(if (navHiddenByIme()) Modifier else Modifier.consumeWindowInsets(insets.only(WindowInsetsSides.Bottom)))
-                .then(if (inherited == null) Modifier.nestedScroll(own) else Modifier)
+                .then(if (inherited == null) Modifier.chromeScroll(own) else Modifier)
                 .testTag(NAV_BAR_BOTTOM_CONTENT_TAG),
         ) { content() }
         NavBarBottom(entries, selectedId, onSelect, dark, collapsed = collapse.collapsed)

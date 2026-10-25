@@ -495,6 +495,9 @@ public class BottomNavCollapse : NestedScrollConnection {
 
     public fun onRelease() { state = chromeScrollOnRelease(state) }
 
+    /** A scroll UP by any means: everything comes back. */
+    public fun restore() { state = ChromeScrollState.Default }
+
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
         // Negated: a nested-scroll y goes negative as the content travels down, which is the same
         // gesture a View shell measures as a RISING scroll offset. One rule, [chromeScrollOnDelta], so the
