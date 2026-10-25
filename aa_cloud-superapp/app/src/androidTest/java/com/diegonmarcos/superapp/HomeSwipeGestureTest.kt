@@ -63,7 +63,9 @@ class HomeSwipeGestureTest {
         val y0 = dm.heightPixels * fromFrac
         val y1 = dm.heightPixels * toFrac
         val ua = inst.uiAutomation
-        val t0 = SystemClock.uptimeMillis()
+        // Event times are synthetic (16 ms apart, in the past): a slow CI emulator injects slowly, and the detector measures
+        // velocity from the event times, not from the wall clock.
+        val t0 = SystemClock.uptimeMillis() - 400
         fun send(action: Int, y: Float, t: Long) {
             val e = MotionEvent.obtain(t0, t, action, x, y, 0)
             e.source = InputDevice.SOURCE_TOUCHSCREEN
@@ -72,10 +74,9 @@ class HomeSwipeGestureTest {
         send(MotionEvent.ACTION_DOWN, y0, t0)
         val steps = 8
         for (s in 1..steps) {
-            SystemClock.sleep(20)
-            send(MotionEvent.ACTION_MOVE, y0 + (y1 - y0) * s / steps, SystemClock.uptimeMillis())
+            send(MotionEvent.ACTION_MOVE, y0 + (y1 - y0) * s / steps, t0 + 16L * s)
         }
-        send(MotionEvent.ACTION_UP, y1, SystemClock.uptimeMillis())
+        send(MotionEvent.ACTION_UP, y1, t0 + 16L * (steps + 1))
     }
 
     /** Swipes in the first column that is not one of the Home stars (a gesture that starts on a star is the star's). */
