@@ -278,9 +278,15 @@ if (!(navPages('configs') instanceof List) || navPages('configs').isEmpty()) {
 if (!(navPages('git') instanceof List) || navPages('git').isEmpty()) {
     throw new GradleException("build.json::ui.sections[git].pages must declare the Git strip, Me and Cloud (#1149)")
 }
-['git', 'rsync', 'mounts'].each { sid ->
+['git', 'fsync', 'mounts'].each { sid ->
     if (!uiDecl.bottom_nav.contains(sid) || !uiDecl.sections.any { it.id == sid }) {
-        throw new GradleException("build.json::ui.bottom_nav / ui.sections must declare the ${sid} page, a former Sync page (#1149)")
+        throw new GradleException("build.json::ui.bottom_nav / ui.sections must declare the ${sid} page, a former Sync page (#1149, #1173)")
+    }
+}
+// #1173 Fsync (Backup, Folders Sync) and Mounts (Rclone, FUSE) each carry their second row: a page with no strip would draw one body only.
+[fsync: ['backup', 'folders'], mounts: ['rclone', 'fuse']].each { sid, ids ->
+    if (navPages(sid)?.collect { it.id } != ids) {
+        throw new GradleException("build.json::ui.sections[${sid}].pages must declare ${ids} in that order (#1173)")
     }
 }
 if (!(uiDecl.sync?.cloud_list?.owner ?: '').toString() || !(uiDecl.sync?.cloud_list?.name_prefix ?: '').toString()) {
