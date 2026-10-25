@@ -22,6 +22,7 @@ import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.backups.MirrorRunner
 import com.diegonmarcos.clouddrive.configs.ConfigsScreen
+import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -90,7 +91,7 @@ class DriveScreenshotTest {
         compose.setContent {
             DriveTheme {
                 DriveShell(select = "configs") { id, _ ->
-                    if (id == "configs") ConfigsScreen(mirrors, prefs, actions, hasAccess = true, rcloneVersion = null, page = "webserver")
+                    if (id == "configs") ConfigsScreen(mirrors, prefs, actions, hasAccess = true, rcloneVersion = null, git = GitSyncCoordinator(ctx, CoroutineScope(SupervisorJob() + Dispatchers.Main)), page = "webserver")
                 }
             }
         }
