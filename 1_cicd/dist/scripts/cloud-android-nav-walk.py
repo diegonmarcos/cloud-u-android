@@ -89,8 +89,17 @@ def dump(tries=8, _depth=0):
     return None
 
 
+ANRS = [0]
+
+
 def dismiss_emulator_prompt(nodes):
     """The emulator's own "Allow wireless debugging on this network?" dialog covers any app that starts after the network comes up."""
+    wait = find(nodes, "aerr_wait")
+    if wait is not None and ANRS[0] < 40:  # an emulator under load reports "not responding": wait it out, and count it in the report
+        ANRS[0] += 1
+        tap(wait)
+        time.sleep(3.0)
+        return True
     title = find(nodes, "alertTitle")
     if title is not None and "wireless debugging" in title.text.lower():
         always, allow = find(nodes, "alwaysUse"), find(nodes, "button1")
@@ -519,7 +528,7 @@ class Walk:
         with open(os.path.join(self.out, "report.json"), "w") as f:
             json.dump({"app": app, "pkg": self.pkg, "results": self.results}, f, indent=1)
         n = {k: sum(1 for r in self.results if r["status"] == k) for k in ("PASS", "FAIL", "SKIP")}
-        lines = ["### %s (%s): %d passed, %d failed, %d skipped" % (app, self.pkg, n["PASS"], n["FAIL"], n["SKIP"]), "",
+        lines = ["### %s (%s): %d passed, %d failed, %d skipped (%d 'not responding' dialogs waited out)" % (app, self.pkg, n["PASS"], n["FAIL"], n["SKIP"], ANRS[0]), "",
                  "| section / page | result | dropdown | scroll | metrics (px) | detail |", "|---|---|---|---|---|---|"]
         for r in self.results:
             c = r["checks"]
