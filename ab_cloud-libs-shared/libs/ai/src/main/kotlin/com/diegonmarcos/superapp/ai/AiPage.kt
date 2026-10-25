@@ -355,7 +355,7 @@ private fun Welcome(engines: List<AiEngine>, query: (AiEngine, String) -> String
         verticalArrangement = Arrangement.spacedBy(m.cardPad),
     ) {
         Text(s.hello, color = c.text, style = theme.type.style(design.metric("hello_font").sp, FontWeight.SemiBold), textAlign = TextAlign.Center)
-        Text(sub, color = c.text2, style = theme.type.style(design.metric("meta_font").sp + 1.sp), textAlign = TextAlign.Center)
+        Text(sub, color = c.text2, style = theme.type.style((design.metric("meta_font") + 1f).sp), textAlign = TextAlign.Center)
         suggestions.forEach { q ->
             Text(
                 q, color = c.text, style = theme.type.style(design.metric("chat_font").sp),
