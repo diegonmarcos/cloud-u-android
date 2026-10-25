@@ -78,7 +78,7 @@ class DeclarationsTest {
         val configs = configs()
         // #609 Git/Rclone/Mounts moved OUT to ui.sections[sync].pages. The owner's order: General (#579's Configs
         // page), Webserver (opens cloud-c3-webserver), Backups (its own tab at #603) and Others.
-        assertEquals(listOf("general", "webserver", "backups", "others"), configs.pages.map { it.id })
+        assertEquals(listOf("general", "webserver", "backups", "others", "git"), configs.pages.map { it.id })
         assertTrue(configs.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
     }
 

@@ -152,6 +152,10 @@ object DriveTags {
     const val SYNC_GIT_BULK_BAR = "sync_git_bulk_bar"
     const val SYNC_GIT_SUMMARY = "sync_git_summary"
     const val SYNC_GIT_META_TABLE = "sync_git_meta_table"
+    const val SYNC_GIT_LIST = "sync_git_list"
+    const val SYNC_GIT_LEGEND = "sync_git_legend"
+    const val SYNC_GIT_STATUS_BLOCK = "sync_git_status_block"
+    const val SYNC_GIT_UNPUSHED = "sync_git_unpushed"
     const val SYNC_GIT_LOGIN = "sync_git_login"
     /** #642 the one line that reports what the cloud-terminal git handoff resolved to. */
     const val SYNC_GIT_HANDOFF = "sync_git_handoff"

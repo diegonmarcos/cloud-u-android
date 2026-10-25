@@ -69,7 +69,6 @@ fun GitPageScreen(
     onPageConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val ctx = LocalContext.current
     val pages = Declarations.navPages(Declarations.SECTION_GIT)
     var current by rememberSaveable { mutableStateOf(pages.firstOrNull()?.id ?: "") }
     LaunchedEffect(page) {
@@ -78,17 +77,7 @@ fun GitPageScreen(
     }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    var nextRun by remember { mutableStateOf<Long?>(null) }
-    LaunchedEffect(Unit) {
-        // WorkManager's own word on when the base period fires next; null when it will not say.
-        nextRun = withContext(Dispatchers.IO) {
-            runCatching {
-                val infos = WorkManager.getInstance(ctx).getWorkInfosForUniqueWorkFlow(GitSyncWorker.WORK_NAME).first()
-                val next = infos.firstOrNull { it.state == WorkInfo.State.ENQUEUED }?.nextScheduleTimeMillis
-                SyncSchedule.minutesUntilNext(next, System.currentTimeMillis())
-            }.getOrNull()
-        }
-    }
+    val nextRun = rememberGitNextRun()
     fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
 
     Column(modifier.fillMaxSize()) {
@@ -108,6 +97,23 @@ fun GitPageScreen(
         }
         SnackbarHost(snackbar)
     }
+}
+
+/** WorkManager's own word on minutes until the git sync fires next; null when it will not say. Shared by the Git page and Configs ▸ Git. */
+@Composable
+fun rememberGitNextRun(): Long? {
+    val ctx = LocalContext.current
+    var nextRun by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(Unit) {
+        nextRun = withContext(Dispatchers.IO) {
+            runCatching {
+                val infos = WorkManager.getInstance(ctx).getWorkInfosForUniqueWorkFlow(GitSyncWorker.WORK_NAME).first()
+                val next = infos.firstOrNull { it.state == WorkInfo.State.ENQUEUED }?.nextScheduleTimeMillis
+                SyncSchedule.minutesUntilNext(next, System.currentTimeMillis())
+            }.getOrNull()
+        }
+    }
+    return nextRun
 }
 
 /** The terminal owns the shared store: start it (process, service, store folder), then open it. One island action. */

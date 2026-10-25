@@ -38,6 +38,7 @@ internal fun repoCellModifier(c: RepoColumn): Modifier =
 @Composable
 private fun columnLabel(c: RepoColumn): String = stringResource(when (c) {
     RepoColumn.NAME -> R.string.repo_col_name
+    RepoColumn.PROVIDER -> R.string.repo_col_provider
     RepoColumn.VISIBILITY -> R.string.repo_col_vis
     RepoColumn.SIZE_MAIN -> R.string.repo_col_size_main
     RepoColumn.SIZE_TOTAL -> R.string.repo_col_size_total
@@ -66,12 +67,13 @@ internal fun RepoTableHeader(column: RepoColumn, ascending: Boolean, scroll: Scr
     }
 }
 
-/** The six fact cells after the name, in column order. */
+/** The seven fact cells after the name, in column order. */
 @Composable
 internal fun RepoCells(r: RepoTableRow) {
     val yes = stringResource(R.string.manage_yes)
     val no = stringResource(R.string.manage_no)
     val texts = listOf(
+        RepoColumn.PROVIDER to (r.provider ?: RepoTable.DASH),
         RepoColumn.VISIBILITY to RepoTable.visibility(r.isPrivate, stringResource(R.string.repo_vis_pvt), stringResource(R.string.repo_vis_pub)),
         RepoColumn.SIZE_MAIN to RepoTable.size(r.sizeMainBytes),
         RepoColumn.SIZE_TOTAL to RepoTable.size(r.sizeTotalBytes),
@@ -110,6 +112,7 @@ internal fun actionLabel(id: String, declared: Declarations.GitOpDecl?): String 
     RepoActions.CHECKOUT_MAIN -> stringResource(R.string.repo_act_checkout_main)
     RepoActions.BRANCHES -> stringResource(R.string.repo_act_branches)
     RepoActions.PRS -> stringResource(R.string.repo_act_prs)
+    RepoActions.UNPUSHED -> stringResource(R.string.repo_act_unpushed)
     RepoActions.OPEN_FOLDER -> stringResource(R.string.sync_open)
     "history" -> stringResource(R.string.repo_act_commit_history)
     RepoActions.RUNS -> stringResource(R.string.repo_act_runs)

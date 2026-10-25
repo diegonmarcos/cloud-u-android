@@ -32,7 +32,7 @@ class RepoActionsTest {
         fun of(g: RepoGroup) = RepoActions.GROUPS.first { it.group == g }.actions
         assertEquals(listOf("sync_no_winner", "sync_remote_wins", "sync_local_wins"), of(RepoGroup.SYNC))
         assertEquals(listOf("fetch", "pull", "push", "commit", "stats"), of(RepoGroup.STEPS))
-        assertEquals(listOf("checkout_main", "branches", "open_folder", "web"), of(RepoGroup.GOTO))
+        assertEquals(listOf("checkout_main", "branches", "unpushed", "open_folder", "web"), of(RepoGroup.GOTO))
         assertEquals(listOf("history", "runs", "actions", "prs"), of(RepoGroup.WORKFLOW))
         assertEquals(listOf("remote", "metadata", "sync_now", "hooks", "size", "settings"), of(RepoGroup.OTHERS))
         assertEquals(listOf("force_pull", "force_push"), of(RepoGroup.DANGEROUS))

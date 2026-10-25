@@ -19,6 +19,7 @@ object RepoActions {
     const val CHECKOUT_MAIN = "checkout_main"
     const val BRANCHES = "branches"
     const val PRS = "prs"
+    const val UNPUSHED = "unpushed"
     const val STASH_PUSH = "stash_push"
     const val RUNS = "runs"
     const val CLEAN_1 = "clean_1"
@@ -36,7 +37,7 @@ object RepoActions {
     val GROUPS: List<Group> = listOf(
         Group(RepoGroup.SYNC, listOf(SYNC_NO_WINNER, SYNC_REMOTE_WINS, SYNC_LOCAL_WINS)),
         Group(RepoGroup.STEPS, listOf("fetch", "pull", "push", "commit", "stats")),
-        Group(RepoGroup.GOTO, listOf(CHECKOUT_MAIN, BRANCHES, OPEN_FOLDER, "web")),
+        Group(RepoGroup.GOTO, listOf(CHECKOUT_MAIN, BRANCHES, UNPUSHED, OPEN_FOLDER, "web")),
         Group(RepoGroup.WORKFLOW, listOf("history", RUNS, "actions", PRS)),
         Group(RepoGroup.REPO_CLEAN, listOf(CLEAN_1, CLEAN_5, CLEAN_10)),
         Group(RepoGroup.DANGEROUS, listOf("force_pull", "force_push")),

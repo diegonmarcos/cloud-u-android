@@ -48,6 +48,9 @@ object GitHostsDecl {
         }
     }
 
+    /** `ui.sync.providers`: [hosts] host -> provider id, [labels] provider id -> the column's word. */
+    data class ProvidersDecl(val hosts: Map<String, String>, val labels: Map<String, String>)
+
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
     private fun JsonObject.str(k: String, d: String = ""): String = (this[k] as? JsonPrimitive)?.contentOrNull ?: d
     private fun JsonObject.bool(k: String): Boolean = (this[k] as? JsonPrimitive)?.contentOrNull == "true"
@@ -72,4 +75,11 @@ object GitHostsDecl {
             )
             d.takeIf { it.id.isNotBlank() && it.kind.isNotBlank() && it.apiBase.isNotBlank() && it.reposPath.isNotBlank() }
         }
+
+    /** `ui.sync.providers` out of the decoded ui.sync text; empty maps when it is absent (every repository is then `other`). */
+    fun parseProviders(syncText: String): ProvidersDecl {
+        val o = sync(syncText)?.get("providers") as? JsonObject ?: return ProvidersDecl(emptyMap(), emptyMap())
+        fun map(k: String) = (o[k] as? JsonObject).orEmpty().mapNotNull { (key, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { key.lowercase() to it } }.toMap()
+        return ProvidersDecl(map("hosts"), map("labels"))
+    }
 }

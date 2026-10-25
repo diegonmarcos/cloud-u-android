@@ -64,7 +64,10 @@ done
 g2() {
     grep -qE 'stringResource\(R\.string\.sync_conflicts, glance\.conflicts\), color = off' "$1" &&
     grep -qE 'Pill\(stringResource\(R\.string\.sync_resolve_conflicts, glance\.conflicts\), \{ actions\.openEngine\(EngineActivity\.ENGINE_GIT, repo\.path\) \}, filled = true\)' "$1" &&
-    grep -qE 'glance\.conflicts > 0 -> StatusLight\.State\.OFF' "$1"
+    # #1175 the light's rule moved to RepoStatus (pure, JVM-tested): a conflict is never green.
+    grep -qE 'g\.conflicts > 0 -> Kind\.CONFLICT' "$SRC/sync/RepoStatus.kt" &&
+    grep -qE 'Kind\.DIRTY, Kind\.CONFLICT, Kind\.ERROR -> StatusLight\.State\.OFF' "$SRC/sync/RepoStatus.kt" &&
+    grep -qE 'RepoStatus\.light\(RepoStatus\.kindOf\(' "$1"
 }
 # g6 <GitSyncWorker.kt> : the worker decides per repository through SyncSchedule.isDue with the repo's own period and rule
 g6() {

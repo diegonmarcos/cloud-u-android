@@ -1,7 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 /** #1138 the Sync ▸ Git repo table's columns, in display order. */
-enum class RepoColumn { NAME, VISIBILITY, SIZE_MAIN, SIZE_TOTAL, BRANCHES, DIRTY, AHEAD_BEHIND }
+enum class RepoColumn { NAME, PROVIDER, VISIBILITY, SIZE_MAIN, SIZE_TOTAL, BRANCHES, DIRTY, AHEAD_BEHIND }
 
 /**
  * One table row's facts. A fact the page could not read (not cloned, not fetched yet, no upstream) is
@@ -17,6 +17,8 @@ data class RepoTableRow(
     val dirtyFiles: Int?,
     val ahead: Int?,
     val behind: Int?,
+    /** The forge's printed word (GitHub / GitLab / Gitea / Other) from the remote URL's host; null = no remote URL known. */
+    val provider: String? = null,
 )
 
 /** #1138 the table's pure rules: ranking, sorting, how each cell prints and where its facts come from. */
@@ -30,6 +32,7 @@ object RepoTable {
 
     private fun key(r: RepoTableRow, c: RepoColumn): Comparable<*>? = when (c) {
         RepoColumn.NAME -> r.name.lowercase()
+        RepoColumn.PROVIDER -> r.provider?.lowercase()
         RepoColumn.VISIBILITY -> r.isPrivate?.let { if (it) 1 else 0 }
         RepoColumn.SIZE_MAIN -> r.sizeMainBytes
         RepoColumn.SIZE_TOTAL -> r.sizeTotalBytes
@@ -78,7 +81,7 @@ object RepoTable {
      * glance (the git engine's status, no network) and whether the clone exists. [declaredPrivate] is the
      * listing's flag when there is one; the REST answer fills it for a repo no listing named.
      */
-    fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?): RepoTableRow {
+    fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null): RepoTableRow {
         val local = cloned && glance != null && glance.read && !glance.gone && glance.error == null
         return RepoTableRow(
             name = name,
@@ -89,6 +92,7 @@ object RepoTable {
             dirtyFiles = if (local) glance!!.changed + glance.conflicts else null,
             ahead = if (local && glance!!.upstream != null) glance.ahead else null,
             behind = if (local && glance!!.upstream != null) glance.behind else null,
+            provider = provider,
         )
     }
 }

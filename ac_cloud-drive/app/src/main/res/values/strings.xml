@@ -626,6 +626,30 @@
 
     <!-- #1138 Sync ▸ Git: the sortable repo table and the grouped repository actions -->
     <string name="repo_col_name">Name</string>
+    <string name="repo_col_provider">Provider</string>
+    <string name="repo_act_unpushed">Show unpushed commits</string>
+    <string name="repo_legend">Status icon: ● read, nothing local at risk (clean, ahead or behind) · ○ needs you (uncommitted changes, conflict or a failed status read; the reason is under the name) · ? no status to show (not cloned, or still reading)</string>
+    <string name="repo_status_title">STATUS</string>
+    <string name="repo_status_cloned">Cloned: %1$s</string>
+    <string name="repo_status_branch">Branch: %1$s · upstream %2$s</string>
+    <string name="repo_status_dirty">Dirty: %1$d files (%2$d modified, %3$d untracked, %4$d conflicting)</string>
+    <string name="repo_status_dirty_unknown">Dirty: unknown (status not read)</string>
+    <string name="repo_status_ab">Remote: ahead %1$s · behind %2$s</string>
+    <string name="repo_status_unpushed">Commits not pushed: %1$s</string>
+    <string name="repo_status_fetch">Last fetch: %1$s</string>
+    <string name="repo_status_never">never</string>
+    <string name="repo_status_error">Last error: %1$s</string>
+    <string name="repo_status_none">none</string>
+    <string name="repo_err_timeout">The status check was stopped: it ran past its time limit (%1$s). A very large working tree on slow storage does this; fetch or try again.</string>
+    <string name="repo_err_not_repo">The folder is no longer a git repository (%1$s).</string>
+    <string name="repo_err_permission">The app may not read this folder (%1$s). Check the storage access.</string>
+    <string name="repo_err_auth">The remote refused the credential (%1$s). Sign in again in Configs, Git.</string>
+    <string name="repo_err_engine">The git engine did not answer (%1$s). Start the terminal app and retry.</string>
+    <string name="repo_err_other">The status could not be read: %1$s</string>
+    <string name="repo_unpushed_no_upstream">No upstream branch is set, so there is nothing to compare with.</string>
+    <string name="repo_unpushed_none">Nothing to push: every local commit is on the remote.</string>
+    <string name="repo_unpushed_line">%1$s  %2$s  %3$s</string>
+    <string name="repo_unpushed_failed">The unpushed commits could not be read: %1$s</string>
     <string name="repo_col_vis">Pvt/Pub</string>
     <string name="repo_col_size_main">Size main</string>
     <string name="repo_col_size_total">Size total</string>

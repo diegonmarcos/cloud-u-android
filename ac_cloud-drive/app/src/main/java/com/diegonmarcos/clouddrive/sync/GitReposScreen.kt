@@ -140,6 +140,9 @@ import kotlinx.coroutines.withContext
 /** #1149 which sub-page of Git this screen is: Me (sign-in, my repositories, parentless folders) or Cloud (the public cloud* list). */
 enum class GitView { ME, CLOUD }
 
+/** Which half of Me is drawn: TABLE is the Git page (bulk bar, summary, table, Local, History); SETUP is Configs ▸ Git (everything that used to sit above the table). */
+enum class GitPart { TABLE, SETUP }
+
 /** One row of THE table, whatever listing it came from; [onClone] clones it from the leg that listed it, [note] is a line under it. */
 private class TableEntry(
     val key: String, val label: String, val name: String, val owner: String, val isPrivate: Boolean?, val fork: Boolean, val source: String,
@@ -151,7 +154,8 @@ private data class CloudPublic(val loading: Boolean = false, val loaded: Boolean
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextRunMinutes: Long?, modifier: Modifier = Modifier, view: GitView = GitView.ME, prefs: DrivePrefs? = null) {
+fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextRunMinutes: Long?, modifier: Modifier = Modifier, view: GitView = GitView.ME, prefs: DrivePrefs? = null, part: GitPart = GitPart.TABLE) {
+    val setup = view == GitView.ME && part == GitPart.SETUP
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val page = Declarations.sync.git
@@ -253,9 +257,11 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
 
     // #1138 one table row of one repository: the cached remote facts and the local glance, no network here.
-    fun tableRow(name: String, owner: String, declaredPrivate: Boolean?): RepoTableRow {
+    // The Provider cell comes from the clone's own remote URL, else the listing's clone URL, through the declared host map.
+    fun tableRow(name: String, owner: String, declaredPrivate: Boolean?, listedUrl: String = ""): RepoTableRow {
         val cloned = clonedByName[name]
-        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[it.id] }, remoteStats[RepoRemoteStats.keyOf(owner, name)])
+        val url = cloned?.remoteUrl?.takeIf { it.isNotBlank() } ?: listedUrl
+        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[it.id] }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers))
     }
     // Pull-to-refresh re-reads the REST facts of every repository the table lists (GitHub-listed or declared; the fleet's own git is not GitHub).
     fun refreshTargets(): List<Pair<String, String>> {
@@ -670,12 +676,19 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
     }
 
+    // A fleet session earned on Configs ▸ Git (FleetSession is process-wide) lists on the table too, with no second sign-in.
+    LaunchedEffect(view, setup) {
+        if (view == GitView.ME && !setup && FleetSession.present) {
+            page.ways.firstOrNull { DriveGitChain.rung(it.rung)?.kind == DriveGitChain.RUNG_FLEET }?.let { fetchFleetListing(it.rung) }
+        }
+    }
+
     // THE ONE TABLE: every repository of every listing (GitHub, Cloud Gitea, the other hosts, the clones no listing named)
     // is one entry; public and private are not separate groups, the header sorts the lot (default: name, then visibility).
     val entries: List<TableEntry> = buildList {
         if (view == GitView.CLOUD) {
             publicRows.forEach { d ->
-                add(TableEntry("pub-" + d.name, d.label, d.name, page.owner, false, false, "", tableRow(d.name, page.owner, false), clonedByName[d.name], { clone(d.name) }, ""))
+                add(TableEntry("pub-" + d.name, d.label, d.name, page.owner, false, false, "", tableRow(d.name, page.owner, false, page.cloneUrl(d.name, Declarations.REMOTE_HTTPS)), clonedByName[d.name], { clone(d.name) }, ""))
             }
         } else {
             page.ways.forEach { way ->
@@ -684,7 +697,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     val owner = gh.owner.ifBlank { page.owner }
                     val cloned = clonedByName[gh.name]
                     add(TableEntry(
-                        "own-" + way.id + "-" + gh.owner + "/" + gh.name, gh.name, gh.name, owner, gh.private, gh.fork, way.label, tableRow(gh.name, owner, gh.private), cloned,
+                        "own-" + way.id + "-" + gh.owner + "/" + gh.name, gh.name, gh.name, owner, gh.private, gh.fork, way.label, tableRow(gh.name, owner, gh.private, gh.cloneUrl), cloned,
                         {
                             // #684 the row clones from the LEG THAT LISTED IT (#669's rule, per way).
                             if (wayListing.rungId.isNotBlank()) cloneViaFleet(wayListing.rungId, gh)
@@ -701,7 +714,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 if (hs.signedIn && hs.loaded && hs.error.isBlank()) hs.repos.forEach { hr ->
                     val owner = hr.owner.ifBlank { page.owner }
                     add(TableEntry(
-                        "host-" + host.id + "-" + hr.owner + "/" + hr.name, hr.name, hr.name, owner, hr.private, hr.fork, host.label, tableRow(hr.name, hr.owner, hr.private), clonedByName[hr.name],
+                        "host-" + host.id + "-" + hr.owner + "/" + hr.name, hr.name, hr.name, owner, hr.private, hr.fork, host.label, tableRow(hr.name, hr.owner, hr.private, hr.cloneUrl), clonedByName[hr.name],
                         {
                             scope.launch {
                                 val token = withContext(Dispatchers.IO) { hostsState.tokenOf(host.id) }
@@ -745,6 +758,13 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     }
                 }
                 RepoSummaryLine(summary)
+                RepoStatusLegend()
+                // #642 what the last clone handoff did, right under the bulk bar that can trigger it: no press of Clone is silent.
+                if (handoff.isNotBlank()) Text(
+                    handoff,
+                    Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_HANDOFF).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
         items(sortedEntries, key = { it.key }) { e ->
@@ -775,16 +795,15 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
     }
 
-    PullToRefreshBox(
-        isRefreshing = refreshingRemote,
+    GitPageFrame(
+        refreshing = refreshingRemote,
         onRefresh = { coordinator.refreshRemoteStats(refreshTargets(), login.token) },
-        modifier = modifier.fillMaxSize(),
+        modifier = modifier,
     ) {
-    LazyColumn(Modifier.fillMaxSize()) {
         // #642 WHAT THE HANDOFF DID, at the top of the page, above every row that could have
         // triggered it. Shown for every outcome including success (which names the folder the
         // clone lands in, the one Files already lists) so no press of Clone is ever silent.
-        if (handoff.isNotBlank()) item {
+        if (setup && handoff.isNotBlank()) item {
             Text(
                 handoff,
                 Modifier.fillMaxWidth()
@@ -794,7 +813,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (seedTally.isNotBlank() && !seedTally.endsWith("complete")) item {
+        if (setup && seedTally.isNotBlank() && !seedTally.endsWith("complete")) item {
             Text(
                 seedTally,
                 Modifier.fillMaxWidth()
@@ -807,7 +826,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 Text(stringResource(R.string.git_seed_retry))
             }
         }
-        if (view == GitView.ME) item {
+        if (setup) item {
             Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Commit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(DriveMetrics.pad))
@@ -825,7 +844,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
         // #850 THE PAGE'S PULL ACTIONS: force pull every clone (asks first — it is the
         // declared destructive verb), and the persisted Auto pull on open (Wi-Fi only).
-        if (view == GitView.ME) item {
+        if (setup) item {
             Column(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_PULL_ALL).padding(horizontal = DriveMetrics.sectionInset)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Pill(stringResource(R.string.git_force_pull_all), { confirmPullAll = true }, icon = Icons.Filled.Sync, enabled = bulk?.finished != false && repos.isNotEmpty())
@@ -889,8 +908,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     // sign-in and lists its OWN repositories below it; neither gates or hides the
                     // other, and both can be signed in and listing at once. A way whose declared
                     // rung is missing renders one line saying so, never a placeholder card (#648).
-                    item { SectionHeader(section.label) }
-                    page.ways.forEach { way ->
+                    if (setup) item { SectionHeader(section.label) }
+                    if (setup) page.ways.forEach { way ->
                         val rungKind = DriveGitChain.rung(way.rung)?.kind
                         val isCloud = rungKind == DriveGitChain.RUNG_FLEET
                         val wayListing = if (isCloud) cloudListing else listing
@@ -919,7 +938,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     }
                     // #1149 THE OTHER HOSTS (GitLab, Bitbucket, Codeberg/Gitea, Azure DevOps): a token card each, and once
                     // signed in the account's repositories in the same sortable table, Clone when no local folder matches.
-                    Declarations.gitHosts.forEach { host ->
+                    if (setup) Declarations.gitHosts.forEach { host ->
                         val hs = hostsState.hosts[host.id] ?: GitHostsState.Host()
                         item(key = "host-card-" + host.id) {
                             GitHostCard(
@@ -932,24 +951,23 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                         }
                     }
                     // #1149 ONE TABLE for every listing above: the sticky header, the bulk bar, the rows.
-                    tableBlock()
+                    if (!setup) tableBlock()
                     // #1149 LOCAL REPOS PARENTLESS: folders holding a .git that are not named like their origin.
-                    if (prefs != null) item(key = "parentless") { ParentlessPanel(parentRoots, prefs) { coordinator.refresh(force = true) } }
+                    if (!setup && prefs != null) item(key = "parentless") { ParentlessPanel(parentRoots, prefs) { coordinator.refresh(force = true) } }
                 }
                 else -> item { EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "") }
             }
         }
 
-        if (view == GitView.ME && repos.isEmpty()) item { EmptyState(Icons.Filled.Commit, stringResource(R.string.sync_empty_title), stringResource(R.string.sync_empty_hint)) }
+        if (view == GitView.ME && !setup && repos.isEmpty()) item { EmptyState(Icons.Filled.Commit, stringResource(R.string.sync_empty_title), stringResource(R.string.sync_empty_hint)) }
 
-        if (view == GitView.ME) item {
+        if (view == GitView.ME && !setup) item {
             SectionHeader(stringResource(R.string.sync_history_section), count = events.size, action = if (showHistory) stringResource(R.string.chrome_close) else stringResource(R.string.sync_history)) { showHistory = !showHistory }
         }
-        if (showHistory) {
+        if (showHistory && !setup) {
             if (events.isEmpty()) item { Text(stringResource(R.string.sync_history_empty), Modifier.padding(horizontal = DriveMetrics.sectionInset), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             items(events.take(50), key = { "${it.epochSeconds}-${it.repoId}" }) { e -> HistoryRow(e, fmt) }
         }
-    }
     }
 
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
@@ -1227,6 +1245,11 @@ private fun GitRepoRow(
                 if (source.isNotBlank()) Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (repo == null && !cloning) Text(stringResource(R.string.git_not_cloned), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (repo != null && glance != null && glance.gone) Text(stringResource(R.string.sync_glance_gone), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else if (repo != null && (glance == null || !glance.read)) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else if (repo != null && glance != null && glance.error != null) Text(
+                    statusErrorText(RepoStatus.errorKind(glance.error), glance.error), style = MaterialTheme.typography.labelSmall,
+                    color = colorResource(R.color.status_light_off), maxLines = 2, overflow = TextOverflow.Ellipsis,
+                )
                 else if (repo != null && glance != null && glance.read) {
                     if (glance.conflicts > 0) Text(stringResource(R.string.sync_conflicts, glance.conflicts), style = MaterialTheme.typography.labelSmall, color = colorResource(R.color.status_light_off))
                     if (glance.repositoryState != "SAFE") Text(glance.repositoryState, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1249,16 +1272,51 @@ private fun GitRepoRow(
     if (running != null) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset))
 }
 
-/** The light of one row, from the last outcome and the live glance — never green on a conflict. */
-private fun lightOf(repo: ManagedRepo?, glance: GitSyncCoordinator.Glance?): StatusLight.State = when {
-    repo == null -> StatusLight.State.UNKNOWN
-    glance == null || !glance.read -> StatusLight.State.UNKNOWN
-    glance.gone -> StatusLight.State.UNVERIFIABLE
-    glance.error != null -> StatusLight.State.UNKNOWN
-    glance.conflicts > 0 -> StatusLight.State.OFF
-    repo.lastSyncEpochSeconds == 0L -> StatusLight.State.UNKNOWN
-    repo.lastSyncSummary.contains("failed", true) || repo.lastSyncSummary.contains("conflict", true) || repo.lastSyncSummary.contains("rejected", true) -> StatusLight.State.OFF
-    else -> StatusLight.State.ON
+/** The light of one row: the REAL status (RepoStatus.light), "?" only when nothing can be said, and then the row says why. */
+private fun lightOf(repo: ManagedRepo?, glance: GitSyncCoordinator.Glance?): StatusLight.State = RepoStatus.light(RepoStatus.kindOf(repo != null, glance))
+
+/** One human sentence for a probe failure (RepoStatus.errorKind picks the sentence, the raw reason rides along as detail). */
+@Composable
+internal fun statusErrorText(kind: RepoStatus.ErrorKind?, detail: String?): String {
+    val d = detail.orEmpty()
+    return when (kind) {
+        RepoStatus.ErrorKind.TIMEOUT -> stringResource(R.string.repo_err_timeout, d)
+        RepoStatus.ErrorKind.NOT_A_REPOSITORY -> stringResource(R.string.repo_err_not_repo, d)
+        RepoStatus.ErrorKind.PERMISSION -> stringResource(R.string.repo_err_permission, d)
+        RepoStatus.ErrorKind.AUTH -> stringResource(R.string.repo_err_auth, d)
+        RepoStatus.ErrorKind.ENGINE -> stringResource(R.string.repo_err_engine, d)
+        RepoStatus.ErrorKind.OTHER -> stringResource(R.string.repo_err_other, d)
+        null -> stringResource(R.string.repo_status_none)
+    }
+}
+
+/** The legend of the leading status icon: what each glyph means, so no "?" is left unexplained. */
+@Composable
+internal fun RepoStatusLegend() {
+    Text(
+        stringResource(R.string.repo_legend),
+        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_LEGEND),
+        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/** The STATUS block at the top of the open repository panel: cloned, branch, dirty, ahead/behind, not pushed, last fetch, last error. */
+@Composable
+private fun RepoStatusBlock(b: RepoStatus.Block, fmt: DateFormat) {
+    val dash = RepoTable.DASH
+    Column(Modifier.fillMaxWidth().padding(top = DriveMetrics.gapWide).testTag(DriveTags.SYNC_GIT_STATUS_BLOCK)) {
+        Text(stringResource(R.string.repo_status_title), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        MetaLine(stringResource(R.string.repo_status_cloned, stringResource(if (b.cloned) R.string.manage_yes else R.string.manage_no)))
+        MetaLine(stringResource(R.string.repo_status_branch, b.branch ?: dash, b.upstream ?: stringResource(R.string.git_meta_no_upstream)))
+        MetaLine(
+            if (b.dirty == null) stringResource(R.string.repo_status_dirty_unknown)
+            else stringResource(R.string.repo_status_dirty, b.dirty!!, b.modified ?: 0, b.untracked ?: 0, b.conflicts ?: 0),
+        )
+        MetaLine(stringResource(R.string.repo_status_ab, b.ahead?.toString() ?: dash, b.behind?.toString() ?: dash))
+        MetaLine(stringResource(R.string.repo_status_unpushed, b.unpushed?.toString() ?: dash))
+        MetaLine(stringResource(R.string.repo_status_fetch, b.lastFetchMs?.let { fmt.format(Date(it)) } ?: stringResource(R.string.repo_status_never)))
+        MetaLine(stringResource(R.string.repo_status_error, if (b.error == null) stringResource(R.string.repo_status_none) else statusErrorText(b.error, b.errorDetail)))
+    }
 }
 
 /**
@@ -1295,6 +1353,7 @@ private fun GitRepoOpsBox(
     var confirm by remember(repo.id) { mutableStateOf<String?>(null) }
     var runs by remember(repo.id) { mutableStateOf<List<String>?>(null) }
     var prs by remember(repo.id) { mutableStateOf<List<String>?>(null) }
+    var unpushed by remember(repo.id) { mutableStateOf<Result<List<com.diegonmarcos.cloudlib.gitsync.GitCommitInfo>>?>(null) }
     var message by remember(repo.id) { mutableStateOf("") }
     val readOnly = page.remoteMode(Declarations.REMOTE_READONLY)?.urlFor(page.owner, repoName) == repo.remoteUrl &&
         repo.authKind == GitSyncCoordinator.AUTH_NONE
@@ -1302,6 +1361,12 @@ private fun GitRepoOpsBox(
     // #1138 the CI/CD run feed is read when its panel opens (a network read the owner asked for), never on render.
     LaunchedEffect(repo.id, panel) {
         if (panel == RepoActions.RUNS && runs == null) runs = coordinator.runFeed(owner, repoName).getOrElse { listOf(ctx.getString(R.string.repo_runs_failed, it.message.orEmpty())) }
+    }
+
+    // The unpushed commits are read when their panel opens (and again when the ahead count moves), never on render.
+    val aheadNow = glance?.takeIf { it.read && it.upstream != null }?.ahead
+    LaunchedEffect(repo.id, panel, aheadNow) {
+        if (panel == RepoActions.UNPUSHED) unpushed = if (aheadNow == null) Result.success(emptyList()) else coordinator.unpushedCommits(repo, aheadNow)
     }
 
     LaunchedEffect(repo.id, panel) {
@@ -1335,7 +1400,7 @@ private fun GitRepoOpsBox(
             RepoActions.SYNC_NO_WINNER, RepoActions.SYNC_REMOTE_WINS, RepoActions.SYNC_LOCAL_WINS -> coordinator.runCompound(repo, id)
             RepoActions.OPEN_FOLDER -> actions.openEngine(EngineActivity.ENGINE_GIT, repo.path)
             RepoActions.CHECKOUT_MAIN -> coordinator.checkoutMain(repo)
-            RepoActions.BRANCHES, RepoActions.PRS -> panel = if (panel == id) "" else id
+            RepoActions.BRANCHES, RepoActions.PRS, RepoActions.UNPUSHED -> panel = if (panel == id) "" else id
             RepoActions.SYNC_NOW -> coordinator.syncNow(repo)
             RepoActions.SETTINGS -> onSettings()
             RepoActions.META_BRANCH, RepoActions.META_SYNC, RepoActions.RUNS -> panel = if (panel == id) "" else id
@@ -1348,6 +1413,8 @@ private fun GitRepoOpsBox(
     }
 
     DriveCard(repo.name, light = lightOf(repo, glance), tag = DriveTags.SYNC_REPO_CARD) {
+        val statusBlock = RepoStatus.block(true, glance)
+        RepoStatusBlock(statusBlock, fmt)
         Text(
             if (repo.lastSyncEpochSeconds > 0) stringResource(R.string.sync_last, fmt.format(Date(repo.lastSyncEpochSeconds * 1000)), repo.lastSyncSummary) else stringResource(R.string.sync_never),
             Modifier.padding(top = DriveMetrics.tight), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -1455,6 +1522,18 @@ private fun GitRepoOpsBox(
             RepoActions.BRANCHES -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 if (d == null || d.loading) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
                 else d.branches.forEach { b -> MetaLine((if (b.isCurrent) "* " else "  ") + b.name + " · " + b.sha.take(7)) }
+            }
+            RepoActions.UNPUSHED -> Column(Modifier.padding(top = DriveMetrics.gapWide).testTag(DriveTags.SYNC_GIT_UNPUSHED)) {
+                val u = unpushed
+                if (statusBlock.unpushed == null) Text(stringResource(R.string.repo_unpushed_no_upstream), style = MaterialTheme.typography.bodySmall)
+                else if (u == null) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
+                else u.fold(
+                    onSuccess = { list ->
+                        if (list.isEmpty()) Text(stringResource(R.string.repo_unpushed_none), style = MaterialTheme.typography.bodySmall)
+                        else list.forEach { c -> MetaLine(stringResource(R.string.repo_unpushed_line, c.shortSha, c.summary, fmt.format(Date(c.time * 1000)))) }
+                    },
+                    onFailure = { MetaLine(stringResource(R.string.repo_unpushed_failed, it.message ?: it.javaClass.simpleName)) },
+                )
             }
             RepoActions.PRS -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 val feed = prs

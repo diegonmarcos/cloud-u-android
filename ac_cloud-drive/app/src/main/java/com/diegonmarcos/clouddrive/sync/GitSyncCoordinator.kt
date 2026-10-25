@@ -82,6 +82,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         val state: String = "",
         /** #850 when this glance was read (epoch ms) — the cache's timestamp. */
         val readAtMs: Long = 0,
+        /** Untracked files among [changed] (the rest are modified / added / deleted). */
+        val untracked: Int = 0,
+        /** When the remote was last fetched (epoch ms, the clone's FETCH_HEAD time); 0 = never / not known. */
+        val fetchedAtMs: Long = 0,
     )
 
     enum class Step { STAGING, COMMITTING, PULLING, PUSHING }
@@ -294,6 +298,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     /** A clone in flight, keyed by the repository name the store will hold it under. */
     val cloning = MutableStateFlow<Set<String>>(emptySet())
+
+    /** The commits not pushed: the newest [ahead] of the branch's log (RepoStatus.unpushed), read on demand off the main thread. */
+    suspend fun unpushedCommits(repo: ManagedRepo, ahead: Int): Result<List<GitCommitInfo>> = withContext(Dispatchers.IO) {
+        runCatching { RepoStatus.unpushed(GitEngine(ctx, File(repo.path)).use { it.log(max = ahead.coerceAtLeast(1)) }, ahead) }
+    }
 
     fun loadDetails(repo: ManagedRepo, historyMax: Int) {
         details.update { it + (repo.id to Details(loading = true)) }
@@ -574,7 +583,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         /** The real probe: libs:git-sync's own status, never a second JGit call here. */
         fun probeStatus(dir: File): GitStatusReader.Probe = GitEngine(engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with"), dir).use { e ->
             val s = e.status()
-            GitStatusReader.Probe(s.branch, s.upstream, s.ahead, s.behind, s.files.size - s.conflicts.size, s.conflicts.size, s.repositoryState)
+            GitStatusReader.Probe(
+                s.branch, s.upstream, s.ahead, s.behind, s.files.size - s.conflicts.size, s.conflicts.size, s.repositoryState,
+                untracked = s.files.count { !it.conflicting && it.unstaged == com.diegonmarcos.cloudlib.gitsync.GitChange.UNTRACKED },
+                fetchedAtMs = File(dir, ".git/FETCH_HEAD").lastModified(),
+            )
         }
 
         const val PREFS_PAGE = "cloud-drive-prefs"
@@ -601,7 +614,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             GitStatusReader.State.NOT_CLONED -> Glance(gone = true, read = true, state = "not_cloned", readAtMs = s.readAtMs)
             GitStatusReader.State.ERROR -> Glance(error = s.reason ?: "unknown", read = true, state = "error", readAtMs = s.readAtMs)
             else -> s.probe!!.let { p ->
-                Glance(p.branch, p.upstream, p.ahead, p.behind, p.changed, p.conflicts, p.repositoryState, read = true, state = s.state.name.lowercase(), readAtMs = s.readAtMs)
+                Glance(p.branch, p.upstream, p.ahead, p.behind, p.changed, p.conflicts, p.repositoryState, read = true, state = s.state.name.lowercase(), readAtMs = s.readAtMs, untracked = p.untracked, fetchedAtMs = p.fetchedAtMs)
             }
         }
 

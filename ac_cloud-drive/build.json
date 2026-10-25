@@ -227,6 +227,11 @@
             "id": "others",
             "label": "Others",
             "icon": "help_outline"
+          },
+          {
+            "id": "git",
+            "label": "Git",
+            "icon": "commit"
           }
         ]
       }
@@ -497,6 +502,11 @@
     "sync": {
       "_doc_cloud_list": "#1149 Sync > Git > Cloud: the PUBLIC cloud* repositories of `owner`, listed live over the GitHub REST route `path` (api base: ui.sync.git.api.base_url) with NO credential, then filtered to public repositories whose name starts with `name_prefix`. CloudRepos.filter is the rule; when the network refuses, the page shows the declared public_repos set and says so.",
       "cloud_list": {"owner": "diegonmarcos", "name_prefix": "cloud", "path": "/users/{owner}/repos?type=owner&sort=full_name&per_page=100", "max_pages": 4},
+      "_doc_providers": "The repos table's Provider column: which forge a repository lives on, derived from the host of its remote URL (HTTPS, ssh:// or scp-like). `hosts` maps a host (exact, or any subdomain of it) to a provider id; a host not listed is `other`; a repository with no remote URL shows a dash. `labels` is what the column prints per id. 10.0.0.6 is the mesh-internal address of the self-hosted Cloud Gitea (the clone_url its listing carries); git.diegonmarcos.com is its public edge.",
+      "providers": {
+        "hosts": {"github.com": "github", "gitlab.com": "gitlab", "git.diegonmarcos.com": "gitea", "10.0.0.6": "gitea"},
+        "labels": {"github": "GitHub", "gitlab": "GitLab", "gitea": "Gitea", "other": "Other"}
+      },
       "_doc_git_hosts": "#1149 Sync > Git > Me: the hosts beyond the GitHub and Cloud-git ways, in render order. `kind` picks the listing parser and the auth header (GitHosts: gitlab, gitea for Codeberg and any Gitea-compatible host, bitbucket, azure). The credential is a personal access token (an app password for Bitbucket) the user pastes, kept in libs:git-sync's GitCredentialStore (SafeEncryptedPrefs): no OAuth client is registered for this app and none is invented. `needs_user` asks for a user name (Azure DevOps: the organisation, substituted for {user} in api_base); `clone_user` is the HTTPS user a clone presents when the host fixes one. The self-hosted Cloud Gitea keeps its own way (ui.sync.git.ways, the fleet rung).",
       "git_hosts": [
         {"id": "gitlab", "label": "GitLab", "icon": "code", "kind": "gitlab", "api_base": "https://gitlab.com/api/v4", "repos_path": "/projects?membership=true&simple=true&order_by=path&sort=asc&per_page=100", "token_url": "https://gitlab.com/-/user_settings/personal_access_tokens", "needs_user": false, "clone_user": "oauth2", "max_pages": 4},

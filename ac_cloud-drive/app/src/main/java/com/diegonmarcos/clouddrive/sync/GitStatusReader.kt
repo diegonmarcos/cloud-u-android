@@ -60,6 +60,10 @@ class GitStatusReader(
         val changed: Int,
         val conflicts: Int,
         val repositoryState: String = "SAFE",
+        /** Untracked files among [changed]. */
+        val untracked: Int = 0,
+        /** The clone's FETCH_HEAD time (epoch ms); 0 = never fetched / not readable. */
+        val fetchedAtMs: Long = 0,
     )
 
     enum class State { READING, CLEAN, AHEAD, BEHIND, DIRTY, NOT_CLONED, ERROR }

@@ -317,6 +317,8 @@ object Declarations {
     /** #1149 Git > Cloud's public list (ui.sync.cloud_list) and Git > Me's extra hosts (ui.sync.git_hosts). */
     val cloudList: GitHostsDecl.CloudListDecl by lazy { GitHostsDecl.parseCloud(decode(BuildConfig.UI_SYNC_B64)) }
     val gitHosts: List<GitHostsDecl.GitHostDecl> by lazy { GitHostsDecl.parseHosts(decode(BuildConfig.UI_SYNC_B64)) }
+    /** The Provider column's declared host -> provider map (ui.sync.providers). */
+    val providers: GitHostsDecl.ProvidersDecl by lazy { GitHostsDecl.parseProviders(decode(BuildConfig.UI_SYNC_B64)) }
     /** #1149 every section the shell can show: the bottom-nav ones plus the ones the top bar opens (AI, Configs). */
     fun routable(id: String): Boolean = nav.section(id) != null
     val files: FilesDecl by lazy { parseFiles(decode(BuildConfig.UI_FILES_B64)) }
