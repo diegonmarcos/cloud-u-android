@@ -103,11 +103,44 @@ class DriveCredentialStore(private val vault: AccountVault) {
     data class ImportResult(val ok: Boolean, val why: String)
 
     private fun hold(kp: KeyPair, comment: String): Boolean {
-        val priv = ByteArrayOutputStream().also { kp.writePrivateKey(it) }.toString(Charsets.UTF_8.name())
         val pub = ByteArrayOutputStream().also { kp.writePublicKey(it, comment) }.toString(Charsets.UTF_8.name()).trim()
+        val priv = openSshPrivate(kp, comment)
         if (priv.isBlank() || !pub.startsWith("ssh-ed25519 ")) return false
-        vault.putConnection(C.P_SSH_PRIVATE, priv); vault.putConnection(C.P_SSH_PUBLIC, pub); vault.putConnection(C.P_SSH_FINGERPRINT, kp.fingerPrint.orEmpty())
+        vault.putConnection(C.P_SSH_PRIVATE, priv); vault.putConnection(C.P_SSH_PUBLIC, pub); vault.putConnection(C.P_SSH_FINGERPRINT, fingerprint(kp.publicKeyBlob))
         return true
+    }
+
+    /** `SHA256:<base64>` of the public key blob, the form GitHub and `ssh-keygen -l` show. */
+    private fun fingerprint(blob: ByteArray): String =
+        "SHA256:" + android.util.Base64.encodeToString(java.security.MessageDigest.getInstance("SHA-256").digest(blob), android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
+
+    /**
+     * jsch cannot write an ed25519 private key (its writePrivateKey throws for EdDSA), so the unencrypted `openssh-key-v1` file is
+     * built here from the key's 32-byte seed and public key (read from the jsch key object; the CI suite pins that the result loads
+     * back to the same public key).
+     */
+    private fun openSshPrivate(kp: KeyPair, comment: String): String {
+        val c = Class.forName("com.jcraft.jsch.KeyPairEdDSA")
+        fun field(n: String) = c.getDeclaredField(n).also { it.isAccessible = true }.get(kp) as ByteArray
+        val seed = field("prv_array"); val pub = field("pub_array")
+        if (seed.size != 32 || pub.size != 32) return ""
+        fun str(o: ByteArrayOutputStream, b: ByteArray) { o.write(java.nio.ByteBuffer.allocate(4).putInt(b.size).array()); o.write(b) }
+        val type = "ssh-ed25519".toByteArray()
+        val blob = ByteArrayOutputStream().also { str(it, type); str(it, pub) }.toByteArray()
+        val check = java.security.SecureRandom().nextInt()
+        val priv = ByteArrayOutputStream().also {
+            it.write(java.nio.ByteBuffer.allocate(8).putInt(check).putInt(check).array())
+            str(it, type); str(it, pub); str(it, seed + pub); str(it, comment.toByteArray())
+            var pad = 1; while (it.size() % 8 != 0) it.write(pad++)
+        }.toByteArray()
+        val file = ByteArrayOutputStream().also {
+            it.write("openssh-key-v1".toByteArray()); it.write(0)
+            str(it, "none".toByteArray()); str(it, "none".toByteArray()); str(it, ByteArray(0))
+            it.write(java.nio.ByteBuffer.allocate(4).putInt(1).array()); str(it, blob); str(it, priv)
+        }.toByteArray()
+        return "-----BEGIN OPENSSH PRIVATE KEY-----\n" +
+            android.util.Base64.encodeToString(file, android.util.Base64.NO_WRAP).chunked(70).joinToString("\n") +
+            "\n-----END OPENSSH PRIVATE KEY-----\n"
     }
 
     fun sshHosts(decl: String = AccountHost.fleetEndpointsDecl()): List<C.SshHost> =

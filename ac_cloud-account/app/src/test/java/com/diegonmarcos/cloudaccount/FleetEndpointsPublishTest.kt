@@ -139,8 +139,17 @@ class FleetEndpointsPublishTest {
         assertFalse(v.grants.allow(AccountVault.VAULT_PACKAGE, FleetEndpointsContract.GRANT_ENDPOINTS))
     }
 
-    @Test fun theVaultHasOneUrlAndIsNotARoutedFleetService() {
+    @Test fun theVaultIsDeclaredMtlsSoItIsNeverRoutedOntoAMeshNameAndNeverGetsTheBearer() {
         val services = FleetEndpointsContract.parseDecl(java.io.File("../build.json").readText().let { org.json.JSONObject(it).getJSONObject("fleet_endpoints").toString() })
-        assertTrue("the vault is reached directly at https://vault.diegonmarcos.com, never rewritten onto a mesh name", services.none { it.id == "vaultwarden" || it.kind == "vault" || it.meshDns.startsWith("vaultwarden") })
+        val vault = services.single { it.kind == "vault" }
+        assertEquals(FleetEndpointsContract.AUTH_MTLS, vault.auth)
+        assertEquals("https://vault.diegonmarcos.com", vault.publicUrl())
+        // the one URL stays direct: the router is never told about it, and the bearer source never answers for its host
+        val router = com.diegonmarcos.superapp.fleetendpoints.EndpointRouter(probe = { _, _, _ -> true })
+        val bearers = com.diegonmarcos.superapp.fleetendpoints.FleetBearers()
+        com.diegonmarcos.superapp.profile.FleetEndpointsRuntime.register(services, router, bearers) { bearer }
+        assertFalse("the vault is reached directly, never rewritten onto a mesh name", router.isRegistered(vault.publicDomain))
+        assertEquals(null, bearers.forHost(vault.publicDomain))
+        assertEquals("a bearer service of the same declaration still gets it", bearer, bearers.forHost("jmap.diegonmarcos.com"))
     }
 }
