@@ -1,0 +1,39 @@
+{
+  "code_blocks": [
+    {
+      "path": "ac_cloud-search/core/src/main/kotlin/com/diegonmarcos/cloudsearch/core/Engine.kt",
+      "language": "kotlin",
+      "start_line": 120,
+      "end_line": 168,
+      "content": "class SearchEngine(private val cfg: SearchConfig, private val http: Http, private val cache: Cache, private val now: () -> Long) {",
+      "symbols": ["SearchEngine", "query"],
+      "distance": 0.18
+    },
+    {
+      "path": "ac_cloud-search/core/src/main/kotlin/com/diegonmarcos/cloudsearch/core/Cgc.kt",
+      "language": "kotlin",
+      "start_line": 31,
+      "end_line": 52,
+      "content": "class McpClient(private val http: Http, private val url: String)",
+      "symbols": [],
+      "distance": 0.35
+    },
+    {
+      "language": "kotlin",
+      "start_line": 1,
+      "content": "an entry with no path is dropped, never filled in",
+      "distance": 0.01
+    }
+  ],
+  "doc_blocks": [
+    {
+      "path": "ac_cloud-search/NOTICE.md",
+      "title": "Cloud Research",
+      "start_line": 1,
+      "end_line": 9,
+      "content": "# Cloud Research (was Cloud Search until #1162)",
+      "distance": 0.4
+    }
+  ],
+  "text_blocks": []
+}

@@ -476,6 +476,32 @@
           "policy": "mesh_first",
           "health": "/health"
         },
+        {
+          "id": "cgc-pub-mcp",
+          "kind": "mcp",
+          "source": "cloud-u-containers/user-ai_cloud-cgc-pub-mcp/build.json",
+          "_doc": "#1184 The fleet's PUBLIC code index (octocode semantic search + GraphRAG over the public repos), streamable-HTTP MCP at /mcp: containers.app (port 3105, mesh dns cloud-cgc-pub-mcp.mesh.diegonmarcos.com) and the hub route mcp.diegonmarcos.com/cloud-cgc-pub-mcp. Cloud Research's Cloud-CGC reads it; mesh first, then the public route with the fleet bearer.",
+          "mesh_dns": "cloud-cgc-pub-mcp.mesh.diegonmarcos.com",
+          "mesh_port": 3105,
+          "mesh_scheme": "http",
+          "public_domain": "mcp.diegonmarcos.com",
+          "public_path": "/cloud-cgc-pub-mcp",
+          "public_scheme": "https",
+          "route_paths": ["/mcp"],
+          "policy": "mesh_first",
+          "health": "/health"
+        },
+        {
+          "id": "cgc-pvt-mcp",
+          "kind": "mcp",
+          "source": "cloud-u-containers/user-ai_cloud-cgc-pub-mcp/build.json",
+          "_doc": "#1184 The PRIVATE surface of the same image (containers.pvt, CGC_SURFACE=pvt, port 3107, cloud-data and cloud-me-my-ai): WireGuard-only, so mesh_only and no public address (its hub route is wg_only). Cloud Research's Me-CGC reads it behind the Cloud Account sign-in. Its index is not built yet (the deploy keys for the private repositories are missing), and the page says what the service answers.",
+          "mesh_dns": "cloud-cgc-pvt-mcp.mesh.diegonmarcos.com",
+          "mesh_port": 3107,
+          "mesh_scheme": "http",
+          "policy": "mesh_only",
+          "health": "/health"
+        },
       {
         "id": "languagetool",
         "kind": "tools",

@@ -10,7 +10,7 @@ import java.security.MessageDigest
 
 /** The one network door. [UrlHttp] is the real one; the JVM suite hands in a local server or a fake. */
 interface Http {
-    data class Response(val code: Int, val body: String)
+    data class Response(val code: Int, val body: String, val headers: Map<String, String> = emptyMap())
 
     fun get(url: String, headers: Map<String, String>, timeoutMs: Int): Response
     fun post(url: String, headers: Map<String, String>, body: String, timeoutMs: Int): Response
@@ -41,7 +41,8 @@ class UrlHttp(private val userAgent: String) : Http {
             val code = c.responseCode
             val stream = if (code in 200..299) c.inputStream else c.errorStream
             val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-            return Http.Response(code, text)
+            val hs = c.headerFields.entries.filter { it.key != null }.associate { it.key!!.lowercase() to it.value.firstOrNull().orEmpty() }
+            return Http.Response(code, text, hs)
         } finally {
             c.disconnect()
         }

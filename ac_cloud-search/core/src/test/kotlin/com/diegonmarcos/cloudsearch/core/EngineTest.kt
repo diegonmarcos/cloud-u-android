@@ -175,6 +175,7 @@ class EngineTest {
                 ex.requestBody.readBytes().toString(Charsets.UTF_8)
             val code = if (ex.requestURI.path == "/fail") 503 else 200
             val bytes = got.toByteArray()
+            ex.responseHeaders.add("Mcp-Session-Id", "sess-1")
             ex.sendResponseHeaders(code, bytes.size.toLong())
             ex.responseBody.use { it.write(bytes) }
         }
@@ -182,8 +183,11 @@ class EngineTest {
         try {
             val base = "http://127.0.0.1:${server.address.port}"
             val h = UrlHttp("UA/1")
-            assertEquals(Http.Response(200, "GET|x|UA/1|"), h.get("$base/ok", mapOf("X-Test" to "x"), 5000))
-            assertEquals(Http.Response(200, "POST|y|UA/1|{\"a\":1}"), h.post("$base/ok", mapOf("X-Test" to "y"), "{\"a\":1}", 5000))
+            val get = h.get("$base/ok", mapOf("X-Test" to "x"), 5000)
+            assertEquals(200, get.code); assertEquals("GET|x|UA/1|", get.body)
+            assertEquals("response headers are read, lower-cased (the MCP session id)", "sess-1", get.headers["mcp-session-id"])
+            val post = h.post("$base/ok", mapOf("X-Test" to "y"), "{\"a\":1}", 5000)
+            assertEquals(200, post.code); assertEquals("POST|y|UA/1|{\"a\":1}", post.body)
             assertEquals(503, h.get("$base/fail", emptyMap(), 5000).code)
         } finally {
             server.stop(0)

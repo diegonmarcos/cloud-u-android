@@ -1,8 +1,10 @@
 package com.diegonmarcos.cloudsearch.data
 
 import android.content.Context
+import com.diegonmarcos.cloudsearch.BuildConfig
 import com.diegonmarcos.cloudsearch.Decl
 import com.diegonmarcos.cloudsearch.core.Cache
+import com.diegonmarcos.cloudsearch.core.FleetEndpoint
 import com.diegonmarcos.cloudsearch.core.Http
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.core.SearchEngine
@@ -24,6 +26,10 @@ class Services(ctx: Context, val http: Http) {
     val engine = SearchEngine(cfg, http, Cache(File(ctx.filesDir, "results")), System::currentTimeMillis)
     /** #903 the Things comparison: stores, shelf prices and the fleet price service, cached under filesDir/things. */
     val things = ThingsEngine(cfg, http, Cache(File(ctx.filesDir, "things")), System::currentTimeMillis) { FleetBearer.token(app) }
+    /** #1184 Research (news) and Cloud-CGC / Me-CGC: the fleet services behind them, addressed from the baked fleet declaration. */
+    val fleet: FleetCalls by lazy {
+        FleetCalls(http, FleetEndpoint.parse(String(android.util.Base64.decode(BuildConfig.FLEET_ENDPOINTS_B64, android.util.Base64.DEFAULT), Charsets.UTF_8))) { FleetBearer.token(app) }
+    }
     val saved = SavedStore(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE))
     val prefs = Prefs(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE), cfg)
     /** libs:ai's file store: the same chat-sessions.json and JSON shape the app always wrote. */

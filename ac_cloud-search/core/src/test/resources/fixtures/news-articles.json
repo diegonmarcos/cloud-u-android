@@ -1,0 +1,10 @@
+{
+  "query": "technology sourcelang:english",
+  "count": 4,
+  "articles": [
+    { "url": "https://example.org/a", "title": "  First story  ", "seendate": "20261024T101500Z", "socialimage": "", "domain": "example.org", "language": "English", "sourcecountry": "US", "tone": 1.2 },
+    { "url": "https://example.net/b", "title": "Second story", "seendate": "20261025T081000Z", "domain": "example.net" },
+    { "url": "ftp://example.net/c", "title": "Not http: dropped", "seendate": "20261025T081000Z", "domain": "example.net" },
+    { "url": "https://example.org/a", "title": "Duplicate url: dropped", "seendate": "20261023T000000Z", "domain": "example.org" }
+  ]
+}

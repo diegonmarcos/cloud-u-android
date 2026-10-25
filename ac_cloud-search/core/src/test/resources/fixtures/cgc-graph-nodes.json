@@ -1,0 +1,20 @@
+{
+  "nodes": [
+    {
+      "id": "ac_cloud-search/app/src/main/java/com/diegonmarcos/cloudsearch/ui/SearchShell.kt",
+      "name": "SearchShell.kt",
+      "kind": "file",
+      "path": "ac_cloud-search/app/src/main/java/com/diegonmarcos/cloudsearch/ui/SearchShell.kt",
+      "description": "The shell: island, first row, second rows",
+      "symbols": ["SearchShell", "SearchState"]
+    },
+    {
+      "id": "ac_cloud-search/core/src/main/kotlin/com/diegonmarcos/cloudsearch/core/Cgc.kt",
+      "kind": "file",
+      "description": "Code index client"
+    },
+    {
+      "name": "a node with no id is dropped"
+    }
+  ]
+}

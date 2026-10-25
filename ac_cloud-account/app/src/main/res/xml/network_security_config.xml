@@ -34,6 +34,8 @@
         <domain includeSubdomains="false">authelia.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">c3-infra-api.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">c3-public-api.mesh.diegonmarcos.com</domain>
+        <domain includeSubdomains="false">cloud-cgc-pub-mcp.mesh.diegonmarcos.com</domain>
+        <domain includeSubdomains="false">cloud-cgc-pvt-mcp.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">cloud-me-api.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">embeddings-api.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">git-proxy-api.mesh.diegonmarcos.com</domain>

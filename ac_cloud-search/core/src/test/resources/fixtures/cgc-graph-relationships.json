@@ -1,0 +1,9 @@
+{
+  "relationships": [
+    { "source": "A.kt", "target": "B.kt", "relationship_type": "imports", "description": "A imports B", "confidence": 0.9 },
+    { "source": "C.kt", "target": "A.kt", "relationship_type": "calls", "description": "C calls into A" },
+    { "source": "A.kt", "target": "D.kt", "type": "calls" },
+    { "source": "E.kt", "target": "A.kt", "relationship_type": "imports" },
+    { "source": "", "target": "A.kt", "relationship_type": "dropped: no source" }
+  ]
+}

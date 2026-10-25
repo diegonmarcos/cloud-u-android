@@ -1,7 +1,7 @@
 {
   "name": "cloud-search",
   "display_name": "Cloud Research",
-  "description": "Diego's Cloud Research (#779, was Cloud Search until #1162) - one app for searching what a life in Germany needs, from the owner's design mockup, on the owner's mockup bottom nav: Me (personal search: House, Jobs, Groceries, Things), LLC (commercial search: Commercial Real Estate, Buy a Business, Suppliers / B2B, Business Services), Chat (web engines + AI chat, and the fleet's Apps, Messages and Code), Agents (#913: draft-only Buy-Side and Sell-Side agents that read your alert mails and pages and write drafts you send yourself) and Reports (what agents published). House and Jobs have Listing, Analysis, Feed and Calculators subpages; Search opens Google, DuckDuckGo, Brave or Qwant results in cloud-browser and holds an AI chat over OpenRouter (sessions grouped today / previous 7 days, a model picker over the live catalogue, natively web-searching models flagged, the token read from the fleet Account and never stored here). REAL DATA ONLY: every in-app listing comes from a public API this app is allowed to read (build.json::search.sources), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used at all says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
+  "description": "Diego's Cloud Research (#779, was Cloud Search until #1162) - one app for searching what a life in Germany needs, from the owner's design mockup, on the shared bottom nav (#1184): Research (News from the fleet news service, Reports of what agents published, and Agents: #913 draft-only Buy-Side and Sell-Side agents that read your alert mails and pages and write drafts you send yourself), Searches (House, Jobs, Groceries, Things, Commercial Real Estate, Buy a Business, Suppliers / B2B, Business Services), AI (web engines + AI chat, and the fleet's Apps, Messages and Code), Cloud-CGC (code search over the public cgc index: Semantic and Graph RAG) and Me-CGC (the same over the private index, mesh only, honest while that index is not built). House and Jobs have Listing, Analysis, Feed and Calculators subpages; Search opens Google, DuckDuckGo, Brave or Qwant results in cloud-browser and holds an AI chat over OpenRouter (sessions grouped today / previous 7 days, a model picker over the live catalogue, natively web-searching models flagged, the token read from the fleet Account and never stored here). REAL DATA ONLY: every in-app listing comes from a public API this app is allowed to read (build.json::search.sources), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used at all says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -1867,6 +1867,54 @@
         "owner": "diegonmarcos",
         "search_url": "https://github.com/search?q={q}%20user%3A{owner}&type=code"
       }
+    },
+    "research": {
+      "_doc": "#1184 the Research section's News page: the fleet news service (news-gdelt, fleet_endpoints id `service`, mesh first then the public route with the fleet bearer; its URLs are baked from ac_cloud-account/build.json, never spelled here). GET {base}{articles_path}?q=<query>&limit=<n> returns {query,count,articles:[{url,title,seendate,domain,...}]}. The topics are GDELT queries, the same ones Cloud SuperIntel's News uses (ac_cloud-superintel assets/si/news.json); an unreachable service shows an empty state with the reasons, never invented stories.",
+      "news": {
+        "service": "news",
+        "articles_path": "/articles",
+        "limit": 40,
+        "timeout_ms": 20000,
+        "topics": [
+          { "id": "tech", "label": "Tech", "query": "technology sourcelang:english" },
+          { "id": "ai", "label": "AI", "query": "artificial intelligence sourcelang:english" },
+          { "id": "science", "label": "Science", "query": "science research sourcelang:english" },
+          { "id": "finance", "label": "Finance", "query": "finance markets sourcelang:english" },
+          { "id": "world", "label": "World", "query": "geopolitics sourcelang:english" },
+          { "id": "health", "label": "Health", "query": "health medicine sourcelang:english" }
+        ]
+      }
+    },
+    "cgc": {
+      "_doc": "#1184 the code indexes. Both are the fleet's cgc MCP service (cloud-u-containers user-ai_cloud-cgc-pub-mcp, streamable HTTP at mcp_path; tools cgc.octocode.search = Semantic, cgc.octocode.graphrag = Graph RAG: search nodes, then get-relationships for callers/callees), one fleet_endpoints entry per surface: cgc-pub-mcp (public repos) and cgc-pvt-mcp (private repos, mesh only: the pvt surface is WireGuard-only). `id` is the ui section (cgc, mecgc). repos mirror that service's build.json runtime.octocode (index_repos less private_repos for the public surface, private_repos for the private one); repo_names maps an index name to its GitHub repository. needs_account: the private index waits for the Cloud Account sign-in (the fleet bearer over Account's IPC); the bearer is sent to a public origin only. A private index that has not been built answers with its own words, and the page says so: no result is ever made up.",
+      "timeout_ms": 45000,
+      "limit": 25,
+      "threshold": 0.3,
+      "indexes": [
+        {
+          "id": "cgc",
+          "label": "Cloud-CGC",
+          "service": "cgc-pub-mcp",
+          "mcp_path": "/mcp",
+          "health_path": "/health",
+          "repos": ["cloud-u-android", "cloud-u-containers", "cloud-infra", "cloud-infra-desktop", "front-diegonmarcos", "front-data"],
+          "repo_names": { "front-diegonmarcos": "diegonmarcos.github.io" },
+          "needs_account": false,
+          "web_url": "https://github.com/diegonmarcos/{repo}/blob/main/{path}#L{line}",
+          "drive_fleet": "drive"
+        },
+        {
+          "id": "mecgc",
+          "label": "Me-CGC",
+          "service": "cgc-pvt-mcp",
+          "mcp_path": "/mcp",
+          "health_path": "/health",
+          "repos": ["cloud-data", "cloud-me-my-ai"],
+          "needs_account": true,
+          "web_url": "https://github.com/diegonmarcos/{repo}/blob/main/{path}#L{line}",
+          "drive_fleet": "drive"
+        }
+      ]
     }
   },
   "agents": {
@@ -2609,19 +2657,64 @@
     },
     "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings), /api/search/analysis?v= (#797: the jobs statistics or the market series, with each source's status), /api/search/feed?v= (the Feed page's headlines and each feed's status). The ops never include `state` (update-ack-guard owns GET /api/state). #913: /api/search/agents (the agents, their last run, the budget), /api/search/runs (the run log with its audit lines), /api/search/reports and /api/search/report?id= (what agents published), /api/search/cloud?kind=apps|messages&q= (the Cloud Search section).",
     "dark_default": true,
-    "_doc_nav": "#868 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island (Me, LLC, Chat, Agents, Reports, #913b), ui.sections[] what each item opens, ui.default_section where the app opens. A section's pages are its PageTabs strip: Me's pages are the personal search.verticals (House, Jobs, Groceries, Things; each with its own subpage strip one level lower), LLC's the commercial ones (Commercial Real Estate, Buy a Business, Suppliers / B2B, Business Services); every vertical other than the assistant is a page of exactly one of the two. Chat is Search (the assistant vertical: engine boxes + AI chat, where a query from outside lands) and the fleet searches that were the Cloud page (Apps, Messages, Code). Agents has Agents, Runs, Templates and Settings, Reports lists what agents published. test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together. ui.style = \"search-html\" is the ONE declared exception to the fleet's island look: the owner's own HTML mockup (_dispatch/assets/cloud-search-mockup.html .bottom-nav: a 60 dp glass pill, 50 dp round cells, the active icon lifts 6 dp and its label fades in, the assistant's icon in the .ai-nav-icon gradient) restored as a VARIANT of libs:bottomnav (SearchHtmlIsland), not an app-local nav; 1_cicd/src/data/nav-shape.json::variants names this app and rule N8 keeps every other app on the fleet island.",
+    "_doc_nav": "#1184 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, exactly Research, Searches, AI, Cloud-CGC, Me-CGC; ui.sections[] what each item opens; ui.default_section where the app opens. Research is News (the fleet news service, search.research) and Reports (what agents published; Agents, Runs, Templates and Settings are its third page). Searches is the former Me and LLC merged: its pages are the search.verticals other than the assistant (House, Jobs, Groceries, Things, Commercial, Business, Suppliers, Services), each with its own subpage strip one level lower, every vertical exactly once. AI (id chat) is Search (the assistant vertical: engine boxes + AI chat, where a query from outside lands) and the fleet searches Apps, Messages and Code. Cloud-CGC (id cgc) and Me-CGC (id mecgc) are code search over the public and the private index (search.cgc), each with Semantic and Graph RAG as its second row. test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together.",
     "bottom_nav": [
-      "me",
-      "llc",
+      "research",
+      "searches",
       "chat",
-      "agents",
-      "reports"
+      "cgc",
+      "mecgc"
     ],
     "sections": [
       {
-        "id": "me",
-        "label": "Me",
-        "icon": "me",
+        "id": "research",
+        "label": "Research",
+        "icon": "reports",
+        "background": "theme",
+        "pages": [
+          {
+            "id": "news",
+            "label": "News",
+            "icon": "rss_feed"
+          },
+          {
+            "id": "reports",
+            "label": "Reports",
+            "icon": "assessment"
+          },
+          {
+            "id": "agenthub",
+            "label": "Agents",
+            "icon": "smart_toy",
+            "pages": [
+              {
+                "id": "agents",
+                "label": "Agents",
+                "icon": "smart_toy"
+              },
+              {
+                "id": "runs",
+                "label": "Runs",
+                "icon": "schedule"
+              },
+              {
+                "id": "templates",
+                "label": "Templates",
+                "icon": "description"
+              },
+              {
+                "id": "settings",
+                "label": "Settings",
+                "icon": "settings"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "searches",
+        "label": "Searches",
+        "icon": "search",
         "background": "theme",
         "pages": [
           {
@@ -2687,15 +2780,7 @@
             "id": "things",
             "label": "Things",
             "icon": "inventory_2"
-          }
-        ]
-      },
-      {
-        "id": "llc",
-        "label": "LLC",
-        "icon": "llc",
-        "background": "theme",
-        "pages": [
+          },
           {
             "id": "commercial",
             "label": "Commercial",
@@ -2747,42 +2832,38 @@
         ]
       },
       {
-        "id": "agents",
-        "label": "Agents",
-        "icon": "agents",
+        "id": "cgc",
+        "label": "Cloud-CGC",
+        "icon": "code",
         "background": "theme",
         "pages": [
           {
-            "id": "agents",
-            "label": "Agents",
-            "icon": "smart_toy"
+            "id": "semantic",
+            "label": "Semantic",
+            "icon": "auto_awesome"
           },
           {
-            "id": "runs",
-            "label": "Runs",
-            "icon": "schedule"
-          },
-          {
-            "id": "templates",
-            "label": "Templates",
-            "icon": "description"
-          },
-          {
-            "id": "settings",
-            "label": "Settings",
-            "icon": "settings"
+            "id": "graph",
+            "label": "Graph RAG",
+            "icon": "hub"
           }
         ]
       },
       {
-        "id": "reports",
-        "label": "Reports",
-        "icon": "reports",
+        "id": "mecgc",
+        "label": "Me-CGC",
+        "icon": "lock",
+        "background": "theme",
         "pages": [
           {
-            "id": "reports",
-            "label": "Reports",
-            "icon": "assessment"
+            "id": "semantic",
+            "label": "Semantic",
+            "icon": "auto_awesome"
+          },
+          {
+            "id": "graph",
+            "label": "Graph RAG",
+            "icon": "hub"
           }
         ]
       }

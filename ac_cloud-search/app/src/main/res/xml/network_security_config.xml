@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security configuration (#1184).
+
+  WHY: Research (News) and Cloud-CGC / Me-CGC reach the fleet's services over the WireGuard mesh first (plain http on
+  <service>.mesh.diegonmarcos.com, WG encrypts) and fall back to the public https route. targetSdk 35 blocks cleartext by
+  default, so each mesh host this app calls is exempted by name below. The list is GENERATED from
+  ac_cloud-account/build.json::fleet_endpoints (1_cicd/src/data/fleet-nsc.json names this app's services) by
+  1_cicd/src/scripts/cloud-android-fleet-nsc.py, never hand-listed; everything else stays https-only.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
+        <domain includeSubdomains="false">cloud-cgc-pub-mcp.mesh.diegonmarcos.com</domain>
+        <domain includeSubdomains="false">cloud-cgc-pvt-mcp.mesh.diegonmarcos.com</domain>
+        <domain includeSubdomains="false">news-gdelt.mesh.diegonmarcos.com</domain>
+        <!-- END fleet-mesh-cleartext -->
+    </domain-config>
+</network-security-config>

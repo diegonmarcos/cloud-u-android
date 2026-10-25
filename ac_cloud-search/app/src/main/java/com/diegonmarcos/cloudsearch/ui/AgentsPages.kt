@@ -98,12 +98,12 @@ private val listPadding = PaddingValues(start = Metrics.gutter, end = Metrics.gu
 fun AgentsSection(state: SearchState) {
     Column(Modifier.fillMaxSize()) {
         NavBarTopSecondRow(
-            pages = NAV.section("agents")?.pages.orEmpty(),
+            pages = NAV.section("research")?.page("agenthub")?.pages.orEmpty(),
             selectedId = state.agentsPage,
             onSelect = { if (it.id == state.agentsPage) state.agentOpen = null; state.agentsPage = it.id },
             dark = state.dark,
             underTopChrome = false,
-            surface = NAV.stripSurface("agents", state.dark),
+            surface = NAV.stripSurface("research", state.dark, "agenthub"),
         )
         Box(Modifier.fillMaxWidth().weight(1f).testTag(Tags.page("agents_" + state.agentsPage))) {
             val svc = state.services.agents

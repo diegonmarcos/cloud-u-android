@@ -199,4 +199,34 @@
     <string name="agents_draft">Draft</string>
     <string name="agents_runs_of">Runs: %1$d</string>
     <string name="vertical_agents">Agents</string>
+    <!-- #1184 Research (News), Cloud-CGC and Me-CGC. -->
+    <string name="research_none">Research is not declared in this build.</string>
+    <string name="research_loading">Loading headlines…</string>
+    <string name="research_empty">No headlines for this topic.</string>
+    <string name="research_unavailable">News service not reachable: %1$s</string>
+    <string name="research_count">%1$d headlines via %2$s</string>
+    <string name="research_note">News service answered: %1$s</string>
+    <string name="cgc_none">The code indexes are not declared in this build.</string>
+    <string name="cgc_semantic_placeholder">Describe the code you are looking for</string>
+    <string name="cgc_graph_placeholder">A file, module or symbol to start the graph from</string>
+    <string name="cgc_search">Search</string>
+    <string name="cgc_idle">Pick a repository and search.</string>
+    <string name="cgc_busy">Searching the index…</string>
+    <string name="cgc_hits">%1$d results via %2$s</string>
+    <string name="cgc_nodes">%1$d graph nodes via %2$s</string>
+    <string name="cgc_empty">No results in %1$s.</string>
+    <string name="cgc_unavailable">Index not reachable: %1$s</string>
+    <string name="cgc_refused">The service refused the query: %1$s</string>
+    <string name="cgc_note">The service answered: %1$s</string>
+    <string name="cgc_private_not_built">Private index not built yet: %1$s</string>
+    <string name="cgc_private_empty">No results, and the private index may not be built yet: the service returned nothing (%1$s)</string>
+    <string name="cgc_no_health">no health report</string>
+    <string name="cgc_open_web">Web</string>
+    <string name="cgc_open_drive">Cloud Drive</string>
+    <string name="cgc_relations">Relations</string>
+    <string name="cgc_callers">Used by (%1$d)</string>
+    <string name="cgc_callees">Uses (%1$d)</string>
+    <string name="cgc_related_none">No relations recorded for this node.</string>
+    <string name="cgc_line">%1$s:%2$d</string>
+    <string name="cgc_account_hint">Sign in to Cloud Account first; the private index is reached over the mesh only.</string>
 </resources>

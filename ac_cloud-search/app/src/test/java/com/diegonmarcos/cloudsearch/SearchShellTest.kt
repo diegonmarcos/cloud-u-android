@@ -127,13 +127,13 @@ class SearchShellTest {
 
     private fun launch() = compose.setContent { SearchShell(state) }
 
-    /** #913b a vertical through the app's own nav: the assistant is the island's Chat; every other one a pill of Me's or LLC's strip. */
+    /** #913b a vertical through the app's own nav: the assistant is the island's Chat; every other one a pill of Searches' strip. */
     private fun openVertical(id: String) {
         if (id == state.chatVertical) compose.onNodeWithTag(Tags.nav("chat")).performClick()
         else {
             compose.onNodeWithTag(Tags.nav(state.sectionOf(id))).performClick()
             compose.waitForIdle()
-            compose.onNodeWithTag(Tags.subpage(id)).performClick()
+            compose.onNodeWithTag(Tags.subpage(id)).performScrollTo().performClick()
         }
         compose.waitForIdle()
     }
@@ -236,31 +236,34 @@ class SearchShellTest {
     @Test fun theSharedNavPatternRendersWithTheSearchFieldInside() {
         launch()
         assertEquals(com.diegonmarcos.superapp.bottomnav.NavStyle.Fleet, com.diegonmarcos.cloudsearch.ui.NAV.style)
-        waitFor(Tags.nav("me"))
+        waitFor(Tags.nav("research"))
         compose.onNodeWithTag(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.ROW).assertExists()
         for (tag in listOf(Tags.ISLAND, Tags.PROFILE, Tags.CONFIGS)) compose.onNodeWithTag(tag).assertExists()
         compose.onNodeWithTag(com.diegonmarcos.superapp.bottomnav.TopBarTags.MENU).assertDoesNotExist()
         val ids = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
-        assertEquals(listOf("me", "llc", "chat", "agents", "reports"), ids)
+        assertEquals(listOf("research", "searches", "chat", "cgc", "mecgc"), ids)
         compose.onNodeWithTag(com.diegonmarcos.superapp.navbarbottom.BottomTags.BAR).assertExists()
         for (id in ids) compose.onNodeWithTag(Tags.nav(id)).assertExists()
         openVertical("house")
         waitFor(Tags.WEB_STRIP)
-        for (v in listOf("house", "jobs", "groceries", "things")) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        for (v in SEARCHES_PAGES) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
         waitFor(Tags.SEARCH_BOX)
         compose.onNodeWithTag(Tags.SEARCH_BOX).performTextInput("Wohnung")
         compose.onNodeWithTag(Tags.SEARCH_BOX).assertTextContains("Wohnung", substring = true)
     }
 
-    /** The five destinations route, and each shows its top tabs (Me's and LLC's verticals, Chat's Search + fleet searches, Agents'). */
+    /** #1184 Searches is the former Me and LLC merged: every one of their verticals, once, in their old order. */
+    private val SEARCHES_PAGES = listOf("house", "jobs", "groceries", "things", "commercial", "business", "suppliers", "services")
+
+    /** The five destinations route, and each shows its top tabs (Research's News/Reports/Agents, Searches' verticals, AI's Search + fleet searches, the two code indexes' modes). */
     @Test fun theFiveDestinationsRouteAndKeepTheirTopTabs() {
         launch()
         val tabs = mapOf(
-            "me" to listOf("house", "jobs", "groceries", "things"),
-            "llc" to listOf("commercial", "business", "suppliers", "services"),
+            "research" to listOf("news", "reports", "agenthub"),
+            "searches" to SEARCHES_PAGES,
             "chat" to listOf(state.chatVertical, "apps", "messages", "code"),
-            "agents" to listOf("agents", "runs", "templates", "settings"),
-            "reports" to emptyList(),
+            "cgc" to listOf("semantic", "graph"),
+            "mecgc" to listOf("semantic", "graph"),
         )
         for ((section, pages) in tabs) {
             compose.onNodeWithTag(Tags.nav(section)).performClick()
@@ -268,7 +271,7 @@ class SearchShellTest {
             compose.runOnIdle { assertEquals(section, state.section) }
             for (id in pages) compose.onNodeWithTag(Tags.subpage(id)).assertExists()
         }
-        compose.onNodeWithTag(Tags.nav("me")).performClick()
+        compose.onNodeWithTag(Tags.nav("searches")).performClick()
         compose.waitForIdle()
         waitFor(Tags.WEB_STRIP)
     }
@@ -506,26 +509,32 @@ class SearchShellTest {
         assertTrue(SearchDebugApi.things(services, mapOf("q" to "x", "city" to "München")).getBoolean("ok"))
     }
 
-    // ── #913 the island, Agents and Reports ──────────────────────────────────────────────────────
+    // ── #913 the island, Agents and Reports; #1184 Research, Searches, AI, Cloud-CGC, Me-CGC ──────
     @Test fun theIslandHoldsTheFiveSectionsAndEachOpens() {
         launch()
-        assertEquals(listOf("me", "llc", "chat", "agents", "reports"), NAV_IDS)
+        assertEquals(listOf("research", "searches", "chat", "cgc", "mecgc"), NAV_IDS)
         for (id in NAV_IDS) {
             compose.onNodeWithTag(Tags.nav(id)).performClick()
             compose.waitForIdle()
             assertEquals(id, state.section)
         }
-        // Me's strip is the personal verticals, LLC's the commercial ones, Chat is the assistant.
-        compose.onNodeWithTag(Tags.nav("me")).performClick()
+        // Searches' strip is the personal verticals then the commercial ones (the former Me and LLC), Chat is the assistant.
+        compose.onNodeWithTag(Tags.nav("searches")).performClick()
         waitFor(Tags.WEB_STRIP)
-        for (v in listOf("house", "jobs", "groceries", "things")) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
-        compose.onNodeWithTag(Tags.nav("llc")).performClick()
-        waitFor(Tags.subpage("commercial"))
-        compose.runOnIdle { assertEquals("commercial", state.vertical) }
-        for (v in listOf("commercial", "business", "suppliers", "services")) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        assertEquals(SEARCHES_PAGES, NAV_PAGES("searches"))
+        for (v in SEARCHES_PAGES) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        openVertical("commercial")
+        compose.runOnIdle { assertEquals("commercial", state.vertical); assertEquals("searches", state.section) }
         compose.onNodeWithTag(Tags.nav("chat")).performClick()
         waitFor(Tags.page("assistant"))
         assertEquals(state.chatVertical, state.vertical)
+    }
+
+    /** #1184 the Agents pages are Research's third page. */
+    private fun openAgents() {
+        compose.onNodeWithTag(Tags.nav("research")).performClick()
+        compose.onNodeWithTag(Tags.subpage("agenthub")).performClick()
+        compose.waitForIdle()
     }
 
     private val NAV_IDS get() = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
@@ -579,7 +588,7 @@ class SearchShellTest {
     @Test fun anAgentRunDraftsForReviewAndNothingIsSent() {
         val a = installAgents()
         launch()
-        compose.onNodeWithTag(Tags.nav("agents")).performClick()
+        openAgents()
         scrollTo(AT.LIST, AT.row("rs_house_rental"))
         click(AT.row("rs_house_rental"))
         waitFor(AT.run("rs_house_rental"))
@@ -608,7 +617,8 @@ class SearchShellTest {
         assertEquals(1, a.runs.all().size)
         assertEquals(1, a.reports.newestFirst().single().items.size)
         // Reports lists it, newest first, and opens the detail.
-        compose.onNodeWithTag(Tags.nav("reports")).performClick()
+        compose.onNodeWithTag(Tags.nav("research")).performClick()
+        compose.onNodeWithTag(Tags.subpage("reports")).performClick()
         waitFor(com.diegonmarcos.cloudsearch.ui.AgentTags.report("row_" + a.reports.newestFirst().single().id))
         compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.AgentTags.report("row_" + a.reports.newestFirst().single().id)).performClick()
         waitFor(com.diegonmarcos.cloudsearch.ui.AgentTags.copy("11223344"))
@@ -617,7 +627,7 @@ class SearchShellTest {
     @Test fun agentsSubSectionsAreReachable() {
         installAgents()
         launch()
-        compose.onNodeWithTag(Tags.nav("agents")).performClick()
+        openAgents()
         for (p in listOf("runs", "templates", "settings", "agents")) {
             compose.onNodeWithTag(Tags.subpage(p)).performClick()
             waitFor(Tags.page("agents_$p"))
@@ -647,7 +657,7 @@ class SearchShellTest {
         compose.onNodeWithTag(Tags.nav("chat")).performClick()
         compose.onNodeWithTag(Tags.subpage("messages")).performClick()
         waitFor(Tags.page("cloud_messages"))
-        compose.onNodeWithTag(Tags.nav("agents")).performClick()
+        openAgents()
         compose.runOnIdle { state.ask("kotlin jobs berlin", kotlinx.coroutines.MainScope()) }
         waitFor(Tags.page("assistant"))
         compose.runOnIdle {
@@ -661,7 +671,7 @@ class SearchShellTest {
     @Test fun theAgentsPageGroupsTheTenAgentsAndEachOpens() {
         val a = installAgents()
         launch()
-        compose.onNodeWithTag(Tags.nav("agents")).performClick()
+        openAgents()
         for (g in a.agents.groups()) scrollTo(AT.LIST, AT.group(g.key))
         assertEquals(listOf("buy/real_estate", "buy/things", "buy/services", "sell/"), a.agents.groups().map { it.key })
         for (x in a.agents.agents) {
@@ -692,7 +702,7 @@ class SearchShellTest {
         compose.runOnIdle { assertEquals(listOf("stepstone", "arbeitsagentur"), a.prefs.sources(agent).map { it.id }) }
     }
 
-    /** #913b Me's and LLC's verticals lead to their agents. */
+    /** #913b Searches' verticals lead to their agents. */
     @Test fun aVerticalLeadsToItsAgents() {
         installAgents()
         launch()
@@ -701,9 +711,9 @@ class SearchShellTest {
         compose.onNodeWithTag(Tags.agentLink("rs_house_purchase")).assertExists()
         compose.onNodeWithTag(Tags.agentLink("rs_house_rental")).performClick()
         waitFor(AT.screen("rs_house_rental"))
-        compose.runOnIdle { assertEquals("agents", state.section); assertEquals("rs_house_rental", state.agentOpen) }
+        compose.runOnIdle { assertEquals("research", state.section); assertEquals("agenthub", state.researchPage); assertEquals("rs_house_rental", state.agentOpen) }
         openVertical("commercial")
-        compose.runOnIdle { assertEquals("llc", state.section) }
+        compose.runOnIdle { assertEquals("searches", state.section) }
         waitFor(Tags.agentLink("rs_commercial_stores"))
         compose.onNodeWithTag(Tags.agentLink("rs_commercial_buildings")).assertExists()
     }
