@@ -2864,7 +2864,7 @@
                 "_doc": "Me-LLC \u2014 Cloud-Me's LLC section, the former Work, entered at Employed. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
                 "id": "myllc",
                 "label": "Me-LLC",
-                "icon": "ic_p_accounts",
+                "icon": "ic_p_cv",
                 "target": "extapp:cloud-me#page:llc/employed"
               }
             ]

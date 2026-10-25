@@ -12,10 +12,17 @@ object LedgerStore {
     const val LLC = "llc_user"
     private const val KEY = "data"
 
+    /** Spelled with literal names so the fleet-config guard sees both stores (a name built at runtime cannot be checked). */
+    private fun prefs(ctx: Context, store: String) = when (store) {
+        BURO -> ctx.getSharedPreferences("buro_user", Context.MODE_PRIVATE)
+        LLC -> ctx.getSharedPreferences("llc_user", Context.MODE_PRIVATE)
+        else -> throw IllegalArgumentException("not a ledger store: $store")
+    }
+
     fun load(ctx: Context, store: String): LedgerData =
-        LedgerData.fromJson(ctx.getSharedPreferences(store, Context.MODE_PRIVATE).getString(KEY, null))
+        LedgerData.fromJson(prefs(ctx, store).getString(KEY, null))
 
     fun save(ctx: Context, store: String, d: LedgerData) {
-        ctx.getSharedPreferences(store, Context.MODE_PRIVATE).edit().putString(KEY, d.toJson()).apply()
+        prefs(ctx, store).edit().putString(KEY, d.toJson()).apply()
     }
 }
