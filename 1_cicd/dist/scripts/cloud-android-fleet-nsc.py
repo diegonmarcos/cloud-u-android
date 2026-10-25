@@ -1,13 +1,13 @@
 # ─── GENERATED: do not edit — edit 1_cicd/src/scripts/cloud-android-fleet-nsc.py ───
 #!/usr/bin/env python3
-"""cloud-android-fleet-nsc -- the cleartext `.app` allowlist of every fleet app's network_security_config.xml is GENERATED
+"""cloud-android-fleet-nsc -- the cleartext mesh allowlist of every fleet app's network_security_config.xml is GENERATED
 from the one fleet endpoint declaration (ac_cloud-account/build.json::fleet_endpoints), never hand-listed (#1093).
 
   write ROOT   rewrite the generated block of every app listed in 1_cicd/src/data/fleet-nsc.json
   check ROOT   exit 1 when a file's block differs from what the declaration derives (FleetHostGuardTest runs the same rule)
 
 The block sits inside a `<domain-config cleartextTrafficPermitted="true">` element, between the BEGIN and END marker comments.
-A mesh host is `<service>.app` on WireGuard (WG encrypts), so only services whose mesh_scheme is http are listed, and a public
+A mesh host is `<container>.mesh.diegonmarcos.com` on WireGuard (WG encrypts), so only services whose mesh_scheme is http are listed, and a public
 host is never cleartext. An app whose file has no such element gets one (before </network-security-config>).
 """
 import json, os, re, sys
