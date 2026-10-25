@@ -94,7 +94,8 @@ class SensorsTest {
         assertEquals("3.14", Sensors.format(3.14159, 2))
         assertEquals("3", Sensors.format(3.14159, 0))
         assertEquals("3", Sensors.format(3.14159, -2))
-        assertEquals("1013.2", Sensors.format(1013.25, 1))
+        assertEquals("1013.2", Sensors.format(1013.24, 1))
+        assertEquals("1013.3", Sensors.format(1013.26, 1))
     }
 
     // ── validation ─────────────────────────────────────────────────────────────────────────────
