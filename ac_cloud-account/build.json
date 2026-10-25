@@ -374,7 +374,7 @@
         "id": "ollama",
         "kind": "ai",
         "source": "cloud-u-containers/user-ai_my-ai-api/build.json",
-        "_doc": "#1179 The fleet Ollama: the Ollama-compatible API of my-ai-api (BRIDGE_OLLAMA_PORT 12436, bound on oci-apps' WireGuard address 10.0.0.6; GET /api/tags, /api/ps, POST /api/generate). Same service and mesh name as the ai-gateway entry, on its Ollama port; Cloud Tools' Store location Fleet Ollama bakes this base URL (fleetMeshUrl('ollama')). Mesh-only.",
+        "_doc": "#1179 The fleet Ollama: the Ollama-compatible API of my-ai-api (BRIDGE_OLLAMA_PORT 12436, bound on oci-apps' WireGuard address 10.0.0.6; GET /api/tags and /v1/models; no /api/ps). Same service and mesh name as the ai-gateway entry, on its Ollama port; Cloud Tools' Store location Fleet Ollama bakes this base URL (fleetMeshUrl('ollama')). Mesh-only.",
         "mesh_dns": "my-ai-api.mesh.diegonmarcos.com",
         "mesh_port": 12436,
         "mesh_scheme": "http",

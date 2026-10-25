@@ -74,7 +74,8 @@ class OllamaRuntime(override val id: String, private val base: String, private v
 
     override fun state(): RuntimeState = runCatching {
         val tags = JSONObject(call("GET", "/api/tags", null, timeoutMs)).optJSONArray("models")
-        val ps = JSONObject(call("GET", "/api/ps", null, timeoutMs)).optJSONArray("models")
+        // The fleet's Ollama-compatible API (my-ai-api's mimic) has no /api/ps: a host that does not answer it holds nothing Loaded.
+        val ps = runCatching { JSONObject(call("GET", "/api/ps", null, timeoutMs)).optJSONArray("models") }.getOrNull()
         val installed = List(tags?.length() ?: 0) { i ->
             val o = tags!!.getJSONObject(i)
             val ref = o.getString("name")
