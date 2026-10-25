@@ -115,7 +115,7 @@ def texts_in(nodes, box):
     return " ".join(n.text for n in nodes if n.text and n.l >= box.l and n.r <= box.r and n.t >= box.t and n.b <= box.b) + " " + box.text + " " + box.desc
 
 
-BLOCKER_TEXTS = ("Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK")
+BLOCKER_TEXTS = ("Continue with local files", "Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK")
 
 
 def clear_blockers(nodes):
@@ -130,11 +130,16 @@ def clear_blockers(nodes):
         if cancel is not None:
             tap(cancel)
             return True
+    dismiss = find(nodes, "signin_fre_dismiss_button")  # a browser first-run screen an app handed off to: leave it, the app is relaunched
+    if dismiss is not None:
+        tap(dismiss)
+        return True
     for want in BLOCKER_TEXTS:
-        for n in nodes:
-            if n.text == want and (n.clickable or n.cls.endswith("Button")):
-                tap(n)
-                return True
+        hits = [n for n in nodes if n.text == want]
+        hits.sort(key=lambda n: not (n.clickable or n.cls.endswith("Button")))
+        if hits:
+            tap(hits[0])
+            return True
     return False
 
 
@@ -190,7 +195,7 @@ class Walk:
         shell("am force-stop %s" % self.pkg)
         shell("logcat -c")
         shell("am start -W -n %s" % act, timeout=120)
-        deadline = time.time() + 60
+        deadline = time.time() + 90
         while time.time() < deadline:
             nodes = dump(2)
             if nodes and any(n.rid.startswith(ITEM) for n in nodes):
@@ -199,6 +204,8 @@ class Walk:
             if nodes and clear_blockers(nodes):
                 settle(1.5)
                 continue
+            if nodes and nodes[0].pkg not in (self.pkg, "android", "com.android.systemui") and not self.foreground():
+                shell("monkey -p %s -c android.intent.category.LAUNCHER 1" % self.pkg)  # brought back to the front after a hand-off
             settle(2)
         return None
 
@@ -303,7 +310,10 @@ class Walk:
                       and not n.rid.startswith(("bottomnav_", "pagetabs_", "navtop", "topbar")))
 
     # ── one page ─────────────────────────────────────────────────────────────
-    def check_page(self, label, via):
+    def has_pages(self, section):
+        return bool((self.sections.get(section) or {}).get("pages"))
+
+    def check_page(self, section, label, via):
         """Run P1-P4 on the page now shown. Returns (checks dict, [failures])."""
         checks, fails = {}, []
         nodes = dump()
@@ -321,7 +331,7 @@ class Walk:
         if dd is None:
             fails.append("P2 the title dropdown did not open")
         else:
-            if not findall(dd, ENTRY):
+            if self.has_pages(section) and not findall(dd, ENTRY):
                 fails.append("P2 the dropdown opened with no page entries")
             if not self.close_dropdown():
                 fails.append("P2 the dropdown did not close on Back")
@@ -386,13 +396,27 @@ class Walk:
                     fails.append("P3 a page that does not scroll changed the bottom bar")
         return checks, fails
 
+    def ensure_chrome(self, section):
+        """A page that left the chrome collapsed must not fail every page after it: bring it back, relaunching if it will not come."""
+        nodes = dump() or []
+        if find(nodes, TITLE) is not None:
+            return
+        x = self.w // 2
+        for _ in range(3):
+            swipe(x, int(self.h * 0.3), int(self.h * 0.8))
+            settle(0.8)
+        nodes = dump() or []
+        if find(nodes, TITLE) is None:
+            self.relaunch_to(section)
+
     def run_page(self, section, pid, label, via_dropdown):
         name = "%s/%s" % (section, pid)
         t0 = time.time()
         shell("logcat -c")
         self.hide_ime()
+        self.ensure_chrome(section)
         err = self.goto(pid, label) if via_dropdown else None
-        checks, fails = ({}, [err]) if err else self.check_page(label, via_dropdown)
+        checks, fails = ({}, [err]) if err else self.check_page(section, label, via_dropdown)
         died = not self.alive()
         crashed, log = self.crashed()
         if crashed or died:

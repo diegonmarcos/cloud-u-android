@@ -57,6 +57,7 @@ on:
       - "ab_cloud-libs-shared/libs/launcher-apptabs/**"
       - "ab_cloud-libs-shared/libs/launcher-onehand/**"
       - "ab_cloud-libs-shared/libs/launcher-zoomies/**"
+      - "ab_cloud-libs-shared/libs/light/**"
       - "ab_cloud-libs-shared/libs/mail/**"
       - "ab_cloud-libs-shared/libs/net/**"
       - "ab_cloud-libs-shared/libs/ops/**"
