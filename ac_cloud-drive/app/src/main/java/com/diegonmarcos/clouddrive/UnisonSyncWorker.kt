@@ -59,7 +59,7 @@ class UnisonSyncWorker(context: Context, params: WorkerParameters) : Worker(cont
         /** Enqueue (or re-apply) the periodic tick. Only when some pair declares a schedule (the user's per-pair switch is read on each tick); otherwise any earlier tick is cancelled. */
         fun schedule(context: Context) {
             val wm = WorkManager.getInstance(context)
-            if (Declarations.unison.pairs.none { it.scheduleMinutes != null }) { wm.cancelUniqueWork(WORK_NAME); return }
+            if (com.diegonmarcos.clouddrive.storage.UnisonPairStore(context).declared().pairs.none { it.scheduleMinutes != null }) { wm.cancelUniqueWork(WORK_NAME); return }
             val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
             val request = PeriodicWorkRequestBuilder<UnisonSyncWorker>(BASE_MINUTES, TimeUnit.MINUTES).setConstraints(constraints).build()
             wm.enqueueUniquePeriodicWork(WORK_NAME, ExistingPeriodicWorkPolicy.UPDATE, request)

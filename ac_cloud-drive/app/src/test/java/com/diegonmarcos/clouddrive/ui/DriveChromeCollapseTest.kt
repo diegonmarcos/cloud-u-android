@@ -90,6 +90,12 @@ class DriveChromeCollapseTest {
                 NavBarTopSecondRow(pages = Declarations.navPages(Declarations.SECTION_GIT), selectedId = "me", onSelect = {}, modifier = Modifier.testTag(STRIP), underTopChrome = false)
                 Box(Modifier.weight(1f)) { PullToRefreshBox(isRefreshing = false, onRefresh = {}, modifier = Modifier.fillMaxSize()) { Rows(sticky = true) } }
             }
+            // #1173 Fsync (Backup | Folders Sync) and Mounts (Rclone | FUSE) carry a second row like Git: the same island, strip and scroll container shape the real pages build.
+            "fsync", "mounts" -> Column(Modifier.fillMaxSize()) {
+                ToolbarIsland(title = id)
+                NavBarTopSecondRow(pages = Declarations.navPages(id), selectedId = Declarations.navPages(id).first().id, onSelect = {}, modifier = Modifier.testTag(STRIP), underTopChrome = false)
+                Box(Modifier.weight(1f)) { Rows() }
+            }
             else -> Column(Modifier.fillMaxSize()) {
                 ToolbarIsland(title = id)
                 Box(Modifier.weight(1f)) { Rows() }
@@ -126,8 +132,8 @@ class DriveChromeCollapseTest {
     }
 
     @Test fun `git page collapses and restores the chrome`() = check("git", strip = true)
-    @Test fun `rsync page collapses and restores the chrome`() = check("rsync", strip = false)
-    @Test fun `mounts page collapses and restores the chrome`() = check("mounts", strip = false)
+    @Test fun `fsync page collapses and restores the chrome`() = check("fsync", strip = true)
+    @Test fun `mounts page collapses and restores the chrome`() = check("mounts", strip = true)
     @Test fun `manage page collapses and restores the chrome`() = check("manage", strip = false)
     @Test fun `home page collapses and restores the chrome`() = check("home", strip = false)
 }

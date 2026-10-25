@@ -1,20 +1,9 @@
 {
-  "_doc": "#604 THE FOLDER↔FOLDER SYNC RULES the Configs ▸ Rsync page renders. A rule is a local folder, a declared remote (data/drive-remotes.json `name`) and a folder inside it, plus a direction; SyncRules.job() maps each one onto ONE libs:rclone RcloneJob, so nothing here is a second transfer engine. Only the `rules` array crosses into the APK. See build.json::_doc_sync_rules for the direction→verb mapping and for why schedule_minutes is declarative only.",
+  "_doc": "#1173 NO FOLDER RULE IS DECLARED IN THE APK any more: the Fsync page draws real state only (the rsync jobs, Unison pairs, rclone remotes and FUSE mounts the user made, kept by Cloud Account). The `rules` array stays as an empty list so the baked SYNC_RULES_B64 and its parser keep their shape; it must stay empty (DeclarationsTest holds it).",
   "_doc_auth": "Same rule as every other file in data/: no password, no token and no key ever appears here. `remote_name` names a remote whose credential the user adds on the device (Configs ▸ Rsync ▸ Remotes ▸ Edit); a rule whose remote is unreachable renders its declared reason, it does not silently fail.",
   "_doc_direction": "upload = local → remote (rclone copy), download = remote → local (rclone copy), bidirectional = rclone bisync. copy never deletes; bisync needs a --resync on its very first run, which the engine screen offers as a flag.",
-  "rules": [
-    {
-      "id": "a37-gdrive",
-      "local_path": "/ya_mnt_sync-a37",
-      "remote_name": "gdrive",
-      "remote_path": "cloud-drive-sync",
-      "direction": "bidirectional",
-      "schedule_minutes": null,
-      "enabled": true,
-      "notes": "The default rule: the Samsung A37's own sync mount kept level with the personal Google Drive folder of the same name. Manual by default — schedule_minutes is null, so it runs when the user taps Run."
-    }
-  ],
-  "_doc_unison": "#1084 THE UNISON FOLDER PAIRS: stateful two-way sync between a folder on this phone and a folder on a fleet host or the desktop, over SSH on the WireGuard mesh, next to rclone (the `rules` above: cloud/API remotes) and rsync (the one-way mirror jobs in drive-mirror-jobs.json). ONE source of truth: roots, ignore rules, batch/auto, fastcheck and the conflict policy are declared HERE; libs:rclone's UnisonProfile generates the Unison profile from them (no .prf is written by hand), UnisonSyncWorker reads `schedule_minutes` from them, and the Sync tab renders them. The Unison binary and its version are NOT here: they are pinned once in ab_cloud-libs-shared/libs/rclone-engine/data/unison-binary.json and every peer must run the same one (cloud-android-unison-pin-guard.py).",
+  "rules": [],
+  "_doc_unison": "#1173 Unison POLICY only: `defaults` and the shared `ignore` rules every user-made pair inherits (storage/UnisonPairs.kt lays the user's pairs over this and hands the result to libs:rclone's UnisonConfig.parse). `pairs` is empty and stays empty: a pair in the APK would be sample data.",
   "unison": {
     "_doc": "defaults apply to every pair that does not override them. `ignore` is Unison's own grammar (Name|Path|BelowPath|Regex <pattern>) and every pair gets these plus its own. batch/auto: the engine runs unattended (there is no terminal on a phone), so a non-conflicting change is applied and a conflicting one is SKIPPED and listed in the Sync tab for a keep-A / keep-B / keep-both decision. fastcheck: default | true | false | yes | no, Unison's own. prefer: absent = ask (every conflict waits for the user), a | b = that side wins (a is the phone), newer | older = by modification time; a pair that picks a winner must keep backup on (parsing refuses a silent overwrite), and what a winner replaces is kept in the engine's private central backup (max_backups copies). root_a is a folder RELATIVE to shared storage, resolved at runtime (the engine runs in its own uid and cannot open another app's private data; no device path is written down). root_b is either {host: <name>.app, user, path, port?, mount?, server_cmd?} (SSH over the mesh; `mount` names a Sync > Mounts ssh connection whose key the engine uses, else the first ssh mount on that host and user) or {path} for another local folder. schedule_minutes (>= 15) is enforced by UnisonSyncWorker on the existing WorkManager; absent = manual (Sync now). require_unmetered holds scheduled runs to Wi-Fi.",
     "defaults": {
@@ -37,20 +26,6 @@
       "Name node_modules",
       "Name .gradle"
     ],
-    "pairs": [
-      {
-        "id": "docs-oci-apps",
-        "name": "Documents ⇄ oci-apps",
-        "enabled": false,
-        "root_a": "Documents/Sync",
-        "root_b": {
-          "host": "oci-apps.mesh.diegonmarcos.com",
-          "user": "ubuntu",
-          "path": "sync/documents"
-        },
-        "schedule_minutes": 60,
-        "notes": "The reference pair. host and user are the fleet declaration's own (cloud-infra b_infra/nixhm-sudo-oci-apps/build.json: dashboard.dns oci-apps.mesh.diegonmarcos.com, hm.user ubuntu; sshd on the default port); the remote folder is relative to that user's home. Off until the user switches it on (Sync > Rsync > Unison pairs) because it needs an ssh connection to oci-apps.mesh.diegonmarcos.com under Sync > Mounts and a unison of the pinned version on that host. Conflicts are never resolved on their own: no `prefer`, so every conflicting file waits for keep-A / keep-B / keep-both."
-      }
-    ]
+    "pairs": []
   }
 }

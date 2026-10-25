@@ -324,6 +324,8 @@ object Declarations {
     val constellation: List<ConstellationAppDecl> by lazy { parseConstellation(decode(BuildConfig.UI_CONSTELLATION_B64)) }
     val syncRules: List<SyncRuleDecl> by lazy { parseSyncRules(decode(BuildConfig.SYNC_RULES_B64)) }
     /** #1084 the Unison folder pairs (data/drive-sync-rules.json `unison`), parsed and validated by libs:rclone; a pair that breaks a rule is a sentence in `problems`, never a half-valid run. */
+    /** #1173 Unison's shipped POLICY (defaults, shared ignore rules; no pair) as JSON text: the user's pairs are laid over it by storage/UnisonPairs. */
+    val unisonPolicy: String by lazy { decode(BuildConfig.UNISON_B64) }
     val unison: com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Declared by lazy {
         runCatching { com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.parse(decode(BuildConfig.UNISON_B64), runCatching { android.os.Environment.getExternalStorageDirectory().absolutePath }.getOrNull() ?: com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.DEFAULT_STORAGE_ROOT) }
             .getOrElse { com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Declared(emptyList(), listOf("the unison declaration is not valid JSON: ${it.message}")) }
@@ -387,9 +389,9 @@ object Declarations {
     const val SECTION_CONFIGS = "configs"
     /** #1149 the former Sync pages, now bottom-nav sections of their own. */
     const val SECTION_GIT = "git"
-    const val SECTION_RSYNC = "rsync"
+    const val SECTION_FSYNC = "fsync"
     const val SECTION_MOUNTS = "mounts"
-    val SYNC_SECTIONS = listOf(SECTION_GIT, SECTION_RSYNC, SECTION_MOUNTS)
+    val SYNC_SECTIONS = listOf(SECTION_GIT, SECTION_FSYNC, SECTION_MOUNTS)
     const val PAGE_ME = "me"
 
     /** #609 the Sync destinations: Git/Rsync/Mounts ([pages]; #1149 their own bottom-nav sections). #608 carries the Git page too. */

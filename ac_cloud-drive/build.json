@@ -3,8 +3,8 @@
   "name": "cloud-drive",
   "display_name": "Cloud Drive",
   "description": "Diego's Cloud Drive — standalone Android storage app, lifted out of the SuperApp's Cloud▸Apps▸Drive pages so the phone's storage surface is its own icon. #609 REDESIGN over #603/#604's Compose chrome: a five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) — Files, Volumes, Home, Sync, Configs — every tab, sub-page, place, section, filter and icon name declared in ui.* below and baked through BuildConfig. Files is a FULL X-plore-class manager over shared storage with TWO declared sections (ui.files.sections): Emulated (shared storage itself, /storage/emulated/0) and cloud-drive-storage (the ONE shared store of #575, storage.shared_root, exposed to every fleet app that holds all-files access — plain shared storage, so NO webserver is needed and libs:webserver stays deliberately unlinked); the store is seeded by DEFAULT with the public cloud repositories (storage.seed + data/drive-git-repos.json seed flags — a baked manifest with a first-run SHALLOW fetch, because an APK cannot carry a working clone). Volumes consolidates the FULL FLEET: the device's removable volumes plus every mesh mount (libs:mounts) and declared fleet connection, browse-through one tap away. Home is the drive's overview, REDESIGNED by #609 into two sections: Apps (the fleet's data-app grid, moved in from the old Apps tab) and Volumes (a snapshot of the two stores, the four volume classes, the seeded git repos' clean/dirty/ahead-behind state and the container mesh's status, each reading the SAME state the Volumes and Sync tabs render, never a second source). Sync holds three sub-pages from ONE declaration (ui.sections[sync].pages) — Git, Rclone and Mounts — moved back OUT of Configs by #609 (the mirror of #603's move the other way): the native git manager, the folder↔folder sync engine and the ftp/sftp/ssh/webdav connections. Configs keeps three sub-pages (ui.sections[configs].pages): Backups (the declared mirror/rsync jobs with cancellable progress), General (the app's settings, sign-in, storage access) and Others (removable storage, about). The four engine libraries (#567) and the ONE shared store (#575) are unchanged underneath. Dark is the default theme, set at the declaration (#336, #337). Design: a0_docs/eng-specs/cloud-drive-redesign.md. The PDF reader is the #577 native pdfium engine (build.json::pdf), the fleet's one in-process renderer, opened from the Files tab and from any app's Open-with. Build via Nix devShell, one APK out.",
-  "_doc_rsync": "TASK #330 named Rsync without naming a home; #604 GAVE IT ONE and #609 moved its page. Rsync IS the folder↔folder sync page: ui.sections[sync].pages 'rclone' is LABELLED Rsync (the id stays 'rclone' because the engine underneath is libs:rclone and a renamed id would be a second name for one dispatch), and the Apps grid's RSync tile routes THERE — {tab: sync, page: rclone} — not to Backups any more. The rules are declared in data/drive-sync-rules.json (see _doc_sync_rules) and run by libs:rclone. Backups keeps what it always was: the ON-DEVICE mirror set of data/drive-mirror-jobs.json, executed by FilesBridge.mirror(), every destination on this phone and no fleet host addressed (see that file's _doc_fleet_destination for why an APK cannot hold the credential, and rep-N2.md for what that defers). One subject, one page, and the tile no longer points at the other one.",
-  "_doc_sync_rules": "#604 THE FOLDER↔FOLDER SYNC RULES, declared in data/drive-sync-rules.json and baked whole (SYNC_RULES_B64 → Declarations.syncRules). A rule is local_path + remote_name:remote_path + direction, and SyncRules.job() maps it onto ONE RcloneJob — bidirectional → the bisync verb, upload → copy local→remote, download → copy remote→local — so the rules page runs the SAME engine, job store and live-progress path as every other rclone job and adds no second transfer mechanism. SCOPE CALL: schedule_minutes is DECLARATIVE ONLY. It is rendered on the card and nothing enforces it, because enforcing it means a WorkManager periodic worker per rule and that is a scheduling subsystem, not a label; RcloneJob is left untouched for the same reason. The enable toggle IS live (DrivePrefs.setRuleEnabled) and defaults to the declared `enabled`: a rule the user switched off keeps its declaration and loses its Run.",
+  "_doc_rsync": "#1173 THE RSYNC PAGE IS FSYNC. Task #330 named Rsync without a home, #604 gave it one and #609/#1149 made it a bottom-nav page; #1173 renamed it Fsync (ui.sections[fsync], the old `rsync` id is gone) and gave it two sub-pages: Backup (engine rsync, one way, run inside the Termux guest) and Folders Sync (engine Unison, two ways, conflicts listed). It declares nothing: no rule, no job, no pair ships in the APK, the page draws what the user made and what the last runs said (see _doc_sync_rules). Configs > Backups keeps what it always was: the ON-DEVICE mirror set of data/drive-mirror-jobs.json, executed by FilesBridge.mirror().",
+  "_doc_sync_rules": "#1173 data/drive-sync-rules.json ships NO folder rule and NO Unison pair (the Fsync page is real state only: the jobs and pairs the user made, kept by Cloud Account). `rules` stays an empty list so the baked SYNC_RULES_B64 and Declarations.parseSyncRules keep their shape (DeclarationsTest holds it empty); `unison` carries Unison's POLICY only (defaults, shared ignore rules) that every user pair inherits, baked as UNISON_B64.",
   "category": "android",
   "build": {
     "type": "gradle",
@@ -63,7 +63,7 @@
   },
   "ui": {
     "_doc": "#868 THE NAVIGATION IS ONE DECLARATION (libs:bottomnav's NavDecl): ui.bottom_nav = the island's ids, ui.sections[] = each one's label/icon and its `pages` (the strip PageTabs draws), ui.default_section = where the app opens. Volumes' four classes, Sync's three pages and Configs' three pages are those `pages` now (they were the keys ui.volumes.classes, ui.sync.pages and ui.configs.pages; ui.tabs and ui.default_tab are gone). #603/#609 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.bottom_nav, SyncScreen renders ui.sections[sync].pages, ConfigsScreen renders ui.sections[configs].pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_SECTIONS_B64 / UI_BOTTOM_NAV / UI_DEFAULT_SECTION / UI_SYNC_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs) with files/volumes/home/apps/configs, moving Sync's three pages and Backups into Configs. #609 REVERSED HALF OF THAT: Apps stopped being a tab (its grid moved into Home, ui.home below) and the freed slot is now Sync, carrying Git/Rclone/Mounts back out of Configs into their own tab — the five tabs are now files/volumes/home/sync/configs. #608 REDESIGNED THE SYNC ▸ GIT SUB-PAGE and declared it whole in ui.sync.git below: two sections (the owner's PUBLIC cloud*/front* set, which needs no login, and Personal, which signs in through libs:auth for the `repo` scope and splits the account's own listing into Public and Private), one DENSE row per repository, and fourteen per-repository operations collapsed behind each row's disclosure — every one of them a verb of libs:git-sync, force push and force pull included.",
-    "bottom_nav": ["explorer", "manage", "agents", "home", "git", "rsync", "mounts"],
+    "bottom_nav": ["explorer", "manage", "agents", "home", "git", "fsync", "mounts"],
     "default_section": "explorer",
     "top_bar": {"drawer": true, "inline_actions": true, "settings": ["account", "configs"]},
     "webserver": {
@@ -167,16 +167,40 @@
         ]
       },
       {
-        "id": "rsync",
-        "label": "Rsync",
+        "id": "fsync",
+        "label": "Fsync",
         "icon": "sync",
-        "_doc": "#1149 the former Sync > Rsync page (libs:rclone's surface, RcloneSyncScreen) as a bottom-nav page. #604's rename stands: the label is Rsync."
+        "_doc": "#1173 the former Rsync page, renamed, with two sub-pages on the second row (PageTabs, icons from libs:ui-icons): Backup = rsync, one-way mirror of a Termux-guest folder to an SSH host or another guest folder (sync/FsyncPage.kt FsyncBackupScreen, storage/BackupJobs.kt), and Folders Sync = Unison, two-way with conflict detection and keep-A / keep-B / keep-both (FolderSyncScreen over UnisonCoordinator). Everything the page draws is real state: the jobs and pairs the user made and the last result of each run; the APK declares no job, rule or pair.",
+        "pages": [
+          {
+            "id": "backup",
+            "label": "Backup",
+            "icon": "backup"
+          },
+          {
+            "id": "folders",
+            "label": "Folders Sync",
+            "icon": "folder"
+          }
+        ]
       },
       {
         "id": "mounts",
         "label": "Mounts",
         "icon": "lan",
-        "_doc": "#1149 the former Sync > Mounts page (libs:mounts' surface, MountsSyncScreen) as a bottom-nav page."
+        "_doc": "#1173 the Mounts page with two sub-pages: Rclone = rclone's own `rclone config` flow in the app (backend list and option schema from `rclone config providers`, OAuth through `rclone authorize`, service account, shared drives, test with `rclone lsd`, usage with `rclone about`, edit, delete, serve over loopback WebDAV) in sync/MountsPage.kt + sync/RemoteWizard.kt, and FUSE = real FUSE mounts (rclone mount, sshfs) run inside the Termux proot guest through the CLOUD_EXEC channel, with a runtime verdict on whether FUSE can work on the device and a WebDAV serve fallback when it cannot (storage/FuseWire.kt). Remotes, keys, mounts and Unison pairs are owned by Cloud Account and reached over its accountdata door (storage/DriveCredentialsClient.kt, held to the contract by DriveCredentialsGuardTest).",
+        "pages": [
+          {
+            "id": "rclone",
+            "label": "Rclone",
+            "icon": "cloud"
+          },
+          {
+            "id": "fuse",
+            "label": "FUSE",
+            "icon": "storage"
+          }
+        ]
       },
       {
         "id": "configs",

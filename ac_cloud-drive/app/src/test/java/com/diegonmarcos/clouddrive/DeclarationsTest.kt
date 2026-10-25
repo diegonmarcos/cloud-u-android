@@ -50,9 +50,9 @@ class DeclarationsTest {
 
     @Test fun tabsDeclareTheOwnersNavOrder() {
         val tabs = Declarations.tabsOf(nav())
-        // #1149 the owner's bottom nav: Explorer, Manager, Agents, Home, Git, Rsync, Mounts. AI and Configs left it for the top bar.
-        assertEquals(listOf("explorer", "manage", "agents", "home", "git", "rsync", "mounts"), tabs.map { it.id })
-        assertEquals(listOf("Explorer", "Manage", "Agents", "Home", "Git", "Rsync", "Mounts"), tabs.map { it.label })
+        // #1149 the owner's bottom nav: Explorer, Manager, Agents, Home, Git, Fsync (#1173: the old Rsync), Mounts. AI and Configs left it for the top bar.
+        assertEquals(listOf("explorer", "manage", "agents", "home", "git", "fsync", "mounts"), tabs.map { it.id })
+        assertEquals(listOf("Explorer", "Manage", "Agents", "Home", "Git", "Fsync", "Mounts"), tabs.map { it.label })
         assertTrue("AI and Configs are sections the top bar opens, not island items", tabs.none { it.id == "ai" || it.id == "configs" } && nav().section("ai") != null && nav().section("configs") != null)
         assertEquals(emptyList<String>(), nav().problems())
         assertTrue(tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
@@ -100,9 +100,14 @@ class DeclarationsTest {
 
     @Test fun syncPagesAndPeriods() {
         val sync = sync()
-        // #1149 the former Sync pages are bottom-nav sections: Git (Me, Cloud), Rsync, Mounts.
-        assertEquals(listOf("git", "rsync", "mounts"), sync.pages.map { it.id })
+        // #1149 the former Sync pages are bottom-nav sections: Git (Me, Cloud), Fsync (Backup, Folders Sync), Mounts (Rclone, FUSE) (#1173).
+        assertEquals(listOf("git", "fsync", "mounts"), sync.pages.map { it.id })
         assertEquals(listOf("me", "cloud"), nav().section("git")!!.pages.map { it.id })
+        assertEquals(listOf("backup", "folders"), nav().section("fsync")!!.pages.map { it.id })
+        assertEquals(listOf("Backup", "Folders Sync"), nav().section("fsync")!!.pages.map { it.label })
+        assertEquals(listOf("rclone", "fuse"), nav().section("mounts")!!.pages.map { it.id })
+        assertEquals(listOf("Rclone", "FUSE"), nav().section("mounts")!!.pages.map { it.label })
+        assertNull("the old Rsync id is gone, not kept as a second name", nav().section("rsync"))
         assertNull(nav().section("sync"))
         assertTrue(sync.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
         assertTrue(sync.gitPeriodsMinutes.isNotEmpty())
@@ -168,21 +173,14 @@ class DeclarationsTest {
         assertEquals("", volumes.ownerOnlyPathOf(""))
     }
 
-    @Test fun syncRulesMapOntoOneRcloneJob() {
+    @Test fun noFolderRuleIsDeclaredAndARuleStillMapsOntoOneRcloneJob() {
         val data = File(root, "data")
-        val rules = Declarations.parseSyncRules(Json.parseToJsonElement(File(data, "drive-sync-rules.json").readText()).jsonObject["rules"].toString())
-        assertTrue(rules.isNotEmpty())
-        assertTrue(rules.all { it.localPath.isNotBlank() && it.remoteName.isNotBlank() && it.direction.isNotBlank() })
-        // #604 the default rule: the A37 mount kept level with Google Drive, both ways, by hand.
-        val first = rules.first()
-        assertEquals("/ya_mnt_sync-a37", first.localPath)
-        assertEquals(Declarations.DIRECTION_BIDIRECTIONAL, first.direction)
-        assertEquals(null, first.scheduleMinutes)
-        assertEquals("gdrive:cloud-drive-sync", first.remoteLeg)
-        // every rule names a DECLARED remote — a rule pointing at nothing could never run.
-        val remoteNames = Declarations.parseRemotes(Json.parseToJsonElement(File(data, "drive-remotes.json").readText()).jsonObject["remotes"].toString()).map { it.name }
-        assertTrue("every rule names a declared remote", rules.all { it.remoteName in remoteNames })
-        // the direction → verb mapping, both one-way legs and the two-way one.
+        val declared = Declarations.parseSyncRules(Json.parseToJsonElement(File(data, "drive-sync-rules.json").readText()).jsonObject["rules"].toString())
+        // #1173 the Fsync page draws real state only: the APK ships no rule (a sample rule would be mock data).
+        assertEquals("no declared sync rule: the page shows what the user made", emptyList<Declarations.SyncRuleDecl>(), declared)
+        // the direction -> verb mapping stays proven on a rule built here: both one-way legs and the two-way one.
+        val first = Declarations.SyncRuleDecl("t1", "/data/local", "remote1", "folder", Declarations.DIRECTION_BIDIRECTIONAL, null, true, "")
+        assertEquals("remote1:folder", first.remoteLeg)
         assertEquals("bisync", com.diegonmarcos.clouddrive.sync.SyncRules.job(first).op)
         val up = first.copy(direction = Declarations.DIRECTION_UPLOAD)
         assertEquals("copy", com.diegonmarcos.clouddrive.sync.SyncRules.job(up).op)
@@ -270,10 +268,11 @@ class DeclarationsTest {
         val data = File(root, "data")
         val apps = Declarations.parseApps(Json.parseToJsonElement(File(data, "drive-apps.json").readText()).jsonObject["apps"].toString())
         assertTrue(apps.size >= 5); assertTrue(apps.all { it.label.isNotBlank() && it.icon.isNotBlank() })
-        // #609 GitSync and RSync are IN-APP routes into declared Sync sub-pages, never packages.
+        // #609 GitSync and Fsync (#1173: the old RSync tile) are IN-APP routes into declared Sync sub-pages, never packages.
         val sync = sync()
         val pageIds = sync.pages.map { it.id }
-        listOf("GitSync", "RSync").forEach { label ->
+        assertTrue("no RSync tile: the page is Fsync now", apps.none { it.label == "RSync" })
+        listOf("GitSync", "Fsync").forEach { label ->
             val tile = apps.single { it.label == label }
             assertEquals("a routed tile carries no package", "", tile.packageName)
             assertTrue("$label routes to a declared Sync section (${tile.routeTab})", tile.routeTab in pageIds)

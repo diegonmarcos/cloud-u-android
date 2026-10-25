@@ -25,7 +25,11 @@ import kotlinx.coroutines.withContext
 class UnisonCoordinator(private val ctx: Context, private val scope: CoroutineScope, private val prefs: DrivePrefs) {
     val syncer = UnisonSyncer(ctx)
 
-    val declared: UnisonConfig.Declared get() = syncer.declared
+    /** The user's pairs (over the shipped policy), read from the phone's own store; empty until the user makes one. */
+    val declaredState = MutableStateFlow(UnisonConfig.Declared(emptyList(), emptyList()))
+    val declared: UnisonConfig.Declared get() = declaredState.value
+    /** Set by the storage coordinator: called after the pair list changed, so Cloud Account's copy follows. */
+    @Volatile var onPairsChanged: () -> Unit = {}
     val states = MutableStateFlow<Map<String, UnisonStateStore.PairState>>(emptyMap())
     /** pair id → the live log of the run in flight (cleared when it ends; the finished log is in [states]). */
     val live = MutableStateFlow<Map<String, List<String>>>(emptyMap())
@@ -37,10 +41,28 @@ class UnisonCoordinator(private val ctx: Context, private val scope: CoroutineSc
     fun refresh() {
         scope.launch {
             withContext(Dispatchers.IO) {
-                syncer.store.retain(declared.pairs.map { it.id }.toSet())
+                val now = syncer.declared
+                declaredState.value = now
+                syncer.store.retain(now.pairs.map { it.id }.toSet())
                 states.value = syncer.store.load()
                 unavailable.value = syncer.runner.unavailable()
             }
+        }
+    }
+
+    /** Add a pair through the engine's own parser; [done] gets null or the parser's sentence. */
+    fun addPair(draft: com.diegonmarcos.clouddrive.storage.UnisonPairs.Draft, done: (String?) -> Unit) {
+        scope.launch {
+            val r = withContext(Dispatchers.IO) { syncer.pairStore.add(draft) }
+            if (r.isSuccess) { refresh(); onPairsChanged() }
+            done(r.exceptionOrNull()?.message)
+        }
+    }
+
+    fun removePair(pair: UnisonConfig.Pair) {
+        scope.launch {
+            withContext(Dispatchers.IO) { syncer.pairStore.remove(pair.id); syncer.store.retain(declared.pairs.map { it.id }.toSet() - pair.id) }
+            refresh(); onPairsChanged()
         }
     }
 

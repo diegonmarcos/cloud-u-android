@@ -62,4 +62,21 @@ class SubPageIconGuardTest {
     @Test fun `the guard sees pages at all (a vacuous pass is a failure)`() {
         for (app in apps) assertTrue("$app declares no pages", decl(app).sections.sumOf { it.allPages().size } > 0)
     }
+
+    @Test fun `Cloud Drive Fsync and Mounts declare their two sub-pages each, with icons the shared catalog draws (#1173)`() {
+        val d = decl("ac_cloud-drive")
+        val want = mapOf("fsync" to listOf("backup", "folders"), "mounts" to listOf("rclone", "fuse"))
+        for ((section, ids) in want) {
+            val s = d.sections.firstOrNull { it.id == section } ?: throw AssertionError("ac_cloud-drive declares no $section section")
+            assertEquals("$section pages", ids, s.allPages().map { it.id })
+            for (p in s.allPages()) {
+                assertTrue("$section/${p.id} icon '${p.icon}' is not in libs:ui-icons", com.diegonmarcos.superapp.uiicons.UiIcons.has(p.icon))
+                assertTrue("$section/${p.id} icon '${p.icon}' is not one the second row draws", SecondRowIcons.has(p.icon))
+                assertTrue("$section/${p.id} has no label", p.label.isNotBlank())
+            }
+        }
+        assertEquals(listOf("Backup", "Folders Sync"), d.sections.first { it.id == "fsync" }.allPages().map { it.label })
+        assertEquals(listOf("Rclone", "FUSE"), d.sections.first { it.id == "mounts" }.allPages().map { it.label })
+        assertTrue("the renamed page keeps no rsync section", d.sections.none { it.id == "rsync" })
+    }
 }

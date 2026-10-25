@@ -48,10 +48,11 @@
       }
     },
     {
-      "label": "RSync",
+      "label": "Fsync",
       "icon": "🔁",
       "route": {
-        "tab": "rsync"
+        "tab": "fsync",
+        "page": "backup"
       }
     },
     {

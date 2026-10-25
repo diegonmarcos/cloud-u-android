@@ -53,7 +53,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * #1149 the former Sync tab is three bottom-nav pages: Git (two sub-pages, Me and Cloud, drawn by libs:bottomnav's
- * PageTabs over ui.sections[git].pages), Rsync and Mounts (a screen each, #567's engines' surfaces). This file routes,
+ * PageTabs over ui.sections[git].pages), Fsync and Mounts (sync/FsyncPage.kt and sync/MountsPage.kt, #1173). This file routes the Git page,
  * it does not draw a card; each page keeps the island with the terminal action it always had.
  *
  * GitPageScreen's dispatch on a page id is the ONE place Kotlin names them; test-drive-shell.sh diffs it against the
@@ -106,28 +106,6 @@ fun GitPageScreen(
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
             }
         }
-        SnackbarHost(snackbar)
-    }
-}
-
-/** Rsync (libs:rclone's surface): the island with the terminal action over [RcloneSyncScreen]. */
-@Composable
-fun RsyncPageScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveActions, modifier: Modifier = Modifier) =
-    SyncSurface(Declarations.SECTION_RSYNC, actions, modifier) { say -> RcloneSyncScreen(rclone, prefs, actions, say) }
-
-/** Mounts (libs:mounts' surface): the island with the terminal action over [MountsSyncScreen]. */
-@Composable
-fun MountsPageScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveActions, modifier: Modifier = Modifier) =
-    SyncSurface(Declarations.SECTION_MOUNTS, actions, modifier) { say -> MountsSyncScreen(rclone, prefs, actions, say) }
-
-@Composable
-private fun SyncSurface(sectionId: String, actions: DriveActions, modifier: Modifier, body: @Composable (say: (String) -> Unit) -> Unit) {
-    val snackbar = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
-    fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
-    Column(modifier.fillMaxSize()) {
-        ToolbarIsland(title = Declarations.nav.section(sectionId)?.label.orEmpty(), subtitle = null, actions = { TerminalIslandAction(actions, ::say) })
-        Box(Modifier.weight(1f)) { body(::say) }
         SnackbarHost(snackbar)
     }
 }

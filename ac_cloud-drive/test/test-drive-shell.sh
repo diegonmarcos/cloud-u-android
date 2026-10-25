@@ -217,7 +217,10 @@ for d, _, fs in os.walk(src):
     for f in fs:
         if f.endswith(".kt"): used |= set(re.findall(r"R\.string\.([a-z0-9_]+)", open(os.path.join(d, f), encoding="utf-8").read()))
 used |= set(re.findall(r"@string/([a-z0-9_]+)", open(manifest, encoding="utf-8").read()))
-declared = set(re.findall(r'<string name="([a-z0-9_]+)"', open(strings, encoding="utf-8").read()))
+import glob
+declared = set()
+for f in glob.glob(os.path.join(os.path.dirname(strings), "strings*.xml")):   # #1173: strings.xml plus strings_storage.xml
+    declared |= set(re.findall(r'<string name="([a-z0-9_]+)"', open(f, encoding="utf-8").read()))
 # app_name is build.gradle's resValue (the launcher label = build.json::display_name), never in strings.xml.
 missing = sorted(used - declared - {"app_name"}); dead = sorted(declared - used)
 bad = 0
@@ -262,8 +265,8 @@ import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]
 bad = 0
 tabs = ui["bottom_nav"]
-if tabs != ["explorer", "manage", "agents", "home", "git", "rsync", "mounts"]:
-    print("    ui.bottom_nav is %s, not the owner's order explorer/manage/agents/home/git/rsync/mounts (#1149)" % tabs); bad = 1
+if tabs != ["explorer", "manage", "agents", "home", "git", "fsync", "mounts"]:
+    print("    ui.bottom_nav is %s, not the owner's order explorer/manage/agents/home/git/fsync/mounts (#1149, #1173)" % tabs); bad = 1
 if ui.get("top_bar", {}).get("drawer") is not True or ui["top_bar"].get("inline_actions") is not True:
     print("    ui.top_bar is not the hamburger plus inline AI / Profile / Configs (#1149)"); bad = 1
 if "backups" in ui:
@@ -280,6 +283,10 @@ sync_sec = next(s for s in ui["sections"] if s["id"] == "git").get("pages", [])
 sync_pages = [p["id"] for p in sync_sec]
 if sync_pages != ["me", "cloud"]:
     print("    ui.sections[git].pages is %s, not me/cloud (#1149)" % sync_pages); bad = 1
+for sid, want in (("fsync", ["backup", "folders"]), ("mounts", ["rclone", "fuse"])):
+    got = [p["id"] for p in next(s for s in ui["sections"] if s["id"] == sid).get("pages", [])]
+    if got != want:
+        print("    ui.sections[%s].pages is %s, not %s (#1173)" % (sid, got, "/".join(want))); bad = 1
 if any(not p.get("label") or not p.get("icon") for p in sync_sec):
     print("    a Git sub-page lacks a label or an icon"); bad = 1
 sections = [x["id"] for x in ui["files"]["sections"]]
@@ -312,17 +319,17 @@ d11_seed "$REPOS" && pass "the store's seed set is public repositories only" || 
 if grep -qE 'buildConfigField "boolean", "SEED_ENABLED"' "$GRADLE" && grep -qE 'buildConfigField "int", +"SEED_DEPTH"' "$GRADLE" && grep -qE 'GitEngine\.clone\(applicationContext, url, dir, auth = auth, depth = BuildConfig\.SEED_DEPTH\)' "$SEED"; then pass "the seed is declared (storage.seed -> SEED_ENABLED/SEED_DEPTH) and cloned SHALLOW through the engine"; else fail "the first-run seed is not wired to the declaration"; fi
 if grep -qE 'GitEngine\.isRepository\(dir\)' "$SEED" && grep -qE 'RepoRegistry\(File\(applicationContext\.filesDir, GitSyncWorker\.REGISTRY_FILE\)\)' "$SEED"; then pass "seeding skips a clone that exists and registers into the SAME registry the Git page reads"; else fail "the seed does not reuse the one registry"; fi
 if grep -qE 'org\.eclipse\.jgit' "$SEED"; then fail "the seed talks to JGit directly - libs:git-sync is the engine"; else pass "the seed goes through libs:git-sync, never a second git"; fi
-python3 - "$APPS_JSON" "$BJ" <<'PYTHON' && pass "the Apps grid carries GitSync and RSync as in-app routes into the Git and Rsync pages" || fail "the Apps grid does not route GitSync / RSync into the Git / Rsync pages"
+python3 - "$APPS_JSON" "$BJ" <<'PYTHON' && pass "the Apps grid carries GitSync and Fsync as in-app routes into the Git and Fsync pages" || fail "the Apps grid does not route GitSync / Fsync into the Git / Fsync pages"
 import json, sys
 apps = json.load(open(sys.argv[1]))["apps"]
 ui = json.load(open(sys.argv[2]))["ui"]
 tabs = ui["bottom_nav"]; secs = {s["id"]: [p["id"] for p in s.get("pages", [])] for s in ui["sections"]}
 bad = 0
-for want in ("GitSync", "RSync"):
+for want in ("GitSync", "Fsync"):
     tile = next((a for a in apps if a.get("label") == want), None)
     if tile is None: print("    no %s tile" % want); bad = 1; continue
     route = tile.get("route") or {}
-    if route.get("tab") not in ("git", "rsync", "mounts") or route.get("tab") not in tabs: print("    %s routes to tab %r, not a former Sync page of the bottom nav (#1149)" % (want, route.get("tab"))); bad = 1
+    if route.get("tab") not in ("git", "fsync", "mounts") or route.get("tab") not in tabs: print("    %s routes to tab %r, not a former Sync page of the bottom nav (#1149)" % (want, route.get("tab"))); bad = 1
     elif route.get("page") is not None and route.get("page") not in secs[route["tab"]]: print("    %s routes to page %r, which ui.sections[%s].pages does not declare" % (want, route.get("page"), route["tab"])); bad = 1
     if tile.get("package"): print("    %s declares a package: it is an in-app route, not an installed app" % want); bad = 1
 sys.exit(bad)
@@ -362,55 +369,44 @@ if "<package>" not in (vol.get("constellation_path") or ""):
 sys.exit(bad)
 PYTHON
 }
-# d12_rsync <build.json> <drive-apps.json> : the rclone page is LABELLED Rsync and the tile routes there
-d12_rsync() {
+# d12_fsync <build.json> <drive-apps.json> : the Rsync page is now Fsync (#1173) with Backup and Folders Sync; the tile routes there
+d12_fsync() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]; apps = json.load(open(sys.argv[2]))["apps"]
 bad = 0
-page = next((s for s in ui["sections"] if s["id"] == "rsync"), None)
+if any(s["id"] == "rsync" for s in ui["sections"]):
+    print("    ui.sections still has `rsync`: the page was renamed to Fsync, not given a second name (#1173)"); bad = 1
+page = next((s for s in ui["sections"] if s["id"] == "fsync"), None)
 if page is None:
-    print("    ui.sections has no `rsync` section: the id is the dispatch and must not change (#1149)"); sys.exit(1)
-if page.get("label") != "Rsync":
-    print("    the rclone sub-page is labelled %r, not 'Rsync' (#604)" % page.get("label")); bad = 1
-tile = next((a for a in apps if a.get("label") == "RSync"), None)
+    print("    ui.sections has no `fsync` section: the id is the dispatch (#1173)"); sys.exit(1)
+if page.get("label") != "Fsync":
+    print("    the fsync section is labelled %r, not 'Fsync' (#1173)" % page.get("label")); bad = 1
+sub = [(p.get("id"), p.get("label"), p.get("icon")) for p in page.get("pages", [])]
+if [(i, l) for i, l, _ in sub] != [("backup", "Backup"), ("folders", "Folders Sync")] or any(not ic for _, _, ic in sub):
+    print("    fsync sub-pages are %s, not Backup then Folders Sync, each with an icon (#1173)" % sub); bad = 1
+tile = next((a for a in apps if a.get("label") == "Fsync"), None)
 if tile is None:
-    print("    no RSync tile in the Apps grid"); sys.exit(1)
+    print("    no Fsync tile in the Apps grid"); sys.exit(1)
 route = tile.get("route") or {}
-if (route.get("tab"), route.get("page")) != ("rsync", None):
-    print("    Apps ▸ RSync routes to %r, not {rsync} (#604 moved it off Backups; #1149 made Rsync a bottom-nav page)" % route); bad = 1
+if (route.get("tab"), route.get("page")) != ("fsync", "backup"):
+    print("    Apps > Fsync routes to %r, not {fsync, backup} (#1173)" % route); bad = 1
 sys.exit(bad)
 PYTHON
 }
-# d12_rules <drive-sync-rules.json> <drive-remotes.json> : the declared folder↔folder rules
+# d12_rules <drive-sync-rules.json> : #1173 no mock: the APK declares no folder rule and no Unison pair, only Unison's policy
 d12_rules() {
-    python3 - "$1" "$2" <<'PYTHON'
+    python3 - "$1" <<'PYTHON'
 import json, sys
-rules = json.load(open(sys.argv[1]))["rules"]
-remotes = [r["name"] for r in json.load(open(sys.argv[2]))["remotes"]]
+d = json.load(open(sys.argv[1]))
 bad = 0
-if not rules:
-    print("    no sync rule declared: the Rsync page would be its own empty state"); sys.exit(1)
-ids = [r.get("id") for r in rules]
-if len(set(ids)) != len(ids) or any(not i for i in ids):
-    print("    rule ids missing or not unique: %s" % ids); bad = 1
-for r in rules:
-    if r.get("direction") not in ("upload", "download", "bidirectional"):
-        print("    rule %r declares direction %r, which SyncRules cannot map" % (r.get("id"), r.get("direction"))); bad = 1
-    if r.get("remote_name") not in remotes:
-        print("    rule %r names remote %r, which data/drive-remotes.json does not declare" % (r.get("id"), r.get("remote_name"))); bad = 1
-    if not (r.get("local_path") or "").startswith("/"):
-        print("    rule %r local_path %r is not an absolute device path" % (r.get("id"), r.get("local_path"))); bad = 1
-    if "enabled" not in r:
-        print("    rule %r does not state enabled" % r.get("id")); bad = 1
-# THE DEFAULT RULE #604 asked for: the A37 mount kept level with Google Drive, both ways, by hand.
-first = rules[0]
-if first.get("local_path") != "/ya_mnt_sync-a37":
-    print("    the first rule's local_path is %r, not /ya_mnt_sync-a37" % first.get("local_path")); bad = 1
-if first.get("direction") != "bidirectional":
-    print("    the default rule is %r, not bidirectional" % first.get("direction")); bad = 1
-if first.get("schedule_minutes") is not None:
-    print("    the default rule declares a schedule (%r): #604 keeps it manual, and nothing enforces a schedule" % first.get("schedule_minutes")); bad = 1
+if d.get("rules"):
+    print("    %d sync rule(s) declared: the Fsync page draws real state only, a declared rule is sample data (#1173)" % len(d["rules"])); bad = 1
+u = d.get("unison") or {}
+if u.get("pairs"):
+    print("    %d Unison pair(s) declared: a pair belongs to the user (storage/UnisonPairs.kt), not to the APK (#1173)" % len(u["pairs"])); bad = 1
+if not u.get("defaults") or not u.get("ignore"):
+    print("    the Unison policy (defaults, ignore) is missing: user pairs inherit it"); bad = 1
 sys.exit(bad)
 PYTHON
 }
@@ -437,8 +433,8 @@ for required in "$VOLUMES_KT" "$RULES_JSON" "$REMOTES_JSON" "$CONN_JSON"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 d12_classes "$BJ" "$VOLUMES_KT" && pass "four volume classes in the #604 order, dispatched by VolumesScreen; their filters are declared too" || fail "the #604 volume classes are not what build.json declares"
-d12_rsync "$BJ" "$APPS_JSON" && pass "Rsync is a bottom-nav section labelled Rsync and the Apps tile routes there" || fail "the Rclone→Rsync rename or the RSync route is not done"
-d12_rules "$RULES_JSON" "$REMOTES_JSON" && pass "the declared sync rules are mappable, and the default one is /ya_mnt_sync-a37 ⇄ Google Drive, manual" || fail "the declared sync rules are not what #604 asked for"
+d12_fsync "$BJ" "$APPS_JSON" && pass "Fsync is a bottom-nav section (Backup, Folders Sync) and the Apps tile routes there; no rsync id remains" || fail "the Rsync→Fsync rename or its route is not done"
+d12_rules "$RULES_JSON" && pass "no sync rule and no Unison pair is declared in the APK: the Fsync page is real state, Unison policy only" || fail "sample rules or pairs are declared again (#1173)"
 d12_machines "$BJ" "$CONN_JSON" && pass "every connection's machine kind is a class that renders it" || fail "a connection would vanish between Cloud-Containers and Cloud-Machines"
 for f in UI_VOLUMES_B64 UI_CONSTELLATION_B64 SYNC_RULES_B64; do
     if grep -qE "buildConfigField \"String\", *\"$f\"" "$GRADLE" && grep -qE "BuildConfig\.$f" "$DECL"; then pass "$f baked and decoded"; else fail "$f not baked in build.gradle or not read in Declarations.kt"; fi
@@ -513,10 +509,14 @@ python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [r.update(seed=True
 d11_seed "$TMP/seed-private.json" >/dev/null && fail "D11 passed a PRIVATE repository marked for seeding (tester is vacuous)" || pass "a private repository marked seed → D11 RED"
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [p.update(pages=p["pages"][1:]) for s in b["ui"]["sections"] if s["id"]=="explorer" for p in s["pages"] if p["id"]=="cloud"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-constellation.json"
 d12_classes "$TMP/no-constellation.json" "$VOLUMES_KT" >/dev/null && fail "D12 passed a declaration that dropped a volume class (tester is vacuous)" || pass "a class dropped from ui.sections[explorer].pages[cloud].pages → D12 RED"
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [a["route"].update(page="backups") for a in d["apps"] if a.get("label")=="RSync"]; json.dump(d,open(sys.argv[2],"w"))' "$APPS_JSON" "$TMP/rsync-backups.json"
-d12_rsync "$BJ" "$TMP/rsync-backups.json" >/dev/null && fail "D12 passed an RSync tile still routing to Backups (tester is vacuous)" || pass "Apps ▸ RSync routed back to Backups → D12 RED"
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["rules"][0]["local_path"]="/somewhere-else"; json.dump(d,open(sys.argv[2],"w"))' "$RULES_JSON" "$TMP/rule-moved.json"
-d12_rules "$TMP/rule-moved.json" "$REMOTES_JSON" >/dev/null && fail "D12 passed a default rule that lost /ya_mnt_sync-a37 (tester is vacuous)" || pass "the default rule's local folder changed → D12 RED"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [a["route"].update(page="backups") for a in d["apps"] if a.get("label")=="Fsync"]; json.dump(d,open(sys.argv[2],"w"))' "$APPS_JSON" "$TMP/rsync-backups.json"
+d12_fsync "$BJ" "$TMP/rsync-backups.json" >/dev/null && fail "D12 passed an Fsync tile routed to Backups (tester is vacuous)" || pass "Apps > Fsync routed to Configs Backups -> D12 RED"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["rules"].append({"id":"sample","local_path":"/x","remote_name":"r","remote_path":"p","direction":"upload","enabled":True}); json.dump(d,open(sys.argv[2],"w"))' "$RULES_JSON" "$TMP/rule-sample.json"
+d12_rules "$TMP/rule-sample.json" >/dev/null && fail "D12 passed a sample sync rule shipped in the APK (tester is vacuous)" || pass "a sample rule declared in the APK -> D12 RED"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["unison"]["pairs"].append({"id":"sample"}); json.dump(d,open(sys.argv[2],"w"))' "$RULES_JSON" "$TMP/pair-sample.json"
+d12_rules "$TMP/pair-sample.json" >/dev/null && fail "D12 passed a sample Unison pair shipped in the APK (tester is vacuous)" || pass "a sample Unison pair declared in the APK -> D12 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [s.update(pages=s["pages"][:1]) for s in b["ui"]["sections"] if s["id"]=="mounts"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-fuse.json"
+d11_structure "$TMP/no-fuse.json" >/dev/null && fail "D11 passed a Mounts page that lost its FUSE sub-page (tester is vacuous)" || pass "Mounts without its FUSE sub-page -> D11 RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d[0]["machine"]="laptop"; json.dump(d,open(sys.argv[2],"w"))' "$CONN_JSON" "$TMP/conn-stray.json"
 d12_machines "$BJ" "$TMP/conn-stray.json" >/dev/null && fail "D12 passed a connection whose machine kind no class renders (tester is vacuous)" || pass "a connection with an undeclared machine kind → D12 RED"
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [s["classes"].pop() for s in b["ui"]["volumes"]["sections"] if s["id"]=="personal"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/section-lost-class.json"
@@ -528,7 +528,7 @@ d13_sections "$TMP/section-swapped.json" >/dev/null && fail "D13 passed the sect
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["volumes"]["personal_auth"].pop("target",None); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/auth-no-target.json"
 d13_sections "$TMP/auth-no-target.json" >/dev/null && fail "D13 passed a personal_auth with no deep-link target (tester is vacuous)" || pass "personal_auth stripped of its target → D13 RED"
 d1 "$BJ" "$MAIN" >/dev/null && d2 "$BJ" "$CONFIGS" >/dev/null && d2s "$BJ" "$SYNC_KT" >/dev/null && d3 "$BJ" "$CATALOG" >/dev/null && d11_seed "$REPOS" >/dev/null \
-    && d12_classes "$BJ" "$VOLUMES_KT" >/dev/null && d12_rsync "$BJ" "$APPS_JSON" >/dev/null && d12_rules "$RULES_JSON" "$REMOTES_JSON" >/dev/null && d12_machines "$BJ" "$CONN_JSON" >/dev/null && d13_sections "$BJ" >/dev/null \
+    && d12_classes "$BJ" "$VOLUMES_KT" >/dev/null && d12_fsync "$BJ" "$APPS_JSON" >/dev/null && d12_rules "$RULES_JSON" "$REMOTES_JSON" >/dev/null && d12_machines "$BJ" "$CONN_JSON" >/dev/null && d13_sections "$BJ" >/dev/null \
     && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 
 echo

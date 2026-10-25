@@ -133,4 +133,32 @@ class ChromeScrollGuardTest {
         val bad = files.filter { it.name != "DriveShell.kt" && own.containsMatchIn(it.readText()) }.map { it.name }
         assertEquals("a Drive page builds its own chrome connection", emptyList<String>(), bad)
     }
+
+    /** The source of top-level function [name] in [text]: from its `fun` to the next top-level declaration. */
+    private fun body(text: String, name: String): String {
+        val start = Regex("""(?m)^(?:private |internal )?fun\s+$name\(""").find(text)?.range?.first ?: throw AssertionError("fun $name not found")
+        val end = Regex("""(?m)^(?:@Composable|fun |private fun |internal fun |/\*\*)""").find(text, start + 8)?.range?.first ?: text.length
+        return text.substring(start, end)
+    }
+
+    @Test fun `the Cloud Drive Fsync and Mounts pages are routed through the shell, carry a second row and their bodies own a scroll container (#1173)`() {
+        val files = driveFiles()
+        val main = files.first { it.name == "MainActivity.kt" }.readText()
+        assertTrue("MainActivity does not route the fsync page", Regex("""^\s*"fsync"\s*->\s*FsyncPageScreen\(""", RegexOption.MULTILINE).containsMatchIn(main))
+        assertTrue("MainActivity does not route the mounts page", Regex("""^\s*"mounts"\s*->\s*MountsPageScreen\(""", RegexOption.MULTILINE).containsMatchIn(main))
+        assertTrue("the old rsync route is back", !Regex("""^\s*"rsync"\s*->""", RegexOption.MULTILINE).containsMatchIn(main))
+        val fsync = files.first { it.name == "FsyncPage.kt" }.readText()
+        val mounts = files.first { it.name == "MountsPage.kt" }.readText()
+        for ((page, text) in listOf("FsyncPageScreen" to fsync, "MountsPageScreen" to mounts)) {
+            val b = body(text, page)
+            assertTrue("$page has no shared second row (NavBarTopSecondRow)", "NavBarTopSecondRow(" in b)
+            assertTrue("$page has no island", "ToolbarIsland(" in b)
+            assertTrue("$page does not draw its sub-pages from the declaration", "Declarations.navPages(" in b)
+        }
+        // each sub-page body owns the scrollable container the one connection follows (the Unison list is drawn by unisonSection inside FolderSyncScreen's LazyColumn)
+        for ((screen, text) in listOf("FsyncBackupScreen" to fsync, "FolderSyncScreen" to fsync, "RcloneRemotesScreen" to mounts, "FuseMountsScreen" to mounts))
+            assertTrue("$screen has no LazyColumn for the chrome to follow", "LazyColumn(" in body(text, screen))
+        val wizard = files.first { it.name == "RemoteWizard.kt" }.readText()
+        assertTrue("the rclone wizard is a dialog, never a second page with its own chrome", "AlertDialog(" in wizard && "NavBarTopSecondRow(" !in wizard)
+    }
 }

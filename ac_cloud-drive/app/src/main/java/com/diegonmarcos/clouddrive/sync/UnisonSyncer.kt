@@ -17,8 +17,8 @@ import java.util.concurrent.CopyOnWriteArrayList
 /**
  * #1084 the ONE place a declared Unison pair is run: the Sync tab's Sync now, the conflict buttons and
  * the WorkManager worker all come through here, so a scheduled run and a manual one are the same code
- * and leave the same record. The pairs are Declarations.unison (cloud-drive's data/drive-sync-rules.json
- * `unison`); the engine is the pinned static unison in Cloud-Lib-Rclone-Engine.apk, reached through
+ * and leave the same record. The pairs are the user's (storage/UnisonPairStore; the shipped data/drive-sync-rules.json
+ * `unison` is policy only); the engine is the pinned static unison in Cloud-Lib-Rclone-Engine.apk, reached through
  * libs:rclone's UnisonRunner; the state (last result, conflicts, log) is UnisonStateStore, app-private.
  *
  * Blocking; callers run it off the main thread. Never throws: a missing engine or credential is a
@@ -30,8 +30,9 @@ class UnisonSyncer(private val ctx: Context) {
     private val credentials by lazy { MountCredentialStore(ctx) }
     val runner = UnisonRunner(RcloneLink(ctx), ::accessFor)
 
-    /** The declared pairs, and the sentences for the ones that did not parse (shown, never silently dropped). */
-    val declared: UnisonConfig.Declared get() = Declarations.unison
+    /** The user's pairs over the shipped policy, and the sentences for the ones that did not parse (shown, never silently dropped). */
+    val pairStore = com.diegonmarcos.clouddrive.storage.UnisonPairStore(ctx)
+    val declared: UnisonConfig.Declared get() = pairStore.declared()
 
     /**
      * The SSH credentials for [pair]'s peer, from the phone's own mounts store: the mount the pair names, else the
@@ -39,6 +40,9 @@ class UnisonSyncer(private val ctx: Context) {
      */
     internal fun accessFor(pair: UnisonConfig.Pair): UnisonRunner.SshAccess? {
         val peer = pair.peer as? UnisonConfig.Peer.Ssh ?: return null
+        // #1173 the SSH key is Cloud Account's: asked for first, handed to the engine as text for this one run, never kept here.
+        val owned = (com.diegonmarcos.clouddrive.storage.AccountStorage.of(ctx).pull(com.diegonmarcos.superapp.fleetconfig.StorageConfigContract.SSH_KEY) as? com.diegonmarcos.clouddrive.storage.AccountStorage.Pulled.Value)?.text.orEmpty()
+        if (owned.isNotBlank()) return UnisonRunner.SshAccess(keyPem = owned)
         val all = runCatching { mounts.load() }.getOrDefault(emptyList())
         val spec = all.firstOrNull { it.type == MountType.SSH && peer.mount.isNotBlank() && (it.name == peer.mount || it.id == peer.mount) }
             ?: all.firstOrNull { it.type == MountType.SSH && it.host == peer.host && it.username == peer.user }

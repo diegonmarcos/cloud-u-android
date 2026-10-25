@@ -52,20 +52,22 @@ fun LazyListScope.unisonSection(
     live: Map<String, List<String>>,
     unavailable: String?,
     onMessage: (String) -> Unit,
+    declared: com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Declared,
+    onAdd: () -> Unit,
+    onDelete: (UnisonConfig.Pair) -> Unit,
 ) {
-    val declared = coordinator.declared
-    item { SectionHeader(stringResource(R.string.unison_section), count = declared.pairs.size) }
+    item { SectionHeader(stringResource(R.string.unison_section), count = declared.pairs.size, action = stringResource(R.string.unison_add), onAction = onAdd) }
     declared.problems.forEach { why ->
         item(key = "unison-problem-$why") {
             Text(stringResource(R.string.unison_problem, why), Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
         }
     }
-    if (declared.pairs.isEmpty() && declared.problems.isEmpty()) item { EmptyState(Icons.Filled.Sync, stringResource(R.string.unison_empty), stringResource(R.string.unison_empty_hint)) }
+    if (declared.pairs.isEmpty() && declared.problems.isEmpty()) item { EmptyState(Icons.Filled.Sync, stringResource(R.string.unison_empty), stringResource(R.string.unison_empty_hint), actionLabel = stringResource(R.string.unison_add), onAction = onAdd) }
     if (unavailable != null && declared.pairs.isNotEmpty()) item(key = "unison-unavailable") {
         Text(unavailable, Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     items(declared.pairs, key = { "unison-" + it.id }) { pair ->
-        UnisonPairCard(coordinator, pair, states[pair.id], live[pair.id], unavailable == null, onMessage)
+        UnisonPairCard(coordinator, pair, states[pair.id], live[pair.id], unavailable == null, onMessage, onDelete)
     }
 }
 
@@ -77,6 +79,7 @@ private fun UnisonPairCard(
     live: List<String>?,
     engineReady: Boolean,
     onMessage: (String) -> Unit,
+    onDelete: (UnisonConfig.Pair) -> Unit,
 ) {
     val on = coordinator.enabled(pair)
     val running = live != null
@@ -91,7 +94,7 @@ private fun UnisonPairCard(
         is UnisonConfig.Peer.Ssh -> "${p.host}:${p.path}"
         is UnisonConfig.Peer.Local -> p.path
     }
-    DriveCard(pair.name, badge = stringResource(R.string.chrome_declared), light = light, summary = "${pair.rootA}  ⇄  $peer", summaryMonospace = true, tag = DriveTags.UNISON_PAIR_CARD) {
+    DriveCard(pair.name, light = light, summary = "${pair.rootA}  ⇄  $peer", summaryMonospace = true, tag = DriveTags.UNISON_PAIR_CARD) {
         val schedule = pair.scheduleMinutes?.let { stringResource(R.string.unison_every, it) } ?: stringResource(R.string.unison_manual)
         val policy = when (pair.prefer) {
             null -> stringResource(R.string.unison_policy_ask)
@@ -132,6 +135,7 @@ private fun UnisonPairCard(
         }
         PillRow {
             Pill(stringResource(if (on) R.string.rsync_rule_on else R.string.rsync_rule_off), { coordinator.setEnabled(pair, !on) }, filled = on)
+            Pill(stringResource(R.string.storage_delete), { onDelete(pair) }, enabled = !running, danger = true)
             if (running) Pill(stringResource(R.string.unison_stop), { coordinator.cancel(pair) }, icon = Icons.Filled.Stop)
             else Pill(stringResource(R.string.unison_sync_now), { coordinator.syncNow(pair) }, modifier = Modifier.testTag(DriveTags.UNISON_SYNC_NOW), icon = Icons.Filled.PlayArrow, filled = true, enabled = engineReady)
         }

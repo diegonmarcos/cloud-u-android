@@ -1,6 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 import com.diegonmarcos.clouddrive.UnisonSyncWorker
+import com.diegonmarcos.clouddrive.storage.UnisonPairs
 import com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig
 import com.diegonmarcos.cloudlib.rclone.unison.UnisonProfile
 import java.io.File
@@ -12,22 +13,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * #1084 the SHIPPED declaration (data/drive-sync-rules.json `unison`) is valid, every pair of it generates a
- * profile, and the scheduler's per-pair decision is the one the git sync already proved (SyncSchedule). The
- * parsing and generation rules themselves are libs:rclone's own suite (UnisonConfigTest, UnisonProfileTest).
+ * #1084 / #1173 the SHIPPED declaration (data/drive-sync-rules.json `unison`) is Unison's POLICY (defaults, shared ignore rules) and no
+ * pair; a pair is the user's, built here the way the Folders Sync form builds one. The scheduler's per-pair decision is the one the git
+ * sync already proved (SyncSchedule). The parsing and generation rules themselves are libs:rclone's own suite (UnisonConfigTest,
+ * UnisonProfileTest); the add/remove rules are UnisonPairsTest.
  */
 class UnisonDeclarationTest {
     private val root = File(System.getProperty("user.dir")).let { if (File(it, "build.json").isFile) it else it.parentFile }
     private val text = JSONObject(File(root, "data/drive-sync-rules.json").readText()).getJSONObject("unison").toString()
+    private val userPairs = UnisonPairs.add("", UnisonPairs.Draft("Docs", "Documents/Sync", host = "box.mesh.diegonmarcos.com", user = "me", remotePath = "sync/docs", scheduleMinutes = 60), text, "/sdcard").getOrThrow()
 
-    @Test fun theShippedDeclarationParsesWithNoProblem() {
+    @Test fun theShippedDeclarationParsesWithNoProblemAndShipsNoPair() {
         val d = UnisonConfig.parse(text)
         assertEquals(emptyList<String>(), d.problems)
-        assertTrue("at least the reference pair is declared", d.pairs.isNotEmpty())
+        assertEquals("a pair in the APK would be sample data", emptyList<String>(), d.pairs.map { it.id })
     }
 
-    @Test fun everyShippedPairGeneratesAProfileFromTheDeclarationAlone() {
-        for (p in UnisonConfig.parse(text).pairs) {
+    @Test fun aUserPairGeneratesAProfileFromThePolicyAndItsOwnFields() {
+        for (p in UnisonPairs.parse(text, userPairs, "/sdcard").pairs) {
             val prf = UnisonProfile.generate(p)
             assertTrue(prf.contains("root = ${p.rootA}"))
             assertTrue("the shared ignore rules reach every pair", prf.contains("ignore = Name .DS_Store") && prf.contains("ignore = Name *.tmp") && prf.contains("ignore = Name build"))
@@ -35,8 +38,8 @@ class UnisonDeclarationTest {
         }
     }
 
-    @Test fun theShippedReferencePairNeverResolvesAConflictOnItsOwn() {
-        val p = UnisonConfig.parse(text).pairs.first()
+    @Test fun aUserPairNeverResolvesAConflictOnItsOwn() {
+        val p = UnisonPairs.parse(text, userPairs, "/sdcard").pairs.first()
         assertEquals("no prefer: every conflict waits for the user", null, p.prefer)
         assertTrue(p.backup)
     }
@@ -51,7 +54,7 @@ class UnisonDeclarationTest {
     }
 
     // ── the scheduler's decision, per pair ───────────────────────────────────────────────────
-    private val pair = UnisonConfig.parse(text).pairs.first()
+    private val pair = UnisonPairs.parse(text, userPairs, "/sdcard").pairs.first()
     private fun due(last: Long, now: Long, unmetered: Boolean?, requireUnmetered: Boolean = pair.requireUnmetered, minutes: Int? = 60) = SyncSchedule.isDue(
         autoSync = minutes != null, repoIntervalMinutes = (minutes ?: 0).toLong(), baseIntervalMinutes = UnisonSyncWorker.BASE_MINUTES,
         lastSyncEpochSeconds = last, nowEpochSeconds = now, requireUnmetered = requireUnmetered, networkUnmetered = unmetered,

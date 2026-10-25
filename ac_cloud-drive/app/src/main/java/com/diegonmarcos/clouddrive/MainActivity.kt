@@ -54,7 +54,8 @@ import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
 import com.diegonmarcos.clouddrive.sync.GitPageScreen
 import com.diegonmarcos.clouddrive.sync.MountsPageScreen
-import com.diegonmarcos.clouddrive.sync.RsyncPageScreen
+import com.diegonmarcos.clouddrive.storage.StorageCoordinator
+import com.diegonmarcos.clouddrive.sync.FsyncPageScreen
 import com.diegonmarcos.clouddrive.startup.StartupGate
 import com.diegonmarcos.clouddrive.startup.StartupGuard
 import com.diegonmarcos.superapp.crash.CrashReports
@@ -217,6 +218,7 @@ class MainActivity : ComponentActivity(), DriveActions {
         }
         val git = gitOrNull
         val rclone = remember { RcloneCoordinator(applicationContext, scope, prefs) }
+        val storage = remember { StorageCoordinator(applicationContext, scope, rclone, prefs) }
         val mirrors = remember { MirrorRunner(scope, prefs) }
         val rcloneVersion by rclone.version.collectAsState()
         // #603/#609 a screen may ask for another tab (an Apps tile's route, a Home quick action):
@@ -246,8 +248,8 @@ class MainActivity : ComponentActivity(), DriveActions {
                     "ai" -> AiScreen()
                     "home" -> HomeScreen(git, this, onOpenFiles = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_LOCAL) }, onOpenVolumes = { jump(Declarations.SECTION_EXPLORER, Declarations.PAGE_CLOUD) }, onOpenSync = { jumpTab = Declarations.SECTION_GIT }, onRoute = jump, onSyncAll = syncAll, page = jumpPage, onPageConsumed = { jumpPage = null })
                     "git" -> GitPageScreen(git, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
-                    "rsync" -> RsyncPageScreen(rclone, prefs, this)
-                    "mounts" -> MountsPageScreen(rclone, prefs, this)
+                    "fsync" -> FsyncPageScreen(storage, rclone, this, jumpPage, onPageConsumed = { jumpPage = null })
+                    "mounts" -> MountsPageScreen(storage, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
                     "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
                     else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)
                 }

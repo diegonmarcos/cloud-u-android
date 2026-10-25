@@ -4,12 +4,13 @@
 # ║ next to rclone and rsync as ONE declaration, ONE scheduler, ONE page      ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
-#   N1  ONE source of truth: the pairs are data/drive-sync-rules.json::unison, baked as UNISON_B64 from
-#       that same file and read by Declarations.unison; no .prf is committed, and no Kotlin file of the
-#       app restates a mesh host or a root.
-#   N2  every declared pair is valid (roots relative to shared storage, host a <name>.app mesh name, a winner policy keeps
-#       backups) and the Unison version is NOT restated in the app: it is pinned once, in the engine.
-#   N3  the conflict surface: the Sync page draws the pairs (unisonSection), the card has Sync now and
+#   N1  ONE source of truth for the POLICY: data/drive-sync-rules.json::unison (defaults, shared ignore rules) is baked as
+#       UNISON_B64 from that same file and read by Declarations; it ships NO pair (#1173: a pair in the APK is sample data, the
+#       user's pairs live in storage/UnisonPairStore and are Cloud Account's); no .prf is committed.
+#   N2  the shipped policy declares no pair and the Unison version is NOT restated in the app: it is pinned once, in the engine.
+#       (Pair validity - mesh host, winner policy needs backups - is libs:rclone's UnisonConfig, proved by its suite and by
+#       UnisonPairsTest on pairs the user makes.)
+#   N3  the conflict surface: the Folders Sync page draws the pairs (unisonSection), the card has Sync now and
 #       Stop, and each conflicted path carries all three of keep-A / keep-B / keep-both, each reaching
 #       UnisonCoordinator.resolve with its UnisonResolve.Choice.
 #   N4  the scheduler: UnisonSyncWorker rides WorkManager, decides per pair with SyncSchedule.isDue, runs
@@ -30,7 +31,7 @@ GRADLE="$APP/app/build.gradle"
 FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
-for required in "$DECL" "$GRADLE" "$SRC/Declarations.kt" "$SRC/UnisonSyncWorker.kt" "$SRC/sync/UnisonScreens.kt" "$SRC/sync/UnisonCoordinator.kt" "$SRC/sync/UnisonSyncer.kt" "$SRC/MainActivity.kt" "$SRC/sync/RcloneMountsScreens.kt"; do
+for required in "$DECL" "$GRADLE" "$SRC/Declarations.kt" "$SRC/UnisonSyncWorker.kt" "$SRC/sync/UnisonScreens.kt" "$SRC/sync/UnisonCoordinator.kt" "$SRC/sync/UnisonSyncer.kt" "$SRC/MainActivity.kt" "$SRC/sync/FsyncPage.kt" "$SRC/storage/UnisonPairs.kt" "$SRC/storage/UnisonPairStore.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -41,8 +42,10 @@ import json, os, re, sys
 decl, gradle, kt, tree = sys.argv[1:5]
 bad = 0
 d = json.load(open(decl))
-if not isinstance(d.get("unison"), dict) or not d["unison"].get("pairs"):
-    print("    drive-sync-rules.json has no unison.pairs"); bad = 1
+if not isinstance(d.get("unison"), dict) or d["unison"].get("pairs"):
+    print("    drive-sync-rules.json::unison is missing or ships a pair: the APK carries Unison's policy only (#1173)"); bad = 1
+if not d.get("unison", {}).get("defaults") or not d.get("unison", {}).get("ignore"):
+    print("    the Unison policy (defaults, ignore) is missing"); bad = 1
 g = open(gradle).read()
 if "UNISON_B64" not in g or ".unison" not in g or "drive-sync-rules.json" not in g:
     print("    build.gradle does not bake UNISON_B64 from drive-sync-rules.json::unison"); bad = 1
@@ -67,24 +70,15 @@ sys.exit(bad)
 PYTHON
 }
 
-# n2 <decl> <engine pin>: the shipped pairs are valid by the same rules the app parses with (re-stated narrowly here), and no version is restated
+# n2 <decl> <engine pin>: the shipped policy ships no pair and restates no version
 n2() {
     python3 - "$@" <<'PYTHON'
-import json, re, sys
+import json, sys
 d = json.load(open(sys.argv[1]))["unison"]
 pin = json.load(open(sys.argv[2]))
 bad = 0
-for p in d["pairs"]:
-    i = p.get("id")
-    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,40}", i or ""): print("    bad id %r" % i); bad = 1
-    ra = p.get("root_a", "")
-    if not ra or ra.startswith("/") or ".." in ra.split("/"): print("    %s: root_a must be relative to shared storage (no device path written down)" % i); bad = 1
-    b = p.get("root_b", {})
-    if "host" in b and not re.fullmatch(r"[a-z0-9][a-z0-9-]*\.mesh\.diegonmarcos\.com", b["host"]): print("    %s: host %r is not a <name>.mesh.diegonmarcos.com mesh name" % (i, b["host"])); bad = 1
-    pref = p.get("prefer", d.get("defaults", {}).get("prefer"))
-    bk = p.get("backup", d.get("defaults", {}).get("backup", True))
-    if pref and not bk: print("    %s: prefer without backup is a silent overwrite" % i); bad = 1
-    if p.get("schedule_minutes") is not None and p["schedule_minutes"] < 15: print("    %s: schedule below WorkManager's floor" % i); bad = 1
+if d.get("pairs"):
+    print("    the declaration ships %d pair(s): a pair in the APK is sample data (#1173)" % len(d["pairs"])); bad = 1
 text = json.dumps(d)
 if pin["version"] in text or pin["ocaml"] in text:
     print("    the declaration restates the Unison version/ocaml: it is pinned once, in the engine"); bad = 1
@@ -98,7 +92,7 @@ n3() {
 import re, sys
 ui, page, strings = (open(f).read() for f in sys.argv[1:4])
 bad = 0
-if "unisonSection(" not in page: print("    RcloneSyncScreen does not draw unisonSection"); bad = 1
+if "unisonSection(" not in page: print("    FolderSyncScreen does not draw unisonSection"); bad = 1
 for needle in ("coordinator.syncNow(pair)", "coordinator.cancel(pair)", "DriveTags.UNISON_SYNC_NOW"):
     if needle not in ui: print("    the pair card lacks %s" % needle); bad = 1
 for choice in ("KEEP_A", "KEEP_B", "KEEP_BOTH"):
@@ -131,7 +125,7 @@ n1 "$DECL" "$GRADLE" "$SRC/Declarations.kt" "$APP" && pass "pairs declared in dr
 echo "── N2 the declaration is valid and pins no version ──"
 n2 "$DECL" "$ROOT/ab_cloud-libs-shared/libs/rclone-engine/data/unison-binary.json" && pass "every pair valid; no winner without backup; no Unison version restated" || fail "the declaration breaks a rule (see above)"
 echo "── N3 the conflict surface ──"
-n3 "$SRC/sync/UnisonScreens.kt" "$SRC/sync/RcloneMountsScreens.kt" "$APP/app/src/main/res/values/strings.xml" && pass "pairs on the Sync page; Sync now, Stop; keep-A/keep-B/keep-both each reach resolve()" || fail "the Sync page does not surface pairs and conflicts (see above)"
+n3 "$SRC/sync/UnisonScreens.kt" "$SRC/sync/FsyncPage.kt" "$APP/app/src/main/res/values/strings.xml" && pass "pairs on the Folders Sync page; Sync now, Stop; keep-A/keep-B/keep-both each reach resolve()" || fail "the Sync page does not surface pairs and conflicts (see above)"
 echo "── N4 the scheduler ──"
 n4 "$SRC/UnisonSyncWorker.kt" "$SRC/sync/UnisonSyncer.kt" "$SRC/MainActivity.kt" && pass "WorkManager periodic, per-pair isDue, runs through UnisonSyncer, scheduled by MainActivity" || fail "the scheduler is not wired (see above)"
 
@@ -145,7 +139,7 @@ else fail "the app or libs:rclone execs a process or ships a unison binary"; fi
 echo "── N6 the JVM suites ──"
 missing=""
 for t in "$LIBRCLONE/src/test/java/com/diegonmarcos/cloudlib/rclone/unison/"{UnisonConfigTest,UnisonProfileTest,UnisonOutputTest,UnisonResolveTest,UnisonRunnerTest,UnisonStateStoreTest}.kt \
-         "$APP/app/src/test/java/com/diegonmarcos/clouddrive/sync/UnisonDeclarationTest.kt"; do
+         "$APP/app/src/test/java/com/diegonmarcos/clouddrive/sync/UnisonDeclarationTest.kt" "$APP/app/src/test/java/com/diegonmarcos/clouddrive/storage/UnisonPairsTest.kt"; do
     [ -f "$t" ] || missing="$missing $t"
 done
 [ -z "$missing" ] && pass "profile generation, config, output/conflicts, resolve, runner, state and the shipped declaration are each tested" || fail "missing suites:$missing"
@@ -157,18 +151,17 @@ mut() {  # mut <label> <command that must fail>
     if "${@:2}" >/dev/null 2>&1; then fail "$1 passed a broken copy (tester is vacuous)"; else pass "$1 -> RED"; fi
 }
 cp "$DECL" "$TMP/decl.json"; cp "$GRADLE" "$TMP/g.gradle"; cp "$SRC/Declarations.kt" "$TMP/d.kt"
-cp "$SRC/sync/UnisonScreens.kt" "$TMP/ui.kt"; cp "$SRC/sync/RcloneMountsScreens.kt" "$TMP/page.kt"; cp "$APP/app/src/main/res/values/strings.xml" "$TMP/s.xml"
+cp "$SRC/sync/UnisonScreens.kt" "$TMP/ui.kt"; cp "$SRC/sync/FsyncPage.kt" "$TMP/page.kt"; cp "$APP/app/src/main/res/values/strings.xml" "$TMP/s.xml"
 cp "$SRC/UnisonSyncWorker.kt" "$TMP/w.kt"; cp "$SRC/sync/UnisonSyncer.kt" "$TMP/sy.kt"; cp "$SRC/MainActivity.kt" "$TMP/m.kt"
 PIN="$ROOT/ab_cloud-libs-shared/libs/rclone-engine/data/unison-binary.json"
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["unison"]["pairs"][0]["root_b"]["host"]="203.0.113.7"; json.dump(d,open(sys.argv[2],"w"))' "$DECL" "$TMP/bad-host.json"
-mut "a pair on a raw IP" n2 "$TMP/bad-host.json" "$PIN"
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); p=d["unison"]["pairs"][0]; p["prefer"]="newer"; p["backup"]=False; json.dump(d,open(sys.argv[2],"w"))' "$DECL" "$TMP/silent.json"
-mut "a winner policy without backups" n2 "$TMP/silent.json" "$PIN"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["unison"]["pairs"].append({"id":"sample","root_a":"Documents","root_b":{"path":"/x"}}); json.dump(d,open(sys.argv[2],"w"))' "$DECL" "$TMP/sample-pair.json"
+mut "a sample pair shipped in the APK (n2)" n2 "$TMP/sample-pair.json" "$PIN"
+mut "a sample pair shipped in the APK (n1)" n1 "$TMP/sample-pair.json" "$GRADLE" "$SRC/Declarations.kt" "$APP"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["unison"]["_doc"]+=" runs unison "+json.load(open(sys.argv[3]))["version"]; json.dump(d,open(sys.argv[2],"w"))' "$DECL" "$TMP/ver.json" "$PIN"
 mut "a restated Unison version" n2 "$TMP/ver.json" "$PIN"
 sed -i 's/UNISON_B64/UNISON_X/g' "$TMP/g.gradle"; mut "gradle that stops baking the declaration" n1 "$TMP/decl.json" "$TMP/g.gradle" "$TMP/d.kt" "$APP"
 sed -i 's/KEEP_BOTH/KEEP_NONE/' "$TMP/ui.kt"; mut "a conflict row without keep-both" n3 "$TMP/ui.kt" "$TMP/page.kt" "$TMP/s.xml"
-sed -i 's/unisonSection(/noSection(/' "$TMP/page.kt"; mut "a Sync page that does not draw the pairs" n3 "$SRC/sync/UnisonScreens.kt" "$TMP/page.kt" "$TMP/s.xml"
+sed -i 's/unisonSection(/noSection(/' "$TMP/page.kt"; mut "a Folders Sync page that does not draw the pairs" n3 "$SRC/sync/UnisonScreens.kt" "$TMP/page.kt" "$TMP/s.xml"
 sed -i 's/SyncSchedule.isDue(/Always.isDue(/' "$TMP/w.kt"; mut "a worker that stops deciding per pair" n4 "$TMP/w.kt" "$TMP/sy.kt" "$TMP/m.kt"
 sed -i 's/UnisonSyncWorker.schedule(this)/\/\/ off/' "$TMP/m.kt"; mut "an app that never schedules the worker" n4 "$SRC/UnisonSyncWorker.kt" "$TMP/sy.kt" "$TMP/m.kt"
 
