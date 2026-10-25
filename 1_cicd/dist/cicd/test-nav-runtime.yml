@@ -38,8 +38,6 @@ on:
       # the shared nav libs
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
-      - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
-      - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
