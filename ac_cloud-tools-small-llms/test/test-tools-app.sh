@@ -213,7 +213,7 @@ for need in ("it.install(", "it.uninstall(", "it.load(", "it.unload(", "store_fi
 if re.search(r"getSharedPreferences|mutableStateOf\(\s*listOf", store): bad.append("A9 StorePage keeps model state of its own: it must come from the runtimes")
 if bj["ui"]["bottom_nav"] != ["apps", "models", "ai", "store", "costs"]: bad.append("A9 bottom_nav is %r" % bj["ui"]["bottom_nav"])
 shell = code(os.path.join(kt, "ui/ToolsShell.kt"))
-for need in ("NavBarTopFirstRowScaffold(", "NavBarTopSecondRow(", "NavBarBottomHost(", "themeBackground(", "rememberAccountLauncher()", "titleHierarchy(", "AiChatPage(", "AppsPage(", "ModelsPage("):
+for need in ("NavBarTopFirstRowScaffold(", "NavSectionLayout(", "NavBarBottomHost(", "themeBackground(", "rememberAccountLauncher()", "titleHierarchy(", "AiChatPage(", "AppsPage(", "ModelsPage("):
     if need not in shell: bad.append("A9 ToolsShell does not call %s" % need)
 apg = code(os.path.join(kt, "ui/AppsPage.kt"))
 for need in ("appRamQ4(", "appDiskFp16(", "appModels(", "phoneCapable(", "AppsList(", "AppsGrid(", "app_totals", "app_phone_icon", "appCategories", "s.escalation", "s.alternatives"):
@@ -283,7 +283,7 @@ mutate "model data loses its guidance" 'sub(M + "/app/src/main/assets/tools-mode
 mutate "overhead note dropped" 'sub(M + "/app/src/main/assets/tools-models.json", "\"overhead_pct\": 20", "\"overhead_pct\": 0")'
 mutate "retrieval model becomes a chat model" 'sub(M + "/app/src/main/assets/tools-models.json", "\"chat\": false", "\"chat\": true")'
 mutate "app names an unknown model" 'sub(M + "/app/src/main/assets/tools-models.json", "\"bge-m3\"\n", "\"bge-m4\"\n")'
-mutate "shell loses the second row" 'sub(K + "/ui/ToolsShell.kt", "NavBarTopSecondRow(", "Foo(")'
+mutate "shell loses the second row" 'sub(K + "/ui/ToolsShell.kt", "NavSectionLayout(", "Foo(")'
 mutate "apps lose the computed totals" 'sub(K + "/ui/AppsPage.kt", "app_totals, gb(data.appRamQ4(a)), gb(data.appDiskFp16(a))", "app_totals, \"0\", \"0\"")'
 mutate "app has no ui template" 'sub(M + "/app/src/main/assets/tools-models.json", "\"template\": \"rag_search\"", "\"template\": \"nope\"")'
 mutate "runner does not call the model" 'sub(K + "/ui/ToolsModel.kt", "call(placed.second", "callz(placed.second")'

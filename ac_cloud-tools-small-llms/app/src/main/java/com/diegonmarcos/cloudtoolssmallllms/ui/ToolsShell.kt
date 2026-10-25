@@ -41,7 +41,7 @@ import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
-import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.navbartop2.NavSectionLayout
 import com.diegonmarcos.superapp.themebg.themeBackground
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
@@ -79,12 +79,8 @@ fun ToolsShell(model: ToolsModel) {
                 onSelect = { open(it.id, null) },
                 modifier = Modifier.testTag(Tags.SHELL),
             ) {
-                Column(Modifier.fillMaxSize()) {
-                    if (sec != null && sec.pages.isNotEmpty()) NavBarTopSecondRow(
-                        pages = sec.pages, selectedId = pageId, onSelect = { model.page = it.id },
-                        modifier = Modifier.fillMaxWidth().testTag(Tags.SECOND_ROW), underTopChrome = false,
-                    )
-                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                val pageBody: @Composable () -> Unit = {
+                    Box(Modifier.fillMaxSize()) {
                         when (model.section) {
                             Decl.SECTION_APPS -> AppsPage(model, pageId ?: Decl.PAGE_APPS_GRID)
                             Decl.SECTION_MODELS -> ModelsPage(model.models, pageId ?: Decl.PAGE_SMALL, model.view) { model.view = it }
@@ -106,6 +102,10 @@ fun ToolsShell(model: ToolsModel) {
                         }
                     }
                 }
+                // The section's child pages in the mode it declares or the user chose in Settings (one row, two rows, side menu).
+                if (sec != null && sec.pages.isNotEmpty()) {
+                    NavSectionLayout(sec, pageId, onSelect = { model.page = it.id }, modifier = Modifier.fillMaxSize().testTag(Tags.SECOND_ROW), content = pageBody)
+                } else pageBody()
             }
         }
     }

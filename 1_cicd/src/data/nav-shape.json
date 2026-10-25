@@ -38,6 +38,8 @@
     "PageTabs(",
     "PageTabsView",
     "NavBarTopSecondRow(",
+    "NavBarTopSecondRows(",
+    "NavSectionLayout(",
     "NavBarTopSecondRowView"
   ],
   "forbidden": [
@@ -80,7 +82,7 @@
   ],
   "n7": {
     "_doc": "N7 = nothing app-side can change how the fleet's island and tab strips look. forbidden_args: named arguments at the top level of an island/strip call. forbidden_props: properties that no longer exist on the View hosts and may not come back. resource_names: regex of res/values* names an app may not declare (island colours, dimens, typography). chrome_call: every held app's main code calls it (edge-to-edge, transparent bars: the same window as Cloud SuperApp).",
-    "calls": ["BottomNavIsland", "BottomNavHost", "PageTabs", "SearchHtmlIsland", "NavBarBottom", "NavBarBottomHost", "NavBarTopSecondRow"],
+    "calls": ["BottomNavIsland", "BottomNavHost", "PageTabs", "SearchHtmlIsland", "NavBarBottom", "NavBarBottomHost", "NavBarTopSecondRow", "NavBarTopSecondRows", "NavSectionLayout", "NavSideMenu"],
     "forbidden_args": ["colorScheme", "palette", "colors", "dimens", "typography", "textStyle", "elevation", "tonalElevation", "shadowElevation", "insets", "windowInsets", "iconSize", "labelSize", "fontSize", "fontFamily", "height", "containerColor", "contentColor", "indicatorColor", "shape", "backgroundColor"],
     "forbidden_props": ["colorScheme", "palette", "dimens", "typography", "elevation", "insets", "iconSize", "labelSize"],
     "view_hosts": ["BottomNavIslandView", "PageTabsView", "NavBarTopSecondRowView"],

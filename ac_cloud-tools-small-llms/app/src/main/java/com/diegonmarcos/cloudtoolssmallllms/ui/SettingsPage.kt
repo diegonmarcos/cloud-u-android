@@ -56,6 +56,10 @@ fun SettingsPage(model: ToolsModel) {
         verticalArrangement = Arrangement.spacedBy(ToolsMetrics.gap),
     ) {
         item {
+            // How the open section's child pages are navigated: one row, two rows or the side menu (persisted, in the backup).
+            Card("Navigation") { com.diegonmarcos.superapp.navbartop2.NavModeConfigCard(com.diegonmarcos.cloudtoolssmallllms.Decl.nav.sections) }
+        }
+        item {
             Card(stringResource(R.string.settings_token)) {
                 Text(
                     if (model.tokenSet) stringResource(R.string.settings_token_stored, model.masked) else stringResource(R.string.settings_token_none),

@@ -184,6 +184,8 @@ private fun AboutPage() {
     Body("Version ${info?.versionName ?: BuildConfig.VERSION_NAME}")
     Note("Build ${BuildConfig.GIT_SHORT_SHA}  ·  ${BuildConfig.BUILD_TIMESTAMP}")
     Note(ctx.packageName)
+    Head("Navigation")
+    com.diegonmarcos.superapp.navbartop2.NavModeConfigCard(MainActivity.NAV.sections)
     Head("Licence")
     Body("Part of the Cloud constellation (diegonmarcos/cloud-u-android).")
     Note("The licence of every file and the attribution for the open-source components built in (Shizuku API, libadb-android, BouncyCastle, AndroidX, Compose) are in LICENSING.md and licenses/inventory.json in the repository.")

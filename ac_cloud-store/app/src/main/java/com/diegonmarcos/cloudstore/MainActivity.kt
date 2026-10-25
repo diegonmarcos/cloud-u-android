@@ -30,7 +30,7 @@ import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
-import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.navbartop2.NavSectionLayout
 import com.diegonmarcos.superapp.uikit.KitDenseMaterial
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.compose.AndroidFragment
@@ -132,13 +132,11 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
             TopBarDrawer { close ->
                 StoreDrawer(NAV, selected, section?.takeIf { it.pages.size > 1 }?.let { pageOf(it) }, onSection = { selected = it }, onPage = { s, p -> selected = s; choose(s, p) }, close = close)
             }
-            Column(Modifier.fillMaxSize()) {
-                // A section with child pages gets the fleet's strip (Phone: Installed | Declared, Feed:
-                // Commits | CI-CD); the page below reads the choice (Phone from StorePages, Feed from here).
-                if (section != null && section.pages.size > 1) {
-                    NavBarTopSecondRow(section.pages, pageOf(section), onSelect = { choose(section.id, it.id) }, underTopChrome = false)
-                }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            // A section with child pages gets the fleet's navigation (Phone: Installed | Declared, Feed: Commits | CI-CD) in the mode
+            // it declares or the user chose in Configs > About (one row, two rows, side menu); the page below reads the choice
+            // (Phone from StorePages, Feed from here).
+            val pageBody: @androidx.compose.runtime.Composable () -> Unit = {
+            Box(Modifier.fillMaxSize()) {
                 val shown = Modifier.fillMaxSize()
                 val hidden = Modifier.size(0.dp)
                 AndroidFragment<StoreCloudFragment>(if (selected == TAB_CLOUD) shown else hidden)
@@ -149,6 +147,9 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
                 if (selected == TAB_SETTINGS) section?.let { ConfigsPage(pageOf(it)) }
             }
             }
+            if (section != null && section.pages.size > 1) {
+                NavSectionLayout(section, pageOf(section), onSelect = { choose(section.id, it.id) }, modifier = Modifier.fillMaxSize(), content = pageBody)
+            } else pageBody()
             }
         }
         Box(Modifier.fillMaxSize().statusBarsPadding()) {

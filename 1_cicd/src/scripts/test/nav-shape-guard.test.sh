@@ -185,6 +185,9 @@ green  "vertical_side_menu with dynamic children from a known source" "$FIX/buil
 mutate "dynamic children from an unknown source"  "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='vertical_side_menu', dynamic_children='bogus')")" "N10 $FIX: ui.sections a declares dynamic_children 'bogus'"
 mutate "dynamic children without the side menu"   "$FIX/build.json" "$(J "d['ui']['sections'][0].update(dynamic_children='mail_folders_labels')")" "N10 $FIX: ui.sections a declares dynamic_children but nav_mode is not vertical_side_menu"
 mutate "a side-menu group naming a page the section lacks" "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='vertical_side_menu', groups=[{'id':'g','label':'G','icon':'i','pages':['zzz']}])")" "N10 $FIX: ui.sections a group 'g' names page 'zzz'"
+# N5: the section-layout call (the three modes) draws the strips as well as a bare strip does
+green  "multi-page sections drawn by NavSectionLayout instead of PageTabs" "$KT" "s=s.replace('PageTabs(pages, null, {});','NavSectionLayout(section, null, {}) { };')"
+mutate "a colour handed to the section layout"    "$KT" "s+='\nfun f() { NavSectionLayout(section, null, {}, colors = c) { } }\n'" "passes \`colors\` to NavSectionLayout"
 # N11: ONE shared nav-bars lib; the retired per-bar libs stay gone
 mutate "the shared nav-bars lib loses the side menu layout"   "$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavSideMenu.kt" "s=s.replace('fun NavSectionLayout(','fun Gone(')" "N11 $UIBARS: NavSideMenu.kt no longer declares \`fun NavSectionLayout(\`"
 mutate "the shared nav-bars lib loses the Configs card"       "$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavModeConfigCard.kt" "s=s.replace('fun NavModeConfigCard(','fun Gone(')" "N11 $UIBARS: NavModeConfigCard.kt no longer declares"
