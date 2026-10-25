@@ -5,6 +5,8 @@
   "_doc_owner": "The one tree allowed to draw the chat. It must also still HOLD the chat (owner_must_hold): a guard whose owner was emptied would stay green for every app that copied the page back out.",
   "owner_must_hold": [
     {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiPage.kt", "needles": ["fun AiChatPage(", "fun AiConsentCard("]},
+    {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiComposerBar.kt", "needles": ["fun AiComposerBar("]},
+    {"file": "src/main/assets/ai/ai-design.json", "needles": ["\"model_tabs\"", "\"composer\"", "\"more\""]},
     {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiPanel.kt", "needles": ["fun AiAssistantPanel("]},
     {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiHost.kt", "needles": ["class AiStandardHost("]},
     {"file": "src/main/assets/ai/ai.json", "needles": ["\"gateway\"", "\"openrouter\""]}

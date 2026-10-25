@@ -13,19 +13,20 @@ agent pickers, answers streaming in, replies drawn as Markdown.
   holds none.
 * Package `com.diegonmarcos.cloudsuperintel`, tile `SI` in Cloud > Apps > AGI (`SI AI | Research Code | Tools | MyTerminal Terminal`).
 
-## Sections (bottom nav: Notebook, SI, News)
+## Sections (bottom nav: Notebook, SI, CGCs)
 
-* **SI**: one persona chat per entry of `app/src/main/assets/si/personas.json` (SI router, Scientist, CTO, Doctor, Lawyer, Asset Manager, Wiki AI), each
-  with its declared system prompt (sent on every request through `AiStandardHost(system=)`, never stored), suggested prompts, agent, preferred models
-  and Web switch. The second row and `build.json::ui` carry the same ids; `test/test-superintel-app.sh` holds them in step.
+* **SI**: the router persona's chat (`app/src/main/assets/si/personas.json`, `si`): it answers as the best-fitting CGC expert and says which.
+* **CGCs**: the experts, one persona chat each, in `horizontal_two_rows` mode (libs:ui-nav-bars; the user may switch to one row or the side menu in
+  Configs), six groups declared in `build.json::ui`: Deep Science (Math, Physics, Chemistry), Engineers (Energy, Manufacturing, Robotics), Production
+  (CTO), Medicine (Biology, Neuroscience), Business (Lawyer, Asset Manager), General (Wiki AI). Each persona declares its system prompt (sent on
+  every request through `AiStandardHost(system=)`, never stored), suggested prompts, preferred agent, models and MCPs, and Web switch; the old Scientist
+  is Math, Physics and Chemistry, the old Doctor is Biology and Neuroscience. `test/test-superintel-app.sh` and `PersonasTest` hold the ids and the
+  groups in step with `build.json::ui`.
 * **Notebook** (`assets/si/notebook.json`): sources (notes, web pages, text files from any storage through the system picker) kept on the phone;
   answers come only from them, with `[n]` citations and the passage shown. No passage that holds enough of the question's terms = the model is not
   called and the answer is "This is not in your sources."; an answer without a valid citation is replaced by the same line. Retrieval is hybrid when the
   fleet embeddings + rerank service answers (embeddings-api on the mesh: bge-m3 dense candidates plus BM25 hits, re-scored by bge-reranker-v2-m3; the
   reranker score floor keeps grounding strict) and BM25 on the phone otherwise. A PDF source is turned into text by the same service (POST /pdf, mesh
   only; off the mesh the file is refused). Studio: summary, FAQ and study notes over the sources.
-* **News** (`assets/si/news.json`): Discover-style topic feeds (For you, Tech, Science, Finance, World, Health, Sports, Arts) from the fleet's
-  news-gdelt service (the `news` entry of `ac_cloud-account/build.json::fleet_endpoints`: mesh first, public + fleet bearer after it; baked as `BuildConfig.NEWS_MESH_URL` / `NEWS_PUBLIC_URL`); headlines about one event are merged into
-  a story with its source count; the card and story summaries are written by the gateway from those headlines only. An unreachable backend shows an
-  empty state, never invented stories. The follow-up box drops its question, with the story's sources, into the SI chat box.
-* JVM tests (`app/src/test`): personas from data, notebook refusal and citation checks, news parsing and grouping.
+* The chat page is libs:ai's (Cloud Code's design): the composer's icon row (Task, Agent, Model, Mode, MCPs) is enabled in `app/src/main/assets/ai/composer.json`.
+* JVM tests (`app/src/test`): personas and CGC groups from data, the composer declaration, notebook refusal and citation checks.

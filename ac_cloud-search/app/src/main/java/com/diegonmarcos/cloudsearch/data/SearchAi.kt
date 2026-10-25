@@ -3,6 +3,7 @@ package com.diegonmarcos.cloudsearch.data
 import com.diegonmarcos.cloudsearch.BuildConfig
 import com.diegonmarcos.superapp.ai.AiAgents
 import com.diegonmarcos.superapp.ai.AiConfig
+import com.diegonmarcos.superapp.ai.AiDesign
 import com.diegonmarcos.superapp.ai.AiGatewayBackend
 import com.diegonmarcos.superapp.ai.AiHost
 import com.diegonmarcos.superapp.ai.AiHttp
@@ -51,6 +52,7 @@ object SearchAi {
             agents = AiAgents.load(s.app),
             modelSource = { s.models.models().map { AiModel(it.id, it.name, it.nativeWeb, it.free) } },
             opener = { Browser.open(s.app, it) },
+            design = AiDesign.load(s.app),
         )
     }
 }

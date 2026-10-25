@@ -15,6 +15,10 @@ data class Persona(
     val web: Boolean,
     val tools: List<String>,
     val router: Boolean,
+    /** The MCP servers of the gateway this persona switches on (by the names it lists). */
+    val mcps: List<String> = emptyList(),
+    /** The CGCs group this persona is in (a build.json::ui group id); empty for the SI router. */
+    val group: String = "",
 )
 
 /** The personas, parsed from data: Kotlin names none of them. */
@@ -28,6 +32,7 @@ object Personas {
             Persona(
                 o.getString("id"), o.getString("label"), o.getString("icon"), o.optString("role"), o.getString("system"),
                 list("suggestions"), o.optString("agent"), list("models"), o.optBoolean("web"), list("tools"), o.optBoolean("router"),
+                list("mcps"), o.optString("group"),
             )
         }
     }

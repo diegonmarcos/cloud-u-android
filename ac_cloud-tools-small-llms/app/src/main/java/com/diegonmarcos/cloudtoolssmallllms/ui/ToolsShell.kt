@@ -61,6 +61,8 @@ fun ToolsShell(model: ToolsModel) {
     val entries = nav.islandEntries()
     val theme = toolsAiTheme()
     LaunchedEffect(Unit) { model.refreshStore() }
+    // Apps' Try in AI sets the task from outside: the composer's Task control follows it.
+    LaunchedEffect(model.chatTask) { if (model.chat.task != model.chatTask) model.chat.chooseTask(model.chatTask) }
     fun open(sectionId: String, page: String?) { model.section = sectionId; model.page = page }
 
     Box(Modifier.fillMaxSize().themeBackground(dark = true).windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))) {
@@ -84,7 +86,7 @@ fun ToolsShell(model: ToolsModel) {
                         when (model.section) {
                             Decl.SECTION_APPS -> AppsPage(model, pageId ?: Decl.PAGE_APPS_GRID)
                             Decl.SECTION_MODELS -> ModelsPage(model.models, pageId ?: Decl.PAGE_SMALL, model.view) { model.view = it }
-                            Decl.SECTION_AI -> AiChatPage(model.chat, theme, Modifier.imePadding().testTag(Tags.CHAT), showModel = false, aboveInput = { TaskRow(model) }, header = {
+                            Decl.SECTION_AI -> AiChatPage(model.chat, theme, Modifier.imePadding().testTag(Tags.CHAT), aboveInput = { TaskRow(model) }, header = {
                                 Chip(stringResource(R.string.backend_auto), selected = model.backend == ToolsModel.AUTO, tag = Tags.BACKEND_AUTO) { model.chooseBackend(ToolsModel.AUTO) }
                                 Spacer(Modifier.width(ToolsMetrics.small))
                                 Chip(stringResource(R.string.backend_openrouter), selected = model.backend == ToolsModel.OPENROUTER, tag = Tags.BACKEND_OPENROUTER) { model.chooseBackend(ToolsModel.OPENROUTER) }
@@ -111,18 +113,13 @@ fun ToolsShell(model: ToolsModel) {
     }
 }
 
-/** The AI page's task row (above the input): the user picks a task, never a model; Stronger asks the task's medium model at once. */
+/** The AI page's note for the task in force and the Stronger chip (the medium model at once); the TASK itself is the shared composer's Task control. */
 @Composable
 private fun TaskRow(model: ToolsModel) {
     Column(Modifier.fillMaxWidth().padding(horizontal = ToolsMetrics.gap), verticalArrangement = Arrangement.spacedBy(ToolsMetrics.small)) {
         val note = model.models.chatTasks.firstOrNull { it.id == model.chatTask }?.note
         if (note != null) Text(note, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(ToolsMetrics.small)) {
-            item { Chip(stringResource(R.string.chat_stronger), selected = model.stronger, tag = Tags.STRONGER) { model.stronger = !model.stronger } }
-            items(model.models.chatTasks, key = { it.id }) { t ->
-                Chip(t.label, selected = model.chatTask == t.id, tag = Tags.chatTask(t.id)) { model.chatTask = t.id }
-            }
-        }
+        Row { Chip(stringResource(R.string.chat_stronger), selected = model.stronger, tag = Tags.STRONGER) { model.stronger = !model.stronger } }
     }
 }
 

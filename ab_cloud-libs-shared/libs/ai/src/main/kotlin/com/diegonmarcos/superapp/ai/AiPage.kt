@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -48,9 +49,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -103,8 +107,9 @@ data class AiType(
 data class AiStrings(
     /** The feature's one name, everywhere: tab, panel, header. */
     val title: String = "AI",
-    val hello: String = "Hi, I'm your AI Assistant",
-    val helloSub: String = "Search the web below or ask me a complex question.",
+    /** The empty chat's greeting (Cloud Code's); [helloSub] blank = the line "agent · model". */
+    val hello: String = "How can I help?",
+    val helloSub: String = "",
     val searchTheWeb: String = "Search the Web…",
     /** "%1$s" is the engine's label. */
     val searchWith: String = "Search %1\$s…",
@@ -135,6 +140,15 @@ data class AiStrings(
     val delete: String = "Delete",
     val cancel: String = "Cancel",
     val save: String = "Save",
+    val noModelsInTab: String = "No model in this tab",
+    val catalogue: String = "Model catalogue…",
+    val noMcp: String = "The gateway lists no MCP server",
+    /** The empty chat's second line when [helloSub] is blank and no agent is picked. */
+    val noAgentLine: String = "No agent",
+    val notListed: String = "not listed by the gateway",
+    val noUsage: String = "The backend has reported no usage yet. Tokens and cost appear here once an answer carries them.",
+    val noSystem: String = "No standing system prompt.",
+    val close: String = "Close",
 )
 
 /** The icons the page draws, by name; the consumer maps each to its own icon set (or keeps the default glyphs). */
@@ -180,8 +194,8 @@ data class AiTheme(
     val strings: AiStrings = AiStrings(),
     val icon: @Composable (name: String, size: Dp, tint: Color, description: String?) -> Unit = AiIcons.glyph,
     val engineField: @Composable (engine: AiEngine, value: String, onValue: (String) -> Unit, placeholder: String, tag: String, onSearch: () -> Unit) -> Unit = AiDefaultEngineField,
-    /** True: the assistant's answers are drawn as Markdown ([AiMarkdownText]); false (the default) keeps plain text. */
-    val markdown: Boolean = false,
+    /** True (the default, as in Cloud Code): the assistant's answers are drawn as Markdown ([AiMarkdownText]); false keeps plain text. */
+    val markdown: Boolean = true,
 )
 
 /** The page in the app's Material colour scheme (Cloud Drive, Cloud Tools Small LLMs): no tokens of its own. */
@@ -199,13 +213,15 @@ fun materialAiTheme(strings: AiStrings = AiStrings()): AiTheme {
     )
 }
 
+
 /**
- * The AI page: [header] (Sessions, in Cloud Search) and the agent and model pickers on top; until the chat has a
- * message, the greeting and one box per [engines] entry (each opens [query]'s URL through the host; none = the
- * greeting alone); then the conversation in the same place, the answer streaming in. The consent card for a
- * mutating tool and the input are pinned at the bottom. [onModel] set: the model chip opens the host's own model
- * page instead of the dropdown (Cloud Search's model catalogue, which carries the Web switch too). [sessionsList]:
- * a Sessions dropdown beside the pickers, over [AiHost.sessions].
+ * The AI page, Cloud Code's: until the chat has a message the greeting ([suggestions] and one box per [engines] entry
+ * under it); then the conversation in the same place, each answer streaming in as Markdown. At the bottom the consent
+ * card for a mutating tool, the app's [aboveInput], then the composer: the input with the round send button, and under it
+ * the icon row (Task, Agent, Model, Permission Mode, MCPs) of the controls the app enables in assets/ai/composer.json;
+ * an app with no such file keeps Agent and Model. [onCatalogue] adds the host's own model page to the Model picker.
+ * [sessionsList]: a Sessions dropdown on top, over [AiHost.sessions]; [header] is the app's own chips on that line.
+ * Sizes come from the shared design (assets/ai/ai-design.json); colours from [theme].
  */
 @Composable
 fun AiChatPage(
@@ -214,38 +230,44 @@ fun AiChatPage(
     modifier: Modifier = Modifier,
     engines: List<AiEngine> = emptyList(),
     query: (AiEngine, String) -> String? = { _, _ -> null },
-    onModel: (() -> Unit)? = null,
+    onCatalogue: (() -> Unit)? = null,
     sessionsList: Boolean = false,
-    /** False hides the Model chip (an app whose backend picks the model itself: Cloud Tools Small LLMs' router). */
-    showModel: Boolean = true,
     /** Suggested prompts under the greeting (a persona chat's): a tap fills the input, nothing is sent until the user does. */
     suggestions: List<String> = emptyList(),
-    /** The app's own controls just above the input (Cloud Tools Small LLMs' task row). */
+    /** The app's composer declaration; null = the app's assets/ai/composer.json, else Agent and Model. */
+    composer: AiComposerDecl? = null,
+    /** Answers the (+) menu's Attach items by id (files, images, notes, drive); null hides Attach. */
+    onAttach: ((String) -> Unit)? = null,
+    /** The app's own controls just above the input. */
     aboveInput: @Composable ColumnScope.() -> Unit = {},
+    /** The app's own chips on the top line (Cloud Search's Sessions). */
     header: @Composable RowScope.() -> Unit = {},
 ) {
+    val ctx = LocalContext.current
+    val design = remember { AiDesign.load(ctx) }
+    val decl = remember(composer) { composer ?: runCatching { AiComposerDecl.load(ctx) }.getOrDefault(AiComposerDecl("", listOf("agent", "model"))) }
     val m = theme.metrics
     val scope = rememberCoroutineScope()
-    LaunchedEffect(Unit) { if (chat.models.isEmpty()) chat.models = withContext(Dispatchers.IO) { runCatching { chat.host().models() }.getOrDefault(emptyList()) } }
+    LaunchedEffect(Unit) {
+        if (chat.models.isEmpty()) chat.models = withContext(Dispatchers.IO) { runCatching { chat.host().models() }.getOrDefault(emptyList()) }
+        if ("task" in decl.controls && chat.tasks.isEmpty()) chat.tasks = AiDesign.loadTasks(ctx)
+        if ("task" in decl.controls && chat.task.isEmpty() && decl.defaultTask.isNotEmpty()) chat.chooseTask(decl.defaultTask)
+    }
     Column(modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = m.gutter, vertical = m.small), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = m.gutter), verticalAlignment = Alignment.CenterVertically) {
             header()
             if (sessionsList) SessionsSelect(chat, theme)
-            Spacer(Modifier.weight(1f))
-            AgentSelect(chat, theme)
-            if (showModel) ModelSelect(chat, theme, onModel)
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            if (chat.session.messages.isEmpty() && !chat.sending) Welcome(engines, query, chat.host(), theme, suggestions) { chat.draft = it }
-            else Conversation(chat, theme)
+            if (chat.session.messages.isEmpty() && !chat.sending) Welcome(engines, query, chat, theme, design, suggestions)
+            else Conversation(chat, theme, design)
         }
         chat.consent?.let { req ->
             AiConsentCard(req, onAllow = { chat.decide(true) }, onDeny = { chat.decide(false) }, theme = theme, modifier = Modifier.padding(horizontal = m.small))
         }
         aboveInput()
-        ChatBar(
-            chat.draft, { chat.draft = it }, sending = chat.sending, theme = theme,
-            onNew = { chat.fresh() },
+        Composer(
+            chat, theme, design, decl, onCatalogue, onAttach,
             onSend = {
                 val ask = chat.draft.trim()
                 if (ask.isNotEmpty() && !chat.sending) {
@@ -258,17 +280,14 @@ fun AiChatPage(
 }
 
 /**
- * The AI settings controls with no conversation: the host's Agent and Model pickers (the very ones the chat page
- * draws, so a choice made here is the choice the chat uses) over the process's [chat]. A host's Configs ▸ AI page
- * draws this and its own words around it; no token is read or shown (the gateway holds the fleet key).
+ * The AI settings controls with no conversation: the very Agent and Model pickers the composer draws (so a choice made here
+ * is the choice the chat uses) over the process's [chat]. A host's Configs page draws this and its own words around it.
  */
 @Composable
 fun AiSettingsPickers(chat: AiChatState, theme: AiTheme, modifier: Modifier = Modifier) {
-    LaunchedEffect(Unit) { if (chat.models.isEmpty()) chat.models = withContext(Dispatchers.IO) { runCatching { chat.host().models() }.getOrDefault(emptyList()) } }
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        AgentSelect(chat, theme)
-        ModelSelect(chat, theme)
-    }
+    val ctx = LocalContext.current
+    val design = remember { AiDesign.load(ctx) }
+    AiComposerBar(chat, theme, design, AiComposerDecl("settings", listOf("agent", "model")), modifier)
 }
 
 /**
@@ -321,30 +340,30 @@ fun AiConsentCard(
     }
 }
 
-/** #initial-search-view: the greeting and the engine boxes; it gives way once a message is sent. */
+/** The empty chat: Cloud Code's greeting with the "agent · model" line under it, then the app's suggestions and engine boxes; it gives way once a message is sent. */
 @Composable
-private fun Welcome(engines: List<AiEngine>, query: (AiEngine, String) -> String?, host: AiHost, theme: AiTheme, suggestions: List<String>, onSuggest: (String) -> Unit) {
+private fun Welcome(engines: List<AiEngine>, query: (AiEngine, String) -> String?, chat: AiChatState, theme: AiTheme, design: AiDesign, suggestions: List<String>) {
     val c = theme.colors
     val m = theme.metrics
     val s = theme.strings
+    val host = chat.host()
+    val agentLabel = host.agents().firstOrNull { it.id == chat.agent }?.label
+    val sub = s.helloSub.ifBlank { (agentLabel ?: s.noAgentLine) + " · " + chat.model.substringAfterLast('/') }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = m.gutter, vertical = m.gutter),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(m.cardPad),
     ) {
-        Box(Modifier.size(m.robot).clip(CircleShape).background(c.ai), contentAlignment = Alignment.Center) {
-            theme.icon(AiIcons.ROBOT, m.iconLg, c.onAi, null)
-        }
-        Text(s.hello, style = TextStyle(brush = c.ai, fontSize = theme.type.greeting, fontWeight = FontWeight.Bold), textAlign = TextAlign.Center)
-        Text(s.helloSub, color = c.text2, style = theme.type.style(theme.type.greetingSub), textAlign = TextAlign.Center)
+        Text(s.hello, color = c.text, style = theme.type.style(design.metric("hello_font").sp, FontWeight.SemiBold), textAlign = TextAlign.Center)
+        Text(sub, color = c.text2, style = theme.type.style(design.metric("meta_font").sp + 1.sp), textAlign = TextAlign.Center)
         suggestions.forEach { q ->
             Text(
-                q, color = c.text, style = theme.type.style(theme.type.chat),
+                q, color = c.text, style = theme.type.style(design.metric("chat_font").sp),
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(m.cardRadius)).background(c.field)
-                    .clickable { onSuggest(q) }.padding(m.cardPad).testTag(AiTags.suggestion(q)),
+                    .clickable { chat.draft = q }.padding(m.cardPad).testTag(AiTags.suggestion(q)),
             )
         }
-        // .search-container: one box per declared engine, in declared order.
+        // One box per declared engine (Cloud Search), in declared order.
         if (engines.isNotEmpty()) Column(Modifier.padding(top = m.gap), verticalArrangement = Arrangement.spacedBy(m.engineGap)) {
             engines.forEachIndexed { i, e ->
                 var q by remember(e.id) { mutableStateOf("") }
@@ -359,7 +378,7 @@ private fun Welcome(engines: List<AiEngine>, query: (AiEngine, String) -> String
 }
 
 @Composable
-private fun Conversation(chat: AiChatState, theme: AiTheme) {
+private fun Conversation(chat: AiChatState, theme: AiTheme, design: AiDesign) {
     val c = theme.colors
     val m = theme.metrics
     val list = rememberLazyListState()
@@ -368,13 +387,17 @@ private fun Conversation(chat: AiChatState, theme: AiTheme) {
         if (n > 0) list.animateScrollToItem(n - 1)
     }
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val bubbleMax = maxWidth * m.bubbleMaxFraction
-        LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(m.gutter), verticalArrangement = Arrangement.spacedBy(m.gutter)) {
-            items(chat.session.messages.withIndex().toList(), key = { it.index }) { (_, msg) -> Bubble(msg, bubbleMax, theme) }
+        val width = maxWidth * (design.metric("assistant_width_pct") / 100f)
+        LazyColumn(
+            Modifier.fillMaxSize(), state = list,
+            contentPadding = PaddingValues(horizontal = m.gutter, vertical = design.metric("list_pad_v").dp),
+            verticalArrangement = Arrangement.spacedBy(design.metric("list_gap").dp),
+        ) {
+            items(chat.session.messages.withIndex().toList(), key = { it.index }) { (_, msg) -> Bubble(msg, width, theme, design) }
             if (chat.sending) {
-                // The answer as it streams in; until the first piece, the thinking row.
-                if (chat.streaming.isNotEmpty()) item { Bubble(AiMsg("assistant", chat.streaming), bubbleMax, theme) }
-                else item { Thinking(if (chat.web) theme.strings.searchingWeb else theme.strings.thinking, theme) }
+                // The answer as it streams in; until the first piece, the thinking line.
+                if (chat.streaming.isNotEmpty()) item { Bubble(AiMsg("assistant", chat.streaming), width, theme, design) }
+                else item { Thinking(if (chat.web) theme.strings.searchingWeb else theme.strings.thinking, theme, design) }
             }
             if (chat.citations.isNotEmpty()) item {
                 Column(verticalArrangement = Arrangement.spacedBy(m.small)) {
@@ -392,78 +415,35 @@ private fun Conversation(chat: AiChatState, theme: AiTheme) {
     }
 }
 
-/** User: a light bubble on the right with a small bottom-right corner. Assistant: the avatar and plain text. */
+/** User: a bubble on the right, its bottom-right corner small. Assistant: flat Markdown at the page's width with the "agent · model" line under it. */
 @Composable
-private fun Bubble(msg: AiMsg, max: Dp, theme: AiTheme) {
+private fun Bubble(msg: AiMsg, max: Dp, theme: AiTheme, design: AiDesign) {
     val c = theme.colors
-    val m = theme.metrics
+    val r = design.metric("user_radius_top").dp
+    val chatSp = design.metric("chat_font").sp
     if (msg.role == "user") {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Text(
-                msg.content, color = c.onUserBubble, style = theme.type.style(theme.type.chat),
+                msg.content, color = c.onUserBubble,
+                style = TextStyle(fontSize = chatSp, lineHeight = chatSp * design.metric("chat_line_height")),
                 modifier = Modifier.widthIn(max = max)
-                    .clip(RoundedCornerShape(m.bubbleRadius, m.bubbleRadius, m.bubbleTail, m.bubbleRadius))
-                    .background(c.userBubble).padding(horizontal = m.bubblePadH, vertical = m.bubblePadV),
+                    .clip(RoundedCornerShape(r, r, design.metric("user_radius_tail").dp, r))
+                    .background(c.userBubble).padding(horizontal = design.metric("user_pad_h").dp, vertical = design.metric("user_pad_v").dp),
             )
         }
     } else {
-        Row(horizontalArrangement = Arrangement.spacedBy(m.bubblePadV)) {
-            AiAvatar(theme)
-            if (theme.markdown) AiMarkdownText(msg.content, theme, Modifier.weight(1f, fill = false).padding(top = m.chipGap))
-            else Text(msg.content, color = c.text, style = theme.type.style(theme.type.chat), modifier = Modifier.padding(top = m.chipGap))
+        Column(Modifier.widthIn(max = max).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(theme.metrics.tiny)) {
+            if (theme.markdown) AiMarkdownText(msg.content, theme, Modifier.fillMaxWidth(), design.metric("chat_font").sp, design.metric("chat_line_height"))
+            else Text(msg.content, color = c.text, style = TextStyle(fontSize = chatSp, lineHeight = chatSp * design.metric("chat_line_height")))
+            if (msg.meta.isNotBlank()) Text(msg.meta, color = c.text2, fontSize = design.metric("meta_font").sp)
         }
     }
 }
 
+/** While an answer is on its way: "Searching the web…" (Web on) or "Thinking…". */
 @Composable
-private fun AiAvatar(theme: AiTheme) {
-    Box(Modifier.size(theme.metrics.aiAvatar).clip(CircleShape).background(theme.colors.ai), contentAlignment = Alignment.Center) {
-        theme.icon(AiIcons.ROBOT, theme.metrics.iconSm, theme.colors.onAi, null)
-    }
-}
-
-/** While an answer is on its way: the avatar and "Searching the web…" (Web on) or "Thinking…". */
-@Composable
-private fun Thinking(label: String, theme: AiTheme) {
-    Row(horizontalArrangement = Arrangement.spacedBy(theme.metrics.bubblePadV), verticalAlignment = Alignment.CenterVertically) {
-        AiAvatar(theme)
-        theme.icon(AiIcons.GLOBE, theme.metrics.iconSm, theme.colors.accent, null)
-        Text(label, color = theme.colors.accent, style = theme.type.style(theme.type.greetingSub, FontWeight.Medium))
-    }
-}
-
-/** The Agent field: the host's gateway agents (shared descriptor) with what each can do; hidden when the host has none. */
-@Composable
-private fun AgentSelect(chat: AiChatState, theme: AiTheme) {
-    val agents = remember { chat.host().agents() }
-    if (agents.isEmpty()) return
-    val c = theme.colors
-    val m = theme.metrics
-    val t = theme.type
-    var open by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(m.cardRadius)
-    Box(Modifier.padding(end = m.small)) {
-        Text("🤖 " + (agents.firstOrNull { it.id == chat.agent }?.label ?: theme.strings.agentNone), color = c.text,
-            style = t.style(t.label, FontWeight.Medium), maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.clip(shape).background(c.field).border(m.hairline, c.tileBorder, shape)
-                .clickable { open = true }.testTag(AiTags.AGENT).padding(horizontal = m.cardPad, vertical = m.gap))
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(text = { Text(theme.strings.agentNone, style = t.style(t.small)) },
-                onClick = { chat.chooseAgent(""); open = false }, modifier = Modifier.testTag(AiTags.agent("none")))
-            agents.forEach { a ->
-                DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text(a.label, style = t.style(t.small, FontWeight.SemiBold), color = if (a.id == chat.agent) c.accent else c.text)
-                            Text(a.sub, style = t.style(t.small), color = c.text2)
-                        }
-                    },
-                    onClick = { chat.chooseAgent(a.id); open = false },
-                    modifier = Modifier.testTag(AiTags.agent(a.id)),
-                )
-            }
-        }
-    }
+private fun Thinking(label: String, theme: AiTheme, design: AiDesign) {
+    Text(label, color = theme.colors.accent, style = theme.type.style(design.metric("chat_font").sp, FontWeight.Medium))
 }
 
 /** The Sessions dropdown: the host's stored sessions, newest first; tapping one opens it in the chat. */
@@ -492,81 +472,42 @@ private fun SessionsSelect(chat: AiChatState, theme: AiTheme) {
     }
 }
 
-/** The model <select>: the host's catalogue, native web-search models marked, and the Web switch; with [onModel], a chip that opens the host's page. */
-@Composable
-private fun ModelSelect(chat: AiChatState, theme: AiTheme, onModel: (() -> Unit)? = null) {
-    val c = theme.colors
-    val m = theme.metrics
-    val s = theme.strings
-    val t = theme.type
-    var open by remember { mutableStateOf(false) }
-    val current = chat.models.firstOrNull { it.id == chat.model }
-    val shape = RoundedCornerShape(m.cardRadius)
-    Box {
-        Row(
-            Modifier.widthIn(max = m.modelMaxWidth).clip(shape).background(c.field).border(m.hairline, c.tileBorder, shape)
-                .clickable { if (onModel != null) onModel() else open = true }.testTag(AiTags.MODEL).padding(horizontal = m.cardPad, vertical = m.gap),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(m.small),
-        ) {
-            Text("✨ " + (current?.name ?: chat.model), color = c.text, style = t.style(t.label, FontWeight.Medium),
-                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-            theme.icon(AiIcons.CARET_DOWN, m.iconXs, c.text2, null)
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(
-                text = { Text(s.webSearch, style = t.style(t.small, FontWeight.SemiBold)) },
-                trailingIcon = {
-                    Switch(chat.web, { chat.toggleWeb() }, Modifier.testTag(AiTags.WEB),
-                        colors = SwitchDefaults.colors(checkedTrackColor = c.accent, uncheckedTrackColor = c.field))
-                },
-                onClick = { chat.toggleWeb() },
-            )
-            if (chat.models.isEmpty()) DropdownMenuItem(text = { Text(s.modelsUnavailable, style = t.style(t.small)) }, onClick = { open = false })
-            chat.models.forEach { mod ->
-                DropdownMenuItem(
-                    text = {
-                        Text(mod.name + (if (mod.nativeWeb) " · " + s.webNative else "") + (if (mod.free) " · " + s.free else ""),
-                            style = t.style(t.small), color = if (mod.id == chat.model) c.accent else c.text)
-                    },
-                    onClick = { chat.pick(mod.id); open = false },
-                )
-            }
-        }
-    }
-}
 
-/** The Gemini-style input: new chat, a field that grows to six lines, the gradient send button. */
+/**
+ * Cloud Code's composer: a hairline on top, the input (a pill that grows to the design's max height) with the round send
+ * button, then the icon row of the controls the app enabled.
+ */
 @Composable
-private fun ChatBar(text: String, onText: (String) -> Unit, sending: Boolean, theme: AiTheme, onNew: () -> Unit, onSend: () -> Unit) {
+private fun Composer(chat: AiChatState, theme: AiTheme, design: AiDesign, decl: AiComposerDecl, onCatalogue: (() -> Unit)?, onAttach: ((String) -> Unit)?, onSend: () -> Unit) {
     val c = theme.colors
     val m = theme.metrics
-    val shape = RoundedCornerShape(m.chatBarRadius)
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = m.small, vertical = m.gap)
-            .clip(shape).background(c.chatBar).border(m.hairline, c.glassBorder, shape).padding(m.chipGap),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(m.small),
+    val inputShape = RoundedCornerShape(design.metric("input_radius").dp)
+    Column(
+        Modifier.fillMaxWidth()
+            .drawBehind { drawLine(c.tileBorder, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = m.hairline.toPx()) }
+            .padding(top = design.metric("composer_pad_top").dp, start = design.metric("composer_pad_h").dp, end = design.metric("composer_pad_h").dp, bottom = design.metric("composer_pad_bottom").dp),
+        verticalArrangement = Arrangement.spacedBy(design.metric("ctl_gap").dp),
     ) {
-        Box(Modifier.size(m.sendButton).clip(CircleShape).clickable(onClick = onNew).testTag(AiTags.NEW_CHAT), contentAlignment = Alignment.Center) {
-            theme.icon(AiIcons.PLUS_CIRCLE, m.icon, c.text2, theme.strings.newChat)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(design.metric("row_gap").dp)) {
+            BasicTextField(
+                value = chat.draft, onValueChange = { chat.draft = it }, minLines = 1, maxLines = 6,
+                textStyle = TextStyle(color = c.text, fontSize = design.metric("chat_font").sp),
+                cursorBrush = SolidColor(c.accent),
+                modifier = Modifier.weight(1f).heightIn(max = design.metric("input_max_height").dp).clip(inputShape).background(c.field)
+                    .border(m.hairline, c.tileBorder, inputShape).testTag(AiTags.CHAT_INPUT),
+                decorationBox = { inner ->
+                    Box(Modifier.padding(horizontal = design.metric("input_pad_h").dp, vertical = design.metric("input_pad_v").dp)) {
+                        if (chat.draft.isEmpty()) Text(theme.strings.askAnything, color = c.text2, style = TextStyle(fontSize = design.metric("chat_font").sp))
+                        inner()
+                    }
+                },
+            )
+            Box(
+                Modifier.size(design.metric("send_size").dp).clip(CircleShape).background(c.ai)
+                    .clickable(enabled = !chat.sending, onClick = onSend).testTag(AiTags.CHAT_SEND),
+                contentAlignment = Alignment.Center,
+            ) { theme.icon(AiIcons.ARROW_UP, m.icon, c.onAi, theme.strings.send) }
         }
-        BasicTextField(
-            value = text, onValueChange = onText, minLines = 1, maxLines = 6,
-            textStyle = TextStyle(color = c.text, fontSize = theme.type.chatInput),
-            cursorBrush = SolidColor(c.accent),
-            modifier = Modifier.weight(1f).padding(vertical = m.cardPad).testTag(AiTags.CHAT_INPUT),
-            decorationBox = { inner ->
-                Box {
-                    if (text.isEmpty()) Text(theme.strings.askAnything, color = c.text2, style = TextStyle(fontSize = theme.type.chatInput))
-                    inner()
-                }
-            },
-        )
-        Box(
-            Modifier.size(m.sendButton).clip(CircleShape).background(c.ai)
-                .clickable(enabled = !sending, onClick = onSend).testTag(AiTags.CHAT_SEND),
-            contentAlignment = Alignment.Center,
-        ) { theme.icon(AiIcons.ARROW_UP, m.icon, c.onAi, theme.strings.send) }
+        AiComposerBar(chat, theme, design, decl, onCatalogue = onCatalogue, onAttach = onAttach)
     }
 }

@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -142,17 +143,17 @@ fun aiMarkdownInline(text: String, codeBg: Color, link: Color): AnnotatedString 
 
 /** An answer drawn as Markdown, in the page's colours and type (the assistant's bubble when [AiTheme.markdown] is on). */
 @Composable
-fun AiMarkdownText(text: String, theme: AiTheme, modifier: Modifier = Modifier) {
+fun AiMarkdownText(text: String, theme: AiTheme, modifier: Modifier = Modifier, size: TextUnit = theme.type.chat, lineHeight: Float = 1.4f) {
     val c = theme.colors
     val m = theme.metrics
-    val body = theme.type.style(theme.type.chat).copy(color = c.text)
+    val body = theme.type.style(size).copy(color = c.text, lineHeight = size * lineHeight)
     val codeBg = c.field
     val blocks = remember(text) { AiMarkdown.blocks(text) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(m.gap)) {
         for (b in blocks) when (b) {
             is AiMdBlock.Heading -> Text(
                 aiMarkdownInline(b.text, codeBg, c.accent),
-                style = body.copy(fontSize = (theme.type.chat.value + (4 - b.level).coerceAtLeast(0) * 2).sp, fontWeight = FontWeight.Bold),
+                style = body.copy(fontSize = (size.value + (4 - b.level).coerceAtLeast(0) * 2).sp, fontWeight = FontWeight.Bold),
             )
             is AiMdBlock.Paragraph -> Text(aiMarkdownInline(b.text, codeBg, c.accent), style = body)
             is AiMdBlock.Item -> Row(Modifier.padding(start = (b.depth * 16).dp)) {
@@ -165,7 +166,7 @@ fun AiMarkdownText(text: String, theme: AiTheme, modifier: Modifier = Modifier) 
             }
             is AiMdBlock.Code -> Text(
                 b.text,
-                style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = (theme.type.chat.value - 2).sp, color = c.text),
+                style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = (size.value - 2).sp, color = c.text),
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(m.cardRadius)).background(codeBg)
                     .horizontalScroll(rememberScrollState()).padding(m.cardPad),
             )

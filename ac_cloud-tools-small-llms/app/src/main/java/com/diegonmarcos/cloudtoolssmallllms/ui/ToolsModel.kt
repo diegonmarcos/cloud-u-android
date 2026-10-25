@@ -32,6 +32,9 @@ import com.diegonmarcos.cloudtoolssmallllms.core.Costs
 import com.diegonmarcos.superapp.ai.AiBackend
 import com.diegonmarcos.superapp.ai.AiChatState
 import com.diegonmarcos.superapp.ai.AiConfig
+import com.diegonmarcos.superapp.ai.AiDesign
+import com.diegonmarcos.superapp.ai.AiTask
+import com.diegonmarcos.superapp.ai.AiUsageLine
 import com.diegonmarcos.superapp.ai.AiFileSessions
 import com.diegonmarcos.superapp.ai.AiGatewayBackend
 import com.diegonmarcos.superapp.ai.AiMemoryPrefs
@@ -391,7 +394,23 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
         AiMemoryPrefs(models.chatTasks.first().small),
         direct = routedBackend,
         modelSource = { emptyList() },
+        design = AiDesign.load(app),
+        // The Costs ledger is this app's real usage: money per day and per month (nothing is invented for tokens).
+        usageSource = {
+            val zone = java.time.ZoneId.systemDefault()
+            listOf(
+                AiUsageLine("Today", "$" + "%.4f".format(java.util.Locale.ROOT, ledger.day(now(), zone))),
+                AiUsageLine("This month", "$" + "%.4f".format(java.util.Locale.ROOT, ledger.month(now(), zone))),
+            )
+        },
     ))
+
+    init {
+        // The composer's Task control is the one task picker: the chat's tasks are this app's chat_tasks, mapped to the model each runs.
+        chat.tasks = models.chatTasks.map { AiTask(it.id, it.label, "openrouter", it.small, it.icon, it.note) }
+        chat.onTask = { if (it.isNotEmpty()) chatTask = it }
+        chat.chooseTask(chatTask)
+    }
 
     /** Apps' Try in AI: open the AI section on the task of [model]'s macro, asking the medium model when it is a medium one. */
     fun tryInAi(model: String) {

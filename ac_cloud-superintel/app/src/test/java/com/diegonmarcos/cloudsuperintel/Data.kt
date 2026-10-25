@@ -15,4 +15,23 @@ object Data {
         val p = s.getJSONArray("pages")
         return (0 until p.length()).map { p.getJSONObject(it).getString("id") }
     }
+
+    fun bottomNav(): List<String> = buildJson().getJSONObject("ui").getJSONArray("bottom_nav").let { a -> (0 until a.length()).map { a.getString(it) } }
+
+    private fun section(id: String): JSONObject {
+        val secs = buildJson().getJSONObject("ui").getJSONArray("sections")
+        return (0 until secs.length()).map { secs.getJSONObject(it) }.first { it.getString("id") == id }
+    }
+
+    /** A section's declared `nav_mode`. */
+    fun navMode(section: String): String = section(section).optString("nav_mode")
+
+    /** A section's page groups as (id, label, page ids). */
+    fun groups(section: String): List<Triple<String, String, List<String>>> {
+        val g = section(section).getJSONArray("groups")
+        return (0 until g.length()).map { g.getJSONObject(it) }.map { o ->
+            val p = o.getJSONArray("pages")
+            Triple(o.getString("id"), o.getString("label"), (0 until p.length()).map { p.getString(it) })
+        }
+    }
 }

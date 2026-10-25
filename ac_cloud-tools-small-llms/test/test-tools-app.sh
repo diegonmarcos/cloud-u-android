@@ -235,7 +235,15 @@ if "AiGatewayBackend(" not in tm or "BuildConfig.AI_GATEWAY_URL" not in tm: bad.
 if "modelSource = { emptyList() }" not in tm or "fun answerTask(" not in tm: bad.append("A9 the chat has a model picker: the user picks a task and answerTask picks the model")
 for need in ("task.small", "task.medium", "models.judgeMinScore", "flagged(question, \"gatekeeping\")", "flagged(text, \"gatekeeping\")", 'text + "\\n\\n— " + label', "private fun placeFor(", "helper(models.judgeModel", "label"):
     if need not in tm: bad.append("A9 ToolsModel lacks %s (task routing, guard in and out, escalation, model label)" % need)
-if "showModel = false" not in shell or "TaskRow(model)" not in shell or "STRONGER" not in shell: bad.append("A9 the AI page does not show tasks (and Stronger) instead of a model picker")
+if "STRONGER" not in shell or "showModel" in shell: bad.append("A9 the AI page does not keep Stronger, or still toggles a model picker of its own")
+if "chat.tasks = models.chatTasks" not in tm or "chat.onTask" not in tm: bad.append("A9 the composer's Task control is not fed by chat_tasks (the task, not the user, picks the model)")
+cd = json.loads(read(os.path.join(app, "app/src/main/assets/ai/composer.json")))
+if not cd.get("task_required") or not {"task", "agent", "model"} <= set(cd["controls"]) or {"mode", "mcp", "effort"} & set(cd["controls"]): bad.append("A9 composer.json must enable Task (required), Agent and Model, and not Mode, MCP or Effort (the router calls the model)")
+shared = os.path.join(app, "../ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai-tasks.json")
+if os.path.exists(shared):
+    st = {t["id"]: t["model"] for t in json.loads(read(shared))["tasks"]}
+    bt = {t["id"]: t["worker"] for t in bj["tools"]["tasks"]}
+    if st != bt: bad.append("A9 libs:ai's ai-tasks.json and build.json::tools.tasks differ (ids or workers): %s" % sorted(set(st.items()) ^ set(bt.items()))[:4])
 if "Tags.pin(" not in code(os.path.join(kt, "ui/SettingsPage.kt")): bad.append("A9 Settings has no advanced pin-model option")
 if "row?.wireId ?: req.model" not in tm: bad.append("A9 the gateway is not sent the data's openrouter_id")
 for need in ("fun runApp(", "private fun place(", "status = \"running\"", "call(placed.second", "models.stepPrompt("):
@@ -303,7 +311,7 @@ mutate "chat gets a picker back" 'sub(K + "/ui/ToolsModel.kt", "modelSource = { 
 mutate "guard on the answer dropped" 'sub(K + "/ui/ToolsModel.kt", "flagged(text, \"gatekeeping\")", "null")'
 mutate "escalation ignores the score" 'sub(K + "/ui/ToolsModel.kt", "models.judgeMinScore", "0")'
 mutate "reply loses its model label" 'sub(K + "/ui/ToolsModel.kt", "text + \"\\n\\n— \" + label", "text")'
-mutate "task row dropped" 'sub(K + "/ui/ToolsShell.kt", "TaskRow(model)", "Unit")'
+mutate "task row dropped" 'sub(K + "/ui/ToolsModel.kt", "chat.tasks = models.chatTasks", "val unused = models.chatTasks")'
 mutate "chat task names an unknown model" 'sub(M + "/app/src/main/assets/tools-models.json", "\"small\": \"ministral-3b-2512\"", "\"small\": \"ministral-9z\"")'
 mutate "bottom nav reordered" 'sub(M + "/build.json", "\"apps\",\n      \"models\",\n      \"ai\"", "\"models\",\n      \"apps\",\n      \"ai\"")'
 

@@ -23,17 +23,15 @@ import com.diegonmarcos.cloudsearch.R
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.core.Templates
 import com.diegonmarcos.cloudsearch.models.ModelCataloguePage
-import com.diegonmarcos.superapp.ai.AiBucket
 import com.diegonmarcos.superapp.ai.AiChatPage
 import com.diegonmarcos.superapp.ai.AiColors
 import com.diegonmarcos.superapp.ai.AiEngine
 import com.diegonmarcos.superapp.ai.AiIcons
 import com.diegonmarcos.superapp.ai.AiMetrics
-import com.diegonmarcos.superapp.ai.AiSessions
+import com.diegonmarcos.superapp.ai.AiSessionsPanel
 import com.diegonmarcos.superapp.ai.AiStrings
 import com.diegonmarcos.superapp.ai.AiTheme
 import com.diegonmarcos.superapp.ai.AiType
-import java.time.ZoneId
 
 /**
  * The mockup's one Search page (renderUnifiedSearchChat), drawn by libs:ai (#823, shared
@@ -60,7 +58,7 @@ fun AssistantPage(v: SearchConfig.Vertical) {
         query = { e, q -> state.cfg.engines.firstOrNull { it.id == e.id }?.let { Templates.fill(it.url, q, state.cfg.city(state.city)) } },
         theme = aiTheme(),
         modifier = Modifier.padding(top = Metrics.contentTop, bottom = bottom),
-        onModel = { catalogue = true },
+        onCatalogue = { catalogue = true },
     ) {
         Chip(stringResource(R.string.sessions), Tags.SESSIONS, icon = R.drawable.ph_list_dashes) { state.menu = Menu.SESSIONS }
     }
@@ -88,7 +86,6 @@ fun aiTheme(): AiTheme {
         type = AiType(label = Type.label, small = Type.small, chat = Type.chat, greeting = Type.greeting,
             greetingSub = Type.greetingSub, chatInput = Type.chatInput),
         strings = AiStrings(
-            hello = stringResource(R.string.assistant_hello), helloSub = stringResource(R.string.assistant_hello_sub),
             searchTheWeb = stringResource(R.string.search_the_web), searchWith = stringResource(R.string.search_with),
             webSearch = stringResource(R.string.web_search), webNative = stringResource(R.string.web_native),
             free = stringResource(R.string.free), modelsUnavailable = stringResource(R.string.models_unavailable),
@@ -118,30 +115,9 @@ private fun phosphor(name: String): Int = when (name) {
     else -> R.drawable.ph_arrow_up
 }
 
-/** Chat Sessions: grouped Today / Previous 7 Days / Older, newest first. */
+/** Chat Sessions: libs:ai's drawer body (New chat, Today / Previous 7 days / Older, rename, delete), the one every app uses. */
 @Composable
 fun SessionsMenu(state: SearchState) {
-    val g = LocalGlass.current
-    val sessions = remember(state.menu) { state.services.sessions.all() }
-    val groups = remember(sessions) { AiSessions.group(sessions, System.currentTimeMillis(), ZoneId.systemDefault()) }
     MenuTitle(stringResource(R.string.chat_sessions), { state.menu = null }, stringResource(R.string.close))
-    if (groups.isEmpty()) Text(stringResource(R.string.no_sessions), color = g.text2, style = Type.style(Type.small))
-    groups.forEach { (bucket, list) ->
-        Text(stringResource(bucketLabel(bucket)), color = g.text2, style = Type.style(Type.menuItem, FontWeight.SemiBold), modifier = Modifier.padding(top = Metrics.gap))
-        list.forEach { s ->
-            Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(Metrics.cardRadius)).background(g.field)
-                    .clickable { state.chat.open(s); state.menu = null }.padding(Metrics.cardPad + Metrics.tiny),
-            ) {
-                Text(s.title.ifBlank { stringResource(R.string.untitled) }, color = g.text, style = Type.style(Type.menuItem, FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(stringResource(R.string.n_messages, s.messages.size), color = g.text2, style = Type.style(Type.label), modifier = Modifier.padding(top = Metrics.small))
-            }
-        }
-    }
-}
-
-fun bucketLabel(b: AiBucket): Int = when (b) {
-    AiBucket.TODAY -> R.string.today
-    AiBucket.PREVIOUS_7_DAYS -> R.string.previous_7_days
-    AiBucket.OLDER -> R.string.older
+    AiSessionsPanel(state.chat, aiTheme(), onPicked = { state.menu = null })
 }

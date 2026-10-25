@@ -16,7 +16,14 @@ class AiRequest(
     /** Messages already in wire shape (a tool round-trips); replaces [messages] when set. */
     val wire: JSONArray? = null,
     val stream: Boolean = true,
+    /** The composer's Effort: sent as `reasoning.effort`; "" sends nothing. */
+    val effort: String = "",
+    /** Extra request headers (the optimisation plugins' toggles); only the gateway takes them. */
+    val headers: Map<String, String> = emptyMap(),
 )
+
+/** Tokens (and the cost, when the backend reports one) of one answer, as the backend REPORTED them. */
+data class AiUsage(val prompt: Long, val completion: Long, val cost: Double? = null)
 
 /** One call the model asked for: [arguments] is its JSON text, unparsed. */
 data class AiToolCall(val id: String, val name: String, val arguments: String)
@@ -28,6 +35,7 @@ class AiReply(
     val error: String? = null,
     val toolCalls: List<AiToolCall> = emptyList(),
     val transport: Boolean = false,
+    val usage: AiUsage? = null,
 )
 
 /** The OpenAI-style wire the gateway and OpenRouter share, as pure functions (shared cases: assets/ai/protocol-cases.json). */
@@ -51,6 +59,7 @@ object AiProtocol {
         if (model != null) o.put("model", model)
         o.put("messages", req.wire ?: messages(req.messages, cfg.historyTurns))
         if (stream) o.put("stream", true)
+        if (req.effort.isNotBlank()) o.put("reasoning", JSONObject().put("effort", req.effort))
         if (openRouter && req.web) {
             if (req.nativeWeb) o.put(cfg.nativeWebParam, JSONObject())
             else o.put("plugins", JSONArray().put(JSONObject().put("id", cfg.webPlugin)))
@@ -71,6 +80,14 @@ object AiProtocol {
         notes.optJSONObject(i)?.optJSONObject("url_citation")?.str("url")
     }.distinct()
 
+    /** The `usage` object of an answer or of a stream's last chunk; null when absent or empty. */
+    fun usage(j: JSONObject?): AiUsage? {
+        val u = j?.optJSONObject("usage") ?: return null
+        val p = u.optLong("prompt_tokens"); val c = u.optLong("completion_tokens")
+        if (p == 0L && c == 0L) return null
+        return AiUsage(p, c, if (u.has("cost") && !u.isNull("cost")) u.optDouble("cost") else null)
+    }
+
     /** A server-sent-event stream fed chunk by chunk (a chunk may end mid-line). [push] returns the text deltas it completed. */
     class Sse {
         var done = false
@@ -78,6 +95,8 @@ object AiProtocol {
         var error: String? = null
             private set
         val citations = LinkedHashSet<String>()
+        var usage: AiUsage? = null
+            private set
         private val buf = StringBuilder()
 
         fun push(chunk: String): List<String> {
@@ -92,6 +111,7 @@ object AiProtocol {
                 val data = line.substring(5).trim()
                 if (data == "[DONE]") { done = true; continue }
                 val j = runCatching { JSONObject(data) }.getOrNull() ?: continue
+                usage(j)?.let { usage = it }
                 if (j.has("error") && !j.isNull("error")) error = j.optJSONObject("error")?.str("message") ?: j.opt("error").toString()
                 val choice = j.optJSONArray("choices")?.optJSONObject(0)
                 val delta = choice?.optJSONObject("delta")
@@ -119,7 +139,23 @@ object AiProtocol {
                 AiToolCall(c.optString("id"), name, f.optString("arguments", "{}").ifBlank { "{}" })
             }
         }.orEmpty()
-        return AiReply(msg?.str("content") ?: "", urlCitations(msg?.optJSONArray("annotations")), null, calls)
+        return AiReply(msg?.str("content") ?: "", urlCitations(msg?.optJSONArray("annotations")), null, calls, usage = usage(j))
+    }
+
+    /** The gateway's /health `plugins` object: name to enabled; anything else is none. */
+    fun parsePlugins(json: String): Map<String, Boolean> {
+        val o = runCatching { JSONObject(json) }.getOrNull()?.optJSONObject("plugins") ?: return emptyMap()
+        return o.keys().asSequence().associateWith { o.optBoolean(it) }
+    }
+
+    /** The gateway's MCP servers (GET mcp_path): `[{server, count}]`, or `{servers: [...]}`; anything else is none. */
+    fun parseMcp(json: String): List<AiMcpServer> {
+        val root = runCatching { org.json.JSONTokener(json).nextValue() }.getOrNull()
+        val a = when (root) { is JSONArray -> root; is JSONObject -> root.optJSONArray("servers"); else -> null } ?: return emptyList()
+        return (0 until a.length()).mapNotNull { a.optJSONObject(it) }.mapNotNull { s ->
+            val name = s.str("server") ?: s.str("name") ?: return@mapNotNull null
+            AiMcpServer(name, if (s.has("count") && !s.isNull("count")) s.optInt("count") else null)
+        }.distinctBy { it.name }
     }
 
     /** The live model list (`data`): text-output models, the natively web-searching ones and the free ones flagged, by name. */

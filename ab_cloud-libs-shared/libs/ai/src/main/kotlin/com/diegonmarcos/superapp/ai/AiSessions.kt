@@ -44,12 +44,12 @@ class AiFileSessions(private val file: File) : AiSessionStore {
 
     companion object {
         fun toJson(s: AiSession): JSONObject = JSONObject().put("id", s.id).put("title", s.title).put("model", s.model).put("updated", s.updated)
-            .put("messages", JSONArray(s.messages.map { JSONObject().put("role", it.role).put("content", it.content) }))
+            .put("messages", JSONArray(s.messages.map { JSONObject().put("role", it.role).put("content", it.content).also { o -> if (it.meta.isNotBlank()) o.put("meta", it.meta) } }))
 
         fun fromJson(o: JSONObject): AiSession = AiSession(
             id = o.getString("id"), title = o.optString("title"), model = o.optString("model"), updated = o.optLong("updated"),
             messages = o.optJSONArray("messages")?.let { a ->
-                (0 until a.length()).map { a.getJSONObject(it) }.map { AiMsg(it.getString("role"), it.getString("content")) }
+                (0 until a.length()).map { a.getJSONObject(it) }.map { AiMsg(it.getString("role"), it.getString("content"), it.optString("meta")) }
             } ?: emptyList(),
         )
     }

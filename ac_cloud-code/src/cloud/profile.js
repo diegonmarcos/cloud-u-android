@@ -10,7 +10,8 @@ import { page, sheet, option, toggleRow } from "./chrome";
 import * as M from "./chat/model";
 import { modelPage, chatSettingsChanged } from "./chat/view";
 
-const chat = { ...nav.chat, ...targets.chat.ai };
+// The permission modes and effort levels are the shared design's (libs:ai ai-design.json), as in chat/view.js.
+const chat = { ...nav.chat, ...targets.chat.ai, permission: { ...nav.chat.permission, ...targets.chat.design.permission }, effort: targets.chat.design.effort };
 const plugin = () => window.CloudChat;
 
 function section(title, ...rows) {

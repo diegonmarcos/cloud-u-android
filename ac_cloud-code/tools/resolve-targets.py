@@ -192,10 +192,34 @@ def shared_ai(app_root, c):
     return {"gateway": gateway, "direct": direct}
 
 
+def shared_design(app_root, c):
+    """The shared AI design (libs:ai ai-design.json) and task mapping (ai-tasks.json), copied whole for the page.
+
+    Held to what the page needs: every control nav.json::chat.composer enables is a control of the design, and every
+    task runs on an agent the page can reach (an agent of the shared descriptors, or the gateway's OpenRouter face)."""
+    repo = os.path.dirname(os.path.abspath(app_root))
+    try:
+        design = json.load(open(os.path.join(repo, c["design"])))
+        tasks = json.load(open(os.path.join(repo, c["tasks"])))["tasks"]
+        agents = json.load(open(os.path.join(repo, c["shared_agents"])))["agents"]
+    except (OSError, ValueError, KeyError) as e:
+        raise SystemExit("resolve-targets: cannot read the shared AI design or task mapping (%s)" % e)
+    known = [x["id"] for x in design["composer"]["controls"]]
+    bad = [x for x in c["composer"]["controls"] if x not in known]
+    if bad:
+        raise SystemExit("resolve-targets: nav.json::chat.composer enables %s, which ai-design.json does not define" % bad)
+    reach = {a["id"] for a in agents} | {a["id"] for a in design["agents_extra"]["agents"]}
+    for t in tasks:
+        if t["agent"] not in reach:
+            raise SystemExit("resolve-targets: task %s runs on agent %r, which no agent descriptor defines" % (t["id"], t["agent"]))
+    return design, tasks
+
+
 def chat(app_root, nav):
     c = dict(nav["chat"])
     c["agents"] = merged_agents(app_root, c)
     ai = shared_ai(app_root, c)
+    design, tasks = shared_design(app_root, c)
     services = fleet_services(app_root, c["fleet_services"])
     prefix = c["agent_prefix"]
     gateway = services.get(ai["gateway"]["service"])
@@ -223,6 +247,8 @@ def chat(app_root, nav):
     claude = next((a for a in c["agents"] if a["mode"] == "claude-cli"), None)
     return {"agents": agents,
             "ai": ai,
+            "design": design,
+            "tasks": tasks,
             "gateway": base_url(gateway),
             "claude_api": base_url(services.get(claude["fleet"])) if claude else None,
             "agent_decls": c["agents"],

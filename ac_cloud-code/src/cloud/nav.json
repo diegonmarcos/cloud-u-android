@@ -247,55 +247,8 @@
       }
     ],
     "_doc_agents": "Listed first, in this order (the owner's: Hermes, OpenClaw, then the rest, then the gateway's own OpenRouter face). Then every mode the LIVE gateway lists in /health.modes that is not declared here (a new agent the gateway starts serving: generic controls, its model and functions from the gateway), then every OTHER fleet service named agent_prefix* that no mode reaches ('no app API yet', disabled). The direct OpenRouter backend comes last. States: ready, offline (the gateway did not answer: still selectable), unavailable (the gateway says so, with its reason), not deployed, no app API (model.js::resolveAgents).",
-    "effort": {
-      "_doc": "Low / Medium / High / Max, sent as OpenRouter's reasoning.effort (which accepts low, medium, high and max, verified 2026-10-10) when the backend passes it and the model reasons (its supported_parameters lists reasoning, read from direct.models_url once a day). Otherwise the control is disabled with the reason.",
-      "levels": [
-        {
-          "id": "low",
-          "label": "Low",
-          "value": "low"
-        },
-        {
-          "id": "medium",
-          "label": "Medium",
-          "value": "medium"
-        },
-        {
-          "id": "high",
-          "label": "High",
-          "value": "high"
-        },
-        {
-          "id": "max",
-          "label": "Max",
-          "value": "max"
-        }
-      ],
-      "default": "medium"
-    },
     "permission": {
-      "_doc": "Auto / Accept / Plan, shown on the composer. No backend the app reaches takes a per-request approval switch today (see each agent's permission._doc), so via=prompt sends the mode as a system instruction; a backend with via=param would get it as that request field instead. The direct OpenRouter backend has no tools, so the control is hidden there.",
-      "modes": [
-        {
-          "id": "auto",
-          "label": "Auto Mode",
-          "short": "Auto",
-          "instruction": ""
-        },
-        {
-          "id": "accept",
-          "label": "Accept Mode",
-          "short": "Accept",
-          "instruction": "Permission mode: accept edits. You may create and edit files without asking. Ask before running commands that change anything outside the files (installs, deploys, pushes, deletions)."
-        },
-        {
-          "id": "plan",
-          "label": "Plan Mode",
-          "short": "Plan",
-          "instruction": "Permission mode: plan. Do not change anything and do not run tools that write. Read what you need, then answer with a numbered plan and wait for approval."
-        }
-      ],
-      "default": "auto"
+      "_doc": "The Permission Modes (ask, auto-edit, read-only, plan) and their default are the shared design's (ai-design.json permission), merged over this block by view.js and the tester. via=prompt per agent is declared in each agent's own `permission`."
     },
     "catalogue": {
       "_doc": "The Model page is libs:model-catalogue (Cloud Search's catalogue, one implementation), narrowed by the lib's own filter to the four Text sections — A0 Code, A1 Agentic, A2 Base, A3 Reasoning — the same tables Cloud Search's chat model page shows. Drawn in HTML (this WebView app has no Compose) as a full page: one radio per row, exactly one selected, saved per agent (model.js::setAgentModel); rows the agent cannot run are greyed with the reason (model.js::rowState).",
@@ -464,7 +417,27 @@
         }
       ],
       "source": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-code"
-    }
+    },
+    "design": "ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai-design.json",
+    "tasks": "ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai-tasks.json",
+    "_doc_design": "THE SHARED AI DESIGN (libs:ai assets/ai/ai-design.json): sizes, composer controls and their order, Model-tab rules, Permission Modes, Effort levels with `auto`, the More sheet's groups. tools/resolve-targets.py copies it into targets.gen.json chat.design (and the task mapping, ai-tasks.json, into chat.tasks); view.js sets every design metric as a --ai-* CSS custom property and draws the bar in the design's order. The Compose chat reads the same file, so the two cannot drift. Nothing about the look or the composer is restated in this file except which controls THIS app enables.",
+    "composer": {
+      "_doc": "Which of the shared config bar's controls Cloud Code enables (ai-design.json defines them and their order: (+), Task, Agent, Model, Effort, Perms, MCP, (More)). Effort and Perms still appear only where the chosen agent takes them. default_task: the task the first chat opens on (empty = none); task_required false: the user can clear it.",
+      "controls": [
+        "plus",
+        "task",
+        "agent",
+        "model",
+        "effort",
+        "mode",
+        "mcp",
+        "more"
+      ],
+      "default_task": "",
+      "task_required": false,
+      "app": "cloud-code"
+    },
+    "_doc_effort": "Effort levels (Auto, Low, Medium, High, Max) are the shared design's (ai-design.json effort), sent as OpenRouter's reasoning.effort; Auto sends nothing."
   },
   "myterminal": {
     "_doc": "THE ONE PLACE the MyTerminal target is named (#562). It is a fleet application id, never a package: tools/resolve-targets.py reads the sibling app whose build.json::name equals it and derives the package (android.application_id) and the launcher activity (its manifest) into src/cloud/targets.gen.json at build time. #561 renamed cloud-ide to cloud-myterminal; if a later rename happens, this one value moves and the resolver fails the build loudly until it does.",

@@ -1,13 +1,21 @@
 package com.diegonmarcos.superapp.ai
 
 /** One chat message: role user | assistant. */
-data class AiMsg(val role: String, val content: String)
+data class AiMsg(
+    val role: String, val content: String,
+    /** An assistant answer's "agent · model" line (Cloud Code shows it under each answer); "" = none. */
+    val meta: String = "",
+)
 
 /** One chat session as the host stores it. */
 data class AiSession(val id: String, val title: String, val model: String, val updated: Long, val messages: List<AiMsg>)
 
 /** One model of the host's catalogue: [nativeWeb] = it searches the web by itself; [free] = no cost. */
-data class AiModel(val id: String, val name: String, val nativeWeb: Boolean = false, val free: Boolean = false)
+data class AiModel(
+    val id: String, val name: String, val nativeWeb: Boolean = false, val free: Boolean = false,
+    /** Data hints for the Model picker's tabs (ai-design.json model_tabs): the catalogue section id (A0 = Code) and the tier a data row declares (small / medium). */
+    val section: String = "", val tier: String = "",
+)
 
 /**
  * One agent of the Agent picker: [sub] says what it can do (from the shared descriptor), [mode] is its

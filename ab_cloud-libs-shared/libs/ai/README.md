@@ -8,7 +8,10 @@ and is the page **and** everything behind it, so no Kotlin app draws a chat of i
 
 | Piece | Where |
 |---|---|
-| Chat page: greeting, conversation, answer **streaming** in, Agent picker, Model picker, Sessions, input | `AiPage.kt` (`AiChatPage`, `AiTheme`, `materialAiTheme`) |
+| Chat page, Cloud Code's design: greeting, conversation (user bubble, flat Markdown answers with an `agent · model` line), answer **streaming** in, the input and the config bar | `AiPage.kt` (`AiChatPage`, `AiTheme`, `materialAiTheme`) |
+| Config bar under the input: (+) · Task · Agent · Model (tabs Frontier · Code · Search · Medium · Small) · Effort · Perms · MCP · (More), collapsible to one chip | `AiComposerBar.kt` (`AiComposerBar`) |
+| The one design source: sizes, controls, model-tab rules, permission modes, effort levels, the More sheet's groups | `src/main/assets/ai/ai-design.json` via `AiDesign.kt`; Cloud Code reads the same file |
+| The task mapping (task to agent + model) | `src/main/assets/ai/ai-tasks.json` (held in step with Cloud Tools' `build.json::tools.tasks`) |
 | Consent card a mutating tool waits on (Allow / Deny) | `AiPage.kt` (`AiConsentCard`) |
 | State: open session, streaming text, pending consent | `AiChatState.kt` |
 | Host seam and the standard host (sessions, prefs, backends, tool loop) | `AiHost.kt` (`AiHost`, `AiStandardHost`, `AiAgents`) |
@@ -68,3 +71,13 @@ tools come with the apps that need them.
 `AiProtocolTest` (JVM, runs in the consumers' `gradle test`) feeds `protocol-cases.json` to the Kotlin wire.
 Cloud Code's `test/chat.mjs` feeds the same file to the JS wire; add a case once and both sides fail until
 both implement it.
+
+## One design, two renderers
+
+`assets/ai/ai-design.json` is the only place the chat's sizes, composer controls, Model-tab rules, Permission Modes, Effort levels and More-sheet groups are written.
+Compose reads it through `AiDesign`; Cloud Code (HTML) gets it copied into `targets.gen.json::chat.design` by `tools/resolve-targets.py`, and `view.js` sets every
+`metrics` entry as a `--ai-*` CSS custom property. Colours stay the host's own (Acode's theme in Cloud Code, the app's theme in Compose).
+
+An app declares which controls it enables and nothing else: Kotlin apps in `assets/ai/composer.json` (`controls`, `default_task`, `task_required`), Cloud Code in `nav.json::chat.composer`.
+A selected Task greys Agent and Model and sets them from the mapping. Permission Mode, MCP selection and the optimisation-plugin toggles ride the request (a standing system
+instruction, and request headers on the gateway); Effort is `reasoning.effort`. Usage & Cost shows only what the backend reported (or the app's Costs ledger).

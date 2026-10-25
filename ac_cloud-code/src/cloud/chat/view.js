@@ -16,7 +16,10 @@ import fsOperation from "fileSystem";
 // nav.json is the tab's own declaration; the gateway and OpenRouter come from the shared AI contract (libs:ai ai.json),
 // copied into targets.gen.json by tools/resolve-targets.py (chat.ai): nothing here restates an endpoint or a path.
 const fleet = targets.chat;
-const chat = { ...nav.chat, ...fleet.ai };
+// The shared design (libs:ai ai-design.json) is the one source of the permission modes and the effort levels too.
+const design = fleet.design;
+const chat = { ...nav.chat, ...fleet.ai, permission: { ...nav.chat.permission, ...design.permission }, effort: design.effort };
+const COLLAPSE_KEY = `${M.KEY}${design.composer.collapse.pref_key}.${nav.chat.composer.app}`;
 const md = markdownIt({ html: false, linkify: true, breaks: true });
 const REASONING_TTL = 24 * 3600 * 1000;
 
@@ -85,7 +88,7 @@ function current() {
 
 function fresh(settings = M.loadSettings(localStorage, chat)) {
 	const s = M.newSession(Date.now(), settings.agent);
-	Object.assign(s, { model: settings.model, effort: settings.effort, mode: settings.mode });
+	Object.assign(s, { model: settings.model, effort: settings.effort, mode: settings.mode, task: nav.chat.composer.default_task || "" });
 	return s;
 }
 
@@ -93,15 +96,23 @@ function agents() {
 	return M.resolveAgents(chat, fleet, S.health);
 }
 
+/** The task in force on the open chat ({locked, task, agent, model}): a selected task forces the agent and the model. */
+function lock() {
+	return M.taskLock(fleet.tasks, current().task);
+}
+
 function agent() {
 	const s = current();
-	const a = M.pickAgent(agents(), s.agent);
-	if (a && a.id !== s.agent) s.agent = a.id;
+	const l = lock();
+	const a = M.pickAgent(agents(), M.lockedAgent(agents(), l, s.agent));
+	if (a && !l.locked && a.id !== s.agent) s.agent = a.id; // a locked chat leaves the user's own pick alone for when the task is cleared
 	return a;
 }
 
-/** The chat model kept for this agent (the Model page saves it per agent). */
+/** The chat model kept for this agent (the Model page saves it per agent); the task's mapped one while a task is selected. */
 function modelOf(a) {
+	const l = lock();
+	if (l.locked && a?.id === l.agent) return l.model;
 	return M.agentModel(localStorage, chat, a?.id);
 }
 
@@ -160,6 +171,9 @@ export async function renderChat(panel, chrome) {
 	$controls = el("div", { className: "cloud-chat-controls" });
 	const composer = el("div", { className: "cloud-chat-composer" }, $attach, el("div", { className: "cloud-chat-row" }, $input, $send), $controls);
 	panel.classList.add("cloud-chat-panel");
+	// The design's sizes as custom properties: cloud.scss restates none of them.
+	for (const [k, v] of Object.entries(design.metrics)) document.documentElement.style.setProperty(`--ai-${k.replaceAll("_", "-")}`, String(v));
+	if (S.collapsed === undefined) S.collapsed = (localStorage.getItem(COLLAPSE_KEY) ?? (design.composer.collapse.default === "collapsed" ? "1" : "0")) === "1";
 	panel.replaceChildren(chrome.bar("AI"), $list, composer);
 	draw();
 	refreshLive().catch(() => {});
@@ -212,33 +226,70 @@ function chip(label, iconName, onclick, { disabled, title, role } = {}) {
 function drawControls() {
 	const s = current();
 	const a = agent();
-	// model.js::controlOrder is the one order: + · Agent · Model · Effort · Mode · MCP · More, and
-	// nothing after More.
+	const l = lock();
+	// model.js::controlOrder is the one order, the design's: (+) · Task · Agent · Model · Effort · Perms · MCP · (More),
+	// narrowed to what this app enables and to what the chosen agent takes.
 	const eff = a ? M.effortControl(a, M.modelControl(a, modelOf(a), S.health).value, S.reasoning) : null;
 	const perm = a ? M.permissionControl(a) : null;
+	const modes = design.permission.modes;
 	const build = {
-		attach: () => chip("", "add", attachSheet, { title: "Attach files, photos or a voice message", role: "attach" }),
-		agent: () => chip(a ? a.label : "Agent", "brain", agentSheet, { role: "agent" }),
+		plus: () => chip("", "add", plusSheet, { title: "Attach files, photos or a voice message, or start a new chat", role: "plus" }),
+		task: () => chip(l.task ? l.task.label : "Task", "check_circle", taskSheet, { title: l.locked ? `Task: ${l.task.label}` : "Task", role: "task" }),
+		agent: () => chip(a ? a.label : "Agent", "brain", agentSheet, { role: "agent", disabled: l.locked, title: l.locked ? `Set by the task: ${l.task.label}` : "Agent" }),
 		model: () => {
 			const mc = M.modelControl(a, modelOf(a), S.health);
-			return chip(shortModel(mc.label), "wand-sparkles", () => modelPage(), { title: mc.pick ? `Model: ${mc.label}` : `Model ${mc.label} (set by ${a.label})`, role: "model" });
+			return chip(shortModel(mc.label), "wand-sparkles", () => modelPage(), { disabled: l.locked, title: l.locked ? `Set by the task: ${l.task.label}` : mc.pick ? `Model: ${mc.label}` : `Model ${mc.label} (set by ${a.label})`, role: "model" });
 		},
 		effort: () => {
-			const lvl = chat.effort.levels.find((l) => l.id === s.effort) || chat.effort.levels[0];
-			return chip(lvl.label, "tune", effortSheet, { disabled: !eff.enabled, title: eff.enabled ? "Effort" : eff.reason, role: "effort" });
+			const lvl = chat.effort.levels.find((x) => x.id === s.effort) || chat.effort.levels.find((x) => x.id === chat.effort.default);
+			return chip(lvl.id === chat.effort.default ? "Effort" : lvl.label, "tune", effortSheet, { disabled: !eff.enabled, title: eff.enabled ? "Effort" : eff.reason, role: "effort" });
 		},
 		mode: () => {
-			const mode = chat.permission.modes.find((m) => m.id === s.mode) || chat.permission.modes[0];
-			return chip(mode.short, mode.id === "plan" ? "notes" : mode.id === "accept" ? "edit" : "zap", modeSheet, { title: mode.label, role: "mode" });
+			const mode = modes.find((m) => m.id === s.mode) || modes.find((m) => m.id === design.permission.default);
+			return chip(mode.short, design.composer.controls.find((c) => c.id === "mode").icon, modeSheet, { title: mode.label, role: "mode" });
 		},
 		mcp: () => chip("MCP", "extension", mcpSheet, { role: "mcp" }),
 		more: () => chip("", "more_vert", moreSheet, { title: "More", role: "more" }),
 	};
-	const ctl = M.controlOrder(a, { effort: !!eff?.shown, permission: !!perm?.shown }).map((id) => build[id]());
-	$controls.replaceChildren(...ctl);
+	const toggle = el("button", { className: "cloud-ctl-toggle", title: S.collapsed ? "Show the config bar" : "Hide the config bar", "data-ctl": "toggle", onclick: toggleBar }, icon(S.collapsed ? "keyboard_arrow_up" : "keyboard_arrow_down"));
+	if (S.collapsed) {
+		const label = l.locked ? l.task.label : shortModel(M.modelControl(a, modelOf(a), S.health).label);
+		$controls.replaceChildren(el("button", { className: "cloud-ctl", "data-ctl": "compact", title: "Show the config bar", onclick: toggleBar }, icon(l.locked ? "check_circle" : "wand-sparkles"), el("span", {}, label)), toggle);
+	} else {
+		const ids = M.controlOrder(a, { effort: !!eff?.shown, permission: !!perm?.shown }, design, nav.chat.composer.controls);
+		$controls.replaceChildren(el("div", { className: "cloud-ctl-row" }, ...ids.map((id) => build[id]())), toggle);
+	}
 	$attach.replaceChildren(...S.pending.map((f, i) => el("span", { className: "cloud-chip" }, icon(chipIcon(f.mime)), f.name,
 		el("button", { className: "cloud-chip-x", title: "Remove", onclick: () => { S.pending.splice(i, 1); drawControls(); } }, icon("clearclose")))));
 	if (S.recording) $attach.append(el("span", { className: "cloud-chip recording" }, icon("keyboard_voice"), "Recording… tap + to stop"));
+}
+
+/** Collapses the whole config bar to one chip (or expands it); remembered per app. */
+function toggleBar() {
+	S.collapsed = !S.collapsed;
+	try {
+		localStorage.setItem(COLLAPSE_KEY, S.collapsed ? "1" : "0");
+	} catch {
+		// a blocked store keeps the state for this session
+	}
+	drawControls();
+}
+
+function taskSheet() {
+	const s = current();
+	const rows = fleet.tasks.map((t) => option(t.label, { checked: t.id === s.task, sub: `${t.agent} \u00b7 ${t.model.split("/").pop()}`, run: () => { s.task = t.id; persist(); draw(); } }));
+	if (!nav.chat.composer.task_required) rows.unshift(option(design.composer.no_task, { checked: !lock().locked, run: () => { s.task = ""; persist(); draw(); } }));
+	sheet("Task", rows, "A task picks its agent and model from the fleet's task mapping; Agent and Model are greyed while it is selected.");
+}
+
+function plusSheet() {
+	if (S.recording) return stopRecording();
+	sheet("Add", [
+		option("Photos & videos", { iconName: "image", sub: "Android photo picker", run: () => pick("media") }),
+		option("Files", { iconName: "attach_file", sub: "any file, through the system picker", run: () => pick("file") }),
+		option("Voice message", { iconName: "keyboard_voice", sub: "record, then send as audio (no speech-to-text in this app)", run: startRecording }),
+		option(design.composer.plus.new_chat, { iconName: "add", run: () => { S.current = fresh(); draw(); } }),
+	]);
 }
 
 function shortModel(label) {
@@ -260,7 +311,7 @@ function agentSheet() {
 
 function effortSheet() {
 	const s = current();
-	sheet("Effort", chat.effort.levels.map((l) => option(l.label, { checked: l.id === s.effort, sub: `reasoning.effort = ${l.value}`, run: () => { s.effort = l.id; persist(); drawControls(); } })));
+	sheet("Effort", chat.effort.levels.map((l) => option(l.label, { checked: l.id === s.effort, sub: l.value ? `reasoning.effort = ${l.value}` : "the model's own default", run: () => { s.effort = l.id; persist(); drawControls(); } })));
 }
 
 function modeSheet() {
@@ -281,15 +332,58 @@ function mcpSheet() {
 	sheet(`MCP · ${a.label}`, servers.map((sv) => toggleRow(sv.name, state[sv.name], (on) => M.mcpToggle(localStorage, a.id, sv.name, on), sv.tools != null ? `${sv.tools} tools` : null)), note);
 }
 
+/**
+ * The More sheet, grouped under headers as the design declares them (Usage & Cost, Plugins - Optimisation, Plugins - Skills, Session,
+ * System prompt, Help), then the chosen agent's own functions under their own header. Usage is only what the backend reported.
+ */
 function moreSheet() {
 	const a = agent();
 	const saved = M.toggles(localStorage, a.id);
-	const rows = M.moreFor(chat, a, S.health).map((f) => {
-		if (f.kind === "toggle") return toggleRow(f.label, saved[f.id] ?? !!S.health?.plugins?.[f.plugin], (on) => M.setToggle(localStorage, a.id, f.id, on), f.header);
-		if (f.kind === "select") return option(`${f.label}: ${saved[f.id] ?? "server default"}`, { sub: f.header, run: () => selectValue(a, f) });
-		return option(f.label, { sub: f.offline ? "gateway offline" : f.kind === "native" ? `${a.label}, live: ${f.path}` : f.route ? chat.gateway[f.route] : null, run: () => invoke(a, f) });
-	});
-	sheet(`More · ${a.label}`, rows, S.health ? null : "The gateway did not answer: the declared list is shown.");
+	const own = M.moreFor(chat, a, S.health);
+	const fn = (id) => own.find((f) => f.id === id);
+	const header = (text) => el("div", { className: "cloud-more-head" }, text);
+	const rows = [];
+	for (const g of design.more.groups) {
+		rows.push(header(g.label));
+		for (const it of g.items) {
+			if (it.kind === "plugin") {
+				const f = fn(it.id);
+				const live = !!S.health?.plugins?.[it.plugin];
+				rows.push(toggleRow(it.label + (live ? "" : " \u00b7 not listed by the gateway"), saved[it.id] ?? live, (on) => M.setToggle(localStorage, a.id, it.id, on), it.header, !f || !live));
+			} else rows.push(option(it.label, { sub: it.kind === "prompt" ? it.prompt : null, run: () => moreItem(a, it) }));
+		}
+	}
+	const shared = new Set(design.more.groups.flatMap((g) => g.items.map((i) => i.id)));
+	const rest = own.filter((f) => !shared.has(f.id));
+	if (rest.length) rows.push(header(`${a.label} functions`));
+	for (const f of rest) {
+		if (f.kind === "toggle") rows.push(toggleRow(f.label, saved[f.id] ?? !!S.health?.plugins?.[f.plugin], (on) => M.setToggle(localStorage, a.id, f.id, on), f.header));
+		else if (f.kind === "select") rows.push(option(`${f.label}: ${saved[f.id] ?? "server default"}`, { sub: f.header, run: () => selectValue(a, f) }));
+		else rows.push(option(f.label, { sub: f.offline ? "gateway offline" : f.kind === "native" ? `${a.label}, live: ${f.path}` : f.route ? chat.gateway[f.route] : null, run: () => invoke(a, f) }));
+	}
+	sheet(`More \u00b7 ${a.label}`, rows, S.health ? null : "The gateway did not answer: the declared list is shown.");
+}
+
+function moreItem(a, it) {
+	const s = current();
+	if (it.kind === "prompt") {
+		$input.value = it.prompt;
+		$input.focus();
+		return;
+	}
+	if (it.kind === "usage") {
+		const lines = M.usageLines(S.sessions, s.id);
+		return page(it.label, null, el("pre", { className: "cloud-pre" }, lines.length ? lines.map((l) => `${l.label}: ${l.value}`).join("\n") : "The backend has reported no usage yet. Tokens and cost appear here once an answer carries them."));
+	}
+	if (it.kind === "export") return exportChat();
+	if (it.kind === "retry") return retry();
+	if (it.kind === "undo") {
+		s.messages.splice(Math.max(0, s.messages.map((m) => m.role).lastIndexOf("user")));
+		persist();
+		return drawMessages();
+	}
+	if (it.kind === "system") return page(it.label, null, el("pre", { className: "cloud-pre" }, M.permissionInstruction(chat, a, s.mode) || "No standing system prompt."));
+	return page(it.label, null, el("p", {}, it.text));
 }
 
 function selectValue(a, f) {
@@ -380,15 +474,6 @@ async function claudeLogin() {
 
 // ── + : files, photos / media, a voice message ──────────────────────────────
 
-function attachSheet() {
-	if (S.recording) return stopRecording();
-	sheet("Attach", [
-		option("Photos & videos", { iconName: "image", sub: "Android photo picker", run: () => pick("media") }),
-		option("Files", { iconName: "attach_file", sub: "any file, through the system picker", run: () => pick("file") }),
-		option("Voice message", { iconName: "keyboard_voice", sub: "record, then send as audio (no speech-to-text in this app)", run: startRecording }),
-	]);
-}
-
 async function pick(kind) {
 	try {
 		const files = await plugin().pick(kind, true);
@@ -448,16 +533,28 @@ export async function modelPage(refresh = false, onPick = null) {
 		}
 		pg.close();
 	};
+	let tab = null;
 	const show = (cat) => {
 		const mc = a ? M.modelControl(a, chosen, S.health) : { pick: true, label: chosen };
 		const head = onPick || mc.pick
 			? `Selected: ${chosen}`
 			: `${a.label} runs ${mc.value || "its own model"}: the rows are shown for reference.`;
+		const sections = cat.groups.flatMap((x) => x.sections);
+		// The design's tabs (Frontier · Code · Search · Medium · Small): each catalogue row lands in one by the declared rules.
+		const tabs = M.modelTabs(design, sections.flatMap((sec) => sec.rows.map((r) => ({ ...r, section: sec.id, key: `${sec.id}:${r.id}` }))));
+		const chosenTab = M.modelTabOf(design, { id: chosen, section: (M.checkedRow(sections, chosen) || "").split(":")[0] });
+		if (!tab || !tabs.some((t) => t.id === tab)) tab = chosenTab;
+		const keep = new Set(tabs.find((t) => t.id === tab).rows.map((r) => r.key));
+		const bar = el("div", { className: "cloud-model-tabs", role: "tablist" }, ...tabs.map((t) => el("button", {
+			className: `cloud-model-tab${t.id === tab ? " active" : ""}`, role: "tab", "data-tab": t.id, "aria-selected": String(t.id === tab),
+			onclick: () => { tab = t.id; show(cat); },
+		}, `${t.label} (${t.rows.length})`)));
 		body.replaceChildren(
 			el("p", { className: "cloud-cat-current" }, head),
+			bar,
 			el("p", { className: "cloud-muted" }, `Prices as of ${cat.as_of} (${cat.origin})`),
-			...cat.groups.flatMap((g) => g.sections.map((sec) => section(sec, M.checkedRow(cat.groups.flatMap((x) => x.sections), chosen)))),
-			el("p", { className: "cloud-muted" }, "The fleet's model catalogue (libs:model-catalogue, shared with Cloud Search): A0 Code, A1 Agentic, A2 Base, A3 Reasoning. Anthropic first, then providers by price. Prices are OpenRouter's, read at most daily."),
+			...sections.map((sec) => ({ ...sec, rows: sec.rows.filter((r) => keep.has(`${sec.id}:${r.id}`)) })).filter((sec) => sec.rows.length).map((sec) => section(sec, M.checkedRow(sections, chosen))),
+			el("p", { className: "cloud-muted" }, "The fleet's model catalogue (libs:model-catalogue, shared with Cloud Search): A0 Code, A1 Agentic, A2 Base, A3 Reasoning, split into the tabs of the shared design. Anthropic first, then providers by price. Prices are OpenRouter's, read at most daily."),
 		);
 		body.querySelector("input[type=radio]:checked")?.closest("tr")?.scrollIntoView?.({ block: "center" });
 	};
@@ -554,7 +651,10 @@ function stream(s, a) {
 					const r = M.parseWhole(status, whole);
 					if (r.error) reply.error = r.error;
 					else reply.content = r.text;
+					if (r.usage) reply.usage = r.usage;
 				}
+				if (parser.usage) reply.usage = parser.usage;
+				reply.at = Date.now();
 				if (parser.error) reply.error = parser.error;
 				if (S.streaming !== id && !reply.content) reply.error = "stopped";
 				delete reply.streaming;

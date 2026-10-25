@@ -666,8 +666,8 @@ body.cloud-collapsed {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px 0;
+  gap: calc(var(--ai-list-gap) * 1px);
+  padding: calc(var(--ai-list-pad-v) * 1px) 0;
 }
 
 .cloud-chat-empty {
@@ -675,21 +675,21 @@ body.cloud-collapsed {
   text-align: center;
 
   .cloud-chat-hello {
-    font-size: 22px;
+    font-size: calc(var(--ai-hello-font) * 1px);
     font-weight: 600;
     margin-bottom: 4px;
   }
 }
 
 .cloud-msg {
-  max-width: 92%;
-  font-size: 14px;
-  line-height: 1.4;
+  max-width: calc(var(--ai-assistant-width-pct) * 1%);
+  font-size: calc(var(--ai-chat-font) * 1px);
+  line-height: var(--ai-chat-line-height);
 
   &.user {
     align-self: flex-end;
-    padding: 8px 12px;
-    border-radius: 14px 14px 4px 14px;
+    padding: calc(var(--ai-user-pad-v) * 1px) calc(var(--ai-user-pad-h) * 1px);
+    border-radius: calc(var(--ai-user-radius-top) * 1px) calc(var(--ai-user-radius-top) * 1px) calc(var(--ai-user-radius-tail) * 1px) calc(var(--ai-user-radius-top) * 1px);
     background-color: var(--active-color);
     color: var(--primary-color);
     white-space: pre-wrap;
@@ -698,7 +698,7 @@ body.cloud-collapsed {
 
   &.assistant {
     align-self: flex-start;
-    width: 92%;
+    width: calc(var(--ai-assistant-width-pct) * 1%);
 
     .cloud-msg-body > :first-child {
       margin-top: 0;
@@ -717,7 +717,7 @@ body.cloud-collapsed {
   }
 
   .cloud-msg-meta {
-    font-size: 11px;
+    font-size: calc(var(--ai-meta-font) * 1px);
   }
 }
 
@@ -750,7 +750,7 @@ body.cloud-collapsed {
 
 .cloud-chat-composer {
   margin: 0 -12px;
-  padding: 6px 8px 8px;
+  padding: calc(var(--ai-composer-pad-top) * 1px) calc(var(--ai-composer-pad-h) * 1px) calc(var(--ai-composer-pad-bottom) * 1px);
   border-top: 1px solid var(--border-color);
   background-color: var(--primary-color);
   color: var(--primary-text-color);
@@ -768,26 +768,26 @@ body.cloud-collapsed {
   .cloud-chat-row {
     display: flex;
     align-items: flex-end;
-    gap: 6px;
-    margin: 4px 0;
+    gap: calc(var(--ai-row-gap) * 1px);
+    margin: calc(var(--ai-ctl-gap) * 1px) 0;
   }
 
   .cloud-chat-input {
     flex: 1;
     min-width: 0;
-    max-height: 160px;
+    max-height: calc(var(--ai-input-max-height) * 1px);
     resize: none;
-    padding: 9px 12px;
-    font-size: 14px;
+    padding: calc(var(--ai-input-pad-v) * 1px) calc(var(--ai-input-pad-h) * 1px);
+    font-size: calc(var(--ai-chat-font) * 1px);
     color: inherit;
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    border-radius: 18px;
+    border-radius: calc(var(--ai-input-radius) * 1px);
   }
 
   .cloud-chat-send {
-    width: 40px;
-    height: 40px;
+    width: calc(var(--ai-send-size) * 1px);
+    height: calc(var(--ai-send-size) * 1px);
     border-radius: 50% !important;
     border: none !important;
     background-color: var(--active-color) !important;
@@ -797,32 +797,83 @@ body.cloud-collapsed {
 
 .cloud-chat-controls {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: calc(var(--ai-ctl-gap) * 1px);
+}
+
+.cloud-ctl-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: calc(var(--ai-ctl-gap) * 1px);
   overflow-x: auto;
   scrollbar-width: none;
+}
+
+.cloud-ctl-toggle {
+  flex: 0 0 auto;
+  width: calc(var(--ai-bar-toggle-size) * 1px);
+  height: calc(var(--ai-bar-toggle-size) * 1px);
+  margin-left: auto;
+  padding: 0 !important;
+  color: inherit;
+  background: none;
+  border: none !important;
 }
 
 .cloud-ctl {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  min-height: 32px;
-  padding: 0 8px !important;
-  font-size: 12px;
+  gap: calc(var(--ai-ctl-gap) * 1px);
+  min-height: calc(var(--ai-ctl-height) * 1px);
+  padding: 0 calc(var(--ai-ctl-pad-h) * 1px) !important;
+  font-size: calc(var(--ai-ctl-font) * 1px);
   color: inherit;
   background: none;
   border: 1px solid var(--border-color) !important;
-  border-radius: 16px !important;
+  border-radius: calc(var(--ai-ctl-radius) * 1px) !important;
   white-space: nowrap;
 
   .icon {
-    font-size: 16px;
+    font-size: calc(var(--ai-ctl-icon) * 1px);
   }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: var(--ai-ctl-disabled-alpha);
   }
+}
+
+// the Model page's tabs (Frontier · Code · Search · Medium · Small) and the More sheet's group headers
+.cloud-model-tabs {
+  display: flex;
+  gap: calc(var(--ai-ctl-gap) * 1px);
+  margin: 8px 0;
+  overflow-x: auto;
+}
+
+.cloud-model-tab {
+  flex: 0 0 auto;
+  min-height: calc(var(--ai-ctl-height) * 1px);
+  padding: 0 calc(var(--ai-ctl-pad-h) * 1px) !important;
+  font-size: calc(var(--ai-ctl-font) * 1px);
+  color: inherit;
+  background: none;
+  border: 1px solid var(--border-color) !important;
+  border-radius: calc(var(--ai-ctl-radius) * 1px) !important;
+
+  &.active {
+    background-color: var(--active-color) !important;
+    color: var(--primary-color);
+  }
+}
+
+.cloud-more-head {
+  margin: 10px 0 2px;
+  font-size: calc(var(--ai-meta-font) * 1px);
+  font-weight: 700;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
 
 // ── the Model page (libs:model-catalogue, the Text tables A0–A3) ─────────────

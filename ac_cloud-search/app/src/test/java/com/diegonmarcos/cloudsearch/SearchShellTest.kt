@@ -4,6 +4,8 @@ import android.content.ComponentName
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -201,6 +203,82 @@ class SearchShellTest {
     }
 
     /**
+     * The shared composer (libs:ai): (+), Task, Agent, Model, Effort, Perms, MCP and More sit under the input in that order; picking a task greys
+     * Agent and Model and sets them from the task mapping; clearing the task gives them back; the Model picker has the five tabs.
+     */
+    @Test fun theComposerRowIsTheSharedOneAndATaskGreysAgentAndModel() {
+        launch()
+        openVertical("search")
+        waitFor(Tags.CHAT_INPUT)
+        val ai = com.diegonmarcos.superapp.ai.AiTags
+        val order = listOf("plus", "task", "agent", "model", "effort", "mode", "mcp", "more")
+        val lefts = order.map { compose.onNodeWithTag(ai.ctl(it)).fetchSemanticsNode().boundsInRoot.left }
+        assertEquals("(+), Task, Agent, Model, Effort, Perms, MCP, (More), left to right", lefts.sorted(), lefts)
+        compose.onNodeWithTag(ai.ctl("agent")).assertIsEnabled()
+        compose.onNodeWithTag(ai.ctl("model")).assertIsEnabled()
+
+        compose.onNodeWithTag(ai.ctl("task")).performClick()
+        waitFor(ai.task("translate"))
+        compose.onNodeWithTag(ai.task("translate")).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(ai.ctl("agent")).assertIsNotEnabled()
+        compose.onNodeWithTag(ai.ctl("model")).assertIsNotEnabled()
+        assertEquals("openrouter", state.chat.agent)
+        assertEquals("mistralai/mistral-small-3.2-24b-instruct", state.chat.model)
+
+        compose.onNodeWithTag(ai.ctl("task")).performClick()
+        waitFor(ai.TASK_NONE)
+        compose.onNodeWithTag(ai.TASK_NONE).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(ai.ctl("agent")).assertIsEnabled()
+        compose.onNodeWithTag(ai.ctl("model")).assertIsEnabled()
+
+        compose.onNodeWithTag(ai.ctl("model")).performClick()
+        for (tab in listOf("frontier", "code", "search", "medium", "small")) waitFor(ai.modelTab(tab))
+    }
+
+    /** The whole config bar collapses to one compact chip behind the chevron, and the state is remembered per app. */
+    @Test fun theConfigBarCollapsesToOneChipAndRemembersIt() {
+        launch()
+        openVertical("search")
+        waitFor(Tags.CHAT_INPUT)
+        val ai = com.diegonmarcos.superapp.ai.AiTags
+        compose.onNodeWithTag(ai.ctl("model")).assertExists()
+        compose.onNodeWithTag(ai.BAR_TOGGLE).performClick()
+        compose.waitForIdle()
+        assertTrue("the chip row is gone", compose.onAllNodesWithTag(ai.ctl("model")).fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithTag(ai.BAR_COMPACT).assertExists()
+        val prefs = RuntimeEnvironment.getApplication().getSharedPreferences("ai_composer", android.content.Context.MODE_PRIVATE)
+        assertTrue("remembered for this app", prefs.getBoolean("ai_composer_collapsed.cloud-search", false))
+        compose.onNodeWithTag(ai.BAR_TOGGLE).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(ai.ctl("model")).assertExists()
+        assertTrue(compose.onAllNodesWithTag(ai.BAR_COMPACT).fetchSemanticsNodes().isEmpty())
+        assertFalse(prefs.getBoolean("ai_composer_collapsed.cloud-search", true))
+    }
+
+    /** (+) offers New chat; Effort lists its levels; More is grouped under headers and its Usage item says so when nothing was reported. */
+    @Test fun plusEffortAndMoreOpenTheirDeclaredContents() {
+        launch()
+        openVertical("search")
+        waitFor(Tags.CHAT_INPUT)
+        val ai = com.diegonmarcos.superapp.ai.AiTags
+        compose.onNodeWithTag(ai.ctl("plus")).performClick()
+        waitFor(ai.NEW_CHAT)
+        compose.onNodeWithTag(ai.NEW_CHAT).performClick()
+        compose.onNodeWithTag(ai.ctl("effort")).performClick()
+        for (l in listOf("auto", "low", "medium", "high", "max")) waitFor(ai.effort(l))
+        compose.onNodeWithTag(ai.effort("high")).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(ai.ctl("more")).performClick()
+        for (g in listOf("usage", "optimisation", "skills", "session", "persona", "help")) waitFor("ai_more_group_$g")
+        for (id in listOf("usage", "skills", "memory", "export", "retry", "undo", "system", "shortcuts", "about")) waitFor(ai.more(id))
+        for (id in listOf("headroom", "rtk", "caveman", "principles")) waitFor(ai.morePlugin(id))
+        compose.onNodeWithTag(ai.more("usage")).performClick()
+        waitFor(ai.MORE_DIALOG)
+    }
+
+    /**
      * The chat's Agent field lists the shared descriptor's agents (DeepSeek Harness with its real capabilities);
      * picking it routes the send through the fleet agent gateway with X-Agent-Mode: deepseek and a DeepSeek model,
      * and needs no OpenRouter token on the phone.
@@ -347,15 +425,16 @@ class SearchShellTest {
 
         // Both parts at once, inside that one page, in the mockup's order of appearance.
         val onPage = hasAnyAncestor(hasTestTag(Tags.page("assistant")))
-        val hello = app.getString(R.string.assistant_hello)
+        val hello = com.diegonmarcos.superapp.ai.AiStrings().hello
         val top = { m: SemanticsMatcher -> compose.onNode(m and onPage).fetchSemanticsNode().boundsInRoot.top }
         val greeting = top(hasText(hello))
         val engines = cfg.engines.map { top(hasTestTag(Tags.engine(it.id))) }
-        assertTrue("Sessions and the model sit above the greeting", top(hasTestTag(Tags.SESSIONS)) < greeting && top(hasTestTag(Tags.MODEL)) < greeting)
+        assertTrue("Sessions sits above the greeting", top(hasTestTag(Tags.SESSIONS)) < greeting)
+        assertTrue("the composer's icon row sits under the input, Cloud Code's layout", top(hasTestTag(Tags.MODEL)) > top(hasTestTag(Tags.CHAT_INPUT)))
         assertTrue("the greeting sits above the engine boxes", greeting < engines.first())
         assertEquals("the engine boxes run in declared order", engines.sorted(), engines)
         assertTrue("the chat input sits below the last engine box", top(hasTestTag(Tags.CHAT_INPUT)) > engines.last())
-        compose.onNode(hasTestTag(Tags.NEW_CHAT) and onPage).assertExists()
+        for (id in listOf("plus", "task", "agent", "model", "effort", "mode", "mcp", "more")) compose.onNode(hasTestTag(com.diegonmarcos.superapp.ai.AiTags.ctl(id)) and onPage).assertExists()
         compose.onNode(hasTestTag(Tags.CHAT_SEND) and onPage).assertExists()
 
         // An engine box opens that engine's own results in cloud-browser.
@@ -379,10 +458,10 @@ class SearchShellTest {
         compose.onNode(hasTestTag(Tags.CHAT_INPUT) and onPage).assertExists()
 
         // A new chat brings the initial view back; Sessions opens its menu.
-        compose.onNodeWithTag(Tags.NEW_CHAT).performClick()
-        for (e in cfg.engines) waitFor(Tags.engine(e.id))
         compose.onNodeWithTag(Tags.SESSIONS).performClick()
         compose.runOnIdle { assertEquals(com.diegonmarcos.cloudsearch.ui.Menu.SESSIONS, state.menu) }
+        compose.onNodeWithTag(Tags.DRAWER_NEW).performClick()
+        for (e in cfg.engines) waitFor(Tags.engine(e.id))
     }
 
     @Test fun debugRoutesAnswerFromTheSameEngine() {

@@ -154,9 +154,65 @@ export function checkedRow(sections, chosen) {
  * The composer's controls, left to right. Model sits right after Agent (it is the agent's model);
  * nothing comes after More. Effort and permission Mode appear only where the agent takes them.
  */
-export function controlOrder(agent, { effort, permission } = {}) {
-	if (!agent) return ["attach", "agent"];
-	return ["attach", "agent", "model", ...(effort ? ["effort"] : []), ...(permission ? ["mode"] : []), "mcp", "more"];
+export function controlOrder(agent, { effort, permission } = {}, design = null, enabled = null) {
+	// The design's order is the one order ((+), Task, Agent, Model, Effort, Perms, MCP, (More)); an app enables a subset
+	// (nav.json::chat.composer) and Effort / Perms still appear only where the agent takes them.
+	const order = design ? design.composer.controls.map((c) => c.id) : ["plus", "task", "agent", "model", "effort", "mode", "mcp", "more"];
+	const on = (id) => !enabled || enabled.includes(id);
+	if (!agent) return order.filter((id) => (id === "plus" || id === "agent") && on(id));
+	return order.filter((id) => on(id) && (id !== "effort" || effort) && (id !== "mode" || permission));
+}
+
+// ── task: a selected task greys Agent and Model and sets them from the mapping ──
+
+/** {locked, agent, model, task}: the task in force (an id of the mapping) and what it forces; locked false when none. */
+export function taskLock(tasks, taskId) {
+	const t = (tasks || []).find((x) => x.id === taskId);
+	return t ? { locked: true, task: t, agent: t.agent, model: t.model } : { locked: false, task: null, agent: null, model: null };
+}
+
+/** The agent the page runs: the task's mapped one when a task is selected and the agent exists, else the user's pick. */
+export function lockedAgent(agents, lock, picked) {
+	if (!lock.locked) return picked;
+	return agents.some((a) => a.id === lock.agent) ? lock.agent : picked;
+}
+
+// ── the Model picker's tabs (Frontier · Code · Search · Medium · Small), rules from the shared design ──
+
+/** The tab id of a catalogue row {id, section?, tier?, nativeWeb?}: the first tab of classify_order whose rule hits, else the fallback. */
+export function modelTabOf(design, row) {
+	const mt = design.model_tabs;
+	const rule = (id) => mt.tabs.find((t) => t.id === id)?.match || {};
+	for (const id of mt.classify_order) {
+		const m = rule(id);
+		if (row.section && (m.sections || []).includes(row.section)) return id;
+		if (row.tier && (m.tiers || []).includes(row.tier)) return id;
+		if (m.native_web && row.nativeWeb) return id;
+		if ((m.id_regex || []).some((re) => new RegExp(re, "i").test(row.id))) return id;
+	}
+	return mt.fallback;
+}
+
+/** The rows split into the design's tabs, in tab order ({id, label, rows}); a row keeps the section it came from. */
+export function modelTabs(design, rows) {
+	const by = new Map(design.model_tabs.tabs.map((t) => [t.id, []]));
+	for (const r of rows) by.get(modelTabOf(design, r)).push(r);
+	return design.model_tabs.tabs.map((t) => ({ id: t.id, label: t.label, rows: by.get(t.id) }));
+}
+
+// ── usage: only what the backend reported ───────────────────────────────────
+
+/** [{label, value}] for the open session and today, from the `usage` the stream/answer carried; [] when nothing was reported. */
+export function usageLines(sessions, sessionId, now = Date.now()) {
+	const used = [];
+	for (const s of sessions) for (const m of s.messages) if (m.usage) used.push({ s: s.id, at: m.at || s.updated || 0, u: m.usage });
+	if (!used.length) return [];
+	const day = new Date(now).toDateString();
+	const line = (label, list) => {
+		const cost = list.filter((x) => typeof x.u.cost === "number");
+		return { label, value: `${list.reduce((a, x) => a + (x.u.prompt || 0), 0)} in \u00b7 ${list.reduce((a, x) => a + (x.u.completion || 0), 0)} out${cost.length ? ` \u00b7 $${cost.reduce((a, x) => a + x.u.cost, 0).toFixed(4)}` : ""}` };
+	};
+	return [line("This session", used.filter((x) => x.s === sessionId)), line("Today", used.filter((x) => new Date(x.at).toDateString() === day))];
 }
 
 /** The model field a request carries: the CLI id for claude-cli, none for a fixed agent. */
@@ -189,7 +245,7 @@ export function effortField(chat, agent, levelId, modelId, reasoning) {
 	const c = effortControl(agent, modelId, reasoning);
 	if (!c.shown || !c.enabled) return null;
 	const level = chat.effort.levels.find((l) => l.id === levelId);
-	if (!level) return null;
+	if (!level || !level.value) return null; // "auto" sends nothing: the model's own default
 	return { reasoning: { effort: level.value } };
 }
 
@@ -382,6 +438,7 @@ export function sseParser() {
 	const state = {
 		done: false,
 		error: null,
+		usage: null,
 		push(chunk) {
 			buf += chunk;
 			const out = [];
@@ -399,6 +456,7 @@ export function sseParser() {
 				try {
 					const j = JSON.parse(data);
 					if (j.error) state.error = j.error.message || String(j.error);
+					if (j.usage && (j.usage.prompt_tokens || j.usage.completion_tokens)) state.usage = usageOf(j.usage);
 					const d = j.choices?.[0]?.delta?.content ?? j.choices?.[0]?.message?.content;
 					if (d) out.push(d);
 				} catch {
@@ -409,6 +467,13 @@ export function sseParser() {
 		},
 	};
 	return state;
+}
+
+/** {prompt, completion, cost?} from an OpenAI-style `usage` object. */
+export function usageOf(u) {
+	const out = { prompt: u.prompt_tokens || 0, completion: u.completion_tokens || 0 };
+	if (typeof u.cost === "number") out.cost = u.cost;
+	return out;
 }
 
 /** A non-streamed answer (the gateway's agent modes answer whole): its text, or its error. */
@@ -423,6 +488,7 @@ export function parseWhole(status, body) {
 	const notes = j.choices?.[0]?.message?.annotations;
 	const out = { text: j.choices?.[0]?.message?.content ?? j.message?.content ?? "" };
 	if (Array.isArray(notes)) out.citations = [...new Set(notes.map((n) => n?.url_citation?.url).filter(Boolean))];
+	if (j.usage && (j.usage.prompt_tokens || j.usage.completion_tokens)) out.usage = usageOf(j.usage);
 	return out;
 }
 

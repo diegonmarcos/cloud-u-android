@@ -15,7 +15,9 @@ const T = await load("src/cloud/tabs.js");
 const nav = JSON.parse(read("src/cloud/nav.json"));
 const fleet = JSON.parse(execFileSync("python3", [join(root, "tools/resolve-targets.py"), root, "--print"], { encoding: "utf8" })).chat;
 // What the page sees (src/cloud/chat/view.js): nav.json's own declaration with the shared AI contract merged over it.
-const chat = { ...nav.chat, ...fleet.ai };
+// The shared design supplies the permission modes and the effort levels (view.js merges it the same way).
+const design = fleet.design;
+const chat = { ...nav.chat, ...fleet.ai, permission: { ...nav.chat.permission, ...design.permission }, effort: design.effort };
 
 class Store {
 	constructor() { this.m = new Map(); }
@@ -81,16 +83,16 @@ out(eg.shown && eg.enabled, "Effort is on for an agent whose model reasons");
 out(!M.effortControl(claude, null, reasoning).shown, "Effort is hidden for Claude (the CLI behind the gateway takes none)");
 for (const l of chat.effort.levels) {
 	const f = M.effortField(chat, direct, l.id, "anthropic/claude-opus-5.5", reasoning);
-	out(f?.reasoning?.effort === l.value, `effort ${l.label} -> reasoning.effort=${l.value}`);
+	out(l.value ? f?.reasoning?.effort === l.value : f === null, l.value ? `effort ${l.label} -> reasoning.effort=${l.value}` : `effort ${l.label} sends nothing (the model's own default)`);
 }
 out(M.effortField(chat, direct, "max", "x/plain", reasoning) === null, "no effort field for a model that does not reason");
 out(M.effortField(chat, direct, "high", "x/plain", null)?.reasoning?.effort === "high", "reasoning support not known yet: the effort is sent");
-out(JSON.stringify(chat.effort.levels.map((l) => l.id)) === '["low","medium","high","max"]', "the four effort levels are Low, Medium, High, Max");
+out(JSON.stringify(chat.effort.levels.map((l) => l.id)) === '["auto","low","medium","high","max"]' && chat.effort.default === "auto", "the effort levels are Auto (default, sends nothing), Low, Medium, High, Max");
 
 out(!M.permissionControl(direct).shown, "permission mode is hidden for the direct backend (no tools)");
 for (const a of [hermes, goose, claude]) out(M.permissionControl(a).shown && M.permissionControl(a).via === "prompt", `${a.label}: permission mode applied as an instruction (no per-request switch)`);
-out(M.permissionInstruction(chat, hermes, "auto") === "" && /plan/i.test(M.permissionInstruction(chat, hermes, "plan")) && /accept/i.test(M.permissionInstruction(chat, goose, "accept")), "Auto adds nothing; Plan and Accept add their instruction");
-out(JSON.stringify(chat.permission.modes.map((m) => m.label)) === '["Auto Mode","Accept Mode","Plan Mode"]', "the modes are Auto Mode, Accept Mode, Plan Mode");
+out(M.permissionInstruction(chat, hermes, "ask") === "" && /plan/i.test(M.permissionInstruction(chat, hermes, "plan")) && /auto-edit/i.test(M.permissionInstruction(chat, goose, "auto_edit")) && /read-only/i.test(M.permissionInstruction(chat, goose, "read_only")), "Ask adds nothing; Plan, Auto-edit and Read-only add their instruction");
+out(JSON.stringify(chat.permission.modes.map((m) => m.id)) === '["ask","auto_edit","read_only","plan"]' && chat.permission.default === "ask", "the permission modes are the shared design's: ask (default), auto_edit, read_only, plan");
 
 // ── the request each backend receives ───────────────────────────────────────
 const store = new Store();
@@ -107,7 +109,7 @@ const dd = JSON.parse(rd.body);
 out(rd.url === chat.direct.url && rd.auth === "openrouter" && !("authorization" in rd.headers) && !/Bearer/.test(JSON.stringify(rd)), "the direct backend asks the plugin to add the token; the page holds none");
 out(dd.model === "anthropic/claude-opus-5.5" && dd.reasoning?.effort === "max" && dd.messages[0].role !== "system", "OpenRouter: the picked model, effort max, no permission instruction");
 let threw = false;
-try { M.buildRequest({ chat, fleet, storage: store, agent: claw, model: "", effort: "low", mode: "auto", session, reasoning, health }); } catch { threw = true; }
+try { M.buildRequest({ chat, fleet, storage: store, agent: claw, model: "", effort: "low", mode: "ask", session, reasoning, health }); } catch { threw = true; }
 out(threw, "a not-deployed agent cannot be sent to");
 const audio = M.toContent("", [{ name: "v.wav", mime: "audio/wav", size: 10, base64: "UklGRg==" }]);
 out(audio[0].type === "input_audio" && audio[0].input_audio.format === "wav", "a voice message goes as input_audio (wav)");
@@ -247,14 +249,77 @@ out(hm.some((f) => f.id === "live:skills" && f.path === "/agents/hermes/skills")
 out(M.moreFor(chat, by(L, "hermes"), health).some((f) => f.id === "skills"), "Hermes behind the MCP loop keeps the skills prompt");
 out(M.moreFor(chat, uclaw, modesUp).some((f) => f.path === "/agents/openclaw/agents") && !M.moreFor(chat, ug, modesUp).some((f) => f.kind === "native"), "OpenClaw lists its agent targets; Goose publishes no native function");
 
-// ── the composer: Model right after Agent, nothing after More ───────────────
+// ── the composer: the shared design's order, narrowed to what the app enables and the agent takes ──
+const designOrder = design.composer.controls.map((c) => c.id);
+out(JSON.stringify(designOrder) === '["plus","task","agent","model","effort","mode","mcp","more"]', "the design's bar is (+), Task, Agent, Model, Effort, Perms, MCP, (More)");
+out(design.composer.controls.find((c) => c.id === "mode").label === "Perms", "the permission control is labelled Perms");
+const enabledHere = nav.chat.composer.controls;
+out(JSON.stringify(enabledHere) === JSON.stringify(designOrder), "Cloud Code enables the whole bar");
 for (const a of [uh, uclaw, ug, uc, uf, ud]) {
 	const e = M.effortControl(a, M.modelControl(a, chat.default_model, modesUp).value, null);
-	const order = M.controlOrder(a, { effort: e.shown, permission: M.permissionControl(a).shown });
-	out(order[order.indexOf("agent") + 1] === "model" && order[order.length - 1] === "more" && order.filter((c) => c === "model").length === 1, `${a.label}: ${order.join(" · ")}`);
+	const order = M.controlOrder(a, { effort: e.shown, permission: M.permissionControl(a).shown }, design, enabledHere);
+	const kept = designOrder.filter((id) => order.includes(id));
+	out(JSON.stringify(order) === JSON.stringify(kept) && order[0] === "plus" && order[order.length - 1] === "more" && order[order.indexOf("agent") + 1] === "model" && order.filter((c) => c === "model").length === 1, `${a.label}: ${order.join(" · ")}`);
 }
+out(JSON.stringify(M.controlOrder(uh, { effort: true, permission: true }, design, ["agent", "task"])) === '["task","agent"]', "an app enabling Task and Agent only gets them in the design's order");
 const view = read("src/cloud/chat/view.js");
-out(/M\.controlOrder\(a, \{ effort: !!eff\?\.shown, permission: !!perm\?\.shown \}\)\.map\(\(id\) => build\[id\]\(\)\)/.test(view) && (view.match(/role: "model"/g) || []).length === 1, "view.js draws the composer in controlOrder's order and has exactly one Model button");
+out(/M\.controlOrder\(a, \{ effort: !!eff\?\.shown, permission: !!perm\?\.shown \}, design, nav\.chat\.composer\.controls\);/.test(view) && /ids\.map\(\(id\) => build\[id\]\(\)\)/.test(view) && (view.match(/role: "model"/g) || []).length === 1, "view.js draws the bar in controlOrder's order and has exactly one Model button");
+for (const c of design.composer.controls) out(new RegExp(`${c.id}: \\(\\) =>`).test(view), `view.js draws the ${c.id} control`);
+// every icon the design names exists in Acode's icon font (the web build cannot draw one it does not have)
+const iconCss = read("src/res/icons/style.css");
+const iconNames = [...design.composer.controls.map((c) => c.icon), ...design.permission.modes.map((m) => m.icon), "keyboard_arrow_up", "keyboard_arrow_down", "more_vert", "add"];
+for (const n of iconNames) out(iconCss.includes(`icon.${n}:before`) || iconCss.includes(`.${n}:before`), `icon "${n}" exists in the icon font`);
+
+// ── Task: a selected task greys Agent and Model and sets them from the shared mapping ──
+const tasks = fleet.tasks;
+const tmap = JSON.parse(read(`../${nav.chat.tasks}`)).tasks;
+out(tasks.length >= 10 && JSON.stringify(tasks) === JSON.stringify(tmap), "the page's tasks are libs:ai's ai-tasks.json, copied by the resolver");
+const none = M.taskLock(tasks, "");
+out(!none.locked && M.lockedAgent(U, none, "hermes") === "hermes", "no task: the user's agent and model stand");
+const tl = M.taskLock(tasks, tasks[0].id);
+out(tl.locked && tl.agent === tasks[0].agent && tl.model === tasks[0].model, `task ${tasks[0].id} forces ${tl.agent} + ${tl.model}`);
+out(M.lockedAgent(U, tl, "hermes") === tl.agent && U.some((a) => a.id === tl.agent), "a locked chat runs the task's agent (an agent the page lists)");
+out(M.lockedAgent(U, { ...tl, agent: "no-such-agent" }, "hermes") === "hermes", "a task naming an unreachable agent leaves the user's pick");
+out(/lock\.locked|l\.locked/.test(view) && /disabled: l\.locked/.test(view), "view.js greys Agent and Model while a task is selected");
+out(tasks.every((t) => U.some((a) => a.id === t.agent)), "every task runs on an agent the picker lists");
+const lreq = M.buildRequest({ chat, fleet, storage: new Store(), agent: M.pickAgent(U, tl.agent), model: tl.model, effort: "auto", mode: "ask", session, reasoning: new Set(), health: modesUp });
+out(JSON.parse(lreq.body).model === tl.model, "a task's request carries the task's model");
+
+// ── the Model picker's tabs: Frontier · Code · Search · Medium · Small, by the design's rules ──
+out(JSON.stringify(design.model_tabs.tabs.map((t) => t.label)) === '["Frontier","Code","Search","Medium","Small"]', "the Model tabs are Frontier, Code, Search, Medium, Small");
+const tab = (id, extra = {}) => M.modelTabOf(design, { id, ...extra });
+out(tab("qwen/qwen-2.5-coder-32b-instruct") === "code" && tab("x/y", { section: "A0" }) === "code", "coder models and the A0 Code section land in Code");
+out(tab("perplexity/sonar-pro") === "search" && tab("x/y", { nativeWeb: true }) === "search", "web-searching models land in Search");
+out(tab("mistralai/ministral-3b-2512") === "small" && tab("google/gemma-3-4b-it") === "small" && tab("x/y", { tier: "small" }) === "small", "3B and 4B models and small-tier rows land in Small");
+out(tab("meta-llama/llama-3.1-8b-instruct") === "medium" && tab("openai/gpt-oss-20b") === "medium" && tab("openai/gpt-4o-mini") === "medium" && tab("x/y", { tier: "medium" }) === "medium", "7B-35B models, minis and medium-tier rows land in Medium");
+out(tab("anthropic/claude-opus-5.5") === "frontier" && tab("openai/gpt-5") === "frontier", "anything else is Frontier");
+const split = M.modelTabs(design, [{ id: "perplexity/sonar" }, { id: "anthropic/claude-opus-5.5" }]);
+out(JSON.stringify(split.map((t) => t.id)) === '["frontier","code","search","medium","small"]' && split.find((t) => t.id === "search").rows.length === 1, "modelTabs splits rows into the five tabs in order");
+out(/M\.modelTabs\(design,/.test(view) && /cloud-model-tab/.test(view), "view.js draws the tabs on the Model page");
+
+// ── collapse: the whole bar folds to one chip, remembered per app ──
+out(/function toggleBar\(\)/.test(view) && /data-ctl": "compact"/.test(view) && /localStorage\.setItem\(COLLAPSE_KEY/.test(view) && /COLLAPSE_KEY = `\$\{M\.KEY\}\$\{design\.composer\.collapse\.pref_key\}\.\$\{nav\.chat\.composer\.app\}`/.test(view), "view.js collapses the bar to a compact chip and remembers it under a per-app key");
+out(design.composer.collapse.default === "expanded", "the bar opens expanded");
+
+// ── More: grouped, declared, honest ──
+const groups = design.more.groups;
+out(JSON.stringify(groups.map((g) => g.label)) === '["Usage & Cost","Plugins - Optimisation","Plugins - Skills","Session","System prompt","Help"]', "More is grouped: Usage & Cost, Plugins - Optimisation, Plugins - Skills, Session, System prompt, Help");
+out(groups.every((g) => g.items.length) && /design\.more\.groups/.test(view) && /cloud-more-head/.test(view), "view.js draws More from the declared groups, under headers");
+const opt = groups[1].items;
+out(opt.every((i) => chat.functions.some((f) => f.id === i.id && f.header === i.header && f.plugin === i.plugin)), "the optimisation plugins are the same toggles (header, plugin) nav.json::functions declares");
+out(M.usageLines([], "x").length === 0 && M.usageLines([{ id: "s", updated: 1, messages: [{ role: "assistant", content: "a" }] }], "s").length === 0, "Usage & Cost invents nothing: no reported usage, no lines");
+const used = M.usageLines([{ id: "s", updated: Date.now(), messages: [{ role: "assistant", content: "a", at: Date.now(), usage: { prompt: 10, completion: 20, cost: 0.5 } }] }], "s");
+out(used.length === 2 && used[0].value === "10 in \u00b7 20 out \u00b7 $0.5000" && used[1].label === "Today", "Usage & Cost sums what the answers reported, per session and per day");
+const sp = M.sseParser();
+sp.push('data: {"choices":[],"usage":{"prompt_tokens":3,"completion_tokens":4}}\n');
+out(sp.usage?.prompt === 3 && sp.usage?.completion === 4, "the stream's usage chunk is read");
+out(M.parseWhole(200, '{"choices":[{"message":{"content":"x"}}],"usage":{"prompt_tokens":1,"completion_tokens":2,"cost":0.01}}').usage?.cost === 0.01, "a whole answer's usage is read");
+
+// ── the design drives the look: no number of it is restated in the stylesheet ──
+const css = read("src/cloud/cloud.scss");
+out(Object.keys(design.metrics).every((k) => view.includes("--ai-") && true) && /replaceAll\("_", "-"\)/.test(view), "view.js sets every design metric as a --ai-* custom property");
+for (const k of ["chat-font", "user-radius-top", "input-radius", "send-size", "ctl-height", "ctl-radius", "assistant-width-pct", "bar-toggle-size"]) out(css.includes(`--ai-${k}`), `cloud.scss reads --ai-${k}`);
+out(!/border-radius: 14px 14px 4px 14px/.test(css) && !/min-height: 32px/.test(css), "the old hard-coded bubble and chip sizes are gone from the stylesheet");
 
 // ── the Model page: A0-A3 from the catalogue, radio, per-agent, greying ─────
 out(/pg\.node\.classList\.add\("cloud-model-page"\)/.test(view) && /type: "radio", name: "cloud-model"/.test(view) && /M\.setAgentModel\(localStorage, a\.id, row\.id\)/.test(view), "the Model page is a full page with one radio group, saving per agent");
@@ -321,7 +386,7 @@ for (const c of proto.request) {
 	const agent = c.backend === "openrouter" ? U.find((a) => a.via === "direct") : U.find((a) => a.via === "gateway" && a.mode === c.mode);
 	const sess = M.newSession(Date.now(), agent.id);
 	sess.messages.push(...c.messages.map((m) => ({ ...m })));
-	const rqc = M.buildRequest({ chat, fleet, storage: new Store(), agent, model: c.model ?? "x/y", effort: "low", mode: "auto", session: sess, reasoning: new Set(), health: modesUp });
+	const rqc = M.buildRequest({ chat, fleet, storage: new Store(), agent, model: c.model ?? "x/y", effort: "low", mode: "ask", session: sess, reasoning: new Set(), health: modesUp });
 	const bc = JSON.parse(rqc.body);
 	const headersOk = Object.entries(c.headers).every(([k, v]) => rqc.headers[k.toLowerCase()] === v);
 	const bodyOk = Object.entries(c.body).every(([k, v]) => JSON.stringify(bc[k]) === JSON.stringify(v));

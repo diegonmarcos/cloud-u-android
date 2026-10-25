@@ -94,6 +94,8 @@ class ModelCatalogueShellTest {
         compose.onNodeWithTag(Tags.nav("chat")).performClick()
         waitFor(Tags.MODEL)
         compose.onNodeWithTag(Tags.MODEL).performClick()
+        waitFor(Tags.MODEL_CATALOGUE)
+        compose.onNodeWithTag(Tags.MODEL_CATALOGUE).performClick()
         waitFor(ModelTags.PAGE)
         waitFor(ModelTags.section("D0"))
     }

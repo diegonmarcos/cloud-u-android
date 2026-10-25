@@ -1,0 +1,111 @@
+{
+  "_doc": "THE SHARED TASK MAPPING (libs:ai): a task is a job (translate, summarize, ...) with the agent and the model that run it. Cloud Tools Small LLMs' build.json::tools.tasks is where the jobs and their worker models are declared; this file carries each one's id, label, icon and worker so every chat can offer the Task control (the composer greys Agent and Model and sets them from here). test-tools-app.sh holds the two in step in both directions (same ids, same worker). `agent` is a gateway mode: `openrouter` runs the named OpenRouter model (the model id is the worker, priced by libs:model-catalogue). Cloud Code reads this file through tools/resolve-targets.py (targets.gen.json chat.tasks).",
+  "version": 1,
+  "tasks": [
+    {
+      "id": "translate",
+      "label": "Translate",
+      "icon": "translate",
+      "agent": "openrouter",
+      "model": "mistralai/mistral-small-3.2-24b-instruct"
+    },
+    {
+      "id": "summarize",
+      "label": "Summarize",
+      "icon": "summarize",
+      "agent": "openrouter",
+      "model": "meta-llama/llama-3.1-8b-instruct"
+    },
+    {
+      "id": "rewrite",
+      "label": "Rewrite",
+      "icon": "edit",
+      "agent": "openrouter",
+      "model": "mistralai/mistral-small-3.2-24b-instruct"
+    },
+    {
+      "id": "grammar",
+      "label": "Fix grammar",
+      "icon": "spellcheck",
+      "agent": "openrouter",
+      "model": "google/gemma-3-4b-it"
+    },
+    {
+      "id": "extract",
+      "label": "Extract",
+      "icon": "list",
+      "agent": "openrouter",
+      "model": "mistralai/ministral-3b-2512"
+    },
+    {
+      "id": "classify",
+      "label": "Classify / tag",
+      "icon": "label",
+      "agent": "openrouter",
+      "model": "google/gemma-3-4b-it"
+    },
+    {
+      "id": "reply",
+      "label": "Reply draft",
+      "icon": "reply",
+      "agent": "openrouter",
+      "model": "mistralai/mistral-small-3.2-24b-instruct"
+    },
+    {
+      "id": "explain",
+      "label": "Explain simply",
+      "icon": "school",
+      "agent": "openrouter",
+      "model": "microsoft/phi-4"
+    },
+    {
+      "id": "math",
+      "label": "Quick math",
+      "icon": "calculate",
+      "agent": "openrouter",
+      "model": "openai/gpt-oss-20b"
+    },
+    {
+      "id": "data",
+      "label": "JSON / CSV fix",
+      "icon": "data",
+      "agent": "openrouter",
+      "model": "meta-llama/llama-3.1-8b-instruct"
+    },
+    {
+      "id": "regex",
+      "label": "Regex / command",
+      "icon": "terminal",
+      "agent": "openrouter",
+      "model": "openai/gpt-oss-20b"
+    },
+    {
+      "id": "titles",
+      "label": "Titles & hashtags",
+      "icon": "tag",
+      "agent": "openrouter",
+      "model": "google/gemma-3-4b-it"
+    },
+    {
+      "id": "sentiment",
+      "label": "Sentiment",
+      "icon": "mood",
+      "agent": "openrouter",
+      "model": "ibm-granite/granite-4.0-h-micro"
+    },
+    {
+      "id": "keywords",
+      "label": "Keywords",
+      "icon": "key",
+      "agent": "openrouter",
+      "model": "ibm-granite/granite-4.0-h-micro"
+    },
+    {
+      "id": "qa",
+      "label": "Q&A on text",
+      "icon": "question",
+      "agent": "openrouter",
+      "model": "mistralai/mistral-small-3.2-24b-instruct"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import android.content.Context
 import com.diegonmarcos.superapp.ai.AiAgents
 import com.diegonmarcos.superapp.ai.AiChatState
 import com.diegonmarcos.superapp.ai.AiConfig
+import com.diegonmarcos.superapp.ai.AiDesign
 import com.diegonmarcos.superapp.ai.AiFileSessions
 import com.diegonmarcos.superapp.ai.AiGatewayBackend
 import com.diegonmarcos.superapp.ai.AiMemoryPrefs
@@ -41,8 +42,8 @@ object SiAi {
             AiChatState(AiStandardHost(
                 cfg, store(app), AiMemoryPrefs(cfg.defaultModel, p.web, p.agent),
                 gateway = AiGatewayBackend(cfg, BuildConfig.AI_GATEWAY_URL), agents = AiAgents.load(app),
-                system = Personas.system(p, all),
-            ))
+                system = Personas.system(p, all), design = AiDesign.load(app),
+            )).also { it.chooseMcps(p.mcps.toSet()) }
         }
     }
 

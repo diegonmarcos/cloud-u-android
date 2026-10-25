@@ -2,7 +2,7 @@
 <resources>
     <!-- English is the fleet's base language (#299). app_name comes from build.json::display_name. -->
     <string name="chat_hello">Hi, I\'m SI</string>
-    <string name="chat_hello_sub">Ask anything. Pick the agent and the model above; your chats are in the menu on the left.</string>
+    <string name="chat_hello_sub">Ask anything. Task, agent, model, mode and MCPs are under the input; your chats are in the menu on the left.</string>
     <string name="chat_hint">Ask SI…</string>
     <string name="chat_send">Send</string>
     <string name="chat_failed">No answer: %1$s</string>
@@ -11,9 +11,8 @@
     <string name="backend_title">Backend</string>
     <string name="backend_body">Answers come from the fleet agent gateway (my-ai-api) over the mesh. This app holds no token: the gateway holds the fleet keys.</string>
     <string name="backend_gateway">Gateway: %1$s</string>
-    <string name="backend_news">News: %1$s</string>
     <string name="about_title">Cloud SuperIntel</string>
-    <string name="about_body">The fleet\'s assistant: Notebook (answers only from your sources), SI (one chat per persona) and News (topic feeds). Version %1$s, build %2$s.</string>
+    <string name="about_body">The fleet\'s assistant: Notebook (answers only from your sources), SI (the router chat) and CGCs (the experts, one chat each). Version %1$s, build %2$s.</string>
     <string name="nb_pick">Open or create a notebook first (Notebooks tab).</string>
     <string name="nb_name">Notebook name</string>
     <string name="nb_new">New</string>
@@ -33,14 +32,4 @@
     <string name="nb_reading">Reading your sources…</string>
     <string name="nb_error">No answer: %1$s</string>
     <string name="nb_not_in_sources">Not in your sources</string>
-    <string name="news_empty">No stories right now</string>
-    <string name="news_empty_why">The news backend gave nothing: %1$s</string>
-    <string name="news_retry">Try again</string>
-    <string name="news_refresh">Refresh</string>
-    <string name="news_sources">%1$d sources · %2$s</string>
-    <string name="news_summarising">Writing the summary…</string>
-    <string name="news_cited">Sources (%1$d)</string>
-    <string name="news_follow_up">Ask a follow-up</string>
-    <string name="news_ask">Ask SI</string>
-    <string name="news_ask_prefix">About the news story \"%1$s\" (sources:\n%2$s)\n\n%3$s</string>
 </resources>

@@ -213,7 +213,8 @@ object Tags {
     const val SORT = "search_sort"
     const val CHAT_INPUT = AiTags.CHAT_INPUT
     const val CHAT_SEND = AiTags.CHAT_SEND
-    const val NEW_CHAT = AiTags.NEW_CHAT
+    const val DRAWER_NEW = AiTags.DRAWER_NEW
+    const val MODEL_CATALOGUE = AiTags.MODEL_CATALOGUE
     const val SESSIONS = "search_sessions"
     const val MODEL = AiTags.MODEL
     const val WEB = AiTags.WEB

@@ -29,6 +29,20 @@ interface AiHost {
     /** Renames / deletes a stored session (the sessions drawer); a host with no store ignores both. */
     fun renameSession(id: String, title: String) {}
     fun deleteSession(id: String) {}
+    /** The composer's Permission Mode (a design mode id) and MCP selection: a host that sends them keeps them for the next [send]. */
+    fun pickMode(id: String) {}
+    fun pickMcps(names: Set<String>) {}
+    /** The composer's Effort (`reasoning.effort` value, "" = none) and the optimisation plugins' request headers. */
+    fun pickEffort(value: String) {}
+    fun pickPlugins(headers: Map<String, String>) {}
+    /** The gateway's live plugins (name to enabled), blocking; empty = it lists none. */
+    fun plugins(): Map<String, Boolean> = emptyMap()
+    /** Tokens and cost the backend REPORTED, for the open session and the day; empty = nothing reported yet. */
+    fun usage(sessionId: String): List<AiUsageLine> = emptyList()
+    /** The standing system prompt in force ("" = none). */
+    fun systemPrompt(): String = ""
+    /** The MCP servers the MCPs control lists, blocking (the page calls it off the main thread); empty = the control shows none. */
+    fun mcpServers(): List<AiMcpServer> = emptyList()
 }
 
 /** The small choices a host remembers. */
@@ -53,7 +67,9 @@ object AiAgents {
 
     /** The shared descriptor from the app's merged assets; empty when the app does not carry it. */
     fun load(ctx: android.content.Context): List<AiAgent> = runCatching {
-        from(AgentCatalogue.parse(ctx.assets.open(AgentCatalogue.ASSET).bufferedReader().use { it.readText() }))
+        val shared = from(AgentCatalogue.parse(ctx.assets.open(AgentCatalogue.ASSET).bufferedReader().use { it.readText() }))
+        // The gateway modes the descriptor lacks (openrouter: any model; the task mapping runs on it), from the shared design.
+        shared + AiDesign.load(ctx).extraAgents.filter { x -> shared.none { it.id == x.id } }
     }.getOrDefault(emptyList())
 }
 
@@ -78,7 +94,18 @@ class AiStandardHost(
     private val gatewayNote: String = "fleet agent gateway, mesh only",
     /** A standing system prompt (a persona chat): sent first on every request, never stored in the session. */
     private val system: String = "",
+    /** The shared design: gives the composer's Permission Modes their sentence. Null = no mode is sent. */
+    private val design: AiDesign? = null,
+    /** An app's own usage lines (Cloud Tools' Costs ledger); replaces the reported-usage tally when set. */
+    private val usageSource: ((String) -> List<AiUsageLine>)? = null,
 ) : AiHost {
+    @Volatile private var effortValue: String = ""
+    @Volatile private var headers: Map<String, String> = emptyMap()
+    private class Used(val at: Long, val session: String, val u: AiUsage)
+    private val used = java.util.concurrent.CopyOnWriteArrayList<Used>()
+    @Volatile private var modeId: String = ""
+    @Volatile private var mcpOn: Set<String> = emptySet()
+
     override var model: String
         get() = prefs.model
         set(v) { prefs.model = v }
@@ -97,6 +124,28 @@ class AiStandardHost(
     override fun sessions(): List<AiSession> = store.all()
     override fun renameSession(id: String, title: String) = store.rename(id, title)
     override fun deleteSession(id: String) = store.delete(id)
+    override fun pickMode(id: String) { modeId = id }
+    override fun pickMcps(names: Set<String>) { mcpOn = names }
+    override fun pickEffort(value: String) { effortValue = value }
+    override fun pickPlugins(headers: Map<String, String>) { this.headers = headers }
+    override fun plugins(): Map<String, Boolean> = gateway?.plugins().orEmpty()
+    override fun systemPrompt(): String = standing()
+    override fun usage(sessionId: String): List<AiUsageLine> {
+        usageSource?.let { return it(sessionId) }
+        if (used.isEmpty()) return emptyList()
+        fun line(label: String, us: List<AiUsage>): AiUsageLine {
+            val cost = us.mapNotNull { it.cost }.takeIf { it.isNotEmpty() }?.sum()
+            return AiUsageLine(label, "${us.sumOf { it.prompt }} in · ${us.sumOf { it.completion }} out" + (cost?.let { " · \$" + "%.4f".format(java.util.Locale.ROOT, it) } ?: ""))
+        }
+        val day = java.time.LocalDate.now()
+        val today = used.filter { java.time.Instant.ofEpochMilli(it.at).atZone(java.time.ZoneId.systemDefault()).toLocalDate() == day }
+        return listOf(line("This session", used.filter { it.session == sessionId }.map { it.u }), line("Today", today.map { it.u }))
+    }
+    override fun mcpServers(): List<AiMcpServer> = if (gateway == null) emptyList() else gateway.mcpServers()
+
+    /** The standing system text of a send: the persona's, then the Permission Mode's sentence, then the chosen MCP servers'. */
+    internal fun standing(): String = listOf(system, design?.mode(modeId)?.instruction.orEmpty(), design?.mcpSentence(mcpOn).orEmpty())
+        .filter { it.isNotBlank() }.joinToString("\n\n")
 
     override fun send(session: AiSession, text: String, model: String, web: Boolean, now: Long, sink: AiSink): AiOutcome {
         val asked = session.copy(
@@ -110,17 +159,19 @@ class AiStandardHost(
         if (backend == null) return AiOutcome(asked, "no AI backend is configured", emptyList())
         val via = agent?.let { "${it.label} ($gatewayNote)" }
         val nativeWeb = agent == null && web && runCatching { models().firstOrNull { it.id == model }?.nativeWeb }.getOrNull() == true
-        val wire = if (system.isBlank()) null else JSONArray().put(JSONObject().put("role", "system").put("content", system)).also { a ->
+        val standing = standing()
+        val wire = if (standing.isBlank()) null else JSONArray().put(JSONObject().put("role", "system").put("content", standing)).also { a ->
             val h = AiProtocol.messages(asked.messages, cfg.historyTurns)
             for (i in 0 until h.length()) a.put(h.get(i))
         }
-        val reply = converse(backend, AiRequest(model, asked.messages, web, nativeWeb, agent, tools, wire), sink)
+        val reply = converse(backend, AiRequest(model, asked.messages, web, nativeWeb, agent, tools, wire, effort = effortValue, headers = if (agent != null) headers else emptyMap()), sink)
+        reply.usage?.let { used.add(Used(now, session.id, it)) }
         val answer = reply.text
         if (answer == null || (answer.isEmpty() && reply.error == null)) {
             val why = reply.error ?: "no choices in the answer"
             return AiOutcome(asked, if (reply.transport) listOfNotNull(via, why).joinToString(": ") else why, emptyList())
         }
-        val answered = asked.copy(messages = asked.messages + AiMsg("assistant", answer), updated = System.currentTimeMillis())
+        val answered = asked.copy(messages = asked.messages + AiMsg("assistant", answer, listOfNotNull(agent?.label, model.takeIf { m -> m.isNotBlank() && (agent == null || agent.modelFor(m) != null) }).joinToString(" · ")), updated = System.currentTimeMillis())
         store.put(answered)
         return AiOutcome(answered, null, reply.citations)
     }
@@ -131,7 +182,7 @@ class AiStandardHost(
         val wire = req.wire ?: AiProtocol.messages(req.messages, cfg.historyTurns)
         var last = AiReply(null, error = "no answer")
         repeat(cfg.maxToolRounds) {
-            last = backend.chat(AiRequest(req.model, req.messages, req.web, req.nativeWeb, req.agent, tools, wire, false), sink::delta)
+            last = backend.chat(AiRequest(req.model, req.messages, req.web, req.nativeWeb, req.agent, tools, wire, false, req.effort, req.headers), sink::delta)
             if (last.error != null || last.toolCalls.isEmpty()) return last
             wire.put(JSONObject().put("role", "assistant").put("content", last.text ?: "").put("tool_calls", org.json.JSONArray(last.toolCalls.map { c ->
                 JSONObject().put("id", c.id).put("type", "function").put("function", JSONObject().put("name", c.name).put("arguments", c.arguments))

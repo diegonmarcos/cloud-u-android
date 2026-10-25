@@ -1,0 +1,304 @@
+package com.diegonmarcos.superapp.ai
+
+import org.json.JSONObject
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Test
+import java.io.File
+
+/**
+ * The shared composer: the design file, the declared controls and their order, the Model tabs and their rules, the Permission
+ * Modes, the MCP sentence, and the Task lock (a task greys Agent and Model and sets them). Plain JVM, over the real assets.
+ */
+class AiComposerTest {
+    private val dir = File("src/main/assets/ai")
+    private val design = AiDesign.parse(File(dir, "ai-design.json").readText())
+    private val cfg = AiConfig.parse(File(dir, "ai.json").readText())
+
+    @Test fun theBarIsPlusTaskAgentModelEffortPermsMcpMoreInThatOrderWhateverSubsetAnAppEnables() {
+        assertEquals(listOf("plus", "task", "agent", "model", "effort", "mode", "mcp", "more"), design.controls.map { it.id })
+        assertEquals("Perms", design.controls.first { it.id == "mode" }.label)
+        assertEquals(listOf("task", "mcp"), design.ordered(listOf("mcp", "task", "nonsense")).map { it.id })
+        assertEquals(listOf("agent", "model"), design.ordered(listOf("model", "agent")).map { it.id })
+    }
+
+    @Test fun everyMetricTheCodeReadsIsDeclared() {
+        val used = listOf(
+            "chat_font", "chat_line_height", "user_radius_top", "user_radius_tail", "user_pad_v", "user_pad_h", "assistant_width_pct",
+            "list_gap", "list_pad_v", "meta_font", "hello_font", "composer_pad_top", "composer_pad_h", "composer_pad_bottom",
+            "input_radius", "input_pad_v", "input_pad_h", "input_max_height", "row_gap", "send_size",
+            "ctl_height", "ctl_radius", "ctl_font", "ctl_gap", "ctl_pad_h", "ctl_icon", "ctl_disabled_alpha", "bar_toggle_size", "compact_font",
+        )
+        for (k in used) assertTrue("metric $k", k in design.metricKeys)
+        assertEquals("no metric is declared and unused", used.toSet(), design.metricKeys)
+    }
+
+    @Test fun theModelPickerHasTheFiveTabsInOrder() {
+        assertEquals(listOf("frontier", "code", "search", "medium", "small"), design.tabs.map { it.id })
+        assertEquals(listOf("Frontier", "Code", "Search", "Medium", "Small"), design.tabs.map { it.label })
+        assertEquals(design.tabs.map { it.id }.toSet(), design.classifyOrder.toSet())
+        assertTrue(design.fallbackTab in design.tabs.map { it.id })
+    }
+
+    @Test fun modelsLandInTheirTabsByDeclaredRules() {
+        fun tab(id: String, nativeWeb: Boolean = false, section: String = "", tier: String = "") = design.tabOf(AiModel(id, id, nativeWeb, false, section, tier))
+        assertEquals("code", tab("qwen/qwen-2.5-coder-32b-instruct"))
+        assertEquals("code", tab("anything/at-all", section = "A0"))
+        assertEquals("search", tab("perplexity/sonar-pro"))
+        assertEquals("search", tab("some/model", nativeWeb = true))
+        assertEquals("small", tab("mistralai/ministral-3b-2512"))
+        assertEquals("small", tab("google/gemma-3-4b-it"))
+        assertEquals("small", tab("deepseek/deepseek-r1-distill-qwen-1.5b"))
+        assertEquals("small", tab("whatever/model", tier = "small"))
+        assertEquals("medium", tab("meta-llama/llama-3.1-8b-instruct"))
+        assertEquals("medium", tab("openai/gpt-oss-20b"))
+        assertEquals("medium", tab("openai/gpt-4o-mini"))
+        assertEquals("medium", tab("whatever/model", tier = "medium"))
+        assertEquals("frontier", tab("anthropic/claude-opus-4"))
+        assertEquals("frontier", tab("openai/gpt-5"))
+        val by = design.byTab(listOf(AiModel("perplexity/sonar", "Sonar"), AiModel("anthropic/claude-opus-4", "Opus")))
+        assertEquals(design.tabs.map { it.id }, by.keys.toList())
+        assertEquals(listOf("Sonar"), by.getValue("search").map { it.name })
+        assertTrue(by.getValue("small").isEmpty())
+    }
+
+    @Test fun permissionModesAreAskAutoEditReadOnlyPlanAndAskAddsNothing() {
+        assertEquals(listOf("ask", "auto_edit", "read_only", "plan"), design.modes.map { it.id })
+        assertEquals("ask", design.defaultMode)
+        assertEquals("", design.mode("ask")!!.instruction)
+        for (m in design.modes.filter { it.id != "ask" }) assertTrue(m.id, m.instruction.startsWith("Permission mode: "))
+    }
+
+    @Test fun mcpSentenceNamesTheChosenServersOrNothing() {
+        assertEquals("", design.mcpSentence(emptySet()))
+        assertEquals("MCP servers for this session: use only a, b when you call tools.", design.mcpSentence(setOf("b", "a")))
+    }
+
+    @Test fun anAppDeclarationNamesOnlyKnownControlsOnce() {
+        val ok = AiComposerDecl.parse("""{"app":"x","controls":["task","agent","model","mode","mcp"],"default_task":"translate"}""", design)
+        assertEquals("translate", ok.defaultTask)
+        assertFalse(ok.taskRequired)
+        assertTrue(AiComposerDecl.parse("""{"app":"x","controls":["task"],"task_required":true}""", design).taskRequired)
+        for (bad in listOf("""{"app":"x","controls":["task","emoji"]}""", """{"app":"x","controls":["task","task"]}""")) {
+            try { AiComposerDecl.parse(bad, design); fail(bad) } catch (_: IllegalArgumentException) {}
+        }
+    }
+
+    @Test fun effortHasAnAutoDefaultThatSendsNothingAndFourLevelsThatDo() {
+        assertEquals(listOf("auto", "low", "medium", "high", "max"), design.efforts.map { it.id })
+        assertEquals("auto", design.defaultEffort)
+        assertEquals("", design.effort("auto")!!.value)
+        val req = AiRequest("m", listOf(AiMsg("user", "hi")), effort = "high")
+        assertEquals("high", JSONObject(AiProtocol.body(cfg, req, "m", false, false)).getJSONObject("reasoning").getString("effort"))
+        assertFalse(JSONObject(AiProtocol.body(cfg, AiRequest("m", listOf(AiMsg("user", "hi"))), "m", false, false)).has("reasoning"))
+    }
+
+    @Test fun theMoreSheetIsGroupedUnderHeadersAndCoversUsagePluginsSkillsAndTheRest() {
+        val groups = design.moreGroups
+        assertEquals(listOf("Usage & Cost", "Plugins - Optimisation", "Plugins - Skills", "Session", "System prompt", "Help"), groups.map { it.label })
+        assertTrue(groups.all { it.items.isNotEmpty() })
+        val items = groups.flatMap { it.items }
+        assertEquals("ids are unique", items.size, items.map { it.id }.toSet().size)
+        assertTrue(items.any { it.kind == "usage" })
+        assertEquals(listOf("headroom", "rtk", "caveman", "principles"), groups[1].items.map { it.id })
+        assertTrue(groups[1].items.all { it.kind == "plugin" && it.header.startsWith("x-") && it.plugin.isNotBlank() })
+        assertTrue(groups[2].items.any { it.id == "skills" && it.kind == "prompt" && it.prompt.isNotBlank() })
+        assertEquals(listOf("export", "retry", "undo"), groups[3].items.map { it.id })
+        assertTrue(items.any { it.id == "shortcuts" && it.text.isNotBlank() } && items.any { it.id == "about" && it.text.isNotBlank() })
+        assertTrue(items.all { it.kind in listOf("usage", "plugin", "prompt", "export", "retry", "undo", "system", "info") })
+    }
+
+    @Test fun theBarCollapsesToOneChipAndRemembersItPerApp() {
+        assertFalse(design.collapsedByDefault)
+        assertEquals("ai_composer_collapsed.cloud-search", design.collapseKey("cloud-search"))
+        assertTrue(design.collapseKey("a") != design.collapseKey("b"))
+        val chat = AiChatState(FakeHost())
+        assertFalse(chat.collapsed)
+        chat.collapsed = true
+        assertTrue(chat.collapsed)
+    }
+
+    @Test fun thePlusMenuOffersTheFourAttachKindsAndNewChat() {
+        assertEquals(listOf("files", "images", "notes", "drive"), design.attachKinds.map { it.first })
+        assertEquals("New chat", design.newChatLabel)
+    }
+
+    @Test fun exportRendersTheSessionAsMarkdown() {
+        val md = AiExport.markdown(AiSession("s", "Plan", "m", 1, listOf(AiMsg("user", "hi"), AiMsg("assistant", "hello", "Hermes · m"))))
+        assertEquals("# Plan\n\n**You**\n\nhi\n\n**Assistant** (Hermes · m)\n\nhello\n", md)
+    }
+
+    @Test fun undoDropsTheLastExchangeAndReturnsTheAsk() {
+        val chat = AiChatState(FakeHost())
+        chat.session = chat.session.copy(messages = listOf(AiMsg("user", "a"), AiMsg("assistant", "A"), AiMsg("user", "b"), AiMsg("assistant", "B")))
+        assertEquals("b", chat.undoLast())
+        assertEquals(listOf("a", "A"), chat.session.messages.map { it.content })
+        assertEquals("a", chat.undoLast())
+        assertEquals(null, chat.undoLast())
+    }
+
+    @Test fun usageAndPluginsParseFromTheBackendsOwnWords() {
+        val u = AiProtocol.parseWhole(200, """{"choices":[{"message":{"content":"x"}}],"usage":{"prompt_tokens":12,"completion_tokens":5,"cost":0.0021}}""").usage!!
+        assertEquals(AiUsage(12, 5, 0.0021), u)
+        assertEquals(null, AiProtocol.parseWhole(200, """{"choices":[{"message":{"content":"x"}}]}""").usage)
+        val sse = AiProtocol.Sse()
+        sse.push("data: {\"choices\":[{\"delta\":{\"content\":\"a\"}}]}\n")
+        sse.push("data: {\"choices\":[],\"usage\":{\"prompt_tokens\":3,\"completion_tokens\":4}}\n")
+        assertEquals(AiUsage(3, 4, null), sse.usage)
+        assertEquals(mapOf("headroom" to true, "rtk" to false), AiProtocol.parsePlugins("""{"plugins":{"headroom":true,"rtk":false}}"""))
+        assertTrue(AiProtocol.parsePlugins("""{"modes":[]}""").isEmpty())
+    }
+
+    @Test fun reportedUsageIsTalliedPerSessionAndNothingIsInventedWhenNoneIsReported() {
+        var reply = AiReply("ok")
+        val gateway = object : AiBackend {
+            override val id = "gateway"
+            override fun models() = emptyList<AiModel>()
+            override fun chat(req: AiRequest, onDelta: (String) -> Unit) = reply
+        }
+        val host = AiStandardHost(cfg, AiMemorySessions(), AiMemoryPrefs("m", false, "hermes"), gateway = gateway, agents = listOf(AiAgent("hermes", "Hermes", "sub")), design = design)
+        val s = host.newSession("m", 1)
+        host.send(s, "q", "m", false, 2, AiSink.None)
+        assertTrue("no usage reported, none shown", host.usage(s.id).isEmpty())
+        reply = AiReply("ok", usage = AiUsage(10, 20, 0.5))
+        host.send(s, "q2", "m", false, 3, AiSink.None)
+        val lines = host.usage(s.id)
+        assertEquals(listOf("This session", "Today"), lines.map { it.label })
+        assertEquals("10 in · 20 out · \$0.5000", lines[0].value)
+    }
+
+    @Test fun pluginTogglesRideTheGatewayRequestAsHeadersAndEffortAsReasoning() {
+        var seen: AiRequest? = null
+        val gateway = object : AiBackend {
+            override val id = "gateway"
+            override fun models() = emptyList<AiModel>()
+            override fun chat(req: AiRequest, onDelta: (String) -> Unit): AiReply { seen = req; return AiReply("ok") }
+        }
+        val host = AiStandardHost(cfg, AiMemorySessions(), AiMemoryPrefs("m", false, "hermes"), gateway = gateway, agents = listOf(AiAgent("hermes", "Hermes", "sub")), design = design)
+        val chat = AiChatState(host)
+        chat.setPlugin(design.moreGroups[1].items[0], true)
+        chat.chooseEffort(design.effort("high")!!)
+        host.send(host.newSession("m", 1), "q", "m", false, 2, AiSink.None)
+        assertEquals(mapOf("x-headroom" to "on"), seen!!.headers)
+        assertEquals("high", seen!!.effort)
+    }
+
+    @Test fun theSharedTaskMappingRunsEveryTaskOnAnOpenRouterModel() {
+        val tasks = AiDesign.parseTasks(File(dir, "ai-tasks.json").readText())
+        assertTrue(tasks.size >= 10)
+        assertEquals(tasks.size, tasks.map { it.id }.toSet().size)
+        for (t in tasks) {
+            assertEquals(t.id, "openrouter", t.agent)
+            assertTrue(t.id, '/' in t.model)
+        }
+        // The mapping's agent is one the design makes available to Compose.
+        assertTrue(design.extraAgents.any { it.id == "openrouter" && it.mode == "openrouter" })
+    }
+
+    private class FakeHost : AiHost {
+        override var model = "free/model"
+        override var web = false
+        var agent = ""
+        var mode = ""
+        var mcps: Set<String> = emptySet()
+        override fun newSession(model: String, now: Long) = AiSession("s", "", model, now, emptyList())
+        override fun models() = emptyList<AiModel>()
+        override fun send(session: AiSession, text: String, model: String, web: Boolean, now: Long, sink: AiSink) = AiOutcome(session, null, emptyList())
+        override fun agent() = agent
+        override fun pickAgent(id: String) { agent = id }
+        override fun pickMode(id: String) { mode = id }
+        override fun pickMcps(names: Set<String>) { mcps = names }
+    }
+
+
+    private val tasks = listOf(AiTask("translate", "Translate", "openrouter", "mistralai/mistral-small-3.2-24b-instruct"), AiTask("summarize", "Summarize", "openrouter", "meta-llama/llama-3.1-8b-instruct"))
+
+    @Test fun aSelectedTaskGreysAgentAndModelAndSetsThemAndClearingRestoresThePicks() {
+        val host = FakeHost()
+        val chat = AiChatState(host)
+        chat.tasks = tasks
+        chat.chooseAgent("hermes")
+        chat.pick("anthropic/claude-opus-4")
+        assertFalse(chat.locked)
+        chat.chooseTask("translate")
+        assertTrue(chat.locked)
+        assertEquals("openrouter", chat.agent)
+        assertEquals("mistralai/mistral-small-3.2-24b-instruct", chat.model)
+        assertEquals("the host follows", "openrouter", host.agent)
+        // Locked: the user cannot change them.
+        chat.chooseAgent("goose"); chat.pick("x/y")
+        assertEquals("openrouter", chat.agent)
+        assertEquals("mistralai/mistral-small-3.2-24b-instruct", chat.model)
+        // Another task re-maps; the picks from before any task are still remembered.
+        chat.chooseTask("summarize")
+        assertEquals("meta-llama/llama-3.1-8b-instruct", chat.model)
+        chat.chooseTask("")
+        assertFalse(chat.locked)
+        assertEquals("hermes", chat.agent)
+        assertEquals("anthropic/claude-opus-4", chat.model)
+        assertEquals("hermes", host.agent)
+        chat.pick("x/y")
+        assertEquals("x/y", chat.model)
+    }
+
+    @Test fun anUnknownTaskIsNotATask() {
+        val chat = AiChatState(FakeHost())
+        chat.tasks = tasks
+        chat.chooseTask("nope")
+        assertFalse(chat.locked)
+        assertEquals("", chat.task)
+    }
+
+    @Test fun modeAndMcpChoicesReachTheHost() {
+        val host = FakeHost()
+        val chat = AiChatState(host)
+        chat.chooseMode("plan")
+        assertEquals("plan", host.mode)
+        chat.toggleMcp("fleet"); chat.toggleMcp("docs")
+        assertEquals(setOf("fleet", "docs"), host.mcps)
+        chat.toggleMcp("fleet")
+        assertEquals(setOf("docs"), host.mcps)
+        chat.chooseMcps(setOf("a"))
+        assertEquals(setOf("a"), chat.mcpOn)
+    }
+
+    @Test fun theGatewayMcpListParses() {
+        assertEquals(listOf(AiMcpServer("fleet", 12), AiMcpServer("docs", null)), AiProtocol.parseMcp("""[{"server":"fleet","count":12},{"server":"docs"},{"server":"fleet","count":1}]"""))
+        assertEquals(listOf(AiMcpServer("x", 3)), AiProtocol.parseMcp("""{"servers":[{"name":"x","count":3}]}"""))
+        assertTrue(AiProtocol.parseMcp("not json").isEmpty())
+        assertTrue(AiProtocol.parseMcp("""{"error":"no"}""").isEmpty())
+    }
+
+    @Test fun theChosenModeAndMcpServersRideTheRequestAsTheStandingSystemMessage() {
+        var seen: AiRequest? = null
+        val gateway = object : AiBackend {
+            override val id = "gateway"
+            override fun models() = emptyList<AiModel>()
+            override fun chat(req: AiRequest, onDelta: (String) -> Unit): AiReply { seen = req; return AiReply("ok") }
+        }
+        val host = AiStandardHost(
+            cfg, AiMemorySessions(), AiMemoryPrefs("m", false, "hermes"), gateway = gateway,
+            agents = listOf(AiAgent("hermes", "Hermes", "sub")), system = "You are a persona.", design = design,
+        )
+        host.pickMode("plan")
+        host.pickMcps(setOf("fleet"))
+        val out = host.send(host.newSession("m", 1), "hello", "m", false, 2, AiSink.None)
+        assertEquals(null, out.error)
+        val system = seen!!.wire!!.getJSONObject(0)
+        assertEquals("system", system.getString("role"))
+        val text = system.getString("content")
+        assertTrue(text.startsWith("You are a persona."))
+        assertTrue(text.contains("Permission mode: plan."))
+        assertTrue(text.contains("use only fleet when you call tools."))
+        assertEquals("the answer carries its agent line", "Hermes · m", out.session.messages.last().meta)
+        // Ask adds nothing and nothing else: no persona, no servers, no wire.
+        val plain = AiStandardHost(cfg, AiMemorySessions(), AiMemoryPrefs("m", false, "hermes"), gateway = gateway, agents = listOf(AiAgent("hermes", "Hermes", "sub")), design = design)
+        plain.pickMode("ask")
+        plain.send(plain.newSession("m", 1), "hello", "m", false, 2, AiSink.None)
+        assertEquals(null, seen!!.wire)
+        assertNotNull(JSONObject(AiProtocol.body(cfg, seen!!, "m", false, false)).getJSONArray("messages"))
+    }
+}

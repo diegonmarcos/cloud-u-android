@@ -1,0 +1,390 @@
+{
+  "_doc": "THE SHARED AI DESIGN (libs:ai): the one source of the chat's look and of its composer, taken from Cloud Code's AI page. Compose reads it through AiDesign (every size here is px on the web and dp/sp in Compose, 1:1); Cloud Code (HTML) reads it through tools/resolve-targets.py, which copies this whole file into targets.gen.json chat.design, and src/cloud/chat/view.js sets each `metrics` entry as the CSS custom property --ai-<key with dashes> on the chat panel, so cloud.scss restates no number. Nothing else in the fleet draws a chat: an app only declares which composer controls it enables and its config bar's first state (Kotlin apps: assets/ai/composer.json, Cloud Code: nav.json::chat.composer).",
+  "version": 1,
+  "metrics": {
+    "chat_font": 14,
+    "chat_line_height": 1.4,
+    "user_radius_top": 14,
+    "user_radius_tail": 4,
+    "user_pad_v": 8,
+    "user_pad_h": 12,
+    "assistant_width_pct": 92,
+    "list_gap": 8,
+    "list_pad_v": 8,
+    "meta_font": 11,
+    "hello_font": 22,
+    "composer_pad_top": 6,
+    "composer_pad_h": 8,
+    "composer_pad_bottom": 8,
+    "input_radius": 18,
+    "input_pad_v": 9,
+    "input_pad_h": 12,
+    "input_max_height": 160,
+    "row_gap": 6,
+    "send_size": 40,
+    "ctl_height": 32,
+    "ctl_radius": 16,
+    "ctl_font": 12,
+    "ctl_gap": 4,
+    "ctl_pad_h": 8,
+    "ctl_icon": 16,
+    "ctl_disabled_alpha": 0.4,
+    "bar_toggle_size": 32,
+    "compact_font": 12
+  },
+  "composer": {
+    "_doc": "The composer's bottom config bar, left to right, in THIS order whichever subset an app enables: (+), Task, Agent, Model, Effort, Perms, MCP, (More). `icon` is a class of Cloud Code's icon font (src/res/icons/style.css, proved by its tester); Compose draws the control's glyph itself (AiComposerBar). A selected Task greys Agent and Model: they show the task's mapped ones (ai-tasks.json) and cannot be changed until the task is cleared. The whole bar collapses to ONE compact chip (the active task, else the model) behind a chevron; the state is remembered per app (`collapse`).",
+    "controls": [
+      {
+        "id": "plus",
+        "label": "Add",
+        "icon": "add"
+      },
+      {
+        "id": "task",
+        "label": "Task",
+        "icon": "check_circle"
+      },
+      {
+        "id": "agent",
+        "label": "Agent",
+        "icon": "brain"
+      },
+      {
+        "id": "model",
+        "label": "Model",
+        "icon": "wand-sparkles"
+      },
+      {
+        "id": "effort",
+        "label": "Effort",
+        "icon": "tune"
+      },
+      {
+        "id": "mode",
+        "label": "Perms",
+        "icon": "zap"
+      },
+      {
+        "id": "mcp",
+        "label": "MCP",
+        "icon": "extension"
+      },
+      {
+        "id": "more",
+        "label": "More",
+        "icon": "more_vert"
+      }
+    ],
+    "no_task": "No task",
+    "collapse": {
+      "_doc": "Chevron toggle at the bar's end. `default` is the first state of an app that never toggled (expanded); the state is kept per app under `pref_key` in the app's own SharedPreferences (Cloud Code: localStorage) so it survives restarts.",
+      "default": "expanded",
+      "pref_key": "ai_composer_collapsed"
+    },
+    "plus": {
+      "_doc": "The (+) menu: Attach (the app's own pickers answer: files, images, notes, Drive; an item is shown only when the app wires it) and New chat.",
+      "attach": [
+        {
+          "id": "files",
+          "label": "Files"
+        },
+        {
+          "id": "images",
+          "label": "Images"
+        },
+        {
+          "id": "notes",
+          "label": "Notes"
+        },
+        {
+          "id": "drive",
+          "label": "Drive"
+        }
+      ],
+      "new_chat": "New chat"
+    }
+  },
+  "model_tabs": {
+    "_doc": "The Model picker's tabs, left to right. A model lands in the FIRST tab of `classify_order` whose `match` hits it (`sections`: the catalogue section id, A0 = Code; `tiers`: the tier a data row declares, e.g. Cloud Tools' small / medium; `native_web`: the model searches the web itself; `id_regex`: case-insensitive, matched on the model id); a model no tab claims goes to `fallback`. Rules are data: a new family is one regex here, no code.",
+    "tabs": [
+      {
+        "id": "frontier",
+        "label": "Frontier",
+        "match": {}
+      },
+      {
+        "id": "code",
+        "label": "Code",
+        "match": {
+          "sections": [
+            "A0"
+          ],
+          "id_regex": [
+            "coder",
+            "codestral",
+            "devstral",
+            "starcoder",
+            "codex",
+            "code-"
+          ]
+        }
+      },
+      {
+        "id": "search",
+        "label": "Search",
+        "match": {
+          "native_web": true,
+          "id_regex": [
+            "perplexity",
+            "sonar",
+            ":online",
+            "search"
+          ]
+        }
+      },
+      {
+        "id": "medium",
+        "label": "Medium",
+        "match": {
+          "tiers": [
+            "medium"
+          ],
+          "id_regex": [
+            "(^|[^0-9.])([5-9]|[12][0-9]|3[0-5])(\\.[0-9]+)?b([^a-z]|$)",
+            "mini",
+            "flash",
+            "small",
+            "medium",
+            "sonnet",
+            "haiku"
+          ]
+        }
+      },
+      {
+        "id": "small",
+        "label": "Small",
+        "match": {
+          "tiers": [
+            "small"
+          ],
+          "id_regex": [
+            "(^|[^0-9.])[0-4](\\.[0-9]+)?b([^a-z]|$)",
+            "nano",
+            "lite",
+            "ministral",
+            "smollm",
+            "tiny"
+          ]
+        }
+      }
+    ],
+    "classify_order": [
+      "search",
+      "code",
+      "small",
+      "medium",
+      "frontier"
+    ],
+    "fallback": "frontier"
+  },
+  "permission": {
+    "_doc": "The Permission Mode's choices. No backend the gateway fronts takes a per-request approval switch today, so a mode is sent as a standing system instruction (via = prompt), exactly as Cloud Code always did; an agent that grows a real switch gets it declared here as `via: param`. `ask` is the default and adds nothing.",
+    "via": "prompt",
+    "default": "ask",
+    "modes": [
+      {
+        "id": "ask",
+        "label": "Ask first",
+        "short": "Ask",
+        "icon": "help",
+        "instruction": ""
+      },
+      {
+        "id": "auto_edit",
+        "label": "Auto-edit",
+        "short": "Auto-edit",
+        "icon": "edit",
+        "instruction": "Permission mode: auto-edit. You may create and edit files without asking. Ask before running commands that change anything outside the files (installs, deploys, pushes, deletions)."
+      },
+      {
+        "id": "read_only",
+        "label": "Read-only",
+        "short": "Read-only",
+        "icon": "block",
+        "instruction": "Permission mode: read-only. Do not change anything and do not run tools that write. Read, search and explain only; say what you would change instead of doing it."
+      },
+      {
+        "id": "plan",
+        "label": "Plan",
+        "short": "Plan",
+        "icon": "notes",
+        "instruction": "Permission mode: plan. Do not change anything and do not run tools that write. Read what you need, then answer with a numbered plan and wait for approval."
+      }
+    ]
+  },
+  "mcp": {
+    "_doc": "The MCPs control toggles the MCP servers the gateway lists for the session (GET ai.json::gateway.mcp_path). The gateway has no per-request server switch yet, so the chosen set rides as a standing instruction; `instruction` is its sentence, {servers} the comma-separated names. An empty selection adds nothing.",
+    "instruction": "MCP servers for this session: use only {servers} when you call tools."
+  },
+  "agents_extra": {
+    "_doc": "Gateway modes ai.json lists that the shared agent descriptor (model-catalogue agents.json) does not: `openrouter` runs any OpenRouter model, the model the request names. Task mappings use it. Cloud Code already lists it as its direct backend, so only Compose adds it.",
+    "agents": [
+      {
+        "id": "openrouter",
+        "label": "OpenRouter",
+        "sub": "any model, through the gateway",
+        "mode": "openrouter"
+      }
+    ]
+  },
+  "effort": {
+    "_doc": "Reasoning effort levels, sent as OpenRouter's reasoning.effort (low, medium, high, max; verified 2026-10-10 in Cloud Code's nav.json) when picked; `auto` sends nothing and leaves the model's own default. A model that does not reason ignores the field.",
+    "default": "auto",
+    "levels": [
+      {
+        "id": "auto",
+        "label": "Auto",
+        "value": ""
+      },
+      {
+        "id": "low",
+        "label": "Low",
+        "value": "low"
+      },
+      {
+        "id": "medium",
+        "label": "Medium",
+        "value": "medium"
+      },
+      {
+        "id": "high",
+        "label": "High",
+        "value": "high"
+      },
+      {
+        "id": "max",
+        "label": "Max",
+        "value": "max"
+      }
+    ]
+  },
+  "more": {
+    "_doc": "The More sheet: groups with headers, each with items. kind: usage = tokens and cost the backend REPORTED (per session and per day; the Costs ledger in Cloud Tools; nothing is invented, a backend that reports nothing says so); plugins = the gateway's optimisation plugins that its live /health.plugins lists, each a request-header toggle (`header`, `plugin`); prompt = fills the input with `prompt` (nothing is sent until the user does); export = the open session as Markdown; system = the standing system prompt in force; info = the declared `text`; retry / undo act on the last exchange.",
+    "groups": [
+      {
+        "id": "usage",
+        "label": "Usage & Cost",
+        "items": [
+          {
+            "id": "usage",
+            "label": "Tokens and cost",
+            "kind": "usage"
+          }
+        ]
+      },
+      {
+        "id": "optimisation",
+        "label": "Plugins - Optimisation",
+        "items": [
+          {
+            "id": "headroom",
+            "label": "Headroom compression",
+            "kind": "plugin",
+            "header": "x-headroom",
+            "plugin": "headroom"
+          },
+          {
+            "id": "rtk",
+            "label": "RTK noise stripping",
+            "kind": "plugin",
+            "header": "x-rtk",
+            "plugin": "rtk"
+          },
+          {
+            "id": "caveman",
+            "label": "Caveman filler stripping",
+            "kind": "plugin",
+            "header": "x-caveman",
+            "plugin": "caveman"
+          },
+          {
+            "id": "principles",
+            "label": "Principles",
+            "kind": "plugin",
+            "header": "x-principles",
+            "plugin": "agents_principles"
+          }
+        ]
+      },
+      {
+        "id": "skills",
+        "label": "Plugins - Skills",
+        "items": [
+          {
+            "id": "skills",
+            "label": "Skills and toolsets",
+            "kind": "prompt",
+            "prompt": "List the skills and toolsets you can use right now, one line each."
+          },
+          {
+            "id": "memory",
+            "label": "Memory",
+            "kind": "prompt",
+            "prompt": "What do you remember about me and my current work? Read your memory first."
+          }
+        ]
+      },
+      {
+        "id": "session",
+        "label": "Session",
+        "items": [
+          {
+            "id": "export",
+            "label": "Export as Markdown",
+            "kind": "export"
+          },
+          {
+            "id": "retry",
+            "label": "Retry last message",
+            "kind": "retry"
+          },
+          {
+            "id": "undo",
+            "label": "Undo last exchange",
+            "kind": "undo"
+          }
+        ]
+      },
+      {
+        "id": "persona",
+        "label": "System prompt",
+        "items": [
+          {
+            "id": "system",
+            "label": "System prompt in force",
+            "kind": "system"
+          }
+        ]
+      },
+      {
+        "id": "help",
+        "label": "Help",
+        "items": [
+          {
+            "id": "shortcuts",
+            "label": "Keyboard shortcuts",
+            "kind": "info",
+            "text": "Enter sends on a hardware keyboard; Shift+Enter adds a line. The chevron at the end of the bar collapses it."
+          },
+          {
+            "id": "about",
+            "label": "About",
+            "kind": "info",
+            "text": "The fleet's one AI chat (libs:ai), Cloud Code's design. Task, agent, model, effort, permission mode and MCP servers are sent with every request; nothing here holds a token."
+          }
+        ]
+      }
+    ]
+  }
+}

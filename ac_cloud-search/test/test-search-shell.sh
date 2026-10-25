@@ -52,7 +52,7 @@
 #       page); AssistantPage draws it through libs:ai's AiChatPage (#823, shared with
 #       Cloud Browser, Cloud Drive and Cloud Tools Small LLMs) with every declared engine, each filled by
 #       Templates.fill and opened through SearchAi's opener = Browser.open; AiChatPage itself draws the engine boxes (Welcome, a
-#       box per engine) and the chat (Conversation + ChatBar); and SearchShellTest keeps the UI test
+#       box per engine) and the chat (Conversation + Composer); and SearchShellTest keeps the UI test
 #       that asserts both parts inside that one page.
 #   S13 (#903) Things is coarse, once, dense and honest: the manifest holds ACCESS_COARSE_LOCATION and
 #       neither the fine nor the background permission; ThingsPage asks for it once (the asked flag is
@@ -422,7 +422,7 @@ if "AiChatPage(" not in page:
     bad.append("S12 AssistantPage does not draw libs:ai's AiChatPage")
 if not re.search(r"engines = state\.cfg\.engines\.map", page) or "Templates.fill(" not in page:
     bad.append("S12 AssistantPage does not hand the page every declared engine, filled by Templates.fill")
-for call in ("Welcome(", "Conversation(", "ChatBar("):
+for call in ("Welcome(", "Conversation(", "Composer("):
     if call not in shared:
         bad.append("S12 AiChatPage does not draw %s) — both halves of the Search tab live in the one page" % call[:-1])
 if not re.search(r"engines\.forEachIndexed", welcome) or "host::openUrl" not in welcome:
@@ -556,7 +556,7 @@ mutate monochrome-dropped app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.x
 mutate search-split build.json 's.replace("\"subpages\": [\n          \"assistant\"\n        ]", "\"subpages\": [\n          \"assistant\",\n          \"listing\"\n        ]")' "S12 vertical search declares subpages"
 mutate assistant-twice build.json 's.replace("\"subpages\": [\n          \"listing\"\n        ],\n        \"sources\": [\n          \"open-prices\"", "\"subpages\": [\n          \"assistant\"\n        ],\n        \"sources\": [\n          \"open-prices\"")' "S12 2 verticals hold the assistant subpage"
 SP=ai/src/main/kotlin/com/diegonmarcos/superapp/ai
-mutate chat-moved-out "$SP/AiPage.kt" 's.replace("        ChatBar(\n            chat.draft,", "        NoBar(\n            chat.draft,")' "S12 AiChatPage does not draw ChatBar"
+mutate chat-moved-out "$SP/AiPage.kt" 's.replace("        Composer(\n            chat, theme", "        NoBar(\n            chat, theme")' "S12 AiChatPage does not draw Composer"
 mutate engines-moved-out "$SP/AiPage.kt" 's.replace("if (chat.session.messages.isEmpty() && !chat.sending) Welcome(", "if (chat.session.messages.isEmpty() && !chat.sending) Unit; if (false) Wx(")' "S12 AiChatPage does not draw Welcome"
 mutate engine-boxes-dropped "$SP/AiPage.kt" 's.replace("engines.forEachIndexed", "emptyList<AiEngine>().forEachIndexed")' "S12 Welcome does not draw a box per declared engine"
 mutate page-not-shared "$J/ui/AssistantPages.kt" 's.replace("    AiChatPage(\n", "    OwnPage(\n")' "S12 AssistantPage does not draw libs:ai"

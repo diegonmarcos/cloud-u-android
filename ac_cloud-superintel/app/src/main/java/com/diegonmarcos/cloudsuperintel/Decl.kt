@@ -5,9 +5,9 @@ import com.diegonmarcos.superapp.bottomnav.NavDecl
 /**
  * The navigation declaration app/build.gradle bakes from build.json::ui (bottom_nav, sections, default_section),
  * decoded once through libs:bottomnav's NavDecl. Kotlin names no section label: the bottom nav, the second
- * row and the title dropdown all come from it. The SI section's pages are the personas of assets/si/personas.json and
- * the News section's pages are the topics of assets/si/news.json: their ids are data, declared in build.json::ui
- * too (test-superintel-app.sh holds the three in step), so Kotlin names none of them.
+ * row and the title dropdown all come from it. The SI section's page and the CGCs section's pages (six groups, two
+ * rows) are the personas of assets/si/personas.json: their ids are data, declared in build.json::ui too
+ * (test-superintel-app.sh and PersonasTest hold the two in step), so Kotlin names none of them.
  */
 object Decl {
     val nav: NavDecl by lazy {
@@ -17,7 +17,7 @@ object Decl {
     /** The ids Kotlin dispatches on; test-superintel-app.sh diffs them against build.json::ui in both directions. */
     const val SECTION_NOTEBOOK = "notebook"
     const val SECTION_SI = "si"
-    const val SECTION_NEWS = "news"
+    const val SECTION_CGCS = "cgcs"
     const val SECTION_SETTINGS = "settings"
     const val PAGE_NB_NOTEBOOKS = "nb_notebooks"
     const val PAGE_NB_SOURCES = "nb_sources"

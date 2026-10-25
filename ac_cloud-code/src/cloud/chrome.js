@@ -72,9 +72,10 @@ export function option(label, { checked, disabled, sub, run, iconName } = {}) {
 }
 
 /** A sheet row with a switch that does NOT close the sheet (MCP servers, More toggles). */
-export function toggleRow(label, on, onChange, sub) {
+export function toggleRow(label, on, onChange, sub, disabled = false) {
 	const input = el("input", { type: "checkbox" });
 	input.checked = !!on;
+	input.disabled = !!disabled;
 	input.addEventListener("change", () => onChange(input.checked));
 	return el("label", { className: "cloud-sheet-row cloud-toggle" }, el("span", { className: "cloud-sheet-label" }, label),
 		sub ? el("span", { className: "cloud-muted" }, sub) : null, input);

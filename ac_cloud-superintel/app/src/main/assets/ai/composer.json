@@ -1,0 +1,16 @@
+{
+  "_doc": "Which of the shared AI composer's controls Cloud SuperIntel enables (libs:ai assets/ai/ai-design.json defines them and their order: Task, Agent, Model, Mode, MCPs). The persona chats (SI and the CGC experts) open on their declared agent, model and MCPs (assets/si/personas.json); the user can change them here. PersonasTest holds this file to the design.",
+  "app": "cloud-superintel",
+  "controls": [
+    "plus",
+    "task",
+    "agent",
+    "model",
+    "effort",
+    "mode",
+    "mcp",
+    "more"
+  ],
+  "default_task": "",
+  "task_required": false
+}

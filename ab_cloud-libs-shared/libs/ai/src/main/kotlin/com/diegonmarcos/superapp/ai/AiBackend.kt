@@ -66,6 +66,10 @@ interface AiBackend {
     fun models(): List<AiModel>
     /** One request. [onDelta] gets the answer's pieces when the backend streams. Blocking. */
     fun chat(req: AiRequest, onDelta: (String) -> Unit): AiReply
+    /** The gateway's live optimisation plugins (`/health.plugins`: name to on/off); empty when it lists none. Blocking. */
+    fun plugins(): Map<String, Boolean> = emptyMap()
+    /** The MCP servers this backend can expose to a session (the gateway's); empty when it has none. Blocking. */
+    fun mcpServers(): List<AiMcpServer> = emptyList()
 }
 
 /** The OpenAI-style chat-completions backends share everything but the address, the headers and the body's extras. */
@@ -95,7 +99,7 @@ abstract class AiChatBackend(protected val cfg: AiConfig, protected val http: Ai
                 }
                 if (r.code !in 200..299) AiProtocol.parseWhole(r.code, r.body)
                 else if (sse.error != null) AiReply(null, error = sse.error)
-                else AiReply(text.toString(), sse.citations.toList())
+                else AiReply(text.toString(), sse.citations.toList(), usage = sse.usage)
             }
         } catch (e: Exception) {
             AiReply(null, error = e.message ?: e.javaClass.simpleName, transport = true)
@@ -114,6 +118,7 @@ class AiGatewayBackend(cfg: AiConfig, private val baseUrl: String, http: AiHttp 
     override fun headers(req: AiRequest): Map<String, String> {
         val h = linkedMapOf("Content-Type" to "application/json")
         req.agent?.let { h[cfg.modeHeader] = it.mode }
+        h.putAll(req.headers)
         return h
     }
     override fun model(req: AiRequest): String? = req.model?.let { m -> req.agent?.modelFor?.invoke(m) ?: if (req.agent == null) m else null }
@@ -121,6 +126,16 @@ class AiGatewayBackend(cfg: AiConfig, private val baseUrl: String, http: AiHttp 
     override fun models(): List<AiModel> = runCatching {
         val r = http.get(baseUrl.trimEnd('/') + cfg.gatewayModelsPath, emptyMap(), cfg.timeoutMs)
         if (r.code !in 200..299) emptyList() else AiProtocol.parseModels(r.body, cfg.nativeWebParam)
+    }.getOrDefault(emptyList())
+
+    override fun plugins(): Map<String, Boolean> = runCatching {
+        val r = http.get(baseUrl.trimEnd('/') + cfg.gatewayHealthPath, emptyMap(), cfg.timeoutMs)
+        if (r.code !in 200..299) emptyMap() else AiProtocol.parsePlugins(r.body)
+    }.getOrDefault(emptyMap())
+
+    override fun mcpServers(): List<AiMcpServer> = runCatching {
+        val r = http.get(baseUrl.trimEnd('/') + cfg.gatewayMcpPath, emptyMap(), cfg.timeoutMs)
+        if (r.code !in 200..299) emptyList() else AiProtocol.parseMcp(r.body)
     }.getOrDefault(emptyList())
 }
 

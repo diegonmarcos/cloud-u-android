@@ -31,7 +31,6 @@ import com.diegonmarcos.cloudsuperintel.BuildConfig
 import com.diegonmarcos.cloudsuperintel.Decl
 import com.diegonmarcos.cloudsuperintel.R
 import com.diegonmarcos.cloudsuperintel.SiAi
-import com.diegonmarcos.cloudsuperintel.SiNews
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.diegonmarcos.superapp.ai.AiChatPage
@@ -46,7 +45,7 @@ import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
-import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.navbartop2.NavSectionLayout
 import com.diegonmarcos.superapp.themebg.themeBackground
 
 /** The test tags the shell is driven by. */
@@ -81,7 +80,6 @@ fun SiShell() {
     val personas = remember { SiAi.personas(ctx) }
     val siDefault = remember { SiAi.defaultId(ctx) }
     val notebooks = remember { NotebookModel(ctx) }
-    val newsTopics = remember { SiNews.config(ctx).topics }
     val nav = Decl.nav
     var section by rememberSaveable { mutableStateOf(nav.default()?.id ?: Decl.SECTION_SI) }
     var page by rememberSaveable { mutableStateOf<String?>(null) }
@@ -89,7 +87,7 @@ fun SiShell() {
     val pageId = page?.takeIf { p -> sec?.pages?.any { it.id == p } == true } ?: sec?.pages?.firstOrNull()?.id
     val theme = siAiTheme()
     // The chat the drawer, the Models page and the sessions follow: the open persona's, else the router's.
-    val persona = personas.firstOrNull { it.id == pageId && sec?.id == Decl.SECTION_SI }
+    val persona = personas.firstOrNull { it.id == pageId && (sec?.id == Decl.SECTION_SI || sec?.id == Decl.SECTION_CGCS) }
     val chat = remember(persona?.id) { SiAi.chat(ctx, persona?.id) }
     val entries = nav.islandEntries()
     fun open(sectionId: String, pageId: String?) { section = sectionId; page = pageId }
@@ -111,33 +109,31 @@ fun SiShell() {
                 modifier = Modifier.testTag(SiTags.SHELL),
             ) {
                 // The hamburger's left drawer: new chat, then the sessions (open, rename, delete).
-                TopBarDrawer { close -> AiSessionsPanel(chat, theme, onPicked = { open(Decl.SECTION_SI, persona?.id ?: siDefault); close() }) }
-                Column(Modifier.fillMaxSize()) {
-                    if (sec != null) NavBarTopSecondRow(
-                        pages = sec.pages, selectedId = pageId, onSelect = { page = it.id },
-                        modifier = Modifier.fillMaxWidth().testTag(SiTags.SECOND_ROW), underTopChrome = false,
-                    )
-                    Box(Modifier.weight(1f).fillMaxWidth()) {
+                TopBarDrawer { close -> AiSessionsPanel(chat, theme, onPicked = { if (persona == null) open(Decl.SECTION_SI, siDefault); close() }) }
+                val pageBody: @Composable () -> Unit = {
+                    Box(Modifier.fillMaxSize()) {
                         when (sec?.id) {
                             Decl.SECTION_NOTEBOOK -> NotebookPage(notebooks, pageId.orEmpty(), theme, { page = it }, NotebookIds(Decl.PAGE_NB_NOTEBOOKS, Decl.PAGE_NB_SOURCES, Decl.PAGE_NB_CHAT, Decl.PAGE_NB_STUDIO))
-                            Decl.SECTION_SI -> persona?.let { p ->
+                            // SI (the router) and every CGC expert are the same shared chat page, each over its own persona.
+                            Decl.SECTION_SI, Decl.SECTION_CGCS -> persona?.let { p ->
                                 LaunchedEffect(p.id) { withContext(Dispatchers.IO) { SiAi.tune(ctx, p, chat) } }
                                 AiChatPage(
                                     chat, theme.copy(strings = theme.strings.copy(hello = p.label, helloSub = p.role)),
                                     Modifier.imePadding().testTag(SiTags.CHAT), suggestions = p.suggestions,
                                 )
                             }
-                            Decl.SECTION_NEWS -> newsTopics.firstOrNull { it.id == pageId }?.let { t ->
-                                NewsTopicPage(t) { q -> SiAi.chat(ctx).draft = q; open(Decl.SECTION_SI, siDefault) }
-                            }
                             else -> when (pageId) {
                                 Decl.PAGE_MODELS -> TextPage(R.string.models_title, stringResource(R.string.models_body)) { AiSettingsPickers(chat, theme) }
-                                Decl.PAGE_BACKEND -> TextPage(R.string.backend_title, stringResource(R.string.backend_body) + "\n\n" + stringResource(R.string.backend_gateway, BuildConfig.AI_GATEWAY_URL) + "\n" + stringResource(R.string.backend_news, BuildConfig.NEWS_MESH_URL))
+                                Decl.PAGE_BACKEND -> TextPage(R.string.backend_title, stringResource(R.string.backend_body) + "\n\n" + stringResource(R.string.backend_gateway, BuildConfig.AI_GATEWAY_URL))
                                 Decl.PAGE_ABOUT -> TextPage(R.string.about_title, stringResource(R.string.about_body, BuildConfig.VERSION_NAME, BuildConfig.GIT_SHORT_SHA))
                             }
                         }
                     }
                 }
+                // The section's child pages in the mode it declares or the user chose in Configs (one row, two rows, side menu).
+                if (sec != null && sec.pages.isNotEmpty()) {
+                    NavSectionLayout(sec, pageId, onSelect = { page = it.id }, modifier = Modifier.fillMaxSize().testTag(SiTags.SECOND_ROW), content = pageBody)
+                } else pageBody()
             }
         }
     }

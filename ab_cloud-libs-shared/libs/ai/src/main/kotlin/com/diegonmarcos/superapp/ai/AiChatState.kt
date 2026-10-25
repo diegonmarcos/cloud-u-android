@@ -28,8 +28,82 @@ class AiChatState(private val host: AiHost) {
 
     private var decision: CompletableFuture<Boolean>? = null
 
-    fun chooseAgent(id: String) { agent = id; host.pickAgent(id) }
-    fun pick(id: String) { model = id; host.model = id }
+    /** The composer's Task control: the shared mapping (or the app's own); [task] is the selected one's id ("" = none). */
+    var tasks by mutableStateOf<List<AiTask>>(emptyList())
+    var task by mutableStateOf("")
+        private set
+    /** The composer's Permission Mode (a design mode id; "" until the page applies the design's default) and the MCPs control's servers and selection. */
+    var mode by mutableStateOf("")
+        private set
+    var mcpServers by mutableStateOf<List<AiMcpServer>>(emptyList())
+    var mcpOn by mutableStateOf<Set<String>>(emptySet())
+        private set
+    /** Called when the user picks a task, so an app that keeps its own task state (Cloud Tools) follows. */
+    var onTask: (String) -> Unit = {}
+
+    private var freeAgent = agent
+    private var freeModel = model
+
+    /** True while a task is selected: Agent and Model are set from the mapping and cannot be changed (the composer greys them). */
+    val locked: Boolean get() = tasks.any { it.id == task }
+
+    /** The selected task, or null. */
+    val selectedTask: AiTask? get() = tasks.firstOrNull { it.id == task }
+
+    /**
+     * Selects a task ("" clears it): Agent and Model become the task's mapped ones and stay put until it is cleared,
+     * when the picks made before the task come back.
+     */
+    fun chooseTask(id: String) {
+        val t = tasks.firstOrNull { it.id == id }
+        if (t != null && !locked) { freeAgent = agent; freeModel = model }
+        if (t == null && locked) { agent = freeAgent; model = freeModel; host.pickAgent(agent); host.model = model }
+        task = t?.id.orEmpty()
+        if (t != null) { agent = t.agent; model = t.model; host.pickAgent(t.agent); host.model = t.model }
+        onTask(task)
+    }
+
+    /** The composer's Effort (an [AiEffort] id; "" until picked = the model's own). */
+    var effort by mutableStateOf("")
+        private set
+    fun chooseEffort(level: AiEffort) { effort = level.id; host.pickEffort(level.value) }
+
+    /** The More sheet's optimisation plugins the user switched (plugin id to on/off) and the request headers they send. */
+    var pluginChoice by mutableStateOf<Map<String, Boolean>>(emptyMap())
+        private set
+    private val pluginHeaders = LinkedHashMap<String, String>()
+    fun setPlugin(item: AiMoreItem, on: Boolean) {
+        pluginChoice = pluginChoice + (item.id to on)
+        pluginHeaders[item.header] = if (on) "on" else "off"
+        host.pickPlugins(LinkedHashMap(pluginHeaders))
+    }
+
+    /** Whether the composer's config bar is collapsed to its one compact chip (the page loads and saves it per app). */
+    var collapsed by mutableStateOf(false)
+
+    /** Drops the last exchange (the last user message and what followed it) from the open chat; returns that message's text, or null when there is none. */
+    fun undoLast(): String? {
+        if (sending) return null
+        val i = session.messages.indexOfLast { it.role == "user" }
+        if (i < 0) return null
+        val text = session.messages[i].content
+        session = session.copy(messages = session.messages.take(i))
+        error = null; citations = emptyList(); streaming = ""
+        return text
+    }
+
+    fun chooseMode(id: String) { mode = id; host.pickMode(id) }
+
+    fun toggleMcp(name: String) {
+        mcpOn = if (name in mcpOn) mcpOn - name else mcpOn + name
+        host.pickMcps(mcpOn)
+    }
+
+    /** Sets the MCP selection at once (a persona's preferred servers). */
+    fun chooseMcps(names: Set<String>) { mcpOn = names; host.pickMcps(names) }
+
+    fun chooseAgent(id: String) { if (locked) return; agent = id; host.pickAgent(id) }
+    fun pick(id: String) { if (locked) return; model = id; host.model = id }
     fun toggleWeb() { web = !web; host.web = web }
     fun fresh() { session = host.newSession(model, System.currentTimeMillis()); error = null; citations = emptyList(); streaming = "" }
     fun open(s: AiSession) { session = s; error = null; citations = emptyList(); streaming = ""; if (s.model.isNotBlank()) model = s.model }
@@ -108,6 +182,22 @@ object AiTags {
     const val MODEL = "ai_model"
     const val WEB = "ai_web_toggle"
     const val AGENT = "ai_agent"
+    const val MODEL_CATALOGUE = "ai_model_catalogue"
+    const val BAR_TOGGLE = "ai_bar_toggle"
+    const val BAR_COMPACT = "ai_bar_compact"
+    fun attach(id: String) = "ai_attach_$id"
+    fun effort(id: String) = "ai_effort_$id"
+    fun more(id: String) = "ai_more_$id"
+    fun morePlugin(id: String) = "ai_more_plugin_$id"
+    const val MORE_DIALOG = "ai_more_dialog"
+    /** The composer row's chips: `ai_ctl_task`, `ai_ctl_agent`, `ai_ctl_model`, `ai_ctl_mode`, `ai_ctl_mcp`. */
+    fun ctl(id: String) = when (id) { "agent" -> AGENT; "model" -> MODEL; else -> "ai_ctl_$id" }
+    fun task(id: String) = "ai_task_$id"
+    const val TASK_NONE = "ai_task_none"
+    fun modelTab(id: String) = "ai_model_tab_$id"
+    fun modelItem(id: String) = "ai_model_item_$id"
+    fun mode(id: String) = "ai_mode_$id"
+    fun mcp(name: String) = "ai_mcp_$name"
     const val SESSIONS = "ai_sessions"
     const val DRAWER = "ai_drawer"
     const val DRAWER_NEW = "ai_drawer_new"
