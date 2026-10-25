@@ -162,15 +162,15 @@ def screen_size():
 
 
 def pages_of(section):
-    """Every destination page of a declared section, depth-first: [(id, label, is_launch)]."""
+    """Every destination page of a declared section, depth-first: [(id, label, is_launch, ancestor ids)]."""
     out = []
 
-    def walk(pages):
+    def walk(pages, up):
         for p in pages or []:
-            out.append((p["id"], p.get("label", p["id"]), bool(p.get("action"))))
-            walk(p.get("pages"))
+            out.append((p["id"], p.get("label", p["id"]), bool(p.get("action")), up))
+            walk(p.get("pages"), up + [p["id"]])
 
-    walk(section.get("pages"))
+    walk(section.get("pages"), [])
     return out
 
 
@@ -260,24 +260,50 @@ class Walk:
         nodes = dump()
         return nodes is not None and not (find(nodes, CRUMB0) or findall(nodes, ENTRY))
 
-    def goto(self, pid, label):
-        """Pick page [pid] in the dropdown (scrolling the dropdown when it is long)."""
-        nodes = self.open_dropdown()
+    def pick(self, pid):
+        """Tap [pid]'s entry in the open dropdown, scrolling the dropdown; None when it is not listed (the dropdown lists the
+        siblings and children of the page shown, so a page elsewhere in the tree is reached through its ancestors)."""
+        nodes = dump()
         if nodes is None:
-            return "the title dropdown did not open"
-        for _ in range(10):
+            return False
+        for _ in range(6):
             e = find(nodes, ENTRY + pid)
             if e is not None:
                 tap(e)
                 settle(1.6)
-                return None
-            crumb = find(nodes, CRUMB0)
-            cx = crumb.cx if crumb else self.w // 2
-            swipe(cx, int(self.h * 0.65), int(self.h * 0.35), 300)
+                return True
+            entries = findall(nodes, ENTRY)
+            if not entries:
+                break
+            top, bottom = min(n.t for n in entries), max(n.b for n in entries)
+            swipe(entries[0].cx, bottom - 20, max(top + 20, bottom - 500), 300)
             settle(0.6)
-            nodes = dump() or nodes
-        shell("input keyevent KEYCODE_BACK")
-        return "the dropdown lists no entry for page %s" % pid
+            again = dump() or nodes
+            if sorted(n.rid for n in findall(again, ENTRY)) == sorted(n.rid for n in entries):
+                break  # the list did not move: that is all of it
+            nodes = again
+        return False
+
+    def goto(self, pid, label, up=()):
+        """Pick page [pid] in the dropdown; when it is not listed from here, climb to the section through the path crumb and descend through its ancestors."""
+        if self.open_dropdown() is None:
+            return "the title dropdown did not open"
+        if self.pick(pid):
+            return None
+        nodes = dump() or []
+        crumb = find(nodes, "navtop1_crumb_1")
+        if crumb is None:
+            shell("input keyevent KEYCODE_BACK")
+            return "the dropdown lists no entry for page %s" % pid
+        tap(crumb)  # the section: its children are listed next
+        settle(1.6)
+        for step in list(up) + [pid]:
+            if self.open_dropdown() is None:
+                return "the title dropdown did not open (descending to %s)" % pid
+            if not self.pick(step):
+                shell("input keyevent KEYCODE_BACK")
+                return "the dropdown lists no entry for page %s (via %s)" % (pid, step)
+        return None
 
     # ── chrome state ─────────────────────────────────────────────────────────
     def chrome(self, nodes, selected=None):
@@ -410,13 +436,13 @@ class Walk:
         if find(nodes, TITLE) is None:
             self.relaunch_to(section)
 
-    def run_page(self, section, pid, label, via_dropdown):
+    def run_page(self, section, pid, label, via_dropdown, up=()):
         name = "%s/%s" % (section, pid)
         t0 = time.time()
         shell("logcat -c")
         self.hide_ime()
         self.ensure_chrome(section)
-        err = self.goto(pid, label) if via_dropdown else None
+        err = self.goto(pid, label, up) if via_dropdown else None
         checks, fails = ({}, [err]) if err else self.check_page(section, label, via_dropdown)
         died = not self.alive()
         crashed, log = self.crashed()
@@ -464,14 +490,14 @@ class Walk:
         pages = [p for p in pages_of(sec)]
         # the section itself (its first page is what it opens on)
         self.run_page(sid, sid, sec.get("label", sid), False)
-        for pid, label, launch in pages:
+        for pid, label, launch, up in pages:
             if launch:
                 self.results.append({"section": sid, "page": pid, "label": label, "status": "SKIP", "checks": {"note": "launch hand-off to another app, not a page"},
                                      "failures": [], "seconds": 0})
                 continue
             if pid == sid:
                 continue
-            self.run_page(sid, pid, label, True)
+            self.run_page(sid, pid, label, True, up)
 
     def run(self):
         if self.launch() is None:

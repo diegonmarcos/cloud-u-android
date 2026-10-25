@@ -241,8 +241,8 @@
       "shell_testers": 0,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
-      "unit_task_declared": false,
-      "unit_test_sources": 21,
+      "unit_task_declared": true,
+      "unit_test_sources": 25,
       "workflow": "ship-cloud-gallery.yml"
     },
     "ac_cloud-keyboard": {
@@ -561,6 +561,6 @@
       "workflow": "ship-lib-calc-native.yml"
     }
   },
-  "with_executed_tests": 31,
-  "with_no_tests_at_all": 31
+  "with_executed_tests": 32,
+  "with_no_tests_at_all": 30
 }
