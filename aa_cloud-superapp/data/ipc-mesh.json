@@ -1303,6 +1303,7 @@
      "callers": [
       "aa_cloud-superapp",
       "browser",
+      "drive",
       "keyboard",
       "mail",
       "search",
