@@ -8,7 +8,6 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import com.diegonmarcos.cloudsearch.core.Http
 import com.diegonmarcos.cloudsearch.data.FleetBearer
@@ -132,8 +131,9 @@ class ResearchCgcShellTest {
         waitText(ResearchTags.STATUS, "2 headlines via mesh")
         assertEquals("http://news-gdelt.mesh.diegonmarcos.com:3019/articles?q=technology%20sourcelang%3Aenglish&limit=40", http.gets.first { "/articles" in it.first }.first)
         assertTrue("the mesh is not sent the bearer", http.gets.filter { "/articles" in it.first }.all { !it.second.containsKey("Authorization") })
-        compose.onNodeWithTag(ResearchTags.topic("finance")).performScrollTo().performClick()
-        compose.waitUntil(60_000) { http.gets.any { it.first.contains("finance%20markets") } }
+        compose.onNodeWithTag(ResearchTags.topic("ai")).performClick()
+        compose.waitUntil(60_000) { synchronized(http.gets) { http.gets.any { it.first.contains("q=artificial%20intelligence%20sourcelang%3Aenglish") } } }
+        assertEquals("ai", state.newsTopic)
     }
 
     @Test fun cloudCgcSemanticShowsRepoPathLineAndOpens() {
