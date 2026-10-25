@@ -18,7 +18,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -99,7 +98,8 @@ class DriveChromeCollapseTest {
     }
 
     private fun h(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().firstOrNull()?.boundsInRoot?.height ?: 0f
-    private fun shown(tag: String) = runCatching { compose.onNodeWithTag(tag).assertIsDisplayed() }.isSuccess
+    /** A bottom label is in the (unmerged) tree only while it is shown; collapsing removes it. */
+    private fun shown(tag: String) = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
     private fun check(tab: String, strip: Boolean) {
         compose.setContent { DriveTheme { DriveShell(select = tab) { id, _ -> Page(id) } } }
