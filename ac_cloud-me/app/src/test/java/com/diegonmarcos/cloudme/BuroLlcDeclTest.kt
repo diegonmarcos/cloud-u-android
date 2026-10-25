@@ -35,13 +35,13 @@ class BuroLlcDeclTest {
     }
 
     @Test fun `Buro follows the hierarchy IDs and DD, Docs, Financial Reports, Calendar`() {
-        assertEquals("many_rows", sections.getValue("buro").getString("nav_mode"))
+        assertEquals("horizontal_two_rows", sections.getValue("buro").getString("nav_mode"))
         assertEquals(mapOf("ids" to listOf("ids", "dd", "wallet", "account"), "docs" to listOf("assets", "services", "liabilities"),
             "reports" to listOf("budgeting", "cashflow"), "calendar" to listOf("calendar")), groups("buro"))
     }
 
     @Test fun `LLC follows the hierarchy Employed, Side hustles, Assets and Portfolio, Calendar`() {
-        assertEquals("many_rows", sections.getValue("llc").getString("nav_mode"))
+        assertEquals("horizontal_two_rows", sections.getValue("llc").getString("nav_mode"))
         assertEquals(mapOf("income" to listOf("employed", "side-hustles"), "manage" to listOf("assets", "portfolio"), "calendar" to listOf("calendar")), groups("llc"))
     }
 

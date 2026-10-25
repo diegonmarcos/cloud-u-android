@@ -223,8 +223,8 @@ want_groups = {
 }
 for sid, want in want_groups.items():
     sec = secs.get(sid, {})
-    if sec.get("nav_mode") != "many_rows":
-        bad("pages", f"{sid} is not on the many_rows nav mode")
+    if sec.get("nav_mode") not in ("horizontal_two_rows", "many_rows"):
+        bad("pages", f"{sid} is not on the horizontal_two_rows nav mode (alias many_rows)")
     got = {g["id"]: g["pages"] for g in sec.get("groups", [])}
     if got != want:
         bad("pages", f"{sid} groups are {got}, wanted {want}")

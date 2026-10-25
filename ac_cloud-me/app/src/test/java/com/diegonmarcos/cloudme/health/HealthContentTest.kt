@@ -40,7 +40,7 @@ class HealthContentTest {
 
     @Test fun `Health declares the Plan and Trackers groups on the many rows second row, every page once`() {
         val s = healthSection()
-        assertEquals("many_rows", s.getString("nav_mode"))
+        assertEquals("horizontal_two_rows", s.getString("nav_mode"))
         val flat = s.getJSONArray("pages").let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("id") } }
         val groups = groupPages()
         assertEquals(listOf("plan", "trackers"), groups.keys.toList())
