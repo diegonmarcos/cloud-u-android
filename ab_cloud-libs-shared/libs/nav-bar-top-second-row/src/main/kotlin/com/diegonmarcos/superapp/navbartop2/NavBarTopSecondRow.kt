@@ -110,6 +110,25 @@ public class SubPageRequests {
         private set
     public fun request(pageId: String) { pending = pageId }
     public fun consume() { pending = null }
+
+    // The page each strip on screen now shows: the first row's title path reads it, so the path follows a pick from a strip or the
+    // dropdown without the app hoisting its sub-page state.
+    private val shownBy = androidx.compose.runtime.mutableStateMapOf<Any, String>()
+    public fun reportShown(strip: Any, pageId: String?) { if (pageId == null) shownBy.remove(strip) else shownBy[strip] = pageId }
+    public fun clearShown(strip: Any) { shownBy.remove(strip) }
+    /** The ids the strips on screen show (outermost and inner strips alike). */
+    public fun shownIds(): List<String> = shownBy.values.toList()
+}
+
+/** A strip tells the enclosing [SubPageRequests] which page it shows, for as long as it is composed. */
+@Composable
+internal fun ReportShownPage(selectedId: String?) {
+    val requests = LocalSubPageRequests.current ?: return
+    val key = remember { Any() }
+    androidx.compose.runtime.DisposableEffect(requests, key, selectedId) {
+        requests.reportShown(key, selectedId)
+        onDispose { requests.clearShown(key) }
+    }
 }
 
 /** The enclosing [SubPageRequests]; null outside libs:nav-bar-top-first-row's scaffold (a strip then ignores requests). */
@@ -146,6 +165,7 @@ public fun NavBarTopSecondRow(
     hidden: Boolean = LocalNavChromeCollapse.current?.hidden ?: false,
 ) {
     if (pages.isEmpty()) return
+    ReportShownPage(selectedId)
     val requests = LocalSubPageRequests.current
     val pending = requests?.pending
     LaunchedEffect(pending, pages, selectedId) {

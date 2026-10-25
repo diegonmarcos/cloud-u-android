@@ -17,6 +17,12 @@ public val LocalNavChromeCollapse: ProvidableCompositionLocal<BottomNavCollapse?
     staticCompositionLocalOf { null }
 
 /**
+ * The View-tag key the chrome's scroll connection is published under on the window's root View. The SAME literal is in
+ * libs:ui-kit's KitInterop.kt (ChromeScrollGuardTest holds both equal): an application-specific id (package byte >= 2).
+ */
+public const val CHROME_SINK_TAG: Int = 0x7e001157
+
+/**
  * Owns the chrome's scroll connection unless an outer host already does: [content] gets it, and everything inside (the
  * first row, the second row, the bottom nav, and any scrollable page) is wired to the same one.
  */
@@ -25,6 +31,14 @@ public fun NavChromeScroll(modifier: Modifier = Modifier, content: @Composable (
     val inherited = LocalNavChromeCollapse.current
     if (inherited != null) { content(inherited); return }
     val own = rememberBottomNavCollapse()
+    // A Fragment's ComposeView is its own composition and the View-parent nested-scroll hand-off did not reach this one on the
+    // emulator, so the connection is ALSO published on the window's root View under CHROME_SINK_TAG; ui-kit's KitPage (which
+    // cannot depend on this lib) reads it from there and reports its scrolls straight to it.
+    val root = androidx.compose.ui.platform.LocalView.current.rootView
+    androidx.compose.runtime.DisposableEffect(root, own) {
+        root.setTag(CHROME_SINK_TAG, own)
+        onDispose { if (root.getTag(CHROME_SINK_TAG) === own) root.setTag(CHROME_SINK_TAG, null) }
+    }
     CompositionLocalProvider(LocalNavChromeCollapse provides own) {
         Box(modifier.fillMaxSize().nestedScroll(own)) { content(own) }
     }

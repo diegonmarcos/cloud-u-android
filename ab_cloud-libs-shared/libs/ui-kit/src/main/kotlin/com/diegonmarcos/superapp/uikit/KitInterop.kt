@@ -71,7 +71,25 @@ fun KitPage(content: @Composable () -> Unit) {
     // whose nested scrolls stop at the View boundary. The interop connection hands them to the View parents, and the hosting
     // AndroidView/AndroidFragment (a NestedScrollingParent) passes them to the host composition's chrome collapse.
     val sink = KitScroll.connection ?: androidx.compose.ui.platform.rememberNestedScrollInteropConnection()
+    // The View-parent hand-off above did not reach the chrome on the emulator for fragment pages (the walk's "content scrolled but the
+    // chrome did not collapse"), so the page ALSO reports straight to the connection the host scaffold published on the root View.
+    val view = androidx.compose.ui.platform.LocalView.current
+    val direct = androidx.compose.runtime.remember(view) { ChromeTagSink(view) }
     androidx.compose.foundation.layout.Box(
-        androidx.compose.ui.Modifier.nestedScroll(sink),
+        androidx.compose.ui.Modifier.nestedScroll(sink).nestedScroll(direct),
     ) { content() }
+}
+
+/** libs:bottomnav's CHROME_SINK_TAG (kept equal by ChromeScrollGuardTest): the key of the chrome connection on the root View. */
+private const val CHROME_SINK_TAG: Int = 0x7e001157
+
+/** Forwards to the chrome's scroll connection when the host published one, looked up on every event (the page can be built before the host). */
+private class ChromeTagSink(private val view: android.view.View) : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+    private fun target() = view.rootView.getTag(CHROME_SINK_TAG) as? androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+
+    override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource) =
+        target()?.onPreScroll(available, source) ?: androidx.compose.ui.geometry.Offset.Zero
+
+    override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity) =
+        target()?.onPreFling(available) ?: androidx.compose.ui.unit.Velocity.Zero
 }

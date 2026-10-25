@@ -102,6 +102,7 @@ public fun NavBarTopSecondRows(
     }
     val groups = section.rowGroups()
     if (groups.isEmpty()) return
+    ReportShownPage(selectedId)
     // A page asked for from the first row's dropdown: select it when one of the groups holds it.
     val requests = LocalSubPageRequests.current
     val pending = requests?.pending

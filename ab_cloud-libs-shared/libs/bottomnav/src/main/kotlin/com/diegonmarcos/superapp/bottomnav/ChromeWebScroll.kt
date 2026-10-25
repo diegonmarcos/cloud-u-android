@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.bottomnav
 
 import android.os.Handler
 import android.os.Looper
+import android.view.MotionEvent
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -23,17 +24,38 @@ public object ChromeWebScroll {
             "window.addEventListener('scroll',function(ev){var t=ev.target,y=(t===document||t===document.documentElement)?window.scrollY:t.scrollTop;" +
             "var d=y-(t.__navLast||0);t.__navLast=y;if(d!==0&&window.NavChrome)window.NavChrome.onScroll(d);},true);})();"
 
-    private class Feed : View.OnScrollChangeListener {
+    private class Feed : View.OnScrollChangeListener, View.OnTouchListener {
         @Volatile var target: BottomNavCollapse? = null
         private val main = Handler(Looper.getMainLooper())
+        /** The finger is on the page: a downward read is a DRAG (everything hidden), else a settle (shrunk). */
+        private var fingerDown = false
+        private var lastY = 0f
+
+        private fun scrolled(delta: Float) {
+            val t = target ?: return
+            if (fingerDown) t.onDragDelta(delta) else t.onScrollDelta(delta)
+        }
 
         @JavascriptInterface
-        fun onScroll(delta: Double) { main.post { target?.onScrollDelta(delta.toFloat()) } }
+        fun onScroll(delta: Double) { main.post { scrolled(delta.toFloat()) } }
 
         override fun onScrollChange(v: View, x: Int, y: Int, oldX: Int, oldY: Int) {
-            if (y != oldY) target?.onScrollDelta((y - oldY).toFloat())
+            if (y != oldY) scrolled((y - oldY).toFloat())
+        }
+
+        override fun onTouch(v: View, e: MotionEvent): Boolean {
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> { fingerDown = true; lastY = e.y }
+                // A finger dragging DOWN reads UP the page: the chrome comes back even when the page cannot scroll further
+                // (it sits at its top, or the scroller is an inner container the bridge cannot see).
+                MotionEvent.ACTION_MOVE -> { if (e.y - lastY > SLOP) target?.onScrollDelta(-1f); lastY = e.y }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { fingerDown = false; target?.onRelease() }
+            }
+            return false
         }
     }
+
+    private const val SLOP = 12f
 
     private val feeds: MutableMap<WebView, Feed> = Collections.synchronizedMap(WeakHashMap())
 
@@ -42,6 +64,7 @@ public object ChromeWebScroll {
         val feed = feeds.getOrPut(webView) {
             Feed().also {
                 webView.setOnScrollChangeListener(it)
+                webView.setOnTouchListener(it)
                 webView.addJavascriptInterface(it, BRIDGE)
             }
         }

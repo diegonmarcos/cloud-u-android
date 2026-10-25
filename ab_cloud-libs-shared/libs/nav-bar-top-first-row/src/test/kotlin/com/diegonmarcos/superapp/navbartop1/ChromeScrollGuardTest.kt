@@ -91,6 +91,12 @@ class ChromeScrollGuardTest {
             found ?: throw AssertionError("KitInterop.kt not found")
         }.readText()
         assertTrue("KitPage no longer wires fragment pages to the View parents' nested scroll", "rememberNestedScrollInteropConnection()" in kit && "fun KitPage" in kit)
+        assertTrue("KitPage no longer reports straight to the chrome connection published on the root View", "ChromeTagSink" in kit && "rootView.getTag(CHROME_SINK_TAG)" in kit)
+        val tagRe = Regex("CHROME_SINK_TAG: Int = (0x[0-9a-fA-F]+)")
+        var libDir: File? = File("").absoluteFile
+        var scrollSrc: File? = null
+        while (libDir != null && scrollSrc == null) { File(libDir, "ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/NavChromeScroll.kt").takeIf { it.isFile }?.let { scrollSrc = it }; libDir = libDir.parentFile }
+        assertEquals("the chrome sink tag differs between libs:bottomnav and libs:ui-kit", tagRe.find((scrollSrc ?: throw AssertionError("NavChromeScroll.kt not found")).readText())?.groupValues?.get(1), tagRe.find(kit)?.groupValues?.get(1))
         assertTrue("KitPage must wrap every page, with or without a host sink", !Regex("""sink == null\) content\(\)""").containsMatchIn(kit))
         // And the bridge into the host composition must stay: the hosting AndroidFragment/FragmentContainerView sits under the scaffold.
         for (app in listOf("ac_cloud-store", "ac_cloud-nav", "ac_cloud-c3")) {

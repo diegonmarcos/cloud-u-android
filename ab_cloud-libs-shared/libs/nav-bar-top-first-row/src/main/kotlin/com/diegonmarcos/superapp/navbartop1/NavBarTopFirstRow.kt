@@ -156,6 +156,25 @@ public fun titleHierarchy(section: NavSection, currentPageId: String?): List<Hie
 }
 
 /**
+ * [hierarchy] with the selection moved to the page a strip on screen shows ([shown], from [SubPageRequests.shownIds]), so the title
+ * path and the dropdown follow a pick made on a strip or from the dropdown even when the app keeps no sub-page state of its own.
+ * The deepest shown page that is in [hierarchy] wins, unless the app already marked a deeper page. Pure.
+ */
+public fun hierarchyWithShown(hierarchy: List<HierarchyEntry>, shown: Collection<String>): List<HierarchyEntry> {
+    if (shown.isEmpty()) return hierarchy
+    val idx = shown.mapNotNull { id -> hierarchy.indexOfFirst { it.depth > 0 && it.id == id }.takeIf { it >= 0 } }
+        .maxByOrNull { hierarchy[it].depth } ?: return hierarchy
+    val appDepth = hierarchy.filter { it.depth > 0 && it.selected }.maxOfOrNull { it.depth } ?: 0
+    if (hierarchy[idx].depth < appDepth) return hierarchy
+    val path = HashSet<Int>()
+    var depth = hierarchy[idx].depth
+    path += idx
+    var k = idx - 1
+    while (k >= 0 && depth > 1) { if (hierarchy[k].depth < depth) { depth = hierarchy[k].depth; if (depth > 0) path += k }; k-- }
+    return hierarchy.mapIndexed { i, e -> if (e.depth == 0) e.copy(selected = false) else e.copy(selected = i in path) }
+}
+
+/**
  * THE first row of every app (#1154): no hamburger; the title at the LEFT as a breadcrumb path ("{App} / {Section} / {Page}",
  * [titleNav]) in a rounded darker-gray box, truncated from the left with an ellipsis when long; a tap opens the dropdown:
  * the path with each segment tappable, a separator, the siblings and children of the page shown, and (second separator)
@@ -355,6 +374,8 @@ public fun NavBarTopFirstRowScaffold(
     val leafState = remember { BreadcrumbLeafState() }
     // A pick below the bottom page asks the strips of the page it opens to select it (the app only switches the page).
     val navigate: (HierarchyEntry) -> Unit = { e -> if (e.depth > 0) requests.request(e.id); onNavigate(e) }
+    // The title path follows the page the strips show (a pick from a strip or the dropdown), not only the app's own state.
+    val followed = hierarchyWithShown(hierarchy, requests.shownIds())
     // #1157 scrolling the page down hides this row and compacts the second row and the bottom nav; up restores all three.
     NavChromeScroll { collapse ->
         AppTopBarScaffold(
@@ -372,7 +393,7 @@ public fun NavBarTopFirstRowScaffold(
             topRow = { c ->
                 val slot = c.drawerContent
                 NavBarTopFirstRow(
-                    title, ThemeBackground.colors(dark), labels, hierarchy, navigate,
+                    title, ThemeBackground.colors(dark), labels, followed, navigate,
                     onAi = { if (onAi != null) onAi() else c.toggleAi() },
                     onProfile = onAccount, onConfigs = onConfigs, avatar = avatar, onTitleClick = onTitleClick,
                     appName = appName, sections = sections, leaf = leaf ?: leafState.text,
