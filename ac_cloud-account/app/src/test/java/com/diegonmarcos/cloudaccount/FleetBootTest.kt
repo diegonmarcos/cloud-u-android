@@ -38,4 +38,15 @@ class FleetBootTest {
         FleetBoot.register(entries, "")
         assertNull(FleetTransport.bearers.forHost("vault.example.org"))
     }
+
+    @Test fun anMtlsServiceIsNeverRoutedOntoTheMeshAndNeverGetsTheBearerAndAnSsoOneGetsNoBearer() {
+        val mtls = FleetEndpointsContract.Entry("vault", "vault", "http://vaultwarden.mesh.diegonmarcos.com:8880", "https://vault.example.org", "mesh_first", "/alive", auth = "mtls")
+        val sso = FleetEndpointsContract.Entry("authelia", "auth", "http://authelia.mesh.diegonmarcos.com:9091", "https://auth.example.org", "mesh_first", "/h", auth = "sso")
+        val bearer = FleetEndpointsContract.Entry("jmap", "mail", "http://stalwart.mesh.diegonmarcos.com:2080", "https://jmap.example.org", "mesh_first", "/h")
+        assertEquals(2, FleetBoot.register(listOf(mtls, sso, bearer), marker))
+        assertFalse(FleetTransport.router.isRegistered("vault.example.org"))
+        assertTrue(FleetTransport.router.isRegistered("auth.example.org"))
+        assertNull(FleetTransport.bearers.forHost("vault.example.org")); assertNull(FleetTransport.bearers.forHost("auth.example.org"))
+        assertEquals(marker, FleetTransport.bearers.forHost("jmap.example.org"))
+    }
 }

@@ -24,6 +24,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.cloudaccount.autofill.AutofillProfilesPage
 import com.diegonmarcos.cloudaccount.hub.AppProfilesPage
 import com.diegonmarcos.cloudaccount.hub.ConnectionsPage
+import com.diegonmarcos.cloudaccount.hub.DriveSetupPage
+import com.diegonmarcos.cloudaccount.hub.FleetServicesSetupPage
 import com.diegonmarcos.cloudaccount.hub.LocalDeviceAuth
 import com.diegonmarcos.cloudaccount.hub.SecretsProvidersPage
 import com.diegonmarcos.cloudaccount.hub.TokensPage
@@ -133,6 +135,8 @@ class SectionScreensTest(private val section: String, private val page: String) 
             "connect/connections" -> ConnectionsPage(go)
             "connect/apps" -> AppProfilesPage()
             "connect/endpoints" -> FleetEndpointsPage(check = { sv -> sv.associate { it.id to EndpointCheck(meshUp = it.hasPublic, publicStatus = if (it.hasPublic) 200 else null) } })
+            "connect/services" -> FleetServicesSetupPage()
+            "connect/drive" -> DriveSetupPage()
             "activity/activity" -> ActivityPage()
             else -> error("no page for $section/$page")
         }
@@ -196,7 +200,7 @@ class SectionScreensTest(private val section: String, private val page: String) 
         private val OUT = File("build/section-screens")
 
         /** The pages #1081 added: they must render. */
-        private val MUST = setOf("personal/wallet", "configs/desktop", "configs/c3", "data/databases", "data/mesh", "activity/activity", "connect/endpoints")
+        private val MUST = setOf("personal/wallet", "configs/desktop", "configs/c3", "data/databases", "data/mesh", "activity/activity", "connect/endpoints", "connect/services", "connect/drive")
 
         @JvmStatic
         @ParameterizedRobolectricTestRunner.Parameters(name = "{0}/{1}")
@@ -204,7 +208,7 @@ class SectionScreensTest(private val section: String, private val page: String) 
             "personal/me", "personal/wallet", "personal/personal",
             "configs/runbook", "configs/perms", "configs/desktop", "configs/c3",
             "data/providers", "data/tokens", "data/databases", "data/mesh",
-            "connect/connections", "connect/apps", "connect/endpoints",
+            "connect/connections", "connect/apps", "connect/endpoints", "connect/services", "connect/drive",
             "activity/activity",
         ).map { it.split('/').toTypedArray<Any>() }
     }

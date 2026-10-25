@@ -136,11 +136,11 @@ ui = json.load(open(sys.argv[1], encoding='utf-8')).get('ui') or {}
 want = {'personal': ['me', 'wallet', 'autocomplete'],
         'configs': ['android', 'desktop', 'c3'],
         'data': ['secrets', 'backups', 'devices'],
-        'connect': ['status', 'auth'],
+        'connect': ['status', 'auth', 'fleetsetup'],
         'activity': ['activity']}
 strips = {'autocomplete': ['personal', 'sites', 'snippets'], 'android': ['runbook', 'apps', 'push', 'perms', 'adb-shell'],
           'secrets': ['providers', 'keys', 'tokens', 'grants', 'import'], 'backups': ['databases', 'bundle'],
-          'devices': ['mesh', 'files', 'working', 'diff'], 'status': ['connections', 'apps'], 'auth': ['hub', 'signin', 'settings']}
+          'devices': ['mesh', 'files', 'working', 'diff'], 'status': ['connections', 'apps', 'endpoints'], 'auth': ['hub', 'signin', 'settings'], 'fleetsetup': ['services', 'drive']}
 got = {s.get('id'): [p.get('id') for p in s.get('pages') or []] for s in ui.get('sections') or []}
 gotstrips = {p.get('id'): [q.get('id') for q in p.get('pages')] for s in ui.get('sections') or [] for p in s.get('pages') or [] if p.get('pages')}
 ok = (ui.get('bottom_nav') == ['personal', 'configs', 'data', 'connect', 'activity'] and got == want and gotstrips == strips and ui.get('default_section') == 'personal'

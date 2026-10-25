@@ -346,7 +346,7 @@
     }
   },
   "fleet_endpoints": {
-    "_doc": "#1093 THE fleet endpoint declaration, declared once (#1090 declared the mail part of it as mail_endpoints). Every fleet service Cloud Account talks to or shows has up to two endpoints, taken from the service's own fleet declaration in cloud-u-containers (`source`): mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. libs:account reads this for four things: (1) Account's own transport (libs:fleet-endpoints: mesh first with a short probe, then the public URL with the fleet bearer, cached, re-probed on a network change), (2) Connect > Status > Endpoints, (3) the `fleet_endpoints` accountdata method that publishes the pairs to the other apps, and (4) the `mail_endpoints` method, which takes the kind=mail services (Cloud Mail). A service that lives under a PATH of a shared host says public_path (and mesh_path when the mesh side differs) and route_paths (the part of it that may be routed). The vault is NOT declared here: it has ONE URL, https://vault.diegonmarcos.com (reachable from a mesh source or with the mTLS client certificate), which Cloud Vault and Cloud Account use directly, so it is never rewritten onto a mesh name and needs no cleartext entry. A service with no public_domain is mesh-only (no public route is declared, or the public name is WG-only) and must say policy mesh_only; the bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets and sent on the exact public origin only. policy is the default: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. health is the path Status asks for. Every mesh endpoint is plain http (`.app` is WireGuard-only, WG encrypts) and every public URL https; each app's network_security_config.xml gets its cleartext `.app` entries GENERATED from this list (1_cicd/src/scripts/cloud-android-fleet-nsc.py, data 1_cicd/src/data/fleet-nsc.json, held by FleetHostGuardTest), never hand-listed.",
+    "_doc": "#1093 THE fleet endpoint declaration, declared once (#1090 declared the mail part of it as mail_endpoints). Every fleet service Cloud Account talks to or shows has up to two endpoints, taken from the service's own fleet declaration in cloud-u-containers (`source`): mesh_dns / mesh_port / mesh_scheme = containers.app.dns / .port / .protocol, public_domain = proxy.domain. libs:account reads this for four things: (1) Account's own transport (libs:fleet-endpoints: mesh first with a short probe, then the public URL with the fleet bearer, cached, re-probed on a network change), (2) Connect > Status > Endpoints, (3) the `fleet_endpoints` accountdata method that publishes the pairs to the other apps, and (4) the `mail_endpoints` method, which takes the kind=mail services (Cloud Mail). A service that lives under a PATH of a shared host says public_path (and mesh_path when the mesh side differs) and route_paths (the part of it that may be routed). The vault is declared with `auth: mtls`: its public URL (vault.diegonmarcos.com) is reached from a mesh source or with the per-device mTLS client certificate, it is never rewritten onto a mesh name by the router and never receives the bearer. `auth` is bearer (default) | mtls | sso (Authelia: auth.diegonmarcos.com with its sso./account. `aliases`); `ssh_hosts` lists the git ssh host entries. A service with no public_domain is mesh-only (no public route is declared, or the public name is WG-only) and must say policy mesh_only; the bearer is never declared here: it is the vault's fleet.bearer, granted per package in Secrets and sent on the exact public origin only. policy is the default: mesh_first (try the mesh, fall back to public + bearer), mesh_only, public_only. health is the path Status asks for. Every mesh endpoint is plain http (`<container>.mesh.diegonmarcos.com` is WireGuard-only, WG encrypts) and every public URL https; each app's network_security_config.xml gets its cleartext mesh entries GENERATED from this list (1_cicd/src/scripts/cloud-android-fleet-nsc.py, data 1_cicd/src/data/fleet-nsc.json, held by FleetHostGuardTest), never hand-listed.",
     "services": [
       {
         "id": "ai-gateway",
@@ -363,7 +363,7 @@
         "id": "jmap",
         "kind": "mail",
         "source": "cloud-u-containers/user-comm_tools-stalwart/build.json",
-        "_doc": "The mesh endpoint is the fleet's convention: `.app` is WireGuard-only and WG already encrypts, so it is plain HTTP on the service's mesh-only port (2080 -> Stalwart's HTTP listener, bound on wg0 and wg-public like its other mesh ports; cloud-u-containers user-comm_tools-stalwart extra_ports must map it). Until that listener is shipped the mesh probe fails and Mail runs on the public URL with the bearer (the verdict is cached), so nothing breaks. The public URL stays https.",
+        "_doc": "The mesh endpoint is the fleet's convention: the mesh name is WireGuard-only and WG already encrypts, so it is plain HTTP on the service's mesh-only port (2080 -> Stalwart's HTTP listener, bound on wg0 and wg-public like its other mesh ports; cloud-u-containers user-comm_tools-stalwart extra_ports must map it). Until that listener is shipped the mesh probe fails and Mail runs on the public URL with the bearer (the verdict is cached), so nothing breaks. The public URL stays https.",
         "mesh_dns": "stalwart.mesh.diegonmarcos.com",
         "mesh_port": 2080,
         "mesh_scheme": "http",
@@ -406,6 +406,8 @@
         "public_domain": "auth.diegonmarcos.com",
         "public_scheme": "https",
         "route_paths": ["/api/health"],
+        "aliases": ["sso.diegonmarcos.com", "account.diegonmarcos.com"],
+        "auth": "sso",
         "policy": "mesh_first",
         "health": "/api/health"
       },
@@ -503,7 +505,25 @@
         "public_scheme": "https",
         "policy": "mesh_first",
         "health": "/me/health"
+      },
+      {
+        "id": "vault",
+        "kind": "vault",
+        "source": "cloud-u-containers/user-vault_vaultwarden/build.json",
+        "_doc": "Cloud Vault's server (Vaultwarden). Private: the mesh name, no credential. Public fallback: vault.diegonmarcos.com behind the per-device mTLS client certificate (`verify_if_given`, no bearer and no token in a URL: the Bitwarden client sends none). `auth: mtls` keeps the fleet bearer off this host and keeps the router from rewriting it onto the mesh; Cloud Vault itself tries the mesh, then the public URL with its certificate.",
+        "mesh_dns": "vaultwarden.mesh.diegonmarcos.com",
+        "mesh_port": 8880,
+        "mesh_scheme": "http",
+        "public_domain": "vault.diegonmarcos.com",
+        "public_scheme": "https",
+        "auth": "mtls",
+        "policy": "mesh_first",
+        "health": "/alive"
       }
+    ],
+    "ssh_hosts": [
+      {"_doc": "Git over ssh: the host entries Setup shows next to the generated ed25519 public key and publishes with it (drive_credentials). HostName is a fleet service's mesh name where the service is ours (Gitea listens on its ssh_port on the mesh), else a plain hostname.", "host": "github.com", "hostname": "github.com", "user": "git", "port": 22, "label": "GitHub"},
+      {"host": "gitea", "service": "gitea", "user": "git", "port": 2222, "label": "Gitea"}
     ]
   },
   "ui": {
@@ -768,6 +788,26 @@
                 "id": "settings",
                 "label": "Settings",
                 "icon": "settings"
+              }
+            ]
+          },
+          {
+            "_doc": "Setup: every fleet connection setting, the new way. Secrets are stored only in this app's keystore-backed vault and published to the other apps over the accountdata provider (fleet_endpoints, drive_credentials).",
+            "id": "fleetsetup",
+            "label": "Setup",
+            "icon": "settings",
+            "pages": [
+              {
+                "_doc": "One row per service of build.json::fleet_endpoints (no URL is typed in the page): mode Private (mesh) or Public + bearer / mTLS / SSO, the resolved URL, credential status, Test, set or rotate the credential (libs:account FleetServicesSetupPage).",
+                "id": "services",
+                "label": "Services",
+                "icon": "dns"
+              },
+              {
+                "_doc": "Cloud Drive: Google Drive / Workspace rclone remotes, git ssh (ed25519 key, per-host ssh config) and cloud mounts (rclone, sshfs / FUSE). Published as drive_credentials (DriveSetupPage).",
+                "id": "drive",
+                "label": "Drive",
+                "icon": "folder"
               }
             ]
           }

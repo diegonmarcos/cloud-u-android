@@ -87,6 +87,19 @@ class FleetEndpointsPublishTest {
         assertEquals(FleetEndpointsContract.POLICY_MESH_ONLY, e.getValue("me-api").policy)
     }
 
+    @Test fun anMtlsOrSsoServiceIsPublishedWithItsAuthAndNeverCountsForTheBearer() {
+        AccountHost.fleetEndpointsDecl = { """{"services":[
+            {"id":"vault","kind":"vault","mesh_dns":"vaultwarden.mesh.diegonmarcos.com","mesh_port":8880,"mesh_scheme":"http","public_domain":"vault.example.org","auth":"mtls","policy":"mesh_first","health":"/alive"},
+            {"id":"sso","kind":"auth","mesh_dns":"authelia.mesh.diegonmarcos.com","mesh_port":9091,"mesh_scheme":"http","public_domain":"auth.example.org","aliases":["sso.example.org"],"auth":"sso","policy":"mesh_first","health":"/h"}]}""" }
+        val v = AccountVault(ctx)
+        v.grants.grant(other, FleetEndpointsContract.GRANT_ENDPOINTS); v.grants.grant(other, FleetEndpointsContract.GRANT_BEARER)
+        val p = published()
+        assertEquals("no bearer service is declared, so none is sent", "", p.bearer)
+        val e = p.entries.associateBy { it.service }
+        assertEquals("mtls", e.getValue("vault").auth); assertEquals("sso", e.getValue("sso").auth)
+        assertEquals(listOf("sso.example.org"), e.getValue("sso").aliases)
+    }
+
     @Test fun aDeclarationOfMeshOnlyServicesSendsNoBearerEvenToAGrantedPackage() {
         AccountHost.fleetEndpointsDecl = { decl.replace("\"public_domain\":\"jmap.example.org\",\"policy\":\"mesh_first\"", "\"policy\":\"mesh_only\"") }
         AccountVault(ctx).grants.grant(other, FleetEndpointsContract.GRANT_ENDPOINTS)

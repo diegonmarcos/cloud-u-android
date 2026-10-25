@@ -76,4 +76,35 @@ class FleetEndpointsDeclTest {
         assertEquals(listOf("connections", "apps", "endpoints"), status.pages.map { it.id })
         assertNotNull(MainActivity.NAV.section("connect")!!.page("endpoints"))
     }
+
+    @Test fun theVaultIsDeclaredMtlsAndTheAuthHostIsSsoWithItsAliases() {
+        val byId = services.associateBy { it.id }
+        assertEquals(FleetEndpointsContract.AUTH_MTLS, byId.getValue("vault").auth)
+        assertEquals("vault.diegonmarcos.com", byId.getValue("vault").publicDomain)
+        assertEquals("vaultwarden.mesh.diegonmarcos.com", byId.getValue("vault").meshDns)
+        assertEquals(FleetEndpointsContract.AUTH_SSO, byId.getValue("authelia").auth)
+        assertEquals(listOf("sso.diegonmarcos.com", "account.diegonmarcos.com"), byId.getValue("authelia").aliases)
+        for (s in services.filter { it.auth != FleetEndpointsContract.AUTH_BEARER }) assertTrue("${s.id}: a non-bearer service has a public host", s.hasPublic)
+    }
+
+    @Test fun noStaleAppTldNameIsDeclaredAnywhere() {
+        val text = declared.toString()
+        assertFalse("a `.app` host is a public TLD name", Regex("[a-z0-9-]+\\.app\"").containsMatchIn(text))
+        assertTrue(services.none { it.meshDns.endsWith(".app") || it.publicDomain.endsWith(".app") })
+    }
+
+    @Test fun theSshHostsAreDeclaredForGithubAndOurGiteaOverTheMesh() {
+        val hosts = com.diegonmarcos.superapp.fleetendpoints.DriveCredentialsContract.parseSshHosts(declared.toString(), services, "~/.ssh/id_ed25519").associateBy { it.host }
+        assertEquals("github.com", hosts.getValue("github.com").hostname); assertEquals(22, hosts.getValue("github.com").port)
+        assertEquals("gitea.mesh.diegonmarcos.com", hosts.getValue("gitea").hostname); assertEquals(2222, hosts.getValue("gitea").port)
+        assertEquals("git", hosts.getValue("gitea").user)
+    }
+
+    @Test fun theSetupPagesAreInTheNavigationAndRenderFromTheDeclarationNotAHandTypedList() {
+        val setup = MainActivity.NAV.section("connect")!!.page("fleetsetup")!!
+        assertEquals(listOf("services", "drive"), setup.pages.map { it.id })
+        val src = File("src/main/java/com/diegonmarcos/cloudaccount/hub/FleetSetupPages.kt").readText()
+        assertFalse("Setup names no host: every URL comes from the declaration", Regex("https?://|diegonmarcos\\.com|\\.mesh\\.").containsMatchIn(src))
+        assertTrue(src.contains("FleetEndpointsRuntime.services()"))
+    }
 }

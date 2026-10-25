@@ -135,6 +135,8 @@ class HubTest {
         assertEquals(listOf("status", "apps"), path("connect", "apps"))
         assertEquals(listOf("auth", "signin"), path("connect", "signin"))
         assertEquals(listOf("auth", "hub"), path("connect", "hub"))
+        assertEquals(listOf("fleetsetup", "services"), path("connect", "services"))
+        assertEquals(listOf("fleetsetup", "drive"), path("connect", "drive"))
         assertEquals(listOf("hub", "signin", "settings"), nav.section("connect")!!.page("auth")!!.pages.map { it.id })
         assertEquals("hub", nav.section("connect")!!.page("auth")!!.leaf().id)
         assertEquals(listOf("desktop"), path("configs", "desktop"))
@@ -143,7 +145,7 @@ class HubTest {
         assertEquals(listOf("me", "wallet", "autocomplete"), tabs("personal"))
         assertEquals(listOf("android", "desktop", "c3"), tabs("configs"))
         assertEquals(listOf("secrets", "backups", "devices"), tabs("data"))
-        assertEquals(listOf("status", "auth"), tabs("connect"))
+        assertEquals(listOf("status", "auth", "fleetsetup"), tabs("connect"))
         assertEquals(listOf("activity"), tabs("activity"))
         // a container opens on its first leaf; a section opens on its first page's leaf
         assertEquals("personal", nav.section("personal")!!.page("autocomplete")!!.leaf().id)

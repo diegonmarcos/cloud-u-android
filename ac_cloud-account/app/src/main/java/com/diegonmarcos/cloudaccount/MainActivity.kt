@@ -31,6 +31,8 @@ import com.diegonmarcos.cloudaccount.autofill.AutofillSnippetsPage
 import com.diegonmarcos.cloudaccount.hub.AppProfilesPage
 import com.diegonmarcos.cloudaccount.hub.ConnectionsPage
 import com.diegonmarcos.cloudaccount.hub.HubNav
+import com.diegonmarcos.cloudaccount.hub.FleetServicesSetupPage
+import com.diegonmarcos.cloudaccount.hub.DriveSetupPage
 import com.diegonmarcos.cloudaccount.hub.ImportPage
 import com.diegonmarcos.cloudaccount.hub.LocalDeviceAuth
 import com.diegonmarcos.cloudaccount.hub.SecretsProvidersPage
@@ -246,6 +248,9 @@ class MainActivity : AppCompatActivity() {
             "connect" -> when (page) {
                 "apps" -> AppProfilesPage()
                 "endpoints" -> FleetEndpointsPage()
+                // Setup: every fleet connection setting (services, Drive / Git / mounts); secrets only in the keystore-backed vault.
+                "services" -> FleetServicesSetupPage()
+                "drive" -> DriveSetupPage()
                 "hub" -> AuthProvidersPage()
                 "signin" -> AccountConnectPage()
                 "settings" -> AccountSettingsPage("${BuildConfig.VERSION_NAME} · ${BuildConfig.GIT_SHORT_SHA} · built ${BuildConfig.BUILD_TIMESTAMP}")
