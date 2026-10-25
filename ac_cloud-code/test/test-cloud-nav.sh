@@ -40,6 +40,19 @@ while IFS= read -r line; do
 done <<< "$bars_out"
 [ "$bchecks" -ge 40 ] || fail "the bars driver made only $bchecks checks — it is not seeing the module"
 
+# ── the editor's text must not bleed through the other pages (Playwright, real css + nav.json) ──
+bleed_out="$(node "$ROOT/test/cloud_bleed.mjs" "$ROOT" 2>&1)"
+status=$?
+[ "$status" -eq 0 ] || fail "bleed driver crashed (exit $status): $bleed_out"
+gchecks=0
+while IFS= read -r line; do
+  case "$line" in
+    "CHECK ok "*)  ok "${line#CHECK ok }"; gchecks=$((gchecks + 1)) ;;
+    "CHECK bad "*) fail "${line#CHECK bad }"; gchecks=$((gchecks + 1)) ;;
+  esac
+done <<< "$bleed_out"
+[ "$gchecks" -ge 4 ] || fail "the bleed driver made only $gchecks checks"
+
 # ── the seam: Acode is touched in exactly one place for the nav ────────────
 main="$ROOT/src/main.js"
 imports="$(grep -c '^import mountCloudNav from "./cloud";$' "$main")"

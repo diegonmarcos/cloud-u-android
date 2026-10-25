@@ -317,6 +317,8 @@ function showTab(id, pageId) {
 	if (PAGE[id] == null && tab.pages.length) PAGE[id] = tab.pages[0].id;
 	bars.setTab(tab, PAGE[id]);
 	for (const [tid, p] of Object.entries(panels)) p.hidden = tid !== state.showPanel;
+	// The editor stays mounted under a panel (its state is kept) but must not paint through it.
+	document.body.classList.toggle("cloud-panel-open", !!state.showPanel);
 	if (state.showPanel) {
 		const view = VIEWS[tab.view];
 		view(panels[tab.id]).catch((err) => toast(String(err?.message || err)));
