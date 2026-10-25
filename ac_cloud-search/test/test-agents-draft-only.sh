@@ -10,7 +10,10 @@
 #   D2  the only POST in the whole app is a model call: the agents' to OpenRouter's declared chat_url
 #       (core/agents/Llm.kt: `http.post(ai.chatUrl,`) and the chat's, which is libs:ai's two backends (OpenRouter
 #       and, when the person picked a chat agent, the fleet agent gateway at the baked address, the path and the
-#       mode header from the shared ai.json) reaching the network only through data/SearchAi.kt's one Http door; no other caller
+#       mode header from the shared ai.json) reaching the network only through data/SearchAi.kt's one Http door; and (#1184)
+#       the code indexes' MCP client (core/Cgc.kt `http.post(url,`: JSON-RPC over POST is how MCP talks), which only
+#       calls the two READ-ONLY search tools (cgc.octocode.search, cgc.octocode.graphrag) and never names the index
+#       tool that would write; no other caller
 #   D3  every declared agent is mode draft_only and the parser refuses any other mode; #913b no agent or source
 #       declares an auto_* or action key (submit, send, apply, buy, ...), and the parser refuses one, and any key
 #       that is not on its list of an agent's keys
@@ -73,9 +76,13 @@ posts = []
 for p in sorted(glob.glob(os.path.join(K, "**", "*.kt"), recursive=True)) + sorted(glob.glob(os.path.join(C, "**", "*.kt"), recursive=True)):
     for m in re.finditer(r'\.post\(([^,]*),', code(p)):
         posts.append((os.path.relpath(p, app), m.group(1).strip()))
-want = [("app/src/main/java/com/diegonmarcos/cloudsearch/data/SearchAi.kt", "url"), ("core/src/main/kotlin/com/diegonmarcos/cloudsearch/core/agents/Llm.kt", "ai.chatUrl")]
+want = [("app/src/main/java/com/diegonmarcos/cloudsearch/data/SearchAi.kt", "url"), ("core/src/main/kotlin/com/diegonmarcos/cloudsearch/core/agents/Llm.kt", "ai.chatUrl"),
+        ("core/src/main/kotlin/com/diegonmarcos/cloudsearch/core/Cgc.kt", "url")]
 if sorted(posts) != sorted(want):
-    bad.append("D2 the POSTs in the app are %s; only the agents' model call to ai.chatUrl and the chat's one Http door (libs:ai's backends) are allowed" % posts)
+    bad.append("D2 the POSTs in the app are %s; only the agents' model call to ai.chatUrl, the chat's one Http door (libs:ai's backends) and the code indexes' MCP client are allowed" % posts)
+cgc_ = code(os.path.join(C, "Cgc.kt")) if os.path.isfile(os.path.join(C, "Cgc.kt")) else ""
+if 'const val SEARCH_TOOL = "cgc.octocode.search"' not in cgc_ or 'const val GRAPH_TOOL = "cgc.octocode.graphrag"' not in cgc_ or re.search(r"octocode\.index|cgc\.[a-z]+\.(write|delete|update|put)", cgc_):
+    bad.append("D2 the code indexes' MCP client calls a tool other than the two read-only search tools")
 sai = os.path.join(K, "data", "SearchAi.kt")
 sai_code = code(sai) if os.path.isfile(sai) else ""
 if "AiGatewayBackend(cfg, BuildConfig.AGENT_GATEWAY_URL, http)" not in sai_code or "direct = AiOpenRouterBackend(" not in sai_code:
@@ -224,6 +231,7 @@ mutate send-verb "$C/agents/Runner.kt" 's.replace("fun run(input: Input): Outcom
 mutate second-post "$J/data/AgentService.kt" 's.replace("val out = runner.run(", "http.post(\"https://x.example\", emptyMap(), \"\", 1); val out = runner.run(")' "D2 the POSTs in the app are"
 mutate post-elsewhere "$J/data/SearchAi.kt" 's.replace("s.http.post(url,", "s.http.post(cfg.modelsUrl,")' "D2 the POSTs in the app are"
 mutate gateway-anywhere "$J/data/SearchAi.kt" 's.replace("AiGatewayBackend(cfg, BuildConfig.AGENT_GATEWAY_URL, http)", "AiGatewayBackend(cfg, \"http://x.example\", http)")' "D2 the chat's POSTs do not go through libs:ai's two backends"
+mutate mcp-index-tool "$C/Cgc.kt" 's.replace("const val GRAPH_TOOL = \"cgc.octocode.graphrag\"", "const val GRAPH_TOOL = \"cgc.octocode.index\"")' "D2 the code indexes' MCP client calls a tool other than"
 mutate tools-in-llm "$C/agents/Llm.kt" 's.replace(".put(\"max_tokens\", req.maxTokens)", ".put(\"max_tokens\", req.maxTokens).put(\"tools\", JSONArray())")' "D2 the agents' model call carries tools"
 mutate auto-send-agent build.json 's.replace("\"mode\": \"draft_only\"", "\"mode\": \"auto_send\"")' "D3 agent rs_house_purchase is mode 'auto_send'"
 mutate auto-submit-key build.json 's.replace("\"mode\": \"draft_only\",", "\"mode\": \"draft_only\",\n        \"auto_submit\": true,", 1)' "D3 agent rs_house_purchase declares auto_submit"
