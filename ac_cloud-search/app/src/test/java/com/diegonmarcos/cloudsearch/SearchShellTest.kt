@@ -3,6 +3,8 @@ package com.diegonmarcos.cloudsearch
 import android.content.ComponentName
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -212,7 +214,7 @@ class SearchShellTest {
         waitFor(Tags.CHAT_INPUT)
         val ai = com.diegonmarcos.superapp.ai.AiTags
         val order = listOf("plus", "task", "agent", "model", "effort", "mode", "mcp", "more")
-        val lefts = order.map { compose.onNodeWithTag(ai.ctl(it)).fetchSemanticsNode().boundsInRoot.left }
+        val lefts = order.map { compose.onNodeWithTag(ai.ctl(it)).fetchSemanticsNode().layoutInfo.coordinates.positionInParent().x }
         assertEquals("(+), Task, Agent, Model, Effort, Perms, MCP, (More), left to right", lefts.sorted(), lefts)
         compose.onNodeWithTag(ai.ctl("agent")).assertIsEnabled()
         compose.onNodeWithTag(ai.ctl("model")).assertIsEnabled()
@@ -270,7 +272,7 @@ class SearchShellTest {
         for (l in listOf("auto", "low", "medium", "high", "max")) waitFor(ai.effort(l))
         compose.onNodeWithTag(ai.effort("high")).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(ai.ctl("more")).performClick()
+        compose.onNodeWithTag(ai.ctl("more")).performScrollTo().performClick()
         for (g in listOf("usage", "optimisation", "skills", "session", "persona", "help")) waitFor("ai_more_group_$g")
         for (id in listOf("usage", "skills", "memory", "export", "retry", "undo", "system", "shortcuts", "about")) waitFor(ai.more(id))
         for (id in listOf("headroom", "rtk", "caveman", "principles")) waitFor(ai.morePlugin(id))
