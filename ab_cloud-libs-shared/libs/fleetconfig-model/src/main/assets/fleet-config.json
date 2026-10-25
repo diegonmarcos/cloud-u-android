@@ -2157,6 +2157,14 @@
       "used_by": [
         "ac_cloud-me"
       ]
+    },
+    "nav_modes": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "#1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them.",
+      "used_by": [
+        "lib-bottomnav"
+      ]
     }
   },
   "bundle": {

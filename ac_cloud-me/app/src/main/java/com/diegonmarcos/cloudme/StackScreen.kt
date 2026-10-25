@@ -117,6 +117,11 @@ private fun Block(o: JSONObject) {
         "link" -> LinkRow(o.optString("label"), o.optString("url"))
         "about" -> AboutCard(o)
         "permissions" -> PermissionsCard(o)
+        // Per section: one row, two rows or the side menu (persisted in nav_modes, part of the backup).
+        "nav_modes" -> {
+            Titles(o)
+            com.diegonmarcos.superapp.navbartop2.NavModeConfigCard(Sections.all().map { it.nav })
+        }
         "ledger" -> LedgerBlock(o)
         "profile_record" -> ProfileRecordBlock(o)
         // `fragment` is consumed by SectionScreen when it is a page's

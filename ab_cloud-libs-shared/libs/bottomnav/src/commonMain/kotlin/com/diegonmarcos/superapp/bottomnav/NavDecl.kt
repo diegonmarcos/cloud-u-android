@@ -85,17 +85,22 @@ public enum class NavStyle(public val declared: String) {
 }
 
 /**
- * How a section's second top row is drawn (`ui.sections[].nav_mode`). [OneRow] (the default): the pages as one strip of
- * chips. [ManyRows]: one row per page GROUP, each [group label as an index dropdown] | [that group's page icons].
+ * How a section's child pages are navigated (`ui.sections[].nav_mode`, runtime-overridable per section in the app's Configs):
+ *  - [OneRow] `horizontal_one_row` (the default): the pages as one strip of chips, the second top row;
+ *  - [ManyRows] `horizontal_two_rows`: one row per page GROUP in one shared box, each [group label as an index dropdown] | [that
+ *    group's page icons]. The older contract name `many_rows` is an alias of it;
+ *  - [SideMenu] `vertical_side_menu`: a vertical left side menu, expanded (icon + label) or a semi-collapsed rail (icon + the first
+ *    letters of the name). The older `one_row` is an alias of [OneRow].
  */
-public enum class SecondRowMode(public val declared: String) {
-    OneRow("one_row"),
-    ManyRows("many_rows");
+public enum class SecondRowMode(public val declared: String, private val aliases: List<String> = emptyList()) {
+    OneRow("horizontal_one_row", listOf("one_row")),
+    ManyRows("horizontal_two_rows", listOf("many_rows")),
+    SideMenu("vertical_side_menu");
 
     public companion object {
-        /** A declared `second_row`; blank is [OneRow], anything unknown is null (a declaration problem). */
+        /** A declared `nav_mode`; blank is [OneRow], anything unknown is null (a declaration problem). The old names are accepted. */
         public fun of(text: String?): SecondRowMode? =
-            if (text.isNullOrBlank()) OneRow else entries.firstOrNull { it.declared == text.trim() }
+            if (text.isNullOrBlank()) OneRow else entries.firstOrNull { text.trim() == it.declared || text.trim() in it.aliases }
     }
 }
 

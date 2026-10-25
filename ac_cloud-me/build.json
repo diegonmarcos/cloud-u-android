@@ -229,7 +229,7 @@
         "_doc": "Health \u2014 a bar section of its own (it was a shortcut into Projects > Health). Two page groups (Plan: index and 12 plan pages; Trackers: 5) on the many_rows nav mode, the groups referencing the flat pages list by id. Every page is drawn by the app's own Compose HealthPage from data/health/*.json (the declared plan, formulas and workout) and the user's entries (SharedPreferences health_user, a declared fleet-config store); the trackers read Health Connect live and say so when it is empty. The metric taxonomy stays here because libs:health's build.gradle looks it up by SECTION ID (`ui.sections[id=health].metrics`).",
         "_doc_metrics": "Data-driven metric taxonomy \u2014 read by SummaryPage / TimelinePage / ConfigsPage to render the per-metric tiles + drill-downs. Each metric maps to one-or-more Health Connect record types via `records` (matched at runtime by class simple-name) + the perm subset via `perm_keys`. Add a metric = one entry here + tile icon. Removing a metric here removes it from all 3 top-level pages.",
         "id": "health",
-        "nav_mode": "many_rows",
+        "nav_mode": "horizontal_two_rows",
         "label": "Health",
         "icon": "ic_nav_health",
         "metrics": [
@@ -578,7 +578,7 @@
       {
         "_doc": "Buro \u2014 the paperwork desk, redesigned as four many_rows groups (each page in exactly one): IDs & DD (identity documents browsed from data/files/wallet/ids, the personal due-diligence checklist, the wallet folders, Account which launches Cloud Account), Docs (Assets, Services, Liabilities & Taxes: the typed `ledger` records of the buro_user store, absorbing the retired House section), Financial Reports (Budgeting against the cashflow, Accounts vs Cashflow, both derived from typed records) and Calendar (the calendar engine's events and the tasks filed under Buro; Cloud Tasks writes). No figure is seeded: an empty ledger says so.",
         "id": "buro",
-        "nav_mode": "many_rows",
+        "nav_mode": "horizontal_two_rows",
         "label": "Buro",
         "icon": "ic_nav_buro",
         "pages": [
@@ -679,7 +679,7 @@
       {
         "_doc": "LLC \u2014 the former Work section, redesigned as three many_rows groups: Income (Employed, Side hustles; the Work pages' LinkedIn history moved here with their generator, data/regen-study.py, each now led by typed records and the derived Income report), Assets & Portfolio (typed company assets, and holdings with derived gain and allocation) and Calendar (the calendar engine, tasks filed under LLC). User entries are the llc_user store. Nothing is seeded.",
         "id": "llc",
-        "nav_mode": "many_rows",
+        "nav_mode": "horizontal_two_rows",
         "label": "LLC",
         "icon": "llc",
         "pages": [

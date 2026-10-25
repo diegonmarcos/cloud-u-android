@@ -75,7 +75,7 @@ public val SecondRowGroupDropdownMax: Dp = 320.dp
 
 /**
  * THE second top row of an app, in the mode its section declares (`ui.sections[].second_row`):
- *  - [SecondRowMode.OneRow] (default): [NavBarTopSecondRow] over the section's pages, as before;
+ *  - [SecondRowMode.OneRow] (default) and [SecondRowMode.SideMenu] (drawn by [NavSectionLayout], not by this bar): [NavBarTopSecondRow] over the section pages;
  *  - [SecondRowMode.ManyRows]: ONE ROW PER GROUP ([NavSection.rowGroups]): the group's label as a clickable index dropdown
  *    listing that group's pages, a "|" divider, then that group's pages as horizontally scrollable icon chips (the selected
  *    one highlighted and named). Rows compact with the shared scroll collapse like [NavBarTopSecondRow].
@@ -96,7 +96,7 @@ public fun NavBarTopSecondRows(
     compact: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
     hidden: Boolean = LocalNavChromeCollapse.current?.hidden ?: false,
 ) {
-    if (section.rows == SecondRowMode.OneRow) {
+    if (section.rows != SecondRowMode.ManyRows) {
         NavBarTopSecondRow(section.pages, selectedId, onSelect, modifier, dark, onReselect, underTopChrome, flushTop, surface, iconFor, compact, hidden)
         return
     }

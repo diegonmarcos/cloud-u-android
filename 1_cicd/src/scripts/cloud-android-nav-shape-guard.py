@@ -518,19 +518,36 @@ def declared_backgrounds(nodes, where=""):
         yield from declared_backgrounds(n.get("pages"), here)
 
 
+ONE_ROW_MODES = ("horizontal_one_row", "one_row")
+TWO_ROWS_MODES = ("horizontal_two_rows", "many_rows")
+SIDE_MENU_MODES = ("vertical_side_menu",)
+DYNAMIC_CHILDREN = ("mail_folders_labels",)
+
+
 def check_second_rows(app, sections, bad):
-    """N10: ui.sections[].nav_mode is one_row|many_rows; groups ({id,label,icon,pages:[page ids]}) only with many_rows;
-    in many_rows every page of the section is in exactly one group, a group names only the section's pages, ids unique."""
+    """N10: ui.sections[].nav_mode is horizontal_one_row (alias one_row, the default) | horizontal_two_rows (alias many_rows) |
+    vertical_side_menu; groups ({id,label,icon,pages:[page ids]}) only with horizontal_two_rows or vertical_side_menu;
+    in horizontal_two_rows every page of the section is in exactly one group, in vertical_side_menu a page may stay ungrouped
+    (it is listed after the groups); a group names only the section's pages, ids unique. `dynamic_children` (the side menu's
+    items come from the app's own data, e.g. the mail account's folders and labels) names a known source and needs the side menu."""
     for s in sections or []:
         if not isinstance(s, dict):
             continue
-        sid, mode, groups = s.get("id"), s.get("nav_mode", "one_row"), s.get("groups")
-        if mode not in ("one_row", "many_rows"):
-            bad.append(f"N10 {app}: ui.sections {sid} declares nav_mode {mode!r}, not one_row or many_rows")
-        if groups is None and mode != "many_rows":
+        sid, mode, groups = s.get("id"), s.get("nav_mode", "horizontal_one_row"), s.get("groups")
+        known = ONE_ROW_MODES + TWO_ROWS_MODES + SIDE_MENU_MODES
+        if mode not in known:
+            bad.append(f"N10 {app}: ui.sections {sid} declares nav_mode {mode!r}, not one of {', '.join(known)}")
+        dyn = s.get("dynamic_children")
+        if dyn is not None:
+            if dyn not in DYNAMIC_CHILDREN:
+                bad.append(f"N10 {app}: ui.sections {sid} declares dynamic_children {dyn!r}, not one of {', '.join(DYNAMIC_CHILDREN)}")
+            if mode not in SIDE_MENU_MODES:
+                bad.append(f"N10 {app}: ui.sections {sid} declares dynamic_children but nav_mode is not vertical_side_menu")
+        grouped = mode in TWO_ROWS_MODES or mode in SIDE_MENU_MODES
+        if groups is None and mode not in TWO_ROWS_MODES:
             continue
-        if mode != "many_rows":
-            bad.append(f"N10 {app}: ui.sections {sid} declares groups but nav_mode is not many_rows")
+        if not grouped:
+            bad.append(f"N10 {app}: ui.sections {sid} declares groups but nav_mode is not horizontal_two_rows or vertical_side_menu")
             continue
         flat = [p.get("id") for p in s.get("pages") or [] if isinstance(p, dict)]
         ids, seen = [], []
@@ -549,9 +566,10 @@ def check_second_rows(app, sections, bad):
                 seen.append(pid)
         if len(ids) != len(set(ids)):
             bad.append(f"N10 {app}: ui.sections {sid} repeats a group id")
-        for pid in flat:
-            if pid not in seen:
-                bad.append(f"N10 {app}: ui.sections {sid} many_rows: page {pid!r} is in no group")
+        if mode in TWO_ROWS_MODES:
+            for pid in flat:
+                if pid not in seen:
+                    bad.append(f"N10 {app}: ui.sections {sid} horizontal_two_rows: page {pid!r} is in no group")
 
 
 def check_backgrounds(app, sections, spec, code, rel, bad):

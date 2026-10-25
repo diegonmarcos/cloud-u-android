@@ -170,9 +170,18 @@ mutate "a surface chosen in code"                "$KT" "s+='\nval x = TabSurface
 mutate "a theme background no strip reads"       "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" "N9 $FIX: declares a light/theme page background but no source calls stripSurface("
 # N10: the second row's mode and page groups
 mutate "an unknown nav_mode"                     "$FIX/build.json" "$(J "d['ui']['sections'][0]['nav_mode']='three_rows'")" "N10 $FIX: ui.sections a declares nav_mode 'three_rows'"
-mutate "groups without many_rows"                "$FIX/build.json" "$(J "d['ui']['sections'][0]['groups']=[{'id':'g','label':'G','icon':'i','pages':['p1']}]")" "N10 $FIX: ui.sections a declares groups but nav_mode is not many_rows"
-mutate "a page in two groups"                    "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='many_rows', groups=[{'id':'g','label':'G','icon':'i','pages':['p1','p2']},{'id':'h','label':'H','icon':'i','pages':['p2']}])")" "N10 $FIX: ui.sections a page 'p2' is in two groups"
-mutate "a page in no group"                      "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='many_rows', groups=[{'id':'g','label':'G','icon':'i','pages':['p1']}])")" "N10 $FIX: ui.sections a many_rows: page 'p2' is in no group"
+mutate "groups without a grouped mode"              "$FIX/build.json" "$(J "d['ui']['sections'][0]['groups']=[{'id':'g','label':'G','icon':'i','pages':['p1']}]")" "N10 $FIX: ui.sections a declares groups but nav_mode is not horizontal_two_rows or vertical_side_menu"
+mutate "a page in two groups"                    "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='horizontal_two_rows', groups=[{'id':'g','label':'G','icon':'i','pages':['p1','p2']},{'id':'h','label':'H','icon':'i','pages':['p2']}])")" "N10 $FIX: ui.sections a page 'p2' is in two groups"
+mutate "a page in no group"                      "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='horizontal_two_rows', groups=[{'id':'g','label':'G','icon':'i','pages':['p1']}])")" "N10 $FIX: ui.sections a horizontal_two_rows: page 'p2' is in no group"
+# the three modes and the old contract names
+green  "the old name many_rows still reads (alias of horizontal_two_rows)" "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='many_rows', groups=[{'id':'g','label':'G','icon':'i','pages':['p1','p2']}])")"
+green  "the old name one_row still reads (alias of horizontal_one_row)" "$FIX/build.json" "$(J "d['ui']['sections'][0]['nav_mode']='one_row'")"
+green  "horizontal_one_row, the default, declared"  "$FIX/build.json" "$(J "d['ui']['sections'][0]['nav_mode']='horizontal_one_row'")"
+green  "vertical_side_menu with groups and an ungrouped page" "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='vertical_side_menu', groups=[{'id':'g','label':'G','icon':'i','pages':['p1']}])")"
+green  "vertical_side_menu with dynamic children from a known source" "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='vertical_side_menu', dynamic_children='mail_folders_labels')")"
+mutate "dynamic children from an unknown source"  "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='vertical_side_menu', dynamic_children='bogus')")" "N10 $FIX: ui.sections a declares dynamic_children 'bogus'"
+mutate "dynamic children without the side menu"   "$FIX/build.json" "$(J "d['ui']['sections'][0].update(dynamic_children='mail_folders_labels')")" "N10 $FIX: ui.sections a declares dynamic_children but nav_mode is not vertical_side_menu"
+mutate "a side-menu group naming a page the section lacks" "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='vertical_side_menu', groups=[{'id':'g','label':'G','icon':'i','pages':['zzz']}])")" "N10 $FIX: ui.sections a group 'g' names page 'zzz'"
 green  "a theme background read through stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" \
     "$KT" "s=s.replace('PageTabs(pages, null, {});','PageTabs(pages, null, {}, surface = nav.stripSurface(\"a\", dark));')"
 green  "an explicit dark background with no stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='dark'")"

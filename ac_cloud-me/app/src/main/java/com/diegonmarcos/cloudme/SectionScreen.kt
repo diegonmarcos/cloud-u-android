@@ -3,6 +3,7 @@ package com.diegonmarcos.cloudme
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.View
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,7 +21,11 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.bottomnav.SecondRowMode
+import com.diegonmarcos.superapp.bottomnav.LocalNavModeStore
+import com.diegonmarcos.superapp.bottomnav.effective
+import com.diegonmarcos.superapp.bottomnav.rememberNavModePrefs
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.navbartop2.NavSectionLayout
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRows
 import com.diegonmarcos.superapp.health.HealthFragment
 import com.diegonmarcos.superapp.uikit.KitFragmentHost
@@ -59,51 +64,63 @@ fun SectionScreen(sectionId: String, requestedPage: String?, modifier: Modifier 
     val ctx = LocalContext.current
     val onTarget = LocalMeTarget.current
 
-    Column(modifier.fillMaxSize()) {
-        // Draws the strips [chain] implies: level 0 offers the section's own
-        // tabs, level n the children of the tab chosen at level n-1, and the
-        // chain says which tab is selected at each. Strips past the chain are
-        // dropped, so stepping out of a container takes its strip with it.
-        val levels = listOf(section.pages) + chain.dropLast(1).map { it.pages }
-        levels.forEachIndexed { level, siblings ->
-            // One tab is not a choice — a single-tab strip reads as a broken
-            // control rather than as a navigation aid. Configs is shaped that
-            // way on purpose: a settings screen is a list you scroll.
-            if (siblings.size > 1) {
-                val onSelect: (Page) -> Unit = { tab ->
-                    // A launch tab (Buro > Account) leaves for its action and the strip keeps
-                    // pointing at the page the user comes back to.
-                    if (tab.action.isNotBlank()) onTarget(tab.action)
-                    else {
-                        // A container tab has no content of its own; tapping one opens the child
-                        // you were last on — which is what staying on the chain means — or its
-                        // first child. Tapping a leaf opens the leaf.
-                        val stillBelow = section.path(pageId).any { it.id == tab.id }
-                        pageId = if (stillBelow) pageId else section.page(tab.id)?.leaf()?.id
+    val store = LocalNavModeStore.current ?: rememberNavModePrefs()
+    // The section's declared nav_mode, unless the user chose another for it in Configs (persisted, in the backup).
+    val nav = section.nav.effective(store)
+    val onSelect: (Page) -> Unit = { tab ->
+        // A launch tab (Buro > Account) leaves for its action and the strip keeps
+        // pointing at the page the user comes back to.
+        if (tab.action.isNotBlank()) onTarget(tab.action)
+        else {
+            // A container tab has no content of its own; tapping one opens the child
+            // you were last on — which is what staying on the chain means — or its
+            // first child. Tapping a leaf opens the leaf.
+            val stillBelow = section.path(pageId).any { it.id == tab.id }
+            pageId = if (stillBelow) pageId else section.page(tab.id)?.leaf()?.id
+        }
+    }
+    // The Samsung Health strip (#1144): icon-only pills, the selected one also shows its name.
+    val icon: @Composable (Page) -> androidx.compose.ui.graphics.painter.Painter? = { p -> pageIcon(ctx, p.icon)?.let { painterResource(it) } }
+    // Draws the strips [chain] implies: level 0 offers the section's own
+    // tabs, level n the children of the tab chosen at level n-1, and the
+    // chain says which tab is selected at each. Strips past the chain are
+    // dropped, so stepping out of a container takes its strip with it.
+    val levels = listOf(section.pages) + chain.dropLast(1).map { it.pages }
+    val sideMenu = nav.rows == SecondRowMode.SideMenu && section.pages.size > 1
+    val body: @Composable (Int) -> Unit = { from ->
+        Column(Modifier.fillMaxSize()) {
+            levels.forEachIndexed { level, siblings ->
+                // One tab is not a choice — a single-tab strip reads as a broken
+                // control rather than as a navigation aid. Configs is shaped that
+                // way on purpose: a settings screen is a list you scroll.
+                if (level >= from && siblings.size > 1) {
+                    if (level == 0 && nav.rows == SecondRowMode.ManyRows) {
+                        // ui.sections[].nav_mode = horizontal_two_rows: one row per page group (label dropdown | icon chips).
+                        NavBarTopSecondRows(
+                            section = nav, selectedId = chain.getOrNull(0)?.id, onSelect = onSelect,
+                            dark = true, underTopChrome = false, iconFor = icon,
+                        )
+                    } else {
+                        NavBarTopSecondRow(
+                            pages = siblings,
+                            selectedId = chain.getOrNull(level)?.id,
+                            onSelect = onSelect,
+                            dark = true,
+                            underTopChrome = false,
+                            iconFor = icon,
+                        )
                     }
                 }
-                // The Samsung Health strip (#1144): icon-only pills, the selected one also shows its name.
-                val icon: @Composable (Page) -> androidx.compose.ui.graphics.painter.Painter? = { p -> pageIcon(ctx, p.icon)?.let { painterResource(it) } }
-                if (level == 0 && section.nav.rows == SecondRowMode.ManyRows) {
-                    // ui.sections[].second_row = many_rows: one row per page group (label dropdown | icon chips).
-                    NavBarTopSecondRows(
-                        section = section.nav, selectedId = chain.getOrNull(0)?.id, onSelect = onSelect,
-                        dark = true, underTopChrome = false, iconFor = icon,
-                    )
-                } else {
-                    NavBarTopSecondRow(
-                        pages = siblings,
-                        selectedId = chain.getOrNull(level)?.id,
-                        onSelect = onSelect,
-                        dark = true,
-                        underTopChrome = false,
-                        iconFor = icon,
-                    )
-                }
             }
+            PageContent(section, page, Modifier.weight(1f).fillMaxWidth())
         }
-        PageContent(section, page, Modifier.weight(1f).fillMaxWidth())
     }
+    if (sideMenu) {
+        // vertical_side_menu: level 0 is the menu docked at the left; the deeper strips stay above the page.
+        Box(modifier.fillMaxSize()) {
+            NavSectionLayout(nav, chain.getOrNull(0)?.id, onSelect, dark = true, iconFor = icon, store = store) { body(1) }
+        }
+    } else Box(modifier.fillMaxSize()) { body(0) }
 }
 
 @Composable

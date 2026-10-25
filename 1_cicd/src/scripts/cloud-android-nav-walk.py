@@ -12,6 +12,7 @@ for each, checks what the owner keeps finding by hand:
      gone, every non-selected bottom label is gone, the bottom bar is shorter, and so are the second row's tabs when the
      page has one). Swipe down: DEFAULT, all of it is back. A page that did not scroll (nothing moved, nothing collapsed) is reported
      `fixed` and only has to leave the chrome intact: a page that scrolls but leaves the chrome expanded FAILS.
+  P5 a section declared vertical_side_menu shows the side menu and its toggle flips expanded <-> rail.
   P4 the pick landed: after choosing the page in the dropdown the title path ends in its label.
 
 Nothing here is relaxed to get green: a failing page is reported with its reason, a screenshot and the UI dump.
@@ -343,7 +344,7 @@ class Walk:
             "bar_h": island.h if island else max((n.h for n in items), default=0),
             "tab_h": strip.h if strip else 0,
             "tabs": len(tabs),
-            "scrollable": [n for n in nodes if n.scrollable and not n.rid.startswith(("pagetabs_", "navtop", "topbar", "bottomnav_")) and n.h >= 150],
+            "scrollable": [n for n in nodes if n.scrollable and not n.rid.startswith(("pagetabs_", "navtop", "navside", "topbar", "bottomnav_")) and n.h >= 150],
         }
 
     def content_box(self, nodes):
@@ -388,6 +389,27 @@ class Walk:
             elif not self.foreground() or not self.alive():
                 fails.append("P2 closing the dropdown left the app")
         checks["dropdown"] = "ok" if not any(f.startswith("P2") for f in fails) else "FAIL"
+        # P5 a section declared vertical_side_menu draws the menu (expanded or rail) and its toggle flips between the two states
+        if (self.sections.get(section) or {}).get("nav_mode") == "vertical_side_menu" and self.has_pages(section):
+            side = dump() or nodes
+            if find(side, "navside_menu") is None:
+                fails.append("P5 the section declares vertical_side_menu but no side menu is on screen")
+            else:
+                rail0 = bool(findall(side, "navside_rail_"))
+                toggle = find(side, "navside_toggle")
+                if toggle is None:
+                    fails.append("P5 the side menu has no expand/collapse toggle")
+                else:
+                    tap(toggle)
+                    settle(0.9)
+                    flipped = dump() or []
+                    if bool(findall(flipped, "navside_rail_")) == rail0:
+                        fails.append("P5 the side menu's toggle did not switch between the expanded menu and the rail")
+                    t2 = find(flipped, "navside_toggle")
+                    if t2 is not None:
+                        tap(t2)
+                        settle(0.6)
+            checks["sidemenu"] = "ok" if not any(f.startswith("P5") for f in fails) else "FAIL"
         # P3 scroll the content up: the chrome must collapse when the page scrolled
         nodes = dump() or nodes
         before = self.chrome(nodes)
