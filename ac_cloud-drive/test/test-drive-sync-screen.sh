@@ -43,6 +43,10 @@ COORD="$SRC/sync/GitSyncCoordinator.kt"
 HIST="$SRC/sync/SyncHistory.kt"
 RC="$SRC/sync/RcloneMountsScreens.kt"
 RCC="$SRC/sync/RcloneCoordinator.kt"
+# #1173 the Mounts and Fsync pages are their own files, over StorageCoordinator's real state
+RM="$SRC/sync/MountsPage.kt"
+FSP="$SRC/sync/FsyncPage.kt"
+STC="$SRC/storage/StorageCoordinator.kt"
 WORKER="$SRC/GitSyncWorker.kt"
 GIT_MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:git-sync"]["dir"])))' "$BJ" "$APP")"
 MODELS="$GIT_MOD/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitModels.kt"
@@ -52,7 +56,7 @@ TESTS="$APP/app/src/test/java/com/diegonmarcos/clouddrive"
 FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
-for required in "$BJ" "$CARDS" "$COORD" "$HIST" "$RC" "$RCC" "$WORKER" "$MODELS" "$LIB_SCREEN"; do
+for required in "$BJ" "$CARDS" "$COORD" "$HIST" "$RC" "$RCC" "$RM" "$FSP" "$STC" "$WORKER" "$MODELS" "$LIB_SCREEN"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -112,13 +116,19 @@ echo "── G7 declared, not cloned (#608: a DENSE ROW, not a card) ──"
 if grep -qE 'ifBlank \{ page\.cloneUrl\(name, mode\) \}' "$CARDS" && grep -qE 'Pill\(stringResource\(R\.string\.sync_clone_into_store\), onClone, filled = true\)' "$CARDS"; then pass "a not-cloned row offers Clone into store; the declared URL is composed once, as the no-listing fallback"; else fail "clone-into-store composition missing"; fi
 if grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$CARDS" && grep -qE 'RepoTable\.visibility\(r\.isPrivate, stringResource\(R\.string\.repo_vis_pvt\)' "$TABLE_UI"; then pass "the dense row is tagged and carries the Pvt/Pub column (#1138; it was a private badge)"; else fail "declared cards incomplete"; fi
 
-echo "── G8 Rclone and Mounts, same language ──"
-if grep -qE 'tag = DriveTags\.SYNC_REMOTE_CARD' "$RC" && grep -qE 'tag = DriveTags\.SYNC_MOUNT_CARD' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_JOB_ROW\)' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_CONNECTION_ROW\)' "$RC"; then pass "remote cards, mount cards, job rows, connection rows are tagged"; else fail "rclone/mounts tree not tagged"; fi
-if grep -qE 'last != null -> StatusLight\.of\(last\)' "$RC" && grep -qE 'unreachableDeclared -> StatusLight\.State\.UNVERIFIABLE' "$RC" && grep -qE 'light = StatusLight\.of\(last\)' "$RC"; then pass "a Test result lights the card; a fleet-declared status is UNVERIFIABLE, never green"; else fail "rclone/mounts lights not honest"; fi
-if grep -qE 'StatusLightRow\(if \(c\.status == "ok"\) StatusLight\.State\.UNVERIFIABLE else StatusLight\.State\.OFF, c\.name\)' "$RC"; then pass "fleet connections: ok → UNVERIFIABLE (the fleet's word), unreachable → OFF with its reason"; else fail "fleet connection lights wrong"; fi
-if grep -qE 'runner\.start\(job,' "$RCC" && grep -qE 'onStats = \{ s ->' "$RCC" && grep -qE 'val runs = MutableStateFlow<Map<String, Run>>' "$RCC" && grep -qE 'LinearProgressIndicator\(progress = \{ s\?\.fraction \?: 0f \}' "$RC"; then pass "job progress rows drive from the runner's stats, held by the coordinator across tab changes"; else fail "rclone job progress not wired"; fi
-if grep -qE 'prefs\.setLastTest\("remote:" \+ remote\.name, ok\)' "$RCC" && grep -qE 'prefs\.setLastTest\("mount:" \+ m\.id, ok\)' "$RCC"; then pass "the last Test per remote/mount is remembered"; else fail "test results not remembered"; fi
-if grep -qE '"\(declared\)"' "$RC" "$CARDS"; then fail "a '(declared)' literal badge — use the string resource"; else pass "badges come from strings (chrome_declared / chrome_private / rclone_fleet_side)"; fi
+# g8 <MountsPage.kt> <FsyncPage.kt> <StorageCoordinator.kt> : #1173 the Rclone, FUSE and Backup pages: tagged cards whose lights are LOOKS at the thing, run state held across tabs
+g8() {
+    local rm="$1" fsp="$2" stc="$3"
+    if grep -qE 'tag = DriveTags\.SYNC_REMOTE_CARD' "$rm" && grep -qE 'tag = DriveTags\.SYNC_MOUNT_CARD' "$rm" && grep -qE 'tag = DriveTags\.SYNC_MOUNT_CARD' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_CONNECTION_ROW\)' "$RC" && grep -qE 'tag = DriveTags\.RSYNC_RULE_CARD' "$fsp"; then pass "remote cards, FUSE mount cards, backup job cards and the Volumes connection rows are tagged"; else fail "rclone/mounts tree not tagged"; fi
+    if grep -qE 'light = StatusLight\.of\(last\)' "$rm" && grep -qE 'light = if \(mounted \|\| isServing\) StatusLight\.State\.ON else StatusLight\.State\.OFF' "$rm" && grep -qE 'light = StatusLight\.of\(last\)' "$RC" && grep -qE 'StatusLight\.of\(job\.lastExit' "$fsp"; then pass "a remote's light is its last Test, a FUSE mount's light is the guest's own mount table, a backup's is its last exit code: never a declared status"; else fail "rclone/mounts lights not honest"; fi
+    if grep -qE 'StatusLightRow\(if \(c\.status == "ok"\) StatusLight\.State\.UNVERIFIABLE else StatusLight\.State\.OFF, c\.name\)' "$RC"; then pass "fleet connections (Volumes): ok → UNVERIFIABLE (the fleet's word), unreachable → OFF with its reason"; else fail "fleet connection lights wrong"; fi
+    if grep -qE 'val backupRunning = MutableStateFlow<Set<String>>' "$stc" && grep -qE 'exec\.job\(BackupJobs\.script\(job\)' "$stc" && grep -qE 'if \(isRunning\) LinearProgressIndicator' "$fsp" && grep -qE 'val fuseBusy = MutableStateFlow<Set<String>>' "$stc" && grep -qE 'if \(working\) LinearProgressIndicator' "$rm"; then pass "a run's state is held by the coordinator across tab changes and drawn as a progress row (backup jobs and mount operations)"; else fail "run state not wired"; fi
+    if grep -qE 'prefs\.setLastTest\("remote:\$name", r\.isSuccess\)' "$stc" && grep -qE 'prefs\.setLastTest\("mount:" \+ m\.id, ok\)' "$RCC"; then pass "the last Test per remote/mount is remembered"; else fail "test results not remembered"; fi
+    if grep -qE '"\(declared\)"' "$rm" "$fsp" "$RC" "$CARDS"; then fail "a '(declared)' literal badge — use the string resource"; else pass "no '(declared)' literal badge"; fi
+    if grep -qE 'Declarations\.(remotes|rcloneJobs|mirrorJobs|syncRules|unison)\b|Declarations\.connections' "$rm" "$fsp" "$stc"; then fail "the Fsync/Mounts pages read a DECLARED list: that is mock data (#1173)"; else pass "the Fsync and Mounts pages read no declared list: remotes, jobs, mounts and pairs are real state"; fi
+}
+echo "── G8 Rclone, FUSE and Backup pages, same language ──"
+g8 "$RM" "$FSP" "$STC"
 
 echo "── M mutation-proof ──"
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
@@ -128,7 +138,12 @@ g6 "$TMP/worker.kt" && fail "G6 passed a worker that ignores the decision (teste
 grep -v 'sync_resolve_conflicts' "$CARDS" > "$TMP/cards.kt"
 cmp -s "$CARDS" "$TMP/cards.kt" && fail "the card mutation changed nothing (tester is stale)"
 g2 "$TMP/cards.kt" && fail "G2 passed a card without Resolve (tester is vacuous)" || pass "Resolve dropped from the card → G2 RED"
-g2 "$CARDS" && g6 "$WORKER" && pass "unmutated tree is still green" || fail "the unmutated tree is red"
+sed 's/light = if (mounted || isServing) StatusLight.State.ON else StatusLight.State.OFF/light = StatusLight.State.ON/' "$RM" > "$TMP/mounts.kt"
+cmp -s "$RM" "$TMP/mounts.kt" && fail "the FUSE light mutation changed nothing (tester is stale)"
+g8 "$TMP/mounts.kt" "$FSP" "$STC" >/dev/null 2>&1 && fail "G8 passed a FUSE card that is always green (tester is vacuous)" || pass "a FUSE light not read from the guest's mount table → G8 RED"
+printf '%s\n' 'val x = Declarations.remotes' >> "$TMP/mounts.kt"; sed -i 's/light = StatusLight.State.ON/light = if (mounted || isServing) StatusLight.State.ON else StatusLight.State.OFF/' "$TMP/mounts.kt"
+g8 "$TMP/mounts.kt" "$FSP" "$STC" >/dev/null 2>&1 && fail "G8 passed a Mounts page that reads a declared list (tester is vacuous)" || pass "a declared list read by the Mounts page → G8 RED"
+g2 "$CARDS" && g6 "$WORKER" && g8 "$RM" "$FSP" "$STC" >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "test-drive-sync-screen: all checks passed"; else echo "test-drive-sync-screen: $FAILURES check(s) FAILED"; exit 1; fi
