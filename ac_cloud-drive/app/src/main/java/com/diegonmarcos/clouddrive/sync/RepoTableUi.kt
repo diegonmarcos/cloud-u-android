@@ -88,7 +88,6 @@ internal fun RepoCells(r: RepoTableRow) {
 private fun groupTitle(g: RepoGroup): String = stringResource(when (g) {
     RepoGroup.SYNC -> R.string.repo_group_sync
     RepoGroup.STEPS -> R.string.repo_group_steps
-    RepoGroup.METADATA -> R.string.repo_group_metadata
     RepoGroup.GOTO -> R.string.repo_group_goto
     RepoGroup.WORKFLOW -> R.string.repo_group_workflow
     RepoGroup.DANGEROUS -> R.string.repo_group_dangerous
@@ -108,6 +107,9 @@ internal fun actionLabel(id: String, declared: Declarations.GitOpDecl?): String 
     "metadata" -> stringResource(R.string.repo_act_remote_url)
     RepoActions.META_BRANCH -> stringResource(R.string.repo_act_default_branch)
     RepoActions.META_SYNC -> stringResource(R.string.repo_act_last_sync)
+    RepoActions.CHECKOUT_MAIN -> stringResource(R.string.repo_act_checkout_main)
+    RepoActions.BRANCHES -> stringResource(R.string.repo_act_branches)
+    RepoActions.PRS -> stringResource(R.string.repo_act_prs)
     RepoActions.OPEN_FOLDER -> stringResource(R.string.sync_open)
     "history" -> stringResource(R.string.repo_act_commit_history)
     RepoActions.RUNS -> stringResource(R.string.repo_act_runs)
@@ -151,9 +153,59 @@ internal fun RepoActionGroupsView(
                         icon = op?.let { IconCatalog.vectorOrDefault(it.icon) },
                         filled = active(id),
                         // Clone settings and the readers stay available while an operation runs; the verbs wait.
-                        enabled = (!busy || isClone || g.group == RepoGroup.METADATA || g.group == RepoGroup.GOTO) && !(op != null && blocked(op)),
+                        enabled = (!busy || isClone || g.group == RepoGroup.GOTO) && !(op != null && blocked(op)),
                         danger = danger,
                     )
+                }
+            }
+        }
+    }
+}
+
+/** The bulk bar: the first row of the table, one pill per [RepoActions.Bulk] command over every repo (Cloud Store's bulk-bar shape). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun RepoBulkBar(busy: Boolean, onBulk: (RepoActions.Bulk) -> Unit) {
+    FlowRow(
+        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_BULK_BAR),
+        horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide),
+    ) {
+        RepoActions.Bulk.entries.forEach { b ->
+            Pill(
+                stringResource(when (b) {
+                    RepoActions.Bulk.CHECK_ALL -> R.string.repo_bulk_check
+                    RepoActions.Bulk.SYNC_ALL -> R.string.repo_bulk_sync
+                    RepoActions.Bulk.CLONE_ALL -> R.string.repo_bulk_clone
+                    RepoActions.Bulk.STASH_PUSH_ALL -> R.string.repo_bulk_stash_push
+                }),
+                { onBulk(b) }, enabled = !busy || b == RepoActions.Bulk.CHECK_ALL,
+            )
+        }
+    }
+}
+
+/** The status summary line under the bulk bar. */
+@Composable
+internal fun RepoSummaryLine(s: RepoTable.Summary) {
+    Text(
+        stringResource(R.string.repo_summary, s.total, s.cloned, s.notCloned, s.dirty, s.ahead, s.behind),
+        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_SUMMARY),
+        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/** The repo metadata as a key | value table; the values are selectable (long-press, copy). */
+@Composable
+internal fun RepoMetaTable(rows: List<Pair<String, String>>) {
+    Column(Modifier.fillMaxWidth().padding(top = DriveMetrics.pad).testTag(DriveTags.SYNC_GIT_META_TABLE)) {
+        Text(stringResource(R.string.repo_meta_table_title), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        androidx.compose.foundation.text.selection.SelectionContainer {
+            Column {
+                rows.forEach { (k, v) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = DriveMetrics.tight)) {
+                        Text(k, Modifier.width(DriveMetrics.tableName), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                        Text(v, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                    }
                 }
             }
         }

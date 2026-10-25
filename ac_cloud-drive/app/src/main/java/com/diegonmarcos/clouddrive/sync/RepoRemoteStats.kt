@@ -85,6 +85,15 @@ object RepoRemoteStats {
         }
     }
 
+    /** One open pull request as a line: `#12 title · author · 2026-10-23T10:00:00Z`. */
+    fun parsePulls(text: String): List<String> {
+        val a = runCatching { json.parseToJsonElement(text) }.getOrNull() as? JsonArray ?: return emptyList()
+        return a.mapNotNull { it as? JsonObject }.map { p ->
+            val user = (p["user"] as? JsonObject)?.str("login").orEmpty()
+            listOf("#" + (p["number"]?.toString() ?: "?") + " " + p.str("title"), user, p.str("created_at")).filter { it.isNotBlank() }.joinToString(" · ")
+        }
+    }
+
     // ── the cache: one small JSON object per repository, in the app's plain prefs (nothing secret in it) ──
 
     object Cache {
@@ -159,4 +168,8 @@ object RepoRemoteStats {
     /** The newest workflow runs of a repository (the CI/CD feed), as display lines. */
     fun fetchRuns(baseUrl: String, owner: String, name: String, token: String, max: Int = 15): Result<List<String>> =
         get("$baseUrl/repos/${enc(owner)}/${enc(name)}/actions/runs?per_page=$max", token).map { parseRuns(it.body) }
+
+    /** The open pull requests of a repository (GitHub and Gitea share the route), as display lines. */
+    fun fetchPulls(baseUrl: String, owner: String, name: String, token: String, max: Int = 30): Result<List<String>> =
+        get("$baseUrl/repos/${enc(owner)}/${enc(name)}/pulls?state=open&per_page=$max", token).map { parsePulls(it.body) }
 }

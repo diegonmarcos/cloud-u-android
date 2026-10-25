@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -139,9 +140,16 @@ import kotlinx.coroutines.withContext
 /** #1149 which sub-page of Git this screen is: Me (sign-in, my repositories, parentless folders) or Cloud (the public cloud* list). */
 enum class GitView { ME, CLOUD }
 
+/** One row of THE table, whatever listing it came from; [onClone] clones it from the leg that listed it, [note] is a line under it. */
+private class TableEntry(
+    val key: String, val label: String, val name: String, val owner: String, val isPrivate: Boolean?, val fork: Boolean, val source: String,
+    val row: RepoTableRow, val cloned: ManagedRepo?, val onClone: () -> Unit, val note: String,
+)
+
 /** #1149 Cloud's live public list: loading, the filtered repositories, or why there are none (the declared set then stands in). */
 private data class CloudPublic(val loading: Boolean = false, val loaded: Boolean = false, val repos: List<GitHubRepos.Repo> = emptyList(), val error: String = "")
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextRunMinutes: Long?, modifier: Modifier = Modifier, view: GitView = GitView.ME, prefs: DrivePrefs? = null) {
     val ctx = LocalContext.current
@@ -662,6 +670,111 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
     }
 
+    // THE ONE TABLE: every repository of every listing (GitHub, Cloud Gitea, the other hosts, the clones no listing named)
+    // is one entry; public and private are not separate groups, the header sorts the lot (default: name, then visibility).
+    val entries: List<TableEntry> = buildList {
+        if (view == GitView.CLOUD) {
+            publicRows.forEach { d ->
+                add(TableEntry("pub-" + d.name, d.label, d.name, page.owner, false, false, "", tableRow(d.name, page.owner, false), clonedByName[d.name], { clone(d.name) }, ""))
+            }
+        } else {
+            page.ways.forEach { way ->
+                val wayListing = if (DriveGitChain.rung(way.rung)?.kind == DriveGitChain.RUNG_FLEET) cloudListing else listing
+                if (wayListing.loaded && wayListing.error.isBlank()) wayListing.repos.forEach { gh ->
+                    val owner = gh.owner.ifBlank { page.owner }
+                    val cloned = clonedByName[gh.name]
+                    add(TableEntry(
+                        "own-" + way.id + "-" + gh.owner + "/" + gh.name, gh.name, gh.name, owner, gh.private, gh.fork, way.label, tableRow(gh.name, owner, gh.private), cloned,
+                        {
+                            // #684 the row clones from the LEG THAT LISTED IT (#669's rule, per way).
+                            if (wayListing.rungId.isNotBlank()) cloneViaFleet(wayListing.rungId, gh)
+                            else if (wayListing.viaGh) cloneViaGh(gh)
+                            else if (gh.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, gh.name)
+                            else clone(gh.name, gh.cloneUrl, gh.sshUrl)
+                        },
+                        if (gh.private && cloned == null && gh.cloneUrl.isBlank() && wayListing.rungId.isBlank()) ctx.getString(R.string.git_way_private_needs_credential, gh.name) else "",
+                    ))
+                }
+            }
+            Declarations.gitHosts.forEach { host ->
+                val hs = hostsState.hosts[host.id] ?: GitHostsState.Host()
+                if (hs.signedIn && hs.loaded && hs.error.isBlank()) hs.repos.forEach { hr ->
+                    val owner = hr.owner.ifBlank { page.owner }
+                    add(TableEntry(
+                        "host-" + host.id + "-" + hr.owner + "/" + hr.name, hr.name, hr.name, owner, hr.private, hr.fork, host.label, tableRow(hr.name, hr.owner, hr.private), clonedByName[hr.name],
+                        {
+                            scope.launch {
+                                val token = withContext(Dispatchers.IO) { hostsState.tokenOf(host.id) }
+                                if (hr.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, hr.name)
+                                else if (token.isBlank()) handoff = ctx.getString(R.string.git_host_no_token, host.label)
+                                else coordinator.cloneInto(name = hr.name, url = hr.cloneUrl, authKind = GitSyncCoordinator.AUTH_HTTPS, username = GitHosts.cloneUser(host, hs.user), token = token)
+                            }
+                        },
+                        "",
+                    ))
+                }
+            }
+            // Any clone the store holds that no listing named: shown, never hidden (the scheduler still syncs it).
+            val named = listing.repos.map { it.name }.toSet() + cloudListing.repos.map { it.name }.toSet() + hostsState.hosts.values.flatMap { h -> h.repos.map { it.name } }.toSet()
+            repos.filter { File(it.path).name !in named }.forEach { r ->
+                add(TableEntry("other-" + r.id, r.name, r.name, page.owner, null, false, "", tableRow(File(r.path).name, page.owner, null), r, {}, ""))
+            }
+        }
+    }
+    val sortedEntries = RepoTable.sort(entries, sortColumn, sortAscending) { it.row }
+    val summary = RepoTable.summarize(entries.map { (it.cloned != null) to it.row })
+
+    // The table block: the sticky column header (BELOW the sign-in cards), the bulk bar and summary, then the rows.
+    fun LazyListScope.tableBlock() {
+        stickyHeader(key = "table-header") {
+            RepoTableHeader(sortColumn, sortAscending, tableScroll) { c ->
+                val next = RepoTable.tap(c, sortColumn, sortAscending)
+                sortColumn = next.first; sortAscending = next.second
+                expanded = ""
+            }
+        }
+        item(key = "table-bulk") {
+            Column {
+                RepoBulkBar(busy = bulk?.finished == false || running.isNotEmpty()) { b ->
+                    expanded = ""
+                    when (b) {
+                        RepoActions.Bulk.CHECK_ALL -> { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token) }
+                        RepoActions.Bulk.SYNC_ALL -> coordinator.runCompoundAll(RepoActions.SYNC_NO_WINNER)
+                        RepoActions.Bulk.CLONE_ALL -> entries.filter { it.cloned == null && it.name !in cloning }.forEach { it.onClone() }
+                        RepoActions.Bulk.STASH_PUSH_ALL -> coordinator.runCompoundAll(RepoActions.STASH_PUSH)
+                    }
+                }
+                RepoSummaryLine(summary)
+            }
+        }
+        items(sortedEntries, key = { it.key }) { e ->
+            val cloned = e.cloned
+            GitRepoRow(
+                name = e.label, repoName = e.name, cells = e.row, scroll = tableScroll, fork = e.fork, source = e.source,
+                repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
+                cloning = e.name in cloning, expanded = expanded == e.key,
+                // A second tap on the same repo closes its menu; a tap on another repo moves it.
+                onToggle = { expanded = RepoTable.toggle(expanded, e.key) },
+                onClone = e.onClone,
+            )
+            if (e.note.isNotBlank()) Text(
+                e.note, Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
+                style = MaterialTheme.typography.labelSmall, color = colorResource(R.color.status_light_off),
+            )
+            if (expanded == e.key && cloned != null) {
+                GitRepoOpsBox(
+                    repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
+                    running = running[cloned.id], glance = glances[cloned.id], fmt = fmt,
+                    coordinator = coordinator, actions = actions,
+                    repoName = e.name, owner = e.owner, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
+                    cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned }, onClose = { expanded = "" },
+                    row = e.row, isPrivate = e.isPrivate,
+                )
+            }
+            Hairline()
+        }
+    }
+
     PullToRefreshBox(
         isRefreshing = refreshingRemote,
         onRefresh = { coordinator.refreshRemoteStats(refreshTargets(), login.token) },
@@ -747,14 +860,6 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             }
         }
 
-        // #1138 THE TABLE HEADER: tap a column to sort every list below by it, tap again to flip the direction.
-        item {
-            RepoTableHeader(sortColumn, sortAscending, tableScroll) { c ->
-                val next = RepoTable.tap(c, sortColumn, sortAscending)
-                sortColumn = next.first; sortAscending = next.second
-            }
-        }
-
         // #1149 Cloud's one-line state: the live list's count, or why the declared set stands in.
         if (view == GitView.CLOUD) item {
             Text(
@@ -776,26 +881,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     item {
                         SectionHeader(section.label, count = publicRows.size)
                     }
-                    items(RepoTable.sort(publicRows, sortColumn, sortAscending) { tableRow(it.name, page.owner, false) }, key = { "pub-" + it.name }) { decl ->
-                        val cloned = clonedByName[decl.name]
-                        GitRepoRow(
-                            name = decl.label, repoName = decl.name, cells = tableRow(decl.name, page.owner, false), scroll = tableScroll, fork = false,
-                            repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
-                            cloning = decl.name in cloning, expanded = expanded == "pub-" + decl.name,
-                            onToggle = { expanded = if (expanded == "pub-" + decl.name) "" else "pub-" + decl.name },
-                            onClone = { clone(decl.name) },
-                        )
-                        if (expanded == "pub-" + decl.name && cloned != null) {
-                            GitRepoOpsBox(
-                                repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
-                                running = running[cloned.id], glance = glances[cloned.id], fmt = fmt,
-                                coordinator = coordinator, actions = actions,
-                                repoName = decl.name, owner = page.owner, remote = remoteStats[RepoRemoteStats.keyOf(page.owner, decl.name)],
-                                cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned },
-                            )
-                        }
-                        Hairline()
-                    }
+                    tableBlock()
                 }
                 "personal" -> {
                     // #684 TWO PARALLEL, ALWAYS-VISIBLE WAY-CARDS — GitHub and Cloud git — in
@@ -830,53 +916,6 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                                 onUseSsh = { login = login.copy(ssh = it) },
                             )
                         }
-                        if (wayListing.loaded && wayListing.error.isBlank()) {
-                            page.personalGroups.forEach { group ->
-                                val inGroup = GitHubRepos.group(wayListing.repos, group.id == Declarations.GIT_GROUP_PRIVATE)
-                                item { SectionHeader(group.label, count = inGroup.size) }
-                                items(RepoTable.sort(inGroup, sortColumn, sortAscending) { tableRow(it.name, it.owner.ifBlank { page.owner }, it.private) }, key = { "own-" + way.id + "-" + it.owner + "/" + it.name }) { gh ->
-                                    // #684 the row clones from the LEG THAT LISTED IT (#669's rule,
-                                    // now per way): the local `listing` is THIS card's listing, so a
-                                    // Cloud-git row rides the fleet session in-process and a GitHub row
-                                    // clones its listing's own URL. Falling through to the page's github
-                                    // template here would clone the wrong leg silently.
-                                    val listing = wayListing
-                                    val cloned = clonedByName[gh.name]
-                                    val key = "own-" + way.id + "-" + gh.name
-                                    GitRepoRow(
-                                        name = gh.name, repoName = gh.name, cells = tableRow(gh.name, gh.owner.ifBlank { page.owner }, gh.private), scroll = tableScroll, fork = gh.fork,
-                                        repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
-                                        cloning = gh.name in cloning, expanded = expanded == key,
-                                        onToggle = { expanded = if (expanded == key) "" else key },
-                                        onClone = {
-                                            if (listing.rungId.isNotBlank()) cloneViaFleet(listing.rungId, gh)
-                                            else if (listing.viaGh) cloneViaGh(gh)
-                                            else if (gh.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, gh.name)
-                                            else clone(gh.name, gh.cloneUrl, gh.sshUrl)
-                                        },
-                                    )
-                                    // #684 a private GitHub row listed with NO on-phone credential
-                                    // (the fleet-proxy leg) cannot clone: it says which credential it
-                                    // needs, never a dead button.
-                                    if (gh.private && cloned == null && gh.cloneUrl.isBlank() && listing.rungId.isBlank())
-                                        Text(
-                                            stringResource(R.string.git_way_private_needs_credential, gh.name),
-                                            Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
-                                            style = MaterialTheme.typography.labelSmall, color = colorResource(R.color.status_light_off),
-                                        )
-                                    if (expanded == key && cloned != null) {
-                                        GitRepoOpsBox(
-                                            repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
-                                            running = running[cloned.id], glance = glances[cloned.id], fmt = fmt,
-                                            coordinator = coordinator, actions = actions,
-                                            repoName = gh.name, owner = gh.owner.ifBlank { page.owner }, remote = remoteStats[RepoRemoteStats.keyOf(gh.owner.ifBlank { page.owner }, gh.name)],
-                                            cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned },
-                                        )
-                                    }
-                                    Hairline()
-                                }
-                            }
-                        }
                     }
                     // #1149 THE OTHER HOSTS (GitLab, Bitbucket, Codeberg/Gitea, Azure DevOps): a token card each, and once
                     // signed in the account's repositories in the same sortable table, Clone when no local folder matches.
@@ -891,41 +930,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                                 onOpenTokenPage = { actions.openUrl(host.tokenUrl) },
                             )
                         }
-                        if (hs.signedIn && hs.loaded && hs.error.isBlank()) {
-                            item(key = "host-head-" + host.id) { SectionHeader(host.label, count = hs.repos.size) }
-                            items(RepoTable.sort(hs.repos, sortColumn, sortAscending) { tableRow(it.name, it.owner, it.private) }, key = { "host-" + host.id + "-" + it.owner + "/" + it.name }) { hr ->
-                                val cloned = clonedByName[hr.name]
-                                val key = "host-" + host.id + "-" + hr.name
-                                GitRepoRow(
-                                    name = hr.name, repoName = hr.name, cells = tableRow(hr.name, hr.owner, hr.private), scroll = tableScroll, fork = hr.fork,
-                                    repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
-                                    cloning = hr.name in cloning, expanded = expanded == key,
-                                    onToggle = { expanded = if (expanded == key) "" else key },
-                                    onClone = {
-                                        scope.launch {
-                                            val token = withContext(Dispatchers.IO) { hostsState.tokenOf(host.id) }
-                                            if (hr.cloneUrl.isBlank()) handoff = ctx.getString(R.string.git_clone_url_missing, hr.name)
-                                            else if (token.isBlank()) handoff = ctx.getString(R.string.git_host_no_token, host.label)
-                                            else coordinator.cloneInto(
-                                                name = hr.name, url = hr.cloneUrl, authKind = GitSyncCoordinator.AUTH_HTTPS,
-                                                username = GitHosts.cloneUser(host, hs.user), token = token,
-                                            )
-                                        }
-                                    },
-                                )
-                                if (expanded == key && cloned != null) {
-                                    GitRepoOpsBox(
-                                        repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
-                                        running = running[cloned.id], glance = glances[cloned.id], fmt = fmt,
-                                        coordinator = coordinator, actions = actions,
-                                        repoName = hr.name, owner = hr.owner.ifBlank { page.owner }, remote = remoteStats[RepoRemoteStats.keyOf(hr.owner.ifBlank { page.owner }, hr.name)],
-                                        cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned },
-                                    )
-                                }
-                                Hairline()
-                            }
-                        }
                     }
+                    // #1149 ONE TABLE for every listing above: the sticky header, the bulk bar, the rows.
+                    tableBlock()
                     // #1149 LOCAL REPOS PARENTLESS: folders holding a .git that are not named like their origin.
                     if (prefs != null) item(key = "parentless") { ParentlessPanel(parentRoots, prefs) { coordinator.refresh(force = true) } }
                 }
@@ -933,34 +940,6 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             }
         }
 
-        // Any clone the store holds that neither section named — a folder added through the
-        // engine itself. Shown, never hidden: a repository the page cannot see is one the
-        // scheduler still syncs.
-        val named = listing.repos.map { it.name }.toSet() + cloudListing.repos.map { it.name }.toSet() + hostsState.hosts.values.flatMap { h -> h.repos.map { it.name } }.toSet()
-        val others = if (view == GitView.ME) repos.filter { File(it.path).name !in named } else emptyList()
-        if (others.isNotEmpty()) {
-            item { SectionHeader(stringResource(R.string.git_section_other), count = others.size) }
-            items(RepoTable.sort(others, sortColumn, sortAscending) { tableRow(File(it.path).name, page.owner, null) }, key = { "other-" + it.id }) { repo ->
-                val key = "other-" + repo.id
-                GitRepoRow(
-                    name = repo.name, repoName = repo.name, cells = tableRow(File(repo.path).name, page.owner, null), scroll = tableScroll, fork = false,
-                    repo = repo, glance = glances[repo.id], running = running[repo.id],
-                    cloning = false, expanded = expanded == key,
-                    onToggle = { expanded = if (expanded == key) "" else key },
-                    onClone = {},
-                )
-                if (expanded == key) {
-                    GitRepoOpsBox(
-                        repo = repo, page = page, details = details[repo.id], result = opResults[repo.id],
-                        running = running[repo.id], glance = glances[repo.id], fmt = fmt,
-                        coordinator = coordinator, actions = actions,
-                        repoName = repo.name, owner = page.owner, remote = remoteStats[RepoRemoteStats.keyOf(page.owner, repo.name)],
-                        cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = repo },
-                    )
-                }
-                Hairline()
-            }
-        }
         if (view == GitView.ME && repos.isEmpty()) item { EmptyState(Icons.Filled.Commit, stringResource(R.string.sync_empty_title), stringResource(R.string.sync_empty_hint)) }
 
         if (view == GitView.ME) item {
@@ -1218,6 +1197,7 @@ private fun GitRepoRow(
     cells: RepoTableRow,
     scroll: ScrollState,
     fork: Boolean,
+    source: String = "",
     repo: ManagedRepo?,
     glance: GitSyncCoordinator.Glance?,
     running: GitSyncCoordinator.Running?,
@@ -1244,6 +1224,7 @@ private fun GitRepoRow(
                     if (fork) CapsuleBadge(stringResource(R.string.git_fork))
                 }
                 // What the cells cannot say: the clone folder is gone, a conflict, or an unfinished merge / rebase.
+                if (source.isNotBlank()) Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (repo == null && !cloning) Text(stringResource(R.string.git_not_cloned), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (repo != null && glance != null && glance.gone) Text(stringResource(R.string.sync_glance_gone), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (repo != null && glance != null && glance.read) {
@@ -1304,12 +1285,16 @@ private fun GitRepoOpsBox(
     cloneDepth: Int,
     cloneSsh: Boolean,
     onSettings: () -> Unit,
+    onClose: () -> Unit,
+    row: RepoTableRow,
+    isPrivate: Boolean?,
 ) {
     val ctx = LocalContext.current
     val off = colorResource(R.color.status_light_off)
     var panel by remember(repo.id) { mutableStateOf("") }
     var confirm by remember(repo.id) { mutableStateOf<String?>(null) }
     var runs by remember(repo.id) { mutableStateOf<List<String>?>(null) }
+    var prs by remember(repo.id) { mutableStateOf<List<String>?>(null) }
     var message by remember(repo.id) { mutableStateOf("") }
     val readOnly = page.remoteMode(Declarations.REMOTE_READONLY)?.urlFor(page.owner, repoName) == repo.remoteUrl &&
         repo.authKind == GitSyncCoordinator.AUTH_NONE
@@ -1317,6 +1302,10 @@ private fun GitRepoOpsBox(
     // #1138 the CI/CD run feed is read when its panel opens (a network read the owner asked for), never on render.
     LaunchedEffect(repo.id, panel) {
         if (panel == RepoActions.RUNS && runs == null) runs = coordinator.runFeed(owner, repoName).getOrElse { listOf(ctx.getString(R.string.repo_runs_failed, it.message.orEmpty())) }
+    }
+
+    LaunchedEffect(repo.id, panel) {
+        if (panel == RepoActions.PRS && prs == null) prs = coordinator.prFeed(owner, repoName).getOrElse { listOf(ctx.getString(R.string.repo_prs_failed, it.message.orEmpty())) }
     }
 
     // The DECLARED operations' dispatch: the ONE place Kotlin names them, diffed against ui.sync.git.ops by test-drive-git-page.sh.
@@ -1345,6 +1334,8 @@ private fun GitRepoOpsBox(
         when (id) {
             RepoActions.SYNC_NO_WINNER, RepoActions.SYNC_REMOTE_WINS, RepoActions.SYNC_LOCAL_WINS -> coordinator.runCompound(repo, id)
             RepoActions.OPEN_FOLDER -> actions.openEngine(EngineActivity.ENGINE_GIT, repo.path)
+            RepoActions.CHECKOUT_MAIN -> coordinator.checkoutMain(repo)
+            RepoActions.BRANCHES, RepoActions.PRS -> panel = if (panel == id) "" else id
             RepoActions.SYNC_NOW -> coordinator.syncNow(repo)
             RepoActions.SETTINGS -> onSettings()
             RepoActions.META_BRANCH, RepoActions.META_SYNC, RepoActions.RUNS -> panel = if (panel == id) "" else id
@@ -1461,11 +1452,37 @@ private fun GitRepoOpsBox(
                 else if (feed.isEmpty()) Text(stringResource(R.string.repo_runs_none), style = MaterialTheme.typography.bodySmall)
                 else feed.forEach { MetaLine(it) }
             }
+            RepoActions.BRANCHES -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
+                if (d == null || d.loading) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
+                else d.branches.forEach { b -> MetaLine((if (b.isCurrent) "* " else "  ") + b.name + " · " + b.sha.take(7)) }
+            }
+            RepoActions.PRS -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
+                val feed = prs
+                if (feed == null) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
+                else if (feed.isEmpty()) Text(stringResource(R.string.repo_prs_none), style = MaterialTheme.typography.bodySmall)
+                else feed.forEach { MetaLine(it) }
+                PillRow { Pill(stringResource(R.string.repo_prs_open_web), { actions.openUrl(page.webUrl(repoName) + "/pulls") }) }
+            }
             "size" -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 if (d == null || d.loading) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
                 else MetaLine(stringResource(R.string.git_size_line, GitRepoScan.humanBytes(d.size.bytes), d.size.files, d.size.folders, GitRepoScan.humanBytes(d.size.gitBytes)))
             }
         }
+        RepoMetaTable(listOf(
+            stringResource(R.string.repo_meta_k_name) to repoName,
+            stringResource(R.string.repo_meta_k_owner) to owner,
+            stringResource(R.string.repo_meta_k_visibility) to RepoTable.visibility(isPrivate, stringResource(R.string.repo_vis_pvt), stringResource(R.string.repo_vis_pub)),
+            stringResource(R.string.repo_meta_k_path) to repo.path,
+            stringResource(R.string.repo_meta_k_remote) to repo.remoteUrl.ifBlank { stringResource(R.string.git_meta_no_remote) },
+            stringResource(R.string.repo_meta_k_branch) to (glance?.branch ?: stringResource(R.string.sync_no_branch)),
+            stringResource(R.string.repo_meta_k_upstream) to (glance?.upstream ?: stringResource(R.string.git_meta_no_upstream)),
+            stringResource(R.string.repo_meta_k_default_branch) to (remote?.defaultBranch ?: stringResource(R.string.repo_unknown)),
+            stringResource(R.string.repo_meta_k_auth) to repo.authKind,
+            stringResource(R.string.repo_meta_k_last_sync) to (if (repo.lastSyncEpochSeconds > 0) fmt.format(Date(repo.lastSyncEpochSeconds * 1000)) + " " + repo.lastSyncSummary else stringResource(R.string.sync_never)),
+            stringResource(R.string.repo_meta_k_size) to (RepoTable.size(row.sizeMainBytes) + " / " + RepoTable.size(row.sizeTotalBytes)),
+            stringResource(R.string.repo_meta_k_branches) to RepoTable.count(row.branches),
+        ))
+        PillRow { Pill(stringResource(R.string.repo_menu_close), onClose) }
         Text(
             if (repo.autoSync) stringResource(R.string.sync_auto, if (repo.syncIntervalMinutes > 0) repo.syncIntervalMinutes else BuildConfig.GIT_SYNC_INTERVAL_MINUTES, stringResource(if (repo.syncRequireUnmetered) R.string.sync_network_unmetered else R.string.sync_network_any)) else stringResource(R.string.sync_manual),
             Modifier.padding(top = DriveMetrics.pad), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

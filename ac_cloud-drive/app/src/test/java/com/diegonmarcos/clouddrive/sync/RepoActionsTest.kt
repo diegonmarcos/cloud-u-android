@@ -23,7 +23,7 @@ class RepoActionsTest {
 
     @Test fun `the groups render in the owner's order, Sync first and Clone settings last`() {
         assertEquals(
-            listOf(RepoGroup.SYNC, RepoGroup.STEPS, RepoGroup.METADATA, RepoGroup.GOTO, RepoGroup.WORKFLOW, RepoGroup.DANGEROUS, RepoGroup.REPO_CLEAN, RepoGroup.OTHERS, RepoGroup.CLONE_SETTINGS),
+            listOf(RepoGroup.SYNC, RepoGroup.STEPS, RepoGroup.GOTO, RepoGroup.WORKFLOW, RepoGroup.REPO_CLEAN, RepoGroup.DANGEROUS, RepoGroup.OTHERS, RepoGroup.CLONE_SETTINGS),
             RepoActions.GROUPS.map { it.group },
         )
     }
@@ -32,12 +32,22 @@ class RepoActionsTest {
         fun of(g: RepoGroup) = RepoActions.GROUPS.first { it.group == g }.actions
         assertEquals(listOf("sync_no_winner", "sync_remote_wins", "sync_local_wins"), of(RepoGroup.SYNC))
         assertEquals(listOf("fetch", "pull", "push", "commit", "stats"), of(RepoGroup.STEPS))
-        assertEquals(listOf("remote", "metadata", "meta_branch", "meta_sync"), of(RepoGroup.METADATA))
-        assertEquals(listOf("open_folder", "web"), of(RepoGroup.GOTO))
-        assertEquals(listOf("history", "runs", "actions"), of(RepoGroup.WORKFLOW))
+        assertEquals(listOf("checkout_main", "branches", "open_folder", "web"), of(RepoGroup.GOTO))
+        assertEquals(listOf("history", "runs", "actions", "prs"), of(RepoGroup.WORKFLOW))
+        assertEquals(listOf("remote", "metadata", "sync_now", "hooks", "size", "settings"), of(RepoGroup.OTHERS))
         assertEquals(listOf("force_pull", "force_push"), of(RepoGroup.DANGEROUS))
         assertEquals(listOf("clean_1", "clean_5", "clean_10"), of(RepoGroup.REPO_CLEAN))
         assertEquals(listOf("clone_full", "clone_depth1", "clone_oauth", "clone_ssh"), of(RepoGroup.CLONE_SETTINGS))
+    }
+
+    @Test fun `the bulk bar is Check all, Sync all, Clone all, Stash and Push all, and stash-push is a compound verb`() {
+        assertEquals(listOf(RepoActions.Bulk.CHECK_ALL, RepoActions.Bulk.SYNC_ALL, RepoActions.Bulk.CLONE_ALL, RepoActions.Bulk.STASH_PUSH_ALL), RepoActions.Bulk.entries)
+        assertTrue(RepoActions.isCompound(RepoActions.STASH_PUSH))
+        assertEquals("sync all has no winner", "sync_no_winner", RepoActions.SYNC_NO_WINNER)
+    }
+
+    @Test fun `the Cloud Gitea way carries its owner-given name`() {
+        assertEquals("Cloud Gitea (Self-hosted)", page.ways.first { it.rung == "gitea" }.label)
     }
 
     @Test fun `every declared operation sits in exactly one group`() {

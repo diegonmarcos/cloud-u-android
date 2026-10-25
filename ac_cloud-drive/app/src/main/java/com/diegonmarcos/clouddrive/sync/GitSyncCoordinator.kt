@@ -406,6 +406,26 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         }
     }
 
+    /** The bulk bar: [id] on every registered clone ([runCompound] per repository; each answers in its own row). */
+    fun runCompoundAll(id: String) { repos.value.forEach { runCompound(it, id) } }
+
+    /** Goto > Checkout Main, through the terminal-root wire; the answer lands in the repo's result line. */
+    fun checkoutMain(repo: ManagedRepo) {
+        if (running.value.containsKey(repo.id)) return
+        running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { record(repo, "checkout_main", runCatching { RepoCompound.checkoutMain(ctx, repo, authFor(repo)) }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }, SyncHistory.TRIGGER_MANUAL) }
+            opResults.update { it + (repo.id to result) }
+            running.update { it - repo.id }
+            reread(repo)
+        }
+    }
+
+    /** Workflow > PRs: the open pull requests as display lines. */
+    suspend fun prFeed(owner: String, name: String): Result<List<String>> = withContext(Dispatchers.IO) {
+        RepoRemoteStats.fetchPulls(Declarations.sync.git.api.baseUrl, owner, name, declaredToken())
+    }
+
     // ── #1138 clone settings: persisted, applied by every later clone ──
 
     /** 0 = clone the full history, 1 = depth 1. */

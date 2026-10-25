@@ -1,7 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 /** #1138 the command types of a repository's detail, one row (wrapping chips) each, in this order. */
-enum class RepoGroup { SYNC, STEPS, METADATA, GOTO, WORKFLOW, DANGEROUS, REPO_CLEAN, OTHERS, CLONE_SETTINGS }
+enum class RepoGroup { SYNC, STEPS, GOTO, WORKFLOW, DANGEROUS, REPO_CLEAN, OTHERS, CLONE_SETTINGS }
 
 /**
  * #1138 THE GROUPED ACTIONS of a repository's detail, as data. A declared operation (build.json
@@ -16,6 +16,10 @@ object RepoActions {
     const val META_BRANCH = "meta_branch"
     const val META_SYNC = "meta_sync"
     const val OPEN_FOLDER = "open_folder"
+    const val CHECKOUT_MAIN = "checkout_main"
+    const val BRANCHES = "branches"
+    const val PRS = "prs"
+    const val STASH_PUSH = "stash_push"
     const val RUNS = "runs"
     const val CLEAN_1 = "clean_1"
     const val CLEAN_5 = "clean_5"
@@ -32,13 +36,11 @@ object RepoActions {
     val GROUPS: List<Group> = listOf(
         Group(RepoGroup.SYNC, listOf(SYNC_NO_WINNER, SYNC_REMOTE_WINS, SYNC_LOCAL_WINS)),
         Group(RepoGroup.STEPS, listOf("fetch", "pull", "push", "commit", "stats")),
-        // Auth = the remote-mode switch (Web OAuth https / SSH), Remote URL = the metadata panel.
-        Group(RepoGroup.METADATA, listOf("remote", "metadata", META_BRANCH, META_SYNC)),
-        Group(RepoGroup.GOTO, listOf(OPEN_FOLDER, "web")),
-        Group(RepoGroup.WORKFLOW, listOf("history", RUNS, "actions")),
-        Group(RepoGroup.DANGEROUS, listOf("force_pull", "force_push")),
+        Group(RepoGroup.GOTO, listOf(CHECKOUT_MAIN, BRANCHES, OPEN_FOLDER, "web")),
+        Group(RepoGroup.WORKFLOW, listOf("history", RUNS, "actions", PRS)),
         Group(RepoGroup.REPO_CLEAN, listOf(CLEAN_1, CLEAN_5, CLEAN_10)),
-        Group(RepoGroup.OTHERS, listOf(SYNC_NOW, "hooks", "size", SETTINGS)),
+        Group(RepoGroup.DANGEROUS, listOf("force_pull", "force_push")),
+        Group(RepoGroup.OTHERS, listOf("remote", "metadata", SYNC_NOW, "hooks", "size", SETTINGS)),
         Group(RepoGroup.CLONE_SETTINGS, listOf(CLONE_FULL, CLONE_DEPTH1, CLONE_OAUTH, CLONE_SSH)),
     )
 
@@ -54,5 +56,8 @@ object RepoActions {
     fun route(id: String): Route = if (id in DANGEROUS || id in REPO_CLEAN) Route.CONFIRM else Route.RUN
 
     /** The compound sync verbs and the history trim run through [GitSyncCoordinator.runCompound]. */
-    fun isCompound(id: String): Boolean = id == SYNC_NO_WINNER || id == SYNC_REMOTE_WINS || id == SYNC_LOCAL_WINS || cleanDepth(id) > 0
+    fun isCompound(id: String): Boolean = id == STASH_PUSH || id == SYNC_NO_WINNER || id == SYNC_REMOTE_WINS || id == SYNC_LOCAL_WINS || cleanDepth(id) > 0
+
+    /** The first row of the page: bulk commands over every repo, in this order (Cloud Store's bulk-bar shape). Plain sync = no winner. */
+    enum class Bulk { CHECK_ALL, SYNC_ALL, CLONE_ALL, STASH_PUSH_ALL }
 }

@@ -44,9 +44,24 @@ object RepoTable {
         val known = items.filter { key(row(it), column) != null }
         val unknown = items.filter { key(row(it), column) == null }.sortedBy { row(it).name.lowercase() }
         @Suppress("UNCHECKED_CAST")
-        val cmp = compareBy<T> { key(row(it), column) as Comparable<Any> }.let { if (ascending) it else it.reversed() }.thenBy { row(it).name.lowercase() }
+        val cmp = compareBy<T> { key(row(it), column) as Comparable<Any> }.let { if (ascending) it else it.reversed() }.thenBy { row(it).name.lowercase() }.thenBy { row(it).isPrivate?.let { p -> if (p) 1 else 0 } ?: -1 }
         return known.sortedWith(cmp) + unknown
     }
+
+    /** Which repository's menu is open after a tap on [tapped]: a second tap on the same repo closes it ("" = none). */
+    fun toggle(open: String, tapped: String): String = if (open == tapped) "" else tapped
+
+    /** The status line over the table: one pass over the rows, [cloned] says whether a row has a local clone. */
+    data class Summary(val total: Int, val cloned: Int, val notCloned: Int, val dirty: Int, val ahead: Int, val behind: Int)
+
+    fun summarize(rows: List<Pair<Boolean, RepoTableRow>>): Summary = Summary(
+        total = rows.size,
+        cloned = rows.count { it.first },
+        notCloned = rows.count { !it.first },
+        dirty = rows.count { (it.second.dirtyFiles ?: 0) > 0 },
+        ahead = rows.count { (it.second.ahead ?: 0) > 0 },
+        behind = rows.count { (it.second.behind ?: 0) > 0 },
+    )
 
     fun size(bytes: Long?): String = if (bytes == null) DASH else GitRepoScan.humanBytes(bytes)
     fun count(n: Int?): String = n?.toString() ?: DASH

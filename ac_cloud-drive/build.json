@@ -530,7 +530,7 @@
           {
             "id": "cloud",
             "rung": "gitea",
-            "label": "Cloud git",
+            "label": "Cloud Gitea (Self-hosted)",
             "icon": "cloud"
           }
         ],

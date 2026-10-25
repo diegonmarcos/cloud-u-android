@@ -34,6 +34,8 @@ internal object RepoCompound {
             }
         }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
 
+    fun checkoutMain(ctx: Context, repo: ManagedRepo, auth: GitAuth): GitOpResult = raw(ctx, File(repo.path), "checkout_main", JSONObject(), auth)
+
     fun run(ctx: Context, repo: ManagedRepo, id: String, auth: GitAuth): GitOpResult {
         val dir = File(repo.path)
         val name = repo.authorName.ifBlank { GitSyncCoordinator.DEFAULT_AUTHOR }
@@ -63,6 +65,15 @@ internal object RepoCompound {
                 }
                 val pushed = raw(ctx, dir, "force_push_lease", JSONObject(), auth)
                 GitOpResult(pushed.ok, "sync-local-wins: " + steps + (if (pushed.ok) "pushed with lease" else "push refused"), pushed.details.ifBlank { pushed.summary })
+            }
+            id == RepoActions.STASH_PUSH -> {
+                val dirty = GitEngine(ctx, dir).use { it.status().files.isNotEmpty() }
+                if (dirty) {
+                    val st = raw(ctx, dir, "stash", JSONObject().put("name", name).put("email", email).put("message", "cloud-drive: stash and push"), auth)
+                    if (!st.ok) return GitOpResult(false, "stash-push: stash failed, nothing pushed", st.details.ifBlank { st.summary })
+                }
+                val pushed = GitEngine(ctx, dir).use { it.push(auth = auth) }
+                GitOpResult(pushed.ok, "stash-push: " + (if (dirty) "local changes stashed, " else "") + pushed.summary, pushed.details)
             }
             RepoActions.cleanDepth(id) > 0 -> {
                 val depth = RepoActions.cleanDepth(id)

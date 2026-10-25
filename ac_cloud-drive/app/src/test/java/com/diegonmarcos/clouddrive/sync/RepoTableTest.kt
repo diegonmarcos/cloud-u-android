@@ -84,4 +84,23 @@ class RepoTableTest {
         val gone = RepoTable.rowOf("repo", false, true, GitSyncCoordinator.Glance(gone = true, read = true), stats)
         assertNull(gone.dirtyFiles)
     }
+
+    @Test fun `the default sort is name then visibility, and public and private mix in one list`() {
+        val rows = listOf(row("b", pvt = true), row("a", pvt = true), row("a", pvt = false), row("c", pvt = false))
+        val sorted = RepoTable.sort(rows, RepoTable.DEFAULT_SORT, true) { it }
+        assertEquals(listOf("a" to false, "a" to true, "b" to true, "c" to false), sorted.map { it.name to it.isPrivate })
+    }
+
+    @Test fun `a second tap on the open repo closes its menu and a tap on another moves it`() {
+        assertEquals("x", RepoTable.toggle("", "x"))
+        assertEquals("", RepoTable.toggle("x", "x"))
+        assertEquals("y", RepoTable.toggle("x", "y"))
+    }
+
+    @Test fun `the summary counts total, cloned, not cloned, dirty, ahead and behind`() {
+        val s = RepoTable.summarize(listOf(
+            true to row("a", dirty = 2, a = 1, b = 0), true to row("b", dirty = 0, a = 0, b = 3), false to row("c"), true to row("d", dirty = 1, a = 2, b = 2),
+        ))
+        assertEquals(RepoTable.Summary(total = 4, cloned = 3, notCloned = 1, dirty = 2, ahead = 2, behind = 2), s)
+    }
 }

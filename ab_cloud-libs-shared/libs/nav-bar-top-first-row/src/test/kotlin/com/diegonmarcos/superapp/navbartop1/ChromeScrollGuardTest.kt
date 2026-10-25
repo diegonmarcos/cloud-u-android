@@ -93,4 +93,30 @@ class ChromeScrollGuardTest {
         val text = (f ?: throw AssertionError("ChromeWebScroll.kt not found")).readText()
         assertTrue("ChromeWebScroll no longer feeds onScrollDelta", "setOnScrollChangeListener" in text && "onScrollDelta(" in text && "addJavascriptInterface" in text)
     }
+
+    /** Every file of an app's main sources, with its path relative to the app's main/java root. */
+    private fun driveFiles(): List<File> = sources("ac_cloud-drive")
+
+    @Test fun `every Cloud Drive page is routed through the one shell and its scroll container rides the shared connection`() {
+        val files = driveFiles()
+        val main = files.first { it.name == "MainActivity.kt" }.readText()
+        val shell = files.first { it.name == "DriveShell.kt" }.readText()
+        // The shell: NavBarBottomHost inside NavBarTopFirstRowScaffold, so the ONE connection (LocalNavChromeCollapse) reaches every page.
+        assertTrue("DriveShell lost the shared scaffold", "NavBarTopFirstRowScaffold(" in shell && "NavBarBottomHost(" in shell)
+        assertTrue("MainActivity must draw its pages through DriveShell", "DriveShell(" in main)
+        // Each routed page: `"id" -> SomeScreen(...)` in MainActivity. Its package holds a scrollable Compose container.
+        val routes = Regex("""^\s*"([a-z_]+)"\s*->\s*([A-Z]\w+)\(""", RegexOption.MULTILINE).findAll(main).map { it.groupValues[1] to it.groupValues[2] }.toList()
+        assertTrue("MainActivity routes no page?", routes.size >= 8)
+        // A page whose scrolling lives in a shared lib (libs:ai's chat page) is checked by that lib; every other page must own a container here.
+        val libOwned = setOf("ai")
+        for ((id, screen) in routes.filter { it.first !in libOwned }) {
+            val def = files.firstOrNull { Regex("""fun\s+$screen\(""").containsMatchIn(it.readText()) } ?: throw AssertionError("page $id: no definition of $screen")
+            val pkg = files.filter { it.parentFile == def.parentFile }.joinToString("\n") { it.readText() }
+            assertTrue("page $id ($screen) has no scrollable Compose container (LazyColumn / verticalScroll / pager) for the chrome to follow", Regex("""LazyColumn|LazyVerticalGrid|verticalScroll\(|HorizontalPager|VerticalPager""").containsMatchIn(pkg))
+        }
+        // No page owns a second connection or switches the chrome's state by hand: that is what detaches it from the shell.
+        val own = Regex("""rememberBottomNavCollapse\(|NavChromeScroll\s*[({]|LocalNavChromeCollapse\s+provides|BottomNavCollapse\(\)""")
+        val bad = files.filter { it.name != "DriveShell.kt" && own.containsMatchIn(it.readText()) }.map { it.name }
+        assertEquals("a Drive page builds its own chrome connection", emptyList<String>(), bad)
+    }
 }

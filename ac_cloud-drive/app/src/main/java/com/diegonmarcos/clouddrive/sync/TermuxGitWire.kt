@@ -22,7 +22,7 @@ object TermuxGitWire {
     data class Plan(val script: String, val stdin: String = "", val network: Boolean = false)
 
     /** Verbs that answer a GitOpResult. #1138 adds the compound ones the engine APK has no verb for (RepoCompound sends them). */
-    val OPS = setOf("push", "force_push", "fetch", "pull", "force_pull", "sync", "force_push_lease", "merge_upstream", "stash", "shrink")
+    val OPS = setOf("push", "force_push", "fetch", "pull", "force_pull", "sync", "force_push_lease", "merge_upstream", "stash", "shrink", "checkout_main")
 
     private const val FS = "%x1f"
     private const val RS = "%x1e"
@@ -83,6 +83,7 @@ object TermuxGitWire {
                 "if [ -f \"\$(git -C ${q(dir)} rev-parse --absolute-git-dir)/MERGE_HEAD\" ]; then " + g(dir, "merge --abort") +
                 "; echo 'merge conflict: merge aborted, nothing changed' >&2; exit 3; fi; exit \$rc; fi", true, header)
             "stash" -> ok(g(dir, "-c user.name=${q(a.optString("name"))} -c user.email=${q(a.optString("email"))} stash push --include-untracked -m ${q(a.optString("message"))}"))
+            "checkout_main" -> ok(g(dir, "checkout main") + " 2>/dev/null || " + g(dir, "checkout master"))
             "shrink" -> a.optInt("depth", 0).takeIf { it in 1..1000 }?.let { d ->
                 ok(gAuthed(dir, "fetch --depth $d ${q(remote)}") + "; " + g(dir, "reflog expire --expire=now --all") + "; " + g(dir, "gc --prune=now -q"), true, header)
             } ?: (null to "bad depth")
