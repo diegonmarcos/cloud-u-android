@@ -879,6 +879,8 @@ fun InboxScreen(
     // by whichever of the two drawer envelopes this window gets: written twice, the two copies
     // drift, and crossing 1 200 dp would throw away the whole list's state.
     val content: @Composable () -> Unit = {
+        // The message list inside the account's folders and labels as the side menu (or rows), per the section's mode (#1189).
+        MailFolderNav(ui, { viewModel.select(it) }) {
         // The list's Scaffold, beside the reading pane when the host decided a split (#103): the
         // pane is a SIBLING of this Scaffold (each takes the status bar once) and lives inside the
         // drawer's envelope. The Scaffold block below is deliberately NOT re-indented.
@@ -1777,7 +1779,8 @@ fun InboxScreen(
             }
         }
         }
-    }
+            }
+}
     // ONE drawer content, two envelopes. `drawerState` is closed from the content in BOTH branches,
     // deliberately: close() on an already-Closed state does nothing, so the six
     // `drawerState.close()` inside [DrawerContent] need no branch of their own (#103).
@@ -1808,7 +1811,7 @@ fun InboxScreen(
                     )
                 }
             },
-            content = { MailFolderNav(ui, { viewModel.select(it) }, content) },
+            content = content,
         )
     } else {
         ModalNavigationDrawer(
@@ -1838,7 +1841,7 @@ fun InboxScreen(
                     )
                 }
             },
-            content = { MailFolderNav(ui, { viewModel.select(it) }, content) },
+            content = content,
         )
     }
 }
