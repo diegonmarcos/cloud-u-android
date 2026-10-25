@@ -98,8 +98,14 @@ class HomeSwipeGestureTest {
         val pfd = ua.executeShellCommand("dumpsys window")
         val focus = java.io.BufferedReader(java.io.InputStreamReader(android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd)))
             .lineSequence().filter { it.contains("mCurrentFocus") }.joinToString(" | ")
+        // The input dispatcher's own window list, in z-order: which window owns the touch at the swipe point.
+        fun sh(cmd: String) = java.io.BufferedReader(java.io.InputStreamReader(
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(ua.executeShellCommand(cmd)))).readText()
+        val input = runCatching { sh("dumpsys input") }.getOrDefault("")
+        runCatching { java.io.File("/data/local/tmp/home-swipe-$name-input.txt").writeText(input) }
+        val wins = input.lineSequence().filter { Regex("^\\s+\\d+: name=").containsMatchIn(it) }.take(14).joinToString(" ; ") { it.trim().take(150) }
         val top = onMain { shell.supportFragmentManager.findFragmentById(R.id.fragment_container)?.javaClass?.simpleName }
-        return "section=${onMain { shell.currentSection }} top=$top focus=[$focus]"
+        return "section=${onMain { shell.currentSection }} top=$top focus=[$focus] windows=[$wins]"
     }
 
     private fun declared(target: String) = target.removePrefix("action:")
