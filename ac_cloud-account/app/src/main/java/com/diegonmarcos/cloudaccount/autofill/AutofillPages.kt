@@ -107,7 +107,7 @@ private fun Page(title: String, subtitle: String, content: @Composable () -> Uni
 }
 
 @Composable
-private fun Field(label: String, value: String, tag: String, keyboard: KeyboardType = KeyboardType.Text, single: Boolean = true, onChange: (String) -> Unit) {
+private fun AutofillField(label: String, value: String, tag: String, keyboard: KeyboardType = KeyboardType.Text, single: Boolean = true, onChange: (String) -> Unit) {
     OutlinedTextField(value, onChange, label = { Text(label, fontSize = KitDensity.caption) }, singleLine = single,
         minLines = if (single) 1 else 3, keyboardOptions = KeyboardOptions(keyboardType = keyboard),
         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp).testTag(tag))
@@ -154,10 +154,10 @@ fun AutofillProfilesPage() {
 private fun ProfileEditor(start: AutofillProfile, onSave: (AutofillProfile) -> Unit, onCancel: () -> Unit) {
     var p by remember(start) { mutableStateOf(start) }
     KitCard(Modifier.padding(vertical = KitDensity.small).testTag("autofill:profile:editor")) {
-        Field("Profile name (shown on the fill chip, e.g. Spain-A)", p.label, "autofill:profile:label") { p = p.copy(label = it) }
+        AutofillField("Profile name (shown on the fill chip, e.g. Spain-A)", p.label, "autofill:profile:label") { p = p.copy(label = it) }
         KitSwitchRow("Default profile", "Offered first unless a site rule or the site's country picks another", p.isDefault, { p = p.copy(isDefault = it) })
         AutofillSot.PROFILE_FIELDS.forEach { c ->
-            Field(columnLabel(c), p[c], "autofill:profile:field:$c") { v -> p = p.copy(fields = p.fields + (c to v)) }
+            AutofillField(columnLabel(c), p[c], "autofill:profile:field:$c") { v -> p = p.copy(fields = p.fields + (c to v)) }
         }
         Text("Addresses", color = LocalKitPalette.current.textPrimary, fontSize = KitDensity.title, modifier = Modifier.padding(top = KitDensity.small))
         p.addresses.forEachIndexed { i, a ->
@@ -197,9 +197,9 @@ private fun AddressEditor(a: AutofillAddress, i: Int, onChange: (AutofillAddress
             Small(if (a.isDefault) "default" else "make default", "autofill:address:$i:default") { onChange(a.copy(isDefault = !a.isDefault)) }
             Small("remove", "autofill:address:$i:remove", onRemove)
         }
-        Field("Label (optional)", a.label, "autofill:address:$i:label") { onChange(a.copy(label = it)) }
+        AutofillField("Label (optional)", a.label, "autofill:address:$i:label") { onChange(a.copy(label = it)) }
         AutofillSot.ADDRESS_FIELDS.forEach { c ->
-            Field(columnLabel(c), a[c], "autofill:address:$i:$c") { v -> onChange(a.copy(fields = a.fields + (c to v))) }
+            AutofillField(columnLabel(c), a[c], "autofill:address:$i:$c") { v -> onChange(a.copy(fields = a.fields + (c to v))) }
         }
         HorizontalDivider()
     }
@@ -209,7 +209,7 @@ private fun AddressEditor(a: AutofillAddress, i: Int, onChange: (AutofillAddress
 private fun ContactEditor(c: AutofillContact, i: Int, onChange: (AutofillContact) -> Unit, onRemove: () -> Unit) {
     val kb = when (c.kind) { ContactKind.TEL -> KeyboardType.Phone; ContactKind.EMAIL -> KeyboardType.Email; else -> KeyboardType.Uri }
     Column(Modifier.padding(vertical = 2.dp).testTag("autofill:contact:$i")) {
-        Field(when (c.kind) { ContactKind.TEL -> "Phone"; ContactKind.EMAIL -> "Email"; else -> "Link" }, c.value, "autofill:contact:$i:value", kb) { onChange(c.copy(value = it)) }
+        AutofillField(when (c.kind) { ContactKind.TEL -> "Phone"; ContactKind.EMAIL -> "Email"; else -> "Link" }, c.value, "autofill:contact:$i:value", kb) { onChange(c.copy(value = it)) }
         Row {
             if (c.kind == ContactKind.TEL) {
                 KitSegmented(listOf("mobile" to "Mobile", "landline" to "Landline", "work" to "Work"), c.type, { onChange(c.copy(type = it)) },
@@ -218,7 +218,7 @@ private fun ContactEditor(c: AutofillContact, i: Int, onChange: (AutofillContact
             Small(if (c.isDefault) "default" else "make default", "autofill:contact:$i:default") { onChange(c.copy(isDefault = !c.isDefault)) }
             Small("remove", "autofill:contact:$i:remove", onRemove)
         }
-        if (c.kind == ContactKind.TEL) Field("Country (ES, DE, BR…)", c.country, "autofill:contact:$i:country") { onChange(c.copy(country = it.trim().uppercase())) }
+        if (c.kind == ContactKind.TEL) AutofillField("Country (ES, DE, BR…)", c.country, "autofill:contact:$i:country") { onChange(c.copy(country = it.trim().uppercase())) }
     }
 }
 
@@ -259,19 +259,19 @@ fun AutofillRulesPage() {
 private fun RuleEditor(start: SiteRule, onSave: (SiteRule) -> Unit, onCancel: () -> Unit) {
     var r by remember(start) { mutableStateOf(start) }
     KitCard(Modifier.padding(vertical = KitDensity.small).testTag("autofill:rule:editor")) {
-        Field("Domain (example.com covers its subdomains; de covers every .de site)", r.domain, "autofill:rule:domain", KeyboardType.Uri) { r = r.copy(domain = it) }
+        AutofillField("Domain (example.com covers its subdomains; de covers every .de site)", r.domain, "autofill:rule:domain", KeyboardType.Uri) { r = r.copy(domain = it) }
         if (r.isProfileRule) {
-            Field("Profile name to offer first", r.literalValue, "autofill:rule:profile") { r = r.copy(literalValue = it) }
+            AutofillField("Profile name to offer first", r.literalValue, "autofill:rule:profile") { r = r.copy(literalValue = it) }
         } else {
-            Field("Form selector (blank = any form)", r.formSelector, "autofill:rule:form") { r = r.copy(formSelector = it) }
-            Field("Field selector (CSS, e.g. #zip or input[name=plz])", r.fieldSelector, "autofill:rule:field") { r = r.copy(fieldSelector = it) }
-            Field("Profile field (or ignore)", r.fieldKey, "autofill:rule:key") { r = r.copy(fieldKey = it.trim()) }
+            AutofillField("Form selector (blank = any form)", r.formSelector, "autofill:rule:form") { r = r.copy(formSelector = it) }
+            AutofillField("Field selector (CSS, e.g. #zip or input[name=plz])", r.fieldSelector, "autofill:rule:field") { r = r.copy(fieldSelector = it) }
+            AutofillField("Profile field (or ignore)", r.fieldKey, "autofill:rule:key") { r = r.copy(fieldKey = it.trim()) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 (Fields.ALL + Fields.IGNORE).forEach { k ->
                     Row(Modifier.clickable { r = r.copy(fieldKey = k) }) { KitChip(k, null, tag = "autofill:rule:key:$k") }
                 }
             }
-            Field("Fixed value instead (non-secret, optional)", r.literalValue, "autofill:rule:value") { r = r.copy(literalValue = it) }
+            AutofillField("Fixed value instead (non-secret, optional)", r.literalValue, "autofill:rule:value") { r = r.copy(literalValue = it) }
         }
         KitSwitchRow("Enabled", "Off keeps the rule without applying it", r.enabled, { r = r.copy(enabled = it) })
         if (!r.valid) Text(if (r.isProfileRule) "Needs a domain and a profile name." else "Needs a domain, a field selector and a known profile field (or a fixed value).",
@@ -299,8 +299,8 @@ fun AutofillSnippetsPage() {
             var label by remember(e) { mutableStateOf(e.label) }
             var text by remember(e) { mutableStateOf(e.text) }
             KitCard(Modifier.padding(vertical = KitDensity.small).testTag("autofill:snippet:editor")) {
-                Field("Label", label, "autofill:snippet:label") { label = it }
-                Field("Text", text, "autofill:snippet:text", single = false) { text = it }
+                AutofillField("Label", label, "autofill:snippet:label") { label = it }
+                AutofillField("Text", text, "autofill:snippet:text", single = false) { text = it }
                 KitActionBar(listOf(
                     KitAction("Save", "autofill:snippet:save", enabled = text.isNotBlank()) { store.save(e.copy(label = label.trim(), text = text)); editing = null; refresh() },
                     KitAction("Cancel", "autofill:snippet:cancel") { editing = null },
@@ -343,7 +343,7 @@ fun AutofillImportBody(pickFile: (((String) -> Unit) -> Unit)? = null) {
     val vaultTakesIds = remember(parsed, ids) { VaultIdentityHandoff.isAvailable(ctx) }
 
     Column(Modifier.fillMaxWidth()) {
-        Field("Paste text or JSON", text, "autofill:import:text", single = false) { text = it; parsed = null; saved = null }
+        AutofillField("Paste text or JSON", text, "autofill:import:text", single = false) { text = it; parsed = null; saved = null }
         KitActionBar(listOfNotNull(
             KitAction("Review", "autofill:import:review", enabled = text.isNotBlank()) {
                 parsed = AutofillImport.parse(text).also { ids = it.ids; sent = emptySet() }
