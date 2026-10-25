@@ -57,9 +57,5 @@ project(":libs:ui-icons").projectDir = file("../ab_cloud-libs-shared/libs/ui-ico
 // #1164 the shared navigation: first row (Profile -> Cloud Account), second row, bottom nav, page background.
 include(":libs:ui-nav-bars")
 project(":libs:ui-nav-bars").projectDir = file("../ab_cloud-libs-shared/libs/ui-nav-bars")
-include(":libs:ui-nav-bars")
-project(":libs:ui-nav-bars").projectDir = file("../ab_cloud-libs-shared/libs/ui-nav-bars")
-include(":libs:ui-nav-bars")
-project(":libs:ui-nav-bars").projectDir = file("../ab_cloud-libs-shared/libs/ui-nav-bars")
 include(":libs:theme-background")
 project(":libs:theme-background").projectDir = file("../ab_cloud-libs-shared/libs/theme-background")

@@ -345,7 +345,7 @@ done
 echo "== mutations: each check must go red on its own break =="
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 mkdir -p "$W/base/ac_cloud-me" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src"
-for l in ui-nav-bars ui-nav-bars; do mkdir -p "$W/base/ab_cloud-libs-shared/libs/$l/src"; cp -r "$APP/../ab_cloud-libs-shared/libs/$l/src/main" "$W/base/ab_cloud-libs-shared/libs/$l/src/"; done
+for l in ui-nav-bars; do mkdir -p "$W/base/ab_cloud-libs-shared/libs/$l/src"; cp -r "$APP/../ab_cloud-libs-shared/libs/$l/src/main" "$W/base/ab_cloud-libs-shared/libs/$l/src/"; done
 mkdir -p "$W/base/ab_cloud-libs-shared/libs/ui-icons/src" "$W/base/ab_cloud-libs-shared/libs/fleetconfig-model/src/main"
 cp -r "$APP/../ab_cloud-libs-shared/libs/ui-icons/src/main" "$W/base/ab_cloud-libs-shared/libs/ui-icons/src/"
 cp -r "$APP/../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets" "$W/base/ab_cloud-libs-shared/libs/fleetconfig-model/src/main/"
