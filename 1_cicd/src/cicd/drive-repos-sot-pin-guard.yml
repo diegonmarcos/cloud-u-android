@@ -30,7 +30,7 @@ jobs:
         run: |
           fix='FIX: bash ac_cloud-drive/tools/sync-repos-sot.sh && git add -A ac_cloud-drive ab_cloud-libs-shared && git commit && git push'
           app=ac_cloud-drive
-          want="$(node -e 'console.log(require(process.argv[1]).storage.repos_source.sha256)' "$app/build.json")"
+          want="$(node -e 'console.log(require(process.argv[1]).storage.repos_source.sha256)' "$PWD/$app/build.json")"
           have="$(sha256sum "$app/data/repos.sot.json" | cut -d' ' -f1)"
           rc=0
           [ "$want" = "$have" ] || { echo "::error::$app/data/repos.sot.json sha256 $have != build.json pin $want"; rc=1; }
