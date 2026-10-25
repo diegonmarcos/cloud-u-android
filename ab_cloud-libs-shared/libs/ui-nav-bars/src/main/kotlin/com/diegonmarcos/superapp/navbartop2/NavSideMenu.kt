@@ -132,8 +132,10 @@ public fun NavSideMenu(
     val shape = RoundedCornerShape(SideMenuSpec.RADIUS)
     val width by animateDpAsState(if (rail) SideMenuSpec.RAIL_WIDTH else SideMenuSpec.EXPANDED_WIDTH, label = "sidemenu_width")
     val items = remember(section) { sideMenuItems(section) }
+    // The caller's modifier (and so its tag: DOCK / OVERLAY) sits on a wrapper, so the menu keeps its own MENU tag on the column.
+    Box(modifier.semantics { testTagsAsResourceId = true }) {
     Column(
-        modifier.semantics { testTagsAsResourceId = true }.width(width).fillMaxHeight()
+        Modifier.width(width).fillMaxHeight()
             .padding(start = SideMenuSpec.SIDE, top = SideMenuSpec.SIDE, bottom = SideMenuSpec.SIDE)
             .testTag(SideMenuTags.MENU)
             .clip(shape).background(palette.tabStrip, shape).border(1.dp, palette.islandBorder, shape)
@@ -153,6 +155,7 @@ public fun NavSideMenu(
             if (item.heading) SideHeading(item, rail, palette)
             else SideRow(item, rail, item.id == selectedId, palette, iconFor, onClick = { item.page?.let(onSelect) })
         }
+    }
     }
 }
 

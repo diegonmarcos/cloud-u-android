@@ -81,7 +81,7 @@ class NavSideMenuTest {
         compose.onNodeWithTag(SideMenuTags.rail("sent"), useUnmergedTree = true).assertTextEquals("Sen")
         compose.onNodeWithTag(SideMenuTags.label("sent"), useUnmergedTree = true).assertDoesNotExist()
         val w = compose.onNodeWithTag(SideMenuTags.MENU).fetchSemanticsNode().boundsInRoot.width
-        assertEquals(SideMenuSpec.RAIL_WIDTH.value + SideMenuSpec.SIDE.value, w, 1.5f)
+        assertEquals(SideMenuSpec.RAIL_WIDTH.value, w, 1.5f)
     }
 
     @Test fun `away draws nothing`() {
@@ -141,7 +141,7 @@ class NavSideMenuTest {
         compose.onNodeWithTag(SideMenuTags.OVERLAY).assertIsDisplayed()
         compose.onNodeWithTag(SideMenuTags.SCRIM).assertExists()
         val dock = compose.onNodeWithTag(SideMenuTags.DOCK).fetchSemanticsNode().boundsInRoot
-        assertEquals("the docked part is the rail", SideMenuSpec.RAIL_WIDTH.value + SideMenuSpec.SIDE.value, dock.width, 1.5f)
+        assertEquals("the docked part is the rail", SideMenuSpec.RAIL_WIDTH.value, dock.width, 1.5f)
         // the scrim folds the menu back to the rail
         compose.onNodeWithTag(SideMenuTags.SCRIM).performClick()
         compose.waitForIdle()
