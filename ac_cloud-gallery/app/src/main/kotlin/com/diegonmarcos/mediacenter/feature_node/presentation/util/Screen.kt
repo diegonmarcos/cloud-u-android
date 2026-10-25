@@ -7,6 +7,14 @@ package com.diegonmarcos.mediacenter.feature_node.presentation.util
 
 sealed class Screen(val route: String) {
     data object TimelineScreen : Screen("timeline_screen")
+
+    // The other bottom-nav tabs (build.json::ui.bottom_nav): Screenshots, Downloads, Camera, Home, Timeline, Maps, Objects.
+    data object ScreenshotsTabScreen : Screen("tab_screenshots")
+    data object DownloadsTabScreen : Screen("tab_downloads")
+    data object CameraTabScreen : Screen("tab_camera")
+    data object HomeTabScreen : Screen("tab_home")
+    data object MapsTabScreen : Screen("tab_maps")
+    data object ObjectsTabScreen : Screen("tab_objects")
     data object AlbumsScreen : Screen("albums_screen")
 
     data object AlbumViewScreen : Screen("album_view_screen") {

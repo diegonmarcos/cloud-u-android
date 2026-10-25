@@ -156,6 +156,12 @@ import com.diegonmarcos.mediacenter.feature_node.presentation.storycards.StoryCa
 import com.diegonmarcos.mediacenter.feature_node.presentation.storycards.StoryCardsViewModel
 import com.diegonmarcos.mediacenter.feature_node.presentation.storycards.StoryViewerScreen
 import com.diegonmarcos.mediacenter.feature_node.presentation.timeline.TimelineScreen
+import com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineFilter
+import com.diegonmarcos.mediacenter.shell.GalleryTab
+import com.diegonmarcos.mediacenter.shell.HomeScreen
+import com.diegonmarcos.mediacenter.shell.MapsTabScreen
+import com.diegonmarcos.mediacenter.shell.ObjectsTabScreen
+import com.diegonmarcos.mediacenter.shell.PermissionGate
 import com.diegonmarcos.mediacenter.feature_node.presentation.trashed.TrashedGridScreen
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.Screen
 import com.diegonmarcos.mediacenter.feature_node.presentation.privatefolder.PrivateFolderScreen
@@ -182,7 +188,6 @@ fun NavigationComp(
     val searchBarActive = rememberSaveable {
         mutableStateOf(false)
     }
-    val bottomNavEntries = rememberNavigationItems()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val groupTimelineByMonth by rememberTimelineGroupByMonth()
     val groupTimelineByYear by rememberTimelineGroupByYear()
@@ -198,7 +203,8 @@ fun NavigationComp(
     val startDest by rememberSaveable(permissionState, lastStartScreen, setupNeeded) {
         mutableStateOf(
             if (permissionState && !setupNeeded) {
-                lastStartScreen
+                // A saved screen that is no longer a tab (Albums, Library) opens Home instead.
+                if (GalleryTab.isTabRoute(lastStartScreen)) lastStartScreen else Screen.HomeTabScreen()
             } else Screen.SetupScreen()
         )
     }
@@ -208,14 +214,14 @@ fun NavigationComp(
     OnLifecycleEvent { _, event ->
         if (event == Lifecycle.Event.ON_STOP) {
             // Only update lastStartScreen if user hasn't set a forced default screen
-            if (!forcedLastScreen && (currentDest == Screen.TimelineScreen() || currentDest == Screen.AlbumsScreen() || currentDest == Screen.LibraryScreen())) {
+            if (!forcedLastScreen && GalleryTab.isTabRoute(currentDest)) {
                 lastStartScreen = currentDest
             }
         }
     }
 
     var lastShouldDisplay by rememberSaveable {
-        mutableStateOf(bottomNavEntries.find { item -> item.route == currentDest } != null)
+        mutableStateOf(GalleryTab.isTabRoute(currentDest))
     }
     val shouldSkipAuth = rememberSaveable {
         mutableStateOf(false)
@@ -225,7 +231,7 @@ fun NavigationComp(
     LaunchedEffect(navBackStackEntry) {
         navBackStackEntry?.destination?.route?.let {
             val shouldDisplayBottomBar =
-                bottomNavEntries.find { item -> item.route == it } != null && !searchBarActive.value
+                GalleryTab.isTabRoute(it) && !searchBarActive.value
             if (lastShouldDisplay != shouldDisplayBottomBar) {
                 bottomBarState.value = shouldDisplayBottomBar
                 lastShouldDisplay = shouldDisplayBottomBar
@@ -281,7 +287,7 @@ fun NavigationComp(
                     permissionState = true
                     // Pop the wizard off the back stack so pressing back from the timeline
                     // exits the app instead of returning to setup.
-                    navController.navigate(Screen.TimelineScreen()) {
+                    navController.navigate(Screen.HomeTabScreen()) {
                         popUpTo(Screen.SetupScreen()) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -290,14 +296,62 @@ fun NavigationComp(
             composable(
                 route = Screen.TimelineScreen()
             ) {
-                TimelineScreen(
-                    paddingValues = paddingValues,
-                    isScrolling = isScrolling,
-                    sharedTransitionScope = this@SharedTransitionLayout,
-                    animatedContentScope = this,
-                    mediaState = timelineState,
-                    metadataState = metadataState
-                )
+                PermissionGate(GalleryTab.TIMELINE) {
+                    TimelineScreen(
+                        paddingValues = paddingValues,
+                        isScrolling = isScrolling,
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedContentScope = this,
+                        mediaState = timelineState,
+                        metadataState = metadataState
+                    )
+                }
+            }
+            // Screenshots, Downloads, Camera: the unified timeline narrowed to one MediaStore bucket.
+            GalleryTab.entries.forEach { tab ->
+                val bucket = tab.bucket ?: return@forEach
+                composable(route = tab.route) {
+                    PermissionGate(tab) {
+                        TimelineScreen(
+                            paddingValues = paddingValues,
+                            isScrolling = isScrolling,
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedContentScope = this,
+                            mediaState = timelineState,
+                            metadataState = metadataState,
+                            fixedFilter = TimelineFilter.bucket(bucket),
+                            scrollToTopRoute = tab.route,
+                        )
+                    }
+                }
+            }
+            composable(route = Screen.HomeTabScreen()) {
+                PermissionGate(GalleryTab.HOME) {
+                    HomeScreen(
+                        mediaState = timelineState,
+                        albumsState = albumsState,
+                        metadataState = metadataState,
+                    )
+                }
+            }
+            composable(route = Screen.MapsTabScreen()) {
+                PermissionGate(GalleryTab.MAPS) {
+                    MapsTabScreen(
+                        mediaState = timelineState,
+                        metadataState = metadataState,
+                        isScrolling = isScrolling,
+                        sharedTransitionScope = this@SharedTransitionLayout,
+                        animatedContentScope = this,
+                    )
+                }
+            }
+            composable(route = Screen.ObjectsTabScreen()) {
+                PermissionGate(GalleryTab.OBJECTS) {
+                    ObjectsTabScreen(
+                        mediaState = timelineState,
+                        metadataState = metadataState,
+                    )
+                }
             }
             composable(
                 route = Screen.TrashedScreen()

@@ -174,7 +174,6 @@
     "ac_cloud-chat": "Exempt by class (#868 nav plan): fork of an upstream chat client; navigation is the upstream's.",
     "ac_cloud-keyboard": "Exempt by class (#868 nav plan): input method; the keyboard is the UI and has no bottom navigation.",
     "ac_cloud-matrix": "Exempt by class (#868 nav plan): fork of an upstream Matrix client; navigation is the upstream's.",
-    "ac_cloud-gallery": "Exempt by class (#868 nav plan): fork of an upstream gallery; navigation is the upstream's.",
     "ac_cloud-myterminal": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
     "ac_cloud-nix-on-droid": "Exempt by class (#868 nav plan): terminal emulator; its UI is the terminal.",
     "ac_cloud-office": "Exempt by class (#868 nav plan): its UI is not ours to reshape; navigation stays the app's own.",

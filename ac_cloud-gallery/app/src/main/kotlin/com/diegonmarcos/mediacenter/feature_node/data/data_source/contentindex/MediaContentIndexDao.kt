@@ -10,6 +10,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MediaContentIndexDao {
@@ -19,6 +20,12 @@ interface MediaContentIndexDao {
 
     @Query("SELECT * FROM media_content_index WHERE albumId = :albumId")
     suspend fun forAlbum(albumId: Long): List<MediaContentIndexEntity>
+
+    @Query("SELECT COUNT(*) FROM media_content_index")
+    fun countFlow(): Flow<Int>
+
+    @Query("SELECT * FROM media_content_index WHERE ocrText IS NOT NULL AND ocrText != '' ORDER BY indexedAt DESC")
+    fun withTextFlow(): Flow<List<MediaContentIndexEntity>>
 
     @Query("SELECT COUNT(*) FROM media_content_index WHERE albumId = :albumId")
     suspend fun countForAlbum(albumId: Long): Int

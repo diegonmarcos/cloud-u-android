@@ -32,10 +32,10 @@ class ComposeInitializer : Initializer<Unit> {
                             paddingValues = paddingValues,
                             bottomBarState = bottomBarState.value,
                             isScrolling = isScrolling.value
-                        ) {
+                        ) { pageInsets ->
                             NavigationComp(
                                 navController = navController,
-                                paddingValues = paddingValues,
+                                paddingValues = pageInsets,
                                 bottomBarState = bottomBarState,
                                 systemBarFollowThemeState = systemBarFollowThemeState,
                                 toggleRotate = { },

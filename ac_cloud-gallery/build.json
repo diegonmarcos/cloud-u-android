@@ -157,5 +157,96 @@
   "web": {
     "kind": "container",
     "target": "photoprism_app"
+  },
+  "ui": {
+    "_doc": "THE navigation declaration (libs:bottomnav's NavDecl), the same shape every app on the shared nav bars carries. app/build.gradle.kts bakes ui.bottom_nav + ui.sections + ui.default_section into BuildConfig and shell/GalleryDeclarations.kt is their only reader. bottom_nav is the owner's order: Screenshots, Downloads, Camera (MediaStore buckets), Home (overview), Timeline (all photos by date with filters; opens on the Camera folder), Maps (photos on a map by EXIF GPS; photos without a position are the second page) and Objects (faces, scenes, text, documents; on-device index with a status). Maps and Objects carry the second row. Icons are libs:ui-icons names.",
+    "bottom_nav": [
+      "screenshots",
+      "downloads",
+      "camera",
+      "home",
+      "timeline",
+      "maps",
+      "objects"
+    ],
+    "default_section": "home",
+    "sections": [
+      {
+        "id": "screenshots",
+        "label": "Screenshots",
+        "icon": "smartphone"
+      },
+      {
+        "id": "downloads",
+        "label": "Downloads",
+        "icon": "download"
+      },
+      {
+        "id": "camera",
+        "label": "Camera",
+        "icon": "camera"
+      },
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home"
+      },
+      {
+        "id": "timeline",
+        "label": "Timeline",
+        "icon": "timeline"
+      },
+      {
+        "id": "maps",
+        "label": "Maps",
+        "icon": "map",
+        "pages": [
+          {
+            "id": "map",
+            "label": "Map",
+            "icon": "map"
+          },
+          {
+            "id": "no_location",
+            "label": "No location",
+            "icon": "place"
+          }
+        ]
+      },
+      {
+        "id": "objects",
+        "label": "Objects",
+        "icon": "psychology",
+        "pages": [
+          {
+            "id": "faces",
+            "label": "Faces",
+            "icon": "person"
+          },
+          {
+            "id": "scenes",
+            "label": "Scenes",
+            "icon": "visibility"
+          },
+          {
+            "id": "text",
+            "label": "Text",
+            "icon": "description"
+          },
+          {
+            "id": "documents",
+            "label": "Documents",
+            "icon": "documents"
+          }
+        ]
+      }
+    ]
+  },
+  "tests": {
+    "_doc": "JVM unit tests (app/src/test): timeline filters (Camera default, persistence), geo split and clustering, index state, tab declaration. gradlew is used directly by the test engine; the debug variant needs no signing key.",
+    "unit": {
+      "task": "testArm64-v8aNoMLDebugUnitTest",
+      "enabled": true
+    }
   }
 }

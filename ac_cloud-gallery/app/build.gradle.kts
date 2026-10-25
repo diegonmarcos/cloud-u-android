@@ -7,6 +7,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -150,6 +151,13 @@ android {
         val driveSharedRoot = ((groovy.json.JsonSlurper().parse(file("../../ac_cloud-drive/build.json")) as Map<String, Any?>)
             ["storage"] as Map<String, Any?>)["shared_root"].toString()
         buildConfigField("String", "DRIVE_SHARED_ROOT", "\"$driveSharedRoot\"")
+        // build.json::ui, the shared nav bars' declaration; shell/GalleryDeclarations.kt is its only reader.
+        @Suppress("UNCHECKED_CAST")
+        val ui = buildJson["ui"] as Map<String, Any?>
+        val uiSectionsB64 = Base64.getEncoder().encodeToString(groovy.json.JsonOutput.toJson(ui["sections"]).toByteArray())
+        buildConfigField("String", "UI_SECTIONS_B64", "\"$uiSectionsB64\"")
+        buildConfigField("String", "UI_BOTTOM_NAV", "\"${(ui["bottom_nav"] as List<*>).joinToString(",")}\"")
+        buildConfigField("String", "UI_DEFAULT_SECTION", "\"${ui["default_section"]}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -418,6 +426,13 @@ kotlin {
 dependencies {
     implementation(project(":libs:analytics"))
     implementation(project(":libs:ml-l-image"))
+    // The shared navigation bars (first row, second row, bottom nav, page background) and their icon catalog.
+    implementation(project(":libs:bottomnav"))
+    implementation(project(":libs:ui-icons"))
+    implementation(project(":libs:theme-background"))
+    implementation(project(":libs:nav-bar-bottom"))
+    implementation(project(":libs:nav-bar-top-first-row"))
+    implementation(project(":libs:nav-bar-top-second-row"))
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.lifecycle.process)
     runtimeOnly(libs.androidx.profileinstaller)

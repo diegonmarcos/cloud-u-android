@@ -52,6 +52,7 @@ import com.diegonmarcos.mediacenter.feature_node.presentation.util.Screen
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.LocalHazeState
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.toggleOrientation
 import com.diegonmarcos.mediacenter.ui.theme.GalleryTheme
+import com.diegonmarcos.superapp.bottomnav.FleetChrome
 import com.diegonmarcos.mediacenter.core.metrics.StartupTracer
 import dagger.hilt.android.AndroidEntryPoint
 import dev.chrisbanes.haze.LocalHazeStyle
@@ -100,6 +101,8 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         enforceSecureFlag()
         enableEdgeToEdge()
+        // The fleet's window: transparent bars, short-edge cutout, the same blur flags as every app on the shared nav bars.
+        FleetChrome.apply(this)
         // Set permission state eagerly so media queries start immediately
         // instead of waiting for a LaunchedEffect after the first Compose frame.
         if (permissionGranted(Constants.PERMISSIONS)) {
@@ -225,10 +228,10 @@ class MainActivity : AppCompatActivity() {
                                     paddingValues = paddingValues,
                                     bottomBarState = bottomBarState.value,
                                     isScrolling = isScrolling.value
-                                ) {
+                                ) { pageInsets ->
                                     NavigationComp(
                                         navController = navController,
-                                        paddingValues = paddingValues,
+                                        paddingValues = pageInsets,
                                         bottomBarState = bottomBarState,
                                         systemBarFollowThemeState = systemBarFollowThemeState,
                                         toggleRotate = ::toggleOrientation,

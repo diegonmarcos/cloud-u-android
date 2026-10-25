@@ -5,6 +5,11 @@
 
 package com.diegonmarcos.mediacenter.feature_node.presentation.help.previews
 
+import com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineFilter
+import com.diegonmarcos.mediacenter.shell.GalleryDeclarations
+import com.diegonmarcos.mediacenter.ui.theme.isDarkTheme
+import com.diegonmarcos.superapp.bottomnav.islandEntries
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottom
 import android.graphics.Color as AndroidColor
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.core.graphics.createBitmap
@@ -37,9 +42,6 @@ import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material.icons.outlined.Slideshow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -700,16 +702,10 @@ private fun LocationMapPreviewMini(modifier: Modifier = Modifier) {
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun NavBarPreviewMini(modifier: Modifier = Modifier) {
-    val navIcons = remember {
-        listOf(
-            Icons.Outlined.Photo to "Timeline",
-            GalleryIcons.Albums to "Albums",
-            Icons.Outlined.PhotoLibrary to "Library",
-        )
-    }
-    val animation = rememberPreviewAnimation(stepCount = 3)
-    val selectedIndex = animation.currentStep
-    val tapXPositions = remember { listOf(0.17f, 0.5f, 0.83f) }
+    // The tutorial draws the app's real bottom nav: the shared bar with the tabs build.json::ui declares.
+    val entries = GalleryDeclarations.nav.islandEntries()
+    val animation = rememberPreviewAnimation(stepCount = entries.size.coerceAtLeast(1))
+    val selectedIndex = animation.currentStep.coerceIn(0, (entries.size - 1).coerceAtLeast(0))
     PreviewFrame(modifier, applyPadding = false) {
         PreviewScreenProvider { sharedScope, animScope ->
             Column(modifier = Modifier.fillMaxSize()) {
@@ -721,47 +717,23 @@ private fun NavBarPreviewMini(modifier: Modifier = Modifier) {
                         metadataState = remember { mutableStateOf(HelpMockData.MOCK_METADATA_STATE) },
                         sharedTransitionScope = sharedScope,
                         animatedContentScope = animScope,
+                        fixedFilter = TimelineFilter(),
                     )
                 }
-                NavigationBar(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .scale(0.75f),
-                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp)
-                ) {
-                    navIcons.forEachIndexed { index, (icon, label) ->
-                        NavigationBarItem(
-                            selected = index == selectedIndex,
-                            onClick = {},
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.secondaryContainer,
-                                selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                                selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            ),
-                            label = {
-                                Text(
-                                    text = label,
-                                    fontWeight = FontWeight.Medium,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = label,
-                                )
-                            }
-                        )
-                    }
-                }
+                NavBarBottom(
+                    entries = entries,
+                    selectedId = entries.getOrNull(selectedIndex)?.id,
+                    onSelect = {},
+                    dark = isDarkTheme(),
+                    modifier = Modifier.scale(0.75f),
+                    collapsed = false,
+                )
             }
         }
         TapGestureOverlay(
             modifier = Modifier.matchParentSize(),
             progress = animation.stepProgress,
-            tapX = tapXPositions[selectedIndex],
+            tapX = (selectedIndex + 0.5f) / entries.size.coerceAtLeast(1),
             tapY = 0.93f
         )
     }

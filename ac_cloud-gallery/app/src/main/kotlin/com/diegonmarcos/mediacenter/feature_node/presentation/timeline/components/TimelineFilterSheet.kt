@@ -20,6 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DateRangePicker
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDateRangePickerState
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.diegonmarcos.mediacenter.core.presentation.components.SetupButton
 import androidx.compose.material3.HorizontalDivider
@@ -40,7 +45,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.mediacenter.R
 import com.diegonmarcos.mediacenter.feature_node.domain.model.Album
+import com.diegonmarcos.mediacenter.feature_node.domain.model.LocationFilter
 import com.diegonmarcos.mediacenter.feature_node.domain.model.MediaTypeFilter
+import com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineDates
 import com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineFilter
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.AppBottomSheetState
 import kotlinx.coroutines.launch
@@ -52,12 +59,39 @@ fun TimelineFilterSheet(
     currentFilter: TimelineFilter,
     availableYears: List<Int>,
     availableAlbums: List<Album>,
+    availableBuckets: List<String>,
     onApply: (TimelineFilter) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 
     if (sheetState.isVisible) {
         var filter by remember(currentFilter) { mutableStateOf(currentFilter) }
+        var showDatePicker by remember { mutableStateOf(false) }
+
+        if (showDatePicker) {
+            val pickerState = rememberDateRangePickerState(
+                initialSelectedStartDateMillis = TimelineDates.pickerMillis(filter.dateFromSec),
+                initialSelectedEndDateMillis = TimelineDates.pickerMillis(filter.dateToSec),
+            )
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val (from, to) = TimelineDates.rangeFromPicker(
+                            pickerState.selectedStartDateMillis,
+                            pickerState.selectedEndDateMillis
+                        )
+                        filter = filter.copy(dateFromSec = from, dateToSec = to)
+                        showDatePicker = false
+                    }) { Text(stringResource(R.string.filter_apply)) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) { Text(stringResource(R.string.action_cancel)) }
+                }
+            ) {
+                DateRangePicker(state = pickerState, modifier = Modifier.height(480.dp))
+            }
+        }
 
         ModalBottomSheet(
             sheetState = sheetState.sheetState,
@@ -121,6 +155,74 @@ fun TimelineFilterSheet(
                             selected = filter.favoritesOnly,
                             onClick = { filter = filter.copy(favoritesOnly = !filter.favoritesOnly) }
                         )
+                    }
+
+                    // Folder (bucket) section
+                    if (availableBuckets.isNotEmpty()) {
+                        FilterSectionHeader(stringResource(R.string.filter_folder))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        ) {
+                            availableBuckets.forEach { bucket ->
+                                FilterChip(
+                                    label = bucket,
+                                    selected = filter.folders.any { it.equals(bucket, ignoreCase = true) },
+                                    onClick = {
+                                        val folders = filter.folders.toMutableSet()
+                                        if (!folders.removeAll { it.equals(bucket, ignoreCase = true) }) folders.add(bucket)
+                                        filter = filter.copy(folders = folders)
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // Location section
+                    FilterSectionHeader(stringResource(R.string.filter_location))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        FilterChip(
+                            label = stringResource(R.string.filter_all),
+                            selected = filter.location == LocationFilter.ANY,
+                            onClick = { filter = filter.copy(location = LocationFilter.ANY) }
+                        )
+                        FilterChip(
+                            label = stringResource(R.string.filter_location_with),
+                            selected = filter.location == LocationFilter.WITH,
+                            onClick = { filter = filter.copy(location = LocationFilter.WITH) }
+                        )
+                        FilterChip(
+                            label = stringResource(R.string.filter_location_without),
+                            selected = filter.location == LocationFilter.WITHOUT,
+                            onClick = { filter = filter.copy(location = LocationFilter.WITHOUT) }
+                        )
+                    }
+
+                    // Date range section
+                    FilterSectionHeader(stringResource(R.string.filter_date_range))
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    ) {
+                        FilterChip(
+                            label = TimelineDates.label(filter.dateFromSec, filter.dateToSec)
+                                ?: stringResource(R.string.filter_date_any),
+                            selected = filter.dateFromSec != null || filter.dateToSec != null,
+                            onClick = { showDatePicker = true }
+                        )
+                        if (filter.dateFromSec != null || filter.dateToSec != null) {
+                            FilterChip(
+                                label = stringResource(R.string.filter_date_clear),
+                                selected = false,
+                                onClick = { filter = filter.copy(dateFromSec = null, dateToSec = null) }
+                            )
+                        }
                     }
 
                     // Time section

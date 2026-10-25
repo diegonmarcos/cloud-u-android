@@ -72,6 +72,9 @@ interface CloudMediaDao {
     @Query("SELECT * FROM cloud_media WHERE trashed = 1 ORDER BY timestamp DESC")
     suspend fun getTrashedAsync(): List<CloudMediaEntity>
 
+    @Query("SELECT COUNT(*) FROM cloud_media WHERE syncState = :state")
+    fun countBySyncState(state: SyncState): Flow<Int>
+
     @Query("SELECT COUNT(*) FROM cloud_media WHERE providerType = :providerType")
     suspend fun countByProvider(providerType: ProviderType): Int
 

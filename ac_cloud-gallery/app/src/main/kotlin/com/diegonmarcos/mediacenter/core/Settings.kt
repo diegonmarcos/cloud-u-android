@@ -409,7 +409,19 @@ object Settings {
 
         @Composable
         fun rememberLastScreen() =
-            rememberPreference(key = LAST_SCREEN, defaultValue = Screen.TimelineScreen())
+            rememberPreference(key = LAST_SCREEN, defaultValue = Screen.HomeTabScreen())
+
+        private val TIMELINE_FILTER = stringPreferencesKey("timeline_filter_v1")
+
+        /** The Timeline tab's filter as [com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineFilterCodec] text; blank = the Camera-only default. */
+        @Composable
+        fun rememberTimelineFilterText() =
+            rememberPreference(
+                key = TIMELINE_FILTER,
+                defaultValue = com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineFilterCodec.encode(
+                    com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineFilter.CAMERA_DEFAULT
+                )
+            )
 
         private val LAST_SEEN_VERSION = stringPreferencesKey("last_seen_version")
 

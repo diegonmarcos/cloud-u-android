@@ -71,6 +71,7 @@ on:
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/scripts/cloud-gallery-fork-engine.sh"
       - "ab_cloud-libs-shared/libs/analytics/**"
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/crash/**"
       - "ab_cloud-libs-shared/libs/cropper/**"
@@ -78,8 +79,13 @@ on:
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/gesture/**"
       - "ab_cloud-libs-shared/libs/ml-l-image/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-bottom/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**"
+      - "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**"
       - "ab_cloud-libs-shared/libs/panoramaviewer/**"
       - "ab_cloud-libs-shared/libs/scrollbar/**"
+      - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ac_cloud-gallery/**"
 permissions:
   contents: write   # for gh release create + tag push reads
@@ -132,7 +138,6 @@ jobs:
         run: |
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
 
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
@@ -150,14 +155,12 @@ jobs:
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "${{ matrix.abi }}"
 
       - name: Set up JDK 17
-        if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
-        if: steps.gate.outputs.skip != 'true'
         uses: android-actions/setup-android@v3
         with:
           # Pins mirror ac_cloud-gallery/flake.nix + build.json::toolchain.
@@ -166,7 +169,6 @@ jobs:
           packages: "platforms;android-37.1 platforms;android-37.0 platforms;android-35 platforms;android-34 platforms;android-26 build-tools;37.0.0 build-tools;35.0.0 build-tools;34.0.0 platform-tools ndk;29.0.14033849 cmake;3.31.6"
 
       - name: Set up Gradle 8.10.2 (cached)
-        if: steps.gate.outputs.skip != 'true'
         # v6, not v3: v3 bundles the old @actions/cache client, which talks to the
         # cache service GitHub retired. Every save AND restore 400s ("Our services
         # aren't available right now"), so the Gradle distribution, the dependency
@@ -178,9 +180,16 @@ jobs:
       # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
       # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
       - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
-        if: steps.gate.outputs.skip != 'true'
         uses: ./.github/actions/gradle-cache-hygiene
       # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
+
+      # UNGATED on the publish gate (toolchain steps above included): the gate hashes build inputs and deliberately
+      # leaves test sources out, so a push that only edits tests skips the gate; gating the suite on it meant a test-only
+      # change never ran the tests it changed. The suite now runs on every Ship run; only build/publish stay gated.
+      # build.json::tests.unit.task names the task; the app's own gradlew runs it (the test engine prefers it).
+      - name: JVM unit tests (fatal on failure)
+        working-directory: ${{ github.workspace }}
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       # ── ONE shared Cloud-constellation signing key (vault) ──────────────
       # ALL constellation apps sign with the SAME key so cross-app

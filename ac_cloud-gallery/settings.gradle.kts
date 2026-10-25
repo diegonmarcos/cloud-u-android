@@ -72,4 +72,12 @@ project(":libs:crash").projectDir = file("../ab_cloud-libs-shared/libs/crash")
 // root; every leaf above already names its own projectDir, so this only gives
 // the container something real to point at.
 project(":libs").projectDir = file("../ab_cloud-libs-shared/libs")
+// The shared navigation bars (first row with breadcrumb + Profile, second row, bottom nav, theme background), by reference like every
+// other shared lib. libs:nav-bar-* declare `api project(':libs:bottomnav')`, `:libs:ui-icons` and `:libs:theme-background`, so
+// each of these includes is required, not optional.
+for (name in listOf("bottomnav", "ui-icons", "theme-background", "nav-bar-bottom", "nav-bar-top-first-row", "nav-bar-top-second-row")) {
+    include(":libs:$name")
+    project(":libs:$name").projectDir = file("../ab_cloud-libs-shared/libs/$name")
+}
+
 include(":ml-models")

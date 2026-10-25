@@ -91,8 +91,10 @@ import com.diegonmarcos.mediacenter.core.toggleNavigationBar
 import com.diegonmarcos.mediacenter.feature_node.domain.model.Media
 import com.diegonmarcos.mediacenter.feature_node.domain.model.MediaMetadataState
 import com.diegonmarcos.mediacenter.feature_node.domain.model.MediaState
-import com.diegonmarcos.mediacenter.feature_node.domain.model.MediaTypeFilter
 import com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineFilter
+import com.diegonmarcos.mediacenter.feature_node.domain.model.TimelineFilterCodec
+import com.diegonmarcos.mediacenter.feature_node.domain.model.bucketOf
+import com.diegonmarcos.mediacenter.core.Settings.Misc.rememberTimelineFilterText
 import com.diegonmarcos.mediacenter.feature_node.domain.model.isHeaderKey
 import com.diegonmarcos.mediacenter.feature_node.domain.model.isIgnoredKey
 import com.diegonmarcos.mediacenter.feature_node.domain.util.isFavorite
@@ -135,19 +137,26 @@ fun TimelineScreen(
     metadataState: State<MediaMetadataState>,
     sharedTransitionScope: SharedTransitionScope,
     animatedContentScope: AnimatedContentScope,
+    fixedFilter: TimelineFilter? = null,
+    scrollToTopRoute: String = Screen.TimelineScreen.route,
 ) {
     val eventHandler = LocalEventHandler.current
     val distributor = LocalMediaDistributor.current
     val isRefreshing by distributor.isRefreshing.collectAsStateWithLifecycle()
     val refreshScope = rememberCoroutineScope()
 
-    // Filter state
-    var timelineFilter by remember { mutableStateOf(TimelineFilter()) }
+    // Filter state. The Timeline tab opens on the Camera folder and keeps the user's choice; a bucket
+    // tab (Screenshots, Downloads, Camera) passes a fixed filter and shows no filter control.
+    var storedFilter by rememberTimelineFilterText()
+    val timelineFilter = fixedFilter ?: remember(storedFilter) { TimelineFilterCodec.decode(storedFilter) }
     val filterSheetState = rememberAppBottomSheetState()
 
     val albumsState = distributor.albumsFlow.collectAsStateWithLifecycle()
     val availableAlbums by rememberedDerivedState(albumsState.value) {
         albumsState.value.albums.sortedBy { it.label }
+    }
+    val availableBuckets by rememberedDerivedState(albumsState.value) {
+        albumsState.value.albums.map { bucketOf(it.relativePath) }.filter { it.isNotBlank() }.distinct().sorted()
     }
 
     val availableYears by rememberedDerivedState(mediaState.value) {
@@ -158,53 +167,9 @@ fun TimelineScreen(
         }.sortedDescending()
     }
 
-    val filteredMediaState: State<MediaState<Media.UriMedia>> = remember(mediaState, timelineFilter) {
-        derivedStateOf {
-            val state = mediaState.value
-            if (!timelineFilter.isActive) return@derivedStateOf state
-
-            val filtered = state.media.filter { media ->
-                val typeMatch = when (timelineFilter.mediaType) {
-                    MediaTypeFilter.ALL -> true
-                    MediaTypeFilter.PHOTOS -> media.isImage
-                    MediaTypeFilter.VIDEOS -> media.isVideo
-                }
-                val favMatch = if (timelineFilter.favoritesOnly) media.isFavorite else true
-                val yearMatch = if (timelineFilter.selectedYears.isNotEmpty()) {
-                    val cal = java.util.Calendar.getInstance()
-                    cal.timeInMillis = media.definedTimestamp * 1000L
-                    cal.get(java.util.Calendar.YEAR) in timelineFilter.selectedYears
-                } else true
-                val albumMatch = if (timelineFilter.selectedAlbumIds.isNotEmpty()) {
-                    media.albumID in timelineFilter.selectedAlbumIds
-                } else true
-                typeMatch && favMatch && yearMatch && albumMatch
-            }
-            val filteredIds = filtered.mapTo(HashSet(filtered.size)) { it.id }
-            state.copy(
-                media = filtered,
-                pagerMedia = state.pagerMedia.filter { it.id in filteredIds },
-                mappedMedia = state.mappedMedia.filter { item ->
-                    when (item) {
-                        is com.diegonmarcos.mediacenter.feature_node.domain.model.MediaItem.MediaViewItem -> item.media.id in filteredIds
-                        is com.diegonmarcos.mediacenter.feature_node.domain.model.MediaItem.Header -> item.data.any { it in filteredIds }
-                    }
-                },
-                mappedMediaWithMonthly = state.mappedMediaWithMonthly.filter { item ->
-                    when (item) {
-                        is com.diegonmarcos.mediacenter.feature_node.domain.model.MediaItem.MediaViewItem -> item.media.id in filteredIds
-                        is com.diegonmarcos.mediacenter.feature_node.domain.model.MediaItem.Header -> item.data.any { it in filteredIds }
-                    }
-                },
-                mappedMediaWithYearly = state.mappedMediaWithYearly.filter { item ->
-                    when (item) {
-                        is com.diegonmarcos.mediacenter.feature_node.domain.model.MediaItem.MediaViewItem -> item.media.id in filteredIds
-                        is com.diegonmarcos.mediacenter.feature_node.domain.model.MediaItem.Header -> item.data.any { it in filteredIds }
-                    }
-                },
-                headers = state.headers.filter { header -> header.data.any { it in filteredIds } }
-            )
-        }
+    val geoIds = remember(metadataState.value.metadata) { geoTaggedIds(metadataState.value.metadata) }
+    val filteredMediaState: State<MediaState<Media.UriMedia>> = remember(mediaState, timelineFilter, geoIds) {
+        derivedStateOf { mediaState.value.filteredBy(timelineFilter, geoIds) }
     }
     var lastSeenVersion by rememberLastSeenVersion()
     val showWhatsNew = remember(lastSeenVersion) { lastSeenVersion != BuildConfig.VERSION_NAME.substringBefore(" (sha-") }
@@ -214,7 +179,7 @@ fun TimelineScreen(
     val storyCards by storyCardsViewModel.allCards.collectAsStateWithLifecycle()
 
     val hasStoryCards = storyCards?.isNotEmpty() == true
-    val aboveGridContent: @Composable (() -> Unit)? = if (showWhatsNew || hasStoryCards) {
+    val aboveGridContent: @Composable (() -> Unit)? = if (fixedFilter == null && (showWhatsNew || hasStoryCards)) {
         {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -269,12 +234,13 @@ fun TimelineScreen(
         Scaffold(
             topBar = {
                 val showFilterButton by rememberShowFilterButton()
+                val filterUi = showFilterButton && fixedFilter == null
                 MainSearchBar(
                     isScrolling = isScrolling,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedContentScope = animatedContentScope,
                     menuItems = { TimelineNavActions() },
-                    searchBarTrailingIcon = if (showFilterButton) {
+                    searchBarTrailingIcon = if (filterUi) {
                         {
                             Box {
                                 IconButton(
@@ -323,7 +289,7 @@ fun TimelineScreen(
                         eventHandler.navigate(Screen.MediaViewScreen.idAndAlbum(it.id, -1L))
                     },
                     emptyContent = { EmptyMedia() },
-                    scrollToTopRoute = Screen.TimelineScreen.route,
+                    scrollToTopRoute = scrollToTopRoute,
                 )
             }
         }
@@ -338,11 +304,12 @@ fun TimelineScreen(
         )
     }
 
-    TimelineFilterSheet(
+    if (fixedFilter == null) TimelineFilterSheet(
         sheetState = filterSheetState,
         currentFilter = timelineFilter,
         availableYears = availableYears,
         availableAlbums = availableAlbums,
-        onApply = { newFilter -> timelineFilter = newFilter }
+        availableBuckets = availableBuckets,
+        onApply = { newFilter -> storedFilter = TimelineFilterCodec.encode(newFilter) }
     )
 }

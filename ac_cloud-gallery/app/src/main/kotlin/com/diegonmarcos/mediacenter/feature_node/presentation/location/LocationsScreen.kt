@@ -76,8 +76,9 @@ fun LocationsScreen(
     locations: List<LocationMedia> = emptyList(),
     geoMedia: List<GeoMedia> = emptyList(),
     initialMediaId: Long = -1L,
+    showBack: Boolean = true,
 ) {
-    MapLocationsContent(metadataState = metadataState, locations = locations, geoMedia = geoMedia, initialMediaId = initialMediaId)
+    MapLocationsContent(metadataState = metadataState, locations = locations, geoMedia = geoMedia, initialMediaId = initialMediaId, showBack = showBack)
 }
 
 @Suppress("DerivedStateOfCandidate")

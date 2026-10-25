@@ -18,6 +18,7 @@ internal fun MapLocationsContent(
     locations: List<LocationMedia> = emptyList(),
     geoMedia: List<GeoMedia> = emptyList(),
     initialMediaId: Long = -1L,
+    showBack: Boolean = true,
 ) {
     ListLocationsContent(metadataState = metadataState, locations = locations)
 }

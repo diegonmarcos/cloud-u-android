@@ -116,6 +116,7 @@ internal fun MapLocationsContent(
     locations: List<LocationMedia> = emptyList(),
     geoMedia: List<GeoMedia> = emptyList(),
     initialMediaId: Long = -1L,
+    showBack: Boolean = true,
 ) {
     val sheetHazeState = LocalHazeState.current
     val allowBlur by rememberAllowBlur()
@@ -600,24 +601,26 @@ internal fun MapLocationsContent(
                 }
             )
 
-            // Back button
-            @OptIn(ExperimentalHazeMaterialsApi::class)
-            NavigationBackButton(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .statusBarsPadding()
-                    .padding(8.dp),
-                containerColor = if (allowBlur) ComposeColor.Transparent else MaterialTheme.colorScheme.surfaceContainer,
-                containerModifier = if (allowBlur) Modifier
-                    .clip(CircleShape)
-                    .hazeEffect(
-                        state = sheetHazeState,
-                        style = HazeMaterials.regular(
-                            containerColor = MaterialTheme.colorScheme.surface
+            // Back button (a bottom-nav tab has none: its tab is the way out)
+            if (showBack) {
+                @OptIn(ExperimentalHazeMaterialsApi::class)
+                NavigationBackButton(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
+                        .padding(8.dp),
+                    containerColor = if (allowBlur) ComposeColor.Transparent else MaterialTheme.colorScheme.surfaceContainer,
+                    containerModifier = if (allowBlur) Modifier
+                        .clip(CircleShape)
+                        .hazeEffect(
+                            state = sheetHazeState,
+                            style = HazeMaterials.regular(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
                         )
-                    )
-                else Modifier
-            )
+                    else Modifier
+                )
+            }
 
             MapAppearanceButton(
                 appearance = mapAppearance,
