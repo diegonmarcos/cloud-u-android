@@ -93,9 +93,12 @@ def dismiss_emulator_prompt(nodes):
     """The emulator's own "Allow wireless debugging on this network?" dialog covers any app that starts after the network comes up."""
     title = find(nodes, "alertTitle")
     if title is not None and "wireless debugging" in title.text.lower():
-        cancel = find(nodes, "button2")
-        if cancel is not None:
-            tap(cancel)
+        always, allow = find(nodes, "alwaysUse"), find(nodes, "button1")
+        if always is not None:
+            tap(always)
+            time.sleep(0.5)
+        if allow is not None:
+            tap(allow)
             time.sleep(1.0)
             return True
     return False
@@ -118,6 +121,10 @@ BLOCKER_TEXTS = ("Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later
 
 def clear_blockers(nodes):
     """First-run screens, the default-app role prompt and permission dialogs: dismiss ONE and say so. Used only while the shared bars are missing."""
+    wait = find(nodes, "aerr_wait")
+    if wait is not None:  # "<app> isn't responding": a slow start on a shared emulator is given the chance to finish; a hang still fails the launch
+        tap(wait)
+        return True
     title = find(nodes, "title") or find(nodes, "alertTitle")
     if title is not None and ("default" in title.text.lower() or "caller id" in title.text.lower()):
         cancel = find(nodes, "button2")
@@ -341,6 +348,7 @@ class Walk:
             fails.append("P3 the UI could not be read after scrolling")
             return checks, fails
         after = self.chrome(nodes2)
+        checks["metrics"] = "bar %d->%d tabs %d->%d labels %d->%d" % (before["bar_h"], after["bar_h"], before["tab_h"], after["tab_h"], len(before["labels"]), len(after["labels"]))
         collapsed = not after["row"]
         sig1 = self.signature(nodes2, *self.content_box(nodes2)) if after["row"] else None
         if collapsed:
@@ -462,10 +470,10 @@ class Walk:
             json.dump({"app": app, "pkg": self.pkg, "results": self.results}, f, indent=1)
         n = {k: sum(1 for r in self.results if r["status"] == k) for k in ("PASS", "FAIL", "SKIP")}
         lines = ["### %s (%s): %d passed, %d failed, %d skipped" % (app, self.pkg, n["PASS"], n["FAIL"], n["SKIP"]), "",
-                 "| section / page | result | dropdown | scroll | detail |", "|---|---|---|---|---|"]
+                 "| section / page | result | dropdown | scroll | metrics (px) | detail |", "|---|---|---|---|---|---|"]
         for r in self.results:
             c = r["checks"]
-            lines.append("| %s/%s | %s | %s | %s | %s |" % (r["section"], r["page"], r["status"], c.get("dropdown", "-"), c.get("scroll", "-"),
+            lines.append("| %s/%s | %s | %s | %s | %s | %s |" % (r["section"], r["page"], r["status"], c.get("dropdown", "-"), c.get("scroll", "-"), c.get("metrics", "-"),
                                                           ("; ".join(r["failures"]) or c.get("note", "")).replace("|", "/")))
         open(os.path.join(self.out, "report.md"), "w").write("\n".join(lines) + "\n")
         print("\n".join(lines))

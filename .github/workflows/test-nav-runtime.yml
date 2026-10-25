@@ -164,6 +164,11 @@ jobs:
           mkdir -p walk-out
           adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard || true
           adb install -r -g app-under-test.apk || { echo "::error::adb install failed"; exit 2; }
+          # nothing between launch and the shared bars: pre-grant what apps ask for on first start
+          adb shell appops set "$PKG" MANAGE_EXTERNAL_STORAGE allow || true
+          adb shell cmd role add-role-holder --user 0 android.app.role.DIALER "$PKG" || true
+          adb shell cmd role add-role-holder --user 0 android.app.role.CALL_SCREENING "$PKG" || true
+          adb shell settings put global adb_wifi_enabled 0 || true
           rc=0
           python3 1_cicd/src/scripts/cloud-android-nav-walk.py --app "$APP" --build-json "$APP/build.json" --pkg "$PKG" --out walk-out || rc=$?
           adb logcat -d -v threadtime > walk-out/logcat.txt || true

@@ -41,6 +41,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -103,6 +105,7 @@ public object BottomTags {
  * The bar is a rounded glass pill; its cells shrink evenly when more than fit at [BottomSpec.CELL]. [collapsed] drops
  * the labels (the scroll-collapse of the old island).
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 public fun NavBarBottom(
     entries: List<BottomNavEntry>,
@@ -116,7 +119,8 @@ public fun NavBarBottom(
     // #1160 the keyboard HIDES the bar (it used to be lifted above it); the host gives the room back to the content.
     if (navHiddenByIme()) return
     Box(
-        modifier.fillMaxWidth()
+        // the bar exposes its tags as resource ids wherever it is hosted (the runtime nav walk, cloud-android-nav-walk.py, reads them)
+        modifier.semantics { testTagsAsResourceId = true }.fillMaxWidth()
             .windowInsetsPadding(bottomNavInsets().only(WindowInsetsSides.Bottom))
             .padding(bottom = BottomSpec.BOTTOM_MARGIN, start = BottomSpec.SIDE_GUTTER, end = BottomSpec.SIDE_GUTTER),
         contentAlignment = Alignment.BottomCenter,

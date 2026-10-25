@@ -49,6 +49,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -121,6 +123,7 @@ internal fun NavPage.holds(id: String): Boolean = this.id == id || pages.any { i
  * selected tab is a rounded rectangle filled with the SuperApp violet ([ThemeColors.tabSelected]); every tab shows its
  * name next to its glyph (#1159), and scrolled down only the selected one does. [iconFor] may override a page's glyph; by default it is the page's declared icon (SecondRowIcons).
  */
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 public fun NavBarTopSecondRow(
     pages: List<NavPage>,
@@ -161,7 +164,7 @@ public fun NavBarTopSecondRow(
     val tab = RoundedCornerShape(SecondRowSpec.TAB_RADIUS)
     val scroll = rememberScrollState()
     val tabHeight by animateDpAsState(if (compact) SecondRowSpec.COMPACT_TAB_HEIGHT else SecondRowSpec.TAB_HEIGHT, label = "secondrow_tab_height")
-    BoxWithConstraints(modifier.fillMaxWidth().padding(top = top, bottom = SecondRowSpec.BOTTOM_INSET, start = SecondRowSpec.SIDE, end = SecondRowSpec.SIDE)) {
+    BoxWithConstraints(modifier.semantics { testTagsAsResourceId = true }.fillMaxWidth().padding(top = top, bottom = SecondRowSpec.BOTTOM_INSET, start = SecondRowSpec.SIDE, end = SecondRowSpec.SIDE)) {
     Row(
         Modifier.fillMaxWidth()
             .testTag(SecondRowTags.STRIP)
