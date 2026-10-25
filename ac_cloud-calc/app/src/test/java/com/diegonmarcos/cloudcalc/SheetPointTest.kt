@@ -19,10 +19,8 @@ import com.diegonmarcos.cloudcalc.ui.CalcShell
 import com.diegonmarcos.cloudcalc.ui.CalcState
 import com.diegonmarcos.cloudcalc.ui.CalcTags
 import com.diegonmarcos.cloudcalc.ui.CalcTheme
-import com.diegonmarcos.cloudcalc.ui.DrawerTags
 import com.diegonmarcos.cloudcalc.ui.SheetTags
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
-import com.diegonmarcos.superapp.bottomnav.TopBarTags
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule

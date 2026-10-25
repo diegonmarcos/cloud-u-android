@@ -184,14 +184,12 @@ jobs:
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "${{ matrix.abi }}"
 
       - name: Set up JDK 17
-        if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
-        if: steps.gate.outputs.skip != 'true'
         uses: android-actions/setup-android@v3
         with:
           # No cmake/ndk — cloud-writer has no native code whatsoever. Pins
@@ -199,7 +197,6 @@ jobs:
           packages: "platforms;android-35 platforms;android-34 platforms;android-26 build-tools;35.0.0 build-tools;34.0.0 platform-tools"
 
       - name: Set up Gradle 8.10.2 (cached)
-        if: steps.gate.outputs.skip != 'true'
         # v6, not v3: v3 bundles the old @actions/cache client, which talks to the
         # cache service GitHub retired. Every save AND restore 400s ("Our services
         # aren't available right now"), so the Gradle distribution, the dependency
@@ -211,7 +208,6 @@ jobs:
       # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
       # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
       - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
-        if: steps.gate.outputs.skip != 'true'
         uses: ./.github/actions/gradle-cache-hygiene
       # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
 
@@ -224,7 +220,6 @@ jobs:
       # sops-decrypts (SOPS_AGE_KEY) and exports ANDROID_KEYSTORE_* for gradle.
       # NO fallback: if the key is unavailable build.sh exits 1 (desired).
       - name: Checkout vault (shared Android signing key)
-        if: steps.gate.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           repository: diegonmarcos/cloud-me_vault
@@ -232,14 +227,12 @@ jobs:
           path: .vault
 
       - name: Install gh CLI + jq
-        if: steps.gate.outputs.skip != 'true'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y jq
           command -v gh
 
       - name: Install ORAS + sops (pinned, sha256-checked, fails at the download)
-        if: steps.gate.outputs.skip != 'true'
         uses: ./.github/actions/install-pinned-tools
         with:
           tools: oras sops
@@ -248,10 +241,11 @@ jobs:
       # Listen segmenter, the documents, the Markdown tools) and libs:decisions,
       # each followed by its PIT mutation gate. PLACED HERE, after JDK, SDK and
       # Gradle exist — up with the shell testers there is no gradle on PATH and
-      # the engine fails closed (#531, the ship-cloud-calc.yml placement). Gated
-      # on the publish gate: unchanged source recompiles nothing new.
+      # the engine fails closed (#531, the ship-cloud-calc.yml placement).
+      # UNGATED on the publish gate (toolchain steps above included): the gate hashes build inputs and deliberately
+      # leaves test sources out, so a push that only edits tests skips the gate; gating the suite on it meant a test-only
+      # change never ran the tests it changed. The suite now runs on every Ship run; only build/publish stay gated.
       - name: JVM unit tests + PIT (fatal on failure)
-        if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ github.workspace }}
         env:
           BYPASS_NIX: "1"

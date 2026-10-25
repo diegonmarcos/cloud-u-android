@@ -15,31 +15,13 @@ import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.sheetui.SheetHub
 
 /**
- * What Cloud Calc puts in the top bar's drawer ([com.diegonmarcos.superapp.bottomnav.TopBarDrawer], called once by
- * CalcShell). It is the open page's: the Sheet page lists its sheets and the saved workbooks; every other page lists
- * the sections of the island and, when the open section has a strip, its pages. All of it is read from the
- * NavDecl (build.json::ui) or the sheet state, nothing is typed here. A tap navigates and closes the drawer.
- * Configs is not listed: it is the top bar's Settings > Configs, once.
+ * What Cloud Calc's Sheet page puts at the end of the first row's title dropdown
+ * ([com.diegonmarcos.superapp.bottomnav.TopBarDrawer], called once by CalcShell): its sheets (the tabs under the grid) and the
+ * saved workbooks, read from the sheet state. The sections and pages are the dropdown's own hierarchy (the NavDecl), not listed
+ * here. A tap acts and closes the dropdown.
  */
 @Composable
-internal fun ColumnScope.CalcDrawer(state: CalcState, close: () -> Unit) {
-    if (Declarations.modesOf(state.tab).any { it.kind == "sheet" }) SheetDrawer(close) else NavDrawer(state, close)
-}
-
-@Composable
-private fun ColumnScope.NavDrawer(state: CalcState, close: () -> Unit) {
-    val section = Declarations.nav.section(state.section)
-    if (section != null && section.pages.size > 1) {
-        Eyebrow(section.label)
-        section.pages.forEach { page ->
-            Item(page.label, page.id == state.tab, DrawerTags.page(page.id)) { state.tab = page.id; close() }
-        }
-    }
-    Eyebrow(stringResource(R.string.drawer_sections))
-    Declarations.sections.forEach { s ->
-        Item(s.label, s.id == state.section, DrawerTags.section(s.id)) { state.showSection(s.id); close() }
-    }
-}
+internal fun ColumnScope.CalcDrawer(close: () -> Unit) = SheetDrawer(close)
 
 /** The Sheet page's say: its sheets (the tabs under the grid) and the workbooks saved in app storage. */
 @Composable
@@ -81,8 +63,6 @@ private fun Eyebrow(text: String) {
 /** The test tags the Robolectric tests drive the drawer by. */
 object DrawerTags {
     const val NEW_SHEET = "calc_drawer_new_sheet"
-    fun section(id: String) = "calc_drawer_section_$id"
-    fun page(id: String) = "calc_drawer_page_$id"
     fun sheet(name: String) = "calc_drawer_sheet_$name"
     fun workbook(name: String) = "calc_drawer_workbook_$name"
 }

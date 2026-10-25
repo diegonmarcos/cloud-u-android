@@ -21,7 +21,7 @@ import com.diegonmarcos.cloudcalc.ui.CalcTheme
 import com.diegonmarcos.cloudcalc.ui.DrawerTags
 import com.diegonmarcos.cloudcalc.ui.SheetTags
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
-import com.diegonmarcos.superapp.bottomnav.TopBarTags
+import com.diegonmarcos.superapp.navbartop1.TopFirstRowTags
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -36,7 +36,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** The new shell pieces under Robolectric: the bar's order, the fleet top bar (drawer, Settings > Configs), and the Sheet page's tabs and cells. */
+/** The new shell pieces under Robolectric: the bar's order, the shared first row (title dropdown, Configs), and the Sheet page's tabs and cells. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "w360dp-h800dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -77,7 +77,7 @@ class SheetShellTest {
         assertTrue(lefts.toSet().size == ids.size)
     }
 
-    @Test fun `the top bar's Settings opens Configs, which is not on the bar, and Back goes back`() {
+    @Test fun `the first row's Configs button opens Configs, which is not on the bar, and Back goes back`() {
         launch()
         assertTrue(compose.onAllNodesWithTag(BottomNavTags.item("settings")).fetchSemanticsNodes().isEmpty())
         assertTrue(compose.onAllNodesWithTag(BottomNavTags.item("configs")).fetchSemanticsNodes().isEmpty())
@@ -85,7 +85,7 @@ class SheetShellTest {
         openConfigsFromTopBar()
         assertEquals("configs", state.tab)
         compose.onNodeWithTag(CalcTags.tab("configs")).assertExists()
-        // Settings > Configs again, while on Configs, changes nothing (it opens, it does not toggle).
+        // Configs again, while on Configs, changes nothing (it opens, it does not toggle).
         openConfigsFromTopBar()
         assertEquals("configs", state.tab)
         compose.runOnIdle { state.toggleConfigs() }
@@ -94,54 +94,51 @@ class SheetShellTest {
     }
 
     private fun openConfigsFromTopBar() {
-        compose.onNodeWithTag(TopBarTags.SETTINGS).performClick()
-        compose.onNodeWithTag(TopBarTags.settingsItem("configs")).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.CONFIGS).performClick()
         compose.waitForIdle()
     }
 
-    @Test fun `the shell draws the declared top bar once, titled with the app name, and no round Configs button`() {
+    @Test fun `the shell draws the shared first row once, titled with the app name, with no hamburger and no round Configs button`() {
         launch()
-        val decl = Declarations.topBar
-        assertTrue("build.json declares ui.top_bar", decl != null)
-        assertTrue(decl!!.drawer && decl.ai)
-        assertEquals(listOf("account", "configs"), decl.settings)
-        assertEquals(1, compose.onAllNodesWithTag(TopBarTags.BAR).fetchSemanticsNodes().size)
-        compose.onNodeWithTag(TopBarTags.MENU).assertExists()
-        compose.onNodeWithTag(TopBarTags.AI).assertExists()
-        compose.onNodeWithTag(TopBarTags.SETTINGS).assertExists()
-        compose.onNodeWithTag(TopBarTags.TITLE).assertTextContains(RuntimeEnvironment.getApplication().getString(R.string.app_name))
+        assertEquals(1, compose.onAllNodesWithTag(TopFirstRowTags.ROW).fetchSemanticsNodes().size)
+        compose.onNodeWithTag(TopFirstRowTags.AI).assertExists()
+        compose.onNodeWithTag(TopFirstRowTags.PROFILE).assertExists()
+        compose.onNodeWithTag(TopFirstRowTags.CONFIGS).assertExists()
+        assertTrue("the first row has no hamburger", compose.onAllNodesWithTag("topbar_menu").fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithTag(TopFirstRowTags.ISLAND).assertTextContains(RuntimeEnvironment.getApplication().getString(R.string.app_name))
         assertTrue(compose.onAllNodesWithTag("calc_configs_button").fetchSemanticsNodes().isEmpty())
     }
 
-    @Test fun `the drawer lists the sections and the open section's pages, a tap navigates and closes it`() {
+    @Test fun `the title dropdown lists the open section's pages, a tap navigates and closes it`() {
         launch()
-        compose.onNodeWithTag(TopBarTags.MENU).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.ISLAND).performClick()
         compose.waitForIdle()
-        compose.onNodeWithTag(TopBarTags.DRAWER).assertExists()
-        Declarations.sections.forEach { compose.onNodeWithTag(DrawerTags.section(it.id)).assertExists() }
-        assertTrue("Configs is not in the drawer", compose.onAllNodesWithTag(DrawerTags.section("settings")).fetchSemanticsNodes().isEmpty())
-        compose.onNodeWithTag(DrawerTags.section("measure")).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertExists()
+        Declarations.nav.section(state.section)!!.pages.forEach { compose.onNodeWithTag(TopFirstRowTags.entry(it.id)).assertExists() }
+        assertTrue("Configs is not in the dropdown", compose.onAllNodesWithTag(TopFirstRowTags.entry("configs")).fetchSemanticsNodes().isEmpty())
+        val target = Declarations.nav.section(state.section)!!.pages.last()
+        compose.onNodeWithTag(TopFirstRowTags.entry(target.id)).performClick()
         compose.waitForIdle()
-        assertEquals("measure", state.section)
-        assertTrue("the drawer closed", compose.onAllNodesWithTag(TopBarTags.DRAWER).fetchSemanticsNodes().isEmpty())
+        assertEquals(target.id, state.tab)
+        assertTrue("the dropdown closed", compose.onAllNodesWithTag(TopFirstRowTags.DROPDOWN).fetchSemanticsNodes().isEmpty())
     }
 
-    @Test fun `the Sheet page fills the drawer with its sheets, and a tap selects one`() {
+    @Test fun `the Sheet page fills the title dropdown with its sheets, and a tap selects one`() {
         launch()
         compose.onNodeWithTag(BottomNavTags.item("sheet")).performClick()
         compose.waitForIdle()
         val st = SheetHub.get(RuntimeEnvironment.getApplication())
         compose.runOnIdle { st.addSheet() }
-        compose.onNodeWithTag(TopBarTags.MENU).performClick()
+        compose.onNodeWithTag(TopFirstRowTags.ISLAND).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(DrawerTags.sheet("Sheet1")).assertExists()
         compose.onNodeWithTag(DrawerTags.sheet("Sheet2")).assertExists()
         compose.onNodeWithTag(DrawerTags.NEW_SHEET).assertExists()
-        assertTrue("the Sheet drawer is the sheets', not the sections'", compose.onAllNodesWithTag(DrawerTags.section("measure")).fetchSemanticsNodes().isEmpty())
+        assertTrue("the Sheet entries are the sheets', not the sections'", compose.onAllNodesWithTag(TopFirstRowTags.entry("measure")).fetchSemanticsNodes().isEmpty())
         compose.onNodeWithTag(DrawerTags.sheet("Sheet1")).performClick()
         compose.waitForIdle()
         assertEquals("Sheet1", st.sheet)
-        assertTrue(compose.onAllNodesWithTag(TopBarTags.DRAWER).fetchSemanticsNodes().isEmpty())
+        assertTrue(compose.onAllNodesWithTag(TopFirstRowTags.DROPDOWN).fetchSemanticsNodes().isEmpty())
     }
 
     @Test fun `Jev has Ask only now, and the Sheet and AI pages are reachable from the bar`() {

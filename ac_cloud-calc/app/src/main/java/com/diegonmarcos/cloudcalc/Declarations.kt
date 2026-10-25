@@ -81,10 +81,8 @@ object Declarations {
     val nav: NavDecl by lazy {
         NavDecl.fromBuildConfig(BuildConfig.UI_SECTIONS_B64, BuildConfig.UI_BOTTOM_NAV, BuildConfig.UI_DEFAULT_SECTION)
     }
-    /** build.json::ui.top_bar as baked into BuildConfig: what the fleet's first row draws (null = no top bar declared). */
-    val topBar: com.diegonmarcos.superapp.bottomnav.TopBarDecl? by lazy {
-        com.diegonmarcos.superapp.bottomnav.TopBarDecl.fromBuildConfig(BuildConfig.UI_TOP_BAR_B64)
-    }
+    /** The AI section's id in ui.sections: the first row's AI button opens it (the AI page is on the island). */
+    const val AI_SECTION = "ai"
     /** The bar's sections, in `ui.bottom_nav` order. */
     val sections: List<Section> by lazy { sectionsOf(nav) }
     /** Every page of every section, in declared order (what #770 called ui.tabs). */

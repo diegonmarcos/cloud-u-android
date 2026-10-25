@@ -203,14 +203,12 @@ jobs:
         run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint "$WORK_DIR"
 
       - name: Set up JDK 17
-        if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
-        if: steps.gate.outputs.skip != 'true'
         uses: android-actions/setup-android@v3
         with:
           # Pre-install the two native toolchains the build needs, so AGP
@@ -226,7 +224,6 @@ jobs:
           packages: "platforms;android-36 platforms;android-35 platforms;android-34 platforms;android-26 build-tools;36.0.0 build-tools;35.0.0 build-tools;34.0.0 platform-tools cmake;3.22.1 ndk;28.0.13004108 ndk;26.1.10909125"
 
       - name: Set up Gradle 8.14 (cached)
-        if: steps.gate.outputs.skip != 'true'
         # v6, not v3: v3 bundles the old @actions/cache client, which talks to the
         # cache service GitHub retired. Every save AND restore 400s ("Our services
         # aren't available right now"), so the Gradle distribution, the dependency
@@ -241,7 +238,6 @@ jobs:
       # ── MANAGED-GRADLE-CACHE-HYGIENE: injected by cloud-android-gradle-cache-hygiene.py ──
       # Edit 1_cicd/src/actions/gradle-cache-hygiene, never this block.
       - name: Gradle cache hygiene (retry failed resolution, never cache a failed lookup)
-        if: steps.gate.outputs.skip != 'true'
         uses: ./.github/actions/gradle-cache-hygiene
       # ── end MANAGED-GRADLE-CACHE-HYGIENE ──
 
@@ -264,7 +260,6 @@ jobs:
       # A cold cache still reaches out; only persisting it removes the lottery.
       # Keyed on go.sum: a pin change correctly invalidates it.
       - name: Cache firestack Go modules + checksum-db tiles
-        if: steps.gate.outputs.skip != 'true'
         uses: actions/cache@v4
         with:
           path: ab_cloud-libs-shared/.cache/gomodcache
@@ -282,7 +277,6 @@ jobs:
       # and exports ANDROID_KEYSTORE_* which the gradle signingConfig reads.
       # NO fallback: if the key is unavailable build.sh exits 1 (desired).
       - name: Checkout vault (shared Android signing key)
-        if: steps.gate.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           repository: diegonmarcos/cloud-me_vault
@@ -290,7 +284,6 @@ jobs:
           path: .vault
 
       - name: Install gh CLI + jq
-        if: steps.gate.outputs.skip != 'true'
         run: |
           sudo apt-get update -y
           sudo apt-get install -y jq
@@ -299,13 +292,11 @@ jobs:
 
       # sops — build.sh::_resolve_signing needs it to decrypt the shared key.
       - name: Install ORAS + sops (pinned, sha256-checked, fails at the download)
-        if: steps.gate.outputs.skip != 'true'
         uses: ./.github/actions/install-pinned-tools
         with:
           tools: oras sops
 
       - name: Determine variant
-        if: steps.gate.outputs.skip != 'true'
         id: variant
         run: |
           if   [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -329,8 +320,10 @@ jobs:
       # Same env as the build step: gradle cannot even CONFIGURE this project
       # without the shared signing key, and BYPASS_NIX because GHA already
       # provides the JDK + SDK + Gradle.
+      # UNGATED on the publish gate (toolchain steps above included): the gate hashes build inputs and deliberately
+      # leaves test sources out, so a push that only edits tests skips the gate; gating the suite on it meant a test-only
+      # change never ran the tests it changed. The suite now runs on every Ship run; only build/publish stay gated.
       - name: JVM unit tests (fatal on failure)
-        if: steps.gate.outputs.skip != 'true'
         env:
           BYPASS_NIX: "1"
           VAULT_DIR: ${{ github.workspace }}/.vault

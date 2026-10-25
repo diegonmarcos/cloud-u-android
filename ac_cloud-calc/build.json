@@ -110,6 +110,10 @@
         "libs:core",
         "libs:bottomnav",
         "libs:ui-icons",
+        "libs:nav-bar-bottom",
+        "libs:nav-bar-top-first-row",
+        "libs:nav-bar-top-second-row",
+        "libs:theme-background",
         "clock",
         "jev",
         "sound",
@@ -200,6 +204,26 @@
       "dir": "../ab_cloud-libs-shared/libs/ui-icons",
       "type": "library",
       "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
+    },
+    "libs:nav-bar-bottom": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-first-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:nav-bar-top-second-row": {
+      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
     },
     "libs:text-tools": {
       "_doc": "#770 the ITextTools binder (contract class in 1_cicd/src/data/lib-classes.json, so no L4 backlog edge), shared BY REFERENCE: the Jev section reads the OpenRouter token the fleet Account manages through TextToolsClient.revealAiKey(\"openrouter\") - the SuperApp's Profile pushes the vault's ai.tokens into the serving app over the same CONSTELLATION_DATA-guarded binder - so the token has one store and this app keeps no copy of it. A manual override lives only in this app's Keystore-backed EncryptedSharedPreferences.",
@@ -604,12 +628,6 @@
     "_doc_sections": "#868 THE ONE navigation declaration (libs:bottomnav's NavDecl), INVERTED from #770: ui.bottom_nav is the island's section ids in display order, ui.sections[] are Calculator, Measure and Jev, each with `pages` - the ten tabs (what #770 called ui.tabs), drawn as the section's top PageTabs strip - and ui.default_section is where the app opens (its first page). Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. A page shows the modes whose `tab` is its id, in ui.modes order, as the sub-strip under the page strip. test/test-calc-shell.sh fails on a section with no page, a page with no mode and a mode naming no page.",
     "bottom_nav": ["calculator", "sheet", "ai", "measure", "jev"],
     "default_section": "calculator",
-    "top_bar": {
-      "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger that opens a side drawer the CURRENT page fills (ui/CalcDrawer.kt: the Sheet page lists its sheets and workbooks, every other page the sections and the open section's pages), the app's name as the title, and two circular buttons: AI (libs:ai's chat in an anchored panel over the fleet gateway) and Settings (Account launches Cloud Account, Configs opens the settings section below, the page that replaced the round top-right Configs button). No app draws its own copy of this row (cloud-android-top-bar-guard).",
-      "drawer": true,
-      "ai": true,
-      "settings": ["account", "configs"]
-    },
     "sections": [
       {
         "id": "calculator",
@@ -705,7 +723,7 @@
         "id": "settings",
         "label": "Configs",
         "icon": "settings",
-        "_doc": "NOT in ui.bottom_nav: the Configs page is opened by the top bar's Settings > Configs (libs:bottomnav AppTopBar, ui.top_bar), and that page is the first section that is not on the bar.",
+        "_doc": "NOT in ui.bottom_nav: the Configs page is opened by the first row's Configs button (libs:nav-bar-top-first-row), and that page is the first section that is not on the bar.",
         "pages": [
           {
             "id": "configs",

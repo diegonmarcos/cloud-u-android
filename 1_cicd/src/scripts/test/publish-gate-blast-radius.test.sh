@@ -507,6 +507,24 @@ s3="$(sidentity)"
     && ok "a test set the build file routes into main is still an input" \
     || fail "src/test/res routed into main res stopped moving the identity — a real update is suppressed"
 
+# The identity above leaves test sources out ON PURPOSE, so a test-only push skips the gate. The JVM unit step of every
+# Ship workflow must therefore not hang off the gate, or that push never runs the tests it changed.
+_cicd="$(cd "$(dirname "$0")/../../cicd" && pwd)"
+_gated=""
+for _f in "$_cicd"/ship-cloud-*.yml; do
+    case "$_f" in *-wasm.yml|*/ship-cloud-mail.yml) continue ;; esac
+    python3 - "$_f" <<'PY' || _gated="$_gated $(basename "$_f")"
+import re,sys
+t=open(sys.argv[1]).read()
+for s in re.split(r'(?m)^(?=      - name: )',t):
+    if 'test-engine.sh unit' in s and 'run:' in s and re.search(r"(?m)^        if:.*steps\.gate\.outputs\.skip",s) and 'Publish gate' not in s:
+        sys.exit(1)
+PY
+done
+[ -z "$_gated" ] \
+    && ok "no Ship workflow gates its JVM unit step on the publish gate" \
+    || fail "the JVM unit step is gated on the publish gate in:$_gated — a test-only change would not run its tests"
+
 printf '\n'
 if [ "$FAILURES" -eq 0 ]; then
     printf 'PASS — the gate weighs each library APK on its own source\n'

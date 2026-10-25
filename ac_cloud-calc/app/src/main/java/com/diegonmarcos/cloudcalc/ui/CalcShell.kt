@@ -6,7 +6,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
@@ -32,11 +36,11 @@ import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.engine.CalcApi
-import com.diegonmarcos.cloudcalc.BuildConfig
-import com.diegonmarcos.superapp.ai.AiFleetChatPanel
-import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
-import com.diegonmarcos.superapp.bottomnav.BottomNavHost
-import com.diegonmarcos.superapp.bottomnav.PageTabs
+import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
+import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
+import com.diegonmarcos.superapp.navbartop1.titleHierarchy
+import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.themebg.themeBackground
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
@@ -45,62 +49,63 @@ import androidx.activity.compose.BackHandler
 /**
  * The shell (#868, INVERTED from #770): the fleet's bottom-nav island carries the sections
  * (Calc, Sheet, AI, Measure, Jev - build.json::ui.bottom_nav), the section's PAGES (what #770 called
- * tabs, ui.sections[].pages) are the top PageTabs strip, and a page shows its modes (ui.modes
+ * tabs, ui.sections[].pages) are the second row, and a page shows its modes (ui.modes
  * whose `tab` is its id) as the sub-strip under it when it has more than one. Above all of it is the
- * fleet's AppTopBar (libs:bottomnav, declared in build.json::ui.top_bar): hamburger + the page's drawer
- * ([CalcDrawer]), the app's name, AI, and Settings (Account, Configs).
+ * fleet's shared first row (#1154, #1157: the breadcrumb title dropdown, AI, Profile, Configs; no hamburger) in
+ * NavBarTopFirstRowScaffold, which owns the ONE scroll collapse of the three bars. What the Sheet page used to put in the
+ * drawer (its sheets and workbooks, [CalcDrawer]) is listed at the end of the title dropdown.
  */
 @Composable
 fun CalcShell(api: CalcApi, state: CalcState) {
     CompositionLocalProvider(LocalCalcApi provides api, LocalCalcState provides state) {
-        val entries = Declarations.nav.islandEntries()
-        // The fleet's own host: the page above the island, the scroll collapse, the inset handling.
-        val host: @Composable () -> Unit = {
-            BottomNavHost(
-                entries = entries,
-                selectedId = state.section,
-                onSelect = { state.showSection(it.id) },
-                modifier = Modifier.testTag(CalcTags.SHELL),
+        val nav = Declarations.nav
+        val sec = nav.section(state.section)
+        val entries = nav.islandEntries()
+        Box(Modifier.fillMaxSize().themeBackground(dark = true).windowInsetsPadding(WindowInsets.statusBars.union(WindowInsets.displayCutout))) {
+            NavBarTopFirstRowScaffold(
+                title = sec?.label ?: stringResource(R.string.app_name),
+                hierarchy = sec?.let { titleHierarchy(it, state.tab) }.orEmpty(),
+                onNavigate = { e -> state.showSection(e.sectionId); if (e.depth > 0) state.tab = e.id },
+                onAccount = rememberAccountLauncher(),
+                onConfigs = { state.openConfigs() },
+                onAi = { state.showSection(Declarations.AI_SECTION) },
+                dark = true,
             ) {
-                // The drawer is the page's: the Sheet page's sheets and workbooks, else the sections and pages.
-                TopBarDrawer { close -> CalcDrawer(state, close) }
-                // Configs is off the island (the top bar's Settings > Configs opens it), so Back leaves it.
-                BackHandler(enabled = state.onConfigs) { state.toggleConfigs() }
-                Column(Modifier.fillMaxSize()) {
-                    TopRow(state)
-                    Box(Modifier.weight(1f).fillMaxWidth()) {
-                        key(state.tab) { TabContent(state.tab) }
+                NavBarBottomHost(
+                    entries = entries,
+                    selectedId = state.section,
+                    onSelect = { state.showSection(it.id) },
+                    modifier = Modifier.testTag(CalcTags.SHELL),
+                ) {
+                    // The Sheet page's sheets and workbooks go to the end of the title dropdown.
+                    if (Declarations.modesOf(state.tab).any { it.kind == "sheet" }) TopBarDrawer { close -> CalcDrawer(close) }
+                    // Configs is off the island (the first row's Configs opens it), so Back leaves it.
+                    BackHandler(enabled = state.onConfigs) { state.toggleConfigs() }
+                    Column(Modifier.fillMaxSize()) {
+                        TopRow(state)
+                        Box(Modifier.weight(1f).fillMaxWidth()) {
+                            key(state.tab) { TabContent(state.tab) }
+                        }
                     }
                 }
             }
-        }
-        Box(Modifier.fillMaxSize().statusBarsPadding()) {
-            val topBar = Declarations.topBar
-            if (topBar == null) host() else AppTopBarScaffold(
-                decl = topBar,
-                title = stringResource(R.string.app_name),
-                onAccount = rememberAccountLauncher(),
-                onConfigs = { state.openConfigs() },
-                aiPanel = { AiFleetChatPanel(BuildConfig.AI_GATEWAY_URL) },
-                content = host,
-            )
         }
     }
 }
 
 /**
- * The top row: the selected section's pages as the pill strip (a section with ONE page draws none). The first
- * row above it, with Configs behind its Settings button, is the fleet's AppTopBar (see [CalcShell]).
+ * The second row: the selected section's pages as the shared pill strip (a section with ONE page draws none). The first
+ * row above it, with Configs behind its Configs button, is the fleet's NavBarTopFirstRow (see [CalcShell]).
  */
 @Composable
 private fun TopRow(state: CalcState) {
     val pages = Declarations.nav.section(state.section)?.pages.orEmpty()
     if (pages.size > 1) {
-        PageTabs(
+        NavBarTopSecondRow(
             pages = pages,
             selectedId = state.tab,
             onSelect = { state.tab = it.id },
-            modifier = Modifier.testTag(CalcTags.PAGES),
+            modifier = Modifier.fillMaxWidth().testTag(CalcTags.PAGES),
             underTopChrome = false,
         )
     }
