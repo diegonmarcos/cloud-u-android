@@ -31,7 +31,12 @@ let chromium = null;
 try {
 	({ chromium } = req(process.env.PLAYWRIGHT_PATH || "playwright"));
 } catch {
-	out(true, "playwright not installed here: browser bleed checks run in CI/dev images that have it");
+	// CI must never skip: a missing browser there is a red tester. Only a local run without CI set skips.
+	if (process.env.CI) {
+		out(false, "playwright is missing in CI: the page-bleed checks cannot run (the workflow installs it)");
+		process.exit(0);
+	}
+	out(true, "playwright not installed here (CI unset): the browser bleed checks are skipped locally only");
 	process.exit(0);
 }
 

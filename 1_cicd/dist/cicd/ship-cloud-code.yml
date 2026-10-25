@@ -87,6 +87,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      # test/cloud_bleed.mjs drives headless Chromium (the editor-text-bleeds-through-pages regression
+      # test, #1193). Pinned here; the tester FAILS in CI when the browser is missing, it never skips.
+      - name: Install Playwright Chromium (for the page-bleed tester)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null
+          npm install playwright@1.48.2
+          npx playwright install --with-deps chromium
+          echo "PLAYWRIGHT_PATH=$RUNNER_TEMP/pw/node_modules/playwright" >> "$GITHUB_ENV"
+
       # Same first step as every ship workflow: this application's testers run
       # BEFORE any toolchain is provisioned, so a red tester costs seconds.
       - name: "Test → this application's testers, and what is not covered"
