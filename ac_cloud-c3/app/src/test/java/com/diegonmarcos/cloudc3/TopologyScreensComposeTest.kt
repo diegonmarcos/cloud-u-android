@@ -59,16 +59,20 @@ class TopologyScreensComposeTest {
         compose.setContent { CloudKitTheme(palette) { TopologyScreen(view, inputs, focus, labels, onFocus, onPivot) } }
     }
 
-    @Test
-    fun `every view draws its tree and prints what no endpoint provides`() {
-        for (view in TopologyModel.ALL) {
-            show(view)
-            compose.onNodeWithTag(TopologyTags.screen(view)).assertExists()
-            compose.onNodeWithTag(TopologyTags.missing(view)).assertExists()
-            val top = TopologyModel.build(view, inputs).first()
-            compose.onNodeWithTag(TopologyTags.row(view, top.id)).assertExists()
-        }
+    /** The compose rule takes one setContent per test, so each view is its own test. */
+    private fun drawsTreeAndMissing(view: String) {
+        show(view)
+        compose.onNodeWithTag(TopologyTags.screen(view)).assertExists()
+        compose.onNodeWithTag(TopologyTags.missing(view)).assertExists()
+        val top = TopologyModel.build(view, inputs).first()
+        compose.onNodeWithTag(TopologyTags.row(view, top.id)).assertExists()
     }
+
+    @Test fun `service view draws its tree and prints what no endpoint provides`() = drawsTreeAndMissing(TopologyModel.SERVICE)
+    @Test fun `infrastructure view draws its tree and prints what no endpoint provides`() = drawsTreeAndMissing(TopologyModel.INFRASTRUCTURE)
+    @Test fun `orchestration view draws its tree and prints what no endpoint provides`() = drawsTreeAndMissing(TopologyModel.ORCHESTRATION)
+    @Test fun `network view draws its tree and prints what no endpoint provides`() = drawsTreeAndMissing(TopologyModel.NETWORK)
+    @Test fun `release view draws its tree and prints what no endpoint provides`() = drawsTreeAndMissing(TopologyModel.RELEASE)
 
     @Test
     fun `the list fallback shows every leaf`() {
