@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudcalc
 
+import android.content.ComponentName
 import android.content.Context
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.key
@@ -26,9 +27,13 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
+import org.junit.runners.model.Statement
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -41,7 +46,18 @@ import org.robolectric.annotation.GraphicsMode
 @Config(sdk = [34], qualifiers = "w360dp-h800dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SensorsAppTest {
-    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @get:Rule
+    val rules: RuleChain = RuleChain.outerRule(TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                val app = RuntimeEnvironment.getApplication()
+                shadowOf(app.packageManager).addActivityIfNotPresent(ComponentName(app, ComponentActivity::class.java))
+                base.evaluate()
+            }
+        }
+    }).around(compose)
 
     private class FakePhone(val has: Set<String>, val denied: Set<String> = emptySet()) : SensorHub.Platform {
         val feeds = mutableMapOf<String, (DoubleArray) -> Unit>()

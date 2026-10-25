@@ -163,6 +163,9 @@ class SheetShellTest {
         compose.onNodeWithTag(SheetTags.ROOT).assertExists()
         compose.onNodeWithTag(BottomNavTags.item("ai")).performClick()
         compose.waitForIdle()
+        assertEquals("the AI section comes back to the page last shown in it", "ask", state.tab)
+        compose.onNodeWithTag(PageTabsTags.tab("ai")).performClick()
+        compose.waitForIdle()
         compose.onNodeWithTag(CalcTags.AI_PAGE).assertExists()
     }
 

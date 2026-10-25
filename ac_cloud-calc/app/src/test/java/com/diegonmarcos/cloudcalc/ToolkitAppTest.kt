@@ -1,5 +1,6 @@
 package com.diegonmarcos.cloudcalc
 
+import android.content.ComponentName
 import android.Manifest
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.key
@@ -21,6 +22,9 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.RuleChain
+import org.junit.rules.TestRule
+import org.junit.runners.model.Statement
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -34,7 +38,18 @@ import java.io.File
 @Config(sdk = [34], qualifiers = "w360dp-h800dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class ToolkitAppTest {
-    @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
+    private val compose = createAndroidComposeRule<ComponentActivity>()
+
+    @get:Rule
+    val rules: RuleChain = RuleChain.outerRule(TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                val app = RuntimeEnvironment.getApplication()
+                shadowOf(app.packageManager).addActivityIfNotPresent(ComponentName(app, ComponentActivity::class.java))
+                base.evaluate()
+            }
+        }
+    }).around(compose)
 
     private val app get() = RuntimeEnvironment.getApplication()
     private val shown = mutableStateOf<Declarations.Mode?>(null)
