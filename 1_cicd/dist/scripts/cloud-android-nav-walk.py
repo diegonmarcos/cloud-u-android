@@ -19,7 +19,7 @@ for each, checks what the owner keeps finding by hand:
 Nothing here is relaxed to get green: a failing page is reported with its reason, a screenshot and the UI dump.
 
 It drives the app through UiAutomator (`uiautomator dump`, `input`), so it needs no instrumentation APK and no Gradle. The
-bars expose their test tags as resource ids (libs:ui-nav-bars sets testTagsAsResourceId on the scaffold).
+bars expose their test tags as resource ids (libs:nav-bar-top-first-row sets testTagsAsResourceId on the scaffold).
 
   cloud-android-nav-walk.py --app ac_cloud-calc --build-json ac_cloud-calc/build.json --pkg com.x --out out/
 Exit 0 when every page passed, 1 when any failed, 2 when the app could not be driven at all (counted as failed pages).
@@ -33,7 +33,7 @@ import sys
 import time
 import xml.etree.ElementTree as ET
 
-# The shared bars' tags (libs:bottomnav TopBarTags / BottomNavTags, libs:ui-nav-bars TopFirstRowTags).
+# The shared bars' tags (libs:bottomnav TopBarTags / BottomNavTags, libs:nav-bar-top-first-row TopFirstRowTags).
 TITLE, CONFIGS, MORE = "topbar_title", "topbar_configs", "navtop1_more"
 CRUMB0 = "navtop1_crumb_0"
 ENTRY = "navtop1_entry_"

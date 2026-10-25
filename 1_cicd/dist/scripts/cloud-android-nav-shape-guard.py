@@ -39,7 +39,7 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
   W1-W4  a held app whose UI is a WebView page (Cordova Cloud Code, #1158) cannot call the Compose bars, so
       it draws the same ones from a declaration (nav-shape.json::web). W1 = N1. W2 its own nav JSON lists the
       same bottom pages, sub-pages (each with an icon) and default as build.json ui. W3 its bar sizes and
-      colours (nav.json::bars) equal the Kotlin constants of libs:ui-nav-bars, -second-row,
+      colours (nav.json::bars) equal the Kotlin constants of libs:nav-bar-top-first-row, -second-row,
       -bottom, bottomnav SearchHtmlTokens and theme-background, so the web bars cannot drift from the libs.
       W4 its sources draw the three bars (markers) and nothing swipes the hamburger open.
 
