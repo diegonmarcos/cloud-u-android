@@ -66,6 +66,7 @@ def uiExternalAppsB64  = b64(buildJson.ui.external_apps  ?: [])
 // consolidated export that data/gen_infra_slice.py derived from it. A missing slice would draw
 // empty pages that look like working ones (#276), so it is asserted present.
 def uiAppsPageB64      = b64(buildJson.ui.apps_page      ?: [:])
+def uiTopologyB64      = b64(buildJson.ui.topology       ?: [:])
 def infraSliceFile     = file("../data/infra_slice.json")
 if (!infraSliceFile.exists()) throw new GradleException("missing data/infra_slice.json - run data/gen_infra_slice.py; the Services and Tools pages would bake empty and look fine")
 def infraSliceB64      = infraSliceFile.bytes.encodeBase64().toString()
@@ -206,6 +207,7 @@ android {
         buildConfigField "String", "UI_ICON_DEFAULT",       "\"${uiIconDefault}\""
         buildConfigField "String", "UI_EXTERNAL_APPS_B64",  "\"${uiExternalAppsB64}\""
         buildConfigField "String", "UI_APPS_PAGE_B64",      "\"${uiAppsPageB64}\""
+        buildConfigField "String", "UI_TOPOLOGY_B64",       "\"${uiTopologyB64}\""
         buildConfigField "String", "INFRA_SLICE_B64",       "\"${infraSliceB64}\""
         buildConfigField "String[]", "ROUTES_B64",        routesB64Array
         buildConfigField "String[]", "DECLARATIONS_B64",  declarationsB64Array

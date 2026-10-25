@@ -275,6 +275,12 @@
             "label": "Table",
             "icon": "ic_link_tile",
             "_doc": "RoutesTableFragment: one row per container - Category, Container, Public URL, Auth Type, Private URL, VM Name, VM IP:PORT. Sort by any column (tap the header), filter by Auth Type and VM, filter state persisted. Rows are data/infra_slice.json::routes, derived by data/gen_infra_slice.py from the edge auth tiers."
+          },
+          {
+            "id": "agents",
+            "label": "Agents",
+            "icon": "ic_robot",
+            "_doc": "AgentsFragment (moved from Ops, owner request 2026-10-25): the launchable C3 siblings, now one of the Containers section's pages."
           }
         ]
       },
@@ -287,22 +293,32 @@
         "id": "ops",
         "label": "Ops",
         "icon": "ic_robot",
-        "_doc": "Renamed from Apps (owner request, 2026-10-16). Three pages, in the owner's order: Agents (the launchable C3 siblings), Services (composites over the Tools they use) and Tools (each engine on its own). Services and Tools are view-only and read ui.apps_page.",
+        "_doc": "Renamed from Apps (owner request, 2026-10-16). Since 2026-10-25 Ops is the five TOPOLOGY VIEWS of the fleet, one page each, one TopologyViewFragment over ui.topology (view | grouping key | dominant metric | incident scenario): Service (logical flow), Infrastructure (compute), Orchestration (GitOps), Network & Security and Release (CI/CD). Agents moved to Containers; Services and Tools are gone from Ops.",
         "pages": [
           {
-            "id": "agents",
-            "label": "Agents",
-            "icon": "ic_robot"
+            "id": "service",
+            "label": "Service",
+            "icon": "ic_p_c3_workflows"
           },
           {
-            "id": "services",
-            "label": "Services",
+            "id": "infrastructure",
+            "label": "Infrastructure",
+            "icon": "ic_p_c3_vms"
+          },
+          {
+            "id": "orchestration",
+            "label": "Orchestration",
             "icon": "ic_p_c3_stack"
           },
           {
-            "id": "tools",
-            "label": "Tools",
-            "icon": "ic_p_c3_vms"
+            "id": "network",
+            "label": "Network",
+            "icon": "ic_wg"
+          },
+          {
+            "id": "release",
+            "label": "Release",
+            "icon": "ic_code"
           }
         ]
       },
@@ -358,6 +374,47 @@
     },
     "_doc_external_apps": "#648 THE APPS TAB. Watchdog, Morpheus and WatchTower are ALREADY standalone fleet members with their own directories, build.json, ship workflow and applicationId — so this tab LAUNCHES them and declares no page of its own. This is the same extapp: idiom the SuperApp's ui.sections[c3] used for exactly these three, moved here with the section. A tile resolves its package against the device rather than assuming it is installed, so a missing app reads as 'not installed' instead of a tap that does nothing.",
     "_doc_external_apps_no_label": "THERE IS NO `label` HERE, AND THAT IS THE #351/#224 RULE, not an omission. An application has ONE name — the fleet name in its own build.json::name — and a label sitting beside a package is a SECOND statement of it that drifts; #224 is literally the commit that reverted a display name back to the fleet name, and aa_cloud-superapp/test/test-app-names-pattern.sh T4 fails the build on any object that names one of our packages next to a disagreeing label. The id IS the name and is what the tile shows. The owner's request named these three as 'Watchdog', 'Morpheus' and 'Watchtower'; the fleet spells them c3-watchdog / c3-morpheus / c3-watchtower, and the spelling shown is the fleet's — reported to the owner rather than settled by adding a private display name here.",
+    "_doc_topology": "The Ops section's five topology views, declared once (owner table: view | grouping key | dominant metric | incident scenario). `missing` names what NO fleet endpoint provides today; the page prints it under the view instead of drawing a number nobody measured. `release` is the repository whose workflow runs the Release view reads (GitHub REST, unauthenticated, like the GHA feed).",
+    "topology": {
+      "views": [
+        {
+          "id": "service",
+          "grouping": "Service (client/gateway, service, DB or queue)",
+          "metric": "Up state per node; auth tier per edge",
+          "question": "Which downstream causes 500s?",
+          "missing": ["per-edge p99 latency", "per-edge 5xx rate"]
+        },
+        {
+          "id": "infrastructure",
+          "grouping": "Provider, VM, container",
+          "metric": "Disk usage per VM; containers up per VM",
+          "question": "Is there a noisy neighbour?",
+          "missing": ["per-VM CPU%", "per-VM RAM%", "disk IOPS", "OOM kills"]
+        },
+        {
+          "id": "orchestration",
+          "grouping": "Fleet, VM, compose project, service, container",
+          "metric": "Declared vs deployed (sync), health",
+          "question": "Did the latest commit apply, are replicas healthy?",
+          "missing": ["commit SHA the deployed state was applied from", "container restart counts"]
+        },
+        {
+          "id": "network",
+          "grouping": "WireGuard subnet, VM, Caddy route or firewall rule, container IP:port",
+          "metric": "Routes and rules per VM, auth tier per route",
+          "question": "Is a policy dropping packets?",
+          "missing": ["allowed and blocked flow counters", "dropped packets per rule", "per-route DNS resolution results"]
+        },
+        {
+          "id": "release",
+          "grouping": "Environment (VM), service version (image tag), last Ship runs",
+          "metric": "Declared vs running image tag; last run conclusion",
+          "question": "Did a fresh deploy regress?",
+          "missing": ["traffic split between versions", "error rate before and after a deploy"]
+        }
+      ],
+      "release": {"owner": "diegonmarcos", "repo": "cloud-u-android", "workflow": "Ship"}
+    },
     "apps_page": {
       "_doc": "THE Apps tab's Services and Tools pages (view-only). `tools` are the individual engines, each `source` a dotted path into cloud-infra's _cloud-data-consolidated.json (services.<name> | native.<name>); data/gen_infra_slice.py reads those paths and every host, zone, rule and port list from the export into data/infra_slice.json, so no host list is typed here. `services` are the composites: each names the tools it uses (a tool's 'used by' list is the inverse, derived) and the `views` it renders over the slice (InfraViews.kt has one renderer per view id; test-c3-shell.sh T9 diffs both ways). A tool's printed name is derived from its id (#351).",
       "tools": [

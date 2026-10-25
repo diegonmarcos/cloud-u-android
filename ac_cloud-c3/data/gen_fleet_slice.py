@@ -33,6 +33,20 @@ def load(arg, key):
     return json.load(urllib.request.urlopen(BASE + PATHS[key]))
 
 
+# The self-hosted provider (owner request 2026-10-25): our own fleet on the WireGuard mesh, listed beside OCI/GCP/AWS/Hetzner/
+# Cloudflare. DERIVED, never typed per VM: its VMs are every declared VM that holds a mesh (wg0) IP. It is flagged self_hosted so
+# the compute view groups by the real vendor providers and does not list the same VM twice.
+SELF_HOSTED = {
+    "id": "cloud", "label": "Cloud", "account": "own fleet on the WireGuard mesh", "plan": "self-managed",
+    "use": "Our own cloud: the mesh VMs and the containers on them, run by us on vendor capacity",
+    "cost": None, "links": [], "self_hosted": True,
+}
+
+
+def with_self_hosted(providers, vms):
+    return providers + [dict(SELF_HOSTED, vms=[v["id"] for v in vms if v.get("wg_ip")])]
+
+
 def build(cons, zone, assets, users):
     vms, vpss = cons["vms"], cons["vpss"]
     provider_of_vpss = {p["vpss"]: p["id"] for p in assets["providers"] if p.get("vpss")}
@@ -124,7 +138,7 @@ def build(cons, zone, assets, users):
     return {
         "_meta": {"generated_by": "data/gen_fleet_slice.py", "sources": PATHS,
                   "note": "READ from the fleet declarations; never edit - run the generator. No key, token or instance id is carried."},
-        "providers": providers, "vms": out_vms,
+        "providers": with_self_hosted(providers, out_vms), "vms": out_vms,
         "storage": {"buckets": buckets, "backends": assets["storage_backends"]},
         "electronics": electronics, "domains": domains,
     }

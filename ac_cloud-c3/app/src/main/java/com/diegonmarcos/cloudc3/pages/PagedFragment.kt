@@ -44,6 +44,11 @@ abstract class PagedFragment : KitComposeFragment() {
 
     private var selected by mutableStateOf<String?>(null)
 
+    /** Show a declared page of this tab (a pivot link from one page to a sibling); an id the tab does not declare is ignored. */
+    fun openPage(pageId: String) {
+        if (pages().any { it.id == pageId }) selected = pageId
+    }
+
     override fun palette(): KitPalette = c3KitPalette(requireContext())
 
     override fun onCreate(savedInstanceState: Bundle?) {

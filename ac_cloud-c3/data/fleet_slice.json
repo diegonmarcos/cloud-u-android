@@ -165,6 +165,22 @@
     }
    ],
    "vms": []
+  },
+  {
+   "id": "cloud",
+   "label": "Cloud",
+   "account": "own fleet on the WireGuard mesh",
+   "plan": "self-managed",
+   "use": "Our own cloud: the mesh VMs and the containers on them, run by us on vendor capacity",
+   "cost": null,
+   "links": [],
+   "self_hosted": true,
+   "vms": [
+    "oci-E2-f_0",
+    "oci-E2-f_1",
+    "oci-A1-f_0",
+    "gcp-E2-f_0"
+   ]
   }
  ],
  "vms": [

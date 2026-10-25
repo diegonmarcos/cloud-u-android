@@ -129,7 +129,7 @@ class DeclarationsTest {
         // which is what keeps "no placeholder in a shipped tab" assertable.
         assertEquals("Infra = Providers | VMs | Storage | Electronics | Domains (2026-10-20); no Stack, Dbs or API page",
             listOf("providers", "machines", "storage", "electronics", "domains"), pageIds("infra"))
-        assertEquals("Public and Private URLs merged into Table", listOf("topology", "table"), pageIds("containers"))
+        assertEquals("Public and Private URLs merged into Table; Agents moved in from Ops (2026-10-25)", listOf("topology", "table", "agents"), pageIds("containers"))
         assertEquals(listOf("observability", "health", "dagu", "mesh"), pageIds("observ"))
         assertEquals(listOf("about"), pageIds("configs"))
     }
@@ -189,7 +189,21 @@ class DeclarationsTest {
     }
 
     @Test
-    fun `the Ops tab declares Agents then Services then Tools`() {
-        assertEquals(listOf("agents", "services", "tools"), pageIds("ops"))
+    fun `the Ops tab declares the five topology views, with Agents under Containers and no Services or Tools`() {
+        assertEquals(listOf("service", "infrastructure", "orchestration", "network", "release"), pageIds("ops"))
+        assertTrue("Agents is not on Ops any more", "agents" !in pageIds("ops"))
+        assertTrue("Services and Tools are gone from Ops", pageIds("ops").none { it == "services" || it == "tools" })
+        assertTrue("Agents is on Containers", "agents" in pageIds("containers"))
+    }
+
+    @Test
+    fun `every Ops page has a declared view with its grouping, metric, question and a second-row icon from the shared catalog`() {
+        val topo = com.diegonmarcos.cloudc3.pages.TopologyModel.parseDecl(ui()["topology"]!!.toString())
+        assertEquals(pageIds("ops"), topo.views.map { it.id })
+        topo.views.forEach { assertTrue("${it.id} lacks grouping/metric/question/missing", it.grouping.isNotBlank() && it.metric.isNotBlank() && it.question.isNotBlank() && it.missing.isNotEmpty()) }
+        assertEquals("Ship", topo.release?.workflow)
+        nav().section("ops")!!.pages.forEach {
+            assertTrue("${it.id} icon ${it.icon} is not in libs:ui-icons", com.diegonmarcos.superapp.uiicons.UiIcons.has(it.icon))
+        }
     }
 }

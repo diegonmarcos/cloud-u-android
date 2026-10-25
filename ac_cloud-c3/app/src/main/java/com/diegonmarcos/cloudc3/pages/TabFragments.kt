@@ -52,7 +52,7 @@ class InfraFragment : PagedFragment() {
 }
 
 /**
- * CONTAINERS (was Topology) - two top tabs. `topology` is the SuperApp's Topology page minus its address cards:
+ * CONTAINERS (was Topology) - three top tabs (Agents joined 2026-10-25, moved from Ops). `topology` is the SuperApp's Topology page minus its address cards:
  * [C3StackFragment] over ui.carried_c3.stack_topology (the Index row and the Infra Apps / User Apps dashboards).
  * `table` is [RoutesTableFragment]: the former Public and Private URL pages merged into one sortable, filterable
  * table over data/infra_slice.json::routes.
@@ -62,6 +62,7 @@ class ContainersFragment : PagedFragment() {
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
         "topology" -> C3StackFragment.newInstance(C3StackFragment.STACK_TOPOLOGY)
         "table" -> RoutesTableFragment()
+        "agents" -> AgentsFragment()
         else -> null
     }
 }
@@ -85,16 +86,19 @@ class ObservFragment : PagedFragment() {
 }
 
 /**
- * OPS (was Apps) - the bottom-nav tab as three pages in the owner's order: Agents (the
- * launchable C3 siblings; the local webserver stays there as a launch tile, it is a cloud-c3
- * sub-app and not a fleet service), Services (composites) and Tools (each engine alone).
+ * OPS (was Apps) - the five topology views of the fleet (owner request, 2026-10-25), one page each over [TopologyViewFragment]:
+ * Service (logical flow), Infrastructure (compute), Orchestration (declared vs deployed), Network and Release. Each is a tree
+ * grouped by its own key with a list fallback, and a node opens the same entity in the other four. Agents moved to Containers;
+ * Services and Tools are gone from here.
  */
 class OpsFragment : PagedFragment() {
     override fun pages(): List<NavPage> = Declarations.opsPages
     override fun pageFragment(pageId: String): Fragment? = when (pageId) {
-        "agents" -> AgentsFragment()
-        "services" -> CatalogFragment.newInstance(CatalogFragment.KIND_SERVICES)
-        "tools" -> CatalogFragment.newInstance(CatalogFragment.KIND_TOOLS)
+        "service" -> TopologyViewFragment.newInstance(TopologyModel.SERVICE)
+        "infrastructure" -> TopologyViewFragment.newInstance(TopologyModel.INFRASTRUCTURE)
+        "orchestration" -> TopologyViewFragment.newInstance(TopologyModel.ORCHESTRATION)
+        "network" -> TopologyViewFragment.newInstance(TopologyModel.NETWORK)
+        "release" -> TopologyViewFragment.newInstance(TopologyModel.RELEASE)
         else -> null
     }
 }

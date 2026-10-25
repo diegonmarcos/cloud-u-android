@@ -520,7 +520,8 @@ tabs = open(sys.argv[3], encoding="utf-8").read()
 bad = []
 secs = {x["id"]: x for x in ui.get("sections") or []}
 def pids(i): return [p["id"] for p in (secs.get(i) or {}).get("pages") or []]
-if pids("containers") != ["topology", "table"]: bad.append("Containers pages are %s, not [topology, table]" % pids("containers"))
+if pids("containers") != ["topology", "table", "agents"]: bad.append("Containers pages are %s, not [topology, table, agents]" % pids("containers"))
+if pids("ops") != ["service", "infrastructure", "orchestration", "network", "release"]: bad.append("Ops pages are %s, not the five topology views (Services and Tools are gone, Agents is under Containers)" % pids("ops"))
 if pids("infra") != ["providers", "machines", "storage", "electronics", "domains"]: bad.append("Infra pages are %s, not [providers, machines, storage, electronics, domains]" % pids("infra"))
 c3 = ui["carried_c3"]
 topo, infra = c3.get("stack_topology") or [], []

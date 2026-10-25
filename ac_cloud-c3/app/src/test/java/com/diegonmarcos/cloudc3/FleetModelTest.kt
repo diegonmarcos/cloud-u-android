@@ -34,8 +34,20 @@ class FleetModelTest {
     fun `the references inside the declaration resolve`() {
         slice.vms.forEach { assertNotNull("vm ${it.id} names provider ${it.provider}", slice.provider(it.provider)) }
         slice.providers.forEach { p -> p.vms.forEach { id -> assertTrue("provider ${p.id} lists vm $id", slice.vms.any { it.id == id }) } }
-        slice.providers.forEach { p -> assertEquals(p.vms, slice.vmsOf(p.id).map { it.id }) }
-        slice.providers.forEach { assertTrue("provider ${it.id} has a console link", it.links.isNotEmpty() && it.links.all { l -> l.url.startsWith("https://") }) }
+        // A vendor provider owns the VMs that name it and has a console to open; the self-hosted Cloud is the VMs on the mesh, a
+        // grouping over the vendor ones, with no console of its own (`selfHosted` is the declaration's own flag).
+        val vendors = slice.providers.filter { !it.selfHosted }
+        vendors.forEach { p -> assertEquals(p.vms, slice.vmsOf(p.id).map { it.id }) }
+        vendors.forEach { assertTrue("provider ${it.id} has a console link", it.links.isNotEmpty() && it.links.all { l -> l.url.startsWith("https://") }) }
+    }
+
+    @Test
+    fun `the self-hosted Cloud provider is declared beside the vendors and holds exactly the mesh VMs`() {
+        val cloud = slice.providers.filter { it.selfHosted }
+        assertEquals("one self-hosted provider", 1, cloud.size)
+        assertEquals("Cloud", cloud.single().label)
+        assertTrue("the vendor providers are still listed", slice.providers.count { !it.selfHosted } >= 3)
+        assertEquals("its VMs are every VM with a WireGuard mesh IP", slice.vms.filter { it.wgIp != null }.map { it.id }, cloud.single().vms)
     }
 
     @Test

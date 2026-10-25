@@ -6,6 +6,7 @@ import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.TopBarDecl
 import com.diegonmarcos.cloudc3.pages.FleetModel
 import com.diegonmarcos.cloudc3.pages.RoutesTableModel
+import com.diegonmarcos.cloudc3.pages.TopologyModel
 import java.util.Base64
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -98,6 +99,8 @@ object Declarations {
 
     /** ui.apps_page (the Services/Tools declaration) and the derived data/infra_slice.json. */
     val appsCatalog: AppsCatalog.Decl by lazy { AppsCatalog.parse(decode(BuildConfig.UI_APPS_PAGE_B64)) }
+    /** ui.topology: the Ops section's five views (grouping key, metric, question, what no endpoint provides). */
+    val topology: TopologyModel.Decl by lazy { TopologyModel.parseDecl(decode(BuildConfig.UI_TOPOLOGY_B64)) }
     val infraSlice: JsonObject by lazy { element(decode(BuildConfig.INFRA_SLICE_B64)) as? JsonObject ?: JsonObject(emptyMap()) }
     val opsBaseUrl: String get() = BuildConfig.C3_OPS_BASE_URL
 

@@ -32,7 +32,7 @@ object FleetModel {
 
     data class Provider(
         val id: String, val label: String, val account: String?, val plan: String?, val use: String?,
-        val cost: Cost?, val links: List<Link>, val vms: List<String>,
+        val cost: Cost?, val links: List<Link>, val vms: List<String>, val selfHosted: Boolean = false,
     )
 
     data class Vm(
@@ -82,7 +82,7 @@ object FleetModel {
                     plan = o.str("plan"), use = o.str("use"),
                     cost = o.obj("cost")?.let { c -> Cost(c.str("live"), c.dbl("amount"), c.str("currency"), c.str("note")) },
                     links = o.objs("links").map { Link(it.str("label").orEmpty(), it.str("url").orEmpty()) },
-                    vms = o.strs("vms"),
+                    vms = o.strs("vms"), selfHosted = o.bool("self_hosted") ?: false,
                 )
             },
             vms = root.objs("vms").map { o ->
