@@ -117,8 +117,8 @@ jobs:
           for i in $(seq 1 100); do
             row=$(gh run list -R "$REPO" -w "$SHIP" -c "$SHA" -L 1 --json status,conclusion,databaseId --jq '.[0] // empty | "\(.status) \(.conclusion // "none") \(.databaseId)"' || true)
             if [ -z "$row" ]; then
-              # no Ship run for this commit: it was not triggered (no watched path moved). Give it three minutes to appear.
-              [ "$i" -ge 6 ] && break
+              # no Ship run for this commit: it was not triggered (no watched path moved). Give it two minutes to appear.
+              [ "$i" -ge 4 ] && break
               sleep 30; continue
             fi
             set -- $row
@@ -179,6 +179,8 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
+          profile: pixel_5
+          ram-size: 3072M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: ./walk.sh

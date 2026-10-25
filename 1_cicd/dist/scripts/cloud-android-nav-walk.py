@@ -38,6 +38,7 @@ ENTRY = "navtop1_entry_"
 ITEM, LABEL = "bottomnav_item_", "bottomnav_label_"
 ISLAND = "bottomnav_island"
 TAB = "pagetabs_tab_"
+STRIP = "pagetabs_strip"
 
 
 def adb(*a, timeout=90):
@@ -70,18 +71,34 @@ class Node:
     def h(self): return self.b - self.t
 
 
-def dump(tries=8):
+def dump(tries=8, _depth=0):
     """The visible UI as a list of Node (the active window: the dropdown's popup while it is open), or None."""
     for _ in range(tries):
         out = shell("uiautomator dump /sdcard/nw.xml >/dev/null 2>&1; cat /sdcard/nw.xml")
         k = out.find("<?xml")
         if k >= 0 and "<hierarchy" in out:
             try:
-                return [Node(e) for e in ET.fromstring(out[k:].strip()).iter("node")]
+                nodes = [Node(e) for e in ET.fromstring(out[k:].strip()).iter("node")]
             except ET.ParseError:
-                pass
+                nodes = None
+            if nodes is not None:
+                if _depth < 4 and dismiss_emulator_prompt(nodes):
+                    return dump(tries, _depth + 1)
+                return nodes
         time.sleep(1.2)
     return None
+
+
+def dismiss_emulator_prompt(nodes):
+    """The emulator's own "Allow wireless debugging on this network?" dialog covers any app that starts after the network comes up."""
+    title = find(nodes, "alertTitle")
+    if title is not None and "wireless debugging" in title.text.lower():
+        cancel = find(nodes, "button2")
+        if cancel is not None:
+            tap(cancel)
+            time.sleep(1.0)
+            return True
+    return False
 
 
 def find(nodes, rid):
@@ -94,6 +111,25 @@ def findall(nodes, prefix):
 
 def texts_in(nodes, box):
     return " ".join(n.text for n in nodes if n.text and n.l >= box.l and n.r <= box.r and n.t >= box.t and n.b <= box.b) + " " + box.text + " " + box.desc
+
+
+BLOCKER_TEXTS = ("Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK")
+
+
+def clear_blockers(nodes):
+    """First-run screens, the default-app role prompt and permission dialogs: dismiss ONE and say so. Used only while the shared bars are missing."""
+    title = find(nodes, "title") or find(nodes, "alertTitle")
+    if title is not None and ("default" in title.text.lower() or "caller id" in title.text.lower()):
+        cancel = find(nodes, "button2")
+        if cancel is not None:
+            tap(cancel)
+            return True
+    for want in BLOCKER_TEXTS:
+        for n in nodes:
+            if n.text == want and (n.clickable or n.cls.endswith("Button")):
+                tap(n)
+                return True
+    return False
 
 
 def tap(n):
@@ -154,6 +190,9 @@ class Walk:
             if nodes and any(n.rid.startswith(ITEM) for n in nodes):
                 settle(1.5)
                 return nodes
+            if nodes and clear_blockers(nodes):
+                settle(1.5)
+                continue
             settle(2)
         return None
 
@@ -169,6 +208,11 @@ class Walk:
 
     def ime_up(self):
         return "mInputShown=true" in shell("dumpsys input_method | grep -m1 mInputShown")
+
+    def hide_ime(self):
+        if self.ime_up():
+            shell("input keyevent KEYCODE_BACK")
+            settle(0.8)
 
     def evidence(self, name):
         safe = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
@@ -227,13 +271,16 @@ class Walk:
         items = [n for n in nodes if n.rid.startswith(ITEM)]
         labels = {n.rid[len(LABEL):] for n in nodes if n.rid.startswith(LABEL)}
         tabs = [n for n in nodes if n.rid.startswith(TAB)]
+        island, strip = find(nodes, ISLAND), find(nodes, STRIP)
         return {
             "row": title is not None,
             "items": len(items),
             "labels": labels,
-            "bar_h": max((n.h for n in items), default=0),
-            "tab_h": max((n.h for n in tabs), default=0),
+            # the bars' own boxes: a tab or item is reported at Compose's 48 dp touch target, which a shrunk bar does not go below
+            "bar_h": island.h if island else max((n.h for n in items), default=0),
+            "tab_h": strip.h if strip else 0,
             "tabs": len(tabs),
+            "scrollable": [n for n in nodes if n.scrollable and not n.rid.startswith(("pagetabs_", "navtop", "topbar", "bottomnav_")) and n.h >= 150],
         }
 
     def content_box(self, nodes):
@@ -302,7 +349,7 @@ class Walk:
                 fails.append("P3 scrolled: the first row hid but non-selected bottom labels stayed (%s)" % ", ".join(sorted(after["labels"])))
             if after["bar_h"] >= before["bar_h"]:
                 fails.append("P3 scrolled: the bottom bar did not shrink (%d -> %d px)" % (before["bar_h"], after["bar_h"]))
-            if before["tabs"] and after["tabs"] and after["tab_h"] >= before["tab_h"]:
+            if before["tab_h"] and after["tab_h"] and after["tab_h"] >= before["tab_h"]:
                 fails.append("P3 scrolled: the second row's tabs did not shrink (%d -> %d px)" % (before["tab_h"], after["tab_h"]))
             for _ in range(3):
                 swipe(x, y2, y1)
@@ -318,9 +365,14 @@ class Walk:
                 fails.append("P3 scrolled back up: the bottom bar did not restore (%d vs %d px)" % (back["bar_h"], before["bar_h"]))
         else:
             moved = sig1 != sig0
-            if moved:
+            if moved and before["scrollable"]:
                 checks["scroll"] = "scrolled"
                 fails.append("P3 the content scrolled but the chrome did not collapse (first row still on screen)")
+            elif moved:
+                # something moved but the page offers no scrollable container: a map or canvas panned, not a list scrolled
+                checks["scroll"] = "panned"
+                if after["items"] != before["items"] or len(after["labels"]) != len(before["labels"]):
+                    fails.append("P3 a page that does not scroll changed the bottom bar")
             else:
                 checks["scroll"] = "fixed"
                 if after["items"] != before["items"] or len(after["labels"]) != len(before["labels"]):
@@ -331,6 +383,7 @@ class Walk:
         name = "%s/%s" % (section, pid)
         t0 = time.time()
         shell("logcat -c")
+        self.hide_ime()
         err = self.goto(pid, label) if via_dropdown else None
         checks, fails = ({}, [err]) if err else self.check_page(label, via_dropdown)
         died = not self.alive()
@@ -363,7 +416,11 @@ class Walk:
                                  "failures": ["build.json::ui.bottom_nav names a section ui.sections does not declare"], "seconds": 0})
             return
         on_bar = sid in self.bottom
+        self.hide_ime()
         nodes = dump() or []
+        if not any(n.rid.startswith(ITEM) for n in nodes) and clear_blockers(nodes):
+            settle(1.5)
+            nodes = dump() or []
         opener = find(nodes, ITEM + sid) if on_bar else find(nodes, CONFIGS)
         if opener is None:
             self.results.append({"section": sid, "page": "-", "label": sec.get("label", sid), "status": "FAIL", "checks": {},
