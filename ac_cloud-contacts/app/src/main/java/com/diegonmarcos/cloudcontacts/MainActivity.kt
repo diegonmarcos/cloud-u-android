@@ -46,7 +46,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private lateinit var bridge: ContactsBridge
-    private val scrollFeed = ChromeScrollFeed()
 
     private val contactsPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -68,7 +67,6 @@ class MainActivity : AppCompatActivity() {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.allowFileAccess = true
-            setOnScrollChangeListener { _, _, y, _, oldY -> scrollFeed.onDelta((y - oldY).toFloat()) }
         }
         bridge = ContactsBridge(
             activity = this,
@@ -77,7 +75,6 @@ class MainActivity : AppCompatActivity() {
             launchImportPicker = { importPicker.launch("*/*") },
         )
         webView.addJavascriptInterface(bridge, "Native")
-        webView.addJavascriptInterface(scrollFeed, "NavChrome")
 
         // SECURITY: only our bundled asset is ever loaded (file:///android_asset).
         webView.loadUrl("file:///android_asset/contacts.html")
@@ -118,7 +115,7 @@ class MainActivity : AppCompatActivity() {
                 selectedId = section,
                 onSelect = { go(it.id) },
             ) {
-                ChromeWebView(webView, scrollFeed)
+                ChromeWebView(webView)
             }
         }
     }

@@ -60,8 +60,8 @@ class ChromeScrollGuardTest {
     /** The scroll surfaces a Compose nestedScroll cannot see (a WebView, a Fragment page, a View list) and the token proving each app feeds them to the ONE collapse. */
     private val webScrollers = mapOf(
         "ac_cloud-browser" to "onScrollDelta(",
-        "ac_cloud-contacts" to "onScrollDelta(",
-        "ac_cloud-news" to "onScrollDelta(",
+        "ac_cloud-contacts" to "ChromeWebScroll.attach(",
+        "ac_cloud-news" to "ChromeWebScroll.attach(",
         "ac_cloud-dialer" to "ChromeScrollHooks.install(",
         "ac_cloud-tasks" to "ChromeWebScroll.attach(",
         "ac_cloud-me" to "ChromeWebScroll.attach(",

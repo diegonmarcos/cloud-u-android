@@ -41,13 +41,11 @@ import com.diegonmarcos.superapp.updater.Updater
  */
 class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
-    private val scrollFeed = ChromeScrollFeed()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
         webView = WebView(this)
-        webView.setOnScrollChangeListener { _, _, y, _, oldY -> scrollFeed.onDelta((y - oldY).toFloat()) }
         webView.webViewClient = WebViewClient()
         // Without this the entire UI is a black box: the whole app is one
         // WebView, so a JS error or a diagnostic console.log went nowhere and
@@ -78,7 +76,6 @@ class MainActivity : AppCompatActivity() {
         // links are therefore handed to the system browser via
         // NewsBridge.openExternal(), never opened in this WebView.
         webView.addJavascriptInterface(NewsBridge(this), "NewsBridge")
-        webView.addJavascriptInterface(scrollFeed, "NavChrome")
         webView.loadUrl("file:///android_asset/news.html")
         setContent { NewsShell() }
         Updater.start(this)
@@ -115,7 +112,7 @@ class MainActivity : AppCompatActivity() {
                 selectedId = section,
                 onSelect = { go(it.id) },
             ) {
-                ChromeWebView(webView, scrollFeed)
+                ChromeWebView(webView)
             }
         }
     }
