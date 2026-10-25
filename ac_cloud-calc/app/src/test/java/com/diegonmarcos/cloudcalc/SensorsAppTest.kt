@@ -127,7 +127,7 @@ class SensorsAppTest {
         val p = FakePhone(setOf("step_counter")).also { SensorHub.platform = it }
         show("sx_activity")
         p.feed("step_counter", 1000.0)
-        compose.onNodeWithTag(SensorTags.value("step_counter")).assertTextContains("1000")
+        compose.onNodeWithTag(SensorTags.value("step_counter")).assertTextContains("1000", substring = true)
         compose.onNodeWithText("750 m").assertExists()
         compose.onNodeWithText("40 kcal").assertExists()
     }
@@ -152,11 +152,11 @@ class SensorsAppTest {
     @Test fun `the compass turns gravity and the magnetic field into a heading and says when a sensor is missing`() {
         val p = FakePhone(setOf("gravity", "magnetometer")).also { SensorHub.platform = it }
         show("sx_compass")
-        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains(str(R.string.compass_waiting))
+        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains(str(R.string.compass_waiting), substring = true)
         p.feed("gravity", 0.0, 0.0, 9.81)
         p.feed("magnetometer", 30.0, 0.0, -40.0)
-        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains("270")
-        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains("W")
+        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains("270", substring = true)
+        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains("W", substring = true)
         compose.onNodeWithText("50.0 µT").assertExists()
     }
 
@@ -165,8 +165,8 @@ class SensorsAppTest {
         show("sx_compass")
         p.feed("accelerometer", 0.0, 0.0, 9.81)
         p.feed("magnetometer", 0.0, 30.0, -40.0)
-        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains("0")
-        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains("N")
+        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains("0", substring = true)
+        compose.onNodeWithTag(SensorTags.COMPASS_HEADING).assertTextContains("N", substring = true)
     }
 
     @Test fun `the compass without a magnetometer says what it lacks and draws no heading`() {
@@ -220,10 +220,10 @@ class SensorsAppTest {
 
     @Test fun `the protractor reads 90 degrees straight above its centre`() {
         show("sx_protractor")
-        compose.onNodeWithTag(SensorTags.PROTRACTOR_ANGLE).assertTextContains("45.0")
+        compose.onNodeWithTag(SensorTags.PROTRACTOR_ANGLE).assertTextContains("45.0", substring = true)
         compose.onNodeWithTag(SensorTags.PROTRACTOR).performTouchInput { click(Offset(width / 2f, height * 0.5f)) }
         compose.waitForIdle()
-        compose.onNodeWithTag(SensorTags.PROTRACTOR_ANGLE).assertTextContains("90.0")
+        compose.onNodeWithTag(SensorTags.PROTRACTOR_ANGLE).assertTextContains("90.0", substring = true)
         assertEquals("the supplement reads 90 too", 2, compose.onAllNodesWithText("90.0°").fetchSemanticsNodes().size)
     }
 
