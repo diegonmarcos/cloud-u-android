@@ -404,7 +404,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 28,
+      "unit_test_sources": 29,
       "workflow": "ship-cloud-search.yml"
     },
     "ac_cloud-search/web": {
@@ -440,7 +440,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 6,
+      "unit_test_sources": 4,
       "workflow": "ship-cloud-superintel.yml"
     },
     "ac_cloud-tasks": {
