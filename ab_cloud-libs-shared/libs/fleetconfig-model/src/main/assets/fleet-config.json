@@ -2165,6 +2165,14 @@
       "used_by": [
         "lib-bottomnav"
       ]
+    },
+    "ai_composer": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "The shared AI chat's config bar: whether it is collapsed to its one compact chip, one boolean per app (key ai_composer_collapsed.<app>). A user layout choice, so it migrates with the app's settings.",
+      "used_by": [
+        "lib-ai"
+      ]
     }
   },
   "bundle": {
