@@ -105,7 +105,10 @@ class SheetShellTest {
         compose.onNodeWithTag(TopFirstRowTags.PROFILE).assertExists()
         compose.onNodeWithTag(TopFirstRowTags.CONFIGS).assertExists()
         assertTrue("the first row has no hamburger", compose.onAllNodesWithTag("topbar_menu").fetchSemanticsNodes().isEmpty())
-        compose.onNodeWithTag(TopFirstRowTags.ISLAND).assertTextContains(RuntimeEnvironment.getApplication().getString(R.string.app_name))
+        // the title is the path "{App} / {Section} / {Page}": the app's name is its first segment, listed in the dropdown
+        compose.onNodeWithTag(TopFirstRowTags.ISLAND).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(TopFirstRowTags.crumb(0)).assertTextContains(RuntimeEnvironment.getApplication().getString(R.string.app_name))
         assertTrue(compose.onAllNodesWithTag("calc_configs_button").fetchSemanticsNodes().isEmpty())
     }
 
