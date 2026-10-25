@@ -35,7 +35,7 @@ class MailSideMenuTest {
         assertEquals(listOf(1, 1, 1, 2, 3), rows.map { it.depth })
     }
 
-    @Test fun `no labels, no Labels group; an empty account has an empty menu`() {
+    @Test fun `no labels, no Labels group, an empty account has an empty menu`() {
         assertEquals(listOf("folders"), section(listOf(mb("i", "inbox"))).groups.map { it.id })
         assertTrue(section(emptyList()).groups.isEmpty())
     }
