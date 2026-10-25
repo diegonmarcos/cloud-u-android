@@ -23,10 +23,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,7 +56,7 @@ fun AppsPage(model: ToolsModel, page: String) {
     val data = model.models
     val open = data.apps.firstOrNull { it.id == model.appId }
     when {
-        open != null -> { BackHandler { model.appId = null }; AppDetail(model, data, open) }
+        open != null -> { BackHandler { model.closeApp() }; AppDetail(model, data, open) }
         page == Decl.PAGE_APPS_LIST -> AppsList(model, data)
         else -> AppsGrid(model, data)
     }
@@ -134,31 +141,72 @@ private fun AppsList(model: ToolsModel, data: ModelsData) {
     }
 }
 
-/** One app: its description, the ordered steps with their model chips, the totals, the phone badge and Try in AI. */
+/**
+ * One app's own page: its UI template (the labels and the result view come from the data), a collapsible header with
+ * the pipeline, RAM, disk and phone badge, the input, Run, the per-step status while it runs and the final result.
+ */
 @Composable
 private fun AppDetail(model: ToolsModel, data: ModelsData, a: AppDef) {
+    var info by rememberSaveable(a.id) { mutableStateOf(false) }
+    val labels = a.ui.inputs.ifEmpty { listOf("") }
+    val values = remember(a.id) { mutableStateListOf(*Array(labels.size) { "" }) }
+    val run = model.appRun?.takeIf { it.appId == a.id }
+    val tpl = data.templates.firstOrNull { it.id == a.ui.template }
     LazyColumn(Modifier.fillMaxSize().testTag(Tags.APP_DETAIL), contentPadding = PaddingValues(ToolsMetrics.gutter), verticalArrangement = Arrangement.spacedBy(ToolsMetrics.gap)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(UiIcons.vector(a.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                 Spacer(Modifier.width(ToolsMetrics.gap))
                 Text(a.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                TextButton(onClick = { model.appId = null }) { Text(stringResource(R.string.apps_back)) }
+                TextButton(onClick = { model.closeApp() }) { Text(stringResource(R.string.apps_back)) }
             }
             Text(a.description, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.app_template, tpl?.label.orEmpty(), tpl?.flow.orEmpty()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag(Tags.APP_TEMPLATE))
+            Row(Modifier.clickable { info = !info }.padding(vertical = ToolsMetrics.gap).testTag(Tags.APP_INFO), verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(if (info) R.string.app_info_hide else R.string.app_info_show), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(ToolsMetrics.gap))
+                Text(stringResource(R.string.app_totals, gb(data.appRamQ4(a)), gb(data.appDiskFp16(a)), data.appModels(a).size), style = MaterialTheme.typography.labelSmall, modifier = Modifier.testTag(Tags.APP_TOTALS))
+                if (data.phoneCapable(a)) { Spacer(Modifier.width(ToolsMetrics.small)); Text(stringResource(R.string.app_phone_icon)) }
+            }
         }
-        itemsSteps(a, data)
+        if (info) {
+            itemsSteps(a, data)
+            item {
+                Text(stringResource(R.string.app_models_used, data.appModels(a).joinToString(", ") { it.model }), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Chip(stringResource(if (data.phoneCapable(a)) R.string.app_phone_yes else R.string.app_phone_no), selected = data.phoneCapable(a), tag = Tags.PHONE_BADGE)
+            }
+        }
         item {
-            val phone = data.phoneCapable(a)
-            Text(stringResource(R.string.app_totals, gb(data.appRamQ4(a)), gb(data.appDiskFp16(a)), data.appModels(a).size), style = MaterialTheme.typography.labelLarge, modifier = Modifier.testTag(Tags.APP_TOTALS))
-            Text(stringResource(R.string.app_models_used, data.appModels(a).joinToString(", ") { it.model }), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Row(horizontalArrangement = Arrangement.spacedBy(ToolsMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
-                Chip(stringResource(if (phone) R.string.app_phone_yes else R.string.app_phone_no), selected = phone, tag = Tags.PHONE_BADGE)
+            Column(verticalArrangement = Arrangement.spacedBy(ToolsMetrics.gap)) {
+                labels.forEachIndexed { i, label ->
+                    OutlinedTextField(
+                        value = values[i], onValueChange = { values[i] = it },
+                        label = { Text(label.ifBlank { a.ui.inputHint }) }, placeholder = { Text(a.ui.inputHint) },
+                        modifier = Modifier.fillMaxWidth().testTag(Tags.appInput(i)),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(ToolsMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
+                    Chip(stringResource(R.string.app_run), selected = true, tag = Tags.APP_RUN) {
+                        model.runApp(a, if (labels.size == 1) values[0] else labels.indices.joinToString("\n\n") { labels[it] + ":\n" + values[it] })
+                    }
+                    val first = data.appModels(a).firstOrNull { it.chat }
+                    if (first != null) TextButton(onClick = { model.tryInAi(first.model) }, modifier = Modifier.testTag(Tags.TRY_IN_AI)) {
+                        Text(stringResource(R.string.app_try_in_ai, first.model))
+                    }
+                }
             }
-            val first = data.appModels(a).firstOrNull { it.chat }
-            if (first != null) TextButton(onClick = { model.tryInAi(first.model) }, modifier = Modifier.testTag(Tags.TRY_IN_AI)) {
-                Text(stringResource(R.string.app_try_in_ai, first.model))
+        }
+        if (run != null) {
+            items(run.steps.withIndex().toList(), key = { "run" + it.index }) { (i, st) ->
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(ToolsMetrics.corner)).background(MaterialTheme.colorScheme.surface).padding(ToolsMetrics.gutter).testTag(Tags.stepStatus(i)),
+                    verticalArrangement = Arrangement.spacedBy(ToolsMetrics.tiny),
+                ) {
+                    Text("${i + 1}. ${data.macro(st.macro)?.label ?: st.macro} · ${st.model.orEmpty()}" + (st.backend?.let { " · $it" } ?: ""), style = MaterialTheme.typography.labelLarge)
+                    Text(st.status, style = MaterialTheme.typography.labelSmall, color = if (st.status.startsWith("failed")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
+            run.output?.let { out -> item { Text(out, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(ToolsMetrics.corner)).background(MaterialTheme.colorScheme.surfaceVariant).padding(ToolsMetrics.gutter).testTag(Tags.APP_RESULT)) } }
         }
     }
 }

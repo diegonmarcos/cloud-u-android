@@ -145,6 +145,15 @@ fun SettingsPage(model: ToolsModel) {
             }
         }
         item {
+            Card(stringResource(R.string.settings_pin)) {
+                Text(stringResource(R.string.settings_pin_note), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Chip(stringResource(R.string.settings_pin_auto), selected = model.pinned.isBlank(), tag = Tags.PIN_AUTO) { model.pin("") }
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(ToolsMetrics.small)) {
+                    items(model.models.chatRows(), key = { it.model }) { r -> Chip(r.model, selected = model.pinned == r.model, tag = Tags.pin(r.model)) { model.pin(r.model) } }
+                }
+            }
+        }
+        item {
             Card(stringResource(R.string.settings_about)) {
                 Text(stringResource(R.string.settings_about_line, stringResource(R.string.app_name), BuildConfig.GIT_SHORT_SHA, BuildConfig.BUILD_TIMESTAMP),
                     style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

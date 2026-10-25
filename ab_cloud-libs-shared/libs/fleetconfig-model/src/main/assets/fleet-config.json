@@ -2007,13 +2007,14 @@
     "cloud_tools_small_llms": {
       "kind": "prefs",
       "class": "content",
-      "doc": "Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the AI chat's backend (backend: openrouter or local), the local runtime usage (local_usage: calls as tokens and time, no cost; the user's content), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check.",
+      "doc": "Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the AI chat's backend (backend: auto, openrouter or local) and pinned model (pinned_model), the local runtime usage (local_usage: calls as tokens and time, no cost; the user's content), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check.",
       "used_by": [
         "ac_cloud-tools-small-llms"
       ],
       "keys": {
         "router": "config",
         "backend": "config",
+        "pinned_model": "config",
         "workers": "config",
         "jev_listed": "device",
         "jev_price_in": "device",
@@ -3804,6 +3805,13 @@
           "path": "SharedPreferences cloud_tools_small_llms:backend (default openrouter)",
           "class": "config",
           "doc": "The AI chat's backend: openrouter (cloud, paid, models with an openrouter_id) or local (a Store runtime, models Loaded there).",
+          "store": "cloud_tools_small_llms"
+        },
+        {
+          "id": "pinned-model",
+          "path": "SharedPreferences cloud_tools_small_llms:pinned_model (default empty = the task picks)",
+          "class": "config",
+          "doc": "The model the AI chat is pinned to (Settings, advanced); empty = each task picks its small model and escalates to its medium one.",
           "store": "cloud_tools_small_llms"
         },
         {

@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
@@ -86,11 +88,13 @@ fun ToolsShell(model: ToolsModel) {
                         when (model.section) {
                             Decl.SECTION_APPS -> AppsPage(model, pageId ?: Decl.PAGE_APPS_GRID)
                             Decl.SECTION_MODELS -> ModelsPage(model.models, pageId ?: Decl.PAGE_SMALL, model.view) { model.view = it }
-                            Decl.SECTION_AI -> AiChatPage(model.chat, theme, Modifier.imePadding().testTag(Tags.CHAT), header = {
+                            Decl.SECTION_AI -> AiChatPage(model.chat, theme, Modifier.imePadding().testTag(Tags.CHAT), showModel = false, aboveInput = { TaskRow(model) }, header = {
+                                Chip(stringResource(R.string.backend_auto), selected = model.backend == ToolsModel.AUTO, tag = Tags.BACKEND_AUTO) { model.chooseBackend(ToolsModel.AUTO) }
+                                Spacer(Modifier.width(ToolsMetrics.small))
                                 Chip(stringResource(R.string.backend_openrouter), selected = model.backend == ToolsModel.OPENROUTER, tag = Tags.BACKEND_OPENROUTER) { model.chooseBackend(ToolsModel.OPENROUTER) }
                                 Spacer(Modifier.width(ToolsMetrics.small))
                                 Chip(stringResource(R.string.backend_local), selected = model.backend == ToolsModel.LOCAL, tag = Tags.BACKEND_LOCAL) { model.chooseBackend(ToolsModel.LOCAL) }
-                                if (model.backend == ToolsModel.LOCAL && model.pickerRows().isEmpty()) {
+                                if (model.backend != ToolsModel.OPENROUTER && model.loadedNames().isEmpty()) {
                                     Spacer(Modifier.width(ToolsMetrics.small))
                                     Chip(stringResource(R.string.backend_load_in_store), icon = "tasks") { open(Decl.SECTION_STORE, Decl.PAGE_LOADED) }
                                 }
@@ -102,6 +106,21 @@ fun ToolsShell(model: ToolsModel) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+/** The AI page's task row (above the input): the user picks a task, never a model; Stronger asks the task's medium model at once. */
+@Composable
+private fun TaskRow(model: ToolsModel) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = ToolsMetrics.gap), verticalArrangement = Arrangement.spacedBy(ToolsMetrics.small)) {
+        val note = model.models.chatTasks.firstOrNull { it.id == model.chatTask }?.note
+        if (note != null) Text(note, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(ToolsMetrics.small)) {
+            item { Chip(stringResource(R.string.chat_stronger), selected = model.stronger, tag = Tags.STRONGER) { model.stronger = !model.stronger } }
+            items(model.models.chatTasks, key = { it.id }) { t ->
+                Chip(t.label, selected = model.chatTask == t.id, tag = Tags.chatTask(t.id)) { model.chatTask = t.id }
             }
         }
     }
@@ -142,6 +161,12 @@ object Tags {
     const val APPS = "tools_apps"
     const val APPS_LIST = "tools_apps_list"
     const val APP_TOTALS = "tools_app_totals"
+    const val APP_TEMPLATE = "tools_app_template"
+    const val APP_INFO = "tools_app_info"
+    const val APP_RUN = "tools_app_run"
+    const val APP_RESULT = "tools_app_result"
+    fun appInput(i: Int) = "tools_app_input_$i"
+    fun stepStatus(i: Int) = "tools_app_step_status_$i"
     fun appRow(id: String) = "tools_app_row_$id"
     fun category(id: String) = "tools_app_category_$id"
     const val APP_DETAIL = "tools_app_detail"
@@ -163,6 +188,11 @@ object Tags {
     const val STORE_LOAD = "tools_store_load"
     const val STORE_UNLOAD = "tools_store_unload"
     const val FITS = "tools_store_fits"
+    const val BACKEND_AUTO = "tools_backend_auto"
+    const val PIN_AUTO = "tools_pin_auto"
+    fun pin(model: String) = "tools_pin_$model"
+    const val STRONGER = "tools_chat_stronger"
+    fun chatTask(id: String) = "tools_chat_task_$id"
     const val BACKEND_OPENROUTER = "tools_backend_openrouter"
     const val BACKEND_LOCAL = "tools_backend_local"
     const val LOCAL_USAGE = "tools_local_usage"

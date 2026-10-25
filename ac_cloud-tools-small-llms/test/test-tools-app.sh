@@ -20,6 +20,8 @@
 #       declared set, chat=false exactly for retrieval, the ~20% overhead stated, every role/macro/app icon in the shared
 #       catalog, every app step names declared macros and models; Models declares Small, Medium and Retrieval pages
 #       and locations (device, ollama) and the 4/8/16-bit tags are declared
+#       and every app declares its own UI: a template of the declared set (all twelve used) plus params
+#       and the chat's task->model mapping (every task names declared models, a gate and a judge, escalation score)
 #   A9  the shell draws the shared bars (first row with Profile -> Cloud Account, second row, bottom nav, theme
 #       background), the bottom nav is Apps, Models, AI, Store, Costs, the AI chat is libs:ai's over the gateway
 #       with its picker fed ONLY by the chat rows of the data file, the four views and the apps page exist, and chat
@@ -157,6 +159,23 @@ for c in md["app_categories"]:
 for a in md["apps"]:
     if a.get("category") not in cats: bad.append("A8 app %r has category %r" % (a["id"], a.get("category")))
 if [cats.index(a["category"]) for a in md["apps"] if a.get("category") in cats] != sorted(cats.index(a["category"]) for a in md["apps"] if a.get("category") in cats): bad.append("A8 apps are not ordered by category")
+tpls = [t["id"] for t in md["app_ui_templates"]]
+if sorted(tpls) != sorted(["rag_search", "doc_extract", "triage_inbox", "chat_guarded", "tool_runner", "tutor", "writer", "vision_qa", "compare_judge", "cluster_view", "summarizer", "quick_actions"]): bad.append("A8 UI templates are %r" % tpls)
+for a in md["apps"]:
+    if a.get("ui", {}).get("template") not in tpls: bad.append("A8 app %r has no valid ui.template" % a["id"])
+    if not a.get("ui", {}).get("params", {}).get("input_hint"): bad.append("A8 app %r ui has no input_hint" % a["id"])
+if {a["ui"]["template"] for a in md["apps"] if "ui" in a} != set(tpls): bad.append("A8 some UI template is used by no app")
+names0 = {r["model"] for r in md["models"]}
+for t in md["chat_tasks"]:
+    for k in ("small", "medium"):
+        if t[k] not in names0: bad.append("A8 chat task %r names unknown %s model %r" % (t["id"], k, t[k]))
+    if t["macro"] not in macros: bad.append("A8 chat task %r has macro %r" % (t["id"], t["macro"]))
+    if '"%s"' % t["icon"] not in uiicons: bad.append("A8 chat task %r icon %r is not in libs:ui-icons" % (t["id"], t["icon"]))
+if md["chat_default_task"] not in [t["id"] for t in md["chat_tasks"]]: bad.append("A8 chat_default_task is not a declared task")
+if md["chat_gate"]["model"] not in names0 or md["chat_escalation"]["small_judge"] not in names0: bad.append("A8 the chat gate or judge model is not declared")
+if not 1 <= md["chat_escalation"]["min_score"] <= 10: bad.append("A8 chat escalation min_score out of range")
+for m in macros:
+    if not md["step_prompts"].get(m): bad.append("A8 no step prompt for macro %r" % m)
 if len(md["apps"]) < 25: bad.append("A8 only %d apps declared (25 expected)" % len(md["apps"]))
 for a in md["apps"]:
     if '"%s"' % a["icon"] not in uiicons: bad.append("A8 app %r icon %r is not in libs:ui-icons" % (a["id"], a["icon"]))
@@ -199,6 +218,8 @@ for need in ("NavBarTopFirstRowScaffold(", "NavBarTopSecondRow(", "NavBarBottomH
 apg = code(os.path.join(kt, "ui/AppsPage.kt"))
 for need in ("appRamQ4(", "appDiskFp16(", "appModels(", "phoneCapable(", "AppsList(", "AppsGrid(", "app_totals", "app_phone_icon", "appCategories", "s.escalation", "s.alternatives"):
     if need not in apg: bad.append("A9 AppsPage lacks %s (list view, computed totals, badges)" % need)
+for need in ("OutlinedTextField(", "model.runApp(", "stepStatus(", "app_info_show", "APP_RESULT"):
+    if need not in apg: bad.append("A9 the app page lacks %s (own UI: input, run, per-step status, result, collapsible header)" % need)
 if len(re.findall(r"app_totals, gb\(data\.appRamQ4\(a\)\), gb\(data\.appDiskFp16\(a\)\)", apg)) < 2: bad.append("A9 the list and the detail do not both show the computed totals")
 pages = code(os.path.join(kt, "ui/ModelsPages.kt"))
 for v in ("TABLE", "GRID", "DETAIL", "MACRO"):
@@ -211,13 +232,19 @@ for lib in ("libs:nav-bar-top-first-row", "libs:nav-bar-top-second-row", "libs:n
 if "AI_GATEWAY_URL" not in script or "ai-gateway.gradle" not in script: bad.append("A9 the gateway address is not baked")
 tm = code(os.path.join(kt, "ui/ToolsModel.kt"))
 if "AiGatewayBackend(" not in tm or "BuildConfig.AI_GATEWAY_URL" not in tm: bad.append("A9 the chat is not routed through the fleet gateway")
-if "modelSource = { pickerModels() }" not in tm or "fun pickerRows(): List<ModelRow> = models.chatRows().filter" not in tm: bad.append("A9 the chat picker is not fed by the data file's chat rows only")
+if "modelSource = { emptyList() }" not in tm or "fun answerTask(" not in tm: bad.append("A9 the chat has a model picker: the user picks a task and answerTask picks the model")
+for need in ("task.small", "task.medium", "models.judgeMinScore", "flagged(question, \"gatekeeping\")", "flagged(text, \"gatekeeping\")", 'text + "\\n\\n— " + label', "private fun placeFor(", "helper(models.judgeModel", "label"):
+    if need not in tm: bad.append("A9 ToolsModel lacks %s (task routing, guard in and out, escalation, model label)" % need)
+if "showModel = false" not in shell or "TaskRow(model)" not in shell or "STRONGER" not in shell: bad.append("A9 the AI page does not show tasks (and Stronger) instead of a model picker")
+if "Tags.pin(" not in code(os.path.join(kt, "ui/SettingsPage.kt")): bad.append("A9 Settings has no advanced pin-model option")
 if "row?.wireId ?: req.model" not in tm: bad.append("A9 the gateway is not sent the data's openrouter_id")
-for need in ("fun chooseBackend(", "else it.openrouterId != null }", "it.model in loadedNames()", "recordLocal(LocalCall(", "LocalChatBackend("):
+for need in ("fun runApp(", "private fun place(", "status = \"running\"", "call(placed.second", "models.stepPrompt("):
+    if need not in tm: bad.append("A9 ToolsModel lacks %s (the app runner)" % need)
+for need in ("fun chooseBackend(", "OPENROUTER -> if (cloud) OPENROUTER else null", "if (loaded) LOCAL", "recordLocal(LocalCall(", "LocalChatBackend("):
     if need not in tm: bad.append("A9 ToolsModel lacks %s" % need)
 if "BACKEND_LOCAL" not in shell or "BACKEND_OPENROUTER" not in shell or "header = {" not in shell: bad.append("A9 the AI page has no OpenRouter | Local toggle in its header")
 if "localCalls" not in code(os.path.join(kt, "ui/CostsPage.kt")): bad.append("A9 Costs does not show local usage")
-if "charge(row.model" not in tm or "stores.saveLedger(l)" not in tm: bad.append("A9 chat calls are not recorded into the Costs ledger")
+if "charge(task, row.model" not in tm or "stores.saveLedger(l)" not in tm: bad.append("A9 chat calls are not recorded into the Costs ledger")
 
 for b in bad: print("  FAIL: " + b)
 sys.exit(1 if bad else 0)
@@ -258,19 +285,26 @@ mutate "retrieval model becomes a chat model" 'sub(M + "/app/src/main/assets/too
 mutate "app names an unknown model" 'sub(M + "/app/src/main/assets/tools-models.json", "\"bge-m3\"\n", "\"bge-m4\"\n")'
 mutate "shell loses the second row" 'sub(K + "/ui/ToolsShell.kt", "NavBarTopSecondRow(", "Foo(")'
 mutate "apps lose the computed totals" 'sub(K + "/ui/AppsPage.kt", "app_totals, gb(data.appRamQ4(a)), gb(data.appDiskFp16(a))", "app_totals, \"0\", \"0\"")'
+mutate "app has no ui template" 'sub(M + "/app/src/main/assets/tools-models.json", "\"template\": \"rag_search\"", "\"template\": \"nope\"")'
+mutate "runner does not call the model" 'sub(K + "/ui/ToolsModel.kt", "call(placed.second", "callz(placed.second")'
+mutate "runner loses per-step status" 'sub(K + "/ui/ToolsModel.kt", "status = \"running\"", "status = \"busy\"")'
+mutate "app page loses its input" 'sub(K + "/ui/AppsPage.kt", "OutlinedTextField(", "Foo(")'
 mutate "app loses its category" 'sub(M + "/app/src/main/assets/tools-models.json", "\"category\": \"search\"", "\"category\": \"nowhere\"")'
 mutate "apps list page dropped" 'sub(M + "/build.json", "\"id\": \"apps_list\"", "\"id\": \"apps_listz\"")'
 mutate "shell loses the apps page" 'sub(K + "/ui/ToolsShell.kt", "AppsPage(model, pageId ?: Decl.PAGE_APPS_GRID)", "Unit")'
 mutate "macro view undrawn" 'sub(K + "/ui/ModelsPages.kt", "ModelsView.MACRO -> ModelsMacro", "ModelsView.MACRO -> ModelsGrid")'
-mutate "chat picker leaves the chat rows" 'sub(K + "/ui/ToolsModel.kt", "models.chatRows().filter { if (backend", "models.rows.filter { if (backend")'
 mutate "openrouter id not sent" 'sub(K + "/ui/ToolsModel.kt", "row?.wireId ?: req.model", "req.model")'
 mutate "chat calls not recorded" 'sub(K + "/ui/ToolsModel.kt", "stores.saveLedger(l)", "")'
-mutate "openrouter picker not filtered by id" 'sub(K + "/ui/ToolsModel.kt", "it.openrouterId != null }", "true }")'
-mutate "local picker not filtered by loaded" 'sub(K + "/ui/ToolsModel.kt", "it.model in loadedNames()", "true")'
 mutate "local usage not recorded" 'sub(K + "/ui/ToolsModel.kt", "recordLocal(LocalCall", "Unit; (LocalCall")'
 mutate "engine loses unload" 'sub(K + "/data/ModelRuntime.kt", "    fun unload(loaded: LoadedModel): String?\n", "")'
 mutate "store keeps its own state" 'sub(K + "/ui/StorePage.kt", "val data = model.models", "val data = model.models; val own = context.getSharedPreferences(\"x\", 0)")'
 mutate "store pages reordered" 'sub(M + "/build.json", "\"id\": \"installed\"", "\"id\": \"installedz\"")'
+mutate "chat gets a picker back" 'sub(K + "/ui/ToolsModel.kt", "modelSource = { emptyList() }", "modelSource = { models.rows.map { AiModel(it.model, it.model) } }")'
+mutate "guard on the answer dropped" 'sub(K + "/ui/ToolsModel.kt", "flagged(text, \"gatekeeping\")", "null")'
+mutate "escalation ignores the score" 'sub(K + "/ui/ToolsModel.kt", "models.judgeMinScore", "0")'
+mutate "reply loses its model label" 'sub(K + "/ui/ToolsModel.kt", "text + \"\\n\\n— \" + label", "text")'
+mutate "task row dropped" 'sub(K + "/ui/ToolsShell.kt", "TaskRow(model)", "Unit")'
+mutate "chat task names an unknown model" 'sub(M + "/app/src/main/assets/tools-models.json", "\"small\": \"ministral-3b-2512\"", "\"small\": \"ministral-9z\"")'
 mutate "bottom nav reordered" 'sub(M + "/build.json", "\"apps\",\n      \"models\",\n      \"ai\"", "\"models\",\n      \"apps\",\n      \"ai\"")'
 
 echo "-- test-tools-app: $PASS passed, $FAILS failed"

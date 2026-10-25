@@ -12,6 +12,7 @@ import com.diegonmarcos.cloudtoolssmallllms.core.TokenVault
 import com.diegonmarcos.cloudtoolssmallllms.core.ToolsConfig
 import com.diegonmarcos.cloudtoolssmallllms.data.AccountStatus
 import com.diegonmarcos.cloudtoolssmallllms.data.Catalogue
+import com.diegonmarcos.cloudtoolssmallllms.data.AppDef
 import com.diegonmarcos.cloudtoolssmallllms.data.LocalCall
 import com.diegonmarcos.cloudtoolssmallllms.data.LocalChatBackend
 import com.diegonmarcos.cloudtoolssmallllms.data.ModelRow
@@ -20,6 +21,7 @@ import com.diegonmarcos.cloudtoolssmallllms.data.ModelsData
 import com.diegonmarcos.cloudtoolssmallllms.data.OllamaRuntime
 import com.diegonmarcos.cloudtoolssmallllms.data.PhoneRuntime
 import com.diegonmarcos.cloudtoolssmallllms.data.RuntimeState
+import com.diegonmarcos.cloudtoolssmallllms.data.Step
 import com.diegonmarcos.cloudtoolssmallllms.data.SecretPrefs
 import com.diegonmarcos.cloudtoolssmallllms.data.Stores
 import com.diegonmarcos.cloudtoolssmallllms.BuildConfig
@@ -31,6 +33,7 @@ import com.diegonmarcos.superapp.ai.AiFileSessions
 import com.diegonmarcos.superapp.ai.AiGatewayBackend
 import com.diegonmarcos.superapp.ai.AiMemoryPrefs
 import com.diegonmarcos.superapp.ai.AiModel
+import com.diegonmarcos.superapp.ai.AiMsg
 import com.diegonmarcos.superapp.ai.AiReply
 import com.diegonmarcos.superapp.ai.AiRequest
 import com.diegonmarcos.superapp.ai.AiStandardHost
@@ -108,9 +111,24 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
     /** The app open in the Apps section; null = the icon grid. */
     var appId by mutableStateOf<String?>(null)
 
-    /** The AI chat's backend: "openrouter" (cloud, needs openrouter_id) or "local" (a Store runtime, the model must be Loaded). */
-    var backend by mutableStateOf(stores.backend.takeIf { it == LOCAL } ?: OPENROUTER)
+    /** The AI chat's backend preference: "auto" (Local when the model is Loaded, else OpenRouter), "openrouter" or "local". */
+    var backend by mutableStateOf(stores.backend.takeIf { it == LOCAL || it == OPENROUTER } ?: AUTO)
         private set
+
+    /** The task the AI chat is on (a chat_tasks id): the task, not the user, picks the model. */
+    var chatTask by mutableStateOf(models.chatDefaultTask)
+
+    /** True = the next answers use the task's medium model at once (the Stronger chip). */
+    var stronger by mutableStateOf(false)
+
+    /** The model the chat is pinned to (Settings, advanced); empty = the task picks. */
+    var pinned by mutableStateOf(stores.pinned)
+        private set
+
+    fun pin(model: String) {
+        pinned = model
+        stores.pinned = model
+    }
 
     /** The runtimes of the Store, one per declared location. The state they report is [runtimeStates]; nothing else is kept. */
     val runtimes: List<ModelRuntime> = models.locations.mapNotNull { l ->
@@ -137,30 +155,17 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
     /** The names of the models currently Loaded on any runtime. */
     fun loadedNames(): Set<String> = runtimeStates.values.flatMap { st -> st.loaded.map { it.name } }.toSet()
 
-    /** The chat rows the picker offers for [backend]: OpenRouter = those with an openrouter_id; Local = those Loaded. */
-    fun pickerRows(): List<ModelRow> = models.chatRows().filter { if (backend == LOCAL) it.model in loadedNames() else it.openrouterId != null }
-
-    private fun pickerModels(): List<AiModel> =
-        pickerRows().map { AiModel(it.model, "${models.macro(it.macro)?.label.orEmpty()} · ${it.model} (${it.params})") }
-
     fun chooseBackend(b: String) {
-        backend = if (b == LOCAL) LOCAL else OPENROUTER
+        backend = if (b == LOCAL || b == OPENROUTER) b else AUTO
         stores.backend = backend
-        syncPicker()
     }
 
-    /** Re-reads every runtime (off the main thread) and refreshes the chat picker from it. */
+    /** Re-reads every runtime (off the main thread): the Store and the chat's placement read the result. */
     fun refreshStore() {
         scope.launch {
             val st = withContext(Dispatchers.IO) { runtimes.associate { it.id to it.state() } }
             runtimeStates = st
-            syncPicker()
         }
-    }
-
-    private fun syncPicker() {
-        chat.models = pickerModels()
-        if (chat.models.none { it.id == chat.model }) chat.models.firstOrNull()?.let { chat.pick(it.id) }
     }
 
     /** One Store action on [runtime]; [what] names it for the busy line. The runtime's own state is re-read after. */
@@ -186,31 +191,150 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
      * priced by the shared catalogue; nothing for a model the catalogue does not price). Local goes to the Store's
      * runtime on its OpenAI-compatible endpoint and is recorded as tokens and time, at no cost.
      */
-    private val routedBackend = object : AiBackend {
-        private val gateway = AiGatewayBackend(AiConfig.load(app), BuildConfig.AI_GATEWAY_URL)
-        private val local = localUrl?.let { LocalChatBackend(AiConfig.load(app), it) }
-        override val id: String get() = backend
-        override fun models(): List<AiModel> = emptyList()
-        override fun chat(req: AiRequest, onDelta: (String) -> Unit): AiReply {
-            val row = models.row(req.model.orEmpty())
-            val chars = req.messages.sumOf { it.content.length }
-            if (backend == LOCAL) {
-                val l = local ?: return AiReply(null, error = "no local runtime is declared")
-                val t0 = System.currentTimeMillis()
-                val reply = l.chat(req, onDelta)
-                val text = reply.text
-                if (row != null && text != null) recordLocal(LocalCall(t0, row.model, (chars + text.length) / 4, System.currentTimeMillis() - t0))
-                return reply
-            }
-            val wire = AiRequest(row?.wireId ?: req.model, req.messages, req.web, req.nativeWeb, req.agent, req.tools, req.wire, req.stream)
-            val reply = gateway.chat(wire, onDelta)
+    private val gateway = AiGatewayBackend(AiConfig.load(app), BuildConfig.AI_GATEWAY_URL)
+    private val localChat = localUrl?.let { LocalChatBackend(AiConfig.load(app), it) }
+
+    /** One model call on [be] (local or openrouter), recorded in Costs: money for OpenRouter, tokens and time for Local. */
+    private fun call(be: String, task: String, req: AiRequest, onDelta: (String) -> Unit): AiReply {
+        val row = models.row(req.model.orEmpty())
+        val chars = req.messages.sumOf { it.content.length }
+        if (be == LOCAL) {
+            val l = localChat ?: return AiReply(null, error = "no local runtime is declared")
+            val t0 = System.currentTimeMillis()
+            val reply = l.chat(req, onDelta)
             val text = reply.text
-            if (row != null && text != null) {
-                val price = catalogue.book.price(row.wireId)
-                if (price != null) charge(row.model, Costs.estimate(price, chars / 4, text.length / 4))
-            }
+            if (row != null && text != null) recordLocal(LocalCall(t0, row.model, (chars + text.length) / 4, System.currentTimeMillis() - t0))
             return reply
         }
+        val wire = AiRequest(row?.wireId ?: req.model, req.messages, req.web, req.nativeWeb, req.agent, req.tools, req.wire, req.stream)
+        val reply = gateway.chat(wire, onDelta)
+        val text = reply.text
+        if (row != null && text != null) {
+            val price = catalogue.book.price(row.wireId)
+            if (price != null) charge(task, row.model, Costs.estimate(price, chars / 4, text.length / 4))
+        }
+        return reply
+    }
+
+    /** Where [row] can run now under the backend preference: Local needs it Loaded, OpenRouter needs its openrouter_id. Null = nowhere. */
+    private fun placeFor(row: ModelRow): String? {
+        val loaded = row.model in loadedNames()
+        val cloud = row.openrouterId != null
+        return when (backend) {
+            LOCAL -> if (loaded) LOCAL else null
+            OPENROUTER -> if (cloud) OPENROUTER else null
+            else -> if (loaded) LOCAL else if (cloud) OPENROUTER else null
+        }
+    }
+
+    private fun chatReq(model: String, req: AiRequest) = AiRequest(model, req.messages, req.web, req.nativeWeb, req.agent, req.tools, req.wire, req.stream)
+
+    /** One answer from [name] for [task]: the reply and the "model · backend" label of where it ran. */
+    private fun ask(name: String, task: String, req: AiRequest, onDelta: (String) -> Unit): Pair<AiReply, String> {
+        val row = models.row(name) ?: return AiReply(null, error = "unknown model $name") to name
+        val be = placeFor(row) ?: return AiReply(null, error = "${row.model} is not available: Load it in Store, or use OpenRouter (no openrouter_id for it)") to row.model
+        return call(be, task, chatReq(row.model, req), onDelta) to "${row.model} · $be"
+    }
+
+    /** A small one-shot call of a helper model (guard, judge) on [text]; null when it cannot be placed or fails. */
+    private fun helper(name: String, macro: String, task: String, text: String): String? {
+        val row = models.row(name) ?: return null
+        val be = placeFor(row) ?: return null
+        val req = AiRequest(row.model, listOf(AiMsg("user", models.stepPrompt(macro) + "\n\n" + text)), stream = false)
+        return runCatching { call(be, task, req, {}).text }.getOrNull()
+    }
+
+    /** The guard (gatekeeping, automatic): the reason when [text] is flagged unsafe, else null (also when no guard can run). */
+    private fun flagged(text: String, task: String): String? =
+        helper(models.gateModel, "gatekeeping", task, text)?.takeIf { it.trim().startsWith("unsafe", ignoreCase = true) }?.take(160)
+
+    /**
+     * One chat turn on the user's TASK: the guard checks the question, the task's small model answers (Local when Loaded, else
+     * OpenRouter; the pinned model instead when pinned), the small judge grades it and a low score asks the medium model again;
+     * the guard checks the answer and the reply names the model it came from. Costs are recorded by [call] under the task id.
+     */
+    private fun answerTask(req: AiRequest, onDelta: (String) -> Unit): AiReply {
+        val task = models.chatTasks.firstOrNull { it.id == chatTask } ?: models.chatTasks.first()
+        val question = req.messages.lastOrNull { it.role == "user" }?.content.orEmpty()
+        flagged(question, "gatekeeping")?.let { return AiReply(null, error = "Blocked by the guard: $it") }
+        val pin = pinned.takeIf { it.isNotBlank() && models.row(it) != null }
+        var (reply, label) = ask(pin ?: if (stronger) task.medium else task.small, task.id, req, onDelta)
+        if (pin == null && !stronger && reply.text != null) {
+            val score = helper(models.judgeModel, "judging", "judging", "Request:\n$question\n\nAnswer:\n${reply.text}")
+                ?.let { Regex("""\b(10|[1-9])\b""").find(it)?.value?.toInt() }
+            if (score != null && score < models.judgeMinScore) {
+                val (better, betterLabel) = ask(task.medium, task.id, req) {}
+                if (better.text != null) { reply = better; label = "$betterLabel · escalated (small scored $score)" }
+            }
+        }
+        val text = reply.text ?: return reply
+        flagged(text, "gatekeeping")?.let { return AiReply(null, error = "The guard held back the answer: $it") }
+        return AiReply(text + "\n\n— " + label, reply.citations)
+    }
+
+    private val routedBackend = object : AiBackend {
+        override val id: String get() = backend
+        override fun models(): List<AiModel> = emptyList()
+        override fun chat(req: AiRequest, onDelta: (String) -> Unit): AiReply = answerTask(req, onDelta)
+    }
+
+    // ── Apps: a mini-app runs its pipeline step by step ─────────────────────────────────────
+
+    /** One step of a running app: what it is, where it runs and how far it got. */
+    data class StepRun(val macro: String, val model: String?, val backend: String?, val status: String, val text: String?)
+
+    /** A run of an app: the steps as they progress and the final output. */
+    data class AppRun(val appId: String, val steps: List<StepRun>, val output: String?, val running: Boolean)
+
+    var appRun by mutableStateOf<AppRun?>(null)
+        private set
+
+    /**
+     * The model and backend a step runs on, by the Local / OpenRouter rules: the step's declared (or default) backend first;
+     * Local needs the model Loaded in the Store, OpenRouter needs its openrouter_id; either falls back to the other when it can.
+     * Null model = the step has nothing to run (no chat model: retrieval, vision) and is reported UI-only.
+     */
+    private fun place(a: AppDef, s: Step): Pair<ModelRow, String>? {
+        if (s.macro == "seeing") return null
+        val rows = s.models.mapNotNull { models.row(it) }.filter { it.chat }
+        if (rows.isEmpty()) return null
+        val loaded = loadedNames()
+        val want = models.backend(a, s)
+        fun local() = rows.firstOrNull { it.model in loaded }?.let { it to LOCAL }
+        fun cloud() = rows.firstOrNull { it.openrouterId != null }?.let { it to OPENROUTER }
+        return if (want == LOCAL) local() ?: cloud() else cloud() ?: local()
+    }
+
+    /** Runs [a] on [input]: each runnable step feeds its answer to the next, status per step, usage into Costs. */
+    fun runApp(a: AppDef, input: String) {
+        if (appRun?.running == true || input.isBlank()) return
+        var steps = a.pipeline.map { StepRun(it.macro, it.models.firstOrNull(), null, "waiting", null) }
+        appRun = AppRun(a.id, steps, null, true)
+        scope.launch {
+            var text = input
+            var failed: String? = null
+            for ((i, s) in a.pipeline.withIndex()) {
+                val placed = place(a, s)
+                steps = steps.toMutableList().also { it[i] = it[i].copy(model = placed?.first?.model ?: it[i].model, backend = placed?.second) }
+                if (s.escalation) { steps = steps.toMutableList().also { it[i] = it[i].copy(status = "skipped: escalation only when needed") }; appRun = AppRun(a.id, steps, null, true); continue }
+                if (placed == null) { steps = steps.toMutableList().also { it[i] = it[i].copy(status = "UI-only: no " + (if (s.macro == "seeing") "image input" else "runtime for this step") + " yet") }; appRun = AppRun(a.id, steps, null, true); continue }
+                steps = steps.toMutableList().also { it[i] = it[i].copy(status = "running") }; appRun = AppRun(a.id, steps, null, true)
+                val prompt = models.stepPrompt(s.macro) + "\n\n" + text
+                val reply = withContext(Dispatchers.IO) {
+                    runCatching { call(placed.second, "app:" + a.id, AiRequest(placed.first.model, listOf(AiMsg("user", prompt)), stream = false), {}) }.getOrElse { AiReply(null, error = it.message ?: it.javaClass.simpleName) }
+                }
+                val out = reply.text
+                if (out == null) { failed = reply.error ?: "no answer"; steps = steps.toMutableList().also { it[i] = it[i].copy(status = "failed: $failed") }; break }
+                text = out
+                steps = steps.toMutableList().also { it[i] = it[i].copy(status = "done", text = out) }; appRun = AppRun(a.id, steps, null, true)
+            }
+            appRun = AppRun(a.id, steps, if (failed == null) text else null, false)
+        }
+    }
+
+    fun closeApp() {
+        appId = null
+        appRun = null
     }
 
     private fun recordLocal(c: LocalCall) {
@@ -218,28 +342,29 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
     }
 
     /**
-     * The AI page's state: the open conversation, kept in a file. The model picker lists ONLY chat models, grouped by
-     * macro task, filtered by the backend ([pickerRows]); the gateway holds the fleet keys, so no token is held for it.
+     * The AI page's state: the open conversation, kept in a file. There is no model picker: the user picks a TASK
+     * ([chatTask]) and [answerTask] picks the model; the gateway holds the fleet keys, so no token is held for it.
      */
     val chat = AiChatState(AiStandardHost(
         AiConfig.load(app), AiFileSessions(File(app.filesDir, "ai-sessions.json")),
-        AiMemoryPrefs((models.chatRows().firstOrNull { it.openrouterId != null } ?: models.chatRows().first()).model),
+        AiMemoryPrefs(models.chatTasks.first().small),
         direct = routedBackend,
-        modelSource = { pickerModels() },
+        modelSource = { emptyList() },
     ))
 
-    /** Apps' Try in AI: open the AI section with [model] picked. */
+    /** Apps' Try in AI: open the AI section on the task of [model]'s macro, asking the medium model when it is a medium one. */
     fun tryInAi(model: String) {
-        syncPicker()
-        chat.pick(model)
+        val row = models.row(model)
+        models.chatTasks.firstOrNull { it.macro == row?.macro }?.let { chatTask = it.id }
+        stronger = row?.tier == "medium"
         section = Decl.SECTION_AI
         page = null
     }
 
-    private fun charge(model: String, usd: Double) {
+    private fun charge(task: String, model: String, usd: Double) {
         if (usd <= 0.0) return
         val l = Ledger(ledger.entries)
-        l.add(Ledger.Entry(now(), usd, CHAT_TASK, model))
+        l.add(Ledger.Entry(now(), usd, task, model))
         ledger = l
         stores.saveLedger(l)
     }
@@ -308,6 +433,7 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
     companion object {
         /** The ledger's task id of a chat call. */
         const val CHAT_TASK = "chat"
+        const val AUTO = "auto"
         const val OPENROUTER = "openrouter"
         const val LOCAL = "local"
     }

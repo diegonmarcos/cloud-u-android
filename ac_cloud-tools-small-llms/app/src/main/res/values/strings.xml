@@ -4,7 +4,7 @@
     <string name="chat_hint">Ask one of the models…</string>
     <string name="chat_send">Send</string>
     <string name="chat_empty_title">Chat with the small and medium models</string>
-    <string name="chat_empty_body">Pick a model from the list above, grouped by macro task; answers go through the fleet agent gateway and are recorded in Costs.</string>
+    <string name="chat_empty_body">Pick a task below; the app picks the model, runs it on this phone's runtime when it is Loaded or on OpenRouter otherwise, and names it under each answer. Everything is recorded in Costs.</string>
     <string name="chat_working">Working…</string>
     <string name="chat_failed">Failed: %1$s</string>
     <string name="chat_clear">Clear chat</string>
@@ -33,6 +33,10 @@
     <string name="app_try_in_ai">Try in AI: %1$s</string>
     <string name="app_alternatives">One of these runs</string>
     <string name="app_escalation">Escalation: only when the step before is not enough</string>
+    <string name="app_template">%1$s: %2$s</string>
+    <string name="app_info_show">Pipeline, RAM and disk</string>
+    <string name="app_info_hide">Hide pipeline</string>
+    <string name="app_run">Run</string>
     <string name="apps_back">All apps</string>
     <string name="col_model">Model</string>
     <string name="col_params">Params</string>
@@ -61,6 +65,11 @@
     <string name="store_uninstall">Uninstall</string>
     <string name="store_load">Load</string>
     <string name="store_unload">Unload</string>
+    <string name="backend_auto">Auto</string>
+    <string name="chat_stronger">Stronger</string>
+    <string name="settings_pin">Advanced: pin model</string>
+    <string name="settings_pin_auto">Auto: the task picks the model</string>
+    <string name="settings_pin_note">A pinned model answers every chat turn instead of the task's small and medium ones.</string>
     <string name="backend_openrouter">OpenRouter</string>
     <string name="backend_local">Local</string>
     <string name="backend_load_in_store">Load a model in Store</string>

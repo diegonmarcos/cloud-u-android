@@ -27,6 +27,11 @@ class Stores(context: Context) {
         get() = prefs.getString(BACKEND, "openrouter").orEmpty()
         set(v) { prefs.edit().putString(BACKEND, v).apply() }
 
+    /** The model the AI chat is pinned to (Settings, advanced); empty = the task picks it. */
+    var pinned: String
+        get() = prefs.getString(PINNED, "").orEmpty()
+        set(v) { prefs.edit().putString(PINNED, v).apply() }
+
     fun localUsage(): List<LocalCall> = runCatching {
         val a = JSONArray(prefs.getString(LOCAL_USAGE, "[]") ?: "[]")
         List(a.length()) { i -> a.getJSONObject(i).let { LocalCall(it.getLong("at"), it.getString("model"), it.getInt("tokens"), it.getLong("ms")) } }
@@ -74,6 +79,7 @@ class Stores(context: Context) {
         private const val LEDGER = "ledger"
         private const val ROUTER = "router"
         private const val BACKEND = "backend"
+        private const val PINNED = "pinned_model"
         private const val LOCAL_USAGE = "local_usage"
         private const val LOCAL_KEEP = 500
         private const val WORKERS = "workers"

@@ -50,8 +50,8 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 6 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 3 | 0 | 100% |
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 2 | 2 | 50% |
-| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 7 | 2 | 77% |
-| **fleet** | | **262** | **52** | **83%** |
+| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 8 | 2 | 80% |
+| **fleet** | | **263** | **52** | **83%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -1079,7 +1079,7 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-c
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
 | `ai_sessions` | file | config | GAP | libs:ai's chat history file (text and attachment names, never a token), carried whole so a new phone keeps the conversations. |
-| `cloud_tools_small_llms` | prefs | content (keys: backend→config, jev_checked_at→device, jev_listed→device, jev_price_in→device, router→config, workers→config) | no | Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the AI chat's backend (backend: openrouter or local), the local runtime usage (local_usage: calls as tokens and time, no cost; the user's content), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check. |
+| `cloud_tools_small_llms` | prefs | content (keys: backend→config, jev_checked_at→device, jev_listed→device, jev_price_in→device, pinned_model→config, router→config, workers→config) | no | Cloud Tools Small LLMs: the cost ledger (ledger: every priced call, for the day and month totals), the router choice (router), the AI chat's backend (backend: auto, openrouter or local) and pinned model (pinned_model), the local runtime usage (local_usage: calls as tokens and time, no cost; the user's content), the per-task worker overrides (workers) and the last read of Jev's availability on OpenRouter (jev_listed, jev_price_in, jev_checked_at). The ledger is the user's content (the AI tab's chat lives in filesDir/ai-sessions.json, an item of this app); router and workers are configuration; the Jev read is a cache of this phone's last network check. |
 | `cloud_tools_small_llms_secrets` | encrypted | secret | yes | Cloud Tools Small LLMs' OpenRouter token (openrouter_token), pasted in Settings: EncryptedSharedPreferences under a Keystore AES-256-GCM master key, shown masked, never logged. The fleet Account's key is never read (decisions-use guard D5). A credential: migrates through the vault. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
@@ -1094,8 +1094,9 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-c
 | `SharedPreferences cloud_tools_small_llms:workers` | config | Per-task worker overrides (task id -> catalogue model id); absent = the task's declared worker. |
 | `SharedPreferences cloud_tools_small_llms:ledger` | content | Every priced call (time, dollars, task, model): the day and month totals on Costs. |
 | `SharedPreferences cloud_tools_small_llms:backend (default openrouter)` | config | The AI chat's backend: openrouter (cloud, paid, models with an openrouter_id) or local (a Store runtime, models Loaded there). |
+| `SharedPreferences cloud_tools_small_llms:pinned_model (default empty = the task picks)` | config | The model the AI chat is pinned to (Settings, advanced); empty = each task picks its small model and escalates to its medium one. |
 | `SharedPreferences cloud_tools_small_llms:local_usage` | content | Every chat call served by a local runtime (time, model, estimated tokens, duration; no cost): the Local usage section on Costs. |
 | `filesDir/ai-sessions.json` | config | AI tab chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 
-Coverage: 7 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
+Coverage: 8 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 

@@ -783,10 +783,158 @@
       "icon": "person"
     }
   ],
+  "chat_tasks": [
+    {
+      "id": "understanding",
+      "label": "Understanding",
+      "icon": "insights",
+      "macro": "understanding",
+      "small": "ministral-3b-2512",
+      "medium": "qwen2.5-14b-instruct"
+    },
+    {
+      "id": "acting",
+      "label": "Acting",
+      "icon": "build",
+      "macro": "acting",
+      "small": "granite-3.1-2b-instruct",
+      "medium": "hermes-3-llama-3.1-8b"
+    },
+    {
+      "id": "thinking",
+      "label": "Thinking",
+      "icon": "psychology",
+      "macro": "thinking",
+      "small": "deepseek-r1-distill-qwen-1.5b",
+      "medium": "deepseek-r1-distill-qwen-14b"
+    },
+    {
+      "id": "producing",
+      "label": "Producing",
+      "icon": "edit",
+      "macro": "producing",
+      "small": "smollm2-1.7b-instruct",
+      "medium": "llama-3.1-8b-instruct"
+    },
+    {
+      "id": "seeing",
+      "label": "Seeing",
+      "icon": "visibility",
+      "macro": "seeing",
+      "small": "qwen2.5-vl-3b-instruct",
+      "medium": "llama-3.2-11b-vision"
+    },
+    {
+      "id": "judging",
+      "label": "Judging",
+      "icon": "verified_user",
+      "macro": "judging",
+      "small": "flow-judge-3b",
+      "medium": "prometheus-2-8b"
+    },
+    {
+      "id": "ask_docs",
+      "label": "Ask my docs",
+      "icon": "search",
+      "macro": "retrieval",
+      "small": "ministral-3b-2512",
+      "medium": "mistral-small-3.2-24b-instruct",
+      "note": "Retrieval (embedding and reranking) has no runtime yet: the question is answered without searching the documents."
+    }
+  ],
+  "chat_default_task": "understanding",
+  "chat_gate": {
+    "model": "llama-guard-3-1b",
+    "note": "Runs automatically on the question and on the answer when it can be placed (Loaded locally, or with an openrouter_id); skipped otherwise."
+  },
+  "chat_escalation": {
+    "small_judge": "flow-judge-3b",
+    "min_score": 5,
+    "note": "A small model's answer is graded 1 to 10 by the small judge; below min_score it is asked again on the task's medium model. The Stronger chip asks the medium model at once."
+  },
+  "app_ui_templates": [
+    {
+      "id": "rag_search",
+      "label": "Search",
+      "flow": "search → ranked results with sources → answer"
+    },
+    {
+      "id": "doc_extract",
+      "label": "Extract",
+      "flow": "document or image → extracted fields or JSON"
+    },
+    {
+      "id": "triage_inbox",
+      "label": "Triage",
+      "flow": "items with labels and draft replies"
+    },
+    {
+      "id": "chat_guarded",
+      "label": "Guarded chat",
+      "flow": "chat with guard badges"
+    },
+    {
+      "id": "tool_runner",
+      "label": "Tool runner",
+      "flow": "task → tool-call log → result"
+    },
+    {
+      "id": "tutor",
+      "label": "Tutor",
+      "flow": "problem → step-by-step reasoning → graded answer"
+    },
+    {
+      "id": "writer",
+      "label": "Writer",
+      "flow": "text → suggest, rewrite or expand"
+    },
+    {
+      "id": "vision_qa",
+      "label": "Vision Q&A",
+      "flow": "image and question → answer"
+    },
+    {
+      "id": "compare_judge",
+      "label": "Compare and judge",
+      "flow": "answers side by side with judge scores"
+    },
+    {
+      "id": "cluster_view",
+      "label": "Clusters",
+      "flow": "items grouped by similarity"
+    },
+    {
+      "id": "summarizer",
+      "label": "Summarizer",
+      "flow": "text → summary and key points"
+    },
+    {
+      "id": "quick_actions",
+      "label": "Quick actions",
+      "flow": "one line → parsed intent → deeplink"
+    }
+  ],
+  "step_prompts": {
+    "retrieval": "Rank the passages in the text below by relevance to the question and list the best three.",
+    "gatekeeping": "You are a safety guard. Reply SAFE or UNSAFE with one short reason for the text below.",
+    "routing": "Name the single kind of request the text below is, in one or two words.",
+    "understanding": "Read the text below and answer the request in it clearly, using only what it says.",
+    "acting": "Plan the tool calls needed for the request below as a short numbered list, then state the result.",
+    "thinking": "Think step by step about the request below and give a clear final answer.",
+    "producing": "Write or improve the text as the request below asks. Reply with the result only.",
+    "seeing": "Describe what the image shows and answer the question about it.",
+    "judging": "Score the answer below from 1 to 10 against the request and give one sentence of reasons."
+  },
   "apps": [
     {
       "id": "private_rag",
       "category": "search",
+      "ui": {
+        "template": "rag_search",
+        "params": {
+          "input_hint": "Ask a question about your documents"
+        }
+      },
       "name": "Private RAG Search",
       "icon": "search",
       "description": "Search your own documents and get a grounded, self-checked answer, fully private.",
@@ -820,6 +968,12 @@
     {
       "id": "code_qa",
       "category": "search",
+      "ui": {
+        "template": "rag_search",
+        "params": {
+          "input_hint": "Ask a question about the repository"
+        }
+      },
       "name": "Code Search & Q&A",
       "icon": "code",
       "description": "Ask questions about a code repository: embed, rerank, answer.",
@@ -847,6 +1001,12 @@
     {
       "id": "multilingual_kb",
       "category": "search",
+      "ui": {
+        "template": "rag_search",
+        "params": {
+          "input_hint": "Ask in any language"
+        }
+      },
       "name": "Multilingual Knowledge Base",
       "icon": "language",
       "description": "Hybrid multilingual search over a knowledge base with a written answer.",
@@ -876,6 +1036,12 @@
     {
       "id": "dedup",
       "category": "search",
+      "ui": {
+        "template": "cluster_view",
+        "params": {
+          "input_hint": "One text per line; similar ones are grouped"
+        }
+      },
       "name": "Semantic Dedup & Clustering",
       "icon": "account_tree",
       "description": "Find near-duplicate and related texts by their embeddings.",
@@ -891,6 +1057,12 @@
     {
       "id": "file_search",
       "category": "search",
+      "ui": {
+        "template": "rag_search",
+        "params": {
+          "input_hint": "Describe the file you are looking for"
+        }
+      },
       "name": "Smart File/Drive Search",
       "icon": "folder_open",
       "description": "Find files by meaning, not by name.",
@@ -912,6 +1084,13 @@
     {
       "id": "receipt_json",
       "category": "documents",
+      "ui": {
+        "template": "doc_extract",
+        "params": {
+          "input_hint": "Paste the text of the receipt or invoice (image pick needs the vision runtime)",
+          "output": "json"
+        }
+      },
       "name": "Receipt/Invoice to JSON",
       "icon": "description",
       "description": "Read a receipt or invoice photo and return its fields as JSON.",
@@ -933,6 +1112,12 @@
     {
       "id": "photo_qa",
       "category": "documents",
+      "ui": {
+        "template": "vision_qa",
+        "params": {
+          "input_hint": "Ask a question about the picture"
+        }
+      },
       "name": "Screenshot/Photo Q&A",
       "icon": "visibility",
       "description": "Ask questions about a screenshot or photo.",
@@ -950,6 +1135,13 @@
     {
       "id": "doc_understanding",
       "category": "documents",
+      "ui": {
+        "template": "doc_extract",
+        "params": {
+          "input_hint": "Paste the document text and say what to find",
+          "output": "fields"
+        }
+      },
       "name": "Document Understanding",
       "icon": "menu_book",
       "description": "Read scanned documents and answer questions about them.",
@@ -971,6 +1163,12 @@
     {
       "id": "email_triage",
       "category": "communication",
+      "ui": {
+        "template": "triage_inbox",
+        "params": {
+          "input_hint": "Paste one email per block; each gets a label and a draft reply"
+        }
+      },
       "name": "Email Triage",
       "icon": "mail",
       "description": "Route each email, classify it and draft a short reply.",
@@ -998,6 +1196,12 @@
     {
       "id": "meeting_notes",
       "category": "communication",
+      "ui": {
+        "template": "summarizer",
+        "params": {
+          "input_hint": "Paste the notes or transcript"
+        }
+      },
       "name": "Meeting/Notes Summarizer",
       "icon": "schedule",
       "description": "Pull out decisions and action items, then write the summary.",
@@ -1019,6 +1223,12 @@
     {
       "id": "writing",
       "category": "communication",
+      "ui": {
+        "template": "writer",
+        "params": {
+          "input_hint": "Paste text and say how to improve it"
+        }
+      },
       "name": "Writing Assistant",
       "icon": "edit",
       "description": "Quick edits first, long-form drafting when needed.",
@@ -1041,6 +1251,12 @@
     {
       "id": "translator",
       "category": "communication",
+      "ui": {
+        "template": "writer",
+        "params": {
+          "input_hint": "Paste text and name the target language"
+        }
+      },
       "name": "Translator/Localizer",
       "icon": "language",
       "description": "Translate and localize text with a strong multilingual model.",
@@ -1058,6 +1274,12 @@
     {
       "id": "tool_runner",
       "category": "agents",
+      "ui": {
+        "template": "tool_runner",
+        "params": {
+          "input_hint": "Describe the task to run with tools"
+        }
+      },
       "name": "Agentic Tool Runner",
       "icon": "build",
       "description": "An agent that calls tools, with a guard model before and after.",
@@ -1092,6 +1314,13 @@
     {
       "id": "spec_json",
       "category": "agents",
+      "ui": {
+        "template": "writer",
+        "params": {
+          "input_hint": "Describe the structure you need",
+          "output": "json"
+        }
+      },
       "name": "Spec-to-JSON Formatter",
       "icon": "table_chart",
       "description": "Turn a plain-language spec into valid JSON or code.",
@@ -1114,6 +1343,12 @@
     {
       "id": "fleet_ops",
       "category": "agents",
+      "ui": {
+        "template": "tool_runner",
+        "params": {
+          "input_hint": "Ask about the fleet or describe the operation"
+        }
+      },
       "name": "Fleet Ops Copilot",
       "icon": "dns",
       "description": "Search runbooks and configs, then act through tools.",
@@ -1135,6 +1370,12 @@
     {
       "id": "notification_filter",
       "category": "agents",
+      "ui": {
+        "template": "triage_inbox",
+        "params": {
+          "input_hint": "Paste notifications, one per line; each is rated important or not"
+        }
+      },
       "name": "Smart Notification Filter",
       "icon": "notifications",
       "description": "Decide which notifications deserve your attention.",
@@ -1156,6 +1397,12 @@
     {
       "id": "math_tutor",
       "category": "reasoning",
+      "ui": {
+        "template": "tutor",
+        "params": {
+          "input_hint": "Type the problem"
+        }
+      },
       "name": "Math/Logic Tutor",
       "icon": "psychology",
       "description": "Step-by-step solutions, escalating hard problems, with a judge on the result.",
@@ -1184,6 +1431,15 @@
     {
       "id": "code_review",
       "category": "reasoning",
+      "ui": {
+        "template": "compare_judge",
+        "params": {
+          "input_hint": "Paste the code to review",
+          "inputs": [
+            "Code"
+          ]
+        }
+      },
       "name": "Code Reviewer",
       "icon": "verified_user",
       "description": "Review code with a coding model, then have a judge grade the review.",
@@ -1205,6 +1461,12 @@
     {
       "id": "research",
       "category": "reasoning",
+      "ui": {
+        "template": "rag_search",
+        "params": {
+          "input_hint": "State the research question"
+        }
+      },
       "name": "Research Assistant",
       "icon": "explore",
       "description": "Find sources, rerank them, reason over them and write up.",
@@ -1238,6 +1500,12 @@
     {
       "id": "safe_chat",
       "category": "safety",
+      "ui": {
+        "template": "chat_guarded",
+        "params": {
+          "input_hint": "Ask anything; the guard checks the question and the answer"
+        }
+      },
       "name": "Safe Chat Gateway",
       "icon": "security",
       "description": "A chat that screens the question, routes it, answers it and screens the answer.",
@@ -1271,6 +1539,12 @@
     {
       "id": "moderation",
       "category": "safety",
+      "ui": {
+        "template": "triage_inbox",
+        "params": {
+          "input_hint": "Paste the content to screen, one item per block"
+        }
+      },
       "name": "Content Moderation",
       "icon": "admin_panel_settings",
       "description": "Screen user content against two safety policies at once.",
@@ -1287,6 +1561,17 @@
     {
       "id": "eval_lab",
       "category": "safety",
+      "ui": {
+        "template": "compare_judge",
+        "params": {
+          "input_hint": "Paste the question, then the answers to compare",
+          "inputs": [
+            "Question",
+            "Answer A",
+            "Answer B"
+          ]
+        }
+      },
       "name": "Answer Grader / Eval Lab",
       "icon": "assessment",
       "description": "Grade the same answers with three judges and compare.",
@@ -1304,6 +1589,12 @@
     {
       "id": "offline",
       "category": "personal",
+      "ui": {
+        "template": "chat_guarded",
+        "params": {
+          "input_hint": "Ask the on-phone assistant"
+        }
+      },
       "name": "Offline Phone Assistant",
       "icon": "smartphone",
       "description": "Chat, search and read photos with only small models, on the phone.",
@@ -1337,6 +1628,12 @@
     {
       "id": "journal",
       "category": "personal",
+      "ui": {
+        "template": "cluster_view",
+        "params": {
+          "input_hint": "Paste journal entries, one per block"
+        }
+      },
       "name": "Journal Insights",
       "icon": "event",
       "description": "Find themes across your journal entries and write them up.",
@@ -1358,6 +1655,12 @@
     {
       "id": "quick_actions",
       "category": "personal",
+      "ui": {
+        "template": "quick_actions",
+        "params": {
+          "input_hint": "Say what you want done, in one line"
+        }
+      },
       "name": "Quick Actions",
       "icon": "bolt",
       "description": "Turn a short request into an action in another Cloud app.",
