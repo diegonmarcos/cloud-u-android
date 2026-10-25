@@ -61,7 +61,7 @@ class NavSideMenuTest {
 
     private fun tags(id: String) = SideMenuTags.item(id)
 
-    @Test fun `expanded: icon and full name per page, a heading per group, the selected row selected`() {
+    @Test fun `expanded shows the icon and full name per page, a heading per group, the selected row selected`() {
         compose.setContent { NavSideMenu(mail, "sent", {}, SideMenuPresence.Expanded, {}) }
         compose.onNodeWithTag(SideMenuTags.MENU).assertIsDisplayed()
         for (id in listOf("inbox", "sent", "work")) {
@@ -74,7 +74,7 @@ class NavSideMenuTest {
         compose.onNodeWithTag(tags("sent")).assertIsSelected()
     }
 
-    @Test fun `rail: the icon with the first three letters, no full labels, narrower than the menu`() {
+    @Test fun `rail shows the icon with the first three letters, no full labels, narrower than the menu`() {
         compose.setContent { NavSideMenu(mail, "inbox", {}, SideMenuPresence.Rail, {}) }
         compose.waitForIdle()
         compose.onNodeWithTag(SideMenuTags.rail("sent"), useUnmergedTree = true).assertExists()
@@ -101,7 +101,7 @@ class NavSideMenuTest {
 
     private val oneRowSection = NavSection("s", "S", "i", (1..3).map { p("p$it", "Page $it") })
 
-    @Test fun `the three modes: the user's choice swaps one row, two rows and the side menu on the same section`() {
+    @Test fun `the three modes, the user's choice swaps one row, two rows and the side menu on the same section`() {
         val store = MemoryNavModeStore()
         val mode = androidx.compose.runtime.mutableStateOf(SecondRowMode.OneRow)
         compose.setContent {
@@ -163,7 +163,7 @@ class NavSideMenuTest {
         assertEquals(null, MemoryNavModeStore().sideExpanded())
     }
 
-    @Test fun `scroll machine on the menu: hidden takes it away, shrunk folds it to the rail, up restores`() {
+    @Test fun `scroll machine on the menu, hidden takes it away, shrunk folds it to the rail, up restores`() {
         val c = BottomNavCollapse()
         val store = MemoryNavModeStore(expanded = true)
         compose.setContent {
