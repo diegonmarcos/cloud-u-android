@@ -115,7 +115,7 @@ jobs:
           mkdir -p apk
           found=""
           for i in $(seq 1 100); do
-            row=$(gh run list -R "$REPO" -w "$SHIP" -c "$SHA" -L 1 --json status,conclusion,databaseId --jq '.[0] // empty | "\(.status) \(.conclusion // "none") \(.databaseId)"' || true)
+            row=$(gh run list -R "$REPO" -w "$SHIP" -c "$SHA" -L 1 --json status,conclusion,databaseId --jq '.[0] // empty | "\(.status) \(if (.conclusion // "") == "" then "none" else .conclusion end) \(.databaseId)"' || true)
             if [ -z "$row" ]; then
               # no Ship run for this commit: it was not triggered (no watched path moved). Give it two minutes to appear.
               [ "$i" -ge 4 ] && break
