@@ -94,8 +94,10 @@ private fun NewsPage(state: SearchState) {
                 r.kind == FleetCalls.Kind.NOTE -> stringResource(R.string.research_note, r.detail)
                 else -> stringResource(R.string.research_unavailable, r.detail)
             }
-            ChipRow { cfg.topics.forEach { t -> Chip(t.label, ResearchTags.topic(t.id), selected = t.id == topic.id) { state.newsTopic = t.id } } }
-            Text(status, Modifier.testTag(ResearchTags.STATUS), color = g.text2, style = Type.style(Type.tiny))
+            Column(verticalArrangement = Arrangement.spacedBy(Metrics.small)) {
+                ChipRow { cfg.topics.forEach { t -> Chip(t.label, ResearchTags.topic(t.id), selected = t.id == topic.id) { state.newsTopic = t.id } } }
+                Text(status, Modifier.testTag(ResearchTags.STATUS), color = g.text2, style = Type.style(Type.tiny))
+            }
         }
         items(result?.items.orEmpty().withIndex().toList(), key = { it.value.url }) { (i, a) ->
             GlassCard(Modifier.testTag(ResearchTags.article(i)), onClick = { Browser.open(ctx, a.url) }) {

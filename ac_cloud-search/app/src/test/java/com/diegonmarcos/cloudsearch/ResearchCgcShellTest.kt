@@ -132,7 +132,11 @@ class ResearchCgcShellTest {
         assertEquals("http://news-gdelt.mesh.diegonmarcos.com:3019/articles?q=technology%20sourcelang%3Aenglish&limit=40", http.gets.first { "/articles" in it.first }.first)
         assertTrue("the mesh is not sent the bearer", http.gets.filter { "/articles" in it.first }.all { !it.second.containsKey("Authorization") })
         compose.onNodeWithTag(ResearchTags.topic("ai")).performClick()
-        compose.waitUntil(60_000) { synchronized(http.gets) { http.gets.any { it.first.contains("q=artificial%20intelligence%20sourcelang%3Aenglish") } } }
+        try {
+            compose.waitUntil(60_000) { synchronized(http.gets) { http.gets.any { it.first.contains("q=artificial%20intelligence%20sourcelang%3Aenglish") } } }
+        } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+            throw AssertionError("the AI topic was never fetched: newsTopic=${state.newsTopic}, asked=${synchronized(http.gets) { http.gets.map { it.first } }}", e)
+        }
         assertEquals("ai", state.newsTopic)
     }
 
