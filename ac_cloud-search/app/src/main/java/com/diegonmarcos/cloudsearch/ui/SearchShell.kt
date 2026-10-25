@@ -89,6 +89,7 @@ class SearchState(val services: Services) {
     /** #1184 Research's second row (News, Reports, Agents) and the News topic shown. */
     var researchPage by mutableStateOf(NAV.section("research")?.pages?.firstOrNull()?.id ?: "news")
     var newsTopic by mutableStateOf<String?>(null)
+    var newsResult by mutableStateOf<com.diegonmarcos.cloudsearch.data.FleetCalls.Result<com.diegonmarcos.cloudsearch.core.ResearchConfig.Article>?>(null)
     /** #1184 the code-index sections (Cloud-CGC, Me-CGC): each one's second-row page (Semantic, Graph RAG) and what it remembers. */
     val cgcSections: List<String> = NAV.bottomNav.filter { id -> services.cfg.cgc?.index(id) != null }
     private val cgcPages = mutableStateMapOf<String, String>()

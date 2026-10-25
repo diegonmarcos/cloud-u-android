@@ -12,10 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -28,6 +25,7 @@ import com.diegonmarcos.cloudsearch.data.Browser
 import com.diegonmarcos.cloudsearch.data.FleetCalls
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 object ResearchTags {
@@ -75,10 +73,17 @@ private fun NewsPage(state: SearchState) {
         return
     }
     val topic = cfg.topics.firstOrNull { it.id == state.newsTopic } ?: cfg.topics.first()
-    var result by remember(topic.id) { mutableStateOf<FleetCalls.Result<ResearchConfig.Article>?>(null) }
-    LaunchedEffect(topic.id) {
-        result = withContext(Dispatchers.IO) { state.services.fleet.news(cfg, topic) }
+    val scope = rememberCoroutineScope()
+    // A topic is fetched when it is picked (and once when the page first opens); an answer for a topic no longer picked is dropped.
+    fun load(t: ResearchConfig.Topic) {
+        state.newsTopic = t.id
+        state.newsResult = null
+        scope.launch {
+            val r = withContext(Dispatchers.IO) { state.services.fleet.news(cfg, t) }
+            if (state.newsTopic == t.id) state.newsResult = r
+        }
     }
+    LaunchedEffect(Unit) { if (state.newsResult == null) load(topic) }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = Metrics.gutter, end = Metrics.gutter, top = Metrics.small, bottom = Metrics.contentBottom),
@@ -86,7 +91,7 @@ private fun NewsPage(state: SearchState) {
     ) {
         // The status is read INSIDE the item, from the state itself: an item that only captured it would not follow the answer.
         item {
-            val r = result
+            val r = state.newsResult
             val status = when {
                 r == null -> stringResource(R.string.research_loading)
                 r.kind == FleetCalls.Kind.OK -> stringResource(R.string.research_count, r.items.size, r.via)
@@ -95,11 +100,11 @@ private fun NewsPage(state: SearchState) {
                 else -> stringResource(R.string.research_unavailable, r.detail)
             }
             Column(verticalArrangement = Arrangement.spacedBy(Metrics.small)) {
-                ChipRow { cfg.topics.forEach { t -> Chip(t.label, ResearchTags.topic(t.id), selected = t.id == topic.id) { state.newsTopic = t.id } } }
+                ChipRow { cfg.topics.forEach { t -> Chip(t.label, ResearchTags.topic(t.id), selected = t.id == topic.id) { load(t) } } }
                 Text(status, Modifier.testTag(ResearchTags.STATUS), color = g.text2, style = Type.style(Type.tiny))
             }
         }
-        items(result?.items.orEmpty().withIndex().toList(), key = { it.value.url }) { (i, a) ->
+        items(state.newsResult?.items.orEmpty().withIndex().toList(), key = { it.value.url }) { (i, a) ->
             GlassCard(Modifier.testTag(ResearchTags.article(i)), onClick = { Browser.open(ctx, a.url) }) {
                 Text(a.title, color = g.text, style = Type.style(Type.body, FontWeight.SemiBold), maxLines = 3, overflow = TextOverflow.Ellipsis)
                 Text(a.domain + " · " + a.seen, color = g.text2, style = Type.style(Type.tiny), maxLines = 1)
