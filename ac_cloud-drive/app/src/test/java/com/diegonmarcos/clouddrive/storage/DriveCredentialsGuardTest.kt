@@ -34,7 +34,7 @@ class DriveCredentialsGuardTest {
         assertEquals(str(contract, "GRANT_RCLONE"), Wire.GRANT_RCLONE)
         assertEquals(str(contract, "GRANT_SSH_PRIVATE"), Wire.GRANT_SSH_PRIVATE)
         assertEquals(str(endpoints, "ACCOUNT_PACKAGE"), Wire.ACCOUNT_PACKAGE)
-        assertTrue("the authority is the accountdata provider", Regex("""const val AUTHORITY = "\$ACCOUNT_PACKAGE\.accountdata"""").containsMatchIn(endpoints))
+        assertTrue("the authority is the accountdata provider", endpoints.contains("const val AUTHORITY = \"\$ACCOUNT_PACKAGE.accountdata\""))
         assertEquals("${Wire.ACCOUNT_PACKAGE}.accountdata", Wire.AUTHORITY)
     }
 
