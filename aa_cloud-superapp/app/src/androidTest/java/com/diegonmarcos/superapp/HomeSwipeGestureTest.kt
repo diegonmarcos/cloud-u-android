@@ -88,6 +88,19 @@ class HomeSwipeGestureTest {
         return false
     }
 
+    /** Evidence for a red run: the focused window, the top fragment, and a screenshot pulled by the workflow. */
+    private fun evidence(shell: ShellActivity, name: String): String {
+        val ua = inst.uiAutomation
+        runCatching {
+            java.io.FileOutputStream("/data/local/tmp/home-swipe-$name.png").use { ua.takeScreenshot()?.compress(android.graphics.Bitmap.CompressFormat.PNG, 90, it) }
+        }
+        val pfd = ua.executeShellCommand("dumpsys window")
+        val focus = java.io.BufferedReader(java.io.InputStreamReader(android.os.ParcelFileDescriptor.AutoCloseInputStream(pfd)))
+            .lineSequence().filter { it.contains("mCurrentFocus") }.joinToString(" | ")
+        val top = onMain { shell.supportFragmentManager.findFragmentById(R.id.fragment_container)?.javaClass?.simpleName }
+        return "section=${onMain { shell.currentSection }} top=$top focus=[$focus]"
+    }
+
     private fun declared(target: String) = target.removePrefix("action:")
 
     @Test fun swipeUpOpensCloudApps() {
@@ -96,13 +109,13 @@ class HomeSwipeGestureTest {
         val ok = swipeUntil(shell, up = true) {
             onMain { shell.currentSection == "cloud" && shell.supportFragmentManager.findFragmentById(R.id.fragment_container) is GroupedTilesFragment }
         }
-        assertTrue("swipe up did not open Cloud > Apps (section=${onMain { shell.currentSection }})", ok)
+        assertTrue("swipe up did not open Cloud > Apps: ${if (ok) "" else evidence(shell, "up")}", ok)
     }
 
     @Test fun swipeDownOpensNotify() {
         assertEquals("page:communication/my-rss", declared(BuildConfig.HOME_SWIPE_DOWN))
         val shell = launchHome()
         val ok = swipeUntil(shell, up = false) { onMain { shell.currentSection == "communication" } }
-        assertTrue("swipe down did not open Notify (section=${onMain { shell.currentSection }})", ok)
+        assertTrue("swipe down did not open Notify: ${if (ok) "" else evidence(shell, "down")}", ok)
     }
 }
