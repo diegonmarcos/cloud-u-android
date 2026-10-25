@@ -51,6 +51,18 @@
       "doc": "Personal notes (Obsidian vault)."
     },
     {
+      "name": "cloud-me-others",
+      "repo": "diegonmarcos/cloud-me-others",
+      "private": false,
+      "doc": "Sources of the b_MyData group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloud-me-profiles",
+      "repo": "diegonmarcos/cloud-me-profiles",
+      "private": false,
+      "doc": "Sources of the b_Profiles group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
       "name": "cloud-me_cgc",
       "repo": "diegonmarcos/cloud-me_cgc",
       "private": true,
@@ -105,10 +117,22 @@
       "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
     },
     {
+      "name": "cloud-webapps-2",
+      "repo": "diegonmarcos/cloud-webapps-2",
+      "private": false,
+      "doc": "Sources of the c_Suite group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
       "name": "front",
       "repo": "diegonmarcos/front",
       "private": false,
       "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume."
+    },
+    {
+      "name": "front-circus",
+      "repo": "diegonmarcos/front-circus",
+      "private": false,
+      "doc": "Sources of the c_Circus group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "front-diegonmarcos",
@@ -117,10 +141,34 @@
       "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud."
     },
     {
+      "name": "front-endeavours",
+      "repo": "diegonmarcos/front-endeavours",
+      "private": false,
+      "doc": "Sources of the a_Companies group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "front-galaxy",
+      "repo": "diegonmarcos/front-galaxy",
+      "private": false,
+      "doc": "Sources of the b_Projects group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
       "name": "front-galaxy-gaia",
       "repo": "diegonmarcos/front-galaxy-gaia",
       "private": true,
       "doc": "Front-end experiment."
+    },
+    {
+      "name": "front-labtools",
+      "repo": "diegonmarcos/front-labtools",
+      "private": false,
+      "doc": "Sources of the c_LabTools group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "front-linktree",
+      "repo": "diegonmarcos/front-linktree",
+      "private": false,
+      "doc": "Linktree sources (linktree, mindmap, pixel-world, icon-view), split from diegonmarcos.github.io (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "front-unity",
@@ -133,6 +181,42 @@
       "repo": "diegonmarcos/z-archived_front-data",
       "private": false,
       "doc": "Front-end content and data. Renamed z-archived_front-data 2026-10-23; to be archived on GitHub (owner click)."
+    },
+    {
+      "name": "z-archived_front-feeds",
+      "repo": "diegonmarcos/z-archived_front-feeds",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into front-circus; renamed z-archived_front-feeds, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-individual",
+      "repo": "diegonmarcos/z-archived_front-individual",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-profiles (b_Profiles); renamed z-archived_front-individual, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-media",
+      "repo": "diegonmarcos/z-archived_front-media",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-profiles (b_Profiles); renamed z-archived_front-media, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-others",
+      "repo": "diegonmarcos/z-archived_front-others",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into front-circus; renamed z-archived_front-others, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-projects",
+      "repo": "diegonmarcos/z-archived_front-projects",
+      "private": false,
+      "doc": "Superseded 2026-10-24 by the 12 per-group front repos (#1072); renamed z-archived_front-projects, to be archived on GitHub (owner click)."
+    },
+    {
+      "name": "z-archived_front-warehouse",
+      "repo": "diegonmarcos/z-archived_front-warehouse",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into front-endeavours; renamed z-archived_front-warehouse, to be archived on GitHub (owner click)"
     }
   ],
   "_doc_hubs": "cloud and front are the HUB repos — the symlink farms. They are mirrored FIRST-CLASS, not skipped: their committed symlinks are the navigation layer, and because every member is a sibling here exactly as it is in ~/git, a link like cloud/cloud-infra -> ../cloud-infra resolves INSIDE the mirror. That is what makes this a usable copy of the workspace rather than a pile of unrelated directories. A link to something not mirrored (cloud-vault, cloud-u-android) dangles, which the farms' own doc already treats as meaning 'a repo you have not cloned yet'."
