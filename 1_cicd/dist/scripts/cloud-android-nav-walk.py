@@ -223,7 +223,7 @@ class Walk:
         # responding" dialog then covers whichever app is walked. The dialogs are switched off; an ANR of the app under test is
         # still found, in the events log (app_anr), and fails its page with the emulator's load beside it.
         shell("settings put global hide_error_dialogs 1")
-        shell("logcat -c")
+        shell("logcat -b all -c")
         shell("am start -W -n %s" % act, timeout=120)
         deadline = time.time() + 90
         while time.time() < deadline:
@@ -330,6 +330,17 @@ class Walk:
             return None
         nodes = dump() or []
         crumb = find(nodes, "navtop1_crumb_1")
+        # a deep path overflows the crumb row (it scrolls sideways): bring its start into view before reading the section crumb
+        for _ in range(3):
+            if crumb is not None:
+                break
+            c0 = find(nodes, "navtop1_crumb_2") or find(nodes, "navtop1_crumb_3") or find(nodes, "navtop1_crumb_4")
+            if c0 is None:
+                break
+            shell("input swipe %d %d %d %d 300" % (c0.cx, c0.cy, min(c0.cx + 600, self.w - 20), c0.cy))
+            settle(0.6)
+            nodes = dump() or nodes
+            crumb = find(nodes, "navtop1_crumb_1")
         if crumb is None:
             shell("input keyevent KEYCODE_BACK")
             return "the dropdown lists no entry for page %s" % pid
@@ -519,7 +530,7 @@ class Walk:
     def run_page(self, section, pid, label, via_dropdown, up=()):
         name = "%s/%s" % (section, pid)
         t0 = time.time()
-        shell("logcat -c")
+        shell("logcat -b all -c")
         self.hide_ime()
         self.ensure_chrome(section)
         err = self.goto(pid, label, up) if via_dropdown else None
