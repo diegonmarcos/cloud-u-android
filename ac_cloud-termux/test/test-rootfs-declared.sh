@@ -57,6 +57,34 @@ n_shared="$(json "$T/shared.json" 'len(d["binaries"])')"
 [ -z "$missing" ] && ok "all $n_shared fleet binaries are in the resolved roster" \
                   || bad "fleet binaries missing from the resolved roster: $missing"
 
+echo "── 2b: #1173 the Drive guest tools are declared, smoked, and unison is the fleet's pinned version ──"
+# verify-inside.sh runs every roster binary with --version and verify-rootfs.sh runs each smoke
+# command under the shipped proot, so being in both lists IS the per-tool runtime proof.
+PIN="$ROOT/ab_cloud-libs-shared/libs/rclone-engine/data/unison-binary.json"
+python3 "$R/resolve.py" get smoke > "$T/smoke.json"
+if python3 - "$T/resolved.json" "$T/smoke.json" "$R/rootfs.json" "$PIN" > "$T/guest.out" 2>&1 <<'PY'
+import json, sys
+bins, smoke = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
+decl, pin = json.load(open(sys.argv[3])), json.load(open(sys.argv[4]))
+want = ["rsync", "unison", "rclone", "sshfs", "fusermount3", "ssh"]
+miss = [t for t in want if t not in bins]
+nosmoke = [t for t in want if not any(c[0] == t for c in smoke.values())]
+u = decl["tarballs"]["unison"]
+errs = []
+if miss: errs.append("not in the roster: %s" % miss)
+if nosmoke: errs.append("no smoke command: %s" % nosmoke)
+if u["version"] != pin["version"]:
+    errs.append("unison %s != fleet pin %s" % (u["version"], pin["version"]))
+for arch, abi in (("amd64", "x86_64"), ("arm64", "arm64-v8a")):
+    want_url = pin["binaries"][abi]["url"]
+    got = u["url_by_arch"][arch].replace("{version}", u["version"]).replace("{arch}", u["arch_names"][arch])
+    if got != want_url: errs.append("%s url %s != pin %s" % (arch, got, want_url))
+print("; ".join(errs) or "ok")
+sys.exit(1 if errs else 0)
+PY
+then ok "rsync, unison, rclone, sshfs, fusermount3, ssh are rostered and smoked; unison is the fleet pin on both ABIs"
+else bad "Drive guest tools: $(cat "$T/guest.out")"; fi
+
 echo "── 3: each guard refuses the declaration it exists to catch ──"
 # mutate <label> <python expression editing d> [expected text]: the resolver must
 # exit non-zero. `toolset` is store.json::toolset.binaries (#737). An edit that

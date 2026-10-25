@@ -162,7 +162,7 @@ def tarball_lines(tarballs, docker_arch):
     for name, t in sorted(tarballs.items()):
         arch = t.get("arch_names", {}).get(docker_arch, docker_arch)
         fill = lambda s: s.replace("{version}", t["version"]).replace("{arch}", arch)
-        url = fill(t["url"])
+        url = fill(t.get("url_by_arch", {}).get(docker_arch, t["url"]))
         if "extract_to" in t:          # a whole tree (node: bin/, lib/node_modules/npm)
             out.append(f"{name}|{url}|{t['extract_to']}|{t.get('strip_components', 0)}|")
         elif "extracted_bin" in t:     # one binary inside an archive (gh)

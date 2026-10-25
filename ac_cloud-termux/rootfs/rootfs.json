@@ -19,13 +19,17 @@
     "age",
     "debianutils",
     "util-linux",
-    "diffutils"
+    "diffutils",
+    "rclone",
+    "sshfs",
+    "fuse3"
   ],
   "_doc_apt_packages": "Terminal-only additions, installed together with the shared apt_packages. git: the shared list counts it as a base-image binary of the AI containers, and debian slim does not carry it. fish: the default shell. zsh: baked and available, NOT the default (#470 follow-up). python3-venv: hermes is installed into its own virtual environment (pip_venvs below). python3: already pulled in by python3-venv, named so the roster can declare it (#737; this terminal's extra, not the shared toolset -- #665 keeps it out of the nix image). age: bookworm ships 1.1.1, the shared toolset's encryption tool. debianutils: provides `which`, which the toolset declares because the on-device checklist runs it. util-linux and diffutils: flock and cmp, which the toolset declares because linux-store (store.json::linux_tools) refuses to start without them; both are Essential in bookworm, named so the roster can declare them.",
   "apt_provides": {
     "debianutils": ["which"],
     "util-linux": ["flock"],
-    "diffutils": ["cmp"]
+    "diffutils": ["cmp"],
+    "fuse3": ["fusermount3"]
   },
   "_doc_apt_provides": "Same meaning as the fleet tool belt's apt_provides (package -> binary names when they differ), for packages only this terminal installs. resolve.py merges both maps.",
   "tarballs": {
@@ -76,6 +80,21 @@
       "extracted_dir": "fd-v{version}-{arch}",
       "extracted_bin": "fd"
     },
+    "unison": {
+      "_doc": "#1173 Cloud Drive Fsync/Mounts run in this guest through CLOUD_EXEC. unison is a tarball, not apt, because bookworm ships 2.51.5 and Unison refuses a peer of another version: the pin is the fleet's ONE version, ab_cloud-libs-shared/libs/rclone-engine/data/unison-binary.json (same release, same asset per arch; arm64 is the musl static build this repo publishes, amd64 the upstream static build), so the guest syncs with every fleet host and the app's own engine. Both are static: no PT_INTERP.",
+      "version": "2.53.8",
+      "url": "https://github.com/bcpierce00/unison/releases/download/v{version}/unison-{version}-{arch}.tar.gz",
+      "url_by_arch": {
+        "amd64": "https://github.com/bcpierce00/unison/releases/download/v{version}/unison-{version}-{arch}.tar.gz",
+        "arm64": "https://github.com/diegonmarcos/cloud-u-android/releases/download/unison-static-{version}-r1/unison-{version}-{arch}.tar.gz"
+      },
+      "arch_names": {
+        "amd64": "ubuntu-22.04-x86_64-static",
+        "arm64": "linux-aarch64-musl-static"
+      },
+      "extracted_dir": "unison-{version}-{arch}",
+      "extracted_bin": "bin/unison"
+    },
     "sops": {
       "_doc": "#737 -- sops for the shared toolset; not packaged in bookworm. The release asset IS the binary (a static Go build).",
       "version": "3.13.3",
@@ -110,7 +129,11 @@
     "goose",
     "hermes",
     "agy",
-    "python3"
+    "python3",
+    "unison",
+    "rclone",
+    "sshfs",
+    "fusermount3"
   ],
   "_doc_binaries": "This terminal's tools BEYOND ab_cloud-terminal-store/store.json::toolset (#737: fish, zsh, node, claude, gh, ... -- the set both terminals ship) and beyond the fleet tool belt's `binaries`. resolve.py merges all three into the roster install-in-rootfs.sh installs and command -v's and verify-rootfs.sh proves present, loadable (PT_INTERP inside the root) and executable under the shipped proot. A name repeated from either other list is refused.",
   "default_shell": "/usr/bin/fish",
@@ -148,6 +171,30 @@
     "antigravity": [
       "agy",
       "--version"
+    ],
+    "unison": [
+      "unison",
+      "-version"
+    ],
+    "rclone": [
+      "rclone",
+      "--version"
+    ],
+    "rsync": [
+      "rsync",
+      "--version"
+    ],
+    "sshfs": [
+      "sshfs",
+      "--version"
+    ],
+    "fusermount3": [
+      "fusermount3",
+      "--version"
+    ],
+    "ssh": [
+      "ssh",
+      "-V"
     ]
   },
   "nameservers": [
