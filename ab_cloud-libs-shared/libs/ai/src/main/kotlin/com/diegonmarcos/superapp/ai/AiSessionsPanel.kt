@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -54,7 +55,11 @@ fun AiSessionsPanel(chat: AiChatState, theme: AiTheme, modifier: Modifier = Modi
             theme.icon(AiIcons.PLUS_CIRCLE, m.icon, c.accent, null)
             Text(theme.strings.newChat, color = c.text, style = t.style(t.chat, FontWeight.Medium), modifier = Modifier.padding(start = m.gap))
         }
-        Column(Modifier.verticalScroll(rememberScrollState())) {
+        // The host may already scroll (a drawer or dropdown inside its own verticalScroll): a second
+        // scroller there is measured with an infinite height and crashes. Scroll only when bounded.
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val own = if (constraints.hasBoundedHeight) Modifier.verticalScroll(rememberScrollState()) else Modifier
+        Column(own) {
             if (all.isEmpty()) Text(theme.strings.noSessions, color = c.text2, style = t.style(t.small), modifier = Modifier.padding(m.gutter))
             for ((bucket, list) in groups) {
                 Text(
@@ -67,6 +72,7 @@ fun AiSessionsPanel(chat: AiChatState, theme: AiTheme, modifier: Modifier = Modi
                     onRename = { renaming = s },
                     onDelete = { chat.remove(s.id); tick++ })
             }
+        }
         }
     }
     renaming?.let { s ->
