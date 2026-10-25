@@ -80,7 +80,7 @@
     <string name="wiz_step">Question %1$d of %2$d</string>
     <string name="wiz_advanced">Also ask the advanced options</string>
     <string name="wiz_required">required</string>
-    <string name="wiz_optional">optional, empty keeps rclone's default</string>
+    <string name="wiz_optional">optional, empty keeps rclone\'s default</string>
     <string name="wiz_default">default: %1$s</string>
     <string name="wiz_secret_kept">Leave empty to keep the stored value</string>
     <string name="wiz_auth_title">Sign in</string>
@@ -89,7 +89,7 @@
     <string name="wiz_auth_open">Open the sign-in page</string>
     <string name="wiz_auth_start">Start sign-in</string>
     <string name="wiz_auth_waiting">Approve the access in the browser; this page continues by itself</string>
-    <string name="wiz_auth_done">Signed in. The token goes into this remote's config.</string>
+    <string name="wiz_auth_done">Signed in. The token goes into this remote\'s config.</string>
     <string name="wiz_auth_keep">Keep the existing sign-in</string>
     <string name="wiz_sa_paste">Paste the service account JSON</string>
     <string name="wiz_shared_title">Shared drive</string>
