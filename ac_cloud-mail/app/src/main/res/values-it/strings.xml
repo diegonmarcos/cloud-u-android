@@ -1048,6 +1048,8 @@
     <string name="home_stat_unread_unavailable">Non conteggiato su IMAP</string>
     <string name="home_stat_cached">Messaggi su questo telefono</string>
     <string name="home_stat_folders">Cartelle</string>
+    <string name="side_menu_labels">Etichette</string>
+    <string name="settings_navigation_title">Navigazione</string>
     <string name="home_stat_subscribed">Cartelle sottoscritte</string>
     <string name="home_hero_unread_label">non letti negli account che sanno contarli</string>
     <string name="home_mood_nothing">Ancora niente qui. Sincronizza un account e questa pagina si riempie.</string>

@@ -1062,6 +1062,8 @@
     <string name="home_stat_unread_unavailable">Nie liczone przy IMAP</string>
     <string name="home_stat_cached">Wiadomości na tym telefonie</string>
     <string name="home_stat_folders">Foldery</string>
+    <string name="side_menu_labels">Etykiety</string>
+    <string name="settings_navigation_title">Nawigacja</string>
     <string name="home_stat_subscribed">Subskrybowane foldery</string>
     <string name="home_hero_unread_label">nieprzeczytanych w kontach, które potrafią je liczyć</string>
     <string name="home_mood_nothing">Na razie nic tu nie ma. Zsynchronizuj konto, a strona się wypełni.</string>

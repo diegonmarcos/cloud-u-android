@@ -1042,6 +1042,8 @@
     <string name="home_stat_unread_unavailable">Bei IMAP nicht gezählt</string>
     <string name="home_stat_cached">Nachrichten auf diesem Telefon</string>
     <string name="home_stat_folders">Ordner</string>
+    <string name="side_menu_labels">Labels</string>
+    <string name="settings_navigation_title">Navigation</string>
     <string name="home_stat_subscribed">Abonnierte Ordner</string>
     <string name="home_hero_unread_label">ungelesen in den Konten, die zählen können</string>
     <string name="home_mood_nothing">Noch nichts hier. Synchronisiere ein Konto, dann füllt sich diese Seite.</string>

@@ -56,13 +56,15 @@ public fun NavModeConfigCard(
     modifier: Modifier = Modifier,
     dark: Boolean = true,
     store: NavModeStore = LocalNavModeStore.current ?: rememberNavModePrefs(),
+    /** Sections whose child pages come from the app's own data at run time (Mail's folders and labels): offered whatever the declaration lists. */
+    dynamic: Set<String> = emptySet(),
 ) {
     val palette = ThemeBackground.colors(dark)
     val shape = RoundedCornerShape(12.dp)
     val chip = RoundedCornerShape(10.dp)
     Column(modifier.fillMaxWidth().testTag(NavModeConfigTags.CARD), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Navigation of child pages", color = palette.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        sections.filter { it.allPages().size > 1 }.forEach { s ->
+        sections.filter { it.allPages().size > 1 || it.id in dynamic }.forEach { s ->
             val declared = s.rows
             val chosen = store.mode(s.id)
             val current = chosen ?: declared

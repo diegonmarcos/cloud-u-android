@@ -64,6 +64,13 @@ public object UiIcons {
         "calendar_month" to Icons.Outlined.CalendarMonth,
         "palette" to Icons.Outlined.Palette,
         "inbox" to Icons.Outlined.Inbox,
+        // #1189 Cloud Mail's folders and labels in the side menu (their roles; the account's own folders draw "folder"/"label").
+        "send" to Icons.Outlined.Send,
+        "drafts" to Icons.Outlined.Drafts,
+        "delete" to Icons.Outlined.Delete,
+        "archive" to Icons.Outlined.Archive,
+        "report" to Icons.Outlined.Report,
+        "label" to Icons.Outlined.Label,
         "rss_feed" to Icons.Outlined.RssFeed,
         "checklist" to Icons.Outlined.Checklist,
         "home" to Icons.Outlined.Home,

@@ -1045,6 +1045,8 @@
     <string name="home_stat_unread_unavailable">Niet geteld bij IMAP</string>
     <string name="home_stat_cached">Berichten op deze telefoon</string>
     <string name="home_stat_folders">Mappen</string>
+    <string name="side_menu_labels">Labels</string>
+    <string name="settings_navigation_title">Navigatie</string>
     <string name="home_stat_subscribed">Geabonneerde mappen</string>
     <string name="home_hero_unread_label">ongelezen in de accounts die kunnen tellen</string>
     <string name="home_mood_nothing">Nog niets hier. Synchroniseer een account en deze pagina vult zich.</string>

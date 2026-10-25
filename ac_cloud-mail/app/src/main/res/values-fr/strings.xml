@@ -1054,6 +1054,8 @@
     <string name="home_stat_unread_unavailable">Non compté en IMAP</string>
     <string name="home_stat_cached">Messages sur ce téléphone</string>
     <string name="home_stat_folders">Dossiers</string>
+    <string name="side_menu_labels">Libellés</string>
+    <string name="settings_navigation_title">Navigation</string>
     <string name="home_stat_subscribed">Dossiers abonnés</string>
     <string name="home_hero_unread_label">non lus dans les comptes qui savent les compter</string>
     <string name="home_mood_nothing">Rien ici pour l\'instant. Synchronisez un compte et cette page se remplit.</string>

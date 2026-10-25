@@ -38,6 +38,9 @@
         "label": "Mail",
         "icon": "mail",
         "background": "theme",
+        "_doc": "#1189 Mail has many folders and labels, so its child pages are navigated by the vertical left side menu (expanded, or the semi-collapsed rail). The menu's items are DYNAMIC: the account's own mailboxes (standard folders, then the user's folders and labels, subfolders nested), built at run time by MailFolderNav; the single declared page below is only the section's entry. The user can switch the section to one or two horizontal rows in Settings (nav_modes).",
+        "nav_mode": "vertical_side_menu",
+        "dynamic_children": "mail_folders_labels",
         "pages": [
           {
             "id": "inbox",

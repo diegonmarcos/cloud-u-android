@@ -1808,7 +1808,7 @@ fun InboxScreen(
                     )
                 }
             },
-            content = content,
+            content = { MailFolderNav(ui, { viewModel.select(it) }, content) },
         )
     } else {
         ModalNavigationDrawer(
@@ -1838,7 +1838,7 @@ fun InboxScreen(
                     )
                 }
             },
-            content = content,
+            content = { MailFolderNav(ui, { viewModel.select(it) }, content) },
         )
     }
 }

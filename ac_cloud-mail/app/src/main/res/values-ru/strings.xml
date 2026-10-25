@@ -1065,6 +1065,8 @@
     <string name="home_stat_unread_unavailable">В IMAP не подсчитывается</string>
     <string name="home_stat_cached">Сообщения на этом телефоне</string>
     <string name="home_stat_folders">Папки</string>
+    <string name="side_menu_labels">Метки</string>
+    <string name="settings_navigation_title">Навигация</string>
     <string name="home_stat_subscribed">Папки с подпиской</string>
     <string name="home_hero_unread_label">непрочитанных в аккаунтах, которые умеют их считать</string>
     <string name="home_mood_nothing">Пока здесь пусто. Синхронизируйте аккаунт, и страница заполнится.</string>

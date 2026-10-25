@@ -1257,6 +1257,8 @@
     <string name="home_stat_unread_unavailable">Not counted on IMAP</string>
     <string name="home_stat_cached">Messages on this phone</string>
     <string name="home_stat_folders">Folders</string>
+    <string name="side_menu_labels">Labels</string>
+    <string name="settings_navigation_title">Navigation</string>
     <string name="home_stat_subscribed">Subscribed folders</string>
     <!-- Home hero and account tiles (#501): the mood line is picked by the real unread total; home_mood_nothing and home_account_empty are what a page or account holding no mail shows instead of zeros. -->
     <string name="home_hero_unread_label">unread across the accounts that count it</string>

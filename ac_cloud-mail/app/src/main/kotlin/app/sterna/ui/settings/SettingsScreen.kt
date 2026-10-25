@@ -436,6 +436,16 @@ private fun SettingsHub(
                 // spent a day not compiling.
                 SettingsCategoryRow(Icons.Filled.Refresh, stringResource(R.string.settings_update_title), stringResource(R.string.settings_update_summary), onOpenUpdate)
             }
+            // How the Mail section's folders and labels are navigated: the side menu (default), one row or two rows (#1189).
+            SettingsSection(stringResource(R.string.settings_navigation_title)) {
+                Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    com.diegonmarcos.superapp.navbartop2.NavModeConfigCard(
+                        sections = app.sterna.ui.mailNav.sections,
+                        dark = app.sterna.ui.theme.LocalSternaDarkTheme.current,
+                        dynamic = setOf("mail"),
+                    )
+                }
+            }
             // Server-side settings that apply to the current account only; the header names it.
             val accountGroupTitle = if (currentAccountLabel.isNotBlank()) {
                 stringResource(R.string.settings_group_current_account, currentAccountLabel)
