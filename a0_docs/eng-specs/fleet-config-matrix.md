@@ -713,7 +713,7 @@ Coverage: 10 covered, 0 gaps.
 
 ## cloud-gallery — `com.diegonmarcos.mediacenter`
 
-Module `ac_cloud-gallery`; libs: lib-analytics, lib-core, lib-crash, lib-cropper, lib-devtools, lib-fleetconfig-model, lib-gesture, lib-ml-l-image, lib-panoramaviewer, lib-scrollbar.
+Module `ac_cloud-gallery`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-cropper, lib-devtools, lib-fleetconfig-model, lib-gesture, lib-ml-l-image, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-panoramaviewer, lib-scrollbar, lib-theme-background, lib-ui-icons.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
