@@ -487,8 +487,8 @@ public class BottomNavCollapse : NestedScrollConnection {
     /** The first row is shown only at DEFAULT. */
     public val firstRowVisible: Boolean get() = state == ChromeScrollState.Default
 
-    /** A host that measures its own scroll (a WebView's scroll-change listener, no touch state): [delta] > 0 is the content travelling UP the screen (reading down); it settles straight to SHRUNK. */
-    public fun onScrollDelta(delta: Float) { state = chromeScrollOnDelta(state, delta, dragging = false) }
+    /** A host that measures its own scroll (a WebView's scroll-change listener): [delta] > 0 is the content travelling UP the screen (reading down). With the touch watched ([onFinger]) a finger-down read is a drag (HIDDEN), else it settles to SHRUNK. */
+    public fun onScrollDelta(delta: Float) { state = chromeScrollOnDelta(state, delta, dragging = fingerTracked && fingerDown) }
 
     /** A host that knows its finger state (a View shell with a touch listener) feeds the drag and the release itself. */
     public fun onDragDelta(delta: Float) { state = chromeScrollOnDelta(state, delta, dragging = true) }

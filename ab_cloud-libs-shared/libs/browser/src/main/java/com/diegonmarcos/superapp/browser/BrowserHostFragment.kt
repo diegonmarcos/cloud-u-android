@@ -274,7 +274,7 @@ class BrowserHostFragment : Fragment() {
 
         val root = ComposeView(ctx).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent { CloudKitTheme(palette()) { Root() } }
+            setContent { CloudKitTheme(palette()) { com.diegonmarcos.superapp.uikit.KitPage { Root() } } }
         }
         hostView = root
 

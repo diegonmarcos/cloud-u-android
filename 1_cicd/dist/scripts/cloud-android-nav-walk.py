@@ -219,6 +219,10 @@ class Walk:
         if "/" not in act:
             raise RuntimeError("no launcher activity for %s (%s)" % (self.pkg, act))
         shell("am force-stop %s" % self.pkg)
+        # The CI emulator has 2 cores: its LAUNCHER often stops answering ("Input dispatching timed out") and the system's "isn't
+        # responding" dialog then covers whichever app is walked. The dialogs are switched off; an ANR of the app under test is
+        # still found, in the events log (app_anr), and fails its page with the emulator's load beside it.
+        shell("settings put global hide_error_dialogs 1")
         shell("logcat -c")
         shell("am start -W -n %s" % act, timeout=120)
         deadline = time.time() + 90
@@ -240,6 +244,15 @@ class Walk:
 
     def foreground(self):
         return self.pkg in shell("dumpsys activity activities | grep -E 'topResumedActivity|mResumedActivity'")
+
+    def app_anr(self):
+        """An ANR of the app under test since the last `logcat -c`, with the emulator's load: real main-thread work shows up as an
+        am_anr line for THIS package; an overloaded emulator shows ANRs of the launcher or of system apps and a load above its cores."""
+        mine = shell("logcat -d -b events -v brief 2>/dev/null | grep am_anr | grep -F %s" % self.pkg, timeout=60).strip()
+        if not mine:
+            return None
+        load = shell("cat /proc/loadavg").strip()
+        return "%s (emulator load %s, %s cores)" % (mine.splitlines()[-1][-160:], load, shell("nproc").strip())
 
     def crashed(self):
         log = shell("logcat -d -b crash -v brief") + shell("logcat -d -v brief AndroidRuntime:E *:S")
@@ -427,12 +440,19 @@ class Walk:
         for i in range(1, steps + 1):
             motion("MOVE", x, y1 + (y2 - y1) * i // steps)
             time.sleep(0.05)
-        settle(0.8)
-        held = dump() or []
+        # the exit animation of the bars may need a moment on the 2-core emulator: poll for the bars to be gone
+        held = []
+        for _ in range(6):
+            settle(0.8)
+            held = dump() or []
+            h0 = self.chrome(held)
+            if not (h0["row"] or find(held, ISLAND) is not None or h0["items"] or find(held, STRIP) is not None or h0["tabs"]):
+                break
         motion("UP", x, y2)
         settle(0.5)
         swipe(x, y1, y2)
         settle(1.2)
+        self.hide_ime()   # a long press in a text page may raise the keyboard, which hides the bar by design
         nodes2 = dump()
         if nodes2 is None:
             fails.append("P3 the UI could not be read after scrolling")
@@ -506,6 +526,9 @@ class Walk:
         checks, fails = ({}, [err]) if err else self.check_page(section, label, via_dropdown)
         died = not self.alive()
         crashed, log = self.crashed()
+        anr = self.app_anr()
+        if anr:
+            fails.insert(0, "P1 the app did not respond (ANR in %s)" % anr)
         if crashed or died:
             fails.insert(0, "P1 the app %s" % ("crashed (FATAL EXCEPTION in logcat)" if crashed else "died"))
             with open(os.path.join(self.out, "dumps", re.sub(r"\W", "_", name) + ".logcat.txt"), "w") as f:

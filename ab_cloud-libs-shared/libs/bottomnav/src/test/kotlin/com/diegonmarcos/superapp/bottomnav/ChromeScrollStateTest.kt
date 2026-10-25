@@ -48,6 +48,11 @@ class ChromeScrollStateTest {
         assertEquals(d, c.state)
         c.onScrollDelta(3f)
         assertEquals("a host without touch state settles straight to SHRUNK", s, c.state)
+        c.restore(); c.onFinger(true)
+        c.onScrollDelta(3f)
+        assertEquals("a WebView-style read with the finger down is a drag", h, c.state)
+        c.onFinger(false); c.onRelease()
+        assertEquals(s, c.state)
     }
 
     @Test fun `with a touch watcher a user-input scroll without a finger shrinks instead of hiding`() {
