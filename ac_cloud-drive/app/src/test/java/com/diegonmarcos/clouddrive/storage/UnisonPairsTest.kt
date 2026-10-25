@@ -47,7 +47,7 @@ class UnisonPairsTest {
     }
 
     @Test fun `the parser's refusal comes back as the sentence, and nothing is saved`() {
-        val r = UnisonPairs.add("", ssh.copy(host = "8.8.8.8"), policy, storage)
+        val r = UnisonPairs.add("", ssh.copy(host = "192.0.2.1"), policy, storage)
         assertTrue(r.isFailure); assertTrue(r.exceptionOrNull()!!.message!!, r.exceptionOrNull()!!.message!!.contains("mesh"))
         assertTrue(UnisonPairs.add("", ssh.copy(rootA = "../x"), policy, storage).isFailure)
         assertTrue(UnisonPairs.add("", ssh.copy(scheduleMinutes = 5), policy, storage).isFailure)
