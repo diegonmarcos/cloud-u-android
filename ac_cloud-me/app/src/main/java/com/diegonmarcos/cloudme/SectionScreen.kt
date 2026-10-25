@@ -22,7 +22,6 @@ import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.bottomnav.SecondRowMode
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRows
-import com.diegonmarcos.superapp.fin.MyFinDashboardFragment
 import com.diegonmarcos.superapp.health.HealthFragment
 import com.diegonmarcos.superapp.uikit.KitFragmentHost
 import org.json.JSONObject
@@ -125,7 +124,6 @@ private fun PageContent(section: Section, page: Page, modifier: Modifier) {
             // page, or adding another one, stays a JSON edit.
             "health" -> HostedFragment("${section.id}/${page.id}", modifier) { healthFragment(single) }
             "healthpage" -> com.diegonmarcos.cloudme.health.HealthPage(single.optString("page"), modifier)
-            "fin" -> HostedFragment("${section.id}/${page.id}", modifier) { MyFinDashboardFragment() }
             "agenda" -> AgendaScreen(AgendaMode.EVENTS, modifier)
             "todo" -> AgendaScreen(AgendaMode.TODOS, modifier)
             "tasks" -> TasksScreen(modifier, single.optString("subject"), single.optString("open"))

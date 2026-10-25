@@ -1,15 +1,10 @@
 package com.diegonmarcos.cloudme.web
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,10 +24,7 @@ import com.diegonmarcos.superapp.bottomnav.PageTabs
 import com.diegonmarcos.superapp.bottomnav.islandEntries
 import com.diegonmarcos.fleet.web.FleetWebTheme
 import com.diegonmarcos.superapp.uikit.KitEmptyState
-import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitPalette
-import com.diegonmarcos.superapp.uikit.KitSectionHeader
-import com.diegonmarcos.superapp.uikit.LocalKitPalette
 import kotlinx.browser.document
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
@@ -93,33 +85,11 @@ private fun NavShell(decl: NavDecl) {
                 PageTabs(section.pages, pageId ?: section.pages.first().id, onSelect = { page = it.id })
             }
             Box(Modifier.weight(1f).fillMaxWidth().padding(12.dp)) {
-                if (section?.id == "buro") MockPage()
-                else KitEmptyState(null, "${section?.label ?: "This"} lives in the Android app for now")
-            }
-        }
-    }
-}
-
-private class MockRow(val title: String, val detail: String)
-
-// Mock data only: the Android app keeps the real thing in its own store; the web page has none.
-private val MOCK_ROWS = listOf(
-    MockRow("Inbox zero", "12 items filed today"),
-    MockRow("Project: garden", "3 open tasks"),
-    MockRow("Agenda", "2 events tomorrow"),
-    MockRow("Receipts", "7 to sort"),
-)
-
-/** The first section's page: a dense list of mock data (sample data). */
-@Composable
-private fun MockPage() {
-    val p = LocalKitPalette.current
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { KitSectionHeader("Buro", "${MOCK_ROWS.size} entries · sample data") }
-        items(MOCK_ROWS, key = { it.title }) { r ->
-            KitCard {
-                Text(r.title, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                Text(r.detail, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                // No store on the web: every page of every section, Buro and LLC included, is the
+                // declared page (build.json::ui) with an honest empty state, never invented rows.
+                val where = listOfNotNull(section?.label, section?.pages?.firstOrNull { it.id == pageId }?.label)
+                    .distinct().joinToString(" \u203a ").ifEmpty { "This" }
+                KitEmptyState(null, "$where has no data on the web yet; it lives in the Android app")
             }
         }
     }

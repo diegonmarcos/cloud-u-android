@@ -9,7 +9,7 @@
 #     dependency is a megabyte count before it is a complaint);
 #  3. it carries the fleet's nav (#876): composeResources/ holds me-nav.json, the build.json::ui the Android shell
 #     bakes (island ids, every section's child page ids), and the app's wasm module holds the strings of the shared
-#     island and tab strip (bottomnav_island, bottomnav_item_, pagetabs_strip) and the mock page ("sample data");
+#     island and tab strip (bottomnav_island, bottomnav_item_, pagetabs_strip) and the honest empty state of a page the web has no store for ("has no data on the web yet");
 #  4. it names no Android: the app's own JS glue carries no `android.` platform name and no
 #     androidx.(activity|fragment|core|lifecycle|navigation|appcompat) (a shared lib that
 #     leaked an Android type into commonMain shows up here even if the purity guard missed
@@ -60,10 +60,14 @@ check() {
     [ "$want" = "$have" ] || { echo "FAIL  me-nav.json is not build.json::ui (island, sections or child pages differ)"; n=$((n + 1)); }
   fi
   # Kotlin/Wasm keeps string literals in the module's data, not in the JS glue: look in both.
-  for t in bottomnav_island bottomnav_item_ pagetabs_strip sample data; do
+  for t in bottomnav_island bottomnav_item_ pagetabs_strip "has no data on the web yet"; do
     grep -qa -e "$t" "$dist"/*.wasm "$dist"/cloud-me.js 2>/dev/null \
       || { echo "FAIL  the island string '$t' is in neither the wasm modules nor the glue"; n=$((n + 1)); }
   done
+  # No invented rows: a page the web has no store for is an empty state, never sample data.
+  if grep -qaiE 'sample data' "$dist"/*.wasm "$dist"/cloud-me.js 2>/dev/null; then
+    echo "FAIL  the page carries sample data (the web has no store: show the empty state)"; n=$((n + 1))
+  fi
   local kb limit
   kb="$(du -sk "$dist" | cut -f1)"; limit=$((budget * 1024))
   [ "$kb" -le "$limit" ] || { echo "FAIL  dist is ${kb} KB, over the ${budget} MB budget"; n=$((n + 1)); }
@@ -94,7 +98,7 @@ stage() {
   rm -rf "$W/d"; mkdir -p "$W/d/composeResources/com.diegonmarcos.cloudme.web.generated/files"
   printf '<html><script src="cloud-me.js"></script></html>' > "$W/d/index.html"
   printf 'var app = "androidx.compose.ui.window";' > "$W/d/cloud-me.js"
-  printf '\0asm\1\0\0\0' > "$W/d/aaaa1111.wasm"; printf '\0asm\1\0\0\0bottomnav_island bottomnav_item_ pagetabs_strip sample data' > "$W/d/bbbb2222.wasm"
+  printf '\0asm\1\0\0\0' > "$W/d/aaaa1111.wasm"; printf '\0asm\1\0\0\0bottomnav_island bottomnav_item_ pagetabs_strip has no data on the web yet' > "$W/d/bbbb2222.wasm"
   jq -c '{sections: .ui.sections, bottom_nav: .ui.bottom_nav, default_section: .ui.default_section}' "$APPD/build.json" > "$W/d/composeResources/com.diegonmarcos.cloudme.web.generated/files/me-nav.json"
 }
 mutant() {  # mutant <label> <shell-edit-of-$W/d> <expected-substring>
@@ -118,6 +122,8 @@ mutant "a stale nav declaration (an island that is not build.json::ui)" 'jq -c "
 mutant "a nav declaration without Buro's child pages" 'jq -c "(.sections[] | select(.id == \"buro\") | .pages) = []" "$W/d/composeResources/com.diegonmarcos.cloudme.web.generated/files/me-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudme.web.generated/files/me-nav.json"' "me-nav.json is not build.json::ui"
 mutant "no island in the page"          'printf "\0asm\1\0\0\0" > "$W/d/bbbb2222.wasm"'                  "the island string 'bottomnav_island'"
 mutant "no page-tab strip in the page"  'printf "\0asm\1\0\0\0bottomnav_island bottomnav_item_" > "$W/d/bbbb2222.wasm"' "the island string 'pagetabs_strip'"
+mutant "sample data returns to the page" 'printf "bottomnav_island bottomnav_item_ pagetabs_strip has no data on the web yet 4 entries sample data" >> "$W/d/bbbb2222.wasm"' "carries sample data"
+mutant "no empty state in the page"     'printf "\0asm\1\0\0\0bottomnav_island bottomnav_item_ pagetabs_strip" > "$W/d/bbbb2222.wasm"' "the island string 'has no data on the web yet'"
 mutant "over the size budget"           'head -c $(( (BUDGET_MB + 1) * 1048576 )) /dev/zero > "$W/d/cloud-me.js.map"' "over the ${BUDGET_MB} MB budget"
 mutant "android.* in the glue"          'printf "var c = \"android.content.Context\";" > "$W/d/cloud-me.js"' "cloud-me.js names android"
 mutant "androidx.fragment in the glue"  'printf "var c = \"androidx.fragment.app.Fragment\";" > "$W/d/cloud-me.js"' "cloud-me.js names android"
