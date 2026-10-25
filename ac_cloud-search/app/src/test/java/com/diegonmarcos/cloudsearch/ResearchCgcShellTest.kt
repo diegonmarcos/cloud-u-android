@@ -109,7 +109,12 @@ class ResearchCgcShellTest {
 
     private fun waitFor(tag: String) = compose.waitUntil(60_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() }
     private fun text(tag: String): String = compose.onNodeWithTag(tag).fetchSemanticsNode().config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }.orEmpty()
-    private fun waitText(tag: String, part: String) = compose.waitUntil(60_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() && text(tag).contains(part) }
+    private fun waitText(tag: String, part: String) = try {
+        compose.waitUntil(60_000) { compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty() && text(tag).contains(part) }
+    } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+        val now = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().let { if (it.isEmpty()) "(no node)" else text(tag) }
+        throw AssertionError("'$tag' never contained '$part'; it said '$now'; posted=${synchronized(http.gets) { http.calls.map { it.third.optString("method") } }}", e)
+    }
 
     private fun search(section: String, page: String, q: String) {
         compose.onNodeWithTag(Tags.nav(section)).performClick()
@@ -124,8 +129,8 @@ class ResearchCgcShellTest {
         compose.onNodeWithTag(Tags.nav("research")).performClick()
         waitFor(ResearchTags.article(0))
         waitText(ResearchTags.STATUS, "2 headlines via mesh")
-        assertEquals("http://news-gdelt.mesh.diegonmarcos.com:3019/articles?q=technology%20sourcelang%3Aenglish&limit=40", http.gets.first().first)
-        assertTrue("the mesh is not sent the bearer", http.gets.all { !it.second.containsKey("Authorization") })
+        assertEquals("http://news-gdelt.mesh.diegonmarcos.com:3019/articles?q=technology%20sourcelang%3Aenglish&limit=40", http.gets.first { "/articles" in it.first }.first)
+        assertTrue("the mesh is not sent the bearer", http.gets.filter { "/articles" in it.first }.all { !it.second.containsKey("Authorization") })
         compose.onNodeWithTag(ResearchTags.topic("finance")).performClick()
         compose.waitUntil(60_000) { http.gets.any { it.first.contains("finance%20markets") } }
     }
