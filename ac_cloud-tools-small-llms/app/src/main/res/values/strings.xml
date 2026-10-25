@@ -4,7 +4,7 @@
     <string name="chat_hint">Ask one of the models…</string>
     <string name="chat_send">Send</string>
     <string name="chat_empty_title">Chat with the small and medium models</string>
-    <string name="chat_empty_body">Pick a task below; the app picks the model, runs it on this phone's runtime when it is Loaded or on OpenRouter otherwise, and names it under each answer. Everything is recorded in Costs.</string>
+    <string name="chat_empty_body">Pick a task below; the app picks the model, runs it on this phone\'s runtime when it is Loaded or on OpenRouter otherwise, and names it under each answer. Everything is recorded in Costs.</string>
     <string name="chat_working">Working…</string>
     <string name="chat_failed">Failed: %1$s</string>
     <string name="chat_clear">Clear chat</string>
@@ -69,7 +69,7 @@
     <string name="chat_stronger">Stronger</string>
     <string name="settings_pin">Advanced: pin model</string>
     <string name="settings_pin_auto">Auto: the task picks the model</string>
-    <string name="settings_pin_note">A pinned model answers every chat turn instead of the task's small and medium ones.</string>
+    <string name="settings_pin_note">A pinned model answers every chat turn instead of the task\'s small and medium ones.</string>
     <string name="backend_openrouter">OpenRouter</string>
     <string name="backend_local">Local</string>
     <string name="backend_load_in_store">Load a model in Store</string>
