@@ -134,9 +134,9 @@ class MeShellTest {
         compose.waitForIdle()
         compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertIsDisplayed()
         for (s in Sections.all()) compose.onNodeWithTag(MeTopBar.drawerItem(s.id)).assertExists()
-        compose.onNodeWithTag(MeTopBar.drawerItem("house")).performClick()
+        compose.onNodeWithTag(MeTopBar.drawerItem("duties")).performClick()
         compose.waitForIdle()
-        assertEquals(listOf("house"), opened)
+        assertEquals(listOf("duties"), opened)
         compose.onNodeWithTag(TopFirstRowTags.DROPDOWN).assertDoesNotExist()
     }
 

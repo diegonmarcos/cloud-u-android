@@ -25,9 +25,15 @@ Agenda's two and the Projects' three each live together instead of in one
 1100-line blob where a page was a key prefix and nothing else.
 
 A tab that declares `pages` of its own is a container: it holds no file, its
-children live one folder deeper (`ui/buro/fin/acct.json`) and the app draws a
-second, quieter strip beneath the first. Buro › Fin is the only one — Acct,
-Budget and Portfolio are three views of one question.
+children live one folder deeper and the app draws a second, quieter strip
+beneath the first. No section uses one today: Buro and LLC use `nav_mode`
+`many_rows` with `groups` (`{id,label,icon,pages:[ids]}`, every page in exactly
+one group), the same contract as Health.
+
+Buro and LLC pages are stacks that carry `ledger` blocks: the owner's typed
+records (collections of flat records, fields typed text/money/date/choice) in
+the `buro_user` / `llc_user` stores, plus derived reports. Nothing is seeded;
+an empty collection says what it is for.
 
 A section with a `target` and no `pages` — Wallet, in the bottom bar — has no
 folder here. It launches Cloud Wallet and hosts nothing.

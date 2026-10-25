@@ -49,7 +49,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Renders one page's list of blocks. Eleven block kinds cover every page in
+ * Renders one page's list of blocks. Thirteen block kinds cover every page in
  * the app that is not a library surface:
  *
  *   section_title  a heading between blocks
@@ -66,6 +66,7 @@ import org.json.JSONObject
  *   link           one tappable row: `label` and `url`
  *   about          version, commit, build time and the update control
  *   permissions    the runtime permissions from build.json, requestable inline
+ *   ledger         the owner's typed records and derived reports (Buro, LLC): see [LedgerBlock]
  *
  * Adding a page means adding JSON, not Kotlin. An unrecognised kind renders
  * its `title` and nothing else, so a typo shows up as a stub on the phone
@@ -115,6 +116,7 @@ private fun Block(o: JSONObject) {
         "link" -> LinkRow(o.optString("label"), o.optString("url"))
         "about" -> AboutCard(o)
         "permissions" -> PermissionsCard(o)
+        "ledger" -> LedgerBlock(o)
         // `fragment` is consumed by SectionScreen when it is a page's
         // only block; reaching here means it was mixed into a longer
         // stack, which this renderer has no container for.

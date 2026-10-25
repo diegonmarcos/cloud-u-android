@@ -52,21 +52,17 @@ has 'R.string.action_back'    "$WEB_KT" "the control carries a contentDescriptio
 # because it no longer exists, not because the rule stopped applying: the rule is
 # about the dispatcher branch, which MySocials still exercises.
 echo "== T4: the reported page is a plain URL — engine-routed, not special-cased =="
-python3 - "$BJ" <<'PY' && ok "MySocials target is a plain http(s) URL" || bad "the reported tile is no longer a plain URL target"
+# MySocials left the Me row (owner order, Cloud Me restructure); the rule is about the dispatcher branch, which
+# every https tile of Cloud > Apps exercises, so the check now holds each of them to a plain http(s) URL.
+python3 - "$BJ" <<'PY' && ok "web tiles of Cloud > Apps have plain http(s) URL targets" || bad "no web tile is left, or one is not a plain URL target"
 import json,sys
 d=json.load(open(sys.argv[1]))
-found={}
-def walk(n):
-    if isinstance(n,dict):
-        if n.get("id") == "mysocials" and "target" in n:
-            found[n["id"]]=n["target"]
-        for v in n.values(): walk(v)
-    elif isinstance(n,list):
-        for v in n: walk(v)
-walk(d)
-assert set(found)=={"mysocials"}, found
+cloud=next(s for s in d["ui"]["sections"] if s["id"]=="cloud")
+found={t["id"]:t["target"] for g in cloud["tile_groups"] for t in g["tiles"]
+       if isinstance(t.get("target"),str) and t["target"].startswith(("http://","https://"))}
+assert found, "no https tile left in Cloud > Apps to exercise the dispatcher"
 for i,t in found.items():
-    assert t.startswith("http://") or t.startswith("https://"), (i,t)
+    assert " " not in t and "#Intent" not in t, (i,t)
 PY
 lacks 'mysocials' "$SHELL_KT" "no per-page special case for MySocials in the dispatcher"
 

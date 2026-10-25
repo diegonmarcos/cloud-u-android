@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""data/web/mysocials/data-linkedin.json.js -> data/ui/study/{cv,roadmap}.json + data/ui/work/{employed,endeavours}.json
+"""data/web/mysocials/data-linkedin.json.js -> data/ui/study/{cv,roadmap}.json + data/ui/llc/{employed,side-hustles}.json
 
-Study (CV, Roadmap) and Work (Employed, Endeavours) are the owner's public LinkedIn
-profile, already bundled for Profile > Professional. There is no LinkedIn API, so
+Study (CV, Roadmap) and the history half of LLC (Employed, Side hustles; the former Work
+section) are the owner's public LinkedIn profile, already bundled for Profile > Professional. There is no LinkedIn API, so
 the bundle is the one source: when the profile changes, refresh that bundle, then
 run this. Nothing is typed twice.
 
@@ -18,8 +18,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, "web", "mysocials", "data-linkedin.json.js")
 UI = os.path.join(HERE, "ui")
 REF_YEAR = 2026
-BREAK = "Career break"  # not employment: kept on the CV, left out of Work
-# Endeavours (Work > Endeavours) are the roles at ventures the owner runs himself; every other role is Employed.
+BREAK = "Career break"  # not employment: kept on the CV, left out of LLC
+# Side hustles (LLC > Side hustles, the former Work > Endeavours) are the roles at ventures the owner runs himself; every other role is Employed.
 ENDEAVOURS = ("LEAF.Y", "Nexus Ventures")
 
 
@@ -87,17 +87,38 @@ def build(d):
     jobs = [e for e in d["experience"] if not e["company"].startswith(BREAK)]
     own = [e for e in jobs if e["company"].startswith(ENDEAVOURS)]
     employed = [e for e in jobs if e not in own]
+    # The owner's typed records (llc_user store) lead each page; the profile's roles follow as history.
     work = [
+        {"kind": "ledger", "store": "llc_user", "currency": "EUR", "reports": ["income"], "ledgers": [{
+            "collection": "employment", "title": "Employment income and contracts",
+            "empty": "No employment contract recorded yet. Add each employer with its gross monthly pay; leave the end date blank while it runs.",
+            "fields": [
+                {"id": "employer", "label": "Employer", "type": "text", "required": True},
+                {"id": "role", "label": "Role", "type": "text"},
+                {"id": "gross_monthly", "label": "Gross monthly", "type": "money", "required": True},
+                {"id": "start", "label": "Start", "type": "date"},
+                {"id": "end", "label": "End", "type": "date"},
+                {"id": "note", "label": "Note", "type": "text"}]}]},
+        {"kind": "section_title", "title": "History from the profile"},
         {"kind": "note", "title": "Employed",
-         "body": f"{len(employed)} roles, newest first. Own ventures are under Endeavours; career breaks are on the CV, not here."},
+         "body": f"{len(employed)} roles, newest first. Own ventures are under Side hustles; career breaks are on the CV, not here."},
         {"kind": "cards", "items": [job_card(e, body=True) for e in employed]},
     ]
     endeavours = [
-        {"kind": "note", "title": "Endeavours",
+        {"kind": "ledger", "store": "llc_user", "currency": "EUR", "reports": ["income"], "ledgers": [{
+            "collection": "side_income", "title": "Side-hustle income",
+            "empty": "No side-hustle income recorded yet. Add each payment with its date and the venture it came from.",
+            "fields": [
+                {"id": "venture", "label": "Side hustle", "type": "text", "required": True},
+                {"id": "date", "label": "Date", "type": "date", "required": True},
+                {"id": "amount", "label": "Amount", "type": "money", "required": True},
+                {"id": "note", "label": "Note", "type": "text"}]}]},
+        {"kind": "section_title", "title": "Ventures from the profile"},
+        {"kind": "note", "title": "Side hustles",
          "body": f"{len(own)} own ventures, newest first."},
         {"kind": "cards", "items": [job_card(e, body=True) for e in own]},
     ]
-    return {"study/cv.json": cv, "study/roadmap.json": roadmap, "work/employed.json": work, "work/endeavours.json": endeavours}
+    return {"study/cv.json": cv, "study/roadmap.json": roadmap, "llc/employed.json": work, "llc/side-hustles.json": endeavours}
 
 
 def main(argv):

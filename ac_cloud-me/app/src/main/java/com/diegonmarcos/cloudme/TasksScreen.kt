@@ -59,7 +59,7 @@ object TasksTags {
  * With no engine or no account every view says it is empty; nothing is invented.
  */
 @Composable
-fun TasksScreen(modifier: Modifier = Modifier) {
+fun TasksScreen(modifier: Modifier = Modifier, subject: String = "", openTarget: String = "") {
     val ctx = LocalContext.current
     val engine = remember { CalEngineClient(ctx) }
     var items by remember { mutableStateOf<List<TaskItem>>(emptyList()) }
@@ -75,11 +75,12 @@ fun TasksScreen(modifier: Modifier = Modifier) {
         items = loaded.getOrDefault(emptyList())
         notice = loaded.exceptionOrNull()?.message
     }
-    TasksContent(items, notice, modifier)
+    TasksContent(TasksModel.forSubject(items, subject), notice, modifier, openTarget = openTarget)
 }
 
 @Composable
-fun TasksContent(items: List<TaskItem>, notice: String?, modifier: Modifier = Modifier, today: Long = System.currentTimeMillis()) {
+fun TasksContent(items: List<TaskItem>, notice: String?, modifier: Modifier = Modifier, today: Long = System.currentTimeMillis(), openTarget: String = "") {
+    val onTarget = LocalMeTarget.current
     var view by rememberSaveable { mutableStateOf(TasksView.DAY) }
     var day by remember { mutableLongStateOf(TasksModel.startOfDay(today)) }
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -93,6 +94,9 @@ fun TasksContent(items: List<TaskItem>, notice: String?, modifier: Modifier = Mo
                     color = colorResource(if (on) R.color.me_primary else R.color.me_text_dim), fontSize = 13.sp, textAlign = TextAlign.Center)
             }
         }
+        // Cloud Me reads the engine; writing an event or a task is Cloud Tasks' job (it owns the CalDAV account).
+        if (openTarget.isNotBlank()) Text("Add or edit in Cloud Tasks", Modifier.padding(top = 10.dp).clickable { onTarget(openTarget) }.padding(vertical = 6.dp),
+            color = colorResource(R.color.me_primary), fontSize = 13.sp)
         if (notice != null) Dim(notice)
         when (view) {
             TasksView.DAY -> DayView(items, day, today) { day = it }

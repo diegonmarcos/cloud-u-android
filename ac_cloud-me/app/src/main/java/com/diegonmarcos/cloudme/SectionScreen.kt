@@ -128,7 +128,7 @@ private fun PageContent(section: Section, page: Page, modifier: Modifier) {
             "fin" -> HostedFragment("${section.id}/${page.id}", modifier) { MyFinDashboardFragment() }
             "agenda" -> AgendaScreen(AgendaMode.EVENTS, modifier)
             "todo" -> AgendaScreen(AgendaMode.TODOS, modifier)
-            "tasks" -> TasksScreen(modifier)
+            "tasks" -> TasksScreen(modifier, single.optString("subject"), single.optString("open"))
             "files" -> FilesScreen(single, modifier)
             "web" -> WebPage(single, modifier)
             else -> StackScreen(stack, modifier)

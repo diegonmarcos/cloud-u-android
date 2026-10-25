@@ -1,0 +1,38 @@
+package com.diegonmarcos.cloudme
+
+/**
+ * Where the destinations of the retired Cloud Me layout went, so a saved state, a SuperApp tile or a shortcut written
+ * against the old ids still lands somewhere sensible instead of nowhere. The Work section is now LLC (Employed kept,
+ * Endeavours became Side hustles); House is gone and its household bills, inventory and upkeep belong to Buro > Docs
+ * (Assets, Services, Liabilities & Taxes); Profile > Tasks moved to its own Duties section; Buro's old Docs, Fin and
+ * Summary pages became the Buro groups. Old stores held no user entries (Work and House were generated or empty pages),
+ * so routes are the whole migration of the navigation; the Work pages' content moved with its generator (data/regen-study.py).
+ */
+object LegacyRoutes {
+    /** "section/page" (or "section" alone) to its new "section/page". */
+    private val moved: Map<String, String> = mapOf(
+        "work/employed" to "llc/employed",
+        "work/endeavours" to "llc/side-hustles",
+        "work" to "llc/employed",
+        "house/manage" to "buro/assets",
+        "house" to "buro/assets",
+        "me/tasks" to "duties/tasks",
+        "buro/summary" to "buro/ids",
+        "buro/docs" to "buro/assets",
+        "buro/fin" to "buro/cashflow",
+        "buro/acct" to "buro/cashflow",
+        "buro/budget" to "buro/budgeting",
+        "buro/portfolio" to "llc/portfolio",
+    )
+
+    /** The new (section, page) for an old one; the arguments come back unchanged when nothing moved. */
+    fun resolve(section: String, page: String?): Pair<String, String?> {
+        val hit = moved["$section/${page.orEmpty()}".trimEnd('/')]
+        // A page of a retired section that the table does not list still opens the section's new home.
+        val fallback = if (hit == null && section in RETIRED_SECTIONS) moved.getValue(section) else null
+        val to = hit ?: fallback ?: return section to page
+        return to.substringBefore('/') to to.substringAfter('/', "").ifBlank { null }
+    }
+
+    private val RETIRED_SECTIONS = setOf("work", "house")
+}

@@ -1,0 +1,15 @@
+[
+  {
+    "kind": "fragment",
+    "id": "files",
+    "root": "wallet/ids",
+    "order": [
+      "id",
+      "doc"
+    ],
+    "labels": {
+      "id": "IDs",
+      "doc": "Documents"
+    }
+  }
+]

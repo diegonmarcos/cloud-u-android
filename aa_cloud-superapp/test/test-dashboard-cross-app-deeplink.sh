@@ -57,7 +57,7 @@ d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
 group = next(g for g in cloud["tile_groups"] if g["title"] == "Me")
 tiles = {t.get("id"): t for t in group["tiles"]}
-want = {"myhealth": "extapp:cloud-me#page:health/body"}
+want = {"myhealth": "extapp:cloud-me#page:health/home"}
 for tid, target in want.items():
     assert tid in tiles, f"Me tile {tid} is gone — the icon must remain"
     assert tiles[tid]["target"] == target, (tid, tiles[tid]["target"], "!=", target)
@@ -147,7 +147,8 @@ ROWS = {
     # #1092: the row is "Me" (was "Projects Me"), placed right after Data Apps. The Me app leads, one rule,
     # then MySocials, MyBuro, MyHealth, MyStudy, MyTrips as the owner ordered. Agenda left the row (it is
     # reachable inside the Me app); the old rules projects-me-sep-0/1/2 went with the old layout.
-    "Me": ["tools-account", "me", "me-sep-1", "mysocials", "myburo", "myhealth", "mystudy", "mytrips"],
+    # Owner order (Cloud Me restructure): Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC.
+    "Me": ["tools-account", "me", "me-sep-1", "myhealth", "mystudy", "myachieves", "me-sep-2", "myduties", "myburo", "myllc"],
     # Four named boards and no rule — task 311 removed PM Boards, PM C3 and the
     # "|" between them. The rule had marked the board LIST off from the named
     # boards; with the list gone there are no longer two kinds of destination in
@@ -166,7 +167,6 @@ TARGETS = {
     # tile from this row, so its deep link is no longer pinned here.
     "tools-account": "page:config/profile",
     "me":        "extapp:cloud-me",
-    "mysocials": "https://diegonmarcos.github.io/mySocials/",
     # A board uuid, baked in at build time because paca's projects table has no
     # slug column and its router only declares /projects/$projectId — there is
     # no name-based route to prefer. Recreating the paca database reissues the
@@ -180,10 +180,12 @@ TARGETS = {
     "mqpm-stochbates": "https://paca.diegonmarcos.com/projects",
     "pmx":       "https://paca.diegonmarcos.com/projects",
     "pm-zirkus": "https://paca.diegonmarcos.com/projects",
-    "myburo":    "extapp:cloud-me#page:buro/summary",
-    "myhealth":  "extapp:cloud-me#page:health/body",
-    "mystudy":   "extapp:cloud-me#page:study/cv",
-    "mytrips":   "extapp:cloud-me#page:achieves/trips",
+    "myhealth":    "extapp:cloud-me#page:health/home",
+    "mystudy":     "extapp:cloud-me#page:study/cv",
+    "myachieves":  "extapp:cloud-me#page:achieves/personal",
+    "myduties":    "extapp:cloud-me#page:duties/tasks",
+    "myburo":      "extapp:cloud-me#page:buro/ids",
+    "myllc":       "extapp:cloud-me#page:llc/employed",
 }
 
 def kind(tile):
@@ -232,9 +234,8 @@ for title, want_order in ROWS.items():
     # second rule divides Buro pages from Projects pages and BOTH are deep
     # links, so the stronger assertion would be false, and a tester that
     # asserts something false is deleted the first time it is inconvenient.
-    # EXCEPTION, owner order #1092: the Me row is declared as `Me | MySocials MyBuro MyHealth MyStudy
-    # MyTrips`, so its second run mixes the web link with the Cloud-Me deep links by design. Only that
-    # row is exempt; every other row keeps the rule.
+    # EXCEPTION: the Me row's first run is `Account Me` (an in-app page and an app launch) by owner
+    # order, so that run mixes kinds by design. Only that row is exempt; every other row keeps the rule.
     for run in ([] if title == "Me" else runs):
         kinds = {kind(t) for t in run}
         assert len(kinds) == 1, (
@@ -278,7 +279,7 @@ titles = [g["title"] for g in cloud["tile_groups"]]
 want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Projects W", "Configs"]
 assert titles == want, (titles, "!=", want)
 g = {x["title"]: [t.get("label") for t in x["tiles"]] for x in cloud["tile_groups"]}
-assert g["Me"] == ["Account", "Me", "|", "MySocials", "MyBuro", "MyHealth", "MyStudy", "MyTrips"], g["Me"]
+assert g["Me"] == ["Account", "Me", "|", "Me-Health", "Me-Study", "Me-Achieves", "|", "Me-Duties", "Me-Buro", "Me-LLC"], g["Me"]
 assert g["Tools Primary"][-3:] == ["Wallet", "Vault", "Light"] and "Account" not in g["Tools Primary"], g["Tools Primary"]  # #1155 order; Account moved to Me, before the Me tile
 assert "Vault" not in g["Data Apps"] and "Me" not in g["Tools Primary"], g
 assert "Account" in g["Configs"], "Account must stay in Configs (intentional duplicate)"

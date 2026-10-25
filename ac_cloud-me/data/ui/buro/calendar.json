@@ -1,0 +1,9 @@
+[
+  {
+    "kind": "fragment",
+    "id": "tasks",
+    "title": "Calendar",
+    "subject": "Buro",
+    "open": "extapp:cloud-tasks"
+  }
+]

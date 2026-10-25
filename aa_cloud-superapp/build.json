@@ -2364,7 +2364,7 @@
             "title": "MyBuro/MyFin",
             "anchor": "myburo/myfin",
             "aliases": ["myfin", "my-fin"],
-            "url": "extapp:cloud-me#page:buro/fin"
+            "url": "extapp:cloud-me#page:buro/cashflow"
           },
           {
             "_doc": "MyHealth (was 'My-health'): Health Connect board. The kind stays board_steps. `aliases` are the retired ids that still resolve.",
@@ -2797,7 +2797,7 @@
             ]
           },
           {
-            "_doc": "Me — the personal-administration row (renamed from 'Projects Me', moved to sit right after Tools Primary and before AGI, #1092). The Me app leads, a rule divides it from the five Cloud-Me/web entries: MySocials (the one web destination), then the Cloud-Me deep links MyBuro, MyHealth, MyStudy, MyTrips. Agenda is no longer a tile of its own here; it stays reachable inside the Me app.",
+            "_doc": "Me — the personal-administration row, in the owner's order: Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC ('|' = group separators, like the AGI row). Account stays first (#1167); the Me app leads the rest; each Me-* tile deep-links into the matching Cloud-Me section. MySocials and MyTrips left the row (Trips is a page of Achieves). Pinned by test-me-account-tile.sh.",
             "title": "Me",
             "tiles": [
               {
@@ -2814,45 +2814,58 @@
                 "target": "extapp:cloud-me"
               },
               {
-                "_doc": "Rule between the Me app and its sub-entries. NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|' (same separator item as Data Apps and Configs).",
+                "_doc": "Rule between the Me app and its sub-entries (Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC). NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|' (same separator item as Data Apps and Configs).",
                 "id": "me-sep-1",
                 "label": "|",
                 "separator": true
               },
               {
-                "_doc": "MySocials — a static site on github.io, not a Cloud-Me page and not a mesh service. It TRAILS the row now (task 503) — moved from between Agenda and MyBuro to the very end, after MyTrips, so the owner's one outward-facing link comes last and everything before the rule ahead of it points inward at Cloud-Me. Tapping it opens the in-app browser rather than another app, which is the difference the rule ahead of it marks.",
-                "id": "mysocials",
-                "label": "MySocials",
-                "icon": "ic_p_identities",
-                "target": "https://diegonmarcos.github.io/mySocials/"
-              },
-              {
-                "_doc": "MyBuro — Cloud-Me's Buro section, entered at its Summary tab (ac_cloud-me/build.json::ui.sections[buro].pages[0]), which is the index of Wallet, Docs, Fin and Vault rather than any one of them. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar. The fragment names `buro/summary` and not `buro`, because a bare section target lands on whatever page happens to be first and would silently follow a reorder there. Not installed → the same download-and-install path every other extapp tile uses.",
-                "id": "myburo",
-                "label": "MyBuro",
-                "icon": "ic_p_folder",
-                "target": "extapp:cloud-me#page:buro/summary"
-              },
-              {
-                "_doc": "MyHealth — MIGRATED to Cloud-Me (Projects > Health), which hosts the same libs:health Compose surface and now owns the only copy of it. The SuperApp's `health` section keeps nothing but the metric taxonomy Configs > Permissions still counts against; its pages are gone. Same `extapp:<appId>#<target>` hand-off as the tiles beside it.",
+                "_doc": "Me-Health \u2014 Cloud-Me's Health section, entered at its Index page (the MyHealth tile, renamed). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
                 "id": "myhealth",
-                "label": "MyHealth",
+                "label": "Me-Health",
                 "icon": "ic_heart",
                 "target": "extapp:cloud-me#page:health/home"
               },
               {
-                "_doc": "MyStudy — Cloud-Me's Projects > Studying page. The fragment is `projects/studying` and not `projects/study`, because the id the router resolves is the page's own declared id (ac_cloud-me/build.json::ui.sections[projects].pages[id=studying]) and not the label on the tile: Cloud-Me's Section.page() flattens a section's whole strip tree into one id list, so guessing at the id is how a tile lands on the app's front door and looks like it half-worked. test-dashboard-cross-app-deeplink.sh T3 walks that flattened tree and fails if this ever stops resolving.",
+                "_doc": "Me-Study \u2014 Cloud-Me's Study section, entered at its CV page (the MyStudy tile, renamed). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
                 "id": "mystudy",
-                "label": "MyStudy",
+                "label": "Me-Study",
                 "icon": "ic_file_stack",
                 "target": "extapp:cloud-me#page:study/cv"
               },
               {
-                "_doc": "MyTrips — Cloud-Me's Projects > Trips page. Same id-not-label rule as MyStudy: `projects/trips` is the declared page id, proven against ac_cloud-me/build.json by T3. Not to be confused with the MyTrips that libs:maps used to render inside this app — that module moved to Cloud-Nav, and this tile reaches the Cloud-Me page rather than the map timeline.",
-                "id": "mytrips",
-                "label": "MyTrips",
+                "_doc": "Me-Achieves \u2014 Cloud-Me's Achieves section (Personal, Pursuits, International Experience, Trips); it replaces the MyTrips tile, Trips being a page of Achieves. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
+                "id": "myachieves",
+                "label": "Me-Achieves",
                 "icon": "ic_map_pin",
-                "target": "extapp:cloud-me#page:achieves/trips"
+                "target": "extapp:cloud-me#page:achieves/personal"
+              },
+              {
+                "_doc": "Second rule of the Me row, between Me-Health Me-Study Me-Achieves and Me-Duties Me-Buro Me-LLC, like the AGI row. NOT a tile: declares no target; GroupedTilesFragment draws it as a bare non-clickable '|'. test-me-account-tile.sh pins the row.",
+                "id": "me-sep-2",
+                "label": "|",
+                "separator": true
+              },
+              {
+                "_doc": "Me-Duties \u2014 Cloud-Me's Duties section, the Tasks page (Day, Subject and Calendar views over the calendar engine). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
+                "id": "myduties",
+                "label": "Me-Duties",
+                "icon": "ic_check_all",
+                "target": "extapp:cloud-me#page:duties/tasks"
+              },
+              {
+                "_doc": "Me-Buro \u2014 Cloud-Me's Buro section, entered at IDs & DD (the MyBuro tile, renamed; Buro has four row groups: IDs & DD, Docs, Financial Reports, Calendar). Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
+                "id": "myburo",
+                "label": "Me-Buro",
+                "icon": "ic_p_folder",
+                "target": "extapp:cloud-me#page:buro/ids"
+              },
+              {
+                "_doc": "Me-LLC \u2014 Cloud-Me's LLC section, the former Work, entered at Employed. Same `extapp:<appId>#<target>` hand-off as the tiles beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar; not installed, the same download-and-install path every other extapp tile uses. The fragment names declared section/page ids of ac_cloud-me/build.json (test-dashboard-cross-app-deeplink.sh T3 proves they resolve).",
+                "id": "myllc",
+                "label": "Me-LLC",
+                "icon": "ic_p_accounts",
+                "target": "extapp:cloud-me#page:llc/employed"
               }
             ]
           },

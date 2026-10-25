@@ -1,7 +1,51 @@
 [
   {
+    "kind": "ledger",
+    "store": "llc_user",
+    "currency": "EUR",
+    "reports": [
+      "income"
+    ],
+    "ledgers": [
+      {
+        "collection": "side_income",
+        "title": "Side-hustle income",
+        "empty": "No side-hustle income recorded yet. Add each payment with its date and the venture it came from.",
+        "fields": [
+          {
+            "id": "venture",
+            "label": "Side hustle",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "id": "amount",
+            "label": "Amount",
+            "type": "money",
+            "required": true
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "section_title",
+    "title": "Ventures from the profile"
+  },
+  {
     "kind": "note",
-    "title": "Endeavours",
+    "title": "Side hustles",
     "body": "2 own ventures, newest first."
   },
   {

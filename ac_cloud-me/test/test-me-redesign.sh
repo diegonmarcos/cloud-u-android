@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tester (#1144, #1150): Cloud Me's seven-section bar, the Samsung Health page tabs, the fleet top bar (hamburger,
 # AI, Profile, Configs), the Achieves text, the tap-only side menu (no edge-swipe), the Account launch and the removed
-# Wallet link, plus the Work / House / Tasks page shapes.
+# Wallet link, plus the LLC / Buro / Duties page shapes.
 # Structure and data only; the RENDERED strip, bar and top bar are measured by app/src/test/.../MeTabsTest.
 # Every check is proven red by its own mutation of a copy of the tree (the tail of this file).
 set -u
@@ -47,8 +47,8 @@ def strings(o):
         for v in o: yield from strings(v)
 
 # ---- N1 nav order
-want_ids = ["health", "study", "achieves", "me", "house", "work", "buro"]
-want_labels = ["Health", "Study", "Achieves", "Profile", "House", "Work", "Buro"]
+want_ids = ["health", "study", "achieves", "me", "duties", "buro", "llc"]
+want_labels = ["Health", "Study", "Achieves", "Profile", "Duties", "Buro", "LLC"]
 if ui.get("bottom_nav") != want_ids:
     bad("nav-order", f"ui.bottom_nav is {ui.get('bottom_nav')}, wanted {want_ids}")
 if [secs[i]["label"] for i in ui.get("bottom_nav", []) if i in secs] != want_labels:
@@ -196,21 +196,73 @@ for lib_bar in (lib_bar, lib_row):
     if m:
         bad("no-drawer", f"the lib AppTopBar carries `{m.group(0)}`: the side menu must open by tap only")
 
-# ---- N7a House replaces Home; Agenda / Todo are one Tasks page under Profile; Trips is under Achieves
+# ---- N7a House is gone and Work is LLC; Tasks moved from Profile to Duties; Trips is under Achieves
 if "home" in secs:
-    bad("pages", "the Home section is back; it is House (House Management)")
-if [p["id"] for p in secs.get("house", {}).get("pages", [])] != ["manage"]:
-    bad("pages", "House is not the single House Management page")
-if [p["id"] for p in secs.get("me", {}).get("pages", [])] != ["professional", "personal", "tasks"]:
-    bad("pages", "Profile pages are not Professional, Personal, Tasks")
-for gone in ("agenda", "todo", "pm"):
-    if any(p["id"] == gone for p in pages(secs.get("house", {}).get("pages"))):
-        bad("pages", f"House still carries {gone}")
+    bad("pages", "the Home section is back")
+for gone in ("house", "work"):
+    if gone in secs or gone in ui.get("bottom_nav", []):
+        bad("pages", f"the retired {gone} section is declared again")
+    if os.path.isdir(os.path.join(app, "data/ui", gone)):
+        bad("pages", f"data/ui/{gone} is back")
+if [p["id"] for p in secs.get("me", {}).get("pages", [])] != ["professional", "personal"]:
+    bad("pages", "Profile pages are not Professional, Personal")
+if [p["id"] for p in secs.get("duties", {}).get("pages", [])] != ["tasks"]:
+    bad("pages", "Duties is not the single Tasks page")
 if os.path.isdir(os.path.join(app, "data/ui/home")):
     bad("pages", "data/ui/home is back")
 blob_all = "".join(open(os.path.join(r, f), encoding="utf-8").read() for r, _, fs in os.walk(os.path.join(app, "data/ui")) for f in fs if f.endswith(".json"))
-if "page:home/" in blob_all:
-    bad("pages", "a page still targets page:home/...")
+for dead in ("page:home/", "page:house/", "page:work/", "page:me/tasks"):
+    if dead in blob_all:
+        bad("pages", f"a page still targets {dead}...")
+
+# the many_rows contract of Buro and LLC: every flat page in exactly one group, groups have a label and an icon from libs:ui-icons
+icons = open(os.path.join(libs, "ui-icons/src/main/kotlin/com/diegonmarcos/superapp/uiicons/UiIcons.kt"), encoding="utf-8").read()
+want_groups = {
+    "buro": {"ids": ["ids", "dd", "wallet", "account"], "docs": ["assets", "services", "liabilities"], "reports": ["budgeting", "cashflow"], "calendar": ["calendar"]},
+    "llc": {"income": ["employed", "side-hustles"], "manage": ["assets", "portfolio"], "calendar": ["calendar"]},
+}
+for sid, want in want_groups.items():
+    sec = secs.get(sid, {})
+    if sec.get("nav_mode") != "many_rows":
+        bad("pages", f"{sid} is not on the many_rows nav mode")
+    got = {g["id"]: g["pages"] for g in sec.get("groups", [])}
+    if got != want:
+        bad("pages", f"{sid} groups are {got}, wanted {want}")
+    flat = [p["id"] for p in sec.get("pages", [])]
+    allg = [x for g in sec.get("groups", []) for x in g["pages"]]
+    if sorted(flat) != sorted(allg):
+        bad("pages", f"{sid}: every page must be in exactly one group")
+    for g in sec.get("groups", []):
+        if not g.get("label") or f'"{g.get("icon")}"' not in icons:
+            bad("pages", f"{sid} group {g.get('id')} has no label or an icon that libs:ui-icons does not hold")
+    for p in sec.get("pages", []):
+        if f'"{p.get("icon")}"' not in icons:
+            bad("pages", f"{sid} page {p['id']} icon {p.get('icon')} is not in libs:ui-icons")
+
+# Buro and LLC user data: every ledger block names a declared store, typed fields, and only known report ids
+known_reports = {"budget_vs_actual", "accounts_vs_cashflow", "portfolio", "income"}
+stores = {"buro": "buro_user", "llc": "llc_user"}
+fc = json.load(open(os.path.join(libs, "fleetconfig-model/src/main/assets/fleet-config.json"), encoding="utf-8"))
+for sid, store in stores.items():
+    st = fc.get("stores", {}).get(store)
+    if not st or "ac_cloud-me" not in st.get("used_by", []) or st.get("class") != "config":
+        bad("pages", f"{store} is not a declared config store of ac_cloud-me in fleet-config.json (the backup would miss it)")
+    for pg in secs.get(sid, {}).get("pages", []):
+        f = os.path.join(app, f"data/ui/{sid}/{pg['id']}.json")
+        for blk in json.load(open(f, encoding="utf-8")) if os.path.exists(f) else []:
+            if blk.get("kind") != "ledger":
+                continue
+            if blk.get("store") != store:
+                bad("pages", f"{f} ledger names store {blk.get('store')}, wanted {store}")
+            for r in blk.get("reports", []):
+                if r not in known_reports:
+                    bad("pages", f"{f} names an unknown report {r}")
+            for led in blk.get("ledgers", []):
+                for fld in led.get("fields", []):
+                    if fld.get("type") not in ("text", "money", "date", "choice") or (fld["type"] == "choice" and not fld.get("options")):
+                        bad("pages", f"{f} field {fld.get('id')} has a bad type or no options")
+                if any(k in json.dumps(led) for k in ("sample", "mock", "demo")):
+                    bad("pages", f"{f} carries sample/mock/demo text: ledgers are empty until typed into")
 
 # ---- N6 Account: renamed from Vault and launching Cloud Account
 buro = secs["buro"]
@@ -255,12 +307,13 @@ if "extapp:cloud-wallet" in blob:
 want_pages = {
     "health": ["Index", "Anthropometrics", "Circadian", "Biomarkers", "Timeline", "Objectives", "Matrix", "Culinary", "Absorption clash", "Thermal", "Hemodynamics", "Supermarket", "Dossier", "Workout plan", "Activities", "Body comp", "HR & HRV", "Sleep"],
     "study": ["CV", "Roadmap"],
-    "work": ["Employed", "Endeavours"],
+    "llc": ["Employed", "Side hustles", "Assets", "Portfolio", "Calendar"],
+    "buro": ["IDs", "Personal DD", "Wallet", "Account", "Assets", "Services", "Liabilities & Taxes", "Budgeting", "Accounts vs Cashflow", "Calendar"],
 }
 for sid, labels in want_pages.items():
     if [p["label"] for p in secs.get(sid, {}).get("pages", [])] != labels:
         bad("pages", f"{sid} pages are not {labels}")
-for sid, pg in (("study", "cv"), ("study", "roadmap"), ("work", "employed"), ("work", "endeavours"), ("house", "manage"), ("me", "tasks"), ("achieves", "trips")):
+for sid, pg in (("study", "cv"), ("study", "roadmap"), ("llc", "employed"), ("llc", "side-hustles"), ("duties", "tasks"), ("achieves", "trips")):
     f = os.path.join(app, f"data/ui/{sid}/{pg}.json")
     if not os.path.exists(f) or not json.load(open(f, encoding="utf-8")):
         bad("pages", f"data/ui/{sid}/{pg}.json is missing or empty")
@@ -277,14 +330,14 @@ only() { # <check id>: nothing but that id is red in the real tree
   local r; r="$(check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | cut -f1 | sort -u | grep -x "$1" || true)"
   [ -z "$r" ]
 }
-for t in "nav-order|the bar reads Health, Study, Achieves, Profile, House, Work, Buro" \
+for t in "nav-order|the bar reads Health, Study, Achieves, Profile, Duties, Buro, LLC" \
          "tab-style|page tabs show every name at rest and only the selected name when scrolled down (#1159)" \
          "settings|the top bar is the fleet AppTopBar: hamburger, AI, Profile, Configs, no dropdown" \
          "achieves|Achieves renders the owner's text (B1, B2, B3, region table with its link)" \
          "no-drawer|no swipe-to-open drawer handler anywhere (shell, the lib top bar, Profile page, resources)" \
          "account|Buro > Account launches Cloud Account through extapp, Vault is gone" \
          "no-wallet|the Wallet link is gone" \
-         "pages|Health, Study, Work, House, Tasks and Trips pages are declared with their data"; do
+         "pages|Health, Study, LLC, Buro, Duties and Trips pages are declared with their data, House and Work are gone"; do
   id="${t%%|*}"; name="${t#*|}"
   if only "$id"; then ok "$name"; else bad "$name"; check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | grep "^$id" | sed 's/^/        /'; fi
 done
@@ -293,6 +346,9 @@ echo "== mutations: each check must go red on its own break =="
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 mkdir -p "$W/base/ac_cloud-me" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src"
 for l in nav-bar-top-second-row nav-bar-top-first-row; do mkdir -p "$W/base/ab_cloud-libs-shared/libs/$l/src"; cp -r "$APP/../ab_cloud-libs-shared/libs/$l/src/main" "$W/base/ab_cloud-libs-shared/libs/$l/src/"; done
+mkdir -p "$W/base/ab_cloud-libs-shared/libs/ui-icons/src" "$W/base/ab_cloud-libs-shared/libs/fleetconfig-model/src/main"
+cp -r "$APP/../ab_cloud-libs-shared/libs/ui-icons/src/main" "$W/base/ab_cloud-libs-shared/libs/ui-icons/src/"
+cp -r "$APP/../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets" "$W/base/ab_cloud-libs-shared/libs/fleetconfig-model/src/main/"
 cp -r "$APP/build.json" "$APP/app" "$APP/data" "$W/base/ac_cloud-me/" 2>/dev/null
 rm -rf "$W/base/ac_cloud-me/app/build"
 cp -r "$APP/../ab_cloud-libs-shared/libs/bottomnav/src/commonMain" "$APP/../ab_cloud-libs-shared/libs/bottomnav/src/main" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src/"
@@ -311,7 +367,13 @@ mutant settings "a dropdown comes back" "echo 'val x = DropdownMenu' >> app/src/
 mutant no-drawer "a drag handler is back in the lib top bar" "echo 'val d = detectHorizontalDragGestures' >> ../ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/AppTopBar.kt"
 mutant settings "the top bar loses its inline actions" "sed -i 's/inlineActions = true/inlineActions = false/' app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"
 mutant pages "the Home section is back" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'home','label':'Home','pages':[]});json.dump(d,open('build.json','w'))\""
-mutant pages "Tasks page dropped from Profile" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].pop() for s in d['ui']['sections'] if s['id']=='me'];json.dump(d,open('build.json','w'))\""
+mutant pages "Tasks page dropped from Duties" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].pop() for s in d['ui']['sections'] if s['id']=='duties'];json.dump(d,open('build.json','w'))\""
+mutant pages "House comes back" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['sections'].append({'id':'house','label':'House','pages':[]});json.dump(d,open('build.json','w'))\""
+mutant pages "a Buro page leaves its group" "python3 -c \"import json;d=json.load(open('build.json'));[s['groups'][1]['pages'].pop() for s in d['ui']['sections'] if s['id']=='buro'];json.dump(d,open('build.json','w'))\""
+mutant pages "an LLC group icon is not a ui-icons name" "sed -i 's/\"icon\": \"payments\"/\"icon\": \"no_such_icon\"/' build.json"
+mutant pages "a Buro ledger names the wrong store" "sed -i 's/\"store\": \"buro_user\"/\"store\": \"llc_user\"/' data/ui/buro/assets.json"
+mutant pages "a ledger names an unknown report" "sed -i 's/budget_vs_actual/made_up_report/' data/ui/buro/budgeting.json"
+mutant pages "the llc store is undeclared in fleet-config" "sed -i 's/\"llc_user\"/\"llc_gone\"/' ../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
 mutant achieves "one owner sentence altered" "sed -i 's/Aikido, Yoga and Meditation\\./Aikido and Yoga./' data/ui/achieves/personal.json"
 mutant achieves "NomadMania link dropped" "sed -i 's#https://nomadmania.com/profile/73889#https://example.com#' data/ui/achieves/international.json"
 mutant no-drawer "the drawer is back in the shell" "echo 'val d = ModalNavigationDrawer' >> app/src/main/java/com/diegonmarcos/cloudme/MainActivity.kt"

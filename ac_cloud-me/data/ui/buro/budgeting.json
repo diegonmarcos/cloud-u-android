@@ -1,0 +1,36 @@
+[
+  {
+    "kind": "note",
+    "title": "Budgeting",
+    "body": "Monthly limits per category, set against what the cashflow actually spent this month (record it under Accounts vs Cashflow)."
+  },
+  {
+    "kind": "ledger",
+    "store": "buro_user",
+    "currency": "EUR",
+    "reports": [
+      "budget_vs_actual"
+    ],
+    "ledgers": [
+      {
+        "collection": "budget",
+        "title": "Budget lines",
+        "empty": "No budget lines yet. Add a category with its monthly limit.",
+        "fields": [
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "limit",
+            "label": "Monthly limit",
+            "type": "money",
+            "required": true
+          }
+        ]
+      }
+    ]
+  }
+]

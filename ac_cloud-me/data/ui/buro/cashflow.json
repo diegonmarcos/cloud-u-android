@@ -1,0 +1,77 @@
+[
+  {
+    "kind": "note",
+    "title": "Accounts vs cashflow",
+    "body": "Each account's opening balance plus the cashflow since its as-of date. Money out is a negative amount, money in a positive one."
+  },
+  {
+    "kind": "ledger",
+    "store": "buro_user",
+    "currency": "EUR",
+    "reports": [
+      "accounts_vs_cashflow"
+    ],
+    "ledgers": [
+      {
+        "collection": "accounts",
+        "title": "Accounts",
+        "empty": "No accounts yet. Add each account with its balance on a date.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Account",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "opening",
+            "label": "Opening balance",
+            "type": "money",
+            "required": true
+          },
+          {
+            "id": "as_of",
+            "label": "As of",
+            "type": "date",
+            "required": true
+          }
+        ]
+      },
+      {
+        "collection": "cashflow",
+        "title": "Cashflow",
+        "empty": "No cashflow entries yet.",
+        "fields": [
+          {
+            "id": "account",
+            "label": "Account",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "text"
+          },
+          {
+            "id": "amount",
+            "label": "Amount (out is negative)",
+            "type": "money",
+            "required": true
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  }
+]

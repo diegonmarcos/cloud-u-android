@@ -1,0 +1,47 @@
+[
+  {
+    "kind": "note",
+    "title": "Services",
+    "body": "Subscriptions, utilities and contracts that renew (formerly House bills and utilities)."
+  },
+  {
+    "kind": "ledger",
+    "store": "buro_user",
+    "currency": "EUR",
+    "ledgers": [
+      {
+        "collection": "services",
+        "title": "Services",
+        "empty": "No services recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Service",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "provider",
+            "label": "Provider",
+            "type": "text"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly cost",
+            "type": "money"
+          },
+          {
+            "id": "renews",
+            "label": "Renews",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  }
+]

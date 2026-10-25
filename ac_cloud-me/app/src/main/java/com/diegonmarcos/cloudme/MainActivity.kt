@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity() {
             // land in the same frame, so the default is never drawn.
             handleShortcutIntent(intent)
         } else {
-            currentSection = savedInstanceState.getString(STATE_SECTION)
+            currentSection = savedInstanceState.getString(STATE_SECTION)?.let { LegacyRoutes.resolve(it, null).first }
         }
 
         setContent {
@@ -195,9 +195,11 @@ class MainActivity : AppCompatActivity() {
     /** The single entry point for showing a section. Everything — bar, Settings
      *  entries, tile targets, restored state — comes through here. */
     fun open(sectionId: String, pageId: String? = null) {
-        val section = Sections.byId(sectionId) ?: return
+        // An id of the retired layout (Work, House, Profile > Tasks, Buro's old pages) goes to where it moved.
+        val (toSection, toPage) = LegacyRoutes.resolve(sectionId, pageId)
+        val section = Sections.byId(toSection) ?: return
         currentSection = section.id
-        currentPage = pageId
+        currentPage = toPage
         openSeq++
     }
 

@@ -7,9 +7,9 @@ launcher for everything the *person* runs: paperwork and money, what is due,
 the public profile, travel, study — and health.
 
 ```
-┌────────┬───────┬──────────┬─────────┬──────┬──────┬──────┐
-│ Health │ Study │ Achieves │ Profile │ House │ Work │ Buro │   ← bottom nav
-└────────┴───────┴──────────┴─────────┴───────┴──────┴──────┘
+┌────────┬───────┬──────────┬─────────┬────────┬──────┬─────┐
+│ Health │ Study │ Achieves │ Profile │ Duties │ Buro │ LLC │   ← bottom nav
+└────────┴───────┴──────────┴─────────┴────────┴──────┴─────┘
   top bar: ☰ left menu (tap only, no edge swipe) · right: AI · Profile · Configs (icons only)
   scrolling down hides the top bar and collapses the nav labels; scrolling up restores both
   page tabs: smaller than the nav, icon only (the selected one also shows its name), spaced evenly
@@ -21,15 +21,15 @@ Almost nothing. That is the design.
 
 | Surface | Where the data actually lives |
 |---|---|
-| Buro → Docs | cloud-myterminal (files) |
-| Buro → IDs | Cloud Wallet (the card deck) |
+| Buro → IDs & DD | the identity documents in `data/files/wallet/ids`, and the typed due-diligence checklist (`buro_user`) |
+| Buro → Docs | typed Assets, Services, Liabilities & Taxes (`buro_user`; it absorbed House) |
+| Buro → Financial Reports | typed budget lines, accounts and cashflow (`buro_user`); Budgeting and Accounts vs Cashflow are derived, never stored |
 | Buro → Account | Cloud Account (launch tab, `extapp:cloud-account`) |
-| Buro → Accounting | `libs:fin`, from `build.json::ui.myfin_mock` |
-| Profile → Tasks | the cal engine — CalDAV events + VTODOs, read locally (Day, Subject, Calendar) |
-| House | House Management: empty states until a source exists |
+| LLC | typed employment, side-hustle income, company assets and holdings (`llc_user`); Income and Portfolio are derived |
+| Duties, Buro/LLC → Calendar | the cal engine — CalDAV events + VTODOs, read locally (Day, Subject, Calendar); Cloud Tasks writes |
 | Me | `libs:wallet` — the same Me tab Cloud Wallet shows |
 | Health | `libs:health` — Health Connect, on-device only |
-| Study, Work | `data/regen-study.py` from the bundled LinkedIn profile data (no LinkedIn API) |
+| Study, LLC history | `data/regen-study.py` from the bundled LinkedIn profile data (no LinkedIn API) |
 | Achieves | `data/ui/achieves/*.json` — the owner's own text |
 
 A second copy of a card, a password or a health record would be a second thing

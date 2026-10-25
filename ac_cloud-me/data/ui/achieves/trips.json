@@ -50,7 +50,7 @@
         "title": "Money",
         "subtitle": "Cards accepted · cash · travel budget",
         "accent": "#66BB6A",
-        "target": "page:buro/budget"
+        "target": "page:buro/budgeting"
       },
       {
         "title": "Health",

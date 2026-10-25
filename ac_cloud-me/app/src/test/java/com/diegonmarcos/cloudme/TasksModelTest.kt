@@ -67,4 +67,13 @@ class TasksModelTest {
         assertEquals(10, next.get(Calendar.MONTH)) // November (0-based)
         assertEquals(1, next.get(Calendar.DAY_OF_MONTH))
     }
+
+    @Test fun `a subject filter keeps every event and only that collection's tasks, case-insensitively`() {
+        val mixed = TasksModel.items(
+            JSONArray().put(event("Standup", at(2026, 10, 24, 9))),
+            JSONArray().put(todo("File taxes", at(2026, 10, 24), "Buro")).put(todo("Invoice", at(2026, 10, 25), "LLC")).put(todo("Loose", null, "")))
+        assertEquals(listOf("Standup", "File taxes"), TasksModel.forSubject(mixed, "buro").map { it.title })
+        assertEquals(listOf("Standup", "Invoice"), TasksModel.forSubject(mixed, " LLC ").map { it.title })
+        assertEquals(mixed, TasksModel.forSubject(mixed, ""))
+    }
 }

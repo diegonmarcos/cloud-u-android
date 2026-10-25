@@ -1061,6 +1061,22 @@
         "ac_cloud-me"
       ]
     },
+    "buro_user": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Me > Buro user data, one JSON string under 'data' (collections of typed records): personal due-diligence items, assets, services, liabilities and taxes, budget lines, accounts and cashflow entries. Your own entries, so they move with the phone; the reports (budget vs cashflow, accounts vs cashflow) are derived from them and never stored.",
+      "used_by": [
+        "ac_cloud-me"
+      ]
+    },
+    "llc_user": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Me > LLC user data (the former Work section), one JSON string under 'data' (collections of typed records): employment contracts, side-hustle income, company assets and portfolio holdings. Your own entries, so they move with the phone; gain, allocation and income totals are derived and never stored.",
+      "used_by": [
+        "ac_cloud-me"
+      ]
+    },
     "home_swipe_prefs": {
       "kind": "prefs",
       "class": "config",

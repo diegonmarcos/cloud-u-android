@@ -1,0 +1,59 @@
+[
+  {
+    "kind": "note",
+    "title": "Liabilities and taxes",
+    "body": "What is owed: loans, mortgages, insurance premiums and tax obligations with their due dates."
+  },
+  {
+    "kind": "ledger",
+    "store": "buro_user",
+    "currency": "EUR",
+    "ledgers": [
+      {
+        "collection": "liabilities",
+        "title": "Liabilities and taxes",
+        "empty": "No liabilities or taxes recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "kind",
+            "label": "Kind",
+            "type": "choice",
+            "options": [
+              "Loan",
+              "Mortgage",
+              "Tax",
+              "Insurance",
+              "Other"
+            ]
+          },
+          {
+            "id": "balance",
+            "label": "Balance owed",
+            "type": "money"
+          },
+          {
+            "id": "monthly",
+            "label": "Monthly payment",
+            "type": "money"
+          },
+          {
+            "id": "due",
+            "label": "Due",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  }
+]

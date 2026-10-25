@@ -30,6 +30,10 @@ object TasksModel {
         return (ev + open).sortedWith(compareBy({ it.whenMs == 0L }, { it.whenMs }, { it.title }))
     }
 
+    /** The rows of one subject: every event (the engine gives events no collection) and the tasks filed under [subject] (case-insensitive); blank keeps everything. */
+    fun forSubject(items: List<TaskItem>, subject: String): List<TaskItem> =
+        if (subject.isBlank()) items else items.filter { !it.isTask || it.subject.equals(subject.trim(), ignoreCase = true) }
+
     private fun due(t: JSONObject): Long? = t.optString("due").toLongOrNull()
 
     fun startOfDay(ms: Long): Long = Calendar.getInstance().apply {

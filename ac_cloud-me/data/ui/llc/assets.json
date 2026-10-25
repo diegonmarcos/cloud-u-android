@@ -1,0 +1,55 @@
+[
+  {
+    "kind": "note",
+    "title": "Assets",
+    "body": "What the company side owns: equipment, IP, domains, cash and receivables."
+  },
+  {
+    "kind": "ledger",
+    "store": "llc_user",
+    "currency": "EUR",
+    "ledgers": [
+      {
+        "collection": "assets",
+        "title": "Company assets",
+        "empty": "No company assets recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "kind",
+            "label": "Kind",
+            "type": "choice",
+            "options": [
+              "Equipment",
+              "IP",
+              "Domain",
+              "Cash",
+              "Receivable",
+              "Other"
+            ]
+          },
+          {
+            "id": "value",
+            "label": "Value",
+            "type": "money"
+          },
+          {
+            "id": "acquired",
+            "label": "Acquired",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,61 @@
+[
+  {
+    "kind": "note",
+    "title": "Personal due diligence",
+    "body": "What has to be verified, renewed or kept in order about the person: identity validity, tax registration, insurance, residence. Items are yours; nothing is pre-filled."
+  },
+  {
+    "kind": "ledger",
+    "store": "buro_user",
+    "currency": "EUR",
+    "ledgers": [
+      {
+        "collection": "dd",
+        "title": "Due-diligence items",
+        "empty": "No due-diligence items yet. Add what must be verified or renewed.",
+        "fields": [
+          {
+            "id": "item",
+            "label": "Item",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "area",
+            "label": "Area",
+            "type": "choice",
+            "options": [
+              "Identity",
+              "Tax",
+              "Legal",
+              "Banking",
+              "Insurance",
+              "Health",
+              "Other"
+            ]
+          },
+          {
+            "id": "status",
+            "label": "Status",
+            "type": "choice",
+            "options": [
+              "Open",
+              "In progress",
+              "Done"
+            ]
+          },
+          {
+            "id": "due",
+            "label": "Due",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  }
+]

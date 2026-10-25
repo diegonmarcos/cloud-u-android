@@ -43,7 +43,7 @@ import org.robolectric.annotation.GraphicsMode
  *  - every tab is drawn as an icon; NO tab but the selected one draws its name;
  *  - a tap moves the name with the selection;
  *  - Settings is two visible entries, Profile and Configs, each opening its own section;
- *  - the bar reads Health, Study, Achieves, Profile, House, Work, Buro.
+ *  - the bar reads Health, Study, Achieves, Profile, Duties, Buro, LLC.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp-xxhdpi")
@@ -129,9 +129,9 @@ class MeTabsTest {
     }
 
     @Test
-    fun `the bar reads Health, Study, Achieves, Profile, House, Work, Buro`() {
+    fun `the bar reads Health, Study, Achieves, Profile, Duties, Buro, LLC`() {
         assertEquals(
-            listOf("Health", "Study", "Achieves", "Profile", "House", "Work", "Buro"),
+            listOf("Health", "Study", "Achieves", "Profile", "Duties", "Buro", "LLC"),
             Sections.bottom().map { it.label },
         )
         assertTrue("a launch section is back on the bar", Sections.bottom().none { it.target.isNotBlank() })

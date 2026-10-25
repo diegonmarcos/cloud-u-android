@@ -1,0 +1,61 @@
+[
+  {
+    "kind": "note",
+    "title": "Portfolio",
+    "body": "Holdings with their cost and current value; gain and allocation are derived."
+  },
+  {
+    "kind": "ledger",
+    "store": "llc_user",
+    "currency": "EUR",
+    "reports": [
+      "portfolio"
+    ],
+    "ledgers": [
+      {
+        "collection": "holdings",
+        "title": "Holdings",
+        "empty": "No holdings recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Holding",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "kind",
+            "label": "Kind",
+            "type": "choice",
+            "options": [
+              "Equity",
+              "Fund",
+              "Bond",
+              "Crypto",
+              "Real estate",
+              "Company stake",
+              "Cash"
+            ]
+          },
+          {
+            "id": "cost",
+            "label": "Cost",
+            "type": "money",
+            "required": true
+          },
+          {
+            "id": "value",
+            "label": "Current value",
+            "type": "money",
+            "required": true
+          },
+          {
+            "id": "as_of",
+            "label": "As of",
+            "type": "date"
+          }
+        ]
+      }
+    ]
+  }
+]

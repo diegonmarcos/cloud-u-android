@@ -1,0 +1,56 @@
+[
+  {
+    "kind": "note",
+    "title": "Assets",
+    "body": "What is owned: property, vehicles, accounts, valuables and the household inventory (formerly under House). Values are typed in; nothing is estimated."
+  },
+  {
+    "kind": "ledger",
+    "store": "buro_user",
+    "currency": "EUR",
+    "ledgers": [
+      {
+        "collection": "assets",
+        "title": "Assets",
+        "empty": "No assets recorded yet.",
+        "fields": [
+          {
+            "id": "name",
+            "label": "Name",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "kind",
+            "label": "Kind",
+            "type": "choice",
+            "options": [
+              "Property",
+              "Vehicle",
+              "Account",
+              "Investment",
+              "Valuables",
+              "Household",
+              "Other"
+            ]
+          },
+          {
+            "id": "value",
+            "label": "Value",
+            "type": "money"
+          },
+          {
+            "id": "acquired",
+            "label": "Acquired",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,8 +1,61 @@
 [
   {
+    "kind": "ledger",
+    "store": "llc_user",
+    "currency": "EUR",
+    "reports": [
+      "income"
+    ],
+    "ledgers": [
+      {
+        "collection": "employment",
+        "title": "Employment income and contracts",
+        "empty": "No employment contract recorded yet. Add each employer with its gross monthly pay; leave the end date blank while it runs.",
+        "fields": [
+          {
+            "id": "employer",
+            "label": "Employer",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "role",
+            "label": "Role",
+            "type": "text"
+          },
+          {
+            "id": "gross_monthly",
+            "label": "Gross monthly",
+            "type": "money",
+            "required": true
+          },
+          {
+            "id": "start",
+            "label": "Start",
+            "type": "date"
+          },
+          {
+            "id": "end",
+            "label": "End",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "section_title",
+    "title": "History from the profile"
+  },
+  {
     "kind": "note",
     "title": "Employed",
-    "body": "11 roles, newest first. Own ventures are under Endeavours; career breaks are on the CV, not here."
+    "body": "11 roles, newest first. Own ventures are under Side hustles; career breaks are on the CV, not here."
   },
   {
     "kind": "cards",
