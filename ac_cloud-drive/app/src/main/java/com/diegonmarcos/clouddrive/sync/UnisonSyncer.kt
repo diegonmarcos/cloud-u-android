@@ -41,7 +41,7 @@ class UnisonSyncer(private val ctx: Context) {
     internal fun accessFor(pair: UnisonConfig.Pair): UnisonRunner.SshAccess? {
         val peer = pair.peer as? UnisonConfig.Peer.Ssh ?: return null
         // #1173 the SSH key is Cloud Account's: asked for first, handed to the engine as text for this one run, never kept here.
-        val owned = (com.diegonmarcos.clouddrive.storage.AccountStorage.of(ctx).pull(com.diegonmarcos.superapp.fleetconfig.StorageConfigContract.SSH_KEY) as? com.diegonmarcos.clouddrive.storage.AccountStorage.Pulled.Value)?.text.orEmpty()
+        val owned = (com.diegonmarcos.clouddrive.storage.DriveCredentialsClient.of(ctx).read() as? com.diegonmarcos.clouddrive.storage.DriveCredentialsClient.Read.Ok)?.snapshot?.sshPrivate.orEmpty()
         if (owned.isNotBlank()) return UnisonRunner.SshAccess(keyPem = owned)
         val all = runCatching { mounts.load() }.getOrDefault(emptyList())
         val spec = all.firstOrNull { it.type == MountType.SSH && peer.mount.isNotBlank() && (it.name == peer.mount || it.id == peer.mount) }
