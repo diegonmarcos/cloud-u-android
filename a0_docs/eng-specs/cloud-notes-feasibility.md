@@ -535,7 +535,7 @@ the exact verb the EE licence forbids.
 
 ### 7.2 The finding that actually decides it: Cloud Notes cannot open the owner's notes
 
-The owner's notes already exist. `diegonmarcos/cloud-notes` is an Obsidian
+The owner's notes already exist. `diegonmarcos/cloud-me-notes` is an Obsidian
 vault: 466 blobs, of which **179 are `.md`**, 11 are `.canvas`, plus a real
 `.obsidian/` configuration directory. Markdown files in folders on disk.
 

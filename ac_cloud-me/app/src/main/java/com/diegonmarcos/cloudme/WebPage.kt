@@ -39,7 +39,7 @@ import org.json.JSONObject
  * state survives a recreation.
  * `{"kind":"fragment","id":"web","url":"mysocials/linkedin.html"}`
  *
- * Profile > Social, Health and DD are the same kind of page (front-media b_Media/mySocials). Health and DD
+ * Profile > Social, Health and DD are the same kind of page (cloud-me-profiles b_Profiles/mySocials). Health and DD
  * add `"inject":"health"|"dd"`: the bundled page is the public SCHEMA only and reads "Locked — sign in";
  * once the page has loaded, the owner's values from the on-device store (imported from the private repo
  * cloud-me-data-pvt, profiles/<id>.data.json) are handed to `window.CloudMeProfile.inject(...)`. The values

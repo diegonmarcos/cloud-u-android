@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""front-media/b_Media/mySocials/dist → data/web/mysocials/
+"""cloud-me-profiles/b_Profiles/mySocials/dist → data/web/mysocials/
 
 Profile does not reimplement the LinkedIn and Instagram layouts — it ships the
 real pages and renders them. Anything else is an approximation that drifts the
@@ -16,7 +16,7 @@ import filecmp, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DIST = os.environ.get("MYSOCIALS_DIST") or os.path.normpath(os.path.join(
-    HERE, "..", "..", "..", "front-media", "b_Media", "mySocials", "dist"))
+    HERE, "..", "..", "..", "cloud-me-profiles", "b_Profiles", "mySocials", "dist"))
 OUT = os.path.join(HERE, "web", "mysocials")
 
 # The pages Profile shows: Professional (linkedin), Personal (instagram), Social, Health and DD. Their

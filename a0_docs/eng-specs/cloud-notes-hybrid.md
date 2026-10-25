@@ -10,7 +10,7 @@ Obsidian-style linked vault. Decisions already taken by the owner:
 - **Own Yjs sync server** (Hocuspocus or y-websocket) as a container behind the edge gate.
 - **Web build twice**: gated container (behind Authelia 2FA) and bundled in the APK.
 - **Keep SQLite** (nbstore) if Phase 0 passes. It did.
-- **Import the Obsidian vault** (`/home/user/cloud-notes`, repo `diegonmarcos/cloud-notes`) and any Markor data.
+- **Import the Obsidian vault** (`/home/user/cloud-notes`, repo `diegonmarcos/cloud-me-notes`) and any Markor data.
 - Web app behind Authelia 2FA; the sync socket authenticates with a Bearer token.
 
 Licence boundary (unchanged, enforced by `test/test-licence-clean.sh`): `packages/backend` and
