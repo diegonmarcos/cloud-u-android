@@ -92,8 +92,8 @@ public object TopFirstRowSpec {
     public val ISLAND_PAD_H: Dp = 14.dp
     public val ISLAND_PAD_V: Dp = 7.dp
     public const val TITLE_SP: Int = 13
-    /** The most height the app's actions area of the dropdown takes; longer content scrolls inside it. */
-    public val ACTIONS_MAX_HEIGHT: Dp = 360.dp
+    /** The finite height bound the app's actions get inside the dropdown's own scroll: far more than a phone shows, so the dropdown scrolls them, and finite so their own scroll/LazyColumn cannot meet an infinite height. */
+    public val ACTIONS_MAX_HEIGHT: Dp = 2000.dp
     public val DROPDOWN_WIDTH: Dp = 280.dp
     public val DROPDOWN_MAX_HEIGHT: Dp = 520.dp
 
@@ -256,8 +256,8 @@ public fun NavBarTopFirstRow(
                     }
                     if (extra != null) {
                         HorizontalDivider(Modifier.testTag(TopFirstRowTags.SEPARATOR_ACTIONS), color = colors.islandBorder)
-                        // The menu's own column scrolls (unbounded height), so a page's actions get a BOUNDED box: its own
-                        // verticalScroll / LazyColumn then has a finite height instead of crashing.
+                        // The popup's column scrolls (infinite height), so a page's actions get a FINITE bound: its own verticalScroll /
+                        // LazyColumn then measures instead of crashing, and the popup's scroll reaches all of it.
                         Column(Modifier.heightIn(max = TopFirstRowSpec.ACTIONS_MAX_HEIGHT).testTag(TopFirstRowTags.ACTIONS)) { extra { open = false } }
                     }
                   }
