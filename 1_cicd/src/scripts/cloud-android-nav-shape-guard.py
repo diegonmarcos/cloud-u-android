@@ -8,6 +8,7 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
              the exemption ledger: every not-yet-migrated app, each with its reason)
 
   N0  libs:bottomnav still ships NavDecl, PageTabs and PageTabsView
+  N11 libs:ui-nav-bars is the ONE nav-bars lib (first row, second row, side menu, bottom nav); the retired per-bar libs stay gone and unnamed
   N1  ui.bottom_nav is min_bottom..max_bottom ids (2..8; the owner lifted the old cap of 5,
       and the island never scrolls: a crowded bar widens and scales down so every item fits,
       8 on a 360dp phone being 44dp cells), each one a ui.sections id;
@@ -38,7 +39,7 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
   W1-W4  a held app whose UI is a WebView page (Cordova Cloud Code, #1158) cannot call the Compose bars, so
       it draws the same ones from a declaration (nav-shape.json::web). W1 = N1. W2 its own nav JSON lists the
       same bottom pages, sub-pages (each with an icon) and default as build.json ui. W3 its bar sizes and
-      colours (nav.json::bars) equal the Kotlin constants of libs:nav-bar-top-first-row, -second-row,
+      colours (nav.json::bars) equal the Kotlin constants of libs:ui-nav-bars, -second-row,
       -bottom, bottomnav SearchHtmlTokens and theme-background, so the web bars cannot drift from the libs.
       W4 its sources draw the three bars (markers) and nothing swipes the hamburger open.
 
@@ -605,6 +606,31 @@ def main(argv):
             bad.append(f"N0 {spec['lib']}: {fname} is gone — the nav declaration and strips live there")
         elif not any(symbol in read(p) for p in hits):
             bad.append(f"N0 {spec['lib']}: {fname} no longer declares `{symbol}`")
+
+    # N11 (#1189): ONE shared nav-bars lib (libs:ui-nav-bars) holds the first row, the second row, the side menu and the bottom nav;
+    # the retired per-bar libs are gone and no app names them; the lib keeps the symbols the scroll machine and the side menu are held to.
+    ui_lib = spec.get("ui_nav_bars")
+    if ui_lib:
+        base = os.path.join(root, ui_lib["dir"])
+        if not os.path.isfile(os.path.join(base, "build.gradle")):
+            bad.append(f"N11 {ui_lib['dir']}: the shared nav-bars lib is gone")
+        for fname, symbol in sorted(ui_lib["symbols"].items()):
+            hits = [p for sub in ("main", "commonMain") for p in walk(os.path.join(base, "src", sub), (".kt",)) if os.path.basename(p) == fname]
+            if not hits:
+                bad.append(f"N11 {ui_lib['dir']}: {fname} is gone")
+            elif not any(symbol in read(p) for p in hits):
+                bad.append(f"N11 {ui_lib['dir']}: {fname} no longer declares `{symbol}`")
+        for retired in ui_lib["retired"]:
+            if os.path.isdir(os.path.join(root, "ab_cloud-libs-shared", "libs", retired)):
+                bad.append(f"N11 ab_cloud-libs-shared/libs/{retired} is back — its code lives in {ui_lib['dir']}")
+        for b in sorted(glob.glob(os.path.join(root, "a[ac]_*", "build.json"))):
+            try:
+                mods = json.load(open(b)).get("modules") or {}
+            except (OSError, ValueError):
+                continue
+            for retired in ui_lib["retired"]:
+                if f"libs:{retired}" in mods:
+                    bad.append(f"N11 {os.path.basename(os.path.dirname(b))}: build.json modules name the retired libs:{retired}; use libs:ui-nav-bars")
 
     apps = sorted(os.path.basename(os.path.dirname(b)) for b in glob.glob(os.path.join(root, "a[ac]_*", "build.json")))
     checked = 0

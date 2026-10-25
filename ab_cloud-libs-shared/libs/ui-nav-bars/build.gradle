@@ -1,7 +1,10 @@
-// libs:nav-bar-top-first-row: the first top row of every app: no hamburger; a left-aligned breadcrumb title ("{App} / {Section} / {Page}") whose tap opens the path, sibling/child pages and the app's actions; AI / Profile / Configs.
-// Part of the shared navigation + theme design (#1154). Built like libs:bottomnav (same toolchain, same
-// compose BOM) so it compiles under whichever AGP the consuming app uses. TESTED through the consumer:
-// the unit task of an app that links it (cloud-mail's testReleaseUnitTest) runs src/test/ here.
+// libs:ui-nav-bars: THE shared navigation chrome of every app (#1189): the first row (breadcrumb title, AI / Profile / Configs), the second
+// row (sub-page strips: one row, two rows, and the vertical left side menu with its semi-collapsed rail), the bottom nav, the
+// three-state scroll machine's bars, and the Configs card that lets a user choose how each section's child pages are navigated.
+// It replaces libs:ui-nav-bars, libs:ui-nav-bars and libs:ui-nav-bars (one lib, the Kotlin packages are
+// unchanged: navbartop1, navbartop2, navbarbottom). The declaration it draws (NavDecl, the scroll machine, the mode store) stays in
+// libs:bottomnav. Built like libs:bottomnav (same toolchain, same compose BOM) so it compiles under whichever AGP the consuming app
+// uses. TESTED through the consumer: the unit task of an app that links it (cloud-mail's testReleaseUnitTest) runs src/test/ here.
 plugins {
     id 'com.android.library'
 }
@@ -11,7 +14,7 @@ if (project.extensions.findByName('kotlin') == null) {
 apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
-    namespace 'com.diegonmarcos.superapp.navbartop1'
+    namespace 'com.diegonmarcos.superapp.uinavbars'
     compileSdk 36
 
     defaultConfig {
@@ -48,7 +51,7 @@ kotlin {
 
 dependencies {
     api project(':libs:bottomnav')
-    api project(':libs:nav-bar-top-second-row')
+    api project(':libs:ui-icons')
     api project(':libs:theme-background')
     implementation platform('androidx.compose:compose-bom:2025.11.01')
     implementation 'androidx.compose.ui:ui'
@@ -57,7 +60,6 @@ dependencies {
     implementation 'androidx.compose.material:material-icons-extended'
     implementation 'androidx.core:core-ktx:1.15.0'
 
-    testImplementation project(':libs:nav-bar-bottom')
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'androidx.activity:activity-compose:1.9.3'
     testImplementation 'org.robolectric:robolectric:4.16.1'

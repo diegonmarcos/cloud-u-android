@@ -17,7 +17,7 @@ import com.diegonmarcos.superapp.navbarbottom.NavBarBottom
  * not tabs of their own, so the pill always moves and never has to stay behind.
  *
  * 2026-10-16 owner decision: all apps must be Compose — the shell draws the island as the
- * [NavBarBottom] composable (libs:nav-bar-bottom, #1154), the same one the browser, me and wallet shells use.
+ * [NavBarBottom] composable (libs:ui-nav-bars, #1154), the same one the browser, me and wallet shells use.
  */
 object C3BottomNav {
 

@@ -1,12 +1,28 @@
 {
   "_doc": "#868 THE nav-shape ledger. Every app's navigation is ONE declaration in build.json::ui (bottom_nav ids min_bottom..max_bottom, 2..8, sections[].pages[] with optional pages[] one strip lower, default_section) drawn by libs:bottomnav (BottomNavIsland/BottomNavIslandView for the bar, PageTabs/PageTabsView for the pill strips) and read through NavDecl. Read by 1_cicd/src/scripts/cloud-android-nav-shape-guard.py (nav-shape-guard.yml). THE BASELINE IS ALL-EXEMPT: no app has migrated yet, so every app below is exempt WITH THE REASON it is, and the guard is green today. Each migration batch removes its apps' entries in the same commit it lands, and from then on the app is held to N1-N5. Removing an entry is the only way to opt an app IN; adding one needs a reason a reviewer can disagree with.",
-  "_doc_rules": "N1 ui.bottom_nav is min_bottom..max_bottom ids (2..8: the owner lifted the cap of 5 in 2026-10; the island never scrolls: a bar whose equal cells fit is drawn as always, a crowded one widens past 80% and scales its icon and label down so every item is on screen, and 8 is the most that keeps a usable cell -- 44dp on a 360dp phone, the one case under the 48dp touch floor), each a ui.sections id, and ui.default_section is one of them. N2 the app compiles libs:bottomnav (a project dependency in its gradle scripts, or build.json modules). N3 no hand-rolled nav widget in the app's sources (forbidden below), comments blanked first so prose about a widget is not the widget. N4 the app's build.gradle bakes UI_BOTTOM_NAV and UI_SECTIONS_B64, and no id literal in Kotlin (id_calls, 'page:<section>/<page>') names a section or page build.json does not declare. N5 a section with two or more pages (or a page with two or more sub-pages) is drawn by PageTabs/PageTabsView or, since #1154, libs:nav-bar-top-second-row's NavBarTopSecondRow (the bar is libs:nav-bar-bottom's NavBarBottom; both are N7 call sites). N6 every exemption carries a reason, names a real app, and an exempt app that already passes N1-N5 is stale (it migrated: delete the exemption). N0 libs:bottomnav still ships NavDecl, PageTabs and PageTabsView. N7 (parity, #868 follow-up): the island and the strips look the SAME in every app because the look is libs:bottomnav's alone. In a held app's sources the island/strip call sites (n7.calls) pass none of n7.forbidden_args, no source assigns n7.forbidden_props on an island or strip view (n7.view_hosts), the app declares no resource named like n7.resource_names (an island colour, dimen or type of its own), and some source calls n7.chrome_call (the lib's window chrome). N9 (light pages): every ui.sections[].background and pages[].background is one of `backgrounds` (dark = the default white-glass strip, light = the lib's light strip, theme = the app's own light/dark mode picks one); a held app's code never names TabSurface itself (the surface comes from the declaration, through NavDecl.stripSurface), and an app that declares a non-dark background calls stripSurface( somewhere.",
+  "_doc_rules": "N1 ui.bottom_nav is min_bottom..max_bottom ids (2..8: the owner lifted the cap of 5 in 2026-10; the island never scrolls: a bar whose equal cells fit is drawn as always, a crowded one widens past 80% and scales its icon and label down so every item is on screen, and 8 is the most that keeps a usable cell -- 44dp on a 360dp phone, the one case under the 48dp touch floor), each a ui.sections id, and ui.default_section is one of them. N2 the app compiles libs:bottomnav (a project dependency in its gradle scripts, or build.json modules). N3 no hand-rolled nav widget in the app's sources (forbidden below), comments blanked first so prose about a widget is not the widget. N4 the app's build.gradle bakes UI_BOTTOM_NAV and UI_SECTIONS_B64, and no id literal in Kotlin (id_calls, 'page:<section>/<page>') names a section or page build.json does not declare. N5 a section with two or more pages (or a page with two or more sub-pages) is drawn by PageTabs/PageTabsView or, since #1154, libs:ui-nav-bars's NavBarTopSecondRow (the bar is libs:ui-nav-bars's NavBarBottom; both are N7 call sites). N6 every exemption carries a reason, names a real app, and an exempt app that already passes N1-N5 is stale (it migrated: delete the exemption). N0 libs:bottomnav still ships NavDecl, PageTabs and PageTabsView. N7 (parity, #868 follow-up): the island and the strips look the SAME in every app because the look is libs:bottomnav's alone. In a held app's sources the island/strip call sites (n7.calls) pass none of n7.forbidden_args, no source assigns n7.forbidden_props on an island or strip view (n7.view_hosts), the app declares no resource named like n7.resource_names (an island colour, dimen or type of its own), and some source calls n7.chrome_call (the lib's window chrome). N9 (light pages): every ui.sections[].background and pages[].background is one of `backgrounds` (dark = the default white-glass strip, light = the lib's light strip, theme = the app's own light/dark mode picks one); a held app's code never names TabSurface itself (the surface comes from the declaration, through NavDecl.stripSurface), and an app that declares a non-dark background calls stripSurface( somewhere.",
   "lib": "ab_cloud-libs-shared/libs/bottomnav",
   "lib_symbols": {
     "NavDecl.kt": "class NavDecl",
     "PageTabs.kt": "fun PageTabs(",
     "PageTabsView.kt": "class PageTabsView",
-    "BottomNavSearchHtml.kt": "fun SearchHtmlIsland("
+    "BottomNavSearchHtml.kt": "fun SearchHtmlIsland(",
+    "BottomNavBar.kt": "enum class ChromeScrollState",
+    "NavChromeScroll.kt": "fun Modifier.chromeScroll(",
+    "NavModes.kt": "interface NavModeStore"
+  },
+  "ui_nav_bars": {
+    "_doc": "N11 (#1189): ONE shared nav-bars lib holds the first row, the second row (one row, two rows, the vertical side menu with its rail), the bottom nav and the Configs card for the per-section navigation mode. The three per-bar libs it replaced (retired) are gone and no app's build.json names them; the symbols are what the apps and the scroll machine are held to.",
+    "dir": "ab_cloud-libs-shared/libs/ui-nav-bars",
+    "retired": ["nav-bar-bottom", "nav-bar-top-first-row", "nav-bar-top-second-row"],
+    "symbols": {
+      "NavBarBottom.kt": "fun NavBarBottom(",
+      "NavBarTopFirstRow.kt": "fun NavBarTopFirstRowScaffold(",
+      "NavBarTopSecondRow.kt": "fun NavBarTopSecondRow(",
+      "NavBarTopSecondRows.kt": "fun NavBarTopSecondRows(",
+      "NavSideMenu.kt": "fun NavSectionLayout(",
+      "NavModeConfigCard.kt": "fun NavModeConfigCard("
+    }
   },
   "max_bottom": 8,
   "min_bottom": 2,
@@ -86,7 +102,7 @@
     },
     "parity": {
       "first_row": {
-        "file": "ab_cloud-libs-shared/libs/nav-bar-top-first-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
         "object": "TopFirstRowSpec",
         "map": {
           "height": "HEIGHT",
@@ -100,7 +116,7 @@
         }
       },
       "second_row": {
-        "file": "ab_cloud-libs-shared/libs/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt",
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt",
         "object": "SecondRowSpec",
         "map": {
           "tab_height": "TAB_HEIGHT",
@@ -119,7 +135,7 @@
         }
       },
       "bottom": {
-        "file": "ab_cloud-libs-shared/libs/nav-bar-bottom/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt",
+        "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt",
         "object": "BottomSpec",
         "map": {
           "cell": "CELL",

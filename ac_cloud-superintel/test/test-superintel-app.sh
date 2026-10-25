@@ -60,7 +60,7 @@ for s in bj["ui"]["sections"]:
 for need in ("NavBarTopFirstRowScaffold(", "NavBarTopSecondRow(", "NavBarBottomHost(", "themeBackground(", "rememberAccountLauncher()", "titleHierarchy("):
     if need not in shell: bad.append("B2 SiShell does not call %s" % need)
 mods = bj["modules"]
-for lib in ("libs:nav-bar-top-first-row", "libs:nav-bar-top-second-row", "libs:nav-bar-bottom", "libs:theme-background", "libs:bottomnav", "libs:ai"):
+for lib in ("libs:ui-nav-bars", "libs:ui-nav-bars", "libs:ui-nav-bars", "libs:theme-background", "libs:bottomnav", "libs:ai"):
     if lib not in mods: bad.append("B2 build.json modules lack %s" % lib)
     if "project(':%s')" % lib not in script: bad.append("B2 the app's build script does not link %s" % lib)
 

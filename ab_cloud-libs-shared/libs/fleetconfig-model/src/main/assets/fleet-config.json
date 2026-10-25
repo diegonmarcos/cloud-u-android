@@ -2594,9 +2594,6 @@
         "lib-fleet-endpoints-android",
         "lib-fleetconfig-model",
         "lib-mail",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-net",
         "lib-shared-store",
         "lib-shizuku-adb-debug-tools",
@@ -2604,6 +2601,7 @@
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": []
@@ -2623,12 +2621,10 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": [
@@ -2662,13 +2658,11 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-text-tools",
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": [
@@ -2733,13 +2727,11 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-ops",
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": []
@@ -2761,12 +2753,10 @@
         "lib-ml-l-image",
         "lib-ml-l-sound",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-text-tools",
         "lib-theme-background",
-        "lib-ui-icons"
+        "lib-ui-icons",
+        "lib-ui-nav-bars"
       ],
       "items": [
         {
@@ -2952,11 +2942,9 @@
         "lib-decisions-link",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-theme-background",
         "lib-ui-icons",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": [
@@ -2999,12 +2987,10 @@
         "lib-crash",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-theme-background",
         "lib-ui-icons",
-        "lib-ui-kit"
+        "lib-ui-kit",
+        "lib-ui-nav-bars"
       ],
       "items": [
         {
@@ -3070,15 +3056,13 @@
         "lib-ml-l-image",
         "lib-model-catalogue",
         "lib-mounts",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-rclone",
         "lib-shared-store",
         "lib-shizuku-adb-debug-tools",
         "lib-sysdns",
         "lib-theme-background",
         "lib-ui-icons",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": [
@@ -3159,12 +3143,10 @@
         "lib-fleet-endpoints-android",
         "lib-fleetconfig-model",
         "lib-ml-l-image",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-text-tools",
         "lib-theme-background",
         "lib-ui-icons",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": [
@@ -3235,12 +3217,10 @@
         "lib-fin",
         "lib-fleetconfig-model",
         "lib-health",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": [
@@ -3267,13 +3247,11 @@
         "lib-fleetconfig-model",
         "lib-gesture",
         "lib-ml-l-image",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-panoramaviewer",
         "lib-scrollbar",
         "lib-theme-background",
-        "lib-ui-icons"
+        "lib-ui-icons",
+        "lib-ui-nav-bars"
       ],
       "items": [
         {
@@ -3344,12 +3322,10 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-maps",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": [
@@ -3381,11 +3357,9 @@
         "lib-decisions-link",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-theme-background",
         "lib-ui-icons",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": [
@@ -3501,11 +3475,9 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-theme-background",
-        "lib-ui-icons"
+        "lib-ui-icons",
+        "lib-ui-nav-bars"
       ],
       "items": [
         {
@@ -3555,12 +3527,10 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-text-tools",
         "lib-theme-background",
-        "lib-ui-icons"
+        "lib-ui-icons",
+        "lib-ui-nav-bars"
       ],
       "items": [
         {
@@ -3611,15 +3581,13 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-shared-store",
         "lib-shizuku-adb-debug-tools",
         "lib-sysdns",
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
+        "lib-ui-nav-bars",
         "lib-updater"
       ],
       "items": []
@@ -3776,13 +3744,11 @@
         "lib-decisions-link",
         "lib-devtools",
         "lib-fleetconfig-model",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-text-tools",
         "lib-theme-background",
         "lib-ui-icons",
-        "lib-ui-kit"
+        "lib-ui-kit",
+        "lib-ui-nav-bars"
       ],
       "items": []
     },
@@ -3798,11 +3764,9 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-theme-background",
-        "lib-ui-icons"
+        "lib-ui-icons",
+        "lib-ui-nav-bars"
       ],
       "items": [
         {
@@ -3827,12 +3791,10 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
-        "lib-nav-bar-bottom",
-        "lib-nav-bar-top-first-row",
-        "lib-nav-bar-top-second-row",
         "lib-text-tools",
         "lib-theme-background",
-        "lib-ui-icons"
+        "lib-ui-icons",
+        "lib-ui-nav-bars"
       ],
       "items": [
         {

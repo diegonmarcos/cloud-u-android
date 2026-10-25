@@ -1,7 +1,7 @@
 // libs:ui-icons: THE icon catalog of the fleet's navigation (#1160).
 //
 // One declarative table of icon NAMES to ImageVectors (UiIcons). Every nav-bar item of every app on the shared nav
-// libs (libs:bottomnav, libs:nav-bar-bottom, libs:nav-bar-top-second-row) draws its glyph from here, so a name means
+// libs (libs:bottomnav, libs:ui-nav-bars, libs:ui-nav-bars) draws its glyph from here, so a name means
 // the same glyph in every app and an app never reaches for a material icon in its nav declaration (the nav-icons guard,
 // 1_cicd/src/scripts/cloud-android-nav-icons-guard.py, fails the build when one does). An entry is TINTED (the bar
 // colours it, the default) or a BRAND icon (UiIcon.tinted = false: drawn in its own colours, e.g. the assistant's gradient).

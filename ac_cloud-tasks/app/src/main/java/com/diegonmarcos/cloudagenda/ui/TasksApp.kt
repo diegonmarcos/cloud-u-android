@@ -165,7 +165,7 @@ fun TasksShell(env: TasksEnv, nav: NavDecl, themeMode: ThemeMode, onThemeMode: (
         dark = dark,
     ) {
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
-            // #1157 the first row is libs:nav-bar-top-first-row's (Profile top-right launches Cloud Account, the title island lists the section and its pages).
+            // #1157 the first row is libs:ui-nav-bars's (Profile top-right launches Cloud Account, the title island lists the section and its pages).
             if (topBar == null) content() else NavBarTopFirstRowScaffold(
                 title = stringResource(R.string.app_name),
                 hierarchy = current?.let { titleHierarchy(it, page) }.orEmpty(),

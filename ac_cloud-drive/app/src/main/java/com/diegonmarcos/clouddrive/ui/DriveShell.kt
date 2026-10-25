@@ -89,14 +89,14 @@ fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Co
             }
         }
     }
-    // The fleet's first row (libs:nav-bar-top-first-row, declared by ui.top_bar): the round Settings button at the top right,
+    // The fleet's first row (libs:ui-nav-bars, declared by ui.top_bar): the round Settings button at the top right,
     // a dropdown of Profile (Cloud Account) and Configs (this app's Configs tab). It owns the top inset, which the
     // pages' own toolbar islands then find already consumed.
     val topBar = Declarations.topBar
     if (topBar == null) host() else {
         val labels = appTopBarLabels().let { it.copy(account = stringResource(R.string.top_bar_profile)) }
         Box(Modifier.fillMaxSize().windowInsetsPadding(topIslandInsets())) {
-            // #1154 the first row is libs:nav-bar-top-first-row's: plain icons, the open page's title as the island, whose dropdown
+            // #1154 the first row is libs:ui-nav-bars's: plain icons, the open page's title as the island, whose dropdown
             // is the open destination's tree (the same one the side menu lists); a pick below it asks the destination's second row.
             val section = Declarations.nav.section(selected)
             NavBarTopFirstRowScaffold(

@@ -50,7 +50,7 @@ export function cssVars(bars, dark) {
 	return v;
 }
 
-/** The width of one bottom cell on a bar of [barWidth] holding [count] items (libs:nav-bar-bottom BottomSpec.cellWidth). */
+/** The width of one bottom cell on a bar of [barWidth] holding [count] items (libs:ui-nav-bars BottomSpec.cellWidth). */
 export function cellWidth(bars, barWidth, count) {
 	const b = bars.bottom;
 	if (count <= 0) return b.cell;
@@ -79,7 +79,7 @@ export function secondRowShown(tab) {
 
 /**
  * The title dropdown: the bottom page (depth 0) then its sub-pages (depth 1), the path to the page shown marked
- * (libs:nav-bar-top-first-row titleHierarchy).
+ * (libs:ui-nav-bars titleHierarchy).
  * @returns {{id:string,label:string,depth:number,tabId:string,selected:boolean}[]}
  */
 export function titleHierarchy(tab, currentPageId) {

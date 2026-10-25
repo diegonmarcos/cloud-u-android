@@ -6,7 +6,7 @@ import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRowView
 
 /**
- * #868 the one place a Maps / Cloud-Nav page draws its tab strip: libs:nav-bar-top-second-row's [NavBarTopSecondRowView]
+ * #868 the one place a Maps / Cloud-Nav page draws its tab strip: libs:ui-nav-bars's [NavBarTopSecondRowView]
  * (the fleet's second row, #1154), fed a section's declared `pages`. Replaces the Material TabLayouts the
  * Timeline host and Configs used to build by hand.
  *

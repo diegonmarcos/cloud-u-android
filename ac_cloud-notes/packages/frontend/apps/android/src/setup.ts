@@ -5,7 +5,7 @@ import './proxy';
 
 import { viewportRuntimeConfig } from '@blocksuite/cloud-notes/std/gfx';
 
-// The Compose shell draws the bottom nav (libs:nav-bar-bottom); the web's own tabs hide.
+// The Compose shell draws the bottom nav (libs:ui-nav-bars); the web's own tabs hide.
 (window as unknown as { cloudNotesNativeNav?: boolean }).cloudNotesNativeNav =
   true;
 

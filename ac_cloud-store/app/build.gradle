@@ -244,9 +244,7 @@ dependencies {
     implementation project(':libs:sysdns')     // #874 FleetDnsBridge: the one resolver of this process
     // #868 the bottom island + NavDecl: the Store's four pages are ui.sections.
     implementation project(':libs:bottomnav')
-    implementation project(':libs:nav-bar-bottom')
-    implementation project(':libs:nav-bar-top-first-row')
-    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:ui-nav-bars')
     implementation project(':libs:theme-background')
     // The top bar's AI panel: the fleet's AI chat over the fleet agent gateway (no token on the phone). It brings libs:model-catalogue along.
     implementation project(':libs:ai')

@@ -2083,7 +2083,7 @@ private fun DrawerContent(
                 // reader cannot see from outside the sheet must not be able to greet them, weeks
                 // later, as a folder list with folders missing from it.
                 var folderTab by remember { mutableStateOf(FolderTab.ALL) }
-                // The fleet's pill strip (libs:nav-bar-top-second-row, #868). In a sheet: no live top inset.
+                // The fleet's pill strip (libs:ui-nav-bars, #868). In a sheet: no live top inset.
                 val folderTabs = listOf(
                     NavPage(FolderTab.ALL.name, stringResource(R.string.inbox_folders_tab_all), "inbox"),
                     NavPage(FolderTab.UNREAD.name, stringResource(R.string.inbox_folders_tab_unread), "mark_email_unread"),

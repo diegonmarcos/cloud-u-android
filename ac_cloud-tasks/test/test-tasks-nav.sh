@@ -65,9 +65,9 @@ for k, v in sorted(ids.items()):
         check(re.search(r"Ids\.%s\s*->" % k, app_kt) is not None, "the shell has a branch for section %s" % v)
 
 # ── built from the fleet's pieces ─────────────────────────────────────────────────────────────────────────
-check("NavBarBottomHost(" in app_kt and "islandEntries" in app_kt, "the island is libs:nav-bar-bottom's NavBarBottomHost over the declared entries")
-check("NavBarTopSecondRow(" in app_kt and "stripSurface(" in app_kt, "tab strips are libs:nav-bar-top-second-row's NavBarTopSecondRow, their surface from the declaration")
-check("NavBarTopFirstRowScaffold(" in app_kt and "rememberAccountLauncher(" in app_kt and "onConfigs =" in app_kt, "the first row is libs:nav-bar-top-first-row's, Profile via the fleet launcher, Configs opening Settings")
+check("NavBarBottomHost(" in app_kt and "islandEntries" in app_kt, "the island is libs:ui-nav-bars's NavBarBottomHost over the declared entries")
+check("NavBarTopSecondRow(" in app_kt and "stripSurface(" in app_kt, "tab strips are libs:ui-nav-bars's NavBarTopSecondRow, their surface from the declaration")
+check("NavBarTopFirstRowScaffold(" in app_kt and "rememberAccountLauncher(" in app_kt and "onConfigs =" in app_kt, "the first row is libs:ui-nav-bars's, Profile via the fleet launcher, Configs opening Settings")
 check("UI_TOP_BAR_B64" in read(APP, "app/build.gradle") and set(ui.get("top_bar", {}).get("settings", [])) == {"account", "configs"} and ui["top_bar"].get("drawer") and ui["top_bar"].get("ai"), "build.json::ui.top_bar declares drawer, ai and the Account / Configs settings, baked into BuildConfig")
 check("TasksTheme(" in app_kt, "the app is wrapped in the theme")
 theme = strip(read(SRC, "ui/Theme.kt"))

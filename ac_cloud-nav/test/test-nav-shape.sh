@@ -8,7 +8,7 @@
 #      Explored carries Trips|Maps, Tracker carries Timeline|Steps|Sleep (#1156) and Configs, no longer in the island, keeps Tracker|APIs|Update|Cache|Layers|About as
 #      its pages; the old nav_tabs / default_tab keys are gone.
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
-#   S3 MainActivity (Compose) draws the bar with libs:nav-bar-bottom's NavBarBottomHost fed by NavConfig.decl (NavDecl),
+#   S3 MainActivity (Compose) draws the bar with libs:ui-nav-bars's NavBarBottomHost fed by NavConfig.decl (NavDecl),
 #      not a BottomNavigationView, and no layout XML shell remains.
 #   S4 the Explored / Tracker hosts (PagedSectionFragment) and Configs draw their strips with NavBarTopSecondRowView, not a TabLayout.
 #   S5 no hand-rolled nav widget anywhere in the app or libs:maps (nav-shape-guard N3).

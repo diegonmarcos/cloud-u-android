@@ -113,16 +113,16 @@ bottom bar names every tab when the names fit their cells and only the selected 
 The fleet's default navigation is drawn in the page by `src/cloud/bars-dom.js` from `nav.json`,
 on the shared page gradient:
 
-- **First row** (`libs:nav-bar-top-first-row`): plain hamburger (tap only, no edge-swipe) opening
+- **First row** (`libs:ui-nav-bars`): plain hamburger (tap only, no edge-swipe) opening
   the active page's drawer; the title as a centred island whose tap opens the hierarchy dropdown
   (the bottom page, then its sub-pages); plain AI (sparkles), Profile and Configs (vertical dots).
   AI hands over to the SuperApp (`extapp:cloud-superapp/ai`), Profile to Cloud Account
   (`extapp:cloud-account`), Configs opens Profile & Config, this app's settings.
-- **Second row** (`libs:nav-bar-top-second-row`): the page's sub-pages as small icon pills with their
+- **Second row** (`libs:ui-nav-bars`): the page's sub-pages as small icon pills with their
   names, violet rounded-rectangle selection. Backlog: Status, Project, Priority, Effort;
   Agents: Batches, Models (the views the backlog engine already emits). Pages with fewer than two
   sub-pages have no second row.
-- **Bottom bar** (`libs:nav-bar-bottom`): Cloud Search's glass pill, accent-coloured selection, every
+- **Bottom bar** (`libs:ui-nav-bars`): Cloud Search's glass pill, accent-coloured selection, every
   item an icon over its name.
 - **Scroll down** hides the first row and compacts the other two (shorter tabs and bar, only the
   selected item keeps its name); scroll up or the top restores all three (`bars.js::collapseStep`).

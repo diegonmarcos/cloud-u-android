@@ -56,12 +56,10 @@ on:
       - "ab_cloud-libs-shared/libs/ml-l-image/**"
       - "ab_cloud-libs-shared/libs/ml-l-sound/**"
       - "ab_cloud-libs-shared/libs/model-catalogue/**"
-      - "ab_cloud-libs-shared/libs/nav-bar-bottom/**"
-      - "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**"
-      - "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
       - "ab_cloud-libs-shared/libs/ui-icons/**"
+      - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ac_cloud-calc/**"
       - "!ac_cloud-calc/web/**"
 permissions:

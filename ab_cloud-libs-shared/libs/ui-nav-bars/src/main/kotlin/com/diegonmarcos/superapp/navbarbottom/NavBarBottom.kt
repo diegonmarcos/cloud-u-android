@@ -64,7 +64,7 @@ import com.diegonmarcos.superapp.themebg.themeBackground
 /**
  * The bottom nav's numbers and colours (#1154): Cloud Search's look (glass pill, hairline, accent-coloured selection
  * with a lifted icon and a label that appears) at the fleet's cell size. The second row is sized against these
- * (see libs:nav-bar-top-second-row), so they are the reference of "clearly smaller".
+ * (see libs:ui-nav-bars), so they are the reference of "clearly smaller".
  */
 public object BottomSpec {
     public val CELL: Dp = 56.dp

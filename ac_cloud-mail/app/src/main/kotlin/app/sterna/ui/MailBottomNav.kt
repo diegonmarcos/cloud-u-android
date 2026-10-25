@@ -32,7 +32,7 @@ internal fun mailEntries(): List<BottomNavEntry> = mailNav.bottomSections().map 
 }
 
 /**
- * cloud-mail's bottom nav (#465): [bottomNavItems] on the shared host (libs:nav-bar-bottom, #1154). DESTINATION items navigate
+ * cloud-mail's bottom nav (#465): [bottomNavItems] on the shared host (libs:ui-nav-bars, #1154). DESTINATION items navigate
  * and move the selected pill. LAUNCH items hand off to another app and leave the pill where it is.
  */
 @Composable

@@ -155,9 +155,7 @@ dependencies {
     implementation project(':libs:ui-kit')
     // #868 NavDecl, and #1164 the shared nav: first row (Profile -> Cloud Account), second row, bottom nav, page background.
     implementation project(':libs:bottomnav')
-    implementation project(':libs:nav-bar-bottom')
-    implementation project(':libs:nav-bar-top-first-row')
-    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:ui-nav-bars')
     implementation project(':libs:theme-background')
 
     implementation 'androidx.core:core-ktx:1.13.1'

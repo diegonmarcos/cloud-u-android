@@ -113,9 +113,9 @@
         "*/src-tauri/gen/android/app/src/main/**",
         "ac_cloud-notes/packages/frontend/apps/android/App/**",
         "ab_cloud-libs-shared/libs/bottomnav/**",
-        "ab_cloud-libs-shared/libs/nav-bar-bottom/**",
-        "ab_cloud-libs-shared/libs/nav-bar-top-first-row/**",
-        "ab_cloud-libs-shared/libs/nav-bar-top-second-row/**",
+        "ab_cloud-libs-shared/libs/ui-nav-bars/**",
+        "ab_cloud-libs-shared/libs/ui-nav-bars/**",
+        "ab_cloud-libs-shared/libs/ui-nav-bars/**",
         "ab_cloud-libs-shared/libs/theme-background/**",
         "ac_cloud-code/src/cloud/**"
       ]

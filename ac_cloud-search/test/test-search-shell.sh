@@ -29,9 +29,9 @@
 #       Kotlin names agree, both ways.
 #   S10 (#797, #868, #1161) Cloud Search draws its OWN glass theme and pages, so the fleet kit (libs:ui-kit)
 #       is not linked or imported; its chrome is the fleet's shared nav pattern: libs:bottomnav is linked
-#       (NavDecl), Glass.kt draws no BottomNav/SubNav, SearchShell draws NavBarBottomHost (libs:nav-bar-bottom),
-#       NavBarTopFirstRowScaffold (libs:nav-bar-top-first-row, Profile on the fleet Account launcher) and the
-#       strips with NavBarTopSecondRow (libs:nav-bar-top-second-row) from the NavDecl build.json::ui bakes, the app
+#       (NavDecl), Glass.kt draws no BottomNav/SubNav, SearchShell draws NavBarBottomHost (libs:ui-nav-bars),
+#       NavBarTopFirstRowScaffold (libs:ui-nav-bars, Profile on the fleet Account launcher) and the
+#       strips with NavBarTopSecondRow (libs:ui-nav-bars) from the NavDecl build.json::ui bakes, the app
 #       bakes UI_BOTTOM_NAV/UI_SECTIONS_B64/UI_DEFAULT_SECTION/UI_STYLE (style fleet: the search-html variant is gone).
 #       #1184: the island is exactly Research, Searches, AI (id chat), Cloud-CGC (cgc), Me-CGC (mecgc); Searches' pages
 #       are search.verticals (less the assistant, the former Me and LLC merged), each with its subpages one strip lower,
@@ -250,7 +250,7 @@ for p in kts:
 glass = code(os.path.join(app, "app/src/main/java/com/diegonmarcos/cloudsearch/ui/Glass.kt"))
 if re.search(r"fun\s+(BottomNav|SubNav)\b", glass):
     bad.append("S10 Glass.kt draws its own BottomNav/SubNav — the bar is libs:bottomnav's BottomNavIsland, the strip its PageTabs")
-# #1161 the bar is libs:nav-bar-bottom's NavBarBottomHost (the shared pattern, no variant), fed by the baked NavDecl.
+# #1161 the bar is libs:ui-nav-bars's NavBarBottomHost (the shared pattern, no variant), fed by the baked NavDecl.
 if not re.search(r"NavBarBottomHost\(\s*entries = NAV\.islandEntries", shell):
     bad.append("S10 SearchShell does not draw NavBarBottomHost from the baked NavDecl (NAV.islandEntries)")
 if re.search(r"\b(BottomNavIsland|SearchHtmlIsland)\s*\(", shell):

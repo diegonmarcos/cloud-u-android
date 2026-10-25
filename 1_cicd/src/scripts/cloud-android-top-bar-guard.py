@@ -183,7 +183,7 @@ def app_findings(repo, cfg, app, top_bar, build):
         if raw is not None:
             codes[rel] = strip_comments(raw)
     everything = "\n".join(codes.values())
-    # #1154 the first row is also drawn by libs:nav-bar-top-first-row's scaffold (policy wiring.scaffold_alt): same drawer, same controller
+    # #1154 the first row is also drawn by libs:ui-nav-bars's scaffold (policy wiring.scaffold_alt): same drawer, same controller
     scaffolds = [cfg["wiring"]["scaffold"]] + list(cfg["wiring"].get("scaffold_alt", []))
     if not any(n in everything for n in scaffolds):
         bad.append("%s: declares ui.top_bar but no Kotlin calls %s: the declared bar is never drawn" % (app, " or ".join(scaffolds)))

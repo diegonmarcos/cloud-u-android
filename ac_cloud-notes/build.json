@@ -44,20 +44,10 @@
       "type": "library",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     },
-    "libs:nav-bar-bottom": {
+    "libs:ui-nav-bars": {
       "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE: Cloud Notes' shell (NotesShell) is the first row, second row, bottom nav and page background of the fleet.",
       "type": "library",
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom"
-    },
-    "libs:nav-bar-top-first-row": {
-      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE: Cloud Notes' shell (NotesShell) is the first row, second row, bottom nav and page background of the fleet.",
-      "type": "library",
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row"
-    },
-    "libs:nav-bar-top-second-row": {
-      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE: Cloud Notes' shell (NotesShell) is the first row, second row, bottom nav and page background of the fleet.",
-      "type": "library",
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row"
+      "dir": "../ab_cloud-libs-shared/libs/ui-nav-bars"
     },
     "libs:theme-background": {
       "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE: Cloud Notes' shell (NotesShell) is the first row, second row, bottom nav and page background of the fleet.",

@@ -55,11 +55,11 @@ if [secs[i]["label"] for i in ui.get("bottom_nav", []) if i in secs] != want_lab
     bad("nav-order", f"the bar labels are not {want_labels}")
 
 # ---- N2 tab style: icon-only, the selected one also shows its name
-# #1154 the strip is libs:nav-bar-top-second-row's (the owner moved the second row out of libs:bottomnav)
-strip = os.path.join(libs, "nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt")
+# #1154 the strip is libs:ui-nav-bars's (the owner moved the second row out of libs:bottomnav)
+strip = os.path.join(libs, "ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt")
 tabs = strip
 if not os.path.exists(strip):
-    bad("tab-style", "libs:nav-bar-top-second-row has no NavBarTopSecondRow.kt")
+    bad("tab-style", "libs:ui-nav-bars has no NavBarTopSecondRow.kt")
 else:
     t = code(strip)
     if "SecondRowTags.icon(" not in t:
@@ -189,7 +189,7 @@ for r, _, fs in os.walk(os.path.join(MAIN, "res")):
 
 # the lib's side menu opens by tap: no drag / swipe API in the top bar that draws it
 lib_bar = os.path.join(libs, "bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/AppTopBar.kt")
-lib_row = os.path.join(libs, "nav-bar-top-first-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt")
+lib_row = os.path.join(libs, "ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt")
 for lib_bar in (lib_bar, lib_row):
   if os.path.exists(lib_bar):
     m = re.search(r"detectHorizontalDragGestures|detectDragGestures|\bswipeable\b|\banchoredDraggable\b|\bdraggable\b|GestureDetector|gesturesEnabled", code(lib_bar))
@@ -345,7 +345,7 @@ done
 echo "== mutations: each check must go red on its own break =="
 W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
 mkdir -p "$W/base/ac_cloud-me" "$W/base/ab_cloud-libs-shared/libs/bottomnav/src"
-for l in nav-bar-top-second-row nav-bar-top-first-row; do mkdir -p "$W/base/ab_cloud-libs-shared/libs/$l/src"; cp -r "$APP/../ab_cloud-libs-shared/libs/$l/src/main" "$W/base/ab_cloud-libs-shared/libs/$l/src/"; done
+for l in ui-nav-bars ui-nav-bars; do mkdir -p "$W/base/ab_cloud-libs-shared/libs/$l/src"; cp -r "$APP/../ab_cloud-libs-shared/libs/$l/src/main" "$W/base/ab_cloud-libs-shared/libs/$l/src/"; done
 mkdir -p "$W/base/ab_cloud-libs-shared/libs/ui-icons/src" "$W/base/ab_cloud-libs-shared/libs/fleetconfig-model/src/main"
 cp -r "$APP/../ab_cloud-libs-shared/libs/ui-icons/src/main" "$W/base/ab_cloud-libs-shared/libs/ui-icons/src/"
 cp -r "$APP/../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets" "$W/base/ab_cloud-libs-shared/libs/fleetconfig-model/src/main/"
@@ -360,7 +360,7 @@ mutant() { # id description sh-command-run-in-copy
 }
 BJ='python3 - "$@"'
 mutant nav-order "bar order swapped" "python3 -c \"import json;d=json.load(open('build.json'));b=d['ui']['bottom_nav'];b[0],b[1]=b[1],b[0];json.dump(d,open('build.json','w'))\""
-mutant tab-style "name drawn on every tab even when compact" "sed -i 's/named = !compact || page.id == selectedId/named = true/' ../ab_cloud-libs-shared/libs/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt"
+mutant tab-style "name drawn on every tab even when compact" "sed -i 's/named = !compact || page.id == selectedId/named = true/' ../ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt"
 mutant tab-style "SectionScreen back to text pills" "sed -i 's/iconFor = /xxx = /' app/src/main/java/com/diegonmarcos/cloudme/SectionScreen.kt"
 mutant settings "Settings entries reduced to one" "python3 -c \"import json;d=json.load(open('build.json'));d['ui']['settings']=['configs'];json.dump(d,open('build.json','w'))\""
 mutant settings "a dropdown comes back" "echo 'val x = DropdownMenu' >> app/src/main/java/com/diegonmarcos/cloudme/MeTopBar.kt"

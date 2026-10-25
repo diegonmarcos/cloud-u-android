@@ -40,18 +40,8 @@
       "type": "library",
       "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
     },
-    "libs:nav-bar-bottom": {
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
-      "type": "library",
-      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE."
-    },
-    "libs:nav-bar-top-first-row": {
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
-      "type": "library",
-      "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE."
-    },
-    "libs:nav-bar-top-second-row": {
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+    "libs:ui-nav-bars": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-nav-bars",
       "type": "library",
       "_doc": "#1164 shared navigation and theme design, shared BY REFERENCE."
     },
@@ -71,9 +61,7 @@
         "libs:bottomnav",
 
         "libs:ui-icons",
-        "libs:nav-bar-bottom",
-        "libs:nav-bar-top-first-row",
-        "libs:nav-bar-top-second-row",
+        "libs:ui-nav-bars",
         "libs:theme-background",
         "libs:core",
         "libs:updater",

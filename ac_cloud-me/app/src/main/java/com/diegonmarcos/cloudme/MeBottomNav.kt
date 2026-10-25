@@ -13,7 +13,7 @@ import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
 import com.diegonmarcos.superapp.navbarbottom.NavBarBottom
 
 /**
- * Cloud Me's bottom nav: libs:nav-bar-bottom's bar (#1154, Cloud Search's coloured selection) fed from [Sections.bottom] (#531).
+ * Cloud Me's bottom nav: libs:ui-nav-bars's bar (#1154, Cloud Search's coloured selection) fed from [Sections.bottom] (#531).
  *
  * The stock Material BottomNavigationView is gone; the bar is the fleet's one Compose island.
  * What stays Cloud Me's own is small: WHICH sections (the bar sections of build.json, in

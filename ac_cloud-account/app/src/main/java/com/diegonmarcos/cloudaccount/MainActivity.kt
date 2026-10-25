@@ -78,7 +78,7 @@ import com.diegonmarcos.superapp.updater.Updater
 
 /**
  * Cloud Account: the five sections of build.json::ui.bottom_nav (Personal Info, Configs, Data, Connect, Activity), drawn
- * by libs:nav-bar-bottom (bar) and libs:nav-bar-top-second-row (strips) from the baked NavDecl. A section's pages are its top strip; a page with pages
+ * by libs:ui-nav-bars (bar) and libs:ui-nav-bars (strips) from the baked NavDecl. A section's pages are its top strip; a page with pages
  * of its own (Autocomplete, Android, Secrets, Backups, Devices, Status, Authentication providers) gets a second strip
  * under it, so every leaf is at most two taps from the island. Every leaf (section, page) is mapped to ONE composable
  * in [Page]; nothing is drawn in two places. The page starts below the top chrome through the one `statusBarsPadding`

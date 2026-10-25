@@ -379,7 +379,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * #1164 THE one shell of the app: the shared first row (title island with the section's pages, Profile top-right launches
-     * Cloud Account), the shared bottom nav (libs:nav-bar-bottom, fed by build.json::ui through [WriterNav.decl]), the shared page
+     * Cloud Account), the shared bottom nav (libs:ui-nav-bars, fed by build.json::ui through [WriterNav.decl]), the shared page
      * background and the shared scroll-collapse (a page scrolled down hides the first row and compacts the rows, up restores).
      * Documents, Tools and Settings are the content of the host; the editor, whose own format and tool bars take the bottom
      * bar's place, is the content of the first-row scaffold alone.
@@ -1161,7 +1161,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * #868 The Tools section: its declared pages (build.json ui.sections[tools].pages) are a
-     * NavBarTopSecondRow strip (libs:nav-bar-top-second-row), and the selected page is the card that opens it. The five
+     * NavBarTopSecondRow strip (libs:ui-nav-bars), and the selected page is the card that opens it. The five
      * used to be a column of cards under Configs; they are the app's tool pages, so they have a
      * section of their own. Which declared id a [Page] is comes from its activity, WriterNav.pageId.
      */

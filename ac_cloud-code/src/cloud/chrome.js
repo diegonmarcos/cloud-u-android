@@ -12,7 +12,7 @@ export function bindTitle(fn) {
 }
 
 /**
- * The first row is the app's, not the panel's (#1158: nav-bar-top-first-row, mounted once by bars-dom.js): a panel only
+ * The first row is the app's, not the panel's (#1158: ui-nav-bars, mounted once by bars-dom.js): a panel only
  * names its title (the AI tab names its agent). [onMenu], [onProfile] and [actions] are the first row's now (the hamburger
  * drawer lists the page's own items, which is where its former icon buttons live), so this draws nothing and returns an
  * empty marker for the panel to hold.

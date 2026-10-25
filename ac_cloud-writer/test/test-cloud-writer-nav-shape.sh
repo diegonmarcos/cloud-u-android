@@ -9,7 +9,7 @@
 #      ai_routing|routes) that the Tools screen draws as a second-row strip.
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
 #   S3 MainActivity's ONE shell (#1164) is the shared first row (NavBarTopFirstRowScaffold, Profile ->
-#      Cloud Account) around libs:nav-bar-bottom's NavBarBottomHost fed by WriterNav.decl (NavDecl); the
+#      Cloud Account) around libs:ui-nav-bars's NavBarBottomHost fed by WriterNav.decl (NavDecl); the
 #      Documents, Tools and Settings screens are the host's content (no per-screen scaffold).
 #   S4 the Tools screen draws its strip with NavBarTopSecondRow, and each declared page opens its own activity.
 #   S5 no hand-rolled nav widget in the app (nav-shape-guard N3).
@@ -177,7 +177,7 @@ def checks(f):
         need("the old nav key ui.%s is gone (one declaration, not two)" % old, old not in ui)
     gradle = "\n".join(code(f[g]) for g in CFG["gradles"])
     need("N2 the app compiles project(':libs:bottomnav')", re.search(r"project\(\s*['\"]:libs:bottomnav['\"]", gradle) is not None)
-    for lib in ("nav-bar-bottom", "nav-bar-top-first-row", "nav-bar-top-second-row", "theme-background"):
+    for lib in ("ui-nav-bars", "ui-nav-bars", "ui-nav-bars", "theme-background"):
         need("N2 the app compiles project(':libs:%s')" % lib, re.search(r"project\(\s*['\"]:libs:%s['\"]" % lib, gradle) is not None)
     need("N2 build.json::modules declares libs:bottomnav", "libs:bottomnav" in mods)
     for field in ("UI_BOTTOM_NAV", "UI_SECTIONS_B64", "UI_DEFAULT_SECTION"):

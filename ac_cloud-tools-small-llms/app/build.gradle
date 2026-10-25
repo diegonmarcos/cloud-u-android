@@ -137,9 +137,7 @@ dependencies {
     // The fleet's bottom-nav island; this app supplies its own entries from ui.bottom_nav.
     implementation project(':libs:bottomnav')
     // The shared bars (#1154, #1157): first row (Profile top right), second row, bottom nav, page gradient; icons from the catalog (#1160).
-    implementation project(':libs:nav-bar-bottom')
-    implementation project(':libs:nav-bar-top-first-row')
-    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:ui-nav-bars')
     implementation project(':libs:theme-background')
     implementation project(':libs:ui-icons')
     // Every decision and every number: plain JVM, mutation-tested on its own (core/build.gradle).

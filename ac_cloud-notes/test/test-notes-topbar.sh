@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ac_cloud-notes tester: the fleet's shared nav scaffold (#1164), and ONE source for the insets.
 #
-# Cloud Notes is a Capacitor/WebView app. Its NotesShell is the activity's content: libs:nav-bar-top-first-row's
-# scaffold (Profile top-right launches Cloud Account), libs:nav-bar-top-second-row, libs:nav-bar-bottom and
+# Cloud Notes is a Capacitor/WebView app. Its NotesShell is the activity's content: libs:ui-nav-bars's
+# scaffold (Profile top-right launches Cloud Account), libs:ui-nav-bars, libs:ui-nav-bars and
 # libs:theme-background, with the editor WebView as the content and its scroll fed to the ONE chrome collapse
 # (ChromeWebScroll). Three halves must agree, none of which a compiler can see across:
 #
@@ -44,11 +44,11 @@ setup = rd('packages/frontend/apps/android/src/setup.ts')
 # declaration
 check('top_bar' not in ui, 'ui declares no top_bar of its own (the shared first row is fixed)')
 mods = build.get('modules') or {}
-check(all(m in mods for m in ('libs:bottomnav', 'libs:nav-bar-bottom', 'libs:nav-bar-top-first-row', 'libs:nav-bar-top-second-row', 'libs:theme-background', 'libs:ai', 'libs:model-catalogue')),
+check(all(m in mods for m in ('libs:bottomnav', 'libs:ui-nav-bars', 'libs:ui-nav-bars', 'libs:ui-nav-bars', 'libs:theme-background', 'libs:ai', 'libs:model-catalogue')),
       'build.json::modules links the shared nav libs, libs:ai and its api dependency libs:model-catalogue')
 check('"UI_SECTIONS_B64"' in gradle and '"UI_BOTTOM_NAV"' in gradle, 'app/build.gradle bakes the nav declaration')
 check('"AI_GATEWAY_URL"' in gradle and 'ai-gateway.gradle' in gradle, 'app/build.gradle bakes AI_GATEWAY_URL via the shared ai-gateway.gradle')
-check(all(("project(':%s')" % m) in gradle for m in ('libs:ai', 'libs:nav-bar-bottom', 'libs:nav-bar-top-first-row', 'libs:nav-bar-top-second-row', 'libs:theme-background')),
+check(all(("project(':%s')" % m) in gradle for m in ('libs:ai', 'libs:ui-nav-bars', 'libs:ui-nav-bars', 'libs:ui-nav-bars', 'libs:theme-background')),
       'app/build.gradle implements :libs:ai and the shared nav libs')
 check(re.search(r"ext\.aiFleetRoot\s*=", gradle) is not None, 'the nested gradle root names the repository root for ai-gateway.gradle')
 

@@ -103,7 +103,7 @@ public fun AppTopBarScaffold(
     barVisible: Boolean = true,
     /**
      * #1154 the row seam: when set, THIS draws the first row instead of [AppTopBar] (the hamburger/AI/panel state stays the
-     * [controller]'s, the drawer overlay and the AI popup stay this scaffold's). libs:nav-bar-top-first-row fills it; an app
+     * [controller]'s, the drawer overlay and the AI popup stay this scaffold's). libs:ui-nav-bars fills it; an app
      * calls that lib's scaffold, never this parameter.
      */
     topRow: (@Composable (AppTopBarController) -> Unit)? = null,
@@ -226,7 +226,7 @@ public class AppTopBarController {
     public var settingsOpen: Boolean by mutableStateOf(false)
         private set
 
-    /** What the page said through [TopBarDrawer]; public so libs:nav-bar-top-first-row can list it in the title dropdown (no hamburger there). */
+    /** What the page said through [TopBarDrawer]; public so libs:ui-nav-bars can list it in the title dropdown (no hamburger there). */
     public var drawerContent: TopBarDrawerContent? by mutableStateOf<TopBarDrawerContent?>(null)
         internal set
 

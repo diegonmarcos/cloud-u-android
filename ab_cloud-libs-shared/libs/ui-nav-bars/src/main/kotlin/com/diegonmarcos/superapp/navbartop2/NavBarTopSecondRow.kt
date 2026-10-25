@@ -131,7 +131,7 @@ internal fun ReportShownPage(selectedId: String?) {
     }
 }
 
-/** The enclosing [SubPageRequests]; null outside libs:nav-bar-top-first-row's scaffold (a strip then ignores requests). */
+/** The enclosing [SubPageRequests]; null outside libs:ui-nav-bars's scaffold (a strip then ignores requests). */
 public val LocalSubPageRequests = staticCompositionLocalOf<SubPageRequests?> { null }
 
 /** [id] is this page or sits anywhere below it. */

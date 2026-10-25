@@ -195,7 +195,7 @@ object Tags {
     const val WEB_STRIP = "search_web_strip"
     const val CHAT_STRIP = "search_chat_strip"
     fun agentLink(id: String) = "search_agent_link_$id"
-    /** #1161 the first row is libs:nav-bar-top-first-row's: its tags are the row's own. */
+    /** #1161 the first row is libs:ui-nav-bars's: its tags are the row's own. */
     const val ISLAND = TopFirstRowTags.ISLAND
     const val PROFILE = TopFirstRowTags.PROFILE
     const val CONFIGS = TopFirstRowTags.CONFIGS
@@ -227,7 +227,7 @@ object Tags {
     const val THINGS_RADIUS = "search_things_radius"
     const val THINGS_APPLY = "search_things_apply"
     fun thingsRow(osm: String) = "search_things_row_$osm"
-    /** libs:nav-bar-bottom's item tag. */
+    /** libs:ui-nav-bars's item tag. */
     fun nav(id: String) = BottomTags.item(id)
     /** A sub-page pill of the page-tab strip. */
     fun subpage(id: String) = PageTabsTags.tab(id)
@@ -248,8 +248,8 @@ fun SearchShell(state: SearchState) {
     CompositionLocalProvider(LocalState provides state) {
         SearchTheme(state.dark) {
             Box(Modifier.fillMaxSize().testTag(Tags.SHELL)) {
-                // #1161 the shared nav pattern: libs:nav-bar-bottom's bar and page background, libs:nav-bar-top-first-row's
-                // row (Profile top-right opens Cloud Account), libs:nav-bar-top-second-row's strips, one scroll-collapse.
+                // #1161 the shared nav pattern: libs:ui-nav-bars's bar and page background, libs:ui-nav-bars's
+                // row (Profile top-right opens Cloud Account), libs:ui-nav-bars's strips, one scroll-collapse.
                 NavBarBottomHost(
                     entries = NAV.islandEntries(),
                     selectedId = if (state.saved) null else state.section,

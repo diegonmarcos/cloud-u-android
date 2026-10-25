@@ -5,7 +5,7 @@
 #
 #   C1 build.json::ui.browser.settings_sections declares the pages (= the top tabs), in order; every setting
 #      names one of them and every page holds a setting, a global row or a native block;
-#   C2 ui.sections[configs].pages is the SAME list (ids and order): the tabs libs:nav-bar-top-second-row draws;
+#   C2 ui.sections[configs].pages is the SAME list (ids and order): the tabs libs:ui-nav-bars draws;
 #   C3 each page is drawn on its own (BrowserConfigsPageScreen): its settings, then its rows, then its native
 #      blocks, from libs:ui-kit's rows and a chip row per enum; the host swaps the page when a tab is picked;
 #   C4 the page is Compose (no View screen added: the compose ratchet counts it).

@@ -115,9 +115,7 @@
         "libs:core",
         "libs:bottomnav",
         "libs:ui-icons",
-        "libs:nav-bar-bottom",
-        "libs:nav-bar-top-first-row",
-        "libs:nav-bar-top-second-row",
+        "libs:ui-nav-bars",
         "libs:theme-background",
         "libs:model-catalogue",
         "libs:ai"
@@ -162,18 +160,8 @@
       "dir": "../ab_cloud-libs-shared/libs/model-catalogue",
       "type": "library"
     },
-    "libs:nav-bar-bottom": {
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-bottom",
-      "type": "library",
-      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
-    },
-    "libs:nav-bar-top-first-row": {
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-first-row",
-      "type": "library",
-      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
-    },
-    "libs:nav-bar-top-second-row": {
-      "dir": "../ab_cloud-libs-shared/libs/nav-bar-top-second-row",
+    "libs:ui-nav-bars": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-nav-bars",
       "type": "library",
       "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
     },

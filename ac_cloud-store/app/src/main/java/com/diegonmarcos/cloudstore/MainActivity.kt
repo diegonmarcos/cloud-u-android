@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FleetChrome.apply(this)
-        // #896 this host draws the child-page strips (build.json::ui sections[].pages) with libs:nav-bar-top-second-row's NavBarTopSecondRow.
+        // #896 this host draws the child-page strips (build.json::ui sections[].pages) with libs:ui-nav-bars's NavBarTopSecondRow.
         StorePages.hostDrawsStrip = true
         requested = tabFrom(intent)
         setContent {
@@ -154,7 +154,7 @@ class MainActivity : AppCompatActivity(), AdbShellHost {
         Box(Modifier.fillMaxSize().statusBarsPadding()) {
             BatteryPrompt()   // #1078 once, while the app is still battery-optimized
             val topBar = TOP_BAR
-            // #1154 the first row is libs:nav-bar-top-first-row's: the open section's name is the island, whose dropdown lists the
+            // #1154 the first row is libs:ui-nav-bars's: the open section's name is the island, whose dropdown lists the
             // section and its pages (the same tree the drawer shows); a pick of a page opens it on the section's strip.
             val openSection = NAV.section(selected)
             if (topBar == null) shell() else NavBarTopFirstRowScaffold(

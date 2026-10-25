@@ -214,7 +214,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-account — `com.diegonmarcos.cloudaccount`
 
-Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-mail, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-net, lib-shared-store, lib-shizuku-adb-debug-tools, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-updater.
+Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofill, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-mail, lib-net, lib-shared-store, lib-shizuku-adb-debug-tools, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -257,7 +257,7 @@ Coverage: 16 covered, 0 gaps.
 
 ## cloud-tasks — `com.diegonmarcos.cloudagenda`
 
-Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-updater.
+Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -288,7 +288,7 @@ Coverage: 7 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
-Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottomnav, lib-browser, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-updater.
+Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottomnav, lib-browser, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -357,7 +357,7 @@ Coverage: 2 covered, 0 gaps.
 
 ## cloud-c3 — `com.diegonmarcos.cloudc3`
 
-Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-ops, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-updater.
+Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-ops, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -382,7 +382,7 @@ Coverage: 9 covered, 0 gaps.
 
 ## cloud-calc — `com.diegonmarcos.cloudcalc`
 
-Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-light, lib-ml-l-image, lib-ml-l-sound, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-icons.
+Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-light, lib-ml-l-image, lib-ml-l-sound, lib-model-catalogue, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -495,7 +495,7 @@ Coverage: 8 covered, 5 gaps — code_chat_sessions, file:filesDir or app storage
 
 ## cloud-contacts — `com.diegonmarcos.cloudcontacts`
 
-Module `ac_cloud-contacts`; libs: lib-analytics, lib-bottomnav, lib-contacts, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-icons, lib-updater.
+Module `ac_cloud-contacts`; libs: lib-analytics, lib-bottomnav, lib-contacts, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-theme-background, lib-ui-icons, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -523,7 +523,7 @@ Coverage: 6 covered, 2 gaps — contacts_vcards, file:system ContactsContract pr
 
 ## cloud-dialer — `com.diegonmarcos.comms.dialer`
 
-Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-icons, lib-ui-kit.
+Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -550,7 +550,7 @@ Coverage: 7 covered, 2 gaps — call_history, file:system CallLog and BlockedNum
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 
-Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-model-catalogue, lib-mounts, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-rclone, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-theme-background, lib-ui-icons, lib-updater.
+Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-disk, lib-disk-scan, lib-file-editor, lib-fleetconfig-model, lib-git-sync, lib-ml-l-image, lib-model-catalogue, lib-mounts, lib-rclone, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-theme-background, lib-ui-icons, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -616,7 +616,7 @@ Coverage: 5 covered, 0 gaps.
 
 ## cloud-mail — `com.diegonmarcos.comms.mail`
 
-Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-ml-l-image, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-icons, lib-updater.
+Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-ml-l-image, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -694,7 +694,7 @@ Coverage: 2 covered, 9 gaps — datastore:elementx_featureflag, datastore:elemen
 
 ## cloud-me — `com.diegonmarcos.cloudme`
 
-Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-updater.
+Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fin, lib-fleetconfig-model, lib-health, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -725,7 +725,7 @@ Coverage: 11 covered, 0 gaps.
 
 ## cloud-gallery — `com.diegonmarcos.mediacenter`
 
-Module `ac_cloud-gallery`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-cropper, lib-devtools, lib-fleetconfig-model, lib-gesture, lib-ml-l-image, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-panoramaviewer, lib-scrollbar, lib-theme-background, lib-ui-icons.
+Module `ac_cloud-gallery`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-cropper, lib-devtools, lib-fleetconfig-model, lib-gesture, lib-ml-l-image, lib-panoramaviewer, lib-scrollbar, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -779,7 +779,7 @@ Coverage: 7 covered, 0 gaps.
 
 ## cloud-nav — `com.diegonmarcos.cloudnav`
 
-Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-maps, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-updater.
+Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-maps, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -820,7 +820,7 @@ Coverage: 13 covered, 0 gaps.
 
 ## cloud-news — `com.diegonmarcos.cloudnews`
 
-Module `ac_cloud-news`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-icons, lib-updater.
+Module `ac_cloud-news`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-theme-background, lib-ui-icons, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -879,7 +879,7 @@ Coverage: 10 covered, 7 gaps — file:$HOME/.config/nix-on-droid/nix-on-droid.ni
 
 ## cloud-notes — `com.diegonmarcos.cloudnotes`
 
-Module `ac_cloud-notes`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-icons.
+Module `ac_cloud-notes`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -920,7 +920,7 @@ Coverage: 3 covered, 0 gaps.
 
 ## cloud-search — `com.diegonmarcos.cloudsearch`
 
-Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-icons.
+Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -946,7 +946,7 @@ Coverage: 4 covered, 4 gaps — search_agents_state, search_chat_sessions, file:
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
-Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-updater.
+Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -1066,7 +1066,7 @@ Coverage: 7 covered, 0 gaps.
 
 ## cloud-writer — `com.diegonmarcos.cloudwriter`
 
-Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-crash, lib-decisions, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-kit.
+Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-crash, lib-decisions, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -1082,7 +1082,7 @@ Coverage: 4 covered, 0 gaps.
 
 ## cloud-superintel — `com.diegonmarcos.cloudsuperintel`
 
-Module `ac_cloud-superintel`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-theme-background, lib-ui-icons.
+Module `ac_cloud-superintel`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -1102,7 +1102,7 @@ Coverage: 3 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 
 ## cloud-tools-small-llms — `com.diegonmarcos.cloudtoolssmallllms`
 
-Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-nav-bar-bottom, lib-nav-bar-top-first-row, lib-nav-bar-top-second-row, lib-text-tools, lib-theme-background, lib-ui-icons.
+Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|

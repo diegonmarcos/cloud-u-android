@@ -23,7 +23,7 @@
 #   D4  the declarations are BAKED (build.gradle → UI_*_B64 from buildJson.ui with
 #       a hard error on a missing block) and decoded once (Declarations.kt).
 #   D5  libs:bottomnav is declared, depended on, linked, and DriveShell draws
-#       NavBarBottomHost (libs:nav-bar-bottom: the bar, its collapse and its insets) with the declared entries.
+#       NavBarBottomHost (libs:ui-nav-bars: the bar, its collapse and its insets) with the declared entries.
 #   D6  the WebView shell is gone: no drive.html, no tailwind.js, no FilesBridge,
 #       no Material Views widget, no WebView and no JavascriptInterface at all; no
 #       AppCompatActivity anywhere (2026-10-15 owner decision: all apps must be Compose,
@@ -172,7 +172,7 @@ d2s "$BJ" "$SYNC_KT" && pass "ui.sections[git].pages dispatch matches; periods a
 
 echo "── D3 icons from declarations ──"
 d3 "$BJ" "$CATALOG" && pass "every declared icon name is in IconCatalog's vocabulary" || fail "an icon is declared that the catalog does not know"
-if grep -qE 'Declarations\.nav\.islandEntries\(\)' "$SHELL_KT" && grep -qE 'NavBarTopSecondRow\(' "$CONFIGS" && grep -qE 'NavBarTopSecondRow\(' "$SYNC_KT"; then pass "the shell draws the declared nav icons from the shared libs:ui-icons catalog and the strips are libs:nav-bar-top-second-row's NavBarTopSecondRow over the declared pages"; else fail "the island does not draw its icons from the shared catalog (islandEntries()), or a strip is not NavBarTopSecondRow"; fi
+if grep -qE 'Declarations\.nav\.islandEntries\(\)' "$SHELL_KT" && grep -qE 'NavBarTopSecondRow\(' "$CONFIGS" && grep -qE 'NavBarTopSecondRow\(' "$SYNC_KT"; then pass "the shell draws the declared nav icons from the shared libs:ui-icons catalog and the strips are libs:ui-nav-bars's NavBarTopSecondRow over the declared pages"; else fail "the island does not draw its icons from the shared catalog (islandEntries()), or a strip is not NavBarTopSecondRow"; fi
 if grep -rqE '"ic_[a-z_]+"' "$SRC"; then fail "a drawable name is typed in Kotlin"; else pass "no drawable-name literal in Kotlin"; fi
 
 echo "── D4 baked once, decoded once ──"

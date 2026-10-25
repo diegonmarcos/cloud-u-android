@@ -8,7 +8,7 @@
 #      (the web tabs, address bar and every overlay stay libs:browser's own UI: no pages; #900 Configs alone has pages, its
 #      13 top tabs, drawn by NavBarTopSecondRow in MainActivity: test-browser-page-menu.sh holds their ids and order).
 #   S2 the app compiles libs:bottomnav and bakes UI_BOTTOM_NAV + UI_SECTIONS_B64 + UI_DEFAULT_SECTION.
-#   S3 MainActivity (a Compose screen) draws the bar with libs:nav-bar-bottom's NavBarBottom fed by NavDecl, under the shared first row (#1164),
+#   S3 MainActivity (a Compose screen) draws the bar with libs:ui-nav-bars's NavBarBottom fed by NavDecl, under the shared first row (#1164),
 #      below the host fragment, not a BottomNavigationView.
 #   S4 Search and Configs are the HOST's own pages (BrowserHostFragment.openSearch/openSettings,
 #      the public doors onto its private pages) and the pill follows the host's overlays (onOverlaysClosed).

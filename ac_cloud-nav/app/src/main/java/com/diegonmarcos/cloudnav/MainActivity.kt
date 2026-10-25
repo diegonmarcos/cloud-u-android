@@ -43,7 +43,7 @@ import com.diegonmarcos.superapp.uikit.KitFragmentHostState
 /**
  * Cloud Nav shell — minimal Google-Maps-style chrome, in Compose:
  *   • a content area that hosts one page fragment (each page draws its own search UI)
- *   • bottom nav island (libs:nav-bar-bottom's NavBarBottomHost): Routes · Navigation · Places · Explored · Tracker
+ *   • bottom nav island (libs:ui-nav-bars's NavBarBottomHost): Routes · Navigation · Places · Explored · Tracker
  *
  * Sections + default section are data-driven from build.json::ui.* (decoded
  * by [NavConfig.decl], libs:bottomnav's NavDecl). The shell deliberately owns NO search bar — Routes does
@@ -121,7 +121,7 @@ class MainActivity : AppCompatActivity() {
         outState.putString(KEY_TAB, currentTab)
     }
 
-    /** The bar is libs:nav-bar-bottom's, fed by NavDecl (#868). The app only says which fragment a
+    /** The bar is libs:ui-nav-bars's, fed by NavDecl (#868). The app only says which fragment a
      *  section opens; the island's look is the lib's, the same in every app. The page sits above it. */
     @Composable
     private fun NavShell() {

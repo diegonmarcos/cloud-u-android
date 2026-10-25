@@ -367,7 +367,7 @@ if not re.search(r"val displayMinHeight: Dp = [1-9]\d*\.dp", theme):
     bad.append("C14 CalcMetrics.displayMinHeight is not a positive dp")
 
 # C15 the declared nav: the island is Calc | Sheet | AI | Measure | Toolkit in that order; Configs is NOT on it - it is the
-# only section off the bar, opened by the shared first row's Configs button (libs:nav-bar-top-first-row); the Sheet and AI
+# only section off the bar, opened by the shared first row's Configs button (libs:ui-nav-bars); the Sheet and AI
 # pages each have their renderer; Jev's attachments take the camera and the microphone through the two gates.
 want_bar = ["calculator", "sheet", "ai", "measure", "toolkit"]
 want_label = ["Calc", "Sheet", "AI", "Measure", "Toolkit"]
@@ -400,7 +400,7 @@ for gone in ("AppTopBarScaffold", "BottomNavHost(", "PageTabs(", "ConfigsButton"
 if "SheetHub" not in drawer or "sheetNames()" not in drawer:
     bad.append("C15 ui/CalcDrawer.kt must list the Sheet page's sheets")
 gr = open(os.path.join(app, "app", "build.gradle"), encoding="utf-8").read()
-for lib in ("libs:nav-bar-bottom", "libs:nav-bar-top-first-row", "libs:nav-bar-top-second-row", "libs:theme-background", "libs:ui-icons"):
+for lib in ("libs:ui-nav-bars", "libs:ui-nav-bars", "libs:ui-nav-bars", "libs:theme-background", "libs:ui-icons"):
     if "project(':%s')" % lib not in gr:
         bad.append("C15 app/build.gradle must depend on the shared bar lib %s" % lib)
     if lib not in bj["modules"]:
@@ -597,7 +597,7 @@ mutate topbar-own-configs-button "$J/ui/CalcShell.kt" 's + "\nprivate fun Config
 mutate topbar-configs-unwired "$J/ui/CalcShell.kt" 's.replace("onConfigs = { state.openConfigs() }", "onConfigs = { }")' "C15 ui/CalcShell.kt must draw the shared bars"
 mutate topbar-old-scaffold "$J/ui/CalcShell.kt" 's + "\nprivate val old = AppTopBarScaffold\n"' "C15 ui/CalcShell.kt still draws its own chrome"
 mutate topbar-declared-again build.json 's.replace("\"bottom_nav\": [", "\"top_bar\": {}, \"bottom_nav\": [", 1)' "C15 build.json::ui.top_bar is back"
-mutate bars-lib-undeclared app/build.gradle 's.replace(":libs:nav-bar-bottom\x27)", ":libs:nav-bar-bottomx\x27)")' "C15 app/build.gradle must depend on the shared bar lib"
+mutate bars-lib-undeclared app/build.gradle 's.replace(":libs:ui-nav-bars\x27)", ":libs:ui-nav-barsx\x27)")' "C15 app/build.gradle must depend on the shared bar lib"
 mutate drawer-not-sheets "$J/ui/CalcDrawer.kt" 's.replace("sheetNames()", "sheets()")' "C15 ui/CalcDrawer.kt must list"
 mutate attach-own-mic "$J/ui/JevAttach.kt" 's.replace("MicGate {", "run {")' "C15 ui/JevAttach.kt must reach the microphone"
 

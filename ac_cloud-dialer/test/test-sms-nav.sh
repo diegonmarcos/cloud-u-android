@@ -62,7 +62,7 @@ def check(root):
     layout = read(root, "app/src/main/res/layout/activity_main.xml")
     if "BottomNavIslandView" in layout:
         bad.append("activity_main.xml draws an island of its own (the bottom nav is the shared Compose one)")
-    for lib in ("nav-bar-bottom", "nav-bar-top-first-row", "nav-bar-top-second-row", "theme-background"):
+    for lib in ("ui-nav-bars", "ui-nav-bars", "ui-nav-bars", "theme-background"):
         if not re.search(r'implementation\(project\(":libs:%s"\)\)' % lib, gradle):
             bad.append("app/build.gradle.kts does not compile libs:" + lib)
     if re.search(r"TabLayout|BottomNavigationView|NavigationBarView", layout):
@@ -132,7 +132,7 @@ MUT = [
     ("the app stops compiling libs:bottomnav", "app/build.gradle.kts", lambda s: s.replace('implementation(project(":libs:bottomnav"))', "")),
     ("the app stops baking UI_SECTIONS_B64", "app/build.gradle.kts", lambda s: s.replace("UI_SECTIONS_B64", "UI_SOMETHING")),
     ("the layout draws its own island again", "app/src/main/res/layout/activity_main.xml", lambda s: s.replace("</androidx.coordinatorlayout.widget.CoordinatorLayout>", '<com.diegonmarcos.superapp.bottomnav.BottomNavIslandView android:layout_width="match_parent" android:layout_height="wrap_content" /></androidx.coordinatorlayout.widget.CoordinatorLayout>')),
-    ("the app stops compiling libs:nav-bar-bottom", "app/build.gradle.kts", lambda s: s.replace('implementation(project(":libs:nav-bar-bottom"))', "")),
+    ("the app stops compiling libs:ui-nav-bars", "app/build.gradle.kts", lambda s: s.replace('implementation(project(":libs:ui-nav-bars"))', "")),
     ("MainActivity stops using the shared first row", K + "activities/MainActivity.kt", lambda s: s.replace("NavBarTopFirstRowScaffold(", "OtherScaffold(")),
     ("MainActivity stops using the shared bottom nav", K + "activities/MainActivity.kt", lambda s: s.replace("NavBarBottomHost(", "OtherHost(")),
     ("Profile stops launching Cloud Account", K + "activities/MainActivity.kt", lambda s: s.replace("rememberAccountLauncher()", "{}")),

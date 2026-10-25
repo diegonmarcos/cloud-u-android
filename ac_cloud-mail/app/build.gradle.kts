@@ -400,9 +400,7 @@ dependencies {
 
     // #1154 the shared navigation + theme design (one lib per bar and the page background); Mail adopts them stage by stage.
     implementation(project(":libs:theme-background"))
-    implementation(project(":libs:nav-bar-top-first-row"))
-    implementation(project(":libs:nav-bar-top-second-row"))
-    implementation(project(":libs:nav-bar-bottom"))
+    implementation(project(":libs:ui-nav-bars"))
 
     // #825 DataBackendClient: Assigned binds the fleet's cal engine (its task store) instead of
     // compiling one, exactly as Cloud Tasks does.

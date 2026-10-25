@@ -2,7 +2,7 @@
 //
 // WHY THE FLEET'S BARS ARE DRAWN IN THE PAGE AND NOT HOSTED NATIVELY. #565 made ab_cloud-libs-shared
 // libs:bottomnav the one bottom nav for NATIVE apps, and #1154 moved the fleet to the shared Compose
-// bars (nav-bar-top-first-row, nav-bar-top-second-row, nav-bar-bottom, theme-background). This app is a
+// bars (ui-nav-bars, ui-nav-bars, ui-nav-bars, theme-background). This app is a
 // Cordova web shell: its whole UI is DOM inside one WebView, and the Android project is GENERATED at
 // build time (no committed gradle module, no Compose plugin; see build-extras.gradle), so hosting the
 // WebView inside a Compose Activity would mean replacing Cordova's activity in a generated project and

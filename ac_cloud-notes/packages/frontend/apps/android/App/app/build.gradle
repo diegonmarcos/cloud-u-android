@@ -151,9 +151,7 @@ dependencies {
     // #868 the fleet's bottom island + top page tabs (build.json::modules).
     implementation project(':libs:bottomnav')
     // #1164 the shared nav: first row (Profile -> Cloud Account), second row, bottom nav, page background.
-    implementation project(':libs:nav-bar-bottom')
-    implementation project(':libs:nav-bar-top-first-row')
-    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:ui-nav-bars')
     implementation project(':libs:theme-background')
     // The top bar's AI panel: the fleet's AI chat over the fleet agent gateway (no token on the phone).
     implementation project(':libs:ai')

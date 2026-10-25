@@ -226,7 +226,7 @@ for v in ("TABLE", "GRID", "DETAIL", "MACRO"):
     if not re.search(r"ModelsView\.%s\s*->\s*Models%s\(" % (v, v.title()), pages): bad.append("A9 the %s view is not drawn" % v)
 if "AiChatPage(" not in shell or re.search(r"\b(BasicTextField|OutlinedTextField)\b", shell): bad.append("A9 the AI page is not libs:ai's alone")
 script = code(os.path.join(app, "app/build." + "gradle"))
-for lib in ("libs:nav-bar-top-first-row", "libs:nav-bar-top-second-row", "libs:nav-bar-bottom", "libs:theme-background", "libs:ui-icons", "libs:ai"):
+for lib in ("libs:ui-nav-bars", "libs:ui-nav-bars", "libs:ui-nav-bars", "libs:theme-background", "libs:ui-icons", "libs:ai"):
     if lib not in bj["modules"]: bad.append("A9 build.json modules lack %s" % lib)
     if "project(':%s')" % lib not in script: bad.append("A9 the app's build script does not link %s" % lib)
 if "AI_GATEWAY_URL" not in script or "ai-gateway.gradle" not in script: bad.append("A9 the gateway address is not baked")

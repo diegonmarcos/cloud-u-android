@@ -285,9 +285,7 @@ dependencies {
     // superapp, mail, wallet, me and drive draw. This app supplies its OWN entries
     // from ui.bottom_nav and does not use the module's cloud-mail item table.
     implementation project(':libs:bottomnav')
-    implementation project(':libs:nav-bar-bottom')
-    implementation project(':libs:nav-bar-top-first-row')
-    implementation project(':libs:nav-bar-top-second-row')
+    implementation project(':libs:ui-nav-bars')
     implementation project(':libs:theme-background')
     // #648 the SuperApp's page:c3/dagu is libs:ops' DaguFragment, and DaguPrefs is the ONE
     // store of the Authelia bearer the feed cards' Re-run buttons and the container sheet's

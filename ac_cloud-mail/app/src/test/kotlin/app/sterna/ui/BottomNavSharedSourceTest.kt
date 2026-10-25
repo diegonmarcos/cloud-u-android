@@ -26,7 +26,7 @@ class BottomNavSharedSourceTest {
         assertTrue(
             "MailBottomNav must draw the bar through the shared module " +
                 "(com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost). The item TABLE is mail's " +
-                "(#868 moved it here); the island that draws it must stay the one in libs:nav-bar-bottom.",
+                "(#868 moved it here); the island that draws it must stay the one in libs:ui-nav-bars.",
             mailBar.contains("import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost") &&
                 mailBar.any { it.startsWith("NavBarBottomHost(") },
         )

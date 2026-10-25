@@ -206,7 +206,7 @@ class BrowserHostFragment : Fragment() {
     val isTabsOpen: Boolean get() = mode is Mode.GRID && overlays.isEmpty()
 
     /**
-     * #1164 the host app draws the URL bar and the page menu itself, in the shared first row (libs:nav-bar-top-first-row):
+     * #1164 the host app draws the URL bar and the page menu itself, in the shared first row (libs:ui-nav-bars):
      * set, the page screen leaves out its own bar row. The host reads [addressDisplay], opens the address overlay with
      * [openAddress], the menu sheet with [openMenu] and runs a declared menu action with [act].
      */

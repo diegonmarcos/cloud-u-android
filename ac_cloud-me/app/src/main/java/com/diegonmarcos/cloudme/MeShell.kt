@@ -16,7 +16,7 @@ import com.diegonmarcos.superapp.navbartop1.titleHierarchy
  * back (#1150). One nested-scroll connection ([rememberBottomNavCollapse], carried by MeBody's content slot) drives
  * both, so they can never disagree. The drawer opens by tapping the hamburger only.
  *
- * #1154 the row is libs:nav-bar-top-first-row's (plain icons, the title island with the hierarchy dropdown of the section
+ * #1154 the row is libs:ui-nav-bars's (plain icons, the title island with the hierarchy dropdown of the section
  * shown) in the dark palette of libs:theme-background (Cloud Me is dark-only); MainActivity paints the gradient behind the window insets.
  */
 @Composable

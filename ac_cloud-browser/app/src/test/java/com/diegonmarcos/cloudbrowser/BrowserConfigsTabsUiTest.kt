@@ -41,7 +41,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * #900 Configs is a section of TOP TABS, one per category, drawn by libs:nav-bar-top-second-row from the SHIPPED declaration:
+ * #900 Configs is a section of TOP TABS, one per category, drawn by libs:ui-nav-bars from the SHIPPED declaration:
  * the order, the sideways scroll, the selection, and each page drawing only its own settings and rows.
  */
 @RunWith(RobolectricTestRunner::class)

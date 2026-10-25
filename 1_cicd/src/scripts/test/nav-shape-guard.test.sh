@@ -41,6 +41,8 @@ rm -rf "$T"; mkdir -p "$T"
 (cd "$ROOT" && git ls-files -z | grep -zE '^a[ac]_[^/]+/(build\.json|build\.gradle(\.kts)?|app/build\.gradle(\.kts)?)$' \
     | xargs -0 cp --parents -t "$T")
 mkdir -p "$T/1_cicd/src/data" "$T/$LIB"; cp "$ROOT/$DATA" "$T/$DATA"; cp -r "$ROOT/$LIB/src" "$T/$LIB/src"
+UIBARS=ab_cloud-libs-shared/libs/ui-nav-bars
+mkdir -p "$T/$UIBARS"; cp -r "$ROOT/$UIBARS/src" "$ROOT/$UIBARS/build.gradle" "$T/$UIBARS/"
 # (whichever app is still exempt AND has no ui.bottom_nav yet: every migration batch removes one, so none is named here)
 dropped="$(python3 - "$T" "$DATA" <<'PY'
 import json, os, sys
@@ -67,6 +69,7 @@ else fail "dropping ${dropped:-any unmigrated app}'s exemption stayed green (rc=
 stage() {
     rm -rf "$T"; mkdir -p "$T/$FIX/app/src/main/res/layout" "$T/$FIX/app/src/main/kotlin" "$T/ac_cloud-old" "$T/1_cicd/src/data" "$T/$LIB"
     cp -r "$ROOT/$LIB/src" "$T/$LIB/src"
+    mkdir -p "$T/$UIBARS"; cp -r "$ROOT/$UIBARS/src" "$ROOT/$UIBARS/build.gradle" "$T/$UIBARS/"
     python3 - "$ROOT/$DATA" "$T/$DATA" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -182,6 +185,11 @@ green  "vertical_side_menu with dynamic children from a known source" "$FIX/buil
 mutate "dynamic children from an unknown source"  "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='vertical_side_menu', dynamic_children='bogus')")" "N10 $FIX: ui.sections a declares dynamic_children 'bogus'"
 mutate "dynamic children without the side menu"   "$FIX/build.json" "$(J "d['ui']['sections'][0].update(dynamic_children='mail_folders_labels')")" "N10 $FIX: ui.sections a declares dynamic_children but nav_mode is not vertical_side_menu"
 mutate "a side-menu group naming a page the section lacks" "$FIX/build.json" "$(J "d['ui']['sections'][0].update(nav_mode='vertical_side_menu', groups=[{'id':'g','label':'G','icon':'i','pages':['zzz']}])")" "N10 $FIX: ui.sections a group 'g' names page 'zzz'"
+# N11: ONE shared nav-bars lib; the retired per-bar libs stay gone
+mutate "the shared nav-bars lib loses the side menu layout"   "$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavSideMenu.kt" "s=s.replace('fun NavSectionLayout(','fun Gone(')" "N11 $UIBARS: NavSideMenu.kt no longer declares \`fun NavSectionLayout(\`"
+mutate "the shared nav-bars lib loses the Configs card"       "$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavModeConfigCard.kt" "s=s.replace('fun NavModeConfigCard(','fun Gone(')" "N11 $UIBARS: NavModeConfigCard.kt no longer declares"
+mutate "the scroll machine loses a state"                      "$LIB/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/BottomNavBar.kt" "s=s.replace('enum class ChromeScrollState','enum class Gone')" "N0 ab_cloud-libs-shared/libs/bottomnav: BottomNavBar.kt no longer declares \`enum class ChromeScrollState\`"
+mutate "an app names a retired per-bar lib"                    "$FIX/build.json" "$(J "d['modules']={'libs:nav-bar-bottom':{'dir':'x'}}")" "N11 $FIX: build.json modules name the retired libs:nav-bar-bottom"
 green  "a theme background read through stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='theme'")" \
     "$KT" "s=s.replace('PageTabs(pages, null, {});','PageTabs(pages, null, {}, surface = nav.stripSurface(\"a\", dark));')"
 green  "an explicit dark background with no stripSurface" "$FIX/build.json" "$(J "d['ui']['sections'][0]['background']='dark'")"
@@ -267,11 +275,11 @@ mutate "a web app's first-row icon drifts from the lib"        "$NAVJ" "$(J "d['
 mutate "a web app's selected-tab colour drifts from the lib"   "$NAVJ" "$(J "d['bars']['theme']['dark']['tabSelected']='0xFF000000'")" "bars.theme.dark.tabSelected is '0xFF000000'"
 mutate "a web app's page gradient drifts from the lib"         "$NAVJ" "$(J "d['bars']['theme']['light']['top']='0xFFFFFFFF'")" "bars.theme.light.top is '0xFFFFFFFF'"
 mutate "a web app's bottom accent drifts from the lib"         "$NAVJ" "$(J "d['bars']['bottom_colors']['dark']['accent']='0xFF123456'")" "bars.bottom_colors.dark.accent is '0xFF123456'"
-mutate "the lib changes the second row; the web app did not follow" "$LIBSRC/nav-bar-top-second-row/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt" \
+mutate "the lib changes the second row; the web app did not follow" "$LIBSRC/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt" \
     "s=s.replace('val TAB_HEIGHT: Dp = 36.dp','val TAB_HEIGHT: Dp = 30.dp')" "SecondRowSpec.TAB_HEIGHT is 30"
 mutate "the lib changes the bar's gutter (through SearchHtmlTokens); the web app did not follow" "$LIB/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/BottomNavSearchHtml.kt" \
     "s=s.replace('val sideGutter: Dp = 16.dp','val sideGutter: Dp = 12.dp')" "BottomSpec.SIDE_GUTTER is 12"
-mutate "the lib loses a spec object the web app is held to"     "$LIBSRC/nav-bar-bottom/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt" \
+mutate "the lib loses a spec object the web app is held to"     "$LIBSRC/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt" \
     "s=s.replace('object BottomSpec','object Gone')" "no longer declares \`object BottomSpec\`"
 mutate "a web app's tab list differs from build.json ui"        "$NAVJ" "$(J "d['tabs'].pop()")" "W2 ac_cloud-code: $NAVJ tabs"
 mutate "a web app's default differs from build.json ui"         "$NAVJ" "$(J "d['default_tab']='backlog'")" "W2 ac_cloud-code: $NAVJ default_tab 'backlog'"

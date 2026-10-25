@@ -37,7 +37,7 @@ object ResearchTags {
 
 /**
  * #1184 Research: News (the fleet news service, build.json::search.research) and Reports (what agents published; the Agents
- * pages are its third page). The second row is libs:nav-bar-top-second-row's; each page below it is one bounded list, so the
+ * pages are its third page). The second row is libs:ui-nav-bars's; each page below it is one bounded list, so the
  * shared scroll-collapse sees a single scroller and nothing scrolls inside another scroller of the same axis.
  */
 @Composable

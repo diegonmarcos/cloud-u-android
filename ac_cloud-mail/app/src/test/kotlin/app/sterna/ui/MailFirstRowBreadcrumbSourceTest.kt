@@ -8,7 +8,7 @@ import org.junit.Test
 /**
  * SOURCE LINT (nothing in this module can run a Composable, see [BottomNavSharedSourceTest]) over the Mail first row.
  * The row itself, its left-aligned title, the absent hamburger and the breadcrumb dropdown are rendered and asserted in
- * libs:nav-bar-top-first-row's own tests (NavBarTopFirstRowTest, BreadcrumbTest), which run inside THIS module's unit
+ * libs:ui-nav-bars's own tests (NavBarTopFirstRowTest, BreadcrumbTest), which run inside THIS module's unit
  * suite; what only Mail can break is the wiring below: it must feed the shared row from its nav declaration, draw no
  * hamburger or drawer of its own, and keep every section reachable (bottom island, dropdown) once the drawer is gone.
  */

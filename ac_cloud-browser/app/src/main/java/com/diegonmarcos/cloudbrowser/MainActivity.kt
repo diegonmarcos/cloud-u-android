@@ -73,9 +73,9 @@ import com.diegonmarcos.superapp.updater.Updater
  * PageTabs, one per config category, declared in ui.sections[configs].pages), and the pill follows the host: it
  * goes back to Browser (or Tabs, when the switcher is showing) the moment the last overlay closes.
  *
- * #1164 the chrome is the fleet's shared nav pattern: libs:nav-bar-top-first-row's row (the URL bar is its title island, a tap
+ * #1164 the chrome is the fleet's shared nav pattern: libs:ui-nav-bars's row (the URL bar is its title island, a tap
  * opens the host's address overlay; the page menu with Dev Tools is its Configs icon; Profile top-right opens Cloud Account),
- * libs:nav-bar-top-second-row's tabs for Configs, libs:nav-bar-bottom's bar on libs:theme-background, and the WebView's scroll
+ * libs:ui-nav-bars's tabs for Configs, libs:ui-nav-bars's bar on libs:theme-background, and the WebView's scroll
  * fed to the one shared scroll-collapse (BrowserHostFragment.onWebScroll -> BottomNavCollapse.onScrollDelta).
  *
  * 2026-10-16 owner decision: all apps must be Compose. The shell is a Compose screen under CloudKitTheme

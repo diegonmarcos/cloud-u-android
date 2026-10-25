@@ -31,7 +31,7 @@ object C3Tags {
 }
 
 /**
- * The shell's chrome: the fleet's shared first row ([NavBarTopFirstRowScaffold], libs:nav-bar-top-first-row; ui.top_bar declares that it shows) over
+ * The shell's chrome: the fleet's shared first row ([NavBarTopFirstRowScaffold], libs:ui-nav-bars; ui.top_bar declares that it shows) over
  * the page and the bottom island. The scaffold draws the hamburger, the title, the AI button and the Settings
  * dropdown; this file only FEEDS it: the AI panel and the Account launch come from the host ([aiPanel], [onAccount]),
  * Settings > Configs is [onConfigs], and the drawer is the full tree of the declared nav ([DrawerTree]).
@@ -63,7 +63,7 @@ fun C3Chrome(
     if (decl == null) {
         Box(modifier.fillMaxSize()) { body() }
     } else {
-        // #1154 the first row is libs:nav-bar-top-first-row's: the open section's name is the island, whose dropdown lists the
+        // #1154 the first row is libs:ui-nav-bars's: the open section's name is the island, whose dropdown lists the
         // section and its pages (the drawer's tree); a pick opens that place like a drawer row does.
         val section = Declarations.nav.section(selectedTab)
         NavBarTopFirstRowScaffold(

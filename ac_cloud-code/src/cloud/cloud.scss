@@ -18,7 +18,7 @@ body.cloud-nav {
   }
 }
 
-// ── first row (libs:nav-bar-top-first-row): plain icons, centred title island ──
+// ── first row (libs:ui-nav-bars): plain icons, centred title island ──
 #cloud-top1 {
   position: fixed;
   top: 0;
@@ -115,7 +115,7 @@ body.cloud-nav {
   }
 }
 
-// ── second row (libs:nav-bar-top-second-row): small icon pills, name on the selected one ──
+// ── second row (libs:ui-nav-bars): small icon pills, name on the selected one ──
 #cloud-top2 {
   position: fixed;
   top: var(--cb-first-row-height);
@@ -179,7 +179,7 @@ body.cloud-nav {
   }
 }
 
-// ── bottom bar (libs:nav-bar-bottom): Cloud Search's glass pill and coloured selection ──
+// ── bottom bar (libs:ui-nav-bars): Cloud Search's glass pill and coloured selection ──
 // At rest every item shows its icon (lifted) and its name; `.compact` (a name would not fit) and the scrolled-down
 // state keep the name of the selected item only.
 @mixin selected-only {
