@@ -204,8 +204,8 @@ for gone in ("house", "work"):
         bad("pages", f"the retired {gone} section is declared again")
     if os.path.isdir(os.path.join(app, "data/ui", gone)):
         bad("pages", f"data/ui/{gone} is back")
-if [p["id"] for p in secs.get("me", {}).get("pages", [])] != ["professional", "personal"]:
-    bad("pages", "Profile pages are not Professional, Personal")
+if [p["id"] for p in secs.get("me", {}).get("pages", [])] != ["professional", "personal", "social", "health", "dd"]:
+    bad("pages", "Profile pages are not Professional, Personal, Social, Health, DD")
 if [p["id"] for p in secs.get("duties", {}).get("pages", [])] != ["tasks"]:
     bad("pages", "Duties is not the single Tasks page")
 if os.path.isdir(os.path.join(app, "data/ui/home")):

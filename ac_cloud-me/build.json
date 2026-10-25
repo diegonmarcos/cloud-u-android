@@ -544,6 +544,21 @@
             "id": "personal",
             "label": "Personal",
             "icon": "ic_p_identities"
+          },
+          {
+            "id": "social",
+            "label": "Social",
+            "icon": "ic_p_identities"
+          },
+          {
+            "id": "health",
+            "label": "Health",
+            "icon": "ic_nav_health"
+          },
+          {
+            "id": "dd",
+            "label": "DD",
+            "icon": "ic_nav_buro"
           }
         ]
       },

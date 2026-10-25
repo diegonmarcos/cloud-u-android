@@ -30,7 +30,7 @@ class BuroLlcDeclTest {
         assertEquals(listOf("health", "study", "achieves", "me", "duties", "buro", "llc"), bar)
         assertEquals(listOf("Health", "Study", "Achieves", "Profile", "Duties", "Buro", "LLC"), bar.map { sections.getValue(it).getString("label") })
         assertFalse("house" in sections); assertFalse("work" in sections)
-        assertEquals(listOf("professional", "personal"), ids(sections.getValue("me").getJSONArray("pages")))
+        assertEquals(listOf("professional", "personal", "social", "health", "dd"), ids(sections.getValue("me").getJSONArray("pages")))
         assertEquals(listOf("tasks"), ids(sections.getValue("duties").getJSONArray("pages")))
     }
 

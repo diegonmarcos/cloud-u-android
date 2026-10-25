@@ -1,0 +1,5 @@
+[
+  {"kind": "section_title", "title": "Social"},
+  {"kind": "note", "title": "Social profile", "body": "Photo carousel, quick facts, prompts, interests and travel, with Edit and View tabs and a completeness score. The page is public and owner-chosen; it lives in front-profiles (b_Profiles/social)."},
+  {"kind": "link", "label": "Open the Social profile", "url": "https://diegonmarcos.github.io/social/"}
+]

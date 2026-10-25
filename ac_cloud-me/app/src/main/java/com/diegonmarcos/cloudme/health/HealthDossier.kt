@@ -111,13 +111,13 @@ object HealthDossier {
     }
 
     /** Writes the PDF into the app cache and hands it to whichever app answers VIEW application/pdf (Cloud Drive's reader). */
-    fun export(ctx: Context, heading: String, sections: List<DossierSection>): Boolean {
-        val file = File(File(ctx.cacheDir, "health"), "dossier.pdf")
+    fun export(ctx: Context, heading: String, sections: List<DossierSection>, fileName: String = "dossier.pdf"): Boolean {
+        val file = File(File(ctx.cacheDir, "health"), fileName)
         writePdf(file, heading, sections)
         val uri = FileProvider.getUriForFile(ctx, ctx.packageName + AUTHORITY_SUFFIX, file)
         val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/pdf").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         return runCatching {
-            ctx.startActivity(Intent.createChooser(view, "Physician dossier").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+            ctx.startActivity(Intent.createChooser(view, heading).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
         }.isSuccess
     }
 }

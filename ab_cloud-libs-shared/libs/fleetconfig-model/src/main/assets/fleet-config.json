@@ -1069,6 +1069,22 @@
         "ac_cloud-me"
       ]
     },
+    "profile_health_user": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Me > Profile > Health record values, one JSON string under 'data' (field id to value, status, expiry), imported from the private store. Special-category data: it stays on the device and in the encrypted backup, never in a public repo; the schema (labels only) is the public asset.",
+      "used_by": [
+        "ac_cloud-me"
+      ]
+    },
+    "profile_dd_user": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Me > Profile > DD (due diligence) dossier values, one JSON string under 'data' (field id to value, status, expiry), imported from the private store. Special-category data: it stays on the device and in the encrypted backup, never in a public repo; the schema (labels only) is the public asset.",
+      "used_by": [
+        "ac_cloud-me"
+      ]
+    },
     "llc_user": {
       "kind": "prefs",
       "class": "config",

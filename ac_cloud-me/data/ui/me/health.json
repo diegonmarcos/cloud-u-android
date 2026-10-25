@@ -1,0 +1,5 @@
+[
+  {"kind": "profile_record", "schema": "health", "store": "profile_health_user",
+   "_doc": "Health record, pre-surgery workup layout. Schema ships as an asset (labels only); the owner's values are imported from the private store and kept on the device. Private stack only."},
+  {"kind": "link", "label": "Open Cloud Me Health (vitals, labs, plan)", "url": "section:health"}
+]

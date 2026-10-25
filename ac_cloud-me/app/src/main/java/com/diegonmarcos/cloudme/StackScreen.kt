@@ -67,6 +67,7 @@ import org.json.JSONObject
  *   about          version, commit, build time and the update control
  *   permissions    the runtime permissions from build.json, requestable inline
  *   ledger         the owner's typed records and derived reports (Buro, LLC): see [LedgerBlock]
+ *   profile_record a schema-driven record with status chips and PDF export (Profile > Health, DD): see [ProfileRecordBlock]
  *
  * Adding a page means adding JSON, not Kotlin. An unrecognised kind renders
  * its `title` and nothing else, so a typo shows up as a stub on the phone
@@ -117,6 +118,7 @@ private fun Block(o: JSONObject) {
         "about" -> AboutCard(o)
         "permissions" -> PermissionsCard(o)
         "ledger" -> LedgerBlock(o)
+        "profile_record" -> ProfileRecordBlock(o)
         // `fragment` is consumed by SectionScreen when it is a page's
         // only block; reaching here means it was mixed into a longer
         // stack, which this renderer has no container for.

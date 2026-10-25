@@ -1,0 +1,4 @@
+[
+  {"kind": "profile_record", "schema": "dd", "store": "profile_dd_user",
+   "_doc": "Shareholder due-diligence dossier (KYC, UBO, record certificates, tax, screening). Schema ships as an asset (labels only); the owner's values are imported from the private store and kept on the device. Private stack only."}
+]

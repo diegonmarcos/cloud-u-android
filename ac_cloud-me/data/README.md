@@ -77,3 +77,12 @@ rules; the matrix, shopping list, overlays and dossier are DERIVED from it) and
 `health_workout.json`. The user's own entries are not here: they live in the SharedPreferences
 store `health_user`, declared in fleet-config.json as a migrating `config` store. Health Connect
 readings are never stored; the trackers read them live and show an empty state when there are none.
+
+## `profiles/` — Health and DD schemas (public), values (private)
+
+`profiles/profiles/<id>.schema.json` is the structure of Profile > Health and Profile > DD: sections and field labels,
+no values. It ships as an asset (`app/build.gradle` adds `data/profiles`). The owner's values are special-category
+data and never enter this repo: they live in the private repo `cloud-me-data-pvt` (`profiles/<id>.data.json`) and are
+imported on the phone (Profile > Health / DD > Import data) into the on-device stores `profile_health_user` and
+`profile_dd_user`. A field with no value renders as "Pending — sample, to be filled/verified". `test/test-profiles-privacy.sh`
+fails if a values file or a value inside a schema appears here.
