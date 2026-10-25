@@ -47,7 +47,7 @@
       "path": "data/repos.sot.json",
       "url": "https://raw.githubusercontent.com/diegonmarcos/git-repos-master/main/repos.json",
       "schema": "cloud-repos/v1",
-      "sha256": "0cfe9c0c41c6d50fc26a7771e644c0293195bd2b94d242219bf5213d08428cc8",
+      "sha256": "b7b1da3be121fdd4e2f65b349860dd7901a1ab047c7cccf4f4a4ac1c93fe5090",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },

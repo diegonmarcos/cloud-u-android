@@ -123,6 +123,12 @@
       "doc": "Sources of the c_Suite group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
+      "name": "cloud_db_infra-ops-obsv_configs-sync",
+      "repo": "diegonmarcos/cloud_db_infra-ops-obsv_configs-sync",
+      "private": false,
+      "doc": "Configs-sync engine data repo: the consolidated fleet config SoT (from 1_cloud-configs) served by c3-infra-api/mcp. Created 2026-10-25 (#1197 programme); public."
+    },
+    {
       "name": "front",
       "repo": "diegonmarcos/front",
       "private": false,
