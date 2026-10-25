@@ -16,7 +16,8 @@ import org.json.JSONObject
  * equal to the source, so Drive can neither drift from nor invent a name. No value is logged or put in a sentence here.
  */
 object Wire {
-    const val ACCOUNT_PACKAGE = "com.diegonmarcos.cloudaccount"
+    /** Cloud Account's package, from the one launch declaration (libs:bottomnav AccountLaunch), not retyped here. */
+    const val ACCOUNT_PACKAGE = com.diegonmarcos.superapp.bottomnav.AccountLaunch.PKG
     const val AUTHORITY = "$ACCOUNT_PACKAGE.accountdata"
     const val METHOD = "drive_credentials"
     const val METHOD_PUT = "drive_credentials_put"
