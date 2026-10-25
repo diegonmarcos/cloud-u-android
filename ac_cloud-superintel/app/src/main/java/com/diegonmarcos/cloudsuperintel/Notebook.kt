@@ -16,8 +16,19 @@ data class NotebookConfig(
     val refusal: String, val groundingSystem: String, val groundingUser: String,
     val maxSourceChars: Int, val generatorSystem: String, val generators: List<Generator>,
     val urlMaxChars: Int, val docMime: List<String>,
+    val semantic: Semantic? = null,
 ) {
     data class Generator(val id: String, val label: String, val prompt: String)
+
+    /**
+     * The fleet embeddings + rerank service's knobs (retrieval.semantic): the served model names, how many candidates go to
+     * the reranker, the floors that keep grounding strict (a passage needs [minRerank] from the reranker, or [minCosine]
+     * when only embeddings answered, or the BM25 coverage floor), batching and timeouts. Absent = BM25 only.
+     */
+    data class Semantic(
+        val embedModel: String, val rerankModel: String, val candidates: Int, val minRerank: Double, val minCosine: Double,
+        val embedBatch: Int, val probeMs: Int, val readMs: Int, val pdfReadMs: Int, val retryAfterMs: Long,
+    )
 
     companion object {
         const val ASSET = "si/notebook.json"
@@ -29,11 +40,16 @@ data class NotebookConfig(
                 val o = gen.getJSONObject(k); Generator(k, o.getString("label"), o.getString("prompt"))
             }.toList()
             val s = r.getJSONObject("sources")
+            val sem = ret.optJSONObject("semantic")?.let { o ->
+                Semantic(o.getString("embed_model"), o.getString("rerank_model"), o.getInt("candidates"), o.getDouble("min_rerank"), o.getDouble("min_cosine"),
+                    o.getInt("embed_batch"), o.getInt("probe_ms"), o.getInt("read_ms"), o.getInt("pdf_read_ms"), o.getLong("retry_after_ms"))
+            }
             return NotebookConfig(
                 ret.getInt("chunk_chars"), ret.getInt("overlap_chars"), ret.getInt("top_k"), ret.getDouble("min_coverage"), ret.getDouble("k1"), ret.getDouble("b"),
                 refusal, g.getString("system").replace("{{refusal}}", refusal), g.getString("user"),
                 gen.getInt("max_source_chars"), gen.getString("system").replace("{{refusal}}", refusal), gens,
                 s.getInt("url_max_chars"), s.getJSONArray("doc_mime").let { a -> (0 until a.length()).map { a.getString(it) } },
+                sem,
             )
         }
     }
@@ -41,6 +57,17 @@ data class NotebookConfig(
 
 /** What a grounded question ended with: [answer] with its [cited] passages, or [grounded] false = the refusal. */
 data class Grounded(val answer: String, val cited: List<Passage>, val grounded: Boolean)
+
+/**
+ * The fleet's embeddings + rerank service as the notebook sees it. Every call returns null when the service does not answer
+ * (off the mesh, down, an unexpected reply), and the notebook then ranks with BM25 alone.
+ */
+interface Ranker {
+    /** One vector per text, in order. */
+    fun embed(texts: List<String>): List<DoubleArray>?
+    /** One relevance score per document, in order (higher = more relevant). */
+    fun rerank(query: String, docs: List<String>): List<Double>?
+}
 
 /** Source-grounded retrieval and answer checking, pure (no network, no Android): the model call is injected. */
 object Notebook {
@@ -90,6 +117,35 @@ object Notebook {
         }.filter { it.third >= cfg.minCoverage && it.second > 0 }.map { it.first to it.second }.sortedByDescending { it.second }.take(cfg.topK)
     }
 
+    private fun cosine(a: DoubleArray, b: DoubleArray): Double {
+        if (a.size != b.size || a.isEmpty()) return 0.0
+        var dot = 0.0; var na = 0.0; var nb = 0.0
+        for (i in a.indices) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i] }
+        return if (na == 0.0 || nb == 0.0) 0.0 else dot / (kotlin.math.sqrt(na) * kotlin.math.sqrt(nb))
+    }
+
+    /**
+     * Retrieval with the fleet service when it answers: dense candidates (embeddings) plus the BM25 hits, re-scored by the
+     * reranker. Grounding stays strict: a passage is evidence only with [NotebookConfig.Semantic.minRerank] from the reranker
+     * (or, when only embeddings answered, [NotebookConfig.Semantic.minCosine], or the BM25 coverage floor), so an out-of-scope
+     * question still finds nothing and the model is not called. No service, no declaration or any failure = [retrieve] (BM25).
+     */
+    fun retrieveHybrid(question: String, all: List<Passage>, cfg: NotebookConfig, ranker: Ranker?): List<Pair<Passage, Double>> {
+        val sem = cfg.semantic
+        if (ranker == null || sem == null || question.isBlank() || all.isEmpty()) return retrieve(question, all, cfg)
+        val vecs = runCatching { ranker.embed(listOf(question) + all.map { it.text }) }.getOrNull()
+        if (vecs == null || vecs.size != all.size + 1) return retrieve(question, all, cfg)
+        val cos = all.indices.map { cosine(vecs[0], vecs[it + 1]) }
+        val dense = all.indices.sortedByDescending { cos[it] }.take(sem.candidates)
+        val lexical = retrieve(question, all, cfg.copy(topK = sem.candidates)).map { hit -> all.indexOfFirst { it === hit.first } }.filter { it >= 0 }
+        val cands = (dense + lexical).distinct()
+        val rr = runCatching { ranker.rerank(question, cands.map { all[it].text }) }.getOrNull()
+        val scored: List<Pair<Int, Double>> =
+            if (rr != null && rr.size == cands.size) cands.zip(rr).filter { it.second >= sem.minRerank }
+            else cands.filter { cos[it] >= sem.minCosine || it in lexical }.map { it to cos[it] }
+        return scored.sortedByDescending { it.second }.take(cfg.topK).map { all[it.first] to it.second }
+    }
+
     /** The wire messages (system, user) for a question over [found]; passages are numbered by SOURCE, so a citation names the source. */
     fun prompt(question: String, found: List<Passage>, cfg: NotebookConfig): Pair<String, String> {
         val p = found.joinToString("\n\n") { "[${it.n}] (${it.source.title}) ${it.text}" }
@@ -117,8 +173,12 @@ object Notebook {
      * One grounded question: retrieval first; with no passage above the floor the model is not called at all.
      * [ask] sends (system, user) to the model and returns its text.
      */
-    fun answer(question: String, sources: List<Source>, cfg: NotebookConfig, ask: (String, String) -> String): Grounded {
-        val found = retrieve(question, passages(sources, cfg), cfg).map { it.first }
+    fun answer(question: String, sources: List<Source>, cfg: NotebookConfig, ask: (String, String) -> String): Grounded =
+        answerWith(question, sources, cfg, null, ask)
+
+    /** [answer] with the fleet embeddings + rerank service ([ranker]) when it is given and answers; BM25 otherwise. */
+    fun answerWith(question: String, sources: List<Source>, cfg: NotebookConfig, ranker: Ranker?, ask: (String, String) -> String): Grounded {
+        val found = retrieveHybrid(question, passages(sources, cfg), cfg, ranker).map { it.first }
         if (found.isEmpty()) return Grounded(cfg.refusal, emptyList(), false)
         val (sys, user) = prompt(question, found, cfg)
         return check(ask(sys, user), found, cfg)

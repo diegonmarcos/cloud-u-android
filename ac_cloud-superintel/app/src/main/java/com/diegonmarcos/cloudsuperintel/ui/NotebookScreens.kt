@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudsuperintel.ChatTurn
+import com.diegonmarcos.cloudsuperintel.FleetRank
 import com.diegonmarcos.cloudsuperintel.Notebook
 import com.diegonmarcos.cloudsuperintel.NotebookConfig
 import com.diegonmarcos.cloudsuperintel.NotebookDoc
@@ -180,12 +181,20 @@ private fun SourcesPage(model: NotebookModel, d: NotebookDoc) {
     }
 }
 
-/** A document the user picked (any provider, Drive included, through the system picker); null when it is not readable text (a PDF has no text extractor here). */
+/**
+ * A document the user picked (any provider, Drive included, through the system picker); null when it is not readable text.
+ * A PDF goes to the fleet extractor ([FleetRank.pdfText], mesh only): null when that does not answer.
+ */
 private fun readDocument(ctx: Context, uri: Uri, cfg: NotebookConfig): Source? {
     val r = ctx.contentResolver
     val mime = r.getType(uri).orEmpty()
-    if (!(mime.startsWith("text/") || mime in cfg.docMime)) return null
     val name = r.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null } ?: uri.lastPathSegment.orEmpty()
+    if (mime == "application/pdf" || (mime.isEmpty() && name.endsWith(".pdf", ignoreCase = true))) {
+        val bytes = r.openInputStream(uri)?.use { it.readBytes() } ?: return null
+        val pdf = FleetRank.shared(cfg)?.pdfText(bytes)?.take(cfg.urlMaxChars) ?: return null
+        return Source(UUID.randomUUID().toString(), name, "doc", pdf, uri.toString())
+    }
+    if (!(mime.startsWith("text/") || mime in cfg.docMime)) return null
     val raw = r.openInputStream(uri)?.bufferedReader()?.use { it.readText() }?.take(cfg.urlMaxChars) ?: return null
     val text = if (mime == "text/html") Notebook.htmlText(raw) else raw
     return if (text.isBlank()) null else Source(UUID.randomUUID().toString(), name, "doc", text, uri.toString())
@@ -223,7 +232,7 @@ private fun NotebookChat(model: NotebookModel, d: NotebookDoc, theme: AiTheme) {
                     model.save(withQ)
                     scope.launch {
                         val g = withContext(Dispatchers.IO) {
-                            runCatching { Notebook.answer(q, d.sources, model.cfg) { sys, user -> SiAi.complete(ctx, sys, user).getOrThrow() } }
+                            runCatching { Notebook.answerWith(q, d.sources, model.cfg, FleetRank.shared(model.cfg)) { sys, user -> SiAi.complete(ctx, sys, user).getOrThrow() } }
                         }
                         g.onSuccess { r ->
                             val t = ChatTurn("assistant", r.answer, r.grounded, r.cited.map { it.n }.distinct(), passages = r.cited.map { "${it.source.title}: ${it.text.take(240)}" })

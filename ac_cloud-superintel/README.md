@@ -20,9 +20,10 @@ agent pickers, answers streaming in, replies drawn as Markdown.
   and Web switch. The second row and `build.json::ui` carry the same ids; `test/test-superintel-app.sh` holds them in step.
 * **Notebook** (`assets/si/notebook.json`): sources (notes, web pages, text files from any storage through the system picker) kept on the phone;
   answers come only from them, with `[n]` citations and the passage shown. No passage that holds enough of the question's terms = the model is not
-  called and the answer is "This is not in your sources."; an answer without a valid citation is replaced by the same line. Retrieval is BM25 on
-  the phone because the fleet gateway (my-ai-api) has no embeddings or rerank endpoint. Studio: summary, FAQ and study notes over the sources.
-  PDF text extraction is not available yet.
+  called and the answer is "This is not in your sources."; an answer without a valid citation is replaced by the same line. Retrieval is hybrid when the
+  fleet embeddings + rerank service answers (embeddings-api on the mesh: bge-m3 dense candidates plus BM25 hits, re-scored by bge-reranker-v2-m3; the
+  reranker score floor keeps grounding strict) and BM25 on the phone otherwise. A PDF source is turned into text by the same service (POST /pdf, mesh
+  only; off the mesh the file is refused). Studio: summary, FAQ and study notes over the sources.
 * **News** (`assets/si/news.json`): Discover-style topic feeds (For you, Tech, Science, Finance, World, Health, Sports, Arts) from the fleet's
   news-gdelt service (`ac_cloud-news/data/topics.json::api.base`, baked as `BuildConfig.NEWS_BASE_URL`); headlines about one event are merged into
   a story with its source count; the card and story summaries are written by the gateway from those headlines only. An unreachable backend shows an

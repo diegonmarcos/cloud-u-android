@@ -13,13 +13,28 @@
       "id": "ollama",
       "label": "Fleet Ollama",
       "kind": "ollama",
-      "url": "http://ollama.mesh.diegonmarcos.com"
+      "endpoint": "ollama",
+      "endpoint_note": "No url here: the address is the fleet declaration's `ollama` service (ac_cloud-account/build.json::fleet_endpoints, the Ollama-compatible API of my-ai-api), baked into the app as BuildConfig.FLEET_OLLAMA_URL by fleet-urls.gradle."
     }
   ],
   "quant_tags": {
     "4": "q4_K_M",
     "8": "q8_0",
     "16": "fp16"
+  },
+  "retrieval_service": {
+    "note": "The Retrieval steps of the Apps run on the fleet embeddings + rerank service (the `embeddings-api` service of the fleet declaration, base URL baked as BuildConfig.EMBED_API_URL; mesh only). The names are the models it serves. A step whose first model has the rerank_role reranks (keeps rerank_top passages scoring at least min_rerank, else leaves none_relevant), any other retrieval step embeds and keeps the embed_top closest. A step's input is the question, a blank line, then one passage per paragraph. Off the mesh a step reports that the service did not answer and the text goes on unchanged.",
+    "embed_model": "BAAI/bge-m3",
+    "rerank_model": "BAAI/bge-reranker-v2-m3",
+    "rerank_role": "Semantic Reranking",
+    "embed_top": 6,
+    "rerank_top": 3,
+    "min_rerank": 0.15,
+    "embed_batch": 16,
+    "probe_ms": 1500,
+    "read_ms": 60000,
+    "retry_after_ms": 60000,
+    "none_relevant": "No passage in the documents is relevant to the question."
   },
   "quant_tags_note": "The tag suffix a fleet Ollama pull asks for at 4, 8 and 16 bits.",
   "phone_each_gb_q4": 2.5,

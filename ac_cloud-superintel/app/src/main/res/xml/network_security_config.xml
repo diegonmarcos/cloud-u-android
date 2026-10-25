@@ -10,6 +10,7 @@
     </base-config>
     <domain-config cleartextTrafficPermitted="true">
         <!-- BEGIN fleet-mesh-cleartext (generated from ac_cloud-account/build.json::fleet_endpoints by 1_cicd/src/scripts/cloud-android-fleet-nsc.py; do not edit) -->
+        <domain includeSubdomains="false">embeddings-api.mesh.diegonmarcos.com</domain>
         <domain includeSubdomains="false">my-ai-api.mesh.diegonmarcos.com</domain>
         <!-- END fleet-mesh-cleartext -->
         <domain includeSubdomains="false">localhost</domain>

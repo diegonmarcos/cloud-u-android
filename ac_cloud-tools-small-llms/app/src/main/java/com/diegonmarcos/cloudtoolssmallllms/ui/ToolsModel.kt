@@ -14,12 +14,15 @@ import com.diegonmarcos.cloudtoolssmallllms.data.AccountStatus
 import com.diegonmarcos.cloudtoolssmallllms.data.Catalogue
 import com.diegonmarcos.cloudtoolssmallllms.data.AppDef
 import com.diegonmarcos.cloudtoolssmallllms.data.LocalCall
+import com.diegonmarcos.cloudtoolssmallllms.data.FleetRetrieval
 import com.diegonmarcos.cloudtoolssmallllms.data.LocalChatBackend
+import com.diegonmarcos.cloudtoolssmallllms.data.Location
 import com.diegonmarcos.cloudtoolssmallllms.data.ModelRow
 import com.diegonmarcos.cloudtoolssmallllms.data.ModelRuntime
 import com.diegonmarcos.cloudtoolssmallllms.data.ModelsData
 import com.diegonmarcos.cloudtoolssmallllms.data.OllamaRuntime
 import com.diegonmarcos.cloudtoolssmallllms.data.PhoneRuntime
+import com.diegonmarcos.cloudtoolssmallllms.data.Retrieval
 import com.diegonmarcos.cloudtoolssmallllms.data.RuntimeState
 import com.diegonmarcos.cloudtoolssmallllms.data.Step
 import com.diegonmarcos.cloudtoolssmallllms.data.SecretPrefs
@@ -130,11 +133,17 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
         stores.pinned = model
     }
 
+    /** A location's address: its own url when the data gives one, else the fleet Ollama baked from the fleet declaration (BuildConfig.FLEET_OLLAMA_URL), never typed here. */
+    private fun urlOf(l: Location): String? = l.url ?: BuildConfig.FLEET_OLLAMA_URL.takeIf { l.kind == "ollama" && it.isNotBlank() }
+
+    /** The fleet embeddings + rerank service the Retrieval steps run on (null = none declared or baked). */
+    private val retrieval = FleetRetrieval.create(models.retrievalService, BuildConfig.EMBED_API_URL)
+
     /** The runtimes of the Store, one per declared location. The state they report is [runtimeStates]; nothing else is kept. */
     val runtimes: List<ModelRuntime> = models.locations.mapNotNull { l ->
         when (l.kind) {
             "device" -> PhoneRuntime(app, l.id)
-            "ollama" -> l.url?.let { OllamaRuntime(l.id, it, models.quantTags) }
+            "ollama" -> urlOf(l)?.let { OllamaRuntime(l.id, it, models.quantTags) }
             else -> null
         }
     }
@@ -150,7 +159,7 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
         private set
 
     /** The first ollama-kind runtime's address: where the Local chat is sent. */
-    private val localUrl: String? = models.locations.firstOrNull { it.kind == "ollama" }?.url
+    private val localUrl: String? = models.locations.firstOrNull { it.kind == "ollama" }?.let { urlOf(it) }
 
     /** The names of the models currently Loaded on any runtime. */
     fun loadedNames(): Set<String> = runtimeStates.values.flatMap { st -> st.loaded.map { it.name } }.toSet()
@@ -317,6 +326,13 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
                 val placed = place(a, s)
                 steps = steps.toMutableList().also { it[i] = it[i].copy(model = placed?.first?.model ?: it[i].model, backend = placed?.second) }
                 if (s.escalation) { steps = steps.toMutableList().also { it[i] = it[i].copy(status = "skipped: escalation only when needed") }; appRun = AppRun(a.id, steps, null, true); continue }
+                if (s.macro == "retrieval") {
+                    steps = steps.toMutableList().also { it[i] = it[i].copy(backend = FLEET, status = "asking the fleet service") }; appRun = AppRun(a.id, steps, null, true)
+                    val (status, out) = withContext(Dispatchers.IO) { runRetrieval(s, text) }
+                    if (out != null) text = out
+                    steps = steps.toMutableList().also { it[i] = it[i].copy(status = status, text = out) }; appRun = AppRun(a.id, steps, null, true)
+                    continue
+                }
                 if (placed == null) { steps = steps.toMutableList().also { it[i] = it[i].copy(status = "UI-only: no " + (if (s.macro == "seeing") "image input" else "runtime for this step") + " yet") }; appRun = AppRun(a.id, steps, null, true); continue }
                 steps = steps.toMutableList().also { it[i] = it[i].copy(status = "running") }; appRun = AppRun(a.id, steps, null, true)
                 val prompt = models.stepPrompt(s.macro) + "\n\n" + text
@@ -330,6 +346,31 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
             }
             appRun = AppRun(a.id, steps, if (failed == null) text else null, false)
         }
+    }
+
+    /**
+     * A Retrieval step on the fleet service: the input's first paragraph is the question and every later paragraph a passage.
+     * A reranker step (its first model has the declared rerank role) keeps the passages the reranker scores at or above the
+     * declared floor, an embedding step keeps the closest ones by cosine; the step hands on the question and what it kept.
+     * Returns the step's status and its output (null = the step produced nothing and the text goes on unchanged).
+     */
+    private fun runRetrieval(s: Step, input: String): Pair<String, String?> {
+        val svc = models.retrievalService
+        val client = retrieval
+        if (svc == null || client == null) return "UI-only: no fleet embeddings service is declared for this build" to null
+        val (question, passages) = Retrieval.split(input)
+        if (question.isBlank() || passages.isEmpty()) return "skipped: write the question, a blank line, then the passages, one paragraph each" to null
+        val down = "UI-only: the fleet embeddings service did not answer (it needs the tunnel up)" to null
+        val rerank = s.models.firstNotNullOfOrNull { models.row(it) }?.role == svc.rerankRole
+        if (rerank) {
+            val ranked = client.rerank(question, passages) ?: return down
+            val kept = ranked.filter { it.second >= svc.minRerank }.take(svc.rerankTop)
+            val out = if (kept.isEmpty()) question + "\n\n" + svc.noneRelevant else Retrieval.join(question, kept.map { it.first })
+            return "done: reranked ${passages.size} passages on the fleet (${svc.rerankModel}), kept ${kept.size}" to out
+        }
+        val ranked = client.rankByEmbedding(question, passages) ?: return down
+        val kept = ranked.take(svc.embedTop)
+        return "done: ranked ${passages.size} passages on the fleet (${svc.embedModel}), kept ${kept.size}" to Retrieval.join(question, kept.map { it.first })
     }
 
     fun closeApp() {
@@ -436,5 +477,6 @@ class ToolsModel(context: Context, private val scope: CoroutineScope) {
         const val AUTO = "auto"
         const val OPENROUTER = "openrouter"
         const val LOCAL = "local"
+        const val FLEET = "fleet"
     }
 }

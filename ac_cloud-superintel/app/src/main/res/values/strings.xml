@@ -25,7 +25,7 @@
     <string name="nb_note_title">Note title</string>
     <string name="nb_note">Note text</string>
     <string name="nb_file">Add a file (text, Markdown, HTML, CSV, JSON; from any storage, Drive included)</string>
-    <string name="nb_unsupported">That file is not readable text. PDF text extraction is not available yet; paste its text as a note.</string>
+    <string name="nb_unsupported">That file is not readable text, or it is a PDF and the fleet extractor did not answer (it needs the tunnel up). Paste its text as a note.</string>
     <string name="nb_failed">That page could not be fetched.</string>
     <string name="nb_no_sources">This notebook has no sources yet. Add a note, a web page or a file in Sources.</string>
     <string name="nb_ask_hint">Ask a question: answers come only from this notebook\'s sources, with citations.</string>

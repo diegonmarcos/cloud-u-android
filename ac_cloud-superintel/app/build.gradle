@@ -44,6 +44,8 @@ def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toStr
 // (libs:bottomnav's NavDecl). Decl.kt is the only decoder. The fleet agent gateway's address is baked
 // from the fleet catalogue by libs/ai/ai-gateway.gradle (aiGatewayUrl), so no endpoint is spelled here.
 apply from: "$rootDir/../ab_cloud-libs-shared/libs/ai/ai-gateway.gradle"
+// #1179 the fleet embeddings + rerank + PDF service's mesh base URL, from the same declaration as every fleet URL (fleet-urls.gradle: fleetMeshUrl).
+apply from: "$rootDir/../ab_cloud-libs-shared/libs/fleet-urls.gradle"
 if (!buildJson.ui?.bottom_nav || !buildJson.ui?.sections)
     throw new GradleException("build.json::ui.bottom_nav / ui.sections missing — the island would draw nothing (#868)")
 // The news backend is the fleet's one (ac_cloud-news/data/topics.json::api.base, the news-gdelt service); assets/si/news.json declares what is asked of it.
@@ -82,6 +84,7 @@ android {
         buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         buildConfigField "String", "AI_GATEWAY_URL",     "\"${aiGatewayUrl}\""
         buildConfigField "String", "NEWS_BASE_URL",      "\"${newsBase}\""
+        buildConfigField "String", "EMBED_API_URL",      "\"${fleetMeshUrl('embeddings-api')}\""
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 

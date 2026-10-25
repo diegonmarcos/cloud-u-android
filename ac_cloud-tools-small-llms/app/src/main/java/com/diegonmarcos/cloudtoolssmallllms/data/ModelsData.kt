@@ -39,6 +39,17 @@ data class Step(val macro: String, val models: List<String>, val backend: String
 /** A runtime the Store manages: kind "device" (this phone) or "ollama" (a fleet host at [url]). */
 data class Location(val id: String, val label: String, val kind: String, val url: String?)
 
+/**
+ * The fleet embeddings + rerank service as the Retrieval steps use it (assets: retrieval_service): the model names it serves,
+ * how many passages an embedding step / the reranker keeps, the reranker score a passage needs, batching and timeouts, the
+ * role name of the reranker rows (a step whose first model has it reranks, any other retrieval step embeds), and the line
+ * a rerank step leaves when nothing is relevant.
+ */
+data class RetrievalService(
+    val embedModel: String, val rerankModel: String, val rerankRole: String, val embedTop: Int, val rerankTop: Int, val minRerank: Double,
+    val embedBatch: Int, val probeMs: Int, val readMs: Int, val retryAfterMs: Long, val noneRelevant: String,
+)
+
 /** An app category of the Apps list (Search & Knowledge, Documents & Vision, ...). */
 data class AppCategory(val id: String, val label: String, val icon: String)
 
@@ -73,6 +84,10 @@ class ModelsData(json: String) {
     }
     val macros: List<Macro> = list(root.getJSONArray("macros")) { Macro(it.getString("id"), it.getString("label"), it.getString("icon"), it.getString("blurb")) }
     val locations: List<Location> = list(root.getJSONArray("locations")) { Location(it.getString("id"), it.getString("label"), it.getString("kind"), it.optString("url").ifBlank { null }) }
+    val retrievalService: RetrievalService? = root.optJSONObject("retrieval_service")?.let {
+        RetrievalService(it.getString("embed_model"), it.getString("rerank_model"), it.getString("rerank_role"), it.getInt("embed_top"), it.getInt("rerank_top"),
+            it.getDouble("min_rerank"), it.getInt("embed_batch"), it.getInt("probe_ms"), it.getInt("read_ms"), it.getLong("retry_after_ms"), it.getString("none_relevant"))
+    }
     val quantTags: Map<Int, String> = root.getJSONObject("quant_tags").let { o -> o.keys().asSequence().associate { it.toInt() to o.getString(it) } }
     val appCategories: List<AppCategory> = list(root.getJSONArray("app_categories")) { AppCategory(it.getString("id"), it.getString("label"), it.getString("icon")) }
     val templates: List<UiTemplate> = list(root.getJSONArray("app_ui_templates")) { UiTemplate(it.getString("id"), it.getString("label"), it.getString("flow")) }
