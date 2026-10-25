@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.cloud
+package com.diegonmarcos.superapp.boards
 import com.diegonmarcos.superapp.launcher.AggregatorStackFragment
 
 import androidx.compose.foundation.background

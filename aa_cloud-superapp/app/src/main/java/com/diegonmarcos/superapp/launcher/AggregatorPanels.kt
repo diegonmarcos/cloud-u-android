@@ -48,11 +48,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentContainerView
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.cloud.C3HealthFragment
+import com.diegonmarcos.superapp.c3.C3HealthFragment
 import com.diegonmarcos.superapp.cloud.C3MeshFragment
-import com.diegonmarcos.superapp.cloud.CalendarAgendaFragment
-import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
-import com.diegonmarcos.superapp.cloud.TasksFragment
+import com.diegonmarcos.superapp.cal.CalendarAgendaFragment
+import com.diegonmarcos.superapp.cal.CalendarMonthFragment
+import com.diegonmarcos.superapp.boards.TasksFragment
 import com.diegonmarcos.superapp.configs.BadgePanes
 import com.diegonmarcos.superapp.rss.RssFeedFragment
 import com.diegonmarcos.superapp.settings.GridColumns

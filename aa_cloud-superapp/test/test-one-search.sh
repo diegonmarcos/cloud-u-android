@@ -44,9 +44,8 @@ grep -q 'SearchEngine.sections(' "$PANEL" && ok "the panel's sections come from 
 echo "== T2: three places, one panel =="
 grep -q 'SearchSession(this, SearchEntry.CLOUD_APPS_PAGE' "$SRC/launcher/GroupedTilesFragment.kt" \
   && ok "Cloud > Apps mounts the shared panel inline" || bad "Cloud > Apps does not mount InlineSearch"
-grep -q 'SearchSession(this, SearchEntry.HOME_SHEET' "$SRC/launcher/AppDrawerSheetFragment.kt" \
-  && grep -q 'SearchFrame(session, "Search"' "$SRC/launcher/AppDrawerSheetFragment.kt" \
-  && ok "the Home swipe sheet mounts the shared panel inline, the same way" || bad "the swipe sheet does not mount InlineSearch"
+[ ! -e "$SRC/launcher/AppDrawerSheetFragment.kt" ] \
+  && ok "the stale Home swipe sheet is gone (swipe-up opens Cloud > Apps itself)" || bad "AppDrawerSheetFragment.kt is back"
 grep -q 'SearchSheetFragment.newInstance()' "$SRC/ShellActivity.kt" \
   && ok "the Home star (action:open_search) opens the shared panel full screen" || bad "openSearchSheet does not open SearchSheetFragment"
 grep -q 'SearchEntry.HOME_STAR' "$SHEET" && ok "the full-screen sheet is the Home star's entry" || bad "SearchSheetFragment is not SearchEntry.HOME_STAR"

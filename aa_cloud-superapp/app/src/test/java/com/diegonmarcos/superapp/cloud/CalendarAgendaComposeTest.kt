@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.cloud
 
+import com.diegonmarcos.superapp.cal.CalendarAgendaFragment
+
 import android.app.Application
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasText

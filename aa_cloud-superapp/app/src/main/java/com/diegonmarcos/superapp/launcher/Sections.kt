@@ -6,7 +6,6 @@ import com.diegonmarcos.superapp.App
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.system.ModePrefs
 import com.diegonmarcos.superapp.rss.RssFeedFragment
-import com.diegonmarcos.superapp.cloud.NewsFeedFragment
 
 import android.content.Context
 import android.util.Base64
@@ -596,16 +595,6 @@ object Sections {
         val privateDns: String,
         val category: String,
     )
-    /** One declared news / open-RSS feed for the Apps mode of Infos. */
-    data class NewsFeed(
-        val id:       String,
-        val name:     String,
-        val url:      String,   // RSS / Atom feed URL
-        val siteUrl:  String,   // Optional landing page; if blank, falls back to url
-        val category: String,   // World | Tech | Finance | Sport | …
-        val icon:     String,
-    )
-
     /** One mail account declared in build.json::ui.mail_accounts.
      *  `kind` picks the transport (jmap | imap | imaps | exchange).
      *  Today the libs:mail JMAP slice is the only one with full
@@ -664,7 +653,6 @@ object Sections {
     @Volatile private var cachedSvcPub:   List<PublicService>?     = null
     @Volatile private var cachedSvcPriv:  List<PrivateService>?    = null
     @Volatile private var cachedLinktree: Map<String, LinktreeSlide>? = null
-    @Volatile private var cachedNews:     List<NewsFeed>?              = null
     @Volatile private var cachedMail:     List<MailAccount>?           = null
     @Volatile private var cachedExtApps:  List<ExternalApp>?           = null
 
@@ -1006,12 +994,8 @@ object Sections {
     }
 
     /** One stop in the horizontal-swipe walk-list (build.json::ui.swipe_walk).
-     *  [section] is a ui.sections id, or "home" for the Home-Apps overlay.
-     *  Exactly one refinement is set per stop:
-     *   • [mode]  apps|admin — Tabbed sections (Infos, Labs).
-     *   • [tab]   cloud|phone — Suite's Cloud|Phone tab strip.
-     *   • [sheet] cloud|phone — open the Home-Apps AppDrawerSheet on that tab.
-     *  All null = land on the section's default page (e.g. Comms). */
+     *  [section] is a ui.sections id; [page] optionally refines it.
+     *  Null = land on the section's default page (e.g. Comms). */
     data class WalkStop(
         val id: String,
         val section: String,
@@ -1019,7 +1003,6 @@ object Sections {
          *  Replaces the old `tab` (Suite) / `mode` (Infos, Labs) split — both
          *  were always just "which child of the section", i.e. a page id. */
         val page: String? = null,
-        val sheet: String? = null,
         val label: String = "",
     )
 
@@ -1038,7 +1021,6 @@ object Sections {
                 id      = o.optString("id", ""),
                 section = o.getString("section"),
                 page    = o.optString("page", "").takeIf { it.isNotBlank() },
-                sheet   = o.optString("sheet", "").takeIf { it.isNotBlank() },
                 label   = o.optString("label", ""),
             ))
         }
@@ -1688,29 +1670,6 @@ object Sections {
         }
         cachedSvcPriv = out.sortedBy { it.name }
         return cachedSvcPriv!!
-    }
-
-    /** build.json::ui.news_feeds — curated external RSS / news channels
-     *  rendered by [NewsFeedFragment] under Infos · Apps. Different
-     *  surface from the ntfy channels (those live in [RssFeedFragment]). */
-    fun newsFeeds(): List<NewsFeed> {
-        cachedNews?.let { return it }
-        val json = String(Base64.decode(BuildConfig.NEWS_FEEDS_B64, Base64.NO_WRAP))
-        val arr  = JSONArray(json)
-        val out  = mutableListOf<NewsFeed>()
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            out.add(NewsFeed(
-                id       = o.optString("id", ""),
-                name     = o.optString("name", ""),
-                url      = o.optString("url", ""),
-                siteUrl  = o.optString("site_url", ""),
-                category = o.optString("category", ""),
-                icon     = o.optString("icon", ""),
-            ))
-        }
-        cachedNews = out
-        return out
     }
 
     /** build.json::ui.mail_accounts — declared seed accounts (JMAP / IMAP /

@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.apps
 
+import com.diegonmarcos.superapp.recentapps.RecentAppsFragment
+
 import android.app.Application
 import androidx.compose.ui.test.onNodeWithText
 import com.diegonmarcos.superapp.ui.KitPageHarness

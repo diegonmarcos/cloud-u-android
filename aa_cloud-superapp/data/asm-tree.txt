@@ -1,9 +1,9 @@
 ╔══════════════════════════════════════════════════════════════════════════════════╗
 ║  BOTTOM NAV  [Inboxes] [Infos] [⌂ Home] [Suite] [Labs]                        ║
 ║  GLOBAL CHROME: Drawer (← swipe) · Toolbar (Dynamic Island · Search · Mode)   ║
-║  SWIPE WALK (circular L→R):                                                    ║
-║  Inboxes → Infos·Apps → Infos·Admin → Home-Apps·Cloud → Home-Apps·Phone →     ║
-║  Suite·Cloud → Suite·Phone → Labs·Apps → Labs·Admin → Configs                  ║
+║  HOME SWIPES (build.json onehand.home_swipes): UP → Cloud·Apps · DOWN → Notify   ║
+║  SWIPE WALK (circular L→R, ui.swipe_walk): see build.json; no Home-Apps sheet any more║
+║  (the stale Home-Apps sheet was removed: its Cloud tab was Cloud·Apps itself)    ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -56,17 +56,8 @@ BOTTOM NAV — 5 AGGREGATOR SECTIONS
 
 [3] HOME  ── master index ─────────────────────────────────────────────────────────
     Master tile grid (all other sections as icon tiles)
-    ┌── Home-Apps sheet (swipe-up) ── AppDrawerSheetFragment ─────────────────────
-    │   Tab: Cloud ── HomeGroupedFragment ── groups from home_groups ─────────────
-    │     Infos           (mode-aware icon)
-    │     Suite           (5 category icons: AI / Comms / Data Apps / Tools Primary / Tools Dashboards)
-    │     Labs→C3         (6 lab tiles — one HomeGroup per lab: C3 / Data & ML / Engineering / Quant / Aero / Circus)
-    │     Configs         (tiles derived from config.pages: Profile / WireGuard / KDE / AI / Launcher / Import / Update / About)
-    │     [+ other home_group cards per build.json::ui.home_groups]
-    └── Tab: Phone ── PhoneAppsFragment ── phone folder grid ───────────────────
-          Installed apps matched to folders (phone_folders from build.json):
-            _#SYSTEM · _Security · _Sys_Info · _SysTools · …
-          [Auto-sink: _New Apps (unmatched) / _Misc (manual)]
+    Swipe UP  → page:cloud/apps   (Cloud > Apps, the one Apps page)
+    Swipe DOWN → page:communication/my-rss   (Notify)
 
 [4] SUITE  ── tab-split aggregator (SuiteCloudPhoneTabsFragment) ─────────────────
     ┌── Cloud tab ── GroupedTilesFragment ─────────────────────────────────────────
@@ -76,7 +67,6 @@ BOTTOM NAV — 5 AGGREGATOR SECTIONS
     │     Data Apps ─── Calendar │ Contacts │ Notes(Obsidian) │ Sheets │ Photos │ Music(Tidal)
     │     Tools Primary ─── Browser │ Tabs(AppTabs) │ Wallet │ Navigation(Cloud-Nav) │ Vault
     │     Tools Dashboards ── PM Boards(paca) │ MyFin │ MyHealth │ MyData
-    │   Footer: "More" → action:open_home_apps  (opens Home-Apps / Cloud tab)
     └── Phone tab ── SuitePhoneAppsFragment ── phone_app_groups ──────────────────
           AI  ─────────────── Claude · Gemini · Termux · Nix  +  folder: Others (Acode / QuickEdit)
           Inboxes ─────────── Gmail · Slack · WhatsApp Business · LinkedIn · Instagram · Google News
@@ -89,7 +79,6 @@ BOTTOM NAV — 5 AGGREGATOR SECTIONS
           Tools Primary ────── Brave · Google Maps · Google Wallet · Translate · Clock · Calculator
           Tools Dashboards ─── SuperApp (self)
           Configs ─────────── Play Store · F-Droid · Settings
-          Footer: "More" → action:open_home_apps_phone  (opens Home-Apps / Phone tab)
           NOT-INSTALLED ENTRIES RENDER. A curated entry whose package is absent
           draws a placeholder tile (dashed glyph + "Not installed") whose tap
           installs it — store intent for a third-party app, libs:updater for a

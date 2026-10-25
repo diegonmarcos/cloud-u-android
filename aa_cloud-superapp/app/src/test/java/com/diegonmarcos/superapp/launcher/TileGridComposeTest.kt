@@ -16,7 +16,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * #773 — the launcher tile and the two grids built on it (TileGrid, HomeGrouped), Compose since
+ * #773 — the launcher tile and the two grids built on it (TileGrid), Compose since
  * item_tile.xml / fragment_tile_grid.xml / fragment_home_grouped.xml.
  *
  *   G1 the plan: a heading where the declared group or subgroup changes, a new group resets the
@@ -26,7 +26,6 @@ import org.robolectric.annotation.Config
  *   G4 the grid draws one tile per non-separator id, a heading per group, and a tap reports the tile id
  *   G5 an empty grid says so
  *   G6 the icon is the wanted 32 dp until the cell cannot hold it, then shrinks to what is left, never below 16
- *   G7 HomeGrouped's buckets are ui.home_groups in order, then ui.home_actions as "Actions"
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
@@ -109,21 +108,5 @@ class TileGridComposeTest : KitPageHarness() {
         assertEquals(27f, tileIconDp(720, 2f, 8, 0, 18).value, 0.01f)
         // A cell that cannot even hold the floor still gets 16 dp.
         assertEquals(16f, tileIconDp(720, 2f, 40, 0, 18).value, 0.01f)
-    }
-
-    @Test
-    fun `G7 home grouped is the declared home groups then the actions`() {
-        val ctx = ApplicationProvider.getApplicationContext<Application>()
-        val b = HomeGroupedFragment.buckets(ctx)
-        val groups = Sections.homeGroups()
-        assertEquals(groups.map { it.title }, b.take(groups.size).map { it.title })
-        for ((i, g) in groups.withIndex()) assertEquals(g.tiles.map { it.id }, b[i].tiles.map { it.first })
-        val acts = Sections.homeActions()
-        if (acts.isNotEmpty()) {
-            assertEquals(ctx.getString(R.string.home_group_actions), b.last().title)
-            assertEquals(acts.map { "action:${it.actionType}" }, b.last().tiles.map { it.first })
-        } else {
-            assertEquals(groups.size, b.size)
-        }
     }
 }

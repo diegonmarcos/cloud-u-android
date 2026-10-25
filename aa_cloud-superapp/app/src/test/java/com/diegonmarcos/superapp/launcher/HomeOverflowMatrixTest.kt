@@ -30,7 +30,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /**
- * The owner's "first row is overflowing on the border": the home screen (status strip over the grouped home grid) on the
+ * The owner's "first row is overflowing on the border": the home screen (status strip over Cloud > Apps' grouped grid) on the
  * Samsung A37 (SM-A376B, 1080 x 2340 px, one centre punch-hole) over the whole settings matrix.
  *
  *   width  1080 px always. Samsung's Screen zoom changes the DENSITY, not the pixels: 420 dpi = 411 dp, 450 dpi = 384 dp
@@ -100,7 +100,7 @@ class HomeOverflowMatrixTest(private val dpi: Int, private val fontScale: Float)
             col.addView(pane, LinearLayout.LayoutParams(-1, 0, 1f))
             a.setContentView(col)
             model = LauncherStatusStrip.install(a, strip)
-            a.supportFragmentManager.beginTransaction().add(pane.id, HomeGroupedFragment.newInstance()).commitNow()
+            a.supportFragmentManager.beginTransaction().add(pane.id, GroupedTilesFragment.newInstance("cloud")).commitNow()
             root = col
         }
         compose.waitForIdle()

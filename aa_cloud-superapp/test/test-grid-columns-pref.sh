@@ -27,12 +27,10 @@ hits=$(grep -rln "UI_PHONE_GRID_COLUMNS\|UI_TILE_COLUMNS" --include=*.kt "$KT" |
 [ -z "$hits" ] && ok "T2 no grid reads BuildConfig columns directly" || bad "T2 direct BuildConfig reads: $hits"
 
 # T3 each grid family uses the pref
-# TileGridFragment / HomeGrouped draw the one small tile at the fixed TileGridFragment.CHIP_COLUMNS (owner: 5 across,
-# everything on one A37 screen), so they must NOT read the stepper; HomeGrouped still redraws live.
+# TileGridFragment draws the one small tile at the fixed TileGridFragment.CHIP_COLUMNS (owner: 5 across,
+# everything on one A37 screen), so it must NOT read the stepper.
 grep -q "val cols = CHIP_COLUMNS" "$KT/launcher/TileGridFragment.kt" && ! grep -q "GridColumns.cloud(" "$KT/launcher/TileGridFragment.kt" \
   && ok "T3 launcher/TileGridFragment.kt draws the fixed CHIP_COLUMNS" || bad "T3 launcher/TileGridFragment.kt"
-grep -q "TileStrip(" "$KT/launcher/HomeGroupedFragment.kt" && ! grep -q "GridColumns.cloud(" "$KT/launcher/HomeGroupedFragment.kt" \
-  && ok "T3 launcher/HomeGroupedFragment.kt draws Cloud > Apps' TileStrip (#1075), no stepper" || bad "T3 launcher/HomeGroupedFragment.kt"
 # The aggregator page reads the pref in its panel bodies (AggregatorPanels.kt) and redraws live from the fragment.
 grep -q "GridColumns.cloud(" "$KT/launcher/AggregatorPanels.kt" && grep -q "redrawOnGridColumns(GridColumns.Kind.CLOUD)" "$KT/launcher/AggregatorStackFragment.kt" \
   && ok "T3 launcher/AggregatorStackFragment.kt (+ AggregatorPanels.kt) reads cloud pref and redraws live" || bad "T3 launcher/AggregatorStackFragment.kt"

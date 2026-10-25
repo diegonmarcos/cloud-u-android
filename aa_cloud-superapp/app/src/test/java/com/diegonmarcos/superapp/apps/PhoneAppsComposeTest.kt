@@ -9,9 +9,7 @@ import androidx.compose.ui.test.performScrollToNode
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
-import com.diegonmarcos.superapp.launcher.AppDrawerSheetFragment
 import com.diegonmarcos.superapp.launcher.GroupedTilesFragment
-import com.diegonmarcos.superapp.launcher.HomeAppsTabs
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.KitPageHarness
 import org.junit.Assert.assertEquals
@@ -122,18 +120,5 @@ class PhoneAppsComposeTest : KitPageHarness() {
             compose.onAllNodesWithTag(GroupedTilesFragment.TAG_RECENT_EMPTY).fetchSemanticsNodes().isNotEmpty()
         }
         assertFalse(compose.onAllNodesWithTag(GroupedTilesFragment.TAG_RECENT_EMPTY).fetchSemanticsNodes().isEmpty())
-    }
-
-    @Test
-    fun `C2 the home sheet swaps its body in place`() {
-        val tabs = HomeAppsTabs.loadFromBuildConfig()
-        assertTrue("ui.home_apps_tabs is empty", tabs.size >= 2)
-        show(AppDrawerSheetFragment.newInstance())
-        compose.onNodeWithTag(AppDrawerSheetFragment.TAG_SHEET).assertExists()
-        compose.onAllNodesWithTag(GroupedTilesFragment.TAG_LIST).assertCountEquals(1)
-        compose.onNodeWithTag(PageTabsTags.tab(tabs[1].id)).performClick()
-        compose.waitForIdle()
-        compose.onAllNodesWithTag(GroupedTilesFragment.TAG_LIST).assertCountEquals(0)
-        compose.onAllNodesWithTag(SuitePhoneAppsFragment.TAG_LIST).assertCountEquals(1)
     }
 }

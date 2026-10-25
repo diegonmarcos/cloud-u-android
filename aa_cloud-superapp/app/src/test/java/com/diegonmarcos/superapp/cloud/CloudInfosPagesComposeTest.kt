@@ -1,5 +1,8 @@
 package com.diegonmarcos.superapp.cloud
 
+import com.diegonmarcos.superapp.boards.TasksFragment
+import com.diegonmarcos.superapp.cal.CalendarMonthFragment
+
 import android.app.Application
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
@@ -100,27 +103,6 @@ class CloudInfosPagesComposeTest : KitPageHarness() {
         val now = Calendar.getInstance()
         val days = now.getActualMaximum(Calendar.DAY_OF_MONTH)
         for (d in 1..days) compose.onNodeWithTag(CalendarMonthFragment.dayTag(d)).assert(hasText(d.toString()))
-    }
-
-    @Test
-    fun `N1 news draws a header per declared feed collapsed`() {
-        show(NewsFeedFragment.newInstance())
-        val feeds = Sections.newsFeeds()
-        if (feeds.isEmpty()) { compose.onNodeWithTag(NewsFeedFragment.TAG_EMPTY).assertExists(); return }
-        for (f in feeds) {
-            compose.onNodeWithTag(NewsFeedFragment.headerTag(f.id)).assertExists()
-            compose.onNodeWithTag(NewsFeedFragment.bodyTag(f.id)).assertDoesNotExist()
-        }
-    }
-
-    @Test
-    fun `N2 a header tap opens the body and a second closes it`() {
-        show(NewsFeedFragment.newInstance())
-        val f = Sections.newsFeeds().firstOrNull() ?: return
-        compose.onNodeWithTag(NewsFeedFragment.headerTag(f.id)).performClick()
-        compose.onNodeWithTag(NewsFeedFragment.bodyTag(f.id)).assertExists()
-        compose.onNodeWithTag(NewsFeedFragment.headerTag(f.id)).performClick()
-        compose.onNodeWithTag(NewsFeedFragment.bodyTag(f.id)).assertDoesNotExist()
     }
 
     private fun androidx.compose.ui.test.SemanticsNodeInteractionCollection.assertCountEquals1() =

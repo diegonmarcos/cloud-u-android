@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.cloud
 
+import com.diegonmarcos.superapp.c3.C3HealthFragment
+
 import android.app.Application
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithTag

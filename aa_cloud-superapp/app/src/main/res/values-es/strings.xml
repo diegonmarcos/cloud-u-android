@@ -76,9 +76,6 @@
     <string name="mesh_col_wg_ip">IP WG</string>
     <string name="mesh_col_endpoint_role">Endpoint · rol</string>
 
-    <!-- News feeds (open RSS — distinct from ntfy) -->
-    <string name="news_feeds_title">Noticias y RSS</string>
-    <string name="news_feeds_empty">No hay feeds de noticias declarados en build.json::ui.news_feeds</string>
 
     <!-- RSS / ntfy channels -->
     <string name="rss_title">RSS · canales de ntfy</string>

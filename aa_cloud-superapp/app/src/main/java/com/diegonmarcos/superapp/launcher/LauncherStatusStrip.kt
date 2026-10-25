@@ -65,7 +65,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
 import com.diegonmarcos.superapp.battery.BatteryIconView
-import com.diegonmarcos.superapp.cloud.CalendarAgendaPopup
+import com.diegonmarcos.superapp.cal.CalendarAgendaPopup
 import com.diegonmarcos.superapp.network.BtLinks
 import com.diegonmarcos.superapp.network.GpsProbe
 import com.diegonmarcos.superapp.network.MobileLink

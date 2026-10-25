@@ -168,7 +168,7 @@ class LauncherNavController(private val host: NavHost) {
         if (!inWalkNav) {
             val stops = Sections.swipeWalk()
             val idx = stops.indexOfFirst {
-                it.sheet == null && it.section == id &&
+                it.section == id &&
                     (it.page == null || it.page == initialPage)
             }
             if (idx >= 0) walkIndex = idx
@@ -519,19 +519,12 @@ class LauncherNavController(private val host: NavHost) {
         navigateWalkStop(stops[walkIndex])
     }
 
-    /** Render one walk stop: a section page (optional `page`) or the
-     *  Home-Apps overlay sheet. */
+    /** Render one walk stop: a section page. */
     fun navigateWalkStop(stop: Sections.WalkStop) {
         inWalkNav = true
         try {
-            host.closeAppDrawerSheetIfOpen()
-            if (stop.sheet != null) {
-                if (host.currentSection != "home") goHome()
-                host.openAppDrawerSheet(stop.sheet)
-            } else {
-                val label = Sections.byId(stop.section)?.label ?: stop.section
-                goSection(stop.section, label, stop.page.orEmpty())
-            }
+            val label = Sections.byId(stop.section)?.label ?: stop.section
+            goSection(stop.section, label, stop.page.orEmpty())
         } finally {
             inWalkNav = false
         }
@@ -566,8 +559,6 @@ class LauncherNavController(private val host: NavHost) {
         fun syncBottomNav(sectionId: String)
         fun syncDrawerTab(index: Int)
         fun invalidateMenu()
-        fun openAppDrawerSheet(initialTab: String = "")
-        fun closeAppDrawerSheetIfOpen()
         fun closeDrawerIfOpen()
         /** A USER CLICKED this target: felt, logged and counted as an open,
          *  then routed. For a target the shell is dispatching to itself, use

@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.cloud
+package com.diegonmarcos.superapp.cal
 import com.diegonmarcos.superapp.launcher.AggregatorStackFragment
 import com.diegonmarcos.superapp.ui.LauncherPalette
 

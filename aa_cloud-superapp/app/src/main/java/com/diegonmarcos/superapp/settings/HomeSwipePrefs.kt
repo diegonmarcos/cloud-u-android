@@ -45,13 +45,13 @@ class HomeSwipePrefs(context: Context) {
         /** UI-facing action vocabulary: id → human label. Order = picker order.
          *  Kept in sync with MainActivity.handleHomeSwipeAction. */
         val ACTIONS: List<Pair<String, String>> = listOf(
-            "open_home_apps"          to "Home Apps (Suite·Cloud)",
-            "open_home_apps_phone"    to "Home Apps (Suite·Phone)",
-            "open_last_superapp_page" to "Last SuperApp page",
-            "open_last_android_app"   to "Last Android app",
-            "walk_step_next"          to "Walk → next",
-            "page:phone/apps"         to "Phone: Apps",
-            "walk_step_prev"          to "Walk ← prev",
+            "page:cloud/apps"          to "Cloud: Apps",
+            "page:communication/my-rss" to "Notify",
+            "page:phone/apps"          to "Phone: Apps",
+            "open_last_superapp_page"  to "Last SuperApp page",
+            "open_last_android_app"    to "Last Android app",
+            "walk_step_next"           to "Walk → next",
+            "walk_step_prev"           to "Walk ← prev",
         )
     }
 }

@@ -2,11 +2,11 @@ package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.rss.RssFeedFragment
 import com.diegonmarcos.superapp.settings.LauncherConfigFragment
 import com.diegonmarcos.superapp.settings.LauncherPresetsFragment
-import com.diegonmarcos.superapp.cloud.C3HealthFragment
-import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
-import com.diegonmarcos.superapp.cloud.CalendarAgendaFragment
+import com.diegonmarcos.superapp.c3.C3HealthFragment
+import com.diegonmarcos.superapp.cal.CalendarMonthFragment
+import com.diegonmarcos.superapp.cal.CalendarAgendaFragment
 import com.diegonmarcos.superapp.network.WireGuardFragment
-import com.diegonmarcos.superapp.apps.RecentAppsFragment
+import com.diegonmarcos.superapp.recentapps.RecentAppsFragment
 
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.R
@@ -136,7 +136,7 @@ object SectionPages {
         // About's Battery section, the home-screen battery popup and the Battery badge).
         sectionId == "config" && pageId == "battery"        ->
             com.diegonmarcos.superapp.batterystats.BatteryStatsFragment.newInstance()
-        sectionId == "config" && (pageId == "about" || pageId == "dev") ->
+        sectionId == "config" && pageId == "about" ->
             com.diegonmarcos.superapp.devcontrol.DevControlFragment.newInstance()
         // "browser" section is dead — tile target extapp:cloud-browser bypasses openSectionPage.
         sectionId == "apptabs"                              ->

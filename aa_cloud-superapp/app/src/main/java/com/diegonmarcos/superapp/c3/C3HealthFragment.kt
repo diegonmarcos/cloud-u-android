@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.cloud
+package com.diegonmarcos.superapp.c3
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.launcher.TileGridFragment
 import com.diegonmarcos.superapp.launcher.AggregatorStackFragment

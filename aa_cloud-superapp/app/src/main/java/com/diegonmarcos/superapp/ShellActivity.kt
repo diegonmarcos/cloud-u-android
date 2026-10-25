@@ -22,7 +22,6 @@ import com.diegonmarcos.superapp.launcher.LauncherStatusStrip
 import com.diegonmarcos.superapp.launcher.HomeDrawerFragment
 import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
 import com.diegonmarcos.superapp.launcher.DetailPlaceholderFragment
-import com.diegonmarcos.superapp.launcher.AppDrawerSheetFragment
 import com.diegonmarcos.superapp.devtools.DevControlBridge
 import com.diegonmarcos.superapp.settings.LauncherProfiles
 import com.diegonmarcos.superapp.settings.LauncherTheme
@@ -83,6 +82,8 @@ import com.diegonmarcos.superapp.launcher.BackHandler
 /** The tag the old update overlay was attached under (#812: removed). */
 private const val UPDATE_OVERLAY_TAG = "update_overlay"
 private const val DRAWER_TAB_HOME = "home"
+/** Fallback for the legacy open_home_apps action ids; the swipes themselves are declared in build.json. */
+private const val CLOUD_APPS_TARGET = "page:cloud/apps"
 private const val DRAWER_TAB_SECTION = "section"
 
 /**
@@ -609,22 +610,11 @@ open class ShellActivity : AppCompatActivity(),
                     return@reselect
                 }
                 // RULE 3 — True same-section re-tap.
-                //   • App-drawer-sheet is up → pop the sheet to expose the
-                //     3D cube underneath.
-                //   • Otherwise → ask the current fragment's Collapsible
-                //     handler to fold/unfold its panels.
+                //   Ask the current fragment's Collapsible handler to
+                //   fold/unfold its panels.
                 Haptics.tap(bottomNav)
                 val cur = supportFragmentManager.findFragmentById(R.id.fragment_container)
-                when (cur) {
-                    is AppDrawerSheetFragment -> {
-                        // A home-overlay fragment — popping
-                        // its back-stack entry restores the 3D cube
-                        // underneath. Use plain pop() so we don't tear
-                        // through other back-stack entries.
-                        supportFragmentManager.popBackStack()
-                    }
-                    else -> (cur as? Collapsible)?.toggleAllCollapsed()
-                }
+                (cur as? Collapsible)?.toggleAllCollapsed()
             }
 
             if (savedInstanceState == null) {
@@ -736,8 +726,8 @@ open class ShellActivity : AppCompatActivity(),
                     val absDx = Math.abs(dx); val absDy = Math.abs(dy)
 
                     // VERTICAL swipes — ONLY meaningful when on the Home
-                    // section (where swipe-up opens AppDrawerSheet) and
-                    // the sheet itself isn't already up. Off-home, the
+                    // section (where the declared swipe-up / swipe-down
+                    // targets open: build.json onehand.home_swipes). Off-home, the
                     // activity-level detector MUST defer entirely to
                     // the fragment so list scrolling, pull-to-refresh,
                     // sheet drag-close, WebView pan, etc. all own
@@ -746,8 +736,6 @@ open class ShellActivity : AppCompatActivity(),
                     // so the detector doesn't even claim to have seen
                     // a vertical gesture off-home — eliminating the
                     // conflict the user reported.
-                    val sheetIsUp = supportFragmentManager
-                        .findFragmentByTag(AppDrawerSheetFragment.BACK_STACK_TAG) != null
                     // "Home screen" means the Home ROOT — currentSection stays
                     // "home" for every fragment pushed while inside the Home
                     // section (e.g. Suite:Phone:All), so that alone isn't
@@ -756,7 +744,7 @@ open class ShellActivity : AppCompatActivity(),
                     // up/down leaks into those pages and fights their scroll.
                     val atHomeRoot = currentSection == "home" &&
                         supportFragmentManager.backStackEntryCount == 0
-                    if (atHomeRoot && !sheetIsUp &&
+                    if (atHomeRoot &&
                         absDy > absDx * 1.4f && absDy > minSwipePx && Math.abs(vY) > 600f) {
                         val consumed = handleVerticalFling(dy)
                         if (consumed) Haptics.tap(bottomNav)
@@ -804,17 +792,11 @@ open class ShellActivity : AppCompatActivity(),
         if ((cur as? SuppressVerticalSwipe)?.suppressVerticalSwipe() == true) {
             return false
         }
-        val sheetIsUp = supportFragmentManager.findFragmentByTag(AppDrawerSheetFragment.BACK_STACK_TAG) != null ||
-                        supportFragmentManager.backStackEntryCount > 0 &&
-                          (0 until supportFragmentManager.backStackEntryCount).any {
-                              supportFragmentManager.getBackStackEntryAt(it).name ==
-                                  AppDrawerSheetFragment.BACK_STACK_TAG
-                          }
         return when {
-            dy < 0 && currentSection == "home" && !sheetIsUp -> {
+            dy < 0 && currentSection == "home" -> {
                 handleHomeSwipeAction(com.diegonmarcos.superapp.settings.HomeSwipePrefs(this).up); true
             }
-            dy > 0 && currentSection == "home" && !sheetIsUp -> {
+            dy > 0 && currentSection == "home" -> {
                 handleHomeSwipeAction(com.diegonmarcos.superapp.settings.HomeSwipePrefs(this).down); true
             }
             else -> false
@@ -828,13 +810,12 @@ open class ShellActivity : AppCompatActivity(),
         // the Configs picker (HomeSwipePrefs.ACTIONS) stores them bare. Strip
         // once so both vocabularies hit the same branches.
         when (val a = action.removePrefix("action:")) {
-            "open_home_apps" -> openAppDrawerSheet()
             "open_last_superapp_page" -> {
                 val last = runCatching {
                     com.diegonmarcos.superapp.apptabs.AppTabPrefs(this).all()
                         .firstOrNull { it !is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.ExternalAppEntry }
                 }.getOrNull()
-                if (last != null) onAppTabPicked(last) else openAppDrawerSheet()
+                if (last != null) onAppTabPicked(last) else routeTarget(CLOUD_APPS_TARGET)
             }
             "open_last_android_app" -> {
                 val last = runCatching {
@@ -844,44 +825,20 @@ open class ShellActivity : AppCompatActivity(),
                 }.getOrNull()
                 if (last != null) {
                     runCatching { startActivity(packageManager.getLaunchIntentForPackage(last.packageName)?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                } else openAppDrawerSheet()
+                } else routeTarget(CLOUD_APPS_TARGET)
             }
             "walk_step_next" -> { fireGeminiPattern(); walkStep(+1) }
             "walk_step_prev" -> { fireGeminiPattern(); walkStep(-1) }
             // Target-string actions ("page:phone/apps") route through the tile
             // grammar. Anything else IS a home action — hand it to the one
             // dispatcher that knows them all (open_home_apps_phone, ...).
-            // Was: a blind openAppDrawerSheet(), which silently turned every
-            // unlisted id — swipe-up's open_home_apps_phone included — into
-            // the Cloud drawer.
             else             -> if (a.contains(':')) onTileClicked(a) else dispatchHomeAction(a)
         }
-    }
-
-    override fun openAppDrawerSheet(initialTab: String) {
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(
-                R.anim.slide_in_up,  R.anim.fade_out,
-                R.anim.fade_in,      R.anim.slide_out_down,
-            )
-            .add(R.id.fragment_container, AppDrawerSheetFragment.newInstance(initialTab),
-                 AppDrawerSheetFragment.BACK_STACK_TAG)
-            .addToBackStack(AppDrawerSheetFragment.BACK_STACK_TAG)
-            .commit()
     }
 
     /** Step `direction` through the circular walk-list, wrapping at both
      *  ends. +1 = next (left-swipe), -1 = prev (right-swipe). */
     private fun walkStep(direction: Int) = nav.walkStep(direction)
-
-    override fun closeAppDrawerSheetIfOpen() {
-        if (supportFragmentManager.findFragmentByTag(AppDrawerSheetFragment.BACK_STACK_TAG) != null) {
-            supportFragmentManager.popBackStack(
-                AppDrawerSheetFragment.BACK_STACK_TAG,
-                FragmentManager.POP_BACK_STACK_INCLUSIVE,
-            )
-        }
-    }
 
     /**
      * The home swipes are read HERE, ahead of every view, so they also saw the
@@ -1897,8 +1854,6 @@ open class ShellActivity : AppCompatActivity(),
             actionType == "update_all" ->
                 // #894 Installs are Cloud Store's: this opens it (or the Install Cloud Store button).
                 routeTarget("page:config/store-cloud")
-            // Drawer "Home Apps" entry → open the same pull-up sheet the
-            // home-screen swipe-up gesture shows.
             // ── Sirius-star inner-ring actions (build.json::onehand.circular_menu
             //    nodes[Configs].actions). Radial-menu only — deliberately NOT
             //    Configs pages, so the Configs grid and Home row stay unchanged.
@@ -1925,16 +1880,10 @@ open class ShellActivity : AppCompatActivity(),
                 findViewById<View>(R.id.fragment_container)
                     ?.snack("Animations ${if (on) "on" else "off"}")
             }
-            actionType == "open_home_apps" -> {
-                if (currentSection != "home") goHome()
-                openAppDrawerSheet()
-            }
-            // Same Home Apps drawer, opened on its Phone body page. Distinct
-            // from the Suite ▸ Phone PAGE — this is the overlay sheet.
-            actionType == "open_home_apps_phone" -> {
-                if (currentSection != "home") goHome()
-                openAppDrawerSheet("phone")
-            }
+            // The Home Apps overlay sheet is gone (it was a stale copy of Cloud ▸ Apps): the
+            // old action ids open the real pages. Prefer the page: target in new data.
+            actionType == "open_home_apps" -> routeTarget(CLOUD_APPS_TARGET)
+            actionType == "open_home_apps_phone" -> routeTarget("page:phone/apps")
             // Cloud Notification Center — same surface the top-bar bell
             // icon opens. Wiring it here means any data-driven entry
             // (tile target / drawer action) can route to it without code.

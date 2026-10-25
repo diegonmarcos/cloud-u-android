@@ -67,7 +67,7 @@ class FloatingNavConfigTest {
         assertEquals("section:communication", byLabel["Comms"]?.target)
         assertEquals("section:cloud", byLabel["Cloud"]?.target)
         assertEquals("section:config", byLabel["Configs"]?.target)
-        assertEquals("action:open_home_apps", byLabel["Home-Apps"]?.target)
+        assertEquals("page:cloud/apps", byLabel["Home-Apps"]?.target)
     }
 
     @Test fun parentInstallAppsResolveInExternalApps() {

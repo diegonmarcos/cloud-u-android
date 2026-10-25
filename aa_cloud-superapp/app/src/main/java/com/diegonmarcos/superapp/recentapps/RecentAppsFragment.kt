@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.apps
+package com.diegonmarcos.superapp.recentapps
 import com.diegonmarcos.superapp.datamanager.AppUsageProvider
 import com.diegonmarcos.superapp.launcher.AppLongPressMenu
 import com.diegonmarcos.superapp.ui.LauncherPalette

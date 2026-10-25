@@ -77,8 +77,8 @@ echo "== T3: every strip site is a PageTabsView =="
 SITES=$( (grep -rlE '\bPageTabs(View)?\(' "$SRC" --include=*.kt; grep -rl '<com.diegonmarcos.superapp.bottomnav.PageTabsView' "$RES/layout") | sed "s#$APP/##")
 echo "$SITES" | sed 's/^/     site: /'
 t3 "$SRC" && ok "T3: $(echo "$SITES" | wc -l) strip sites, none with its own dimen, listener or TabLayout" || bad "T3: a strip site is not a PageTabsView, or declares its own spacing"
-grep -q 'underTopChrome = false' "$SRC/com/diegonmarcos/superapp/launcher/AppDrawerSheetFragment.kt" \
-    && ok "T3: the sheet's strip opts out of the top-chrome inset, not of the geometry" || bad "T3: the drawer sheet strip is not declared as not-under-top-chrome"
+[ ! -e "$SRC/com/diegonmarcos/superapp/launcher/AppDrawerSheetFragment.kt" ] \
+    && ok "T3: the stale drawer sheet (and its strip) is gone" || bad "T3: AppDrawerSheetFragment.kt is back"
 [ ! -e "$SRC/com/diegonmarcos/superapp/launcher/AppTabsStyle.kt" ] && ok "T3: AppTabsStyle.kt is gone (the lib's PageTabs replaced it)" || bad "T3: AppTabsStyle.kt is back"
 
 echo "== T4: mutation =="

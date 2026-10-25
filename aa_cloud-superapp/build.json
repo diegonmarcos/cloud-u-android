@@ -730,12 +730,12 @@
         }
       ]
     },
-    "_doc_home_swipes": "Configurable home-screen swipe actions. swipe_up fires when the user flings upward while on the Home section (default opens the Home Apps drawer). swipe_left/swipe_right replace the circular walk-list step. Values: open_home_apps (Cloud tab) | open_home_apps_phone (Phone tab) | open_last_superapp_page | open_last_android_app | walk_step_next | walk_step_prev.",
+    "_doc_home_swipes": "Configurable home-screen swipe actions. swipe_up fires when the user flings upward while on the Home section Default: up opens Cloud > Apps, down opens Notify (any `page:<section>/<page>` target works, no code edit). swipe_left/swipe_right replace the circular walk-list step. Named actions: open_last_superapp_page | open_last_android_app | walk_step_next | walk_step_prev. The old Home Apps sheet is gone: the legacy ids open_home_apps / open_home_apps_phone route to page:cloud/apps / page:phone/apps.",
     "home_swipes": {
-      "swipe_up": "action:open_home_apps_phone",
+      "swipe_up": "page:cloud/apps",
       "swipe_left": "open_last_superapp_page",
       "swipe_right": "open_last_android_app",
-      "swipe_down": "page:phone/apps"
+      "swipe_down": "page:communication/my-rss"
     }
   },
   "privileged_channel": {
@@ -2530,31 +2530,36 @@
             "id": "data-ml",
             "label": "Data & ML",
             "icon": "ic_database",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "engineering",
             "label": "Engineering",
             "icon": "ic_wg",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "quant",
             "label": "Quant & Markets",
             "icon": "ic_fin",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "aero-space",
             "label": "Aero & Space",
             "icon": "ic_maps",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "circus",
             "label": "Circus",
             "icon": "ic_solutions",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           }
         ],
         "_doc_stack_apps": "Labs/Apps tab — themed placeholder panels (Data & ML, Engineering, Quant & Markets, Aero & Space, Circus). kind=link_grid with empty links renders the title as a collapsable header until per-section content lands. Suite was removed (the Suite slide now lives only on the bottom-nav Suite section, not here).",
@@ -3941,48 +3946,6 @@
         ]
       },
       {
-        "id": "solutions",
-        "label": "Solutions",
-        "icon": "ic_solutions",
-        "module": null,
-        "supports_accounts": false,
-        "drawer_default_children": [
-          "Professional",
-          "Personal",
-          "Tools",
-          "Cloud",
-          "Other"
-        ],
-        "_doc": "Front-end app launcher — categories mirror ~/git/front-diegonmarcos/ top-level folders (a-Companies/Individual/Portals = Professional; b-* = Personal; c-* = Tools; d-Cloud; e-Others = Other). Sits next to C3 (cloud ops) under the Home master index.",
-        "pages": [
-          {
-            "id": "professional",
-            "label": "Professional",
-            "icon": "ic_p_sol_pro"
-          },
-          {
-            "id": "personal",
-            "label": "Personal",
-            "icon": "ic_p_sol_personal"
-          },
-          {
-            "id": "tools",
-            "label": "Tools",
-            "icon": "ic_p_sol_tools"
-          },
-          {
-            "id": "cloud",
-            "label": "Cloud",
-            "icon": "ic_p_sol_cloud"
-          },
-          {
-            "id": "other",
-            "label": "Other",
-            "icon": "ic_p_sol_other"
-          }
-        ]
-      },
-      {
         "id": "c3",
         "label": "C3",
         "parent": "cloud",
@@ -4046,13 +4009,15 @@
             "id": "reports",
             "label": "Reports",
             "icon": "ic_p_c3_reports",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "stack",
             "label": "Stack",
             "icon": "ic_p_c3_stack",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "health",
@@ -4064,19 +4029,22 @@
             "id": "workflows",
             "label": "Workflows",
             "icon": "ic_p_c3_workflows",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "vms",
             "label": "VMs",
             "icon": "ic_p_c3_vms",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "logs",
             "label": "Logs",
             "icon": "ic_p_logs",
-            "hidden": true
+            "hidden": true,
+            "placeholder": true
           },
           {
             "id": "dagu",
@@ -4091,6 +4059,7 @@
             "label": "GHA",
             "icon": "ic_code",
             "hidden": true,
+            "placeholder": true,
             "_doc": "Target of the `GHA events` tile. Declared so the target resolves and the tile lands on PageContentFragment's stub, which is what an un-wired page is supposed to do here. There is NO native fragment yet — libs:ops OpsPages says as much ('future \"gha\" once that lands'); until it does, this is a placeholder, not a working screen."
           }
         ],
@@ -4538,40 +4507,6 @@
             "id": "grid",
             "label": "Recent Apps",
             "icon": "ic_file_stack"
-          }
-        ]
-      },
-      {
-        "_doc_rename": "Renamed Tabs → Browser (and the underlying libs:browser module) so the 'Tabs' name space is free for the App Tabs feature (last-6 opened pages/apps). All section ids, deep-links, package names, and class names migrated; SharedPreferences file name 'tabs' kept so users' existing open-browser-tabs list survives the rename. Section icon = ic_world (globe) to visually distinguish from the App Tabs section which keeps ic_mode_apps.",
-        "id": "browser",
-        "label": "Browser",
-        "icon": "ic_world",
-        "module": null,
-        "pages": [
-          {
-            "id": "all",
-            "label": "Open Tabs",
-            "icon": "ic_mode_apps"
-          },
-          {
-            "id": "linktree",
-            "label": "Linktree",
-            "icon": "ic_tree",
-            "action": "https://linktree.diegonmarcos.com/"
-          }
-        ]
-      },
-      {
-        "_doc": "Wallet — MIGRATED to Cloud-Wallet (ac_cloud-wallet, com.diegonmarcos.cloudwallet). libs:wallet (Compose card-stack deck) was extracted from the SuperApp into a standalone constellation APK. The home tile target is now extapp:cloud-wallet (see ui.sections[home].tiles[Cloud][wallet]), so MainActivity.launchExternalApp handles launching; openSectionPage('wallet','cards') is dead code as of the migration. Section entry kept as a tombstone for reference; module:null + bottom_nav:false means it is not shown in drawer or bottom nav.",
-        "id": "wallet",
-        "label": "Wallet",
-        "icon": "ic_wallet",
-        "module": null,
-        "pages": [
-          {
-            "id": "cards",
-            "label": "Cards",
-            "icon": "ic_wallet"
           }
         ]
       },
@@ -5201,23 +5136,12 @@
       "shortcut"
     ],
     "dynamic_island_action": "extapp:cloud-myterminal",
-    "_doc_home_apps_tabs": "Tabs at the top of the Home Apps swipe-up sheet (AppDrawerSheetFragment). Cloud = the existing HomeGroupedFragment (cloud-service tile grid derived from home_groups). Phone = PhoneAppsFragment (Android-launcher folder grid of installed apps grouped by phone_folders). Order = display order.",
     "_doc_app_tabs": "App Tabs (libs:launcher-apptabs) — the last-N opened SuperApp entries (sections, pages incl. sub-pages, external apps) as an LRU grid. `cap` = how many to keep; MainActivity sets AppTabPrefs.cap from BuildConfig.UI_APP_TABS_CAP at startup.",
     "app_tabs": {
       "_doc": "cap = how many entries the App Tabs LRU STORES (AppTabPrefs.cap, pushed in from BuildConfig at startup). star_cap = how many of them the Recent Tabs star DRAWS on its arc. Two numbers because they answer different questions: the store keeps a little more than any one surface shows, so an entry dropped by a filter (an external app, a page whose section was deleted) does not leave the arc short. star_cap must stay <= cap or the star can never fill.",
       "cap": 10,
       "star_cap": 9
     },
-    "home_apps_tabs": [
-      {
-        "id": "cloud",
-        "label": "Cloud"
-      },
-      {
-        "id": "phone",
-        "label": "Phone"
-      }
-    ],
     "_doc_search_scopes": "Scope chips of the SuperApp's one search (search/SearchPanel.kt over libs:search's SearchEngine): the Home star (action:open_search, SearchSheetFragment), the Home swipe sheet and Cloud > Apps all show these chips. DECOUPLED from home_apps_tabs (renaming a search scope must NOT rename the Home-Apps body tabs). Each scope: `id` (also the result-section key), `label` (chip text), `section` (the title of its group of results), `kind` (which builder fills it). Results are one section per scope, in THIS order. Kinds: `cloud_apps` = cloud sections + tiles + every section's grouped rows (folder entries included) + home actions; `phone_apps` = installed launchable apps (LauncherApps); `cloud_configs` = every section sub-page + cached consolidated.json service entries (tap copies the value); `phone_configs` = installed Android Settings activities; `browser_fav` / `browser_history` = Cloud Browser's bookmarks / history matching the text, asked per query through its signature-guarded lookup provider (content://<cloud-browser>.lookup, never an incognito page), tap opens the page in Cloud Browser; `browser_web` = one row: Search the web for <text> with Cloud Browser's default engine, or Open <url> when the text is a URL or domain. No Cloud Browser (or one too old for the lookup): the browser scopes stay empty and say so once. Which chips start ON is per entry point (libs:search SearchEntry): Cloud > Apps and the swipe sheet start on the apps + configs, the Home star on the browser scopes + configs; each entry remembers its own last choice (search_scope_prefs). Reorder/rename here, no Kotlin edit.",
     "_doc_camera_apps": "Fallback camera apps for action:open_camera, in order. The FIRST attempt is always the OS resolver for MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA, which honours whatever camera the user set as default - this list is only for when nothing answers that action (some OEM cameras do not export the filter). Ordered so the OEM's own camera wins over a third-party one; a package that is not installed is skipped.",
     "camera_apps": [
@@ -5294,7 +5218,18 @@
         "section": "Web"
       }
     ],
-    "_doc_swipe_walk": "Horizontal swipe (left/right) walk-list - the CIRCULAR ordered list of navigation stops the bottom-nav swipe-cycle steps through. Replaces the old 'cycle the 4 bottom-nav sections' behaviour: now it also visits each section's pages and the Home-Apps overlay. Each stop: `section` (id in ui.sections, or 'home' for the Home-Apps sheet) + ONE optional refinement - `page` (any page id of that section: apps|admin|cloud|phone|c3|...), or `sheet` (cloud|phone, opens the Home-Apps AppDrawerSheet on that body page). Left-swipe = next (down the list), right-swipe = previous; wraps at both ends. Reorder/add/remove stops here - no Kotlin edit. Consumed by MainActivity.walkStep / Sections.swipeWalk(). Entries name a REAL section + page: infos-apps/infos-admin outlived the Apps|Admin facets Projects used to have and had been walking to page:infos/apps and page:infos/admin, neither of which exists — the walk step silently fell through to the section instead of the page.",
+    "_doc_page_packages": "Where each section's page implementations live: section id -> the packages under com.diegonmarcos.superapp that may hold its page classes (the Kotlin side of the page hierarchy). Read by PageImplementationsGuardTest, which fails when a declared page has no implementation (a page that has none must say `placeholder: true`), when launcher/SectionPages.kt routes a page no section declares (stale), or when a routed page class sits outside its section's packages. Sections whose pages are drawn from data (facet / tabs / url / upstream) or hosted by a lib module need no entry. Moving a page class means changing this map and the class's package together.",
+    "page_packages": {
+      "c3": ["c3"],
+      "cal": ["cal"],
+      "boards": ["boards"],
+      "recentapps": ["recentapps"],
+      "phone": ["apps"],
+      "feed": ["rss"],
+      "wg": ["network"],
+      "config": ["settings", "configs", "devcontrol", "network", "agents", "batterystats", "apps"]
+    },
+    "_doc_swipe_walk": "Horizontal swipe (left/right) walk-list - the CIRCULAR ordered list of navigation stops the bottom-nav swipe-cycle steps through. Replaces the old 'cycle the 4 bottom-nav sections' behaviour: now it also visits each section's pages. Each stop: `section` (id in ui.sections) + an optional `page` (any page id of that section). Left-swipe = next (down the list), right-swipe = previous; wraps at both ends. Reorder/add/remove stops here - no Kotlin edit. Consumed by MainActivity.walkStep / Sections.swipeWalk(). Entries name a REAL section + page: infos-apps/infos-admin outlived the Apps|Admin facets Projects used to have and had been walking to page:infos/apps and page:infos/admin, neither of which exists — the walk step silently fell through to the section instead of the page.",
     "swipe_walk": [
       {
         "id": "comms",
@@ -5312,18 +5247,6 @@
         "section": "boards",
         "page": "tasks",
         "label": "Boards · Tasks"
-      },
-      {
-        "id": "home-apps-cloud",
-        "section": "home",
-        "sheet": "cloud",
-        "label": "Home Apps · Cloud"
-      },
-      {
-        "id": "home-apps-phone",
-        "section": "home",
-        "sheet": "phone",
-        "label": "Home Apps · Phone"
       },
       {
         "id": "cloud-apps",
@@ -5345,8 +5268,7 @@
       },
       {
         "id": "c3",
-        "section": "cloud",
-        "page": "c3",
+        "section": "c3",
         "label": "C3"
       },
       {
@@ -9838,7 +9760,7 @@
             },
             {
               "label": "Home-Apps",
-              "target": "action:open_home_apps"
+              "target": "page:cloud/apps"
             },
             {
               "label": "Cloud",
@@ -10147,106 +10069,6 @@
         }
       ]
     },
-    "news_feeds": [
-      {
-        "id": "bbc-world",
-        "name": "BBC News · World",
-        "category": "World",
-        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
-        "site_url": "https://www.bbc.com/news/world"
-      },
-      {
-        "id": "guardian-world",
-        "name": "Guardian · World",
-        "category": "World",
-        "url": "https://www.theguardian.com/world/rss",
-        "site_url": "https://www.theguardian.com/international"
-      },
-      {
-        "id": "npr-news",
-        "name": "NPR News",
-        "category": "World",
-        "url": "https://feeds.npr.org/1001/rss.xml",
-        "site_url": "https://www.npr.org"
-      },
-      {
-        "id": "reuters-gn",
-        "name": "Reuters (via Google News)",
-        "category": "World",
-        "url": "https://news.google.com/rss/search?q=site%3Areuters.com&hl=en-US&gl=US",
-        "site_url": "https://www.reuters.com"
-      },
-      {
-        "id": "ap-gn",
-        "name": "AP (via Google News)",
-        "category": "World",
-        "url": "https://news.google.com/rss/search?q=site%3Aapnews.com&hl=en-US&gl=US",
-        "site_url": "https://apnews.com"
-      },
-      {
-        "id": "hn",
-        "name": "Hacker News",
-        "category": "Tech",
-        "url": "https://hnrss.org/frontpage",
-        "site_url": "https://news.ycombinator.com"
-      },
-      {
-        "id": "verge",
-        "name": "The Verge",
-        "category": "Tech",
-        "url": "https://www.theverge.com/rss/index.xml",
-        "site_url": "https://www.theverge.com"
-      },
-      {
-        "id": "ars",
-        "name": "Ars Technica",
-        "category": "Tech",
-        "url": "https://feeds.arstechnica.com/arstechnica/index",
-        "site_url": "https://arstechnica.com"
-      },
-      {
-        "id": "techcrunch",
-        "name": "TechCrunch",
-        "category": "Tech",
-        "url": "https://techcrunch.com/feed/",
-        "site_url": "https://techcrunch.com"
-      },
-      {
-        "id": "wired",
-        "name": "Wired",
-        "category": "Tech",
-        "url": "https://www.wired.com/feed/rss",
-        "site_url": "https://www.wired.com"
-      },
-      {
-        "id": "engadget",
-        "name": "Engadget",
-        "category": "Tech",
-        "url": "https://www.engadget.com/rss.xml",
-        "site_url": "https://www.engadget.com"
-      },
-      {
-        "id": "marketwatch",
-        "name": "MarketWatch · Top",
-        "category": "Finance",
-        "url": "https://feeds.marketwatch.com/marketwatch/topstories",
-        "site_url": "https://www.marketwatch.com"
-      },
-      {
-        "id": "bloomberg-gn",
-        "name": "Bloomberg (via Google News)",
-        "category": "Finance",
-        "url": "https://news.google.com/rss/search?q=site%3Abloomberg.com&hl=en-US&gl=US",
-        "site_url": "https://www.bloomberg.com"
-      },
-      {
-        "id": "espn-top",
-        "name": "ESPN · Top",
-        "category": "Sport",
-        "url": "https://www.espn.com/espn/rss/news",
-        "site_url": "https://www.espn.com"
-      }
-    ],
     "mail_accounts": [
       {
         "id": "me-jmap",
@@ -10291,12 +10113,6 @@
         "label": "Recent Apps",
         "icon": "ic_file_stack",
         "target": "page:recentapps/grid"
-      },
-      {
-        "id": "home-apps",
-        "label": "Home Apps",
-        "icon": "ic_home_apps",
-        "target": "action:open_home_apps"
       },
       {
         "id": "apptabs-grid",
