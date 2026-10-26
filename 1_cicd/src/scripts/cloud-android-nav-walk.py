@@ -145,6 +145,11 @@ def clear_blockers(nodes):
     if wait is not None:  # "<app> isn't responding": a slow start on a shared emulator is given the chance to finish; a hang still fails the launch
         tap(wait)
         return True
+    if nodes and "packageinstaller" in nodes[0].pkg:  # an app's own self-update asking for "install unknown apps": not the page under test, decline it
+        cancel = find(nodes, "button2")
+        if cancel is not None:
+            tap(cancel)
+            return True
     title = find(nodes, "title") or find(nodes, "alertTitle")
     if title is not None and ("default" in title.text.lower() or "caller id" in title.text.lower()):
         cancel = find(nodes, "button2")
