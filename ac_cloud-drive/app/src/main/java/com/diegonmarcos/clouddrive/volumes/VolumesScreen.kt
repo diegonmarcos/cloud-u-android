@@ -148,6 +148,18 @@ private fun ColumnScope.VolumeSection(
     val ctx = LocalContext.current
     key(label) {
         var pick by rememberSaveable { mutableStateOf(secClasses.firstOrNull()?.id ?: "") }
+        // The class pills are this page's sub-page strip: a pick in the title dropdown reaches them as a request, and the title path
+        // follows the pill shown (the shared second row does both itself; this strip is Drive's own).
+        val requests = com.diegonmarcos.superapp.navbartop2.LocalSubPageRequests.current
+        val want = requests?.pending
+        androidx.compose.runtime.LaunchedEffect(want) {
+            if (want != null && secClasses.any { it.id == want }) { pick = want; requests.consume() }
+        }
+        val stripKey = remember { Any() }
+        androidx.compose.runtime.DisposableEffect(requests, stripKey, pick) {
+            requests?.reportShown(stripKey, pick)
+            onDispose { requests?.clearShown(stripKey) }
+        }
         Column(Modifier.fillMaxWidth().weight(1f).testTag(DriveTags.VOLUMES_SECTION)) {
             ClassStrip(label, secClasses, pick, { pick = it }) {
                 if (auth != null) Pill(
