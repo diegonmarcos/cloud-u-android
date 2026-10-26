@@ -286,25 +286,25 @@ const lreq = M.buildRequest({ chat, fleet, storage: new Store(), agent: M.pickAg
 out(JSON.parse(lreq.body).model === tl.model, "a task's request carries the task's model");
 
 // ── the shared catalogues: the Model Catalogue's subpages and the Task Catalogue (libs:ai ai-catalogue.json) ──
-const cat = fleet.catalogue;
-const catFile = JSON.parse(read(`../${nav.chat.catalogue}`));
-out(JSON.stringify(cat) === JSON.stringify(catFile), "the page's catalogues are libs:ai's ai-catalogue.json, copied by the resolver");
+const cg = fleet.catalogue;
+const cgFile = JSON.parse(read(`../${nav.chat.catalogue}`));
+out(JSON.stringify(cg) === JSON.stringify(cgFile), "the page's catalogues are libs:ai's ai-catalogue.json, copied by the resolver");
 out(!("model_tabs" in design), "the design no longer carries the old picker tabs");
-out(JSON.stringify(M.modelTabs(cat).map((t) => t.label)) === '["Frontier","Core","Specialist","Medium","Small"]', "the Model Catalogue's subpages are Frontier, Core, Specialist, Medium, Small");
-out(["Anthropic", "OpenAI", "Google", "xAI", "Meta", "Mistral", "DeepSeek", "Qwen"].every((c) => M.declaredGroups(cat, "frontier").some((g) => g.label === c)), "Frontier lists the major companies");
-out(["medical", "legal", "finance", "science", "code"].every((d) => M.declaredGroups(cat, "specialist").some((g) => g.id === d)), "Specialist lists the domains");
-out(M.declaredGroups(cat, "core").length === 0, "Core has no declared list: it is the model-catalogue tables");
-const med = M.declaredGroups(cat, "medium")[0].models;
-const sml = M.declaredGroups(cat, "small")[0].models;
-out(med.some((m) => m.id === "microsoft/phi-4" && !m.local) && sml.some((m) => m.name === "smollm2-360m-instruct" && m.local), "Medium and Small are Cloud Tools' chat rows; a row with no OpenRouter id is local only");
-const tc = M.taskCatalogue(cat, fleet.tasks);
-out(JSON.stringify(tc.groups.map((g) => g.label)) === '["Tasks - Big LLMs","Tasks - Medium & Small LLMs"]', "the Task Catalogue has the two groups");
-out(JSON.stringify(tc.groups[0].categories.map((c) => c.label)) === '["Code","Search (AI search engines)","Conversation","Data Triage"]' && JSON.stringify(tc.groups[1].categories.map((c) => c.label)) === '["Conversation","Data Triage","Math"]', "the groups' categories are the listed ones");
-out(tc.groups.every((g) => g.categories.every((c) => c.items.every((i) => i.task))), "every catalogue item has an agent and model mapping");
-out(tc.tasks.length === new Set(tc.tasks.map((t) => t.id)).size && fleet.tasks.every((t) => tc.tasks.some((x) => x.id === t.id)), "the selectable tasks are the shared mapping plus the Big LLM items, each id once");
-const big = M.taskLock(tc.tasks, "code_architecture");
-out(big.locked && big.agent === "openrouter" && big.model === "anthropic/claude-opus-5.5", "a Big LLM task greys Agent and Model and sets them from the catalogue");
-out(tc.tasks.every((t) => U.some((a) => a.id === t.agent)), "every catalogue task runs on an agent the picker lists");
+out(JSON.stringify(M.modelTabs(cg).map((t) => t.label)) === '["Frontier","Core","Specialist","Medium","Small"]', "the Model Catalogue's subpages are Frontier, Core, Specialist, Medium, Small");
+out(["Anthropic", "OpenAI", "Google", "xAI", "Meta", "Mistral", "DeepSeek", "Qwen"].every((c) => M.declaredGroups(cg, "frontier").some((g) => g.label === c)), "Frontier lists the major companies");
+out(["medical", "legal", "finance", "science", "code"].every((d) => M.declaredGroups(cg, "specialist").some((g) => g.id === d)), "Specialist lists the domains");
+out(M.declaredGroups(cg, "core").length === 0, "Core has no declared list: it is the model-catalogue tables");
+const cgMed = M.declaredGroups(cg, "medium")[0].models;
+const cgSml = M.declaredGroups(cg, "small")[0].models;
+out(cgMed.some((m) => m.id === "microsoft/phi-4" && !m.local) && cgSml.some((m) => m.name === "smollm2-360m-instruct" && m.local), "Medium and Small are Cloud Tools' chat rows; a row with no OpenRouter id is local only");
+const cgTasks = M.taskCatalogue(cg, fleet.tasks);
+out(JSON.stringify(cgTasks.groups.map((g) => g.label)) === '["Tasks - Big LLMs","Tasks - Medium & Small LLMs"]', "the Task Catalogue has the two groups");
+out(JSON.stringify(cgTasks.groups[0].categories.map((c) => c.label)) === '["Code","Search (AI search engines)","Conversation","Data Triage"]' && JSON.stringify(cgTasks.groups[1].categories.map((c) => c.label)) === '["Conversation","Data Triage","Math"]', "the groups' categories are the listed ones");
+out(cgTasks.groups.every((g) => g.categories.every((c) => c.items.every((i) => i.task))), "every catalogue item has an agent and model mapping");
+out(cgTasks.tasks.length === new Set(cgTasks.tasks.map((t) => t.id)).size && fleet.tasks.every((t) => cgTasks.tasks.some((x) => x.id === t.id)), "the selectable tasks are the shared mapping plus the Big LLM items, each id once");
+const cgBig = M.taskLock(cgTasks.tasks, "code_architecture");
+out(cgBig.locked && cgBig.agent === "openrouter" && cgBig.model === "anthropic/claude-opus-5.5", "a Big LLM task greys Agent and Model and sets them from the catalogue");
+out(cgTasks.tasks.every((t) => U.some((a) => a.id === t.agent)), "every catalogue task runs on an agent the picker lists");
 out(/function taskPage\(\)/.test(view) && /task: \(\) => chip\([^\n]*taskPage/.test(view) && !/taskSheet/.test(view), "view.js: the Task button opens the Task Catalogue page");
 out(/M\.modelTabs\(fleet\.catalogue\)/.test(view) && /M\.declaredGroups\(fleet\.catalogue, tab\)/.test(view) && /cloud-model-tab/.test(view), "view.js draws the Model Catalogue's subpages on the Model page");
 

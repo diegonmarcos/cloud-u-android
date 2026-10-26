@@ -6,7 +6,9 @@
   "owner_must_hold": [
     {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiPage.kt", "needles": ["fun AiChatPage(", "fun AiConsentCard("]},
     {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiComposerBar.kt", "needles": ["fun AiComposerBar("]},
-    {"file": "src/main/assets/ai/ai-design.json", "needles": ["\"model_tabs\"", "\"composer\"", "\"more\""]},
+    {"file": "src/main/assets/ai/ai-design.json", "needles": ["\"composer\"", "\"more\""]},
+    {"file": "src/main/assets/ai/ai-catalogue.json", "needles": ["\"tabs\"", "\"tools_models\"", "\"tasks\""]},
+    {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiCataloguePages.kt", "needles": ["fun AiModelCatalogue(", "fun AiTaskCatalogue("]},
     {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiPanel.kt", "needles": ["fun AiAssistantPanel("]},
     {"file": "src/main/kotlin/com/diegonmarcos/superapp/ai/AiHost.kt", "needles": ["class AiStandardHost("]},
     {"file": "src/main/assets/ai/ai.json", "needles": ["\"gateway\"", "\"openrouter\""]}
