@@ -31,6 +31,17 @@ class CgcTest {
         assertTrue(cfg.threshold in 0.0..1.0)
     }
 
+    /** #1197 one CGC section, two rows: each index names its Semantic and Graph RAG page ids, and a page resolves back to (index, mode). */
+    @Test fun eachIndexNamesItsTwoPagesInTheCgcSection() {
+        assertEquals("cloud_semantic" to "cloud_graph", cfg.index("cgc")!!.let { it.semanticPage to it.graphPage })
+        assertEquals("me_semantic" to "me_graph", cfg.index("mecgc")!!.let { it.semanticPage to it.graphPage })
+        assertEquals("cgc" to false, cfg.indexOfPage("cloud_semantic")!!.let { it.first.id to it.second })
+        assertEquals("cgc" to true, cfg.indexOfPage("cloud_graph")!!.let { it.first.id to it.second })
+        assertEquals("mecgc" to false, cfg.indexOfPage("me_semantic")!!.let { it.first.id to it.second })
+        assertEquals("mecgc" to true, cfg.indexOfPage("me_graph")!!.let { it.first.id to it.second })
+        assertNull(cfg.indexOfPage("semantic"))
+    }
+
     @Test fun aResultOpensOnTheWebAtItsLine() {
         val pub = cfg.index("cgc")!!
         assertEquals("https://github.com/diegonmarcos/cloud-u-android/blob/main/a/B.kt#L12", pub.web("cloud-u-android", "a/B.kt", 12))
@@ -44,6 +55,8 @@ class CgcTest {
     }
 
     @Test fun aBrokenDeclarationIsRefused() {
+        assertTrue(refused { it.getJSONArray("indexes").getJSONObject(1).put("graph_page", "cloud_graph") }.contains("distinct semantic_page and graph_page"))
+        assertTrue(refused { it.getJSONArray("indexes").getJSONObject(0).remove("semantic_page") }.contains("distinct semantic_page and graph_page"))
         assertTrue(refused { it.put("indexes", org.json.JSONArray()) }.contains("at least one index"))
         assertTrue(refused { it.getJSONArray("indexes").put(it.getJSONArray("indexes").getJSONObject(0)) }.contains("no repeated id"))
         assertTrue(refused { it.getJSONArray("indexes").getJSONObject(0).put("repos", org.json.JSONArray()) }.contains("need repos"))

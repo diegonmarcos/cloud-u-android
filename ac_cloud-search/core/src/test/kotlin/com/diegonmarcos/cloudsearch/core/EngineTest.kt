@@ -24,7 +24,9 @@ class EngineTest {
                 "arbeitnow" in url -> Http.Response(200, Fixtures.text("arbeitnow.json"))
                 "prices.openfoodfacts" in url -> Http.Response(200, Fixtures.text("open-prices.json"))
                 "search.openfoodfacts" in url -> Http.Response(200, Fixtures.text("off-search.json"))
-                "tagesschau" in url -> Http.Response(200, Fixtures.text("tagesschau-verbraucher.xml"))
+                "tagesschau.de" in url -> Http.Response(200, Fixtures.text("tagesschau-verbraucher.xml"))
+                "www.youtube.com/feeds/videos.xml" in url -> Http.Response(200, Fixtures.text("youtube-feed.xml"))
+                "news.google.com/rss" in url -> Http.Response(200, Fixtures.text("google-news-technology.xml"))
                 else -> Http.Response(404, "")
             }
         }
@@ -192,5 +194,30 @@ class EngineTest {
         } finally {
             server.stop(0)
         }
+    }
+
+    /** #1197 a News page's feed is read on its own, in its declared syntax, newest first, through the same cache. */
+    @Test fun aNewsFeedIsReadInItsOwnSyntaxNewestFirstAndCached() {
+        val e = engine()
+        val yt = e.feedOf("yt-google-developers")
+        assertEquals(4, yt.items.size)
+        assertEquals(yt.items.map { it.date }.sortedDescending(), yt.items.map { it.date })
+        assertEquals(SearchEngine.State.OK, yt.statuses.single().state)
+        assertEquals("Google for Developers", yt.statuses.single().label)
+        val gn = e.feedOf("gn-technology")
+        assertEquals(5, gn.items.size)
+        assertEquals("From impulse purchase to pocket studio: The M-Vave FM-1 - Ars Technica", gn.items.first().title)
+        assertEquals("the second read is the cache's", SearchEngine.State.CACHED, e.feedOf("yt-google-developers").statuses.single().state)
+        assertEquals(1, http.calls.count { "channel_id=UC_x5XG1OV2P6uZZ5FSM9Ttw" in it })
+        assertEquals(yt.items.size, e.feedOf("yt-google-developers").fetched)
+    }
+
+    @Test fun aNewsFeedThatCannotBeReadSaysWhyAndInventsNothing() {
+        http.down = true
+        val r = engine().feedOf("yt-ted")
+        assertTrue(r.items.isEmpty())
+        assertEquals(SearchEngine.State.ERROR, r.statuses.single().state)
+        assertTrue(r.statuses.single().detail.contains("offline"))
+        assertTrue(runCatching { engine().feedOf("ghost") }.isFailure)
     }
 }

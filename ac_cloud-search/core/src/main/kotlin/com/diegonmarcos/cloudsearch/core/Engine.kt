@@ -149,22 +149,32 @@ class SearchEngine(val cfg: SearchConfig, private val http: Http, private val ca
         return v.sources.mapNotNull { cfg.sources[it] }.filter { !it.fetches }.map { notFetched(it, q.trim(), city) }
     }
 
+    /** One declared feed read through the cache: its items and what came of it. */
+    private fun readFeed(feed: SearchConfig.Feed): Pair<List<FeedItem>, SourceStatus> {
+        val f = fetch("feed|${feed.id}", feed.url, emptyMap(), cfg.timeoutMs)
+        if (f.body == null) return emptyList<FeedItem>() to SourceStatus(feed.id, feed.label, f.state, 0, f.detail, f.at, null)
+        return runCatching { Parsers.feed(feed.format, f.body, feed.label) }.fold(
+            onSuccess = { it to SourceStatus(feed.id, feed.label, f.state, it.size, f.detail, f.at, null) },
+            onFailure = { emptyList<FeedItem>() to SourceStatus(feed.id, feed.label, State.ERROR, 0, "unreadable feed: ${it.message}", f.at, null) },
+        )
+    }
+
     /** The vertical's feeds, newest first, narrowed to its declared keywords. */
     fun feed(verticalId: String): FeedResult {
         val v = cfg.vertical(verticalId) ?: throw IllegalArgumentException("no vertical '$verticalId'")
         val all = mutableListOf<FeedItem>()
-        val statuses = v.feeds.mapNotNull { cfg.feeds[it] }.map { feed ->
-            val f = fetch("feed|${feed.id}", feed.url, emptyMap(), cfg.timeoutMs)
-            if (f.body == null) SourceStatus(feed.id, feed.label, f.state, 0, f.detail, f.at, null)
-            else runCatching { Parsers.rss(f.body, feed.label) }.fold(
-                onSuccess = { all += it; SourceStatus(feed.id, feed.label, f.state, it.size, f.detail, f.at, null) },
-                onFailure = { SourceStatus(feed.id, feed.label, State.ERROR, 0, "unreadable feed: ${it.message}", f.at, null) },
-            )
-        }
+        val statuses = v.feeds.mapNotNull { cfg.feeds[it] }.map { feed -> readFeed(feed).let { (items, status) -> all += items; status } }
         val kept = all.filter { item -> v.feedKeywords.isEmpty() || v.feedKeywords.any { k -> (item.title + " " + item.text).contains(k, ignoreCase = true) } }
             .distinctBy { it.url ?: it.title }
             .sortedByDescending { it.date ?: 0L }
         return FeedResult(kept, all.size, statuses)
+    }
+
+    /** One declared feed on its own (a News page's chip), newest first and unfiltered: what the feed itself published. */
+    fun feedOf(feedId: String): FeedResult {
+        val feed = cfg.feeds[feedId] ?: throw IllegalArgumentException("no feed '$feedId'")
+        val (items, status) = readFeed(feed)
+        return FeedResult(items.distinctBy { it.url ?: it.title }.sortedByDescending { it.date ?: 0L }, items.size, listOf(status))
     }
 
     /** Market analysis for a vertical whose `analysis` is declared, computed from its live sources only. */

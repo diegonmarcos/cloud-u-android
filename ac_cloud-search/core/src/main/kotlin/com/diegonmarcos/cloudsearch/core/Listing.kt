@@ -64,6 +64,10 @@ object Parsers {
         "arbeitnow" -> arbeitnow(body, source)
         "open_prices" -> openPrices(body, source)
         "off_search" -> offSearch(body, source)
+        "openverse" -> openverse(body, source)
+        "archive_org" -> archiveOrg(body, source)
+        "tvmaze" -> tvmaze(body, source)
+        "open_library" -> openLibrary(body, source)
         else -> throw IllegalArgumentException("no parser '$parser' for source ${source.id}")
     }
 
@@ -138,15 +142,61 @@ object Parsers {
         )
     }
 
+    /** Openverse (Creative Commons images): results[], each with its licence and the page it came from. */
+    fun openverse(body: String, s: SearchConfig.Source): List<Listing> = objects(JSONObject(body).optJSONArray("results")).map { j ->
+        val id = j.getString("id")
+        val licence = listOfNotNull(j.optStr("license")?.uppercase(Locale.ROOT)?.let { l -> "CC $l" + (j.optStr("license_version")?.let { v -> " $v" } ?: "") })
+        Listing(
+            id = id, source = s.id, title = j.optStr("title") ?: id,
+            subtitle = listOfNotNull(j.optStr("creator"), j.optStr("provider")).joinToString(" • "),
+            price = null, currency = null, unit = null, url = j.optStr("foreign_landing_url") ?: j.optStr("url"),
+            image = j.optStr("thumbnail") ?: j.optStr("url"), date = null, verified = s.verified, location = null, remote = null,
+            tags = licence,
+        )
+    }
+
+    /** Internet Archive advancedsearch: response.docs[] of items (identifier, title, year, creator). */
+    fun archiveOrg(body: String, s: SearchConfig.Source): List<Listing> =
+        objects(JSONObject(body).optJSONObject("response")?.optJSONArray("docs")).map { j ->
+            val id = j.getString("identifier")
+            Listing(
+                id = id, source = s.id, title = j.optStr("title") ?: id,
+                subtitle = listOfNotNull(j.optStr("creator"), j.optNum("year")?.toInt()?.toString()).joinToString(" • "),
+                price = null, currency = null, unit = null, url = s.itemUrl.replace("{id}", id).takeIf { it.isNotBlank() },
+                image = s.imageUrl.replace("{id}", id).takeIf { it.isNotBlank() }, date = null, verified = s.verified,
+                location = null, remote = null, tags = emptyList(),
+            )
+        }
+
+    /** TVMaze show search: an array of {score, show}. */
+    fun tvmaze(body: String, s: SearchConfig.Source): List<Listing> = objects(JSONArray(body)).mapNotNull { it.optJSONObject("show") }.map { j ->
+        val id = j.get("id").toString()
+        val premiered = j.optStr("premiered")
+        Listing(
+            id = id, source = s.id, title = j.getString("name"),
+            subtitle = listOfNotNull(premiered?.take(4), j.optJSONObject("network")?.optStr("name") ?: j.optJSONObject("webChannel")?.optStr("name")).joinToString(" • "),
+            price = null, currency = null, unit = null, url = j.optStr("url") ?: s.itemUrl.replace("{id}", id).takeIf { it.isNotBlank() },
+            image = j.optJSONObject("image")?.optStr("medium"), date = isoDay(premiered), verified = s.verified, location = null, remote = null,
+            tags = strings(j.optJSONArray("genres")) + listOfNotNull(j.optStr("status")),
+        )
+    }
+
+    /** Open Library search: docs[] of works; the key is the work's path, the cover an id for [SearchConfig.Source.imageUrl]. */
+    fun openLibrary(body: String, s: SearchConfig.Source): List<Listing> = objects(JSONObject(body).optJSONArray("docs")).map { j ->
+        val key = j.getString("key")
+        val cover = j.optNum("cover_i")?.toLong()?.toString()
+        Listing(
+            id = key, source = s.id, title = j.optStr("title") ?: key,
+            subtitle = listOfNotNull(strings(j.optJSONArray("author_name")).take(2).joinToString(", ").takeIf { it.isNotBlank() }, j.optNum("first_publish_year")?.toInt()?.toString()).joinToString(" • "),
+            price = null, currency = null, unit = null, url = s.itemUrl.replace("{id}", key).takeIf { it.isNotBlank() },
+            image = cover?.let { s.imageUrl.replace("{id}", it).takeIf { u -> u.isNotBlank() } }, date = null, verified = s.verified,
+            location = null, remote = null, tags = emptyList(),
+        )
+    }
+
     /** RSS 2.0 <item>s: title, description (tags stripped), link, pubDate (RFC 1123). */
     fun rss(xml: String, feed: String): List<FeedItem> {
-        val f = DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = false
-            // A feed is remote input: no DTDs, no external entities.
-            runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
-            isExpandEntityReferences = false
-        }
-        val doc = f.newDocumentBuilder().parse(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
+        val doc = secureXml().newDocumentBuilder().parse(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
         val items = doc.getElementsByTagName("item")
         return (0 until items.length).map { i ->
             val e = items.item(i) as org.w3c.dom.Element
@@ -159,6 +209,37 @@ object Parsers {
                 feed = feed,
             )
         }
+    }
+
+    /** The declared feed syntax ([SearchConfig.FORMAT_RSS] or [SearchConfig.FORMAT_ATOM]) to its items. */
+    fun feed(format: String, xml: String, feed: String): List<FeedItem> =
+        if (format == SearchConfig.FORMAT_ATOM) atom(xml, feed) else rss(xml, feed)
+
+    /** Atom <entry>s (YouTube's channel feeds): title, the alternate link, the video description (media:description), published. */
+    fun atom(xml: String, feed: String): List<FeedItem> {
+        val doc = secureXml().newDocumentBuilder().parse(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
+        val entries = doc.getElementsByTagName("entry")
+        return (0 until entries.length).map { i ->
+            val e = entries.item(i) as org.w3c.dom.Element
+            fun child(tag: String): String? = e.getElementsByTagName(tag).item(0)?.textContent?.trim()?.takeIf { it.isNotEmpty() }
+            val links = e.getElementsByTagName("link")
+            val href = (0 until links.length).map { links.item(it) as org.w3c.dom.Element }
+                .firstOrNull { it.getAttribute("rel").let { r -> r.isEmpty() || r == "alternate" } }?.getAttribute("href")?.takeIf { it.isNotEmpty() }
+            FeedItem(
+                title = child("title") ?: "",
+                text = strip(child("media:description") ?: child("summary") ?: ""),
+                url = href,
+                date = (child("published") ?: child("updated"))?.let { d -> runCatching { ZonedDateTime.parse(d).toInstant().toEpochMilli() }.getOrNull() },
+                feed = feed,
+            )
+        }
+    }
+
+    /** A feed is remote input: no DTDs, no external entities. */
+    private fun secureXml(): DocumentBuilderFactory = DocumentBuilderFactory.newInstance().apply {
+        isNamespaceAware = false
+        runCatching { setFeature("http://apache.org/xml/features/disallow-doctype-decl", true) }
+        isExpandEntityReferences = false
     }
 
     fun strip(html: String): String = html.replace(Regex("<[^>]*>"), " ").replace("&nbsp;", " ").replace(Regex("\\s+"), " ").trim()

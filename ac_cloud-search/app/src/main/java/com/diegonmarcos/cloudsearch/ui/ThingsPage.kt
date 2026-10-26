@@ -58,6 +58,7 @@ class ThingsModel(initial: String) {
 
     fun run(state: SearchState, scope: CoroutineScope, ctx: android.content.Context) {
         val item = q
+        val hint = state.v().thingsCategory
         loading = true
         stale = false
         state.busy++
@@ -66,7 +67,7 @@ class ThingsModel(initial: String) {
                 val (w, r) = withContext(Dispatchers.IO) {
                     runCatching {
                         val w = ThingsArea.resolve(state.services, ctx)
-                        w to state.services.things.compare(w.area, item)
+                        w to state.services.things.compare(w.area, item, hint)
                     }.getOrNull() ?: (null to null)
                 }
                 where = w

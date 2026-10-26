@@ -1,6 +1,6 @@
-# Cloud Research (was Cloud Search until #1162) — what it reads, what it reuses, and why
+# Cloud Search (called Cloud Research from #1162 to #1197) — what it reads, what it reuses, and why
 
-The app is branded Cloud Research (launcher, store, tile). Its identifiers keep the old name on purpose: directory `ac_cloud-search`, fleet id `search` / `cloud-search`, applicationId `com.diegonmarcos.cloudsearch`, GHCR image and APK asset `Cloud-Search*.apk`. Renaming any of them would install as a second app (a new applicationId cannot update the old one) and break the Store's update path.
+The app is branded Cloud Search (launcher, store, tile; tile caption Search). Its identifiers never changed, on purpose: directory `ac_cloud-search`, fleet id `search` / `cloud-search`, applicationId `com.diegonmarcos.cloudsearch`, GHCR image and APK asset `Cloud-Search*.apk`. Renaming any of them would install as a second app (a new applicationId cannot update the old one) and break the Store's update path.
 
 ## Data sources (build.json::search.sources is the one declaration)
 
@@ -48,3 +48,11 @@ build.json::search.social_2026 and held equal to the limits the PAP itself carri
   statement, which is the PAP's own code and not an expression; rent-vs-buy is a month-by-month
   simulation; neither gains anything from an expression engine in another process, and binding
   one would make three plain calculators depend on a second APK being installed.
+
+## #1197 News, Media and the engine list (all keyless, all declared in build.json::search)
+
+- **YouTube** channel feeds (`search.feeds` yt-*, Atom, `https://www.youtube.com/feeds/videos.xml?channel_id=...`): YouTube's own published feed per channel; read-only, no key.
+- **Google News** topic feeds (`search.feeds` gn-*, RSS): Google's published per-topic feeds; each headline opens at its publisher.
+- **Openverse** (images, CC-licensed; every result carries its licence), **Internet Archive** advancedsearch (moving images and its feature_films collection), **TVMaze** show search (CC BY-SA data), **Open Library** search (books): public APIs, no key, read through the same engine and cache as every other source.
+- **Search engines** (`search.engines_major`): Google, Google AI Mode, Bing, DuckDuckGo, Brave, Qwant, Kagi, Perplexity, Ecosia, Startpage, Yahoo, SearXNG (searx.be), MetaGer. They are only OPENED in Cloud Browser with the query; nothing is scraped. The fleet declares no SearXNG or metasearch service of its own (ac_cloud-account fleet_endpoints), so none is called.
+- **Price compare**: Shopping > Compare, Electronics and Clothing use the Things page (OpenStreetMap stores, Open Prices shelf prices, scrappers-api site prices); an item that names no category falls back to the page's own.

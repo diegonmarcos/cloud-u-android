@@ -9,7 +9,8 @@
 #     dependency is a megabyte count before it is a complaint);
 #  3. it carries the fleet's nav (#876): composeResources/ holds search-nav.json, the build.json::ui the Android shell
 #     bakes (island ids, every section's child page ids), and the app's wasm module holds the strings of the shared
-#     island and tab strip (bottomnav_island, bottomnav_item_, pagetabs_strip) and the mock page ("sample data");
+#     island and tab strip (bottomnav_island, bottomnav_item_, pagetabs_strip); the page shows no sample data (#1197: every section
+#     says it lives in the Android app, which reads the real sources);
 #  4. it names no Android: the app's own JS glue carries no `android.` platform name and no
 #     androidx.(activity|fragment|core|lifecycle|navigation|appcompat) (a shared lib that
 #     leaked an Android type into commonMain shows up here even if the purity guard missed
@@ -60,7 +61,7 @@ check() {
     [ "$want" = "$have" ] || { echo "FAIL  search-nav.json is not build.json::ui (island, sections or child pages differ)"; n=$((n + 1)); }
   fi
   # Kotlin/Wasm keeps string literals in the module's data, not in the JS glue: look in both.
-  for t in bottomnav_island bottomnav_item_ pagetabs_strip sample data; do
+  for t in bottomnav_island bottomnav_item_ pagetabs_strip; do
     grep -qa -e "$t" "$dist"/*.wasm "$dist"/cloud-search.js 2>/dev/null \
       || { echo "FAIL  the island string '$t' is in neither the wasm modules nor the glue"; n=$((n + 1)); }
   done
@@ -94,7 +95,7 @@ stage() {
   rm -rf "$W/d"; mkdir -p "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files"
   printf '<html><script src="cloud-search.js"></script></html>' > "$W/d/index.html"
   printf 'var app = "androidx.compose.ui.window";' > "$W/d/cloud-search.js"
-  printf '\0asm\1\0\0\0' > "$W/d/aaaa1111.wasm"; printf '\0asm\1\0\0\0bottomnav_island bottomnav_item_ pagetabs_strip sample data' > "$W/d/bbbb2222.wasm"
+  printf '\0asm\1\0\0\0' > "$W/d/aaaa1111.wasm"; printf '\0asm\1\0\0\0bottomnav_island bottomnav_item_ pagetabs_strip' > "$W/d/bbbb2222.wasm"
   jq -c '{sections: .ui.sections, bottom_nav: .ui.bottom_nav, default_section: .ui.default_section}' "$APPD/build.json" > "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json"
 }
 mutant() {  # mutant <label> <shell-edit-of-$W/d> <expected-substring>
@@ -115,7 +116,7 @@ mutant "a wasm that is not wasm"        'printf "<html>404</html>" > "$W/d/bbbb2
 mutant "no nav declaration"             'rm "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json"' "no search-nav.json with a bottom_nav"
 mutant "a nav declaration with no bar"  'printf "{}" > "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json"' "no search-nav.json with a bottom_nav"
 mutant "a stale nav declaration (an island that is not build.json::ui)" 'jq -c ".bottom_nav = [\"stale\"]" "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json"' "search-nav.json is not build.json::ui"
-mutant "a nav declaration without Searches child pages" 'jq -c "(.sections[] | select(.id == \"searches\") | .pages) = []" "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json"' "search-nav.json is not build.json::ui"
+mutant "a nav declaration without Brokers child pages" 'jq -c "(.sections[] | select(.id == \"brokers\") | .pages) = []" "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json" > "$W/n" && mv "$W/n" "$W/d/composeResources/com.diegonmarcos.cloudsearch.web.generated/files/search-nav.json"' "search-nav.json is not build.json::ui"
 mutant "no island in the page"          'printf "\0asm\1\0\0\0" > "$W/d/bbbb2222.wasm"'                  "the island string 'bottomnav_island'"
 mutant "no page-tab strip in the page"  'printf "\0asm\1\0\0\0bottomnav_island bottomnav_item_" > "$W/d/bbbb2222.wasm"' "the island string 'pagetabs_strip'"
 mutant "over the size budget"           'head -c $(( (BUDGET_MB + 1) * 1048576 )) /dev/zero > "$W/d/cloud-search.js.map"' "over the ${BUDGET_MB} MB budget"

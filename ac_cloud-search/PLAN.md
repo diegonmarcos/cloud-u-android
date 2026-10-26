@@ -1,4 +1,4 @@
-# Cloud Research (was Cloud Search, #1162) — the plan per section (#797)
+# Cloud Search (Cloud Research #1162-#1197) — the plan per section (#797; nav since #1197: News, Research, CGC, Search, Media, Shopping, Brokers)
 
 The design is the owner's mockup (`_dispatch/assets/cloud-search-mockup.html`): a glass theme with
 light/dark tokens, a top bar (menu · dynamic island · profile menu), and the app's OWN bottom nav

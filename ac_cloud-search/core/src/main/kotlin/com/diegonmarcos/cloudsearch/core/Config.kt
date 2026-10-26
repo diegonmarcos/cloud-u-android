@@ -37,6 +37,10 @@ data class SearchConfig(
     /** The Research section (news) and the two code indexes (Cloud-CGC, Me-CGC): see Cgc.kt, Research.kt. */
     val research: ResearchConfig? = null,
     val cgc: CgcConfig? = null,
+    /** The News section's feed pages (YouTube, Google News, RSS): which declared feeds each shows. Empty = none. */
+    val newsPages: List<NewsPage> = emptyList(),
+    /** The Search section's Engines page: the major web and AI search engines, opened in cloud-browser with the typed query. */
+    val majorEngines: List<MajorEngine> = emptyList(),
 ) {
     data class City(val id: String, val label: String, val lat: Double, val lon: Double, val radiusKm: Int, val aliases: List<String>)
     data class Subpage(val id: String, val label: String, val kind: String)
@@ -48,6 +52,8 @@ data class SearchConfig(
         val series: List<String>, val chart: String, val chartPoints: Int, val chartColor: String,
         /** The agents this vertical leads to (the Me and LLC pages link their matching agents). */
         val agents: List<String> = emptyList(),
+        /** A things-page vertical (Electronics, Clothing): the things.categories id an item that names no category falls back to. */
+        val thingsCategory: String = "",
     )
 
     /**
@@ -59,11 +65,20 @@ data class SearchConfig(
         val id: String, val label: String, val kind: String, val enabled: Boolean, val parser: String,
         val url: String, val headers: Map<String, String>, val queryRequired: Boolean, val localFilter: Boolean,
         val cityFilter: Boolean, val verified: Boolean, val itemUrl: String, val why: String, val terms: String,
+        /** A cover or thumbnail URL with {id}, for a source whose answer names an id but no picture. */
+        val imageUrl: String = "",
     ) {
         val fetches: Boolean get() = kind == KIND_API && enabled
     }
 
-    data class Feed(val id: String, val label: String, val url: String)
+    /** [format] is the feed's syntax: rss (RSS 2.0) or atom (YouTube's channel feeds). */
+    data class Feed(val id: String, val label: String, val url: String, val format: String = FORMAT_RSS)
+
+    /** One News page (`youtube`, `gnews`, `rss`): [feeds] are declared feed ids, one chip each. */
+    data class NewsPage(val id: String, val blurb: String, val feeds: List<String>)
+
+    /** One engine of the Engines page: [url] has {q}; [kind] is web or ai (an AI answer engine). */
+    data class MajorEngine(val id: String, val label: String, val url: String, val kind: String)
 
     /** One official time series (a `market` analysis reads them); [change] is pct (an index) or pp (a rate). */
     data class Series(
@@ -98,10 +113,15 @@ data class SearchConfig(
     fun vertical(id: String): Vertical? = verticals.firstOrNull { it.id == id }
     fun city(id: String?): City = cities.firstOrNull { it.id == id } ?: cities.first { it.id == defaultCity }
     fun subpage(id: String): Subpage? = subpages.firstOrNull { it.id == id }
+    fun newsPage(id: String): NewsPage? = newsPages.firstOrNull { it.id == id }
 
     companion object {
         const val KIND_API = "api"
         const val KIND_LINK = "link"
+        const val FORMAT_RSS = "rss"
+        const val FORMAT_ATOM = "atom"
+        val FEED_FORMATS = setOf(FORMAT_RSS, FORMAT_ATOM)
+        val ENGINE_KINDS = setOf("web", "ai")
 
         /** What a vertical's Analysis page may compute: nothing, the jobs statistics, or official market series. */
         val ANALYSES = setOf("none", "jobs", "market")
@@ -147,6 +167,7 @@ data class SearchConfig(
                         calculators = strings(v.optJSONArray("calculators")), analysis = v.optString("analysis", "none"),
                         series = strings(v.optJSONArray("series")), chart = v.optString("chart"), chartPoints = v.optInt("chart_points", 0),
                         chartColor = v.optString("chart_color"), agents = strings(v.optJSONArray("agents")),
+                        thingsCategory = v.optString("things_category"),
                     )
                 },
                 sources = members(o.getJSONObject("sources")).associate { (id, s) ->
@@ -156,9 +177,10 @@ data class SearchConfig(
                         queryRequired = s.optBoolean("query_required", false), localFilter = s.optBoolean("local_filter", false),
                         cityFilter = s.optBoolean("city_filter", false), verified = s.optBoolean("verified", false),
                         itemUrl = s.optString("item_url"), why = s.optString("why"), terms = s.optString("terms"),
+                        imageUrl = s.optString("image_url"),
                     )
                 },
-                feeds = members(o.getJSONObject("feeds")).associate { (id, f) -> id to Feed(id, f.getString("label"), f.getString("url")) },
+                feeds = members(o.getJSONObject("feeds")).associate { (id, f) -> id to Feed(id, f.getString("label"), f.getString("url"), f.optString("format", FORMAT_RSS)) },
                 series = (o.optJSONObject("series")?.let { members(it) } ?: emptyList()).associate { (id, x) ->
                     id to Series(
                         id = id, label = x.getString("label"), source = x.getString("source"), detail = x.optString("detail"),
@@ -207,6 +229,8 @@ data class SearchConfig(
                 cloud = o.optJSONObject("cloud")?.let { CloudConfig.parse(it) },
                 research = o.optJSONObject("research")?.let { ResearchConfig.parse(it) },
                 cgc = o.optJSONObject("cgc")?.let { CgcConfig.parse(it) },
+                newsPages = objects(o.optJSONArray("news_pages")).map { NewsPage(it.getString("id"), it.optString("blurb"), strings(it.getJSONArray("feeds"))) },
+                majorEngines = objects(o.optJSONArray("engines_major")).map { MajorEngine(it.getString("id"), it.getString("label"), it.getString("url"), it.optString("kind", "web")) },
             )
             val problems = cfg.problems()
             require(problems.isEmpty()) { "build.json::search is inconsistent: " + problems.joinToString("; ") }
@@ -246,6 +270,20 @@ data class SearchConfig(
                 if (v.chartPoints < 2) bad += "vertical ${v.id} chart_points must be at least 2"
             }
             if (v.analysis != "none" && v.chartColor.isBlank()) bad += "vertical ${v.id} has an analysis chart but no chart_color"
+        }
+        for (f in feeds.values) if (f.format !in FEED_FORMATS) bad += "feed ${f.id} format ${f.format} is none of $FEED_FORMATS"
+        for (n in newsPages) {
+            if (n.feeds.isEmpty()) bad += "news page ${n.id} names no feed"
+            n.feeds.filter { it !in feeds }.forEach { bad += "news page ${n.id} names feed $it, which is not declared" }
+        }
+        if (newsPages.map { it.id }.toSet().size != newsPages.size) bad += "duplicate news page ids"
+        for (e in majorEngines) {
+            if ("{q}" !in e.url || !e.url.startsWith("https://")) bad += "major engine ${e.id} needs an https url with {q}"
+            if (e.kind !in ENGINE_KINDS) bad += "major engine ${e.id} kind ${e.kind} is none of $ENGINE_KINDS"
+        }
+        if (majorEngines.map { it.id }.toSet().size != majorEngines.size) bad += "duplicate major engine ids"
+        for (v in verticals) {
+            if (v.thingsCategory.isNotBlank() && things?.category(v.thingsCategory) == null) bad += "vertical ${v.id} things_category ${v.thingsCategory} is not a things category"
         }
         for (x in series.values) {
             if (x.change !in CHANGES) bad += "series ${x.id} change ${x.change} is none of $CHANGES"

@@ -62,6 +62,7 @@ import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.TopFirstRowTags
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.navbartop2.NavSectionLayout
 import com.diegonmarcos.superapp.ai.AiChatState
 import com.diegonmarcos.superapp.ai.AiTags
 import kotlinx.coroutines.CoroutineScope
@@ -81,25 +82,26 @@ enum class Menu { CATEGORIES, FILTERS, SESSIONS, PROFILE }
 /** Everything the shell remembers while it is up; the durable half lives in [Services.prefs]. */
 class SearchState(val services: Services) {
     val cfg: SearchConfig = services.cfg
-    /** The vertical whose page is the assistant (Chat › Search); every other vertical is a page of Me or LLC. */
+    /** The vertical whose page is the assistant (Search › AI Chat); every other vertical is a page of Media, Shopping or Brokers. */
     val chatVertical: String = cfg.verticals.first { v -> v.subpages.any { cfg.subpage(it)?.kind == "assistant" } }.id
-    /** #1184 the island's selection: research, searches, chat (AI), cgc or mecgc (ui.sections). */
+    /** #1197 the island's selection: news, research, cgc, chat (Search), media, shopping or brokers (ui.sections). */
     var section by mutableStateOf(NAV.default()?.id ?: "chat")
     var agentsPage by mutableStateOf(NAV.section("research")?.page("agenthub")?.pages?.firstOrNull()?.id ?: "agents")
-    /** #1184 Research's second row (News, Reports, Agents) and the News topic shown. */
-    var researchPage by mutableStateOf(NAV.section("research")?.pages?.firstOrNull()?.id ?: "news")
+    /** #1197 Research's second row (Reports, Models, Agents). */
+    var researchPage by mutableStateOf(NAV.section("research")?.pages?.firstOrNull()?.id ?: "reports")
+    /** #1197 News's second row (News, YouTube Feed, Google News Feed, RSS), the fleet-news topic shown, and each feed page's chosen feed and last answer. */
+    var newsPage by mutableStateOf(NAV.section("news")?.pages?.firstOrNull()?.id ?: "news")
+    val feedPicks = mutableStateMapOf<String, String>()
+    val feedResults = mutableStateMapOf<String, com.diegonmarcos.cloudsearch.core.SearchEngine.FeedResult>()
     var newsTopic by mutableStateOf<String?>(null)
     var newsResult by mutableStateOf<com.diegonmarcos.cloudsearch.data.FleetCalls.Result<com.diegonmarcos.cloudsearch.core.ResearchConfig.Article>?>(null)
-    /** #1184 the code-index sections (Cloud-CGC, Me-CGC): each one's second-row page (Semantic, Graph RAG) and what it remembers. */
-    val cgcSections: List<String> = NAV.bottomNav.filter { id -> services.cfg.cgc?.index(id) != null }
-    private val cgcPages = mutableStateMapOf<String, String>()
+    /** #1197 the CGC section: one page per index and mode (Cloud CGC and Me CGC, each Semantic and Graph RAG) and what each index remembers. */
+    var cgcPage by mutableStateOf(NAV.section("cgc")?.pages?.firstOrNull()?.id ?: "cloud_semantic")
     private val cgcModels = mutableMapOf<String, CgcModel>()
-    fun cgcPage(section: String): String = cgcPages[section] ?: NAV.section(section)?.pages?.firstOrNull()?.id ?: "semantic"
-    fun showCgcPage(section: String, id: String) { cgcPages[section] = id }
-    fun cgc(section: String): CgcModel = cgcModels.getOrPut(section) { CgcModel(cfg.cgc!!.index(section)!!) }
+    fun cgc(indexId: String): CgcModel = cgcModels.getOrPut(indexId) { CgcModel(cfg.cgc!!.index(indexId)!!) }
     /**
-     * #913b Chat's strip: Search (its page id is the assistant vertical's id; where a query from outside lands), then
-     * Apps, Messages and Code (once the Cloud page).
+     * #913b Search's strip: AI Chat (its page id is the assistant vertical's id; where a query from outside lands), then
+     * Engines (#1197), Apps, Messages and Code (once the Cloud page).
      */
     var chatPage by mutableStateOf(chatVertical)
     /** The agent whose screen (config, runs, results, drafts) is open on the Agents page, or null for the list. */
@@ -133,13 +135,13 @@ class SearchState(val services: Services) {
     fun areaChanged() { thingsModels.values.forEach { it.stale = true }; areaRev++ }
 
     /**
-     * The island section a vertical lives under: Chat for the assistant, else the section (Searches) whose strip
+     * The island section a vertical lives under: Search (id chat) for the assistant, else the section (Media, Shopping, Brokers) whose strip
      * lists it (build.json::ui.sections; test-search-shell.sh S10 holds every vertical to exactly one of them).
      */
     fun sectionOf(verticalId: String): String =
         if (verticalId == chatVertical) "chat" else verticalSections.firstOrNull { s -> NAV.section(s)?.pages?.any { it.id == verticalId } == true } ?: verticalSections.first()
 
-    /** The island sections whose pages are search verticals: Searches (the former Me and LLC, merged). */
+    /** The island sections whose pages are search verticals: Media, Shopping and Brokers. */
     val verticalSections: List<String> = NAV.bottomNav.filter { s -> s != "chat" && NAV.section(s)?.pages?.let { p -> p.isNotEmpty() && p.all { cfg.vertical(it.id) != null } } == true }
 
     /** The mockup's switchTopic(): a vertical opens on its first subpage, menus close. */
@@ -149,7 +151,7 @@ class SearchState(val services: Services) {
         cfg.vertical(id)?.let { subpages[it.id] = it.subpages.first() }
     }
 
-    /** A tap on an island item (ui.bottom_nav). Searches keeps the vertical it was on; Chat keeps its page. */
+    /** A tap on an island item (ui.bottom_nav). Media, Shopping and Brokers keep the vertical they were on; Search keeps its page. */
     fun openSection(id: String) {
         saved = false; menu = null
         when (id) {
@@ -162,7 +164,7 @@ class SearchState(val services: Services) {
         }
     }
 
-    /** #913b a vertical's agent link (Searches): the Agents page (under Research) opens on that agent's screen. */
+    /** #913b a vertical's agent link (Brokers, Shopping): the Agents page (under Research) opens on that agent's screen. */
     fun openAgent(id: String) {
         openSection("research"); researchPage = "agenthub"; agentsPage = NAV.section("research")?.page("agenthub")?.pages?.firstOrNull()?.id ?: "agents"; agentOpen = id
     }
@@ -284,8 +286,9 @@ private fun Chrome(state: SearchState, v: SearchConfig.Vertical) {
     }
     val pageId = when {
         state.section == "chat" -> state.chatPage
+        state.section == "news" -> state.newsPage
         state.section == "research" -> state.researchPage
-        state.section in state.cgcSections -> state.cgcPage(state.section)
+        state.section == "cgc" -> state.cgcPage
         state.section in state.verticalSections -> state.vertical
         else -> null
     }
@@ -309,8 +312,9 @@ private fun Chrome(state: SearchState, v: SearchConfig.Vertical) {
         if (state.saved) SavedPage()
         else when (state.section) {
             "chat" -> ChatSection(state, v)
+            "news" -> NewsSection(state)
             "research" -> ResearchSection(state)
-            in state.cgcSections -> CgcSection(state, state.section)
+            "cgc" -> CgcSection(state)
             in state.verticalSections -> VerticalsSection(state, state.section, v)
             else -> {
                 val sub = state.subpageOf(v)
@@ -320,33 +324,35 @@ private fun Chrome(state: SearchState, v: SearchConfig.Vertical) {
     }
 }
 
-/** A pick in the title dropdown: the bottom page, or one of its pages (a vertical, a Chat, Research or code-index page). */
+/** A pick in the title dropdown: the bottom page, or one of its pages (a vertical, a Search, News, Research or CGC page). */
 private fun navigateTo(state: SearchState, e: HierarchyEntry) {
     if (e.depth == 0) { state.openSection(e.sectionId); return }
     if (e.depth > 1) return
     when {
         e.sectionId == "chat" -> { state.openSection("chat"); state.chatPage = e.id }
+        e.sectionId == "news" -> { state.openSection("news"); state.newsPage = e.id }
         e.sectionId == "research" -> { state.openSection("research"); state.researchPage = e.id }
-        e.sectionId in state.cgcSections -> { state.openSection(e.sectionId); state.showCgcPage(e.sectionId, e.id) }
+        e.sectionId == "cgc" -> { state.openSection("cgc"); state.cgcPage = e.id }
         e.sectionId in state.verticalSections -> state.open(e.id)
     }
 }
 
-/** #1184 Searches (the former Me and LLC): a strip of the section's verticals (ui.sections[].pages) over the selected vertical's page. */
+/**
+ * #1197 Media, Shopping and Brokers: the section's verticals (ui.sections[].pages) in the section's own second row (one strip, or
+ * Brokers' one row per group) over the selected vertical's page.
+ */
 @Composable
 private fun VerticalsSection(state: SearchState, section: String, v: SearchConfig.Vertical) {
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.testTag(Tags.WEB_STRIP)) {
-            NavBarTopSecondRow(
-                pages = NAV.section(section)?.pages.orEmpty(),
-                selectedId = state.vertical,
-                onSelect = { state.open(it.id) },
-                dark = state.dark,
-                underTopChrome = false,
-                surface = NAV.stripSurface(section, state.dark),
-            )
-        }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+    val decl = NAV.section(section) ?: return
+    NavSectionLayout(
+        section = decl,
+        selectedId = state.vertical,
+        onSelect = { state.open(it.id) },
+        modifier = Modifier.fillMaxSize().testTag(Tags.WEB_STRIP),
+        dark = state.dark,
+        surface = NAV.stripSurface(section, state.dark),
+    ) {
+        Box(Modifier.fillMaxSize()) {
             val sub = state.subpageOf(v)
             key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
         }
@@ -354,8 +360,8 @@ private fun VerticalsSection(state: SearchState, section: String, v: SearchConfi
 }
 
 /**
- * #913b Chat: Search (the assistant vertical, as before: a query from outside lands here) and, on the same strip,
- * the fleet searches that were the Cloud page: Apps, Messages and Code (CloudPages.kt).
+ * #913b Search (id chat): AI Chat (the assistant vertical, as before: a query from outside lands here), Engines (#1197) and, on the
+ * same strip, the fleet searches that were the Cloud page: Apps, Messages and Code (CloudPages.kt).
  */
 @Composable
 private fun ChatSection(state: SearchState, v: SearchConfig.Vertical) {
@@ -374,7 +380,8 @@ private fun ChatSection(state: SearchState, v: SearchConfig.Vertical) {
             if (state.chatPage == state.chatVertical) {
                 val sub = state.subpageOf(v)
                 key(v.id, sub) { Page(v, state.cfg.subpage(sub)?.kind ?: "") }
-            } else CloudPage(state, state.chatPage)
+            } else if (state.chatPage == "engines") EnginesPage(state)
+            else CloudPage(state, state.chatPage)
         }
     }
 }

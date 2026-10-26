@@ -1,7 +1,7 @@
 {
   "name": "cloud-search",
-  "display_name": "Cloud Research",
-  "description": "Diego's Cloud Research (#779, was Cloud Search until #1162) - one app for searching what a life in Germany needs, from the owner's design mockup, on the shared bottom nav (#1184): Research (News from the fleet news service, Reports of what agents published, and Agents: #913 draft-only Buy-Side and Sell-Side agents that read your alert mails and pages and write drafts you send yourself), Searches (House, Jobs, Groceries, Things, Commercial Real Estate, Buy a Business, Suppliers / B2B, Business Services), AI (web engines + AI chat, and the fleet's Apps, Messages and Code), Cloud-CGC (code search over the public cgc index: Semantic and Graph RAG) and Me-CGC (the same over the private index, mesh only, honest while that index is not built). House and Jobs have Listing, Analysis, Feed and Calculators subpages; Search opens Google, DuckDuckGo, Brave or Qwant results in cloud-browser and holds an AI chat over OpenRouter (sessions grouped today / previous 7 days, a model picker over the live catalogue, natively web-searching models flagged, the token read from the fleet Account and never stored here). REAL DATA ONLY: every in-app listing comes from a public API this app is allowed to read (build.json::search.sources), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used at all says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
+  "display_name": "Cloud Search",
+  "description": "Diego's Cloud Search (#779; renamed Cloud Research in #1162, back to Cloud Search in #1197) - one app for searching, on the shared bottom nav (#1184): News (the fleet news service, YouTube channel feeds, Google News topic feeds and the German RSS feeds), Research (Reports of what agents published, the Model catalogue and Agents: #913 draft-only Buy-Side and Sell-Side agents that read your alert mails and pages and write drafts you send yourself), CGC (Cloud CGC and Me CGC, each with Semantic and Graph RAG over the public and the private code index), Search (the AI chat over OpenRouter and the major web and AI search engines, plus the fleet's Apps, Messages and Code), Media (Image, Video, Movies, Books), Shopping (Groceries, Electronics, Clothing and Compare, the price comparison) and Brokers (Job Placement, Real Estate, Business). House and Jobs keep their Listing, Analysis, Feed and Calculators subpages. REAL DATA ONLY: every in-app listing or feed comes from a public API or feed this app is allowed to read (build.json::search.sources, search.feeds), cached on the phone so the last results stay readable offline; a portal whose terms forbid automated access is never fetched - its own search page opens in cloud-browser - and a source that cannot be used says why. The German payslip runs the BMF's own Lohnsteuer PAP 2026 (core/pap, generated into Kotlin by core/tools/pap2kt.py) with the 2026 social-insurance rules, golden-tested against the BMF's calculator. English is the base language (#299); dark is the default theme (#336).",
   "category": "android",
   "vendored_engine": null,
   "android": {
@@ -589,6 +589,130 @@
           "services_general",
           "job_placement"
         ]
+      },
+      {
+        "id": "image",
+        "label": "Image",
+        "title": "Images",
+        "blurb": "Openly licensed pictures, each with its licence.",
+        "icon": "globe",
+        "placeholder": "A subject: cat, bridge, map...",
+        "subpages": [
+          "listing"
+        ],
+        "sources": [
+          "openverse-images"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": []
+      },
+      {
+        "id": "video",
+        "label": "Video",
+        "title": "Video",
+        "blurb": "Moving images from the Internet Archive.",
+        "icon": "cloud",
+        "placeholder": "A subject: moon landing, trains...",
+        "subpages": [
+          "listing"
+        ],
+        "sources": [
+          "archive-video"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": []
+      },
+      {
+        "id": "movies",
+        "label": "Movies",
+        "title": "Movies and series",
+        "blurb": "Films the Archive may show, and TV series.",
+        "icon": "business",
+        "placeholder": "A title: Chaplin, Matrix...",
+        "subpages": [
+          "listing"
+        ],
+        "sources": [
+          "archive-films",
+          "tvmaze-shows"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": []
+      },
+      {
+        "id": "books",
+        "label": "Books",
+        "title": "Books",
+        "blurb": "Works from Open Library, with authors and year.",
+        "icon": "suppliers",
+        "placeholder": "A title, author or subject",
+        "subpages": [
+          "listing"
+        ],
+        "sources": [
+          "open-library-books"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": []
+      },
+      {
+        "id": "electronics",
+        "label": "Electronics",
+        "title": "Electronics",
+        "blurb": "Stores near you that sell it, and what each asks.",
+        "icon": "things",
+        "placeholder": "Phone, laptop, headphones...",
+        "subpages": [
+          "things"
+        ],
+        "sources": [
+          "idealo",
+          "ebay",
+          "kleinanzeigen"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": [],
+        "things_category": "electronics",
+        "agents": [
+          "things_electronics"
+        ]
+      },
+      {
+        "id": "clothing",
+        "label": "Clothing",
+        "title": "Clothing",
+        "blurb": "Stores near you that sell it, and what each asks.",
+        "icon": "commercial",
+        "placeholder": "Jacket, jeans, shoes...",
+        "subpages": [
+          "things"
+        ],
+        "sources": [
+          "vinted",
+          "ebay",
+          "kleinanzeigen"
+        ],
+        "chips": [],
+        "analysis": "none",
+        "feeds": [],
+        "feed_keywords": [],
+        "calculators": [],
+        "things_category": "clothes"
       }
     ],
     "_doc_sources": "Every source, with what this app may do with it. kind `api`: a public API read in-app when `enabled` (parser = the core/Listing.kt Parsers branch, held to a saved real response in core/src/test/resources/fixtures). kind `link`: NEVER fetched - the site's own search (or a site: search when its URL scheme needs ids this app cannot know) opens in cloud-browser, because its terms forbid automated access or it has no public API. `why` is shown on the listing under the source's name, so nothing is silently missing. Verified 2026-10-02 from the mesh: BA Jobsuche v6 (200 with the published key and an honest user agent; v4 answers 403), Arbeitnow (200), Open Prices (2,131 Berlin prices within 30 km), search.openfoodfacts.org (200). The fleet's scraping backend was considered for the portals and is not used: crawlee-cloud is archived, and its successor scrappers-api sits behind two-factor auth and returns only a summary from /scrape (the data stays on the server) - and none of the portals below permits scraping in the first place.",
@@ -847,6 +971,62 @@
         "enabled": true,
         "url": "https://www.arbeitsagentur.de/jobsuche/suche?was={q}&wo={city}",
         "why": "The agency's own job search, opened in cloud-browser; the listing in this app reads its official API (Jobsuche v6)."
+      },
+      "openverse-images": {
+        "label": "Openverse",
+        "kind": "api",
+        "enabled": true,
+        "parser": "openverse",
+        "verified": false,
+        "query_required": true,
+        "url": "https://api.openverse.org/v1/images/?q={q}&page_size=30",
+        "terms": "Openverse (WordPress Foundation) image search over openly licensed works; anonymous use is allowed and every result names its licence."
+      },
+      "archive-video": {
+        "label": "Internet Archive",
+        "kind": "api",
+        "enabled": true,
+        "parser": "archive_org",
+        "verified": false,
+        "query_required": true,
+        "url": "https://archive.org/advancedsearch.php?q={q}%20AND%20mediatype%3Amovies&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=year&fl%5B%5D=creator&rows=30&output=json&sort%5B%5D=downloads%20desc",
+        "item_url": "https://archive.org/details/{id}",
+        "image_url": "https://archive.org/services/img/{id}",
+        "terms": "The Internet Archive's public advancedsearch API over its moving-image items."
+      },
+      "archive-films": {
+        "label": "Internet Archive films",
+        "kind": "api",
+        "enabled": true,
+        "parser": "archive_org",
+        "verified": false,
+        "query_required": true,
+        "url": "https://archive.org/advancedsearch.php?q={q}%20AND%20mediatype%3Amovies%20AND%20collection%3Afeature_films&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=year&fl%5B%5D=creator&rows=30&output=json&sort%5B%5D=downloads%20desc",
+        "item_url": "https://archive.org/details/{id}",
+        "image_url": "https://archive.org/services/img/{id}",
+        "terms": "The Internet Archive's feature_films collection (full-length films it may show), through the same public API."
+      },
+      "tvmaze-shows": {
+        "label": "TVMaze",
+        "kind": "api",
+        "enabled": true,
+        "parser": "tvmaze",
+        "verified": false,
+        "query_required": true,
+        "url": "https://api.tvmaze.com/search/shows?q={q}",
+        "terms": "TVMaze's public show search (CC BY-SA data): TV series with network, premiere and genres."
+      },
+      "open-library-books": {
+        "label": "Open Library",
+        "kind": "api",
+        "enabled": true,
+        "parser": "open_library",
+        "verified": false,
+        "query_required": true,
+        "url": "https://openlibrary.org/search.json?q={q}&limit=30&fields=key,title,author_name,first_publish_year,cover_i",
+        "item_url": "https://openlibrary.org{id}",
+        "image_url": "https://covers.openlibrary.org/b/id/{id}-M.jpg",
+        "terms": "Open Library's public search API: works with authors, first publication year and cover."
       }
     },
     "series": {
@@ -888,7 +1068,7 @@
       }
     },
     "feeds": {
-      "_doc": "RSS feeds for the Feed subpage; a vertical shows the items whose title or text names one of its feed_keywords.",
+      "_doc": "Feeds read in-app (rss = RSS 2.0, the default; atom = YouTube's channel feeds). A vertical's Feed subpage shows the items of its feeds whose text names one of its feed_keywords; the News pages (news_pages) show one feed at a time, unfiltered. YouTube publishes a keyless Atom feed per channel_id; Google News publishes an RSS feed per topic.",
       "tagesschau-wirtschaft": {
         "label": "tagesschau Wirtschaft",
         "url": "https://www.tagesschau.de/wirtschaft/index~rss2.xml"
@@ -896,6 +1076,56 @@
       "tagesschau-verbraucher": {
         "label": "tagesschau Verbraucher",
         "url": "https://www.tagesschau.de/wirtschaft/verbraucher/index~rss2.xml"
+      },
+      "yt-google-developers": {
+        "label": "Google for Developers",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC_x5XG1OV2P6uZZ5FSM9Ttw",
+        "format": "atom"
+      },
+      "yt-fireship": {
+        "label": "Fireship",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA",
+        "format": "atom"
+      },
+      "yt-kurzgesagt": {
+        "label": "Kurzgesagt",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCsXVk37bltHxD1rDPwtNM8Q",
+        "format": "atom"
+      },
+      "yt-tagesschau": {
+        "label": "tagesschau",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC5NOEUbkLheQcaaRldYW5GA",
+        "format": "atom"
+      },
+      "yt-ted": {
+        "label": "TED",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCAuUUnT6oDeKwE6v1NGQxug",
+        "format": "atom"
+      },
+      "yt-veritasium": {
+        "label": "Veritasium",
+        "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCHnyfMqiRRG1u-2MsSQLbXA",
+        "format": "atom"
+      },
+      "gn-world": {
+        "label": "Google News World",
+        "url": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US&gl=US&ceid=US:en"
+      },
+      "gn-business": {
+        "label": "Google News Business",
+        "url": "https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=en-US&gl=US&ceid=US:en"
+      },
+      "gn-technology": {
+        "label": "Google News Technology",
+        "url": "https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=en-US&gl=US&ceid=US:en"
+      },
+      "gn-science": {
+        "label": "Google News Science",
+        "url": "https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=en-US&gl=US&ceid=US:en"
+      },
+      "gn-health": {
+        "label": "Google News Health",
+        "url": "https://news.google.com/rss/headlines/section/topic/HEALTH?hl=en-US&gl=US&ceid=US:en"
       }
     },
     "engines": [
@@ -1339,7 +1569,7 @@
       "native_web_param": "web_search_options",
       "title_chars": 40
     },
-    "_doc_subpages": "#797 a subpage is a tab of the sub-nav under a vertical's title; a vertical with one subpage draws no sub-nav (the mockup's Search, Groceries and Things). `assistant` is the mockup's one Search page: the four engine boxes and the AI chat together. Saved Items is not a subpage: it is the menu's own view of everything starred.",
+    "_doc_subpages": "#797 a subpage is a tab of the sub-nav under a vertical's title; a vertical with one subpage draws no sub-nav (the Search, Groceries, Things, Electronics, Clothing and Media pages). `assistant` is the mockup's one Search page: the four engine boxes and the AI chat together. Saved Items is not a subpage: it is the menu's own view of everything starred.",
     "_doc_engines": "#797 each engine box of the Search page: `icon` is a Phosphor name (ui/IconCatalog), `accent` a colour name in res/values/colors.xml (the mockup's per-engine tint). Every engine opens its own results page in cloud-browser; none is scraped.",
     "things": {
       "_doc": "#903 The Things page (subpage kind `things`): the stores around the person that sell an item's kind, and what each asks for it. AREA: a coarse location fix (permission asked once) or the city typed in settings, default radius_km, adjustable in settings. STORES: OpenStreetMap shop=* through the Overpass API (keyless, ODbL; the public instances in overpass_urls are tried in order, because any one of them is sometimes overloaded) within the radius, cached per area/category for stores_ttl_hours; the item is matched to shop types by `categories[].words` (a word may sit inside a compound, 'bohr' in 'Bohrmaschine'); an item no category names falls back to `fallback`, and the page says so. PRICES, only what a source published: (1) Open Prices shelf prices seen at that very OSM place (receipt or price tag, dated; groceries and drugstore goods mostly), (2) the online price a chain's own site publishes, read server-side by scrappers-api GET /prices (robots.txt-gated, JSON-LD offers; needs the fleet bearer; see user-data_scrappers-api/src/code/prices.json for the chains and why the others are off). A store with neither shows no price and why; nothing is estimated.",
@@ -1864,17 +2094,41 @@
         "limit": 40,
         "timeout_ms": 20000,
         "topics": [
-          { "id": "tech", "label": "Tech", "query": "technology sourcelang:english" },
-          { "id": "ai", "label": "AI", "query": "artificial intelligence sourcelang:english" },
-          { "id": "science", "label": "Science", "query": "science research sourcelang:english" },
-          { "id": "finance", "label": "Finance", "query": "finance markets sourcelang:english" },
-          { "id": "world", "label": "World", "query": "geopolitics sourcelang:english" },
-          { "id": "health", "label": "Health", "query": "health medicine sourcelang:english" }
+          {
+            "id": "tech",
+            "label": "Tech",
+            "query": "technology sourcelang:english"
+          },
+          {
+            "id": "ai",
+            "label": "AI",
+            "query": "artificial intelligence sourcelang:english"
+          },
+          {
+            "id": "science",
+            "label": "Science",
+            "query": "science research sourcelang:english"
+          },
+          {
+            "id": "finance",
+            "label": "Finance",
+            "query": "finance markets sourcelang:english"
+          },
+          {
+            "id": "world",
+            "label": "World",
+            "query": "geopolitics sourcelang:english"
+          },
+          {
+            "id": "health",
+            "label": "Health",
+            "query": "health medicine sourcelang:english"
+          }
         ]
       }
     },
     "cgc": {
-      "_doc": "#1184 the code indexes. Both are the fleet's cgc MCP service (cloud-u-containers user-ai_cloud-cgc-pub-mcp, streamable HTTP at mcp_path; tools cgc.octocode.search = Semantic, cgc.octocode.graphrag = Graph RAG: search nodes, then get-relationships for callers/callees), one fleet_endpoints entry per surface: cgc-pub-mcp (public repos) and cgc-pvt-mcp (private repos, mesh only: the pvt surface is WireGuard-only). `id` is the ui section (cgc, mecgc). repos mirror that service's build.json runtime.octocode (index_repos less private_repos for the public surface, private_repos for the private one); repo_names maps an index name to its GitHub repository. needs_account: the private index waits for the Cloud Account sign-in (the fleet bearer over Account's IPC); the bearer is sent to a public origin only. A private index that has not been built answers with its own words, and the page says so: no result is ever made up.",
+      "_doc": "#1184 the code indexes. Both are the fleet's cgc MCP service (cloud-u-containers user-ai_cloud-cgc-pub-mcp, streamable HTTP at mcp_path; tools cgc.octocode.search = Semantic, cgc.octocode.graphrag = Graph RAG: search nodes, then get-relationships for callers/callees), one fleet_endpoints entry per surface: cgc-pub-mcp (public repos) and cgc-pvt-mcp (private repos, mesh only: the pvt surface is WireGuard-only). `id` names the index; semantic_page and graph_page are its two ui.sections[cgc] page ids (#1197: one CGC section, Cloud CGC and Me CGC as its two rows). repos mirror that service's build.json runtime.octocode (index_repos less private_repos for the public surface, private_repos for the private one); repo_names maps an index name to its GitHub repository. needs_account: the private index waits for the Cloud Account sign-in (the fleet bearer over Account's IPC); the bearer is sent to a public origin only. A private index that has not been built answers with its own words, and the page says so: no result is ever made up.",
       "timeout_ms": 45000,
       "limit": 25,
       "threshold": 0.3,
@@ -1885,11 +2139,22 @@
           "service": "cgc-pub-mcp",
           "mcp_path": "/mcp",
           "health_path": "/health",
-          "repos": ["cloud-u-android", "cloud-u-containers", "cloud-infra", "cloud-infra-desktop", "front-diegonmarcos", "front-data"],
-          "repo_names": { "front-diegonmarcos": "diegonmarcos.github.io" },
+          "repos": [
+            "cloud-u-android",
+            "cloud-u-containers",
+            "cloud-infra",
+            "cloud-infra-desktop",
+            "front-diegonmarcos",
+            "front-data"
+          ],
+          "repo_names": {
+            "front-diegonmarcos": "diegonmarcos.github.io"
+          },
           "needs_account": false,
           "web_url": "https://github.com/diegonmarcos/{repo}/blob/main/{path}#L{line}",
-          "drive_fleet": "drive"
+          "drive_fleet": "drive",
+          "semantic_page": "cloud_semantic",
+          "graph_page": "cloud_graph"
         },
         {
           "id": "mecgc",
@@ -1897,13 +2162,133 @@
           "service": "cgc-pvt-mcp",
           "mcp_path": "/mcp",
           "health_path": "/health",
-          "repos": ["cloud-data", "cloud-me-my-ai"],
+          "repos": [
+            "cloud-data",
+            "cloud-me-my-ai"
+          ],
           "needs_account": true,
           "web_url": "https://github.com/diegonmarcos/{repo}/blob/main/{path}#L{line}",
-          "drive_fleet": "drive"
+          "drive_fleet": "drive",
+          "semantic_page": "me_semantic",
+          "graph_page": "me_graph"
         }
       ]
-    }
+    },
+    "news_pages": [
+      {
+        "id": "youtube",
+        "blurb": "The newest videos of the channels declared here, from YouTube's own channel feeds.",
+        "feeds": [
+          "yt-google-developers",
+          "yt-fireship",
+          "yt-kurzgesagt",
+          "yt-tagesschau",
+          "yt-ted",
+          "yt-veritasium"
+        ]
+      },
+      {
+        "id": "gnews",
+        "blurb": "Google News headlines by topic, from its own RSS feeds; every headline opens at its publisher.",
+        "feeds": [
+          "gn-world",
+          "gn-business",
+          "gn-technology",
+          "gn-science",
+          "gn-health"
+        ]
+      },
+      {
+        "id": "rss",
+        "blurb": "German consumer and business news from tagesschau's RSS feeds.",
+        "feeds": [
+          "tagesschau-wirtschaft",
+          "tagesschau-verbraucher"
+        ]
+      }
+    ],
+    "_doc_news_pages": "#1197 the News section's feed pages: id = the ui page id; feeds = declared search.feeds ids, one chip each. A feed that cannot be read shows its reason on the page, never invented items.",
+    "engines_major": [
+      {
+        "id": "google",
+        "label": "Google",
+        "kind": "web",
+        "url": "https://www.google.com/search?q={q}"
+      },
+      {
+        "id": "google-ai",
+        "label": "Google AI Mode",
+        "kind": "ai",
+        "url": "https://www.google.com/search?udm=50&q={q}"
+      },
+      {
+        "id": "bing",
+        "label": "Bing",
+        "kind": "web",
+        "url": "https://www.bing.com/search?q={q}"
+      },
+      {
+        "id": "duckduckgo",
+        "label": "DuckDuckGo",
+        "kind": "web",
+        "url": "https://duckduckgo.com/?q={q}"
+      },
+      {
+        "id": "brave",
+        "label": "Brave Search",
+        "kind": "web",
+        "url": "https://search.brave.com/search?q={q}"
+      },
+      {
+        "id": "qwant",
+        "label": "Qwant",
+        "kind": "web",
+        "url": "https://www.qwant.com/?q={q}"
+      },
+      {
+        "id": "kagi",
+        "label": "Kagi",
+        "kind": "web",
+        "url": "https://kagi.com/search?q={q}"
+      },
+      {
+        "id": "perplexity",
+        "label": "Perplexity",
+        "kind": "ai",
+        "url": "https://www.perplexity.ai/search?q={q}"
+      },
+      {
+        "id": "ecosia",
+        "label": "Ecosia",
+        "kind": "web",
+        "url": "https://www.ecosia.org/search?q={q}"
+      },
+      {
+        "id": "startpage",
+        "label": "Startpage",
+        "kind": "web",
+        "url": "https://www.startpage.com/do/search?q={q}"
+      },
+      {
+        "id": "yahoo",
+        "label": "Yahoo",
+        "kind": "web",
+        "url": "https://search.yahoo.com/search?p={q}"
+      },
+      {
+        "id": "searxng",
+        "label": "SearXNG (searx.be)",
+        "kind": "web",
+        "url": "https://searx.be/search?q={q}"
+      },
+      {
+        "id": "metager",
+        "label": "MetaGer",
+        "kind": "web",
+        "url": "https://metager.org/meta/meta.ger3?eingabe={q}"
+      }
+    ],
+    "_doc_engines_major": "#1197 the Engines page: the major web and AI search engines, each opened in cloud-browser with the typed query ({q}); the user's query never goes through this app's servers (it has none). kind ai = an engine that answers in prose. SearXNG is the open metasearch engine; searx.be is one public instance of it."
   },
   "agents": {
     "_doc": "#913b the agents CATALOGUE (the definitions and the templates their drafts start from) for build.json::search.agents, kept out of build.json::search because that block is baked whole into one BuildConfig string here and in Cloud Browser (SEARCH_CONFIG_B64), and a Java string constant holds at most 65535 bytes. app/build.gradle bakes this block as AGENTS_B64 and Decl.kt puts it back under search.agents (SearchConfig.withAgents) before the one parser reads it, as the JVM suite does (Fixtures.searchJson). Cloud Browser, which bakes search but not this, reads no agent.",
@@ -2645,19 +3030,21 @@
     },
     "_doc_debug_api": "Routes on the fleet debug API (libs:devtools AppDebugServer), for checks with the screen locked: /api/search/verticals (every vertical, subpage, source with its kind/enabled/why), /api/search/query?v=&q=&city= (the real query through the same engine and cache the screens use: listings + per-source status), /api/search/calc?name=&<field>=... (a calculator's outputs and warnings), /api/search/analysis?v= (#797: the jobs statistics or the market series, with each source's status), /api/search/feed?v= (the Feed page's headlines and each feed's status). The ops never include `state` (update-ack-guard owns GET /api/state). #913: /api/search/agents (the agents, their last run, the budget), /api/search/runs (the run log with its audit lines), /api/search/reports and /api/search/report?id= (what agents published), /api/search/cloud?kind=apps|messages&q= (the Cloud Search section).",
     "dark_default": true,
-    "_doc_nav": "#1184 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, exactly Research, Searches, AI, Cloud-CGC, Me-CGC; ui.sections[] what each item opens; ui.default_section where the app opens. Research is News (the fleet news service, search.research) and Reports (what agents published; Agents, Runs, Templates and Settings are its third page). Searches is the former Me and LLC merged: its pages are the search.verticals other than the assistant (House, Jobs, Groceries, Things, Commercial, Business, Suppliers, Services), each with its own subpage strip one level lower, every vertical exactly once. AI (id chat) is Search (the assistant vertical: engine boxes + AI chat, where a query from outside lands) and the fleet searches Apps, Messages and Code. Cloud-CGC (id cgc) and Me-CGC (id mecgc) are code search over the public and the private index (search.cgc), each with Semantic and Graph RAG as its second row. test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together.",
+    "_doc_nav": "#1197 THE nav declaration (libs:bottomnav NavDecl): ui.bottom_nav is the island, exactly News, Research, CGC, Search (id chat), Media, Shopping, Brokers; ui.sections[] what each item opens; ui.default_section where the app opens. News: the fleet news service (search.research), the YouTube channel feeds (search.news_pages youtube), the Google News topic feeds (gnews) and the RSS feeds (rss). Research: Reports (what agents published), Models (the model catalogue) and Agents (Agents, Runs, Templates and Settings one strip lower). CGC: horizontal_two_rows, one row per index, Cloud CGC then Me CGC, each with Semantic and Graph RAG (search.cgc.indexes[].semantic_page / graph_page name the page ids). Search (id chat): AI Chat (the assistant vertical; where a query from outside lands), Engines (search.engines_major) and the fleet searches Apps, Messages and Code. Media, Shopping and Brokers: their pages are search.verticals (Media: image, video, movies, books; Shopping: groceries, electronics, clothing, things = Compare; Brokers: jobs, house, commercial, business, suppliers, services, in horizontal_two_rows groups Job Placement, Real Estate and Business). Every vertical sits in exactly one section; test-search-shell.sh S10 holds the declaration, search.verticals and search.subpages together.",
     "bottom_nav": [
+      "news",
       "research",
-      "searches",
-      "chat",
       "cgc",
-      "mecgc"
+      "chat",
+      "media",
+      "shopping",
+      "brokers"
     ],
     "sections": [
       {
-        "id": "research",
-        "label": "Research",
-        "icon": "reports",
+        "id": "news",
+        "label": "News",
+        "icon": "rss_feed",
         "background": "theme",
         "pages": [
           {
@@ -2666,9 +3053,37 @@
             "icon": "rss_feed"
           },
           {
+            "id": "youtube",
+            "label": "YouTube Feed",
+            "icon": "play_circle"
+          },
+          {
+            "id": "gnews",
+            "label": "Google News Feed",
+            "icon": "public"
+          },
+          {
+            "id": "rss",
+            "label": "RSS",
+            "icon": "feed"
+          }
+        ]
+      },
+      {
+        "id": "research",
+        "label": "Research",
+        "icon": "reports",
+        "background": "theme",
+        "pages": [
+          {
             "id": "reports",
             "label": "Reports",
             "icon": "assessment"
+          },
+          {
+            "id": "models",
+            "label": "Models",
+            "icon": "memory"
           },
           {
             "id": "agenthub",
@@ -2700,38 +3115,179 @@
         ]
       },
       {
-        "id": "searches",
-        "label": "Searches",
-        "icon": "search",
+        "id": "cgc",
+        "label": "CGC",
+        "icon": "code",
+        "background": "theme",
+        "nav_mode": "horizontal_two_rows",
+        "groups": [
+          {
+            "id": "cloud_cgc",
+            "label": "Cloud CGC",
+            "icon": "code",
+            "pages": [
+              "cloud_semantic",
+              "cloud_graph"
+            ]
+          },
+          {
+            "id": "me_cgc",
+            "label": "Me CGC",
+            "icon": "lock",
+            "pages": [
+              "me_semantic",
+              "me_graph"
+            ]
+          }
+        ],
+        "pages": [
+          {
+            "id": "cloud_semantic",
+            "label": "Semantic",
+            "icon": "auto_awesome"
+          },
+          {
+            "id": "cloud_graph",
+            "label": "Graph RAG",
+            "icon": "hub"
+          },
+          {
+            "id": "me_semantic",
+            "label": "Semantic",
+            "icon": "auto_awesome"
+          },
+          {
+            "id": "me_graph",
+            "label": "Graph RAG",
+            "icon": "hub"
+          }
+        ]
+      },
+      {
+        "id": "chat",
+        "label": "Search",
+        "icon": "assistant",
         "background": "theme",
         "pages": [
           {
-            "id": "house",
-            "label": "House",
-            "icon": "home",
+            "id": "search",
+            "label": "AI Chat",
+            "icon": "assistant"
+          },
+          {
+            "id": "engines",
+            "label": "Engines",
+            "icon": "language"
+          },
+          {
+            "id": "apps",
+            "label": "Apps",
+            "icon": "apps"
+          },
+          {
+            "id": "messages",
+            "label": "Messages",
+            "icon": "forum"
+          },
+          {
+            "id": "code",
+            "label": "Code",
+            "icon": "code"
+          }
+        ]
+      },
+      {
+        "id": "media",
+        "label": "Media",
+        "icon": "video",
+        "background": "theme",
+        "pages": [
+          {
+            "id": "image",
+            "label": "Image",
+            "icon": "palette"
+          },
+          {
+            "id": "video",
+            "label": "Video",
+            "icon": "video"
+          },
+          {
+            "id": "movies",
+            "label": "Movies",
+            "icon": "play_circle"
+          },
+          {
+            "id": "books",
+            "label": "Books",
+            "icon": "menu_book"
+          }
+        ]
+      },
+      {
+        "id": "shopping",
+        "label": "Shopping",
+        "icon": "inventory_2",
+        "background": "theme",
+        "pages": [
+          {
+            "id": "groceries",
+            "label": "Groceries",
+            "icon": "restaurant"
+          },
+          {
+            "id": "electronics",
+            "label": "Electronics",
+            "icon": "devices"
+          },
+          {
+            "id": "clothing",
+            "label": "Clothing",
+            "icon": "accessibility_new"
+          },
+          {
+            "id": "things",
+            "label": "Compare",
+            "icon": "compare_arrows"
+          }
+        ]
+      },
+      {
+        "id": "brokers",
+        "label": "Brokers",
+        "icon": "work",
+        "background": "theme",
+        "nav_mode": "horizontal_two_rows",
+        "groups": [
+          {
+            "id": "job_placement",
+            "label": "Job Placement",
+            "icon": "work",
             "pages": [
-              {
-                "id": "listing",
-                "label": "Listing",
-                "icon": "description"
-              },
-              {
-                "id": "analysis",
-                "label": "Analysis",
-                "icon": "insights"
-              },
-              {
-                "id": "feed",
-                "label": "Feed",
-                "icon": "rss_feed"
-              },
-              {
-                "id": "calculators",
-                "label": "Calculators",
-                "icon": "table_chart"
-              }
+              "jobs"
             ]
           },
+          {
+            "id": "real_estate",
+            "label": "Real Estate",
+            "icon": "home",
+            "pages": [
+              "house",
+              "commercial"
+            ]
+          },
+          {
+            "id": "business_group",
+            "label": "Business",
+            "icon": "rocket_launch",
+            "pages": [
+              "business",
+              "suppliers",
+              "services"
+            ]
+          }
+        ],
+        "pages": [
           {
             "id": "jobs",
             "label": "Jobs",
@@ -2760,14 +3316,31 @@
             ]
           },
           {
-            "id": "groceries",
-            "label": "Groceries",
-            "icon": "restaurant"
-          },
-          {
-            "id": "things",
-            "label": "Things",
-            "icon": "inventory_2"
+            "id": "house",
+            "label": "House",
+            "icon": "home",
+            "pages": [
+              {
+                "id": "listing",
+                "label": "Listing",
+                "icon": "description"
+              },
+              {
+                "id": "analysis",
+                "label": "Analysis",
+                "icon": "insights"
+              },
+              {
+                "id": "feed",
+                "label": "Feed",
+                "icon": "rss_feed"
+              },
+              {
+                "id": "calculators",
+                "label": "Calculators",
+                "icon": "table_chart"
+              }
+            ]
           },
           {
             "id": "commercial",
@@ -2790,76 +3363,23 @@
             "icon": "build"
           }
         ]
-      },
-      {
-        "id": "chat",
-        "label": "AI",
-        "icon": "assistant",
-        "background": "theme",
-        "pages": [
-          {
-            "id": "search",
-            "label": "Search",
-            "icon": "search"
-          },
-          {
-            "id": "apps",
-            "label": "Apps",
-            "icon": "apps"
-          },
-          {
-            "id": "messages",
-            "label": "Messages",
-            "icon": "forum"
-          },
-          {
-            "id": "code",
-            "label": "Code",
-            "icon": "code"
-          }
-        ]
-      },
-      {
-        "id": "cgc",
-        "label": "Cloud-CGC",
-        "icon": "code",
-        "background": "theme",
-        "pages": [
-          {
-            "id": "semantic",
-            "label": "Semantic",
-            "icon": "auto_awesome"
-          },
-          {
-            "id": "graph",
-            "label": "Graph RAG",
-            "icon": "hub"
-          }
-        ]
-      },
-      {
-        "id": "mecgc",
-        "label": "Me-CGC",
-        "icon": "lock",
-        "background": "theme",
-        "pages": [
-          {
-            "id": "semantic",
-            "label": "Semantic",
-            "icon": "auto_awesome"
-          },
-          {
-            "id": "graph",
-            "label": "Graph RAG",
-            "icon": "hub"
-          }
-        ]
       }
     ],
     "default_section": "chat"
   },
   "_doc_fleet_agents": "This app's agents, in the fleet agent registry's one shape (aa_cloud-superapp/build.json::_doc_fleet_agents). Consolidated into aa_cloud-superapp/data/fleet-agents.json by 1_cicd/src/scripts/cloud-android-fleet-agents.py and shown in Cloud SuperApp ▸ Configs ▸ Apps ▸ Agents ▸ Fleet agents.",
   "fleet_agents": [
-    {"from": "ac_cloud-search/build.json", "path": "agents.agents", "kind": "in-app agent", "trigger": "on demand (Run on the agent page); reads alert mail and listings, writes drafts only", "summary_key": "blurb", "open": "page:agents/agents", "status": {"source": "none", "reason": "runs and drafts are kept inside Cloud Search; it exposes no provider for them yet"}}
+    {
+      "from": "ac_cloud-search/build.json",
+      "path": "agents.agents",
+      "kind": "in-app agent",
+      "trigger": "on demand (Run on the agent page); reads alert mail and listings, writes drafts only",
+      "summary_key": "blurb",
+      "open": "page:agents/agents",
+      "status": {
+        "source": "none",
+        "reason": "runs and drafts are kept inside Cloud Search; it exposes no provider for them yet"
+      }
+    }
   ]
 }

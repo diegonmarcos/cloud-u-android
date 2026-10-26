@@ -1,6 +1,7 @@
 package com.diegonmarcos.cloudsearch.core
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -57,6 +58,18 @@ class ThingsEngineTest {
         assertEquals(euro, r.rows.first())
         assertTrue(r.rows.drop(1).all { it.price == null && it.note.isNotBlank() })
         assertEquals("MediaMarkt: Answers 403 to automated clients (verified 2026-10-07).", r.rows.first { it.store.name == "MediaMarkt" }.note)
+    }
+
+    /** #1197 the Electronics and Clothing pages: an item that names no category falls back to the page's own, never to a category it does name. */
+    @Test fun anItemThatNamesNoCategoryFallsBackToThePagesOwnCategory() {
+        val named = engine().compare(berlin, "Laptop", "clothes")
+        assertEquals("a named category wins over the page's hint", "electronics", named.category.id)
+        assertTrue(named.matched)
+        val hinted = engine().compare(berlin, "Xyzzy", "clothes")
+        assertEquals("clothes", hinted.category.id)
+        assertFalse(hinted.matched)
+        assertEquals(Fixtures.cfg.things!!.fallback.id, engine().compare(berlin, "Xyzzy").category.id)
+        assertEquals("an unknown hint is the declared fallback", Fixtures.cfg.things!!.fallback.id, engine().compare(berlin, "Xyzzy", "ghost").category.id)
     }
 
     @Test fun theTokenAuthorisesTheServiceCallAndIsNeverCachedOrInTheKey() {

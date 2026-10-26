@@ -72,6 +72,85 @@ class ParsersTest {
         assertEquals(emptyList<String>(), l[3].tags) // "unknown" is not a grade
     }
 
+    @Test fun openverse() {
+        val l = Parsers.parse("openverse", Fixtures.text("openverse-images.json"), src("openverse-images"))
+        assertEquals(3, l.size)
+        assertEquals("1c5442f6-6bb6-4ab7-b603-f598e7579dd2", l[0].id)
+        assertEquals("Cat Fish 2", l[0].title)
+        assertEquals("admiller • flickr", l[0].subtitle)
+        assertEquals("https://www.flickr.com/photos/32426194@N00/3481540500", l[0].url)
+        assertEquals("https://api.openverse.org/v1/images/1c5442f6-6bb6-4ab7-b603-f598e7579dd2/thumb/", l[0].image)
+        assertEquals(listOf("CC BY 2.0"), l[0].tags)
+        assertEquals(listOf("CC BY-NC-SA 2.0"), l[1].tags)
+        assertNull(l[0].price)
+    }
+
+    @Test fun archiveOrg() {
+        val l = Parsers.parse("archive_org", Fixtures.text("archive-movies.json"), src("archive-video"))
+        assertEquals(4, l.size)
+        assertEquals("Experime1940", l[0].id)
+        assertEquals("Experiments in the Revival of Organisms", l[0].title)
+        assertEquals("Techfilm Studio, Moscow • 1940", l[0].subtitle)
+        assertEquals("https://archive.org/details/Experime1940", l[0].url)
+        assertEquals("https://archive.org/services/img/Experime1940", l[0].image)
+        assertEquals("an item with no creator or year has an empty subtitle", "", l[1].subtitle)
+        assertEquals("NASA/Johnson Space Center • 1969", l[3].subtitle)
+    }
+
+    @Test fun tvmaze() {
+        val l = Parsers.parse("tvmaze", Fixtures.text("tvmaze-shows.json"), src("tvmaze-shows"))
+        assertEquals(3, l.size)
+        assertEquals("3616", l[0].id)
+        assertEquals("Matrix", l[0].title)
+        assertEquals("1993 • USA Network", l[0].subtitle)
+        assertEquals("https://www.tvmaze.com/shows/3616/matrix", l[0].url)
+        assertEquals(Parsers.isoDay("1993-03-01"), l[0].date)
+        assertEquals(listOf("Drama", "Ended"), l[0].tags)
+        assertEquals("a web channel stands in for the network", "2012 • Gaia", l[2].subtitle)
+        assertTrue(l[0].image!!.startsWith("https://static.tvmaze.com/"))
+    }
+
+    @Test fun openLibrary() {
+        val l = Parsers.parse("open_library", Fixtures.text("open-library.json"), src("open-library-books"))
+        assertEquals(4, l.size)
+        assertEquals("/works/OL893414W", l[0].id)
+        assertEquals("Dune", l[0].title)
+        assertEquals("Frank Herbert • 1965", l[0].subtitle)
+        assertEquals("https://openlibrary.org/works/OL893414W", l[0].url)
+        assertEquals("https://covers.openlibrary.org/b/id/11481354-M.jpg", l[0].image)
+        assertEquals("open_library:/works/OL893414W", l[0].key)
+    }
+
+    @Test fun atomYouTubeFeed() {
+        val items = Parsers.feed("atom", Fixtures.text("youtube-feed.xml"), "Google for Developers")
+        assertEquals(4, items.size)
+        assertEquals("🔊 Voice design and voice replication with Gemini 3.8 Flash TTS", items[0].title)
+        assertEquals("https://www.youtube.com/shorts/CsF5oqVV5YE", items[0].url)
+        assertEquals(java.time.ZonedDateTime.parse("2026-10-21T23:00:08+00:00").toInstant().toEpochMilli(), items[0].date) // the entry's own date, not the channel's
+        assertTrue(items[0].text.startsWith("Google DeepMind"))
+        assertFalse(items[0].text.contains("<"))
+        assertEquals("Google for Developers", items[0].feed)
+        assertEquals("https://www.youtube.com/watch?v=SOF3_evPje8", items[1].url)
+    }
+
+    @Test fun googleNewsRssFeed() {
+        val items = Parsers.feed("rss", Fixtures.text("google-news-technology.xml"), "Google News Technology")
+        assertEquals(5, items.size)
+        assertEquals("Hinge damage suspected to be behind iPhone Duo screen cracks - AppleInsider", items[0].title)
+        assertTrue(items[0].url!!.startsWith("https://news.google.com/rss/articles/"))
+        assertEquals(java.time.ZonedDateTime.parse("2026-10-25T21:28:00Z").toInstant().toEpochMilli(), items[0].date)
+        assertFalse("the escaped markup of the description is stripped", items[0].text.contains("<"))
+    }
+
+    @Test fun anAtomFeedWithoutAnAlternateLinkOrDateStillParses() {
+        val xml = """<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>T</title><link href="https://e.org/x"/><updated>2026-01-02T03:04:05Z</updated><summary>S</summary></entry></feed>"""
+        val i = Parsers.atom(xml, "f").single()
+        assertEquals("https://e.org/x", i.url)
+        assertEquals("S", i.text)
+        assertEquals(java.time.ZonedDateTime.parse("2026-01-02T03:04:05Z").toInstant().toEpochMilli(), i.date)
+        assertNull(Parsers.atom("""<feed><entry><title>T</title></entry></feed>""", "f").single().url)
+    }
+
     @Test fun rss() {
         val items = Parsers.rss(Fixtures.text("tagesschau-verbraucher.xml"), "tagesschau Verbraucher")
         assertEquals(6, items.size)

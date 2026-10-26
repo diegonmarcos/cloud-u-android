@@ -13,6 +13,7 @@ import com.diegonmarcos.cloudsearch.core.Http
 import com.diegonmarcos.cloudsearch.data.FleetBearer
 import com.diegonmarcos.cloudsearch.data.Services
 import com.diegonmarcos.cloudsearch.ui.CgcTags
+import com.diegonmarcos.cloudsearch.ui.NewsTags
 import com.diegonmarcos.cloudsearch.ui.ResearchTags
 import com.diegonmarcos.cloudsearch.ui.SearchShell
 import com.diegonmarcos.cloudsearch.ui.SearchState
@@ -36,7 +37,7 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * #1184 Research (News) and the two code indexes through the real shell, on a fake network that answers the way the fleet's
+ * #1184 News (the fleet news service) and the two code indexes (#1197: Cloud CGC and Me CGC, the CGC section's two rows) through the real shell, on a fake network that answers the way the fleet's
  * news service and its cgc MCP service do (JSON-RPC over an event stream): the answers are shaped like the services', not
  * captured from them. The private index is asked with and without the Cloud Account sign-in, and answers as an unbuilt index does.
  */
@@ -67,6 +68,12 @@ class ResearchCgcShellTest {
                 "/articles" in url -> Http.Response(200, """{"query":"q","count":2,"articles":[
                     {"url":"https://example.org/a","title":"Chip makers expand","seendate":"20261024T101500Z","domain":"example.org"},
                     {"url":"https://example.net/b","title":"Open model released","seendate":"20261025T081000Z","domain":"example.net"}]}""")
+                "youtube.com/feeds/videos.xml" in url -> Http.Response(200, """<?xml version="1.0" encoding="UTF-8"?>
+                    <feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+                     <title>Channel</title>
+                     <entry><title>Newer video</title><link rel="alternate" href="https://www.youtube.com/watch?v=b"/><published>2026-10-22T10:00:00+00:00</published></entry>
+                     <entry><title>Older video</title><link rel="alternate" href="https://www.youtube.com/watch?v=a"/><published>2026-10-21T10:00:00+00:00</published></entry>
+                    </feed>""")
                 "cloud-cgc-pvt-mcp" in url && url.endsWith("/health") -> Http.Response(200, """{"status":"degraded","checks":{"octocode":{"binary":true},"kgstore":{"reachable":false}}}""")
                 else -> Http.Response(404, "")
             }
@@ -126,7 +133,7 @@ class ResearchCgcShellTest {
 
     @Test fun researchShowsTheFleetNewsFromTheDeclaredServiceMeshFirst() {
         compose.setContent { SearchShell(state) }
-        compose.onNodeWithTag(Tags.nav("research")).performClick()
+        compose.onNodeWithTag(Tags.nav("news")).performClick()
         waitFor(ResearchTags.article(0))
         waitText(ResearchTags.STATUS, "2 headlines via mesh")
         assertEquals("http://news-gdelt.mesh.diegonmarcos.com:3019/articles?q=technology%20sourcelang%3Aenglish&limit=40", http.gets.first { "/articles" in it.first }.first)
@@ -140,9 +147,21 @@ class ResearchCgcShellTest {
         assertEquals("ai", state.newsTopic)
     }
 
+    /** #1197 News > YouTube Feed: the first declared channel's Atom feed is fetched and its videos listed newest first. */
+    @Test fun youTubeFeedListsTheChannelsVideosNewestFirst() {
+        compose.setContent { SearchShell(state) }
+        compose.onNodeWithTag(Tags.nav("news")).performClick()
+        compose.onNodeWithTag(Tags.subpage("youtube")).performClick()
+        waitFor(NewsTags.item(1))
+        waitText(NewsTags.STATUS, "2 items")
+        assertTrue(text(NewsTags.item(0)).startsWith("Newer video"))
+        val channel = state.cfg.feeds.getValue(state.cfg.newsPage("youtube")!!.feeds.first()).url
+        assertTrue("the declared channel feed was asked: $channel", synchronized(http.gets) { http.gets.any { it.first == channel } })
+    }
+
     @Test fun cloudCgcSemanticShowsRepoPathLineAndOpens() {
         compose.setContent { SearchShell(state) }
-        search("cgc", "semantic", "query engine")
+        search("cgc", "cloud_semantic", "query engine")
         waitFor(CgcTags.hit(0))
         waitText(CgcTags.STATUS, "1 results via mesh")
         val call = http.calls.last { it.third.getString("method") == "tools/call" }
@@ -156,7 +175,7 @@ class ResearchCgcShellTest {
 
     @Test fun cloudCgcGraphRagListsNodesThenCallersAndCallees() {
         compose.setContent { SearchShell(state) }
-        search("cgc", "graph", "engine")
+        search("cgc", "cloud_graph", "engine")
         waitFor(CgcTags.node(0))
         compose.onNodeWithTag(CgcTags.node(0)).performClick()
         waitFor(CgcTags.edge(0))
@@ -167,7 +186,7 @@ class ResearchCgcShellTest {
 
     @Test fun meCgcWaitsForTheAccountSignInAndSendsNothingWithout() {
         compose.setContent { SearchShell(state) }
-        search("mecgc", "semantic", "secrets layout")
+        search("cgc", "me_semantic", "secrets layout")
         waitText(CgcTags.STATUS, "Cloud Account has no fleet sign-in")
         assertTrue("nothing reached the private service", http.calls.none { "pvt" in it.first })
     }
@@ -175,7 +194,7 @@ class ResearchCgcShellTest {
     @Test fun meCgcSaysTheIndexIsNotBuiltInTheServicesWords() {
         FleetBearer.reader = { "tok" }
         compose.setContent { SearchShell(state) }
-        search("mecgc", "semantic", "secrets layout")
+        search("cgc", "me_semantic", "secrets layout")
         waitText(CgcTags.STATUS, "Private index not built yet: No octocode index for project cloud-data")
         assertEquals("cloud-data", http.calls.last { it.third.getString("method") == "tools/call" }.third.getJSONObject("params").getJSONObject("arguments").getString("repo"))
         assertTrue("the bearer never goes to a mesh name", http.calls.all { !it.second.containsKey("Authorization") })
@@ -186,7 +205,7 @@ class ResearchCgcShellTest {
         FleetBearer.reader = { "tok" }
         http.privateBuilt = true
         compose.setContent { SearchShell(state) }
-        search("mecgc", "semantic", "anything")
+        search("cgc", "me_semantic", "anything")
         waitText(CgcTags.STATUS, "service degraded (graph store unreachable)")
         assertTrue(text(CgcTags.STATUS).startsWith("No results, and the private index may not be built yet"))
     }

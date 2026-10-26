@@ -16,6 +16,8 @@ data class CgcConfig(val timeoutMs: Int, val limit: Int, val threshold: Double, 
     data class Index(
         val id: String, val label: String, val service: String, val mcpPath: String, val healthPath: String, val repos: List<String>,
         val needsAccount: Boolean, val webUrl: String, val driveFleet: String, val repoNames: Map<String, String> = emptyMap(),
+        /** The ui.sections[cgc] page ids of this index's two modes (Cloud CGC and Me CGC share one section). */
+        val semanticPage: String = "", val graphPage: String = "",
     ) {
         /** The repository's file on the web at [line] (or without a line anchor). */
         fun web(repo: String, path: String, line: Int?): String =
@@ -23,6 +25,10 @@ data class CgcConfig(val timeoutMs: Int, val limit: Int, val threshold: Double, 
     }
 
     fun index(id: String): Index? = indexes.firstOrNull { it.id == id }
+
+    /** The index a page of the cgc section belongs to, and whether that page is its Graph RAG mode (else Semantic). */
+    fun indexOfPage(page: String): Pair<Index, Boolean>? =
+        indexes.firstOrNull { page == it.semanticPage || page == it.graphPage }?.let { it to (page == it.graphPage) }
 
     companion object {
         fun parse(o: JSONObject): CgcConfig {
@@ -33,11 +39,14 @@ data class CgcConfig(val timeoutMs: Int, val limit: Int, val threshold: Double, 
                     x.getJSONArray("repos").let { r -> (0 until r.length()).map { r.getString(it) } },
                     x.getBoolean("needs_account"), x.getString("web_url"), x.getString("drive_fleet"),
                     x.optJSONObject("repo_names")?.let { n -> n.keys().asSequence().associateWith { k -> n.getString(k) } } ?: emptyMap(),
+                    x.optString("semantic_page"), x.optString("graph_page"),
                 )
             }
             val cfg = CgcConfig(o.getInt("timeout_ms"), o.getInt("limit"), o.getDouble("threshold"), ix)
             require(ix.isNotEmpty() && ix.map { it.id }.toSet().size == ix.size) { "search.cgc.indexes needs at least one index and no repeated id" }
             require(ix.all { it.repos.isNotEmpty() && it.mcpPath.startsWith("/") && it.webUrl.startsWith("https://") }) { "search.cgc.indexes need repos, a /mcp_path and an https web_url" }
+            val pages = ix.flatMap { listOf(it.semanticPage, it.graphPage) }
+            require(pages.all { it.isNotBlank() } && pages.toSet().size == pages.size) { "search.cgc.indexes each need a distinct semantic_page and graph_page" }
             require(cfg.threshold in 0.0..1.0 && cfg.limit in 1..100) { "search.cgc threshold must be 0..1 and limit 1..100" }
             return cfg
         }
@@ -62,7 +71,7 @@ class McpClient(private val http: Http, private val url: String, private val hea
     fun call(tool: String, args: JSONObject): McpReply {
         val h = headers + mapOf("Accept" to "application/json, text/event-stream")
         val init = post(h, rpc(1, "initialize", JSONObject().put("protocolVersion", "2025-03-26").put("capabilities", JSONObject())
-            .put("clientInfo", JSONObject().put("name", "cloud-research").put("version", "1"))))
+            .put("clientInfo", JSONObject().put("name", "cloud-search").put("version", "1"))))
         result(init.body, 1)
         val sid = init.headers["mcp-session-id"]
         val h2 = if (sid.isNullOrBlank()) h else h + ("Mcp-Session-Id" to sid)

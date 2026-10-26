@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tester (#571, #779, #803, #1162): Cloud ▸ Apps ▸ AGI is exactly SI AI | Research Code | Tools |
+# Tester (#571, #779, #803, #1162): Cloud ▸ Apps ▸ AGI is exactly SI AI | Search Code | Tools |
 # MyTerminal | Terminal, SuperApp sits in Configs right before Store, and each launching tile
 # LANDS on the app it is named for. (2026-10-13: the B-LLM and S-LLM folders are gone; Tools, the
 # Cloud Tools Small LLMs app, took S-LLM's place. test-agi-llm-folders.sh, which pinned the two
@@ -75,9 +75,9 @@ titles = [g.get("title") for g in cloud.get("tile_groups", [])]
 check("AGI" in titles and "Me" in titles and titles.index("AGI") == titles.index("Me") + 1,
       "AGI is the group immediately after Me (%s)" % titles)
 
-print("== T1: the AGI row is SI AI | Research Code | Tools | MyTerminal Terminal (#1162), '|' being the group separators ==")
+print("== T1: the AGI row is SI AI | Search Code | Tools | MyTerminal Terminal (#1162), '|' being the group separators ==")
 got = [t.get("label") for t in tiles]
-want = ["SI", "AI", "|", "Research", "Code", "|", "Tools", "|", "MyTerminal", "Terminal"]
+want = ["SI", "AI", "|", "Search", "Code", "|", "Tools", "|", "MyTerminal", "Terminal"]
 check(got == want, "AGI captions are %s (want %s)" % (got, want))
 ids = [t.get("id") for t in tiles]
 check([i for i in ids if not str(i).startswith("agi-sep-")] == ["si", "ai-chat", "search", "code", "tools-small-llms", "drive", "ai-tmx"], "AGI tile ids are %s" % ids)
@@ -115,7 +115,7 @@ def fleet_for(directory):
     hits = [a for a in fleet if a.get("kind") == "app"
             and a.get("repo_url", "").rstrip("/").endswith("/" + directory)]
     return hits[0] if len(hits) == 1 else None
-for label, directory in (("SI", "ac_cloud-superintel"), ("Research", "ac_cloud-search"), ("Tools", "ac_cloud-tools-small-llms"), ("Terminal", "ac_cloud-nix-on-droid"),
+for label, directory in (("SI", "ac_cloud-superintel"), ("Search", "ac_cloud-search"), ("Tools", "ac_cloud-tools-small-llms"), ("Terminal", "ac_cloud-nix-on-droid"),
                          ("MyTerminal", "ac_cloud-myterminal"), ("Code", "ac_cloud-code")):
     tile, entry = by.get(label), fleet_for(directory)
     check(entry is not None, "fleet manifest has exactly one app built from %s" % directory)
@@ -134,7 +134,7 @@ def glyph_in(tile, fg):
     return bool(tp) and all(('pathData="%s"' % p) in read(fg) for p in tp)
 
 print("== T3: the Code, Search and Tools glyphs exist and are their apps' own launcher foregrounds ==")
-for label in ("SI", "Research", "Code", "Tools"):
+for label in ("SI", "Search", "Code", "Tools"):
     icon = (by.get(label) or {}).get("icon", "")
     check(bool(icon) and os.path.isfile(os.path.join(app, "app/src/main/res/drawable", icon + ".xml")),
           "%s's icon %r is a drawable in this app (iconResFor would fall back to ic_link_tile in silence)" % (label, icon))
@@ -148,7 +148,7 @@ mine = os.path.join(app, "app/src/main/res/drawable", ide_icon + ".xml")
 theirs = os.path.join(root, "ac_cloud-code/res/android/drawable/ic_launcher_foreground.xml")
 check(bool(ide_icon) and os.path.isfile(mine) and os.path.isfile(theirs) and glyph_in(mine, theirs),
       "drawable/%s.xml draws ac_cloud-code's launcher glyph (generated: cloud-android-launcher-icons.py)" % ide_icon)
-search_icon = (by.get("Research") or {}).get("icon", "")
+search_icon = (by.get("Search") or {}).get("icon", "")
 mine = os.path.join(app, "app/src/main/res/drawable", search_icon + ".xml")
 theirs = os.path.join(root, "ac_cloud-search/app/src/main/res/drawable/ic_launcher_foreground.xml")
 check(bool(search_icon) and os.path.isfile(mine) and os.path.isfile(theirs) and read(mine) == read(theirs),
@@ -202,8 +202,8 @@ holders = [g.get("title") for g in groups(bj["ui"]["sections"], None)
 check(holders == ["Configs"], "the SuperApp tile is declared once, in Configs (found in %s)" % holders)
 
 print("== T6: the Search tile keeps its gradient ==")
-check((by.get("Research") or {}).get("tint") is False, "the Research tile declares tint:false")
-check(not any(t.get("tint") is False for t in tiles if t.get("label") != "Research"),
+check((by.get("Search") or {}).get("tint") is False, "the Search tile declares tint:false")
+check(not any(t.get("tint") is False for t in tiles if t.get("label") != "Search"),
       "no other AGI tile opts out of the tint")
 check('tint       = t.optBoolean("tint", true)' in sections, "Sections parses a tile's `tint`, default true")
 check(re.search(r"if \(missing\) p\.textSecondary else if \(tile\.tint\) p\.textPrimary else", cell),

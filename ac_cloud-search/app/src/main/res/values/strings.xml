@@ -12,7 +12,7 @@
     <string name="no_renderer">No page draws subpages of kind %1$s.</string>
 
     <string name="fleet_account">Fleet Account</string>
-    <string name="version">Cloud Research · build %1$s</string>
+    <string name="version">Cloud Search · build %1$s</string>
     <string name="token_title">OpenRouter token (for AI chat)</string>
     <string name="token_blurb">Managed by the fleet Account (SuperApp ▸ Profile). Read when you send a message, never stored by this app.</string>
     <string name="token_check">Check</string>
@@ -199,6 +199,18 @@
     <string name="agents_draft">Draft</string>
     <string name="agents_runs_of">Runs: %1$d</string>
     <string name="vertical_agents">Agents</string>
+    <!-- #1197 the News feed pages and the Search > Engines page. -->
+    <string name="feed_loading">Loading…</string>
+    <string name="feed_count">%1$d items</string>
+    <string name="feed_empty">The feed has no items.</string>
+    <string name="feed_unavailable">Feed not reachable: %1$s</string>
+    <string name="feed_stale">%1$d items from the last saved copy (the feed answered: %2$s)</string>
+    <string name="engines_title">Search engines</string>
+    <string name="engines_blurb">Opens the engine\'s own results in Cloud Browser with your query.</string>
+    <string name="engines_placeholder">What to search for</string>
+    <string name="engines_kind_web">Web search</string>
+    <string name="engines_kind_ai">AI answers</string>
+    <string name="engines_in">Search in</string>
     <!-- #1184 Research (News), Cloud-CGC and Me-CGC. -->
     <string name="research_none">Research is not declared in this build.</string>
     <string name="research_loading">Loading headlines…</string>

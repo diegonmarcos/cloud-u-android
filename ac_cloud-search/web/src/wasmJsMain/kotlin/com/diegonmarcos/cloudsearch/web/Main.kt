@@ -73,7 +73,7 @@ private fun NavScreen() {
     }
     val decl = nav
     if (decl == null) {
-        Box(Modifier.fillMaxSize().padding(12.dp)) { KitEmptyState(null, "Loading Cloud Research…") }
+        Box(Modifier.fillMaxSize().padding(12.dp)) { KitEmptyState(null, "Loading Cloud Search…") }
     } else {
         NavShell(decl)
     }
@@ -93,33 +93,8 @@ private fun NavShell(decl: NavDecl) {
                 PageTabs(section.pages, pageId ?: section.pages.first().id, onSelect = { page = it.id })
             }
             Box(Modifier.weight(1f).fillMaxWidth().padding(12.dp)) {
-                if (section?.id == "searches") MockPage()
-                else KitEmptyState(null, "${section?.label ?: "This"} lives in the Android app for now")
-            }
-        }
-    }
-}
-
-private class MockRow(val title: String, val detail: String)
-
-// Mock data only: the Android app keeps the real thing in its own store; the web page has none.
-private val MOCK_ROWS = listOf(
-    MockRow("Saved search: invoices", "23 results"),
-    MockRow("Saved search: travel", "8 results"),
-    MockRow("Recent: tax 2025", "41 results"),
-    MockRow("Recent: warranty", "5 results"),
-)
-
-/** The first section's page: a dense list of mock data (sample data). */
-@Composable
-private fun MockPage() {
-    val p = LocalKitPalette.current
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { KitSectionHeader("Me", "${MOCK_ROWS.size} entries · sample data") }
-        items(MOCK_ROWS, key = { it.title }) { r ->
-            KitCard {
-                Text(r.title, color = p.textPrimary, style = MaterialTheme.typography.titleSmall, maxLines = 1)
-                Text(r.detail, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                // No sample data: the real sources are read by the Android app, so every section says so.
+                KitEmptyState(null, "${section?.label ?: "This"} lives in the Android app for now")
             }
         }
     }

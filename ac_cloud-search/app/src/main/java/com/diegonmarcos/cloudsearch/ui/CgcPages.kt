@@ -36,7 +36,7 @@ import com.diegonmarcos.cloudsearch.core.CloudConfig
 import com.diegonmarcos.cloudsearch.data.Browser
 import com.diegonmarcos.cloudsearch.data.FleetCalls
 import com.diegonmarcos.cloudsearch.data.Launch
-import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.navbartop2.NavSectionLayout
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -67,28 +67,27 @@ class CgcModel(val ix: CgcConfig.Index) {
 }
 
 /**
- * #1184 Cloud-CGC (the public index) and Me-CGC (the private one): the same section over a different declared index
- * (build.json::search.cgc). Its second row is Semantic and Graph RAG; each page is one LazyColumn, the only vertical scroller.
+ * #1197 CGC: Cloud CGC (the public index) and Me CGC (the private one), one row each in the section's second row, the same page over a
+ * different declared index (build.json::search.cgc); each row's Semantic and Graph RAG pages are the index's semantic_page and
+ * graph_page. Each page is one LazyColumn, the only vertical scroller.
  */
 @Composable
-fun CgcSection(state: SearchState, section: String) {
+fun CgcSection(state: SearchState) {
     val cfg = state.cfg.cgc
-    val ix = cfg?.index(section)
-    val page = state.cgcPage(section)
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.testTag(CgcTags.STRIP)) {
-            NavBarTopSecondRow(
-                pages = NAV.section(section)?.pages.orEmpty(),
-                selectedId = page,
-                onSelect = { state.showCgcPage(section, it.id) },
-                dark = state.dark,
-                underTopChrome = false,
-                surface = NAV.stripSurface(section, state.dark),
-            )
-        }
-        Box(Modifier.weight(1f).fillMaxWidth().testTag(Tags.page("cgc_${section}_$page"))) {
-            if (cfg == null || ix == null) Text(stringResource(R.string.cgc_none), Modifier.padding(Metrics.gutter), color = LocalGlass.current.text2)
-            else CgcPage(state, cfg, ix, state.cgc(section), page == "graph")
+    val page = state.cgcPage
+    val hit = cfg?.indexOfPage(page)
+    val decl = NAV.section("cgc") ?: return
+    NavSectionLayout(
+        section = decl,
+        selectedId = page,
+        onSelect = { state.cgcPage = it.id },
+        modifier = Modifier.fillMaxSize().testTag(CgcTags.STRIP),
+        dark = state.dark,
+        surface = NAV.stripSurface("cgc", state.dark),
+    ) {
+        Box(Modifier.fillMaxSize().testTag(Tags.page("cgc_$page"))) {
+            if (cfg == null || hit == null) Text(stringResource(R.string.cgc_none), Modifier.padding(Metrics.gutter), color = LocalGlass.current.text2)
+            else CgcPage(state, cfg, hit.first, state.cgc(hit.first.id), hit.second)
         }
     }
 }

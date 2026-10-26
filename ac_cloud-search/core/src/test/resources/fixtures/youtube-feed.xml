@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+ <link rel="self" href="http://www.youtube.com/feeds/videos.xml?channel_id=UC_x5XG1OV2P6uZZ5FSM9Ttw"/>
+ <id>yt:channel:_x5XG1OV2P6uZZ5FSM9Ttw</id>
+ <yt:channelId>_x5XG1OV2P6uZZ5FSM9Ttw</yt:channelId>
+ <title>Google for Developers</title>
+ <link rel="alternate" href="https://www.youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw"/>
+ <author>
+  <name>Google for Developers</name>
+  <uri>https://www.youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw</uri>
+ </author>
+ <published>2007-08-23T00:34:43+00:00</published>
+ <entry>
+  <id>yt:video:CsF5oqVV5YE</id>
+  <yt:videoId>CsF5oqVV5YE</yt:videoId>
+  <yt:channelId>UC_x5XG1OV2P6uZZ5FSM9Ttw</yt:channelId>
+  <title>🔊 Voice design and voice replication with Gemini 3.8 Flash TTS</title>
+  <link rel="alternate" href="https://www.youtube.com/shorts/CsF5oqVV5YE"/>
+  <author>
+   <name>Google for Developers</name>
+   <uri>https://www.youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw</uri>
+  </author>
+  <published>2026-10-21T23:00:08+00:00</published>
+  <updated>2026-10-24T22:10:34+00:00</updated>
+  <media:group>
+   <media:title>🔊 Voice design and voice replication with Gemini 3.8 Flash TTS</media:title>
+   <media:content url="https://www.youtube.com/v/CsF5oqVV5YE?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i4.ytimg.com/vi/CsF5oqVV5YE/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Google DeepMind’s Thor Schaeff demos how Gemini 3.8 Flash TTS and Gemini 3.8 Flash-Lite TTS let you design custom voices from a text prompt or replicate your own, with support for 100+ languages and easy access via the Gemini API.
+
+Try it now at ai.studio/generate-speech. Have questions? Drop them in the comments.
+
+
+
+Subscribe to Google for Developers → https://goo.gle/developers    
+
+
+
+Speakers: Thor Schaeff
+Products Mentioned: Gemini, Google AI Studio</media:description>
+   <media:community>
+    <media:starRating count="322" average="5.00" min="1" max="5"/>
+    <media:statistics views="9711"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:SOF3_evPje8</id>
+  <yt:videoId>SOF3_evPje8</yt:videoId>
+  <yt:channelId>UC_x5XG1OV2P6uZZ5FSM9Ttw</yt:channelId>
+  <title>Design and replicate voices with Gemini 3.8 Flash TTS</title>
+  <link rel="alternate" href="https://www.youtube.com/watch?v=SOF3_evPje8"/>
+  <author>
+   <name>Google for Developers</name>
+   <uri>https://www.youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw</uri>
+  </author>
+  <published>2026-10-21T19:00:23+00:00</published>
+  <updated>2026-10-24T22:12:47+00:00</updated>
+  <media:group>
+   <media:title>Design and replicate voices with Gemini 3.8 Flash TTS</media:title>
+   <media:content url="https://www.youtube.com/v/SOF3_evPje8?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i4.ytimg.com/vi/SOF3_evPje8/hqdefault.jpg" width="480" height="360"/>
+   <media:description>See how Gemini 3.8 Flash TTS lets you design custom voices from a text prompt and replicate your own voice in Google AI Studio. Google DeepMind’s Thor Schaeff walks through:
+
+*Voice design
+*Voice replication
+*Multi-speaker dialogue generation
+*Building with the Gemini API across 100+ languages
+*Partner integrations with Agora, LiveKit, Pipecat, and Vercel
+Try it now at ai.studio/generate-speech. Have questions? Drop them in the comments.
+
+Chapters:
+0:00 — Introduction to Gemini TTS
+0:27 — Voice replication in Google AI Studio
+1:00 — Voice design from a text prompt
+2:19 — Using custom voices across multiple languages
+4:10 — Using custom voices in the Gemini API
+5:44 — Listing and managing voices via the Gemini API
+8:58 — Multi-speaker dialogue generation
+11:55 — Live podcast demo
+12:53 — Gemini 3.8 Flash TTS vs. Flash-Lite TTS
+13:34 — Partner integrations with Agora, LiveKit, Pipecat, and Vercel
+
+
+🔗Resources:
+Blog → https://goo.gle/4dQZL6c
+Migration Guide → https://goo.gle/4jzgSNG
+Prompting Guide → https://goo.gle/4ywvpgQ
+
+
+
+Subscribe to Google for Developers → https://goo.gle/developers    
+
+
+
+
+Speakers: Thor Schaeff
+Products Mentioned: Gemini, Google AI Studio</media:description>
+   <media:community>
+    <media:starRating count="300" average="5.00" min="1" max="5"/>
+    <media:statistics views="31243"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:LJ2v4-FvPcA</id>
+  <yt:videoId>LJ2v4-FvPcA</yt:videoId>
+  <yt:channelId>UC_x5XG1OV2P6uZZ5FSM9Ttw</yt:channelId>
+  <title>🧰 Builders building with Gemini Audio</title>
+  <link rel="alternate" href="https://www.youtube.com/shorts/LJ2v4-FvPcA"/>
+  <author>
+   <name>Google for Developers</name>
+   <uri>https://www.youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw</uri>
+  </author>
+  <published>2026-10-16T21:00:00+00:00</published>
+  <updated>2026-10-20T02:34:59+00:00</updated>
+  <media:group>
+   <media:title>🧰 Builders building with Gemini Audio</media:title>
+   <media:content url="https://www.youtube.com/v/LJ2v4-FvPcA?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i1.ytimg.com/vi/LJ2v4-FvPcA/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Google DeepMind's Paige Bailey catches up with builders experimenting with our latest models. Watch as they dive deep into Gemma's open-weight capabilities to build powerful local applications, use Lyria for cutting-edge music creation, and create real-time voice accessibility tools with the latest Gemini Audio models.
+
+🔗Resources:
+Gemini Audio → https://goo.gle/3UtAPew
+Gemma → https://goo.gle/4zxlVCL
+
+
+Subscribe to Google for Developers → https://goo.gle/developers    
+
+
+Speakers: Paige Bailey, Lejun Min, Samuel Sharaf, Daisy Mayorga, Manuel Castro, Faraz Siddiqi
+Products Mentioned: Gemini</media:description>
+   <media:community>
+    <media:starRating count="126" average="5.00" min="1" max="5"/>
+    <media:statistics views="3476"/>
+   </media:community>
+  </media:group>
+ </entry>
+ <entry>
+  <id>yt:video:-nmcYcO-EE8</id>
+  <yt:videoId>-nmcYcO-EE8</yt:videoId>
+  <yt:channelId>UC_x5XG1OV2P6uZZ5FSM9Ttw</yt:channelId>
+  <title>🎵 Turning motion into music with Gemini</title>
+  <link rel="alternate" href="https://www.youtube.com/shorts/-nmcYcO-EE8"/>
+  <author>
+   <name>Google for Developers</name>
+   <uri>https://www.youtube.com/channel/UC_x5XG1OV2P6uZZ5FSM9Ttw</uri>
+  </author>
+  <published>2026-10-16T16:00:00+00:00</published>
+  <updated>2026-10-20T02:32:04+00:00</updated>
+  <media:group>
+   <media:title>🎵 Turning motion into music with Gemini</media:title>
+   <media:content url="https://www.youtube.com/v/-nmcYcO-EE8?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+   <media:thumbnail url="https://i2.ytimg.com/vi/-nmcYcO-EE8/hqdefault.jpg" width="480" height="360"/>
+   <media:description>Turning laptop movement into browser-based music: Creator utilized Google AI Studio, Google Antigravity, and Gemini to shift raw accelerometer data into audio responding to every tilt and gesture.
+
+🔗 Explore the build → https://goo.gle/4zzWjVN 
+
+
+Subscribe to Google for Developers → https://goo.gle/developers   
+
+Products Mentioned: Gemini, Google AI Studio, Google Antigravity
+Speaker: Matias Piña Aguilera</media:description>
+   <media:community>
+    <media:starRating count="155" average="5.00" min="1" max="5"/>
+    <media:statistics views="8445"/>
+   </media:community>
+  </media:group>
+ </entry>
+ </feed>

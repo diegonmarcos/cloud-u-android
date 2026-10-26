@@ -72,11 +72,12 @@ class ThingsEngine(
     }
 
     /** Stores, shelf prices and online prices for [q] around [area], as the sorted table. */
-    fun compare(area0: Things.Area, q: String): Result {
+    fun compare(area0: Things.Area, q: String, categoryHint: String = ""): Result {
         val query = q.trim()
         val area = area0.coarse(t.minRadiusKm, t.maxRadiusKm)
         val matched = Things.categoryFor(query, t)
-        val cat = matched ?: t.fallback
+        // An item that names no category falls back to the page's own (Electronics, Clothing), else to the declared fallback.
+        val cat = matched ?: t.category(categoryHint) ?: t.fallback
         val statuses = mutableListOf<SourceStatus>()
 
         // stores — cached per area, category and radius; the public Overpass instances are tried in order

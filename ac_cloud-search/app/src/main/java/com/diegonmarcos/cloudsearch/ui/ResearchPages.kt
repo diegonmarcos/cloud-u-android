@@ -23,6 +23,7 @@ import com.diegonmarcos.cloudsearch.R
 import com.diegonmarcos.cloudsearch.core.ResearchConfig
 import com.diegonmarcos.cloudsearch.data.Browser
 import com.diegonmarcos.cloudsearch.data.FleetCalls
+import com.diegonmarcos.cloudsearch.models.ModelCataloguePage
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,8 +37,8 @@ object ResearchTags {
 }
 
 /**
- * #1184 Research: News (the fleet news service, build.json::search.research) and Reports (what agents published; the Agents
- * pages are its third page). The second row is libs:ui-nav-bars's; each page below it is one bounded list, so the
+ * #1197 Research: Reports (what agents published), Models (the model catalogue) and the Agents pages (its third page). The fleet
+ * news service (build.json::search.research) is the News section's first page. The second row is libs:ui-nav-bars's; each page below it is one bounded list, so the
  * shared scroll-collapse sees a single scroller and nothing scrolls inside another scroller of the same axis.
  */
 @Composable
@@ -55,16 +56,17 @@ fun ResearchSection(state: SearchState) {
         }
         Box(Modifier.weight(1f).fillMaxWidth().testTag(Tags.page("research_" + state.researchPage))) {
             when (state.researchPage) {
-                "reports" -> ReportsSection(state)
+                "models" -> ModelCataloguePage(state, onClose = { state.researchPage = "reports" }, modifier = Modifier.padding(top = Metrics.contentTop, bottom = Metrics.contentBottom))
                 "agenthub" -> AgentsSection(state)
-                else -> NewsPage(state)
+                else -> ReportsSection(state)
             }
         }
     }
 }
 
+/** The fleet news service's headlines by topic: the News section's first page. */
 @Composable
-private fun NewsPage(state: SearchState) {
+fun NewsPage(state: SearchState) {
     val g = LocalGlass.current
     val ctx = LocalContext.current
     val cfg = state.cfg.research

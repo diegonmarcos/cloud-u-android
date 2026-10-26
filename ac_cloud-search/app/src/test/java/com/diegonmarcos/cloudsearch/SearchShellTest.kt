@@ -310,40 +310,45 @@ class SearchShellTest {
 
     /**
      * #1161 the shared nav pattern: the first row (no hamburger, breadcrumb title, AI, Profile top-right, Configs), the bottom nav of
-     * the five declared sections (each item shows its label at rest) and the second row of the section's pages, with the
+     * the seven declared sections (each item shows its label at rest) and the second row of the section's pages, with the
      * search field of the page still there and typeable.
      */
     @Test fun theSharedNavPatternRendersWithTheSearchFieldInside() {
         launch()
         assertEquals(com.diegonmarcos.superapp.bottomnav.NavStyle.Fleet, com.diegonmarcos.cloudsearch.ui.NAV.style)
-        waitFor(Tags.nav("research"))
+        waitFor(Tags.nav("news"))
         compose.onNodeWithTag(com.diegonmarcos.superapp.navbartop1.TopFirstRowTags.ROW).assertExists()
         for (tag in listOf(Tags.ISLAND, Tags.PROFILE, Tags.CONFIGS)) compose.onNodeWithTag(tag).assertExists()
         compose.onNodeWithTag(com.diegonmarcos.superapp.bottomnav.TopBarTags.MENU).assertDoesNotExist()
         val ids = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
-        assertEquals(listOf("research", "searches", "chat", "cgc", "mecgc"), ids)
+        assertEquals(listOf("news", "research", "cgc", "chat", "media", "shopping", "brokers"), ids)
         compose.onNodeWithTag(com.diegonmarcos.superapp.navbarbottom.BottomTags.BAR).assertExists()
         for (id in ids) compose.onNodeWithTag(Tags.nav(id)).assertExists()
         openVertical("house")
         waitFor(Tags.WEB_STRIP)
-        for (v in SEARCHES_PAGES) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        for (v in BROKERS_PAGES) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
         waitFor(Tags.SEARCH_BOX)
         compose.onNodeWithTag(Tags.SEARCH_BOX).performTextInput("Wohnung")
         compose.onNodeWithTag(Tags.SEARCH_BOX).assertTextContains("Wohnung", substring = true)
     }
 
-    /** #1184 Searches is the former Me and LLC merged: every one of their verticals, once, in their old order. */
-    private val SEARCHES_PAGES = listOf("house", "jobs", "groceries", "things", "commercial", "business", "suppliers", "services")
+    /** #1197 the former Searches (and the old Me and LLC), each vertical once: Media, Shopping and Brokers hold them. */
+    private val MEDIA_PAGES = listOf("image", "video", "movies", "books")
+    private val SHOPPING_PAGES = listOf("groceries", "electronics", "clothing", "things")
+    private val BROKERS_PAGES = listOf("jobs", "house", "commercial", "business", "suppliers", "services")
+    private val SEARCH_PAGES get() = listOf(state.chatVertical, "engines", "apps", "messages", "code")
 
-    /** The five destinations route, and each shows its top tabs (Research's News/Reports/Agents, Searches' verticals, AI's Search + fleet searches, the two code indexes' modes). */
-    @Test fun theFiveDestinationsRouteAndKeepTheirTopTabs() {
+    /** The seven destinations route, and each shows its second row (News' feeds, Research's Reports/Models/Agents, CGC's two indexes, Search's pages, the verticals of Media, Shopping, Brokers). */
+    @Test fun theSevenDestinationsRouteAndKeepTheirTopTabs() {
         launch()
         val tabs = mapOf(
-            "research" to listOf("news", "reports", "agenthub"),
-            "searches" to SEARCHES_PAGES,
-            "chat" to listOf(state.chatVertical, "apps", "messages", "code"),
-            "cgc" to listOf("semantic", "graph"),
-            "mecgc" to listOf("semantic", "graph"),
+            "news" to listOf("news", "youtube", "gnews", "rss"),
+            "research" to listOf("reports", "models", "agenthub"),
+            "cgc" to listOf("cloud_semantic", "cloud_graph", "me_semantic", "me_graph"),
+            "chat" to SEARCH_PAGES,
+            "media" to MEDIA_PAGES,
+            "shopping" to SHOPPING_PAGES,
+            "brokers" to BROKERS_PAGES,
         )
         for ((section, pages) in tabs) {
             compose.onNodeWithTag(Tags.nav(section)).performClick()
@@ -351,7 +356,7 @@ class SearchShellTest {
             compose.runOnIdle { assertEquals(section, state.section) }
             for (id in pages) compose.onNodeWithTag(Tags.subpage(id)).assertExists()
         }
-        compose.onNodeWithTag(Tags.nav("searches")).performClick()
+        compose.onNodeWithTag(Tags.nav("brokers")).performClick()
         compose.waitForIdle()
         waitFor(Tags.WEB_STRIP)
     }
@@ -590,25 +595,45 @@ class SearchShellTest {
         assertTrue(SearchDebugApi.things(services, mapOf("q" to "x", "city" to "München")).getBoolean("ok"))
     }
 
-    // ── #913 the island, Agents and Reports; #1184 Research, Searches, AI, Cloud-CGC, Me-CGC ──────
-    @Test fun theIslandHoldsTheFiveSectionsAndEachOpens() {
+    // ── #913 the island, Agents and Reports; #1197 News, Research, CGC, Search, Media, Shopping, Brokers ──────
+    @Test fun theIslandHoldsTheSevenSectionsAndEachOpens() {
         launch()
-        assertEquals(listOf("research", "searches", "chat", "cgc", "mecgc"), NAV_IDS)
+        assertEquals(listOf("news", "research", "cgc", "chat", "media", "shopping", "brokers"), NAV_IDS)
+        assertEquals(listOf("News", "Research", "CGC", "Search", "Media", "Shopping", "Brokers"), NAV_IDS.map { com.diegonmarcos.cloudsearch.ui.NAV.section(it)!!.label })
         for (id in NAV_IDS) {
             compose.onNodeWithTag(Tags.nav(id)).performClick()
             compose.waitForIdle()
             assertEquals(id, state.section)
         }
-        // Searches' strip is the personal verticals then the commercial ones (the former Me and LLC), Chat is the assistant.
-        compose.onNodeWithTag(Tags.nav("searches")).performClick()
+        // Brokers holds Job Placement, Real Estate and Business in one row per group; Search is the assistant.
+        compose.onNodeWithTag(Tags.nav("brokers")).performClick()
         waitFor(Tags.WEB_STRIP)
-        assertEquals(SEARCHES_PAGES, NAV_PAGES("searches"))
-        for (v in SEARCHES_PAGES) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        assertEquals(BROKERS_PAGES, NAV_PAGES("brokers"))
+        for (v in BROKERS_PAGES) compose.onNodeWithTag(Tags.subpage(v)).assertExists()
+        for (g in listOf("job_placement", "real_estate", "business_group")) compose.onNodeWithTag(com.diegonmarcos.superapp.navbartop2.SecondRowGroupTags.row(g)).assertExists()
         openVertical("commercial")
-        compose.runOnIdle { assertEquals("commercial", state.vertical); assertEquals("searches", state.section) }
+        compose.runOnIdle { assertEquals("commercial", state.vertical); assertEquals("brokers", state.section) }
         compose.onNodeWithTag(Tags.nav("chat")).performClick()
         waitFor(Tags.page("assistant"))
         assertEquals(state.chatVertical, state.vertical)
+    }
+
+    /** #1197 Search > Engines: every declared major engine is a card; a tap opens that engine's results for the typed query in cloud-browser. */
+    @Test fun theEnginesPageOpensAMajorEngineWithTheTypedQuery() {
+        launch()
+        val cfg = Decl.config
+        compose.onNodeWithTag(Tags.nav("chat")).performClick()
+        compose.onNodeWithTag(Tags.subpage("engines")).performClick()
+        waitFor(com.diegonmarcos.cloudsearch.ui.EnginesTags.QUERY)
+        assertTrue("the list declares the engines the owner named", listOf("google", "bing", "duckduckgo", "brave", "qwant", "kagi", "perplexity").all { id -> cfg.majorEngines.any { it.id == id } })
+        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.EnginesTags.QUERY).performTextInput("kotlin jobs")
+        val shadow = shadowOf(RuntimeEnvironment.getApplication())
+        while (shadow.nextStartedActivity != null) Unit
+        val first = cfg.majorEngines.first()
+        compose.onNodeWithTag(com.diegonmarcos.cloudsearch.ui.EnginesTags.engine(first.id)).performClick()
+        val opened = shadow.nextStartedActivity
+        assertEquals(Templates.fill(first.url, "kotlin jobs", cfg.city(state.city)), opened?.dataString)
+        assertEquals(BuildConfig.BROWSER_PACKAGE, opened?.`package`)
     }
 
     /** #1184 the Agents pages are Research's third page. */
@@ -721,7 +746,7 @@ class SearchShellTest {
         launch()
         compose.onNodeWithTag(Tags.nav("chat")).performClick()
         waitFor(Tags.CHAT_STRIP)
-        assertEquals(listOf(state.chatVertical, "apps", "messages", "code"), NAV_PAGES("chat"))
+        assertEquals(SEARCH_PAGES, NAV_PAGES("chat"))
         for (p in listOf("apps", "messages", "code")) {
             compose.onNodeWithTag(Tags.subpage(p)).performClick()
             waitFor(Tags.page("cloud_$p"))
@@ -783,7 +808,7 @@ class SearchShellTest {
         compose.runOnIdle { assertEquals(listOf("stepstone", "arbeitsagentur"), a.prefs.sources(agent).map { it.id }) }
     }
 
-    /** #913b Searches' verticals lead to their agents. */
+    /** #913b Brokers' and Shopping's verticals lead to their agents. */
     @Test fun aVerticalLeadsToItsAgents() {
         installAgents()
         launch()
@@ -794,7 +819,7 @@ class SearchShellTest {
         waitFor(AT.screen("rs_house_rental"))
         compose.runOnIdle { assertEquals("research", state.section); assertEquals("agenthub", state.researchPage); assertEquals("rs_house_rental", state.agentOpen) }
         openVertical("commercial")
-        compose.runOnIdle { assertEquals("searches", state.section) }
+        compose.runOnIdle { assertEquals("brokers", state.section) }
         waitFor(Tags.agentLink("rs_commercial_stores"))
         compose.onNodeWithTag(Tags.agentLink("rs_commercial_buildings")).assertExists()
     }

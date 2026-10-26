@@ -2936,15 +2936,15 @@
                 "target": "intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
               },
               {
-                "_doc": "Group separator (#1162): a bare '|' between SI AI and Research Code, like the Data Apps and Me rows; the AGI row reads SI AI | Research Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
                 "id": "agi-sep-1",
                 "label": "|",
                 "separator": true
               },
               {
-                "_doc": "#1162 the caption is now Research (Cloud Search renamed Cloud Research; id, package and extapp target stay search / cloud-search so installed copies update). #779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). #803: the owner moved SuperApp to the Configs row, so AGI now STARTS with Search: Search, AI Chat, Code, Tools, MyTerminal, Terminal (B-LLM and S-LLM removed, Tools in S-LLM's place, 2026-10-13). GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3) — #803 the Phosphor shooting-star in the mockup's .ai-nav-icon gradient (Cloud Search's app/tools/phosphor.json::launcher generates it; Phosphor is MIT, recorded in ac_cloud-search/NOTICE.md). `tint: false` keeps that gradient: every other tile glyph is drawn white, which would flatten this one to a silhouette (test-agi-tiles.sh T6).",
+                "_doc": "#1162 the caption was Research (Cloud Search renamed Cloud Research); the caption is Search again (renamed back to Cloud Search); id, package and extapp target stay search / cloud-search so installed copies update). #779 Search — hands off to the standalone Cloud Search app (ac_cloud-search, com.diegonmarcos.cloudsearch, read from ITS android.application_id and app/build.gradle namespace). #803: the owner moved SuperApp to the Configs row, so AGI now STARTS with Search: Search, AI Chat, Code, Tools, MyTerminal, Terminal (B-LLM and S-LLM removed, Tools in S-LLM's place, 2026-10-13). GroupedTilesFragment walks group.tiles in declared order with no sort, so array position is that placement, and test-agi-tiles.sh T1 pins the row. target=extapp:cloud-search → launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-search].install_apk_url (ABI-resolved through the fleet assets map). icon ic_cloud_search is Cloud Search's own launcher foreground, byte for byte (test-agi-tiles.sh T3) — #803 the Phosphor shooting-star in the mockup's .ai-nav-icon gradient (Cloud Search's app/tools/phosphor.json::launcher generates it; Phosphor is MIT, recorded in ac_cloud-search/NOTICE.md). `tint: false` keeps that gradient: every other tile glyph is drawn white, which would flatten this one to a silhouette (test-agi-tiles.sh T6).",
                 "id": "search",
-                "label": "Research",
+                "label": "Search",
                 "icon": "ic_cloud_search",
                 "tint": false,
                 "target": "extapp:cloud-search"
@@ -2957,7 +2957,7 @@
                 "target": "extapp:cloud-code"
               },
               {
-                "_doc": "Group separator (#1162): a bare '|' between SI AI and Research Code, like the Data Apps and Me rows; the AGI row reads SI AI | Research Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
                 "id": "agi-sep-2",
                 "label": "|",
                 "separator": true
@@ -2970,7 +2970,7 @@
                 "target": "extapp:cloud-tools-small-llms"
               },
               {
-                "_doc": "Group separator (#1162): a bare '|' between SI AI and Research Code, like the Data Apps and Me rows; the AGI row reads SI AI | Research Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
                 "id": "agi-sep-3",
                 "label": "|",
                 "separator": true
