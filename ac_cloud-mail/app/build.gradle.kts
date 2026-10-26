@@ -384,6 +384,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.core)
     implementation(project(":libs:openpgp-api"))
+    // The nav walk's seed receiver (src/navWalk, -PtestApp only) writes the cached folders through the database it builds.
+    if (testApp) implementation(libs.androidx.room.runtime)
 
     // Enhance and Translate. NOT the engines - this is the binder they are reached
     // across; both live in the Cloud Keyboard, along with the routing settings and the
