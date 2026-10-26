@@ -23,7 +23,8 @@ import com.diegonmarcos.cloudsearch.R
 import com.diegonmarcos.cloudsearch.core.ResearchConfig
 import com.diegonmarcos.cloudsearch.data.Browser
 import com.diegonmarcos.cloudsearch.data.FleetCalls
-import com.diegonmarcos.cloudsearch.models.ModelCataloguePage
+import com.diegonmarcos.superapp.ai.AiModelCatalogue
+import com.diegonmarcos.superapp.modelcatalogue.CatalogueFetch
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -56,7 +57,11 @@ fun ResearchSection(state: SearchState) {
         }
         Box(Modifier.weight(1f).fillMaxWidth().testTag(Tags.page("research_" + state.researchPage))) {
             when (state.researchPage) {
-                "models" -> ModelCataloguePage(state, onClose = { state.researchPage = "reports" }, modifier = Modifier.padding(top = Metrics.contentTop, bottom = Metrics.contentBottom))
+                "models" -> AiModelCatalogue(
+                    state.chat, aiTheme(),
+                    CatalogueFetch { url -> state.services.http.get(url, emptyMap(), state.services.cfg.timeoutMs).takeIf { it.code in 200..299 }?.body },
+                    Modifier.padding(top = Metrics.contentTop, bottom = Metrics.contentBottom),
+                )
                 "agenthub" -> AgentsSection(state)
                 else -> ReportsSection(state)
             }
