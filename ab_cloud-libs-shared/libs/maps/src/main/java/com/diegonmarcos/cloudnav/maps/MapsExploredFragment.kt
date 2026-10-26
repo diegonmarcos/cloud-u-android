@@ -370,6 +370,7 @@ class MapsExploredFragment : KitComposeFragment() {
     /** Feature count the LIVE MapLibre pin SOURCE reports — proves the native
      *  CircleLayer actually renders the typed FeatureCollection on this stack. */
     fun debugPinSourceCount(): Int = mapFrag?.debugPinFeatureCount() ?: -1
+    fun debugMapState(): String = mapFrag?.debugState() ?: "mapFrag=null"
     fun debugSetMode(m: Mode) { mode = m; recomputePins(frame = false) }
     /** Visited-only feature count the manager built for [layer] (needs assets). */
     fun debugGeoVisitedCount(layer: MapsGeoLayers.Layer): Int = geo?.visitedCount(layer) ?: -1

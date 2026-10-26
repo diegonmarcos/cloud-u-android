@@ -87,6 +87,7 @@ class ExploredRenderTest {
 
                 // ── native pins + Countries fill both register on the GL stack ──
                 var pinSource = -1
+                var mapState = "no Explored fragment"
                 var fillSource = -1
                 var deadline = System.currentTimeMillis() + 90_000
                 while (System.currentTimeMillis() < deadline) {
@@ -94,9 +95,10 @@ class ExploredRenderTest {
                         explored()?.let { f ->
                             pinSource = f.debugPinSourceCount()
                             fillSource = f.debugFillSourceCount(MapsGeoLayers.Layer.COUNTRIES)
+                            mapState = f.debugMapState()
                         }
                     }
-                    android.util.Log.i("MapPins", "probe pinSource=$pinSource fillSource=$fillSource")
+                    android.util.Log.i("MapPins", "probe pinSource=$pinSource fillSource=$fillSource $mapState")
                     scenario.onActivity { act ->
                         fun tree(f: androidx.fragment.app.Fragment): String = f.javaClass.simpleName + "(v=" + (f.view != null) + ",r=" + f.isResumed + ")" + f.childFragmentManager.fragments.joinToString(",", "[", "]") { tree(it) }
                         android.util.Log.i("MapPins", "tree " + act.supportFragmentManager.fragments.joinToString(" ") { tree(it) })
@@ -104,8 +106,8 @@ class ExploredRenderTest {
                     if (pinSource > 0 && fillSource > 0) break
                     Thread.sleep(1000)
                 }
-                assertTrue("native pin SOURCE must report >0 features (got $pinSource)", pinSource > 0)
-                assertTrue("Countries fill SOURCE must report >0 features (got $fillSource)", fillSource > 0)
+                assertTrue("native pin SOURCE must report >0 features (got $pinSource; map: $mapState)", pinSource > 0)
+                assertTrue("Countries fill SOURCE must report >0 features (got $fillSource; map: $mapState)", fillSource > 0)
 
                 // ── PLACES mode must render FAR more pins than CITY (684 > 228) ──
                 var cityCount = -1

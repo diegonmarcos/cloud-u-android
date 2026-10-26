@@ -170,6 +170,11 @@ class MapsMapFragment : KitComposeFragment() {
      *  render (typed FeatureCollection) on this stack. */
     fun debugPinFeatureCount(): Int = debugFillFeatureCount(SRC_PINS)
 
+    /** Where the map is in its bring-up (test diagnostics: a pin count of -1 alone cannot say which step never happened). */
+    fun debugState(): String = "mapView=${mapView != null} attached=${mapView?.isAttachedToWindow} size=${mapView?.width}x${mapView?.height} " +
+        "shown=${mapView?.isShown} map=${map != null} style=${map?.style != null} styleReady=$styleReady styleKey=$styleKey " +
+        "viewCreated=${view != null} resumed=$isResumed"
+
     /** Project a geo coordinate to a screen pixel (null until the map is ready).
      *  Lets a caller draw its own pin overlay on top of the map — bypassing the
      *  GeoJSON/CircleLayer pin path. */
