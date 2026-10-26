@@ -709,6 +709,7 @@ open class ShellActivity : AppCompatActivity(),
         navSwipeGesture = android.view.GestureDetector(this,
             object : android.view.GestureDetector.SimpleOnGestureListener() {
                 override fun onDown(e: android.view.MotionEvent): Boolean = true
+                override fun onLongPress(e: android.view.MotionEvent) { Trace.i(TAG, "detector long-press at x=${e.x} y=${e.y}") }
 
                 override fun onFling(
                     e1: android.view.MotionEvent?, e2: android.view.MotionEvent,
