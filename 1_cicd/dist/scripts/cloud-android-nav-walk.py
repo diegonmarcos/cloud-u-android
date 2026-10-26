@@ -137,7 +137,7 @@ def texts_in(nodes, box):
     return " ".join(n.text for n in nodes if n.text and n.l >= box.l and n.r <= box.r and n.t >= box.t and n.b <= box.b) + " " + box.text + " " + box.desc
 
 
-BLOCKER_TEXTS = ("Get Started", "Continue with local files", "Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK", "Continue", "Next", "Finish", "Done")
+BLOCKER_TEXTS = ("Get Started", "Skip for now", "Continue with local files", "Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK", "Continue", "Next", "Finish", "Done")
 
 
 def clear_blockers(nodes):
@@ -225,7 +225,7 @@ class Walk:
         shell("settings put global hide_error_dialogs 1")
         shell("logcat -b all -c")
         shell("am start -W -n %s" % act, timeout=120)
-        deadline = time.time() + 90
+        deadline = time.time() + 150  # a first-run wizard (Cloud Gallery: five steps) is tapped through
         while time.time() < deadline:
             nodes = dump(2)
             if nodes and any(n.rid.startswith(ITEM) for n in nodes):

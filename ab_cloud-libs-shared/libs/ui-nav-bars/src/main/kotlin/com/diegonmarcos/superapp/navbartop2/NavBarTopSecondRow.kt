@@ -110,7 +110,7 @@ public class SubPageRequests {
         private set
     public fun request(pageId: String) { pending = pageId; lastRequested = pageId }
     public fun consume() { pending = null }
-    private var lastRequested: String? = null
+    private var lastRequested: String? by mutableStateOf(null)
 
     // The page each strip on screen now shows: the first row's title path reads it, so the path follows a pick from a strip or the
     // dropdown without the app hoisting its sub-page state. Strips on one page that show pages of the SAME depth (two pill rows) are
