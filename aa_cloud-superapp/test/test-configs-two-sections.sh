@@ -74,7 +74,7 @@ def members(g, s=''):
             if not p.get('hidden') and not p.get('is_action')
             and p.get('group', '') == g and p.get('subgroup', '') == s]
 want = {
-    ('Setup', 'Launcher'):             ['Controls', 'One-Hand', 'Notify'],  # Controls = tabs Presets | Panels (UI | Tools)
+    ('Setup', 'Launcher'):             ['Quick Actions', 'One-Hand', 'Notify'],  # Controls = tabs Presets | Panels (UI | Tools)
     ('Fleet', ''):                     ['C3', 'Peer Control', 'Agents'],
     ('Setup', 'Connect'):          ['Account'],
     ('Setup', 'Apps'):             ['Store', 'Permissions'],
@@ -412,7 +412,7 @@ for g, s, label, icon in tiles:
 want = ['H:SETUP',
         'S:CONNECT',      'Account[ic_person]',
         'S:APPS',         'Store[ic_storefront]', 'Permissions[ic_key]',
-        'S:LAUNCHER',     'Controls[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
+        'S:LAUNCHER',     'Quick Actions[ic_home]', 'One-Hand[ic_onehand]', 'Notify[ic_rss]',
         'S:NETWORK',          'Firewall[ic_lock]', 'DNS[ic_world]', 'Webserver[ic_web]', 'Cloud Mesh[ic_wg]', 'Apps Access[ic_apps]', 'ADB Shell[ic_terminal]',
         'H:FLEET',        'C3[ic_p_watchdog]', 'Peer Control[ic_hub]', 'Agents[ic_robot]',
         'H:OBSERVABILITY', 'Diagnostics[ic_monitor_heart]', 'Logcat[ic_subject]', 'About[ic_info]',
@@ -424,7 +424,7 @@ else:
     print('rendered != spec: ' + ' | '.join(l for l in difflib.unified_diff(want, out, lineterm='', n=0)
                                            if l[:1] in '+-' and l[:3] not in ('+++', '---')))
 PY
-)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Controls,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Webserver,Cloud Mesh,Apps Access,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[Diagnostics,Logcat,About] ACTIONS[Update All,KDE Connect,Animations]"
+)" "grid = SETUP ▸ CONNECT[Account] ▸ APPS[Store,Permissions] ▸ LAUNCHER[Quick Actions,One-Hand,Notify] ▸ NETWORK[Firewall,DNS,Webserver,Cloud Mesh,Apps Access,ADB Shell] FLEET[C3,Peer Control,Agents] OBSERVABILITY[Diagnostics,Logcat,About] ACTIONS[Update All,KDE Connect,Animations]"
 
 echo "== T12: THE AI PAGE IS GONE, not hidden — no route, target or tile names it (#723) =="
 # Deleting a declaration and leaving its door behind is the dead-tile failure:

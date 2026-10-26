@@ -159,7 +159,9 @@ private fun PageTabsContent(
 
     val live = insets ?: WindowInsets.statusBars.union(WindowInsets.displayCutout)
     val liveTop = if (underTopChrome && !flushTop) live.getTop(density) else 0
-    val divider = pages.indexOfFirst { it.action.isNotBlank() }.takeIf { it > 0 }
+    val launchDivider = pages.indexOfFirst { it.action.isNotBlank() }.takeIf { it > 0 }
+    /** Indices a "|" is drawn before: the first launch page, and every page declared `separatorBefore`. */
+    val dividers = pages.indices.filter { it > 0 && (it == launchDivider || pages[it].separatorBefore) }.toSet()
 
     fun styleAt(px: Float, color: Color = Color.Unspecified) = pillStyle(density, px, spacing, color)
     val labels = pages.map { it.label.uppercase() }
@@ -170,9 +172,9 @@ private fun PageTabsContent(
             .padding(top = with(density) { (topBase + liveTop).toDp() }, bottom = with(density) { bottomGap.toDp() }),
     ) {
         val widthPx = with(density) { maxWidth.toPx() }
-        val dividerPx = if (divider == null) 0f else {
+        val dividerPx = if (dividers.isEmpty()) 0f else {
             val w = measurer.measure("|", styleAt(startPx)).size.width
-            w + 2 * dividerPad
+            (w + 2 * dividerPad) * dividers.size
         }
         val avail = widthPx - 2 * stripPad - dividerPx
         val plan = remember(labels, avail, density.density, density.fontScale, spacing) {
@@ -204,7 +206,7 @@ private fun PageTabsContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             pages.forEachIndexed { i, page ->
-                if (i == divider) {
+                if (i in dividers) {
                     Text(
                         "|",
                         // A drawn separator, not content: TalkBack would read it as "vertical bar".

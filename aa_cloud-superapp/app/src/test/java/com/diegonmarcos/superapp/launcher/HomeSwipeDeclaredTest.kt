@@ -14,8 +14,11 @@ import org.robolectric.annotation.Config
 
 /**
  * Home-screen vertical swipes are DATA (build.json onehand.home_swipes -> BuildConfig.HOME_SWIPE_*):
- *   S1 swipe UP is Cloud > Apps, swipe DOWN is the Notify page, and a fresh install's prefs read exactly that
+ *   S1 swipe UP is Cloud > Apps, swipe DOWN on the left half is Notify, on the right half Quick Actions, and a fresh
+ *      install's prefs read exactly that; left is the last Cloud app, right the last SuperApp page
  *   S2 each declared `page:` target is a page the app really has (section + page declared)
+ *   S3 the declared shapes are a circle (toggle the light) and a C (open Cloud Calc)
+ *   S4 the Configs > Launcher entry is called Quick Actions
  * The gestures themselves are driven on an emulator by androidTest HomeSwipeGestureTest.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -33,15 +36,35 @@ class HomeSwipeDeclaredTest {
 
     @Test fun `S1 up is Cloud Apps and down is Notify`() {
         assertEquals("page:cloud/apps", BuildConfig.HOME_SWIPE_UP)
-        assertEquals("page:communication/my-rss", BuildConfig.HOME_SWIPE_DOWN)
+        assertEquals("page:communication/my-rss", BuildConfig.HOME_SWIPE_DOWN_LEFT)
+        assertEquals("page:config/controls", BuildConfig.HOME_SWIPE_DOWN_RIGHT)
+        assertEquals("open_last_cloud_app", BuildConfig.HOME_SWIPE_LEFT)
+        assertEquals("open_last_superapp_page", BuildConfig.HOME_SWIPE_RIGHT)
         assertEquals("Notify", Sections.byId("communication")!!.label)
         val prefs = HomeSwipePrefs(RuntimeEnvironment.getApplication())
         assertEquals(BuildConfig.HOME_SWIPE_UP, prefs.up)
-        assertEquals(BuildConfig.HOME_SWIPE_DOWN, prefs.down)
+        assertEquals(BuildConfig.HOME_SWIPE_DOWN_LEFT, prefs.downLeft)
+        assertEquals(BuildConfig.HOME_SWIPE_DOWN_RIGHT, prefs.downRight)
+        assertEquals(BuildConfig.HOME_SWIPE_LEFT, prefs.left)
+        assertEquals(BuildConfig.HOME_SWIPE_RIGHT, prefs.right)
     }
 
     @Test fun `S2 the declared swipe targets are real pages`() {
         resolves(BuildConfig.HOME_SWIPE_UP)
-        resolves(BuildConfig.HOME_SWIPE_DOWN)
+        resolves(BuildConfig.HOME_SWIPE_DOWN_LEFT)
+        resolves(BuildConfig.HOME_SWIPE_DOWN_RIGHT)
+    }
+
+    @Test fun `S3 the declared shapes are a circle and a C`() {
+        val t = ShapeRecogniser.declared.templates.associate { it.id to it.action }
+        assertEquals("toggle_light", t["circle"])
+        assertEquals("open_cloud_calc", t["c"])
+        for (a in t.values) assertTrue("$a is not in the Configs picker", HomeSwipePrefs.ACTIONS.any { it.first == a })
+        for (a in listOf(BuildConfig.HOME_SWIPE_LEFT, BuildConfig.HOME_SWIPE_RIGHT))
+            assertTrue("$a is not in the Configs picker", HomeSwipePrefs.ACTIONS.any { it.first == a })
+    }
+
+    @Test fun `S4 the Launcher entry is Quick Actions`() {
+        assertEquals("Quick Actions", Sections.byId("config")!!.allPages.first { it.id == "controls" }.label)
     }
 }

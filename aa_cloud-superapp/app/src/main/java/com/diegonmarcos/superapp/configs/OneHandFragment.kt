@@ -505,7 +505,14 @@ class OneHandFragment : KitComposeFragment() {
         addHomeSwipePicker("Swipe up",    { HomeSwipePrefs(ctx).up },    { HomeSwipePrefs(ctx).up = it })
         addHomeSwipePicker("Swipe left",  { HomeSwipePrefs(ctx).left },  { HomeSwipePrefs(ctx).left = it })
         addHomeSwipePicker("Swipe right", { HomeSwipePrefs(ctx).right }, { HomeSwipePrefs(ctx).right = it })
-        addHomeSwipePicker("Swipe down",  { HomeSwipePrefs(ctx).down },  { HomeSwipePrefs(ctx).down = it })
+        addHomeSwipePicker("Swipe down (left half)",  { HomeSwipePrefs(ctx).downLeft },  { HomeSwipePrefs(ctx).downLeft = it })
+        addHomeSwipePicker("Swipe down (right half)", { HomeSwipePrefs(ctx).downRight }, { HomeSwipePrefs(ctx).downRight = it })
+        caption(
+            "Draw a shape on Home (a long curved stroke; straight strokes stay swipes). " +
+            "The shapes and their tolerances are declared in onehand.shape_gestures.")
+        for (t in com.diegonmarcos.superapp.launcher.ShapeRecogniser.declared.templates) {
+            addHomeSwipePicker("Draw: ${t.label}", { HomeSwipePrefs(ctx).shape(t.id, t.action) }, { HomeSwipePrefs(ctx).setShape(t.id, it) })
+        }
         caption(
             "Runtime overrides; defaults come from onehand.home_swipes, baked " +
             "into BuildConfig at build time.")

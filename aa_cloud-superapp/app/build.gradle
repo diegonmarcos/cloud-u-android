@@ -251,9 +251,12 @@ def uiSwipeWalkJson = groovy.json.JsonOutput.toJson(buildJson.ui.swipe_walk ?: [
 def uiSwipeWalkB64  = uiSwipeWalkJson.bytes.encodeBase64().toString()
 // Home-screen swipe actions — configurable via build.json::onehand.home_swipes.
 def homeSwipeUp    = (buildJson.onehand?.home_swipes?.swipe_up    ?: "page:cloud/apps") as String
-def homeSwipeLeft  = (buildJson.onehand?.home_swipes?.swipe_left  ?: "walk_step_next") as String
-def homeSwipeRight = (buildJson.onehand?.home_swipes?.swipe_right ?: "walk_step_prev") as String
-def homeSwipeDown  = (buildJson.onehand?.home_swipes?.swipe_down  ?: "page:communication/my-rss") as String
+def homeSwipeLeft  = (buildJson.onehand?.home_swipes?.swipe_left  ?: "open_last_cloud_app") as String
+def homeSwipeRight = (buildJson.onehand?.home_swipes?.swipe_right ?: "open_last_superapp_page") as String
+def homeSwipeDownLeft  = (buildJson.onehand?.home_swipes?.swipe_down_left  ?: "page:communication/my-rss") as String
+def homeSwipeDownRight = (buildJson.onehand?.home_swipes?.swipe_down_right ?: "page:config/controls") as String
+// Drawn-shape gestures (circle, C ...): templates + recogniser tolerances, read by launcher/ShapeRecogniser.
+def homeShapesB64 = groovy.json.JsonOutput.toJson(buildJson.onehand?.shape_gestures ?: [:]).bytes.encodeBase64().toString()
 // ui.search_scopes is NOT baked here any more: libs:search reads it from
 // ${rootDir}/build.json into its OWN BuildConfig, so an app gets scope chips
 // by declaring the block and nothing else.
@@ -843,7 +846,9 @@ android {
         buildConfigField "String", "HOME_SWIPE_UP",    "\"${homeSwipeUp}\""
         buildConfigField "String", "HOME_SWIPE_LEFT",  "\"${homeSwipeLeft}\""
         buildConfigField "String", "HOME_SWIPE_RIGHT", "\"${homeSwipeRight}\""
-        buildConfigField "String", "HOME_SWIPE_DOWN",  "\"${homeSwipeDown}\""
+        buildConfigField "String", "HOME_SWIPE_DOWN_LEFT",  "\"${homeSwipeDownLeft}\""
+        buildConfigField "String", "HOME_SWIPE_DOWN_RIGHT", "\"${homeSwipeDownRight}\""
+        buildConfigField "String", "HOME_SHAPE_GESTURES_B64", "\"${homeShapesB64}\""
         buildConfigField "String", "UI_INBOX_CLASSES_B64",   "\"${uiInboxClassesB64}\""
         buildConfigField "String", "UI_CAMERA_APPS_B64",     "\"${uiCameraAppsB64}\""
         buildConfigField "String", "UI_PHONE_SMART_FOLDERS_B64", "\"${uiPhoneSmartFoldersB64}\""

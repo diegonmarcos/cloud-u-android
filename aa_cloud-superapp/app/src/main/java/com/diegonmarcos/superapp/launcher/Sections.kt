@@ -174,6 +174,8 @@ object Sections {
          *  is a classification and belongs beside the other classifications
          *  under ui.*, where every surface and every tester can read it. */
         val classId: String = "",
+        /** Used by kind=board_resources — which [com.diegonmarcos.superapp.boards.ResourcesProvider] section this card reads. */
+        val resource: String = "",
         /** Which side of a page's Cloud/Phone split this panel's stream sits
          *  on. A property of the SOURCE, not of any single notification:
          *  everything the notification listener captures is from an app on
@@ -440,6 +442,8 @@ object Sections {
         /** A thin `|` between two runs of tiles in the Configs page grid (same element as the
          *  Data Apps `separator`); never a destination, so the Home row skips it. */
         val separator: Boolean = false,
+        /** `separator_before` in build.json: the page strip draws a "|" group separator just before this page. */
+        val separatorBefore: Boolean = false,
 
         /** Page ids of THIS section that this page renders behind one tab
          *  strip, in strip order — the page-level twin of
@@ -724,6 +728,7 @@ object Sections {
                         actionsFromSection = po.optString("actions_from_section", ""),
                         hidden   = po.optBoolean("hidden", false),
                         separator = po.optBoolean("separator", false),
+                        separatorBefore = po.optBoolean("separator_before", false),
                         tabs     = po.optJSONArray("tabs")?.let { ta ->
                             (0 until ta.length()).map { ta.getString(it) }
                         }.orEmpty(),
@@ -920,6 +925,7 @@ object Sections {
                         aliases         = p.optJSONArray("aliases")?.let { aa -> (0 until aa.length()).map { aa.optString(it) }.filter { it.isNotBlank() } } ?: emptyList(),
                         source          = p.optString("source", ""),
                         classId         = p.optString("class", ""),
+                        resource        = p.optString("resource", ""),
                         limit           = p.optInt("limit", 0),
                         aboveFilters    = p.optBoolean("above_filters", false),
                         bottom          = p.optBoolean("bottom", false),
@@ -1048,7 +1054,7 @@ object Sections {
     fun defaultSectionId(): String = BuildConfig.UI_DEFAULT_SECTION
 
     /** A page as the shared strip ([com.diegonmarcos.superapp.bottomnav.PageTabsView]) draws it. */
-    fun navPage(p: Page): NavPage = NavPage(p.id, p.label, p.iconName.orEmpty(), p.action)
+    fun navPage(p: Page): NavPage = NavPage(p.id, p.label, p.iconName.orEmpty(), p.action, separatorBefore = p.separatorBefore)
 
     /** Apps/Admin global toggle default — overridden by ModePrefs at runtime. */
     fun defaultMode(): String = BuildConfig.UI_DEFAULT_MODE

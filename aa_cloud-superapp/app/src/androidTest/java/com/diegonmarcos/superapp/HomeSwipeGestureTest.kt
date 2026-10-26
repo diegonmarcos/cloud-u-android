@@ -19,8 +19,9 @@ import org.junit.runner.RunWith
 
 /**
  * The Home screen's vertical swipes on a REAL emulator, through the real input pipeline. The destinations are DATA
- * (build.json onehand.home_swipes): swipe UP opens Cloud > Apps, swipe DOWN opens Notify. The test reads the
- * declared targets from BuildConfig, so editing build.json changes what it expects, never this file.
+ * (build.json onehand.home_swipes): swipe UP opens Cloud > Apps, swipe DOWN on the left half Notify, on the right half
+ * Quick Actions, swipe LEFT the last Cloud app, swipe RIGHT the last SuperApp page; a drawn circle toggles the light and a drawn C
+ * opens Cloud Calc (onehand.shape_gestures). The test reads the declared targets from BuildConfig, so editing build.json changes what it expects, never this file.
  *
  * Run: INSTRUMENT_CLASS=com.diegonmarcos.superapp.HomeSwipeGestureTest ./build.sh instrument
  */
@@ -79,38 +80,59 @@ class HomeSwipeGestureTest {
         return cond()
     }
 
-    /** A quick vertical fling at column [xFrac] of the screen: [fromFrac] to [toFrac] of its height in 160 ms. */
-    private fun fling(xFrac: Float, fromFrac: Float, toFrac: Float) {
-        val dm = ctx.resources.displayMetrics
-        val x = dm.widthPixels * xFrac
-        val y0 = dm.heightPixels * fromFrac
-        val y1 = dm.heightPixels * toFrac
+    /** Injects one touch stroke through the real input pipeline: [pts] in screen px, 12 ms apart, starting at NOW. */
+    private fun stroke(pts: List<Pair<Float, Float>>, stepMs: Long = 12) {
         val ua = inst.uiAutomation
-        // Event times start at NOW and run 10 ms apart: the detector arms its long-press at downTime + 500 ms, and a down time in
+        // Event times start at NOW and run apart: the detector arms its long-press at downTime + 500 ms, and a down time in
         // the past (the earlier "synthetic" trick) let that fire before the release arrived, which cancels the fling.
         val t0 = SystemClock.uptimeMillis()
-        fun send(action: Int, y: Float, t: Long) {
-            val e = MotionEvent.obtain(t0, t, action, x, y, 0)
+        fun send(action: Int, p: Pair<Float, Float>, t: Long) {
+            val e = MotionEvent.obtain(t0, t, action, p.first, p.second, 0)
             e.source = InputDevice.SOURCE_TOUCHSCREEN
             ua.injectInputEvent(e, true); e.recycle()
         }
-        send(MotionEvent.ACTION_DOWN, y0, t0)
-        val steps = 8
-        for (s in 1..steps) {
-            send(MotionEvent.ACTION_MOVE, y0 + (y1 - y0) * s / steps, t0 + 10L * s)
-        }
-        send(MotionEvent.ACTION_UP, y1, t0 + 10L * (steps + 1))
+        send(MotionEvent.ACTION_DOWN, pts.first(), t0)
+        for (s in 1 until pts.size - 1) send(MotionEvent.ACTION_MOVE, pts[s], t0 + stepMs * s)
+        send(MotionEvent.ACTION_UP, pts.last(), t0 + stepMs * (pts.size - 1))
     }
 
-    /** Swipes in the first column that is not one of the Home stars (a gesture that starts on a star is the star's). */
-    private fun swipeUntil(shell: ShellActivity, up: Boolean, arrived: () -> Boolean): Boolean {
-        for (x in listOf(0.5f, 0.25f, 0.75f, 0.4f, 0.6f, 0.15f)) {
-            if (up) fling(x, 0.78f, 0.38f) else fling(x, 0.38f, 0.78f)
+    private val dm get() = ctx.resources.displayMetrics
+
+    /** A quick vertical fling at column [xFrac] of the screen: [fromFrac] to [toFrac] of its height in 8 steps. */
+    private fun fling(xFrac: Float, fromFrac: Float, toFrac: Float) {
+        val x = dm.widthPixels * xFrac
+        val y0 = dm.heightPixels * fromFrac; val y1 = dm.heightPixels * toFrac
+        stroke((0..9).map { x to y0 + (y1 - y0) * it / 9 }, 10)
+    }
+
+    /** A quick horizontal fling at row [yFrac]: [fromFrac] to [toFrac] of the width. */
+    private fun hfling(yFrac: Float, fromFrac: Float, toFrac: Float) {
+        val y = dm.heightPixels * yFrac
+        val x0 = dm.widthPixels * fromFrac; val x1 = dm.widthPixels * toFrac
+        stroke((0..9).map { x0 + (x1 - x0) * it / 9 to y }, 10)
+    }
+
+    /** An arc of radius [rFrac] x width around (cxFrac, cyFrac): from [a0] to [a1] degrees, screen coordinates (y down). */
+    private fun arcStroke(cxFrac: Float, cyFrac: Float, rFrac: Float, a0: Double, a1: Double) {
+        val cx = dm.widthPixels * cxFrac; val cy = dm.heightPixels * cyFrac; val r = dm.widthPixels * rFrac
+        stroke((0..28).map { i ->
+            val a = Math.toRadians(a0 + (a1 - a0) * i / 28)
+            (cx + r * Math.cos(a)).toFloat() to (cy - r * Math.sin(a)).toFloat()
+        })
+    }
+
+    /** Tries [attempt] at the given [spots] (the first place that is not a Home star takes the gesture) until [arrived]. */
+    private fun <T> tryUntil(shell: ShellActivity, spots: List<T>, attempt: (T) -> Unit, arrived: () -> Boolean): Boolean {
+        for (s in spots) {
+            attempt(s)
             if (until(4_000, arrived)) return true
             if (!onMain { shell.currentSection == "home" }) return false
         }
         return false
     }
+
+    private val leftXs = listOf(0.25f, 0.4f, 0.15f, 0.35f)
+    private val rightXs = listOf(0.75f, 0.6f, 0.85f, 0.65f)
 
     /** Evidence for a red run: the focused window, the top fragment, and a screenshot pulled by the workflow. */
     private fun evidence(shell: ShellActivity, name: String): String {
@@ -132,25 +154,99 @@ class HomeSwipeGestureTest {
     }
 
     private fun declared(target: String) = target.removePrefix("action:")
+    private fun lastAction(shell: ShellActivity) = onMain { shell.lastHomeAction }
+
+    private fun onCloudApps(shell: ShellActivity) = onMain {
+        val top = shell.supportFragmentManager.findFragmentById(R.id.fragment_container)
+        shell.currentSection == "cloud" &&
+            (top is GroupedTilesFragment || top?.childFragmentManager?.fragments?.any { it is GroupedTilesFragment && it.isVisible } == true)
+    }
 
     @Test fun swipeUpOpensCloudApps() {
         assertEquals("page:cloud/apps", declared(BuildConfig.HOME_SWIPE_UP))
         val shell = launchHome()
-        val ok = swipeUntil(shell, up = true) {
-            // Cloud is a tabbed section: its Apps tab is a GroupedTilesFragment hosted in the strip's pane.
-            onMain {
-                val top = shell.supportFragmentManager.findFragmentById(R.id.fragment_container)
-                shell.currentSection == "cloud" &&
-                    (top is GroupedTilesFragment || top?.childFragmentManager?.fragments?.any { it is GroupedTilesFragment && it.isVisible } == true)
-            }
-        }
+        val ok = tryUntil(shell, listOf(0.5f, 0.25f, 0.75f, 0.4f, 0.6f, 0.15f), { fling(it, 0.78f, 0.38f) }) { onCloudApps(shell) }
         assertTrue("swipe up did not open Cloud > Apps: ${if (ok) "" else evidence(shell, "up")}", ok)
     }
 
-    @Test fun swipeDownOpensNotify() {
-        assertEquals("page:communication/my-rss", declared(BuildConfig.HOME_SWIPE_DOWN))
+    @Test fun swipeDownLeftHalfOpensNotify() {
+        assertEquals("page:communication/my-rss", declared(BuildConfig.HOME_SWIPE_DOWN_LEFT))
         val shell = launchHome()
-        val ok = swipeUntil(shell, up = false) { onMain { shell.currentSection == "communication" } }
-        assertTrue("swipe down did not open Notify: ${if (ok) "" else evidence(shell, "down")}", ok)
+        val ok = tryUntil(shell, leftXs, { fling(it, 0.38f, 0.78f) }) { onMain { shell.currentSection == "communication" } }
+        assertTrue("swipe down on the left half did not open Notify: ${if (ok) "" else evidence(shell, "down-left")}", ok)
+    }
+
+    @Test fun swipeDownRightHalfOpensQuickActions() {
+        assertEquals("page:config/controls", declared(BuildConfig.HOME_SWIPE_DOWN_RIGHT))
+        val shell = launchHome()
+        val ok = tryUntil(shell, rightXs, { fling(it, 0.38f, 0.78f) }) { onMain { shell.currentSection == "config" } }
+        assertTrue("swipe down on the right half did not open Quick Actions: ${if (ok) "" else evidence(shell, "down-right")}", ok)
+    }
+
+    @Test fun swipeLeftOpensLastCloudApp() {
+        assertEquals("open_last_cloud_app", declared(BuildConfig.HOME_SWIPE_LEFT))
+        val shell = launchHome()
+        // A fleet app launched earlier; it is not installed on the emulator, so the action falls back to Cloud > Apps.
+        val pkg = com.diegonmarcos.superapp.launcher.Sections.externalApps().first { it.hubPackage.isNotBlank() }.hubPackage
+        com.diegonmarcos.superapp.apptabs.AppTabPrefs(ctx).recordExternalApp(pkg, "Fleet app")
+        val ok = tryUntil(shell, listOf(0.4f, 0.55f, 0.3f), { hfling(it, 0.8f, 0.25f) }) { lastAction(shell) == "open_last_cloud_app" }
+        assertTrue("swipe left did not run open_last_cloud_app: ${if (ok) "" else evidence(shell, "left")}", ok)
+        assertTrue("fallback is Cloud > Apps", until(8_000) { onCloudApps(shell) })
+    }
+
+    @Test fun swipeRightOpensLastSuperAppPage() {
+        assertEquals("open_last_superapp_page", declared(BuildConfig.HOME_SWIPE_RIGHT))
+        val shell = launchHome()
+        com.diegonmarcos.superapp.apptabs.AppTabPrefs(ctx).recordPage("communication", "my-rss", "Notify", "ic_rss")
+        val ok = tryUntil(shell, listOf(0.4f, 0.55f, 0.3f), { hfling(it, 0.25f, 0.8f) }) { onMain { shell.currentSection == "communication" } }
+        assertTrue("swipe right did not open the last SuperApp page: ${if (ok) "" else evidence(shell, "right")}", ok)
+    }
+
+    @Test fun drawingACircleTogglesTheLight() {
+        val declaredAction = com.diegonmarcos.superapp.launcher.ShapeRecogniser.declared.templates.first { it.id == "circle" }.action
+        assertEquals("toggle_light", declaredAction)
+        val shell = launchHome()
+        val spots = listOf(0.5f to 0.5f, 0.35f to 0.55f, 0.65f to 0.55f, 0.5f to 0.4f)
+        val ok = tryUntil(shell, spots, { arcStroke(it.first, it.second, 0.2f, 0.0, 360.0) }) { lastAction(shell) == "toggle_light" }
+        assertTrue("a drawn circle did not toggle the light: ${if (ok) "" else evidence(shell, "circle")}", ok)
+        // The light engine was driven: the torch flipped, or a flash-less emulator reported why it could not.
+        val st = com.diegonmarcos.superapp.light.Light.engine(ctx).state
+        assertTrue("the light engine was not touched", st.rearOn || st.error != null || st.frontOn)
+        onMain { com.diegonmarcos.superapp.light.Light.engine(ctx).offAll() }
+    }
+
+    @Test fun drawingACOpensCloudCalc() {
+        val declaredAction = com.diegonmarcos.superapp.launcher.ShapeRecogniser.declared.templates.first { it.id == "c" }.action
+        assertEquals("open_cloud_calc", declaredAction)
+        val shell = launchHome()
+        val spots = listOf(0.5f to 0.5f, 0.4f to 0.55f, 0.6f to 0.55f, 0.5f to 0.4f)
+        val ok = tryUntil(shell, spots, { arcStroke(it.first, it.second, 0.15f, 45.0, 315.0) }) { lastAction(shell) == "open_cloud_calc" }
+        assertTrue("a drawn C did not open Cloud Calc: ${if (ok) "" else evidence(shell, "c")}", ok)
+    }
+
+    @Test fun aLongStraightStrokeStaysASwipeNotAShape() {
+        val shell = launchHome()
+        val ok = tryUntil(shell, listOf(0.5f, 0.25f, 0.75f), { fling(it, 0.78f, 0.38f) }) { onCloudApps(shell) }
+        assertTrue("swipe up did not open Cloud > Apps", ok)
+        assertTrue("a swipe must not run a shape action", lastAction(shell) == "page:cloud/apps")
+    }
+
+    /** True once the accessibility tree of the active window shows [text] (case-insensitive substring). */
+    private fun shows(text: String) = inst.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText(text)?.isNotEmpty() == true
+
+    @Test fun boardsResourcesPageShowsTheLivePhone() {
+        val shell = launchHome()
+        onMain { shell.dispatchTarget("page:boards/resources") }
+        assertTrue("Boards did not open", until(20_000) { onMain { shell.currentSection == "boards" } })
+        assertTrue("Resources did not show Battery and Device: ${evidence(shell, "resources")}", until(20_000) { shows("Battery") && shows("Device") })
+        assertTrue("no live battery level row", until(10_000) { shows("Level") })
+    }
+
+    @Test fun boardsQuickActionsIsTheConfigsPage() {
+        val shell = launchHome()
+        onMain { shell.dispatchTarget("page:boards/quick-actions") }
+        assertTrue("Boards did not open", until(20_000) { onMain { shell.currentSection == "boards" } })
+        // The strip over Presets | Panels is the Configs > Launcher > Quick Actions page, mirrored.
+        assertTrue("Quick Actions did not show the Configs page: ${evidence(shell, "quick-actions")}", until(20_000) { shows("Panels") && shows("Presets") })
     }
 }

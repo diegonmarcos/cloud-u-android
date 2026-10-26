@@ -748,7 +748,7 @@ open class ShellActivity : AppCompatActivity(),
                         supportFragmentManager.backStackEntryCount == 0
                     if (atHomeRoot &&
                         absDy > absDx * 1.4f && absDy > minSwipePx && Math.abs(vY) > 600f) {
-                        val consumed = handleVerticalFling(dy)
+                        val consumed = handleVerticalFling(dy, e1.x)
                         if (consumed) Haptics.tap(bottomNav)
                         return consumed
                     }
@@ -785,7 +785,7 @@ open class ShellActivity : AppCompatActivity(),
 
     /** Fire the configured action on swipe-up/down while on Home. Returns
      *  true if the gesture was consumed. */
-    private fun handleVerticalFling(dy: Float): Boolean {
+    private fun handleVerticalFling(dy: Float, startX: Float): Boolean {
         // Some fragments (browser/WebView in detail mode etc.) need to
         // own vertical flings — let the inner content scroll, pull-to-
         // refresh, or fire its own swipe-up navigation without the
@@ -799,11 +799,17 @@ open class ShellActivity : AppCompatActivity(),
                 handleHomeSwipeAction(com.diegonmarcos.superapp.settings.HomeSwipePrefs(this).up); true
             }
             dy > 0 && currentSection == "home" -> {
-                handleHomeSwipeAction(com.diegonmarcos.superapp.settings.HomeSwipePrefs(this).down); true
+                // Swipe down is split by the half it STARTS in: left -> Notify, right -> Quick Actions (declared, editable).
+                val prefs = com.diegonmarcos.superapp.settings.HomeSwipePrefs(this)
+                handleHomeSwipeAction(com.diegonmarcos.superapp.launcher.HomeSwipeRouter.downAction(
+                    startX, resources.displayMetrics.widthPixels, prefs.downLeft, prefs.downRight)); true
             }
             else -> false
         }
     }
+
+    /** The last Home gesture action dispatched; read by the emulator test (HomeSwipeGestureTest). */
+    @Volatile internal var lastHomeAction: String? = null
 
     /** Dispatch a home-screen swipe action by name. Values come from
      *  build.json::onehand.home_swipes baked into BuildConfig. */
@@ -812,6 +818,7 @@ open class ShellActivity : AppCompatActivity(),
         // the Configs picker (HomeSwipePrefs.ACTIONS) stores them bare. Strip
         // once so both vocabularies hit the same branches.
         Trace.i(TAG, "home swipe action=$action")
+        lastHomeAction = action.removePrefix("action:")
         when (val a = action.removePrefix("action:")) {
             "open_last_superapp_page" -> {
                 val last = runCatching {
@@ -830,6 +837,18 @@ open class ShellActivity : AppCompatActivity(),
                     runCatching { startActivity(packageManager.getLaunchIntentForPackage(last.packageName)?.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 } else routeTarget(CLOUD_APPS_TARGET)
             }
+            "open_last_cloud_app" -> {
+                val last = runCatching {
+                    com.diegonmarcos.superapp.launcher.HomeSwipeRouter.lastCloudApp(
+                        com.diegonmarcos.superapp.apptabs.AppTabPrefs(this).all(),
+                        com.diegonmarcos.superapp.launcher.HomeSwipeRouter.fleetPackages(Sections.externalApps()))
+                }.getOrNull()
+                val launch = last?.let { packageManager.getLaunchIntentForPackage(it.packageName) }
+                if (launch != null) runCatching { startActivity(launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                else routeTarget(CLOUD_APPS_TARGET)
+            }
+            "toggle_light" -> com.diegonmarcos.superapp.light.Light.engine(this).quickTap()
+            "open_cloud_calc" -> onTileClicked("extapp:cloud-calc")
             "walk_step_next" -> { fireGeminiPattern(); walkStep(+1) }
             "walk_step_prev" -> { fireGeminiPattern(); walkStep(-1) }
             // Target-string actions ("page:phone/apps") route through the tile
@@ -864,12 +883,65 @@ open class ShellActivity : AppCompatActivity(),
         }
     }
 
+    // ── drawn shapes (circle, C): build.json onehand.shape_gestures ──────────
+    private val strokePts = ArrayList<Pair<Float, Float>>()
+    private var strokeTracking = false
+    private val shapeTrail by lazy {
+        com.diegonmarcos.superapp.launcher.GestureTrailView(this).also {
+            addContentView(it, android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
+        }
+    }
+
+    /** Feeds the stroke; true when this UP ended a drawn SHAPE (long and curved), which the swipe detector must not also see. */
+    private fun trackStroke(ev: android.view.MotionEvent): Boolean {
+        val rec = com.diegonmarcos.superapp.launcher.ShapeRecogniser
+        when (ev.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> {
+                strokePts.clear(); strokePts += ev.x to ev.y
+                strokeTracking = currentSection == "home" && supportFragmentManager.backStackEntryCount == 0 &&
+                    !drawerLayout.isDrawerOpen(GravityCompat.START)
+            }
+            android.view.MotionEvent.ACTION_MOVE -> if (strokeTracking) {
+                strokePts += ev.x to ev.y
+                val len = rec.pathLength(strokePts)
+                val gap = Math.hypot((ev.x - strokePts[0].first).toDouble(), (ev.y - strokePts[0].second).toDouble())
+                val d = resources.displayMetrics.density
+                // The trail shows once the stroke is clearly not a straight swipe.
+                if (len > 40f * d && gap / len < 0.8) shapeTrail.add(ev.x, ev.y)
+            }
+            android.view.MotionEvent.ACTION_UP -> if (strokeTracking) {
+                strokeTracking = false
+                strokePts += ev.x to ev.y
+                if (shapeTrail.alpha > 0f) shapeTrail.end()
+                val cfg = rec.declared
+                if (rec.classify(strokePts, cfg, resources.displayMetrics.density) == rec.Kind.SHAPE) {
+                    val m = rec.recognise(strokePts, cfg)
+                    Trace.i(TAG, "shape stroke -> ${m?.id} d=${m?.distance}")
+                    if (m != null) {
+                        Haptics.tap(bottomNav)
+                        handleHomeSwipeAction(com.diegonmarcos.superapp.settings.HomeSwipePrefs(this).shape(m.id, m.action))
+                    }
+                    return true
+                }
+            }
+            android.view.MotionEvent.ACTION_CANCEL -> { strokeTracking = false; if (shapeTrail.alpha > 0f) shapeTrail.end() }
+        }
+        return false
+    }
+
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
         val admitted = ::navSwipeGesture.isInitialized &&
             starGestureGate.admits(ev.actionMasked == android.view.MotionEvent.ACTION_DOWN, ev.x, ev.y)
         if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN || ev.actionMasked == android.view.MotionEvent.ACTION_UP)
             Trace.i(TAG, "touch ${ev.actionMasked} x=${ev.x} y=${ev.y} detector=$admitted")
-        if (admitted) navSwipeGesture.onTouchEvent(ev)
+        if (admitted) {
+            // A long curved stroke is a shape: the recogniser takes it and the swipe detector sees a CANCEL, never the UP, so
+            // a circle can not also fire a fling.
+            if (trackStroke(ev)) {
+                val cancel = android.view.MotionEvent.obtain(ev); cancel.action = android.view.MotionEvent.ACTION_CANCEL
+                navSwipeGesture.onTouchEvent(cancel); cancel.recycle()
+            } else navSwipeGesture.onTouchEvent(ev)
+        }
         return super.dispatchTouchEvent(ev)
     }
 

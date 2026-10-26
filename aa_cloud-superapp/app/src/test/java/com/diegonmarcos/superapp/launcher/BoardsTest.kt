@@ -100,7 +100,7 @@ class BoardsTest : KitPageHarness() {
 
     @Test fun `Work-PM and C3-PM are gone and Tasks replaces them`() {
         val boards = Sections.byId("boards")!!
-        assertEquals(listOf("msgs", "my-pm", "tasks"), boards.allPages.map { it.id })
+        assertEquals(listOf("msgs", "my-pm", "tasks", "resources", "quick-actions"), boards.allPages.map { it.id })
         assertTrue(boards.allPages.none { it.label in setOf("Work-PM", "C3-PM") })
         assertFalse("work-pm" in boards.stackByPage || "work-pm" in boards.tilesByPage)
         assertEquals("boards" to "tasks", Sections.canonicalPage("infos", "work-pm"))

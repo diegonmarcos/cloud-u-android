@@ -121,6 +121,8 @@ public data class NavPage(
     val pages: List<NavPage> = emptyList(),
     /** What this page's own sub-strip is drawn over; null = its parent's. */
     val background: PageBackground? = null,
+    /** True: a "|" group separator is drawn on the strip just before this page (a declared group boundary, not a page). */
+    val separatorBefore: Boolean = false,
 ) {
     /** The tab that actually renders when this one is selected, walked all the way down. */
     public fun leaf(): NavPage = pages.firstOrNull()?.leaf() ?: this

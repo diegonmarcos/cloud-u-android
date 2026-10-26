@@ -191,7 +191,7 @@ configs = [g for g in groups(bj["ui"]["sections"], "Configs")]
 check(len(configs) == 1, "exactly one Configs tile group under ui.sections (found %d)" % len(configs))
 if configs:
     row = [t.get("label") for t in configs[0]["tiles"]]
-    check(row == ["SuperApp", "|", "Account", "|", "Store", "Controls", "Firewall", "|", "C3", "|", "About"], "Configs row = SuperApp | Account | Store, Controls, Firewall | C3 | About (owner order 2026-10) (got %s)" % row)
+    check(row == ["SuperApp", "|", "Account", "|", "Store", "Quick Actions", "Firewall", "|", "C3", "|", "About"], "Configs row = SuperApp | Account | Store, Controls, Firewall | C3 | About (owner order 2026-10) (got %s)" % row)
     sa = next((t for t in configs[0]["tiles"] if t.get("label") == "SuperApp"), {})
     # #1153 (supersedes #1095): the tile launches the real app as its own task (app://<own package>,
     # NEW_TASK | LAUNCH_ADJACENT in ShellActivity), so split screen keeps the Configs page open beside it.

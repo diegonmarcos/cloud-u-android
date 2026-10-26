@@ -1,7 +1,7 @@
 ╔══════════════════════════════════════════════════════════════════════════════════╗
 ║  BOTTOM NAV  [Inboxes] [Infos] [⌂ Home] [Suite] [Labs]                        ║
 ║  GLOBAL CHROME: Drawer (← swipe) · Toolbar (Dynamic Island · Search · Mode)   ║
-║  HOME SWIPES (build.json onehand.home_swipes): UP → Cloud·Apps · DOWN → Notify   ║
+║  HOME GESTURES (onehand.home_swipes + shape_gestures): UP Cloud·Apps · DOWN L Notify · DOWN R Quick Actions ║
 ║  SWIPE WALK (circular L→R, ui.swipe_walk): see build.json; no Home-Apps sheet any more║
 ║  (the stale Home-Apps sheet was removed: its Cloud tab was Cloud·Apps itself)    ║
 ╚══════════════════════════════════════════════════════════════════════════════════╝

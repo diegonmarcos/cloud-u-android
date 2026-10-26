@@ -730,12 +730,25 @@
         }
       ]
     },
-    "_doc_home_swipes": "Configurable home-screen swipe actions. swipe_up fires when the user flings upward while on the Home section Default: up opens Cloud > Apps, down opens Notify (any `page:<section>/<page>` target works, no code edit). swipe_left/swipe_right replace the circular walk-list step. Named actions: open_last_superapp_page | open_last_android_app | walk_step_next | walk_step_prev. The old Home Apps sheet is gone: the legacy ids open_home_apps / open_home_apps_phone route to page:cloud/apps / page:phone/apps.",
+    "_doc_home_swipes": "Configurable home-screen gestures, all editable live in Configs > Launcher > One-Hand. Swipes (fire on the Home root only): swipe_up opens Cloud > Apps; swipe_down_left (a swipe down that STARTS on the left half of the screen) opens Notify; swipe_down_right (starts on the right half) opens Quick Actions (page:config/controls); swipe_left opens the last Cloud app launched (open_last_cloud_app: the newest launched app that is a fleet/constellation app, else Cloud > Apps); swipe_right opens the last SuperApp page (open_last_superapp_page). Any `page:<section>/<page>` target works, no code edit. Other named actions: open_last_android_app | walk_step_next | walk_step_prev | toggle_light (libs:light, flips the default light) | open_cloud_calc. The old Home Apps sheet is gone: the legacy ids open_home_apps / open_home_apps_phone route to page:cloud/apps / page:phone/apps. Shapes: a stroke at least shape_gestures.min_length_dp long whose end-to-start distance is under max_straightness of its length is a drawn SHAPE, not a swipe: it goes to the recogniser (launcher/ShapeRecogniser.kt) and never to the swipe detector, so the two cannot conflict. The recogniser resamples the stroke to `resample` points, scales it to a unit box, centres it, tries each of rotations_deg and compares it with every template below by the mean two-way nearest-point distance; the best template wins when its distance is at most max_distance and beats the runner-up by min_margin. Size is free, rotation is tolerated within rotations_deg, start point and direction are free. Templates are DATA: `points` are x,y pairs (y down) of the ideal stroke; add a gesture here (id, label, action, points) and it is recognised with no Kotlin. A short trail is drawn under the finger while a curved stroke is in progress.",
     "home_swipes": {
       "swipe_up": "page:cloud/apps",
-      "swipe_left": "open_last_superapp_page",
-      "swipe_right": "open_last_android_app",
-      "swipe_down": "page:communication/my-rss"
+      "swipe_down_left": "page:communication/my-rss",
+      "swipe_down_right": "page:config/controls",
+      "swipe_left": "open_last_cloud_app",
+      "swipe_right": "open_last_superapp_page"
+    },
+    "shape_gestures": {
+      "min_length_dp": 120,
+      "max_straightness": 0.6,
+      "resample": 32,
+      "max_distance": 0.085,
+      "min_margin": 0.015,
+      "rotations_deg": [-30, -15, 0, 15, 30],
+      "gestures": [
+        {"id": "circle", "label": "Circle", "action": "toggle_light", "points": [[1.0,0.0],[0.924,0.383],[0.707,0.707],[0.383,0.924],[0.0,1.0],[-0.383,0.924],[-0.707,0.707],[-0.924,0.383],[-1.0,0.0],[-0.924,-0.383],[-0.707,-0.707],[-0.383,-0.924],[-0.0,-1.0],[0.383,-0.924],[0.707,-0.707],[0.924,-0.383],[1.0,-0.0]]},
+        {"id": "c", "label": "C", "action": "open_cloud_calc", "points": [[0.707,-0.707],[0.423,-0.906],[0.087,-0.996],[-0.259,-0.966],[-0.574,-0.819],[-0.819,-0.574],[-0.966,-0.259],[-0.996,0.087],[-0.906,0.423],[-0.707,0.707],[-0.423,0.906],[-0.087,0.996],[0.259,0.966],[0.574,0.819]]}
+      ]
     }
   },
   "privileged_channel": {
@@ -2359,6 +2372,22 @@
             "label": "Tasks",
             "icon": "ic_pm_boards",
             "facet": true
+          },
+          {
+            "_doc": "Resources: the phone, live (battery, memory, storage, CPU, networks, device, sensors), one card per `resource` of stack_resources, every value read from the platform by boards/ResourcesProvider and refreshed every 2 s while the page is visible. `separator_before` draws the strip's \"|\" group separator between Tasks and this group (Resources, Quick Actions). Icon from libs:ui-icons.",
+            "id": "resources",
+            "label": "Resources",
+            "icon": "speed",
+            "facet": true,
+            "separator_before": true
+          },
+          {
+            "_doc": "Quick Actions: THE page Configs > Launcher > Quick Actions opens (page:config/controls), mirrored by page so there is one implementation and no copy. Icon from libs:ui-icons.",
+            "id": "quick-actions",
+            "label": "Quick Actions",
+            "icon": "bolt",
+            "facet": true,
+            "mirror_page": "config/controls"
           }
         ],
         "tabs": true,
@@ -2412,6 +2441,15 @@
             "title": "Calendar",
             "subtitle": "Month view"
           }
+        ],
+        "stack_resources": [
+          {"kind": "board_resources", "resource": "battery", "title": "Battery", "subtitle": "Level, state, health, temperature, voltage, cycles"},
+          {"kind": "board_resources", "resource": "memory", "title": "Memory", "subtitle": "RAM used and free"},
+          {"kind": "board_resources", "resource": "storage", "title": "Storage", "subtitle": "Used and free per volume"},
+          {"kind": "board_resources", "resource": "cpu", "title": "CPU", "subtitle": "Cores, frequency, load"},
+          {"kind": "board_resources", "resource": "network", "title": "Networks", "subtitle": "Wi-Fi, mobile, VPN / mesh, Bluetooth"},
+          {"kind": "board_resources", "resource": "device", "title": "Device", "subtitle": "Model, Android, security patch, uptime"},
+          {"kind": "board_resources", "resource": "sensors", "title": "Sensors", "subtitle": "What this phone carries"}
         ],
         "_doc_moved_cloud": "stack_cloud / tiles_cloud USED to hang here — GHA runs, repo commits and the Dagu deeplink. They are now sections[c3].stack_observability, under Cloud ▸ C3 ▸ Observability — which IS the c3 section's own Observability tab, not a copy of it beside the pages it points at. Nothing else keyed off them: `page:infos/cloud` addresses the PAGE, not these lists.",
         "_doc_stack_msgs": "Projects ▸ Inboxes. A card here is a CHANNEL CLASS — Mail, Chat, Messenger, RSS — and never one app. The owner asked for this on 2026-09-10: the page used to carry one card per app (Mail · accounts, Chat · Matrix, Chat · Mattermost, Messenger (Element), Dialer (Fossy)), which meant the question \"is there anything for me in my messages\" had to be asked five times and re-asked every time an app was installed. A panel names its class with `class: <id>`, an id from ui.inbox_classes, and draws that class's slice of the SAME phone notification feed Notify ▸ Inboxes reads, with a counted summary above it. WHY THE MEMBERSHIP IS NOT WRITTEN HERE: it lives in ui.inbox_classes beside ui.phone_folders, because a package roster is a CLASSIFICATION and every classification in this file lives under ui.* keyed on package — phone_folders, ntfy.taxon, external_apps. A roster inside a stack would be the only one that no other surface and no tester could read. WHY A FIFTH CARD: four curated classes are not a catch-all, and the card this page replaced was. An app that no class claims lands in the class marked `catch_all: true` (Other) rather than vanishing — the owner installing a messaging app nobody classified must still see its notifications on the screen they check, and a screen that silently drops notifications is worse than the per-app screen it replaced. WHAT THE SUMMARY IS: counts, measured from the notification listener — how many apps or channels the class holds, how many notifications, and how long ago the newest one arrived. It is deliberately not a written digest: kind=stats on this page prints numbers declared in this file under the caption 'Mock data — live fetch pending', and replacing five mock dashboards with a sixth, or with a paid model call the owner did not ask to pay for, would be a worse card than an honest count. WHAT MAIL REACHES: mail NOTIFICATIONS, not mail content. The message bodies live in the mail app's own store; ui.mail_accounts on this page is connection config (server, user, ports) and carries no messages, which is why renderMailAccounts has always captioned its own list 'Unread / total counts pending JMAP slice C2 + IMAP slice'. The Mail card says so on the card rather than presenting the lesser thing under the greater name. RSS is the one class that is not phone packages: it declares `source: c3ntfy` and reuses the stream=channels renderer the C3 Ntfy panel already had, so it is a retitle plus a summary and not new plumbing.",
@@ -3026,7 +3064,7 @@
               {
                 "_doc": "Configs ▸ Setup ▸ Launcher ▸ Controls — the merged Controls entry (tabs Presets | Panels ▸ UI | Tools); replaces the old Presets tile in this row.",
                 "id": "configs-controls",
-                "label": "Controls",
+                "label": "Quick Actions",
                 "icon": "ic_home",
                 "target": "page:config/controls"
               },
@@ -4688,7 +4726,7 @@
           {
             "_doc": "Tab 2 of Launcher — the CONTROLS (#574): ONE producer, LauncherConfigFragment, drawing the device/fleet switchboard (the Samsung-style icon grid declared in ui.control_panel and implemented in configs/DeviceControls.kt, formerly Configs ▸ Panel ▸ Control) followed by the launcher's own screensaver, switches, sliders and set-as-default-launcher. The theme picker that used to open this tab moved to Presets ▸ Themes — the SAME LauncherThemes.apply, not a copy. Nothing persisted moves with it: LauncherSettingsPrefs keys off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
             "id": "controls",
-            "label": "Controls",
+            "label": "Quick Actions",
             "icon": "ic_home",
             "tabs": ["presets", "panels"],
             "group": "Setup",
