@@ -359,7 +359,9 @@ class Walk:
         title = find(nodes, TITLE)
         items = [n for n in nodes if n.rid.startswith(ITEM)]
         labels = {n.rid[len(LABEL):] for n in nodes if n.rid.startswith(LABEL)}
-        tabs = [n for n in nodes if n.rid.startswith(TAB)]
+        # only the shared second row's tabs: a page's own icon row may reuse the tab tag but sits in no strip or group box
+        boxes = [n for n in nodes if n.rid in (STRIP, "navtop2_groups_box")]
+        tabs = [n for n in nodes if n.rid.startswith(TAB) and any(b.l <= n.l and b.t <= n.t and n.r <= b.r and n.b <= b.b for b in boxes)]
         island, strip = find(nodes, ISLAND), find(nodes, STRIP)
         return {
             "row": title is not None,
@@ -531,6 +533,7 @@ class Walk:
         name = "%s/%s" % (section, pid)
         t0 = time.time()
         shell("logcat -b all -c")
+        shell("cmd statusbar collapse")  # a stray swipe from the top edge must not leave the shade over every later page
         self.hide_ime()
         self.ensure_chrome(section)
         err = self.goto(pid, label, up) if via_dropdown else None
