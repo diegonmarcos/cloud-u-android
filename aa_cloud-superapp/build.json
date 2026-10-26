@@ -752,6 +752,8 @@
     }
   },
   "privileged_channel": {
+    "default_on": false,
+    "_default_on_doc": "Whether this app arms the privileged channel by itself (auto-connect at start/boot, Wireless debugging re-arm, a privileged tool's implicit reconnect). SuperApp: OFF until the user enables Configs > Keep Wireless debugging on (must equal that control's default_on; test-channel-auto-arm.sh). Read by libs/shizuku-adb-debug-tools ChannelAutoArm from the same baked block.",
     "_doc": "What THIS app declares it needs the privileged shell channel for. Read by libs/shizuku-adb-debug-tools/build.gradle into BuildConfig.CHANNEL_NEEDS_B64 and listed, as written, in the Declared needs section of the ADB Shell page (libs:shizuku-adb-debug-tools AdbShellPage). Add a need here and it shows there; nothing about it is typed in Kotlin. Each need: id (unique), label, why (one sentence), commands (the shell verbs it runs).",
     "needs": [
       {
@@ -9006,8 +9008,8 @@
               "id": "wireless_debugging_keepalive",
               "icon": "ic_refresh",
               "label": "Keep Wireless debugging on",
-              "default_on": true,
-              "subtitle": "Turns Wireless debugging back on whenever Android drops it (Wi-Fi change, reboot) and reconnects the shell channel. Off leaves it exactly as you set it."
+              "default_on": false,
+              "subtitle": "Turns Wireless debugging back on whenever Android drops it (Wi-Fi change, reboot) and reconnects the shell channel. Off (the default) leaves it exactly as you set it and the app never connects the channel by itself."
             },
             {
               "id": "app_api",

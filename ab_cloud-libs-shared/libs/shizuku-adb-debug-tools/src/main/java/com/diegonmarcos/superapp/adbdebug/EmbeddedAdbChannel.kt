@@ -201,6 +201,14 @@ object EmbeddedAdbChannel : ShellChannel {
     }.getOrElse { rejected(ctx, it); false to "autoconnect failed: ${it.message}" }
 
     /**
+     * [autoConnect] for every IMPLICIT caller (app start, boot, keep-alive, a privileged tool that found no
+     * channel): does nothing while the app's auto-arm switch is off ([ChannelAutoArm]). A tap on the ADB Shell
+     * page is explicit and calls [autoConnect] itself.
+     */
+    fun autoArm(ctx: Context): Pair<Boolean, String> =
+        if (ChannelAutoArm.enabled(ctx)) autoConnect(ctx) else false to ChannelAutoArm.OFF_MSG
+
+    /**
      * Run [block] with the process temporarily pinned to the Wi-Fi
      * (non-VPN) network, so the socket libadb opens bypasses the WireGuard
      * tunnel. This is what makes pairing work with WG ON: the device's

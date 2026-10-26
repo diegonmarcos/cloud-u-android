@@ -93,7 +93,7 @@ class WirelessDebugKeeper(ctx: Context, params: WorkerParameters) : Worker(ctx, 
         }
         override fun channelAnswers() = EmbeddedAdbChannel.isReady(ctx) && EmbeddedAdbChannel.probe(ctx)
         override fun dropChannel() = EmbeddedAdbChannel.disconnect(ctx)
-        override fun reconnect() = EmbeddedAdbChannel.autoConnect(ctx)
+        override fun reconnect() = EmbeddedAdbChannel.autoArm(ctx)
     }
 
     /** The owner's switch. Default declared in build.json (`default_on` on the

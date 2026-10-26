@@ -14,7 +14,7 @@ import androidx.work.WorkManager
 class PrivilegedPlaneBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
-        WorkManager.getInstance(context).enqueue(
+        if (com.diegonmarcos.superapp.adbdebug.ChannelAutoArm.enabled(context)) WorkManager.getInstance(context).enqueue(
             OneTimeWorkRequestBuilder<PrivilegedPlaneWorker>().build()
         )
         // Android replays Wireless Debugging at boot before Wi-Fi is up and

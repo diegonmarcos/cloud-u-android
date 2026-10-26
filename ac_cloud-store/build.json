@@ -146,6 +146,8 @@
     ]
   },
   "privileged_channel": {
+    "default_on": true,
+    "_default_on_doc": "Whether this app arms the privileged channel by itself (auto re-arm after reboot, when Wireless debugging is available, and before an install finds no channel). Cloud Store: ON so installs and updates work; the user turns it off on the ADB Shell page (Settings). Read by libs/shizuku-adb-debug-tools ChannelAutoArm.",
     "_doc": "What THIS app declares it needs the privileged shell channel for. Read by libs/shizuku-adb-debug-tools/build.gradle into BuildConfig.CHANNEL_NEEDS_B64 and listed, as written, in the Declared needs section of the ADB Shell page (libs:shizuku-adb-debug-tools AdbShellPage). Add a need here and it shows there; nothing about it is typed in Kotlin. Each need: id (unique), label, why (one sentence), commands (the shell verbs it runs).",
     "needs": [
       {

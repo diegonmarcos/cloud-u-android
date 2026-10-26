@@ -46,9 +46,14 @@ class PrivilegedPlaneWorker(ctx: Context, params: WorkerParameters) : Worker(ctx
         if (com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx) != null)
             DeviceTuning.run(ctx) { cmd -> com.diegonmarcos.superapp.adbdebug.ShellChannels.active(ctx)?.exec(ctx, cmd) }
 
+        // The switch is the owner's (default off, build.json::privileged_channel.default_on): nothing below arms the channel without it.
+        if (!com.diegonmarcos.superapp.adbdebug.ChannelAutoArm.enabled(ctx)) {
+            Log.i(TAG, "auto-arm off - not connecting the embedded channel")
+            return Result.success()
+        }
         var last = ""
         for (attempt in 1..ATTEMPTS) {
-            val (ok, msg) = EmbeddedAdbChannel.autoConnect(ctx)
+            val (ok, msg) = EmbeddedAdbChannel.autoArm(ctx)
             last = msg
             if (ok) {
                 Log.i(TAG, "privileged plane up on attempt $attempt: $msg")

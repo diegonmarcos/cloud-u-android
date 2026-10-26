@@ -270,6 +270,15 @@ fun AdbShellPage(modifier: Modifier = Modifier) {
                 StateDot((conn?.dot() ?: Dot.UNKNOWN).color())
                 Text((conn?.title() ?: "Reading") + (facts?.let { f -> ChannelState.route(f)?.let { " via $it" } } ?: ""), fontSize = 12.sp, fontWeight = FontWeight.Medium)
             }
+            // Keep the channel armed: the app's declared default (build.json::privileged_channel.default_on) until the user flips it.
+            var autoArm by remember { mutableStateOf(ChannelAutoArm.enabled(ctx)) }
+            if (ChannelAutoArm.hostSwitch == null) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    DenseButton(if (autoArm) "Keep armed: ON" else "Keep armed: OFF", primary = autoArm,
+                        onClick = { autoArm = !autoArm; ChannelAutoArm.set(ctx, autoArm) })
+                    Dim(if (autoArm) "Re-arms the channel after a reboot and when Wireless debugging is available." else "Never connects by itself; use Reconnect.")
+                }
+            } else Dim("Auto-connect follows Configs > Keep Wireless debugging on (" + (if (autoArm) "on" else "off") + ").")
             val enab = facts?.let { ChannelActions.enablement(it) }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 for (a in ChannelAction.values()) {

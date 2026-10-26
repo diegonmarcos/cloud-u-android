@@ -92,7 +92,7 @@ object DevControlServer {
         // online after every update/relaunch with NO manual connect port.
         // Silent no-op if not paired / WD off. Off the main + server threads.
         Thread {
-            runCatching { com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel.autoConnect(app) }
+            runCatching { com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel.autoArm(app) }
         }.apply { isDaemon = true; name = "adb-autoconnect"; start() }
     }
 
@@ -397,7 +397,7 @@ object DevControlServer {
                 "adb/autoconnect" -> {
                     // mDNS auto-discovery of the local adbd connect service —
                     // no manual connect port. Needs paired + Wireless Debugging ON.
-                    val (ok, msg) = com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel.autoConnect(ctx)
+                    val (ok, msg) = com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel.autoArm(ctx)
                     reply(writer, "200 OK", """{"ok":$ok,"message":"${jsonEscape(msg)}"}""", "application/json")
                 }
                 "adb/connect" -> {

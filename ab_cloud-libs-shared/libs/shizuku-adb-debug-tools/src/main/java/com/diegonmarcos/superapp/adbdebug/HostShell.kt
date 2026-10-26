@@ -93,10 +93,11 @@ object HostShell {
 
     /** BLOCKS. Backoff reconnect: adbd and its mDNS advert take a while after boot. */
     fun reconnect(ctx: Context, attempts: Int): Pair<Boolean, String> {
+        if (!ChannelAutoArm.enabled(ctx)) return false to ChannelAutoArm.OFF_MSG
         keepWirelessDebuggingOn(ctx)
         var last = ""
         for (n in 1..attempts) {
-            val (ok, msg) = EmbeddedAdbChannel.autoConnect(ctx)
+            val (ok, msg) = EmbeddedAdbChannel.autoArm(ctx)
             last = msg
             if (ok) { Log.i(TAG, "channel up on attempt $n: $msg"); return true to msg }
             Log.i(TAG, "attempt $n/$attempts: $msg")
@@ -120,7 +121,7 @@ open class HostShellWorker(ctx: Context, params: WorkerParameters) : Worker(ctx,
 open class HostShellBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
-            HostShell.schedule(context.applicationContext, replace = true)
+            if (ChannelAutoArm.enabled(context)) HostShell.schedule(context.applicationContext, replace = true)
             HostShellService.start(context.applicationContext)
         }
     }

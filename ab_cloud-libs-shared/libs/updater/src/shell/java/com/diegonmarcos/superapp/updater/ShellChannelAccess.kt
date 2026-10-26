@@ -41,7 +41,7 @@ internal fun activeShellChannel(ctx: Context): ShellChannel? = ShellChannels.act
  */
 internal fun ensureShellChannel(ctx: Context): ShellChannel? {
     ShellChannels.active(ctx)?.let { return it }
-    val (connected, message) = EmbeddedAdbChannel.autoConnect(ctx)
+    val (connected, message) = EmbeddedAdbChannel.autoArm(ctx)
     Log.i("FleetUpdater", "no live shell channel — embedded adb reconnect: $message")
     return if (connected) ShellChannels.active(ctx) else null
 }

@@ -100,7 +100,7 @@ object WirelessDebugging {
         // dies. That is expected, and the re-read below — which needs no
         // channel at all — is what decides the verdict.
         val channel = ShellChannels.active(ctx)
-            ?: (if (EmbeddedAdbChannel.autoConnect(ctx).first) EmbeddedAdbChannel else null)
+            ?: (if (EmbeddedAdbChannel.autoArm(ctx).first) EmbeddedAdbChannel else null)
             ?: return Result(false, "none",
                 "No way to write this setting: WRITE_SECURE_SETTINGS is not granted to " +
                 "this app and no shell channel is up. Use \"Open Wireless Debugging\" " +
