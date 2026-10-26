@@ -321,12 +321,38 @@ class Walk:
             nodes = again
         return False
 
+    def strip_tab(self, pid):
+        """Tap page [pid]'s tab on a second-row strip (scrolling the strip sideways): how a reader reaches a page the dropdown cannot list
+        because a container page always shows its first child, so the dropdown's neighbourhood is the child's, never the container's."""
+        for direction in (1, -1):
+            for _ in range(6):
+                nodes = dump() or []
+                tab = find(nodes, TAB + pid)
+                if tab is not None:
+                    tap(tab)
+                    settle(1.6)
+                    return True
+                strips = findall(nodes, STRIP)
+                if not strips:
+                    break
+                st = strips[0]
+                half = (st.r - st.l) // 3
+                shell("input swipe %d %d %d %d 300" % (st.cx + direction * half, st.cy, st.cx - direction * half, st.cy))
+                settle(0.5)
+        return False
+
     def goto(self, pid, label, up=()):
         """Pick page [pid] in the dropdown; when it is not listed from here, climb to the section through the path crumb and descend through its ancestors."""
         if self.open_dropdown() is None:
             return "the title dropdown did not open"
         if self.pick(pid):
             return None
+        shell("input keyevent KEYCODE_BACK")
+        settle(0.8)
+        if self.strip_tab(pid):
+            return None
+        if self.open_dropdown() is None:
+            return "the title dropdown did not open"
         nodes = dump() or []
         self.evidence("dropdown_%s" % pid.replace("/", "_"))  # what the dropdown listed when the page was not in it
         # pick() left the list scrolled to its end: the path row is at the top of the dropdown, so scroll back there first
@@ -358,7 +384,9 @@ class Walk:
                 return "the title dropdown did not open (descending to %s)" % pid
             if not self.pick(step):
                 shell("input keyevent KEYCODE_BACK")
-                return "the dropdown lists no entry for page %s (via %s)" % (pid, step)
+                settle(0.8)
+                if not self.strip_tab(step):
+                    return "the dropdown lists no entry for page %s (via %s)" % (pid, step)
         return None
 
     # ── chrome state ─────────────────────────────────────────────────────────
