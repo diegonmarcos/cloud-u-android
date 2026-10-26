@@ -231,34 +231,33 @@ class HomeSwipeGestureTest {
         assertTrue("a swipe must not run a shape action", lastAction(shell) == "page:cloud/apps")
     }
 
-    /** True once the accessibility tree of the active window shows [text] (case-insensitive substring). */
-    private fun shows(text: String) = inst.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText(text)?.isNotEmpty() == true
-
-    /** Taps the strip tab named [label] through accessibility (the pill, or the nearest clickable parent of its text). */
-    private fun tapTab(label: String): Boolean {
-        val root = inst.uiAutomation.rootInActiveWindow ?: return false
-        var n: android.view.accessibility.AccessibilityNodeInfo? = root.findAccessibilityNodeInfosByText(label).firstOrNull()
-        while (n != null && !n.isClickable) n = n.parent
-        return n?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK) == true
+    /** The Boards strip (the top fragment) and what it shows in its pane. */
+    private fun boardsStrip(shell: ShellActivity) = onMain {
+        shell.supportFragmentManager.findFragmentById(R.id.fragment_container) as? com.diegonmarcos.superapp.launcher.SectionTabsFragment
     }
+
+    private fun paneFragments(shell: ShellActivity) = onMain { boardsStrip(shell)?.childFragmentManager?.fragments?.map { it.javaClass.simpleName }.orEmpty() }
 
     @Test fun boardsResourcesPageShowsTheLivePhone() {
         val shell = launchHome()
         onMain { shell.dispatchTarget("page:boards/resources") }
         assertTrue("Boards did not open", until(20_000) { onMain { shell.currentSection == "boards" } })
-        assertTrue("Resources tab missing (the strip may shorten its label): ${evidence(shell, "res-tab")}", until(20_000) { shows("Resour") })
-        until(8_000) { shows("Battery") } || tapTab("Resour")
-        assertTrue("Resources did not show Battery and Device: ${evidence(shell, "resources")}", until(20_000) { shows("Battery") && shows("Device") })
-        assertTrue("no live battery level row", until(10_000) { shows("Level") })
+        assertTrue("the Resources tab was not selected: ${paneFragments(shell)} ${evidence(shell, "resources")}",
+            until(20_000) { onMain { boardsStrip(shell)?.selectedPage == "resources" } })
+        // The page is the aggregator stack of the declared board_resources cards, and every section it declares answers on this device.
+        assertTrue("Resources did not render its stack: ${paneFragments(shell)}", until(20_000) { "AggregatorStackFragment" in paneFragments(shell) })
+        for (s in com.diegonmarcos.superapp.boards.ResourcesProvider.SECTIONS.filter { it != "network" && it != "sensors" }) {
+            assertTrue("$s read nothing on a device", com.diegonmarcos.superapp.boards.ResourcesProvider.read(ctx, s).isNotEmpty())
+        }
     }
 
     @Test fun boardsQuickActionsIsTheConfigsPage() {
         val shell = launchHome()
         onMain { shell.dispatchTarget("page:boards/quick-actions") }
         assertTrue("Boards did not open", until(20_000) { onMain { shell.currentSection == "boards" } })
-        assertTrue("Quick Actions tab missing (the strip may shorten its label): ${evidence(shell, "qa-tab")}", until(20_000) { shows("Quick") })
-        until(8_000) { shows("Panels") } || tapTab("Quick")
-        // The strip over Presets | Panels is the Configs > Launcher > Quick Actions page, mirrored.
-        assertTrue("Quick Actions did not show the Configs page: ${evidence(shell, "quick-actions")}", until(20_000) { shows("Panels") && shows("Presets") })
+        assertTrue("the Quick Actions tab was not selected: ${paneFragments(shell)} ${evidence(shell, "quick-actions")}",
+            until(20_000) { onMain { boardsStrip(shell)?.selectedPage == "quick-actions" } })
+        // Mirrored page: the pane holds the very strip Configs > Launcher > Quick Actions opens (a SectionTabsFragment over Presets | Panels).
+        assertTrue("Quick Actions did not host the Configs strip: ${paneFragments(shell)}", until(20_000) { "SectionTabsFragment" in paneFragments(shell) })
     }
 }

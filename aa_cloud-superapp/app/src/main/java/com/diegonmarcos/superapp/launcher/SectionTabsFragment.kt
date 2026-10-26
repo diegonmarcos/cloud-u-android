@@ -107,6 +107,8 @@ class SectionTabsFragment : KitComposeFragment(), Collapsible, BackHandler {
      * the next honest reload.
      */
     private var selectedPageId = ""
+    /** The page whose tab is selected now (read by the emulator test). */
+    val selectedPage: String get() = selectedPageId
 
     /** The state saved by the last instance, read before the first composition. */
     private var restoredState: Bundle? = null
