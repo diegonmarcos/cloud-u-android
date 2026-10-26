@@ -101,11 +101,11 @@ private fun FeedPage(state: SearchState, page: SearchConfig.NewsPage) {
             val r = state.feedResults[picked]
             val st = r?.statuses?.firstOrNull()
             val status = when {
-                r == null || st == null -> stringResource(R.string.feed_loading)
-                st.state == SearchEngine.State.ERROR -> stringResource(R.string.feed_unavailable, st.detail)
-                st.state == SearchEngine.State.STALE -> stringResource(R.string.feed_stale, r.items.size, st.detail)
-                r.items.isEmpty() -> stringResource(R.string.feed_empty)
-                else -> stringResource(R.string.feed_count, r.items.size)
+                r == null || st == null -> stringResource(R.string.newsfeed_loading)
+                st.state == SearchEngine.State.ERROR -> stringResource(R.string.newsfeed_unavailable, st.detail)
+                st.state == SearchEngine.State.STALE -> stringResource(R.string.newsfeed_stale, r.items.size, st.detail)
+                r.items.isEmpty() -> stringResource(R.string.newsfeed_empty)
+                else -> stringResource(R.string.newsfeed_count, r.items.size)
             }
             Column(verticalArrangement = Arrangement.spacedBy(Metrics.small)) {
                 Text(page.blurb, color = g.text2, style = Type.style(Type.small))

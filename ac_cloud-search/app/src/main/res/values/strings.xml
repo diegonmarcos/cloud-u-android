@@ -200,11 +200,11 @@
     <string name="agents_runs_of">Runs: %1$d</string>
     <string name="vertical_agents">Agents</string>
     <!-- #1197 the News feed pages and the Search > Engines page. -->
-    <string name="feed_loading">Loading…</string>
-    <string name="feed_count">%1$d items</string>
-    <string name="feed_empty">The feed has no items.</string>
-    <string name="feed_unavailable">Feed not reachable: %1$s</string>
-    <string name="feed_stale">%1$d items from the last saved copy (the feed answered: %2$s)</string>
+    <string name="newsfeed_loading">Loading…</string>
+    <string name="newsfeed_count">%1$d items</string>
+    <string name="newsfeed_empty">The feed has no items.</string>
+    <string name="newsfeed_unavailable">Feed not reachable: %1$s</string>
+    <string name="newsfeed_stale">%1$d items from the last saved copy (the feed answered: %2$s)</string>
     <string name="engines_title">Search engines</string>
     <string name="engines_blurb">Opens the engine\'s own results in Cloud Browser with your query.</string>
     <string name="engines_placeholder">What to search for</string>
