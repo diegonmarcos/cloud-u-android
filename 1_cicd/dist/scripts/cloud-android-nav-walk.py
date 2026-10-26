@@ -579,8 +579,9 @@ class Walk:
         self.hide_ime()   # a long press in a text page may raise the keyboard, which hides the bar by design
         nodes2 = dump()
         # a page's own scroll reaches the chrome through a bridge on the 2-core emulator's main thread: give it a few seconds to
-        # land before reading the final state (the same end state is asserted, only the wait is longer)
-        for _ in range(4):
+        # land before reading the final state (the same end state is asserted, only the wait is longer: a frame that still shows the page
+        # before the gesture, e.g. the previous page's title under a faded first row, is a loaded emulator that has not drawn yet)
+        for _ in range(10):
             if nodes2 is None or not self.chrome(nodes2)["row"]:
                 break
             settle(1.2)

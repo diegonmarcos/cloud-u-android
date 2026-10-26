@@ -163,10 +163,6 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK (walk build)
-        if: ${{ matrix.walk_build.cmd != null }}
-        uses: android-actions/setup-android@v3
-
       - name: Build the walk's own APK (test-only variant)
         if: ${{ matrix.walk_build.cmd != null }}
         env:
