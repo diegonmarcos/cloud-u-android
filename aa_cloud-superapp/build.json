@@ -2777,13 +2777,6 @@
                 "label": "Vault",
                 "icon": "ic_vault",
                 "target": "extapp:cloud-vault"
-              },
-              {
-                "_doc": "Light (#1155) - the flashlight tool, last of the nine primary tools. target=action:light: a tap toggles the default light at once (Rear unless the Light page says Front or Both) and opens the Light page (LightActivity). Order of this row is the declaration: array position is render position (GroupedTilesFragment does not sort), pinned by test-primary-tools-order.sh. Wallet stays: it targets the standalone Cloud Wallet app (ac_cloud-wallet), which exists in the fleet.",
-                "id": "light",
-                "label": "Light",
-                "icon": "ic_light",
-                "target": "action:light"
               }
             ]
           },
