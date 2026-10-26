@@ -246,8 +246,8 @@ class HomeSwipeGestureTest {
         val shell = launchHome()
         onMain { shell.dispatchTarget("page:boards/resources") }
         assertTrue("Boards did not open", until(20_000) { onMain { shell.currentSection == "boards" } })
-        assertTrue("Resources tab missing", until(20_000) { shows("Resources") })
-        until(8_000) { shows("Battery") } || tapTab("Resources")
+        assertTrue("Resources tab missing (the strip may shorten its label): ${evidence(shell, "res-tab")}", until(20_000) { shows("Resour") })
+        until(8_000) { shows("Battery") } || tapTab("Resour")
         assertTrue("Resources did not show Battery and Device: ${evidence(shell, "resources")}", until(20_000) { shows("Battery") && shows("Device") })
         assertTrue("no live battery level row", until(10_000) { shows("Level") })
     }
@@ -256,8 +256,8 @@ class HomeSwipeGestureTest {
         val shell = launchHome()
         onMain { shell.dispatchTarget("page:boards/quick-actions") }
         assertTrue("Boards did not open", until(20_000) { onMain { shell.currentSection == "boards" } })
-        assertTrue("Quick Actions tab missing", until(20_000) { shows("Quick Actions") })
-        until(8_000) { shows("Panels") } || tapTab("Quick Actions")
+        assertTrue("Quick Actions tab missing (the strip may shorten its label): ${evidence(shell, "qa-tab")}", until(20_000) { shows("Quick") })
+        until(8_000) { shows("Panels") } || tapTab("Quick")
         // The strip over Presets | Panels is the Configs > Launcher > Quick Actions page, mirrored.
         assertTrue("Quick Actions did not show the Configs page: ${evidence(shell, "quick-actions")}", until(20_000) { shows("Panels") && shows("Presets") })
     }
