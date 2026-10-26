@@ -547,6 +547,8 @@ class Walk:
             fails.insert(0, "P1 the app %s" % ("crashed (FATAL EXCEPTION in logcat)" if crashed else "died"))
             with open(os.path.join(self.out, "dumps", re.sub(r"\W", "_", name) + ".logcat.txt"), "w") as f:
                 f.write(log)
+                if died and not crashed:  # a death with no crash: who killed it (the system, a signal, finish())
+                    f.write("\n--- process events ---\n" + shell("logcat -d -b all -v brief 2>/dev/null | grep -E 'am_proc_died|am_kill|am_finish|ActivityManager.*(%s|Killing)|lowmemorykiller|libc.*Fatal signal' | tail -40" % re.escape(self.pkg), timeout=60))
         checks["alive"] = "FAIL" if (crashed or died) else "ok"
         if fails:
             self.evidence(name)
