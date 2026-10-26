@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.clouddrive.Declarations
+import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
@@ -42,6 +43,7 @@ private fun columnLabel(c: RepoColumn): String = stringResource(when (c) {
     RepoColumn.VISIBILITY -> R.string.repo_col_vis
     RepoColumn.SIZE_MAIN -> R.string.repo_col_size_main
     RepoColumn.SIZE_TOTAL -> R.string.repo_col_size_total
+    RepoColumn.SIZE_DISK -> R.string.repo_col_size_disk
     RepoColumn.BRANCHES -> R.string.repo_col_branches
     RepoColumn.DIRTY -> R.string.repo_col_dirty
     RepoColumn.AHEAD_BEHIND -> R.string.repo_col_ab
@@ -67,7 +69,7 @@ internal fun RepoTableHeader(column: RepoColumn, ascending: Boolean, scroll: Scr
     }
 }
 
-/** The seven fact cells after the name, in column order. */
+/** The eight fact cells after the name, in column order. */
 @Composable
 internal fun RepoCells(r: RepoTableRow) {
     val yes = stringResource(R.string.manage_yes)
@@ -77,6 +79,7 @@ internal fun RepoCells(r: RepoTableRow) {
         RepoColumn.VISIBILITY to RepoTable.visibility(r.isPrivate, stringResource(R.string.repo_vis_pvt), stringResource(R.string.repo_vis_pub)),
         RepoColumn.SIZE_MAIN to RepoTable.size(r.sizeMainBytes),
         RepoColumn.SIZE_TOTAL to RepoTable.size(r.sizeTotalBytes),
+        RepoColumn.SIZE_DISK to RepoTable.size(r.sizeDiskBytes),
         RepoColumn.BRANCHES to RepoTable.count(r.branches),
         RepoColumn.DIRTY to RepoTable.dirty(r.dirtyFiles, yes, no),
         RepoColumn.AHEAD_BEHIND to RepoTable.aheadBehind(r.ahead, r.behind),
@@ -139,6 +142,8 @@ internal fun RepoActionGroupsView(
     blocked: (Declarations.GitOpDecl) -> Boolean,
     active: (String) -> Boolean,
     onAction: (String) -> Unit,
+    /** #1195 an action that cannot run now (a not-cloned repository: clone-required ones), drawn disabled. */
+    unavailable: (String) -> Boolean = { false },
 ) {
     Column(Modifier.fillMaxWidth().padding(top = DriveMetrics.pad), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
         RepoActions.GROUPS.forEach { g ->
@@ -156,7 +161,7 @@ internal fun RepoActionGroupsView(
                         icon = op?.let { IconCatalog.vectorOrDefault(it.icon) },
                         filled = active(id),
                         // Clone settings and the readers stay available while an operation runs; the verbs wait.
-                        enabled = (!busy || isClone || g.group == RepoGroup.GOTO) && !(op != null && blocked(op)),
+                        enabled = (!busy || isClone || g.group == RepoGroup.GOTO) && !(op != null && blocked(op)) && !unavailable(id),
                         danger = danger,
                     )
                 }
@@ -165,26 +170,25 @@ internal fun RepoActionGroupsView(
     }
 }
 
-/** The bulk bar: the first row of the table, one pill per [RepoActions.Bulk] command over every repo (Cloud Store's bulk-bar shape). */
-@OptIn(ExperimentalLayoutApi::class)
+/** The bulk bar: ABOVE the column header, one pill per [RepoActions.Bulk] command over every repo, then the Settings gear (the shared PageActionsBar). */
 @Composable
-internal fun RepoBulkBar(busy: Boolean, onBulk: (RepoActions.Bulk) -> Unit) {
-    FlowRow(
-        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_BULK_BAR),
-        horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide),
-    ) {
-        RepoActions.Bulk.entries.forEach { b ->
-            Pill(
+internal fun RepoBulkBar(busy: Boolean, prefs: DrivePrefs?, onBulk: (RepoActions.Bulk) -> Unit) {
+    PageActionsBar(
+        AutoChecks.Page.GIT, prefs,
+        RepoActions.Bulk.entries.map { b ->
+            BarAction(
                 stringResource(when (b) {
                     RepoActions.Bulk.CHECK_ALL -> R.string.repo_bulk_check
                     RepoActions.Bulk.SYNC_ALL -> R.string.repo_bulk_sync
                     RepoActions.Bulk.CLONE_ALL -> R.string.repo_bulk_clone
                     RepoActions.Bulk.STASH_PUSH_ALL -> R.string.repo_bulk_stash_push
+                    RepoActions.Bulk.REFRESH_SIZES -> R.string.repo_bulk_sizes
                 }),
-                { onBulk(b) }, enabled = !busy || b == RepoActions.Bulk.CHECK_ALL,
+                { onBulk(b) }, enabled = !busy || b == RepoActions.Bulk.CHECK_ALL || b == RepoActions.Bulk.REFRESH_SIZES,
             )
-        }
-    }
+        },
+        tag = DriveTags.SYNC_GIT_BULK_BAR,
+    )
 }
 
 /** The status summary line under the bulk bar. */

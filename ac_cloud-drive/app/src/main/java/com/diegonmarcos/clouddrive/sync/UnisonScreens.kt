@@ -55,8 +55,10 @@ fun LazyListScope.unisonSection(
     declared: com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Declared,
     onAdd: () -> Unit,
     onDelete: (UnisonConfig.Pair) -> Unit,
+    open: String = "",
+    onToggle: (String) -> Unit = {},
 ) {
-    item { SectionHeader(stringResource(R.string.unison_section), count = declared.pairs.size, action = stringResource(R.string.unison_add), onAction = onAdd) }
+    item { SectionHeader(stringResource(R.string.unison_section), count = declared.pairs.size) }
     declared.problems.forEach { why ->
         item(key = "unison-problem-$why") {
             Text(stringResource(R.string.unison_problem, why), Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
@@ -67,7 +69,7 @@ fun LazyListScope.unisonSection(
         Text(unavailable, Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     items(declared.pairs, key = { "unison-" + it.id }) { pair ->
-        UnisonPairCard(coordinator, pair, states[pair.id], live[pair.id], unavailable == null, onMessage, onDelete)
+        UnisonPairCard(coordinator, pair, states[pair.id], live[pair.id], unavailable == null, onMessage, onDelete, expanded = open == "u-" + pair.id, onToggle = { onToggle("u-" + pair.id) })
     }
 }
 
@@ -80,6 +82,8 @@ private fun UnisonPairCard(
     engineReady: Boolean,
     onMessage: (String) -> Unit,
     onDelete: (UnisonConfig.Pair) -> Unit,
+    expanded: Boolean,
+    onToggle: () -> Unit,
 ) {
     val on = coordinator.enabled(pair)
     val running = live != null
@@ -94,7 +98,9 @@ private fun UnisonPairCard(
         is UnisonConfig.Peer.Ssh -> "${p.host}:${p.path}"
         is UnisonConfig.Peer.Local -> p.path
     }
-    DriveCard(pair.name, light = light, summary = "${pair.rootA}  ⇄  $peer", summaryMonospace = true, tag = DriveTags.UNISON_PAIR_CARD) {
+    DriveCard(pair.name, light = light, summary = "${pair.rootA}  ⇄  $peer", summaryMonospace = true, onClick = onToggle, tag = DriveTags.UNISON_PAIR_CARD) {
+        TapChevron(expanded)
+        if (!expanded) return@DriveCard
         val schedule = pair.scheduleMinutes?.let { stringResource(R.string.unison_every, it) } ?: stringResource(R.string.unison_manual)
         val policy = when (pair.prefer) {
             null -> stringResource(R.string.unison_policy_ask)

@@ -1,7 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 /** #1138 the Sync ▸ Git repo table's columns, in display order. */
-enum class RepoColumn { NAME, PROVIDER, VISIBILITY, SIZE_MAIN, SIZE_TOTAL, BRANCHES, DIRTY, AHEAD_BEHIND }
+enum class RepoColumn { NAME, PROVIDER, VISIBILITY, SIZE_MAIN, SIZE_TOTAL, SIZE_DISK, BRANCHES, DIRTY, AHEAD_BEHIND }
 
 /**
  * One table row's facts. A fact the page could not read (not cloned, not fetched yet, no upstream) is
@@ -19,6 +19,8 @@ data class RepoTableRow(
     val behind: Int?,
     /** The forge's printed word (GitHub / GitLab / Gitea / Other) from the remote URL's host; null = no remote URL known. */
     val provider: String? = null,
+    /** #1195 the clone's bytes on this phone's disk (cached walk); null = not cloned / not measured yet. */
+    val sizeDiskBytes: Long? = null,
 )
 
 /** #1138 the table's pure rules: ranking, sorting, how each cell prints and where its facts come from. */
@@ -36,6 +38,7 @@ object RepoTable {
         RepoColumn.VISIBILITY -> r.isPrivate?.let { if (it) 1 else 0 }
         RepoColumn.SIZE_MAIN -> r.sizeMainBytes
         RepoColumn.SIZE_TOTAL -> r.sizeTotalBytes
+        RepoColumn.SIZE_DISK -> r.sizeDiskBytes
         RepoColumn.BRANCHES -> r.branches
         RepoColumn.DIRTY -> r.dirtyFiles
         // Ahead first, then behind: one number that orders by ahead and breaks ties by behind.
@@ -52,7 +55,7 @@ object RepoTable {
     }
 
     /** Which repository's menu is open after a tap on [tapped]: a second tap on the same repo closes it ("" = none). */
-    fun toggle(open: String, tapped: String): String = if (open == tapped) "" else tapped
+    fun toggle(open: String, tapped: String): String = TapPanel.toggle(open, tapped)
 
     /** The status line over the table: one pass over the rows, [cloned] says whether a row has a local clone. */
     data class Summary(val total: Int, val cloned: Int, val notCloned: Int, val dirty: Int, val ahead: Int, val behind: Int)
@@ -81,7 +84,7 @@ object RepoTable {
      * glance (the git engine's status, no network) and whether the clone exists. [declaredPrivate] is the
      * listing's flag when there is one; the REST answer fills it for a repo no listing named.
      */
-    fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null): RepoTableRow {
+    fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null, diskBytes: Long? = null): RepoTableRow {
         val local = cloned && glance != null && glance.read && !glance.gone && glance.error == null
         return RepoTableRow(
             name = name,
@@ -93,6 +96,8 @@ object RepoTable {
             ahead = if (local && glance!!.upstream != null) glance.ahead else null,
             behind = if (local && glance!!.upstream != null) glance.behind else null,
             provider = provider,
+            // A size is only ever shown for a clone that exists; a stale cache entry of a removed clone prints the dash.
+            sizeDiskBytes = if (cloned) diskBytes else null,
         )
     }
 }

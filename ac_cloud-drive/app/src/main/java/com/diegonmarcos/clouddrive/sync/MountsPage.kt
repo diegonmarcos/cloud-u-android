@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Lan
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -94,7 +95,7 @@ fun MountsPageScreen(
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "mounts_page", modifier = Modifier.weight(1f)) { id ->
             when (id) {
                 "rclone" -> RcloneRemotesScreen(storage, rclone, prefs, actions, ::say)
-                "fuse" -> FuseMountsScreen(storage, rclone, actions, ::say)
+                "fuse" -> FuseMountsScreen(storage, rclone, actions, prefs, ::say)
                 else -> EmptyState(Icons.Filled.Lan, stringResource(R.string.chrome_unknown_tab), "")
             }
         }
@@ -110,11 +111,22 @@ fun RcloneRemotesScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, 
     val notes by storage.remoteNotes.collectAsState()
     val busy by storage.remoteBusy.collectAsState()
     val serving by storage.serving.collectAsState()
-    LaunchedEffect(Unit) { rclone.refresh(); storage.refreshAccount() }
+    // #1195 stored lists render at once; running rclone (version, remotes) and the account read happen only when the Settings ask or Refresh is tapped.
+    AutoRefreshEffects(AutoChecks.Page.MOUNTS, prefs, { rclone.loadStored(); storage.refreshAccount(deep = false) }, { rclone.refresh(); storage.refreshAccount() })
+    var open by rememberSaveable { mutableStateOf("") }
     val available = rclone.runner.isAvailable
     var wizard by remember { mutableStateOf<Pair<Boolean, String?>?>(null) }   // (open, editing name)
     var deleting by remember { mutableStateOf<String?>(null) }
     LazyColumn(modifier.fillMaxSize()) {
+        item {
+            PageActionsBar(
+                AutoChecks.Page.MOUNTS, prefs,
+                listOf(
+                    BarAction(stringResource(R.string.remote_add), { wizard = true to null }, icon = Icons.Filled.CloudSync),
+                    BarAction(stringResource(R.string.mounts_refresh), { rclone.refresh(); storage.refreshAccount() }, icon = Icons.Filled.Sync),
+                ),
+            )
+        }
         item {
             Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -127,13 +139,13 @@ fun RcloneRemotesScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, 
             }
         }
         item { AccountLine(storage, actions) }
-        item { SectionHeader(stringResource(R.string.rclone_remotes_section), count = remotes.size, action = stringResource(R.string.remote_add)) { wizard = true to null } }
+        item { SectionHeader(stringResource(R.string.rclone_remotes_section), count = remotes.size) }
         if (remotes.isEmpty()) item { EmptyState(Icons.Filled.CloudSync, stringResource(R.string.remote_empty), stringResource(R.string.remote_empty_hint), actionLabel = stringResource(R.string.remote_add)) { wizard = true to null } }
         items(remotes, key = { "remote-" + it.name }) { r ->
             val last = prefs.lastTest("remote:" + r.name)
             val options = r.options.filterKeys { k -> !com.diegonmarcos.clouddrive.storage.RcloneProviders.masked(k) }.entries.joinToString("  ") { "${it.key}=${it.value}" }
             val serve = serving[r.name]
-            DriveCard("${r.name}:", light = StatusLight.of(last), summary = "${r.type}  $options", summaryMonospace = true, tag = DriveTags.SYNC_REMOTE_CARD) {
+            TapCard("${r.name}:", expanded = open == "r-" + r.name, onToggle = { open = TapPanel.toggle(open, "r-" + r.name) }, light = StatusLight.of(last), summary = "${r.type}  $options", summaryMonospace = true, tag = DriveTags.SYNC_REMOTE_CARD) {
                 val note = notes[r.name] ?: if (last == null) stringResource(R.string.rclone_untested) else null
                 if (!note.isNullOrBlank()) Text(note, Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 if (serve != null) Text(stringResource(R.string.remote_serving, serve.port), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall)
@@ -165,7 +177,7 @@ fun RcloneRemotesScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, 
 }
 
 @Composable
-fun FuseMountsScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, actions: DriveActions, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+fun FuseMountsScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, actions: DriveActions, prefs: DrivePrefs, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
     val specs by storage.fuseSpecs.collectAsState()
     val verdict by storage.fuseVerdict.collectAsState()
     val caps by storage.fuseCaps.collectAsState()
@@ -173,10 +185,20 @@ fun FuseMountsScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, act
     val serving by storage.guestServing.collectAsState()
     val busy by storage.fuseBusy.collectAsState()
     val notes by storage.fuseNotes.collectAsState()
-    LaunchedEffect(Unit) { storage.refreshAccount(); storage.refreshFuse() }
+    AutoRefreshEffects(AutoChecks.Page.MOUNTS, prefs, { storage.refreshAccount(deep = false); storage.refreshFuse(deep = false) }, { storage.refreshAccount(); storage.refreshFuse() })
+    var open by rememberSaveable { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
     val usable = verdict?.usable == true
     LazyColumn(modifier.fillMaxSize()) {
+        item {
+            PageActionsBar(
+                AutoChecks.Page.MOUNTS, prefs,
+                listOf(
+                    BarAction(stringResource(R.string.fuse_new), { adding = true }, icon = Icons.Filled.Lan),
+                    BarAction(stringResource(R.string.fuse_check), { storage.refreshAccount(); storage.refreshFuse() }, icon = Icons.Filled.Sync),
+                ),
+            )
+        }
         item {
             Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -185,19 +207,17 @@ fun FuseMountsScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, act
                     caps?.let { c -> Text(FuseWire.PROBE_BINS.joinToString("  ") { (if (c.has(it)) "✓ " else "✗ ") + it }, Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2) }
                 }
                 StatusLightRow(StatusLight.of(verdict?.usable), stringResource(R.string.fuse_status))
-                Spacer(Modifier.width(DriveMetrics.pad))
-                Pill(stringResource(R.string.fuse_check), { storage.refreshFuse() })
             }
         }
         item { AccountLine(storage, actions) }
         if (verdict != null && !usable) item { NoteText(stringResource(R.string.fuse_fallback_hint), Modifier.padding(horizontal = DriveMetrics.sectionInset)) }
-        item { SectionHeader(stringResource(R.string.fuse_section), count = specs.size, action = stringResource(R.string.fuse_new)) { adding = true } }
+        item { SectionHeader(stringResource(R.string.fuse_section), count = specs.size) }
         if (specs.isEmpty()) item { EmptyState(Icons.Filled.Lan, stringResource(R.string.fuse_empty), stringResource(R.string.fuse_empty_hint), actionLabel = stringResource(R.string.fuse_new)) { adding = true } }
         items(specs, key = { "fuse-" + it.id }) { s ->
             val mounted = FuseWire.isMounted(live, s)
             val isServing = s.id in serving
             val working = s.id in busy
-            DriveCard(s.id, badge = s.kind.label, light = if (mounted || isServing) StatusLight.State.ON else StatusLight.State.OFF, summary = "${s.source}  →  ${s.mountpoint}", summaryMonospace = true, tag = DriveTags.SYNC_MOUNT_CARD) {
+            TapCard(s.id, expanded = open == "f-" + s.id, onToggle = { open = TapPanel.toggle(open, "f-" + s.id) }, badge = s.kind.label, light = if (mounted || isServing) StatusLight.State.ON else StatusLight.State.OFF, summary = "${s.source}  →  ${s.mountpoint}", summaryMonospace = true, tag = DriveTags.SYNC_MOUNT_CARD) {
                 Text(
                     notes[s.id] ?: if (isServing) stringResource(R.string.fuse_serving, FuseWire.servePort(s.id)) else stringResource(if (mounted) R.string.fuse_mounted else R.string.fuse_not_mounted) + " · cache ${s.cacheMode}" + if (s.readOnly) " · ro" else "",
                     Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 4, overflow = TextOverflow.Ellipsis,

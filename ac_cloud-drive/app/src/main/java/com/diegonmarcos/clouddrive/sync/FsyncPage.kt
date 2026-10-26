@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.clouddrive.Declarations
+import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.storage.BackupJobs
@@ -72,6 +73,7 @@ fun FsyncPageScreen(
     storage: StorageCoordinator,
     rclone: RcloneCoordinator,
     actions: DriveActions,
+    prefs: DrivePrefs,
     page: String? = null,
     onPageConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -94,8 +96,8 @@ fun FsyncPageScreen(
         NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "fsync_page", modifier = Modifier.weight(1f)) { id ->
             when (id) {
-                "backup" -> FsyncBackupScreen(storage, actions, ::say)
-                "folders" -> FolderSyncScreen(rclone, storage, actions, ::say)
+                "backup" -> FsyncBackupScreen(storage, actions, prefs, ::say)
+                "folders" -> FolderSyncScreen(rclone, storage, actions, prefs, ::say)
                 else -> EmptyState(Icons.Filled.Sync, stringResource(R.string.chrome_unknown_tab), "")
             }
         }
@@ -120,16 +122,28 @@ internal fun AccountLine(storage: StorageCoordinator, actions: DriveActions) {
 }
 
 @Composable
-fun FsyncBackupScreen(storage: StorageCoordinator, actions: DriveActions, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+fun FsyncBackupScreen(storage: StorageCoordinator, actions: DriveActions, prefs: DrivePrefs, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
     val jobs by storage.backups.collectAsState()
     val running by storage.backupRunning.collectAsState()
     val notes by storage.backupNotes.collectAsState()
     val rsync by storage.rsyncReady.collectAsState()
     val snap by storage.accountSnapshot.collectAsState()
-    LaunchedEffect(Unit) { storage.refreshBackups(); storage.refreshAccount() }
+    // #1195 stored jobs render at once; the rsync probe and the account read run only when the Settings ask (or Refresh is tapped).
+    AutoRefreshEffects(AutoChecks.Page.FSYNC, prefs, { storage.refreshBackups(deep = false); storage.refreshAccount(deep = false) }, { storage.refreshBackups(); storage.refreshAccount() })
+    var open by rememberSaveable { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
     LazyColumn(modifier.fillMaxSize()) {
+        item {
+            PageActionsBar(
+                AutoChecks.Page.FSYNC, prefs,
+                listOf(
+                    BarAction(stringResource(R.string.backup_new), { adding = true }, icon = Icons.Filled.Backup),
+                    BarAction(stringResource(R.string.fsync_refresh), { storage.refreshBackups(); storage.refreshAccount() }, icon = Icons.Filled.Sync),
+                    BarAction(stringResource(R.string.fsync_run_all), { jobs.filter { it.id !in running }.forEach { storage.runBackup(it) } }, enabled = rsync == "ready" && jobs.isNotEmpty(), icon = Icons.Filled.PlayArrow),
+                ),
+            )
+        }
         item {
             Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -147,13 +161,14 @@ fun FsyncBackupScreen(storage: StorageCoordinator, actions: DriveActions, onMess
                 Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        item { SectionHeader(stringResource(R.string.backup_section), count = jobs.size, action = stringResource(R.string.backup_new)) { adding = true } }
+        item { SectionHeader(stringResource(R.string.backup_section), count = jobs.size) }
         if (jobs.isEmpty()) item { EmptyState(Icons.Filled.Backup, stringResource(R.string.backup_empty), stringResource(R.string.backup_empty_hint), actionLabel = stringResource(R.string.backup_new)) { adding = true } }
         items(jobs, key = { "backup-" + it.id }) { job ->
             val isRunning = job.id in running
             val target = when (val t = job.target) { is BackupJobs.Target.Local -> t.path; is BackupJobs.Target.Ssh -> "${t.user}@${t.host}:${t.path}" }
-            DriveCard(
-                job.name, badge = stringResource(if (job.mirror) R.string.backup_mirror_badge else R.string.backup_copy_badge),
+            TapCard(
+                job.name, expanded = open == "b-" + job.id, onToggle = { open = TapPanel.toggle(open, "b-" + job.id) },
+                badge = stringResource(if (job.mirror) R.string.backup_mirror_badge else R.string.backup_copy_badge),
                 light = if (isRunning) StatusLight.State.UNKNOWN else StatusLight.of(job.lastExit?.let { it == 0 }),
                 summary = "${job.source}  →  $target", summaryMonospace = true, tag = DriveTags.RSYNC_RULE_CARD,
             ) {
@@ -214,18 +229,29 @@ private fun NewBackupDialog(onDismiss: () -> Unit, onCreate: (BackupJobs.Job) ->
 }
 
 @Composable
-fun FolderSyncScreen(rclone: RcloneCoordinator, storage: StorageCoordinator, actions: DriveActions, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+fun FolderSyncScreen(rclone: RcloneCoordinator, storage: StorageCoordinator, actions: DriveActions, prefs: DrivePrefs, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
     val unison = rclone.unison
     val declared by unison.declaredState.collectAsState()
     val states by unison.states.collectAsState()
     val live by unison.live.collectAsState()
     val unavailable by unison.unavailable.collectAsState()
-    LaunchedEffect(Unit) { storage.refreshAccount(); unison.refresh() }
+    AutoRefreshEffects(AutoChecks.Page.FSYNC, prefs, { storage.refreshAccount(deep = false) }, { storage.refreshAccount(); unison.refresh() })
+    var open by rememberSaveable { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<com.diegonmarcos.cloudlib.rclone.unison.UnisonConfig.Pair?>(null) }
     LazyColumn(modifier.fillMaxSize()) {
+        item {
+            PageActionsBar(
+                AutoChecks.Page.FSYNC, prefs,
+                listOf(
+                    BarAction(stringResource(R.string.unison_add), { adding = true }, icon = Icons.Filled.Sync),
+                    BarAction(stringResource(R.string.fsync_refresh), { storage.refreshAccount(); unison.refresh() }, icon = Icons.Filled.Sync),
+                    BarAction(stringResource(R.string.unison_sync_now), { declared.pairs.filter { unison.enabled(it) && it.id !in live }.forEach { unison.syncNow(it) } }, enabled = unavailable == null && declared.pairs.isNotEmpty(), icon = Icons.Filled.PlayArrow),
+                ),
+            )
+        }
         item { AccountLine(storage, actions) }
-        unisonSection(unison, states, live, unavailable, onMessage, declared, onAdd = { adding = true }, onDelete = { deleting = it })
+        unisonSection(unison, states, live, unavailable, onMessage, declared, onAdd = { adding = true }, onDelete = { deleting = it }, open = open, onToggle = { open = TapPanel.toggle(open, it) })
     }
     if (adding) NewPairDialog(onDismiss = { adding = false }, onCreate = { draft -> unison.addPair(draft) { why -> if (why == null) adding = false else onMessage(why) } })
     deleting?.let { pair ->

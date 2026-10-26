@@ -47,6 +47,13 @@ class RcloneCoordinator(private val ctx: Context, private val scope: CoroutineSc
     /** id → result text of the last test in this session. */
     val testResults = MutableStateFlow<Map<String, String>>(emptyMap())
 
+    /** #1195 the stored jobs and mounts only (file reads on IO, no rclone binary run): what a page open always does. */
+    fun loadStored() {
+        scope.launch {
+            withContext(Dispatchers.IO) { val j = jobStore.load(); val m = mountStore.load(); jobs.value = j; mounts.value = m }
+        }
+    }
+
     fun refresh() {
         scope.launch {
             withContext(Dispatchers.IO) {

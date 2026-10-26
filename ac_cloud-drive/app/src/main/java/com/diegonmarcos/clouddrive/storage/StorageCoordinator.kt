@@ -49,7 +49,15 @@ class StorageCoordinator(private val ctx: Context, private val scope: CoroutineS
      * Called when a page opens: ask Account what it holds and bring this phone level ([CredentialMerge]): what only Account has is
      * restored here (a new phone), what only this phone has (a remote just made, a refreshed token, a mount, a pair) is handed over.
      */
-    fun refreshAccount() {
+    fun refreshAccount(deep: Boolean = true) {
+        if (!deep) {
+            // #1195 the stored lists only (small file reads on IO): no Account IPC, no rclone / unison binary probe.
+            scope.launch {
+                rclone.loadStored(); rclone.unison.loadDeclared()
+                fuseSpecs.value = withContext(Dispatchers.IO) { fuseFromDisk() }
+            }
+            return
+        }
         scope.launch {
             val note = withContext(Dispatchers.IO) { levelWithAccount() }
             accountNote.value = note
@@ -218,10 +226,11 @@ class StorageCoordinator(private val ctx: Context, private val scope: CoroutineS
     private fun guest(script: String, stdin: String? = null, timeoutMs: Int = 60_000): StoreExec.Result = exec.run(script, stdin, timeoutMs)
 
     /** The guest's answer to the FUSE check plus its live mounts; any failure to reach the guest becomes the verdict's reason. */
-    fun refreshFuse() {
+    fun refreshFuse(deep: Boolean = true) {
         scope.launch {
             withContext(Dispatchers.IO) {
                 fuseSpecs.value = fuseFromDisk()
+                if (!deep) return@withContext
                 val probe = runCatching { guest(FuseWire.probe(), timeoutMs = 30_000) }
                 val caps = probe.getOrNull()?.takeIf { it.ok }?.let { FuseWire.parseCaps(it.out) }
                 fuseCaps.value = caps
@@ -340,10 +349,11 @@ class StorageCoordinator(private val ctx: Context, private val scope: CoroutineS
     /** Whether rsync exists in the guest: null = not asked or not reachable. */
     val rsyncReady = MutableStateFlow<String?>(null)
 
-    fun refreshBackups() {
+    fun refreshBackups(deep: Boolean = true) {
         scope.launch {
             withContext(Dispatchers.IO) {
                 backups.value = if (backupFile.isFile) BackupJobs.fromJson(runCatching { backupFile.readText() }.getOrDefault("")) else emptyList()
+                if (!deep) return@withContext
                 val r = runCatching { guest("command -v rsync >/dev/null 2>&1 && echo ready || echo missing", timeoutMs = 30_000) }
                 rsyncReady.value = r.fold({ if (it.out.trim() == "ready") "ready" else "rsync is not installed in the Termux guest (apt install rsync)" }, { "Cloud Terminal's Termux is not reachable: install and open it once" })
             }

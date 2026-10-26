@@ -52,6 +52,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -101,6 +102,7 @@ import com.diegonmarcos.cloudlib.auth.SignInHost
 import com.diegonmarcos.cloudlib.auth.SignInResult
 import com.diegonmarcos.cloudlib.auth.SignInWays
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -146,7 +148,7 @@ enum class GitPart { TABLE, SETUP }
 /** One row of THE table, whatever listing it came from; [onClone] clones it from the leg that listed it, [note] is a line under it. */
 private class TableEntry(
     val key: String, val label: String, val name: String, val owner: String, val isPrivate: Boolean?, val fork: Boolean, val source: String,
-    val row: RepoTableRow, val cloned: ManagedRepo?, val onClone: () -> Unit, val note: String,
+    val row: RepoTableRow, val cloned: ManagedRepo?, val onClone: () -> Unit, val note: String, val cloneUrl: String = "",
 )
 
 /** #1149 Cloud's live public list: loading, the filtered repositories, or why there are none (the declared set then stands in). */
@@ -184,6 +186,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     val cloning by coordinator.cloning.collectAsState()
     // #1138 the repo table: the cached REST facts, the clone settings, the sort and the one scroll the header and rows share.
     val remoteStats by coordinator.remoteStats.collectAsState()
+    val diskSizes by coordinator.diskSizes.collectAsState()
+    val autoSettings = rememberAutoSettings(AutoChecks.Page.GIT, prefs)
     val refreshingRemote by coordinator.refreshingRemote.collectAsState()
     val cloneDepth by coordinator.cloneDepth.collectAsState()
     val cloneSsh by coordinator.cloneViaSsh.collectAsState()
@@ -214,6 +218,10 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // #850 once per entry to the page: the bounded, cached status read, and the auto pull
     // when it is on and the network is unmetered. Recomposition never re-runs this.
     LaunchedEffect(Unit) { coordinator.onPageOpened() }
+    // #1195 the periodic check, only while this page is open and only when an interval is set (off by default).
+    LaunchedEffect(autoSettings.intervalMinutes) {
+        while (autoSettings.intervalMinutes > 0) { delay(autoSettings.intervalMinutes * 60_000L); coordinator.onTick() }
+    }
     val bulk by coordinator.bulk.collectAsState()
     val autoPull by coordinator.autoPullOnOpen.collectAsState()
     val autoPullNote by coordinator.autoPullNote.collectAsState()
@@ -250,7 +258,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // for want of a credential, was only readable off Download/drive-debug/. What is shown is
     // the report's OWN tally line — the same words the log carries, never new prose and never
     // a credential — and a cleanly complete pass draws nothing.
-    val seedTally = remember { StoreSeedWorker.lastReport(ctx).trim().lines().lastOrNull().orEmpty() }
+    // A file read: off the main thread (#1195), blank until it lands.
+    val seedTally by produceState("") { value = withContext(Dispatchers.IO) { StoreSeedWorker.lastReport(ctx).trim().lines().lastOrNull().orEmpty() } }
     val clonedByName = repos.associateBy { File(it.path).name }
     // #1149 where Parentless looks: the store's git folder and the folder every registered clone sits in.
     val parentRoots = remember(repos) { (listOf(SharedStore.gitRoot()) + repos.mapNotNull { File(it.path).parentFile }).distinctBy { it.absolutePath } }
@@ -261,7 +270,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     fun tableRow(name: String, owner: String, declaredPrivate: Boolean?, listedUrl: String = ""): RepoTableRow {
         val cloned = clonedByName[name]
         val url = cloned?.remoteUrl?.takeIf { it.isNotBlank() } ?: listedUrl
-        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[it.id] }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers))
+        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[it.id] }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes })
     }
     // Pull-to-refresh re-reads the REST facts of every repository the table lists (GitHub-listed or declared; the fleet's own git is not GitHub).
     fun refreshTargets(): List<Pair<String, String>> {
@@ -688,7 +697,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     val entries: List<TableEntry> = buildList {
         if (view == GitView.CLOUD) {
             publicRows.forEach { d ->
-                add(TableEntry("pub-" + d.name, d.label, d.name, page.owner, false, false, "", tableRow(d.name, page.owner, false, page.cloneUrl(d.name, Declarations.REMOTE_HTTPS)), clonedByName[d.name], { clone(d.name) }, ""))
+                add(TableEntry("pub-" + d.name, d.label, d.name, page.owner, false, false, "", tableRow(d.name, page.owner, false, page.cloneUrl(d.name, Declarations.REMOTE_HTTPS)), clonedByName[d.name], { clone(d.name) }, "", page.cloneUrl(d.name, Declarations.REMOTE_HTTPS)))
             }
         } else {
             page.ways.forEach { way ->
@@ -706,6 +715,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                             else clone(gh.name, gh.cloneUrl, gh.sshUrl)
                         },
                         if (gh.private && cloned == null && gh.cloneUrl.isBlank() && wayListing.rungId.isBlank()) ctx.getString(R.string.git_way_private_needs_credential, gh.name) else "",
+                        gh.cloneUrl,
                     ))
                 }
             }
@@ -724,6 +734,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                             }
                         },
                         "",
+                        hr.cloneUrl,
                     ))
                 }
             }
@@ -739,22 +750,18 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
 
     // The table block: the sticky column header (BELOW the sign-in cards), the bulk bar and summary, then the rows.
     fun LazyListScope.tableBlock() {
-        stickyHeader(key = "table-header") {
-            RepoTableHeader(sortColumn, sortAscending, tableScroll) { c ->
-                val next = RepoTable.tap(c, sortColumn, sortAscending)
-                sortColumn = next.first; sortAscending = next.second
-                expanded = ""
-            }
-        }
+        // #1195 ORDER: the actions bar (bulk buttons + Settings gear), the summary and the legend come FIRST; the sortable column header
+        // is the sticky item right below them and stays pinned while the rows scroll.
         item(key = "table-bulk") {
             Column {
-                RepoBulkBar(busy = bulk?.finished == false || running.isNotEmpty()) { b ->
+                RepoBulkBar(busy = bulk?.finished == false || running.isNotEmpty(), prefs = prefs) { b ->
                     expanded = ""
                     when (b) {
-                        RepoActions.Bulk.CHECK_ALL -> { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token) }
+                        RepoActions.Bulk.CHECK_ALL -> { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token); coordinator.refreshSizes(force = true) }
                         RepoActions.Bulk.SYNC_ALL -> coordinator.runCompoundAll(RepoActions.SYNC_NO_WINNER)
                         RepoActions.Bulk.CLONE_ALL -> entries.filter { it.cloned == null && it.name !in cloning }.forEach { it.onClone() }
                         RepoActions.Bulk.STASH_PUSH_ALL -> coordinator.runCompoundAll(RepoActions.STASH_PUSH)
+                        RepoActions.Bulk.REFRESH_SIZES -> coordinator.refreshSizes(force = true)
                     }
                 }
                 RepoSummaryLine(summary)
@@ -765,6 +772,13 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_HANDOFF).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+        stickyHeader(key = "table-header") {
+            RepoTableHeader(sortColumn, sortAscending, tableScroll) { c ->
+                val next = RepoTable.tap(c, sortColumn, sortAscending)
+                sortColumn = next.first; sortAscending = next.second
+                expanded = ""
             }
         }
         items(sortedEntries, key = { it.key }) { e ->
@@ -781,6 +795,14 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 e.note, Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
                 style = MaterialTheme.typography.labelSmall, color = colorResource(R.color.status_light_off),
             )
+            if (expanded == e.key && cloned == null) {
+                GitRepoNotClonedBox(
+                    page = page, repoName = e.name, owner = e.owner, row = e.row, isPrivate = e.isPrivate,
+                    remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)], cloneUrl = e.cloneUrl,
+                    cloning = e.name in cloning, coordinator = coordinator, actions = actions,
+                    onClone = e.onClone, onClose = { expanded = "" },
+                )
+            }
             if (expanded == e.key && cloned != null) {
                 GitRepoOpsBox(
                     repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
@@ -1230,7 +1252,7 @@ private fun GitRepoRow(
     Row(
         Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_ROW)
             .heightIn(min = DriveMetrics.rowHeight)
-            .clickable(enabled = repo != null, onClick = onToggle),
+            .clickable(onClick = onToggle),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(Modifier.horizontalScroll(scroll).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
@@ -1245,7 +1267,7 @@ private fun GitRepoRow(
                 if (source.isNotBlank()) Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (repo == null && !cloning) Text(stringResource(R.string.git_not_cloned), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (repo != null && glance != null && glance.gone) Text(stringResource(R.string.sync_glance_gone), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                else if (repo != null && (glance == null || !glance.read)) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                else if (repo != null && (glance == null || !glance.read)) Text(stringResource(R.string.sync_glance_unchecked), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (repo != null && glance != null && glance.error != null) Text(
                     statusErrorText(RepoStatus.errorKind(glance.error), glance.error), style = MaterialTheme.typography.labelSmall,
                     color = colorResource(R.color.status_light_off), maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -1559,6 +1581,7 @@ private fun GitRepoOpsBox(
             stringResource(R.string.repo_meta_k_auth) to repo.authKind,
             stringResource(R.string.repo_meta_k_last_sync) to (if (repo.lastSyncEpochSeconds > 0) fmt.format(Date(repo.lastSyncEpochSeconds * 1000)) + " " + repo.lastSyncSummary else stringResource(R.string.sync_never)),
             stringResource(R.string.repo_meta_k_size) to (RepoTable.size(row.sizeMainBytes) + " / " + RepoTable.size(row.sizeTotalBytes)),
+            stringResource(R.string.repo_meta_k_size_disk) to RepoTable.size(row.sizeDiskBytes),
             stringResource(R.string.repo_meta_k_branches) to RepoTable.count(row.branches),
         ))
         PillRow { Pill(stringResource(R.string.repo_menu_close), onClose) }
@@ -1591,6 +1614,88 @@ private fun GitRepoOpsBox(
             },
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.chrome_cancel)) } },
         )
+    }
+}
+
+/**
+ * #1195 THE PANEL OF A REPOSITORY THAT IS NOT CLONED: it opens on the same tap as a cloned one. What needs no clone works
+ * (Open on web, Clone, Copy URL, View PRs, CI runs, the metadata the forge's cached answer holds); every action that needs
+ * the local clone is drawn disabled and the line under the chips says why ([RepoActions.needsClone]).
+ */
+@Composable
+private fun GitRepoNotClonedBox(
+    page: Declarations.GitPageDecl,
+    repoName: String,
+    owner: String,
+    row: RepoTableRow,
+    isPrivate: Boolean?,
+    remote: RepoRemoteStats.Stats?,
+    cloneUrl: String,
+    cloning: Boolean,
+    coordinator: GitSyncCoordinator,
+    actions: DriveActions,
+    onClone: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val ctx = LocalContext.current
+    var prs by remember(repoName) { mutableStateOf<List<String>?>(null) }
+    var runs by remember(repoName) { mutableStateOf<List<String>?>(null) }
+    var panel by remember(repoName) { mutableStateOf("") }
+    val url = cloneUrl.ifBlank { page.cloneUrl(repoName, Declarations.REMOTE_HTTPS) }
+    // The two feeds are network reads the owner asked for by opening their panel; never on render.
+    LaunchedEffect(repoName, panel) {
+        if (panel == RepoActions.PRS && prs == null) prs = coordinator.prFeed(owner, repoName).getOrElse { listOf(ctx.getString(R.string.repo_prs_failed, it.message.orEmpty())) }
+        if (panel == RepoActions.RUNS && runs == null) runs = coordinator.runFeed(owner, repoName).getOrElse { listOf(ctx.getString(R.string.repo_runs_failed, it.message.orEmpty())) }
+    }
+    DriveCard(repoName, light = StatusLight.State.UNKNOWN, tag = DriveTags.SYNC_GIT_NOT_CLONED_PANEL) {
+        PillRow {
+            Pill(stringResource(R.string.repo_act_open_web), { actions.openUrl(page.webUrl(repoName)) })
+            Pill(stringResource(R.string.sync_clone_into_store), onClone, filled = true, enabled = !cloning)
+            Pill(stringResource(R.string.repo_act_copy_url), {
+                (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager)?.setPrimaryClip(ClipData.newPlainText(repoName, url))
+            })
+        }
+        RepoActionGroupsView(
+            page = page, busy = false, blocked = { false },
+            active = { it == panel },
+            onAction = { id ->
+                when (id) {
+                    "web" -> actions.openUrl(page.webUrl(repoName))
+                    RepoActions.PRS, RepoActions.RUNS -> panel = if (panel == id) "" else id
+                    RepoActions.CLONE_FULL -> coordinator.setCloneDepth(0)
+                    RepoActions.CLONE_DEPTH1 -> coordinator.setCloneDepth(1)
+                    RepoActions.CLONE_OAUTH -> coordinator.setCloneViaSsh(false)
+                    RepoActions.CLONE_SSH -> coordinator.setCloneViaSsh(true)
+                }
+            },
+            unavailable = { RepoActions.needsClone(it) },
+        )
+        Text(stringResource(R.string.repo_not_cloned_why), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        when (panel) {
+            RepoActions.PRS -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
+                val feed = prs
+                if (feed == null) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
+                else if (feed.isEmpty()) Text(stringResource(R.string.repo_prs_none), style = MaterialTheme.typography.bodySmall)
+                else feed.forEach { MetaLine(it) }
+            }
+            RepoActions.RUNS -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
+                val feed = runs
+                if (feed == null) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
+                else if (feed.isEmpty()) Text(stringResource(R.string.repo_runs_none), style = MaterialTheme.typography.bodySmall)
+                else feed.forEach { MetaLine(it) }
+            }
+        }
+        RepoMetaTable(listOf(
+            stringResource(R.string.repo_meta_k_name) to repoName,
+            stringResource(R.string.repo_meta_k_owner) to owner,
+            stringResource(R.string.repo_meta_k_visibility) to RepoTable.visibility(isPrivate, stringResource(R.string.repo_vis_pvt), stringResource(R.string.repo_vis_pub)),
+            stringResource(R.string.repo_meta_k_remote) to url.ifBlank { stringResource(R.string.git_meta_no_remote) },
+            stringResource(R.string.repo_meta_k_default_branch) to (remote?.defaultBranch ?: stringResource(R.string.repo_unknown)),
+            stringResource(R.string.repo_meta_k_size) to (RepoTable.size(row.sizeMainBytes) + " / " + RepoTable.size(row.sizeTotalBytes)),
+            stringResource(R.string.repo_meta_k_size_disk) to RepoTable.size(row.sizeDiskBytes),
+            stringResource(R.string.repo_meta_k_branches) to RepoTable.count(row.branches),
+        ))
+        PillRow { Pill(stringResource(R.string.repo_menu_close), onClose) }
     }
 }
 

@@ -38,6 +38,13 @@ class UnisonCoordinator(private val ctx: Context, private val scope: CoroutineSc
 
     private val handles = java.util.concurrent.ConcurrentHashMap<String, UnisonRunner.Handle>()
 
+    /** #1195 the declared pairs and their remembered state (file reads on IO), without asking the engine whether it runs. */
+    fun loadDeclared() {
+        scope.launch {
+            withContext(Dispatchers.IO) { val now = syncer.declared; declaredState.value = now; states.value = syncer.store.load() }
+        }
+    }
+
     fun refresh() {
         scope.launch {
             withContext(Dispatchers.IO) {

@@ -151,6 +151,11 @@ object DriveTags {
     const val SYNC_GIT_TABLE_HEADER = "sync_git_table_header"
     const val SYNC_GIT_BULK_BAR = "sync_git_bulk_bar"
     const val SYNC_GIT_SUMMARY = "sync_git_summary"
+    /** #1195 the shared actions bar of Fsync / Mounts, the Settings gear and its sheet (Git's bar keeps SYNC_GIT_BULK_BAR). */
+    const val SYNC_ACTIONS_BAR = "sync_actions_bar"
+    const val SYNC_AUTO_SETTINGS = "sync_auto_settings"
+    const val SYNC_AUTO_SHEET = "sync_auto_sheet"
+    const val SYNC_GIT_NOT_CLONED_PANEL = "sync_git_not_cloned_panel"
     const val SYNC_GIT_META_TABLE = "sync_git_meta_table"
     const val SYNC_GIT_LIST = "sync_git_list"
     const val SYNC_GIT_LEGEND = "sync_git_legend"

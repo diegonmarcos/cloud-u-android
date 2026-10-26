@@ -53,4 +53,59 @@ class GitPageLayoutTest {
         assertTrue(src.contains("expanded = RepoTable.toggle(expanded, e.key)"))
         assertTrue(src.contains("onClose = { expanded = \"\" }"))
     }
+
+    private val dir = File(root, "app/src/main/java/com/diegonmarcos/clouddrive/sync")
+    private val fsync = File(dir, "FsyncPage.kt").readText()
+    private val mounts = File(dir, "MountsPage.kt").readText()
+    private val tableUi = File(dir, "RepoTableUi.kt").readText()
+
+    @Test fun `#1195 the actions bar sits above the column header and the header is the sticky item right below it`() {
+        val block = src.substring(src.indexOf("fun LazyListScope.tableBlock()"))
+        val bar = block.indexOf("RepoBulkBar(")
+        val header = block.indexOf("stickyHeader(key = \"table-header\")")
+        val rows = block.indexOf("items(sortedEntries")
+        assertTrue("bulk bar, then sticky header, then rows", bar in 0 until header && header < rows)
+        assertTrue("the bar is its own item, not inside the sticky header", block.substring(0, header).contains("item(key = \"table-bulk\")"))
+        assertTrue("the bar carries the Settings gear", tableUi.contains("PageActionsBar(") && tableUi.contains("AutoChecks.Page.GIT, prefs"))
+    }
+
+    @Test fun `#1195 git fsync and mounts share one actions bar with the settings sheet and one tap-to-open row`() {
+        assertTrue(tableUi.contains("PageActionsBar("))
+        assertEquals("two Fsync bars (backup, folders)", 2, Regex("PageActionsBar\\(").findAll(fsync).count())
+        assertEquals("two Mounts bars (rclone, fuse)", 2, Regex("PageActionsBar\\(").findAll(mounts).count())
+        assertTrue(File(dir, "TablePage.kt").readText().contains("AutoSettingsSheet(page, prefs)"))
+        assertEquals(1, Regex("fun AutoSettingsSheet\\(").findAll(File(dir, "TablePage.kt").readText()).count())
+        assertTrue(fsync.contains("TapCard(") && mounts.contains("TapCard(") && File(dir, "UnisonScreens.kt").readText().contains("onClick = onToggle"))
+        for (f in listOf(fsync, mounts)) assertTrue("tap again closes the panel", f.contains("TapPanel.toggle(open"))
+        assertEquals("one rule for the toggle", "if (open == tapped) \"\" else tapped", File(dir, "TablePage.kt").readText().lines().first { it.contains("fun toggle") }.substringAfter("=").trim())
+    }
+
+    @Test fun `#1195 a repository that is not cloned opens its panel on a tap`() {
+        assertFalse("the row is clickable whether or not it is cloned", src.contains(".clickable(enabled = repo != null"))
+        assertTrue(src.contains("expanded == e.key && cloned == null"))
+        assertTrue(src.contains("GitRepoNotClonedBox("))
+        for (needle in listOf("R.string.repo_act_open_web", "R.string.sync_clone_into_store", "R.string.repo_act_copy_url", "RepoActions.PRS", "RepoActions.needsClone(it)", "R.string.repo_not_cloned_why")) assertTrue(needle, src.contains(needle))
+    }
+
+    @Test fun `#1195 the pages open without disk, process or network work in their composables`() {
+        // StrictMode-style, read off the source: the composables only read the caches; every walk, probe and request is in a coordinator behind withContext(IO).
+        val banned = listOf("walkTopDown", "walkFileTree", "listFiles(", "HttpURLConnection", ".readText(", "ProcessBuilder", "Runtime.getRuntime")
+        for ((name, text) in mapOf("GitReposScreen" to src, "FsyncPage" to fsync, "MountsPage" to mounts, "RepoTableUi" to tableUi, "TablePage" to File(dir, "TablePage.kt").readText())) {
+            banned.forEach { assertFalse("$name must not call $it on the main thread", text.contains(it)) }
+        }
+        assertFalse("the seed report is read off the main thread", src.contains("remember { StoreSeedWorker.lastReport"))
+        val coord = File(dir, "GitSyncCoordinator.kt").readText()
+        assertTrue("sizes are walked on IO", coord.contains("withContext(Dispatchers.IO) {\n                    val dirs = registry.load()"))
+        assertTrue("opening the Git page loads the registry and runs only the plan", coord.contains("runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.OPEN))"))
+        val pageOpen = coord.substring(coord.indexOf("fun onPageOpened()"), coord.indexOf("fun onTick()"))
+        assertFalse("no unconditional status read on open", pageOpen.contains("refresh("))
+        for (f in listOf(fsync, mounts)) assertTrue("the deep probes sit behind the settings", f.contains("AutoRefreshEffects("))
+        assertTrue(File(dir, "RepoDiskSize.kt").readText().contains("check(!StartupGuard.onMainThread())"))
+    }
+
+    @Test fun `#1195 the size column is in the table header and cells`() {
+        assertTrue(tableUi.contains("RepoColumn.SIZE_DISK -> R.string.repo_col_size_disk"))
+        assertTrue(tableUi.contains("RepoColumn.SIZE_DISK to RepoTable.size(r.sizeDiskBytes)"))
+        assertTrue(src.contains("diskSizes[File(it.path).absolutePath]?.bytes"))
+    }
 }

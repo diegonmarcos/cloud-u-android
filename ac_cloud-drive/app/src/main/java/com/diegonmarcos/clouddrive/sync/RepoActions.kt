@@ -60,5 +60,13 @@ object RepoActions {
     fun isCompound(id: String): Boolean = id == STASH_PUSH || id == SYNC_NO_WINNER || id == SYNC_REMOTE_WINS || id == SYNC_LOCAL_WINS || cleanDepth(id) > 0
 
     /** The first row of the page: bulk commands over every repo, in this order (Cloud Store's bulk-bar shape). Plain sync = no winner. */
-    enum class Bulk { CHECK_ALL, SYNC_ALL, CLONE_ALL, STASH_PUSH_ALL }
+    enum class Bulk { CHECK_ALL, SYNC_ALL, CLONE_ALL, STASH_PUSH_ALL, REFRESH_SIZES }
+
+    /**
+     * #1195 what a repository that is NOT cloned can still do: open it on the web, read its pull requests and CI runs
+     * (remote reads), and set how a clone will be made. Every other action needs the local clone and is drawn disabled
+     * with the reason ([needsClone]); Clone and Copy URL are the panel's own two buttons.
+     */
+    val NO_CLONE_NEEDED: Set<String> = setOf("web", PRS, RUNS, CLONE_FULL, CLONE_DEPTH1, CLONE_OAUTH, CLONE_SSH)
+    fun needsClone(id: String): Boolean = id !in NO_CLONE_NEEDED
 }

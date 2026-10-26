@@ -110,10 +110,16 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * loaded and the reads are requested, with the job that ends when they have all ended.
      */
     fun refresh(force: Boolean = false): kotlinx.coroutines.Job = scope.launch {
+        val list = loadRegistry()
+        statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) }, force).join()
+    }
+
+    /** #1195 the registry and the history only (a small file read on IO, no git status, no walk, no network): what a page open always does. */
+    private suspend fun loadRegistry(): List<ManagedRepo> {
         val list = withContext(Dispatchers.IO) { registry.load() }
         repos.value = list
         events.value = withContext(Dispatchers.IO) { history.load() }
-        statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) }, force).join()
+        return list
     }
 
     /** After an operation changed [repo]'s tree: its cached status is stale, re-read it. */
@@ -203,19 +209,63 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     }.getOrDefault(false)
 
     /**
-     * #850 the page opened: read every status (cached, bounded) and, when the toggle is on
-     * and the declared network constraint holds, pull every clone (plain pull). Called from
-     * the page's LaunchedEffect(Unit) — once per entry, never per recomposition.
+     * #850 / #1195 the page opened. The table renders from what is cached: this loads the registry and the persisted
+     * size cache and nothing else. Status reads, fetches, pulls and size walks run only when the page's Settings
+     * ask for them ([AutoChecks.plan], all off by default); a plain pull additionally keeps its declared Wi-Fi-only
+     * constraint. Called from the page's LaunchedEffect(Unit): once per entry, never per recomposition.
      */
     fun onPageOpened() {
-        refresh()
         scope.launch {
+            loadRegistry()
+            runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.OPEN))
+        }
+    }
+
+    /** The periodic tick of an open page (the page schedules it only when an interval is set). */
+    fun onTick() { scope.launch { runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.TICK)) } }
+
+    /** The Git page's auto-behaviour settings as persisted in cloud-drive-prefs (DrivePrefs writes the same file); all off when nothing is stored. */
+    private suspend fun autoSettings(): AutoChecks.Settings = withContext(Dispatchers.IO) { AutoChecks.Settings(AutoChecks.Page.GIT, pagePrefs.all) }
+
+    private suspend fun runPlan(work: Set<AutoChecks.Work>) {
+        if (AutoChecks.Work.READ_STATUS in work) refresh()
+        if (AutoChecks.Work.FETCH_ALL in work) fetchAll()
+        if (AutoChecks.Work.REFRESH_SIZES in work) refreshSizes()
+        if (AutoChecks.Work.PULL_ALL in work) {
             val on = withContext(Dispatchers.IO) { pagePrefs.getBoolean(KEY_AUTO_PULL, Declarations.sync.git.autoPull.defaultOn) }
             autoPullOnOpen.value = on
             autoPullNote.value = when (val d = autoPullDecision(on, Declarations.sync.git.autoPull.requireUnmetered, unmetered(), bulkRunning.get())) {
                 AUTO_PULL_GO -> { pullAll(force = false, trigger = TRIGGER_OPEN); "" }
                 else -> d
             }
+        }
+    }
+
+    /** Fetch every clone (the declared fetch op, one running op per repository). */
+    fun fetchAll() { repos.value.forEach { runOp(it, OP_FETCH) } }
+
+    // ── #1195 size on disk: walked in the background, cached by fingerprint, shown from the cache ──
+
+    val diskSizes = MutableStateFlow<Map<String, RepoDiskSize.Entry>>(emptyMap())
+        .also { f -> scope.launch(Dispatchers.IO) { f.value = RepoDiskSize.load(pagePrefs) } }
+    val refreshingSizes = MutableStateFlow(false)
+
+    /**
+     * Bring the size cache up to date, incrementally: a clone whose fingerprint (path + HEAD / index / FETCH_HEAD /
+     * folder mtimes) is unchanged is not walked again; [force] walks every clone. One clone at a time, on IO.
+     */
+    fun refreshSizes(force: Boolean = false) {
+        if (!refreshingSizes.compareAndSet(false, true)) return
+        scope.launch {
+            try {
+                val next = withContext(Dispatchers.IO) {
+                    val dirs = registry.load().map { File(it.path) }
+                    val out = RepoDiskSize.refresh(diskSizes.value, dirs, force)
+                    RepoDiskSize.save(pagePrefs, out)
+                    out
+                }
+                diskSizes.value = next
+            } finally { refreshingSizes.value = false }
         }
     }
 
@@ -591,7 +641,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         }
 
         const val PREFS_PAGE = "cloud-drive-prefs"
-        const val KEY_AUTO_PULL = "git.auto_pull_on_open"
+        const val KEY_AUTO_PULL = AutoChecks.GIT_PULL_KEY
         const val KEY_CLONE_DEPTH = "git.clone_depth"
         const val KEY_CLONE_SSH = "git.clone_ssh"
         const val TRIGGER_OPEN = "open"
