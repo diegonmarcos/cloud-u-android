@@ -201,7 +201,7 @@ def shared_design(app_root, c):
     try:
         design = json.load(open(os.path.join(repo, c["design"])))
         tasks = json.load(open(os.path.join(repo, c["tasks"])))["tasks"]
-        catalogue = json.load(open(os.path.join(repo, c["catalogue"])))
+        catalogue = json.load(open(os.path.join(repo, c["shared_catalogue"])))
         agents = json.load(open(os.path.join(repo, c["shared_agents"])))["agents"]
     except (OSError, ValueError, KeyError) as e:
         raise SystemExit("resolve-targets: cannot read the shared AI design or task mapping (%s)" % e)

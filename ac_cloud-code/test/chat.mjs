@@ -287,7 +287,7 @@ out(JSON.parse(lreq.body).model === tl.model, "a task's request carries the task
 
 // ── the shared catalogues: the Model Catalogue's subpages and the Task Catalogue (libs:ai ai-catalogue.json) ──
 const cg = fleet.catalogue;
-const cgFile = JSON.parse(read(`../${nav.chat.catalogue}`));
+const cgFile = JSON.parse(read(`../${nav.chat.shared_catalogue}`));
 out(JSON.stringify(cg) === JSON.stringify(cgFile), "the page's catalogues are libs:ai's ai-catalogue.json, copied by the resolver");
 out(!("model_tabs" in design), "the design no longer carries the old picker tabs");
 out(JSON.stringify(M.modelTabs(cg).map((t) => t.label)) === '["Frontier","Core","Specialist","Medium","Small"]', "the Model Catalogue's subpages are Frontier, Core, Specialist, Medium, Small");
