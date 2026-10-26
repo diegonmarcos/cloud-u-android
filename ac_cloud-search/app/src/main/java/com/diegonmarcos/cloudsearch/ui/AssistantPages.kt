@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.cloudsearch.R
 import com.diegonmarcos.cloudsearch.core.SearchConfig
 import com.diegonmarcos.cloudsearch.core.Templates
-import com.diegonmarcos.cloudsearch.models.ModelCataloguePage
 import com.diegonmarcos.superapp.ai.AiChatPage
 import com.diegonmarcos.superapp.ai.AiColors
 import com.diegonmarcos.superapp.ai.AiEngine
@@ -30,6 +29,7 @@ import com.diegonmarcos.superapp.ai.AiIcons
 import com.diegonmarcos.superapp.ai.AiMetrics
 import com.diegonmarcos.superapp.ai.AiSessionsPanel
 import com.diegonmarcos.superapp.ai.AiStrings
+import com.diegonmarcos.superapp.modelcatalogue.CatalogueFetch
 import com.diegonmarcos.superapp.ai.AiTheme
 import com.diegonmarcos.superapp.ai.AiType
 
@@ -46,19 +46,14 @@ fun AssistantPage(v: SearchConfig.Vertical) {
     val state = LocalState.current
     // With the keyboard up the nav is gone (SearchShell), so the input sits right on the keyboard.
     val bottom = if (imeOpen()) Metrics.small else Metrics.contentBottom
-    // The model chip opens the model catalogue (models/ModelCataloguePage) in the chat's place; back returns.
-    var catalogue by rememberSaveable { mutableStateOf(false) }
-    if (catalogue) {
-        ModelCataloguePage(state, onClose = { catalogue = false }, modifier = Modifier.padding(top = Metrics.contentTop, bottom = bottom))
-        return
-    }
+    // The Model button opens libs:ai's full Model Catalogue and the Task button its Task Catalogue; the prices ride this app's one network door.
     AiChatPage(
         state.chat,
         engines = state.cfg.engines.map { AiEngine(it.id, it.label, it.icon, it.accent) },
         query = { e, q -> state.cfg.engines.firstOrNull { it.id == e.id }?.let { Templates.fill(it.url, q, state.cfg.city(state.city)) } },
         theme = aiTheme(),
         modifier = Modifier.padding(top = Metrics.contentTop, bottom = bottom),
-        onCatalogue = { catalogue = true },
+        catalogueFetch = CatalogueFetch { url -> state.services.http.get(url, emptyMap(), state.services.cfg.timeoutMs).takeIf { it.code in 200..299 }?.body },
     ) {
         Chip(stringResource(R.string.sessions), Tags.SESSIONS, icon = R.drawable.ph_list_dashes) { state.menu = Menu.SESSIONS }
     }

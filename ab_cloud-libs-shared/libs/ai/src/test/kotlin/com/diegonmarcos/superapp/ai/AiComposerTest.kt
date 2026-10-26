@@ -10,7 +10,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * The shared composer: the design file, the declared controls and their order, the Model tabs and their rules, the Permission
+ * The shared composer: the design file, the declared controls and their order, the Permission
  * Modes, the MCP sentence, and the Task lock (a task greys Agent and Model and sets them). Plain JVM, over the real assets.
  */
 class AiComposerTest {
@@ -34,35 +34,6 @@ class AiComposerTest {
         )
         for (k in used) assertTrue("metric $k", k in design.metricKeys)
         assertEquals("no metric is declared and unused", used.toSet(), design.metricKeys)
-    }
-
-    @Test fun theModelPickerHasTheFiveTabsInOrder() {
-        assertEquals(listOf("frontier", "code", "search", "medium", "small"), design.tabs.map { it.id })
-        assertEquals(listOf("Frontier", "Code", "Search", "Medium", "Small"), design.tabs.map { it.label })
-        assertEquals(design.tabs.map { it.id }.toSet(), design.classifyOrder.toSet())
-        assertTrue(design.fallbackTab in design.tabs.map { it.id })
-    }
-
-    @Test fun modelsLandInTheirTabsByDeclaredRules() {
-        fun tab(id: String, nativeWeb: Boolean = false, section: String = "", tier: String = "") = design.tabOf(AiModel(id, id, nativeWeb, false, section, tier))
-        assertEquals("code", tab("qwen/qwen-2.5-coder-32b-instruct"))
-        assertEquals("code", tab("anything/at-all", section = "A0"))
-        assertEquals("search", tab("perplexity/sonar-pro"))
-        assertEquals("search", tab("some/model", nativeWeb = true))
-        assertEquals("small", tab("mistralai/ministral-3b-2512"))
-        assertEquals("small", tab("google/gemma-3-4b-it"))
-        assertEquals("small", tab("deepseek/deepseek-r1-distill-qwen-1.5b"))
-        assertEquals("small", tab("whatever/model", tier = "small"))
-        assertEquals("medium", tab("meta-llama/llama-3.1-8b-instruct"))
-        assertEquals("medium", tab("openai/gpt-oss-20b"))
-        assertEquals("medium", tab("openai/gpt-4o-mini"))
-        assertEquals("medium", tab("whatever/model", tier = "medium"))
-        assertEquals("frontier", tab("anthropic/claude-opus-4"))
-        assertEquals("frontier", tab("openai/gpt-5"))
-        val by = design.byTab(listOf(AiModel("perplexity/sonar", "Sonar"), AiModel("anthropic/claude-opus-4", "Opus")))
-        assertEquals(design.tabs.map { it.id }, by.keys.toList())
-        assertEquals(listOf("Sonar"), by.getValue("search").map { it.name })
-        assertTrue(by.getValue("small").isEmpty())
     }
 
     @Test fun permissionModesAreAskAutoEditReadOnlyPlanAndAskAddsNothing() {

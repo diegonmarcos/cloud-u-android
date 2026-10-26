@@ -244,6 +244,11 @@ if os.path.exists(shared):
     st = {t["id"]: t["model"] for t in json.loads(read(shared))["tasks"]}
     bt = {t["id"]: t["worker"] for t in bj["tools"]["tasks"]}
     if st != bt: bad.append("A9 libs:ai's ai-tasks.json and build.json::tools.tasks differ (ids or workers): %s" % sorted(set(st.items()) ^ set(bt.items()))[:4])
+shared_cat = os.path.join(app, "../ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai-catalogue.json")
+if os.path.exists(shared_cat):
+    sc = {(m["id"], m["tier"], m["params"], m.get("openrouter_id", "")) for m in json.loads(read(shared_cat))["tools_models"]["models"]}
+    tm_rows = {(m["model"], m["tier"], m["params"], m.get("openrouter_id", "")) for m in json.loads(read(os.path.join(app, "app/src/main/assets/tools-models.json")))["models"] if m.get("chat")}
+    if sc != tm_rows: bad.append("A9 libs:ai's ai-catalogue.json tools_models and tools-models.json chat rows differ: %s" % sorted(sc ^ tm_rows)[:4])
 if "Tags.pin(" not in code(os.path.join(kt, "ui/SettingsPage.kt")): bad.append("A9 Settings has no advanced pin-model option")
 if "row?.wireId ?: req.model" not in tm: bad.append("A9 the gateway is not sent the data's openrouter_id")
 for need in ("fun runApp(", "private fun place(", "status = \"running\"", "call(placed.second", "models.stepPrompt("):

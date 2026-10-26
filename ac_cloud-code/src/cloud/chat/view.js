@@ -16,6 +16,8 @@ import fsOperation from "fileSystem";
 // nav.json is the tab's own declaration; the gateway and OpenRouter come from the shared AI contract (libs:ai ai.json),
 // copied into targets.gen.json by tools/resolve-targets.py (chat.ai): nothing here restates an endpoint or a path.
 const fleet = targets.chat;
+// The shared catalogues (libs:ai ai-catalogue.json): the Task Catalogue's groups and every task a selection can set.
+const taskCat = M.taskCatalogue(fleet.catalogue, fleet.tasks);
 // The shared design (libs:ai ai-design.json) is the one source of the permission modes and the effort levels too.
 const design = fleet.design;
 const chat = { ...nav.chat, ...fleet.ai, permission: { ...nav.chat.permission, ...design.permission }, effort: design.effort };
@@ -98,7 +100,7 @@ function agents() {
 
 /** The task in force on the open chat ({locked, task, agent, model}): a selected task forces the agent and the model. */
 function lock() {
-	return M.taskLock(fleet.tasks, current().task);
+	return M.taskLock(taskCat.tasks, current().task);
 }
 
 function agent() {
@@ -234,7 +236,7 @@ function drawControls() {
 	const modes = design.permission.modes;
 	const build = {
 		plus: () => chip("", "add", plusSheet, { title: "Attach files, photos or a voice message, or start a new chat", role: "plus" }),
-		task: () => chip(l.task ? l.task.label : "Task", "check_circle", taskSheet, { title: l.locked ? `Task: ${l.task.label}` : "Task", role: "task" }),
+		task: () => chip(l.task ? l.task.label : "Task", "check_circle", taskPage, { title: l.locked ? `Task: ${l.task.label}` : "Task", role: "task" }),
 		agent: () => chip(a ? a.label : "Agent", "brain", agentSheet, { role: "agent", disabled: l.locked, title: l.locked ? `Set by the task: ${l.task.label}` : "Agent" }),
 		model: () => {
 			const mc = M.modelControl(a, modelOf(a), S.health);
@@ -275,11 +277,26 @@ function toggleBar() {
 	drawControls();
 }
 
-function taskSheet() {
+/**
+ * The Task button: the full Task Catalogue page (libs:ai ai-catalogue.json), the groups Big LLMs and Medium & Small LLMs with their
+ * categories. Selecting a task greys Agent and Model and sets them from its mapping, then returns to Chat; "No task" clears it.
+ */
+function taskPage() {
 	const s = current();
-	const rows = fleet.tasks.map((t) => option(t.label, { checked: t.id === s.task, sub: `${t.agent} \u00b7 ${t.model.split("/").pop()}`, run: () => { s.task = t.id; persist(); draw(); } }));
-	if (!nav.chat.composer.task_required) rows.unshift(option(design.composer.no_task, { checked: !lock().locked, run: () => { s.task = ""; persist(); draw(); } }));
-	sheet("Task", rows, "A task picks its agent and model from the fleet's task mapping; Agent and Model are greyed while it is selected.");
+	const pg = page("Task catalogue", null, el("div", { className: "cloud-cat cloud-task-cat" }));
+	pg.node.classList.add("cloud-task-page");
+	const choose = (id) => { s.task = id; persist(); draw(); pg.close(); };
+	const body = pg.node.querySelector(".cloud-task-cat");
+	if (!nav.chat.composer.task_required) body.append(el("button", { className: `cloud-task-none${s.task ? "" : " active"}`, "data-task": "", onclick: () => choose("") }, design.composer.no_task));
+	for (const g of taskCat.groups) {
+		body.append(el("h3", { className: "cloud-task-group", "data-group": g.id }, g.label));
+		for (const c of g.categories) {
+			body.append(el("div", { className: "cloud-task-category", "data-category": c.id }, el("strong", {}, c.label),
+				...c.items.map((i) => el("button", {
+					className: `cloud-task-item${i.id === s.task ? " active" : ""}`, "data-task": i.id, disabled: !i.task, onclick: () => choose(i.id),
+				}, el("span", {}, i.label), el("small", { className: "cloud-muted" }, i.task ? `${i.task.agent} \u00b7 ${i.task.model.split("/").pop()}${i.note ? ` \u00b7 ${i.note}` : ""}` : "no mapping")))));
+		}
+	}
 }
 
 function plusSheet() {
@@ -540,21 +557,22 @@ export async function modelPage(refresh = false, onPick = null) {
 			? `Selected: ${chosen}`
 			: `${a.label} runs ${mc.value || "its own model"}: the rows are shown for reference.`;
 		const sections = cat.groups.flatMap((x) => x.sections);
-		// The design's tabs (Frontier · Code · Search · Medium · Small): each catalogue row lands in one by the declared rules.
-		const tabs = M.modelTabs(design, sections.flatMap((sec) => sec.rows.map((r) => ({ ...r, section: sec.id, key: `${sec.id}:${r.id}` }))));
-		const chosenTab = M.modelTabOf(design, { id: chosen, section: (M.checkedRow(sections, chosen) || "").split(":")[0] });
-		if (!tab || !tabs.some((t) => t.id === tab)) tab = chosenTab;
-		const keep = new Set(tabs.find((t) => t.id === tab).rows.map((r) => r.key));
+		// The shared catalogue's subpages (Frontier · Core · Specialist · Medium · Small): Core is the model-catalogue tables, the rest declared lists.
+		const tabs = M.modelTabs(fleet.catalogue);
+		if (!tab || !tabs.some((t) => t.id === tab)) tab = "core";
 		const bar = el("div", { className: "cloud-model-tabs", role: "tablist" }, ...tabs.map((t) => el("button", {
 			className: `cloud-model-tab${t.id === tab ? " active" : ""}`, role: "tab", "data-tab": t.id, "aria-selected": String(t.id === tab),
 			onclick: () => { tab = t.id; show(cat); },
-		}, `${t.label} (${t.rows.length})`)));
+		}, t.label)));
+		const declared = M.declaredGroups(fleet.catalogue, tab).map((g) => declaredSection(g));
 		body.replaceChildren(
 			el("p", { className: "cloud-cat-current" }, head),
 			bar,
-			el("p", { className: "cloud-muted" }, `Prices as of ${cat.as_of} (${cat.origin})`),
-			...sections.map((sec) => ({ ...sec, rows: sec.rows.filter((r) => keep.has(`${sec.id}:${r.id}`)) })).filter((sec) => sec.rows.length).map((sec) => section(sec, M.checkedRow(sections, chosen))),
-			el("p", { className: "cloud-muted" }, "The fleet's model catalogue (libs:model-catalogue, shared with Cloud Search): A0 Code, A1 Agentic, A2 Base, A3 Reasoning, split into the tabs of the shared design. Anthropic first, then providers by price. Prices are OpenRouter's, read at most daily."),
+			...(tab === "core" ? [
+				el("p", { className: "cloud-muted" }, `Prices as of ${cat.as_of} (${cat.origin})`),
+				...sections.map((sec) => section(sec, M.checkedRow(sections, chosen))),
+				el("p", { className: "cloud-muted" }, "The fleet's model catalogue (libs:model-catalogue, shared with Cloud Search): A0 Code, A1 Agentic, A2 Base, A3 Reasoning. Anthropic first, then providers by price. Prices are OpenRouter's, read at most daily."),
+			] : declared),
 		);
 		body.querySelector("input[type=radio]:checked")?.closest("tr")?.scrollIntoView?.({ block: "center" });
 	};
@@ -565,6 +583,21 @@ export async function modelPage(refresh = false, onPick = null) {
 		if (refresh) toast(`Prices: ${live.origin}, as of ${live.as_of}`);
 	} catch (e) {
 		body.replaceChildren(el("p", {}, `The catalogue could not be read: ${e?.message || e}`));
+	}
+
+	function declaredSection(g) {
+		const rows = g.models.map((m) => {
+			const st = onPick ? { allowed: !m.local, reason: m.local ? "phone / Ollama only" : "" } : M.rowState(a, { ...m, selectable: !m.local }, S.health);
+			const radio = el("input", { type: "radio", name: "cloud-model", value: m.id, checked: chosen === m.id, disabled: !st.allowed, "aria-label": m.name });
+			radio.addEventListener("change", () => choose(m));
+			radio.addEventListener("click", (e) => e.stopPropagation());
+			const name = el("div", {}, m.name, st.allowed ? null : el("div", { className: "cloud-cat-why" }, st.reason));
+			return el("tr", { className: `${st.allowed ? "" : "dim"}${chosen === m.id ? " current" : ""}`, "data-model": m.id, onclick: st.allowed ? () => choose(m) : null },
+				el("td", {}, radio), el("td", {}, name), el("td", {}, m.local ? "" : m.id), el("td", {}, m.sub));
+		});
+		return el("section", { className: "cloud-cat-section", "data-section": g.id },
+			el("div", { className: "cloud-cat-head" }, el("strong", {}, g.label)),
+			el("div", { className: "cloud-cat-scroll" }, el("table", {}, el("tbody", {}, rows))));
 	}
 
 	function section(sec, checked) {

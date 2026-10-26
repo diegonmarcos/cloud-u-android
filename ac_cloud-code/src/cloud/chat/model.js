@@ -177,27 +177,49 @@ export function lockedAgent(agents, lock, picked) {
 	return agents.some((a) => a.id === lock.agent) ? lock.agent : picked;
 }
 
-// ── the Model picker's tabs (Frontier · Code · Search · Medium · Small), rules from the shared design ──
+// ── the shared catalogues (libs:ai ai-catalogue.json): the Model Catalogue's subpages and the Task Catalogue ──
 
-/** The tab id of a catalogue row {id, section?, tier?, nativeWeb?}: the first tab of classify_order whose rule hits, else the fallback. */
-export function modelTabOf(design, row) {
-	const mt = design.model_tabs;
-	const rule = (id) => mt.tabs.find((t) => t.id === id)?.match || {};
-	for (const id of mt.classify_order) {
-		const m = rule(id);
-		if (row.section && (m.sections || []).includes(row.section)) return id;
-		if (row.tier && (m.tiers || []).includes(row.tier)) return id;
-		if (m.native_web && row.nativeWeb) return id;
-		if ((m.id_regex || []).some((re) => new RegExp(re, "i").test(row.id))) return id;
-	}
-	return mt.fallback;
+/** The Model Catalogue's subpages, in order: [{id, label}] (Frontier · Core · Specialist · Medium · Small). */
+export function modelTabs(catalogue) {
+	return catalogue.tabs.map((t) => ({ id: t.id, label: t.label }));
 }
 
-/** The rows split into the design's tabs, in tab order ({id, label, rows}); a row keeps the section it came from. */
-export function modelTabs(design, rows) {
-	const by = new Map(design.model_tabs.tabs.map((t) => [t.id, []]));
-	for (const r of rows) by.get(modelTabOf(design, r)).push(r);
-	return design.model_tabs.tabs.map((t) => ({ id: t.id, label: t.label, rows: by.get(t.id) }));
+/**
+ * The declared lists of one subpage as headed groups [{id, label, models: [{id, name, sub, local, provider}]}]; Core has none
+ * (it is the model-catalogue tables). A Medium / Small row with no openrouter_id is `local` (phone / Ollama only: shown greyed).
+ */
+export function declaredGroups(catalogue, tab) {
+	const named = (list) => list.map((g) => ({ id: g.id, label: g.label, models: g.models.map((m) => ({ id: m.id, name: m.name, sub: m.note || "", local: false, provider: g.label })) }));
+	if (tab === "frontier") return named(catalogue.frontier.companies);
+	if (tab === "specialist") return named(catalogue.specialist.domains);
+	if (tab !== "medium" && tab !== "small") return [];
+	const label = catalogue.tabs.find((t) => t.id === tab).label;
+	const models = catalogue.tools_models.models.filter((m) => m.tier === tab).map((m) => ({
+		id: m.openrouter_id || m.id, name: m.name, sub: `${m.params} \u00b7 ${m.role}`, local: !m.openrouter_id, provider: "",
+	}));
+	return [{ id: tab, label, models }];
+}
+
+/**
+ * The Task Catalogue: {groups: [{id, label, categories: [{id, label, items: [{id, label, task, note}]}]}], tasks}. An item with its own
+ * agent and model is a Big LLM task; any other takes its mapping from the shared ai-tasks.json by id (task null when it has none).
+ * `tasks` is every task a selection can set: the shared mapping plus the Big LLM items, each id once.
+ */
+export function taskCatalogue(catalogue, shared) {
+	const groups = catalogue.tasks.groups.map((g) => ({
+		id: g.id, label: g.label,
+		categories: g.categories.map((c) => ({
+			id: c.id, label: c.label,
+			items: c.items.map((i) => {
+				const own = i.model ? { id: i.id, label: i.label, agent: i.agent, model: i.model, note: i.note } : null;
+				const ref = shared.find((t) => t.id === i.id);
+				return { id: i.id, label: i.label, note: i.note || null, task: own || (ref ? { ...ref, label: i.label } : null) };
+			}),
+		})),
+	}));
+	const tasks = [...shared];
+	for (const g of groups) for (const c of g.categories) for (const i of c.items) if (i.task && !tasks.some((t) => t.id === i.id)) tasks.push(i.task);
+	return { groups, tasks };
 }
 
 // ── usage: only what the backend reported ───────────────────────────────────

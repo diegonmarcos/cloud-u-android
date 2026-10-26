@@ -9,8 +9,9 @@ and is the page **and** everything behind it, so no Kotlin app draws a chat of i
 | Piece | Where |
 |---|---|
 | Chat page, Cloud Code's design: greeting, conversation (user bubble, flat Markdown answers with an `agent · model` line), answer **streaming** in, the input and the config bar | `AiPage.kt` (`AiChatPage`, `AiTheme`, `materialAiTheme`) |
-| Config bar under the input: (+) · Task · Agent · Model (tabs Frontier · Code · Search · Medium · Small) · Effort · Perms · MCP · (More), collapsible to one chip | `AiComposerBar.kt` (`AiComposerBar`) |
-| The one design source: sizes, controls, model-tab rules, permission modes, effort levels, the More sheet's groups | `src/main/assets/ai/ai-design.json` via `AiDesign.kt`; Cloud Code reads the same file |
+| Config bar under the input: (+) · Task · Agent · Model · Effort · Perms · MCP · (More), collapsible to one chip | `AiComposerBar.kt` (`AiComposerBar`) |
+| The Model button opens the full **Model Catalogue** (subpages Frontier · Core · Specialist · Medium · Small; Core = libs:model-catalogue's A Text / B Search / C Audio & Speech / D Visual Media tables) and the Task button the **Task Catalogue** (Big LLMs; Medium & Small LLMs); both replace the chat | `AiCataloguePages.kt` (`AiModelCatalogue`, `AiTaskCatalogue`), data `src/main/assets/ai/ai-catalogue.json` via `AiCatalogue.kt` (Cloud Code reads the same file; the Medium / Small rows are held in step with Cloud Tools' `tools-models.json` by test-tools-app.sh) |
+| The one design source: sizes, controls, permission modes, effort levels, the More sheet's groups | `src/main/assets/ai/ai-design.json` via `AiDesign.kt`; Cloud Code reads the same file |
 | The task mapping (task to agent + model) | `src/main/assets/ai/ai-tasks.json` (held in step with Cloud Tools' `build.json::tools.tasks`) |
 | Consent card a mutating tool waits on (Allow / Deny) | `AiPage.kt` (`AiConsentCard`) |
 | State: open session, streaming text, pending consent | `AiChatState.kt` |
@@ -74,7 +75,7 @@ both implement it.
 
 ## One design, two renderers
 
-`assets/ai/ai-design.json` is the only place the chat's sizes, composer controls, Model-tab rules, Permission Modes, Effort levels and More-sheet groups are written.
+`assets/ai/ai-design.json` is the only place the chat's sizes, composer controls, Permission Modes, Effort levels and More-sheet groups are written.
 Compose reads it through `AiDesign`; Cloud Code (HTML) gets it copied into `targets.gen.json::chat.design` by `tools/resolve-targets.py`, and `view.js` sets every
 `metrics` entry as a `--ai-*` CSS custom property. Colours stay the host's own (Acode's theme in Cloud Code, the app's theme in Compose).
 

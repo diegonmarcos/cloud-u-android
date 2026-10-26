@@ -7,9 +7,6 @@ import org.json.JSONObject
 /** One composer control of the shared row (Task, Agent, Model, Mode, MCPs): [icon] is a Material symbol name. */
 data class AiControl(val id: String, val label: String, val icon: String)
 
-/** One tab of the Model picker (Frontier, Code, Search, Medium, Small). */
-data class AiModelTab(val id: String, val label: String)
-
 /** One Permission Mode: [instruction] is the standing system sentence the mode sends ("" adds nothing). */
 data class AiPermissionMode(val id: String, val label: String, val short: String, val icon: String, val instruction: String)
 
@@ -36,7 +33,7 @@ data class AiTask(val id: String, val label: String, val agent: String, val mode
 
 /**
  * The shared AI design (assets/ai/ai-design.json), parsed once: the sizes of the chat and its composer
- * (Cloud Code's AI page, px = dp = sp), the composer's controls, the Model tabs and their rules, the
+ * (Cloud Code's AI page, px = dp = sp), the composer's controls, the
  * Permission Modes and the MCP sentence. Cloud Code (HTML) reads the same file through its resolver.
  */
 class AiDesign private constructor(private val root: JSONObject) {
@@ -69,20 +66,6 @@ class AiDesign private constructor(private val root: JSONObject) {
 
     fun effort(id: String): AiEffort? = efforts.firstOrNull { it.id == id }
 
-    private val tabsObj = root.getJSONObject("model_tabs")
-    val tabs: List<AiModelTab> = tabsObj.getJSONArray("tabs").objs().map { AiModelTab(it.getString("id"), it.getString("label")) }
-    val classifyOrder: List<String> = tabsObj.getJSONArray("classify_order").strings()
-    val fallbackTab: String = tabsObj.getString("fallback")
-
-    private class Rule(val sections: List<String>, val tiers: List<String>, val nativeWeb: Boolean, val ids: List<Regex>)
-    private val rules: Map<String, Rule> = tabsObj.getJSONArray("tabs").objs().associate { t ->
-        val m = t.getJSONObject("match")
-        t.getString("id") to Rule(
-            m.optJSONArray("sections")?.strings().orEmpty(), m.optJSONArray("tiers")?.strings().orEmpty(), m.optBoolean("native_web"),
-            m.optJSONArray("id_regex")?.strings().orEmpty().map { Regex(it, RegexOption.IGNORE_CASE) },
-        )
-    }
-
     private val perm = root.getJSONObject("permission")
     val permissionVia: String = perm.getString("via")
     val defaultMode: String = perm.getString("default")
@@ -92,23 +75,6 @@ class AiDesign private constructor(private val root: JSONObject) {
     val mcpInstruction: String = root.getJSONObject("mcp").getString("instruction")
     val extraAgents: List<AiAgent> = root.getJSONObject("agents_extra").getJSONArray("agents").objs().map {
         AiAgent(it.getString("id"), it.getString("label"), it.getString("sub"), it.getString("mode"))
-    }
-
-    /** The tab [m] lands in: the first of [classifyOrder] whose rule hits it, else [fallbackTab]. [section] / [tier] are data hints a catalogue row may carry. */
-    fun tabOf(m: AiModel): String = classifyOrder.firstOrNull { id -> hit(rules[id], m) } ?: fallbackTab
-
-    private fun hit(r: Rule?, m: AiModel): Boolean {
-        if (r == null) return false
-        if (m.section.isNotEmpty() && m.section in r.sections) return true
-        if (m.tier.isNotEmpty() && m.tier in r.tiers) return true
-        if (r.nativeWeb && m.nativeWeb) return true
-        return r.ids.any { it.containsMatchIn(m.id) }
-    }
-
-    /** [models] split into the tabs, in tab order; a tab with no model maps to an empty list. */
-    fun byTab(models: List<AiModel>): Map<String, List<AiModel>> {
-        val by = models.groupBy { tabOf(it) }
-        return tabs.associate { it.id to by[it.id].orEmpty() }
     }
 
     fun mode(id: String): AiPermissionMode? = modes.firstOrNull { it.id == id }

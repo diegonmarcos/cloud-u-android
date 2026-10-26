@@ -206,7 +206,7 @@ class SearchShellTest {
 
     /**
      * The shared composer (libs:ai): (+), Task, Agent, Model, Effort, Perms, MCP and More sit under the input in that order; picking a task greys
-     * Agent and Model and sets them from the task mapping; clearing the task gives them back; the Model picker has the five tabs.
+     * Agent and Model and sets them from the task mapping; clearing the task gives them back; the Model button opens the catalogue with the five subpages.
      */
     @Test fun theComposerRowIsTheSharedOneAndATaskGreysAgentAndModel() {
         launch()
@@ -236,7 +236,7 @@ class SearchShellTest {
         compose.onNodeWithTag(ai.ctl("model")).assertIsEnabled()
 
         compose.onNodeWithTag(ai.ctl("model")).performClick()
-        for (tab in listOf("frontier", "code", "search", "medium", "small")) waitFor(ai.modelTab(tab))
+        for (tab in listOf("frontier", "core", "specialist", "medium", "small")) waitFor(ai.catTab(tab))
     }
 
     /** The whole config bar collapses to one compact chip behind the chevron, and the state is remembered per app. */

@@ -193,7 +193,7 @@ def shared_ai(app_root, c):
 
 
 def shared_design(app_root, c):
-    """The shared AI design (libs:ai ai-design.json) and task mapping (ai-tasks.json), copied whole for the page.
+    """The shared AI design (libs:ai ai-design.json), task mapping (ai-tasks.json) and catalogues (ai-catalogue.json), copied whole for the page.
 
     Held to what the page needs: every control nav.json::chat.composer enables is a control of the design, and every
     task runs on an agent the page can reach (an agent of the shared descriptors, or the gateway's OpenRouter face)."""
@@ -201,6 +201,7 @@ def shared_design(app_root, c):
     try:
         design = json.load(open(os.path.join(repo, c["design"])))
         tasks = json.load(open(os.path.join(repo, c["tasks"])))["tasks"]
+        catalogue = json.load(open(os.path.join(repo, c["catalogue"])))
         agents = json.load(open(os.path.join(repo, c["shared_agents"])))["agents"]
     except (OSError, ValueError, KeyError) as e:
         raise SystemExit("resolve-targets: cannot read the shared AI design or task mapping (%s)" % e)
@@ -212,14 +213,23 @@ def shared_design(app_root, c):
     for t in tasks:
         if t["agent"] not in reach:
             raise SystemExit("resolve-targets: task %s runs on agent %r, which no agent descriptor defines" % (t["id"], t["agent"]))
-    return design, tasks
+    shared = {t["id"] for t in tasks}
+    for g in catalogue["tasks"]["groups"]:
+        for cat in g["categories"]:
+            for i in cat["items"]:
+                if "model" in i:
+                    if i["agent"] not in reach:
+                        raise SystemExit("resolve-targets: catalogue task %s runs on agent %r, which no agent descriptor defines" % (i["id"], i["agent"]))
+                elif i["id"] not in shared:
+                    raise SystemExit("resolve-targets: catalogue task %s has no model of its own and is not in ai-tasks.json" % i["id"])
+    return design, tasks, catalogue
 
 
 def chat(app_root, nav):
     c = dict(nav["chat"])
     c["agents"] = merged_agents(app_root, c)
     ai = shared_ai(app_root, c)
-    design, tasks = shared_design(app_root, c)
+    design, tasks, catalogue = shared_design(app_root, c)
     services = fleet_services(app_root, c["fleet_services"])
     prefix = c["agent_prefix"]
     gateway = services.get(ai["gateway"]["service"])
@@ -249,6 +259,7 @@ def chat(app_root, nav):
             "ai": ai,
             "design": design,
             "tasks": tasks,
+            "catalogue": catalogue,
             "gateway": base_url(gateway),
             "claude_api": base_url(services.get(claude["fleet"])) if claude else None,
             "agent_decls": c["agents"],

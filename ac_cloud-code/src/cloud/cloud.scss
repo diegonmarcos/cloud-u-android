@@ -844,7 +844,7 @@ body.cloud-collapsed {
   }
 }
 
-// the Model page's tabs (Frontier · Code · Search · Medium · Small) and the More sheet's group headers
+// the Model page's subpages (Frontier · Core · Specialist · Medium · Small), the Task page's groups and the More sheet's group headers
 .cloud-model-tabs {
   display: flex;
   gap: calc(var(--ai-ctl-gap) * 1px);
@@ -865,6 +865,39 @@ body.cloud-collapsed {
   &.active {
     background-color: var(--active-color) !important;
     color: var(--primary-color);
+  }
+}
+
+.cloud-task-group {
+  margin: 14px 0 4px;
+}
+
+.cloud-task-category {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--ai-ctl-gap) * 1px);
+  margin: 6px 0;
+}
+
+.cloud-task-item,
+.cloud-task-none {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: calc(var(--ai-ctl-pad-h) * 1px) !important;
+  font-size: calc(var(--ai-ctl-font) * 1px);
+  color: inherit;
+  background: none;
+  border: 1px solid var(--border-color) !important;
+  border-radius: calc(var(--ai-ctl-radius) * 1px) !important;
+
+  &.active {
+    background-color: var(--active-color) !important;
+    color: var(--primary-color);
+  }
+
+  &:disabled {
+    opacity: var(--ai-ctl-disabled-alpha);
   }
 }
 

@@ -78,6 +78,9 @@ class AiChatState(private val host: AiHost) {
         host.pickPlugins(LinkedHashMap(pluginHeaders))
     }
 
+    /** The catalogue page that replaces the chat: "" = none, [PAGE_MODELS] (the Model button) or [PAGE_TASKS] (the Task button). */
+    var page by mutableStateOf("")
+
     /** Whether the composer's config bar is collapsed to its one compact chip (the page loads and saves it per app). */
     var collapsed by mutableStateOf(false)
 
@@ -171,6 +174,11 @@ class AiChatState(private val host: AiHost) {
     }
 
     fun host(): AiHost = host
+
+    companion object {
+        const val PAGE_MODELS = "models"
+        const val PAGE_TASKS = "tasks"
+    }
 }
 
 /** The test tags the page is driven by (Cloud Search's SearchShellTest, the browser's checks). */
@@ -182,7 +190,6 @@ object AiTags {
     const val MODEL = "ai_model"
     const val WEB = "ai_web_toggle"
     const val AGENT = "ai_agent"
-    const val MODEL_CATALOGUE = "ai_model_catalogue"
     const val BAR_TOGGLE = "ai_bar_toggle"
     const val BAR_COMPACT = "ai_bar_compact"
     fun attach(id: String) = "ai_attach_$id"
@@ -194,8 +201,15 @@ object AiTags {
     fun ctl(id: String) = when (id) { "agent" -> AGENT; "model" -> MODEL; else -> "ai_ctl_$id" }
     fun task(id: String) = "ai_task_$id"
     const val TASK_NONE = "ai_task_none"
-    fun modelTab(id: String) = "ai_model_tab_$id"
-    fun modelItem(id: String) = "ai_model_item_$id"
+    /** The Model Catalogue page, its subpage tabs (`ai_cat_tab_frontier`...), a model row, and its close button. */
+    const val CATALOGUE_PAGE = "ai_catalogue_models"
+    const val CATALOGUE_CLOSE = "ai_catalogue_close"
+    fun catTab(id: String) = "ai_cat_tab_$id"
+    fun catRow(id: String) = "ai_cat_row_$id"
+    /** The Task Catalogue page and a task group's header. */
+    const val TASK_PAGE = "ai_catalogue_tasks"
+    const val TASK_CLOSE = "ai_task_catalogue_close"
+    fun taskGroup(id: String) = "ai_task_group_$id"
     fun mode(id: String) = "ai_mode_$id"
     fun mcp(name: String) = "ai_mcp_$name"
     const val SESSIONS = "ai_sessions"

@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.diegonmarcos.superapp.modelcatalogue.CatalogueFetch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -141,7 +142,15 @@ data class AiStrings(
     val cancel: String = "Cancel",
     val save: String = "Save",
     val noModelsInTab: String = "No model in this tab",
-    val catalogue: String = "Model catalogue…",
+    val catalogue: String = "Model catalogue",
+    val taskCatalogue: String = "Task catalogue",
+    /** A Medium / Small row that runs only on the phone or the fleet Ollama. */
+    val localOnly: String = "phone / Ollama only",
+    /** The Task Catalogue's last group: the app's own tasks the shared catalogue does not list. */
+    val appTasks: String = "This app",
+    /** A catalogue task this app does not offer. */
+    val taskNotOffered: String = "not offered in this app",
+    val core: String = "A Text · B Search · C Audio & Speech · D Visual Media",
     val noMcp: String = "The gateway lists no MCP server",
     /** The empty chat's second line when [helloSub] is blank and no agent is picked. */
     val noAgentLine: String = "No agent",
@@ -219,7 +228,7 @@ fun materialAiTheme(strings: AiStrings = AiStrings()): AiTheme {
  * under it); then the conversation in the same place, each answer streaming in as Markdown. At the bottom the consent
  * card for a mutating tool, the app's [aboveInput], then the composer: the input with the round send button, and under it
  * the icon row (Task, Agent, Model, Permission Mode, MCPs) of the controls the app enables in assets/ai/composer.json;
- * an app with no such file keeps Agent and Model. [onCatalogue] adds the host's own model page to the Model picker.
+ * an app with no such file keeps Agent and Model. The Model button opens the shared Model Catalogue and the Task button the Task Catalogue (AiCataloguePages); [onCatalogue] swaps in the host's own model page.
  * [sessionsList]: a Sessions dropdown on top, over [AiHost.sessions]; [header] is the app's own chips on that line.
  * Sizes come from the shared design (assets/ai/ai-design.json); colours from [theme].
  */
@@ -231,6 +240,8 @@ fun AiChatPage(
     engines: List<AiEngine> = emptyList(),
     query: (AiEngine, String) -> String? = { _, _ -> null },
     onCatalogue: (() -> Unit)? = null,
+    /** The host's network door for the Model Catalogue's prices (OpenRouter's public lists, no key); default: a plain HTTPS GET. */
+    catalogueFetch: CatalogueFetch = AiPublicFetch,
     sessionsList: Boolean = false,
     /** Suggested prompts under the greeting (a persona chat's): a tap fills the input, nothing is sent until the user does. */
     suggestions: List<String> = emptyList(),
@@ -250,9 +261,11 @@ fun AiChatPage(
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         if (chat.models.isEmpty()) chat.models = withContext(Dispatchers.IO) { runCatching { chat.host().models() }.getOrDefault(emptyList()) }
-        if ("task" in decl.controls && chat.tasks.isEmpty()) chat.tasks = AiDesign.loadTasks(ctx)
+        if ("task" in decl.controls && chat.tasks.isEmpty()) chat.tasks = runCatching { AiCatalogue.load(ctx).tasks }.getOrDefault(emptyList()).ifEmpty { AiDesign.loadTasks(ctx) }
         if ("task" in decl.controls && chat.task.isEmpty() && decl.defaultTask.isNotEmpty()) chat.chooseTask(decl.defaultTask)
     }
+    if (chat.page == AiChatState.PAGE_MODELS) { AiModelCatalogue(chat, theme, catalogueFetch, modifier); return }
+    if (chat.page == AiChatState.PAGE_TASKS) { AiTaskCatalogue(chat, theme, decl, modifier); return }
     Column(modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = m.gutter), verticalAlignment = Alignment.CenterVertically) {
             header()

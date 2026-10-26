@@ -68,8 +68,7 @@ internal fun loadCollapsed(ctx: Context, design: AiDesign, app: String): Boolean
  * The composer's config bar (Cloud Code's, shared): the controls [decl] enables, always in the design's order
  * (+) · Task · Agent · Model · Effort · Perms · MCP · (More). A selected task greys Agent and Model: they show the task's
  * mapped agent and model and open nothing until the task is cleared. The chevron at the end collapses the whole bar to one compact
- * chip (the active task, else the model); the state is kept per app. [onCatalogue] adds the host's own model page to the Model
- * picker; [onAttach] answers the (+) menu's Attach items (files, images, notes, Drive: the app's pickers). The controls scroll sideways
+ * chip (the active task, else the model); the state is kept per app. [onCatalogue] replaces the Model button's page with the host's own (default: the shared Model Catalogue); [onAttach] answers the (+) menu's Attach items (files, images, notes, Drive: the app's pickers). The controls scroll sideways
  * only when they do not fit; the bar sits in a column, never inside another scroller.
  */
 @Composable
@@ -106,7 +105,7 @@ fun AiComposerBar(
                 shown.forEach { ctl ->
                     when (ctl.id) {
                         "plus" -> PlusControl(chat, theme, design, ctl, onAttach)
-                        "task" -> TaskControl(chat, theme, design, decl, ctl)
+                        "task" -> TaskControl(chat, theme, design, ctl)
                         "agent" -> AgentControl(chat, theme, design, ctl)
                         "model" -> ModelControl(chat, theme, design, ctl, onCatalogue)
                         "effort" -> EffortControl(chat, theme, design, ctl)
@@ -167,6 +166,25 @@ private fun Ctl(
     }
 }
 
+/** One chip of the row that acts on a tap (no menu). A disabled chip is greyed and does nothing. */
+@Composable
+private fun Btn(ctl: AiControl, theme: AiTheme, design: AiDesign, label: String, enabled: Boolean = true, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(design.metric("ctl_radius").dp)
+    Row(
+        Modifier.height(design.metric("ctl_height").dp)
+            .alpha(if (enabled) 1f else design.metric("ctl_disabled_alpha"))
+            .clip(shape).border(theme.metrics.hairline, theme.colors.tileBorder, shape)
+            .clickable(enabled = enabled, onClick = onClick).testTag(AiTags.ctl(ctl.id))
+            .padding(horizontal = design.metric("ctl_pad_h").dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(design.metric("ctl_gap").dp),
+    ) {
+        Text(controlGlyph(ctl.id), fontSize = design.metric("ctl_icon").sp, color = theme.colors.text)
+        if (label.isNotEmpty()) Text(label, color = theme.colors.text, fontSize = design.metric("ctl_font").sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.widthIn(max = theme.metrics.modelMaxWidth))
+    }
+}
+
 @Composable
 private fun PlusControl(chat: AiChatState, theme: AiTheme, design: AiDesign, ctl: AiControl, onAttach: ((String) -> Unit)?) {
     val t = theme.type
@@ -178,26 +196,10 @@ private fun PlusControl(chat: AiChatState, theme: AiTheme, design: AiDesign, ctl
     }
 }
 
+/** The Task button: opens the full Task Catalogue (AiTaskCatalogue) in the chat's place. */
 @Composable
-private fun TaskControl(chat: AiChatState, theme: AiTheme, design: AiDesign, decl: AiComposerDecl, ctl: AiControl) {
-    val t = theme.type
-    Ctl(ctl, theme, design, chat.selectedTask?.label ?: ctl.label, enabled = chat.tasks.isNotEmpty()) { close ->
-        if (!decl.taskRequired) DropdownMenuItem(
-            text = { Text(design.noTask, style = t.style(t.small), color = if (!chat.locked) theme.colors.accent else theme.colors.text) },
-            onClick = { chat.chooseTask(""); close() }, modifier = Modifier.testTag(AiTags.TASK_NONE),
-        )
-        chat.tasks.forEach { task ->
-            DropdownMenuItem(
-                text = {
-                    Column {
-                        Text(task.label, style = t.style(t.small, FontWeight.SemiBold), color = if (task.id == chat.task) theme.colors.accent else theme.colors.text)
-                        Text(task.model.substringAfterLast('/'), style = t.style(t.small), color = theme.colors.text2)
-                    }
-                },
-                onClick = { chat.chooseTask(task.id); close() }, modifier = Modifier.testTag(AiTags.task(task.id)),
-            )
-        }
-    }
+private fun TaskControl(chat: AiChatState, theme: AiTheme, design: AiDesign, ctl: AiControl) {
+    Btn(ctl, theme, design, chat.selectedTask?.label ?: ctl.label, enabled = chat.tasks.isNotEmpty()) { chat.page = AiChatState.PAGE_TASKS }
 }
 
 @Composable
@@ -225,50 +227,11 @@ private fun AgentControl(chat: AiChatState, theme: AiTheme, design: AiDesign, ct
     }
 }
 
+/** The Model button: opens the FULL Model Catalogue (AiModelCatalogue), or the host's own page when it passes [onCatalogue]. Greyed while a task is selected. */
 @Composable
 private fun ModelControl(chat: AiChatState, theme: AiTheme, design: AiDesign, ctl: AiControl, onCatalogue: (() -> Unit)?) {
-    val c = theme.colors
-    val s = theme.strings
-    val t = theme.type
-    val byTab = remember(chat.models) { design.byTab(chat.models) }
     val current = chat.models.firstOrNull { it.id == chat.model }
-    var tab by remember(chat.model) { mutableStateOf(current?.let { design.tabOf(it) } ?: design.tabs.first().id) }
-    Ctl(ctl, theme, design, (current?.name ?: chat.model).substringAfterLast('/'), enabled = !chat.locked) { close ->
-        if (onCatalogue != null) DropdownMenuItem(
-            text = { Text(s.catalogue, style = t.style(t.small, FontWeight.SemiBold), color = c.accent) },
-            onClick = { close(); onCatalogue() }, modifier = Modifier.testTag(AiTags.MODEL_CATALOGUE),
-        )
-        DropdownMenuItem(
-            text = { Text(s.webSearch, style = t.style(t.small, FontWeight.SemiBold)) },
-            trailingIcon = {
-                Switch(chat.web, { chat.toggleWeb() }, Modifier.testTag(AiTags.WEB),
-                    colors = SwitchDefaults.colors(checkedTrackColor = c.accent, uncheckedTrackColor = c.field))
-            },
-            onClick = { chat.toggleWeb() },
-        )
-        // The tabs: Frontier · Code · Search · Medium · Small.
-        Row(Modifier.fillMaxWidth().padding(horizontal = theme.metrics.gap), horizontalArrangement = Arrangement.spacedBy(theme.metrics.small)) {
-            design.tabs.forEach { tb ->
-                Text(
-                    tb.label, color = if (tb.id == tab) c.accent else c.text2,
-                    style = t.style(t.small, if (tb.id == tab) FontWeight.Bold else FontWeight.Medium),
-                    modifier = Modifier.clickable { tab = tb.id }.padding(vertical = theme.metrics.gap, horizontal = theme.metrics.small).testTag(AiTags.modelTab(tb.id)),
-                )
-            }
-        }
-        val rows = byTab[tab].orEmpty()
-        if (chat.models.isEmpty()) DropdownMenuItem(text = { Text(s.modelsUnavailable, style = t.style(t.small)) }, onClick = { close() })
-        else if (rows.isEmpty()) DropdownMenuItem(text = { Text(s.noModelsInTab, style = t.style(t.small), color = c.text2) }, onClick = {})
-        rows.forEach { mod ->
-            DropdownMenuItem(
-                text = {
-                    Text(mod.name + (if (mod.nativeWeb) " · " + s.webNative else "") + (if (mod.free) " · " + s.free else ""),
-                        style = t.style(t.small), color = if (mod.id == chat.model) c.accent else c.text)
-                },
-                onClick = { chat.pick(mod.id); close() }, modifier = Modifier.testTag(AiTags.modelItem(mod.id)),
-            )
-        }
-    }
+    Btn(ctl, theme, design, (current?.name ?: chat.model).substringAfterLast('/'), enabled = !chat.locked) { if (onCatalogue != null) onCatalogue() else chat.page = AiChatState.PAGE_MODELS }
 }
 
 @Composable

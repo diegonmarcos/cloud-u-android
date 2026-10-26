@@ -1,0 +1,700 @@
+{
+  "_doc": "THE SHARED CATALOGUES of libs:ai: the Model Catalogue's subpages and the Task Catalogue, one data file read by every app that chats (Cloud Search, Cloud SuperIntel, Cloud Tools Small LLMs through AiChatPage; Cloud Code through tools/resolve-targets.py, which copies this file into targets.gen.json chat.catalogue). The Model button of the composer opens the whole Model Catalogue with the subpages in `tabs`: Frontier and Specialist are the declared lists below (ids are OpenRouter ids; the page marks one the live model list does not carry), Core is libs:model-catalogue's A Text / B Search / C Audio & Speech / D Visual Media tables (assets models/catalogue.json), Medium and Small are the chat rows of Cloud Tools' tools-models.json (`tools_models`, tier medium = 7B to 32B, small = at most 4B; a row with no openrouter_id runs only on the phone or the fleet Ollama and is shown greyed; test-tools-app.sh holds the copy in step with that file). The Task button opens the Task Catalogue: `tasks.groups`, each with categories of items. An item with agent and model declares its own mapping (a Big LLM task); an item with only id and label is a Medium & Small task whose mapping is ai-tasks.json (same id). Selecting a task greys Agent and Model and sets them from that mapping.",
+  "version": 1,
+  "tabs": [
+    {
+      "id": "frontier",
+      "label": "Frontier"
+    },
+    {
+      "id": "core",
+      "label": "Core"
+    },
+    {
+      "id": "specialist",
+      "label": "Specialist"
+    },
+    {
+      "id": "medium",
+      "label": "Medium"
+    },
+    {
+      "id": "small",
+      "label": "Small"
+    }
+  ],
+  "frontier": {
+    "_doc": "The latest, most advanced huge model of each company, newest first within a company.",
+    "companies": [
+      {
+        "id": "anthropic",
+        "label": "Anthropic",
+        "models": [
+          {
+            "id": "anthropic/claude-opus-5.5",
+            "name": "Claude Opus 5.5"
+          },
+          {
+            "id": "anthropic/claude-fable-5.1",
+            "name": "Claude Fable 5.1"
+          }
+        ]
+      },
+      {
+        "id": "openai",
+        "label": "OpenAI",
+        "models": [
+          {
+            "id": "openai/gpt-5",
+            "name": "GPT-5"
+          },
+          {
+            "id": "openai/gpt-oss-120b",
+            "name": "gpt-oss-120b"
+          }
+        ]
+      },
+      {
+        "id": "google",
+        "label": "Google",
+        "models": [
+          {
+            "id": "google/gemini-2.5-pro",
+            "name": "Gemini 2.5 Pro"
+          }
+        ]
+      },
+      {
+        "id": "xai",
+        "label": "xAI",
+        "models": [
+          {
+            "id": "x-ai/grok-4",
+            "name": "Grok 4"
+          }
+        ]
+      },
+      {
+        "id": "meta",
+        "label": "Meta",
+        "models": [
+          {
+            "id": "meta-llama/llama-4-maverick",
+            "name": "Llama 4 Maverick"
+          }
+        ]
+      },
+      {
+        "id": "mistral",
+        "label": "Mistral",
+        "models": [
+          {
+            "id": "mistralai/mistral-medium-3.1",
+            "name": "Mistral Medium 3.1"
+          }
+        ]
+      },
+      {
+        "id": "deepseek",
+        "label": "DeepSeek",
+        "models": [
+          {
+            "id": "deepseek/deepseek-v4-pro-0813",
+            "name": "DeepSeek V4 Pro 0813"
+          }
+        ]
+      },
+      {
+        "id": "qwen",
+        "label": "Qwen",
+        "models": [
+          {
+            "id": "qwen/qwen3.8-2.4t-a95b",
+            "name": "Qwen3.8 2.4T A95B"
+          }
+        ]
+      },
+      {
+        "id": "moonshot",
+        "label": "Moonshot",
+        "models": [
+          {
+            "id": "moonshotai/kimi-k3",
+            "name": "Kimi K3"
+          }
+        ]
+      },
+      {
+        "id": "zai",
+        "label": "Z-AI",
+        "models": [
+          {
+            "id": "z-ai/glm-5.3",
+            "name": "GLM 5.3"
+          }
+        ]
+      }
+    ]
+  },
+  "specialist": {
+    "_doc": "Domain-specialised models.",
+    "domains": [
+      {
+        "id": "medical",
+        "label": "Medical",
+        "models": [
+          {
+            "id": "google/medgemma-27b-it",
+            "name": "MedGemma 27B"
+          }
+        ]
+      },
+      {
+        "id": "legal",
+        "label": "Legal",
+        "models": [
+          {
+            "id": "nvidia/nemotron-3-ultra-550b-a55b",
+            "name": "Nemotron 3 Ultra (long-context contracts)"
+          }
+        ]
+      },
+      {
+        "id": "finance",
+        "label": "Finance",
+        "models": [
+          {
+            "id": "deepseek/deepseek-r1-0528",
+            "name": "DeepSeek R1 0528 (quantitative reasoning)"
+          }
+        ]
+      },
+      {
+        "id": "science",
+        "label": "Science and math",
+        "models": [
+          {
+            "id": "qwen/qwen3-235b-a22b-thinking-2507",
+            "name": "Qwen3 235B Thinking"
+          },
+          {
+            "id": "moonshotai/kimi-k2-thinking",
+            "name": "Kimi K2 Thinking"
+          }
+        ]
+      },
+      {
+        "id": "code",
+        "label": "Code specialists",
+        "models": [
+          {
+            "id": "mistralai/codestral-2508",
+            "name": "Codestral 2508"
+          },
+          {
+            "id": "qwen/qwen3-coder",
+            "name": "Qwen3 Coder 480B A35B"
+          },
+          {
+            "id": "moonshotai/kimi-k2.7-code",
+            "name": "Kimi K2.7 Code"
+          }
+        ]
+      },
+      {
+        "id": "vision",
+        "label": "Vision and documents",
+        "models": [
+          {
+            "id": "mistralai/pixtral-12b",
+            "name": "Pixtral 12B"
+          },
+          {
+            "id": "meta-llama/llama-3.2-11b-vision-instruct",
+            "name": "Llama 3.2 11B Vision"
+          }
+        ]
+      }
+    ]
+  },
+  "tools_models": {
+    "_doc": "The chat rows of ac_cloud-tools-small-llms assets tools-models.json::models (retrieval rows are not chat models): id = its `model`, tier small or medium.",
+    "models": [
+      {
+        "id": "smollm2-360m-instruct",
+        "name": "smollm2-360m-instruct",
+        "params": "0.36B",
+        "tier": "small",
+        "role": "Routing / Drafting"
+      },
+      {
+        "id": "llama-guard-3-1b",
+        "name": "llama-guard-3-1b",
+        "params": "1B",
+        "tier": "small",
+        "role": "Safety / Guardrails"
+      },
+      {
+        "id": "llama-3.2-1b-instruct",
+        "name": "llama-3.2-1b-instruct",
+        "params": "1B",
+        "tier": "small",
+        "role": "Routing / Drafting",
+        "openrouter_id": "meta-llama/llama-3.2-1b-instruct"
+      },
+      {
+        "id": "qwen2.5-coder-1.5b-instruct",
+        "name": "qwen2.5-coder-1.5b-instruct",
+        "params": "1.5B",
+        "tier": "small",
+        "role": "Code / Math (Edge)"
+      },
+      {
+        "id": "deepseek-r1-distill-qwen-1.5b",
+        "name": "deepseek-r1-distill-qwen-1.5b",
+        "params": "1.5B",
+        "tier": "small",
+        "role": "Deep Reasoning"
+      },
+      {
+        "id": "smollm2-1.7b-instruct",
+        "name": "smollm2-1.7b-instruct",
+        "params": "1.7B",
+        "tier": "small",
+        "role": "Lightweight Editing"
+      },
+      {
+        "id": "shieldgemma-2b",
+        "name": "shieldgemma-2b",
+        "params": "2B",
+        "tier": "small",
+        "role": "Safety / Guardrails"
+      },
+      {
+        "id": "granite-guardian-3.1-2b",
+        "name": "granite-guardian-3.1-2b",
+        "params": "2B",
+        "tier": "small",
+        "role": "Safety / Guardrails"
+      },
+      {
+        "id": "granite-3.1-2b-instruct",
+        "name": "granite-3.1-2b-instruct",
+        "params": "2B",
+        "tier": "small",
+        "role": "Tool Calling"
+      },
+      {
+        "id": "ministral-3b-2512",
+        "name": "ministral-3b-2512",
+        "params": "3B",
+        "tier": "small",
+        "role": "Classification / Extract",
+        "openrouter_id": "mistralai/ministral-3b-2512"
+      },
+      {
+        "id": "granite-4.0-h-micro",
+        "name": "granite-4.0-h-micro",
+        "params": "3B",
+        "tier": "small",
+        "role": "Classification / Extract",
+        "openrouter_id": "ibm-granite/granite-4.0-h-micro"
+      },
+      {
+        "id": "qwen2.5-3b-instruct",
+        "name": "qwen2.5-3b-instruct",
+        "params": "3B",
+        "tier": "small",
+        "role": "Classification / Extract"
+      },
+      {
+        "id": "functionary-small-v3",
+        "name": "functionary-small-v3",
+        "params": "3B",
+        "tier": "small",
+        "role": "Tool Calling"
+      },
+      {
+        "id": "deepseek-r1-distill-llama-3.2-3b",
+        "name": "deepseek-r1-distill-llama-3.2-3b",
+        "params": "3B",
+        "tier": "small",
+        "role": "Deep Reasoning"
+      },
+      {
+        "id": "qwen2.5-vl-3b-instruct",
+        "name": "qwen2.5-vl-3b-instruct",
+        "params": "3B",
+        "tier": "small",
+        "role": "Vision (VLM)"
+      },
+      {
+        "id": "flow-judge-3b",
+        "name": "flow-judge-3b",
+        "params": "3B",
+        "tier": "small",
+        "role": "Quality Evaluation"
+      },
+      {
+        "id": "phi-3.5-mini-instruct",
+        "name": "phi-3.5-mini-instruct",
+        "params": "3.8B",
+        "tier": "small",
+        "role": "Code / Math (Edge)"
+      },
+      {
+        "id": "gemma-3-4b-it",
+        "name": "gemma-3-4b-it",
+        "params": "4B",
+        "tier": "small",
+        "role": "Classification / Extract",
+        "openrouter_id": "google/gemma-3-4b-it"
+      },
+      {
+        "id": "qwen2.5-coder-7b-instruct",
+        "name": "qwen2.5-coder-7b-instruct",
+        "params": "7B",
+        "tier": "medium",
+        "role": "Code / Data Formatting"
+      },
+      {
+        "id": "qwen2.5-vl-7b-instruct",
+        "name": "qwen2.5-vl-7b-instruct",
+        "params": "7B",
+        "tier": "medium",
+        "role": "Vision (VLM)"
+      },
+      {
+        "id": "llama-guard-3-8b",
+        "name": "llama-guard-3-8b",
+        "params": "8B",
+        "tier": "medium",
+        "role": "Safety / Guardrails",
+        "openrouter_id": "meta-llama/llama-guard-3-8b"
+      },
+      {
+        "id": "prometheus-2-8b",
+        "name": "prometheus-2-8b",
+        "params": "8B",
+        "tier": "medium",
+        "role": "Quality Evaluation"
+      },
+      {
+        "id": "llama-3.1-8b-instruct",
+        "name": "llama-3.1-8b-instruct",
+        "params": "8B",
+        "tier": "medium",
+        "role": "Long-Form Generation",
+        "openrouter_id": "meta-llama/llama-3.1-8b-instruct"
+      },
+      {
+        "id": "hermes-3-llama-3.1-8b",
+        "name": "hermes-3-llama-3.1-8b",
+        "params": "8B",
+        "tier": "medium",
+        "role": "Tool Calling"
+      },
+      {
+        "id": "granite-3.1-8b-instruct",
+        "name": "granite-3.1-8b-instruct",
+        "params": "8B",
+        "tier": "medium",
+        "role": "Tool Calling"
+      },
+      {
+        "id": "deepseek-r1-distill-llama-8b",
+        "name": "deepseek-r1-distill-llama-8b",
+        "params": "8B",
+        "tier": "medium",
+        "role": "Deep Reasoning"
+      },
+      {
+        "id": "shieldgemma-9b",
+        "name": "shieldgemma-9b",
+        "params": "9B",
+        "tier": "medium",
+        "role": "Safety / Guardrails"
+      },
+      {
+        "id": "llama-3.2-11b-vision",
+        "name": "llama-3.2-11b-vision",
+        "params": "11B",
+        "tier": "medium",
+        "role": "Vision (VLM)",
+        "openrouter_id": "meta-llama/llama-3.2-11b-vision-instruct"
+      },
+      {
+        "id": "pixtral-12b",
+        "name": "pixtral-12b",
+        "params": "12B",
+        "tier": "medium",
+        "role": "Vision (VLM)",
+        "openrouter_id": "mistralai/pixtral-12b"
+      },
+      {
+        "id": "athene-v2-chat-judge",
+        "name": "athene-v2-chat-judge",
+        "params": "14B",
+        "tier": "medium",
+        "role": "Quality Evaluation"
+      },
+      {
+        "id": "phi-4",
+        "name": "phi-4",
+        "params": "14B",
+        "tier": "medium",
+        "role": "Long-Form Generation",
+        "openrouter_id": "microsoft/phi-4"
+      },
+      {
+        "id": "qwen2.5-14b-instruct",
+        "name": "qwen2.5-14b-instruct",
+        "params": "14B",
+        "tier": "medium",
+        "role": "Long-Form Generation"
+      },
+      {
+        "id": "deepseek-r1-distill-qwen-14b",
+        "name": "deepseek-r1-distill-qwen-14b",
+        "params": "14B",
+        "tier": "medium",
+        "role": "Deep Reasoning",
+        "openrouter_id": "deepseek/deepseek-r1-distill-qwen-14b"
+      },
+      {
+        "id": "gpt-oss-20b",
+        "name": "gpt-oss-20b",
+        "params": "20B",
+        "tier": "medium",
+        "role": "Code / Data Formatting",
+        "openrouter_id": "openai/gpt-oss-20b"
+      },
+      {
+        "id": "mistral-small-3.2-24b-instruct",
+        "name": "mistral-small-3.2-24b-instruct",
+        "params": "24B",
+        "tier": "medium",
+        "role": "Long-Form Generation",
+        "openrouter_id": "mistralai/mistral-small-3.2-24b-instruct"
+      },
+      {
+        "id": "gemma-2-27b-it",
+        "name": "gemma-2-27b-it",
+        "params": "27B",
+        "tier": "medium",
+        "role": "Long-Form Generation",
+        "openrouter_id": "google/gemma-2-27b-it"
+      },
+      {
+        "id": "qwen2.5-coder-32b-instruct",
+        "name": "qwen2.5-coder-32b-instruct",
+        "params": "32B",
+        "tier": "medium",
+        "role": "Code / Data Formatting",
+        "openrouter_id": "qwen/qwen-2.5-coder-32b-instruct"
+      },
+      {
+        "id": "qwq-32b",
+        "name": "qwq-32b",
+        "params": "32B",
+        "tier": "medium",
+        "role": "Deep Reasoning",
+        "openrouter_id": "qwen/qwq-32b"
+      }
+    ]
+  },
+  "tasks": {
+    "groups": [
+      {
+        "id": "big",
+        "label": "Tasks - Big LLMs",
+        "categories": [
+          {
+            "id": "code",
+            "label": "Code",
+            "items": [
+              {
+                "id": "code_architecture",
+                "label": "Architecture",
+                "agent": "openrouter",
+                "model": "anthropic/claude-opus-5.5"
+              },
+              {
+                "id": "code_agentic",
+                "label": "Agentic coding",
+                "agent": "openrouter",
+                "model": "anthropic/claude-sonnet-5.5"
+              }
+            ]
+          },
+          {
+            "id": "search",
+            "label": "Search (AI search engines)",
+            "items": [
+              {
+                "id": "search_duckduckgo",
+                "label": "DuckDuckGo AI",
+                "agent": "openrouter",
+                "model": "openai/gpt-oss-120b:online",
+                "note": "Runs a web-searching model through the gateway; DuckDuckGo's own AI chat has no API."
+              },
+              {
+                "id": "search_google",
+                "label": "Google AI search",
+                "agent": "openrouter",
+                "model": "google/gemini-2.5-pro:online",
+                "note": "Runs a web-searching model through the gateway; Google's AI mode has no API."
+              },
+              {
+                "id": "search_qwant",
+                "label": "Qwant",
+                "agent": "openrouter",
+                "model": "mistralai/mistral-medium-3.1:online",
+                "note": "Runs a web-searching model through the gateway; Qwant's AI has no API."
+              },
+              {
+                "id": "search_perplexity",
+                "label": "Perplexity",
+                "agent": "openrouter",
+                "model": "perplexity/sonar-pro"
+              },
+              {
+                "id": "search_brave",
+                "label": "Brave",
+                "agent": "openrouter",
+                "model": "meta-llama/llama-4-maverick:online",
+                "note": "Runs a web-searching model through the gateway; Brave's AI has no API."
+              }
+            ]
+          },
+          {
+            "id": "conversation",
+            "label": "Conversation",
+            "items": [
+              {
+                "id": "voice_translate",
+                "label": "Voice to text and real-time translation",
+                "agent": "openrouter",
+                "model": "mistralai/voxtral-small-24b-2507"
+              },
+              {
+                "id": "grammar_translate",
+                "label": "Grammar and translation",
+                "agent": "openrouter",
+                "model": "qwen/qwen3-235b-a22b-2507"
+              },
+              {
+                "id": "enhance",
+                "label": "Text enhancement",
+                "agent": "openrouter",
+                "model": "anthropic/claude-sonnet-5.5"
+              },
+              {
+                "id": "summarise",
+                "label": "Summarising",
+                "agent": "openrouter",
+                "model": "anthropic/claude-haiku-5.5"
+              }
+            ]
+          },
+          {
+            "id": "triage",
+            "label": "Data Triage",
+            "items": [
+              {
+                "id": "triage_files",
+                "label": "Files organisation",
+                "agent": "openrouter",
+                "model": "deepseek/deepseek-v4-pro-0813"
+              },
+              {
+                "id": "triage_mail",
+                "label": "Mail triage",
+                "agent": "openrouter",
+                "model": "anthropic/claude-haiku-5.5"
+              },
+              {
+                "id": "triage_tasks",
+                "label": "Tasks triage",
+                "agent": "openrouter",
+                "model": "moonshotai/kimi-k3"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "small",
+        "label": "Tasks - Medium & Small LLMs",
+        "categories": [
+          {
+            "id": "conversation",
+            "label": "Conversation",
+            "items": [
+              {
+                "id": "translate",
+                "label": "Translate"
+              },
+              {
+                "id": "rewrite",
+                "label": "Rewrite"
+              },
+              {
+                "id": "grammar",
+                "label": "Fix grammar"
+              },
+              {
+                "id": "summarize",
+                "label": "Summarize"
+              },
+              {
+                "id": "keywords",
+                "label": "Keywords"
+              },
+              {
+                "id": "explain",
+                "label": "Explain"
+              },
+              {
+                "id": "qa",
+                "label": "Q&A"
+              },
+              {
+                "id": "reply",
+                "label": "Reply draft"
+              }
+            ]
+          },
+          {
+            "id": "triage",
+            "label": "Data Triage",
+            "items": [
+              {
+                "id": "extract",
+                "label": "Extract"
+              },
+              {
+                "id": "classify",
+                "label": "Categorise"
+              }
+            ]
+          },
+          {
+            "id": "math",
+            "label": "Math",
+            "items": [
+              {
+                "id": "math",
+                "label": "Quick math"
+              },
+              {
+                "id": "sentiment",
+                "label": "Sentiment"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -285,17 +285,28 @@ out(tasks.every((t) => U.some((a) => a.id === t.agent)), "every task runs on an 
 const lreq = M.buildRequest({ chat, fleet, storage: new Store(), agent: M.pickAgent(U, tl.agent), model: tl.model, effort: "auto", mode: "ask", session, reasoning: new Set(), health: modesUp });
 out(JSON.parse(lreq.body).model === tl.model, "a task's request carries the task's model");
 
-// ── the Model picker's tabs: Frontier · Code · Search · Medium · Small, by the design's rules ──
-out(JSON.stringify(design.model_tabs.tabs.map((t) => t.label)) === '["Frontier","Code","Search","Medium","Small"]', "the Model tabs are Frontier, Code, Search, Medium, Small");
-const tab = (id, extra = {}) => M.modelTabOf(design, { id, ...extra });
-out(tab("qwen/qwen-2.5-coder-32b-instruct") === "code" && tab("x/y", { section: "A0" }) === "code", "coder models and the A0 Code section land in Code");
-out(tab("perplexity/sonar-pro") === "search" && tab("x/y", { nativeWeb: true }) === "search", "web-searching models land in Search");
-out(tab("mistralai/ministral-3b-2512") === "small" && tab("google/gemma-3-4b-it") === "small" && tab("x/y", { tier: "small" }) === "small", "3B and 4B models and small-tier rows land in Small");
-out(tab("meta-llama/llama-3.1-8b-instruct") === "medium" && tab("openai/gpt-oss-20b") === "medium" && tab("openai/gpt-4o-mini") === "medium" && tab("x/y", { tier: "medium" }) === "medium", "7B-35B models, minis and medium-tier rows land in Medium");
-out(tab("anthropic/claude-opus-5.5") === "frontier" && tab("openai/gpt-5") === "frontier", "anything else is Frontier");
-const split = M.modelTabs(design, [{ id: "perplexity/sonar" }, { id: "anthropic/claude-opus-5.5" }]);
-out(JSON.stringify(split.map((t) => t.id)) === '["frontier","code","search","medium","small"]' && split.find((t) => t.id === "search").rows.length === 1, "modelTabs splits rows into the five tabs in order");
-out(/M\.modelTabs\(design,/.test(view) && /cloud-model-tab/.test(view), "view.js draws the tabs on the Model page");
+// ── the shared catalogues: the Model Catalogue's subpages and the Task Catalogue (libs:ai ai-catalogue.json) ──
+const cat = fleet.catalogue;
+const catFile = JSON.parse(read(`../${nav.chat.catalogue}`));
+out(JSON.stringify(cat) === JSON.stringify(catFile), "the page's catalogues are libs:ai's ai-catalogue.json, copied by the resolver");
+out(!("model_tabs" in design), "the design no longer carries the old picker tabs");
+out(JSON.stringify(M.modelTabs(cat).map((t) => t.label)) === '["Frontier","Core","Specialist","Medium","Small"]', "the Model Catalogue's subpages are Frontier, Core, Specialist, Medium, Small");
+out(["Anthropic", "OpenAI", "Google", "xAI", "Meta", "Mistral", "DeepSeek", "Qwen"].every((c) => M.declaredGroups(cat, "frontier").some((g) => g.label === c)), "Frontier lists the major companies");
+out(["medical", "legal", "finance", "science", "code"].every((d) => M.declaredGroups(cat, "specialist").some((g) => g.id === d)), "Specialist lists the domains");
+out(M.declaredGroups(cat, "core").length === 0, "Core has no declared list: it is the model-catalogue tables");
+const med = M.declaredGroups(cat, "medium")[0].models;
+const sml = M.declaredGroups(cat, "small")[0].models;
+out(med.some((m) => m.id === "microsoft/phi-4" && !m.local) && sml.some((m) => m.name === "smollm2-360m-instruct" && m.local), "Medium and Small are Cloud Tools' chat rows; a row with no OpenRouter id is local only");
+const tc = M.taskCatalogue(cat, fleet.tasks);
+out(JSON.stringify(tc.groups.map((g) => g.label)) === '["Tasks - Big LLMs","Tasks - Medium & Small LLMs"]', "the Task Catalogue has the two groups");
+out(JSON.stringify(tc.groups[0].categories.map((c) => c.label)) === '["Code","Search (AI search engines)","Conversation","Data Triage"]' && JSON.stringify(tc.groups[1].categories.map((c) => c.label)) === '["Conversation","Data Triage","Math"]', "the groups' categories are the listed ones");
+out(tc.groups.every((g) => g.categories.every((c) => c.items.every((i) => i.task))), "every catalogue item has an agent and model mapping");
+out(tc.tasks.length === new Set(tc.tasks.map((t) => t.id)).size && fleet.tasks.every((t) => tc.tasks.some((x) => x.id === t.id)), "the selectable tasks are the shared mapping plus the Big LLM items, each id once");
+const big = M.taskLock(tc.tasks, "code_architecture");
+out(big.locked && big.agent === "openrouter" && big.model === "anthropic/claude-opus-5.5", "a Big LLM task greys Agent and Model and sets them from the catalogue");
+out(tc.tasks.every((t) => U.some((a) => a.id === t.agent)), "every catalogue task runs on an agent the picker lists");
+out(/function taskPage\(\)/.test(view) && /task: \(\) => chip\([^\n]*taskPage/.test(view) && !/taskSheet/.test(view), "view.js: the Task button opens the Task Catalogue page");
+out(/M\.modelTabs\(fleet\.catalogue\)/.test(view) && /M\.declaredGroups\(fleet\.catalogue, tab\)/.test(view) && /cloud-model-tab/.test(view), "view.js draws the Model Catalogue's subpages on the Model page");
 
 // ── collapse: the whole bar folds to one chip, remembered per app ──
 out(/function toggleBar\(\)/.test(view) && /data-ctl": "compact"/.test(view) && /localStorage\.setItem\(COLLAPSE_KEY/.test(view) && /COLLAPSE_KEY = `\$\{M\.KEY\}\$\{design\.composer\.collapse\.pref_key\}\.\$\{nav\.chat\.composer\.app\}`/.test(view), "view.js collapses the bar to a compact chip and remembers it under a per-app key");
