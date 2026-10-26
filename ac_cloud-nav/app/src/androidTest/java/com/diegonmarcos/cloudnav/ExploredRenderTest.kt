@@ -85,6 +85,18 @@ class ExploredRenderTest {
                     found
                 }
 
+                // ── the map reaches its GL style (surface ready) before any feature count is asked for ──
+                // A bounded wait on the map's own bring-up (view attached and sized, style loaded), so a map that never got its surface
+                // fails here with where it stopped, instead of as a -1 feature count after the long poll below.
+                var bringUp = "no Explored fragment"
+                val styled = runCatching {
+                    compose.waitUntil(45_000) {
+                        scenario.onActivity { explored()?.let { bringUp = it.debugMapState() } }
+                        bringUp.contains("styleReady=true")
+                    }
+                }.isSuccess
+                assertTrue("the Explored map never loaded its style within 45 s (map: $bringUp)", styled)
+
                 // ── native pins + Countries fill both register on the GL stack ──
                 var pinSource = -1
                 var mapState = "no Explored fragment"

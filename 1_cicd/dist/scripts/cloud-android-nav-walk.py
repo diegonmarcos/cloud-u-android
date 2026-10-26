@@ -332,16 +332,15 @@ class Walk:
         opener = find(nodes, MORE) or find(nodes, TITLE)
         if opener is None:
             return None
-        # A page that is still loading (Cloud Mail's inbox spinner) keeps the 2-core emulator's main thread busy and can swallow the
-        # first tap: the opener is tapped again, once, after a longer settle. A dropdown that never opens still fails the page.
-        for wait in (1.0, 2.5):
-            tap(opener)
-            settle(wait)
+        # ONE tap (the title sets open = true: the app ignores nothing). The dropdown is a Popup window that a loaded 2-core emulator
+        # draws a few seconds late (Cloud Mail's inbox spinner, Cloud Search's jobs page), so the hierarchy is polled for it, not re-tapped.
+        tap(opener)
+        settle(1.0)
+        for _ in range(4):
             nodes = dump()
             if nodes and (find(nodes, CRUMB0) or findall(nodes, ENTRY)):
                 return nodes
-            again = dump() or []
-            opener = find(again, MORE) or find(again, TITLE) or opener
+            settle(1.5)
         if self.ime_up():
             shell("input keyevent KEYCODE_BACK")
             settle(0.6)
