@@ -78,7 +78,7 @@
         "cmd": "./gradlew --no-daemon :app:assembleDebug -PtestApp",
         "apk_glob": "ac_cloud-mail/app/build/outputs/apk/debug/*.apk"
       },
-      "seed": "app.sterna.bench.NavWalkSeedReceiver:app.sterna.test.navwalk.SEED"
+      "seed": "app.sterna.navwalk.NavWalkSeedReceiver:app.sterna.test.navwalk.SEED"
     },
     {
       "app": "ac_cloud-me",

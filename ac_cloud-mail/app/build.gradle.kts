@@ -271,6 +271,10 @@ android {
         sourceSets.getByName("release").res.srcDir("src/testApp/res")
         sourceSets.getByName("debug").kotlin.srcDir("src/testApp/kotlin")
         sourceSets.getByName("release").kotlin.srcDir("src/testApp/kotlin")
+        // src/navWalk is NOT a bench entry point (BenchProvisionSourceTest lints only the bench dirs above): it poses one offline
+        // account for the emulator nav walk, outside the ConnectViewModel on purpose, because no mail server exists there to prove one.
+        sourceSets.getByName("debug").kotlin.srcDir("src/navWalk/kotlin")
+        sourceSets.getByName("release").kotlin.srcDir("src/navWalk/kotlin")
         sourceSets.getByName("debug").kotlin.srcDir("src/benchShared/kotlin")
         sourceSets.getByName("release").kotlin.srcDir("src/benchShared/kotlin")
         sourceSets.getByName("debug").manifest.srcFile("src/testApp/AndroidManifest.xml")

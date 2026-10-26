@@ -1,4 +1,4 @@
-package app.sterna.bench
+package app.sterna.navwalk
 
 import android.app.Application
 import android.content.BroadcastReceiver
@@ -13,10 +13,10 @@ import app.sterna.container
  * an unresolvable host and holds a throwaway placeholder password: nothing is ever contacted or sent, the screens simply open
  * with an empty, offline mailbox, which is all the walk needs.
  *
- * Exists only in the `-PtestApp` build (src/testApp is registered on no other variant, see app/build.gradle.kts), so the release
+ * Exists only in the `-PtestApp` build (src/navWalk, beside src/testApp, is registered on no other variant, see app/build.gradle.kts), so the release
  * APK has neither this class nor its manifest entry. The walk builds that variant itself in CI; it is never published.
  *
- *   adb shell am broadcast -n com.diegonmarcos.comms.mail.test/app.sterna.bench.NavWalkSeedReceiver -a app.sterna.test.navwalk.SEED
+ *   adb shell am broadcast -n com.diegonmarcos.comms.mail.test/app.sterna.navwalk.NavWalkSeedReceiver -a app.sterna.test.navwalk.SEED
  */
 class NavWalkSeedReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
