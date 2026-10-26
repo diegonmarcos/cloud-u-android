@@ -57,6 +57,9 @@ object CalcMetrics {
     val gap: Dp = 8.dp
     val gutter: Dp = 12.dp
     val keyHeight: Dp = 52.dp
+    /** The calculator pad's round key (its diameter, or the column width when narrower). */
+    val padKey: Dp = 56.dp
+    val padElevation: Dp = 3.dp
     /** The mode row's icons: small, so the row stays about two lines of text tall. */
     val modeIcon: Dp = 16.dp
     /** Data-dense controls (converter pickers, swap, =, update): never the 40dp Material default. */

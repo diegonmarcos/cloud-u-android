@@ -25,4 +25,35 @@
     <color name="calc_text_secondary">#AAFFFFFF</color>
 
     <color name="calc_error">#FFF87171</color>
+    <!-- The calculator pad (CalcPad.kt PadPalette): dark = pad_*, light = pad_light_*. Per role: fill (the
+         top of the key's gradient; the bottom is the same colour 22% darker) and the ink on it. -->
+    <color name="pad_digit">#FF2B3447</color>
+    <color name="pad_on_digit">#FFFFFFFF</color>
+    <color name="pad_function">#FF1A2233</color>
+    <color name="pad_on_function">#FFCBD5E1</color>
+    <color name="pad_operator">#FF0A84FF</color>
+    <color name="pad_on_operator">#FFFFFFFF</color>
+    <color name="pad_clear">#FFE11D48</color>
+    <color name="pad_on_clear">#FFFFFFFF</color>
+    <color name="pad_delete">#FFF59E0B</color>
+    <color name="pad_on_delete">#FF1C1002</color>
+    <color name="pad_evaluate">#FF7C3AED</color>
+    <color name="pad_on_evaluate">#FFFFFFFF</color>
+    <color name="pad_light_digit">#FF334155</color>
+    <color name="pad_light_on_digit">#FFFFFFFF</color>
+    <color name="pad_light_function">#FF64748B</color>
+    <color name="pad_light_on_function">#FFFFFFFF</color>
+    <color name="pad_light_operator">#FF0062CC</color>
+    <color name="pad_light_on_operator">#FFFFFFFF</color>
+    <color name="pad_light_clear">#FFBE123C</color>
+    <color name="pad_light_on_clear">#FFFFFFFF</color>
+    <color name="pad_light_delete">#FFB45309</color>
+    <color name="pad_light_on_delete">#FFFFFFFF</color>
+    <color name="pad_light_evaluate">#FF6D28D9</color>
+    <color name="pad_light_on_evaluate">#FFFFFFFF</color>
+    <!-- The input field's glass panel and the key's highlight rim. -->
+    <color name="pad_panel">#26FFFFFF</color>
+    <color name="pad_rim">#33FFFFFF</color>
+    <color name="pad_light_panel">#99FFFFFF</color>
+    <color name="pad_light_rim">#66FFFFFF</color>
 </resources>

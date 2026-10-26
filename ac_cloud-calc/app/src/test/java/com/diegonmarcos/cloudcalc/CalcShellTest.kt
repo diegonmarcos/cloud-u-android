@@ -4,6 +4,7 @@ import android.content.ComponentName
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.getBoundsInRoot
@@ -465,5 +466,55 @@ class CalcShellTest {
         compose.waitForIdle()
         assertEquals(mode.tab, state.tab)
         compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("42")
+    }
+
+    @Test fun `focusing the expression field never opens the soft keyboard, yet the cursor and selection still move`() {
+        openStandard()
+        typeKeys("1", "2", "3")
+        val imm = RuntimeEnvironment.getApplication().getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+        compose.onNodeWithTag(CalcTags.INPUT).performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.INPUT).assertIsFocused()
+        select(1, 2)
+        assertFalse("the soft keyboard must stay closed", shadowOf(imm).isSoftInputVisible)
+        // The selection is live: the pad replaces it.
+        typeKeys("9")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("193")
+        assertFalse(shadowOf(imm).isSoftInputVisible)
+    }
+
+    @Test fun `the pad edits in the middle - inserts at the cursor, DEL deletes before it or the selection`() {
+        openStandard()
+        typeKeys("1", "2", "3", "4")
+        select(2)
+        typeKeys("+")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("12+34")
+        typeKeys("DEL", "DEL")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("134")
+        select(1, 3)
+        typeKeys("DEL")
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("14")
+    }
+
+    @Test fun `a pasted text is cut down to what a calc reads`() {
+        openStandard()
+        compose.onNodeWithTag(CalcTags.INPUT).performTextReplacement("1+2\n\t3\u0000x\uD83D\uDE00")
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("1+23x")
+    }
+
+    @Test fun `pad keys carry their role and the roles are told apart by colour`() {
+        openStandard()
+        fun role(label: String) = compose.onNodeWithTag(CalcTags.key(label)).fetchSemanticsNode().config[com.diegonmarcos.cloudcalc.ui.PadRoleKey]
+        assertEquals("DIGIT", role("7")); assertEquals("OPERATOR", role("+")); assertEquals("CLEAR", role("AC"))
+        assertEquals("DELETE", role("DEL")); assertEquals("EVALUATE", role("=")); assertEquals("FUNCTION", role("√"))
+        listOf(true, false).forEach { dark ->
+            val p = com.diegonmarcos.cloudcalc.ui.PadPalette.of(RuntimeEnvironment.getApplication(), dark)
+            val fills = com.diegonmarcos.cloudcalc.ui.PadRole.values().map { p.fill(it) }
+            assertEquals("every role has its own fill (dark=$dark)", fills.size, fills.toSet().size)
+            com.diegonmarcos.cloudcalc.ui.PadRole.values().forEach {
+                assertTrue("$it ink readable on its fill (dark=$dark)", com.diegonmarcos.superapp.themebg.ThemeBackground.contrast(p.ink(it), p.fill(it)) >= 4.5)
+            }
+        }
     }
 }

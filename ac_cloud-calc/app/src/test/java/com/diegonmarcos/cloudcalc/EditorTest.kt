@@ -70,4 +70,11 @@ class EditorTest {
         assertEquals("2 + sqrt|", Editor.complete(e("2 + sq"), "sqrt").show())
         assertEquals("", Editor.wordBeforeCursor(e("2 + 3", 5)))
     }
+
+    @Test fun `sanitising drops what a calc cannot read and keeps the selection on the same characters`() {
+        assertEquals("1+23x", Editor.sanitize("1+2\n\t3\u0000x\uD83D\uDE00"))
+        assertEquals("500÷3", Editor.sanitize("500÷3"))
+        Editor.sanitize(e("1\n+2\n3", 2, 5)).let { assertEquals("1+23", it.text); assertEquals(1 to 3, it.start to it.end) }
+        assertEquals(2, Editor.sanitize(e("a\nb", 3)).start)
+    }
 }

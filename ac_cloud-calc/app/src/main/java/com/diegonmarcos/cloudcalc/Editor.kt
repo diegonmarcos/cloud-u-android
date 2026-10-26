@@ -58,4 +58,13 @@ object Editor {
         val w = wordBeforeCursor(e)
         return Edit.at(e.before.dropLast(w.length) + name + e.after, e.lo - w.length + name.length)
     }
+
+    /** Characters a calc expression may hold beyond letters and digits (glyphs Logic.normalize maps included). */
+    private const val EXTRA = " +-*/^%!().,;=<>&|~_°√÷×∕／⁄✕⋅·−"
+
+    /** [s] with everything a calc cannot read (newlines, emoji, control characters) dropped. */
+    fun sanitize(s: String): String = s.filter { it.isLetterOrDigit() || it in EXTRA }
+
+    /** [e] sanitised, the selection kept on the same characters (the dropped ones before it do not count). */
+    fun sanitize(e: Edit): Edit = Edit.of(sanitize(e.text), sanitize(e.text.substring(0, e.start)).length, sanitize(e.text.substring(0, e.end)).length)
 }

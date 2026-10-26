@@ -151,6 +151,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
     var bases by remember(mode.id) { mutableStateOf(listOf<Pair<String, String>>()) }
     var suggestions by remember(mode.id) { mutableStateOf(listOf<Logic.Item>()) }
     val options = Logic.options(mode.options, overrides)
+    val palette = PadPalette.of(androidx.compose.ui.platform.LocalContext.current, dark = true)
 
     LaunchedEffect(state.pending) {
         val p = state.pending
@@ -177,13 +178,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
         Column(Modifier.fillMaxWidth().weight(1f).heightIn(min = CalcMetrics.displayMinHeight).verticalScroll(rememberScrollState()).testTag(CalcTags.DISPLAY)) {
             ChoiceRow(mode.angleChoices, options) { c -> overrides = overrides + (c.key to c.value) }
             ChoiceRow(mode.baseChoices, options) { c -> overrides = overrides + (c.key to c.value) }
-            OutlinedTextField(
-                value = field,
-                onValueChange = { field = it },
-                modifier = Modifier.fillMaxWidth().testTag(CalcTags.INPUT),
-                textStyle = MaterialTheme.typography.headlineSmall,
-                placeholder = { Text(stringResource(R.string.expression_hint)) },
-            )
+            ExpressionField(field, { field = it }, palette)
             if (suggestions.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(CalcMetrics.small)) {
                     items(suggestions) { s ->
@@ -191,7 +186,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
                     }
                 }
             }
-            ResultBlock(result, Logic.optionValue(options, "out_base", 10))
+            ResultBlock(result, Logic.optionValue(options, "out_base", 10), MaterialTheme.typography.displaySmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold))
             bases.forEach { (label, value) ->
                 Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(label, style = MaterialTheme.typography.labelLarge)
@@ -201,7 +196,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
         }
         // DISPLAY END
         mode.keys.forEach { row ->
-            Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small), horizontalArrangement = Arrangement.spacedBy(CalcMetrics.small)) {
+            Row(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small / 2), horizontalArrangement = Arrangement.spacedBy(CalcMetrics.small)) {
                 row.forEach { k ->
                     val press: () -> Unit = {
                         val r = result
@@ -212,9 +207,7 @@ private fun ExpressionMode(mode: Declarations.Mode) {
                             setEdit(Editor.replaceAll(r.text))
                         }
                     }
-                    val m = Modifier.weight(1f).height(CalcMetrics.keyHeight).testTag(CalcTags.key(k.label))
-                    if (k.action == Declarations.Action.EVALUATE) Button(onClick = press, modifier = m, contentPadding = PaddingValues(0.dp)) { Text(k.label) }
-                    else FilledTonalButton(onClick = press, modifier = m, contentPadding = PaddingValues(0.dp)) { Text(k.label) }
+                    PadKey(k, palette, press, Modifier.weight(1f))
                 }
             }
         }
@@ -238,7 +231,7 @@ private fun ChoiceRow(choices: List<Declarations.Choice>, options: String, onPic
 }
 
 @Composable
-internal fun ResultBlock(result: Logic.Result?, outBase: Int = 10) {
+internal fun ResultBlock(result: Logic.Result?, outBase: Int = 10, style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.headlineMedium) {
     if (result == null) return
     val clipboard = LocalClipboardManager.current
     Column(Modifier.fillMaxWidth().padding(vertical = CalcMetrics.gap)) {
@@ -247,7 +240,7 @@ internal fun ResultBlock(result: Logic.Result?, outBase: Int = 10) {
         } else {
             Text(
                 "= " + Logic.shown(result.text, outBase),
-                style = MaterialTheme.typography.headlineMedium,
+                style = style,
                 color = if (result.ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 // Long-press copies the plain number (no separators) so it pastes cleanly elsewhere.
                 modifier = Modifier.testTag(CalcTags.RESULT).pointerInput(result) {
