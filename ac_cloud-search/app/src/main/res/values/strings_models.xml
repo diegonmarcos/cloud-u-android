@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Chat › Search › the model catalogue (models/ModelCataloguePage). English is the base language (#299); the
+     section and model names are data (assets/models/catalogue.json), not resources. -->
+<resources>
+    <string name="models_title">Models</string>
+    <string name="models_current">Current: %1$s</string>
+    <string name="models_prices_as_of">Prices as of %1$s (%2$s)</string>
+    <string name="models_origin_live">live from OpenRouter</string>
+    <string name="models_origin_cached">from OpenRouter, cached</string>
+    <string name="models_origin_stale">offline: last OpenRouter prices</string>
+    <string name="models_origin_snapshot">offline: bundled snapshot</string>
+    <string name="models_refreshing">refreshing…</string>
+    <string name="models_not_chat">not a chat model</string>
+    <string name="models_no_anthropic">No Anthropic model</string>
+    <string name="models_not_listed">not on OpenRouter</string>
+    <string name="models_none">No models on OpenRouter</string>
+    <string name="models_catalogue_unreadable">The model list could not be read.</string>
+    <string name="models_col_provider">Provider</string>
+    <string name="models_col_model">Model</string>
+    <string name="models_col_id">OpenRouter Model ID</string>
+    <string name="models_col_params">Architecture / Params (Total / Active)</string>
+    <string name="models_col_license">License</string>
+    <string name="models_col_input">Input $/1M</string>
+    <string name="models_col_output">Output $/1M (Floor)</string>
+    <string name="models_footer">Anthropic first as the reference, then the best open-weights model of each provider, ranked by price, low to high (output price; input price for embeddings). Floor = the cheapest provider OpenRouter routes to. est. = an estimate, not an official figure. Tap a chat model to use it; greyed sections are not chat models.</string>
+</resources>
