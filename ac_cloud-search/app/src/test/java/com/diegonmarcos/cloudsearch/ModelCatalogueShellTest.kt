@@ -132,6 +132,17 @@ class ModelCatalogueShellTest {
         assertEquals("nothing was picked", before, state.chat.model)
     }
 
+    @Test fun closingTheCatalogueInResearchReturnsToResearchReports() {
+        compose.setContent { SearchShell(state) }
+        compose.runOnUiThread { state.openSection("research"); state.researchPage = "models" }
+        waitFor(AiTags.CATALOGUE_PAGE)
+        compose.onNodeWithTag(AiTags.CATALOGUE_CLOSE).performClick()
+        waitFor(Tags.page("research_reports"))
+        assertEquals("reports", state.researchPage)
+        assertEquals("research", state.section)
+        assertTrue("the catalogue is gone", compose.onAllNodesWithTag(AiTags.CATALOGUE_PAGE).fetchSemanticsNodes().isEmpty())
+    }
+
     @Test fun theCatalogueHasTheFiveSubpagesAndEachListsItsModels() {
         compose.setContent { SearchShell(state) }
         openCatalogue()

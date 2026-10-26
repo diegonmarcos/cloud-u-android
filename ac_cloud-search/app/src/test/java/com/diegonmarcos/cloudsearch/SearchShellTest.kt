@@ -506,13 +506,24 @@ class SearchShellTest {
         compose.onNodeWithTag(Tags.SEARCH_BOX).performImeAction()
     }
 
+    private fun waitThingsRowText(osm: String, part: String) = try {
+        compose.waitUntil(60_000) {
+            compose.onAllNodesWithTag(Tags.thingsRow(osm)).fetchSemanticsNodes().any { n ->
+                n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.any { it.text.contains(part) } == true
+            }
+        }
+    } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+        throw AssertionError("the row '$osm' never said '$part'", e)
+    }
+
     @Test fun thingsComparesStoresWithTheirRealPriceOrWhyNone() {
         services.prefs.useLocation = false
         services.prefs.city = "munich" // the declared city the fake stores sit in
         state.city = "munich"
         com.diegonmarcos.cloudsearch.data.FleetBearer.reader = { "tok-1" }
         openThings("Bohrmaschine")
-        waitFor(Tags.thingsRow("node/1"))
+        // the page first lists the stores for the empty query, then the typed item's answer replaces it: wait for the answer
+        waitThingsRowText("node/1", "€24.49")
         // the chain store carries the price its own site published, with where it comes from; the other says why not
         compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("€24.49", substring = true)
         compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("online", substring = true)
@@ -538,7 +549,7 @@ class SearchShellTest {
         state.city = "munich"
         com.diegonmarcos.cloudsearch.data.FleetBearer.reader = { "" }
         openThings("Bohrmaschine")
-        waitFor(Tags.thingsRow("node/1"))
+        waitThingsRowText("node/1", "fleet sign-in")
         compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("no price", substring = true)
         compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("fleet sign-in", substring = true)
         assertTrue(synchronized(http.asked) { http.asked.none { "/scrappers/prices" in it } })

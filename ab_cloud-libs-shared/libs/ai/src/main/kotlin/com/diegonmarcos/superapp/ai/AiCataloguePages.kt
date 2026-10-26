@@ -59,15 +59,17 @@ val AiPublicFetch = CatalogueFetch { url ->
  * ONE scroller below them; it replaces the chat, never sits inside another scroller. [fetch] is the host's network door for prices.
  */
 @Composable
-fun AiModelCatalogue(chat: AiChatState, theme: AiTheme, fetch: CatalogueFetch = AiPublicFetch, modifier: Modifier = Modifier) {
+fun AiModelCatalogue(chat: AiChatState, theme: AiTheme, fetch: CatalogueFetch = AiPublicFetch, modifier: Modifier = Modifier, onClose: (() -> Unit)? = null) {
     val ctx = LocalContext.current
+    // Close, Back and a pick end the page: the chat's own page flag, or the host's own way out when it shows the catalogue outside the chat.
+    val done = { chat.page = ""; onClose?.invoke(); Unit }
     val cat = remember { runCatching { AiCatalogue.load(ctx) }.getOrNull() }
     val c = theme.colors
     val t = theme.type
     val m = theme.metrics
     val s = theme.strings
     var tab by remember { mutableStateOf("core") }
-    BackHandler { chat.page = "" }
+    BackHandler { done() }
     val core by produceState<CoreSource?>(null, fetch) {
         value = withContext(Dispatchers.IO) {
             val k = runCatching { ModelCatalogue.parse(ctx.assets.open(ModelCatalogue.ASSET).bufferedReader().use { it.readText() }) }.getOrNull()
@@ -75,7 +77,7 @@ fun AiModelCatalogue(chat: AiChatState, theme: AiTheme, fetch: CatalogueFetch = 
         }
     }
     Column(modifier.fillMaxSize().testTag(AiTags.CATALOGUE_PAGE)) {
-        Header(theme, s.catalogue, AiTags.CATALOGUE_CLOSE, { chat.page = "" }) {
+        Header(theme, s.catalogue, AiTags.CATALOGUE_CLOSE, { done() }) {
             Text(s.webSearch, color = c.text2, style = t.style(t.small))
             Switch(chat.web, { chat.toggleWeb() }, Modifier.padding(horizontal = m.small).testTag(AiTags.WEB),
                 colors = SwitchDefaults.colors(checkedTrackColor = c.accent, uncheckedTrackColor = c.field))
@@ -87,7 +89,7 @@ fun AiModelCatalogue(chat: AiChatState, theme: AiTheme, fetch: CatalogueFetch = 
                     modifier = Modifier.clickable { tab = tb.id }.padding(vertical = m.gap, horizontal = m.small).testTag(AiTags.catTab(tb.id)))
             }
         }
-        if (tab == "core") CorePage(chat, theme, core)
+        if (tab == "core") CorePage(chat, theme, core, done)
         else Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = m.gutter, vertical = m.gap),
             verticalArrangement = Arrangement.spacedBy(m.gap)) {
             val groups = when (tab) {
@@ -95,7 +97,7 @@ fun AiModelCatalogue(chat: AiChatState, theme: AiTheme, fetch: CatalogueFetch = 
                 "specialist" -> cat.specialist
                 else -> listOf(AiCatalogueGroup(tab, cat.tabs.first { it.id == tab }.label, cat.tier(tab)))
             }
-            groups.forEach { g -> ModelGroup(chat, theme, g) }
+            groups.forEach { g -> ModelGroup(chat, theme, g, done) }
         }
     }
 }
@@ -104,7 +106,7 @@ fun AiModelCatalogue(chat: AiChatState, theme: AiTheme, fetch: CatalogueFetch = 
 private class CoreSource(val catalogue: ModelCatalogue.Catalogue?, val repo: ModelCatalogueRepository?)
 
 @Composable
-private fun ColumnScope.CorePage(chat: AiChatState, theme: AiTheme, core: CoreSource?) {
+private fun ColumnScope.CorePage(chat: AiChatState, theme: AiTheme, core: CoreSource?, done: () -> Unit) {
     val c = theme.colors
     val t = theme.type
     val m = theme.metrics
@@ -125,13 +127,13 @@ private fun ColumnScope.CorePage(chat: AiChatState, theme: AiTheme, core: CoreSo
     ModelCataloguePage(
         catalogue = core?.catalogue, repo = core?.repo, ready = core != null,
         current = chat.model, currentName = chat.models.firstOrNull { it.id == chat.model }?.name ?: chat.model,
-        theme = ct, words = words, onPick = { id -> chat.pick(id); chat.page = "" }, modifier = Modifier.weight(1f),
+        theme = ct, words = words, onPick = { id -> chat.pick(id); done() }, modifier = Modifier.weight(1f),
     )
 }
 
 /** One headed list of a declared tab: its models, a tap picks. */
 @Composable
-private fun ModelGroup(chat: AiChatState, theme: AiTheme, g: AiCatalogueGroup) {
+private fun ModelGroup(chat: AiChatState, theme: AiTheme, g: AiCatalogueGroup, done: () -> Unit) {
     val c = theme.colors
     val t = theme.type
     val m = theme.metrics
@@ -139,7 +141,7 @@ private fun ModelGroup(chat: AiChatState, theme: AiTheme, g: AiCatalogueGroup) {
     g.models.forEach { mod ->
         val listed = chat.models.isEmpty() || chat.models.any { it.id == mod.id }
         Column(
-            Modifier.fillMaxWidth().alpha(if (mod.local) 0.45f else 1f).clickable(enabled = !mod.local) { chat.pick(mod.id); chat.page = "" }
+            Modifier.fillMaxWidth().alpha(if (mod.local) 0.45f else 1f).clickable(enabled = !mod.local) { chat.pick(mod.id); done() }
                 .padding(vertical = m.small).testTag(AiTags.catRow(mod.id)),
         ) {
             Text(mod.name, color = if (mod.id == chat.model) c.accent else c.text, style = t.style(t.small, FontWeight.SemiBold))

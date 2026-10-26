@@ -61,6 +61,7 @@ fun ResearchSection(state: SearchState) {
                     state.chat, aiTheme(),
                     CatalogueFetch { url -> state.services.http.get(url, emptyMap(), state.services.cfg.timeoutMs).takeIf { it.code in 200..299 }?.body },
                     Modifier.padding(top = Metrics.contentTop, bottom = Metrics.contentBottom),
+                    onClose = { state.researchPage = "reports" }, // here the catalogue is a Research page, not the chat's: Close goes back to Reports
                 )
                 "agenthub" -> AgentsSection(state)
                 else -> ReportsSection(state)
