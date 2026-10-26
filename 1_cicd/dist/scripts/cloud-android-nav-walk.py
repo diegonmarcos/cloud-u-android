@@ -599,6 +599,14 @@ class Walk:
     def run(self):
         if self.launch() is None:
             self.evidence("launch")
+            seen = " ".join(n.text for n in (dump() or []) if n.text)
+            if "Add account" in seen:
+                # a mail client has no chrome until an account exists, and the CI emulator has no mail server to sign in to: reported as
+                # SKIP with the reason, never as a pass (the side menu is held by the Robolectric tests, the account-less screen by none)
+                self.results.append({"section": "-", "page": "launch", "label": "launch", "status": "SKIP",
+                                     "checks": {"note": "onboarding (Add account): the shared bars exist only once an account is signed in"},
+                                     "failures": [], "seconds": 60})
+                self.report()
             self.results.append({"section": "-", "page": "launch", "label": "launch", "status": "FAIL", "checks": {},
                                  "failures": ["the shared bottom nav never appeared within 60 s of launch (no %s*)" % ITEM], "seconds": 60})
         else:
