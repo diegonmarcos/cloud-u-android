@@ -201,7 +201,7 @@ class EngineTest {
         val e = engine()
         val yt = e.feedOf("yt-google-developers")
         assertEquals(4, yt.items.size)
-        assertEquals(yt.items.map { it.date }.sortedDescending(), yt.items.map { it.date })
+        assertEquals(yt.items.map { it.date!! }.sortedDescending(), yt.items.map { it.date!! })
         assertEquals(SearchEngine.State.OK, yt.statuses.single().state)
         assertEquals("Google for Developers", yt.statuses.single().label)
         val gn = e.feedOf("gn-technology")
