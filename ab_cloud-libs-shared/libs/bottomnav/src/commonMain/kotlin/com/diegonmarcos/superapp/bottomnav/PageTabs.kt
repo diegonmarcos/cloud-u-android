@@ -159,9 +159,9 @@ private fun PageTabsContent(
 
     val live = insets ?: WindowInsets.statusBars.union(WindowInsets.displayCutout)
     val liveTop = if (underTopChrome && !flushTop) live.getTop(density) else 0
-    val launchDivider = pages.indexOfFirst { it.action.isNotBlank() }.takeIf { it > 0 }
+    val divider = pages.indexOfFirst { it.action.isNotBlank() }.takeIf { it > 0 }
     /** Indices a "|" is drawn before: the first launch page, and every page declared `separatorBefore`. */
-    val dividers = pages.indices.filter { it > 0 && (it == launchDivider || pages[it].separatorBefore) }.toSet()
+    val dividers = pages.indices.filter { it > 0 && (it == divider || pages[it].separatorBefore) }.toSet()
 
     fun styleAt(px: Float, color: Color = Color.Unspecified) = pillStyle(density, px, spacing, color)
     val labels = pages.map { it.label.uppercase() }

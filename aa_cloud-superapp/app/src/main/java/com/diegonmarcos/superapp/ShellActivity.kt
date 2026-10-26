@@ -929,19 +929,19 @@ open class ShellActivity : AppCompatActivity(),
         return false
     }
 
+    /** The event the swipe detector sees: a long curved stroke is a shape the recogniser took, so the detector gets a CANCEL
+     *  instead of its UP and a circle can not also fire a fling. */
+    private fun strokeAwareEvent(ev: android.view.MotionEvent): android.view.MotionEvent {
+        if (!trackStroke(ev)) return ev
+        return android.view.MotionEvent.obtain(ev).also { it.action = android.view.MotionEvent.ACTION_CANCEL }
+    }
+
     override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
         val admitted = ::navSwipeGesture.isInitialized &&
             starGestureGate.admits(ev.actionMasked == android.view.MotionEvent.ACTION_DOWN, ev.x, ev.y)
         if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN || ev.actionMasked == android.view.MotionEvent.ACTION_UP)
             Trace.i(TAG, "touch ${ev.actionMasked} x=${ev.x} y=${ev.y} detector=$admitted")
-        if (admitted) {
-            // A long curved stroke is a shape: the recogniser takes it and the swipe detector sees a CANCEL, never the UP, so
-            // a circle can not also fire a fling.
-            if (trackStroke(ev)) {
-                val cancel = android.view.MotionEvent.obtain(ev); cancel.action = android.view.MotionEvent.ACTION_CANCEL
-                navSwipeGesture.onTouchEvent(cancel); cancel.recycle()
-            } else navSwipeGesture.onTouchEvent(ev)
-        }
+        if (admitted) navSwipeGesture.onTouchEvent(strokeAwareEvent(ev))
         return super.dispatchTouchEvent(ev)
     }
 

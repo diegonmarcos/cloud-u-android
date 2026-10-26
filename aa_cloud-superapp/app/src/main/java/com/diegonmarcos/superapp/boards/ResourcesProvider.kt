@@ -4,8 +4,6 @@ import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.bluetooth.BluetoothManager
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.net.ConnectivityManager
@@ -110,26 +108,22 @@ object ResourcesProvider {
         }
     }.getOrDefault(emptyList()).filter { it.value.isNotBlank() }
 
+    /** The battery SoT's own report (libs:battery BatteryRepository.report): this board never reads BatteryManager itself. */
     fun battery(ctx: Context): List<ResRow> {
-        val i = ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return emptyList()
+        val r = com.diegonmarcos.superapp.battery.BatteryRepository.report(ctx)?.reading ?: return emptyList()
         val rows = ArrayList<ResRow>()
-        ResourcesFormat.percent(i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1), i.getIntExtra(BatteryManager.EXTRA_SCALE, -1))
-            ?.let { rows += ResRow("Level", "$it%") }
-        rows += ResRow("State", ResourcesFormat.batteryStatus(i.getIntExtra(BatteryManager.EXTRA_STATUS, -1)))
-        val plug = i.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)
+        rows += ResRow("Level", "${r.levelPct}%")
+        rows += ResRow("State", ResourcesFormat.batteryStatus(r.status))
         rows += ResRow("Power source", when {
-            plug and BatteryManager.BATTERY_PLUGGED_AC != 0 -> "AC"
-            plug and BatteryManager.BATTERY_PLUGGED_USB != 0 -> "USB"
-            plug and BatteryManager.BATTERY_PLUGGED_WIRELESS != 0 -> "Wireless"
+            r.plugged and BatteryManager.BATTERY_PLUGGED_AC != 0 -> "AC"
+            r.plugged and BatteryManager.BATTERY_PLUGGED_USB != 0 -> "USB"
+            r.plugged and BatteryManager.BATTERY_PLUGGED_WIRELESS != 0 -> "Wireless"
             else -> "Battery"
         })
-        rows += ResRow("Health", ResourcesFormat.batteryHealth(i.getIntExtra(BatteryManager.EXTRA_HEALTH, -1)))
-        if (i.hasExtra(BatteryManager.EXTRA_TEMPERATURE)) rows += ResRow("Temperature", ResourcesFormat.temperature(i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0)))
-        if (i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) > 0) rows += ResRow("Voltage", ResourcesFormat.voltage(i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0)))
-        if (Build.VERSION.SDK_INT >= 34) {
-            val cycles = i.getIntExtra(BatteryManager.EXTRA_CYCLE_COUNT, -1)
-            if (cycles >= 0) rows += ResRow("Charge cycles", cycles.toString())
-        }
+        rows += ResRow("Health", ResourcesFormat.batteryHealth(r.health))
+        r.tempDc?.let { rows += ResRow("Temperature", ResourcesFormat.temperature(it)) }
+        r.voltageMv?.takeIf { it > 0 }?.let { rows += ResRow("Voltage", ResourcesFormat.voltage(it)) }
+        r.systemCycles?.takeIf { it >= 0 }?.let { rows += ResRow("Charge cycles", it.toString()) }
         return rows
     }
 

@@ -2376,18 +2376,18 @@
             "facet": true
           },
           {
-            "_doc": "Resources: the phone, live (battery, memory, storage, CPU, networks, device, sensors), one card per `resource` of stack_resources, every value read from the platform by boards/ResourcesProvider and refreshed every 2 s while the page is visible. `separator_before` draws the strip's \"|\" group separator between Tasks and this group (Resources, Quick Actions). Icon from libs:ui-icons.",
+            "_doc": "Resources: the phone, live (battery, memory, storage, CPU, networks, device, sensors), one card per `resource` of stack_resources, every value read from the platform by boards/ResourcesProvider and refreshed every 2 s while the page is visible. `separator_before` draws the strip's \"|\" group separator between Tasks and this group (Resources, Quick Actions).",
             "id": "resources",
             "label": "Resources",
-            "icon": "speed",
+            "icon": "ic_devices",
             "facet": true,
             "separator_before": true
           },
           {
-            "_doc": "Quick Actions: THE page Configs > Launcher > Quick Actions opens (page:config/controls), mirrored by page so there is one implementation and no copy. Icon from libs:ui-icons.",
+            "_doc": "Quick Actions: THE page Configs > Launcher > Quick Actions opens (page:config/controls), mirrored by page so there is one implementation and no copy.",
             "id": "quick-actions",
             "label": "Quick Actions",
-            "icon": "bolt",
+            "icon": "ic_home",
             "facet": true,
             "mirror_page": "config/controls"
           }
