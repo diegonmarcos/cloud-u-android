@@ -71,7 +71,15 @@ class ExploredRenderTest {
                 scenario.onActivity { act ->
                     val host = act.supportFragmentManager.fragments.filterIsInstance<ExploredFragment>().first()
                     host.childFragmentManager.executePendingTransactions()
-                    host.childFragmentManager.beginTransaction().replace(R.id.nav_host_timeline, MapsExploredFragment.newInstance()).commitNow()
+                    // The page the deep link mounted owns a MapView of its own. It is removed (its view and GL surface torn down) BEFORE the
+                    // page under test is added, in two steps: one transaction that destroys one MapView while the next is created left the
+                    // new one attached and sized but never handed a map (getMapAsync never fired), intermittently (see the style wait below).
+                    host.childFragmentManager.findFragmentById(R.id.nav_host_timeline)?.let { host.childFragmentManager.beginTransaction().remove(it).commitNow() }
+                }
+                compose.waitForIdle()
+                scenario.onActivity { act ->
+                    val host = act.supportFragmentManager.fragments.filterIsInstance<ExploredFragment>().first()
+                    host.childFragmentManager.beginTransaction().add(R.id.nav_host_timeline, MapsExploredFragment.newInstance()).commitNow()
                 }
 
                 fun explored(): MapsExploredFragment? = run {
