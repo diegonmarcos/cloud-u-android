@@ -210,11 +210,9 @@
     }
   },
   "search": {
-    "_doc": "THE declaration (core/Config.kt parses and validates it; app/build.gradle bakes it into BuildConfig.SEARCH_CONFIG_B64; the JVM suite reads this file). No vertical, source, URL, engine, calculator field or model is spelled in Kotlin.",
     "user_agent": "CloudSearch/0.1 (+https://github.com/diegonmarcos/cloud-u-android)",
     "timeout_ms": 15000,
     "cache_ttl_minutes": 60,
-    "_doc_cache": "A source answer younger than cache_ttl_minutes is reused without asking the source again; an older one is refetched, and when the refetch fails the last stored answer is shown marked stale (the offline last-results view).",
     "recent_days": 7,
     "max_results": 80,
     "default_vertical": "search",
@@ -715,7 +713,6 @@
         "things_category": "clothes"
       }
     ],
-    "_doc_sources": "Every source, with what this app may do with it. kind `api`: a public API read in-app when `enabled` (parser = the core/Listing.kt Parsers branch, held to a saved real response in core/src/test/resources/fixtures). kind `link`: NEVER fetched - the site's own search (or a site: search when its URL scheme needs ids this app cannot know) opens in cloud-browser, because its terms forbid automated access or it has no public API. `why` is shown on the listing under the source's name, so nothing is silently missing. Verified 2026-10-02 from the mesh: BA Jobsuche v6 (200 with the published key and an honest user agent; v4 answers 403), Arbeitnow (200), Open Prices (2,131 Berlin prices within 30 km), search.openfoodfacts.org (200). The fleet's scraping backend was considered for the portals and is not used: crawlee-cloud is archived, and its successor scrappers-api sits behind two-factor auth and returns only a summary from /scrape (the data stays on the server) - and none of the portals below permits scraping in the first place.",
     "sources": {
       "ba-jobsuche": {
         "label": "Bundesagentur für Arbeit",
@@ -980,7 +977,7 @@
         "verified": false,
         "query_required": true,
         "url": "https://api.openverse.org/v1/images/?q={q}&page_size=30",
-        "terms": "Openverse (WordPress Foundation) image search over openly licensed works; anonymous use is allowed and every result names its licence."
+        "terms": "Openverse (WordPress Foundation): openly licensed images, each with its licence."
       },
       "archive-video": {
         "label": "Internet Archive",
@@ -992,7 +989,7 @@
         "url": "https://archive.org/advancedsearch.php?q={q}%20AND%20mediatype%3Amovies&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=year&fl%5B%5D=creator&rows=30&output=json&sort%5B%5D=downloads%20desc",
         "item_url": "https://archive.org/details/{id}",
         "image_url": "https://archive.org/services/img/{id}",
-        "terms": "The Internet Archive's public advancedsearch API over its moving-image items."
+        "terms": "Internet Archive advancedsearch: its moving-image items."
       },
       "archive-films": {
         "label": "Internet Archive films",
@@ -1004,7 +1001,7 @@
         "url": "https://archive.org/advancedsearch.php?q={q}%20AND%20mediatype%3Amovies%20AND%20collection%3Afeature_films&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=year&fl%5B%5D=creator&rows=30&output=json&sort%5B%5D=downloads%20desc",
         "item_url": "https://archive.org/details/{id}",
         "image_url": "https://archive.org/services/img/{id}",
-        "terms": "The Internet Archive's feature_films collection (full-length films it may show), through the same public API."
+        "terms": "Internet Archive feature_films collection: full-length films it may show."
       },
       "tvmaze-shows": {
         "label": "TVMaze",
@@ -1014,7 +1011,7 @@
         "verified": false,
         "query_required": true,
         "url": "https://api.tvmaze.com/search/shows?q={q}",
-        "terms": "TVMaze's public show search (CC BY-SA data): TV series with network, premiere and genres."
+        "terms": "TVMaze public show search (CC BY-SA data)."
       },
       "open-library-books": {
         "label": "Open Library",
@@ -1026,11 +1023,10 @@
         "url": "https://openlibrary.org/search.json?q={q}&limit=30&fields=key,title,author_name,first_publish_year,cover_i",
         "item_url": "https://openlibrary.org{id}",
         "image_url": "https://covers.openlibrary.org/b/id/{id}-M.jpg",
-        "terms": "Open Library's public search API: works with authors, first publication year and cover."
+        "terms": "Open Library public search API: works, authors, year, cover."
       }
     },
     "series": {
-      "_doc": "#797 official time series for a vertical whose analysis is `market`. Each URL returns ONE series (every dimension but time pinned), parsed by `parser` (core/Market.kt Series.parse: jsonstat = Eurostat's JSON-stat 2.0, sdmx_json = SDMX-JSON 1.0 as the Bundesbank and the ECB serve it), cached like a source. change: pct = percent change of an index against the same period a year before; pp = percentage-point change of a rate. Verified 2026-10-03 from the mesh; the ECB's own data API answered an HTML error page on one of two tries, so the mortgage rate is read from the Bundesbank, which publishes the same MFI interest-rate statistic for Germany.",
       "bbk-mortgage-rate": {
         "label": "Mortgage rate",
         "source": "Deutsche Bundesbank",
@@ -1068,7 +1064,6 @@
       }
     },
     "feeds": {
-      "_doc": "Feeds read in-app (rss = RSS 2.0, the default; atom = YouTube's channel feeds). A vertical's Feed subpage shows the items of its feeds whose text names one of its feed_keywords; the News pages (news_pages) show one feed at a time, unfiltered. YouTube publishes a keyless Atom feed per channel_id; Google News publishes an RSS feed per topic.",
       "tagesschau-wirtschaft": {
         "label": "tagesschau Wirtschaft",
         "url": "https://www.tagesschau.de/wirtschaft/index~rss2.xml"
@@ -1538,7 +1533,6 @@
       "_doc_tone": "#797 an output's `tone` is how the mockup's result box draws it: total (bold), minus (a deduction, red), result (the answer, green bold), detail (an indented line of the one above, small); none = a plain row."
     },
     "social_2026": {
-      "_doc": "SV-Rechengrößenverordnung 2026 (BGBl. 26 Nov 2025) as summarised by lohn-info.de/sozialversicherungsbeitraege2026.html, read 2026-10-02. PayslipTest holds bbg_* and the pension/unemployment halves equal to the values the BMF's PAP 2026 itself carries (MPARA), so the two declarations cannot drift. Rates in percent (totals; the payslip splits them), limits in euro.",
       "bbg_kv_pv_year": 69750,
       "bbg_rv_av_year": 101400,
       "kv_general_pct": 14.6,
@@ -1555,7 +1549,6 @@
       "midijob_upper_month": 2000
     },
     "ai": {
-      "_doc": "The AI chat (Search ▸ AI chat). OpenRouter's OpenAI-compatible chat completions; the token is the fleet Account's, read with libs:text-tools TextToolsClient.revealAiKey(account_provider) for each send and never stored or logged by this app. The model list is the live catalogue (models_url, cached catalog_ttl_hours); a model whose supported_parameters list native_web_param searches the web natively, any other model searches through the `web_plugin` plugin when the Web toggle is on. Verified against the live catalogue on 2026-10-02 (465 models; 19 with web_search_options, openrouter/auto among them).",
       "account_provider": "openrouter",
       "chat_url": "https://openrouter.ai/api/v1/chat/completions",
       "models_url": "https://openrouter.ai/api/v1/models",
@@ -1569,10 +1562,7 @@
       "native_web_param": "web_search_options",
       "title_chars": 40
     },
-    "_doc_subpages": "#797 a subpage is a tab of the sub-nav under a vertical's title; a vertical with one subpage draws no sub-nav (the Search, Groceries, Things, Electronics, Clothing and Media pages). `assistant` is the mockup's one Search page: the four engine boxes and the AI chat together. Saved Items is not a subpage: it is the menu's own view of everything starred.",
-    "_doc_engines": "#797 each engine box of the Search page: `icon` is a Phosphor name (ui/IconCatalog), `accent` a colour name in res/values/colors.xml (the mockup's per-engine tint). Every engine opens its own results page in cloud-browser; none is scraped.",
     "things": {
-      "_doc": "#903 The Things page (subpage kind `things`): the stores around the person that sell an item's kind, and what each asks for it. AREA: a coarse location fix (permission asked once) or the city typed in settings, default radius_km, adjustable in settings. STORES: OpenStreetMap shop=* through the Overpass API (keyless, ODbL; the public instances in overpass_urls are tried in order, because any one of them is sometimes overloaded) within the radius, cached per area/category for stores_ttl_hours; the item is matched to shop types by `categories[].words` (a word may sit inside a compound, 'bohr' in 'Bohrmaschine'); an item no category names falls back to `fallback`, and the page says so. PRICES, only what a source published: (1) Open Prices shelf prices seen at that very OSM place (receipt or price tag, dated; groceries and drugstore goods mostly), (2) the online price a chain's own site publishes, read server-side by scrappers-api GET /prices (robots.txt-gated, JSON-LD offers; needs the fleet bearer; see user-data_scrappers-api/src/code/prices.json for the chains and why the others are off). A store with neither shows no price and why; nothing is estimated.",
       "default_radius_km": 20,
       "min_radius_km": 1,
       "max_radius_km": 100,
@@ -1925,7 +1915,6 @@
       }
     },
     "agents": {
-      "_doc": "#913 the Agents page (draft-only agents). Cloud Search READS through two read-only fleet doors (engines) and never submits, posts or sends anything: an agent produces a DRAFT and the person copies it and sends it themselves. Every agent must say mode draft_only or the declaration is refused. This block is also the contract with the engines (each engine's own constants are held equal to it by ac_cloud-mail/test/test-mail-agent-door.sh and ac_cloud-browser/test/test-browser-agent-door.sh and by the JVM suite). #913b the agents are organised into two sides: Buy-Side (Real Estate, Things, Services: the owner looks for something) and Sell-Side (the owner offers something: a property, their work). Every agent is a DEFINITION run by the same engine (core/agents/Runner.kt): its sources (the alert mails each site sends, which listing links in them count, and the site search the person opens in Cloud Browser), the filters it asks for, its goal and the template its drafts start from. An agent may search, compare, summarise and draft; submitting, sending, buying or applying is always the person's own act in Cloud Browser. The parser refuses an agent that is not mode draft_only or that declares any auto_* key or an action key (submit, send, apply, buy, post, ...).",
       "engines": {
         "mail": {
           "_doc": "Cloud Mail's query-only provider (ac_cloud-mail app.sterna.agentapi). Authority is <mail package>.<authority_suffix>; the package is the fleet row `fleet`.",
@@ -2075,7 +2064,6 @@
       ]
     },
     "cloud": {
-      "_doc": "#913 the Cloud Search section (Apps, Messages, Code): the parts of the fleet this app can search honestly. Apps searches the constellation manifest (baked from aa_cloud-superapp/data/constellation-fleet.json, kind app) and opens the app; Messages searches Cloud Mail through the read-only agent door; Code has no search engine in the fleet yet, so it opens Cloud Code and searches the owner's repositories on GitHub in Cloud Browser.",
       "messages": {
         "limit": 40,
         "lookback_days": 90
@@ -2087,7 +2075,6 @@
       }
     },
     "research": {
-      "_doc": "#1184 the Research section's News page: the fleet news service (news-gdelt, fleet_endpoints id `service`, mesh first then the public route with the fleet bearer; its URLs are baked from ac_cloud-account/build.json, never spelled here). GET {base}{articles_path}?q=<query>&limit=<n> returns {query,count,articles:[{url,title,seendate,domain,...}]}. The topics are GDELT queries, the same ones Cloud SuperIntel's News uses (ac_cloud-superintel assets/si/news.json); an unreachable service shows an empty state with the reasons, never invented stories.",
       "news": {
         "service": "news",
         "articles_path": "/articles",
@@ -2128,7 +2115,6 @@
       }
     },
     "cgc": {
-      "_doc": "#1184 the code indexes. Both are the fleet's cgc MCP service (cloud-u-containers user-ai_cloud-cgc-pub-mcp, streamable HTTP at mcp_path; tools cgc.octocode.search = Semantic, cgc.octocode.graphrag = Graph RAG: search nodes, then get-relationships for callers/callees), one fleet_endpoints entry per surface: cgc-pub-mcp (public repos) and cgc-pvt-mcp (private repos, mesh only: the pvt surface is WireGuard-only). `id` names the index; semantic_page and graph_page are its two ui.sections[cgc] page ids (#1197: one CGC section, Cloud CGC and Me CGC as its two rows). repos mirror that service's build.json runtime.octocode (index_repos less private_repos for the public surface, private_repos for the private one); repo_names maps an index name to its GitHub repository. needs_account: the private index waits for the Cloud Account sign-in (the fleet bearer over Account's IPC); the bearer is sent to a public origin only. A private index that has not been built answers with its own words, and the page says so: no result is ever made up.",
       "timeout_ms": 45000,
       "limit": 25,
       "threshold": 0.3,
@@ -2207,7 +2193,6 @@
         ]
       }
     ],
-    "_doc_news_pages": "#1197 the News section's feed pages: id = the ui page id; feeds = declared search.feeds ids, one chip each. A feed that cannot be read shows its reason on the page, never invented items.",
     "engines_major": [
       {
         "id": "google",
@@ -2287,8 +2272,27 @@
         "kind": "web",
         "url": "https://metager.org/meta/meta.ger3?eingabe={q}"
       }
-    ],
-    "_doc_engines_major": "#1197 the Engines page: the major web and AI search engines, each opened in cloud-browser with the typed query ({q}); the user's query never goes through this app's servers (it has none). kind ai = an engine that answers in prose. SearXNG is the open metasearch engine; searx.be is one public instance of it."
+    ]
+  },
+  "_doc_search": {
+    "_doc": "THE declaration (core/Config.kt parses and validates it; app/build.gradle bakes it into BuildConfig.SEARCH_CONFIG_B64; the JVM suite reads this file). No vertical, source, URL, engine, calculator field or model is spelled in Kotlin.",
+    "_doc_cache": "A source answer younger than cache_ttl_minutes is reused without asking the source again; an older one is refetched, and when the refetch fails the last stored answer is shown marked stale (the offline last-results view).",
+    "_doc_sources": "Every source, with what this app may do with it. kind `api`: a public API read in-app when `enabled` (parser = the core/Listing.kt Parsers branch, held to a saved real response in core/src/test/resources/fixtures). kind `link`: NEVER fetched - the site's own search (or a site: search when its URL scheme needs ids this app cannot know) opens in cloud-browser, because its terms forbid automated access or it has no public API. `why` is shown on the listing under the source's name, so nothing is silently missing. Verified 2026-10-02 from the mesh: BA Jobsuche v6 (200 with the published key and an honest user agent; v4 answers 403), Arbeitnow (200), Open Prices (2,131 Berlin prices within 30 km), search.openfoodfacts.org (200). The fleet's scraping backend was considered for the portals and is not used: crawlee-cloud is archived, and its successor scrappers-api sits behind two-factor auth and returns only a summary from /scrape (the data stays on the server) - and none of the portals below permits scraping in the first place.",
+    "_doc_subpages": "#797 a subpage is a tab of the sub-nav under a vertical's title; a vertical with one subpage draws no sub-nav (the Search, Groceries, Things, Electronics, Clothing and Media pages). `assistant` is the mockup's one Search page: the four engine boxes and the AI chat together. Saved Items is not a subpage: it is the menu's own view of everything starred.",
+    "_doc_engines": "#797 each engine box of the Search page: `icon` is a Phosphor name (ui/IconCatalog), `accent` a colour name in res/values/colors.xml (the mockup's per-engine tint). Every engine opens its own results page in cloud-browser; none is scraped.",
+    "_doc_news_pages": "#1197 the News section's feed pages: id = the ui page id; feeds = declared search.feeds ids, one chip each. A feed that cannot be read shows its reason on the page, never invented items.",
+    "_doc_engines_major": "#1197 the Engines page: the major web and AI search engines, each opened in cloud-browser with the typed query ({q}); the user's query never goes through this app's servers (it has none). kind ai = an engine that answers in prose. SearXNG is the open metasearch engine; searx.be is one public instance of it.",
+    "children": {
+      "series": "#797 official time series for a vertical whose analysis is `market`. Each URL returns ONE series (every dimension but time pinned), parsed by `parser` (core/Market.kt Series.parse: jsonstat = Eurostat's JSON-stat 2.0, sdmx_json = SDMX-JSON 1.0 as the Bundesbank and the ECB serve it), cached like a source. change: pct = percent change of an index against the same period a year before; pp = percentage-point change of a rate. Verified 2026-10-03 from the mesh; the ECB's own data API answered an HTML error page on one of two tries, so the mortgage rate is read from the Bundesbank, which publishes the same MFI interest-rate statistic for Germany.",
+      "feeds": "Feeds read in-app (rss = RSS 2.0, the default; atom = YouTube's channel feeds). A vertical's Feed subpage shows the items of its feeds whose text names one of its feed_keywords; the News pages (news_pages) show one feed at a time, unfiltered. YouTube publishes a keyless Atom feed per channel_id; Google News publishes an RSS feed per topic.",
+      "social_2026": "SV-Rechengrößenverordnung 2026 (BGBl. 26 Nov 2025) as summarised by lohn-info.de/sozialversicherungsbeitraege2026.html, read 2026-10-02. PayslipTest holds bbg_* and the pension/unemployment halves equal to the values the BMF's PAP 2026 itself carries (MPARA), so the two declarations cannot drift. Rates in percent (totals; the payslip splits them), limits in euro.",
+      "ai": "The AI chat (Search ▸ AI chat). OpenRouter's OpenAI-compatible chat completions; the token is the fleet Account's, read with libs:text-tools TextToolsClient.revealAiKey(account_provider) for each send and never stored or logged by this app. The model list is the live catalogue (models_url, cached catalog_ttl_hours); a model whose supported_parameters list native_web_param searches the web natively, any other model searches through the `web_plugin` plugin when the Web toggle is on. Verified against the live catalogue on 2026-10-02 (465 models; 19 with web_search_options, openrouter/auto among them).",
+      "things": "#903 The Things page (subpage kind `things`): the stores around the person that sell an item's kind, and what each asks for it. AREA: a coarse location fix (permission asked once) or the city typed in settings, default radius_km, adjustable in settings. STORES: OpenStreetMap shop=* through the Overpass API (keyless, ODbL; the public instances in overpass_urls are tried in order, because any one of them is sometimes overloaded) within the radius, cached per area/category for stores_ttl_hours; the item is matched to shop types by `categories[].words` (a word may sit inside a compound, 'bohr' in 'Bohrmaschine'); an item no category names falls back to `fallback`, and the page says so. PRICES, only what a source published: (1) Open Prices shelf prices seen at that very OSM place (receipt or price tag, dated; groceries and drugstore goods mostly), (2) the online price a chain's own site publishes, read server-side by scrappers-api GET /prices (robots.txt-gated, JSON-LD offers; needs the fleet bearer; see user-data_scrappers-api/src/code/prices.json for the chains and why the others are off). A store with neither shows no price and why; nothing is estimated.",
+      "agents": "#913 the Agents page (draft-only agents). Cloud Search READS through two read-only fleet doors (engines) and never submits, posts or sends anything: an agent produces a DRAFT and the person copies it and sends it themselves. Every agent must say mode draft_only or the declaration is refused. This block is also the contract with the engines (each engine's own constants are held equal to it by ac_cloud-mail/test/test-mail-agent-door.sh and ac_cloud-browser/test/test-browser-agent-door.sh and by the JVM suite). #913b the agents are organised into two sides: Buy-Side (Real Estate, Things, Services: the owner looks for something) and Sell-Side (the owner offers something: a property, their work). Every agent is a DEFINITION run by the same engine (core/agents/Runner.kt): its sources (the alert mails each site sends, which listing links in them count, and the site search the person opens in Cloud Browser), the filters it asks for, its goal and the template its drafts start from. An agent may search, compare, summarise and draft; submitting, sending, buying or applying is always the person's own act in Cloud Browser. The parser refuses an agent that is not mode draft_only or that declares any auto_* key or an action key (submit, send, apply, buy, post, ...).",
+      "cloud": "#913 the Cloud Search section (Apps, Messages, Code): the parts of the fleet this app can search honestly. Apps searches the constellation manifest (baked from aa_cloud-superapp/data/constellation-fleet.json, kind app) and opens the app; Messages searches Cloud Mail through the read-only agent door; Code has no search engine in the fleet yet, so it opens Cloud Code and searches the owner's repositories on GitHub in Cloud Browser.",
+      "research": "#1184 the Research section's News page: the fleet news service (news-gdelt, fleet_endpoints id `service`, mesh first then the public route with the fleet bearer; its URLs are baked from ac_cloud-account/build.json, never spelled here). GET {base}{articles_path}?q=<query>&limit=<n> returns {query,count,articles:[{url,title,seendate,domain,...}]}. The topics are GDELT queries, the same ones Cloud SuperIntel's News uses (ac_cloud-superintel assets/si/news.json); an unreachable service shows an empty state with the reasons, never invented stories.",
+      "cgc": "#1184 the code indexes. Both are the fleet's cgc MCP service (cloud-u-containers user-ai_cloud-cgc-pub-mcp, streamable HTTP at mcp_path; tools cgc.octocode.search = Semantic, cgc.octocode.graphrag = Graph RAG: search nodes, then get-relationships for callers/callees), one fleet_endpoints entry per surface: cgc-pub-mcp (public repos) and cgc-pvt-mcp (private repos, mesh only: the pvt surface is WireGuard-only). `id` names the index; semantic_page and graph_page are its two ui.sections[cgc] page ids (#1197: one CGC section, Cloud CGC and Me CGC as its two rows). repos mirror that service's build.json runtime.octocode (index_repos less private_repos for the public surface, private_repos for the private one); repo_names maps an index name to its GitHub repository. needs_account: the private index waits for the Cloud Account sign-in (the fleet bearer over Account's IPC); the bearer is sent to a public origin only. A private index that has not been built answers with its own words, and the page says so: no result is ever made up."
+    }
   },
   "agents": {
     "_doc": "#913b the agents CATALOGUE (the definitions and the templates their drafts start from) for build.json::search.agents, kept out of build.json::search because that block is baked whole into one BuildConfig string here and in Cloud Browser (SEARCH_CONFIG_B64), and a Java string constant holds at most 65535 bytes. app/build.gradle bakes this block as AGENTS_B64 and Decl.kt puts it back under search.agents (SearchConfig.withAgents) before the one parser reads it, as the JVM suite does (Fixtures.searchJson). Cloud Browser, which bakes search but not this, reads no agent.",

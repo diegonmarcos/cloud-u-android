@@ -118,7 +118,7 @@ class ParsersTest {
         assertEquals("Frank Herbert • 1965", l[0].subtitle)
         assertEquals("https://openlibrary.org/works/OL893414W", l[0].url)
         assertEquals("https://covers.openlibrary.org/b/id/11481354-M.jpg", l[0].image)
-        assertEquals("open_library:/works/OL893414W", l[0].key)
+        assertEquals("open-library-books:/works/OL893414W", l[0].key)
     }
 
     @Test fun atomYouTubeFeed() {
