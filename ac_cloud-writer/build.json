@@ -197,7 +197,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-24",
+        "pricing_as_of": "2026-10-26",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -243,8 +243,8 @@
               "roleplay",
               "translation"
             ],
-            "prompt": 0.0675,
-            "completion": 0.225,
+            "prompt": 0.09,
+            "completion": 0.3,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
           {
@@ -345,8 +345,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0444,
-            "completion": 0.1333,
+            "prompt": 0.44,
+            "completion": 1.32,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -360,9 +360,11 @@
             ],
             "trained_for": [
               "academia",
+              "finance",
               "legal",
               "programming",
               "roleplay",
+              "science",
               "technology"
             ],
             "prompt": 0.0341,
@@ -428,7 +430,7 @@
           {
             "id": "google/gemini-2.5-flash",
             "name": "Gemini 2.5 Flash",
-            "trained_for": ["trivia"],
+            "trained_for": [],
             "prompt": 0.3,
             "completion": 2.5,
             "note": "Translation-ranked plus eight more categories, and cheap. Selectable, but no longer any tool's default — see _doc_tool_models."
