@@ -137,7 +137,7 @@ def texts_in(nodes, box):
     return " ".join(n.text for n in nodes if n.text and n.l >= box.l and n.r <= box.r and n.t >= box.t and n.b <= box.b) + " " + box.text + " " + box.desc
 
 
-BLOCKER_TEXTS = ("Continue with local files", "Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK")
+BLOCKER_TEXTS = ("Get Started", "Continue with local files", "Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK")
 
 
 def clear_blockers(nodes):
