@@ -914,7 +914,7 @@ open class ShellActivity : AppCompatActivity(),
                 strokePts += ev.x to ev.y
                 if (shapeTrail.alpha > 0f) shapeTrail.end()
                 val cfg = rec.declared
-                if (rec.classify(strokePts, cfg, resources.displayMetrics.density) == rec.Kind.SHAPE) {
+                if (rec.classify(strokePts, cfg, resources.displayMetrics.density) == com.diegonmarcos.superapp.launcher.ShapeRecogniser.Kind.SHAPE) {
                     val m = rec.recognise(strokePts, cfg)
                     Trace.i(TAG, "shape stroke -> ${m?.id} d=${m?.distance}")
                     if (m != null) {
