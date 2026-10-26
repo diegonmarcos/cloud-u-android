@@ -330,6 +330,13 @@ class Walk:
             return None
         nodes = dump() or []
         self.evidence("dropdown_%s" % pid.replace("/", "_"))  # what the dropdown listed when the page was not in it
+        # pick() left the list scrolled to its end: the path row is at the top of the dropdown, so scroll back there first
+        box = find(nodes, "navtop1_dropdown")
+        if box is not None:
+            for _ in range(4):
+                swipe(box.cx, box.t + 60, min(box.t + 60 + 600, box.b - 20), 250)
+                settle(0.4)
+            nodes = dump() or nodes
         crumb = find(nodes, "navtop1_crumb_1")
         # a deep path overflows the crumb row (it scrolls sideways): bring its start into view before reading the section crumb
         for _ in range(3):
