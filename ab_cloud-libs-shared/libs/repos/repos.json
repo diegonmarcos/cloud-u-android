@@ -15,6 +15,12 @@
   },
   "repos": [
     {
+      "name": "CG",
+      "repo": "diegonmarcos/CG",
+      "private": false,
+      "doc": "Project master for the CG family (CG-circus, CG-galaxy, CG-galaxy-gaia, CG-unity, CG-voxel-rust): its own repos.json subset plus committed symlinks, same model as front, cloud and lecole-42. Created 2026-10-26 (#1204)."
+    },
+    {
       "name": "CG-circus",
       "repo": "diegonmarcos/CG-circus",
       "private": false,
