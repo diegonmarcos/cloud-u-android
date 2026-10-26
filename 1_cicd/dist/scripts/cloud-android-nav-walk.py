@@ -332,11 +332,16 @@ class Walk:
         opener = find(nodes, MORE) or find(nodes, TITLE)
         if opener is None:
             return None
-        tap(opener)
-        settle(1.0)
-        nodes = dump()
-        if nodes and (find(nodes, CRUMB0) or findall(nodes, ENTRY)):
-            return nodes
+        # A page that is still loading (Cloud Mail's inbox spinner) keeps the 2-core emulator's main thread busy and can swallow the
+        # first tap: the opener is tapped again, once, after a longer settle. A dropdown that never opens still fails the page.
+        for wait in (1.0, 2.5):
+            tap(opener)
+            settle(wait)
+            nodes = dump()
+            if nodes and (find(nodes, CRUMB0) or findall(nodes, ENTRY)):
+                return nodes
+            again = dump() or []
+            opener = find(again, MORE) or find(again, TITLE) or opener
         if self.ime_up():
             shell("input keyevent KEYCODE_BACK")
             settle(0.6)
