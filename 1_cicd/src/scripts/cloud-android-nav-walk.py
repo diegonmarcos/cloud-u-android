@@ -658,6 +658,9 @@ class Walk:
         shell("logcat -b all -c")
         shell("cmd statusbar collapse")  # a stray swipe from the top edge must not leave the shade over every later page
         self.hide_ime()
+        if "packageinstaller" in shell("dumpsys window | grep -m1 mCurrentFocus"):  # the app's own self-update asked for "install unknown apps": decline it
+            clear_blockers(dump() or [])
+            settle(1.5)
         if not self.foreground():  # an earlier page left the app (a stray Back, a death): come back before walking this one
             self.relaunch_to(section)
         self.ensure_chrome(section)
