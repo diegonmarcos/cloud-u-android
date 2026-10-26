@@ -328,6 +328,7 @@ class Walk:
         if self.pick(pid):
             return None
         nodes = dump() or []
+        self.evidence("dropdown_%s" % pid.replace("/", "_"))  # what the dropdown listed when the page was not in it
         crumb = find(nodes, "navtop1_crumb_1")
         # a deep path overflows the crumb row (it scrolls sideways): bring its start into view before reading the section crumb
         for _ in range(3):
