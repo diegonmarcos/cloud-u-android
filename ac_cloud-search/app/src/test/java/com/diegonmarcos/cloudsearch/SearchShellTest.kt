@@ -222,7 +222,7 @@ class SearchShellTest {
 
         compose.onNodeWithTag(ai.ctl("task")).performClick()
         waitFor(ai.task("translate"))
-        compose.onNodeWithTag(ai.task("translate")).performClick()
+        compose.onNodeWithTag(ai.task("translate")).performScrollTo().performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(ai.ctl("agent")).assertIsNotEnabled()
         compose.onNodeWithTag(ai.ctl("model")).assertIsNotEnabled()
