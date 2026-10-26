@@ -491,7 +491,7 @@ class CalcShellTest {
         compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("12+34")
         typeKeys("DEL", "DEL")
         compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("134")
-        select(1, 3)
+        select(1, 2)
         typeKeys("DEL")
         compose.onNodeWithTag(CalcTags.INPUT).assertTextContains("14")
     }

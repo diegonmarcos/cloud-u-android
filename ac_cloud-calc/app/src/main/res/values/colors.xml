@@ -31,7 +31,7 @@
     <color name="pad_on_digit">#FFFFFFFF</color>
     <color name="pad_function">#FF1A2233</color>
     <color name="pad_on_function">#FFCBD5E1</color>
-    <color name="pad_operator">#FF0A84FF</color>
+    <color name="pad_operator">#FF0066D6</color>
     <color name="pad_on_operator">#FFFFFFFF</color>
     <color name="pad_clear">#FFE11D48</color>
     <color name="pad_on_clear">#FFFFFFFF</color>
