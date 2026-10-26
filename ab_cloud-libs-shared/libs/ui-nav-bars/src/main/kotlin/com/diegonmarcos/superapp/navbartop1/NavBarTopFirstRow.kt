@@ -158,12 +158,12 @@ public fun titleHierarchy(section: NavSection, currentPageId: String?): List<Hie
 /**
  * [hierarchy] with the selection moved to the page a strip on screen shows ([shown], from [SubPageRequests.shownIds]), so the title
  * path and the dropdown follow a pick made on a strip or from the dropdown even when the app keeps no sub-page state of its own.
- * The deepest shown page that is in [hierarchy] wins, unless the app already marked a deeper page. Pure.
+ * The deepest shown page that is in [hierarchy] wins (the LAST of [shown] among equals, which is the strip used last), unless the app already marked a deeper page. Pure.
  */
 public fun hierarchyWithShown(hierarchy: List<HierarchyEntry>, shown: Collection<String>): List<HierarchyEntry> {
     if (shown.isEmpty()) return hierarchy
     val idx = shown.mapNotNull { id -> hierarchy.indexOfFirst { it.depth > 0 && it.id == id }.takeIf { it >= 0 } }
-        .maxByOrNull { hierarchy[it].depth } ?: return hierarchy
+        .asReversed().maxByOrNull { hierarchy[it].depth } ?: return hierarchy
     val appDepth = hierarchy.filter { it.depth > 0 && it.selected }.maxOfOrNull { it.depth } ?: 0
     if (hierarchy[idx].depth < appDepth) return hierarchy
     val path = HashSet<Int>()

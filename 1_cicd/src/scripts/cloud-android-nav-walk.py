@@ -136,7 +136,7 @@ def texts_in(nodes, box):
     return " ".join(n.text for n in nodes if n.text and n.l >= box.l and n.r <= box.r and n.t >= box.t and n.b <= box.b) + " " + box.text + " " + box.desc
 
 
-BLOCKER_TEXTS = ("Get Started", "Continue with local files", "Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK")
+BLOCKER_TEXTS = ("Get Started", "Continue with local files", "Skip", "Not now", "Later", "Got it", "No thanks", "Maybe later", "Dismiss", "While using the app", "Allow", "OK", "Continue", "Next", "Finish", "Done")
 
 
 def clear_blockers(nodes):
@@ -321,6 +321,13 @@ class Walk:
             nodes = again
         return False
 
+    def back_if_dropdown(self):
+        """Close the title dropdown with Back only while it is open: a Back on the page itself leaves the app."""
+        nodes = dump() or []
+        if find(nodes, CRUMB0) or findall(nodes, ENTRY):
+            shell("input keyevent KEYCODE_BACK")
+            settle(0.8)
+
     def strip_tab(self, pid):
         """Tap page [pid]'s tab on a second-row strip (scrolling the strip sideways): how a reader reaches a page the dropdown cannot list
         because a container page always shows its first child, so the dropdown's neighbourhood is the child's, never the container's."""
@@ -347,8 +354,7 @@ class Walk:
             return "the title dropdown did not open"
         if self.pick(pid):
             return None
-        shell("input keyevent KEYCODE_BACK")
-        settle(0.8)
+        self.back_if_dropdown()
         if self.strip_tab(pid):
             return None
         if self.open_dropdown() is None:
@@ -375,7 +381,7 @@ class Walk:
             nodes = dump() or nodes
             crumb = find(nodes, "navtop1_crumb_1")
         if crumb is None:
-            shell("input keyevent KEYCODE_BACK")
+            self.back_if_dropdown()
             return "the dropdown lists no entry for page %s" % pid
         tap(crumb)  # the section: its children are listed next
         settle(1.6)
@@ -383,8 +389,7 @@ class Walk:
             if self.open_dropdown() is None:
                 return "the title dropdown did not open (descending to %s)" % pid
             if not self.pick(step):
-                shell("input keyevent KEYCODE_BACK")
-                settle(0.8)
+                self.back_if_dropdown()
                 if not self.strip_tab(step):
                     return "the dropdown lists no entry for page %s (via %s)" % (pid, step)
         return None
@@ -592,6 +597,8 @@ class Walk:
         shell("logcat -b all -c")
         shell("cmd statusbar collapse")  # a stray swipe from the top edge must not leave the shade over every later page
         self.hide_ime()
+        if not self.foreground():  # an earlier page left the app (a stray Back, a death): come back before walking this one
+            self.relaunch_to(section)
         self.ensure_chrome(section)
         err = self.goto(pid, label, up) if via_dropdown else None
         checks, fails = ({}, [err]) if err else self.check_page(section, label, via_dropdown, pid)

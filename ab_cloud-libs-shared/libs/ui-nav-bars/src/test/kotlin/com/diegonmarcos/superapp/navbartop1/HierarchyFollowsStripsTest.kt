@@ -28,4 +28,9 @@ class HierarchyFollowsStripsTest {
         val app = tree.map { if (it.id == "b" || it.id == "b1") it.copy(selected = true) else it }
         assertEquals(app, hierarchyWithShown(app, listOf("a")))
     }
+
+    @Test fun `two strips on one depth give the path to the one shown last`() {
+        assertEquals(listOf("b", "b2"), hierarchyWithShown(tree, listOf("b", "b1", "b2")).filter { it.selected && it.depth > 0 }.map { it.id })
+        assertEquals(listOf("b", "b1"), hierarchyWithShown(tree, listOf("b", "b2", "b1")).filter { it.selected && it.depth > 0 }.map { it.id })
+    }
 }

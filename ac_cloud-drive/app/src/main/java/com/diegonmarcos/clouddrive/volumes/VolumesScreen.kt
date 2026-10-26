@@ -90,9 +90,6 @@ fun VolumesScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveAc
     val scope = rememberCoroutineScope()
     fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
 
-    // The title path follows ONE strip: the section the reader last used (the first until then), not every section at once.
-    var reporter by remember { mutableStateOf<String?>(null) }
-    val firstLabel = Declarations.volumes.sections.firstOrNull()?.label
     Column(modifier.fillMaxSize()) {
         // #630 no shared "current class" caption any more: each section names its own selection.
         ToolbarIsland(title = stringResource(R.string.volumes_title))
@@ -118,7 +115,6 @@ fun VolumesScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveAc
                 secClasses = sec.classIds.mapNotNull { id -> classes.firstOrNull { c -> c.id == id } },
                 auth = if (sec.auth) auth else null,
                 rclone = rclone, prefs = prefs, actions = actions, onOpenPath = onOpenPath, say = ::say,
-                reporting = (reporter ?: firstLabel) == sec.label, onUsed = { reporter = sec.label },
             )
         }
         // A class no section claims keeps a section of its own rather than vanishing (#292).
@@ -148,26 +144,12 @@ private fun ColumnScope.VolumeSection(
     actions: DriveActions,
     onOpenPath: (String) -> Unit,
     say: (String) -> Unit,
-    reporting: Boolean = true,
-    onUsed: () -> Unit = {},
 ) {
     val ctx = LocalContext.current
     key(label) {
         var pick by rememberSaveable { mutableStateOf(secClasses.firstOrNull()?.id ?: "") }
-        // The class pills are this page's sub-page strip: a pick in the title dropdown reaches them as a request, and the title path
-        // follows the pill shown (the shared second row does both itself; this strip is Drive's own).
-        val requests = com.diegonmarcos.superapp.navbartop2.LocalSubPageRequests.current
-        val want = requests?.pending
-        androidx.compose.runtime.LaunchedEffect(want) {
-            if (want != null && secClasses.any { it.id == want }) { pick = want; onUsed(); requests.consume() }
-        }
-        val stripKey = remember { Any() }
-        androidx.compose.runtime.DisposableEffect(requests, stripKey, pick, reporting) {
-            if (reporting) requests?.reportShown(stripKey, pick)
-            onDispose { requests?.clearShown(stripKey) }
-        }
         Column(Modifier.fillMaxWidth().weight(1f).testTag(DriveTags.VOLUMES_SECTION)) {
-            ClassStrip(label, secClasses, pick, { pick = it; onUsed() }) {
+            ClassStrip(label, secClasses, pick, { pick = it }) {
                 if (auth != null) Pill(
                     stringResource(R.string.volumes_personal_auth),
                     { if (!actions.openAuthProfile(auth.pkg, auth.target, auth.extra)) say(ctx.getString(R.string.volumes_personal_auth_unavailable)) },

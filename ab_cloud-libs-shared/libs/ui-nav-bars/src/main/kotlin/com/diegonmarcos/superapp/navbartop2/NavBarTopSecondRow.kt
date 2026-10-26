@@ -108,16 +108,27 @@ public object SecondRowTags {
 public class SubPageRequests {
     public var pending: String? by mutableStateOf(null)
         private set
-    public fun request(pageId: String) { pending = pageId }
+    public fun request(pageId: String) { pending = pageId; lastRequested = pageId }
     public fun consume() { pending = null }
+    private var lastRequested: String? = null
 
     // The page each strip on screen now shows: the first row's title path reads it, so the path follows a pick from a strip or the
-    // dropdown without the app hoisting its sub-page state.
+    // dropdown without the app hoisting its sub-page state. Strips on one page that show pages of the SAME depth (two pill rows) are
+    // ordered by when each last changed, and the page the last request named goes last: the title follows the strip the reader used.
     private val shownBy = androidx.compose.runtime.mutableStateMapOf<Any, String>()
-    public fun reportShown(strip: Any, pageId: String?) { if (pageId == null) shownBy.remove(strip) else shownBy[strip] = pageId }
-    public fun clearShown(strip: Any) { shownBy.remove(strip) }
-    /** The ids the strips on screen show (outermost and inner strips alike). */
-    public fun shownIds(): List<String> = shownBy.values.toList()
+    private val changeOrder = ArrayList<Any>()
+    public fun reportShown(strip: Any, pageId: String?) {
+        if (pageId == null) { clearShown(strip); return }
+        if (shownBy[strip] != pageId) { changeOrder.remove(strip); changeOrder.add(strip); if (pageId != lastRequested) lastRequested = null }
+        shownBy[strip] = pageId
+    }
+    public fun clearShown(strip: Any) { shownBy.remove(strip); changeOrder.remove(strip) }
+    /** The ids the strips on screen show (outermost and inner strips alike), the one the reader used last at the end. */
+    public fun shownIds(): List<String> {
+        val ordered = changeOrder.mapNotNull { shownBy[it] }.ifEmpty { shownBy.values.toList() }
+        val last = lastRequested
+        return if (last != null && last in ordered) ordered.filter { it != last } + last else ordered
+    }
 }
 
 /** A strip tells the enclosing [SubPageRequests] which page it shows, for as long as it is composed. */
