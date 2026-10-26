@@ -4,6 +4,7 @@ import android.content.ComponentName
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsEnabled
@@ -214,7 +215,7 @@ class SearchShellTest {
         waitFor(Tags.CHAT_INPUT)
         val ai = com.diegonmarcos.superapp.ai.AiTags
         val order = listOf("plus", "task", "agent", "model", "effort", "mode", "mcp", "more")
-        val lefts = order.map { compose.onNodeWithTag(ai.ctl(it)).fetchSemanticsNode().layoutInfo.coordinates.positionInParent().x }
+        val lefts = order.map { compose.onNodeWithTag(ai.ctl(it)).fetchSemanticsNode().layoutInfo.coordinates.positionInRoot().x }
         assertEquals("(+), Task, Agent, Model, Effort, Perms, MCP, (More), left to right", lefts.sorted(), lefts)
         compose.onNodeWithTag(ai.ctl("agent")).assertIsEnabled()
         compose.onNodeWithTag(ai.ctl("model")).assertIsEnabled()
