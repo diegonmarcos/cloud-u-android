@@ -76,6 +76,8 @@ class MainActivity : AppCompatActivity() {
         // links are therefore handed to the system browser via
         // NewsBridge.openExternal(), never opened in this WebView.
         webView.addJavascriptInterface(NewsBridge(this), "NewsBridge")
+        // the scroll bridge must exist BEFORE the first load (a JavaScript interface added later only reaches later pages); the shell sets its target
+        com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(webView, null)
         webView.loadUrl("file:///android_asset/news.html")
         setContent { NewsShell() }
         Updater.start(this)

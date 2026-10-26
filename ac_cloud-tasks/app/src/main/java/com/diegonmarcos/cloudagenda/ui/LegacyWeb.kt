@@ -37,6 +37,8 @@ fun LegacyWeb(tab: String, modifier: Modifier = Modifier) {
                         show(view, wanted.value)
                     }
                 }
+                // the scroll bridge must exist BEFORE the first load: a JavaScript interface added later only reaches pages loaded after it
+                com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(this, collapse)
                 loadUrl("file:///android_asset/tasks.html")
             }
         },

@@ -30,9 +30,13 @@ public object ChromeWebScroll {
         /** The finger is on the page: a downward read is a DRAG (everything hidden), else a settle (shrunk). */
         private var fingerDown = false
         private var lastY = 0f
+        private var downY = 0f
 
         private fun scrolled(delta: Float) {
             val t = target ?: return
+            // A finger that has travelled UP the screen reads down the page: a negative scroll offset meanwhile is the page re-laying
+            // itself out (images loading, an inner scroller clamping), never the reader scrolling back, so it must not restore the bars.
+            if (fingerDown && delta < 0f && lastY < downY - SLOP) return
             if (fingerDown) t.onDragDelta(delta) else t.onScrollDelta(delta)
         }
 
@@ -45,7 +49,7 @@ public object ChromeWebScroll {
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { fingerDown = true; lastY = e.y }
+                MotionEvent.ACTION_DOWN -> { fingerDown = true; lastY = e.y; downY = e.y }
                 // A finger dragging DOWN reads UP the page: the chrome comes back even when the page cannot scroll further
                 // (it sits at its top, or the scroller is an inner container the bridge cannot see).
                 MotionEvent.ACTION_MOVE -> { if (e.y - lastY > SLOP) target?.onScrollDelta(-1f); lastY = e.y }

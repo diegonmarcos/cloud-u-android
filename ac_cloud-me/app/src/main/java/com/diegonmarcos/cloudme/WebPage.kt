@@ -103,6 +103,8 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
                 }, "CloudMeBridge")
                 setBackgroundColor(0xFF0B0414.toInt())
                 web.value = this
+                // the scroll bridge must exist BEFORE the first load: a JavaScript interface added later only reaches pages loaded after it
+                com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(this, collapse)
                 if (!saved.isEmpty) restoreState(saved) else loadUrl("file:///android_asset/$url")
             }
         },

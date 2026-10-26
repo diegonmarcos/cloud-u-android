@@ -77,6 +77,8 @@ class MainActivity : AppCompatActivity() {
         webView.addJavascriptInterface(bridge, "Native")
 
         // SECURITY: only our bundled asset is ever loaded (file:///android_asset).
+        // the scroll bridge must exist BEFORE the first load (a JavaScript interface added later only reaches later pages); the shell sets its target
+        com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(webView, null)
         webView.loadUrl("file:///android_asset/contacts.html")
 
         setContent { ContactsShell() }
