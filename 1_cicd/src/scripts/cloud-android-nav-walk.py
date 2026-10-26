@@ -426,7 +426,22 @@ class Walk:
     def has_pages(self, section):
         return bool((self.sections.get(section) or {}).get("pages"))
 
-    def check_page(self, section, label, via):
+    def labels_under(self, section, pid):
+        """Labels of the pages below [pid]: a container page shows its first child, so its title path ends in a child's label."""
+        def find_page(pages):
+            for p in pages or []:
+                if p.get("id") == pid:
+                    return p
+                hit = find_page(p.get("pages"))
+                if hit:
+                    return hit
+            return None
+        def labels(p):
+            return [c.get("label", "") for c in p.get("pages", [])] + [l for c in p.get("pages", []) for l in labels(c)]
+        hit = find_page((self.sections.get(section) or {}).get("pages")) if pid else None
+        return [l for l in labels(hit) if l] if hit else []
+
+    def check_page(self, section, label, via, pid=None):
         """Run P1-P4 on the page now shown. Returns (checks dict, [failures])."""
         checks, fails = {}, []
         nodes = dump()
@@ -437,7 +452,7 @@ class Walk:
         title = find(nodes, TITLE)
         if title is None:
             fails.append("P4 the shared first row is not on screen (no %s)" % TITLE)
-        elif via and label.lower() not in texts_in(nodes, title).lower():
+        elif via and not any(l.lower() in texts_in(nodes, title).lower() for l in [label] + self.labels_under(section, pid)):
             fails.append("P4 the title path does not end in '%s' after picking it (shows: %s)" % (label, texts_in(nodes, title).strip()[:80]))
         # P2 the dropdown opens, lists this page's neighbourhood, and closes
         dd = self.open_dropdown()
@@ -571,7 +586,7 @@ class Walk:
         if find(nodes, TITLE) is None:
             self.relaunch_to(section)
 
-    def run_page(self, section, pid, label, via_dropdown, up=()):
+    def run_page(self, section, pid, label, via_dropdown, up=(), retry=False):
         name = "%s/%s" % (section, pid)
         t0 = time.time()
         shell("logcat -b all -c")
@@ -579,9 +594,15 @@ class Walk:
         self.hide_ime()
         self.ensure_chrome(section)
         err = self.goto(pid, label, up) if via_dropdown else None
-        checks, fails = ({}, [err]) if err else self.check_page(section, label, via_dropdown)
+        checks, fails = ({}, [err]) if err else self.check_page(section, label, via_dropdown, pid)
         died = not self.alive()
         crashed, log = self.crashed()
+        if died and not crashed and not retry and "dying proc com.google.android.gms" in shell("logcat -d -b events -v brief 2>/dev/null | grep am_kill | grep -F %s" % self.pkg, timeout=60):
+            # the emulator's Google Play services restarted and the system took this app (a downloadable-fonts client) down with it:
+            # not a nav fault. Relaunch and walk the page again once; a second death is reported
+            print("note %s: killed with Google Play services on the emulator, walking it again" % name, flush=True)
+            self.relaunch_to(section)
+            return self.run_page(section, pid, label, via_dropdown, up, retry=True)
         anr = self.app_anr()
         if anr:
             fails.insert(0, "P1 the app did not respond (ANR in %s)" % anr)

@@ -133,7 +133,13 @@ jobs:
           if ! find apk -name '*.apk' | grep -q .; then
             echo "walking the APK on the rolling release"
             gh release download latest -R "$REPO" -p "${ASSET}-x86_64.apk" -D apk 2>/dev/null \
-              || gh release download latest -R "$REPO" -p "${ASSET}.apk" -D apk
+              || gh release download latest -R "$REPO" -p "${ASSET}.apk" -D apk 2>/dev/null \
+              || {
+                # an app whose APK is not on the rolling release (Cloud Gallery): the APK its newest successful Ship run built
+                last=$(gh run list -R "$REPO" -w "$SHIP" --status success -L 1 --json databaseId --jq '.[0].databaseId // empty')
+                echo "no release asset: the APK of the newest successful $SHIP run ($last)"
+                [ -n "$last" ] && gh run download "$last" -R "$REPO" -p "${PREFIX}*" -D apk
+              }
           fi
           find apk -name '*.apk' | sort > apks.txt; cat apks.txt
           pick=""
