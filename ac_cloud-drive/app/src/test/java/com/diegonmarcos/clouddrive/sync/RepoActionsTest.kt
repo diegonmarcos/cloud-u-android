@@ -119,6 +119,5 @@ class RepoActionsTest {
         for (id in listOf("fetch", "pull", "push", "commit", "stats", RepoActions.OPEN_FOLDER, RepoActions.CHECKOUT_MAIN, RepoActions.BRANCHES, RepoActions.UNPUSHED, RepoActions.SYNC_NO_WINNER, RepoActions.STASH_PUSH, "force_pull", "force_push", RepoActions.CLEAN_1, "size", "hooks", RepoActions.SYNC_NOW, RepoActions.SETTINGS)) assertTrue(id, RepoActions.needsClone(id))
         // Every action of every group is either available without a clone or explained as needing one: nothing is silently missing.
         RepoActions.GROUPS.flatMap { it.actions }.forEach { id -> assertEquals(id !in RepoActions.NO_CLONE_NEEDED, RepoActions.needsClone(id)) }
-        assertEquals("the refresh-sizes bulk command exists beside the four owner commands", listOf("CHECK_ALL", "SYNC_ALL", "CLONE_ALL", "STASH_PUSH_ALL", "REFRESH_SIZES"), RepoActions.Bulk.entries.map { it.name })
     }
 }

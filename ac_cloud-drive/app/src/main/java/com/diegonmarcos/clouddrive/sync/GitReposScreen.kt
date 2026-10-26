@@ -754,14 +754,13 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         // is the sticky item right below them and stays pinned while the rows scroll.
         item(key = "table-bulk") {
             Column {
-                RepoBulkBar(busy = bulk?.finished == false || running.isNotEmpty(), prefs = prefs) { b ->
+                RepoBulkBar(busy = bulk?.finished == false || running.isNotEmpty(), prefs = prefs, onRefreshSizes = { coordinator.refreshSizes(force = true) }) { b ->
                     expanded = ""
                     when (b) {
                         RepoActions.Bulk.CHECK_ALL -> { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token); coordinator.refreshSizes(force = true) }
                         RepoActions.Bulk.SYNC_ALL -> coordinator.runCompoundAll(RepoActions.SYNC_NO_WINNER)
                         RepoActions.Bulk.CLONE_ALL -> entries.filter { it.cloned == null && it.name !in cloning }.forEach { it.onClone() }
                         RepoActions.Bulk.STASH_PUSH_ALL -> coordinator.runCompoundAll(RepoActions.STASH_PUSH)
-                        RepoActions.Bulk.REFRESH_SIZES -> coordinator.refreshSizes(force = true)
                     }
                 }
                 RepoSummaryLine(summary)

@@ -172,7 +172,7 @@ internal fun RepoActionGroupsView(
 
 /** The bulk bar: ABOVE the column header, one pill per [RepoActions.Bulk] command over every repo, then the Settings gear (the shared PageActionsBar). */
 @Composable
-internal fun RepoBulkBar(busy: Boolean, prefs: DrivePrefs?, onBulk: (RepoActions.Bulk) -> Unit) {
+internal fun RepoBulkBar(busy: Boolean, prefs: DrivePrefs?, onRefreshSizes: () -> Unit, onBulk: (RepoActions.Bulk) -> Unit) {
     PageActionsBar(
         AutoChecks.Page.GIT, prefs,
         RepoActions.Bulk.entries.map { b ->
@@ -182,11 +182,10 @@ internal fun RepoBulkBar(busy: Boolean, prefs: DrivePrefs?, onBulk: (RepoActions
                     RepoActions.Bulk.SYNC_ALL -> R.string.repo_bulk_sync
                     RepoActions.Bulk.CLONE_ALL -> R.string.repo_bulk_clone
                     RepoActions.Bulk.STASH_PUSH_ALL -> R.string.repo_bulk_stash_push
-                    RepoActions.Bulk.REFRESH_SIZES -> R.string.repo_bulk_sizes
                 }),
-                { onBulk(b) }, enabled = !busy || b == RepoActions.Bulk.CHECK_ALL || b == RepoActions.Bulk.REFRESH_SIZES,
+                { onBulk(b) }, enabled = !busy || b == RepoActions.Bulk.CHECK_ALL,
             )
-        },
+        } + BarAction(stringResource(R.string.repo_bulk_sizes), onRefreshSizes),
         tag = DriveTags.SYNC_GIT_BULK_BAR,
     )
 }
