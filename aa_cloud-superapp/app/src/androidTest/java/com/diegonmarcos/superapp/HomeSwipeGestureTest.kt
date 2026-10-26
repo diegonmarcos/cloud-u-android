@@ -33,11 +33,22 @@ class HomeSwipeGestureTest {
      *  the first swipe and takes every touch (run 40245015198: the focused window was the app's own overlay, not the
      *  activity). A swipe test needs the Home screen in front, so the idle timeout is off for the test and restored after. */
     private var savedScreensaver = 0
+    private val savedSkips = mutableMapOf<String, Int>()
     @Before fun screensaverOff() {
         val prefs = com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx)
         savedScreensaver = prefs.screensaverTimeout; prefs.screensaverTimeout = 0
+        // The first-run permission ask is a modal dialog over Home (non-dismissable): it takes every touch of the first
+        // launch, so its skip ledger is set to "asked enough" for the test and restored after.
+        val ask = com.diegonmarcos.superapp.system.PermAskTracker(ctx)
+        com.diegonmarcos.superapp.system.FirstRunPerms.ORDER.forEach {
+            savedSkips[it.name] = ask.skips(it.name); ask.setSkips(it.name, com.diegonmarcos.superapp.system.FirstRunPerms.MAX_SKIPS)
+        }
     }
-    @After fun screensaverRestore() { com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).screensaverTimeout = savedScreensaver }
+    @After fun screensaverRestore() {
+        com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).screensaverTimeout = savedScreensaver
+        val ask = com.diegonmarcos.superapp.system.PermAskTracker(ctx)
+        savedSkips.forEach { (k, v) -> ask.setSkips(k, v) }
+    }
 
     /** startActivitySync waits for the main thread to go idle, which the animated Home never does: start it and poll. */
     private fun launchHome(): ShellActivity {
@@ -126,7 +137,12 @@ class HomeSwipeGestureTest {
         assertEquals("page:cloud/apps", declared(BuildConfig.HOME_SWIPE_UP))
         val shell = launchHome()
         val ok = swipeUntil(shell, up = true) {
-            onMain { shell.currentSection == "cloud" && shell.supportFragmentManager.findFragmentById(R.id.fragment_container) is GroupedTilesFragment }
+            // Cloud is a tabbed section: its Apps tab is a GroupedTilesFragment hosted in the strip's pane.
+            onMain {
+                val top = shell.supportFragmentManager.findFragmentById(R.id.fragment_container)
+                shell.currentSection == "cloud" &&
+                    (top is GroupedTilesFragment || top?.childFragmentManager?.fragments?.any { it is GroupedTilesFragment && it.isVisible } == true)
+            }
         }
         assertTrue("swipe up did not open Cloud > Apps: ${if (ok) "" else evidence(shell, "up")}", ok)
     }
