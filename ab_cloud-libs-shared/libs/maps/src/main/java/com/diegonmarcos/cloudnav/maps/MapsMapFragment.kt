@@ -173,7 +173,7 @@ class MapsMapFragment : KitComposeFragment() {
     /** Where the map is in its bring-up (test diagnostics: a pin count of -1 alone cannot say which step never happened). */
     fun debugState(): String = "mapView=${mapView != null} attached=${mapView?.isAttachedToWindow} size=${mapView?.width}x${mapView?.height} " +
         "shown=${mapView?.isShown} map=${map != null} style=${map?.style != null} styleReady=$styleReady styleKey=$styleKey " +
-        "viewCreated=${view != null} resumed=$isResumed"
+        "viewCreated=${view != null} resumed=$isResumed forwarded=$forwarded viewLifecycle=${viewLifecycleOwnerLiveData.value?.lifecycle?.currentState}"
 
     /** Project a geo coordinate to a screen pixel (null until the map is ready).
      *  Lets a caller draw its own pin overlay on top of the map — bypassing the
@@ -184,6 +184,8 @@ class MapsMapFragment : KitComposeFragment() {
     private var mapView: MapView? = null
     private var map: MapLibreMap? = null
     private var styleReady = false
+    /** The lifecycle events the MapView was handed (test diagnostics: a MapView never started never gets its GL surface). */
+    private var forwarded = ""
 
     private var pins: List<Pin> = emptyList()
     private var me: LatLng? = null
@@ -248,6 +250,7 @@ class MapsMapFragment : KitComposeFragment() {
         val lifecycle = viewLifecycleOwner.lifecycle
         DisposableEffect(lifecycle, mv) {
             val observer = LifecycleEventObserver { _, event ->
+                forwarded += event.name.removePrefix("ON_") + ","
                 when (event) {
                     Lifecycle.Event.ON_START -> mv.onStart()
                     Lifecycle.Event.ON_RESUME -> mv.onResume()
