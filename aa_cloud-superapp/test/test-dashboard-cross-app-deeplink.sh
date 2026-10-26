@@ -280,7 +280,7 @@ want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Projects W", "Con
 assert titles == want, (titles, "!=", want)
 g = {x["title"]: [t.get("label") for t in x["tiles"]] for x in cloud["tile_groups"]}
 assert g["Me"] == ["Account", "Me", "|", "Me-Health", "Me-Study", "Me-Achieves", "|", "Me-Duties", "Me-Buro", "Me-LLC"], g["Me"]
-assert g["Tools Primary"][-3:] == ["Wallet", "Vault", "Light"] and "Account" not in g["Tools Primary"], g["Tools Primary"]  # #1155 order; Account moved to Me, before the Me tile
+assert g["Tools Primary"][-2:] == ["Wallet", "Vault"] and "Account" not in g["Tools Primary"], g["Tools Primary"]  # #1155 order (Light left for Cloud Calc > Toolkit); Account moved to Me, before the Me tile
 assert "Vault" not in g["Data Apps"] and "Me" not in g["Tools Primary"], g
 assert "Account" in g["Configs"], "Account must stay in Configs (intentional duplicate)"
 ids = [t["id"] for x in cloud["tile_groups"] for t in x["tiles"] if t.get("id")]

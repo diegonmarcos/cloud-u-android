@@ -234,10 +234,20 @@ class HomeSwipeGestureTest {
     /** True once the accessibility tree of the active window shows [text] (case-insensitive substring). */
     private fun shows(text: String) = inst.uiAutomation.rootInActiveWindow?.findAccessibilityNodeInfosByText(text)?.isNotEmpty() == true
 
+    /** Taps the strip tab named [label] through accessibility (the pill, or the nearest clickable parent of its text). */
+    private fun tapTab(label: String): Boolean {
+        val root = inst.uiAutomation.rootInActiveWindow ?: return false
+        var n: android.view.accessibility.AccessibilityNodeInfo? = root.findAccessibilityNodeInfosByText(label).firstOrNull()
+        while (n != null && !n.isClickable) n = n.parent
+        return n?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK) == true
+    }
+
     @Test fun boardsResourcesPageShowsTheLivePhone() {
         val shell = launchHome()
         onMain { shell.dispatchTarget("page:boards/resources") }
         assertTrue("Boards did not open", until(20_000) { onMain { shell.currentSection == "boards" } })
+        assertTrue("Resources tab missing", until(20_000) { shows("Resources") })
+        until(8_000) { shows("Battery") } || tapTab("Resources")
         assertTrue("Resources did not show Battery and Device: ${evidence(shell, "resources")}", until(20_000) { shows("Battery") && shows("Device") })
         assertTrue("no live battery level row", until(10_000) { shows("Level") })
     }
@@ -246,6 +256,8 @@ class HomeSwipeGestureTest {
         val shell = launchHome()
         onMain { shell.dispatchTarget("page:boards/quick-actions") }
         assertTrue("Boards did not open", until(20_000) { onMain { shell.currentSection == "boards" } })
+        assertTrue("Quick Actions tab missing", until(20_000) { shows("Quick Actions") })
+        until(8_000) { shows("Panels") } || tapTab("Quick Actions")
         // The strip over Presets | Panels is the Configs > Launcher > Quick Actions page, mirrored.
         assertTrue("Quick Actions did not show the Configs page: ${evidence(shell, "quick-actions")}", until(20_000) { shows("Panels") && shows("Presets") })
     }

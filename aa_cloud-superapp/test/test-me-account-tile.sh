@@ -16,6 +16,6 @@ eq "MySocials and MyTrips left the Me row" "$(jq -r "$G | select(.title == \"Me\
 eq "Me row starts Account, Me" "$(jq -r "$G | select(.title == \"Me\") | [.tiles[0:2][].label] | join(\",\")" "$BJ")" "Account,Me"
 eq "Account tile opens the profile page" "$(jq -r "$G | select(.title == \"Me\") | .tiles[0].target" "$BJ")" "page:config/profile"
 eq "Tools Primary has no Account tile" "$(jq -r "$G | select(.title == \"Tools Primary\") | [.tiles[] | select(.label == \"Account\")] | length" "$BJ")" "0"
-eq "Tools Primary still ends with Light" "$(jq -r "$G | select(.title == \"Tools Primary\") | .tiles[-1].label" "$BJ")" "Light"
+eq "Tools Primary now ends with Vault (Light moved to Cloud Calc > Toolkit)" "$(jq -r "$G | select(.title == \"Tools Primary\") | .tiles[-1].label" "$BJ")" "Vault"
 echo; echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
