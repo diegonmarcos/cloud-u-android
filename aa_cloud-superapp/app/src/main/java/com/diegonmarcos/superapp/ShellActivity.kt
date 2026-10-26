@@ -886,9 +886,11 @@ open class ShellActivity : AppCompatActivity(),
     // ── drawn shapes (circle, C): build.json onehand.shape_gestures ──────────
     private val strokePts = ArrayList<Pair<Float, Float>>()
     private var strokeTracking = false
-    private val shapeTrail by lazy {
-        com.diegonmarcos.superapp.launcher.GestureTrailView(this).also {
-            addContentView(it, android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
+    private val trailState = com.diegonmarcos.superapp.launcher.GestureTrailState()
+    private val shapeTrailHost by lazy {
+        androidx.compose.ui.platform.ComposeView(this).also { cv ->
+            cv.setContent { com.diegonmarcos.superapp.launcher.GestureTrail(trailState, 6f * resources.displayMetrics.density) }
+            addContentView(cv, android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT))
         }
     }
 
@@ -897,7 +899,7 @@ open class ShellActivity : AppCompatActivity(),
         val rec = com.diegonmarcos.superapp.launcher.ShapeRecogniser
         when (ev.actionMasked) {
             android.view.MotionEvent.ACTION_DOWN -> {
-                strokePts.clear(); strokePts += ev.x to ev.y
+                strokePts.clear(); strokePts += ev.x to ev.y; trailState.begin()
                 strokeTracking = currentSection == "home" && supportFragmentManager.backStackEntryCount == 0 &&
                     !drawerLayout.isDrawerOpen(GravityCompat.START)
             }
@@ -907,12 +909,12 @@ open class ShellActivity : AppCompatActivity(),
                 val gap = Math.hypot((ev.x - strokePts[0].first).toDouble(), (ev.y - strokePts[0].second).toDouble())
                 val d = resources.displayMetrics.density
                 // The trail shows once the stroke is clearly not a straight swipe.
-                if (len > 40f * d && gap / len < 0.8) shapeTrail.add(ev.x, ev.y)
+                if (len > 40f * d && gap / len < 0.8) { shapeTrailHost; trailState.add(ev.x, ev.y) }
             }
             android.view.MotionEvent.ACTION_UP -> if (strokeTracking) {
                 strokeTracking = false
                 strokePts += ev.x to ev.y
-                if (shapeTrail.alpha > 0f) shapeTrail.end()
+                trailState.end()
                 val cfg = rec.declared
                 if (rec.classify(strokePts, cfg, resources.displayMetrics.density) == com.diegonmarcos.superapp.launcher.ShapeRecogniser.Kind.SHAPE) {
                     val m = rec.recognise(strokePts, cfg)
@@ -924,7 +926,7 @@ open class ShellActivity : AppCompatActivity(),
                     return true
                 }
             }
-            android.view.MotionEvent.ACTION_CANCEL -> { strokeTracking = false; if (shapeTrail.alpha > 0f) shapeTrail.end() }
+            android.view.MotionEvent.ACTION_CANCEL -> { strokeTracking = false; trailState.end() }
         }
         return false
     }
