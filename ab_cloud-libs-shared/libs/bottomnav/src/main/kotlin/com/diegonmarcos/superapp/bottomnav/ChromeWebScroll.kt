@@ -40,6 +40,9 @@ public object ChromeWebScroll {
             // A finger that has travelled UP the screen reads down the page: a negative scroll offset meanwhile is the page re-laying
             // itself out (images loading, an inner scroller clamping), never the reader scrolling back, so it must not restore the bars.
             if (fingerDown && delta < 0f && lastY < downY - SLOP) return
+            // With no finger on the page a negative offset is never the reader scrolling back (that restores from the finger's own downward
+            // travel in onTouch): it is the page re-laying itself out (images failing or loading, scroll anchoring), and it must not undo a collapse.
+            if (!fingerDown && delta < 0f) return
             if (fingerDown) t.onDragDelta(delta) else t.onScrollDelta(delta)
         }
 
