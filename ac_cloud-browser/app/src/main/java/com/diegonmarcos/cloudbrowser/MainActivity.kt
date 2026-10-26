@@ -110,6 +110,9 @@ class MainActivity : AppCompatActivity() {
             if (f is BrowserHostFragment) {
                 f.externalBar = true
                 f.onWebScroll = { d -> onWebScroll(d) }
+                // the page's touch and inner scrollers feed the same collapse (a held drag hides every bar, the release shrinks them)
+                f.onWebViewCreated = { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(it, chromeCollapse) }
+                f.onWebPageFinished = { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(it, chromeCollapse); com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(it) }
                 f.onOverlaysClosed = {
                     selectedId = decl.section(if (f.isTabsOpen) "tabs" else "browser")?.id
                     chromeCollapse?.onScrollDelta(-1f)

@@ -197,6 +197,15 @@
         "ab_cloud-libs-shared/libs/ui-kit/src/main/**",
         "ab_cloud-libs-shared/web/**"
       ]
+    },
+    "drive-repos-sot-pin-guard.yml": {
+      "_doc": "Compares the sha256 of Drive's repos.sot.json copies with the pin in its build.json and re-runs the generator over the copy.",
+      "paths": [
+        "ab_cloud-libs-shared/libs/repos/**",
+        "ac_cloud-drive/build.json",
+        "ac_cloud-drive/data/**",
+        "ac_cloud-drive/tools/**"
+      ]
     }
   }
 }

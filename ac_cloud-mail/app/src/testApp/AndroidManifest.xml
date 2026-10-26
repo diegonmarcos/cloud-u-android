@@ -24,5 +24,10 @@
             android:name="app.sterna.bench.BenchProvisionReceiver"
             android:enabled="true"
             android:exported="true" />
+        <!-- Poses one offline account for the emulator nav walk (NavWalkSeedReceiver). Same exposure as the bench receiver above: test app only. -->
+        <receiver
+            android:name="app.sterna.bench.NavWalkSeedReceiver"
+            android:enabled="true"
+            android:exported="true" />
     </application>
 </manifest>

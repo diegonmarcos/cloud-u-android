@@ -218,6 +218,9 @@ class BrowserHostFragment : Fragment() {
     fun act(id: String) = runAction(id)
     /** #1164 the page scrolled by this many px (> 0: reading down); the host feeds the shared chrome's scroll-collapse with it. */
     var onWebScroll: ((Float) -> Unit)? = null
+    /** #1164 a page WebView was created (before its first load) / finished a page: the host wires the shared chrome's web scroll bridge (touch, inner scrollers). */
+    var onWebViewCreated: ((WebView) -> Unit)? = null
+    var onWebPageFinished: ((WebView) -> Unit)? = null
 
     /** #868 the host shell's nav island follows the screen: called whenever the last overlay (the
      *  Search page, Settings, a sheet) is gone, so the island can put its pill back on the page. */
@@ -920,6 +923,7 @@ class BrowserHostFragment : Fragment() {
         webTabKey = tabKey
         webView = WebView(ctx).apply {
             bindProfile(this, tab)   // before anything loads
+            onWebViewCreated?.invoke(this)   // the scroll bridge must exist BEFORE the first load
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             settings.setSupportZoom(true)
@@ -1008,6 +1012,7 @@ class BrowserHostFragment : Fragment() {
                 override fun onPageFinished(view: WebView?, finishedUrl: String?) {
                     super.onPageFinished(view, finishedUrl)
                     val u = finishedUrl ?: return
+                    view?.let { onWebPageFinished?.invoke(it) }
                     // #1141 desktop view: the layout viewport is a desktop width even if the page's meta viewport says device-width.
                     if (desktopMode) view?.evaluateJavascript(ViewModePlan.DESKTOP_VIEWPORT_JS, null)
                     if (readerOn) return

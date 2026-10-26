@@ -75,6 +75,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      # The unit task below runs the fork's own Gradle wrapper (8.13), which
+      # cannot parse the runner's default JDK 25 ("25.0.4.1"), so the JDK is
+      # pinned BEFORE the testers, and not behind the publish gate (testing is
+      # not gated, see below).
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
       # Every application's testers, and — for the 24 that have none — the
       # COVERAGE-GAP line naming exactly what this run did NOT check. Until this
       # step existed, an application with zero testers and one with fifty
@@ -106,14 +117,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "${{ matrix.combo.abi }}"
-
-      - name: Set up JDK 17
-        if: steps.gate.outputs.skip != 'true'
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: gradle
 
       - name: Checkout vault (shared Android signing key)
         if: steps.gate.outputs.skip != 'true'

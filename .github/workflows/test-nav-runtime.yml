@@ -153,6 +153,37 @@ jobs:
           cp "$pick" app-under-test.apk
           echo "PKG=$("$aapt2" dump packagename "$pick")" >> "$GITHUB_ENV"
 
+      # An app that declares `walk_build` in nav-walk-apps.json is walked on a test-only variant that THIS job builds (Mail: the
+      # -PtestApp debug build, which alone carries the receiver that poses an offline account so the walk gets past onboarding).
+      # The Ship APK above stays the gate (a failed Ship run already stopped this job); the release APK never contains the seed.
+      - name: Set up JDK 17 (walk build)
+        if: ${{ matrix.walk_build.cmd != null }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK (walk build)
+        if: ${{ matrix.walk_build.cmd != null }}
+        uses: android-actions/setup-android@v3
+
+      - name: Build the walk's own APK (test-only variant)
+        if: ${{ matrix.walk_build.cmd != null }}
+        env:
+          DIR: ${{ matrix.walk_build.dir }}
+          CMD: ${{ matrix.walk_build.cmd }}
+          GLOB: ${{ matrix.walk_build.apk_glob }}
+        run: |
+          set -eu
+          ( cd "$DIR" && chmod +x gradlew && eval "$CMD" )
+          shopt -s nullglob globstar
+          apks=($GLOB)
+          [ "${#apks[@]}" -ge 1 ] || { echo "::error::the walk build produced no APK ($GLOB)"; exit 1; }
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          cp "${apks[0]}" app-under-test.apk
+          echo "APK under test (walk build): ${apks[0]} ($("$aapt2" dump packagename app-under-test.apk))"
+          echo "PKG=$("$aapt2" dump packagename app-under-test.apk)" >> "$GITHUB_ENV"
+
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \

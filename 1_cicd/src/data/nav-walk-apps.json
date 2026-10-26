@@ -1,5 +1,5 @@
 {
-  "_doc": "The apps the runtime nav walk (1_cicd/src/cicd/test-nav-runtime.yml, driver 1_cicd/src/scripts/cloud-android-nav-walk.py) drives: every app on the shared nav libs. `ship` is its Ship workflow (the walk waits for that workflow's run of the same commit and tests the APK it built, else the APK on the rolling `latest` release), `artifact` the prefix of the APK artifact that run uploads, `asset` the release asset's base name (the walk prefers `<asset>-x86_64.apk`). An app on the shared bars that is not listed here is not walked: ChromeScrollGuardTest's app list and this one must name the same apps (the workflow's plan job fails otherwise).",
+  "_doc": "The apps the runtime nav walk (1_cicd/src/cicd/test-nav-runtime.yml, driver 1_cicd/src/scripts/cloud-android-nav-walk.py) drives: every app on the shared nav libs. `ship` is its Ship workflow (the walk waits for that workflow's run of the same commit and tests the APK it built, else the APK on the rolling `latest` release), `artifact` the prefix of the APK artifact that run uploads, `asset` the release asset's base name (the walk prefers `<asset>-x86_64.apk`). An app on the shared bars that is not listed here is not walked: ChromeScrollGuardTest's app list and this one must name the same apps (the workflow's plan job fails otherwise). Optional per-app keys: `start_page` (\"mhtml\": the walk opens a deterministic local test page through a VIEW intent, no network, for an app whose home page is a live site); `walk_build` {dir, cmd, apk_glob} (the walk builds this APK itself in CI instead of taking the Ship APK, for a test-only variant that carries what the release never may, e.g. Mail's seeded offline account); `seed` (\"<receiver class>:<action>\", broadcast to the installed app before its first launch).",
   "apps": [
     {
       "app": "ac_cloud-news",
@@ -41,7 +41,8 @@
       "app": "ac_cloud-browser",
       "ship": "ship-cloud-browser.yml",
       "artifact": "Cloud-Browser-",
-      "asset": "Cloud-Browser"
+      "asset": "Cloud-Browser",
+      "start_page": "mhtml"
     },
     {
       "app": "ac_cloud-contacts",
@@ -71,7 +72,13 @@
       "app": "ac_cloud-mail",
       "ship": "ship-cloud-mail.yml",
       "artifact": "cloud-comms-mail-",
-      "asset": "cloud-comms-mail"
+      "asset": "cloud-comms-mail",
+      "walk_build": {
+        "dir": "ac_cloud-mail",
+        "cmd": "./gradlew --no-daemon :app:assembleDebug -PtestApp",
+        "apk_glob": "ac_cloud-mail/app/build/outputs/apk/debug/*.apk"
+      },
+      "seed": "app.sterna.bench.NavWalkSeedReceiver:app.sterna.test.navwalk.SEED"
     },
     {
       "app": "ac_cloud-me",

@@ -22,7 +22,10 @@ public object ChromeWebScroll {
     public const val SCRIPT: String =
         "(function(){if(window.__navChromeFeed)return;window.__navChromeFeed=1;" +
             "window.addEventListener('scroll',function(ev){var t=ev.target,y=(t===document||t===document.documentElement)?window.scrollY:t.scrollTop;" +
-            "var d=y-(t.__navLast||0);t.__navLast=y;if(d!==0&&window.NavChrome)window.NavChrome.onScroll(d);},true);})();"
+            "var d=y-(t.__navLast||0);t.__navLast=y;if(d!==0&&window.NavChrome)window.NavChrome.onScroll(d);},true);" +
+            // which scroller is under the finger: tells the bridge a drag up on it reads down the page even before (or without) a scroll event
+            "document.addEventListener('touchstart',function(ev){var n=ev.target,s=0;while(n&&n!==document){if(n.scrollHeight>n.clientHeight+1){var o=getComputedStyle(n).overflowY;if(o==='auto'||o==='scroll'){s=1;break;}}n=n.parentNode;}" +
+            "var de=document.scrollingElement||document.documentElement;if(!s&&de.scrollHeight>de.clientHeight+1)s=1;if(window.NavChrome)window.NavChrome.setScrollable(s);},{capture:true,passive:true});})();"
 
     private class Feed : View.OnScrollChangeListener, View.OnTouchListener {
         @Volatile var target: BottomNavCollapse? = null
@@ -40,6 +43,13 @@ public object ChromeWebScroll {
             if (fingerDown) t.onDragDelta(delta) else t.onScrollDelta(delta)
         }
 
+        /** The page under the finger has something to scroll (an inner container, or the document). */
+        @Volatile private var innerScrollable = false
+        private var dragged = false
+
+        @JavascriptInterface
+        fun setScrollable(on: Int) { innerScrollable = on != 0 }
+
         @JavascriptInterface
         fun onScroll(delta: Double) { main.post { scrolled(delta.toFloat()) } }
 
@@ -49,10 +59,16 @@ public object ChromeWebScroll {
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { fingerDown = true; lastY = e.y; downY = e.y }
+                MotionEvent.ACTION_DOWN -> { fingerDown = true; lastY = e.y; downY = e.y; dragged = false; innerScrollable = false }
                 // A finger dragging DOWN reads UP the page: the chrome comes back even when the page cannot scroll further
                 // (it sits at its top, or the scroller is an inner container the bridge cannot see).
-                MotionEvent.ACTION_MOVE -> { if (e.y - lastY > SLOP) target?.onScrollDelta(-1f); lastY = e.y }
+                MotionEvent.ACTION_MOVE -> {
+                    if (e.y - lastY > SLOP) { target?.onScrollDelta(-1f); dragged = false }
+                    // A finger travelling UP over a page that can scroll reads down it: hide the chrome now, from the gesture itself, so a
+                    // scroll event that arrives late (a loaded emulator, a WebView page that scrolls an inner container) cannot leave it standing.
+                    if (!dragged && downY - e.y > 2 * SLOP && (v.canScrollVertically(1) || innerScrollable)) { dragged = true; target?.onDragDelta(1f) }
+                    lastY = e.y
+                }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { fingerDown = false; target?.onRelease() }
             }
             return false

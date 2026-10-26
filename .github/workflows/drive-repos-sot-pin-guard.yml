@@ -8,6 +8,14 @@ name: "drive repos.sot.json pin guard"
 
 on:
   push:
+    # ── MANAGED-GUARD-TRIGGERS: injected by cloud-android-guard-triggers.py from 1_cicd/src/data/guard-triggers.json ──
+    paths:
+      - "1_cicd/src/cicd/drive-repos-sot-pin-guard.yml"
+      - "ab_cloud-libs-shared/libs/repos/**"
+      - "ac_cloud-drive/build.json"
+      - "ac_cloud-drive/data/**"
+      - "ac_cloud-drive/tools/**"
+    # ── end MANAGED-GUARD-TRIGGERS ──
     branches: [main]
   pull_request:
   workflow_dispatch:

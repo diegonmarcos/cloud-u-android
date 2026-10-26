@@ -211,6 +211,12 @@ class Walk:
         self.sections = {s["id"]: s for s in ui.get("sections", [])}
         self.w, self.h = screen_size()
         self.results = []
+        here = os.path.dirname(os.path.abspath(__file__))
+        apps = json.load(open(os.path.join(here, "..", "data", "nav-walk-apps.json"), encoding="utf-8"))["apps"]
+        # per-app launch recipe from nav-walk-apps.json: `seed` (a test-only receiver that poses state) and `start_page` (a local page)
+        self.cfg = next((x for x in apps if x["app"] == a.app), {})
+        self.seeded = False
+        self.page_url = None
 
     # ── driving ──────────────────────────────────────────────────────────────
     def launch(self):
@@ -224,7 +230,12 @@ class Walk:
         # still found, in the events log (app_anr), and fails its page with the emulator's load beside it.
         shell("settings put global hide_error_dialogs 1")
         shell("logcat -b all -c")
-        shell("am start -W -n %s" % act, timeout=120)
+        self.seed()
+        view = self.start_page()
+        if view:
+            shell("am start -W -n %s -a android.intent.action.VIEW -d %s -t multipart/related" % (act, view), timeout=120)
+        else:
+            shell("am start -W -n %s" % act, timeout=120)
         deadline = time.time() + 150  # a first-run wizard (Cloud Gallery: five steps) is tapped through
         while time.time() < deadline:
             nodes = dump(2)
@@ -238,6 +249,40 @@ class Walk:
                 shell("monkey -p %s -c android.intent.category.LAUNCHER 1" % self.pkg)  # brought back to the front after a hand-off
             settle(2)
         return None
+
+    def seed(self):
+        """Pose the state a test-only receiver of the app declares (nav-walk-apps.json `seed`: "<class>:<action>"), once, before the first launch."""
+        spec = self.cfg.get("seed")
+        if not spec or self.seeded:
+            return
+        self.seeded = True
+        cls, action = spec.split(":", 1)
+        print("seed: %s" % shell("am broadcast -n %s/%s -a %s" % (self.pkg, cls, action)).strip().replace("\n", " | "), flush=True)
+        settle(2)
+        print("seed log: %s" % shell("logcat -d -s NavWalkSeed:I | tail -3").strip().replace("\n", " | "), flush=True)
+
+    def start_page(self):
+        """The VIEW uri of the deterministic local test page (nav-walk-apps.json `start_page` = "mhtml"), no network: a saved-page archive,
+        long enough to scroll, on the app's own external files dir (readable by it without any permission). None when the app has none."""
+        if self.cfg.get("start_page") != "mhtml":
+            return None
+        if self.page_url:
+            return self.page_url
+        rows = "".join("<p>Row %d. The quick brown fox jumps over the lazy dog, and the page keeps going so that it scrolls.</p>\n" % i for i in range(1, 161))
+        html = "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1'><title>nav walk page</title></head><body><h1>Nav walk</h1>\n%s</body></html>\n" % rows
+        mht = ("MIME-Version: 1.0\r\nContent-Type: multipart/related; boundary=\"NAVWALK\"; type=\"text/html\"\r\n\r\n"
+               "--NAVWALK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\nContent-Location: https://navwalk.invalid/\r\n\r\n"
+               + html + "\r\n--NAVWALK--\r\n")
+        local = os.path.join(self.out, "navwalk.mhtml")
+        open(local, "w", encoding="utf-8", newline="").write(mht)
+        for d in ("/sdcard/Android/data/%s/files" % self.pkg, "/sdcard/Download"):
+            shell("mkdir -p %s" % d)
+            adb("push", local, d + "/navwalk.mhtml")
+            if "No such file" not in shell("ls %s/navwalk.mhtml 2>&1" % d):
+                self.page_url = "file://%s/navwalk.mhtml" % d
+                break
+        print("start page: %s" % self.page_url, flush=True)
+        return self.page_url
 
     def alive(self):
         return bool(shell("pidof %s" % self.pkg).strip())
@@ -456,6 +501,16 @@ class Walk:
         if not self.foreground():
             fails.append("P1 the app is not in the foreground after opening the page")
         title = find(nodes, TITLE)
+        # A page that composes hundreds of rows keeps the 2-core emulator's main thread busy, and the accessibility tree uiautomator
+        # reads can be a partial one for a few seconds. The first row is still required: poll for it and record how long it took.
+        waited = 0
+        while title is None and waited < 6 and self.foreground():
+            settle(1.5)
+            waited += 1
+            nodes = dump() or nodes
+            title = find(nodes, TITLE)
+        if waited:
+            checks["title_wait"] = "%s after %d poll(s)" % ("appeared" if title else "never appeared", waited)
         if title is None:
             fails.append("P4 the shared first row is not on screen (no %s)" % TITLE)
         elif via and not any(l.lower() in texts_in(nodes, title).lower() for l in [label] + self.labels_under(section, pid)):
