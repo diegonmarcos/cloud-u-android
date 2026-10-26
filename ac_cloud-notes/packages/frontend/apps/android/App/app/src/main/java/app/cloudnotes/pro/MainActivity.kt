@@ -92,6 +92,9 @@ class MainActivity : BridgeActivity(), CloudNotesThemePlugin.Callback {
         val container = bridge.webView.parent as CoordinatorLayout
         val run: (String) -> Unit = { js -> bridge.webView.post { bridge.webView.evaluateJavascript(js, null) } }
         val shell = NotesShell(NativeNav(decl, run), BuildConfig.AI_GATEWAY_URL, run)
+        // the editor's scroll bridge (NavChrome) must be on the WebView in the turn that starts its load: a JavaScript interface added
+        // later never reaches the already-loaded single page; the shell sets the collapse target when it composes
+        com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(bridge.webView, null)
         bridge.webView.addJavascriptInterface(shell.host(), "CloudNotesHost")
         (container.parent as? ViewGroup)?.removeView(container)
         setContentView(ComposeView(this).apply { setContent { shell.Content(container, bridge.webView) } })
