@@ -316,10 +316,11 @@ for q in vert_pages:
         continue
     # a page's label is its own (Shopping's things vertical is Compare, Brokers' jobs is Jobs); a vertical with subpages says which
     if len(v["subpages"]) > 1:
-        if [z.get("id") for z in q.get("pages") or []] != v["subpages"]:
+        # #1199 a nav page id is unique in the app: "<vertical>-<subpage>" (jobs-listing), never the bare shared subpage id
+        if [z.get("id") for z in q.get("pages") or []] != ["%s-%s" % (v["id"], x) for x in v["subpages"]]:
             bad.append("S10 ui.sections page %s subpages differ from search.verticals[%s]" % (q.get("id"), v["id"]))
         for z in q.get("pages") or []:
-            if z.get("label") != labels.get(z.get("id")):
+            if z.get("label") != labels.get(z.get("id")[len(v["id"]) + 1:]):
                 bad.append("S10 ui.sections page %s/%s label differs from search.subpages" % (q.get("id"), z.get("id")))
     elif q.get("pages"):
         bad.append("S10 ui.sections page %s declares a second strip for a vertical with one subpage" % q.get("id"))
