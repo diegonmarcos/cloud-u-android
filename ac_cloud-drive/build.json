@@ -47,7 +47,7 @@
       "path": "data/repos.sot.json",
       "url": "https://raw.githubusercontent.com/diegonmarcos/git-repos-master/main/repos.json",
       "schema": "cloud-repos/v1",
-      "sha256": "f023732df8c5e397caa0baf1900ec9bc400817321c0398d1ab8ab3fa89028cdc",
+      "sha256": "e0cac424f3246be047ffdc93951cd0453766e61f5a6ea566ed7911d5cc96a578",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },
@@ -748,8 +748,8 @@
             "caption": "front"
           },
           {
-            "repo": "front-assets-cdn",
-            "caption": "front-assets-cdn"
+            "repo": "cloud_db_assets-cdn",
+            "caption": "cloud_db_assets-cdn"
           },
           {
             "repo": "z-archived_front-data",

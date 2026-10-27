@@ -84,8 +84,8 @@
    "notes": "The fleet's front-end tree. #731 renamed upstream from `ffront` (2026-10-01): `renamed_from` makes the seed worker MOVE a device's git/ffront clone to git/front and repoint its origin, instead of cloning a second copy beside it."
   },
   {
-   "name": "front-assets-cdn",
-   "label": "front-assets-cdn",
+   "name": "cloud_db_assets-cdn",
+   "label": "cloud_db_assets-cdn",
    "seed": true,
    "notes": "Static assets. #629 CORRECTED: the prose here contradicted the flag beside it — it IS seeded."
   },

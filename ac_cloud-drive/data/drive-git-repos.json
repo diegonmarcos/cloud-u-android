@@ -119,13 +119,14 @@
    "renamed_from": ["ffront"]
   },
   {
-   "name": "front-assets-cdn",
-   "label": "front-assets-cdn",
+   "name": "cloud_db_assets-cdn",
+   "label": "cloud_db_assets-cdn",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
-   "notes": "Static assets. #629 CORRECTED: the prose here contradicted the flag beside it — it IS seeded."
+   "notes": "Static assets. #629 CORRECTED: the prose here contradicted the flag beside it — it IS seeded.",
+   "renamed_from": ["front-assets-cdn"]
   },
   {
    "name": "z-archived_front-data",

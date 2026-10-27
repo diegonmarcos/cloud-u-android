@@ -51,6 +51,60 @@
       "doc": "Voxel engine in Rust (vox-rust build plan under docs/)."
     },
     {
+      "name": "DeepSc",
+      "repo": "diegonmarcos/DeepSc",
+      "private": false,
+      "doc": "Project master for the DeepSc family (DeepSc-StarkX, DeepSc-X): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "DeepSc-StarkX",
+      "repo": "diegonmarcos/DeepSc-StarkX",
+      "private": false,
+      "doc": "Stark.x company site (published at /stark/), moved from front-endeavours a_Companies/stark (#1224); front-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "DeepSc-X",
+      "repo": "diegonmarcos/DeepSc-X",
+      "private": false,
+      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; the matching front-labtools project c-Stk_DsX/sailytics moves here with the labtools split (#1218). #1224."
+    },
+    {
+      "name": "DuckPeng",
+      "repo": "diegonmarcos/DuckPeng",
+      "private": false,
+      "doc": "Project master for the DuckPeng family: the CG hub, the cloud hub and DuckPeng-LeafY. Its own repos.json subset plus committed symlinks. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "DuckPeng-LeafY",
+      "repo": "diegonmarcos/DuckPeng-LeafY",
+      "private": false,
+      "doc": "Leaf.y company site (published at /leafy/), moved from front-endeavours a_Companies/leafy (#1224); front-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "Fin-CM",
+      "repo": "diegonmarcos/Fin-CM",
+      "private": false,
+      "doc": "Project master for the Fin-CM family (Fin-CM-NexusZ, Fin-CM-mqpm, Fin-CM-Blmbrg): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "Fin-CM-Blmbrg",
+      "repo": "diegonmarcos/Fin-CM-Blmbrg",
+      "private": false,
+      "doc": "Blmbrg (fin terminal, market watch, news): README and deployer wiring skeleton; the matching front-labtools projects b-Nxs_Blmmbrg/* move here with the labtools split (#1218). #1224."
+    },
+    {
+      "name": "Fin-CM-NexusZ",
+      "repo": "diegonmarcos/Fin-CM-NexusZ",
+      "private": false,
+      "doc": "Nexus.z company site (published at /nexus/), moved from front-endeavours a_Companies/nexus (#1224); front-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "Fin-CM-mqpm",
+      "repo": "diegonmarcos/Fin-CM-mqpm",
+      "private": false,
+      "doc": "MQPM / StochBates: README and deployer wiring skeleton, no content yet (#1224)."
+    },
+    {
       "name": "cloud",
       "repo": "diegonmarcos/cloud",
       "private": false,
@@ -96,7 +150,7 @@
       "name": "cloud-me-profiles",
       "repo": "diegonmarcos/cloud-me-profiles",
       "private": false,
-      "doc": "Sources of the b_Profiles group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the b_Profiles group (and Lnktree, moved in from front-linktree, #1217), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "cloud-me_cgc",
@@ -159,6 +213,12 @@
       "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
+      "name": "cloud_db_assets-cdn",
+      "repo": "diegonmarcos/cloud_db_assets-cdn",
+      "private": false,
+      "doc": "Static assets served from the CDN. Renamed from front-assets-cdn 2026-10-27 (#1217)."
+    },
+    {
       "name": "cloud_db_infra-ops-obsv_configs-sync",
       "repo": "diegonmarcos/cloud_db_infra-ops-obsv_configs-sync",
       "private": false,
@@ -186,13 +246,13 @@
       "name": "front-labtools",
       "repo": "diegonmarcos/front-labtools",
       "private": false,
-      "doc": "Sources of the c_LabTools group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_CG-Zirkus, a-Lfy_C3, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX."
     },
     {
       "name": "front-linktree",
       "repo": "diegonmarcos/front-linktree",
       "private": false,
-      "doc": "Linktree sources (linktree, mindmap, pixel-world, icon-view), split from diegonmarcos.github.io (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Superseded 2026-10-27 (#1217): linktree sources moved into cloud-me-profiles (Lnktree); to be renamed z-archived_front-linktree. Originally split from diegonmarcos.github.io (#1072)."
     },
     {
       "name": "z-archived_front-data",
