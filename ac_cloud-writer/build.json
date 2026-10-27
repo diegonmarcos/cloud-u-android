@@ -197,7 +197,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "z-ai/glm-5.3-flash",
-        "pricing_as_of": "2026-10-26",
+        "pricing_as_of": "2026-10-27",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -345,8 +345,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.44,
-            "completion": 1.32,
+            "prompt": 0.119,
+            "completion": 0.238,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
