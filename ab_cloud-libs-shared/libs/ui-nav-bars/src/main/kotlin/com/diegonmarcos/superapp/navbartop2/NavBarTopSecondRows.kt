@@ -143,6 +143,8 @@ public fun NavBarTopSecondRows(
                     Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
                         g.pages.forEachIndexed { i, page ->
                             val on = page.id == selectedId
+                            // A declared boundary inside the row (`separator_before`): a "|" like the label's.
+                            if (i > 0 && page.separatorBefore) Text("|", color = palette.inkDim)
                             SecondRowTab(
                                 page, i, g.pages.size, on,
                                 // Default state: EVERY page shows its name; only the HIDDEN/SHRUNK states fold the non-selected ones.

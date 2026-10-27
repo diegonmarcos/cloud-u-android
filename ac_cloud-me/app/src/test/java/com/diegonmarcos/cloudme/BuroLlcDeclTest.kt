@@ -30,7 +30,7 @@ class BuroLlcDeclTest {
         assertEquals(listOf("health", "study", "achieves", "me", "duties", "buro", "llc"), bar)
         assertEquals(listOf("Health", "Study", "Achieves", "Profile", "Duties", "Buro", "LLC"), bar.map { sections.getValue(it).getString("label") })
         assertFalse("house" in sections); assertFalse("work" in sections)
-        assertEquals(listOf("professional", "personal", "social", "health", "dd"), ids(sections.getValue("me").getJSONArray("pages")))
+        assertEquals(listOf("professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree"), ids(sections.getValue("me").getJSONArray("pages")))
         assertEquals(listOf("tasks"), ids(sections.getValue("duties").getJSONArray("pages")))
     }
 
@@ -118,5 +118,37 @@ class BuroLlcDeclTest {
         val cards = { a: JSONArray -> (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("kind") == "cards" }.sumOf { it.getJSONArray("items").length() } }
         assertTrue("the LinkedIn roles are still there", cards(employed) >= 1)
         assertTrue("the own ventures are still there", cards(side) >= 1)
+    }
+
+    @Test fun `Profile is two rows Prof and Pers with the declared separators`() {
+        val me = sections.getValue("me")
+        assertEquals("horizontal_two_rows", me.getString("nav_mode"))
+        assertEquals(mapOf("prof" to listOf("professional", "leafy", "nexus", "stark"),
+            "pers" to listOf("personal", "social", "health", "dd", "astro", "lnktree")), groups("me"))
+        val pages = me.getJSONArray("pages")
+        val sep = (0 until pages.length()).map { pages.getJSONObject(it) }.filter { it.optBoolean("separator_before") }.map { it.getString("id") }
+        assertEquals(listOf("leafy", "health", "lnktree"), sep)
+    }
+
+    @Test fun `the five published sites are embedded by their https URL`() {
+        val want = mapOf("leafy" to "https://diegonmarcos.github.io/leafy/", "nexus" to "https://diegonmarcos.github.io/nexus/",
+            "stark" to "https://diegonmarcos.github.io/stark/", "astro" to "https://diegonmarcos.github.io/myAstro/",
+            "lnktree" to "https://linktree.diegonmarcos.com/")
+        for ((p, url) in want) {
+            val b = page("me", p).getJSONObject(0)
+            assertEquals("fragment", b.getString("kind")); assertEquals("web", b.getString("id")); assertEquals(url, b.getString("url"))
+        }
+    }
+
+    @Test fun `Experiences is a done and to-do ledger over the declared experiences_user store`() {
+        val b = page("achieves", "experiences").getJSONObject(0)
+        assertEquals("ledger", b.getString("kind")); assertEquals(LedgerStore.EXP, b.getString("store"))
+        val defs = (0 until b.getJSONArray("ledgers").length()).map { LedgerDef.parse(b.getJSONArray("ledgers").getJSONObject(it)) }
+        assertEquals(listOf("done", "todo"), defs.map { it.collection })
+        assertTrue("done is seeded from the owner's pursuits", defs[0].builtin.size >= 10)
+        assertTrue(defs[1].suggestions.isNotEmpty()); assertEquals("done", defs[1].moveTo)
+        for (d in defs) for (r in d.builtin + d.suggestions) assertTrue(LedgerModel.validate(d, r).isEmpty())
+        val fc = JSONObject(BuroLlcTestData.text("../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"))
+        assertEquals("config", fc.getJSONObject("stores").getJSONObject("experiences_user").getString("class"))
     }
 }

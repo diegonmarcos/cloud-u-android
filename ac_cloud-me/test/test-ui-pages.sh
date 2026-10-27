@@ -205,7 +205,7 @@ for root, _, names in os.walk("data/ui"):
             continue
         for b in json.load(open(os.path.join(root, n))):
             if isinstance(b, dict) and b.get("id") == "web":
-                if not os.path.exists(os.path.join("data/web", b.get("url", ""))):
+                if not b.get("url", "").startswith("https://") and not os.path.exists(os.path.join("data/web", b.get("url", ""))):
                     bad.append(f"{root}/{n}: web block has no data/web/{b.get('url')}")
 for b in bad:
     print("FAIL:", b)

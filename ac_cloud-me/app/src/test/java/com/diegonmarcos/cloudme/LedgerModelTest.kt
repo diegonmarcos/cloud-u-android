@@ -84,4 +84,15 @@ class LedgerModelTest {
         assertEquals(mapOf("name" to "Flat", "value" to "5"),
             LedgerModel.clean(def, mapOf("name" to " Flat ", "value" to "5", "kind" to "  ", "junk" to "x")))
     }
+
+    @Test fun `an entry can be edited in place and a to-do moved to done`() {
+        val d = LedgerData().added("todo", mapOf("name" to "Dive")).added("todo", mapOf("name" to "Hike"))
+        val e = d.replaced("todo", "r1", mapOf("name" to "Dive reef"))
+        assertEquals(listOf("Dive reef", "Hike"), e.rows("todo").map { it["name"] })
+        assertEquals("r1", e.rows("todo").first()["id"])
+        val m = e.moved("todo", "r1", "done")
+        assertEquals(listOf("Hike"), m.rows("todo").map { it["name"] })
+        assertEquals(listOf("Dive reef"), m.rows("done").map { it["name"] })
+        assertEquals(m.toJson(), LedgerData.fromJson(m.toJson()).toJson())
+    }
 }

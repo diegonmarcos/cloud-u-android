@@ -289,7 +289,7 @@ public class NavDecl(
             (a as? List<*>)?.mapNotNull { e ->
                 val o = e as? Map<*, *> ?: return@mapNotNull null
                 val id = o.text("id").ifBlank { return@mapNotNull null }
-                NavPage(id, o.text("label", id), o.text("icon"), o.text("action"), pages(o["pages"]), PageBackground.of(o.text("background")))
+                NavPage(id, o.text("label", id), o.text("icon"), o.text("action"), pages(o["pages"]), PageBackground.of(o.text("background")), o["separator_before"] == true)
             } ?: emptyList()
     }
 }

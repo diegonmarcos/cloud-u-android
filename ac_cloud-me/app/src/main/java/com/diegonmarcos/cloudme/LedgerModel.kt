@@ -20,7 +20,15 @@ typealias Rec = Map<String, String>
 data class LedgerField(val id: String, val label: String, val type: String, val options: List<String>, val required: Boolean)
 
 /** One collection of a ledger block: its records are `LedgerData.rows(collection)`. */
-data class LedgerDef(val collection: String, val title: String, val fields: List<LedgerField>, val empty: String) {
+data class LedgerDef(
+    val collection: String, val title: String, val fields: List<LedgerField>, val empty: String,
+    /** Declared read-only rows shown with the user's (the page's own facts); never stored. */
+    val builtin: List<Rec> = emptyList(),
+    /** Declared proposals: Accept stores one as the user's own record (editable); accepted ones stop showing. */
+    val suggestions: List<Rec> = emptyList(),
+    /** Non-blank: collection a record can be moved to ("Mark done"), with [moveLabel] on the button. */
+    val moveTo: String = "", val moveLabel: String = "",
+) {
     companion object {
         fun parse(o: JSONObject): LedgerDef = LedgerDef(
             o.getString("collection"), o.optString("title"),
@@ -32,7 +40,12 @@ data class LedgerDef(val collection: String, val title: String, val fields: List
                 }
             },
             o.optString("empty", "Nothing here yet."),
+            recs(o.optJSONArray("builtin")), recs(o.optJSONArray("suggestions")),
+            o.optString("move_to"), o.optString("move_label", "Move"),
         )
+
+        private fun recs(a: JSONArray?): List<Rec> =
+            (0 until (a?.length() ?: 0)).mapNotNull { a!!.optJSONObject(it) }.map { r -> r.keys().asSequence().associateWith { k -> r.optString(k) } }
     }
 }
 
@@ -51,6 +64,16 @@ class LedgerData(private val data: Map<String, List<Rec>> = emptyMap()) {
 
     fun removed(collection: String, id: String): LedgerData =
         LedgerData(data + (collection to rows(collection).filterNot { it["id"] == id }))
+
+    /** Replaces the record [id] of [collection] with [values] (same id); an unknown id changes nothing. */
+    fun replaced(collection: String, id: String, values: Rec): LedgerData =
+        LedgerData(data + (collection to rows(collection).map { if (it["id"] == id) values + ("id" to id) else it }))
+
+    /** Moves the record [id] from [from] to the end of [to] (new id there). */
+    fun moved(from: String, id: String, to: String): LedgerData {
+        val rec = rows(from).firstOrNull { it["id"] == id } ?: return this
+        return removed(from, id).added(to, rec - "id")
+    }
 
     fun toJson(): String = JSONObject().put("v", 1).put("collections", JSONObject().apply {
         data.forEach { (name, rows) -> put(name, JSONArray().apply { rows.forEach { r -> put(JSONObject(r)) } }) }

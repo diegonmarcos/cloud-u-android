@@ -110,9 +110,9 @@ for pid in ("personal", "pursuits", "international"):
     ach[pid] = json.load(open(f, encoding="utf-8")) if os.path.exists(f) else []
     if not ach[pid]:
         bad("achieves", f"data/ui/achieves/{pid}.json is missing or empty")
-if [p["id"] for p in secs.get("achieves", {}).get("pages", [])] != ["personal", "pursuits", "international", "trips"] or \
-   [p["label"] for p in secs.get("achieves", {}).get("pages", [])] != ["Personal", "Personal Pursuits", "International Experience", "Trips"]:
-    bad("achieves", "Achieves pages are not Personal, Personal Pursuits, International Experience, Trips")
+if [p["id"] for p in secs.get("achieves", {}).get("pages", [])] != ["personal", "pursuits", "international", "trips", "experiences"] or \
+   [p["label"] for p in secs.get("achieves", {}).get("pages", [])] != ["Personal", "Personal Pursuits", "International Experience", "Trips", "Experiences"]:
+    bad("achieves", "Achieves pages are not Personal, Personal Pursuits, International Experience, Trips, Experiences")
 EXPECT = {
  "personal": [
   "B1) Personal",
@@ -204,8 +204,26 @@ for gone in ("house", "work"):
         bad("pages", f"the retired {gone} section is declared again")
     if os.path.isdir(os.path.join(app, "data/ui", gone)):
         bad("pages", f"data/ui/{gone} is back")
-if [p["id"] for p in secs.get("me", {}).get("pages", [])] != ["professional", "personal", "social", "health", "dd"]:
-    bad("pages", "Profile pages are not Professional, Personal, Social, Health, DD")
+if [p["id"] for p in secs.get("me", {}).get("pages", [])] != ["professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree"]:
+    bad("pages", "Profile pages are not Professional, Leaf.y, Nexus.z, Stark.x, Personal, Social, Health, DD, Astro, Lnktree")
+_me = secs.get("me", {})
+if _me.get("nav_mode") != "horizontal_two_rows" or {g["id"]: g["pages"] for g in _me.get("groups", [])} != {"prof": ["professional", "leafy", "nexus", "stark"], "pers": ["personal", "social", "health", "dd", "astro", "lnktree"]}:
+    bad("pages", "Profile is not the two rows Prof / Pers")
+if [p["id"] for p in _me.get("pages", []) if p.get("separator_before")] != ["leafy", "health", "lnktree"]:
+    bad("pages", "Profile row separators are not before Leaf.y, Health, Lnktree")
+for _pid, _u in (("leafy", "https://diegonmarcos.github.io/leafy/"), ("nexus", "https://diegonmarcos.github.io/nexus/"), ("stark", "https://diegonmarcos.github.io/stark/"), ("astro", "https://diegonmarcos.github.io/myAstro/"), ("lnktree", "https://linktree.diegonmarcos.com/")):
+    _f = os.path.join(app, f"data/ui/me/{_pid}.json")
+    _b = json.load(open(_f, encoding="utf-8")) if os.path.exists(_f) else []
+    if len(_b) != 1 or _b[0].get("id") != "web" or _b[0].get("url") != _u:
+        bad("pages", f"Profile > {_pid} is not the embedded page {_u}")
+_ex = os.path.join(app, "data/ui/achieves/experiences.json")
+_eb = json.load(open(_ex, encoding="utf-8")) if os.path.exists(_ex) else []
+if len(_eb) != 1 or _eb[0].get("kind") != "ledger" or _eb[0].get("store") != "experiences_user" or [l["collection"] for l in _eb[0].get("ledgers", [])] != ["done", "todo"]:
+    bad("pages", "Achieves > Experiences is not the ledger over experiences_user with done and todo")
+_fc = json.load(open(os.path.join(libs, "fleetconfig-model/src/main/assets/fleet-config.json"), encoding="utf-8"))
+_st = _fc.get("stores", {}).get("experiences_user")
+if not _st or "ac_cloud-me" not in _st.get("used_by", []) or _st.get("class") != "config":
+    bad("pages", "experiences_user is not a declared config store of ac_cloud-me (the backup would miss it)")
 if [p["id"] for p in secs.get("duties", {}).get("pages", [])] != ["tasks"]:
     bad("pages", "Duties is not the single Tasks page")
 if os.path.isdir(os.path.join(app, "data/ui/home")):

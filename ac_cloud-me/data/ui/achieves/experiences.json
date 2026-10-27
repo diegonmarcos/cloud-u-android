@@ -1,0 +1,218 @@
+[
+  {
+    "kind": "ledger",
+    "store": "experiences_user",
+    "currency": "",
+    "reports": [],
+    "ledgers": [
+      {
+        "collection": "done",
+        "title": "✅ Done",
+        "empty": "No experience recorded yet. Add each one with its date and place.",
+        "fields": [
+          {
+            "id": "title",
+            "label": "Experience",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "🎸 Live concert",
+              "🎪 Festival",
+              "🏁 Track / place",
+              "🥾 Hike",
+              "🏕️ Camping",
+              "⚓ Diving",
+              "🪂 Skydiving / air",
+              "🌊 Water / sea",
+              "🏔️ Mountain / snow",
+              "🌐 Travel"
+            ],
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date"
+          },
+          {
+            "id": "place",
+            "label": "Place",
+            "type": "text"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "builtin": [
+          {
+            "title": "🪂 Skydiving",
+            "category": "🪂 Skydiving / air",
+            "note": "Endurance sports (Personal Pursuits)"
+          },
+          {
+            "title": "🪂 Bungee jump",
+            "category": "🪂 Skydiving / air",
+            "note": "Endurance sports (Personal Pursuits)"
+          },
+          {
+            "title": "🥾 Hiking",
+            "category": "🥾 Hike",
+            "note": "Endurance sports (Personal Pursuits)"
+          },
+          {
+            "title": "🧗🏻‍♂️ Rock climbing",
+            "category": "🏔️ Mountain / snow",
+            "note": "Endurance sports (Personal Pursuits)"
+          },
+          {
+            "title": "🏕️ Camping",
+            "category": "🏕️ Camping",
+            "note": "Nature sports (Personal Pursuits)"
+          },
+          {
+            "title": "⚓ Scuba diving",
+            "category": "⚓ Diving",
+            "note": "Nature sports (Personal Pursuits)"
+          },
+          {
+            "title": "🏄🏻‍♂️ Surfing",
+            "category": "🌊 Water / sea",
+            "note": "Nature sports (Personal Pursuits)"
+          },
+          {
+            "title": "⛵ Sailing",
+            "category": "🌊 Water / sea",
+            "note": "Nature sports (Personal Pursuits)"
+          },
+          {
+            "title": "🏂🏻 Snowboarding",
+            "category": "🏔️ Mountain / snow",
+            "note": "High adrenaline (Personal Pursuits)"
+          },
+          {
+            "title": "🚵🏻‍♂️ Trail moto",
+            "category": "🏁 Track / place",
+            "note": "High adrenaline (Personal Pursuits)"
+          },
+          {
+            "title": "🌐 180+ cities, 45+ countries, 5 continents",
+            "category": "🌐 Travel",
+            "note": "International Experience"
+          },
+          {
+            "title": "🏛️ 60+ World Heritage Sites",
+            "category": "🌐 Travel",
+            "note": "International Experience"
+          }
+        ]
+      },
+      {
+        "collection": "todo",
+        "title": "🎯 To do",
+        "empty": "Nothing planned yet. Accept a suggestion or add your own.",
+        "fields": [
+          {
+            "id": "title",
+            "label": "Experience",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "🎸 Live concert",
+              "🎪 Festival",
+              "🏁 Track / place",
+              "🥾 Hike",
+              "🏕️ Camping",
+              "⚓ Diving",
+              "🪂 Skydiving / air",
+              "🌊 Water / sea",
+              "🏔️ Mountain / snow",
+              "🌐 Travel"
+            ],
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date"
+          },
+          {
+            "id": "place",
+            "label": "Place",
+            "type": "text"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "suggestions": [
+          {
+            "title": "🌊 Oceans Seven endurance swims",
+            "category": "🌊 Water / sea",
+            "note": "Pursuing (Personal Pursuits)"
+          },
+          {
+            "title": "🏔️ Seven Summits hike",
+            "category": "🥾 Hike",
+            "note": "Pursuing (Personal Pursuits)"
+          },
+          {
+            "title": "🚴🏻‍♂️ Pre-Tour de France cycling",
+            "category": "🏁 Track / place",
+            "note": "Pursuing (Personal Pursuits)"
+          },
+          {
+            "title": "🎷 Jazz festival",
+            "category": "🎪 Festival",
+            "note": "Suggestion, jazzy music is an interest"
+          },
+          {
+            "title": "🎸 Live concert of a favourite band",
+            "category": "🎸 Live concert",
+            "note": "Suggestion"
+          },
+          {
+            "title": "🏁 Ride a famous circuit or track day",
+            "category": "🏁 Track / place",
+            "note": "Suggestion"
+          },
+          {
+            "title": "🥾 Multi-day backpacking trail",
+            "category": "🥾 Hike",
+            "note": "Suggestion, backpacking is an interest"
+          },
+          {
+            "title": "🏕️ Wild camping under the stars",
+            "category": "🏕️ Camping",
+            "note": "Suggestion"
+          },
+          {
+            "title": "⚓ Dive a wreck or a coral reef",
+            "category": "⚓ Diving",
+            "note": "Suggestion"
+          },
+          {
+            "title": "🪂 Skydive in a new country",
+            "category": "🪂 Skydiving / air",
+            "note": "Suggestion"
+          }
+        ],
+        "move_to": "done",
+        "move_label": "Mark done"
+      }
+    ]
+  }
+]

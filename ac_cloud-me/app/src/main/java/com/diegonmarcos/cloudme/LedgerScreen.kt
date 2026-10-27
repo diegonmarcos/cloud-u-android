@@ -43,6 +43,10 @@ object LedgerTags {
     fun field(collection: String, id: String) = "me:ledger:field:$collection:$id"
     fun row(collection: String, id: String) = "me:ledger:row:$collection:$id"
     fun remove(collection: String, id: String) = "me:ledger:remove:$collection:$id"
+    fun edit(collection: String, id: String) = "me:ledger:edit:$collection:$id"
+    fun move(collection: String, id: String) = "me:ledger:move:$collection:$id"
+    fun accept(collection: String, n: Int) = "me:ledger:accept:$collection:$n"
+    fun builtin(collection: String, n: Int) = "me:ledger:builtin:$collection:$n"
     fun empty(collection: String) = "me:ledger:empty:$collection"
 }
 
@@ -67,7 +71,9 @@ fun LedgerBlock(o: JSONObject) {
     for (r in reports) LedgerReports.build(r, data, today, currency)?.let { ReportCard(it) }
     for (def in defs) CollectionCard(def, data.rows(def.collection), currency,
         onAdd = { values -> commit(data.added(def.collection, values)) },
-        onRemove = { id -> commit(data.removed(def.collection, id)) })
+        onRemove = { id -> commit(data.removed(def.collection, id)) },
+        onEdit = { id, values -> commit(data.replaced(def.collection, id, values)) },
+        onMove = if (def.moveTo.isBlank()) null else { id -> commit(data.moved(def.collection, id, def.moveTo)) })
 }
 
 @Composable
@@ -89,34 +95,57 @@ private fun ReportRow(columns: List<String>, cells: List<String>, bold: Boolean 
 }
 
 @Composable
-private fun CollectionCard(def: LedgerDef, rows: List<Rec>, currency: String, onAdd: (Rec) -> Unit, onRemove: (String) -> Unit) {
+private fun CollectionCard(def: LedgerDef, rows: List<Rec>, currency: String, onAdd: (Rec) -> Unit, onRemove: (String) -> Unit,
+                           onEdit: (String, Rec) -> Unit, onMove: ((String) -> Unit)?) {
     var adding by remember(def.collection) { mutableStateOf(false) }
+    var editing by remember(def.collection) { mutableStateOf<String?>(null) }
+    val first = def.fields.first().id
     HCard {
         HHead(def.title)
-        if (rows.isEmpty()) HText(def.empty, modifier = Modifier.testTag(LedgerTags.empty(def.collection)))
+        def.builtin.forEachIndexed { n, r ->
+            Column(Modifier.fillMaxWidth().padding(top = 10.dp).testTag(LedgerTags.builtin(def.collection, n))) { RecLines(def, r, currency) }
+        }
+        if (rows.isEmpty() && def.builtin.isEmpty()) HText(def.empty, modifier = Modifier.testTag(LedgerTags.empty(def.collection)))
         rows.forEach { r ->
             val id = r["id"].orEmpty()
+            if (editing == id) {
+                AddForm(def, r, onCancel = { editing = null }, onSave = { onEdit(id, it); editing = null })
+                return@forEach
+            }
             Row(Modifier.fillMaxWidth().padding(top = 10.dp).testTag(LedgerTags.row(def.collection, id))) {
-                Column(Modifier.weight(1f)) {
-                    Text(r[def.fields.first().id].orEmpty(), color = ink(), fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                    def.fields.drop(1).forEach { f ->
-                        r[f.id]?.let { v -> Text("${f.label}: ${if (f.type == "money") LedgerModel.fmt(LedgerModel.money(v) ?: java.math.BigDecimal.ZERO, currency) else v}", color = dim(), fontSize = 12.sp) }
-                    }
-                }
+                Column(Modifier.weight(1f)) { RecLines(def, r, currency) }
+                onMove?.let { mv -> Text(def.moveLabel, color = accent(), fontSize = 12.sp, modifier = Modifier.clickable { mv(id) }.padding(8.dp).testTag(LedgerTags.move(def.collection, id))) }
+                Text("Edit", color = dim(), fontSize = 12.sp, modifier = Modifier.clickable { editing = id }.padding(8.dp).testTag(LedgerTags.edit(def.collection, id)))
                 Text("Remove", color = dim(), fontSize = 12.sp, modifier = Modifier.clickable { onRemove(id) }.padding(8.dp).testTag(LedgerTags.remove(def.collection, id)))
+            }
+        }
+        val open = def.suggestions.withIndex().filter { (_, sg) -> rows.none { it[first] == sg[first] } }
+        if (open.isNotEmpty()) HText("Suggestions")
+        open.forEach { (n, sg) ->
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+                Column(Modifier.weight(1f)) { RecLines(def, sg, currency) }
+                Text("Accept", color = accent(), fontSize = 12.sp, modifier = Modifier.clickable { onAdd(sg) }.padding(8.dp).testTag(LedgerTags.accept(def.collection, n)))
             }
         }
         if (!adding) {
             Pill("Add", true, accent()) { adding = true }
         } else {
-            AddForm(def, onCancel = { adding = false }, onSave = { onAdd(it); adding = false })
+            AddForm(def, emptyMap(), onCancel = { adding = false }, onSave = { onAdd(it); adding = false })
         }
     }
 }
 
 @Composable
-private fun AddForm(def: LedgerDef, onCancel: () -> Unit, onSave: (Rec) -> Unit) {
-    var values by remember(def.collection) { mutableStateOf<Rec>(emptyMap()) }
+private fun RecLines(def: LedgerDef, r: Rec, currency: String) {
+    Text(r[def.fields.first().id].orEmpty(), color = ink(), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    def.fields.drop(1).forEach { f ->
+        r[f.id]?.let { v -> Text("${f.label}: ${if (f.type == "money") LedgerModel.fmt(LedgerModel.money(v) ?: java.math.BigDecimal.ZERO, currency) else v}", color = dim(), fontSize = 12.sp) }
+    }
+}
+
+@Composable
+private fun AddForm(def: LedgerDef, initial: Rec, onCancel: () -> Unit, onSave: (Rec) -> Unit) {
+    var values by remember(def.collection, initial) { mutableStateOf<Rec>(initial) }
     var errors by remember(def.collection) { mutableStateOf<Map<String, String>>(emptyMap()) }
     for (f in def.fields) {
         if (f.type == "choice") {

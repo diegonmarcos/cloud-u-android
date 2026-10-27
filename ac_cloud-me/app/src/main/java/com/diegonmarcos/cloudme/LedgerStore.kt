@@ -10,12 +10,14 @@ import android.content.Context
 object LedgerStore {
     const val BURO = "buro_user"
     const val LLC = "llc_user"
+    const val EXP = "experiences_user"
     private const val KEY = "data"
 
     /** Spelled with literal names so the fleet-config guard sees both stores (a name built at runtime cannot be checked). */
     private fun prefs(ctx: Context, store: String) = when (store) {
         BURO -> ctx.getSharedPreferences("buro_user", Context.MODE_PRIVATE)
         LLC -> ctx.getSharedPreferences("llc_user", Context.MODE_PRIVATE)
+        EXP -> ctx.getSharedPreferences("experiences_user", Context.MODE_PRIVATE)
         else -> throw IllegalArgumentException("not a ledger store: $store")
     }
 

@@ -105,7 +105,7 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
                 web.value = this
                 // the scroll bridge must exist BEFORE the first load: a JavaScript interface added later only reaches pages loaded after it
                 com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(this, collapse)
-                if (!saved.isEmpty) restoreState(saved) else loadUrl("file:///android_asset/$url")
+                if (!saved.isEmpty) restoreState(saved) else loadUrl(if (url.startsWith("https://")) url else "file:///android_asset/$url")
             }
         },
         onRelease = { it.stopLoading(); it.destroy() },

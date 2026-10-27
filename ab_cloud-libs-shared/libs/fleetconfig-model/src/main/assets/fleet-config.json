@@ -1087,6 +1087,14 @@
         "ac_cloud-me"
       ]
     },
+    "experiences_user": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Me > Achieves > Experiences user data, one JSON string under 'data': your own done and to-do experiences (accepted suggestions, edits, additions). Moves with the phone and the backup.",
+      "used_by": [
+        "ac_cloud-me"
+      ]
+    },
     "llc_user": {
       "kind": "prefs",
       "class": "config",
