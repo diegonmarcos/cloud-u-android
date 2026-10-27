@@ -55,7 +55,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
-Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bottomnav, lib-chat, lib-core, lib-crash, lib-databackend, lib-datamanager, lib-decisions-link, lib-devtools, lib-firewall, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-light, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-icons, lib-ui-kit, lib-updater, lib-webserver.
+Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-auth, lib-battery, lib-bluetooth, lib-bottomnav, lib-chat, lib-core, lib-crash, lib-databackend, lib-datamanager, lib-decisions-link, lib-devtools, lib-firewall, lib-fleet-endpoints, lib-fleet-endpoints-android, lib-fleetconfig-model, lib-health, lib-kde-connect, lib-launcher-apptabs, lib-launcher-onehand, lib-launcher-zoomies, lib-light, lib-mail, lib-net, lib-ops, lib-search, lib-shared-store, lib-shizuku-adb-debug-tools, lib-sysdns, lib-text-tools, lib-ui-icons, lib-ui-kit, lib-updater, lib-webserver.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -289,7 +289,7 @@ Coverage: 8 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
-Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottomnav, lib-browser, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
+Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bluetooth, lib-bottomnav, lib-browser, lib-core, lib-crash, lib-decisions-link, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars, lib-updater.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -314,6 +314,7 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-bottom
 | `tabs` | prefs | config (keys: active_url→device, defaults_seeded_v1→device) | yes | Browser tab groups/active URL are user state; defaults_seeded_v1 is a migration marker. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
+| `web_bluetooth_grants` | prefs | device | no | #1222 Cloud Browser's Web Bluetooth permission memory: per site origin, the Bluetooth devices (address, name) the user picked in the chooser and the services the page named. Device addresses belong to this phone's radio and pairings, so it never migrates; a private tab keeps its grants in memory only. |
 
 | file | class | doc |
 |---|---|---|

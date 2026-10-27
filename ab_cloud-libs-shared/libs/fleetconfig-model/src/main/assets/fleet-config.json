@@ -1221,6 +1221,14 @@
         "aa_cloud-superapp"
       ]
     },
+    "web_bluetooth_grants": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "#1222 Cloud Browser's Web Bluetooth permission memory: per site origin, the Bluetooth devices (address, name) the user picked in the chooser and the services the page named. Device addresses belong to this phone's radio and pairings, so it never migrates; a private tab keeps its grants in memory only.",
+      "used_by": [
+        "lib-browser"
+      ]
+    },
     "light_prefs": {
       "kind": "prefs",
       "class": "config",
@@ -2436,6 +2444,7 @@
         "lib-appstore",
         "lib-auth",
         "lib-battery",
+        "lib-bluetooth",
         "lib-bottomnav",
         "lib-chat",
         "lib-core",
@@ -2658,6 +2667,7 @@
         "lib-ai",
         "lib-analytics",
         "lib-autofill",
+        "lib-bluetooth",
         "lib-bottomnav",
         "lib-browser",
         "lib-core",
