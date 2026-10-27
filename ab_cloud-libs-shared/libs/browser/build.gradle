@@ -43,6 +43,8 @@ android {
 
 dependencies {
     implementation project(':libs:core')
+    // #1222 navigator.bluetooth for pages: WebBluetoothBridge drives libs:bluetooth's GattSession.
+    implementation project(':libs:bluetooth')
     // #802 the fleet's Compose kit (theme, rows, switches) — the sheet and settings page draw with it.
     implementation project(':libs:ui-kit')
     // #802 "Translate page": the fleet's text-tools contract (a thin binder client; the

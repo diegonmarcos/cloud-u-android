@@ -632,6 +632,14 @@ class BrowserHostFragment : Fragment() {
      * profile data from the Cloud Account SOT. Logins, passwords, codes and cards stay with Cloud Vault
      * through the Android Autofill framework, which this WebView keeps feeding (importantForAutofill).
      */
+    /**
+     * #1222 Web Bluetooth: Android WebView has no navigator.bluetooth, so each page gets a polyfill over a JS bridge to libs:bluetooth,
+     * a native device chooser and per-origin permission memory (WebBluetooth.kt). Android's own Bluetooth permission is asked here.
+     */
+    private val webBluetooth by lazy {
+        WebBluetooth(requireContext()) { perms, done -> permDone = done; permRequest.launch(perms) }
+    }
+
     private val domAutofill by lazy {
         // #900 once the user keeps profiles of their own (Configs > Autocomplete), those fill and this Cloud Account chip steps aside.
         DomAutofill(requireContext(), { browserSettings.bool("profile_fill") != false && !ac.hasLocalProfiles() }, { browserSettings.bool("offer_save_address") != false })
@@ -945,6 +953,7 @@ class BrowserHostFragment : Fragment() {
             }, PasskeySupport.JS_BRIDGE)
             // Tier 2 DOM autofill: the page engine reports focus / submit (keys and ids, never values) over this bridge.
             domAutofill.attach(this)
+            webBluetooth.attach(this, tab.isPrivate)
             ac.attach(this)
             // #802 the Android Autofill Framework (Cloud Vault's service) sees the page's fields.
             importantForAutofill = if (browserSettings.bool("autofill_enabled") == false) View.IMPORTANT_FOR_AUTOFILL_NO
@@ -959,6 +968,7 @@ class BrowserHostFragment : Fragment() {
                     if (readerPending) readerPending = false else { readerOn = false; translator.abandon() }
                     domAutofill.dismiss()
                     ac.dismiss()
+                    view?.let { webBluetooth.onPageStarted(it) }
                     pageHostNow = BrowserSitePolicy.hostOf(startedUrl)
                     // Settings, then this host's shields: a host that was shielded must not leave JS off for the next.
                     view?.let { applySettings(it, startedUrl) }
@@ -2520,6 +2530,7 @@ class BrowserHostFragment : Fragment() {
         webView?.let { wv -> webTabKey?.let { if (isAdded) runCatching { captureTab(wv, it) } } }
         webTabKey = null
         webView?.let {
+            runCatching { webBluetooth.detach(it) }
             runCatching { it.stopLoading() }
             runCatching { it.destroy() }
         }

@@ -19,7 +19,7 @@ import java.io.File
  * Configs ▸ Fleet ▸ Agents.
  *
  *   G1 the baked registry is data/fleet-agents.json, every agent present
- *   G2 Configs: Agents is in the Fleet group, after Peer Control and before About, over two tabs
+ *   G2 Configs: Agents is in the Observability group, after Peer Control and before About, over two tabs
  *   G3 SuperApp agents shows only this app's rows; Fleet agents shows every app's
  *   G4 a tap opens the details with the Open action
  *   G5 empty and error states
@@ -50,7 +50,7 @@ class AgentsPageComposeTest : KitPageHarness() {
         assertTrue(ids.indexOf("kde") < ids.indexOf("agents"))
         assertTrue(ids.indexOf("agents") < ids.indexOf("about"))
         val agents = section.allPages.first { it.id == "agents" }
-        assertEquals("Fleet", agents.group)
+        assertEquals("Observability", agents.group)   // #1221: Observability reads Agents | Diagnostics Logcat About
         assertEquals(listOf("agents-superapp", "agents-fleet"), Sections.tabPagesOf("config", agents).map { it.id })
     }
 

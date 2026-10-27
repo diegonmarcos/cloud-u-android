@@ -1066,6 +1066,8 @@ dependencies {
     implementation project(':libs:battery')
     // libs:light - the Light tool (rules, torch service, LightPanel page), shared with Cloud Calc's Toolkit > Light.
     implementation project(':libs:light')
+    // libs:bluetooth (#1221) - the Bluetooth page (Configs > Fleet > Bluetooth): scan, connect, GATT, decoding, ATT log, Dev tools.
+    implementation project(':libs:bluetooth')
     // libs:datamanager — per-app usage + network DATA providers (feeds the
     // Phone smart folders + Suite/Phone Active Apps). Sibling of libs:battery.
     implementation project(':libs:datamanager')

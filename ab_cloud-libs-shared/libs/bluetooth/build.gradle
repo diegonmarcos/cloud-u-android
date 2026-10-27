@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// libs:bluetooth (#1221): Android Bluetooth as one shared lib. The rules (Uuids, GattCatalog, GattDecoders, BleFilters, BleLog,
+// GattSession, BleController: plain Kotlin over the BleAdapter port) and the Android half (AndroidBleAdapter: the LE scanner, GATT,
+// bonding, classic bonded list; BlePermissions) live here once, with the Compose page (BluetoothPanel: Find, Connect, Interact, Debug,
+// Dev). The known services, characteristics, scan filters and test payloads are DATA (assets/bluetooth/gatt-catalog.json), not code.
+// The SuperApp draws BluetoothPanel in Configs > Fleet > Bluetooth; Cloud Browser's Web Bluetooth polyfill (#1222) drives the same
+// GattSession through libs:browser. The runtime permissions are declared in this lib's manifest, so a host merges them in.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    // The compiler is resolved from each consuming root build (declared `apply false` there).
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.bluetooth'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures { compose = true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    // The nav glyphs and the page's icons come from the one catalog.
+    implementation project(':libs:ui-icons')
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'androidx.core:core-ktx:1.13.1'
+}

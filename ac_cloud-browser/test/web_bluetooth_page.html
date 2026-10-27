@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Web Bluetooth test page</title>
+<!-- #1222 A local page the harness (ble_polyfill_harness.js) loads: a button whose click calls navigator.bluetooth.requestDevice with
+     a heart-rate filter and walks the GATT tree of the fake adapter. Its result is written to window.__result. Obvious fakes only. -->
+<button id="go">Connect strap</button>
+<script>
+  window.__result = { steps: [] };
+  const log = (s) => window.__result.steps.push(s);
+  document.getElementById('go').addEventListener('click', async () => {
+    try {
+      log('availability:' + await navigator.bluetooth.getAvailability());
+      const device = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }], optionalServices: ['battery_service'] });
+      log('device:' + device.name);
+      device.addEventListener('gattserverdisconnected', () => log('disconnected'));
+      const server = await device.gatt.connect();
+      log('connected:' + server.connected);
+      const hr = await server.getPrimaryService('heart_rate');
+      const hrm = await hr.getCharacteristic('heart_rate_measurement');
+      log('props:notify=' + hrm.properties.notify + ',read=' + hrm.properties.read);
+      hrm.addEventListener('characteristicvaluechanged', (e) => log('bpm:' + e.target.value.getUint8(1)));
+      await hrm.startNotifications();
+      const batt = await (await server.getPrimaryService('battery_service')).getCharacteristic('battery_level');
+      log('battery:' + (await batt.readValue()).getUint8(0));
+      await (await server.getPrimaryService('battery_service')).getCharacteristic(0x2a19).then(() => log('numeric-uuid-ok'));
+      try { await server.getPrimaryService('device_information'); } catch (e) { log('blocked:' + e.name); }
+      window.__result.device = device;
+      window.__result.hrm = hrm;
+    } catch (e) { log('error:' + e.name + ':' + e.message); }
+    window.__result.done = true;
+  });
+</script>

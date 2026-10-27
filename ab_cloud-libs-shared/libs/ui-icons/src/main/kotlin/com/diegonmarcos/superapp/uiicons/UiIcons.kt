@@ -287,6 +287,10 @@ public object UiIcons {
         "flashlight_on" to Icons.Outlined.FlashlightOn,
         "keyboard_voice" to Icons.Outlined.KeyboardVoice,
         "sensors" to Icons.Outlined.Sensors,
+        // #1221 Configs > Fleet > Bluetooth and its five tabs (Find, Connect, Interact use the next three; Debug and Dev draw ic_p_logs / ic_code).
+        "ic_bluetooth" to Icons.Outlined.Bluetooth,
+        "bluetooth_find" to Icons.Outlined.BluetoothSearching,
+        "bluetooth_connected" to Icons.Outlined.BluetoothConnected,
         )
     }
 

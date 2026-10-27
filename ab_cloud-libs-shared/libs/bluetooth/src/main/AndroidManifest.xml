@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- #1221 Bluetooth. API 31+: BLUETOOTH_SCAN (never used to derive a location) and BLUETOOTH_CONNECT are runtime permissions the
+         page asks for. API 26-30: the legacy pair is install-time and scanning needs location, so that is declared up to 30 only. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+    <!-- Bluetooth is optional hardware: a host stays installable on a device without it. -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+</manifest>

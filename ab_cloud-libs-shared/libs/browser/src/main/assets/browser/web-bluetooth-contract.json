@@ -1,0 +1,37 @@
+{
+  "_doc": "#1222 THE wire contract of Web Bluetooth in Cloud Browser, declared once. web_bluetooth.js (the page polyfill) and WebBluetoothCore.kt (the native side) are both held to it: the node harness (test-browser-web-bluetooth.sh) checks every message the polyfill sends against `ops` and every reply it accepts against `result`; WebBluetoothCoreTest checks every reply the core builds. A type is: uuid (lower-case 128-bit string), uuid[], string, hex (even-length hex, no separators), bool, device (opaque per-origin id), filters (array of {services:uuid[], name, namePrefix}), props (the nine BluetoothCharacteristicProperties booleans); a trailing ? marks an optional field.",
+  "version": 1,
+  "transport": {
+    "js_to_native": "AndroidWebBluetooth.post(json): one JSON text per call",
+    "native_to_js": "window.__cloudBle.recv(json): one JSON text per call, a reply or an event"
+  },
+  "request": { "fields": ["v", "id", "op", "args", "gesture?"] },
+  "reply": { "ok": ["v", "id", "ok", "result"], "error": ["v", "id", "ok", "error"], "error_fields": ["name", "message"] },
+  "errors": ["NotFoundError", "NotAllowedError", "SecurityError", "NetworkError", "NotSupportedError", "InvalidStateError", "TypeError"],
+  "ops": {
+    "getAvailability": { "args": {}, "result": { "available": "bool" } },
+    "getDevices": { "args": {}, "result": { "devices": "device-info[]" } },
+    "requestDevice": {
+      "gesture": true,
+      "args": { "filters?": "filters", "acceptAllDevices?": "bool", "optionalServices": "uuid[]" },
+      "result": { "device": "device-info" }
+    },
+    "forget": { "args": { "device": "device" }, "result": {} },
+    "gattConnect": { "args": { "device": "device" }, "result": {} },
+    "gattDisconnect": { "args": { "device": "device" }, "result": {} },
+    "getPrimaryServices": { "args": { "device": "device", "service?": "uuid" }, "result": { "services": "uuid[]" } },
+    "getCharacteristics": { "args": { "device": "device", "service": "uuid", "characteristic?": "uuid" }, "result": { "characteristics": "characteristic-info[]" } },
+    "readValue": { "args": { "device": "device", "service": "uuid", "characteristic": "uuid" }, "result": { "value": "hex" } },
+    "writeValue": { "args": { "device": "device", "service": "uuid", "characteristic": "uuid", "value": "hex", "response": "auto|with|without" }, "result": {} },
+    "startNotifications": { "args": { "device": "device", "service": "uuid", "characteristic": "uuid" }, "result": {} },
+    "stopNotifications": { "args": { "device": "device", "service": "uuid", "characteristic": "uuid" }, "result": {} }
+  },
+  "shapes": {
+    "device-info": { "id": "device", "name?": "string" },
+    "characteristic-info": { "uuid": "uuid", "properties": "props" }
+  },
+  "events": {
+    "gattserverdisconnected": { "device": "device" },
+    "characteristicvaluechanged": { "device": "device", "service": "uuid", "characteristic": "uuid", "value": "hex" }
+  }
+}

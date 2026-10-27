@@ -48,6 +48,7 @@
       "depends_on": [
         "libs:core",
         "libs:browser",
+        "libs:bluetooth",
         "libs:autofill",
         "libs:updater",
         "libs:text-tools",
@@ -133,6 +134,14 @@
     "libs:bottomnav": {
       "_doc_dir": "#868 the fleet's bottom island + NavDecl, shared BY REFERENCE: MainActivity's island carries Browser | Search | Configs. The web tabs, the address bar and every overlay stay libs:browser's own UI.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav"
+    },
+    "libs:bluetooth": {
+      "dir": "../ab_cloud-libs-shared/libs/bluetooth",
+      "type": "library",
+      "depends_on": [
+        "libs:ui-icons"
+      ],
+      "_doc": "#1222 the Bluetooth stack behind the Web Bluetooth polyfill (navigator.bluetooth): libs:browser's WebBluetoothBridge drives its GattSession, shared BY REFERENCE with the SuperApp's Configs > Fleet > Bluetooth page (#1221)."
     },
     "libs:ui-icons": {
       "dir": "../ab_cloud-libs-shared/libs/ui-icons",

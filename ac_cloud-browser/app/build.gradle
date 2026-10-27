@@ -351,6 +351,8 @@ dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
     implementation project(':libs:browser')
+    // #1222 the Bluetooth stack the Web Bluetooth polyfill drives (the app's tests run the bridge over a fake adapter).
+    implementation project(':libs:bluetooth')
     // Tier 2 DOM autofill: the Cloud Account SOT contract libs:browser reads (its types are in DomAutofill's API).
     implementation project(':libs:autofill')
     implementation project(':libs:updater')

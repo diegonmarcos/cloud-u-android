@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tester: Configs ▸ Fleet ▸ Agents — every agent the fleet runs, in one page with two tabs.
 #
-#   A1 Configs reads Launcher, Apps, Setup; Apps = C3 · Peer Control · Agents; Agents comes
+#   A1 Configs reads Setup, Fleet, Observability; Fleet = Bluetooth · C3 Fleet Control · Peer Control; Agents (Observability) comes
 #      before About in the grid (Observability = Diagnostics, Logcat, About)
 #   A2 Agents is a page over exactly two tabs, SuperApp agents then Fleet agents, both hidden
 #      pages of their own (reached through the strip), and the nav rule holds (2..8 tabs)
@@ -48,15 +48,15 @@ for p in vis:
 probs = []
 if groups != ['Setup', 'Fleet', 'Observability']: probs.append('groups = %r' % groups)
 apps = [p['label'] for p in vis if p.get('group') == 'Fleet']
-if apps != ['C3', 'Peer Control', 'Agents']: probs.append('Fleet = %r' % apps)
+if apps != ['Bluetooth', 'C3 Fleet Control', 'Peer Control']: probs.append('Fleet = %r' % apps)  # #1221: Agents moved to Observability
 ids = [p['id'] for p in vis]
 if 'agents' not in ids or 'about' not in ids or ids.index('agents') > ids.index('about'):
     probs.append('Agents is not before About: %r' % ids)
 obs = [p['label'] for p in vis if p.get('group') == 'Observability']
-if obs != ['Diagnostics', 'Logcat', 'About']: probs.append('Observability = %r' % obs)
+if obs != ['Agents', 'Diagnostics', 'Logcat', 'About']: probs.append('Observability = %r' % obs)
 print('; '.join(probs) or 'OK')
 PY
-)" "Configs = Setup, Fleet[C3, Peer Control, Agents], Observability; Agents before About; Observability = Diagnostics + Logcat + About"
+)" "Configs = Setup, Fleet[Bluetooth, C3 Fleet Control, Peer Control], Observability[Agents, Diagnostics, Logcat, About]; Agents before About"
 
 echo "== A2: Agents is a strip over SuperApp agents | Fleet agents =="
 check "$(python3 - "$BJ" <<'PY'

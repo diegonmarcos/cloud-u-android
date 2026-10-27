@@ -1,0 +1,380 @@
+{
+ "_doc": "#1221 THE declared Bluetooth vocabulary of libs:bluetooth: services, characteristics and descriptors by UUID (16-bit short form or full 128-bit), the decoder that turns a characteristic's bytes into a value (GattDecoders: battery_level, heart_rate, sensor_location, temperature_measurement, temperature_c, humidity, pressure, csc, utf8, uint, cccd), the scan filter presets and the Dev tab's test payloads. `alias` is the Web Bluetooth name (navigator.bluetooth requestDevice filters services:['heart_rate']). Adding a device family is a row here, no Kotlin.",
+ "categories": [
+  {
+   "id": "core",
+   "label": "Core"
+  },
+  {
+   "id": "info",
+   "label": "Device info"
+  },
+  {
+   "id": "battery",
+   "label": "Battery"
+  },
+  {
+   "id": "hrm",
+   "label": "Heart rate"
+  },
+  {
+   "id": "env",
+   "label": "Environment"
+  },
+  {
+   "id": "cycling",
+   "label": "Cycling and motion"
+  },
+  {
+   "id": "health",
+   "label": "Health"
+  },
+  {
+   "id": "ring",
+   "label": "Smart ring"
+  },
+  {
+   "id": "dfu",
+   "label": "Firmware update"
+  },
+  {
+   "id": "uart",
+   "label": "UART"
+  }
+ ],
+ "services": [
+  {
+   "uuid": "1800",
+   "name": "Generic Access",
+   "alias": "generic_access",
+   "category": "core"
+  },
+  {
+   "uuid": "1801",
+   "name": "Generic Attribute",
+   "alias": "generic_attribute",
+   "category": "core"
+  },
+  {
+   "uuid": "180a",
+   "name": "Device Information",
+   "alias": "device_information",
+   "category": "info"
+  },
+  {
+   "uuid": "180f",
+   "name": "Battery",
+   "alias": "battery_service",
+   "category": "battery"
+  },
+  {
+   "uuid": "180d",
+   "name": "Heart Rate",
+   "alias": "heart_rate",
+   "category": "hrm"
+  },
+  {
+   "uuid": "1809",
+   "name": "Health Thermometer",
+   "alias": "health_thermometer",
+   "category": "env"
+  },
+  {
+   "uuid": "181a",
+   "name": "Environmental Sensing",
+   "alias": "environmental_sensing",
+   "category": "env"
+  },
+  {
+   "uuid": "1816",
+   "name": "Cycling Speed and Cadence",
+   "alias": "cycling_speed_and_cadence",
+   "category": "cycling"
+  },
+  {
+   "uuid": "1814",
+   "name": "Running Speed and Cadence",
+   "alias": "running_speed_and_cadence",
+   "category": "cycling"
+  },
+  {
+   "uuid": "181d",
+   "name": "Weight Scale",
+   "alias": "weight_scale",
+   "category": "health"
+  },
+  {
+   "uuid": "1810",
+   "name": "Blood Pressure",
+   "alias": "blood_pressure",
+   "category": "health"
+  },
+  {
+   "uuid": "1822",
+   "name": "Pulse Oximeter",
+   "alias": "pulse_oximeter",
+   "category": "health"
+  },
+  {
+   "uuid": "1802",
+   "name": "Immediate Alert",
+   "alias": "immediate_alert",
+   "category": "core"
+  },
+  {
+   "uuid": "1812",
+   "name": "Human Interface Device",
+   "alias": "human_interface_device",
+   "category": "core"
+  },
+  {
+   "uuid": "4cdabaa0-2cea-c0c1-b38d-a0481ae60a97",
+   "name": "Vendor ring pipe (PEAQ / OPlayer)",
+   "category": "ring"
+  },
+  {
+   "uuid": "fee7",
+   "name": "Wearable vendor (Tencent / Colmi)",
+   "category": "ring"
+  },
+  {
+   "uuid": "fee0",
+   "name": "Wearable vendor (Huami / Xiaomi)",
+   "category": "ring"
+  },
+  {
+   "uuid": "fe59",
+   "name": "Nordic Secure DFU",
+   "category": "dfu"
+  },
+  {
+   "uuid": "6e400001-b5a3-f393-e0a9-e50e24dcca9e",
+   "name": "Nordic UART Service",
+   "category": "uart"
+  }
+ ],
+ "characteristics": [
+  {
+   "uuid": "2a00",
+   "name": "Device Name",
+   "alias": "gap.device_name",
+   "decoder": "utf8"
+  },
+  {
+   "uuid": "2a01",
+   "name": "Appearance",
+   "alias": "gap.appearance",
+   "decoder": "uint"
+  },
+  {
+   "uuid": "2a19",
+   "name": "Battery Level",
+   "alias": "battery_level",
+   "decoder": "battery_level",
+   "unit": "%"
+  },
+  {
+   "uuid": "2a37",
+   "name": "Heart Rate Measurement",
+   "alias": "heart_rate_measurement",
+   "decoder": "heart_rate",
+   "unit": "bpm"
+  },
+  {
+   "uuid": "2a38",
+   "name": "Body Sensor Location",
+   "alias": "body_sensor_location",
+   "decoder": "sensor_location"
+  },
+  {
+   "uuid": "2a39",
+   "name": "Heart Rate Control Point",
+   "alias": "heart_rate_control_point"
+  },
+  {
+   "uuid": "2a1c",
+   "name": "Temperature Measurement",
+   "alias": "temperature_measurement",
+   "decoder": "temperature_measurement"
+  },
+  {
+   "uuid": "2a6e",
+   "name": "Temperature",
+   "alias": "temperature",
+   "decoder": "temperature_c",
+   "unit": "C"
+  },
+  {
+   "uuid": "2a6f",
+   "name": "Humidity",
+   "alias": "humidity",
+   "decoder": "humidity",
+   "unit": "%"
+  },
+  {
+   "uuid": "2a6d",
+   "name": "Pressure",
+   "alias": "pressure",
+   "decoder": "pressure",
+   "unit": "hPa"
+  },
+  {
+   "uuid": "2a5b",
+   "name": "CSC Measurement",
+   "alias": "csc_measurement",
+   "decoder": "csc"
+  },
+  {
+   "uuid": "2a29",
+   "name": "Manufacturer Name String",
+   "alias": "manufacturer_name_string",
+   "decoder": "utf8"
+  },
+  {
+   "uuid": "2a24",
+   "name": "Model Number String",
+   "alias": "model_number_string",
+   "decoder": "utf8"
+  },
+  {
+   "uuid": "2a25",
+   "name": "Serial Number String",
+   "alias": "serial_number_string",
+   "decoder": "utf8"
+  },
+  {
+   "uuid": "2a26",
+   "name": "Firmware Revision String",
+   "alias": "firmware_revision_string",
+   "decoder": "utf8"
+  },
+  {
+   "uuid": "2a27",
+   "name": "Hardware Revision String",
+   "alias": "hardware_revision_string",
+   "decoder": "utf8"
+  },
+  {
+   "uuid": "2a28",
+   "name": "Software Revision String",
+   "alias": "software_revision_string",
+   "decoder": "utf8"
+  },
+  {
+   "uuid": "4cdabaa1-2cea-c0c1-b38d-a0481ae60a97",
+   "name": "Vendor Command (TX)"
+  },
+  {
+   "uuid": "4cdabaa2-2cea-c0c1-b38d-a0481ae60a97",
+   "name": "Vendor Telemetry (RX)"
+  },
+  {
+   "uuid": "6e400002-b5a3-f393-e0a9-e50e24dcca9e",
+   "name": "NUS RX (write)"
+  },
+  {
+   "uuid": "6e400003-b5a3-f393-e0a9-e50e24dcca9e",
+   "name": "NUS TX (notify)"
+  }
+ ],
+ "descriptors": [
+  {
+   "uuid": "2900",
+   "name": "Characteristic Extended Properties"
+  },
+  {
+   "uuid": "2901",
+   "name": "Characteristic User Description",
+   "decoder": "utf8"
+  },
+  {
+   "uuid": "2902",
+   "name": "Client Characteristic Configuration",
+   "decoder": "cccd"
+  },
+  {
+   "uuid": "2904",
+   "name": "Characteristic Presentation Format"
+  }
+ ],
+ "filters": [
+  {
+   "id": "all",
+   "label": "All devices"
+  },
+  {
+   "id": "ring",
+   "label": "Smart rings (PSR, Colmi, ...)",
+   "namePrefixes": [
+    "PSR",
+    "Ring",
+    "R0"
+   ]
+  },
+  {
+   "id": "hrm",
+   "label": "Heart rate straps (0x180D)",
+   "services": [
+    "180d"
+   ],
+   "namePrefixes": [
+    "Polar",
+    "Garmin"
+   ]
+  },
+  {
+   "id": "env",
+   "label": "Thermometers and weather (0x181A, 0x1809)",
+   "services": [
+    "181a",
+    "1809"
+   ]
+  },
+  {
+   "id": "cycling",
+   "label": "Cycling speed and cadence (0x1816)",
+   "services": [
+    "1816"
+   ]
+  },
+  {
+   "id": "uart",
+   "label": "Nordic UART",
+   "services": [
+    "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
+   ]
+  }
+ ],
+ "probes": [
+  {
+   "label": "Ring: start continuous HR",
+   "hex": "AB 00 04 31 01 00 00",
+   "note": "turns the optical LEDs on"
+  },
+  {
+   "label": "Ring: stop continuous HR",
+   "hex": "AB 00 04 31 00 00 00",
+   "note": "turns the optical sensor off"
+  },
+  {
+   "label": "Ring: query activity summary",
+   "hex": "AB 00 04 21 00 00 00",
+   "note": "steps and sleep"
+  },
+  {
+   "label": "Nordic UART: AT",
+   "hex": "41 54 0D 0A",
+   "note": "modem check, ASCII AT CR LF"
+  },
+  {
+   "label": "Colmi R02: trigger HR",
+   "hex": "03 01 FF",
+   "note": "budget ring command"
+  },
+  {
+   "label": "Minimal ping",
+   "hex": "01",
+   "note": "one-byte alive poke"
+  }
+ ]
+}

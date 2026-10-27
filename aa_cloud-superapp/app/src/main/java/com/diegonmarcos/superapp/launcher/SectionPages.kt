@@ -97,6 +97,10 @@ object SectionPages {
             com.diegonmarcos.superapp.agents.AgentsFragment.newInstance(com.diegonmarcos.superapp.agents.AgentsFragment.SCOPE_SUPERAPP)
         sectionId == "config" && pageId == "agents-fleet"    ->
             com.diegonmarcos.superapp.agents.AgentsFragment.newInstance(com.diegonmarcos.superapp.agents.AgentsFragment.SCOPE_FLEET)
+        // Configs ▸ Fleet ▸ Bluetooth (#1221): the `bluetooth` page declares `tabs`, so the strip branch at the top answered it;
+        // these are its five tabs, one fragment over libs:bluetooth's page and the one shared stack.
+        sectionId == "config" && pageId.startsWith("bluetooth-") ->
+            com.diegonmarcos.superapp.bluetooth.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.of(pageId.removePrefix("bluetooth-")))
         // Store's two tabs (#563). The `store` page itself declares `tabs`, so
         // the strip branch at the top already answered it.
         // #865 each Store page is wrapped: once Cloud Store is installed it shows
