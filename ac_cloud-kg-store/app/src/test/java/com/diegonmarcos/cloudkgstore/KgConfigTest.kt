@@ -50,7 +50,7 @@ class KgConfigTest {
         val ids = ArrayList<String>()
         for (s in ui.arr("sections") { it }) {
             ids += s.getString("id")
-            for (p in s.arr("pages") { it }) { ids += p.getString("id"); assertTrue("page ${p.getString("id")} has an icon", p.getString("icon").isNotBlank()) }
+            for (p in (s.optJSONArray("pages") ?: org.json.JSONArray()).let { a -> (0 until a.length()).map { a.getJSONObject(it) } }) { ids += p.getString("id"); assertTrue("page ${p.getString("id")} has an icon", p.getString("icon").isNotBlank()) }
         }
         assertEquals("section and page ids are unique", ids.size, ids.toSet().size)
     }
