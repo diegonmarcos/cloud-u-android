@@ -63,7 +63,7 @@ if got != want: bad.append("B1 the Cloud groups are not Application and Repo wit
 if [p["label"] for p in sections.get("web", {"pages": []})["pages"]] != ["News", "Media", "Shopping", "Real Estate", "Jobs", "Business"]: bad.append("B1 the Web pages are not News, Media, Shopping, Real Estate, Jobs, Business")
 if [p["label"] for p in sections.get("phone", {"pages": []})["pages"]] != ["Apps"]: bad.append("B1 the Phone section is not the Apps index")
 for s in bj["ui"]["sections"]:
-    for p in s["pages"]:
+    for p in s.get("pages", []):
         if not p.get("icon"): bad.append("B1 page %r has no icon (the second row draws one per tab)" % p["id"])
 
 # B2
