@@ -80,7 +80,7 @@
   },
   "ask": {
     "_doc": "The assistant behind the AI icon (libs:ai over the fleet agent gateway): `system` rides every request and is never stored; `suggestions` fill the box under the greeting; `mcps` are the gateway MCP servers switched on for this chat (the fleet's public knowledge graph).",
-    "page": "ask_chat",
+    "page": "ask",
     "system": "You are the assistant of Cloud KG Store, the fleet's knowledge-graph store. You help the owner search the fleet's code graph (Cloud-CGC and Me-CGC), the fleet's apps and binaries, the installed Android apps and the web sources of Cloud Search (news, media, shopping, real estate, jobs, business). Answer from what the tools return; when a tool returns nothing or is not reachable, say so plainly instead of guessing.",
     "suggestions": [
       "Which fleet app handles the debug API ports?",

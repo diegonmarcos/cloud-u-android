@@ -355,15 +355,7 @@
       {
         "id": "ask",
         "label": "Ask",
-        "icon": "assistant",
-        "pages": [
-          {
-            "id": "ask_chat",
-            "label": "Ask",
-            "icon": "assistant",
-            "pages": []
-          }
-        ]
+        "icon": "assistant"
       },
       {
         "id": "settings",

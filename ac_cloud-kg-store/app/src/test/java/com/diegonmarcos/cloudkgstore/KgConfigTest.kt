@@ -113,8 +113,7 @@ class KgConfigTest {
     }
 
     @Test fun theAssistantIsDeclaredData() {
-        assertEquals("ask_chat", kg.ask.page)
-        assertTrue(pageIds("ask").contains(kg.ask.page))
+        assertEquals("ask", kg.ask.page)
         assertTrue(kg.ask.suggestions.size >= 3)
         assertTrue(kg.ask.system.isNotBlank())
     }
