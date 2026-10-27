@@ -85,9 +85,9 @@ print(','.join(p['id'] for p in pages if p.get('tabs')))
 # Agents (Configs ▸ Fleet ▸ Agents: SuperApp agents | Fleet agents) and Apps Mesh (Apps | IPC |
 # Identity) have checks of their own: test-configs-agents-page.sh A2, test-ipc-mesh-page.sh R1 and
 # test-fleet-shared-uid.sh U4.
-[ "$OWNERS" = "controls,agents,panels" ] \
-  && ok "the Configs tab strips are Controls (Presets | Panels), Panels (UI | Tools) and Agents, checked by this tester, test-configs-agents-page.sh (Apps Mesh, IPC and Identity are Cloud Store > Access now: no strip here) (Store opens Cloud Store since #865)" \
-  || bad "Configs tab strips are [$OWNERS], expected controls,agents,panels - a new one must bring a check of its own"
+[ "$OWNERS" = "controls,bluetooth,agents,panels" ] \
+  && ok "the Configs tab strips are Controls (Presets | Panels), Panels (UI | Tools), Bluetooth (Find | Connect | Interact | Debug | Dev; test-bluetooth-page.sh B1) and Agents, checked by this tester, test-configs-agents-page.sh (Apps Mesh, IPC and Identity are Cloud Store > Access now: no strip here) (Store opens Cloud Store since #865)" \
+  || bad "Configs tab strips are [$OWNERS], expected controls,bluetooth,agents,panels - a new one must bring a check of its own"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'
