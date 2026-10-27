@@ -1,16 +1,13 @@
 package com.diegonmarcos.superapp.browser
 
-import android.app.AlertDialog
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
-import android.widget.ArrayAdapter
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.diegonmarcos.superapp.bluetooth.BlePermissions
-import com.diegonmarcos.superapp.bluetooth.BleDevice
 import com.diegonmarcos.superapp.bluetooth.BluetoothHub
 import com.diegonmarcos.superapp.bluetooth.GattCatalog
 import org.json.JSONObject
@@ -42,7 +39,7 @@ class WebBluetooth(private val ctx: Context, private val requestPermissions: (Ar
     /** Call once per WebView, before it loads anything. A private tab's grants live in memory and end with the tab. */
     fun attach(w: WebView, privateTab: Boolean) {
         val grants = if (privateTab) WebBleGrants(MemoryKv()) else prefsGrants
-        val core = WebBluetoothCore(BluetoothHub.session(ctx), catalog, grants, DialogChooser(w), permissions) { json -> deliver(w, json) }
+        val core = WebBluetoothCore(BluetoothHub.session(ctx), catalog, grants, ComposeChooser(w), permissions) { json -> deliver(w, json) }
         cores[w] = core
         w.addJavascriptInterface(Bridge(w, core), JS_BRIDGE)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
@@ -72,37 +69,6 @@ class WebBluetooth(private val ctx: Context, private val requestPermissions: (Ar
         fun post(json: String?) {
             val text = json ?: return
             main.post { core.handle(WebBluetoothCore.originOf(w.url), text) }
-        }
-    }
-
-    /** The native device chooser: a list that fills while the scan runs. Exactly one of pick / cancel. */
-    private class DialogChooser(private val w: WebView) : WebBleChooser {
-        private val main = Handler(Looper.getMainLooper())
-
-        override fun show(request: ChooserRequest, onPick: (BleDevice) -> Unit, onCancel: () -> Unit) {
-            main.post {
-                val items = ArrayList<String>()
-                val adapter = ArrayAdapter(w.context, android.R.layout.simple_list_item_1, items)
-                var shown: List<BleDevice> = emptyList()
-                var done = false
-                val host = request.origin.substringAfter("://")
-                val dialog = AlertDialog.Builder(w.context)
-                    .setTitle("$host wants to connect to a Bluetooth device")
-                    .setAdapter(adapter) { _, which -> shown.getOrNull(which)?.let { done = true; onPick(it) } }
-                    .setNegativeButton("Cancel") { _, _ -> }
-                    .setOnDismissListener { if (!done) { done = true; onCancel() } }
-                    .create()
-                request.onUpdate = {
-                    main.post {
-                        shown = request.devices
-                        items.clear()
-                        shown.forEach { items.add("${it.label}  (${it.rssi} dBm)\n${it.address}") }
-                        adapter.notifyDataSetChanged()
-                        dialog.setTitle(if (shown.isEmpty()) "$host: scanning..." else "$host wants to connect to a Bluetooth device")
-                    }
-                }
-                runCatching { dialog.show() }.onFailure { if (!done) { done = true; onCancel() } }
-            }
         }
     }
 

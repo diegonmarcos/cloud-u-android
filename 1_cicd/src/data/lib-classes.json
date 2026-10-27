@@ -25,6 +25,7 @@
     "theme-background": { "class": "gui", "why": "#1154 shared navigation + theme: the page background and colour roles." },
     "ui-icons": { "class": "gui", "why": "#1160 shared navigation icon catalog: name to ImageVector for every nav bar." },
     "light": { "class": "gui", "why": "#1155 the Light tool shared by reference: the LightPanel page the SuperApp and Cloud Calc's Toolkit both render, over one engine and torch service." },
+    "bluetooth": { "class": "gui", "why": "#1221 Android Bluetooth shared by reference: the five-tab Bluetooth page (Find, Connect, Interact, Debug, Dev) the SuperApp renders in Configs > Fleet, over one GATT stack that Cloud Browser's Web Bluetooth bridge (#1222) also drives." },
     "browser":                 { "class": "gui",      "why": "cloud-browser's feature module (activity + web views)." },
     "cal":                     { "class": "engine",   "why": "Cloud-Lib-Cal; cloud-me binds it (IDataBackend)." },
     "calc":                    { "class": "engine",   "why": "#767 Cloud-Lib-Calc: libqalculate as a pinned libqalc.so behind CalcBackendService; cloud-calc binds it." },
