@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.diegonmarcos.cloudcalc.ConvertSearch
 import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.Logic
 import com.diegonmarcos.cloudcalc.engine.CalcApi
@@ -72,6 +73,18 @@ class CalcState(private val prefs: SharedPreferences?, private val now: () -> Lo
     fun clearHistory() {
         history.clear()
         prefs?.edit()?.remove(KEY)?.apply()
+    }
+
+    /** A Convert search hit being opened: the converter takes [category] and [unit] (a unit, or a food id) once, then clears it. */
+    data class Jump(val modeId: String, val category: String, val unit: String)
+    var jump by mutableStateOf<Jump?>(null)
+
+    /** Open the converter a search hit names, on its category and unit. */
+    fun open(e: ConvertSearch.Entry) {
+        val m = Declarations.mode(e.modeId) ?: return
+        modeByTab[m.tab] = m.id
+        tab = m.tab
+        jump = Jump(e.modeId, e.category, e.unit)
     }
 
     /** Show [modeId] and hand it [text]: an expression mode, else the first one declared. */

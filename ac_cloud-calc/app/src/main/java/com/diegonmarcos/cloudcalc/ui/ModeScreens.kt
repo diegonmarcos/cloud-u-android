@@ -90,6 +90,7 @@ fun ModeScreen(mode: Declarations.Mode) {
             "catalog" -> CatalogMode(mode)
             "converter" -> ConverterMode(mode)
             "data_converter" -> DataConverterMode(mode)
+            "nutrition" -> NutritionMode(mode)
             "form" -> FormMode(mode)
             "plot" -> PlotMode(mode)
             "meter" -> MeterMode(mode)
@@ -307,6 +308,12 @@ private fun ConverterMode(mode: Declarations.Mode) {
     /** The stamp the rates carry; the matrix recomputes when it moves. */
     var ratesTime by remember(mode.id) { mutableStateOf(0L) }
 
+    LaunchedEffect(state.jump) {
+        val j = state.jump?.takeIf { it.modeId == mode.id } ?: return@LaunchedEffect
+        if (j.category in mode.categories) category = j.category
+        if (j.unit.isNotBlank()) from = j.unit
+        state.jump = null
+    }
     LaunchedEffect(category) {
         units = Logic.items(io { api.items("unit", category, 1000) })
         val names = units.map { it.name }

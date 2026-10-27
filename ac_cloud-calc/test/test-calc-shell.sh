@@ -539,7 +539,7 @@ mutate bottom-nav-orphan build.json 's.replace("\"bottom_nav\": [\"calculator\",
 mutate bottom-nav-six build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"toolkit\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"toolkit\", \"a\"]")' "C1 ui.bottom_nav must hold one to five"
 mutate default-off-bar build.json 's.replace("\"default_section\": \"calculator\"", "\"default_section\": \"history\"")' "C1 ui.default_section"
 mutate section-icon build.json 's.replace("\"icon\": \"speed\"", "\"icon\": \"spd\"")' "C3 tab measure icon"
-mutate jev-tool-no-mode build.json 's.replace("\"mode\": \"units\"", "\"mode\": \"unitz\"")' "C11 jev tool units names mode unitz"
+mutate jev-tool-no-mode build.json 's.replace("\"mode\": \"unit_length\"", "\"mode\": \"unitz\"")' "C11 jev tool units names mode unitz"
 mutate jev-tool-no-form build.json 's.replace("\"form\": \"dbsum\"", "\"form\": \"dbsun\"")' "names form dbsun"
 mutate jev-fallback-mode build.json 's.replace("\"fallback_mode\": \"standard\"", "\"fallback_mode\": \"basic\"")' "C11 jev route.fallback_mode basic"
 mutate jev-ask-key build.json 's.replace("\"acoustics\": [", "\"acoustix\": [")' "C11 jev ask.acoustix"

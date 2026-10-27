@@ -314,7 +314,7 @@
         "units": {
           "criterion": "Convert a quantity between units: length, mass, volume, temperature, speed, energy, pressure, data size or other physical units.",
           "action": "expression",
-          "mode": "units"
+          "mode": "unit_length"
         },
         "currency": {
           "criterion": "Convert an amount of money between currencies.",
@@ -511,7 +511,207 @@
           "instructions": "`result`, from `calculation`, is a reasonable amount for its purpose (a tip, a discount, a loan payment) in most countries."
         }
       ],
-      "units": [
+      "unit_length": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_area": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_volume": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_mass": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_temperature": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_speed": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_pressure": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_energy": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_power": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_time": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_data": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_angle": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_frequency": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_force": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_acceleration": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_density": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_fuel": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_cooking": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_current": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_potential": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_resistance": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_charge": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_capacitance": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_illuminance": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_radioactivity": [
+        {
+          "id": "normal_range",
+          "label": "Normal range?",
+          "type": "noul",
+          "instructions": "`result` is within the normal everyday range for the quantity converted in `calculation`."
+        }
+      ],
+      "unit_typography": [
         {
           "id": "normal_range",
           "label": "Normal range?",
@@ -1982,48 +2182,725 @@
         ]
       },
       {
-        "id": "units",
-        "label": "Units",
+        "id": "unit_length",
+        "label": "Length",
         "icon": "straighten",
-        "short": "Units",
+        "short": "Length",
         "tab": "convert",
         "kind": "converter",
         "options": {
           "approx": 2,
           "mixed_units": false
         },
-        "_doc": "Unit categories are libqalculate's own category titles (units.xml); the units in each come from the engine at run time (items unit <category>), so ~600 units appear with no list here.",
         "categories": [
+          "Length"
+        ],
+        "search": [
           "Length",
-          "Area",
-          "Volume",
-          "Mass",
-          "Time",
-          "Speed",
-          "Acceleration",
-          "Force",
-          "Pressure",
-          "Energy",
-          "Power",
-          "Temperature",
-          "Angle",
-          "Frequency",
-          "Information",
-          "Fuel Economy",
-          "Cooking",
-          "Density",
-          "Electric Current",
-          "Electric Potential",
-          "Electric Resistance",
-          "Electric Charge",
-          "Capacitance",
-          "Illuminance",
-          "Radioactivity",
-          "Typography"
+          "metre|m",
+          "meter|m",
+          "kilometre|km",
+          "kilometer|km",
+          "centimetre|cm",
+          "millimetre|mm",
+          "mile|mi",
+          "yard|yd",
+          "foot|ft",
+          "feet|ft",
+          "inch|in",
+          "nautical mile",
+          "light year",
+          "distance",
+          "height"
         ],
         "default": {
           "value": "1",
           "category": "Length"
+        },
+        "_doc": "One Convert mode per quantity type (#1213); the mode's category is libqalculate's own category title (units.xml) and its units come from the engine at run time (items unit <category>), so ~600 units appear with no list here. `search` is what the Convert search box finds besides the label: \"term\" or \"term|engine unit\" (the unit the converter opens on)."
+      },
+      {
+        "id": "unit_area",
+        "label": "Area",
+        "icon": "apps",
+        "short": "Area",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Area"
+        ],
+        "search": [
+          "Area",
+          "square metre",
+          "square meter",
+          "square foot",
+          "square mile",
+          "hectare",
+          "acre",
+          "sq ft"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Area"
+        }
+      },
+      {
+        "id": "unit_volume",
+        "label": "Volume",
+        "icon": "science",
+        "short": "Volume",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Volume"
+        ],
+        "search": [
+          "Volume",
+          "litre|L",
+          "liter|L",
+          "millilitre|mL",
+          "gallon|gal",
+          "quart",
+          "pint",
+          "fluid ounce",
+          "cubic metre",
+          "capacity"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Volume"
+        }
+      },
+      {
+        "id": "unit_mass",
+        "label": "Mass",
+        "icon": "build",
+        "short": "Mass",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Mass"
+        ],
+        "search": [
+          "Mass",
+          "kilogram|kg",
+          "gram|g",
+          "milligram|mg",
+          "pound|lb",
+          "ounce|oz",
+          "tonne",
+          "stone",
+          "weight"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Mass"
+        }
+      },
+      {
+        "id": "unit_temperature",
+        "label": "Temperature",
+        "icon": "bolt",
+        "short": "Temperature",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Temperature"
+        ],
+        "search": [
+          "Temperature",
+          "celsius",
+          "fahrenheit",
+          "kelvin",
+          "degrees"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Temperature"
+        }
+      },
+      {
+        "id": "unit_speed",
+        "label": "Speed",
+        "icon": "speed",
+        "short": "Speed",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Speed"
+        ],
+        "search": [
+          "Speed",
+          "km/h",
+          "kph",
+          "mph",
+          "miles per hour",
+          "metres per second",
+          "m/s",
+          "knot",
+          "velocity"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Speed"
+        }
+      },
+      {
+        "id": "unit_pressure",
+        "label": "Pressure",
+        "icon": "science",
+        "short": "Pressure",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Pressure"
+        ],
+        "search": [
+          "Pressure",
+          "pascal|Pa",
+          "bar|bar",
+          "psi|psi",
+          "atmosphere|atm",
+          "mmHg",
+          "torr",
+          "kilopascal"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Pressure"
+        }
+      },
+      {
+        "id": "unit_energy",
+        "label": "Energy",
+        "icon": "bolt",
+        "short": "Energy",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Energy"
+        ],
+        "search": [
+          "Energy",
+          "joule|J",
+          "kilojoule|kJ",
+          "calorie",
+          "kilocalorie",
+          "kilowatt hour|kWh",
+          "btu",
+          "electronvolt"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Energy"
+        }
+      },
+      {
+        "id": "unit_power",
+        "label": "Power",
+        "icon": "bolt",
+        "short": "Power",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Power"
+        ],
+        "search": [
+          "Power",
+          "watt|W",
+          "kilowatt|kW",
+          "horsepower|hp",
+          "megawatt"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Power"
+        }
+      },
+      {
+        "id": "unit_time",
+        "label": "Time",
+        "icon": "clock",
+        "short": "Time",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Time"
+        ],
+        "search": [
+          "Time",
+          "second|s",
+          "minute|min",
+          "hour|h",
+          "day",
+          "week",
+          "month",
+          "year",
+          "duration"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Time"
+        }
+      },
+      {
+        "id": "unit_data",
+        "label": "Data",
+        "icon": "memory",
+        "short": "Data",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Information"
+        ],
+        "search": [
+          "Data",
+          "Information",
+          "bit",
+          "byte",
+          "kilobyte",
+          "megabyte",
+          "gigabyte",
+          "terabyte",
+          "storage"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Information"
+        }
+      },
+      {
+        "id": "unit_angle",
+        "label": "Angle",
+        "icon": "functions",
+        "short": "Angle",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Angle"
+        ],
+        "search": [
+          "Angle",
+          "degree",
+          "radian",
+          "gradian",
+          "turn",
+          "arcminute",
+          "arcsecond"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Angle"
+        }
+      },
+      {
+        "id": "unit_frequency",
+        "label": "Frequency",
+        "icon": "graphic_eq",
+        "short": "Frequency",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Frequency"
+        ],
+        "search": [
+          "Frequency",
+          "hertz|Hz",
+          "kilohertz|kHz",
+          "megahertz|MHz",
+          "gigahertz|GHz",
+          "rpm"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Frequency"
+        }
+      },
+      {
+        "id": "unit_force",
+        "label": "Force",
+        "icon": "build",
+        "short": "Force",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Force"
+        ],
+        "search": [
+          "Force",
+          "newton|N",
+          "kilonewton",
+          "pound-force",
+          "kilogram-force",
+          "dyne"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Force"
+        }
+      },
+      {
+        "id": "unit_acceleration",
+        "label": "Acceleration",
+        "icon": "speed",
+        "short": "Acceleration",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Acceleration"
+        ],
+        "search": [
+          "Acceleration",
+          "m/s^2",
+          "g-force",
+          "gravity"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Acceleration"
+        }
+      },
+      {
+        "id": "unit_density",
+        "label": "Density",
+        "icon": "science",
+        "short": "Density",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Density"
+        ],
+        "search": [
+          "Density",
+          "kg/m^3",
+          "g/cm^3",
+          "g/ml"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Density"
+        }
+      },
+      {
+        "id": "unit_fuel",
+        "label": "Fuel economy",
+        "icon": "speed",
+        "short": "Fuel",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Fuel Economy"
+        ],
+        "search": [
+          "Fuel economy",
+          "Fuel Economy",
+          "mpg",
+          "miles per gallon",
+          "litres per 100 km",
+          "l/100km",
+          "km/l"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Fuel Economy"
+        }
+      },
+      {
+        "id": "unit_cooking",
+        "label": "Cooking",
+        "icon": "restaurant",
+        "short": "Cooking",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Cooking"
+        ],
+        "search": [
+          "Cooking",
+          "teaspoon",
+          "tablespoon",
+          "cup",
+          "stick of butter",
+          "dash",
+          "pinch"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Cooking"
+        }
+      },
+      {
+        "id": "unit_current",
+        "label": "Current",
+        "icon": "bolt",
+        "short": "Current",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Electric Current"
+        ],
+        "search": [
+          "Current",
+          "Electric Current",
+          "ampere|A",
+          "amp",
+          "milliampere|mA"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Electric Current"
+        }
+      },
+      {
+        "id": "unit_potential",
+        "label": "Voltage",
+        "icon": "bolt",
+        "short": "Voltage",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Electric Potential"
+        ],
+        "search": [
+          "Voltage",
+          "Electric Potential",
+          "volt|V",
+          "millivolt|mV",
+          "kilovolt|kV"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Electric Potential"
+        }
+      },
+      {
+        "id": "unit_resistance",
+        "label": "Resistance",
+        "icon": "bolt",
+        "short": "Resistance",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Electric Resistance"
+        ],
+        "search": [
+          "Resistance",
+          "Electric Resistance",
+          "ohm",
+          "kilohm",
+          "megohm"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Electric Resistance"
+        }
+      },
+      {
+        "id": "unit_charge",
+        "label": "Charge",
+        "icon": "bolt",
+        "short": "Charge",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Electric Charge"
+        ],
+        "search": [
+          "Charge",
+          "Electric Charge",
+          "coulomb|C",
+          "ampere hour",
+          "milliampere hour|mAh"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Electric Charge"
+        }
+      },
+      {
+        "id": "unit_capacitance",
+        "label": "Capacitance",
+        "icon": "bolt",
+        "short": "Capacitance",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Capacitance"
+        ],
+        "search": [
+          "Capacitance",
+          "farad|F",
+          "microfarad",
+          "picofarad"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Capacitance"
+        }
+      },
+      {
+        "id": "unit_illuminance",
+        "label": "Illuminance",
+        "icon": "bolt",
+        "short": "Illuminance",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Illuminance"
+        ],
+        "search": [
+          "Illuminance",
+          "lux|lx",
+          "foot-candle",
+          "lumen"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Illuminance"
+        }
+      },
+      {
+        "id": "unit_radioactivity",
+        "label": "Radioactivity",
+        "icon": "science",
+        "short": "Radioactivity",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Radioactivity"
+        ],
+        "search": [
+          "Radioactivity",
+          "becquerel|Bq",
+          "curie",
+          "sievert",
+          "gray"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Radioactivity"
+        }
+      },
+      {
+        "id": "unit_typography",
+        "label": "Typography",
+        "icon": "apps",
+        "short": "Typography",
+        "tab": "convert",
+        "kind": "converter",
+        "options": {
+          "approx": 2,
+          "mixed_units": false
+        },
+        "categories": [
+          "Typography"
+        ],
+        "search": [
+          "Typography",
+          "point",
+          "pica",
+          "em",
+          "pixel"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Typography"
         }
       },
       {
@@ -2144,6 +3021,51 @@
           "category": "Data rate",
           "from": "Mbit/s",
           "to": "MB/s"
+        }
+      },
+      {
+        "id": "nutrition",
+        "label": "Nutrition – Food",
+        "icon": "restaurant",
+        "short": "Food",
+        "tab": "convert",
+        "kind": "nutrition",
+        "_doc": "Food quantities by density, calories and kJ, macros per portion and oven temperatures. The figures are app/src/main/resources/nutrition.json (foods generated from USDA FoodData Central SR Legacy by data/usda-extract.py, public domain; unit definitions NIST SP 811; gas marks from the BBC Good Food / Guardian table), converted in BigDecimal by Nutrition, never by the engine. categories are the chapters in this order: food quantity, macros per portion, energy, oven.",
+        "categories": [
+          "Food quantity",
+          "Macros",
+          "Energy",
+          "Oven"
+        ],
+        "search": [
+          "Nutrition",
+          "Food",
+          "cups to grams|cup|Food quantity",
+          "grams to cups|g|Food quantity",
+          "ounces|oz|Food quantity",
+          "tablespoon|tbsp|Food quantity",
+          "teaspoon|tsp|Food quantity",
+          "density|cup|Food quantity",
+          "calories|kcal|Energy",
+          "kilocalories|kcal|Energy",
+          "kilojoules|kJ|Energy",
+          "kcal to kJ|kcal|Energy",
+          "macros|g|Macros",
+          "protein|g|Macros",
+          "fat|g|Macros",
+          "carbohydrate|g|Macros",
+          "fibre|g|Macros",
+          "oven temperature|°C|Oven",
+          "gas mark|gas mark|Oven",
+          "cooking temperature|°C|Oven",
+          "fan oven|°C|Oven"
+        ],
+        "default": {
+          "value": "1",
+          "category": "Food quantity",
+          "food": "flour_ap",
+          "from": "cup",
+          "to": "g"
         }
       },
       {

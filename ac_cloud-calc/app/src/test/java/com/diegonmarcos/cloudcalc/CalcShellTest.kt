@@ -6,6 +6,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.isToggleable
@@ -244,7 +245,7 @@ class CalcShellTest {
         listOf("standard", "scientific", "programmer").forEach { id ->
             assertEquals("$id must print always-decimal", 2, Logic.optionValue(Declarations.mode(id)!!.options, "approx", -1))
         }
-        listOf("units", "currency", "physics").forEach { id ->
+        (Declarations.modes.filter { it.id.startsWith("unit_") }.map { it.id } + listOf("currency", "physics")).forEach { id ->
             assertEquals("$id must print always-decimal", 2, Logic.optionValue(Declarations.mode(id)!!.options, "approx", -1))
         }
         openStandard()
@@ -400,6 +401,34 @@ class CalcShellTest {
         at(CalcTags.CONVERT_EQ).performClick()
         compose.waitForIdle()
         assertEquals(Logic.Entry(net.id, "4 GB at 1000 Mbit/s", "32 s"), state.history.first().copy(ts = 0L))
+    }
+
+    @Test fun `Nutrition - Food weighs a cup of flour, gives its oven readings, and the search box opens it on a unit`() {
+        launch()
+        val n = Declarations.mode("nutrition")!!
+        compose.runOnIdle { state.tab = n.tab; state.modeByTab[n.tab] = n.id }
+        compose.waitForIdle()
+        // Opens on 1 cup of all-purpose flour in grams: the USDA 1 cup portion is 125 g.
+        compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 125 g")
+        compose.onNodeWithTag(CalcTags.INPUT).performTextReplacement("2")
+        compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 250 g")
+        // No engine call: the arithmetic is the app's own.
+        assertTrue(synchronized(engine.evals) { engine.evals.none { "flour" in it } })
+        compose.onNodeWithText("Oven").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.INPUT).performTextReplacement("180")
+        compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 356 °F")
+        assertTrue(has("Nearest gas mark 4"))
+        // The search box: "kcal" opens the Energy chapter on kcal (1 kcal = 4.184 kJ).
+        val other = Declarations.mode("unit_length")!!
+        compose.runOnIdle { state.tab = other.tab; state.modeByTab[other.tab] = other.id }
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.CONVERT_SEARCH).performTextInput("kcal")
+        compose.waitForIdle()
+        compose.onNodeWithTag(CalcTags.searchHit(0)).performClick()
+        compose.waitForIdle()
+        assertEquals(n.id, state.modeByTab[n.tab])
+        compose.onNodeWithTag(CalcTags.RESULT).assertTextContains("= 4.184 kJ")
     }
 
     private fun has(text: String) = compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()

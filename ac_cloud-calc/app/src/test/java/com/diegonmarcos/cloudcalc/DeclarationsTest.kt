@@ -96,6 +96,7 @@ class DeclarationsTest {
                         assertTrue("${m.id}: default pair", u.unit(m.defaults["from"].orEmpty()) != null && u.unit(m.defaults["to"].orEmpty()) != null)
                     }
                 }
+                "nutrition" -> assertEquals("${m.id}: chapters", 4, m.categories.size)
                 "form" -> assertTrue("${m.id}: no forms", m.forms.isNotEmpty())
                 "plot" -> assertTrue("${m.id}: bad range", m.plot != null && m.plot!!.xmax > m.plot!!.xmin && m.plot!!.steps > 0)
                 "meter" -> m.meter!!.let { assertTrue("${m.id}: fft ${it.fftSize}", it.fftSize > 0 && (it.fftSize and (it.fftSize - 1)) == 0) }

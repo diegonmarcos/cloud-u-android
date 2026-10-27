@@ -65,6 +65,16 @@ internal fun DataConverterMode(mode: Declarations.Mode) {
         if (set != null && (set.unit(from.value) == null || set.unit(to.value) == null)) { from.value = set.from; to.value = set.to }
     }
 
+    val state = LocalCalcState.current
+    // A search hit opens this mode on its category and unit (the other end of the pair is the category's declared one).
+    LaunchedEffect(state.jump) {
+        val j = state.jump?.takeIf { it.modeId == mode.id } ?: return@LaunchedEffect
+        if (j.category in mode.categories) category = j.category
+        mode.unitSets.firstOrNull { it.category == j.category }?.takeIf { it.unit(j.unit) != null }?.let { u ->
+            from.value = j.unit; to.value = if (u.to != j.unit) u.to else u.from
+        }
+        state.jump = null
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(CalcMetrics.gutter)) {
         if (mode.categories.size > 1) {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(CalcMetrics.gap)) {

@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -33,6 +35,7 @@ import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import com.diegonmarcos.cloudcalc.ConvertSearch
 import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.engine.CalcApi
@@ -121,6 +124,8 @@ private fun TabContent(tabId: String) {
     }
     val selected = state.modeByTab[tabId]?.takeIf { id -> modes.any { it.id == id } } ?: modes.first().id
     Column(Modifier.fillMaxSize().testTag(CalcTags.tab(tabId))) {
+        // A page of converters starts with the box that finds any category, unit, alias or food.
+        if (modes.any { it.kind in ConvertSearch.KINDS }) ConvertSearchBox(modes)
         if (modes.size > 1) {
             // The page's modes are a dense icon row: icon over a short label, no minimum height.
             ModeIcons(modes, selected, Declarations.tabs.firstOrNull { it.id == tabId }?.icon.orEmpty()) { state.modeByTab[tabId] = it }
@@ -133,8 +138,12 @@ private fun TabContent(tabId: String) {
 /** One mode per cell: [Declarations.Mode.icon] (else the page's [pageIcon]) over its short label; scrolls when it must. */
 @Composable
 private fun ModeIcons(modes: List<Declarations.Mode>, selectedId: String, pageIcon: String, onSelect: (String) -> Unit) {
+    val listState = rememberLazyListState()
+    // A mode picked elsewhere (a search hit) is scrolled into the row.
+    LaunchedEffect(selectedId) { modes.indexOfFirst { it.id == selectedId }.takeIf { it >= 0 }?.let { listState.scrollToItem(it) } }
     LazyRow(
-        Modifier.fillMaxWidth().testTag(CalcTags.STRIP),
+        state = listState,
+        modifier = Modifier.fillMaxWidth().testTag(CalcTags.STRIP),
         contentPadding = PaddingValues(horizontal = CalcMetrics.small),
         horizontalArrangement = Arrangement.spacedBy(CalcMetrics.hairline),
     ) {
@@ -168,6 +177,9 @@ object CalcTags {
     const val CONVERT_EQ = "calc_convert_eq"
     const val CONVERT_SWAP = "calc_convert_swap"
     const val MATRIX = "calc_rates_matrix"
+    const val CONVERT_SEARCH = "calc_convert_search"
+    fun searchHit(i: Int) = "calc_search_hit_$i"
+    const val NUTRITION_FOOD = "calc_nutrition_food"
     fun matrixCell(row: String, col: String) = "calc_rates_cell_${row}_$col"
     fun pickerItem(name: String) = "calc_picker_$name"
     const val DATA_HINT = "calc_data_hint"

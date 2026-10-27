@@ -76,6 +76,8 @@ object Declarations {
         /** A data_converter's own units (build.json::ui.modes[].unit_sets), exact factors, no engine. */
         val unitSets: List<UnitSet> = emptyList(),
         val transfer: Transfer? = null,
+        /** Search terms of a Convert mode ("term", "term|unit" or "term|unit|category"): what ConvertSearch finds besides its label, categories and units. */
+        val search: List<String> = emptyList(),
         /** The mode's own `spec` object as JSON: what a Toolkit or Sensors mode reads (its group, sensor ids, limits, deep-link pages); "{}" when it declares none. */
         val spec: String = "{}",
     )
@@ -156,6 +158,7 @@ object Declarations {
                     u.getJSONArray("units").objects().map { DataUnit(it.getString("name"), it.getString("label"), java.math.BigDecimal(it.getString("factor"))) },
                 )
             },
+            search = (m.optJSONArray("search") ?: JSONArray()).strings(),
             spec = (m.optJSONObject("spec") ?: JSONObject()).toString(),
             transfer = m.optJSONObject("transfer")?.let { t ->
                 val d = t.optJSONObject("default") ?: JSONObject()

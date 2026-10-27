@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material.icons.filled.AccessTime
@@ -76,6 +77,7 @@ object IconCatalog {
         "explore" -> Icons.Filled.Explore
         "bedtime" -> Icons.Filled.Bedtime
         "apps" -> Icons.Filled.Apps
+        "restaurant" -> Icons.Filled.Restaurant
         else -> fallback
     }
 }
