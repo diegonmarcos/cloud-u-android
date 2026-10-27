@@ -99,11 +99,11 @@ object SectionPages {
             com.diegonmarcos.superapp.agents.AgentsFragment.newInstance(com.diegonmarcos.superapp.agents.AgentsFragment.SCOPE_FLEET)
         // Configs ▸ Fleet ▸ Bluetooth (#1221): the `bluetooth` page declares `tabs`, so the strip branch at the top answered it;
         // these are its five tabs, one fragment over libs:bluetooth's page and the one shared stack.
-        sectionId == "config" && pageId == "bluetooth-find" -> com.diegonmarcos.superapp.bluetooth.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Find)
-        sectionId == "config" && pageId == "bluetooth-connect" -> com.diegonmarcos.superapp.bluetooth.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Connect)
-        sectionId == "config" && pageId == "bluetooth-interact" -> com.diegonmarcos.superapp.bluetooth.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Interact)
-        sectionId == "config" && pageId == "bluetooth-debug" -> com.diegonmarcos.superapp.bluetooth.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Debug)
-        sectionId == "config" && pageId == "bluetooth-dev" -> com.diegonmarcos.superapp.bluetooth.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Dev)
+        sectionId == "config" && pageId == "bluetooth-find" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Find)
+        sectionId == "config" && pageId == "bluetooth-connect" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Connect)
+        sectionId == "config" && pageId == "bluetooth-interact" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Interact)
+        sectionId == "config" && pageId == "bluetooth-debug" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Debug)
+        sectionId == "config" && pageId == "bluetooth-dev" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Dev)
         // Store's two tabs (#563). The `store` page itself declares `tabs`, so
         // the strip branch at the top already answered it.
         // #865 each Store page is wrapped: once Cloud Store is installed it shows

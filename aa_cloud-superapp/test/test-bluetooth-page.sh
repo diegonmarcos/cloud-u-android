@@ -23,7 +23,7 @@ BJ="$APP/build.json"
 KT="$APP/app/src/main/java/com/diegonmarcos/superapp"
 LIB="$ROOT/ab_cloud-libs-shared/libs/bluetooth"
 LK="$LIB/src/main/java/com/diegonmarcos/superapp/bluetooth"
-for f in "$BJ" "$KT/bluetooth/BluetoothFragment.kt" "$KT/launcher/SectionPages.kt" "$LIB/build.gradle" "$LIB/src/main/AndroidManifest.xml" "$LK/BluetoothUi.kt" "$LK/GattDecoders.kt" "$LIB/src/main/assets/bluetooth/gatt-catalog.json"; do
+for f in "$BJ" "$KT/configs/BluetoothFragment.kt" "$KT/launcher/SectionPages.kt" "$LIB/build.gradle" "$LIB/src/main/AndroidManifest.xml" "$LK/BluetoothUi.kt" "$LK/GattDecoders.kt" "$LIB/src/main/assets/bluetooth/gatt-catalog.json"; do
   [ -f "$f" ] || { echo "  ABORT: no such file: $f"; exit 2; }
 done
 command -v python3 >/dev/null 2>&1 || { echo "  ABORT: python3 missing"; exit 2; }
@@ -76,9 +76,9 @@ PY
 )" "horizontal_two_rows: Fleet = Bluetooth | C3 Fleet Control, Observability = Agents | Diagnostics Logcat About; every page in one group"
 
 echo "== B3: the page is the lib's, scroll wired =="
-grep -q 'class BluetoothFragment : KitComposeFragment()' "$KT/bluetooth/BluetoothFragment.kt" && ! grep -q 'override val reportsScroll.*false' "$KT/bluetooth/BluetoothFragment.kt" \
+grep -q 'class BluetoothFragment : KitComposeFragment()' "$KT/configs/BluetoothFragment.kt" && ! grep -q 'override val reportsScroll.*false' "$KT/configs/BluetoothFragment.kt" \
   && ok "BluetoothFragment is a KitComposeFragment that reports its scroll to the shell" || bad "BluetoothFragment is not a scroll-reporting KitComposeFragment"
-grep -q 'BluetoothPanel(controller, tab)' "$KT/bluetooth/BluetoothFragment.kt" && grep -q 'BluetoothHub.controller' "$KT/bluetooth/BluetoothFragment.kt" \
+grep -q 'BluetoothPanel(controller, tab)' "$KT/configs/BluetoothFragment.kt" && grep -q 'BluetoothHub.controller' "$KT/configs/BluetoothFragment.kt" \
   && ok "the fragment draws BluetoothPanel over the shared BluetoothHub controller" || bad "the fragment does not draw the lib's panel"
 grep -q 'LazyColumn' "$LK/BluetoothUi.kt" && ok "the panel body is a LazyColumn (a scroll the shell sees)" || bad "the panel body is not scrollable by the shell"
 grep -q 'UiIcons.vector' "$LK/BluetoothUi.kt" && ! grep -q 'androidx.compose.material.icons' "$LK"/*.kt && ok "icons come from libs:ui-icons, none from material directly" || bad "an icon is not from libs:ui-icons"

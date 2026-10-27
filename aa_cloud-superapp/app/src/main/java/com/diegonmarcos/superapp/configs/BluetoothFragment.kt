@@ -1,8 +1,11 @@
-package com.diegonmarcos.superapp.bluetooth
+package com.diegonmarcos.superapp.configs
 
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import com.diegonmarcos.superapp.ShellActivity
+import com.diegonmarcos.superapp.bluetooth.BluetoothHub
+import com.diegonmarcos.superapp.bluetooth.BluetoothPanel
+import com.diegonmarcos.superapp.bluetooth.BtTab
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.uikit.KitComposeFragment
 
