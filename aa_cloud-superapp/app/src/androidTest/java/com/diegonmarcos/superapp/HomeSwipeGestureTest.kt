@@ -45,10 +45,25 @@ class HomeSwipeGestureTest {
             savedSkips[it.name] = ask.skips(it.name); ask.setSkips(it.name, com.diegonmarcos.superapp.system.FirstRunPerms.MAX_SKIPS)
         }
     }
+    /** Runs a shell command and waits for it to finish (reading its output), unlike a closed stream which may cut it short. */
+    private fun shell(cmd: String): String = runCatching {
+        java.io.BufferedReader(java.io.InputStreamReader(
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(inst.uiAutomation.executeShellCommand(cmd)))).readText()
+    }.getOrDefault("")
+
+    private fun closeInstaller() {
+        repeat(3) {
+            shell("am force-stop com.google.android.packageinstaller")
+            shell("am force-stop com.android.packageinstaller")
+            if (!shell("dumpsys window").contains("mCurrentFocus=Window{") || !shell("dumpsys window").lineSequence().any { it.contains("mCurrentFocus") && it.contains("packageinstaller") }) return
+            SystemClock.sleep(500)
+        }
+    }
+
     @After fun screensaverRestore() {
         // Drawing a C opens the install offer for Cloud Calc (it is not on the emulator): close the system installer so it can not
         // take the touches of the next test.
-        runCatching { inst.uiAutomation.executeShellCommand("am force-stop com.google.android.packageinstaller").close() }
+        closeInstaller()
         com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).screensaverTimeout = savedScreensaver
         val ask = com.diegonmarcos.superapp.system.PermAskTracker(ctx)
         savedSkips.forEach { (k, v) -> ask.setSkips(k, v) }
@@ -56,6 +71,7 @@ class HomeSwipeGestureTest {
 
     /** startActivitySync waits for the main thread to go idle, which the animated Home never does: start it and poll. */
     private fun launchHome(): ShellActivity {
+        closeInstaller()
         val i = Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         ctx.startActivity(i)
         var shell: ShellActivity? = null
