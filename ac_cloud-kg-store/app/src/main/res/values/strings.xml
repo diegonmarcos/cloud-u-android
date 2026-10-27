@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- English is the fleet's base language (#299). app_name comes from build.json::display_name. -->
+    <string name="chat_hello">Ask the knowledge graph</string>
+    <string name="chat_hello_sub">Search the fleet\'s code, apps and the web sources by asking. Task, agent, model, mode and MCPs are under the input; your chats are in the menu on the left.</string>
+    <string name="chat_hint">Ask Cloud KG Store…</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_failed">No answer: %1$s</string>
+    <string name="models_title">Model and agent</string>
+    <string name="models_body">The agent decides who answers (Claude, Hermes, Goose, OpenClaw, or a model through OpenRouter); the model is the one that agent runs when it takes a choice. The same two pickers are above the chat.</string>
+    <string name="backend_title">Backend</string>
+    <string name="backend_body">The assistant answers from the fleet agent gateway (my-ai-api) over the mesh. The Cloud pages call the fleet services declared in ac_cloud-account (mesh first, then the public route with the fleet sign-in of Cloud Account); the Web pages read the sources Cloud Search declares. This app stores no token: the gateway holds the fleet keys and the fleet bearer is read from Cloud Account on use.</string>
+    <string name="backend_gateway">Gateway: %1$s</string>
+    <string name="about_title">Cloud KG Store</string>
+    <string name="about_body">The fleet\'s knowledge-graph store: Cloud (applications and repositories), Phone (the installed apps index) and Web (news, media, shopping, real estate, jobs, business). Version %1$s, build %2$s.</string>
+
+    <string name="go">Search</string>
+    <string name="send">Send</string>
+    <string name="status_busy">Working…</string>
+    <string name="status_ok">%1$d results via %2$s</string>
+    <string name="status_empty">The service answered with nothing for this.</string>
+    <string name="status_unavailable">Not reachable: %1$s</string>
+    <string name="status_refused">Refused: %1$s</string>
+    <string name="status_note">The service said: %1$s</string>
+
+    <string name="binary_hint">Filter the fleet apps</string>
+    <string name="binary_probe">%1$s GET %2$s:</string>
+    <string name="binary_none">No fleet app matches.</string>
+    <string name="debug_summary">%1$d of %2$d apps declare a debug port.</string>
+    <string name="debug_port">Debug port %1$d, gateway route %2$s</string>
+    <string name="mcp_empty">The service lists no tools.</string>
+    <string name="mcp_inputs">Inputs: %1$s</string>
+    <string name="console_path">Path, for example /health</string>
+    <string name="console_body">JSON body of the POST</string>
+    <string name="console_missing">None of this page\'s services is in the fleet endpoints this build baked.</string>
+    <string name="console_http">HTTP %1$d</string>
+    <string name="code_hint">Search the owner\'s repositories for code</string>
+    <string name="code_nothing">Type something to search for.</string>
+    <string name="code_opened">Opened in the browser:</string>
+    <string name="code_undeclared">Cloud Search declares no code search, so there is nothing to open.</string>
+    <string name="code_body">Code search of the repositories of %1$s on GitHub, opened in the browser.</string>
+    <string name="cgc_undeclared">Cloud Search declares no code index.</string>
+    <string name="cgc_health">%1$s, via %2$s</string>
+    <string name="cgc_private_empty">The private index answered with nothing: it may not be built yet.</string>
+    <string name="cgc_related_none">No relationships were found for this node.</string>
+    <string name="semantic_hint">Search the code by meaning</string>
+    <string name="graph_hint">Search the code graph</string>
+    <string name="semantic_reranked">Reranked by the fleet reranker, via %1$s.</string>
+    <string name="semantic_not_reranked">Not reranked, in the index\'s order: %1$s</string>
+    <string name="graph_from">Called or imported by %1$s</string>
+    <string name="graph_to">Calls or imports %1$s</string>
+
+    <string name="phone_hint">Filter the installed apps</string>
+    <string name="phone_user">User apps</string>
+    <string name="phone_all">All apps</string>
+    <string name="phone_system">system</string>
+    <string name="phone_count">%1$d of %2$d installed apps</string>
+    <string name="phone_version">Version %1$s (%2$d)</string>
+    <string name="phone_installer">installed by %1$s</string>
+    <string name="phone_permissions">Permissions (%1$d)</string>
+    <string name="phone_granted">granted</string>
+    <string name="phone_not_granted">not granted</string>
+    <string name="phone_activities">Activities (%1$d)</string>
+    <string name="phone_services">Services (%1$d)</string>
+    <string name="phone_receivers">Receivers (%1$d)</string>
+    <string name="phone_providers">Providers (%1$d)</string>
+
+    <string name="web_undeclared">Cloud Search declares nothing for this page.</string>
+    <string name="web_count">%1$d results</string>
+    <string name="web_source_ok">%1$s: %2$d</string>
+    <string name="web_source_stale">%1$s: %2$d (last answer; now: %3$s)</string>
+    <string name="web_source_error">%1$s: %2$s</string>
+    <string name="web_source_skipped">%1$s: %2$s</string>
+    <string name="web_source_link">%1$s: opens its own search</string>
+    <string name="web_source_disabled">%1$s: not read (%2$s)</string>
+</resources>

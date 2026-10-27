@@ -296,6 +296,7 @@
      "gallery",
      "keyboard",
      "keyboard-engines",
+     "kg-store",
      "lib-analytics-sink",
      "lib-cal",
      "lib-calc",
@@ -528,6 +529,7 @@
      "gallery",
      "keyboard",
      "keyboard-engines",
+     "kg-store",
      "lib-analytics-sink",
      "lib-cal",
      "lib-calc",
@@ -652,6 +654,7 @@
      "gallery",
      "keyboard",
      "keyboard-engines",
+     "kg-store",
      "lib-analytics-sink",
      "lib-cal",
      "lib-calc",
@@ -1164,6 +1167,7 @@
       "gallery",
       "keyboard",
       "keyboard-engines",
+      "kg-store",
       "lib-analytics-sink",
       "lib-cal",
       "lib-calc",
@@ -1305,6 +1309,7 @@
       "browser",
       "drive",
       "keyboard",
+      "kg-store",
       "mail",
       "search",
       "store"
@@ -2066,6 +2071,20 @@
      "callers": []
     }
    ]
+  },
+  {
+   "id": "kg-store",
+   "pkg": "com.diegonmarcos.cloudkgstore",
+   "label": "cloud-kg-store",
+   "kind": "app",
+   "dir": "ac_cloud-kg-store",
+   "door": true,
+   "libs": [
+    "core",
+    "devtools",
+    "fleetconfig-model"
+   ],
+   "endpoints": []
   },
   {
    "id": "mail",

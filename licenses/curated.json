@@ -370,6 +370,12 @@
    "what": "Cloud Store app (#865, the Store split out of cloud-superapp)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
+  "ac_cloud-kg-store": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Cloud KG Store app (knowledge-graph store and browser: fleet API, MCP and code-graph services, installed apps index, web sources of Cloud Search)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
   "ac_cloud-superintel": {
    "licence": "LicenseRef-NoLicenseGranted",
    "kind": "own",

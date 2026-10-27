@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- The fleet services (mesh first, then the public route), the fleet agent gateway (my-ai-api, mesh only) and the web sources
+         Cloud Search declares; Cloud Account is opened by a package-pinned intent. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Phone > Apps is an index of EVERY installed app (package, version, permissions, components): on Android 11+ PackageManager shows
+         only the packages named in <queries> without this permission (the same grant Cloud Drive's Manage > Apps and the SuperApp hold). -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <!-- Profile at the top right opens Cloud Account (com.diegonmarcos.cloudaccount.OPEN, libs:bottomnav AccountLaunch); the fleet bearer
+         for the public fallback route is read from its provider (KgBearer), which on API 30+ needs the package to be visible. -->
+    <queries>
+        <package android:name="com.diegonmarcos.cloudaccount" />
+    </queries>
+
+    <application
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CloudKgStore"
+        tools:targetApi="31">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.CloudKgStore">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Share > Cloud KG Store of plain text lands in the assistant's box; nothing is sent until the user does. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

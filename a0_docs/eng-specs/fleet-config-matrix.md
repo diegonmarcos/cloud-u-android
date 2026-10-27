@@ -35,7 +35,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 5 | 0 | 100% |
 | cloud-mail | `com.diegonmarcos.comms.mail` | 11 | 2 | 84% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 2 | 9 | 18% |
-| cloud-me | `com.diegonmarcos.cloudme` | 11 | 0 | 100% |
+| cloud-me | `com.diegonmarcos.cloudme` | 12 | 0 | 100% |
 | cloud-gallery | `com.diegonmarcos.mediacenter` | 6 | 1 | 85% |
 | cloud-myterminal | `com.diegonmarcos.ide` | 7 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 13 | 0 | 100% |
@@ -50,8 +50,9 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-wallet | `com.diegonmarcos.cloudwallet` | 7 | 0 | 100% |
 | cloud-writer | `com.diegonmarcos.cloudwriter` | 4 | 0 | 100% |
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 4 | 2 | 66% |
+| cloud-kg-store | `com.diegonmarcos.cloudkgstore` | 4 | 2 | 66% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 10 | 2 | 83% |
-| **fleet** | | **304** | **52** | **85%** |
+| **fleet** | | **309** | **54** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -709,6 +710,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 | `buro_user` | prefs | config | yes | Cloud Me > Buro user data, one JSON string under 'data' (collections of typed records): personal due-diligence items, assets, services, liabilities and taxes, budget lines, accounts and cashflow entries. Your own entries, so they move with the phone; the reports (budget vs cashflow, accounts vs cashflow) are derived from them and never stored. |
 | `cloud_analytics` | prefs | config (keys: visitor_id→device) | yes | Analytics consent is a user choice; visitor_id is a per-install identity. |
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `experiences_user` | prefs | config | yes | Cloud Me > Achieves > Experiences user data, one JSON string under 'data': your own done and to-do experiences (accepted suggestions, edits, additions). Moves with the phone and the backup. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `health_store` | prefs | device | no | Health Connect snapshots, history and source last-seen; cache of device data. |
 | `health_user` | prefs | config | yes | #1180 Cloud Me > Health user data, one JSON string under 'data': saved body measurements, lab results, ticked plan events and shopping items, the workout log, chosen activity level, sleep target and dossier choices. Your own entries, so they move with the phone; Health Connect readings are never copied in (the trackers read them live). |
@@ -728,7 +730,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 |---|---|---|
 | `assets/health_*.json (from ac_cloud-me/data/health)` | config | #1180 Cloud Me > Health declared content (plan, formulas, home clusters, workout programme) is baked from git into the build, so a new phone gets it by installing the same build; the user's own entries are the health_user store. |
 
-Coverage: 11 covered, 0 gaps.
+Coverage: 12 covered, 0 gaps.
 
 ## cloud-gallery — `com.diegonmarcos.mediacenter`
 
@@ -1108,6 +1110,28 @@ Module `ac_cloud-superintel`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, 
 | file | class | doc |
 |---|---|---|
 | `filesDir/ai-sessions.json` | config | The chat history of the sessions drawer (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
+
+Coverage: 4 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
+
+## cloud-kg-store — `com.diegonmarcos.cloudkgstore`
+
+Module `ac_cloud-kg-store`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-model-catalogue, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `ai_composer` | prefs | config | yes | The shared AI chat's config bar: whether it is collapsed to its one compact chip, one boolean per app (key ai_composer_collapsed.<app>). A user layout choice, so it migrates with the app's settings. |
+| `ai_sessions` | file | config | GAP | libs:ai's chat history file (text and attachment names, never a token), carried whole so a new phone keeps the conversations. |
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
+
+| file | class | doc |
+|---|---|---|
+| `filesDir/results` | device | cached answers of the Web pages' sources (Cloud Search's declared sources, read through its linked core), refetched from the sources |
+| `filesDir/ai-sessions.json` | config | The assistant's chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 
 Coverage: 4 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 

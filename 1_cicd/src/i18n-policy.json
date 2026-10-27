@@ -42,6 +42,9 @@
     "ac_cloud-superintel/app": {
       "base_language": "en"
     },
+    "ac_cloud-kg-store/app": {
+      "base_language": "en"
+    },
     "ac_cloud-tools-small-llms/app": {
       "base_language": "en"
     },

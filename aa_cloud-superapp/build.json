@@ -2940,7 +2940,7 @@
                 "target": "intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
               },
               {
-                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | KG Store Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
                 "id": "agi-sep-1",
                 "label": "|",
                 "separator": true
@@ -2961,10 +2961,17 @@
                 "target": "extapp:cloud-code"
               },
               {
-                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | KG Store Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
                 "id": "agi-sep-2",
                 "label": "|",
                 "separator": true
+              },
+              {
+                "_doc": "#1207 KG Store, Cloud KG Store (ac_cloud-kg-store, com.diegonmarcos.cloudkgstore): the fleet's knowledge-graph store and browser (Cloud: applications and repositories over the fleet's API, MCP and code-graph services; Phone: the installed apps index; Web: news, media, shopping, real estate, jobs, business on Cloud Search's sources). Placed right after the '| Search Code |' group, as the owner asked, so the AGI row reads SI AI | Search Code | KG Store Tools | MyTerminal Terminal. Opened through ui.external_apps[cloud-kg-store]; the glyph ic_kgs is generated from ac_cloud-kg-store/build.json::launcher_icon by cloud-android-launcher-icons.py (never edit the drawable).",
+                "id": "kg-store",
+                "label": "KG Store",
+                "icon": "ic_kgs",
+                "target": "extapp:cloud-kg-store"
               },
               {
                 "_doc": "Tools - hands off to the standalone Cloud Tools Small LLMs app (ac_cloud-tools-small-llms, com.diegonmarcos.cloudtoolssmallllms, read from ITS android.application_id and app/build.gradle namespace): an AI chat that does quick text jobs with small, cheap OpenRouter models only, a router (Jev, else a small JSON model) picking the task and its worker. It REPLACES the S-LLM folder in S-LLM's place (the owner, 2026-10-13), and the B-LLM folder (the three hosted Telegram agents) is gone from the row, so AGI reads Search, AI Chat, Code, Tools, MyTerminal, Terminal (test-agi-tiles.sh T1). target=extapp:cloud-tools-small-llms -> launchExternalApp opens the package if installed, else installs ui.external_apps[id=cloud-tools-small-llms].install_apk_url. icon ic_tools_small_llms is that app's launcher foreground, byte for byte (test-agi-tiles.sh T3); Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so the drawable's existence is pinned there too.",
@@ -2974,7 +2981,7 @@
                 "target": "extapp:cloud-tools-small-llms"
               },
               {
-                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
+                "_doc": "Group separator (#1162): a bare '|' between SI AI and Search Code, like the Data Apps and Me rows; the AGI row reads SI AI | Search Code | KG Store Tools | MyTerminal Terminal (test-agi-tiles.sh T1 pins it).",
                 "id": "agi-sep-3",
                 "label": "|",
                 "separator": true
@@ -8470,6 +8477,15 @@
         "hub_package": "com.diegonmarcos.cloudsuperintel",
         "install_package": "com.diegonmarcos.cloudsuperintel",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-SuperIntel.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#1207 Cloud KG Store (ac_cloud-kg-store, published by ship-cloud-kg-store.yml). Added for the Cloud > Apps > AGI 'KG Store' tile: every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ac_cloud-kg-store/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map. folder=prod_ai ('@AI') is the taxonomy half of the same record, as for Cloud Search.",
+        "id": "cloud-kg-store",
+        "folder": "prod_ai",
+        "hub_package": "com.diegonmarcos.cloudkgstore",
+        "install_package": "com.diegonmarcos.cloudkgstore",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-KG-Store.apk",
         "forks": {}
       },
       {

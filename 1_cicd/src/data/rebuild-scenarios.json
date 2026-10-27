@@ -7,10 +7,10 @@
         "ab_cloud-libs-shared/libs/core/src/main/java/com/diegonmarcos/superapp/core/FleetAlerts.kt"
       ],
       "expect": {
-        "apps": 37,
+        "apps": 38,
         "libs": 0,
         "rootfs": 0,
-        "ship": 38,
+        "ship": 39,
         "refresh": 0
       }
     },
@@ -20,10 +20,10 @@
         "ab_cloud-libs-shared/libs/devtools/src/main/java/com/diegonmarcos/superapp/devtools/AppDebugServer.kt"
       ],
       "expect": {
-        "apps": 37,
+        "apps": 38,
         "libs": 0,
         "rootfs": 0,
-        "ship": 38,
+        "ship": 39,
         "refresh": 0
       }
     },
@@ -54,15 +54,15 @@
       }
     },
     {
-      "id": "libs/bottomnav (23 consumers)",
+      "id": "libs/bottomnav (24 consumers)",
       "files": [
         "ab_cloud-libs-shared/libs/bottomnav/src/main/java/com/diegonmarcos/superapp/bottomnav/BottomNav.kt"
       ],
       "expect": {
-        "apps": 23,
+        "apps": 24,
         "libs": 0,
         "rootfs": 0,
-        "ship": 24,
+        "ship": 25,
         "refresh": 0
       }
     },
@@ -220,10 +220,10 @@
         "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/java/com/diegonmarcos/superapp/fleetconfig/FleetPolicy.kt"
       ],
       "expect": {
-        "apps": 37,
+        "apps": 38,
         "libs": 0,
         "rootfs": 0,
-        "ship": 38,
+        "ship": 39,
         "refresh": 0
       }
     },
@@ -234,10 +234,10 @@
         "ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
       ],
       "expect": {
-        "apps": 37,
+        "apps": 38,
         "libs": 0,
         "rootfs": 0,
-        "ship": 38,
+        "ship": 39,
         "refresh": 0
       }
     },

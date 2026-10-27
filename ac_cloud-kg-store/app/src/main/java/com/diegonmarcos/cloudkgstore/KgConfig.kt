@@ -1,0 +1,62 @@
+package com.diegonmarcos.cloudkgstore
+
+import org.json.JSONObject
+
+/** One page of assets/kg/kg.json::pages: its [kind] picks the reader, the rest is what that reader is told. */
+class KgPage(val id: String, o: JSONObject) {
+    /** The fleet service a page rerank asks (embeddings-api) and the model it names. */
+    data class Rerank(val service: String, val path: String, val model: String)
+
+    val kind: String = o.getString("kind")
+    val services: List<String> = strings(o, "services")
+    val verticals: List<String> = strings(o, "verticals")
+    val methods: List<String> = strings(o, "methods")
+    val service: String = o.optString("service")
+    val probePath: String = o.optString("probe_path")
+    val gatewayRoute: String = o.optString("gateway_route")
+    /** The honest sentence for "nothing is declared here" (an app with no MCP endpoint yet). */
+    val missing: String = o.optString("missing")
+    val rerank: Rerank? = o.optJSONObject("rerank")?.let { Rerank(it.getString("service"), it.getString("path"), it.getString("model")) }
+
+    private fun strings(o: JSONObject, k: String): List<String> = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
+}
+
+/** assets/kg/kg.json, read once. Nothing here names a page, a service or a vertical: they are all in the JSON. */
+class KgConfig(val timeoutMs: Int, val mcpPath: String, val responseChars: Int, val pages: Map<String, KgPage>, val ask: Ask) {
+    data class Ask(val page: String, val system: String, val suggestions: List<String>, val mcps: List<String>)
+
+    fun page(id: String): KgPage? = pages[id]
+
+    companion object {
+        const val ASSET = "kg/kg.json"
+
+        const val KIND_BINARY = "binary"
+        const val KIND_DEBUG = "debug"
+        const val KIND_MCP = "mcp"
+        const val KIND_CONSOLE = "console"
+        const val KIND_CODE = "code"
+        const val KIND_CGC = "cgc"
+        const val KIND_SEMANTIC = "semantic"
+        const val KIND_GRAPH = "graph"
+        const val KIND_PHONE_APPS = "phone_apps"
+        const val KIND_NEWS = "news"
+        const val KIND_VERTICALS = "verticals"
+        val KINDS = setOf(KIND_BINARY, KIND_DEBUG, KIND_MCP, KIND_CONSOLE, KIND_CODE, KIND_CGC, KIND_SEMANTIC, KIND_GRAPH, KIND_PHONE_APPS, KIND_NEWS, KIND_VERTICALS)
+
+        fun parse(text: String): KgConfig {
+            val o = JSONObject(text)
+            val p = o.getJSONObject("pages")
+            val pages = p.keys().asSequence().filterNot { it.startsWith("_") }.associateWith { KgPage(it, p.getJSONObject(it)) }
+            val a = o.getJSONObject("ask")
+            val ask = Ask(
+                a.getString("page"), a.getString("system"),
+                a.getJSONArray("suggestions").let { s -> (0 until s.length()).map { s.getString(it) } },
+                a.optJSONArray("mcps")?.let { s -> (0 until s.length()).map { s.getString(it) } } ?: emptyList(),
+            )
+            val cfg = KgConfig(o.getInt("timeout_ms"), o.getString("mcp_path"), o.getInt("response_chars"), pages, ask)
+            require(pages.values.all { it.kind in KINDS }) { "kg.json::pages names a kind that is none of $KINDS" }
+            require(cfg.mcpPath.startsWith("/")) { "kg.json::mcp_path must start with /" }
+            return cfg
+        }
+    }
+}

@@ -1,0 +1,16 @@
+{
+  "_doc": "Which of the shared AI composer's controls Cloud KG Store enables (libs:ai assets/ai/ai-design.json defines them and their order: Task, Agent, Model, Mode, MCPs). The assistant behind the AI icon opens on the system prompt, suggestions and MCPs of assets/kg/kg.json::ask; the user can change the agent, model and MCPs here. KgConfigTest holds this file to the design.",
+  "app": "cloud-kg-store",
+  "controls": [
+    "plus",
+    "task",
+    "agent",
+    "model",
+    "effort",
+    "mode",
+    "mcp",
+    "more"
+  ],
+  "default_task": "",
+  "task_required": false
+}

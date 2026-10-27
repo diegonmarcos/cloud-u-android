@@ -2104,6 +2104,7 @@
       "doc": "libs:ai's chat history file (text and attachment names, never a token), carried whole so a new phone keeps the conversations.",
       "used_by": [
         "ac_cloud-drive",
+        "ac_cloud-kg-store",
         "ac_cloud-superintel",
         "ac_cloud-tools-small-llms"
       ]
@@ -3800,6 +3801,38 @@
           "path": "filesDir/ai-sessions.json",
           "class": "config",
           "doc": "The chat history of the sessions drawer (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store",
+          "store": "ai_sessions"
+        }
+      ]
+    },
+    "kg-store": {
+      "package": "com.diegonmarcos.cloudkgstore",
+      "module": "ac_cloud-kg-store",
+      "schema_version": 1,
+      "libs": [
+        "lib-ai",
+        "lib-bottomnav",
+        "lib-core",
+        "lib-crash",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-model-catalogue",
+        "lib-theme-background",
+        "lib-ui-icons",
+        "lib-ui-nav-bars"
+      ],
+      "items": [
+        {
+          "id": "results-cache",
+          "path": "filesDir/results",
+          "class": "device",
+          "doc": "cached answers of the Web pages' sources (Cloud Search's declared sources, read through its linked core), refetched from the sources"
+        },
+        {
+          "id": "ai-sessions",
+          "path": "filesDir/ai-sessions.json",
+          "class": "config",
+          "doc": "The assistant's chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store",
           "store": "ai_sessions"
         }
       ]

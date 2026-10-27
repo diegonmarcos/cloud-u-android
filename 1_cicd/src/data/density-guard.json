@@ -82,6 +82,7 @@
     "ac_cloud-tasks",
     "ac_cloud-calc",
     "ac_cloud-superintel",
+    "ac_cloud-kg-store",
     "ac_cloud-tools-small-llms",
     "ac_cloud-writer",
     "ac_cloud-gallery",

@@ -26,6 +26,12 @@
       "asset": "Cloud-SuperIntel"
     },
     {
+      "app": "ac_cloud-kg-store",
+      "ship": "ship-cloud-kg-store.yml",
+      "artifact": "Cloud-KG-Store-",
+      "asset": "Cloud-KG-Store"
+    },
+    {
       "app": "ac_cloud-tools-small-llms",
       "ship": "ship-cloud-tools-small-llms.yml",
       "artifact": "Cloud-Tools-Small-LLMs-",

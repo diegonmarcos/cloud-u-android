@@ -3,6 +3,7 @@
   "declaration": "ac_cloud-account/build.json",
   "apps": [
     {"nsc": "ac_cloud-superintel/app/src/main/res/xml/network_security_config.xml", "services": ["ai-gateway", "embeddings-api"]},
+    {"nsc": "ac_cloud-kg-store/app/src/main/res/xml/network_security_config.xml", "services": ["ai-gateway", "embeddings-api", "c3-infra-api", "cloud-me-api", "c3-public-api", "cgc-pub-mcp", "cgc-pvt-mcp"]},
     {"nsc": "ac_cloud-tools-small-llms/app/src/main/res/xml/network_security_config.xml", "services": ["ai-gateway", "embeddings-api", "ollama"]},
     { "nsc": "ac_cloud-account/app/src/main/res/xml/network_security_config.xml", "services": "*" },
     { "nsc": "ac_cloud-mail/app/src/main/res/xml/network_security_config.xml", "services": ["jmap"] },
