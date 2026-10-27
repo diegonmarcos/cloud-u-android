@@ -44,8 +44,10 @@ for t, label in zip(want, ['Find', 'Connect', 'Interact', 'Debug', 'Dev']):
 print('; '.join(probs) or 'OK')
 PY
 )" "bluetooth: Fleet, label Bluetooth, tabs Find | Connect | Interact | Debug | Dev, each a hidden page with an icon"
-grep -q 'pageId.startsWith("bluetooth-")' "$KT/launcher/SectionPages.kt" && grep -q 'BluetoothFragment.newInstance' "$KT/launcher/SectionPages.kt" \
-  && ok "every bluetooth-* tab routes to BluetoothFragment" || bad "the bluetooth tabs are not routed"
+for tab in find connect interact debug dev; do
+  grep -qE "pageId == \"bluetooth-$tab\" +-> .*BluetoothFragment.newInstance\(.*BtTab\." "$KT/launcher/SectionPages.kt" \
+    && ok "config/bluetooth-$tab routes to BluetoothFragment" || bad "config/bluetooth-$tab is not routed"
+done
 python3 - "$LK/BluetoothUi.kt" <<'PY' && ok "BtTab ids are exactly find, connect, interact, debug, dev" || bad "BtTab ids drifted from the declared tabs"
 import re, sys
 ids = re.findall(r'(?:Find|Connect|Interact|Debug|Dev)\("(\w+)"', open(sys.argv[1]).read())
