@@ -188,17 +188,26 @@ class HomeSwipeGestureTest {
         assertTrue("swipe up did not open Cloud > Apps: ${if (ok) "" else evidence(shell, "up")}", ok)
     }
 
-    /** A phone that once opened the old picker holds retired overrides (up = Phone > Apps, down = Cloud > Apps): the declared gestures must win. */
-    @Test fun legacyStoredOverridesDoNotBeatTheDeclaredSwipes() {
+    private fun storeLegacyOverrides() {
         ctx.getSharedPreferences("home_swipe_prefs", android.content.Context.MODE_PRIVATE).edit().clear()
             .remove("schema").putString("swipe_up", "action:open_home_apps_phone").putString("swipe_down", "page:cloud/apps").commit()
+    }
+
+    /** A phone that once opened the old picker holds retired overrides (up = Phone > Apps, down = Cloud > Apps): the declared gestures must win. */
+    @Test fun legacyStoredOverridesDoNotBeatTheDeclaredSwipeDown() {
+        storeLegacyOverrides()
         val shell = launchHome()
         val ok = tryUntil(shell, listOf(0.25f, 0.4f, 0.15f, 0.35f), { fling(it, 0.38f, 0.78f) }) { onMain { shell.currentSection == "communication" } }
         assertTrue("with a legacy override stored, swipe down on the left did not open Notify: ${if (ok) "" else evidence(shell, "legacy-down")}", ok)
         assertEquals("page:communication/my-rss", lastAction(shell))
-        val shell2 = launchHome()
-        val up = tryUntil(shell2, listOf(0.5f, 0.25f, 0.75f, 0.4f), { fling(it, 0.78f, 0.38f) }) { onCloudApps(shell2) }
-        assertTrue("with a legacy override stored, swipe up did not open Cloud > Apps: ${if (up) "" else evidence(shell2, "legacy-up")}", up)
+    }
+
+    @Test fun legacyStoredOverridesDoNotBeatTheDeclaredSwipeUp() {
+        storeLegacyOverrides()
+        val shell = launchHome()
+        val up = tryUntil(shell, listOf(0.5f, 0.25f, 0.75f, 0.4f), { fling(it, 0.78f, 0.38f) }) { onCloudApps(shell) }
+        assertTrue("with a legacy override stored, swipe up did not open Cloud > Apps: ${if (up) "" else evidence(shell, "legacy-up")}", up)
+        assertEquals("page:cloud/apps", lastAction(shell))
     }
 
     @Test fun swipeDownLeftHalfOpensNotify() {
