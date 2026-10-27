@@ -67,4 +67,18 @@ class HomeSwipeDeclaredTest {
     @Test fun `S4 the Launcher entry is Quick Actions`() {
         assertEquals("Quick Actions", Sections.byId("config")!!.allPages.first { it.id == "controls" }.label)
     }
+
+    @Test fun `S5 overrides of the retired vocabulary are dropped once and later edits stay`() {
+        val app = RuntimeEnvironment.getApplication()
+        app.getSharedPreferences("home_swipe_prefs", android.content.Context.MODE_PRIVATE).edit().clear()
+            .putString("swipe_up", "action:open_home_apps_phone").putString("swipe_down", "page:cloud/apps")
+            .putString("swipe_left", "walk_step_next").putString("swipe_right", "walk_step_prev").commit()
+        val prefs = HomeSwipePrefs(app)
+        assertEquals(BuildConfig.HOME_SWIPE_UP, prefs.up)
+        assertEquals(BuildConfig.HOME_SWIPE_DOWN_LEFT, prefs.downLeft)
+        assertEquals(BuildConfig.HOME_SWIPE_LEFT, prefs.left)
+        assertEquals(BuildConfig.HOME_SWIPE_RIGHT, prefs.right)
+        prefs.up = "page:phone/apps"
+        assertEquals("a deliberate edit survives the next start", "page:phone/apps", HomeSwipePrefs(app).up)
+    }
 }

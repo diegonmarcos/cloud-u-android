@@ -20,6 +20,15 @@ class HomeSwipePrefs(context: Context) {
     private val sp: SharedPreferences =
         context.getSharedPreferences("home_swipe_prefs", Context.MODE_PRIVATE)
 
+    init {
+        // Overrides written by builds before the declared gestures (build.json onehand.home_swipes, #1200) belong to a retired
+        // vocabulary (swipe up -> Phone > Apps, swipe down -> Cloud > Apps, ...) and kept beating the declaration on phones that had
+        // ever opened the picker. Once, they are dropped; an edit made in Configs from now on is a deliberate override and stays.
+        if (sp.getInt(K_SCHEMA, 0) < SCHEMA) {
+            sp.edit().remove(K_UP).remove(K_LEFT).remove(K_RIGHT).remove(K_DOWN_LEFT).remove(K_DOWN_RIGHT).putInt(K_SCHEMA, SCHEMA).apply()
+        }
+    }
+
     var up: String
         get() = sp.getString(K_UP, BuildConfig.HOME_SWIPE_UP) ?: BuildConfig.HOME_SWIPE_UP
         set(value) { sp.edit().putString(K_UP, value).apply() }
@@ -47,6 +56,8 @@ class HomeSwipePrefs(context: Context) {
     fun setShape(id: String, action: String) { sp.edit().putString("shape_$id", action).apply() }
 
     companion object {
+        private const val K_SCHEMA = "schema"
+        private const val SCHEMA = 2
         private const val K_UP = "swipe_up"
         private const val K_LEFT = "swipe_left"
         private const val K_RIGHT = "swipe_right"
