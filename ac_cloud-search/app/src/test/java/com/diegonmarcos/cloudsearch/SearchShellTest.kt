@@ -160,8 +160,8 @@ class SearchShellTest {
             // A vertical with one subpage draws no sub-nav (the mockup's Search, Groceries, Things).
             // (Things' one subpage shares its id with Web Search's Things pill, which is always there.)
             if (v.subpages.first() !in cfg.verticals.map { it.id } + NAV_PAGES("chat"))
-                assertEquals(v.subpages.size > 1, compose.onAllNodesWithTag(Tags.subpage(v.subpages.first())).fetchSemanticsNodes().isNotEmpty())
-            if (v.subpages.size > 1) compose.onNodeWithTag(Tags.subpage(v.subpages.last())).performClick()
+                assertEquals(v.subpages.size > 1, compose.onAllNodesWithTag(Tags.subpage(state.navId(v, v.subpages.first()))).fetchSemanticsNodes().isNotEmpty())
+            if (v.subpages.size > 1) compose.onNodeWithTag(Tags.subpage(state.navId(v, v.subpages.last()))).performClick()
             for (sub in v.subpages) {
                 compose.runOnIdle { state.showSubpage(v, sub) }
                 // Bounded wait, not an instant check: a heavy page (the payslip runs the whole PAP
@@ -656,6 +656,17 @@ class SearchShellTest {
     }
 
     private val NAV_IDS get() = com.diegonmarcos.cloudsearch.ui.NAV.bottomNav
+    /** #1199 a page id names one page in the whole app: a second owner made the title path resolve to the first ("Jobs" for House's Listing). */
+    @Test fun everyNavPageIdIsUniqueInTheApp() {
+        val nav = com.diegonmarcos.cloudsearch.ui.NAV
+        val ids = mutableListOf<String>()
+        fun walk(pages: List<com.diegonmarcos.superapp.bottomnav.NavPage>) { pages.forEach { ids += it.id; walk(it.pages) } }
+        nav.bottomNav.forEach { walk(nav.section(it)!!.pages) }
+        assertEquals("duplicate page ids: " + ids.groupBy { it }.filter { it.value.size > 1 }.keys, ids.size, ids.toSet().size)
+        val jobs = nav.section("brokers")!!.page("jobs")!!.pages.map { it.id }
+        assertEquals(listOf("jobs-listing", "jobs-analysis", "jobs-feed", "jobs-calculators"), jobs)
+    }
+
     private fun NAV_PAGES(section: String) = com.diegonmarcos.cloudsearch.ui.NAV.section(section)!!.pages.map { it.id }
 
     /** A click through the node's own action: a node scrolled to the list's edge may sit under the island. */

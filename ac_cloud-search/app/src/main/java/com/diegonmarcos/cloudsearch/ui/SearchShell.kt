@@ -126,7 +126,10 @@ class SearchState(val services: Services) {
 
     fun v(): SearchConfig.Vertical = cfg.vertical(vertical) ?: cfg.verticals.first()
     fun subpageOf(v: SearchConfig.Vertical): String = subpages[v.id]?.takeIf { it in v.subpages } ?: v.subpages.first()
-    fun showSubpage(v: SearchConfig.Vertical, id: String) { subpages[v.id] = id }
+    /** #1199 a sub-page's id in the nav declaration is unique per vertical ("jobs-listing"), so the title path cannot resolve to another vertical's page. */
+    fun navId(v: SearchConfig.Vertical, sub: String): String = "${v.id}-$sub"
+    /** Takes the declared sub-page id or its nav id; the legacy bare id ("listing") still names the same sub-page. */
+    fun showSubpage(v: SearchConfig.Vertical, id: String) { subpages[v.id] = id.removePrefix("${v.id}-") }
     fun filtersOf(v: String): Filters = filters[v] ?: Filters()
     fun listing(v: String): ListingModel = listings.getOrPut(v) { ListingModel(services.prefs.lastQuery(v)) }
     fun things(v: String): ThingsModel = thingsModels.getOrPut(v) { ThingsModel(services.prefs.lastQuery(v)) }
@@ -327,7 +330,13 @@ private fun Chrome(state: SearchState, v: SearchConfig.Vertical) {
 /** A pick in the title dropdown: the bottom page, or one of its pages (a vertical, a Search, News, Research or CGC page). */
 private fun navigateTo(state: SearchState, e: HierarchyEntry) {
     if (e.depth == 0) { state.openSection(e.sectionId); return }
-    if (e.depth > 1) return
+    if (e.depth > 2) return
+    if (e.depth == 2) {
+        // a sub-page of a vertical (Brokers' Jobs, House): open the vertical, then the sub-page its unique id names
+        val v = state.cfg.verticals.firstOrNull { e.id.startsWith(it.id + "-") && e.sectionId in state.verticalSections } ?: return
+        state.open(v.id); state.showSubpage(v, e.id)
+        return
+    }
     when {
         e.sectionId == "chat" -> { state.openSection("chat"); state.chatPage = e.id }
         e.sectionId == "news" -> { state.openSection("news"); state.newsPage = e.id }

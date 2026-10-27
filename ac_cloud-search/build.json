@@ -3298,22 +3298,22 @@
             "icon": "work",
             "pages": [
               {
-                "id": "listing",
+                "id": "jobs-listing",
                 "label": "Listing",
                 "icon": "description"
               },
               {
-                "id": "analysis",
+                "id": "jobs-analysis",
                 "label": "Analysis",
                 "icon": "insights"
               },
               {
-                "id": "feed",
+                "id": "jobs-feed",
                 "label": "Feed",
                 "icon": "rss_feed"
               },
               {
-                "id": "calculators",
+                "id": "jobs-calculators",
                 "label": "Calculators",
                 "icon": "table_chart"
               }
@@ -3325,22 +3325,22 @@
             "icon": "home",
             "pages": [
               {
-                "id": "listing",
+                "id": "house-listing",
                 "label": "Listing",
                 "icon": "description"
               },
               {
-                "id": "analysis",
+                "id": "house-analysis",
                 "label": "Analysis",
                 "icon": "insights"
               },
               {
-                "id": "feed",
+                "id": "house-feed",
                 "label": "Feed",
                 "icon": "rss_feed"
               },
               {
-                "id": "calculators",
+                "id": "house-calculators",
                 "label": "Calculators",
                 "icon": "table_chart"
               }

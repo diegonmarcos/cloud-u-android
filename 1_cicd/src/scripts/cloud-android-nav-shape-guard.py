@@ -49,6 +49,11 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
       itself (the surface comes from the declaration, through NavDecl.stripSurface), and an
       app that declares a non-dark background calls stripSurface( (else the line is dead).
 
+  N12 (#1199) a page id names ONE page in the whole app: no two pages of ui.sections[].pages[] (at any depth) share an id,
+      or the breadcrumb/title path resolves to the first owner (House's Listing showed "Jobs"). Holds for every app, exempt
+      or not; nav-shape.json::duplicate_page_ids is the ledger of apps that still have duplicates (each with its reason and
+      the duplicated ids), and an entry that no longer matches fails, so the ledger can only shrink.
+
 Rules N1-N5, N7 and N9 hold for every app that is NOT exempt. The baseline is all-exempt, so
 this is green today; each migration batch deletes its apps' entries.
 
@@ -135,6 +140,22 @@ def page_ids(pages):
         if isinstance(p, dict):
             yield p.get("id")
             yield from page_ids(p.get("pages"))
+
+
+def duplicate_page_ids(sections):
+    """{id: [paths]} for every page id (any depth, section ids excluded) declared by more than one page."""
+    seen = {}
+
+    def walk(pages, path):
+        for p in pages or []:
+            if isinstance(p, dict):
+                seen.setdefault(p.get("id"), []).append("/".join(path + [str(p.get("id"))]))
+                walk(p.get("pages"), path + [str(p.get("id"))])
+
+    for sec in sections or []:
+        if isinstance(sec, dict):
+            walk(sec.get("pages"), [str(sec.get("id"))])
+    return {k: v for k, v in seen.items() if len(v) > 1}
 
 
 def needs_strip(sections):
@@ -676,6 +697,24 @@ def main(argv):
             bad.append(f"N6 {app}: exempt in {DATA} but there is no such app (a[ac]_*/build.json)")
         if not isinstance(why, str) or len(why.strip()) < spec["min_reason_chars"]:
             bad.append(f"N6 {app}: exemption needs a reason of at least {spec['min_reason_chars']} characters")
+
+    # N12
+    known = {k: v for k, v in (spec.get("duplicate_page_ids") or {}).items() if not k.startswith("_")}
+    for app in apps:
+        dups = duplicate_page_ids((uis.get(app) or {}).get("sections"))
+        entry = known.get(app)
+        if dups and entry is None:
+            bad.append(f"N12 {app}: page ids declared more than once {dict(sorted(dups.items()))} — make each id unique in the app (e.g. jobs-listing), "
+                       f"the breadcrumb resolves to the first owner")
+        elif dups and sorted(entry.get("ids", [])) != sorted(dups):
+            bad.append(f"N12 {app}: {DATA}::duplicate_page_ids lists {sorted(entry.get('ids', []))} but the duplicates are {sorted(dups)}")
+        elif entry is not None and not dups:
+            bad.append(f"N12 {app}: no duplicate page ids any more — delete its entry in {DATA}::duplicate_page_ids")
+        if entry is not None and len(str(entry.get("reason", "")).strip()) < spec["min_reason_chars"]:
+            bad.append(f"N12 {app}: duplicate_page_ids entry needs a reason of at least {spec['min_reason_chars']} characters")
+    for app in sorted(known):
+        if app not in apps:
+            bad.append(f"N12 {app}: in {DATA}::duplicate_page_ids but there is no such app (a[ac]_*/build.json)")
 
     for b in bad:
         print("FAIL     " + b)
