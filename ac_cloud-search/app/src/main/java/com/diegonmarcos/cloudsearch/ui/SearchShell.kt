@@ -292,7 +292,8 @@ private fun Chrome(state: SearchState, v: SearchConfig.Vertical) {
         state.section == "news" -> state.newsPage
         state.section == "research" -> state.researchPage
         state.section == "cgc" -> state.cgcPage
-        state.section in state.verticalSections -> state.vertical
+        // #1199 the page ids are unique now, so the path follows the sub-page the state holds, not a strip that may be scrolled out of the list
+        state.section in state.verticalSections -> if (v.subpages.size > 1) state.navId(v, state.subpageOf(v)) else state.vertical
         else -> null
     }
     NavBarTopFirstRowScaffold(
