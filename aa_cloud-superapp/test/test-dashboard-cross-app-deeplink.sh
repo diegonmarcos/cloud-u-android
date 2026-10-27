@@ -149,12 +149,12 @@ ROWS = {
     # reachable inside the Me app); the old rules projects-me-sep-0/1/2 went with the old layout.
     # Owner order (Cloud Me restructure): Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC.
     "Me": ["tools-account", "me", "me-sep-1", "myhealth", "mystudy", "myachieves", "me-sep-2", "myduties", "myburo", "myllc"],
-    # Four named boards and no rule — task 311 removed PM Boards, PM C3 and the
+    # Six named boards (#1212) and no rule — task 311 removed PM Boards, PM C3 and the
     # "|" between them. The rule had marked the board LIST off from the named
     # boards; with the list gone there are no longer two kinds of destination in
     # the row for it to divide, so it went with them rather than floating at the
     # head of a row whose every tile is now the same kind of tile.
-    "Projects W":  ["pm-c3-dp-7321", "mqpm-stochbates", "pmx", "pm-zirkus"],
+    "Projects W":  ["lf-c3-dp-7321", "lf-cg-zirkus", "lf-cg-galaxy", "nx-mqpm-stochbates", "nx-blmbrg", "sk-deep-scx"],  # #1212 owner order and names
 }
 
 # Every target, spelled the way the ROUTER resolves it and not the way the tile
@@ -173,13 +173,15 @@ TARGETS = {
     # id and silently breaks this tile; see its _doc in build.json. Task 311
     # removed the PM C3 tile that pinned the other uuid here; the board itself
     # still exists in paca, so restoring it is a tile, not a board.
-    "pm-c3-dp-7321": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
+    "lf-c3-dp-7321": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
     # The three boards that do not exist in paca yet address the project INDEX, not a uuid. Pinning
     # that here is the point: the day task 182 creates a board and wires its uuid, this line fails
     # and says so, instead of the placeholder quietly outliving the board it was standing in for.
-    "mqpm-stochbates": "https://paca.diegonmarcos.com/projects",
-    "pmx":       "https://paca.diegonmarcos.com/projects",
-    "pm-zirkus": "https://paca.diegonmarcos.com/projects",
+    "nx-mqpm-stochbates": "https://paca.diegonmarcos.com/projects",
+    "lf-cg-zirkus": "https://paca.diegonmarcos.com/projects",
+    "lf-cg-galaxy": "https://paca.diegonmarcos.com/projects",
+    "nx-blmbrg": "https://paca.diegonmarcos.com/projects",
+    "sk-deep-scx": "https://paca.diegonmarcos.com/projects",
     "myhealth":    "extapp:cloud-me#page:health/home",
     "mystudy":     "extapp:cloud-me#page:study/cv",
     "myachieves":  "extapp:cloud-me#page:achieves/personal",

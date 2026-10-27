@@ -2991,31 +2991,45 @@
             "title": "Projects W",
             "tiles": [
               {
-                "_doc": "PM C3-D&P-7321 — the paca board that used to be shown as plain 'PM X', renamed to the project's real name. The uuid is unchanged because the BOARD is unchanged: only the label the owner reads was wrong. Its id moved with its label (pmx became pm-c3-dp-7321) so that the id of a tile keeps naming the project it opens, and the freed 'pmx' id now belongs to the new PM X board below. Same uuid addressing and the same warning as PM C3: recreate the paca database and this target dies silently. Verified 2026-09-09: GET /api/v1/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d answers 200 with name X, and the board carries its 4 task_statuses.",
-                "id": "pm-c3-dp-7321",
-                "label": "PM C3-D&P-7321",
+                "_doc": "Lf-C3-D&P-7321 (was PM C3-D&P-7321): the paca board of the C3 D&P project; the uuid is unchanged because the board is unchanged, only the label and id (was pm-c3-dp-7321) follow the owner's Lf/Nx/Sk naming (#1212).",
+                "id": "lf-c3-dp-7321",
+                "label": "Lf-C3-D&P-7321",
                 "icon": "ic_p_c3_reports",
                 "target": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d"
               },
               {
-                "_doc": "MQPM-StochBates. No paca board of this name exists yet, so the tile opens the paca project INDEX rather than a uuid: an invented uuid would answer 404 inside the embedded browser and look like a broken app, while the index lets the board be picked by hand and makes the gap visible. Task 182 owns creating the board and swapping this target for its uuid — the same job it already holds for PM C3 and PM X.",
-                "id": "mqpm-stochbates",
-                "label": "MQPM-StochBates",
-                "icon": "ic_p_markets_prices",
+                "_doc": "Lf-CG-Zirkus (was PM Zirkus). No paca board yet - index target, uuid to follow via task 182.",
+                "id": "lf-cg-zirkus",
+                "label": "Lf-CG-Zirkus",
+                "icon": "ic_p_sol_pro",
                 "target": "https://paca.diegonmarcos.com/projects"
               },
               {
-                "_doc": "PM X — a NEW board, not the one this label used to point at. The old 'PM X' tile was the C3-D&P-7321 project under a wrong name and keeps its uuid above; this entry inherits the 'pmx' id and waits for a board of its own. Index target for the reason given on MQPM-StochBates; task 182 wires the uuid.",
-                "id": "pmx",
-                "label": "PM X",
+                "_doc": "Lf-CG-Galaxy (#1212). No paca board yet - index target (an invented uuid would 404), uuid to follow via task 182.",
+                "id": "lf-cg-galaxy",
+                "label": "Lf-CG-Galaxy",
                 "icon": "ic_pm_boards",
                 "target": "https://paca.diegonmarcos.com/projects"
               },
               {
-                "_doc": "PM Zirkus. No paca board yet — index target, uuid to follow via task 182, as for the two tiles above.",
-                "id": "pm-zirkus",
-                "label": "PM Zirkus",
-                "icon": "ic_p_sol_pro",
+                "_doc": "Nx-MQPM-StochBates (was MQPM-StochBates). No paca board yet - index target, uuid to follow via task 182.",
+                "id": "nx-mqpm-stochbates",
+                "label": "Nx-MQPM-StochBates",
+                "icon": "ic_p_markets_prices",
+                "target": "https://paca.diegonmarcos.com/projects"
+              },
+              {
+                "_doc": "Nx-Blmbrg (#1212). No paca board yet - index target, uuid to follow via task 182.",
+                "id": "nx-blmbrg",
+                "label": "Nx-Blmbrg",
+                "icon": "ic_p_markets_prices",
+                "target": "https://paca.diegonmarcos.com/projects"
+              },
+              {
+                "_doc": "Sk-Deep-ScX (#1212). No paca board yet - index target, uuid to follow via task 182.",
+                "id": "sk-deep-scx",
+                "label": "Sk-Deep-ScX",
+                "icon": "ic_p_sol_tools",
                 "target": "https://paca.diegonmarcos.com/projects"
               }
             ]
