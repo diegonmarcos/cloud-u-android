@@ -386,6 +386,14 @@ class Walk:
     def strip_tab(self, pid):
         """Tap page [pid]'s tab on a second-row strip (scrolling the strip sideways): how a reader reaches a page the dropdown cannot list
         because a container page always shows its first child, so the dropdown's neighbourhood is the child's, never the container's."""
+        # A strip that is the first item of a scrolling page (Cloud Search's vertical sub-pages) is scrolled out of the tree by the scroll
+        # check of the page before: bring the page back to its top (swipe down) until the tab is in the hierarchy.
+        for _ in range(5):
+            nodes = dump() or []
+            if find(nodes, TAB + pid) is not None:
+                break
+            swipe(self.w // 2, int(self.h * 0.35), int(self.h * 0.8), 250)
+            settle(0.6)
         for direction in (1, -1):
             for _ in range(6):
                 nodes = dump() or []
