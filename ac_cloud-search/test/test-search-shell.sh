@@ -580,7 +580,7 @@ mutate cloud-pages-reordered build.json 's.replace("\"id\": \"apps\",\n         
 mutate agents-debug-op-dropped "$J/debugapi/SearchDebugApi.kt" 's.replace("\"runs\" -> runs(", "\"runz\" -> runs(")' "S7 /api/<group>/runs"
 mutate nav-not-baked app/build.gradle 's.replace("\"UI_SECTIONS_B64\"", "\"UI_SECTIONS\"")' "S10 app/build.gradle does not bake UI_SECTIONS_B64"
 mutate section-reordered build.json 's.replace("\"bottom_nav\": [\n      \"news\",\n      \"research\",", "\"bottom_nav\": [\n      \"research\",\n      \"news\",")' "S10 ui.bottom_nav is not news, research, cgc, chat, media, shopping, brokers"
-mutate section-pages-drift build.json 's.replace("\"id\": \"calculators\",\n                \"label\": \"Calculators\"", "\"id\": \"calculators\",\n                \"label\": \"Calculatorz\"")' "S10 ui.sections page jobs/calculators label"
+mutate section-pages-drift build.json 's.replace("\"id\": \"jobs-calculators\",\n                \"label\": \"Calculators\"", "\"id\": \"jobs-calculators\",\n                \"label\": \"Calculatorz\"")' "S10 ui.sections page jobs/jobs-calculators label"
 mutate parser-missing "$C/Listing.kt" 's.replace("\"open_prices\" -> openPrices(body, source)", "")' "S4 a source uses parser open_prices"
 mutate dead-parser "$C/Listing.kt" 's.replace("\"ba\" -> ba(body, source)", "\"ba\" -> ba(body, source)\n        \"immo\" -> ba(body, source)")' "S4 Parsers.parse has parser immo"
 mutate series-parser-missing "$C/Market.kt" 's.replace("\"jsonstat\" -> jsonStat(body)", "")' "S4 a series uses parser jsonstat"
