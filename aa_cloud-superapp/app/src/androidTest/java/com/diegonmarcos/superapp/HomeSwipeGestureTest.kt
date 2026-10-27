@@ -52,7 +52,7 @@ class HomeSwipeGestureTest {
     }.getOrDefault("")
 
     private fun closeInstaller() {
-        repeat(3) {
+        repeat(6) {
             shell("am force-stop com.google.android.packageinstaller")
             shell("am force-stop com.android.packageinstaller")
             if (!shell("dumpsys window").contains("mCurrentFocus=Window{") || !shell("dumpsys window").lineSequence().any { it.contains("mCurrentFocus") && it.contains("packageinstaller") }) return
@@ -254,6 +254,10 @@ class HomeSwipeGestureTest {
         val spots = listOf(0.5f to 0.5f, 0.4f to 0.55f, 0.6f to 0.55f, 0.5f to 0.4f)
         val ok = tryUntil(shell, spots, { arcStroke(it.first, it.second, 0.15f, 45.0, 315.0) }) { lastAction(shell) == "open_cloud_calc" }
         assertTrue("a drawn C did not open Cloud Calc: ${if (ok) "" else evidence(shell, "c")}", ok)
+        // Cloud Calc is not on the emulator, so the tile offers to install it and the system installer pops up a little later:
+        // wait for it, then close it, so it can not take the touches of the next test.
+        until(30_000) { shell("dumpsys window").lineSequence().any { it.contains("mCurrentFocus") && it.contains("packageinstaller") } }
+        closeInstaller()
     }
 
     @Test fun aLongStraightStrokeStaysASwipeNotAShape() {
