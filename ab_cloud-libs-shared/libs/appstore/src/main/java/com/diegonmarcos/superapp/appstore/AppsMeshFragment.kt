@@ -22,7 +22,8 @@ class AppsMeshFragment : KitComposeFragment() {
     @Composable
     override fun Content() {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(sdp(StoreDensity.S12))) {
-            AppsMesh.Page(this@AppsMeshFragment)
+            // #1211 App API Endpoints moved to Store > Access > Apps MCP-API: not offered on this view.
+            AppsMesh.Page(this@AppsMeshFragment, showEndpoints = false)
         }
     }
 }

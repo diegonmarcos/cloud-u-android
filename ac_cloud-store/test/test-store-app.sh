@@ -89,9 +89,14 @@ check() {
   # 3. #894 SuperApp never runs the pass, Cloud Store installed or not
   strip "$SA" | grep -q 'runsFleetPass *= *{ *false *}' && ok "SuperApp never runs the fleet pass" || bad "SuperApp's runsFleetPass is not { false }"
   local sp; sp="$(strip "$SP")"
-  for pg in store-cloud store-phone apps-mesh; do
+  for pg in store-cloud store-phone; do
     printf '%s' "$sp" | grep -q "pageId == \"$pg\" *-> *com.diegonmarcos.superapp.apps.CloudStoreHandoff.page(pageId)" && ok "SuperApp page $pg goes through the hand-off" || bad "SuperApp page $pg bypasses the hand-off"
   done
+  # Apps Mesh left SuperApp's Configs for Store > Access (one Apps Access tile, test-apps-mesh.sh C1): SuperApp routes no apps-mesh page of its own.
+  printf '%s' "$sp" | grep -q 'pageId == "apps-mesh"' && bad "SuperApp still routes an apps-mesh page (it is Store > Access now)" || ok "SuperApp routes no apps-mesh page of its own (Store > Access hosts Apps Mesh)"
+  # #1211 the Store's Apps Mesh view carries no App API Endpoints button (Access > Apps MCP-API replaced it)
+  grep -q 'showEndpoints = false' "$L/AppsMeshFragment.kt" \
+    && ok "the Store's Apps Mesh view hides the App API Endpoints button" || bad "the Store's Apps Mesh view still offers App API Endpoints"
 
   # 4. one package name, one OPEN action
   local appid pkg action
@@ -234,6 +239,9 @@ mutate "package name drifts" super/apps/CloudStoreHandoff.kt 'const val PKG = "c
 mutate "OPEN action dropped" store/app/src/main/AndroidManifest.xml '<action android:name="com.diegonmarcos.cloudstore.OPEN" />' '' || M=$((M+1))
 mutate "Cloud Store gives up the pass" store/app/src/main/java/com/diegonmarcos/cloudstore/App.kt 'runsFleetPass = { true }' 'runsFleetPass = { false }' || M=$((M+1))
 mutate "Apps Mesh dropped from Access" store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt 'AndroidFragment<AppsMeshFragment>' 'AndroidFragment<StoreCloudFragment>' || M=$((M+1))
+mutate "Store Apps Mesh offers App API Endpoints again" lib/AppsMeshFragment.kt 'showEndpoints = false' 'showEndpoints = true' || M=$((M+1))
+mutate "SuperApp routes its own apps-mesh page again" super/launcher/SectionPages.kt 'sectionId == "config" && pageId == "adb-shell"' 'pageId == "apps-mesh" -> null
+        sectionId == "config" && pageId == "adb-shell"' || M=$((M+1))
 mutate "island replaced by a TabRow" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'NavBarBottomHost(' 'TabRow(' || M=$((M+1))
 mutate "island no longer fed by NavDecl" store/app/src/main/java/com/diegonmarcos/cloudstore/MainActivity.kt 'NavDecl.fromBuildConfig(' 'NavDeclx.fromBuildConfig(' || M=$((M+1))
 mutate "a section leaves the bar" store/build.json '"bottom_nav": [

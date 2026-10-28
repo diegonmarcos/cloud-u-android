@@ -502,9 +502,9 @@ object AppsMesh {
      * slowest app. The probe only LOOKS: Wake / Wake all start what is stopped.
      */
     @Composable
-    fun Page(host: Fragment, onStore: ((Fleet.App) -> Unit)? = null) {
+    fun Page(host: Fragment, onStore: ((Fleet.App) -> Unit)? = null, showEndpoints: Boolean = true) {
         val ctx = LocalContext.current
-        val m = remember(host) { Model(ctx, host, onStore) }
+        val m = remember(host) { Model(ctx, host, onStore, showEndpoints) }
         DisposableEffect(m) {
             m.start()
             onDispose { m.stop() }
@@ -512,7 +512,7 @@ object AppsMesh {
         m.Body()
     }
 
-    private class Model(val ctx: Context, val host: Fragment, val onStore: ((Fleet.App) -> Unit)?) {
+    private class Model(val ctx: Context, val host: Fragment, val onStore: ((Fleet.App) -> Unit)?, val showEndpoints: Boolean = true) {
         val appCtx: Context = ctx.applicationContext
         val decl = load(ctx)
         val fleetJson = fleetJson()
@@ -604,12 +604,14 @@ object AppsMesh {
         private fun Root() {
             Note(exposure(decl, mesh))
             val gaps = live?.let { gaps(decl, fleet, links, it).size }
-            Controls("root", mapOf(
+            // #1211 the Store's view has no App API Endpoints button: that page is Access > Apps MCP-API now.
+            val rootHandlers = mapOf<String, () -> Unit>(
                 "endpoints" to { sub = Sub("endpoints", decl.label("root", "endpoints")) },
                 "gaps" to { sub = Sub("gaps", decl.label("root", "gaps")) },
                 "reprobe" to { probe(wake = false) },
                 "wake" to { probe(wake = true) },
-            ), gaps)
+            )
+            Controls("root", if (showEndpoints) rootHandlers else rootHandlers - "endpoints", gaps)
             // the filter group: the Store's own chips, with counts, remembered
             val n = counts(fleet, links, live)
             Group("root", "filter") {

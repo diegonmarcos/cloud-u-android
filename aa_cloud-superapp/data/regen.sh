@@ -575,6 +575,11 @@ regen_constellation() {
     # After the fleet file, because it reads the packages from it.
     python3 "$UNIX/1_cicd/src/scripts/cloud-android-fleet-agents.py" write "$UNIX" \
         || { echo "ERROR: fleet-agents.json did not generate" >&2; return 1; }
+    # apps-mcp-api.json (libs:appstore asset): the endpoints every Store > Cloud > Apps app declares in its
+    # build.json::api_endpoints, consolidated for Store > Access > Apps MCP-API. After the fleet file (it reads
+    # the fleet rows and groups from it).
+    python3 "$UNIX/1_cicd/src/scripts/cloud-android-apps-mcp-api.py" write "$UNIX" \
+        || { echo "ERROR: apps-mcp-api.json did not generate" >&2; return 1; }
 }
 regen_constellation
 
