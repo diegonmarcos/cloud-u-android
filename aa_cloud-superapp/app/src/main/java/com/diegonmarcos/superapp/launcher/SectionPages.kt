@@ -36,9 +36,9 @@ object SectionPages {
     fun pagesFor(sectionId: String, includeHidden: Boolean = false): List<Page> {
         val section = Sections.byId(sectionId) ?: return emptyList()
         return (if (includeHidden) section.allPages else section.pages).map { p ->
-            Page(p.id, p.label, p.iconName ?: "", p.action, p.isAction) {
+            Page(p.id, p.label, p.iconName ?: "", p.action, p.isAction, factory = {
                 factoryFor(sectionId, p.id, p.label, p.url, p.tabs)
-            }
+            })
         }
     }
 
