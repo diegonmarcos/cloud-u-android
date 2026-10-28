@@ -70,8 +70,8 @@ sync_one() {
   printf '  %-30s updated  %s -> %s\n' "$name" "${cur:0:8}" "${head:0:8}"
 }
 
-# #1073 the list is DERIVED from the one registry, git-repos-master/repos.json, vendored byte-for-byte
-# next to this file as repos.sot.json (refreshed by git-repos-master's ./clone.sh --sync). No farm is read
+# #1073 the list is DERIVED from the one registry, _git-repos-master/repos.json, vendored byte-for-byte
+# next to this file as repos.sot.json (refreshed by _git-repos-master's ./clone.sh --sync). No farm is read
 # any more; a pending_creation entry (repo not created yet) is never listed.
 #   --refresh-list  rewrite repos.json from repos.sot.json     --check-list  exit 1 if repos.json is stale
 _derive_list() {  # $1 = write | check

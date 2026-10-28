@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * #1073 cloud-drive reads ONE repo list: git-repos-master/repos.json, vendored as data/repos.sot.json
+ * #1073 cloud-drive reads ONE repo list: _git-repos-master/repos.json, vendored as data/repos.sot.json
  * (build.json storage.repos_source). Held here, by the parser the phone runs: the copy is the pinned one,
  * every Sync > Git repository is listed by the registry and created, visibility agrees, and a
  * pending_creation repository (cloud-webapps, cloud-me-containers) is never offered for clone or seed.
@@ -52,7 +52,7 @@ class RepoSotTest {
         assertEquals("repos.sot.json drifted from build.json::storage.repos_source.sha256", build["sha256"]!!.jsonPrimitive.content, sha)
         assertEquals("cloud-repos/v1", sot["_schema"]!!.jsonPrimitive.content)
         assertEquals("data/repos.sot.json", build["path"]!!.jsonPrimitive.content)
-        assertTrue("url must name git-repos-master", "/git-repos-master/" in build["url"]!!.jsonPrimitive.content)
+        assertTrue("url must name _git-repos-master", "/_git-repos-master/" in build["url"]!!.jsonPrimitive.content)
         assertTrue("url must name the registry file", build["url"]!!.jsonPrimitive.content.endsWith("/repos.json"))
     }
 

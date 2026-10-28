@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# #1073 cloud-drive reads ONE repo list: git-repos-master/repos.json.
+# #1073 cloud-drive reads ONE repo list: _git-repos-master/repos.json.
 #
 #   R1  data/repos.sot.json is the pinned copy (build.json storage.repos_source.sha256), valid cloud-repos/v1,
 #       and identical to the libs:repos copy

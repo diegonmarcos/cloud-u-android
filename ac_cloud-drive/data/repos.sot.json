@@ -2,7 +2,7 @@
   "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `./clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
   "_schema": "cloud-repos/v1",
 
-  "_self_doc": "git-repos-master is the only repo of the account with no entry here. It is the index; an entry would give it a symlink to its own parent directory, which is a loop, not information.",
+  "_self_doc": "_git-repos-master is the only repo of the account with no entry here. It is the index; an entry would give it a symlink to its own parent directory, which is a loop, not information.",
 
   "_visibility_doc": "`private` mirrors GitHub visibility as of 2026-08-20 and only drives the \"(private)\" hint in `--list` plus a clearer message when a clone fails for lack of credentials. It grants nothing.",
 
@@ -13,6 +13,7 @@
     { "from": "a_Companies/leafy", "to": "DuckPeng-LeafY", "kind": "app-folder", "since": "2026-10-27", "ticket": "#1224", "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/leafy is now a symlink. Published URL /leafy/ unchanged." },
     { "from": "a_Companies/nexus", "to": "Fin-CM-NexusZ", "kind": "app-folder", "since": "2026-10-27", "ticket": "#1224", "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/nexus is now a symlink. Published URL /nexus/ unchanged." },
     { "from": "a_Companies/stark", "to": "DeepSc-StarkX", "kind": "app-folder", "since": "2026-10-27", "ticket": "#1224", "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/stark is now a symlink. Published URL /stark/ unchanged." },
+    { "from": "git-repos-master", "to": "_git-repos-master", "kind": "self", "since": "2026-10-28", "doc": "Leading underscore so the index sorts first." },
     { "from": "front", "to": "Projects", "kind": "repo", "since": "2026-10-28", "doc": "Front family renamed Projects." },
     { "from": "front-endeavours", "to": "Projects-endeavours", "kind": "repo", "since": "2026-10-28", "doc": "Front family renamed Projects." },
     { "from": "front-labtools", "to": "Projects-labtools", "kind": "repo", "since": "2026-10-28", "doc": "Front family renamed Projects." },
@@ -38,7 +39,7 @@
       "doc": "GitHub repo diegonmarcos/ffront was renamed front; the registry url followed on 2026-10-21 (it still said ffront)." }
   ],
   "unregistered_ok": [
-    { "name": "git-repos-master", "reason": "this index itself (see _self_doc)" },
+    { "name": "_git-repos-master", "reason": "this index itself (see _self_doc)" },
     { "name": "cloud-me", "reason": "on GitHub but not indexed here as of 2026-10-21 (#1073); owner to decide: register or archive" },
     { "name": "cloud-me_data-private", "reason": "on GitHub but not indexed here as of 2026-10-21 (#1073); owner to decide: register or archive" },
     { "name": "z-archived_My-ai-memory", "reason": "on GitHub but not indexed here as of 2026-10-21 (#1073); owner to decide: register or archive" },
@@ -47,13 +48,13 @@
   "_unregistered_doc": "GitHub repos (by GitHub name) that exist but deliberately have no entry. cloud-infra's repos-sot tester fails when the fetched GitHub inventory holds a repo that is neither registered above nor listed here, and when a pending_creation repo already shows up in the inventory (flip its status).",
   "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know.",
   "consumers": [
-    { "repo": "lecole-42", "what": "d_lecole project master: repos.json subset + clone/link script", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
-    { "repo": "git-repos-master", "what": "clone.sh + committed symlink farm", "reads": "repos.json (itself)", "guard": "9_others/test/test-repos-sot.sh" },
+    { "repo": "lecole-42", "what": "d_lecole project master: repos.json subset + clone/link script", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
+    { "repo": "_git-repos-master", "what": "clone.sh + committed symlink farm", "reads": "repos.json (itself)", "guard": "9_others/test/test-repos-sot.sh" },
     { "repo": "cloud", "what": "cloud hub: holds THE cloud family file (2_vault + a_cloud, full hierarchy, every field of the registry for those repos); cloud-t-infra keeps a byte copy", "reads": "repos.json (family subset)", "guard": "check-repos-sot.sh (in the cloud repo)" },
-    { "repo": "CG", "what": "CG project master subset", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
-    { "repo": "Fin-CM", "what": "Fin-CM project master subset (NexusZ, mqpm, Blmbrg)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
-    { "repo": "DeepSc", "what": "DeepSc project master subset (StarkX, X)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
-    { "repo": "DuckPeng", "what": "DuckPeng project master subset (CG, cloud, LeafY)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
+    { "repo": "CG", "what": "CG project master subset", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
+    { "repo": "Fin-CM", "what": "Fin-CM project master subset (NexusZ, mqpm, Blmbrg)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
+    { "repo": "DeepSc", "what": "DeepSc project master subset (StarkX, X)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
+    { "repo": "DuckPeng", "what": "DuckPeng project master subset (CG, cloud, LeafY)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
     { "repo": "Projects", "what": "Projects master subset", "reads": "repos.json (subset)", "guard": "check-repos-sot.sh (in the Projects repo)" },
     { "repo": "cloud-t-infra", "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory", "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy of cloud/repos.json, the cloud family only)", "guard": "9_others/test/repos-sot.test.sh (registered in 9_others/test-registry.json)" },
     { "repo": "cloud-u-android", "what": "libs:repos mirror list, cloud-drive Sync > Git list, cloud-drive seed/clone targets", "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies)", "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt" },
@@ -79,13 +80,13 @@
       "doc": "#1073/#1224 cloud-infra: byte copy of the CLOUD family file (cloud/repos.json: 2_vault + a_cloud only, full hierarchy), NOT of the full registry; the source its fleet-manifest and derive guards read (9_others/test/repos-sot.test.sh fails on any difference)."
     },
     {
-      "from": "git-repos-master/repos.json",
+      "from": "_git-repos-master/repos.json",
       "to": ["ac_cloud-drive/data/repos.sot.json", "ab_cloud-libs-shared/libs/repos/repos.sot.json"],
       "requires": "ac_cloud-drive/data",
       "doc": "#1073 cloud-u-android: byte copy of THIS registry, baked into cloud-drive at build time (build.json storage.repos_source) and read by libs:repos sync.sh --refresh-list. Guards: ac_cloud-drive/test/test-drive-repos-sot.sh, RepoSotTest.kt."
     },
     {
-      "from": "git-repos-master/.claude/SESSION-SURVIVAL.md",
+      "from": "_git-repos-master/.claude/SESSION-SURVIVAL.md",
       "to": [".claude/SESSION-SURVIVAL.md"],
       "requires": ".claude",
       "doc": "Shell-death recovery runbook from the 2026-10-15 incident (Bash sandbox died after a glob delete in /tmp). Every repo's CLAUDE.md imports it via `@.claude/SESSION-SURVIVAL.md` so every session has it. requires is .claude because sync_all refuses entries without one."
@@ -133,19 +134,19 @@
       "doc": "cloud-me_vault/others: a vendored copy of the cloud module (src and dist; no deployed .claude). Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
     },
     {
-      "from": "git-repos-master/.claude/skills/c3-infra",
+      "from": "_git-repos-master/.claude/skills/c3-infra",
       "to": [".claude/skills/c3-infra"],
       "requires": ".claude",
       "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloud-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. c3-infra skill + rules/*.md."
     },
     {
-      "from": "git-repos-master/.claude/hooks/c3",
+      "from": "_git-repos-master/.claude/hooks/c3",
       "to": [".claude/hooks/c3"],
       "requires": ".claude",
       "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloud-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. c3-infra PreToolUse guard hooks and tests, wired in settings.json hooks."
     },
     {
-      "from": "git-repos-master/.claude/agents",
+      "from": "_git-repos-master/.claude/agents",
       "to": [".claude/agents"],
       "requires": ".claude",
       "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloud-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. lean agents build/explore/ops/review/general-purpose."

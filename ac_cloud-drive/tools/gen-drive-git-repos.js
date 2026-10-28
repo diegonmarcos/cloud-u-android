@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // #1073 data/drive-git-repos.json is GENERATED from
 //   data/drive-git-family.json  (the drive-owned overlay: which repos, label, seed, notes)
-//   data/repos.sot.json         (byte copy of git-repos-master/repos.json: identity, visibility, pending, renames)
+//   data/repos.sot.json         (byte copy of _git-repos-master/repos.json: identity, visibility, pending, renames)
 //
 //   node tools/gen-drive-git-repos.js          write data/drive-git-repos.json
 //   node tools/gen-drive-git-repos.js --check  exit 1 (and say why) if the file on disk differs

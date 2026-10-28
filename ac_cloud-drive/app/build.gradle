@@ -146,7 +146,7 @@ def seedUnmetered = seedDecl.require_unmetered_network == null ? true : seedDecl
 def gitReposFile = file('../data/drive-git-repos.json')
 def gitReposB64  = b64(gitReposFile.exists()
     ? new groovy.json.JsonSlurper().parse(gitReposFile) : [:])
-// #1073 build.json::storage.repos_source: the repo registry (git-repos-master/repos.json) is the
+// #1073 build.json::storage.repos_source: the repo registry (_git-repos-master/repos.json) is the
 // ONE list of repositories. Its byte copy is BAKED here (REPOS_SOT_B64 = identity, visibility,
 // pending, renames only) and the build fails when the copy is not the pinned one, or when the
 // Sync > Git family names a repository the registry does not list / has not created yet.
@@ -154,7 +154,7 @@ def gitReposB64  = b64(gitReposFile.exists()
 // tools/gen-drive-git-repos.js (test/test-drive-repos-sot.sh holds it to --check).
 def reposSrcDecl = storageDecl.repos_source ?: [:]
 def reposSotFile = file("../${reposSrcDecl.path ?: 'data/repos.sot.json'}")
-if (!reposSotFile.isFile()) throw new GradleException("build.json::storage.repos_source.path ${reposSotFile} is missing -- the repo list is read from git-repos-master/repos.json, vendored there")
+if (!reposSotFile.isFile()) throw new GradleException("build.json::storage.repos_source.path ${reposSotFile} is missing -- the repo list is read from _git-repos-master/repos.json, vendored there")
 def reposSotSha = java.security.MessageDigest.getInstance('SHA-256').digest(reposSotFile.bytes).encodeHex().toString()
 if (reposSotSha != (reposSrcDecl.sha256 ?: '').toString()) {
     throw new GradleException("repos.sot.json sha256 ${reposSotSha} != build.json::storage.repos_source.sha256 -- run ac_cloud-drive/tools/sync-repos-sot.sh (the copy drifted from its pin)")

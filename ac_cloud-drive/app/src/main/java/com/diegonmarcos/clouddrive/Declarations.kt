@@ -290,7 +290,7 @@ object Declarations {
         /** old clone name -> current name, from every repository's declared `renamed_from`. */
         val renames: Map<String, String> get() = repos.flatMap { r -> r.renamedFrom.map { it to r.name } }.toMap()
     }
-    /** #1073 one entry of the repo registry (git-repos-master/repos.json) as baked in REPOS_SOT_B64. [github] is the GitHub repository name; [pending] = not created yet, so nothing may clone or list it. */
+    /** #1073 one entry of the repo registry (_git-repos-master/repos.json) as baked in REPOS_SOT_B64. [github] is the GitHub repository name; [pending] = not created yet, so nothing may clone or list it. */
     data class RepoSotEntry(val name: String, val github: String, val private: Boolean, val pending: Boolean, val renamedFrom: List<String> = emptyList())
     /** The registry, the ONE list of repositories; the Sync > Git family is held to it. */
     data class RepoSotDecl(val repos: List<RepoSotEntry>) {
