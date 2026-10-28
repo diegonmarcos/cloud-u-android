@@ -86,7 +86,7 @@ class SearchShellTest {
                        {"type":"node","id":2,"lat":48.15,"lon":11.59,"tags":{"name":"Kleiner Baumarkt","shop":"doityourself"}}]}""")
                 "nominatim" in url -> Http.Response(200, """[{"lat":"48.1371","lon":"11.5753","name":"München","display_name":"München, Bayern, Deutschland"}]""")
                 "prices.openfoodfacts" in url -> Http.Response(200, """{"items":[]}""")
-                "/scrappers/prices" in url -> Http.Response(200,
+                "/scrappers-api/prices" in url -> Http.Response(200,
                     """{"results":[{"adapter":"obi","label":"OBI","status":"ok","price":24.49,"currency":"EUR","title":"Bohrmaschine X","url":"https://www.obi.de/p/1","fetched_at":1790000000000}],
                        "adapters":[{"adapter":"obi","label":"OBI","enabled":true,"brands":["obi"],"why":""}]}""")
                 "arbeitsagentur" in url -> Http.Response(200,
@@ -537,7 +537,7 @@ class SearchShellTest {
         // the default city and the declared 20 km radius, said on the page
         compose.onNodeWithTag(Tags.THINGS_AREA).assertTextContains("20 km", substring = true)
         synchronized(http.asked) {
-            val i = http.asked.indexOfFirst { "/scrappers/prices" in it }
+            val i = http.asked.indexOfFirst { "/scrappers-api/prices" in it }
             assertTrue(http.asked[i], "q=Bohrmaschine" in http.asked[i] && "brands=kleiner%20baumarkt%2Cobi" in http.asked[i])
             assertEquals(mapOf("Authorization" to "Bearer tok-1"), http.headersAsked[i])
         }
@@ -552,7 +552,7 @@ class SearchShellTest {
         waitThingsRowText("node/1", "fleet sign-in")
         compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("no price", substring = true)
         compose.onNodeWithTag(Tags.thingsRow("node/1")).assertTextContains("fleet sign-in", substring = true)
-        assertTrue(synchronized(http.asked) { http.asked.none { "/scrappers/prices" in it } })
+        assertTrue(synchronized(http.asked) { http.asked.none { "/scrappers-api/prices" in it } })
     }
 
     @Test fun thingsCentresOnTheCoarseFixWhenAllowed() {

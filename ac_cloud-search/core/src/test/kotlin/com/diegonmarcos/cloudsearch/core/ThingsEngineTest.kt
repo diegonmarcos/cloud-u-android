@@ -26,7 +26,7 @@ class ThingsEngineTest {
                 "overpass" in url -> Http.Response(200, Fixtures.text("overpass-electronics.json"))
                 "prices.openfoodfacts" in url -> Http.Response(200, Fixtures.text("open-prices.json"))
                 "nominatim" in url -> Http.Response(200, if ("Atlantis" in url) "[]" else Fixtures.text("nominatim-koeln.json"))
-                "/scrappers/prices" in url -> service(url)
+                "/scrappers-api/prices" in url -> service(url)
                 else -> Http.Response(404, "")
             }
         }
@@ -50,7 +50,7 @@ class ThingsEngineTest {
         assertEquals(4, r.rows.size)
         assertTrue("the Overpass query names the category's shop types and the radius", http.calls.any { "overpass" in it && "electronics%7Ccomputer" in it && "around%3A20000%2C52.52000%2C13.41000" in it })
         assertTrue(http.calls.any { "prices.openfoodfacts" in it && "radius_km=20" in it && "lat=52.52" in it })
-        val svc = http.calls.first { "/scrappers/prices" in it }
+        val svc = http.calls.first { "/scrappers-api/prices" in it }
         assertTrue(svc, svc.contains("q=Laptop") && svc.contains("brands=cyberport%2Ceuronics%2Ckleiner%20pc-laden%2Cmediamarkt"))
         // Euronics has a real online price in the saved answer; the rest say why not
         val euro = r.rows.first { it.store.name.startsWith("Euronics") }
@@ -74,7 +74,7 @@ class ThingsEngineTest {
 
     @Test fun theTokenAuthorisesTheServiceCallAndIsNeverCachedOrInTheKey() {
         engine().compare(berlin, "Laptop")
-        val i = http.calls.indexOfFirst { "/scrappers/prices" in it }
+        val i = http.calls.indexOfFirst { "/scrappers-api/prices" in it }
         assertEquals(mapOf("Authorization" to "Bearer tok-123"), http.headers[i])
         assertTrue(http.headers.filterIndexed { n, _ -> n != i }.all { it.isEmpty() })
         assertTrue("no cache file holds the token", tmp.root.listFiles()!!.none { it.readText().contains("tok-123") })
@@ -84,7 +84,7 @@ class ThingsEngineTest {
     @Test fun withoutTheFleetSignInTheServiceIsSkippedAndSaysSo() {
         token = null
         val r = engine().compare(berlin, "Laptop")
-        assertTrue(http.calls.none { "/scrappers/prices" in it })
+        assertTrue(http.calls.none { "/scrappers-api/prices" in it })
         val st = status(r, ThingsEngine.ID_SERVICE)
         assertEquals(SearchEngine.State.SKIPPED, st.state); assertTrue(st.detail.contains("fleet sign-in"))
         assertTrue(r.rows.all { it.price == null })
@@ -103,7 +103,7 @@ class ThingsEngineTest {
         val r = engine().compare(berlin, "  ")
         assertEquals(SearchEngine.State.SKIPPED, status(r, ThingsEngine.ID_SHELF).state)
         assertEquals("needs a search term", status(r, ThingsEngine.ID_SERVICE).detail)
-        assertTrue(http.calls.none { "prices.openfoodfacts" in it || "/scrappers/prices" in it })
+        assertTrue(http.calls.none { "prices.openfoodfacts" in it || "/scrappers-api/prices" in it })
         assertEquals(4, r.rows.size)
     }
 
@@ -118,7 +118,7 @@ class ThingsEngineTest {
         assertTrue("another radius is another area", http.calls.size > asked)
         val n = http.calls.size
         e.compare(berlin, "Handy")
-        assertEquals("the same category in the same area reuses the stores (shelf and service ask again for the new item)", 1, http.calls.drop(n).count { "/scrappers/prices" in it })
+        assertEquals("the same category in the same area reuses the stores (shelf and service ask again for the new item)", 1, http.calls.drop(n).count { "/scrappers-api/prices" in it })
         assertTrue(http.calls.drop(n).none { "overpass" in it })
         now += Fixtures.cfg.cacheTtlMinutes * 60_000L
         e.compare(berlin, "Laptop")
