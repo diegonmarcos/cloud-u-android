@@ -87,11 +87,14 @@ class DriveScreenshotTest {
         val ctx = RuntimeEnvironment.getApplication()
         val prefs = DrivePrefs(ctx)
         val mirrors = MirrorRunner(CoroutineScope(SupervisorJob() + Dispatchers.Main), prefs)
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+        val rclone = com.diegonmarcos.clouddrive.sync.RcloneCoordinator(ctx, scope, prefs)
+        val storage = com.diegonmarcos.clouddrive.storage.StorageCoordinator(ctx, scope, rclone, prefs)
         // Webserver is opened by its declared page id, so the capture needs neither the sign-in card nor a network.
         compose.setContent {
             DriveTheme {
                 DriveShell(select = "configs") { id, _ ->
-                    if (id == "configs") ConfigsScreen(mirrors, prefs, actions, hasAccess = true, rcloneVersion = null, git = GitSyncCoordinator(ctx, CoroutineScope(SupervisorJob() + Dispatchers.Main)), page = "webserver")
+                    if (id == "configs") ConfigsScreen(mirrors, prefs, actions, hasAccess = true, rcloneVersion = null, git = GitSyncCoordinator(ctx, CoroutineScope(SupervisorJob() + Dispatchers.Main)), storage = storage, rclone = rclone, page = "webserver")
                 }
             }
         }
