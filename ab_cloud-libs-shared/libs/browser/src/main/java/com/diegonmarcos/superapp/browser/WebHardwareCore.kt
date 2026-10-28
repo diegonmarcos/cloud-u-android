@@ -105,7 +105,7 @@ class WebHardwareCore(
 
     // ---- shared: choosing a device ----
 
-    private fun choose(id: Int, kind: String, grants: WebHwGrants, candidates: () -> List<HwUsbDevice>, gesture: Boolean) {
+    private fun offerDevices(id: Int, kind: String, grants: WebHwGrants, candidates: () -> List<HwUsbDevice>, gesture: Boolean) {
         if (!gesture) { fail(id, "SecurityError", "Must be handling a user gesture to show a permission request."); return }
         if (!usb.supported) { fail(id, "NotFoundError", "This device has no USB host."); return }
         val o = origin
@@ -159,7 +159,7 @@ class WebHardwareCore(
         val fa = args.optJSONArray("filters")
         val filters = List(fa?.length() ?: 0) { fa!!.getJSONObject(it) }
         if (filters.any { !it.has("usbVendorId") }) { fail(id, "TypeError", "A serial port filter needs usbVendorId."); return }
-        choose(id, "serial", serialGrants, {
+        offerDevices(id, "serial", serialGrants, {
             serial.ports().filter { d -> filters.isEmpty() || filters.any { f -> f.getInt("usbVendorId") == d.vendorId && (!f.has("usbProductId") || f.getInt("usbProductId") == d.productId) } }
         }, gesture)
     }
@@ -229,7 +229,7 @@ class WebHardwareCore(
     private fun requestUsb(id: Int, args: JSONObject, gesture: Boolean) {
         val fa = args.optJSONArray("filters") ?: run { fail(id, "TypeError", "requestDevice needs a filters array."); return }
         val filters = List(fa.length()) { fa.getJSONObject(it) }
-        choose(id, "usb", usbGrants, {
+        offerDevices(id, "usb", usbGrants, {
             usb.attached().filter { d -> !onlyProtected(d) && (filters.isEmpty() || filters.any { matches(it, d) }) }
         }, gesture)
     }
