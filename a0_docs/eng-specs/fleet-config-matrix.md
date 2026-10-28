@@ -316,6 +316,9 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-blueto
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 | `web_bluetooth_grants` | prefs | device | no | #1222 Cloud Browser's Web Bluetooth permission memory: per site origin, the Bluetooth devices (address, name) the user picked in the chooser and the services the page named. Device addresses belong to this phone's radio and pairings, so it never migrates; a private tab keeps its grants in memory only. |
+| `web_nfc_grants` | prefs | device | no | #1225 Cloud Browser's Web NFC permission memory: per site origin, whether the user allowed the site to read and write NFC tags. The NFC radio belongs to this phone, so it never migrates; a private tab keeps its grant in memory only. |
+| `web_serial_grants` | prefs | device | no | #1225 Cloud Browser's Web Serial permission memory: per site origin, the USB serial ports (vendor:product key, name) the user picked in the chooser. A port is a cable on this phone, so it never migrates; a private tab keeps its grants in memory only. |
+| `web_usb_grants` | prefs | device | no | #1225 Cloud Browser's WebUSB permission memory: per site origin, the USB devices (vendor:product key, name) the user picked in the chooser. Devices are plugged into this phone, so it never migrates; a private tab keeps its grants in memory only; Android's own per-device USB permission is separate and asked again after a replug. |
 
 | file | class | doc |
 |---|---|---|

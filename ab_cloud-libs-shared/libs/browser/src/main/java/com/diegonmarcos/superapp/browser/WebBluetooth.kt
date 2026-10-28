@@ -19,9 +19,7 @@ import java.util.WeakHashMap
  * [WebBluetoothCore]; they share libs:bluetooth's session, so a connection is the same one the SuperApp's Bluetooth page shows.
  * The origin of a request is read from the WebView on the main thread, never from the page's own words.
  *
- * Feasibility of the sibling APIs (#1222 ticket): Web Serial and WebUSB would need a UsbManager permission flow, a native chooser and
- * a bridge of the same shape (usb-serial / bulk transfers): feasible, a separate ticket each. Web NFC needs the foreground NFC
- * dispatch of the one visible WebView and an NDEF bridge: feasible for NDEFReader scan / write, not for raw ISO-DEP. None is built here.
+ * Web Serial, WebUSB and Web NFC (#1225) are the siblings of this file: WebHardware.kt, with the same shape (bridge, contract, core, Compose chooser, grants).
  *
  * [requestPermissions] asks Android for the Bluetooth permissions in the host's UI (the fragment's launcher).
  */

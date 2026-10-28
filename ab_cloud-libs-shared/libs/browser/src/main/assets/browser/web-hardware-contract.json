@@ -1,0 +1,64 @@
+{
+  "_doc": "#1225 THE wire contract of Web Serial, WebUSB and Web NFC in Cloud Browser, declared once (the sibling of web-bluetooth-contract.json). web_hardware.js (the page polyfill) and WebHardwareCore.kt (the native side) are both held to it: the node harness (test-browser-web-hardware.sh) checks every message the polyfill sends against `ops` and every reply it accepts against `result`; WebHardwareCoreTest checks every reply the core builds. A type is: int, string, bool, hex (even-length hex, no separators), id (opaque per-origin handle), a trailing [] for arrays, a|b for an enum, or the name of an entry of `shapes`; a trailing ? on a field name marks it optional.",
+  "version": 1,
+  "transport": {
+    "js_to_native": "AndroidWebHardware.post(json): one JSON text per call",
+    "native_to_js": "window.__cloudHw.recv(json): one JSON text per call, a reply or an event"
+  },
+  "request": { "fields": ["v", "id", "op", "args", "gesture?"] },
+  "reply": { "ok": ["v", "id", "ok", "result"], "error": ["v", "id", "ok", "error"], "error_fields": ["name", "message"] },
+  "errors": ["NotFoundError", "NotAllowedError", "SecurityError", "NetworkError", "NotSupportedError", "InvalidStateError", "InvalidAccessError", "TypeError", "AbortError", "NotReadableError"],
+  "ops": {
+    "serial.getPorts": { "args": {}, "result": { "ports": "serial-info[]" } },
+    "serial.requestPort": { "gesture": true, "args": { "filters?": "serial-filter[]" }, "result": { "port": "serial-info" } },
+    "serial.open": { "args": { "port": "id", "baudRate": "int", "dataBits": "int", "stopBits": "int", "parity": "none|even|odd", "flowControl": "none|hardware" }, "result": {} },
+    "serial.write": { "args": { "port": "id", "value": "hex" }, "result": {} },
+    "serial.close": { "args": { "port": "id" }, "result": {} },
+    "serial.setSignals": { "args": { "port": "id", "dataTerminalReady?": "bool", "requestToSend?": "bool", "break?": "bool" }, "result": {} },
+    "serial.forget": { "args": { "port": "id" }, "result": {} },
+
+    "usb.getDevices": { "args": {}, "result": { "devices": "usb-info[]" } },
+    "usb.requestDevice": { "gesture": true, "args": { "filters": "usb-filter[]" }, "result": { "device": "usb-info" } },
+    "usb.forget": { "args": { "device": "id" }, "result": {} },
+    "usb.open": { "args": { "device": "id" }, "result": {} },
+    "usb.close": { "args": { "device": "id" }, "result": {} },
+    "usb.selectConfiguration": { "args": { "device": "id", "configurationValue": "int" }, "result": {} },
+    "usb.claimInterface": { "args": { "device": "id", "interfaceNumber": "int" }, "result": {} },
+    "usb.releaseInterface": { "args": { "device": "id", "interfaceNumber": "int" }, "result": {} },
+    "usb.selectAlternateInterface": { "args": { "device": "id", "interfaceNumber": "int", "alternateSetting": "int" }, "result": {} },
+    "usb.controlTransferIn": { "args": { "device": "id", "setup": "usb-setup", "length": "int" }, "result": { "status": "ok|stall|babble", "data": "hex" } },
+    "usb.controlTransferOut": { "args": { "device": "id", "setup": "usb-setup", "data": "hex" }, "result": { "status": "ok|stall|babble", "bytesWritten": "int" } },
+    "usb.transferIn": { "args": { "device": "id", "endpointNumber": "int", "length": "int" }, "result": { "status": "ok|stall|babble", "data": "hex" } },
+    "usb.transferOut": { "args": { "device": "id", "endpointNumber": "int", "data": "hex" }, "result": { "status": "ok|stall|babble", "bytesWritten": "int" } },
+    "usb.clearHalt": { "args": { "device": "id", "direction": "in|out", "endpointNumber": "int" }, "result": {} },
+    "usb.reset": { "args": { "device": "id" }, "result": {} },
+
+    "nfc.scan": { "args": {}, "result": {} },
+    "nfc.stop": { "args": {}, "result": {} },
+    "nfc.write": { "args": { "records": "ndef-record[]", "overwrite": "bool" }, "result": {} }
+  },
+  "shapes": {
+    "serial-info": { "id": "id", "usbVendorId": "int", "usbProductId": "int" },
+    "serial-filter": { "usbVendorId": "int", "usbProductId?": "int" },
+    "usb-info": {
+      "id": "id", "vendorId": "int", "productId": "int", "deviceClass": "int", "deviceSubclass": "int", "deviceProtocol": "int",
+      "manufacturerName?": "string", "productName?": "string", "serialNumber?": "string", "configurations": "usb-config[]"
+    },
+    "usb-config": { "configurationValue": "int", "interfaces": "usb-interface[]" },
+    "usb-interface": { "interfaceNumber": "int", "alternates": "usb-alternate[]" },
+    "usb-alternate": { "alternateSetting": "int", "interfaceClass": "int", "interfaceSubclass": "int", "interfaceProtocol": "int", "endpoints": "usb-endpoint[]" },
+    "usb-endpoint": { "endpointNumber": "int", "direction": "in|out", "type": "bulk|interrupt|isochronous|control", "packetSize": "int" },
+    "usb-filter": { "vendorId?": "int", "productId?": "int", "classCode?": "int", "subclassCode?": "int", "protocolCode?": "int", "serialNumber?": "string" },
+    "usb-setup": { "requestType": "standard|class|vendor", "recipient": "device|interface|endpoint|other", "request": "int", "value": "int", "index": "int" },
+    "ndef-record": { "recordType": "string", "mediaType?": "string", "id?": "string", "data": "hex", "encoding?": "string", "lang?": "string" },
+    "ndef-message": { "serialNumber": "string", "records": "ndef-record[]" }
+  },
+  "events": {
+    "serial.data": { "port": "id", "value": "hex" },
+    "serial.disconnect": { "port": "id" },
+    "usb.connect": { "device": "usb-info" },
+    "usb.disconnect": { "device": "id" },
+    "nfc.reading": { "message": "ndef-message" },
+    "nfc.readingerror": {}
+  }
+}

@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Web Serial / WebUSB / Web NFC test page</title>
+<!-- #1225 A local page the harness (hw_polyfill_harness.js) loads: three buttons whose clicks call navigator.serial.requestPort,
+     navigator.usb.requestDevice and NDEFReader.scan / write, the way a real site does. Results go to window.__result. Obvious fakes only. -->
+<button id="serial">Open serial</button>
+<button id="usb">Open USB</button>
+<button id="nfc">Read tag</button>
+<script>
+  window.__result = { steps: [], done: {} };
+  const log = (s) => window.__result.steps.push(s);
+  const dec = new TextDecoder(), enc = new TextEncoder();
+  const run = (id, fn) => document.getElementById(id).addEventListener('click', async () => {
+    try { await fn(); } catch (e) { log(id + ' error:' + e.name + ':' + e.message); }
+    window.__result.done[id] = true;
+  });
+  run('serial', async () => {
+    const port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x2341 }] });
+    log('info:' + JSON.stringify(port.getInfo()));
+    await port.open({ baudRate: 115200 });
+    log('open:' + (port.readable !== null && port.writable !== null));
+    const w = port.writable.getWriter();
+    await w.write(enc.encode('hi'));
+    w.releaseLock();
+    const r = port.readable.getReader();
+    const { value } = await r.read();
+    log('rx:' + dec.decode(value));
+    r.releaseLock();
+    await port.setSignals({ dataTerminalReady: true });
+    await port.close();
+    log('closed:' + (port.readable === null));
+    window.__result.port = port;
+  });
+  run('usb', async () => {
+    const dev = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x1209 }] });
+    log('usb:' + dev.productName + ':' + dev.vendorId.toString(16));
+    await dev.open();
+    log('opened:' + dev.opened + ',config:' + (dev.configuration ? dev.configuration.configurationValue : 'none'));
+    await dev.selectConfiguration(1);
+    await dev.claimInterface(0);
+    log('claimed:' + dev.configuration.interfaces[0].claimed);
+    const out = await dev.transferOut(1, new Uint8Array([0xc0, 0xff, 0xee]));
+    log('out:' + out.bytesWritten + ':' + out.status);
+    const inn = await dev.transferIn(1, 64);
+    log('in:' + Array.from(new Uint8Array(inn.data.buffer)).join(','));
+    const ctl = await dev.controlTransferIn({ requestType: 'standard', recipient: 'device', request: 6, value: 0x100, index: 0 }, 18);
+    log('ctl:' + ctl.data.getUint8(0) + ',' + ctl.data.getUint8(1));
+    await dev.releaseInterface(0);
+    await dev.close();
+    log('closed:' + dev.opened);
+    window.__result.device = dev;
+  });
+  run('nfc', async () => {
+    const ndef = new NDEFReader();
+    ndef.onreading = (e) => log('tag:' + e.serialNumber + ':' + e.message.records[0].recordType + ':' + dec.decode(e.message.records[0].data) + ':' + e.message.records[0].lang);
+    await ndef.scan();
+    log('scanning');
+    await ndef.write('hello');
+    log('written');
+    window.__result.ndef = ndef;
+  });
+</script>

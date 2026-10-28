@@ -5,6 +5,11 @@
      BrowserHostFragment is hosted by app/'s MainActivity.
      <queries>: PasskeySupport resolves the system browser for "Continue sign-in in secure browser". -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- #1225 Web NFC (NDEF read / write through reader mode). USB host (WebUSB, Web Serial) needs no permission: Android asks per device.
+         Both are optional hardware, so a phone without either stays installable and tells the page so. -->
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />

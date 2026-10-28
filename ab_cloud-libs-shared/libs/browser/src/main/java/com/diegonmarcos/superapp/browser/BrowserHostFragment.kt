@@ -640,6 +640,9 @@ class BrowserHostFragment : Fragment() {
         WebBluetooth(requireContext()) { perms, done -> permDone = done; permRequest.launch(perms) }
     }
 
+    /** #1225 Web Serial, WebUSB and Web NFC: the same shape as Web Bluetooth (WebHardware.kt); Android asks its own USB permission, NFC uses reader mode on this activity. */
+    private val webHardware by lazy { WebHardware(requireContext()) { activity } }
+
     private val domAutofill by lazy {
         // #900 once the user keeps profiles of their own (Configs > Autocomplete), those fill and this Cloud Account chip steps aside.
         DomAutofill(requireContext(), { browserSettings.bool("profile_fill") != false && !ac.hasLocalProfiles() }, { browserSettings.bool("offer_save_address") != false })
@@ -954,6 +957,7 @@ class BrowserHostFragment : Fragment() {
             // Tier 2 DOM autofill: the page engine reports focus / submit (keys and ids, never values) over this bridge.
             domAutofill.attach(this)
             webBluetooth.attach(this, tab.isPrivate)
+            webHardware.attach(this, tab.isPrivate)
             ac.attach(this)
             // #802 the Android Autofill Framework (Cloud Vault's service) sees the page's fields.
             importantForAutofill = if (browserSettings.bool("autofill_enabled") == false) View.IMPORTANT_FOR_AUTOFILL_NO
@@ -969,6 +973,7 @@ class BrowserHostFragment : Fragment() {
                     domAutofill.dismiss()
                     ac.dismiss()
                     view?.let { webBluetooth.onPageStarted(it) }
+                    view?.let { webHardware.onPageStarted(it) }
                     pageHostNow = BrowserSitePolicy.hostOf(startedUrl)
                     // Settings, then this host's shields: a host that was shielded must not leave JS off for the next.
                     view?.let { applySettings(it, startedUrl) }
@@ -2531,6 +2536,7 @@ class BrowserHostFragment : Fragment() {
         webTabKey = null
         webView?.let {
             runCatching { webBluetooth.detach(it) }
+            runCatching { webHardware.detach(it) }
             runCatching { it.stopLoading() }
             runCatching { it.destroy() }
         }
