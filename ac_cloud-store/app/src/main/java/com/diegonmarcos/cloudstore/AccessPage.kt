@@ -66,7 +66,8 @@ import com.diegonmarcos.superapp.updater.Fleet
 @Composable
 fun AccessPage(page: String) {
     when (page) {
-        PAGE_MESH -> AndroidFragment<AppsMeshFragment>(Modifier.fillMaxSize())
+        PAGE_MESH -> AndroidFragment<AppsMeshFragment>(Modifier.fillMaxSize(),
+            arguments = androidx.core.os.bundleOf(AppsMeshFragment.ARG_SHOW_ENDPOINTS to false))
         // #1211 Apps MCP-API: the endpoints each Store > Cloud > Apps app declares (libs:appstore AppsMcpApiPage).
         PAGE_MCPAPI -> AppsMcpApiPage()
         // #ipc IPC Mesh: the same shared composable SuperApp > Configs > Network > IPC draws (libs:appstore).

@@ -221,7 +221,8 @@ class StoreResolverTest : KitPageHarness() {
     }
 
     private fun stateLines(): Map<String, String> =
-        compose.onAllNodes(tagStartsWith(StorePhoneFragment.STATE_TAG_PREFIX)).fetchSemanticsNodes()
+        // #1210 the state now sits in the row head, a clickable that merges its children: read the tags unmerged.
+        compose.onAllNodes(tagStartsWith(StorePhoneFragment.STATE_TAG_PREFIX), useUnmergedTree = true).fetchSemanticsNodes()
             .associate { it.tag()!!.removePrefix(StorePhoneFragment.STATE_TAG_PREFIX) to it.text() }
 
     @Test

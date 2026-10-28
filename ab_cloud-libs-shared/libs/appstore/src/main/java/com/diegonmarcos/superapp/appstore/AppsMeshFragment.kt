@@ -22,8 +22,13 @@ class AppsMeshFragment : KitComposeFragment() {
     @Composable
     override fun Content() {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(sdp(StoreDensity.S12))) {
-            // #1211 App API Endpoints moved to Store > Access > Apps MCP-API: not offered on this view.
-            AppsMesh.Page(this@AppsMeshFragment, showEndpoints = false)
+            // #1211 the Store host passes ARG_SHOW_ENDPOINTS=false (its endpoints live in Access > Apps MCP-API); SuperApp keeps the button.
+            AppsMesh.Page(this@AppsMeshFragment, showEndpoints = arguments?.getBoolean(ARG_SHOW_ENDPOINTS, true) ?: true)
         }
+    }
+
+    companion object {
+        /** #1211 false hides the App API Endpoints button (Cloud Store > Access); absent = shown (SuperApp). */
+        const val ARG_SHOW_ENDPOINTS = "show_endpoints"
     }
 }
