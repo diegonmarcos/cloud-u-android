@@ -50,6 +50,8 @@ class GitStatusReader(
     private val clock: () -> Long = System::currentTimeMillis,
     /** Is [dir] a clone? A store repository is invisible to File checks in EXEC mode, so this asks the routed probe (GitEngine). */
     private val isRepository: (File) -> Boolean = { com.diegonmarcos.cloudlib.gitsync.GitEngine.isRepository(it) },
+    /** Is [dir] too large for the unattended worktree scan (size guard)? true = the row ends LARGE ("tap to check") and no probe runs; an on-demand [Target] bypasses it. */
+    private val tooLarge: (File) -> Boolean = { false },
 ) {
     /** What one `git status` says, before it is classified. */
     data class Probe(
@@ -66,7 +68,7 @@ class GitStatusReader(
         val fetchedAtMs: Long = 0,
     )
 
-    enum class State { READING, CLEAN, AHEAD, BEHIND, DIRTY, NOT_CLONED, ERROR }
+    enum class State { READING, CLEAN, AHEAD, BEHIND, DIRTY, NOT_CLONED, ERROR, LARGE }
 
     data class Status(
         val state: State,
@@ -86,11 +88,12 @@ class GitStatusReader(
             State.DIRTY -> "dirty ${probe?.changed ?: 0}" + if ((probe?.conflicts ?: 0) > 0) " conflicts ${probe?.conflicts}" else ""
             State.NOT_CLONED -> "not cloned"
             State.ERROR -> "error(${reason ?: "unknown"})"
+            State.LARGE -> "large"
         }
     }
 
     /** One repository to read: its stable id and its working tree. */
-    data class Target(val id: String, val dir: File)
+    data class Target(val id: String, val dir: File, /** The owner asked for this one (status window): the size guard does not apply. */ val onDemand: Boolean = false)
 
     private val permits = Semaphore(concurrency.coerceAtLeast(1))
     private val inFlight = HashSet<String>()
@@ -119,10 +122,18 @@ class GitStatusReader(
             if (!claim) continue
             // Keep the last value visible while re-reading; only a never-read row shows READING.
             _statuses.update { m -> if (m.containsKey(t.id)) m else m + (t.id to Status(State.READING)) }
-            started += scope.launch { readOne(t) }
+            val job = scope.launch { readOne(t) }
+            synchronized(jobs) { jobs += job }
+            job.invokeOnCompletion { synchronized(jobs) { jobs -= job } }
+            started += job
         }
         return scope.launch { started.joinAll() }
     }
+
+    private val jobs = HashSet<Job>()
+
+    /** The screen closed: every read still waiting its turn (or awaited) is cancelled; a probe already running cannot be killed, so its repository stays claimed until it returns. */
+    fun cancelAll() { synchronized(jobs) { jobs.toList() }.forEach { it.cancel() } }
 
     /** Drop [id]'s cached entry so the next request reads it, e.g. after a pull. */
     fun invalidate(id: String) {
@@ -135,9 +146,14 @@ class GitStatusReader(
             permits.withPermit {
                 val begin = clock()
                 val done = CompletableDeferred<Result<Probe?>>()
+                val deferred = java.util.concurrent.atomic.AtomicReference<RepoCheap.Head?>(null)
                 val thread = Thread({
                     // null = not a clone (checked here, on the probe thread: a store repository is asked of cld.termux).
-                    val r = runCatching { if (isRepository(t.dir)) probe(t.dir) else null }
+                    val r = runCatching {
+                        if (!isRepository(t.dir)) null
+                        else if (!t.onDemand && tooLarge(t.dir)) { deferred.set(RepoCheap.head(t.dir)); null }
+                        else probe(t.dir)
+                    }
                     // A probe that outlived its timeout frees its repository only now; the
                     // completion and the release are one step under the reader's lock.
                     synchronized(inFlight) {
@@ -146,7 +162,12 @@ class GitStatusReader(
                     }
                 }, "git-status-${threadSeq.incrementAndGet()}").apply { isDaemon = true }
                 thread.start()
-                val r = withTimeoutOrNull(timeoutMs) { done.await() }
+                val r = try { withTimeoutOrNull(timeoutMs) { done.await() } } catch (c: kotlinx.coroutines.CancellationException) {
+                    // Cancelled mid-probe: the thread keeps running, so the repository stays claimed until it returns.
+                    synchronized(inFlight) { if (!done.isCompleted) { stuckIds += t.id; stuck = true } }
+                    thread.interrupt()
+                    throw c
+                }
                 val took = clock() - begin
                 val status = when {
                     r == null -> {
@@ -159,6 +180,7 @@ class GitStatusReader(
                         Status(State.ERROR, reason = "timeout after " + if (timeoutMs >= 1000) "${timeoutMs / 1000}s" else "${timeoutMs}ms", readAtMs = clock(), tookMs = took)
                     }
                     r.isFailure -> Status(State.ERROR, reason = r.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName } ?: "unknown", readAtMs = clock(), tookMs = took)
+                    deferred.get() != null -> deferred.get()!!.let { h -> Status(State.LARGE, Probe(h.branch, h.upstream, 0, 0, 0, 0), readAtMs = clock(), tookMs = took) }
                     r.getOrNull() == null -> Status(State.NOT_CLONED, readAtMs = clock(), tookMs = took)
                     else -> classify(r.getOrThrow()!!, clock(), took)
                 }

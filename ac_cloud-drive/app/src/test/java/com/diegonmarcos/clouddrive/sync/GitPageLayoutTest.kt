@@ -131,7 +131,7 @@ class GitPageLayoutTest {
         assertTrue("the row reads the registry flag", src.contains("Declarations.repoSot.lfsOf(name)"))
         val vis = tableUi.indexOf("RepoColumn.VISIBILITY to"); val lfs = tableUi.indexOf("RepoColumn.LFS to")
         assertTrue("LFS is the cell right after Pvt/Pub", vis in 0 until lfs && tableUi.substring(vis, lfs).lines().size == 2)
-        for (f in listOf(src, tableUi, window)) assertFalse("no repo name is hardcoded as LFS", f.contains("cloud_db_LFS"))
+        for (f in listOf(src, tableUi, window)) assertFalse("no repo name is hardcoded as LFS", f.contains("cloud_db_LFS") || f.contains("cloudy_db_LFS"))
     }
 
     @Test fun `#1238 the status window is full screen, shows what the app knows, and holds Clone repo as its last section`() {

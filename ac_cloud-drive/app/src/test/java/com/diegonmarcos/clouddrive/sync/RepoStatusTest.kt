@@ -37,6 +37,16 @@ class RepoStatusTest {
         for (r in reads) assert(StatusLight.glyph(RepoStatus.light(RepoStatus.kindOf(true, r))) != "?") { "a read clone drew ? for $r" }
     }
 
+    @Test fun `a large repository is its own kind, below error and above dirty, with real branch but no counts`() {
+        val big = GitSyncCoordinator.Glance("main", "origin/main", read = true, large = true, state = "large")
+        assertEquals(Kind.LARGE, RepoStatus.kindOf(true, big))
+        assertEquals(Kind.ERROR, RepoStatus.kindOf(true, big.copy(error = "x")))
+        val b = RepoStatus.block(true, big)
+        assertEquals("main", b.branch); assertEquals(null, b.modified); assertEquals(null, b.ahead); assertEquals(null, b.dirty)
+        val row = RepoTable.rowOf("x", null, true, big.copy(changed = 9), null)
+        assertEquals("a guard-skipped tree never claims a dirty count", null, row.dirtyFiles)
+    }
+
     @Test fun `a cloned repository that was never synced still shows its real status, not a question mark`() {
         // The old light read "never synced" (lastSync == 0) as UNKNOWN for every read repository.
         assertEquals(StatusLight.State.ON, RepoStatus.light(RepoStatus.kindOf(true, g())))

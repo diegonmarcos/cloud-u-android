@@ -98,7 +98,7 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         // git/<new> under the same completeness rule, so a renamed repository is never seeded a
         // second time beside its stray old-name clone.
         val moves = StoreMigration.migrate(SharedStore.root(), BuildConfig.GIT_SUBDIR, family.repos.map { it.name }.toSet()) +
-            StoreMigration.migrateRenames(SharedStore.gitRoot(), family.renames)
+            StoreMigration.migrateRenames(SharedStore.gitRoot(), Declarations.repoSot.renameMap + family.renames)
         moves.forEach { move ->
             DriveDebugLog.i(applicationContext, TAG, "migration ${move.name}: ${move.decision}")
             if (!StoreMigration.isComplete(move.to)) return@forEach

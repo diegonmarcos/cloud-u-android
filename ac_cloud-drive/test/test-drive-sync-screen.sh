@@ -86,6 +86,10 @@ if sed -n '/fun onPageOpened()/,/^    }/p' "$COORD" | grep -qE 'statusReader\.re
    && ! grep -E '^\s+(CLEAN|AHEAD|BEHIND|DIVERGED|DIRTY|NO_UPSTREAM|CONFLICT|ERROR)\(StatusLight\.State\.(UNKNOWN|UNVERIFIABLE)' "$SRC/sync/RepoStatus.kt" >/dev/null \
    && grep -qF 'never renders a question mark' "$APP/app/src/test/java/com/diegonmarcos/clouddrive/sync/RepoStatusTest.kt"; then pass "page open reads local status; every read kind has a non-? light; JVM fixture pins it"; else fail "a cloned repo can render ? after its status was read"; fi
 
+echo "── G1c cheap-first, bounded, cancellable status; live registry ──"
+if grep -qF 'fun cancelAll()' "$SRC/sync/GitStatusReader.kt" && grep -qF 'tooLarge(t.dir)' "$SRC/sync/GitStatusReader.kt" && grep -qF 'RepoCheap.tooLarge(dir, d.maxAutoFiles, d.maxScanMs)' "$COORD" \
+   && grep -qF 'onDispose { coordinator.cancelStatusReads() }' "$CARDS" && grep -qF 'fun checkWorktree(' "$COORD" && grep -qF 'refreshRegistry()' "$COORD" && grep -qF 'RepoSotLive.refresh(' "$COORD"; then pass "size guard before any worktree scan, on-demand check, cancel on close, conditional-GET registry refresh on open"; else fail "status scheduler guard / cancel / live registry wiring missing"; fi
+
 echo "── G2 the card ──"
 g2 "$CARDS" && pass "conflicts in the off colour, a red light, and a Resolve pill that opens the engine" || fail "conflicts are not surfaced on the card"
 for s in sync_now sync_open sync_history sync_settings sync_last sync_never sync_auto sync_manual sync_glance_reading sync_glance_gone sync_glance_unreadable sync_clean sync_changed; do

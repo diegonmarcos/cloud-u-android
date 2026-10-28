@@ -173,7 +173,12 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             )
         }
     }
-    val publicRows = if (cloudPublic.repos.isNotEmpty()) cloudPublic.repos.map { Declarations.GitPublicRepoDecl(it.name, it.name) } else page.publicRepos
+    // The registry (baked snapshot, replaced by the newer live copy when RepoSotLive fetched one) feeds the declared fallback, so a stale build never lists names the registry has since renamed or retired.
+    val sotRev by coordinator.sotRev.collectAsState()
+    val registryRows = remember(sotRev) {
+        Declarations.repoSot.repos.filter { !it.private && !it.pending && page.inNameFamilies(it.github) }.map { Declarations.GitPublicRepoDecl(it.github, it.github) }.sortedBy { it.name }
+    }
+    val publicRows = if (cloudPublic.repos.isNotEmpty()) cloudPublic.repos.map { Declarations.GitPublicRepoDecl(it.name, it.name) } else registryRows.ifEmpty { page.publicRepos }
     // #1149 Me: the declared hosts beyond GitHub and Cloud git (token sign-in, their own listings).
     val hostsState = remember { GitHostsState(ctx.applicationContext, scope) }
     LaunchedEffect(view) { if (view == GitView.ME) hostsState.restore() }
@@ -220,6 +225,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // #850 once per entry to the page: the bounded, cached status read, and the auto pull
     // when it is on and the network is unmetered. Recomposition never re-runs this.
     LaunchedEffect(Unit) { coordinator.onPageOpened() }
+    // The page closed: stop the status reads still queued (a running probe finishes, bounded by its timeout).
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { coordinator.cancelStatusReads() } }
     // #1195 the periodic check, only while this page is open and only when an interval is set (off by default).
     LaunchedEffect(autoSettings.intervalMinutes) {
         while (autoSettings.intervalMinutes > 0) { delay(autoSettings.intervalMinutes * 60_000L); coordinator.onTick() }
@@ -262,7 +269,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // a credential — and a cleanly complete pass draws nothing.
     // A file read: off the main thread (#1195), blank until it lands.
     val seedTally by produceState("") { value = withContext(Dispatchers.IO) { StoreSeedWorker.lastReport(ctx).trim().lines().lastOrNull().orEmpty() } }
-    val clonedByName = repos.associateBy { File(it.path).name }
+    // A clone folder under an OLD name (cloud-infra) is the same repository as its renamed row (cloudy-t-infra): keyed by the current name, never listed twice.
+    val clonedByName = repos.associateBy { Declarations.repoSot.canonical(File(it.path).name) }
+    var showArchived by remember { mutableStateOf(false) }
     // #1149 where Parentless looks: the store's git folder and the folder every registered clone sits in.
     val parentRoots = remember(repos) { (listOf(SharedStore.gitRoot()) + repos.mapNotNull { File(it.path).parentFile }).distinctBy { it.absolutePath } }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
@@ -279,7 +288,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         val named = publicRows.map { it.name }.toSet() + listing.repos.map { it.name }.toSet()
         return publicRows.map { page.owner to it.name } +
             listing.repos.map { it.owner.ifBlank { page.owner } to it.name } +
-            repos.map { File(it.path).name }.filter { it !in named }.map { page.owner to it }
+            repos.map { Declarations.repoSot.canonical(File(it.path).name) }.filter { it !in named }.map { page.owner to it }
     }
 
     // #642 what the last handoff to cloud-terminal-nix resolved to. Never empty after a
@@ -696,7 +705,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
 
     // THE ONE TABLE: every repository of every listing (GitHub, Cloud Gitea, the other hosts, the clones no listing named)
     // is one entry; public and private are not separate groups, the header sorts the lot (default: name, then visibility).
-    val entries: List<TableEntry> = buildList {
+    val allEntries: List<TableEntry> = buildList {
         if (view == GitView.CLOUD) {
             publicRows.forEach { d ->
                 add(TableEntry("pub-" + d.name, d.label, d.name, page.owner, false, false, "", tableRow(d.name, page.owner, false, page.cloneUrl(d.name, Declarations.REMOTE_HTTPS)), clonedByName[d.name], { clone(d.name) }, "", page.cloneUrl(d.name, Declarations.REMOTE_HTTPS)))
@@ -742,11 +751,14 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             }
             // Any clone the store holds that no listing named: shown, never hidden (the scheduler still syncs it).
             val named = listing.repos.map { it.name }.toSet() + cloudListing.repos.map { it.name }.toSet() + hostsState.hosts.values.flatMap { h -> h.repos.map { it.name } }.toSet()
-            repos.filter { File(it.path).name !in named }.forEach { r ->
-                add(TableEntry("other-" + r.id, r.name, r.name, page.owner, null, false, "", tableRow(File(r.path).name, page.owner, null), r, {}, ""))
+            repos.filter { Declarations.repoSot.canonical(File(it.path).name) !in named }.forEach { r ->
+                add(TableEntry("other-" + r.id, r.name, r.name, page.owner, null, false, "", tableRow(Declarations.repoSot.canonical(File(r.path).name), page.owner, null), r, {}, ""))
             }
         }
     }
+    // Retired repositories (z-archived_*) sit in a collapsed Archived group: counted, hidden until the owner opens it.
+    val archivedCount = allEntries.count { Declarations.repoSot.isArchived(it.name) }
+    val entries = if (showArchived) allEntries else allEntries.filterNot { Declarations.repoSot.isArchived(it.name) }
     val sortedEntries = RepoTable.sort(entries, sortColumn, sortAscending) { it.row }
     val summary = RepoTable.summarize(entries.map { (it.cloned != null) to it.row })
 
@@ -767,6 +779,11 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 }
                 RepoSummaryLine(summary)
                 RepoStatusLegend()
+                if (archivedCount > 0) Text(
+                    stringResource(if (showArchived) R.string.repo_archived_hide else R.string.repo_archived_show, archivedCount),
+                    Modifier.fillMaxWidth().clickable { showArchived = !showArchived }.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
+                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
+                )
                 // #642 what the last clone handoff did, right under the bulk bar that can trigger it: no press of Clone is silent.
                 if (handoff.isNotBlank()) Text(
                     handoff,
@@ -998,7 +1015,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         RepoStatusWindow(
             name = e.name, owner = e.owner, row = e.row, repo = e.cloned, glance = e.cloned?.let { glances[it.id] },
             cloneUrl = e.cloneUrl.ifBlank { page.cloneUrl(e.name, Declarations.REMOTE_HTTPS) }, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
-            cloning = e.name in cloning, fmt = fmt, onClone = e.onClone, onClose = { statusFor = "" },
+            cloning = e.name in cloning, fmt = fmt, onClone = e.onClone, onCheckWorktree = { e.cloned?.let { coordinator.checkWorktree(it) } }, onClose = { statusFor = "" },
         )
     }
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }

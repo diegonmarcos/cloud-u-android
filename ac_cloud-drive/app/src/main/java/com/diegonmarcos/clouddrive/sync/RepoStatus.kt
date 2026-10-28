@@ -21,6 +21,8 @@ object RepoStatus {
      */
     enum class Kind(val light: StatusLight.State) {
         NOT_CLONED(StatusLight.State.UNKNOWN), READING(StatusLight.State.UNKNOWN), MISSING(StatusLight.State.UNVERIFIABLE),
+        /** Size guard: the working tree was not scanned (large repo, tap to check). */
+        LARGE(StatusLight.State.UNVERIFIABLE),
         ERROR(StatusLight.State.OFF), CONFLICT(StatusLight.State.OFF), DIRTY(StatusLight.State.OFF),
         DIVERGED(StatusLight.State.OFF), NO_UPSTREAM(StatusLight.State.OFF),
         BEHIND(StatusLight.State.ON), AHEAD(StatusLight.State.ON), CLEAN(StatusLight.State.ON),
@@ -32,6 +34,7 @@ object RepoStatus {
         g == null || !g.read -> Kind.READING
         g.gone -> Kind.MISSING
         g.error != null -> Kind.ERROR
+        g.large -> Kind.LARGE
         g.conflicts > 0 -> Kind.CONFLICT
         g.changed > 0 -> Kind.DIRTY
         g.upstream == null -> Kind.NO_UPSTREAM
@@ -83,17 +86,18 @@ object RepoStatus {
     fun block(cloned: Boolean, g: GitSyncCoordinator.Glance?): Block {
         val kind = kindOf(cloned, g)
         val read = cloned && g != null && g.read && !g.gone && g.error == null
+        val counts = read && !g!!.large
         return Block(
             kind = kind, cloned = cloned,
             branch = if (read) g!!.branch else null,
             upstream = if (read) g!!.upstream else null,
-            modified = if (read) (g!!.changed - g.untracked).coerceAtLeast(0) else null,
-            untracked = if (read) g!!.untracked else null,
-            conflicts = if (read) g!!.conflicts else null,
-            ahead = if (read && g!!.upstream != null) g.ahead else null,
-            behind = if (read && g!!.upstream != null) g.behind else null,
-            unpushed = if (read && g!!.upstream != null) g.ahead else null,
-            lastFetchMs = if (read && g!!.fetchedAtMs > 0) g.fetchedAtMs else null,
+            modified = if (counts) (g!!.changed - g.untracked).coerceAtLeast(0) else null,
+            untracked = if (counts) g!!.untracked else null,
+            conflicts = if (counts) g!!.conflicts else null,
+            ahead = if (counts && g!!.upstream != null) g.ahead else null,
+            behind = if (counts && g!!.upstream != null) g.behind else null,
+            unpushed = if (counts && g!!.upstream != null) g.ahead else null,
+            lastFetchMs = if (counts && g!!.fetchedAtMs > 0) g.fetchedAtMs else null,
             error = if (kind == Kind.ERROR) errorKind(g?.error) else null,
             errorDetail = if (kind == Kind.ERROR) g?.error else null,
         )

@@ -552,6 +552,8 @@ android {
         buildConfigField "String", "RCLONE_JOBS_B64",    "\"${rcloneJobsB64}\""
         buildConfigField "String", "GIT_REPOS_B64",      "\"${gitReposB64}\""
         buildConfigField "String", "REPOS_SOT_B64",      "\"${reposSotB64}\""
+        buildConfigField "String", "REPOS_SOT_URL",      "\"${reposSrcDecl.url ?: ''}\""
+        buildConfigField "int",    "REPOS_SOT_REFRESH_MIN", "${(reposSrcDecl.refresh_minutes ?: 30) as int}"
         buildConfigField "boolean", "SEED_ENABLED",       "${seedEnabled}"
         buildConfigField "int",     "SEED_DEPTH",         "${seedDepth}"
         buildConfigField "boolean", "SEED_REQUIRE_UNMETERED", "${seedUnmetered}"

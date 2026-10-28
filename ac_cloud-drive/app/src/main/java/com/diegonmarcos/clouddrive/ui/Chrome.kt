@@ -164,6 +164,7 @@ object DriveTags {
     const val SYNC_GIT_STATUS_CELL = "sync_git_status_cell"
     const val SYNC_GIT_STATUS_WINDOW = "sync_git_status_window"
     const val SYNC_GIT_STATUS_CLONE = "sync_git_status_clone"
+    const val SYNC_GIT_STATUS_CHECK = "sync_git_status_check"
     const val SYNC_GIT_UNPUSHED = "sync_git_unpushed"
     const val SYNC_GIT_LOGIN = "sync_git_login"
     /** #642 the one line that reports what the cloud-terminal git handoff resolved to. */

@@ -84,7 +84,7 @@ object Declarations {
     }
 
     /** #850 the status reader's bounds: per-repository timeout, how many are read at once, cache age. */
-    data class GitStatusDecl(val timeoutSeconds: Int = 20, val concurrency: Int = 3, val ttlSeconds: Int = 60)
+    data class GitStatusDecl(val timeoutSeconds: Int = 20, val concurrency: Int = 1, val ttlSeconds: Int = 60, val maxAutoFiles: Int = 3000, val maxScanMs: Long = 1500)
 
     /**
      * #850 "Auto pull on open": [defaultOn] is the setting before the owner touches it, the
@@ -291,9 +291,22 @@ object Declarations {
         val renames: Map<String, String> get() = repos.flatMap { r -> r.renamedFrom.map { it to r.name } }.toMap()
     }
     /** #1073 one entry of the repo registry (_git-repos-master/repos.json) as baked in REPOS_SOT_B64. [github] is the GitHub repository name; [pending] = not created yet, so nothing may clone or list it. */
-    data class RepoSotEntry(val name: String, val github: String, val private: Boolean, val pending: Boolean, val renamedFrom: List<String> = emptyList(), val lfs: Boolean = false)
+    data class RepoSotEntry(val name: String, val github: String, val private: Boolean, val pending: Boolean, val renamedFrom: List<String> = emptyList(), val lfs: Boolean = false) {
+        /** The registry's naming convention for a retired repository (z-archived_*): hidden from the table unless the owner opens the Archived group. */
+        val archived: Boolean get() = github.startsWith("z-archived") || name.startsWith("z-archived")
+    }
     /** The registry, the ONE list of repositories; the Sync > Git family is held to it. */
-    data class RepoSotDecl(val repos: List<RepoSotEntry>) {
+    data class RepoSotDecl(val repos: List<RepoSotEntry>, /** the registry's own rename records, old -> new (one hop each) */ val renameRecords: Map<String, String> = emptyMap()) {
+        /** Every historical name -> the current github name (entries' renamed_from, then the records, chains followed). */
+        val renameMap: Map<String, String> by lazy {
+            val direct = LinkedHashMap<String, String>()
+            renameRecords.forEach { (o, n) -> direct[o] = n }
+            repos.forEach { r -> r.renamedFrom.forEach { o -> if (o != r.github) direct[o] = r.github } }
+            direct.keys.associateWith { k -> var cur = direct[k]!!; var hops = 0; while (hops++ < 10) cur = direct[cur] ?: break; cur }
+        }
+        /** The current name of a clone folder or repository name: itself when never renamed. */
+        fun canonical(name: String): String = renameMap[name] ?: name
+        fun isArchived(name: String): Boolean = byGithub(canonical(name))?.archived ?: name.startsWith("z-archived")
         fun byGithub(github: String): RepoSotEntry? = repos.firstOrNull { it.github == github }
         /** #1238 true = the registry declares `lfs: true` for it, false = listed and normal, null = the registry does not list it (unknown, never guessed). */
         fun lfsOf(github: String): Boolean? = byGithub(github)?.lfs
@@ -344,7 +357,10 @@ object Declarations {
     val apps: List<AppTileDecl> by lazy { parseApps(decode(BuildConfig.UI_APPS_B64)) }
     val connections: List<ConnectionDecl> by lazy { parseConnections(decode(BuildConfig.CONNECTIONS_B64)) }
     /** #1073 the repo registry, baked from build.json::storage.repos_source. */
-    val repoSot: RepoSotDecl by lazy { parseRepoSot(decode(BuildConfig.REPOS_SOT_B64)) }
+    private val bakedSot: RepoSotDecl by lazy { parseRepoSot(decode(BuildConfig.REPOS_SOT_B64)) }
+    /** A newer registry fetched at runtime (RepoSotLive), replacing the baked snapshot for everything that is read live. */
+    @Volatile var liveSot: RepoSotDecl? = null
+    val repoSot: RepoSotDecl get() = liveSot ?: bakedSot
     /** The Sync > Git family, minus any repository the registry does not list or has not created (pending_creation). */
     val gitFamily: GitFamilyDecl by lazy { restrictToRegistry(parseGitFamily(decode(BuildConfig.GIT_REPOS_B64)), repoSot) }
     val mirrorJobs: List<MirrorJobDecl> by lazy { parseMirrorJobs(decode(BuildConfig.MIRROR_JOBS_B64)) }
@@ -438,8 +454,10 @@ object Declarations {
         return GitPageDecl(
             status = GitStatusDecl(
                 timeoutSeconds = (st.int("timeout_seconds") ?: 20).coerceIn(1, 600),
-                concurrency = (st.int("concurrency") ?: 3).coerceIn(1, 16),
+                concurrency = (st.int("concurrency") ?: 1).coerceIn(1, 4),
                 ttlSeconds = (st.int("ttl_seconds") ?: 60).coerceAtLeast(0),
+                maxAutoFiles = (st.int("max_auto_files") ?: 3000).coerceAtLeast(1),
+                maxScanMs = (st.int("max_scan_ms") ?: 1500).toLong().coerceAtLeast(1),
             ),
             autoPull = GitAutoPullDecl(ap.bool("default_on", false), ap.bool("require_unmetered_network", true)),
             dense = o.bool("dense", true),
@@ -562,10 +580,19 @@ object Declarations {
         ConnectionDecl(name, c.str("kind"), c.str("endpoint"), c.str("auth"), c.str("vm"), c.str("status"), c.str("scope"), c.str("notes"), c.str("reason"), c.str("uri"), c.str("machine", MACHINE_CONTAINER))
     }
 
-    fun parseRepoSot(text: String): RepoSotDecl = RepoSotDecl(objects(element(text)).mapNotNull { r ->
-        val name = r.str("name"); if (name.isBlank()) return@mapNotNull null
-        RepoSotEntry(name, r.str("github", name), r.bool("private"), r.bool("pending"), r.strings("renamed_from"), r.bool("lfs"))
-    })
+    /** The baked slim array, or the full registry object (`repos` + `renames`) a live fetch returns. */
+    fun parseRepoSot(text: String): RepoSotDecl {
+        val e = element(text)
+        val o = e as? JsonObject
+        val list = if (o != null) objects(o["repos"]) else objects(e)
+        val repos = list.mapNotNull { r ->
+            val name = r.str("name"); if (name.isBlank()) return@mapNotNull null
+            val github = r.str("github").ifBlank { r.str("url").substringAfterLast('/').substringAfterLast(':').removeSuffix(".git").ifBlank { name } }
+            RepoSotEntry(name, github, r.bool("private"), r.bool("pending") || r.str("status") == "pending_creation", r.strings("renamed_from"), r.bool("lfs"))
+        }
+        val records = o?.let { objects(it["renames"]) }.orEmpty().mapNotNull { x -> x.str("from").takeIf { it.isNotBlank() }?.let { f -> x.str("to").takeIf { it.isNotBlank() }?.let { t -> f to t } } }.toMap()
+        return RepoSotDecl(repos, records)
+    }
 
     /** #1073 a family repository survives only when the registry lists it and it exists: a pending_creation repo is never offered for clone or seed. */
     fun restrictToRegistry(family: GitFamilyDecl, sot: RepoSotDecl): GitFamilyDecl =

@@ -666,6 +666,10 @@
     <string name="repo_kind_error">status could not be read</string>
     <string name="repo_kind_conflict">conflicts</string>
     <string name="repo_kind_dirty">uncommitted changes</string>
+    <string name="repo_kind_large">large repo: working tree not scanned, tap to check</string>
+    <string name="repo_archived_show">Archived (%1$d): tap to show</string>
+    <string name="repo_archived_hide">Archived (%1$d) shown: tap to hide</string>
+    <string name="repo_check_worktree">Check working tree</string>
     <string name="repo_kind_diverged">diverged: unpushed commits and new remote commits</string>
     <string name="repo_kind_no_upstream">no upstream branch to compare with</string>
     <string name="repo_kind_behind">behind the remote</string>

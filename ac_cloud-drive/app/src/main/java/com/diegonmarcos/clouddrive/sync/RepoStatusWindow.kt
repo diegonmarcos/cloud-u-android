@@ -36,6 +36,7 @@ private fun kindText(k: RepoStatus.Kind): String = stringResource(when (k) {
     RepoStatus.Kind.NOT_CLONED -> R.string.repo_kind_not_cloned
     RepoStatus.Kind.READING -> R.string.repo_kind_reading
     RepoStatus.Kind.MISSING -> R.string.repo_kind_missing
+    RepoStatus.Kind.LARGE -> R.string.repo_kind_large
     RepoStatus.Kind.ERROR -> R.string.repo_kind_error
     RepoStatus.Kind.CONFLICT -> R.string.repo_kind_conflict
     RepoStatus.Kind.DIRTY -> R.string.repo_kind_dirty
@@ -65,6 +66,7 @@ internal fun RepoStatusWindow(
     cloning: Boolean,
     fmt: DateFormat,
     onClone: () -> Unit,
+    onCheckWorktree: () -> Unit = {},
     onClose: () -> Unit,
 ) {
     val kind = RepoStatus.kindOf(repo != null, glance)
@@ -108,6 +110,7 @@ internal fun RepoStatusWindow(
                         RepoStatus.CloneAction.CLONING -> Text(stringResource(R.string.git_cloning), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         RepoStatus.CloneAction.NONE -> Text(stringResource(R.string.repo_status_window_cloned_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    if (kind == RepoStatus.Kind.LARGE) Pill(stringResource(R.string.repo_check_worktree), onCheckWorktree, modifier = Modifier.testTag(DriveTags.SYNC_GIT_STATUS_CHECK), filled = true)
                     androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = DriveMetrics.listBottom))
                 }
             }

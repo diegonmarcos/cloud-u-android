@@ -93,7 +93,7 @@ object RepoTable {
      * listing's flag when there is one; the REST answer fills it for a repo no listing named.
      */
     fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null, diskBytes: Long? = null, lfs: Boolean? = null): RepoTableRow {
-        val local = cloned && glance != null && glance.read && !glance.gone && glance.error == null
+        val local = cloned && glance != null && glance.read && !glance.gone && glance.error == null && !glance.large
         return RepoTableRow(
             name = name,
             isPrivate = declaredPrivate ?: remote?.isPrivate,

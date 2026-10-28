@@ -104,7 +104,7 @@ class RepoSotTest {
 
     @Test fun lfsComesFromTheRegistryFieldNeverFromKotlin() {
         // #1238 the LFS | Normal column: the registry's declarative `lfs: true`, read through the baked copy.
-        assertEquals("cloud_db_LFS is the LFS repository", true, decl.lfsOf("cloud_db_LFS"))
+        assertEquals("cloudy_db_LFS is the LFS repository", true, decl.lfsOf("cloudy_db_LFS"))
         val declared = sot["repos"]!!.jsonArray.map { it.jsonObject }
         assertTrue("the registry declares at least one lfs repo", declared.any { it["lfs"]?.jsonPrimitive?.boolean == true })
         for (r in declared) {

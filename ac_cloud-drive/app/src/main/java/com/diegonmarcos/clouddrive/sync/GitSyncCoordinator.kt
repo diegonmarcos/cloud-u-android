@@ -1,6 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
+import com.diegonmarcos.clouddrive.BuildConfig
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveDebugLog
 import com.diegonmarcos.clouddrive.GitSyncWorker
@@ -78,6 +79,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         val error: String? = null,
         val gone: Boolean = false,
         val read: Boolean = false,
+        /** Size guard: the worktree was NOT scanned (too large for the unattended pass); branch / upstream are real, counts are not. */
+        val large: Boolean = false,
         /** #850 the reader's terminal word: clean / ahead / behind / dirty / not_cloned / error. */
         val state: String = "",
         /** #850 when this glance was read (epoch ms) — the cache's timestamp. */
@@ -215,12 +218,29 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * constraint. Called from the page's LaunchedEffect(Unit): once per entry, never per recomposition.
      */
     fun onPageOpened() {
+        refreshRegistry()
         scope.launch {
             val list = loadRegistry()
             // The LOCAL status (no network, cached by ttl, bounded, off the main thread) is read on every open: without
             // it every cloned row stayed on "?" (the #1195 gate made the read opt-in and nothing else triggered it).
             statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) })
             runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.OPEN))
+        }
+    }
+
+    /** Bumped when a newer registry than the baked snapshot was applied (Declarations.liveSot): the table recomposes on it. */
+    val sotRev = MutableStateFlow(0)
+
+    /** Table open: apply the cached live registry at once, then ask the declared url (conditional GET, at most every refresh_minutes) and apply a newer one. Off the main thread. */
+    fun refreshRegistry() {
+        scope.launch(Dispatchers.IO) {
+            fun apply(text: String?) {
+                val d = text?.let { runCatching { Declarations.parseRepoSot(it) }.getOrNull() } ?: return
+                if (d.repos.isNotEmpty()) { Declarations.liveSot = d; sotRev.value = sotRev.value + 1 }
+            }
+            apply(RepoSotLive.cached(ctx.filesDir))
+            val o = runCatching { RepoSotLive.refresh(ctx.filesDir, BuildConfig.REPOS_SOT_URL, RepoSotLive.http, BuildConfig.REPOS_SOT_REFRESH_MIN * 60_000L, System.currentTimeMillis()) }.getOrNull()
+            if (o == RepoSotLive.Outcome.UPDATED) apply(RepoSotLive.cached(ctx.filesDir))
         }
     }
 
@@ -243,6 +263,12 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             }
         }
     }
+
+    /** The owner asked for ONE clone's working-tree status (status window): the size guard does not apply, one repository, forced. */
+    fun checkWorktree(repo: ManagedRepo) { statusReader.request(listOf(GitStatusReader.Target(repo.id, File(repo.path), onDemand = true)), force = true) }
+
+    /** The Git page closed: stop the reads still queued. */
+    fun cancelStatusReads() { statusReader.cancelAll() }
 
     /** Fetch every clone (the declared fetch op, one running op per repository). */
     fun fetchAll() { repos.value.forEach { runOp(it, OP_FETCH) } }
@@ -630,6 +656,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 timeoutMs = d.timeoutSeconds * 1000L,
                 concurrency = d.concurrency,
                 ttlMs = d.ttlSeconds * 1000L,
+                tooLarge = { dir -> Declarations.repoSot.lfsOf(dir.name) == true || RepoCheap.tooLarge(dir, d.maxAutoFiles, d.maxScanMs) },
             )
         }
 
@@ -665,6 +692,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         fun glanceOf(s: GitStatusReader.Status): Glance = when (s.state) {
             GitStatusReader.State.READING -> Glance()
             GitStatusReader.State.NOT_CLONED -> Glance(gone = true, read = true, state = "not_cloned", readAtMs = s.readAtMs)
+            GitStatusReader.State.LARGE -> Glance(s.probe?.branch, s.probe?.upstream, read = true, large = true, state = "large", readAtMs = s.readAtMs)
             GitStatusReader.State.ERROR -> Glance(error = s.reason ?: "unknown", read = true, state = "error", readAtMs = s.readAtMs)
             else -> s.probe!!.let { p ->
                 Glance(p.branch, p.upstream, p.ahead, p.behind, p.changed, p.conflicts, p.repositoryState, read = true, state = s.state.name.lowercase(), readAtMs = s.readAtMs, untracked = p.untracked, fetchedAtMs = p.fetchedAtMs)
