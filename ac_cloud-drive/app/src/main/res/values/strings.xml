@@ -88,7 +88,6 @@
     <string name="files_rename_pattern">Rename by pattern</string>
     <string name="files_rename_pattern_hint">{name} {n} {ext} {date}</string>
     <string name="files_zip">Zip</string>
-    <string name="files_unzip_here">Extract here</string>
     <string name="files_convert_pdf">Convert PDF to…</string>
     <string name="files_convert_pdf_not_offered">docx, xlsx and odt need the fleet converter service and are not produced on the phone</string>
     <string name="files_convert_saved">Saved %1$s next to the original</string>
@@ -247,7 +246,6 @@
     <!-- #608 SYNC ▸ GIT, the redesigned page. The section titles, the operation labels and
          the repository names are DECLARATIONS (build.json::ui.sync.git), never strings: what
          lives here is only the wording the page itself owns. -->
-    <string name="git_section_other">Other clones in the store</string>
     <!-- #629 the vault-delivered git credential: the supported path, not a browser login -->
     <string name="git_login_from_vault">Credential: from vault (%1$s)</string>
     <string name="git_login_vault_note">The config import delivered this credential, so the private listing and every clone work without a browser login.</string>

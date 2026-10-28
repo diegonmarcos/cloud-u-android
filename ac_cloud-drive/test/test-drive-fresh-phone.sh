@@ -27,7 +27,7 @@
 #   F2  without all-files access the seed attempts nothing, reports every declared
 #       repository as needs-storage, and retries — before the migration touches
 #       the store.
-#   F3  every PUBLIC cloud*/front* repository the manifest declares is seeded.
+#   F3  every PUBLIC repository of a declared name family (build.json::ui.sync.git.name_families) is seeded.
 #   F4  the seed's network constraint is declared in build.json, not hardcoded.
 #   F5  cloud-shared-store: cloud-termux makes ~/cloud-shared-store a REAL directory in
 #       its home (seen as /root/cloud-shared-store through the $HOME bind) whatever the
@@ -83,7 +83,7 @@ PY
 
 # f2 <StoreSeed.kt>
 f2() {
-    python3 - "$1" <<'PY'
+    python3 - "$1" "${2:-$SRC/SeedReport.kt}" <<'PY'
 import re, sys
 s = open(sys.argv[1]).read()
 m = re.search(r'override fun doWork\(\).*?\n    \}\n', s, re.S)
@@ -95,7 +95,16 @@ if gate < 0: bad.append('doWork has no all-files gate')
 elif mig >= 0 and gate > mig: bad.append('the gate runs AFTER the migration has already touched the store')
 else:
     tail = body[gate:gate + 600]
-    if 'return Result.retry()' not in tail: bad.append('a pass without storage does not retry')
+    # The retry is the worker's bounded budget (SeedPolicy), reached through conclude(); the three lines
+    # below pin each link of it: the gate hands its report to conclude(), conclude maps RETRY to
+    # Result.retry(), and an incomplete report (every repository NEEDS_STORAGE, which is resumable) is
+    # RETRY until MAX_PASSES.
+    if 'return conclude(blocked)' not in tail: bad.append('a pass without storage does not retry (it no longer ends in conclude(blocked))')
+    if not re.search(r'SeedPolicy\.Next\.RETRY -> \{[^\n]*Result\.retry\(\) \}', s): bad.append('conclude() does not map RETRY to Result.retry()')
+    rep = open(sys.argv[2]).read()
+    if not re.search(r'report\.complete -> Next\.DONE\s+pass >= MAX_PASSES -> Next\.GIVE_UP\s+else -> Next\.RETRY', rep): bad.append('SeedPolicy.decide no longer retries an incomplete pass until the budget is spent')
+    if not re.search(r'val complete: Boolean get\(\) = outcomes\.size == declared && resumable\.isEmpty\(\)', rep): bad.append('a report with unresolved repositories can read as complete')
+    if not re.search(r'val RESUMABLE = setOf\([^)]*NEEDS_STORAGE', rep): bad.append('NEEDS_STORAGE is not a resumable outcome, so the retry would end the work')
     if 'reportFile(applicationContext).writeText(blocked.text())' not in tail: bad.append('a pass without storage is not persisted for the Git page')
 print('\n'.join('    ' + b for b in bad)); sys.exit(1 if bad else 0)
 PY
@@ -103,15 +112,19 @@ PY
 
 # f3 <drive-git-repos.json> <StoreSeed.kt dir's Declarations.kt>
 f3() {
-    python3 - "$1" "$SRC/Declarations.kt" <<'PY'
+    python3 - "$1" "$SRC/Declarations.kt" "$BUILD_JSON" <<'PY'
 import json, re, sys
 repos = json.load(open(sys.argv[1]))['repos']
 decl = open(sys.argv[2]).read()
 bad = []
 if not re.search(r'val seedRepos: List<GitRepoDecl> get\(\) = gitFamily\.repos\.filter \{ it\.seed && !it\.private \}', decl):
     bad.append('Declarations.seedRepos is no longer "declared seed and not private"')
-pub = [r['name'] for r in repos if r.get('public') and not r.get('private') and re.match(r'(cloud|front)', r['name'])]
-if not pub: bad.append('the manifest declares no public cloud*/front* repository at all')
+# The name families are the DECLARED ones (build.json::ui.sync.git.name_families), not a prefix typed here:
+# the cloud-* / front-* names were renamed (cloudy-*, Projects-*), and a family list typed in this file
+# is exactly what went stale.
+fams = tuple(json.load(open(sys.argv[3]))['ui']['sync']['git']['name_families'])
+pub = [r['name'] for r in repos if r.get('public') and not r.get('private') and r['name'].startswith(fams)]
+if not pub: bad.append('the manifest declares no public repository in a declared name family at all')
 miss = [n for n in pub if not next(r for r in repos if r['name'] == n).get('seed')]
 if miss: bad.append('public repositories the seed never attempts: ' + ', '.join(miss))
 print('\n'.join('    ' + b for b in bad)); sys.exit(1 if bad else 0)
@@ -195,7 +208,7 @@ echo "── #730 a fresh phone: the store seeds and the terminal mounts it ─�
 run() { local id="$1" what="$2"; shift 2; local out; if out="$("$@" 2>&1)"; then pass "$id $what"; else fail "$id $what"; [ -n "$out" ] && echo "$out"; fi; }
 run F1 "the seed is scheduled on first launch and re-kicked on the all-files grant" f1 "$MAIN"
 run F2 "without all-files access the seed reports needs-storage for every repository and retries" f2 "$SEED"
-run F3 "every public cloud*/front* repository in the manifest is seeded" f3 "$MANIFEST"
+run F3 "every public repository of a declared name family in the manifest is seeded" f3 "$MANIFEST"
 run F4 "the seed's network constraint is declared" f4 "$SEED" "$BUILD_JSON" "$GRADLE"
 run F5 "cloud-termux makes ~/cloud-shared-store in its home (grant-independent) and cloud-nix links to it" f5 "$ENTER" "$BAKE"
 run F6 "no ~/emulated link or empty mount point is left when storage is not granted" f6 "$ENTER" "$BAKE"
@@ -214,10 +227,10 @@ mut() {
 }
 mut F1a "$MAIN" "s.replace('        StoreSeedWorker.schedule(this)\n', '        if (hadStorageAccess) StoreSeedWorker.schedule(this)\n')" f1 MUTATED
 mut F1b "$MAIN" "s.replace('StoreSeedWorker.kick(this)', 'Unit')" f1 MUTATED
-mut F2a "$SEED" "s.replace('return Result.retry()\n        }\n        val family', 'return Result.success()\n        }\n        val family')" f2 MUTATED
+mut F2a "$SEED" "s.replace('return conclude(blocked)', 'return Result.success()', 1)" f2 MUTATED
 mut F2b "$SEED" "s.replace('SeedReport.withoutStorage(', 'SeedReport.withoutStorageX(')" f2 MUTATED
-# F3 un-seeds one public repository through the JSON itself (a duplicate key would lose to the original).
-mut F3 "$MANIFEST" "(lambda j, d: ([r.update(seed=False) for r in d['repos'] if r['name'] == 'front-data'], j.dumps(d, indent=1))[1])(__import__('json'), __import__('json').loads(s))" f3 MUTATED
+# F3 un-seeds the first seeded public repository (whatever its current name) through the JSON itself (a duplicate key would lose to the original).
+mut F3 "$MANIFEST" "(lambda j, d: ([r.update(seed=False) for r in [x for x in d['repos'] if x.get('seed') and x.get('public') and not x.get('private')][:1]], j.dumps(d, indent=1))[1])(__import__('json'), __import__('json').loads(s))" f3 MUTATED
 mut F4 "$SEED" "s.replace('if (BuildConfig.SEED_REQUIRE_UNMETERED) NetworkType.UNMETERED else NetworkType.CONNECTED', 'NetworkType.UNMETERED')" f4 MUTATED "$BUILD_JSON" "$GRADLE"
 mut F5a "$ENTER" "s.replace('mkdir -p \"\$CLOUD_STORE\" \"\$CLOUD_STORE_CFG\"', 'true')" f5 MUTATED "$BAKE"
 mut F5b "$BAKE" "s.replace('cloud_storage_link \"\$HOME/{store_dir}\" \"\$CLOUD_STORE_OWNER\"', 'cloud_storage_link \"\$HOME/{store_dir}\" \"\$CLOUD_STORE_OWNER.old\"')" f5 "$ENTER" MUTATED

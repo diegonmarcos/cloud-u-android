@@ -188,7 +188,7 @@ echo "── D5 the fleet island ──"
 if python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); m=b["modules"]; sys.exit(0 if "libs:bottomnav" in m and "libs:bottomnav" in m["app"]["depends_on"] and m["libs:bottomnav"].get("dir","").endswith("libs/bottomnav") else 1)' "$BJ"; then pass "libs:bottomnav declared and depended on"; else fail "libs:bottomnav missing from build.json modules / app.depends_on"; fi
 if grep -qE "implementation project\(':libs:bottomnav'\)" "$GRADLE"; then pass "libs:bottomnav linked"; else fail "libs:bottomnav not linked in app/build.gradle"; fi
 if grep -qE 'NavBarBottomHost\(' "$SHELL_KT" && grep -qE 'entries = Declarations\.nav\.islandEntries\(\)' "$SHELL_KT"; then pass "DriveShell draws the island from the declared tabs, on the fleet's host (which owns the scroll-collapse)"; else fail "DriveShell does not draw NavBarBottomHost from Declarations.tabs"; fi
-if grep -qE 'setContent \{ DriveTheme \{ Root\(\) \} \}' "$MAIN" && grep -qE 'class MainActivity : ComponentActivity\(\), DriveActions' "$MAIN"; then pass "MainActivity is a Compose host implementing DriveActions"; else fail "MainActivity is not the Compose host"; fi
+if grep -qE 'setContent \{ DriveTheme \{ Root\(\)(; [A-Za-z.]+\(\))* \} \}' "$MAIN" && grep -qE 'class MainActivity : ComponentActivity\(\), DriveActions' "$MAIN"; then pass "MainActivity is a Compose host implementing DriveActions"; else fail "MainActivity is not the Compose host"; fi
 
 echo "── D6 the WebView shell is gone ──"
 for gone in "$APP/app/src/main/assets/drive.html" "$APP/app/src/main/assets/vendor/tailwind.js" "$SRC/FilesBridge.kt" "$APP/app/src/main/res/layout/activity_main.xml"; do
@@ -206,6 +206,10 @@ for gone in "$APP/app/src/main/assets/reader.html" "$APP/app/src/main/assets/ven
 
 echo "── D7 no colour or caption literal; strings alive ──"
 COLOUR="$(grep -rnE 'Color\(0x[0-9A-Fa-f]{6,8}\)|parseColor\(|#[0-9A-Fa-f]{6}' "$SRC" --include='*.kt' | grep -vE '^\S+:\s*(//|\*|/\*)' || true)"
+# The ONE place a hex colour is data rather than chrome: the CSS of the standalone .html the Markdown
+# converter WRITES for the owner's document (files/convert/Markdown.kt STYLE). Exempted only as a CSS
+# declaration in that file; a Color(0x..) or parseColor( there, or any hex elsewhere, still fails.
+COLOUR="$(printf '%s\n' "$COLOUR" | grep -vE 'convert/Markdown\.kt:[0-9]+:.*(color|background|border[a-z-]*):[^;}"]*#[0-9A-Fa-f]{3,6}' | grep -v '^$' || true)"
 if [ -z "$COLOUR" ]; then pass "no colour literal in the chrome's Kotlin (colors.xml → DriveTheme)"; else fail "colour literal in Kotlin:"; printf '%s\n' "$COLOUR" | sed 's/^/        /'; fi
 CAPTION="$(grep -rnE '(^|[^A-Za-z])(Text|CapsuleBadge|Pill|SectionHeader|DriveCard|EmptyState)\(\s*"[A-Za-z][^"]*"' "$SRC" --include='*.kt' || true)"
 if [ -z "$CAPTION" ]; then pass "no caption literal in a screen (every caption is a string resource or a declaration)"; else fail "caption typed into Kotlin:"; printf '%s\n' "$CAPTION" | sed 's/^/        /'; fi
@@ -234,7 +238,8 @@ if grep -qE 'enum class State \{ ON, OFF, UNKNOWN, UNVERIFIABLE \}' "$LIGHT" && 
 if grep -qE 'fun of\(reading: Boolean\?, observed: Boolean = true\): State' "$LIGHT" && grep -qE 'null -> State\.UNKNOWN' "$LIGHT"; then pass "null never collapses to OFF; unobserved is UNVERIFIABLE"; else fail "StatusLight.of does not implement the honesty rules"; fi
 for c in status_light_on status_light_off status_light_unknown; do grep -qE "<color name=\"$c\">" "$COLORS" && pass "colors.xml declares $c" || fail "colors.xml lacks $c"; done
 for s in status_light_on status_light_off status_light_unknown status_light_unverifiable status_light_description; do grep -qE "<string name=\"$s\">" "$STRINGS" && pass "strings.xml declares $s" || fail "strings.xml lacks $s"; done
-SUPER="$ROOT/aa_cloud-superapp/app/src/main/res/values/colors.xml"
+# the status-light tokens moved out of the superapp tree into libs:account (the superapp consumes them from there)
+SUPER="$ROOT/ab_cloud-libs-shared/libs/account/src/main/res/values/colors.xml"
 if [ -f "$SUPER" ]; then
     for c in status_light_on status_light_off status_light_unknown; do
         ours="$(grep -oE "<color name=\"$c\">#[0-9A-Fa-f]+</color>" "$COLORS" | grep -oE '#[0-9A-Fa-f]+' | tr 'a-f' 'A-F')"
@@ -334,7 +339,7 @@ for want in ("GitSync", "Fsync"):
     if tile.get("package"): print("    %s declares a package: it is an in-app route, not an installed app" % want); bad = 1
 sys.exit(bad)
 PYTHON
-if grep -qE 'CompositionLocalProvider\(LocalContentColor provides text, content = content\)' "$THEME"; then pass "the dark theme provides LocalContentColor: no Text() inherits material3's Color.Black on the dark page"; else fail "DriveTheme does not provide LocalContentColor - every Text() without an explicit colour prints BLACK on the dark page"; fi
+if tr '\n' ' ' <"$THEME" | grep -qE 'CompositionLocalProvider\( *LocalContentColor provides text,'; then pass "the dark theme provides LocalContentColor: no Text() inherits material3's Color.Black on the dark page"; else fail "DriveTheme does not provide LocalContentColor - every Text() without an explicit colour prints BLACK on the dark page"; fi
 for a in android:textColorPrimary android:textColorSecondary colorOnSurface; do
     grep -qE "<item name=\"$a\">@color/drive_text" "$THEMES" && pass "Theme.CloudDrive names $a" || fail "Theme.CloudDrive does not override $a - an inflated View falls back to a framework ink"
 done

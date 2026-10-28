@@ -69,11 +69,15 @@ s2() {
 import json, os, re, sys
 shared, bj, src = json.load(open(sys.argv[1])), json.load(open(sys.argv[2])), sys.argv[3]
 providers = shared.get("auth", {}).get("sign_in", {}).get("providers", [])
-# #641 the three ways left: the two Authelia ways and Google's device grant. An EQUALITY, so a
+# #1083 the five ways: the two Authelia ways, Google, GitHub (an OAuth App device flow; #641's
+# GitHub App grant stays deleted) and Cloudflare Access. An EQUALITY on the ordered ids, so a
 # provider quietly added or removed is reported rather than absorbed.
-if len(providers) != 3 or any(p.get("id") == "github" for p in providers):
-    print("    shared build.json::auth.sign_in declares %r; the three ways are authelia, authelia_web and google (#641 deleted the GitHub App device grant)"
-          % [p.get("id") for p in providers]); sys.exit(1)
+ids = [p.get("id") for p in providers]
+if ids != ["authelia", "authelia_web", "google", "github", "cloudflare"]:
+    print("    shared build.json::auth.sign_in declares %r; the five ways are authelia, authelia_web, google, github and cloudflare (#1083)" % ids); sys.exit(1)
+gh = providers[3]
+if gh.get("kind") != "device_flow" or not gh.get("client_id") or gh.get("client_secret"):
+    print("    the github provider must be a secret-less device_flow with a client_id (an OAuth App, not #641's deleted GitHub App grant)"); sys.exit(1)
 if "sign_in" in json.dumps(bj.get("ui", {})) or "providers" in json.dumps(bj.get("auth", {})):
     print("    this app's build.json ALSO declares a sign-in provider list — two declarations"); sys.exit(1)
 code = ""
@@ -82,10 +86,13 @@ for d, _, fs in os.walk(src):
         if f.endswith(".kt"):
             for line in open(os.path.join(d, f), encoding="utf-8"):
                 if not line.strip().startswith(("//", "*", "/*")): code += line
+# A JSON field NAME read off a registry row (r.str("github"): the repos registry's own `github` key,
+# #1238) is not a provider id typed into the app, so accessor arguments are not counted for the id.
+keyless = re.sub(r'\b(?:str|optString|has|opt|getString)\("[^"]*"\)', "", code)
 bad = []
 for p in providers:
-    for lit in [p.get("id"), p.get("device_code_url"), p.get("token_url"), p.get("userinfo_url"), p.get("client_id")]:
-        if lit and '"%s"' % lit in code: bad.append(lit)
+    for lit, hay in [(p.get("id"), keyless), (p.get("device_code_url"), code), (p.get("token_url"), code), (p.get("userinfo_url"), code), (p.get("client_id"), code)]:
+        if lit and '"%s"' % lit in hay: bad.append(lit)
 if bad: print("    provider data typed into this app's Kotlin: %s" % bad); sys.exit(1)
 PYTHON
 }

@@ -114,10 +114,16 @@ if isinstance(order, list) and isinstance(providers, dict):
             print("    rung %s declares no kind, which is the only thing code dispatches on" % rid); bad += 1
         if not (p.get("label") or "").strip():
             print("    rung %s declares no label: the page could not name it" % rid); bad += 1
-# #641 STAYS DONE. The chain must not have smuggled a github provider back into
-# the device-grant list; it authenticates through GITHUB'S OWN app instead.
-if any(p.get("id") == "github" for p in auth["sign_in"]["providers"]):
-    print("    the github provider is declared in auth.sign_in.providers again (#641 deleted it)"); bad += 1
+# #641 STAYS DONE, as amended by #1083. The chain must not smuggle a github GIT credential back into the
+# sign-in list: #1083 re-declared GitHub there as an IDENTITY-only OAuth App (grants == [identity], no
+# secret), so the sign-in entry may exist but can never be a credential the chain would clone with, and
+# the chain's own github rung stays gh on the device with no client of ours.
+for p in auth["sign_in"]["providers"]:
+    if p.get("id") == "github" and (p.get("grants") != ["identity"] or p.get("client_secret")):
+        print("    the github sign-in provider is no longer identity-only/secret-less (#641 deleted the git-capable one)"); bad += 1
+if (chain.get("providers") or {}).get("github", {}).get("kind") != "gh_on_device" or any(
+        k in (chain.get("providers") or {}).get("github", {}) for k in ("client_id", "client_secret", "token_url")):
+    print("    the chain's github rung is not plain gh_on_device without a client of its own"); bad += 1
 # ONE ID. The chain must not carry its own copy of the credential id.
 if "vault-git-https" in json.dumps(chain.get("providers") or {}):
     print("    a rung repeats the credential id — a second copy is how one credential "
@@ -747,7 +753,7 @@ PYTHON
              echo "    go through the ONE session-aware authFor, or a session repository dials anonymously"; bad=1; }
     # THE PAGE ROUTES A FLEET-LISTED ROW HERE — in-process, never the terminal, which
     # cannot present the session.
-    grep -qE 'if \(listing\.rungId\.isNotBlank\(\)\) cloneViaFleet\(listing\.rungId, gh\)' "$page" \
+    grep -qE 'if \(wayListing\.rungId\.isNotBlank\(\)\) cloneViaFleet\(wayListing\.rungId, gh\)' "$page" \
         || { echo "    a fleet-listed row does not clone on the leg that listed it"; bad=1; }
     grep -qE 'authKind = GitSyncCoordinator\.AUTH_SESSION' "$page" \
         || { echo "    the fleet clone does not carry the session auth kind"; bad=1; }
@@ -1050,7 +1056,7 @@ _stage && _green "c11" _c11 && {
                                     'GitOpResult(false, why)'
     _red "C11 a failed session clone surfaces as raw transport prose with no next step" _c11; }
 _stage && _green "c11" _c11 && {
-    _sub "$W/GitReposScreen.kt" 'if (listing.rungId.isNotBlank()) cloneViaFleet(listing.rungId, gh)' \
+    _sub "$W/GitReposScreen.kt" 'if (wayListing.rungId.isNotBlank()) cloneViaFleet(wayListing.rungId, gh)' \
                                 'if (false) Unit'
     _red "C11 a fleet-listed row re-routed off the leg that listed it" _c11; }
 _stage && _green "c11" _c11 && {

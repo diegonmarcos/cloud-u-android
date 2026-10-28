@@ -147,7 +147,7 @@ a4() {
 # r1 <shared build.json> : the remedy mapping is declared, in one place, and covers the real error
 r1() {
     python3 - "$1" <<'PYTHON'
-import json, sys
+import json, re, sys
 auth = json.load(open(sys.argv[1], encoding="utf-8"))["auth"]
 rows = auth.get("grant_remedies") or []
 bad = 0
@@ -167,15 +167,19 @@ for r in rows:
         print("    row %s carries no remedy, which is the whole point" % r.get("match")); bad += 1
     if "settings/apps" in ((r.get("remedy") or "") + " " + (r.get("url") or "")):
         print("    row %s still points at a GitHub App setting" % r.get("match")); bad += 1
-# The provider itself, in the same file: exactly one device grant is left and it is not GitHub's.
+# The providers themselves, in the same file: Google's device grant and GitHub's identity-only OAuth App.
 providers = json.load(open(sys.argv[1], encoding="utf-8"))["auth"]["sign_in"]["providers"]
 flows = [p for p in providers if p.get("kind") == "device_flow"]
-if len(flows) != 1 or flows[0].get("id") != "google":
-    print("    the device grants are %r; exactly one, Google's, is expected"
+# #1083 GitHub is back in the SHARED sign-in list as the owner's own OAuth App (Ov23li id, secret-less,
+# identity only); #641's deleted provider was a GitHub APP (Iv1./Iv23 ids, Device Flow OFF). The git
+# credential still comes from the vault/chain, so the sign-in github may never grant anything but identity.
+if [p.get("id") for p in flows] != ["google", "github"]:
+    print("    the device grants are %r; exactly Google's and the GitHub OAuth App's are expected"
           % [p.get("id") for p in flows]); bad += 1
-if any(p.get("id") == "github" for p in providers):
-    print("    the github provider is declared again"); bad += 1
-if "Ov23li" in open(sys.argv[1], encoding="utf-8").read():
+gh = next((p for p in providers if p.get("id") == "github"), {})
+if gh.get("grants") != ["identity"] or gh.get("client_secret") or not (gh.get("client_id") or "").startswith("Ov23li"):
+    print("    the github provider must be identity-only, secret-less and an OAuth App (Ov23li client id)"); bad += 1
+if re.search(r"Iv1\.|Iv23", open(sys.argv[1], encoding="utf-8").read()):
     print("    a GitHub App client id is back in the shared declaration"); bad += 1
 print("    declared remedies: %d" % len(rows))
 sys.exit(1 if bad else 0)

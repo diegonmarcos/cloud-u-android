@@ -107,15 +107,28 @@ for rid, rung in chain.items():
         if k in CLIENT_KEYS:
             print("    git rung %s declares %s — an OAuth-App client of the fleet's own; the GitHub leg is gh's own sign-in"
                   % (rid, ".".join(kp))); bad = 1
-# the whole auth block and the drive's git page: no GitHub OAuth endpoint, no oauth landing
+# #1083 declared GitHub again in auth.sign_in, as an IDENTITY sign-in (the owner's own OAuth App,
+# scope read:user, grants identity only). That provider is the one place an oauth endpoint may sit,
+# and only while it can never become a git credential: identity grant only, no `repo`-class scope.
+# Everything else in the auth block, and the whole git page, still names no oauth endpoint.
+sign_in_gh = [p for p in (auth.get("sign_in", {}).get("providers") or []) if p.get("id") == "github"]
+for p in sign_in_gh:
+    if p.get("grants") != ["identity"] or re.search(r"\brepo\b|\bgist\b|\bworkflow\b|write:|admin:", p.get("scope") or ""):
+        print("    auth.sign_in github is no longer identity-only (grants %r, scope %r): it would be a git credential of the fleet's own"
+              % (p.get("grants"), p.get("scope"))); bad = 1
+def _exempt(kp):
+    return len(kp) >= 4 and kp[:3] == ["auth", "sign_in", "providers"] and kp[3].isdigit() and \
+        (auth.get("sign_in", {}).get("providers") or [])[int(kp[3])].get("id") == "github"
 for label, tree in (("auth", auth), ("ui.sync.git", ((drive.get("ui") or {}).get("sync") or {}).get("git") or {})):
     for kp, k, v in walk(tree, [label]):
+        if _exempt(kp):
+            continue
         if isinstance(v, str) and OAUTH_VALUE.search(v):
             print("    %s = %r names a GitHub OAuth endpoint or an oauth landing" % (".".join(kp), v)); bad = 1
-# no sign-in provider may be GitHub's in any spelling (#641's rule, carried here too)
+# no OTHER sign-in provider may be GitHub's in any spelling (#641's rule, carried here too)
 for p in auth.get("sign_in", {}).get("providers") or []:
-    if "github" in json.dumps({k: v for k, v in p.items() if not k.startswith("_doc")}).lower():
-        print("    auth.sign_in declares a GitHub provider again: %s" % p.get("id")); bad = 1
+    if p.get("id") != "github" and "github" in json.dumps({k: v for k, v in p.items() if not k.startswith("_doc")}).lower():
+        print("    auth.sign_in provider %s names GitHub" % p.get("id")); bad = 1
 # the gh pin carries gh's binary and how it speaks — never a client or endpoint of ours
 for kp, k, v in walk(pin, ["gh-binary"]):
     if k in CLIENT_KEYS or (isinstance(v, str) and OAUTH_VALUE.search(v)):
@@ -204,7 +217,7 @@ PYTHON
         || { echo    "    the page's sign-in does not run gh auth login on the declared host"; bad=1; }
     grep -qE 'ghEngine\.repoList\(ghLimit, GitHubRepos\.GH_FIELDS\)' "$page" \
         || { echo "    the GitHub listing is not gh repo list"; bad=1; }
-    grep -qE 'else if \(listing\.viaGh\) cloneViaGh\(gh\)' "$page" \
+    grep -qE 'else if \(wayListing\.viaGh\) cloneViaGh\(gh\)' "$page" \
         || { echo "    a row gh listed does not clone on gh's credential (it would fall to a terminal with none)"; bad=1; }
     python3 - "$page" <<'PYTHON' || bad=1
 import re, sys
@@ -409,9 +422,9 @@ _green g3 g3 "$SHARED_BJ" "$RUNNER" "$MUT/page.kt" "$LIST" "$COORD" "$STR" "$WIR
 # G3 — gh's rows fall to the terminal clone
 cp "$PAGE" "$MUT/page.kt"
 _green g3 g3 "$SHARED_BJ" "$RUNNER" "$MUT/page.kt" "$LIST" "$COORD" "$STR" "$WIRING" && {
-    _sub "$MUT/page.kt" '                                            else if (listing.viaGh) cloneViaGh(gh)
+    _sub "$MUT/page.kt" '                            else if (wayListing.viaGh) cloneViaGh(gh)
 ' ''
-    python3 -c 'import sys; sys.exit(0 if "else if (listing.viaGh) cloneViaGh(gh)" not in open(sys.argv[1]).read() else 1)' "$MUT/page.kt" \
+    python3 -c 'import sys; sys.exit(0 if "else if (wayListing.viaGh) cloneViaGh(gh)" not in open(sys.argv[1]).read() else 1)' "$MUT/page.kt" \
         && _applied "$PAGE" "$MUT/page.kt" 'else clone(gh.name, gh.cloneUrl, gh.sshUrl)' \
         && _red "G3 a row gh listed falls through to the terminal clone" g3 "$SHARED_BJ" "$RUNNER" "$MUT/page.kt" "$LIST" "$COORD" "$STR" "$WIRING"; }
 # G3 — gh's clone re-templates the URL

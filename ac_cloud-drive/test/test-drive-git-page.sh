@@ -23,7 +23,7 @@
 #       an owner, the name families and a non-empty public set.
 #   P2  the public set is derived, not hand-picked: every name begins with a
 #       declared name family, the list is unique and alphabetical, THIS
-#       repository (cloud-u-android) is in it, every repository the seed
+#       repository (found in the pinned registry by its pre-rename name cloud-u-android) is in it, every repository the seed
 #       manifest marks `seed` is in it, and nothing the manifest marks
 #       `private: true` is.
 #   P3  declaration ↔ dispatch, both directions: GitReposScreen's
@@ -143,11 +143,17 @@ sys.exit(bad)
 PYTHON
 }
 
-# p2 <build.json> <drive-git-repos.json>
+# p2 <build.json> <drive-git-repos.json> [registry copy, default data/repos.sot.json]
 p2() {
-    python3 - "$1" "$2" <<'PYTHON'
+    python3 - "$1" "$2" "${3:-$APP/data/repos.sot.json}" <<'PYTHON'
 import json, sys
 g = json.load(open(sys.argv[1]))["ui"]["sync"]["git"]
+# THIS repository's current name comes from the registry copy the app pins (data/repos.sot.json), found by
+# the name it had before the cloud-* -> cloudy-* rename, so a later rename follows the registry, not this file.
+me = [r["name"] for r in json.load(open(sys.argv[3]))["repos"] if "cloud-u-android" in r.get("renamed_from", [])]
+if len(me) != 1:
+    print("    the pinned registry copy does not name exactly one repository that was cloud-u-android: %s" % me); sys.exit(1)
+me = me[0]
 manifest = json.load(open(sys.argv[2]))["repos"]
 families = tuple(g["name_families"])
 names = [r["repo"] for r in g["public_repos"]]
@@ -161,8 +167,8 @@ if names != sorted(names):
     print("    public_repos is not alphabetical by name: %s" % names); bad = 1
 if any(not r.get("caption") for r in g["public_repos"]):
     print("    a public_repos entry has no caption"); bad = 1
-if "cloud-u-android" not in names:
-    print("    cloud-u-android is missing from the declared public set (#608 names it explicitly)"); bad = 1
+if me not in names:
+    print("    %s is missing from the declared public set (#608 names it explicitly)" % me); bad = 1
 by_name = {r["name"]: r for r in manifest}
 for r in manifest:
     if r.get("seed") and r["name"] not in names:
@@ -235,7 +241,7 @@ echo "── P1 the declaration is whole and ordered ──"
 p1 "$BJ" && pass "ui.sync.git declares both sections, both groups, both login ways, the https api, the three remote modes and the fourteen operations" || fail "ui.sync.git is not what #608 declares"
 
 echo "── P2 the public set is derived, not hand-picked ──"
-p2 "$BJ" "$REPOS" && pass "every declared public repository is in a declared name family, unique, alphabetical; cloud-u-android is in it; the seed set is a subset; no manifest-private repository is" || fail "the declared public set disagrees with its own rule or with the seed manifest"
+p2 "$BJ" "$REPOS" && pass "every declared public repository is in a declared name family, unique, alphabetical; this repository (by its registry name) is in it; the seed set is a subset; no manifest-private repository is" || fail "the declared public set disagrees with its own rule or with the seed manifest"
 
 echo "── P3 declaration ↔ dispatch, both directions ──"
 p3 "$BJ" "$PAGE" && pass "the screen dispatches exactly the declared sections and exactly the declared operations" || fail "the page's dispatch and the declaration disagree"
@@ -252,7 +258,7 @@ else
 fi
 if grep -rqE 'org\.eclipse\.jgit' "$SRC"; then fail "the app imports JGit directly — libs:git-sync is the engine"; else pass "no JGit in the app: every verb goes through the engine"; fi
 
-echo "── P5 #653 there is no GITHUB login on this page, and no GitHub App anywhere ──"
+echo "── P5 #653 no GITHUB login surface on this page; #1083 GitHub is a shared OAuth App, never a GitHub App ──"
 # The provider was a GitHub APP (`Ov23li` client_id prefix) and GitHub Apps ship with Device
 # Flow OFF, so Start could never work. The client id must still be absent everywhere.
 #
@@ -279,21 +285,30 @@ else
 fi
 if grep -qiE 'policy *= *listOf\([^)]*github|Open\.Device|DeviceFlowDialog|SignIn\.Kind\.DEVICE_FLOW' "$PAGE"; then fail "a GitHub / device-flow sign-in surface is on the page"; else pass "no GitHub and no device-flow sign-in surface on the page"; fi
 if grep -qE 'webauth' "$PAGE"; then fail "the page still reads a webauth way"; else pass "no webauth way is read in Kotlin"; fi
-if grep -rqE 'Ov23li' "$SHARED_BJ" "$BJ" "$PAGE"; then fail "a GitHub App client id is back in the declarations"; else pass "no Ov23li client id in either declaration or on the page"; fi
+# #1083 re-declared GitHub in the SHARED declaration as the owner's own OAuth App (client ids with the
+# Ov23li prefix ARE OAuth Apps, which ship Device Flow ON; the deleted #641 provider carried a GitHub
+# APP id, Iv1./Iv23, whose Device Flow is OFF). What stays forbidden is a GitHub App id anywhere, and
+# ANY client id in THIS app's declaration or on the page: the id lives in the shared declaration only.
+if grep -qE 'Ov23li|Iv1\.|Iv23' "$BJ" "$PAGE"; then fail "a GitHub client id is typed in this app's declaration or on the page"; else pass "no GitHub client id in this app's declaration or on the page"; fi
 python3 - "$SHARED_BJ" <<'PYTHON'
-import json, sys
+import json, re, sys
 p = json.load(open(sys.argv[1], encoding="utf-8"))["auth"]["sign_in"]["providers"]
 flows = [x for x in p if x.get("kind") == "device_flow"]
 bad = 0
 # NOT ">= 0": the check must not pass by finding no device grant at all.
-if len(flows) != 1 or flows[0].get("id") != "google":
-    print("    the shared declaration carries %r as its device grants; exactly one, Google's, is expected"
+if [x.get("id") for x in flows] != ["google", "github"]:
+    print("    the shared declaration carries %r as its device grants; exactly Google's and the GitHub OAuth App's are expected"
           % [x.get("id") for x in flows]); bad = 1
-if any(x.get("id") == "github" for x in p):
-    print("    the github provider is declared again"); bad = 1
+for x in p:
+    for k in ("client_id", "fallback_client_id"):
+        if re.match(r"(Iv1\.|Iv23)", x.get(k) or ""):
+            print("    provider %s carries a GitHub APP client id in %s (Device Flow is OFF on GitHub Apps)" % (x.get("id"), k)); bad = 1
+gh = next((x for x in p if x.get("id") == "github"), None)
+if not gh or gh.get("client_secret") or not (gh.get("client_id") or "").startswith("Ov23li") or not gh.get("fallback_client_id"):
+    print("    the github provider must be a secret-less OAuth App (Ov23li client_id) with a public fallback_client_id"); bad = 1
 sys.exit(1 if bad else 0)
 PYTHON
-if [ $? -eq 0 ]; then pass "the shared declaration keeps exactly ONE device grant (Google's) and no github provider"; else fail "the shared declaration does not carry exactly one device-flow provider with no github among them"; fi
+if [ $? -eq 0 ]; then pass "the shared declaration keeps exactly two device grants (Google's, and GitHub's OAuth App with no secret and no GitHub App id)"; else fail "the shared declaration's device grants are not Google's plus the secret-less GitHub OAuth App"; fi
 if grep -qE 'github\.com/settings/apps|Configs . Sign in' "$PAGE" "$STR"; then fail "the page still points at a provider setting or another page"; else pass "no breadcrumb prose: the page states its own state and stops"; fi
 # #646 THIS ASSERTION IS INVERTED, and the reason is a measurement, not a preference.
 # #641 required this line to end "there is no browser login", which was TRUE of the client it
@@ -318,7 +333,7 @@ URLS="$(grep -nE '"https://' "$PAGE" "$LIST" "$COORD" || true)"
 if [ -z "$URLS" ]; then pass "no endpoint literal beside the declaration"; else fail "an endpoint is typed into Kotlin:"; printf '%s\n' "$URLS" | sed 's/^/        /'; fi
 if grep -qE 'fun parse\(text: String\): List<Repo>' "$LIST" && grep -qE 'fun fetch\(api: Declarations\.GitApiDecl, token: String\)' "$LIST"; then pass "the parser takes TEXT (JVM-testable) and the fetch takes the declared api"; else fail "GitHubRepos is not split into a pure parser and a declared fetch"; fi
 if grep -qE 'fun group\(repos: List<Repo>, wantPrivate: Boolean\): List<Repo> =\s*$' "$LIST" && grep -qE 'repos\.filter \{ it\.private == wantPrivate \}\.sortedBy \{ it\.name\.lowercase\(\) \}' "$LIST"; then pass "the two groups are the PROVIDER's own private flag, each alphabetical"; else fail "the public/private split is not the provider's flag (or is unsorted)"; fi
-if ! grep -qE 'page\.personalGroups|GIT_GROUP_PRIVATE' "$PAGE" && grep -qE 'stickyHeader\(' "$PAGE" && grep -qE 'val entries: List<TableEntry>' "$PAGE"; then pass "ONE table over every listing: no Public/Private groups, a sticky header, one sortable entry list"; else fail "the personal section still splits into public/private groups or has no sticky header"; fi
+if ! grep -qE 'page\.personalGroups|GIT_GROUP_PRIVATE' "$PAGE" && grep -qE 'stickyHeader\(' "$PAGE" && grep -qE 'val allEntries: List<TableEntry>' "$PAGE"; then pass "ONE table over every listing: no Public/Private groups, a sticky header, one sortable entry list"; else fail "the personal section still splits into public/private groups or has no sticky header"; fi
 if grep -qE 'complete = false' "$LIST" && grep -qE 'R\.string\.git_listing_truncated' "$PAGE"; then pass "a listing stopped at the declared page cap SAYS so instead of showing a silent prefix"; else fail "a truncated listing is not reported"; fi
 
 echo "── P7 the reads are real reads ──"
