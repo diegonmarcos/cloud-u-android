@@ -848,8 +848,11 @@ class BrowserHostFragment : Fragment() {
      * `adb shell settings put global cloud_browser_page_log 1` (a global setting nothing in the app writes). Not BuildConfig.DEBUG:
      * the build that ships to the phone is the debug variant, so that gate would leave the logging on for the reader.
      */
-    private fun pageLogOn(url: String?): Boolean = isLoopbackPage(url) &&
-        runCatching { android.provider.Settings.Global.getInt(requireContext().contentResolver, "cloud_browser_page_log", 0) == 1 }.getOrDefault(false)
+    private fun pageLogOn(url: String?): Boolean = runCatching {
+        // 1 = loopback pages only; 2 (#1140, the emulator test of a public page) = any page.
+        val v = android.provider.Settings.Global.getInt(requireContext().contentResolver, "cloud_browser_page_log", 0)
+        v == 2 || (v == 1 && isLoopbackPage(url))
+    }.getOrDefault(false)
 
     /** #886 what the strip draws, as Compose state the host refreshes when a tab's page, title, icon or group changes. */
     private class StripModel(val tabs: List<BrowserTab>, val activeKey: String, val group: String, val color: Int)
@@ -1033,7 +1036,7 @@ class BrowserHostFragment : Fragment() {
                     if (readerOn) return
                     // The layout numbers of a loopback page (logcat tag LocalPageMetrics), so a page that renders blank here and
                     // fine elsewhere says why (viewport, scroll size, text length) in the emulator test's evidence.
-                    if (pageLogOn(u)) view?.evaluateJavascript("JSON.stringify({w:innerWidth,h:innerHeight,dpr:devicePixelRatio,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,bw:document.body?document.body.getBoundingClientRect().width:-1,bh:document.body?document.body.getBoundingClientRect().height:-1,text:document.body?document.body.innerText.length:-1,js:true})") { r -> android.util.Log.d("LocalPageMetrics", "$u $r") }
+                    if (pageLogOn(u)) view?.evaluateJavascript("JSON.stringify({w:innerWidth,h:innerHeight,dpr:devicePixelRatio,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,bw:document.body?document.body.getBoundingClientRect().width:-1,bh:document.body?document.body.getBoundingClientRect().height:-1,text:document.body?document.body.innerText.length:-1,links:document.querySelectorAll('a[href]').length,js:true})") { r -> android.util.Log.d("LocalPageMetrics", "$u $r") }
                     probePasskey(view, u)
                     // Tier 2: (re)install the DOM autofill engine; a private tab gets no prompts and never offers to save.
                     view?.let { domAutofill.inject(it, u, tab.isPrivate); ac.inject(it, u, tab.isPrivate) }
