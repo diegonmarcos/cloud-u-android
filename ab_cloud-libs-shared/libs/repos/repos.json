@@ -75,16 +75,22 @@
       "doc": "Blmbrg (fin terminal, market watch, news): README and deployer wiring skeleton; the matching front-labtools projects b-Nxs_Blmmbrg/* move here with the labtools split (#1218). #1224."
     },
     {
-      "name": "Fin-CM-___",
-      "repo": "diegonmarcos/Fin-CM-___",
-      "private": false,
-      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
-    },
-    {
       "name": "Fin-CM-mqpm",
       "repo": "diegonmarcos/Fin-CM-mqpm",
       "private": false,
       "doc": "MQPM / StochBates: README and deployer wiring skeleton, no content yet (#1224)."
+    },
+    {
+      "name": "Fin-Corporate",
+      "repo": "diegonmarcos/Fin-Corporate",
+      "private": false,
+      "doc": "Corporate finance (Nexus.z, Field Finance, Project Corporate); member of the Fin-___ hub. Created 2026-10-28."
+    },
+    {
+      "name": "Fin-___",
+      "repo": "diegonmarcos/Fin-___",
+      "private": false,
+      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
     },
     {
       "name": "Projects-___",
@@ -103,6 +109,12 @@
       "repo": "diegonmarcos/Projects-labtools",
       "private": false,
       "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_CG-Zirkus, a-Lfy_C3, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX."
+    },
+    {
+      "name": "cloud-me-___",
+      "repo": "diegonmarcos/cloud-me-___",
+      "private": false,
+      "doc": "Top hub of the cloud-me project (the owner's configs across the cloud): an index above the two sub-hubs cloud-me-pub-___ and cloud-me-pvt-___, its own repos.json subset (only those two) plus committed symlinks, same model as cloudy-___ and CG-___. Created 2026-10-28 (#1244)."
     },
     {
       "name": "cloud-me-pub-___",
