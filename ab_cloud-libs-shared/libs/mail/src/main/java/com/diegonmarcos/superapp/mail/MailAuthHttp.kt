@@ -43,7 +43,7 @@ object MailAuthScope {
         return if (parts.size >= 3 && parts.all { it.isNotEmpty() } && !parts.all { it.all(Char::isDigit) }) parts.takeLast(2).joinToString(".") else host.lowercase()
     }
 
-    /** Same host, or same registrable domain (jmap.diegonmarcos.com ~ api.diegonmarcos.com). */
+    /** Same host, or same registrable domain (jmap.diegonmarcos.com ~ c3-pvt.diegonmarcos.com). */
     fun allows(serverHost: String, requestHost: String): Boolean =
         serverHost.isNotEmpty() && (serverHost.equals(requestHost, true) || registrable(serverHost) == registrable(requestHost))
 }

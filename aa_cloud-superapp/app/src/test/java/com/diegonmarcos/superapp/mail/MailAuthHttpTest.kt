@@ -87,7 +87,7 @@ class MailAuthHttpTest {
         server.enqueue(MockResponse().setBody("{}"))
         get(client(MailAuthCreds(MailAuthMode.AUTHELIA, sessionCookie = "s")), url("evil.example.com"))
         assertNull(server.takeRequest().getHeader("Cookie"))
-        assertTrue(MailAuthScope.allows("jmap.diegonmarcos.com", "api.diegonmarcos.com"))
+        assertTrue(MailAuthScope.allows("jmap.diegonmarcos.com", "c3-pvt.diegonmarcos.com"))
         assertFalse(MailAuthScope.allows("jmap.diegonmarcos.com", "diegonmarcos.com.evil.net"))
     }
 

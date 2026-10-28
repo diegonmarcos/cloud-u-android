@@ -33,7 +33,7 @@ class GateHeadersTest {
         assertTrue(GateHeaders.forRequest("jmap.diegonmarcos.com", "jmap.diegonmarcos.com",
             MailAuthCreds(mode = MailAuthMode.AUTHELIA, bearer = "t", sessionCookie = "c")).isEmpty())
         assertTrue(GateHeaders.forRequest("jmap.diegonmarcos.com", "evil.example.org", bearer()).isEmpty())
-        assertEquals(1, GateHeaders.forRequest("jmap.diegonmarcos.com", "api.diegonmarcos.com", bearer()).size)
+        assertEquals(1, GateHeaders.forRequest("jmap.diegonmarcos.com", "c3-pvt.diegonmarcos.com", bearer()).size)
     }
 
     @Test fun `on the wire the mailbox Authorization is untouched and the fleet header rides next to it`() {

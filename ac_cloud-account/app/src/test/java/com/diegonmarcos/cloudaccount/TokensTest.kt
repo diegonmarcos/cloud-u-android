@@ -130,9 +130,9 @@ class TokensClientTest {
 
     @Test fun generateSendsNameAudienceScopesAndExpiryAndReturnsTheValueOnce() {
         val e = FakeTokenEngine()
-        val (row, value) = (client(e).generate(" mcp ", "mcp.diegonmarcos.com", listOf("a", " ", "b"), 30) as TokensResult.Ok).value
+        val (row, value) = (client(e).generate(" mcp ", "c3-pvt.diegonmarcos.com", listOf("a", " ", "b"), 30) as TokensResult.Ok).value
         val sent = JSONObject(e.lastBody!!)
-        assertEquals("mcp", sent.getString("name")); assertEquals("mcp.diegonmarcos.com", sent.getString("audience"))
+        assertEquals("mcp", sent.getString("name")); assertEquals("c3-pvt.diegonmarcos.com", sent.getString("audience"))
         assertEquals(listOf("a", "b"), (0 until sent.getJSONArray("scopes").length()).map { sent.getJSONArray("scopes").getString(it) })
         assertEquals(30, sent.getInt("ttl_days"))
         assertEquals("ft_NEWVALUE_wxyz", value); assertFalse(row.toString().contains("NEWVALUE"))
