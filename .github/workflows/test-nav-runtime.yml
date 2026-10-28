@@ -200,10 +200,14 @@ jobs:
           adb shell cmd role add-role-holder --user 0 android.app.role.DIALER "$PKG" || true
           adb shell cmd role add-role-holder --user 0 android.app.role.CALL_SCREENING "$PKG" || true
           adb shell settings put global adb_wifi_enabled 0 || true
+          # stream the log from the start: a dead emulator takes a post-run `logcat -d` with it, the stream keeps what came before
+          adb logcat -v threadtime "*:W" ActivityManager:I chromium:I WindowManager:I > walk-out/logcat-stream.txt 2>&1 &
+          LOGCAT_PID=$!
           rc=0
           python3 1_cicd/src/scripts/cloud-android-nav-walk.py --app "$APP" --build-json "$APP/build.json" --pkg "$PKG" --out walk-out || rc=$?
           # a dead emulator makes a bare adb call wait for the device forever (run 40679943894 sat 87 min here)
           timeout 60 adb logcat -d -v threadtime > walk-out/logcat.txt || true
+          kill "$LOGCAT_PID" 2>/dev/null || true
           exit $rc
           EOF
           chmod +x walk.sh
