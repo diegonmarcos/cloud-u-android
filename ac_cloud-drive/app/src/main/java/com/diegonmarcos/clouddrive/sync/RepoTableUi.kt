@@ -107,9 +107,12 @@ internal fun RepoStatusCell(icons: RepoStatus.Icons, name: String, onOpen: () ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             // LOCAL | SERVER | SYNC, each its own light with its own kind in the accessible label.
             Row(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
-                StatusDot(RepoStatus.lightOf("local", icons.local, decl), "$name local ${icons.local.name.lowercase()}")
-                StatusDot(RepoStatus.lightOf("server", icons.server, decl), "$name server ${icons.server.name.lowercase()}")
-                StatusDot(RepoStatus.lightOf("sync", icons.sync, decl), "$name sync ${icons.sync.name.lowercase()}")
+                // "not checked yet" / "never" draw a hollow dotted circle, never the "?" of a read that does not end.
+                fun glyph(l: StatusLight.State) = if (l == StatusLight.State.UNVERIFIABLE) "\u25CC" else StatusLight.glyph(l)
+                val lo = RepoStatus.lightOf("local", icons.local, decl); val se = RepoStatus.lightOf("server", icons.server, decl); val sy = RepoStatus.lightOf("sync", icons.sync, decl)
+                StatusDot(lo, "$name local ${icons.local.name.lowercase()}", glyph = glyph(lo))
+                StatusDot(se, "$name server ${icons.server.name.lowercase()}", glyph = glyph(se))
+                StatusDot(sy, "$name sync ${icons.sync.name.lowercase()}", glyph = glyph(sy))
             }
             if (caption.isNotBlank()) Text(caption, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }

@@ -89,11 +89,11 @@ object StatusLight {
  * by printing the word outright.
  */
 @Composable
-fun StatusDot(state: StatusLight.State, rowLabel: String, modifier: Modifier = Modifier) {
+fun StatusDot(state: StatusLight.State, rowLabel: String, modifier: Modifier = Modifier, glyph: String = StatusLight.glyph(state)) {
     val ctx = LocalContext.current
     val description = StatusLight.description(ctx, rowLabel, state)
     Text(
-        StatusLight.glyph(state),
+        glyph,
         modifier.testTag(DriveTags.STATUS_LIGHT).semantics { contentDescription = description },
         color = colorResource(StatusLight.colourRes(state)),
         style = MaterialTheme.typography.labelLarge,
