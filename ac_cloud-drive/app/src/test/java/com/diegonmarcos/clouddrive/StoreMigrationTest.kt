@@ -189,7 +189,7 @@ class StoreMigrationTest {
     @Test fun theManifestDeclaresTheFrontRename() {
         val data = listOf(File("data"), File("../data"), File("ac_cloud-drive/data")).first { File(it, "drive-git-repos.json").isFile }
         val family = Declarations.parseGitFamily(File(data, "drive-git-repos.json").readText())
-        assertEquals("front", family.renames["ffront"])
+        assertEquals("Projects", family.renames["ffront"])
         assertTrue(family.repos.none { it.name == "ffront" })
     }
 
