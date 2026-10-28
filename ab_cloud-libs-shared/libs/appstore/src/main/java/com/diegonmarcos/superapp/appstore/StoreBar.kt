@@ -441,6 +441,37 @@ object StoreRow {
     }
 
     /**
+     * THE Store row, whole: the card, the head (state dot left, name, meta right, the collapsed quick verb,
+     * chevron), whatever [below] the head even when collapsed (an error area), and - only while [open] - the
+     * [detail] lines with the row's buttons. Cloud (fleet apps) and Phone (installed / declared apps) both draw
+     * every row through this one function; a page differs only in the values it passes and the extra buttons
+     * and filters it adds.
+     */
+    @Composable
+    fun Item(
+        label: String, open: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier, tag: String? = null,
+        dot: String = "·", dotColor: Int = Ink.DIM, meta: String = "", metaColor: Int = Ink.DIM,
+        quick: StoreQuick? = null, headTag: String? = null, metaTag: String? = null, dotTag: String? = null,
+        below: @Composable ColumnScope.() -> Unit = {},
+        detail: @Composable ColumnScope.() -> Unit,
+    ) {
+        Card(modifier, tag) {
+            Head(label, open, onToggle, dot = dot, dotColor = dotColor, meta = meta, metaColor = metaColor,
+                quick = quick, headTag = headTag, metaTag = metaTag, dotTag = dotTag)
+            below()
+            if (open) Column(Modifier.padding(start = sdp(StoreDensity.S12), end = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S8)),
+                content = detail)
+        }
+    }
+
+    /** The one summary line over a list ("12 total  ·  2 updates"), the same on every Store list page. */
+    @Composable
+    fun Summary(text: String, tag: String = "store-summary") {
+        Text(text, color = Ink.DIM.ink(), fontSize = StoreDensity.T_META.sp,
+            modifier = Modifier.testTag(tag).padding(top = sdp(StoreDensity.S2), bottom = sdp(StoreDensity.S6)))
+    }
+
+    /**
      * The row's head. [open] / [onToggle] keep the page's memory of the chevron; [meta] is the one-line
      * status slot (state, or the size on the Phone page) and [quick] the verb beside it, if any.
      */

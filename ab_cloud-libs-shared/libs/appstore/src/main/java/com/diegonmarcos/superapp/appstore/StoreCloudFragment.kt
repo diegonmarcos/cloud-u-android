@@ -441,8 +441,7 @@ class StoreCloudFragment : KitComposeFragment() {
         // The Libs tab has two sections: the installable engines (this list, with
         // who binds each) and, below it, the libs that only compile in (info rows).
         if (hasLibSections) SectionHeading("Runtime engines — installable APKs")
-        Text(summaryOf(list), color = cDim.ink(), fontSize = StoreDensity.T_META.sp,
-            modifier = Modifier.testTag("store-summary").padding(top = sdp(StoreDensity.S2), bottom = sdp(StoreDensity.S6)))
+        StoreRow.Summary(summaryOf(list))
         // Filter chips. With two dozen libs the answer to "too much scrolling" is
         // to stop scrolling: pick the slice you came for. Counts come from the
         // cached [states], so a chip is instant and never re-checks.
@@ -607,19 +606,17 @@ class StoreCloudFragment : KitComposeFragment() {
         val stg = stages[app.id]
         val ui = rowUi(ctx, app, s, stg, checking[app.id] == true)
         val open = expanded[app.id] == true
-        StoreRow.Card(Modifier.onGloballyPositioned { rowTops[app.id] = it.positionInRoot().y }, tag = "store-row:${app.id}") {
-            // The per-app action, on the collapsed row on purpose: updating ONE app
-            // is the common case, and making it expand-then-tap would cost two taps
-            // for the thing people do most. Hidden when the app is up to date, so
-            // the column only ever shows actionable rows.
-            StoreRow.Head(app.label, open, { expanded[app.id] = !open },
-                dot = ui.dot, dotColor = ui.dotColor, meta = ui.meta, metaColor = ui.metaColor,
-                quick = ui.quick?.let { (label, fill) -> StoreQuick(label, fill) { next(ctx, app) } },
-                headTag = "store-head:${app.id}", metaTag = "store-meta:${app.id}", dotTag = "store-dot:${app.id}")
-            ui.error?.let { ErrorArea(ctx, app, it) }
-            MigrationArea(ctx, app, stg)
-            if (open) FleetDetail(ctx, app, ui, stg)
-        }
+        StoreRow.Item(app.label, open, { expanded[app.id] = !open },
+            Modifier.onGloballyPositioned { rowTops[app.id] = it.positionInRoot().y }, tag = "store-row:${app.id}",
+            dot = ui.dot, dotColor = ui.dotColor, meta = ui.meta, metaColor = ui.metaColor,
+            // The per-app action, on the collapsed row on purpose: updating ONE app is the common case, and
+            // making it expand-then-tap would cost two taps for the thing people do most.
+            quick = ui.quick?.let { (label, fill) -> StoreQuick(label, fill) { next(ctx, app) } },
+            headTag = "store-head:${app.id}", metaTag = "store-meta:${app.id}", dotTag = "store-dot:${app.id}",
+            below = {
+                ui.error?.let { ErrorArea(ctx, app, it) }
+                MigrationArea(ctx, app, stg)
+            }) { FleetDetail(ctx, app, ui, stg) }
     }
 
     /**
@@ -720,7 +717,7 @@ class StoreCloudFragment : KitComposeFragment() {
     /** Everything the old always-visible card carried, now behind the chevron. */
     @Composable
     private fun FleetDetail(ctx: Context, app: Fleet.App, ui: RowUi, stg: StoreStages.Stage?) {
-        Column(Modifier.padding(start = sdp(StoreDensity.S12), end = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S8))) {
+        Column {
             // The chip must offer the SAME bytes the updater would install, so it
             // uses the per-ABI asset too — handing an x86_64 user the arm64 APK is
             // the manual version of the bug Fleet.App.abiReleaseUrl fixes.

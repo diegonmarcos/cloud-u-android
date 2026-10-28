@@ -313,7 +313,7 @@ class StorePhoneFragment : KitComposeFragment() {
             .sortedWith(StoreSizes.comparator(sort, { r: AppRow -> StoreSizeProbe.cached(r.pkg)?.totalBytes }, SHELF_ORDER))
         val missing = shown.count { !it.installed }
         val play = shown.count { !it.installed && !it.direct }
-        StoreCaption(ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
+        StoreRow.Summary(ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
             ctx.getString(R.string.store_phone_count_missing, missing, play))
         // Two groups, each with its own Install all: what our Store fully
         // manages, and what the VENDOR ties to Google Play (Play Integrity / a
@@ -387,74 +387,100 @@ class StorePhoneFragment : KitComposeFragment() {
     private fun integrity(ctx: Context, r: AppRow): SourceResolver.Integrity =
         r.external?.let { IntegrityMarks.effective(ctx, it) } ?: SourceResolver.Integrity.NONE
 
-    /** THE Store row ([StoreRow]), as the Cloud page draws it: the head (name, size, chevron), the row's
-     *  state lines, its buttons EXPANDED in full-width lines, and behind the chevron the package and
-     *  the size breakdown. */
+    /** The row's head as the Cloud page draws it: status dot left, then the short state and the size on the right. */
+    private class PhoneHead(val dot: String, val color: Int, val meta: String)
+
+    /** The short "who has it" label of an app we cannot install ourselves, from the app's own declared hand-off. */
+    private fun needsLabel(ctx: Context, r: AppRow): String {
+        val handoff = r.external?.handoff
+        return when {
+            r.external?.unresolved != null -> "no public source"
+            handoff is SourceResolver.Source.Store -> cfg?.kinds?.firstOrNull { it.id == handoff.kind }?.label ?: handoff.kind
+            else -> ctx.getString(R.string.store_phone_badge_needs_play)
+        }
+    }
+
+    private fun headOf(ctx: Context, r: AppRow): PhoneHead {
+        if (checking[r.pkg] == true) return PhoneHead("·", cDim, ctx.getString(R.string.store_phone_checking))
+        val size = if (r.installed) StoreSizes.rowLabel(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE
+        val (dot, color, state) = when (val s = states[r.pkg] ?: SourceResolver.Check.Unknown(null, "")) {
+            is SourceResolver.Check.Installed -> Triple("✓", cUp, "installed  ·  " + s.versionName)
+            is SourceResolver.Check.UpdateAvailable -> Triple("⬆", cUpd, "update  ·  " + s.versionName)
+            is SourceResolver.Check.NotInstalled ->
+                if (s.needsPlay) Triple("◯", cBadge, needsLabel(ctx, r))
+                else Triple("◯", cMiss, "not installed")
+            is SourceResolver.Check.Unknown -> Triple("·", cDim, "unknown")
+        }
+        return PhoneHead(dot, color, state + (if (size == StoreSizes.NONE) "" else "  ·  $size"))
+    }
+
+    /** THE Store row ([StoreRow.Item]), exactly as the Cloud page draws it: the head (status dot, name, short
+     *  state + size, quick verb, chevron) and, behind the chevron, the state line, the row's buttons EXPANDED
+     *  in full-width lines, the package and the size breakdown. */
     @Composable
     private fun PhoneRow(ctx: Context, r: AppRow) {
         redrawTick
         val open = openRows[r.pkg] == true
-        StoreRow.Card(tag = "store-phone-row:${r.pkg}") {
-            // The size slot: "48 MB", "48 MB APK" (no usage access), or "—" (not installed / not measured yet).
-            StoreRow.Head(r.label, open, { openRows[r.pkg] = !open },
-                meta = if (r.installed) StoreSizes.rowLabel(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE,
-                headTag = "store-phone-head:${r.pkg}", metaTag = SIZE_TAG_PREFIX + r.pkg)
-            Column(Modifier.padding(start = sdp(StoreDensity.S12), end = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S6))) {
-                // The state line: version / update / not installed / needs Play. Tagged
-                // with the package so a test reads the rendered verdict, not this source.
-                val (text, colour) = if (checking[r.pkg] == true) ctx.getString(R.string.store_phone_checking) to cDim
-                    else stateLine(ctx, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
-                Text(text, color = colour.ink(), fontSize = StoreDensity.T_CAPTION.sp, modifier = Modifier.testTag(STATE_TAG_PREFIX + r.pkg))
-                // The Play Integrity badge: an app the vendor ties to Google Play. We
-                // still install it; the badge says it may refuse to run. Tagged so a
-                // test reads the rendered badge.
-                if (integrity(ctx, r) == SourceResolver.Integrity.PLAY)
-                    Text(ctx.getString(R.string.store_phone_integrity_badge), color = cBadge.ink(), fontSize = StoreDensity.T_CAPTION.sp,
-                        modifier = Modifier.testTag(INTEGRITY_TAG_PREFIX + r.pkg))
-                // #625 cached-vs-installed, per row. "cached, matches what is
-                // installed" is the state in which the bytes are about to be reaped;
-                // "cached, NOT installed" is a download waiting for its install — the
-                // thing that used to disappear.
-                cached[r.pkg]?.let { e ->
-                    val rec = e.record ?: return@let
-                    val here = SourceResolver.installed(ctx, r.pkg)?.second
-                    val mb = (e.bytes / 1_000_000).coerceAtLeast(1L)
-                    Text(if (here == rec.versionCode) ctx.getString(R.string.store_cache_matches, rec.versionCode, mb)
-                         else ctx.getString(R.string.store_cache_waiting, rec.versionCode, mb, here?.toString() ?: "—"),
-                        color = (if (here == rec.versionCode) cUp else cUpd).ink(), fontSize = StoreDensity.T_CAPTION.sp,
-                        modifier = Modifier.testTag(CACHE_TAG_PREFIX + r.pkg))
-                }
-                val verbs = ArrayList<StoreVerb>()
-                r.actions.forEach { a ->
-                    verbs += StoreVerb(a.label, null, { act(ctx, r, a) }, "store-phone:verb:${a.kind.name}:${r.pkg}",
-                        alpha = if (a.disabledReason == null) null else 0.4f,
-                        description = a.disabledReason?.let { "${a.label}: $it" } ?: a.label)
-                }
-                // Detected at runtime: an UNKNOWN app this store installed that did not
-                // run is marked PLAY on this phone (persisted, exported with the inventory).
-                val ext = r.external
-                // Declared is the user's list: any foreign row can join or leave it.
-                if (ext != null) verbs += StoreVerb(
-                    ctx.getString(if (ext.declared) R.string.store_phone_undeclare else R.string.store_phone_declare), null, {
-                        if (ext.declared) DeclaredEdits.undeclare(ctx, r.pkg)
-                        else DeclaredEdits.declare(ctx, r.pkg, r.label, originKinds(ctx, r.pkg))
-                        reload()
-                    }, "store-phone:declare:${r.pkg}")
-                if (r.installed && ext != null && IntegrityMarks.canReport(ctx, ext)) verbs += StoreVerb(
-                    ctx.getString(R.string.store_phone_did_not_run), null, {
-                        IntegrityMarks.mark(ctx, r.pkg)
-                        Toast.makeText(ctx, ctx.getString(R.string.store_phone_marked_play, r.label), Toast.LENGTH_LONG).show()
-                        redrawTick++
-                    }, "store-phone:did-not-run:${r.pkg}")
-                // EXPANDED, as the Cloud page lays its buttons out: never a sideways scroller hiding half of them.
-                StoreRow.Actions(verbs)
+        val head = headOf(ctx, r)
+        // The collapsed quick verb is the row's own Install / Update, when it can run.
+        val quickAction = r.actions.firstOrNull { (it.kind == PhoneAppActions.Kind.INSTALL || it.kind == PhoneAppActions.Kind.UPDATE) && it.disabledReason == null }
+        StoreRow.Item(r.label, open, { openRows[r.pkg] = !open }, tag = "store-phone-row:${r.pkg}",
+            dot = head.dot, dotColor = head.color, meta = head.meta, metaColor = head.color,
+            quick = quickAction?.let { a -> StoreQuick(if (a.kind == PhoneAppActions.Kind.UPDATE) "⬆" else "⬇",
+                if (a.kind == PhoneAppActions.Kind.UPDATE) 0xFFED8936.toInt() else 0xFF2B6CB0.toInt()) { act(ctx, r, a) } },
+            headTag = "store-phone-head:${r.pkg}", metaTag = STATE_TAG_PREFIX + r.pkg) {
+            // The full state line: version / update / not installed / needs Play, tagged with the package so a
+            // test reads the rendered verdict, not this source.
+            val (text, colour) = if (checking[r.pkg] == true) ctx.getString(R.string.store_phone_checking) to cDim
+                else stateLine(ctx, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
+            Text(text, color = colour.ink(), fontSize = StoreDensity.T_META.sp, modifier = Modifier.testTag(STATE_LINE_TAG_PREFIX + r.pkg))
+            // The Play Integrity badge: an app the vendor ties to Google Play. We
+            // still install it; the badge says it may refuse to run. Tagged so a
+            // test reads the rendered badge.
+            if (integrity(ctx, r) == SourceResolver.Integrity.PLAY)
+                Text(ctx.getString(R.string.store_phone_integrity_badge), color = cBadge.ink(), fontSize = StoreDensity.T_CAPTION.sp,
+                    modifier = Modifier.testTag(INTEGRITY_TAG_PREFIX + r.pkg))
+            // #625 cached-vs-installed, per row. "cached, matches what is
+            // installed" is the state in which the bytes are about to be reaped;
+            // "cached, NOT installed" is a download waiting for its install - the
+            // thing that used to disappear.
+            cached[r.pkg]?.let { e ->
+                val rec = e.record ?: return@let
+                val here = SourceResolver.installed(ctx, r.pkg)?.second
+                val mb = (e.bytes / 1_000_000).coerceAtLeast(1L)
+                Text(if (here == rec.versionCode) ctx.getString(R.string.store_cache_matches, rec.versionCode, mb)
+                     else ctx.getString(R.string.store_cache_waiting, rec.versionCode, mb, here?.toString() ?: "—"),
+                    color = (if (here == rec.versionCode) cUp else cUpd).ink(), fontSize = StoreDensity.T_CAPTION.sp,
+                    modifier = Modifier.testTag(CACHE_TAG_PREFIX + r.pkg))
             }
-            if (open) Column(Modifier.padding(start = sdp(StoreDensity.S12), end = sdp(StoreDensity.S12), bottom = sdp(StoreDensity.S8))) {
-                Text(r.pkg, color = cDim.ink(), fontSize = StoreDensity.T_CAPTION.sp, fontFamily = FontFamily.Monospace,
-                    maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
-                Text(if (r.installed) StoreSizes.breakdown(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE,
-                    color = cDim.ink(), fontSize = StoreDensity.T_CAPTION.sp, modifier = Modifier.testTag(SIZE_DETAIL_TAG_PREFIX + r.pkg))
+            Text(r.pkg, color = cDim.ink(), fontSize = StoreDensity.T_CAPTION.sp, fontFamily = FontFamily.Monospace,
+                maxLines = 1, overflow = TextOverflow.MiddleEllipsis)
+            Text(if (r.installed) StoreSizes.breakdown(StoreSizeProbe.cached(r.pkg)) else StoreSizes.NONE,
+                color = cDim.ink(), fontSize = StoreDensity.T_CAPTION.sp, modifier = Modifier.testTag(SIZE_DETAIL_TAG_PREFIX + r.pkg))
+            val verbs = ArrayList<StoreVerb>()
+            r.actions.forEach { a ->
+                verbs += StoreVerb(a.label, null, { act(ctx, r, a) }, "store-phone:verb:${a.kind.name}:${r.pkg}",
+                    alpha = if (a.disabledReason == null) null else 0.4f,
+                    description = a.disabledReason?.let { "${a.label}: $it" } ?: a.label)
             }
+            // Detected at runtime: an UNKNOWN app this store installed that did not
+            // run is marked PLAY on this phone (persisted, exported with the inventory).
+            val ext = r.external
+            // Declared is the user's list: any foreign row can join or leave it. These two are Phone's extra buttons.
+            if (ext != null) verbs += StoreVerb(
+                ctx.getString(if (ext.declared) R.string.store_phone_undeclare else R.string.store_phone_declare), null, {
+                    if (ext.declared) DeclaredEdits.undeclare(ctx, r.pkg)
+                    else DeclaredEdits.declare(ctx, r.pkg, r.label, originKinds(ctx, r.pkg))
+                    reload()
+                }, "store-phone:declare:${r.pkg}")
+            if (r.installed && ext != null && IntegrityMarks.canReport(ctx, ext)) verbs += StoreVerb(
+                ctx.getString(R.string.store_phone_did_not_run), null, {
+                    IntegrityMarks.mark(ctx, r.pkg)
+                    Toast.makeText(ctx, ctx.getString(R.string.store_phone_marked_play, r.label), Toast.LENGTH_LONG).show()
+                    redrawTick++
+                }, "store-phone:did-not-run:${r.pkg}")
+            // EXPANDED, as the Cloud page lays its buttons out: never a sideways scroller hiding half of them.
+            StoreRow.Actions(verbs)
         }
     }
 
@@ -826,6 +852,8 @@ class StorePhoneFragment : KitComposeFragment() {
         const val INTEGRITY_TAG_PREFIX = "store-integrity:"
         /** The state line of a row is tagged [STATE_TAG_PREFIX] + package. */
         const val STATE_TAG_PREFIX = "store-phone-state:"
+        /** The full state line behind the chevron, tagged [STATE_LINE_TAG_PREFIX] + package. */
+        const val STATE_LINE_TAG_PREFIX = "store-phone-state-line:"
         /** #625 the cached-vs-installed line, tagged [CACHE_TAG_PREFIX] + package.
          *  Absent when nothing for that package is in the cache — a test reads
          *  the rendered answer rather than this source. */
