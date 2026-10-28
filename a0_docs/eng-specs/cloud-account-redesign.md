@@ -29,7 +29,7 @@ apps through Cloud Store, pushes configs into every fleet app, grants permission
    GitHub (`api.github.com/repos/{repo}/contents/{path}`) and Gitea (`git.diegonmarcos.com/api/v1/repos/
    {owner}/{repo}/contents/{path}`) expose with the same GET/PUT body. One `ForgeClient`, two declared
    forges, no git push engine (gix has no push; JGit stays for the SSH *read* route only).
-2. **Per-device files, owned by the app.** `C_A1-configs/devices/<device>.json` + `devices/DEFAULT.json`.
+2. **Per-device files, owned by the app.** `Shared/configs/devices/<device>.json` + `devices/DEFAULT.json`.
    Written only by this app (commit + push from the phone). No GitHub Actions, no hand fold, no sops.
    `emit.py check` must not see `devices/` as an input (one exclusion line in cloud-vault; the only change
    outside the app).
@@ -167,7 +167,7 @@ when changed; WorkManager, like `ConstellationWorker`) · fleet token · debug A
 
 ## 5. Data
 
-### 5.1 The device file — `C_A1-configs/devices/<device>.json`
+### 5.1 The device file — `Shared/configs/devices/<device>.json`
 ```json
 { "kind": "cloud-account.device-profile", "schema": 1,
   "device":   { "id": "galaxy-s21", "model": "SM-G996B", "android": 34, "captured_at": "…", "by": "cloud-account/<ver>" },
@@ -202,7 +202,7 @@ ui.sections: account[profile, connect] · profiles[devices, working, diff] · se
              · secrets[connections, secrets, grants] · settings[]
 ui.account.forges: [ {id: github, api: https://api.github.com, repo: <declared>, auth: bearer, ways: [gh_auth_login, github_pat, github_ssh]},
                      {id: gitea,  api: https://git.diegonmarcos.com/api/v1, repo: <owner/repo to confirm>, auth: token, ways: [gitea_token, authelia_web]} ]
-ui.account.vault: { branch: main, devices_dir: C_A1-configs/devices, secrets_file: C_A1-configs/profile-secrets.json }
+ui.account.vault: { branch: main, devices_dir: Shared/configs/devices, secrets_file: Shared/configs/profile-secrets.json }
 ui.account.runbook: the eight step ids in order (so a step can be disabled by declaration)
 ui.account.perms.shell_verbs: the table in 4.9
 shizuku_client: as cloud-store's (embedded first, Shizuku fallback)

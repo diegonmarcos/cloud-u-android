@@ -436,8 +436,8 @@
     }
   },
   "signing": {
-    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
-    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+    "vault_keystore": "Shared/Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "Shared/Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "wake_lock": {
     "_doc": "#787 Termux's 'Acquire wakelock', ON by default: TermuxService takes a partial wake lock (plus the Wi-Fi lock when wifi_lock) whenever a session is open and drops it when the last one ends (com.termux.cloud.CloudWakeLock decides; test/test-wake-lock.sh runs it). The notification action still turns it off, and that choice persists. Read by app/build.gradle into BuildConfig; the build fails if either key is missing. State: GET /api/terminal/wakelock (also /api/terminal).",

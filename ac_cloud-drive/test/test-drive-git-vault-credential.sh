@@ -18,7 +18,7 @@
 # exist yet — so there is NO fallback: the vault credential is the only git auth.
 #
 # ON OUR SIDE the credential was already on the phone. cloud-vault
-# C_A1-configs/git/sources.json declares git.github_token (and an ssh key pair),
+# Shared/configs/git/sources.json declares git.github_token (and an ssh key pair),
 # the #566 emitter really does put it in the artifact, and #608's DriveAuthApply
 # already writes it into libs:git-sync's keystore credential store. The browser
 # ceremony was duplicating a credential we had — and adding a provider setting as

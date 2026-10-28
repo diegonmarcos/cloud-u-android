@@ -56,9 +56,9 @@ class ForgeClientTest {
     @Test fun github_sends_bearer_and_round_trips() {
         val f = FakeForge("Bearer", token)
         val c = ForgeClient(github, token, f)
-        val put = c.put("C_A1-configs/devices/galaxy.json", "{\"a\":1}\n", null, "m", "main")
+        val put = c.put("Shared/configs/devices/galaxy.json", "{\"a\":1}\n", null, "m", "main")
         assertTrue(put is Result.Ok)
-        val got = c.get("C_A1-configs/devices/galaxy.json", "main") as Result.Ok
+        val got = c.get("Shared/configs/devices/galaxy.json", "main") as Result.Ok
         assertEquals("{\"a\":1}\n", got.value.text)
         assertEquals((put as Result.Ok).value, got.value.sha)
         assertTrue(f.requests.all { it.second.startsWith("https://gh.test/repos/owner/vault/contents/") })
@@ -67,7 +67,7 @@ class ForgeClientTest {
     @Test fun gitea_sends_token_scheme_and_posts_a_new_file() {
         val f = FakeForge("token", token)
         val c = ForgeClient(gitea, token, f)
-        assertTrue(c.put("C_A1-configs/devices/galaxy.json", "x", null, "m", "main") is Result.Ok)
+        assertTrue(c.put("Shared/configs/devices/galaxy.json", "x", null, "m", "main") is Result.Ok)
         assertEquals("POST", f.requests.last().first)
         assertEquals("token $token", f.requests.last().third["Authorization"])
         assertTrue(f.requests.last().second.startsWith("https://gitea.test/api/v1/repos/owner/vault/contents/"))
@@ -119,12 +119,12 @@ class ForgeClientTest {
         val d = ForgeClient.Decl.parse(JSONObject("""{"forges":[
             {"id":"github","api":"https://api.github.com","repo":"o/v","auth":"bearer"},
             {"id":"gitea","api":"https://git.test/api/v1","repo":null,"auth":"token"}],
-            "vault":{"branch":"main","devices_dir":"C_A1-configs/devices"}}"""))
+            "vault":{"branch":"main","devices_dir":"Shared/configs/devices"}}"""))
         assertEquals(Auth.BEARER, d.forge("github")!!.auth)
         assertEquals(Auth.TOKEN, d.forge("gitea")!!.auth)
         assertEquals(null, d.forge("gitea")!!.repo)
         assertEquals("github", d.firstUsable()!!.id)
-        assertEquals("C_A1-configs/devices/galaxy.json", d.devicePath("galaxy"))
+        assertEquals("Shared/configs/devices/galaxy.json", d.devicePath("galaxy"))
     }
 
     /** Over 1 MB the contents API omits content: the raw route must be taken, the sha kept. */
@@ -138,7 +138,7 @@ class ForgeClientTest {
 
     @Test fun large_file_falls_back_to_raw_on_github() {
         val calls = mutableListOf<Pair<String, Map<String, String>>>()
-        val r = ForgeClient(github, token, bigFile("Bearer", calls)).get("C_A1-configs/profile-secrets.json", "main") as Result.Ok
+        val r = ForgeClient(github, token, bigFile("Bearer", calls)).get("Shared/configs/profile-secrets.json", "main") as Result.Ok
         assertEquals("{\"big\":true}", r.value.text)
         assertEquals("sha-big", r.value.sha)
         assertEquals(2, calls.size)
@@ -147,15 +147,15 @@ class ForgeClientTest {
 
     @Test fun large_file_falls_back_to_raw_on_gitea() {
         val calls = mutableListOf<Pair<String, Map<String, String>>>()
-        val r = ForgeClient(gitea, token, bigFile("token", calls)).get("C_A1-configs/profile-secrets.json", "main") as Result.Ok
+        val r = ForgeClient(gitea, token, bigFile("token", calls)).get("Shared/configs/profile-secrets.json", "main") as Result.Ok
         assertEquals("{\"big\":true}", r.value.text)
         assertEquals("sha-big", r.value.sha)
-        assertTrue(calls[1].first.startsWith("https://gitea.test/api/v1/repos/owner/vault/raw/C_A1-configs/profile-secrets.json?ref=main"))
+        assertTrue(calls[1].first.startsWith("https://gitea.test/api/v1/repos/owner/vault/raw/Shared/configs/profile-secrets.json?ref=main"))
     }
 
     @Test fun put_dry_shape_is_the_same_body_on_both_bases() {
-        val a = ForgeClient(github, "-").putShape("C_A1-configs/devices/galaxy.json", "s", "m", "main")
-        val b = ForgeClient(gitea, "-").putShape("C_A1-configs/devices/galaxy.json", "s", "m", "main")
+        val a = ForgeClient(github, "-").putShape("Shared/configs/devices/galaxy.json", "s", "m", "main")
+        val b = ForgeClient(gitea, "-").putShape("Shared/configs/devices/galaxy.json", "s", "m", "main")
         assertEquals(a.getJSONArray("body_keys").toString(), b.getJSONArray("body_keys").toString())
         assertTrue(a.getString("url").startsWith("https://gh.test/"))
         assertTrue(b.getString("url").startsWith("https://gitea.test/api/v1/"))

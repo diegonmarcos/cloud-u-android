@@ -13,7 +13,7 @@
 #   V1  the map's keys ARE the schema's fields, both ways
 #   V2  every app id is a declared cockpit section; held fields sit in that app's `vault`
 #   V3  `apps: []` or `held: false` must say why
-#   V4  every item the cloud-vault sources declare (C_A1-configs/<section>/sources.json, when the
+#   V4  every item the cloud-vault sources declare (Shared/configs/<section>/sources.json, when the
 #       vault is checked out beside this repo) is a schema field — "the vault schema"
 #   V5  every app that reports something holds at least one field
 #   V6  (#810) every HELD field is one its app's reader reads, or carries an `unread_why`
@@ -30,10 +30,10 @@ TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 
 VAULT=""
 for c in "$APP/../../cloud-vault" "$APP/../../../cloud-vault"; do
-    [ -d "$c/C_A1-configs" ] && VAULT="$c/C_A1-configs" && break
+    [ -d "$c/Shared/configs" ] && VAULT="$c/Shared/configs" && break
 done
 
-# check <build.json> [vault C_A1-configs dir] — prints the first broken rule, exit 1; silent exit 0.
+# check <build.json> [vault Shared/configs dir] — prints the first broken rule, exit 1; silent exit 0.
 check() {
     python3 - "$1" "${2:-}" <<'PY'
 import json, os, sys

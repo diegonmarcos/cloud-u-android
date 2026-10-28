@@ -51,7 +51,7 @@ def googleSecret = (System.getenv('GOOGLE_DEVICE_CLIENT_SECRET') ?: '').trim()
 if (!googleSecret) {
     def vaultDir = System.getenv('VAULT_DIR')
     if (vaultDir) {
-        def sf = file("${vaultDir}/A_A0-Providers/B_SERVICES-CLOUD/b15-google-oauth/device_client_secret")
+        def sf = file("${vaultDir}/Shared/Providers/B_SERVICES-CLOUD/b15-google-oauth/device_client_secret")
         if (sf.exists()) googleSecret = sf.text.trim()
     }
 }

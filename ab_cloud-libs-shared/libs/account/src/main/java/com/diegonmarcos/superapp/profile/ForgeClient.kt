@@ -52,8 +52,8 @@ class ForgeClient(val forge: Forge, private val token: String, private val http:
                     Forge(f.optString("id"), f.optString("api"), if (f.isNull("repo")) null else f.optString("repo").ifBlank { null }, auth, ways)
                 }
                 val v = o.optJSONObject("vault") ?: JSONObject()
-                return Decl(forges, v.optString("branch", "main"), v.optString("devices_dir", "C_A1-configs/devices"),
-                    v.optString("secrets_file", "C_A1-configs/profile-secrets.json"))
+                return Decl(forges, v.optString("branch", "main"), v.optString("devices_dir", "Shared/configs/devices"),
+                    v.optString("secrets_file", "Shared/configs/profile-secrets.json"))
             }
 
             /** The host app's declaration (BuildConfig.UI_ACCOUNT_B64); empty when the host declares none. */

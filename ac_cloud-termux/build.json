@@ -88,8 +88,8 @@
     }
   },
   "signing": {
-    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
-    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+    "vault_keystore": "Shared/Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "Shared/Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "storage": {
     "_doc": "MOVED here from ac_cloud-drive/build.json (owner decision, cloud-shared-store). shared_root is the folder under SHARED storage (/storage/emulated/0/<shared_root>) that USED to be the fleet's one store. It is now the LEGACY MIRROR: (1) the optional export mirror's target (shared_store.export_mirror), so Gallery/Files see what the user exports; (2) the backup/restore drop for the one-time sharedUserId migration (shared_store.migration); (3) cloud-drive's git manager working tree and cloud-code's Backlog/Repos root until they move onto the provider; (4) the nix terminal's fallback when it cannot reach the store directly. RELATIVE on purpose (the absolute path is one device's fact). THE ONE declaration: ac_cloud-drive/app/build.gradle, ac_cloud-nix-on-droid/app/build.gradle and ac_cloud-code/tools/resolve-targets.py READ it from here; test/test-shared-store.sh fails on a second copy.",

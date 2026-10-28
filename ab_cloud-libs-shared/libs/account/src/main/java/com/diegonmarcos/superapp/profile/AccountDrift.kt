@@ -9,7 +9,7 @@ import java.security.MessageDigest
  * every rule here on golden fixtures, and the tab, the debug API and the sync actions call only this.
  *
  * ONE PATTERN, THREE FILES. Each is a body in the vault bundle's own shape
- * (`section › key › …`, cloud-vault C_A1-configs/profile-secrets.json):
+ * (`section › key › …`, cloud-vault Shared/configs/profile-secrets.json):
  *  • S — the declared SERVER file, exactly as Connect last fetched it;
  *  • R — the RUNTIME snapshot, every value an app reported, written at the path the vault keeps it;
  *  • L — the LOCAL declared copy, edited on this phone and not yet uploaded.

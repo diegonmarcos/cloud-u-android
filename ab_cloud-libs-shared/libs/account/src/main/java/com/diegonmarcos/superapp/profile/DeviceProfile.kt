@@ -5,7 +5,7 @@ import android.os.Build
 import org.json.JSONObject
 
 /**
- * Cloud Account redesign (spec 5.1): the device file `C_A1-configs/devices/<id>.json`.
+ * Cloud Account redesign (spec 5.1): the device file `Shared/configs/devices/<id>.json`.
  *
  * ```
  * { "kind": "cloud-account.device-profile", "schema": 1,

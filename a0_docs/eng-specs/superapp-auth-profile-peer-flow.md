@@ -244,7 +244,7 @@ or provider literal in the profile package.
 
 Declared on wg0 in cloud-infra `config.json#native.wireguard.clients.samsung-a37`
 (10.0.0.10 / fd0c:1d00::10, its own X25519 key, keypair in cloud-vault
-`A_A0-Providers/C_TOOLS-INFRA/c0-wireguard/samsung-a37{,-public}/`), and as the peer
+`Shared/Providers/C_TOOLS-INFRA/c0-wireguard/samsung-a37{,-public}/`), and as the peer
 `samsung-a37` of user `diego`. Its wg-public row lives in
 `cloud-u-containers/infra-net_wireguard-public/build.json`, which #573 may not
 touch; until that row exists the phone has NO published profiles (the vault
@@ -301,7 +301,7 @@ exist yet; git auth is the vault-delivered credential alone.
 * cloud-infra `9_others/test/superapp-users-model.test.sh` — one primary
   identity, one primary peer, every peer on a mesh, published profiles filed
   under their own peer.
-* cloud-vault `A_A0-Providers/C_TOOLS-INFRA/c0-wireguard/test-phone-profiles.sh` — derived
+* cloud-vault `Shared/Providers/C_TOOLS-INFRA/c0-wireguard/test-phone-profiles.sh` — derived
   profiles are the deriver's, pending peers have none.
 
 ## 8. Shared with cloud-drive (#587)

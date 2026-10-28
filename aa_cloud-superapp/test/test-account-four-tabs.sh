@@ -319,7 +319,7 @@ json.dump({"schema_version": 1,
 PYF
 out=$(mask_leaks "$BJ" "$TMP/fixture.json" "$SECRET_PATHS") && ok "C: the declared rule masks every secret of the synthetic bundle" || bad "C: the declared rule leaks: $(echo $out)"
 VAULT_BUNDLE=""
-for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs/profile-secrets.json}" "$APP/../../cloud-vault/C_A1-configs/profile-secrets.json" "$APP/../../../cloud-vault/C_A1-configs/profile-secrets.json"; do
+for v in "${CLOUD_VAULT:+$CLOUD_VAULT/Shared/configs/profile-secrets.json}" "$APP/../../cloud-vault/Shared/configs/profile-secrets.json" "$APP/../../../cloud-vault/Shared/configs/profile-secrets.json"; do
     [ -f "$v" ] && VAULT_BUNDLE="$v" && break
 done
 if [ -n "$VAULT_BUNDLE" ]; then
@@ -382,11 +382,11 @@ PYD
 }
 msg=$(drift_decl_ok "$BJ") && ok "D: the pairs (S/R, L/S, L/R), the upload target beside the generated file, and the runtime deadline are declared" || bad "D: $msg"
 LOCALPY=""
-for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs/local.py}" "$APP/../../cloud-vault/C_A1-configs/local.py" "$APP/../../../cloud-vault/C_A1-configs/local.py"; do [ -f "$v" ] && LOCALPY="$v" && break; done
+for v in "${CLOUD_VAULT:+$CLOUD_VAULT/Shared/configs/local.py}" "$APP/../../cloud-vault/Shared/configs/local.py" "$APP/../../../cloud-vault/Shared/configs/local.py"; do [ -f "$v" ] && LOCALPY="$v" && break; done
 if [ -n "$LOCALPY" ]; then
     vp=$(grep -oE '^LOCAL = CONFIGS / "[^"]+"' "$LOCALPY" | cut -d'"' -f2)
-    [ -n "$vp" ] && [ "$(jq -r '.ui.profile.drift.upload.path' "$BJ")" = "C_A1-configs/$vp" ] \
-        && ok "D: the upload path is the one cloud-vault's local.py checks (C_A1-configs/$vp)" || bad "D: the upload path is not the file cloud-vault's local.py checks ($vp)"
+    [ -n "$vp" ] && [ "$(jq -r '.ui.profile.drift.upload.path' "$BJ")" = "Shared/configs/$vp" ] \
+        && ok "D: the upload path is the one cloud-vault's local.py checks (Shared/configs/$vp)" || bad "D: the upload path is not the file cloud-vault's local.py checks ($vp)"
 else
     echo "  UNVERIFIABLE: cloud-vault is not beside this repo - the upload path was not compared with local.py's"
 fi
@@ -450,7 +450,7 @@ for m in 'AM|s/if (p.a == Slot.R || p.b == Slot.R) AccountRuntime.observed(runti
     dm "$v" "$e"; rc=$?
     case $rc in 0) ok "D-mutation: caught - $v: ${e:0:70}";; 2) bad "D-mutation: did not apply - $v: ${e:0:70}";; *) bad "D-mutation: NOT caught - $v: ${e:0:70}";; esac
 done
-for jm in '.ui.profile.drift.upload.path = "C_A1-configs/profile-secrets.json"' '.ui.profile.drift.pairs |= .[1:]' '.ui.profile.drift.pairs[0].b = "S"'; do
+for jm in '.ui.profile.drift.upload.path = "Shared/configs/profile-secrets.json"' '.ui.profile.drift.pairs |= .[1:]' '.ui.profile.drift.pairs[0].b = "S"'; do
     jq "$jm" "$BJ" > "$TMP/d.json"
     if cmp -s "$BJ" "$TMP/d.json"; then bad "D-mutation: did not apply - $jm"
     else drift_decl_ok "$TMP/d.json" >/dev/null && bad "D-mutation: NOT caught - $jm" || ok "D-mutation: caught - $jm"; fi
@@ -652,8 +652,8 @@ grep -q 'UI_PROFILE_INFOS_B64' "$APP/../ab_cloud-libs-shared/libs/account/build.
 out=$(schema_rows_cover "$BJ" "") && ok "F: with nothing fetched, every declared field still draws (as empty) - $(jq '[.ui.profile.infos.schema.sections[].fields[]] | length' "$BJ") fields in $(jq '.ui.profile.infos.schema.sections | length' "$BJ") sections" || bad "F: fields without a row: $(echo $out)"
 out=$(schema_rows_cover "$BJ" "$TMP/fixture.json") && ok "F: over the synthetic bundle every declared field draws" || bad "F: fields without a row: $(echo $out)"
 VAULT_DIR=""
-for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs}" "$APP/../../cloud-vault/C_A1-configs" "$APP/../../../cloud-vault/C_A1-configs"; do [ -f "$v/schema.json" ] && VAULT_DIR="$v" && break; done
-schema_drift() {   # $1 = build.json, $2 = C_A1-configs dir; prints the drift; 1 iff any
+for v in "${CLOUD_VAULT:+$CLOUD_VAULT/Shared/configs}" "$APP/../../cloud-vault/Shared/configs" "$APP/../../../cloud-vault/Shared/configs"; do [ -f "$v/schema.json" ] && VAULT_DIR="$v" && break; done
+schema_drift() {   # $1 = build.json, $2 = Shared/configs dir; prints the drift; 1 iff any
     python3 - "$1" "$2" <<'PYD'
 import json, os, sys
 mine = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["schema"]
@@ -661,7 +661,7 @@ d = sys.argv[2]; vs = json.load(open(os.path.join(d, "schema.json")))
 # emit.py's own rule (resolvers()): a resolver is any object carrying `kind` - no list of
 # kinds here, so a resolver kind the vault adds (peer_devices, 11950b4) is a field, not a crash.
 # #727 EVERY section directory, not only schema.json's list: schema.json's sections in
-# its order, then each C_A1-configs/<dir>/sources.json it does not list yet (STAGED).
+# its order, then each Shared/configs/<dir>/sources.json it does not list yet (STAGED).
 listed = [s["id"] for s in vs["sections"]]
 staged = sorted(x for x in os.listdir(d) if os.path.isfile(os.path.join(d, x, "sources.json")) and x not in listed)
 want = []

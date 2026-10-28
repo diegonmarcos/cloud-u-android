@@ -125,10 +125,10 @@ while IFS= read -r l; do
     grep -qF "\"$l\"" <<<"$(codeof "$CW"; codeof "$AP"; codeof "$PP"; codeof "$AR"; codeof "$AT")" && bad "T3: section label '$l' is also a Kotlin literal" || ok "T3: label '$l' lives only in build.json"
 done <<< "$LABELS"
 VAULT_IDS=$(jq -r '.ui.vault_connect.cockpit.sections[].vault[]' "$BJ" | sort -u)
-# #695 the vault re-lettered E0_configs/ -> C_A1-configs/; the old path made this
+# #695 the vault re-lettered E0_configs/ -> Shared/configs/; the old path made this
 # cross-check silently skip (a moved path disarms a tester).
-SCHEMA="$APP/../../cloud-vault/C_A1-configs/schema.json"
-[ -f "$SCHEMA" ] || SCHEMA="$(cd "$APP/../.." 2>/dev/null && pwd)/cloud-vault/C_A1-configs/schema.json"
+SCHEMA="$APP/../../cloud-vault/Shared/configs/schema.json"
+[ -f "$SCHEMA" ] || SCHEMA="$(cd "$APP/../.." 2>/dev/null && pwd)/cloud-vault/Shared/configs/schema.json"
 if [ -f "$SCHEMA" ]; then
     for v in $VAULT_IDS; do
         if jq -e --arg v "$v" '.sections[] | select(.id == $v)' "$SCHEMA" >/dev/null; then ok "T3: vault section '$v' exists in cloud-vault schema.json"

@@ -21,9 +21,9 @@
     ]
   },
   "signing": {
-    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
-    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
-    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: Shared/Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + Shared/Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
+    "vault_keystore": "Shared/Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "Shared/Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "diagnostics": {
     "_doc": "On-device DevControlServer diagnostics → cloud sink.",

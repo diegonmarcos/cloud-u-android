@@ -43,7 +43,7 @@ JMAP="$LIB/mail/src/main/java/com/diegonmarcos/superapp/mail/JmapPrefs.kt"
 PREFS="$ROOT/app/src/main/java/com/diegonmarcos/superapp/network/WireGuardPrefs.kt"
 MESH="$ROOT/app/src/main/java/com/diegonmarcos/superapp/network/AccountMesh.kt"
 STR="$LIB/account/src/main/res/values/strings.xml"
-VAULT_SRC="$ROOT/../../cloud-me-pvt-vault/C_A1-configs/mesh/sources.json"
+VAULT_SRC="$ROOT/../../cloud-me-pvt-vault/Shared/configs/mesh/sources.json"
 
 echo "T1 four profiles stored by name, one active, the key in ONE slot"
 has "$PREFS" 'fun saveProfiles(profiles: Map<String, String>)' "WireGuardPrefs stores a named profile set"
@@ -124,7 +124,7 @@ echo "T7 the A37's own profiles reach the bundle under its own id"
 if [ -f "$VAULT_SRC" ]; then
   has "$VAULT_SRC" '"devices": {' "mesh/sources.json declares per-device profile sets"
   has "$VAULT_SRC" 'c0-wireguard/samsung-a37-public' "...the A37's from its OWN dir (its own key)"
-  hasnt "$VAULT_SRC" '"samsung-a37": {"profiles": {"kind": "files", "repo": "cloud-vault", "dir": "A_A0-Providers/C_TOOLS-INFRA/c0-wireguard/termux-public"' "...never the S21+'s dir"
+  hasnt "$VAULT_SRC" '"samsung-a37": {"profiles": {"kind": "files", "repo": "cloud-vault", "dir": "Shared/Providers/C_TOOLS-INFRA/c0-wireguard/termux-public"' "...never the S21+'s dir"
 else
   echo "  skip: vault not checked out beside this repo"
 fi

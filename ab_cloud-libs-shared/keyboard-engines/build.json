@@ -81,7 +81,7 @@
   },
   "keyboard_media": {
     "_doc": "Same block as aa_cloud-superapp and ac_cloud-keyboard — shared vault secret. build.sh sops-decrypts vault_secrets → GIPHY_API_KEY env var → Gradle BuildConfig → MediaRuntime.configure().",
-    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d3-keyboard-media/secrets.yaml",
+    "vault_secrets": "Shared/Providers/D_TOOLS-DEVICES/d3-keyboard-media/secrets.yaml",
     "enabled": true,
     "sticker": {
       "enabled": true
@@ -134,8 +134,8 @@
   ],
   "signing": {
     "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. build.sh::_resolve_signing resolves $VAULT_DIR + sops-decrypts the passwords. NO fallback.",
-    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
-    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+    "vault_keystore": "Shared/Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "Shared/Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "release": {
     "_doc_kind": "'lib' = a companion APK that ships engines behind AIDL bound services instead of UI. data/regen.sh copies this into constellation-fleet.json; the SuperApp's Constellation page files it under the Libs tab instead of Apps. Absent/anything else = 'app'.",

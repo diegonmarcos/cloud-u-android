@@ -6,7 +6,7 @@
 # all missing phone apps." One grep-contract per promise; the install behaviour
 # itself is StorePhoneAppsTest / StoreResolverTest's.
 #
-# T1 THE VAULT DECLARES IT. cloud-vault C_A1-configs: `apps` is the LAST schema.json
+# T1 THE VAULT DECLARES IT. cloud-vault Shared/configs: `apps` is the LAST schema.json
 #    section, apps/sources.json points apps.devices.galaxy-s21.inventory at
 #    apps/galaxy-s21-apps.json with a cloud-vault json resolver, and that file is a
 #    #565 inventory (kind cloud-sa.app-inventory, schema 1, every row carrying the
@@ -29,7 +29,7 @@ APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$APP/.." && pwd)"
 LIB="$ROOT/ab_cloud-libs-shared/libs"
 VAULT=""
-for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs}" "$ROOT/../cloud-vault/C_A1-configs" "$ROOT/../cloud-me-pvt-vault/C_A1-configs"; do
+for v in "${CLOUD_VAULT:+$CLOUD_VAULT/Shared/configs}" "$ROOT/../cloud-vault/Shared/configs" "$ROOT/../cloud-me-pvt-vault/Shared/configs"; do
   [ -n "$v" ] && [ -f "$v/schema.json" ] && VAULT="$v" && break
 done
 
@@ -54,8 +54,8 @@ else:
     (ok if ids and ids[-2:] == ["apps", "peers"] else bad)("schema.json lists `apps` then `peers` as the LAST sections (%s)" % ids[-2:])
     src = json.load(open(os.path.join(vault, "apps", "sources.json")))["items"]
     inv = src.get("devices", {}).get("galaxy-s21", {}).get("inventory", {})
-    (ok if inv.get("kind") == "json" and inv.get("repo") == "cloud-vault" and inv.get("path") == "C_A1-configs/apps/galaxy-s21-apps.json" and inv.get("pointer") == []
-     else bad)("apps.devices.galaxy-s21.inventory is a cloud-vault json resolver at C_A1-configs/apps/galaxy-s21-apps.json")
+    (ok if inv.get("kind") == "json" and inv.get("repo") == "cloud-vault" and inv.get("path") == "Shared/configs/apps/galaxy-s21-apps.json" and inv.get("pointer") == []
+     else bad)("apps.devices.galaxy-s21.inventory is a cloud-vault json resolver at Shared/configs/apps/galaxy-s21-apps.json")
     def pend(v):
         if isinstance(v, dict): return v.get("kind") == "pending" or any(pend(x) for x in v.values())
         if isinstance(v, list): return any(pend(x) for x in v)
