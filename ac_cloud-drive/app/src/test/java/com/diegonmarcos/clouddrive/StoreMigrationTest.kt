@@ -122,7 +122,7 @@ class StoreMigrationTest {
         assertEquals(1, moves.size)
         assertFalse(moves.first().moved)
         assertFalse("no copy may be deleted while neither is complete", moves.first().removed)
-        assertTrue(File(root, "cloud/.git").exists())
+        assertTrue(File(root, "cloudy-___/.git").exists())
         assertTrue(File(root, "git/cloudy-___/.git").exists())
         assertTrue("the decision must say why", moves.first().decision.contains("NEITHER"))
     }
@@ -147,7 +147,7 @@ class StoreMigrationTest {
         val moves = StoreMigration.migrate(root, "git", declared)
         assertTrue("neither is a stray to migrate: " + moves.map { it.decision }, moves.isEmpty())
         assertTrue(File(root, "my-photos/.git").exists())
-        assertTrue("the user's own folder must survive", File(root, "cloud/notes.txt").exists())
+        assertTrue("the user's own folder must survive", File(root, "cloudy-___/notes.txt").exists())
         assertFalse(File(root, "git/cloudy-___").exists())
     }
 
@@ -159,7 +159,7 @@ class StoreMigrationTest {
         val moves = StoreMigration.migrate(root, "git", declared)
         assertEquals(1, moves.size)
         assertFalse(moves.first().removed)
-        assertTrue(File(root, "cloud/notes.txt").exists())
+        assertTrue(File(root, "cloudy-___/notes.txt").exists())
     }
 
     /** #731 an upstream rename: a complete git/ffront moves to git/front, the old dir is gone, content survives. */
@@ -189,7 +189,7 @@ class StoreMigrationTest {
     @Test fun theManifestDeclaresTheFrontRename() {
         val data = listOf(File("data"), File("../data"), File("ac_cloud-drive/data")).first { File(it, "drive-git-repos.json").isFile }
         val family = Declarations.parseGitFamily(File(data, "drive-git-repos.json").readText())
-        assertEquals("Projects", family.renames["ffront"])
+        assertEquals("Projects-___", family.renames["ffront"])
         assertTrue(family.repos.none { it.name == "ffront" })
     }
 
