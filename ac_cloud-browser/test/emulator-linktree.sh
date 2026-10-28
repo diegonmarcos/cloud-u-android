@@ -16,6 +16,12 @@ fails=0
 ok()  { echo "PASS  $1"; }
 bad() { echo "::error title=linktree emulator test::$1"; echo "FAIL  $1"; fails=$((fails + 1)); }
 
+# The runner can hand over an emulator adb still reports offline (seen as "adb: device offline" then a hung wait): reconnect until it answers.
+for _ in $(seq 1 60); do
+  [ "$(timeout 10 adb get-state 2>/dev/null | tr -d '\r')" = device ] && [ "$(timeout 10 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ] && break
+  timeout 20 adb reconnect offline >/dev/null 2>&1 || true; sleep 5
+done
+[ "$(timeout 10 adb get-state 2>/dev/null | tr -d '\r')" = device ] || { bad "L0 the emulator never came online"; exit 2; }
 adb logcat -c || true
 adb install -r -g "$APK" >/dev/null || { bad "install of Cloud Browser failed"; exit 2; }
 adb shell settings put global window_animation_scale 0 || true
