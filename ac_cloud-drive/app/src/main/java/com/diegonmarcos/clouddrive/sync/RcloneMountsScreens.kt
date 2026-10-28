@@ -77,6 +77,8 @@ fun MountsSyncScreen(
     val fleet = connections.filter { it.name !in mountable }
 
     LazyColumn(modifier.fillMaxSize()) {
+        // Mount lifetime: keeper status + missing background permissions, each with a one-tap fix.
+        item { com.diegonmarcos.clouddrive.mounts.MountKeeperCard() }
         item { SectionHeader(stringResource(R.string.mounts_section), count = mounts.size, action = stringResource(R.string.mounts_add)) { actions.openEngine(EngineActivity.ENGINE_MOUNTS, "") } }
         if (mounts.isEmpty()) item { EmptyState(Icons.Filled.Lan, stringResource(R.string.mounts_empty), stringResource(R.string.mounts_empty_hint), actionLabel = stringResource(R.string.mounts_open)) { actions.openEngine(EngineActivity.ENGINE_MOUNTS, "") } }
         items(mounts, key = { it.id }) { m ->

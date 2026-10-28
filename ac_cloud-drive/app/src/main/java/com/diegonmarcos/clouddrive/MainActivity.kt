@@ -133,6 +133,11 @@ class MainActivity : ComponentActivity(), DriveActions {
         guarded("DataMigration", optional = true) {
             DataMigration.onLaunch(this)
         }
+        // Mount keeper (build.json::mount_keeper): re-attach to live mounts, restart the keeper if mounts
+        // were on. Never reconnects a healthy mount; only the keeper reopens a dead one, with backoff.
+        guarded("MountKeeper", optional = true) {
+            com.diegonmarcos.clouddrive.mounts.MountKeeper.onAppOpen(this)
+        }
         guarded("system bars") {
             WindowCompat.getInsetsController(window, window.decorView).apply {
                 // Dark page top and bottom (Theme.CloudDrive, #336/#337) → light system-bar glyphs.

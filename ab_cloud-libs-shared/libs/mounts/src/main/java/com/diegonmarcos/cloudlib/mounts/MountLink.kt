@@ -58,6 +58,24 @@ class MountLink(context: Context) : MountTransport {
         }
     }
 
+    /**
+     * A PERSISTENT bind, held by the host's mount keeper (a foreground service) for as long as mounts are on.
+     * Without it the engine is bound only for one step, so between steps its process is a cached process
+     * Android (and Samsung's battery manager above all) may kill at any time, dropping every connection
+     * handle: the next step then answers UNKNOWN_HANDLE and EngineFs reopens, which is the remount seen on
+     * every app reopen. BIND_IMPORTANT lends the engine the keeper's foreground priority. Close to release.
+     */
+    fun hold(): java.io.Closeable {
+        val (service, why) = resolve(ctx)
+        if (service == null) throw IOException(why ?: "the mounts engine is not ready")
+        val conn = Conn()
+        conn.bound = runCatching {
+            ctx.bindService(Intent().setClassName(service.packageName, service.name), conn, Context.BIND_AUTO_CREATE or Context.BIND_IMPORTANT)
+        }.getOrDefault(false)
+        if (!conn.bound) throw IOException("${service.packageName} did not accept the bind")
+        return java.io.Closeable { conn.release(ctx) }
+    }
+
     override fun session(): MountTransport.Session {
         val (service, why) = resolve(ctx)
         if (service == null) throw IOException(why ?: "the mounts engine is not ready")

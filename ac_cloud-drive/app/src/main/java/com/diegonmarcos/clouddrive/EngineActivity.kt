@@ -41,6 +41,8 @@ class EngineActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The mounts browser's sessions belong to the process registry the keeper configures.
+        runCatching { com.diegonmarcos.clouddrive.mounts.MountKeeper.install(this) }
         val engine = intent.getStringExtra(EXTRA_ENGINE) ?: ""
         // #575: the git manager with no target opens ON the shared store, so an "add
         // repository" from there lands under <shared_root>/… and nowhere else.

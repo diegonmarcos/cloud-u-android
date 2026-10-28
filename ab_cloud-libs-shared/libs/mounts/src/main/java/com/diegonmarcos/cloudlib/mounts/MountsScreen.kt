@@ -232,7 +232,9 @@ private fun BrowserScreen(mount: MountSpec, credentials: MountCredentialStore, d
         scope.launch {
             val r = withContext(Dispatchers.IO) {
                 runCatching {
-                    val f = fs ?: MountFsFactory.open(context, mount, credentials.secretFor(mount), credentials.knownHosts).also { fs = it }
+                    // re-attach to the live session (opened only if dead); never a fresh connect per screen
+                    val app = context.applicationContext
+                    val f = MountSessions.get { m -> MountFsFactory.open(app, m, credentials.secretFor(m), credentials.knownHosts) }.acquire(mount, probe = false).also { fs = it }
                     f.list(p)
                 }
             }
@@ -241,7 +243,9 @@ private fun BrowserScreen(mount: MountSpec, credentials: MountCredentialStore, d
         }
     }
     LaunchedEffect(mount.id) { refresh(mount.path.ifBlank { "/" }) }
-    androidx.compose.runtime.DisposableEffect(mount.id) { onDispose { fs?.let { f -> Thread { runCatching { f.close() } }.start() } } }
+    // The session belongs to MountSessions (process scope, kept by the host's keeper service):
+    // leaving this screen releases the lease and leaves the connection up, so reopening re-attaches.
+    androidx.compose.runtime.DisposableEffect(mount.id) { onDispose { fs?.close() } }
 
     val uploadPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
         val u = uri ?: return@rememberLauncherForActivityResult

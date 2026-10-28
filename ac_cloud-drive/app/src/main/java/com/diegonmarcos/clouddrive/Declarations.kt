@@ -394,6 +394,9 @@ object Declarations {
     /** #629 the same block's `credential_id`: the id the VAULT-delivered credential is held under. */
     val authCredentialIds: Map<String, String> by lazy { parseAuthCredentialIds(decode(BuildConfig.AUTH_APPLIES_B64)) }
 
+    /** build.json::mount_keeper (the mount lifetime policy), decoded once; parsed by mounts/MountPolicy. */
+    val mountKeeperJson: String by lazy { decode(BuildConfig.MOUNT_KEEPER_B64) }
+
     fun decode(b64: String): String = if (b64.isBlank()) "" else runCatching { String(Base64.getDecoder().decode(b64), Charsets.UTF_8) }.getOrDefault("")
 
     // ── parsers (pure; JVM-tested) ─────────────────────────────────────────

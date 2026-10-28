@@ -63,6 +63,29 @@
       "require_unmetered_network": true
     }
   },
+  "mount_keeper": {
+    "_doc": "Mount lifetime, declared. Mount connections live in the mounts engine process and were held only by the browser screen, which bound the engine one step at a time: once the UI went away (Activity destroyed, app swiped, screen off, Samsung battery killing the unbound engine process) every handle was lost and the next open reconnected. Now a foreground service (MountKeeperService, type specialUse) owns them: started sticky, independent of the UI, holding a persistent bind on the engine, probing each live mount every health_interval_seconds and reopening ONLY a dead one, after backoff_initial_seconds doubling to backoff_max_seconds. The UI re-attaches through libs:mounts MountSessions. The mount SET is not listed here: it is the declared connections (data/drive-connections.json) plus the mounts the user opens; this block is policy only. Baked as MOUNT_KEEPER_B64, decoded by mounts/MountPolicy.kt.",
+    "enabled": true,
+    "start_on_app_open": true,
+    "restore_on_boot": true,
+    "restore_on_update": true,
+    "_doc_autoconnect_declared": "false: the keeper restores the mounts that were live when it last ran (persisted ids), not every declared connection, because a declared connection without a stored credential is a connect that always fails.",
+    "autoconnect_declared": false,
+    "health_interval_seconds": 60,
+    "backoff_initial_seconds": 5,
+    "backoff_max_seconds": 300,
+    "wake_lock_during_transfers": true,
+    "wake_lock_max_minutes": 30,
+    "notification_channel": "mount-keeper",
+    "oem_battery_guides": [
+      {
+        "manufacturer": "samsung",
+        "title": "Samsung: Never sleeping apps",
+        "steps": "Settings > Battery > Background usage limits > Never sleeping apps > add Cloud Drive. Then App info > Battery > Unrestricted.",
+        "intent_component": "com.samsung.android.lool/com.samsung.android.sm.battery.ui.BatteryActivity"
+      }
+    ]
+  },
   "ui": {
     "_doc": "#868 THE NAVIGATION IS ONE DECLARATION (libs:bottomnav's NavDecl): ui.bottom_nav = the island's ids, ui.sections[] = each one's label/icon and its `pages` (the strip PageTabs draws), ui.default_section = where the app opens. Volumes' four classes, Sync's three pages and Configs' three pages are those `pages` now (they were the keys ui.volumes.classes, ui.sync.pages and ui.configs.pages; ui.tabs and ui.default_tab are gone). #603/#609 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.bottom_nav, SyncScreen renders ui.sections[sync].pages, ConfigsScreen renders ui.sections[configs].pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_SECTIONS_B64 / UI_BOTTOM_NAV / UI_DEFAULT_SECTION / UI_SYNC_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs) with files/volumes/home/apps/configs, moving Sync's three pages and Backups into Configs. #609 REVERSED HALF OF THAT: Apps stopped being a tab (its grid moved into Home, ui.home below) and the freed slot is now Sync, carrying Git/Rclone/Mounts back out of Configs into their own tab — the five tabs are now files/volumes/home/sync/configs. #608 REDESIGNED THE SYNC ▸ GIT SUB-PAGE and declared it whole in ui.sync.git below: two sections (the owner's PUBLIC cloud*/front* set, which needs no login, and Personal, which signs in through libs:auth for the `repo` scope and splits the account's own listing into Public and Private), one DENSE row per repository, and fourteen per-repository operations collapsed behind each row's disclosure — every one of them a verb of libs:git-sync, force push and force pull included.",
     "bottom_nav": ["explorer", "manage", "agents", "home", "git", "fsync", "mounts"],

@@ -817,4 +817,20 @@
     <string name="repo_unlisted_title">Unlisted git folders</string>
     <string name="repo_unlisted_none">No unlisted git folder found yet (pull to refresh or check all to scan).</string>
     <string name="repo_unlisted_no_remote">no remote</string>
+    <!-- Mount keeper -->
+    <string name="mount_keeper_channel">Mounts kept alive</string>
+    <string name="mount_keeper_title">Cloud Drive mounts</string>
+    <string name="mount_keeper_stop">Stop mounts</string>
+    <plurals name="mount_keeper_count">
+        <item quantity="one">%d mount connected</item>
+        <item quantity="other">%d mounts connected</item>
+    </plurals>
+    <string name="mount_keeper_section">Keep mounts alive</string>
+    <string name="mount_keeper_running">%1$d live · kept by a background service</string>
+    <string name="mount_keeper_stopped">Not running: mounts close with the app</string>
+    <string name="mount_keeper_need_notifications">Allow notifications (the keeper\'s status)</string>
+    <string name="mount_keeper_need_battery">Allow running in background (no battery optimisation)</string>
+    <string name="mount_keeper_guide_done">Done</string>
+    <string name="mount_keeper_fix">Fix</string>
+    <string name="mount_keeper_all_ok">Background permissions OK</string>
 </resources>
