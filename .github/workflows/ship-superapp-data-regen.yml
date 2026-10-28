@@ -64,11 +64,11 @@ jobs:
           repository: diegonmarcos/cloud-t-infra
           path: .inputs/cloud-infra
 
-      - name: Checkout front (linktree input)
+      - name: Checkout cloud-me-profiles (linktree input)
         uses: actions/checkout@v4
         with:
-          repository: diegonmarcos/diegonmarcos.github.io
-          path: .inputs/front
+          repository: diegonmarcos/cloud-me-profiles
+          path: .inputs/profiles
 
       # regen.sh takes all three inputs as positional args, so it needs no
       # ~/git/... layout on the runner. All three are mandatory and it aborts
@@ -82,7 +82,7 @@ jobs:
           bash regen.sh \
             "$GITHUB_WORKSPACE/.inputs/cloud-infra/1_cloud-configs/dist/_cloud-data-consolidated.json" \
             "$GITHUB_WORKSPACE/.inputs/cloud-infra/1_cloud-configs/dist/mesh-snapshot.json" \
-            "$GITHUB_WORKSPACE/.inputs/front/1_front-configs/src/data-links/projects.json"
+            "$GITHUB_WORKSPACE/.inputs/profiles/Lnktree/linktree/src/data/projects.json"
 
       - name: Commit refreshed snapshots
         run: |
