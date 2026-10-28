@@ -111,6 +111,12 @@ def dismiss_emulator_prompt(nodes):
         tap(wait)
         time.sleep(3.0)
         return True
+    if nodes and "packageinstaller" in nodes[0].pkg:  # an app's own self-update asking for "install unknown apps" (Cloud Mail's test build): decline it wherever it lands
+        cancel = find(nodes, "button2")
+        if cancel is not None:
+            tap(cancel)
+            time.sleep(1.0)
+            return True
     title = find(nodes, "alertTitle")
     if title is not None and "wireless debugging" in title.text.lower():
         always, allow = find(nodes, "alwaysUse"), find(nodes, "button1")
