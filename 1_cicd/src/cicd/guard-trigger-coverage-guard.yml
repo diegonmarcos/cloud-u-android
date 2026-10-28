@@ -31,6 +31,12 @@ on:
 permissions:
   contents: read
 
+# A push burst runs one coverage check and keeps only the newest pending one; a running
+# check is never cancelled by a push (it takes strace over every filtered guard).
+concurrency:
+  group: guard-trigger-coverage-guard-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   coverage:
     runs-on: ubuntu-latest

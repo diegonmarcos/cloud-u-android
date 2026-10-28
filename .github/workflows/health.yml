@@ -5,6 +5,11 @@ on:
     - cron: '17 */6 * * *'
   workflow_dispatch:
 
+# One health run at a time; a slow run is never cancelled by the next tick.
+concurrency:
+  group: health
+  cancel-in-progress: false
+
 jobs:
   health:
     runs-on: ubuntu-latest
