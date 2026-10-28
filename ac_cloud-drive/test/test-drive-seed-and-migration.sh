@@ -227,7 +227,7 @@ PYTHON
     grep -q 'stray.list()?.isEmpty() == true' "$2" || { echo "    the empty old-name leftover is never removed"; return 1; }
     grep -q 'fun undeclared(gitRoot: File' "$2" || { echo "    no reconciliation of git/ against the manifest"; return 1; }
     grep -q 'StoreMigration.undeclared(SharedStore.gitRoot()' "$3" || { echo "    the seed never reports undeclared directories"; return 1; }
-    grep -q 'StoreMigration.migrateRenames(SharedStore.gitRoot(), family.renames)' "$3" || { echo "    the rename migration is not armed"; return 1; }
+    grep -q 'StoreMigration.migrateRenames(SharedStore.gitRoot(), Declarations.repoSot.renameMap + family.renames)' "$3" || { echo "    the rename migration is not armed"; return 1; }
 }
 echo "── R the store reconciles with the manifest (#821) ──"
 if r1 "$MANIFEST" "$MIGRATION" "$SEED"; then pass "every known store leftover is declared or migrated, and undeclared dirs are reported"; else fail "the store can hold directories the manifest does not account for"; fi
