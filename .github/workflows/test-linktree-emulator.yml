@@ -30,7 +30,7 @@ permissions:
 jobs:
   linktree:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4

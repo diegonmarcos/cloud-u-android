@@ -26,7 +26,7 @@ adb shell settings put global cloud_browser_page_log 2 || true
 STATIC=$(curl -fsS "$URL" | grep -o '<a [^>]*href=' | wc -l)
 echo "static anchors in $URL: $STATIC"
 
-adb shell am start -W -a android.intent.action.VIEW -d "$URL" -p "$BPKG" >/dev/null
+timeout 120 adb shell am start -W -a android.intent.action.VIEW -d "$URL" -p "$BPKG" >/dev/null || bad "L0 the emulator did not take the start command (offline or hung)"
 sleep 40   # the loader's own deadline is 6s, plus network on a software-rendered emulator
 adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb shell cat /sdcard/ui.xml 2>/dev/null > "$OUT/linktree.xml" || true
 adb exec-out screencap -p > "$OUT/linktree.png" 2>/dev/null || true
