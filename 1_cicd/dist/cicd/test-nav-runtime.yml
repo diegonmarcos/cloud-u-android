@@ -53,9 +53,13 @@ permissions:
   contents: read
   actions: read
 
+# Pushes to main share ONE group per ref and a newer push cancels the older walk: a
+# per-sha group never superseded anything, so every push stacked a 20-app emulator
+# matrix and the queue starved the account's hosted runners for hours (#1198).
+# A manual dispatch gets its own group (run_id) and is never cancelled by a push.
 concurrency:
-  group: test-nav-runtime-${{ github.sha }}
-  cancel-in-progress: false
+  group: test-nav-runtime-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 jobs:
   plan:
@@ -213,6 +217,8 @@ jobs:
           chmod +x walk.sh
 
       - name: Boot emulator + walk
+        # a hung emulator must not hold a runner for the whole job budget
+        timeout-minutes: 90
         uses: reactivecircus/android-emulator-runner@v2
         env:
           APP: ${{ matrix.app }}
