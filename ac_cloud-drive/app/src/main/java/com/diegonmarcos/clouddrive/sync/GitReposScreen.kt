@@ -282,7 +282,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     fun tableRow(name: String, owner: String, declaredPrivate: Boolean?, listedUrl: String = ""): RepoTableRow {
         val cloned = clonedByName[name]
         val url = cloned?.remoteUrl?.takeIf { it.isNotBlank() } ?: listedUrl
-        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[it.id] }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes }, Declarations.repoSot.lfsOf(name))
+        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[GitSyncCoordinator.statusKey(it)] }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes }, Declarations.repoSot.lfsOf(name))
     }
     // Pull-to-refresh re-reads the REST facts of every repository the table lists (GitHub-listed or declared; the fleet's own git is not GitHub).
     fun refreshTargets(): List<Pair<String, String>> {
@@ -780,6 +780,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     }
                 }
                 RepoSummaryLine(summary)
+                RepoCheckProgressLine(RepoStatus.progress(repos.map { GitSyncCoordinator.statusKey(it) }.distinct(), glances), fmt)
                 fullProgress?.let { p -> Text(stringResource(R.string.repo_full_progress, p.done, p.total), Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset).testTag(DriveTags.SYNC_GIT_FULL_PROGRESS), style = MaterialTheme.typography.labelSmall) }
                 RepoStatusLegend()
                 if (archivedCount > 0) Text(
@@ -806,7 +807,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             val cloned = e.cloned
             GitRepoRow(
                 name = e.label, repoName = e.name, cells = e.row, scroll = tableScroll, fork = e.fork,
-                repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
+                repo = cloned, glance = cloned?.let { glances[GitSyncCoordinator.statusKey(it)] }, running = cloned?.let { running[it.id] },
+                icons = RepoStatus.icons(cloned != null, cloned?.let { glances[GitSyncCoordinator.statusKey(it)] }, cloned?.let { running.containsKey(it.id) } == true, events, cloned?.id.orEmpty()),
                 cloning = e.name in cloning, expanded = expanded == e.key,
                 // A second tap on the same repo closes its menu; a tap on another repo moves it.
                 onToggle = { expanded = RepoTable.toggle(expanded, e.key) },
@@ -827,7 +829,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             if (expanded == e.key && cloned != null) {
                 GitRepoOpsBox(
                     repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
-                    running = running[cloned.id], glance = glances[cloned.id], fmt = fmt,
+                    running = running[cloned.id], glance = glances[GitSyncCoordinator.statusKey(cloned)], fmt = fmt,
                     coordinator = coordinator, actions = actions,
                     repoName = e.name, owner = e.owner, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
                     cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned }, onClose = { expanded = "" },
@@ -1016,7 +1018,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // #1238 the full-screen status window of the tapped row: what the app already knows, no mock data; Clone repo is its last section.
     entries.firstOrNull { it.key == statusFor }?.let { e ->
         RepoStatusWindow(
-            name = e.name, owner = e.owner, row = e.row, repo = e.cloned, glance = e.cloned?.let { glances[it.id] },
+            name = e.name, owner = e.owner, row = e.row, repo = e.cloned, glance = e.cloned?.let { glances[GitSyncCoordinator.statusKey(it)] },
+            icons = RepoStatus.icons(e.cloned != null, e.cloned?.let { glances[GitSyncCoordinator.statusKey(it)] }, e.cloned?.let { running.containsKey(it.id) } == true, events, e.cloned?.id.orEmpty()),
             cloneUrl = e.cloneUrl.ifBlank { page.cloneUrl(e.name, Declarations.REMOTE_HTTPS) }, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
             cloning = e.name in cloning, fmt = fmt, onClone = e.onClone, onCheckWorktree = { e.cloned?.let { coordinator.checkWorktree(it) } }, onClose = { statusFor = "" },
         )
@@ -1269,12 +1272,12 @@ private fun GitRepoRow(
     repo: ManagedRepo?,
     glance: GitSyncCoordinator.Glance?,
     running: GitSyncCoordinator.Running?,
+    icons: RepoStatus.Icons,
     cloning: Boolean,
     expanded: Boolean,
     onToggle: () -> Unit,
     onOpenStatus: () -> Unit,
 ) {
-    val light = lightOf(repo, glance)
     // #1138 THE TABLE ROW: the light and the name, then one cell per column, then the clone / disclosure
     // control; the whole row scrolls sideways on the ONE scroll state the header shares.
     Row(
@@ -1285,7 +1288,7 @@ private fun GitRepoRow(
     ) {
         Row(Modifier.horizontalScroll(scroll).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
             // #1238 the leftmost column is the status icon on its own: a tap opens the full-screen status window.
-            RepoStatusCell(light, name, onOpenStatus, RepoStatus.levelCaption(glance, System.currentTimeMillis()))
+            RepoStatusCell(icons, name, onOpenStatus, RepoStatus.levelCaption(glance, System.currentTimeMillis()))
             Column(Modifier.width(DriveMetrics.tableName)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(name, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)

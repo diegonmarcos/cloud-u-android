@@ -79,9 +79,9 @@ fun HomeScreen(
     }
     val repos by git.repos.collectAsState()
     val glances by git.glances.collectAsState()
-    val dirty = repos.count { r -> val g = glances[r.id]; g != null && (g.changed > 0 || g.conflicts > 0) }
-    val ahead = repos.sumOf { r -> glances[r.id]?.ahead ?: 0 }
-    val behind = repos.sumOf { r -> glances[r.id]?.behind ?: 0 }
+    val dirty = repos.count { r -> val g = glances[com.diegonmarcos.clouddrive.sync.GitSyncCoordinator.statusKey(r)]; g != null && (g.changed > 0 || g.conflicts > 0) }
+    val ahead = repos.sumOf { r -> glances[com.diegonmarcos.clouddrive.sync.GitSyncCoordinator.statusKey(r)]?.ahead ?: 0 }
+    val behind = repos.sumOf { r -> glances[com.diegonmarcos.clouddrive.sync.GitSyncCoordinator.statusKey(r)]?.behind ?: 0 }
     val reachableContainers = containerConnections.count { it.status == "ok" }
 
     Column(modifier.fillMaxSize()) {

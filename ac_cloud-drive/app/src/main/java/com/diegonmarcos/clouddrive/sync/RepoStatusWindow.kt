@@ -35,6 +35,7 @@ import java.util.Date
 private fun kindText(k: RepoStatus.Kind): String = stringResource(when (k) {
     RepoStatus.Kind.NOT_CLONED -> R.string.repo_kind_not_cloned
     RepoStatus.Kind.READING -> R.string.repo_kind_reading
+    RepoStatus.Kind.NOT_CHECKED -> R.string.repo_kind_not_checked
     RepoStatus.Kind.MISSING -> R.string.repo_kind_missing
     RepoStatus.Kind.LARGE -> R.string.repo_kind_large
     RepoStatus.Kind.ERROR -> R.string.repo_kind_error
@@ -61,6 +62,7 @@ internal fun RepoStatusWindow(
     row: RepoTableRow,
     repo: ManagedRepo?,
     glance: GitSyncCoordinator.Glance?,
+    icons: RepoStatus.Icons,
     cloneUrl: String,
     remote: RepoRemoteStats.Stats?,
     cloning: Boolean,
@@ -85,6 +87,9 @@ internal fun RepoStatusWindow(
                 }
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
                     Text(stringResource(R.string.repo_status_window_state, kindText(kind)), style = MaterialTheme.typography.bodyMedium)
+                    RepoThreeSections(icons, name)
+                    // Debug line: the exact path read and the reader's outcome, so a "?" can never be silent again.
+                    Text(RepoStatus.debugLine(repo?.path.orEmpty(), glance), Modifier.testTag(DriveTags.SYNC_GIT_DEBUG_LINE), style = MaterialTheme.typography.labelSmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     RepoStatusBlock(block, fmt)
                     RepoMetaTable(listOf(
                         stringResource(R.string.repo_meta_k_name) to name,
@@ -112,6 +117,36 @@ internal fun RepoStatusWindow(
                     }
                     if (kind == RepoStatus.Kind.LARGE) Pill(stringResource(R.string.repo_check_worktree), onCheckWorktree, modifier = Modifier.testTag(DriveTags.SYNC_GIT_STATUS_CHECK), filled = true)
                     androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = DriveMetrics.listBottom))
+                }
+            }
+        }
+    }
+}
+
+/** The status window's three sections, matching the three row icons: LOCAL (working copy), SERVER (against the remote), SYNC (last job). */
+@Composable
+private fun RepoThreeSections(icons: RepoStatus.Icons, name: String) {
+    val decl = com.diegonmarcos.clouddrive.Declarations.sync.git.status.icons
+    fun word(k: Enum<*>) = k.name.lowercase().replace('_', ' ')
+    val now = System.currentTimeMillis()
+    val last = icons.lastSync
+    val syncDetail = when (icons.sync) {
+        RepoStatus.SyncKind.RUNNING -> stringResource(R.string.repo_sync_running)
+        RepoStatus.SyncKind.NEVER -> stringResource(R.string.repo_sync_never_ran)
+        RepoStatus.SyncKind.OK -> stringResource(R.string.repo_sync_ok_at, RepoStatus.ageWord(now - (last?.epochSeconds ?: 0) * 1000), last?.summary.orEmpty())
+        RepoStatus.SyncKind.ERROR -> stringResource(R.string.repo_sync_failed, RepoStatus.ageWord(now - (last?.epochSeconds ?: 0) * 1000), last?.summary.orEmpty())
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
+        listOf(
+            Triple(R.string.repo_section_local, RepoStatus.lightOf("local", icons.local, decl), word(icons.local)),
+            Triple(R.string.repo_section_server, RepoStatus.lightOf("server", icons.server, decl), word(icons.server)),
+            Triple(R.string.repo_section_sync, RepoStatus.lightOf("sync", icons.sync, decl), word(icons.sync) + ": " + syncDetail),
+        ).forEach { (title, light, text) ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
+                StatusDot(light, name + " " + stringResource(title))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(title), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

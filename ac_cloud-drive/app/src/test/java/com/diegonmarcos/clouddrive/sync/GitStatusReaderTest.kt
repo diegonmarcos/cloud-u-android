@@ -50,7 +50,7 @@ class GitStatusReaderTest {
         val st = reader.statuses.value
         assertEquals(GitStatusReader.State.ERROR, st["huge"]!!.state)
         assertTrue(st["huge"]!!.reason!!.startsWith("timeout"))
-        assertEquals("error(timeout after 300ms)", st["huge"]!!.label())
+        assertEquals("error(timeout after 300ms: status read timed out)", st["huge"]!!.label())
         assertEquals(GitStatusReader.State.AHEAD, st["a"]!!.state)
         assertEquals(GitStatusReader.State.AHEAD, st["b"]!!.state)
         assertTrue("every row ended", st.values.all { it.terminal })

@@ -294,7 +294,7 @@ object DriveDebugApi {
         return buildString {
             append("""{"ok":true,"finished":$finished,"count":${repos.size},"repos":[""")
             repos.forEachIndexed { i, r ->
-                val s = st[r.id]
+                val s = st[GitSyncCoordinator.statusKey(r)]
                 if (i > 0) append(',')
                 append("""{"name":"${esc(r.name)}","state":"${esc(s?.state?.name?.lowercase() ?: "unrequested")}",""")
                 append(""""label":"${esc(s?.label() ?: "unrequested")}","read_at_ms":${s?.readAtMs ?: 0},"took_ms":${s?.tookMs ?: 0}}""")

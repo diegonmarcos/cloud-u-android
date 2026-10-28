@@ -15,6 +15,8 @@ import com.diegonmarcos.cloudlib.gitsync.GitOpResult
 import com.diegonmarcos.cloudlib.gitsync.GitRemoteInfo
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
+import com.diegonmarcos.cloudlib.sharedstore.StoreAccess
+import com.diegonmarcos.cloudlib.sharedstore.StoreExec
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +68,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     private fun declaredToken(): String =
         com.diegonmarcos.clouddrive.configs.DriveAuthApply.vaultGitToken(ctx)
             .ifBlank { runCatching { com.diegonmarcos.clouddrive.configs.DriveGitChain.resolve(ctx).token.orEmpty() }.getOrDefault("") }
+    private val statusCache = StatusCache(File(ctx.filesDir, StatusCache.FILE))
     val history = SyncHistory(File(ctx.filesDir, SyncHistory.FILE))
 
     data class Glance(
@@ -91,6 +94,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         val untracked: Int = 0,
         /** When the remote was last fetched (epoch ms, the clone's FETCH_HEAD time); 0 = never / not known. */
         val fetchedAtMs: Long = 0,
+        /** The exact directory the reader read, how it read it ("files" / "exec" / "engine") and how long it took (debug line). */
+        val path: String = "",
+        val via: String = "",
+        val tookMs: Long = 0,
     )
 
     enum class Step { STAGING, COMMITTING, PULLING, PUSHING }
@@ -105,7 +112,14 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     init {
         // #850 the glances ARE the one reader's statuses, entry by entry as each ends — a
         // slow repository no longer holds every other row on "reading…".
-        scope.launch { statusReader.statuses.collect { m -> glances.value = m.mapValues { (_, s) -> glanceOf(s) } } }
+        // The persisted cache first (file read on IO): the table renders from it at once, no check runs by itself.
+        scope.launch {
+            withContext(Dispatchers.IO) { runCatching { statusCache.load() }.getOrDefault(emptyMap()) }.let { statusReader.seed(it) }
+            statusReader.statuses.collect { m ->
+                glances.value = m.mapValues { (_, s) -> glanceOf(s) }
+                withContext(Dispatchers.IO) { runCatching { statusCache.save(m) } }
+            }
+        }
     }
 
     /**
@@ -116,7 +130,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      */
     fun refresh(force: Boolean = false): kotlinx.coroutines.Job = scope.launch {
         val list = loadRegistry()
-        statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) }, force).join()
+        statusReader.request(list.map { GitStatusReader.Target(statusKey(it), File(it.path)) }, force).join()
     }
 
     /** #1195 the registry and the history only (a small file read on IO, no git status, no walk, no network): what a page open always does. */
@@ -128,7 +142,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     }
 
     /** After an operation changed [repo]'s tree: its cached status is stale, re-read it. */
-    private fun reread(repo: ManagedRepo) { statusReader.invalidate(repo.id); refresh() }
+    private fun reread(repo: ManagedRepo) { statusReader.invalidate(statusKey(repo)); refresh() }
 
     // ── #850 Force pull (all / one) and Auto pull on open ─────────────────────
 
@@ -178,7 +192,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                         val result = withContext(Dispatchers.IO) { perform(repo, opId, "", { token.value }, trigger) }
                         opResults.update { it + (repo.id to result) }
                         running.update { it - repo.id }
-                        statusReader.invalidate(repo.id)
+                        statusReader.invalidate(statusKey(repo))
                         bulk.update { b -> b?.copy(done = b.done + 1, results = b.results + (repo.name to result)) }
                     } finally { gate.release() }
                 }
@@ -222,10 +236,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     fun onPageOpened() {
         refreshRegistry()
         scope.launch {
-            val list = loadRegistry()
-            // The LOCAL status (no network, cached by ttl, bounded, off the main thread) is read on every open: without
-            // it every cloned row stayed on "?" (the #1195 gate made the read opt-in and nothing else triggered it).
-            statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) })
+            loadRegistry()
+            // NO status work here: the table shows the persisted cache; a check runs only on an explicit owner action (pull-to-refresh, Light / Full check all, the status window).
             runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.OPEN))
         }
     }
@@ -267,14 +279,14 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     }
 
     /** The owner asked for ONE clone's working-tree status (status window): the size guard does not apply, one repository, forced. */
-    fun checkWorktree(repo: ManagedRepo) { statusReader.request(listOf(GitStatusReader.Target(repo.id, File(repo.path), onDemand = true)), force = true) }
+    fun checkWorktree(repo: ManagedRepo) { statusReader.request(listOf(GitStatusReader.Target(statusKey(repo), File(repo.path), onDemand = true)), force = true) }
 
     /** Progress of the manual FULL check: done of total repositories, null = none running. */
     data class FullProgress(val done: Int, val total: Int)
     val fullProgress = MutableStateFlow<FullProgress?>(null)
 
     /** "Light check all": refs only, forced, one worker; this is also what runs on open. */
-    fun lightCheckAll() { scope.launch { val list = loadRegistry(); statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) }, force = true, level = GitStatusReader.Level.LIGHT) } }
+    fun lightCheckAll() { scope.launch { val list = loadRegistry(); statusReader.request(list.map { GitStatusReader.Target(statusKey(it), File(it.path)) }, force = true, level = GitStatusReader.Level.LIGHT) } }
 
     /** "Full check all": MANUAL only. Adds the dirty / worktree scan, one repository at a time with the per-repo timeout; the size guard marks huge / LFS repositories LARGE (each is confirmed individually in its status window). Progress is published; [cancelStatusReads] stops it. */
     fun fullCheckAll() {
@@ -283,10 +295,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             val list = loadRegistry()
             val started = System.currentTimeMillis()
             fullProgress.value = FullProgress(0, list.size)
-            val job = statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) }, force = true, level = GitStatusReader.Level.FULL)
+            val job = statusReader.request(list.map { GitStatusReader.Target(statusKey(it), File(it.path)) }, force = true, level = GitStatusReader.Level.FULL)
             while (job.isActive) {
                 val st = statusReader.statuses.value
-                fullProgress.value = FullProgress(list.count { st[it.id]?.let { s -> s.terminal && s.level == GitStatusReader.Level.FULL && s.readAtMs >= started } == true }, list.size)
+                fullProgress.value = FullProgress(list.count { st[statusKey(it)]?.let { s -> s.terminal && s.level == GitStatusReader.Level.FULL && s.readAtMs >= started } == true }, list.size)
                 kotlinx.coroutines.delay(300)
             }
             fullProgress.value = null
@@ -668,6 +680,12 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     companion object {
         private const val TAG = "GitSync"
 
+        /**
+         * THE ONE KEY of a repository's status: the canonical registry name (a clone folder under an old name and its
+         * renamed row are the same repository). The reader's cache, the glances and every row lookup use this and nothing else.
+         */
+        fun statusKey(repo: ManagedRepo, canonical: (String) -> String = { Declarations.repoSot.canonical(it) }): String = canonical(File(repo.path).name)
+
         /** #871 the git verbs run in the engine APK, so the shared status probe needs a Context to find it: the one the coordinators were built with. */
         @Volatile private var engineContext: Context? = null
 
@@ -697,19 +715,23 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             )
         }
 
-        /** LIGHT probe: branch + upstream from .git, the two tips from the engine's branch list, the local log window; never the worktree. */
+        /**
+         * LIGHT probe, refs only, never the worktree: plain .git files when this app can see them (log through the engine only
+         * when the two tips differ); otherwise ONE script in cld.termux (a store owned by cld.termux is invisible to java.io).
+         * Throws, with the exact path, when neither can read the clone: the row then ends in ERROR with that message.
+         */
         fun probeLight(dir: File): GitStatusReader.Probe {
-            val head = RepoCheap.head(dir)
-            val fetched = File(dir, ".git/FETCH_HEAD").lastModified()
-            if (head.branch == null || head.upstream == null) return GitStatusReader.Probe(head.branch, head.upstream, 0, 0, 0, 0, fetchedAtMs = fetched)
-            return GitEngine(engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with"), dir).use { e ->
-                val br = e.branches()
-                val localSha = br.firstOrNull { !it.isRemote && it.name == head.branch }?.sha
-                val remoteSha = br.firstOrNull { it.isRemote && it.name == head.upstream }?.sha
-                val log = if (localSha != null && remoteSha != null && localSha != remoteSha) e.log(max = Declarations.sync.git.status.logWindow).map { it.sha } else emptyList()
-                val r = RepoCheap.aheadBehind(localSha, remoteSha, log)
-                GitStatusReader.Probe(head.branch, head.upstream, r?.ahead ?: 0, r?.behind ?: 0, 0, 0, fetchedAtMs = fetched)
+            if (File(dir, ".git").isDirectory) return RepoCheap.lightProbe(dir) { _ ->
+                GitEngine(engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with"), dir).use { e -> e.log(max = Declarations.sync.git.status.logWindow).map { it.sha } }
             }
+            val ctx = engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with")
+            if (StoreGit.useExec(ctx) && StoreAccess.paths.inStore(dir.absolutePath, StoreAccess.userId())) {
+                val guest = StoreAccess.paths.guestPath(dir.absolutePath, StoreAccess.userId()) ?: error("${dir.absolutePath} is not inside the store")
+                val r = StoreExec(ctx).run(RepoCheap.lightScript(StoreExec.q(guest)), timeoutMs = 15_000)
+                if (!r.ok) error("git in cld.termux failed (exit ${r.exit}) reading ${dir.absolutePath}: ${r.err.trim().takeLast(300)}")
+                return RepoCheap.parseLight(r.out)
+            }
+            error("not a git repository: no readable .git in ${dir.absolutePath}")
         }
 
         const val PREFS_PAGE = "cloud-drive-prefs"
@@ -733,11 +755,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         /** The row's [Glance] for one reader status — READING is the only non-read state. */
         fun glanceOf(s: GitStatusReader.Status): Glance = when (s.state) {
             GitStatusReader.State.READING -> Glance()
-            GitStatusReader.State.NOT_CLONED -> Glance(gone = true, read = true, state = "not_cloned", readAtMs = s.readAtMs)
-            GitStatusReader.State.LARGE -> Glance(s.probe?.branch, s.probe?.upstream, read = true, large = true, state = "large", readAtMs = s.readAtMs, level = "full")
-            GitStatusReader.State.ERROR -> Glance(error = s.reason ?: "unknown", read = true, state = "error", readAtMs = s.readAtMs, level = s.level.name.lowercase())
+            GitStatusReader.State.NOT_CLONED -> Glance(gone = true, read = true, state = "not_cloned", readAtMs = s.readAtMs, path = s.path, tookMs = s.tookMs)
+            GitStatusReader.State.LARGE -> Glance(s.probe?.branch, s.probe?.upstream, read = true, large = true, state = "large", readAtMs = s.readAtMs, level = "full", path = s.path, tookMs = s.tookMs)
+            GitStatusReader.State.ERROR -> Glance(error = s.reason ?: "unknown", read = true, state = "error", readAtMs = s.readAtMs, level = s.level.name.lowercase(), path = s.path, tookMs = s.tookMs)
             else -> s.probe!!.let { p ->
-                Glance(p.branch, p.upstream, p.ahead, p.behind, p.changed, p.conflicts, p.repositoryState, read = true, state = s.state.name.lowercase(), readAtMs = s.readAtMs, untracked = p.untracked, fetchedAtMs = p.fetchedAtMs, level = s.level.name.lowercase())
+                Glance(p.branch, p.upstream, p.ahead, p.behind, p.changed, p.conflicts, p.repositoryState, read = true, state = s.state.name.lowercase(), readAtMs = s.readAtMs, untracked = p.untracked, fetchedAtMs = p.fetchedAtMs, level = s.level.name.lowercase(), path = s.path, via = p.via, tookMs = s.tookMs)
             }
         }
 

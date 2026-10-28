@@ -20,7 +20,9 @@ object RepoStatus {
      * (MISSING too: the folder is gone, nothing can be read).
      */
     enum class Kind(val light: StatusLight.State) {
-        NOT_CLONED(StatusLight.State.UNKNOWN), READING(StatusLight.State.UNKNOWN), MISSING(StatusLight.State.UNVERIFIABLE),
+        NOT_CLONED(StatusLight.State.UNKNOWN), READING(StatusLight.State.UNKNOWN),
+        /** Cloned, but no check has ever run (empty cache): shown as "not checked yet" until the owner pulls to refresh. Not a read in flight. */
+        NOT_CHECKED(StatusLight.State.UNVERIFIABLE), MISSING(StatusLight.State.UNVERIFIABLE),
         /** Size guard: the working tree was not scanned (large repo, tap to check). */
         LARGE(StatusLight.State.UNVERIFIABLE),
         ERROR(StatusLight.State.OFF), CONFLICT(StatusLight.State.OFF), DIRTY(StatusLight.State.OFF),
@@ -31,7 +33,8 @@ object RepoStatus {
     /** The kind of one row: [cloned] says whether a clone is registered, [g] is the status reader's last answer for it. */
     fun kindOf(cloned: Boolean, g: GitSyncCoordinator.Glance?): Kind = when {
         !cloned -> Kind.NOT_CLONED
-        g == null || !g.read -> Kind.READING
+        g == null -> Kind.NOT_CHECKED
+        !g.read -> Kind.READING
         g.gone -> Kind.MISSING
         g.error != null -> Kind.ERROR
         g.large -> Kind.LARGE
@@ -53,7 +56,7 @@ object RepoStatus {
     fun errorKind(reason: String?): ErrorKind {
         val r = reason.orEmpty().lowercase()
         return when {
-            r.startsWith("timeout") -> ErrorKind.TIMEOUT
+            r.startsWith("timeout") || "timed out" in r -> ErrorKind.TIMEOUT
             "not a git" in r || "repository not found" in r || "no such repository" in r || "invalid git" in r -> ErrorKind.NOT_A_REPOSITORY
             "permission" in r || "eacces" in r || "read-only" in r -> ErrorKind.PERMISSION
             "401" in r || "403" in r || "not authorized" in r || "auth" in r -> ErrorKind.AUTH
@@ -133,4 +136,88 @@ object RepoStatus {
 
     /** The commits a push would send: the newest [ahead] entries of the branch's log (the log is newest first). */
     fun unpushed(log: List<GitCommitInfo>, ahead: Int?): List<GitCommitInfo> = if (ahead == null || ahead <= 0) emptyList() else log.take(ahead)
+
+    // ── The THREE icons (local / server / sync): each derived on its own, so one failing part never leaves the others on "?" ──
+
+    /** LOCAL: the working copy. READING is the only "not read yet"; CLONED = the folder is a clone but the light check did not scan the tree (dirty unknown). */
+    enum class LocalKind { NOT_CLONED, NOT_CHECKED, READING, MISSING, CLONED, CLEAN, DIRTY, CONFLICT, LARGE, ERROR }
+    /** SERVER: the clone against its remote, from refs. NOT_FETCHED = refs equal but never fetched, so "in sync" would be a guess. */
+    enum class ServerKind { NOT_CLONED, NOT_CHECKED, READING, UNKNOWN, NOT_FETCHED, IN_SYNC, AHEAD, BEHIND, DIVERGED, NO_UPSTREAM, UNREACHABLE }
+    /** SYNC: the last sync / fetch / push / pull job record. */
+    enum class SyncKind { NEVER, RUNNING, OK, ERROR }
+
+    fun localKind(cloned: Boolean, g: GitSyncCoordinator.Glance?): LocalKind = when {
+        !cloned -> LocalKind.NOT_CLONED
+        g == null -> LocalKind.NOT_CHECKED
+        !g.read -> LocalKind.READING
+        g.gone -> LocalKind.MISSING
+        g.error != null -> LocalKind.ERROR
+        g.large -> LocalKind.LARGE
+        g.level == "light" -> LocalKind.CLONED
+        g.conflicts > 0 -> LocalKind.CONFLICT
+        g.changed > 0 -> LocalKind.DIRTY
+        else -> LocalKind.CLEAN
+    }
+
+    /** [fetchFailed] = the newest fetch / pull job of this repository failed (the remote did not answer). */
+    fun serverKind(cloned: Boolean, g: GitSyncCoordinator.Glance?, fetchFailed: Boolean = false): ServerKind = when {
+        !cloned -> ServerKind.NOT_CLONED
+        g == null -> ServerKind.NOT_CHECKED
+        !g.read -> ServerKind.READING
+        g.gone || g.error != null || g.large && g.upstream == null -> ServerKind.UNKNOWN
+        g.upstream == null -> ServerKind.NO_UPSTREAM
+        fetchFailed -> ServerKind.UNREACHABLE
+        g.ahead > 0 && g.behind > 0 -> ServerKind.DIVERGED
+        g.behind > 0 -> ServerKind.BEHIND
+        g.ahead > 0 -> ServerKind.AHEAD
+        g.fetchedAtMs <= 0 -> ServerKind.NOT_FETCHED
+        else -> ServerKind.IN_SYNC
+    }
+
+    fun syncKind(running: Boolean, last: SyncEvent?): SyncKind = when {
+        running -> SyncKind.RUNNING
+        last == null -> SyncKind.NEVER
+        last.ok -> SyncKind.OK
+        else -> SyncKind.ERROR
+    }
+
+    /** The three kinds of one row, with the sync event they came from (its age / message are shown). */
+    data class Icons(val local: LocalKind, val server: ServerKind, val sync: SyncKind, val lastSync: SyncEvent? = null)
+
+    fun icons(cloned: Boolean, g: GitSyncCoordinator.Glance?, running: Boolean, events: List<SyncEvent>, repoId: String): Icons {
+        val mine = events.filter { it.repoId == repoId }.maxByOrNull { it.epochSeconds }
+        val fetchOp = mine?.takeIf { !it.ok && (it.summary.startsWith("fetch") || it.summary.startsWith("pull")) }
+        return Icons(localKind(cloned, g), serverKind(cloned, g, fetchOp != null), syncKind(running, mine), mine)
+    }
+
+    /** The baked default of build.json::...git.status.icons (the declaration wins when it names a kind). Light names: on / off / unknown / unverifiable. */
+    val DEFAULT_ICONS: Map<String, Map<String, String>> = mapOf(
+        "local" to mapOf("not_cloned" to "unknown", "not_checked" to "unverifiable", "reading" to "unknown", "missing" to "unverifiable", "cloned" to "unverifiable", "clean" to "on", "dirty" to "off", "conflict" to "off", "large" to "unverifiable", "error" to "off"),
+        "server" to mapOf("not_cloned" to "unknown", "not_checked" to "unverifiable", "reading" to "unknown", "unknown" to "unknown", "not_fetched" to "unverifiable", "in_sync" to "on", "ahead" to "on", "behind" to "on", "diverged" to "off", "no_upstream" to "off", "unreachable" to "off"),
+        "sync" to mapOf("never" to "unverifiable", "running" to "unverifiable", "ok" to "on", "error" to "off"),
+    )
+
+    /** The light of one icon kind through the declared mapping [decl] (falls back to [DEFAULT_ICONS], then UNKNOWN). */
+    fun lightOf(icon: String, kind: Enum<*>, decl: Map<String, Map<String, String>> = emptyMap()): StatusLight.State {
+        val k = kind.name.lowercase()
+        return when ((decl[icon]?.get(k) ?: DEFAULT_ICONS[icon]?.get(k))?.lowercase()) {
+            "on" -> StatusLight.State.ON
+            "off" -> StatusLight.State.OFF
+            "unverifiable" -> StatusLight.State.UNVERIFIABLE
+            else -> StatusLight.State.UNKNOWN
+        }
+    }
+
+    /** "last check: <time> / n of m done": [keys] are the row status keys of the cloned repositories, [glances] the reader's answers. */
+    data class Progress(val done: Int, val total: Int, val lastCheckMs: Long)
+    fun progress(keys: Collection<String>, glances: Map<String, GitSyncCoordinator.Glance>): Progress {
+        val read = keys.mapNotNull { glances[it]?.takeIf { g -> g.read } }
+        return Progress(read.size, keys.size, read.maxOfOrNull { it.readAtMs } ?: 0L)
+    }
+
+    /** The status window's debug line: the exact path read and the reader's outcome. */
+    fun debugLine(path: String, g: GitSyncCoordinator.Glance?): String =
+        "path=" + path.ifBlank { "-" } + " read=" + (g?.path?.takeIf { it.isNotBlank() } ?: "-") +
+            " via=" + (g?.via?.ifBlank { "-" } ?: "-") + " outcome=" + (if (g == null) "not requested" else if (!g.read) "reading" else g.state.ifBlank { "?" }) +
+            (g?.error?.let { " error=$it" } ?: "") + (if (g != null && g.read) " took=${g.tookMs}ms" else "")
 }

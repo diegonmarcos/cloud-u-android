@@ -37,7 +37,7 @@ import com.diegonmarcos.clouddrive.ui.StatusLight
 
 /** #1138 the repo table's column width: the name column is wide, every other column is one table cell. */
 internal fun repoCellModifier(c: RepoColumn): Modifier =
-    Modifier.width(when (c) { RepoColumn.NAME -> DriveMetrics.tableName; RepoColumn.STATUS -> DriveMetrics.tap; else -> DriveMetrics.tableCell }).padding(horizontal = DriveMetrics.gap)
+    Modifier.width(when (c) { RepoColumn.NAME -> DriveMetrics.tableName; RepoColumn.STATUS -> DriveMetrics.tap * 2; else -> DriveMetrics.tableCell }).padding(horizontal = DriveMetrics.gap)
 
 @Composable
 private fun columnLabel(c: RepoColumn): String = stringResource(when (c) {
@@ -97,17 +97,33 @@ internal fun RepoCells(r: RepoTableRow) {
 
 /** #1238 the leftmost cell: the status icon; a tap on it (not on the row) opens the repository's full-screen status window. */
 @Composable
-internal fun RepoStatusCell(light: StatusLight.State, name: String, onOpen: () -> Unit, caption: String = "") {
+internal fun RepoStatusCell(icons: RepoStatus.Icons, name: String, onOpen: () -> Unit, caption: String = "") {
+    val decl = com.diegonmarcos.clouddrive.Declarations.sync.git.status.icons
     Box(
         repoCellModifier(RepoColumn.STATUS).heightIn(min = DriveMetrics.tap).testTag(DriveTags.SYNC_GIT_STATUS_CELL)
             .clickable(onClickLabel = stringResource(R.string.repo_status_open), onClick = onOpen),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            StatusDot(light, name)
+            // LOCAL | SERVER | SYNC, each its own light with its own kind in the accessible label.
+            Row(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
+                StatusDot(RepoStatus.lightOf("local", icons.local, decl), "$name local ${icons.local.name.lowercase()}")
+                StatusDot(RepoStatus.lightOf("server", icons.server, decl), "$name server ${icons.server.name.lowercase()}")
+                StatusDot(RepoStatus.lightOf("sync", icons.sync, decl), "$name sync ${icons.sync.name.lowercase()}")
+            }
             if (caption.isNotBlank()) Text(caption, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         }
     }
+}
+
+/** "last check: <time> / n of m done": the owner sees the checks progress and finish. */
+@Composable
+internal fun RepoCheckProgressLine(p: RepoStatus.Progress, fmt: java.text.DateFormat) {
+    Text(
+        stringResource(R.string.repo_check_progress, if (p.lastCheckMs > 0) fmt.format(java.util.Date(p.lastCheckMs)) else stringResource(R.string.sync_never), p.done, p.total),
+        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_CHECK_PROGRESS),
+        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable

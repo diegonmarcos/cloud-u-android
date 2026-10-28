@@ -100,7 +100,7 @@ class GitPageLayoutTest {
         assertTrue("opening the Git page loads the registry and runs only the plan", coord.contains("runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.OPEN))"))
         val pageOpen = coord.substring(coord.indexOf("fun onPageOpened()"), coord.indexOf("fun onTick()"))
         assertFalse("no unconditional FULL refresh on open", Regex("(^|\\s)refresh\\(").containsMatchIn(pageOpen))
-        assertTrue("the only status work on open is the one bounded, size-guarded, ttl-cached reader request", pageOpen.contains("statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) })"))
+        assertFalse("opening the page starts NO status read: the table renders from the persisted cache, checks run only on an explicit owner action", pageOpen.contains("statusReader.request(") || pageOpen.contains("lightCheckAll(") || pageOpen.contains("fullCheckAll("))
         for (f in listOf(fsync, mounts)) assertTrue("the deep probes sit behind the settings", f.contains("AutoRefreshEffects("))
         assertTrue(File(dir, "RepoDiskSize.kt").readText().contains("check(!StartupGuard.onMainThread())"))
     }
@@ -116,7 +116,7 @@ class GitPageLayoutTest {
     private val rowFn = src.substring(src.indexOf("private fun GitRepoRow("), src.indexOf("private fun lightOf("))
 
     @Test fun `#1238 the row has the status icon cell first, no GitHub or Not Cloned text and no Clone button`() {
-        assertTrue("the status cell comes before the name column", rowFn.indexOf("RepoStatusCell(light, name, onOpenStatus, RepoStatus.levelCaption(glance, System.currentTimeMillis()))") in 0 until rowFn.indexOf("Column(Modifier.width(DriveMetrics.tableName))"))
+        assertTrue("the status cell comes before the name column", rowFn.indexOf("RepoStatusCell(icons, name, onOpenStatus, RepoStatus.levelCaption(glance, System.currentTimeMillis()))") in 0 until rowFn.indexOf("Column(Modifier.width(DriveMetrics.tableName))"))
         assertFalse("no Not cloned text under the row", rowFn.contains("git_not_cloned"))
         assertFalse("the listing label (GitHub) is not drawn under the row", rowFn.contains("source: String") || rowFn.contains("Text(source"))
         assertFalse("the Clone button left the row", rowFn.contains("sync_clone_into_store") || rowFn.contains("onClone"))

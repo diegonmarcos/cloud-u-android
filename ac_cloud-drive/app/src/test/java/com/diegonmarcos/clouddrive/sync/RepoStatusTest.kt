@@ -56,7 +56,8 @@ class RepoStatusTest {
     @Test fun `a question mark only ever means not cloned, not read yet or folder missing, and a failed read is a red ring`() {
         assertEquals(Kind.NOT_CLONED, RepoStatus.kindOf(false, g()))
         assertEquals(Kind.NOT_CLONED, RepoStatus.kindOf(false, null))
-        assertEquals(Kind.READING, RepoStatus.kindOf(true, null))
+        // A cloned repository with no cached result was never checked (empty cache): "not checked yet", not a read in flight.
+        assertEquals(Kind.NOT_CHECKED, RepoStatus.kindOf(true, null))
         assertEquals(Kind.READING, RepoStatus.kindOf(true, g(read = false)))
         assertEquals(Kind.MISSING, RepoStatus.kindOf(true, g(gone = true)))
         assertEquals(Kind.ERROR, RepoStatus.kindOf(true, g(error = "boom")))

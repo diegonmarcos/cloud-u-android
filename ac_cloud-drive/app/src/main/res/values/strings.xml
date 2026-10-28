@@ -661,6 +661,7 @@
     <string name="repo_status_window_actions">Actions</string>
     <string name="repo_status_window_cloned_note">Already cloned: the clone is managed from the repository panel.</string>
     <string name="repo_kind_not_cloned">not cloned</string>
+    <string name="repo_kind_not_checked">not checked yet (pull to refresh)</string>
     <string name="repo_kind_reading">status not read yet</string>
     <string name="repo_kind_missing">clone folder is gone</string>
     <string name="repo_kind_error">status could not be read</string>
@@ -722,6 +723,14 @@
     <string name="fsync_refresh">Refresh</string>
     <string name="mounts_refresh">Refresh</string>
     <string name="repo_bulk_stash_push">Stash &amp; Push all</string>
+    <string name="repo_check_progress">last check: %1$s / %2$d of %3$d done</string>
+    <string name="repo_section_local">LOCAL (working copy)</string>
+    <string name="repo_section_server">SERVER (against the remote)</string>
+    <string name="repo_section_sync">SYNC (last sync job)</string>
+    <string name="repo_sync_running">a sync job is running</string>
+    <string name="repo_sync_never_ran">no sync, fetch, push or pull has run yet</string>
+    <string name="repo_sync_ok_at">ok, %1$s ago: %2$s</string>
+    <string name="repo_sync_failed">failed, %1$s ago: %2$s</string>
     <string name="repo_summary">%1$d repos · %2$d cloned · %3$d not cloned · %4$d dirty · %5$d ahead · %6$d behind</string>
     <string name="repo_meta_k_name">Name</string>
     <string name="repo_meta_k_owner">Owner</string>

@@ -71,6 +71,8 @@ class GitStatusReader(
         val untracked: Int = 0,
         /** The clone's FETCH_HEAD time (epoch ms); 0 = never fetched / not readable. */
         val fetchedAtMs: Long = 0,
+        /** How the facts were read: "files" (plain .git files), "exec" (git in cld.termux), "engine"; "" = unknown. Shown on the debug line. */
+        val via: String = "",
     )
 
     enum class State { READING, CLEAN, AHEAD, BEHIND, DIRTY, NOT_CLONED, ERROR, LARGE }
@@ -82,6 +84,8 @@ class GitStatusReader(
         val readAtMs: Long = 0,
         val tookMs: Long = 0,
         val level: Level = Level.FULL,
+        /** The exact directory that was read (debug line of the status window). */
+        val path: String = "",
     ) {
         val terminal: Boolean get() = state != State.READING
 
@@ -145,6 +149,11 @@ class GitStatusReader(
     /** The screen closed: every read still waiting its turn (or awaited) is cancelled; a probe already running cannot be killed, so its repository stays claimed until it returns. */
     fun cancelAll() { synchronized(jobs) { jobs.toList() }.forEach { it.cancel() } }
 
+    /** Seed terminal entries read in an earlier process (the persisted cache); never overwrites an entry already here. */
+    fun seed(entries: Map<String, Status>) {
+        _statuses.update { m -> entries.filter { (k, v) -> v.terminal && k !in m }.let { if (it.isEmpty()) m else m + it } }
+    }
+
     /** Drop [id]'s cached entry so the next request reads it, e.g. after a pull. */
     fun invalidate(id: String) {
         _statuses.update { m -> m[id]?.let { m + (id to it.copy(readAtMs = 0)) } ?: m }
@@ -152,56 +161,79 @@ class GitStatusReader(
 
     private suspend fun readOne(t: Target, level: Level) {
         val full = level == Level.FULL
+        val queuedAt = clock()  
         var stuck = false
         try {
-            (if (full) fullPermits else permits).withPermit {
-                val begin = clock()
-                val done = CompletableDeferred<Result<Probe?>>()
-                val deferred = java.util.concurrent.atomic.AtomicReference<RepoCheap.Head?>(null)
-                val thread = Thread({
-                    // null = not a clone (checked here, on the probe thread: a store repository is asked of cld.termux).
-                    val r = runCatching {
-                        if (!isRepository(t.dir)) null
-                        else if (!full) lightProbe(t.dir)
-                        else if (!t.onDemand && tooLarge(t.dir)) { deferred.set(RepoCheap.head(t.dir)); null }
-                        else probe(t.dir)
-                    }
-                    // A probe that outlived its timeout frees its repository only now; the
-                    // completion and the release are one step under the reader's lock.
-                    synchronized(inFlight) {
-                        done.complete(r)
-                        if (stuckIds.remove(t.id)) inFlight -= t.id
-                    }
-                }, "git-status-${threadSeq.incrementAndGet()}").apply { isDaemon = true }
-                thread.start()
-                val r = try { withTimeoutOrNull(timeoutMs) { done.await() } } catch (c: kotlinx.coroutines.CancellationException) {
-                    // Cancelled mid-probe: the thread keeps running, so the repository stays claimed until it returns.
-                    synchronized(inFlight) { if (!done.isCompleted) { stuckIds += t.id; stuck = true } }
-                    thread.interrupt()
-                    throw c
-                }
-                val took = clock() - begin
-                val status = when {
-                    r == null -> {
-                        // Not killed (JGit ignores interrupts in places) — abandoned, and the
-                        // repository stays claimed until the thread returns: never two probes.
-                        synchronized(inFlight) {
-                            if (!done.isCompleted) { stuckIds += t.id; stuck = true }
+            val status = try {
+                (if (full) fullPermits else permits).withPermit {
+                    val begin = clock()
+                    val done = CompletableDeferred<Result<Probe?>>()
+                    val deferred = java.util.concurrent.atomic.AtomicReference<RepoCheap.Head?>(null)
+                    val thread = Thread({
+                        // null = not a clone (checked here, on the probe thread: a store repository is asked of cld.termux).
+                        val r = runCatching {
+                            if (!isRepository(t.dir)) null
+                            else if (!full) lightProbe(t.dir)
+                            else if (!t.onDemand && tooLarge(t.dir)) { deferred.set(RepoCheap.head(t.dir)); null }
+                            else probe(t.dir)
                         }
+                        // A probe that outlived its timeout frees its repository only now; the
+                        // completion and the release are one step under the reader's lock.
+                        synchronized(inFlight) {
+                            done.complete(r)
+                            if (stuckIds.remove(t.id)) inFlight -= t.id
+                        }
+                    }, "git-status-${threadSeq.incrementAndGet()}").apply { isDaemon = true }
+                    thread.start()
+                    val r = try { withTimeoutOrNull(timeoutMs) { done.await() } } catch (c: kotlinx.coroutines.CancellationException) {
+                        // Cancelled mid-probe: the thread keeps running, so the repository stays claimed until it returns.
+                        synchronized(inFlight) { if (!done.isCompleted) { stuckIds += t.id; stuck = true } }
                         thread.interrupt()
-                        Status(State.ERROR, reason = "timeout after " + if (timeoutMs >= 1000) "${timeoutMs / 1000}s" else "${timeoutMs}ms", readAtMs = clock(), tookMs = took, level = level)
+                        throw c
                     }
-                    r.isFailure -> Status(State.ERROR, reason = r.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName } ?: "unknown", readAtMs = clock(), tookMs = took)
-                    deferred.get() != null -> deferred.get()!!.let { h -> Status(State.LARGE, Probe(h.branch, h.upstream, 0, 0, 0, 0), readAtMs = clock(), tookMs = took, level = Level.FULL) }
-                    r.getOrNull() == null -> Status(State.NOT_CLONED, readAtMs = clock(), tookMs = took)
-                    else -> classify(r.getOrThrow()!!, clock(), took).copy(level = level)
+                    val took = clock() - begin
+                    when {
+                        r == null -> {
+                            // Not killed (JGit ignores interrupts in places) — abandoned, and the
+                            // repository stays claimed until the thread returns: never two probes.
+                            synchronized(inFlight) {
+                                if (!done.isCompleted) { stuckIds += t.id; stuck = true }
+                            }
+                            thread.interrupt()
+                            timedOut(t, level, took)
+                        }
+                        r.isFailure -> failed(t, level, r.exceptionOrNull(), took)
+                        deferred.get() != null -> deferred.get()!!.let { h -> Status(State.LARGE, Probe(h.branch, h.upstream, 0, 0, 0, 0), readAtMs = clock(), tookMs = took, level = Level.FULL, path = t.dir.absolutePath) }
+                        r.getOrNull() == null -> Status(State.NOT_CLONED, readAtMs = clock(), tookMs = took, level = level, path = t.dir.absolutePath)
+                        else -> classify(r.getOrThrow()!!, clock(), took).copy(level = level, path = t.dir.absolutePath)
+                    }
                 }
-                publish(t.id, status)
+            } catch (c: kotlinx.coroutines.CancellationException) {
+                // The read was cancelled: never leave READING behind.
+                // A cached value stays; an entry that never got a result is dropped (the row then reads "not checked yet").
+                _statuses.update { m -> if (m[t.id]?.terminal == false) m - t.id else m }
+                throw c
+            } catch (e: Throwable) {
+                // Anything else the read threw: terminal, with its message. Never swallowed.
+                failed(t, level, e, clock() - queuedAt)
             }
+            publish(t.id, status)
         } finally {
             if (!stuck) synchronized(inFlight) { inFlight -= t.id }
+            // Hard guarantee: whatever happened above, this repository does not stay on READING.
+            _statuses.update { m -> if (m[t.id]?.terminal == false) m + (t.id to Status(State.ERROR, reason = "status read ended without a result", readAtMs = 0, level = level, path = t.dir.absolutePath)) else m }
         }
     }
+
+    private fun timedOut(t: Target, level: Level, took: Long) = Status(
+        State.ERROR, reason = "timeout after " + (if (timeoutMs >= 1000) "${timeoutMs / 1000}s" else "${timeoutMs}ms") + ": status read timed out",
+        readAtMs = clock(), tookMs = took, level = level, path = t.dir.absolutePath,
+    )
+
+    private fun failed(t: Target, level: Level, e: Throwable?, took: Long) = Status(
+        State.ERROR, reason = e?.let { it.message ?: it.javaClass.simpleName } ?: "unknown",
+        readAtMs = clock(), tookMs = took, level = level, path = t.dir.absolutePath,
+    )
 
     /** Repositories whose probe outlived its timeout; guarded by the [inFlight] lock. */
     private val stuckIds = HashSet<String>()

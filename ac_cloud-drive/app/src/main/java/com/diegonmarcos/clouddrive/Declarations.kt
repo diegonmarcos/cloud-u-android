@@ -84,7 +84,7 @@ object Declarations {
     }
 
     /** #850 the status reader's bounds: per-repository timeout, how many are read at once, cache age. */
-    data class GitStatusDecl(val timeoutSeconds: Int = 20, val concurrency: Int = 1, val ttlSeconds: Int = 60, val maxAutoFiles: Int = 3000, val maxScanMs: Long = 1500, val logWindow: Int = 100)
+    data class GitStatusDecl(val timeoutSeconds: Int = 20, val concurrency: Int = 1, val ttlSeconds: Int = 60, val maxAutoFiles: Int = 3000, val maxScanMs: Long = 1500, val logWindow: Int = 100, /** The three-icon mapping (local / server / sync -> kind -> on|off|unknown|unverifiable) of build.json git.status.icons. */ val icons: Map<String, Map<String, String>> = emptyMap())
 
     /**
      * #850 "Auto pull on open": [defaultOn] is the setting before the owner touches it, the
@@ -459,6 +459,9 @@ object Declarations {
                 ttlSeconds = (st.int("ttl_seconds") ?: 60).coerceAtLeast(0),
                 maxAutoFiles = (st.int("max_auto_files") ?: 3000).coerceAtLeast(1),
                 maxScanMs = (st.int("max_scan_ms") ?: 1500).toLong().coerceAtLeast(1),
+                icons = (st["icons"] as? JsonObject)?.mapNotNull { (icon, v) ->
+                    (v as? JsonObject)?.let { m -> icon to m.mapNotNull { (k, l) -> (l as? kotlinx.serialization.json.JsonPrimitive)?.content?.let { k to it } }.toMap() }
+                }?.toMap() ?: emptyMap(),
             ),
             autoPull = GitAutoPullDecl(ap.bool("default_on", false), ap.bool("require_unmetered_network", true)),
             dense = o.bool("dense", true),
