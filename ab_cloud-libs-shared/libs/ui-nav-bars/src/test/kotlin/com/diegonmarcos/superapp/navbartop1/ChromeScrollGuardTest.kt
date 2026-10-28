@@ -162,7 +162,7 @@ class ChromeScrollGuardTest {
             assertTrue("$page does not draw its sub-pages from the declaration", "Declarations.navPages(" in b)
         }
         // each sub-page body owns the scrollable container the one connection follows (the Unison list is drawn by unisonSection inside FolderSyncScreen's LazyColumn)
-        for ((screen, text) in listOf("FsyncBackupScreen" to fsync, "FolderSyncScreen" to fsync, "RcloneRemotesScreen" to mounts, "FuseMountsScreen" to mounts))
+        for ((screen, text) in listOf("FolderSyncScreen" to fsync, "RcloneRemotesScreen" to mounts, "FuseMountsScreen" to mounts))
             assertTrue("$screen has no LazyColumn for the chrome to follow", "LazyColumn(" in body(text, screen))
         val wizard = files.first { it.name == "RemoteWizard.kt" }.readText()
         assertTrue("the rclone wizard is a dialog, never a second page with its own chrome", "AlertDialog(" in wizard && "NavBarTopSecondRow(" !in wizard)
