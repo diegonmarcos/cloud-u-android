@@ -43,13 +43,13 @@
   "consumers": [
     { "repo": "lecole-42", "what": "d_lecole project master: repos.json subset + clone/link script", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
     { "repo": "git-repos-master", "what": "clone.sh + committed symlink farm", "reads": "repos.json (itself)", "guard": "9_others/test/test-repos-sot.sh" },
-    { "repo": "cloud", "what": "project master subset (a_cloud + front) used by derive-repo-map and the libs:repos refresh", "reads": "repos.json (subset)", "guard": "check-repos-sot.sh (in the cloud repo)" },
+    { "repo": "cloud", "what": "cloud hub: holds THE cloud family file (2_vault + a_cloud, full hierarchy, every field of the registry for those repos); cloud-t-infra keeps a byte copy", "reads": "repos.json (family subset)", "guard": "check-repos-sot.sh (in the cloud repo)" },
     { "repo": "CG", "what": "CG project master subset", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
     { "repo": "Fin-CM", "what": "Fin-CM project master subset (NexusZ, mqpm, Blmbrg)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
     { "repo": "DeepSc", "what": "DeepSc project master subset (StarkX, X)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
     { "repo": "DuckPeng", "what": "DuckPeng project master subset (CG, cloud, LeafY)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from git-repos-master)" },
     { "repo": "front", "what": "front project master subset", "reads": "repos.json (subset)", "guard": "check-repos-sot.sh (in the front repo)" },
-    { "repo": "cloud-t-infra", "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory", "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy)", "guard": "9_others/test/repos-sot.test.sh (registered in 9_others/test-registry.json)" },
+    { "repo": "cloud-t-infra", "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory", "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy of cloud/repos.json, the cloud family only)", "guard": "9_others/test/repos-sot.test.sh (registered in 9_others/test-registry.json)" },
     { "repo": "cloud-u-android", "what": "libs:repos mirror list, cloud-drive Sync > Git list, cloud-drive seed/clone targets", "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies)", "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt" },
     { "repo": "cloud-u-desktop", "what": "NixOS/home-manager twin: embeds only the `cloud` index submodule, keeps no repo list", "reads": "none (submodule of cloud)", "guard": "n/a" },
     { "repo": "cloud-u-linux", "what": "dtk/linux-account: no repo list of its own", "reads": "none", "guard": "n/a" },
@@ -67,10 +67,10 @@
   "_fleet_files_doc": "Files that MUST be byte-identical in every repo that has the module they belong to, and where the one authoritative copy lives. `./clone.sh --sync` copies each `from` (resolved under base_dir) to each `to` in every cloned repo that has the entry's `requires` path. `requires` is the OPT-IN and it is explicit on purpose: the obvious shortcut — 'copy where the destination's parent directory exists' — is wrong for any destination at the repo ROOT, because the root always exists. That rule put .mcp.json into all sixteen repos that have no dotfiles module at all (cloud-notes, cloud-u-linux, every lecole-42 entry) on its first run. `requires` names the directory that proves the module is present, so a root-level file is gated by the module it belongs to rather than by its own location.\n\nThis exists because 'one shared implementation, many callers' was only ever true by hand. It was not: deploy-dotfiles.sh had already drifted in cloud-infra-desktop (missing the whole claude-SoT refresh block) and was MISSING outright in four repos whose build.sh calls it, and .mcp.json's own _doc admitted 'propagated by hand — nothing automates that hop', which is how cloud-vault ended up without the cloud-infra-mcp headersHelper while cloud had it. Every one of those was a file claiming, in its own header, to be the same file as another.\n\nADDING a file here is the whole registration: no code change. `from` is <repo>/<path> under base_dir; a `to` list means one source lands at several destinations (mcp.json is both the dotfiles-module source AND the deployed root file, so a repo is consistent whether or not its build.sh has run).",
   "fleet_files": [
     {
-      "from": "git-repos-master/repos.json",
+      "from": "cloud/repos.json",
       "to": ["1_cloud-configs/src/inputs/repos.sot.json"],
       "requires": "1_cloud-configs/src/inputs",
-      "doc": "#1073 cloud-infra: byte copy of THIS registry, the source its fleet-manifest and derive guards read (9_others/test/repos-sot.test.sh fails on any difference)."
+      "doc": "#1073/#1224 cloud-infra: byte copy of the CLOUD family file (cloud/repos.json: 2_vault + a_cloud only, full hierarchy), NOT of the full registry; the source its fleet-manifest and derive guards read (9_others/test/repos-sot.test.sh fails on any difference)."
     },
     {
       "from": "git-repos-master/repos.json",
