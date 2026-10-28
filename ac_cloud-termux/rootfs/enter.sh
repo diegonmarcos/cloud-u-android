@@ -74,18 +74,95 @@ wipe_rootfs() {
 }
 # wipe_rootfs end
 
-want="$(cat "$HERE/rootfs.sha256" 2>/dev/null)" || fallback "rootfs.sha256 is missing: the app has not staged the rootfs"
-if [ "$(cat "$STAMP" 2>/dev/null || true)" != "$want" ]; then
-    [ -f "$HERE/rootfs.tar.zst" ] || fallback "rootfs.tar.zst is missing and no unpacked rootfs matches $want"
+# unpack_rootfs begin
+# startup-step: unpack_rootfs
+# Every login session and UnpackService (TerminalDebugApi.prepare after an update or a
+# Store install) runs this file, so several unpackers can start at once. 2026-10-28 two of
+# them wiped and extracted the same tree concurrently: hundreds of "Cannot stat", "Directory
+# renamed before its status could be extracted", "Cannot hard link", then a failed unpack and
+# the plain Termux shell. So: (1) one unpacker at a time, a lock in var/lib/cloud-rootfs that
+# every entry point takes; the next caller waits, then re-reads the stamp and finds the work
+# done; (2) the tarball goes into a fresh rootfs.new.<pid>, is checked, stamped and only then
+# swapped in with two renames; the old root becomes rootfs.old.<pid> and is deleted after the
+# swap, never while anything extracts into it; (3) tar never tries to chown (an app uid
+# cannot); (4) a failed unpack deletes only its own staging dir, the working root stays.
+LOCKDIR="$HERE/var/lib/cloud-rootfs"
+UNPACK_OLD=""
+UNPACK_ERR=""
+rootfs_lock() {
+    mkdir -p "$LOCKDIR"
+    if command -v flock >/dev/null 2>&1; then
+        exec 9>"$LOCKDIR/unpack.lock"
+        flock 9 && return 0
+        exec 9>&-
+    fi
+    # No flock: mkdir is atomic; a lock whose owner is gone is taken over.
+    while ! mkdir "$LOCKDIR/unpack.lck" 2>/dev/null; do
+        holder="$(cat "$LOCKDIR/unpack.lck/pid" 2>/dev/null || true)"
+        if [ -n "$holder" ] && ! kill -0 "$holder" 2>/dev/null; then
+            rm -rf "$LOCKDIR/unpack.lck"
+        else
+            sleep 1
+        fi
+    done
+    echo $$ > "$LOCKDIR/unpack.lck/pid"
+}
+rootfs_unlock() {
+    exec 9>&-
+    [ "$(cat "$LOCKDIR/unpack.lck/pid" 2>/dev/null || true)" != $$ ] || rm -rf "$LOCKDIR/unpack.lck"
+}
+unpack_rootfs() {  # $1 = wanted digest; 0 = $ROOTFS holds it (UNPACK_OLD = old root to delete), 1 = UNPACK_ERR says why
+    rootfs_lock
+    if [ "$(cat "$STAMP" 2>/dev/null || true)" = "$1" ]; then rootfs_unlock; return 0; fi
+    if [ ! -f "$HERE/rootfs.tar.zst" ]; then
+        rootfs_unlock; UNPACK_ERR="rootfs.tar.zst is missing and no unpacked rootfs matches $1"; return 1
+    fi
     echo "Unpacking the agent toolbelt (first start after install or update)..." >&2
-    wipe_rootfs
-    mkdir -p "$ROOTFS"
+    live="$ROOTFS"
+    for d in "$HERE"/rootfs.new.* "$HERE"/rootfs.old.*; do   # left by an unpacker that died; nobody extracts while we hold the lock
+        [ -d "$d" ] || continue
+        ROOTFS="$d"; wipe_rootfs; rm -rf "$d" >/dev/null 2>&1 || true
+    done
+    ROOTFS="$live"
+    new="$HERE/rootfs.new.$$"
+    mkdir -p "$new"
     # Android forbids hard links in app storage; --link2symlink emulates the
     # rootfs's (claude's bin/claude.exe is one) and proot resolves them later.
-    zstd -dc "$HERE/rootfs.tar.zst" | "$HERE/proot" --link2symlink -0 tar -xf - -C "$ROOTFS" \
-        || fallback "unpacking the rootfs failed"
-    echo "$want" > "$STAMP"
+    if zstd -dc "$HERE/rootfs.tar.zst" | "$HERE/proot" --link2symlink -0 \
+            tar --no-same-owner --no-same-permissions -xf - -C "$new" \
+        && [ -f "$new/etc/passwd" ]; then
+        :
+    else
+        ROOTFS="$new"; wipe_rootfs; rm -rf "$new" >/dev/null 2>&1 || true; ROOTFS="$live"
+        rootfs_unlock; UNPACK_ERR="unpacking the rootfs failed (the previous root, if any, is unchanged)"; return 1
+    fi
+    echo "$1" > "$new/.cloud-rootfs.sha256"
+    # The root's /tmp is scratch an update has no reason to touch: it moves into the new root.
+    if [ -d "$ROOTFS/tmp" ] && [ ! -L "$ROOTFS/tmp" ]; then
+        rm -rf "$new/tmp" >/dev/null 2>&1 || true
+        mv "$ROOTFS/tmp" "$new/tmp" 2>/dev/null || true
+    fi
+    if [ -e "$ROOTFS" ] || [ -L "$ROOTFS" ]; then
+        UNPACK_OLD="$HERE/rootfs.old.$$"
+        mv "$ROOTFS" "$UNPACK_OLD" || { rootfs_unlock; UNPACK_ERR="the old root could not be moved aside"; return 1; }
+    fi
+    mv "$new" "$ROOTFS" || { [ -z "$UNPACK_OLD" ] || mv "$UNPACK_OLD" "$ROOTFS"; rootfs_unlock; UNPACK_ERR="the new root could not be moved in"; return 1; }
     rm -f "$HERE/rootfs.tar.zst"
+    rootfs_unlock
+    echo "cloud-rootfs: unpacked $1" >&2
+    return 0
+}
+# unpack_rootfs end
+
+want="$(cat "$HERE/rootfs.sha256" 2>/dev/null)" || fallback "rootfs.sha256 is missing: the app has not staged the rootfs"
+if [ "$(cat "$STAMP" 2>/dev/null || true)" != "$want" ]; then
+    unpack_rootfs "$want" || fallback "$UNPACK_ERR"
+fi
+# The old root, after the swap and outside the lock: nothing extracts into this tree any more.
+if [ -n "$UNPACK_OLD" ]; then
+    live="$ROOTFS"; ROOTFS="$UNPACK_OLD"
+    wipe_rootfs
+    ROOTFS="$live"; rm -rf "$UNPACK_OLD" >/dev/null 2>&1 || true
 fi
 
 # The login shell is root's entry in the rootfs, written at build time from
