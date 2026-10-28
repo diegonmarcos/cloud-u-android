@@ -202,7 +202,8 @@ jobs:
           adb shell settings put global adb_wifi_enabled 0 || true
           rc=0
           python3 1_cicd/src/scripts/cloud-android-nav-walk.py --app "$APP" --build-json "$APP/build.json" --pkg "$PKG" --out walk-out || rc=$?
-          adb logcat -d -v threadtime > walk-out/logcat.txt || true
+          # a dead emulator makes a bare adb call wait for the device forever (run 40679943894 sat 87 min here)
+          timeout 60 adb logcat -d -v threadtime > walk-out/logcat.txt || true
           exit $rc
           EOF
           chmod +x walk.sh
@@ -216,7 +217,7 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: pixel_5
-          ram-size: 3072M
+          ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: ./walk.sh

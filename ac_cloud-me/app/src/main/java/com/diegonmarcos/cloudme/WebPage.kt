@@ -71,6 +71,10 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
 
     // #1164 the page's scroll feeds the shell's one chrome collapse (first row, second row, bottom nav).
     val collapse = com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse.current
+    // #1198 a remote page (Lnktree) can lose its renderer process; an unhandled loss takes the whole app down
+    // (WebViewClient.onRenderProcessGone returns false -> the process is killed). Handle it and build a fresh WebView.
+    var generation by remember { mutableStateOf(0) }
+    androidx.compose.runtime.key(generation) {
     AndroidView(
         modifier = modifier.fillMaxSize(),
         update = { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(it, collapse) },
@@ -87,6 +91,14 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
                 @Suppress("DEPRECATION")
                 settings.allowFileAccessFromFileURLs = true
                 webViewClient = object : WebViewClient() {
+                    override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
+                        saved.clear()
+                        canGoBack = false
+                        web.value = null
+                        generation++   // drops this WebView (onRelease destroys it) and creates a new one
+                        return true
+                    }
+
                     override fun onPageFinished(view: WebView?, url: String?) {
                         view?.let { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(it) }
                         view?.let { if (inject.isNotBlank()) pushProfile(it, ctx, inject) }
@@ -110,6 +122,7 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
         },
         onRelease = { it.stopLoading(); it.destroy() },
     )
+    }
 }
 
 /** Hands the stored values of Health/DD to the loaded page; a page with nothing stored stays locked. */
