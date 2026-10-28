@@ -8,7 +8,20 @@ import org.json.JSONObject
 data class AiCatalogueTab(val id: String, val label: String)
 
 /** One model of a declared list: [id] is its OpenRouter id (a Medium / Small row with none is [local] only). */
-data class AiCatalogueModel(val id: String, val name: String, val sub: String = "", val local: Boolean = false)
+data class AiCatalogueModel(
+    val id: String, val name: String, val sub: String = "", val local: Boolean = false,
+    /** The declared parameter count ("27B", "0.36B"); "" = not declared, so no size columns. */
+    val params: String = "",
+)
+
+/** The size columns of one model, computed from its declared params by the catalogue's `sizes` block: Q8 disk, and RAM at Q8 / Q6 / Q4, in GB. */
+data class AiSizes(val params: String, val diskQ8: Double, val ramQ8: Double, val ramQ6: Double, val ramQ4: Double) {
+    /** "Params 3B · Q8 disk 3.2 GB · RAM Q8 / Q6 / Q4 3.7 / 3.0 / 2.6 GB", with the labels the catalogue declares. */
+    fun text(l: AiSizeLabels): String = "${l.params} $params · ${l.diskQ8} ${gb(diskQ8)} GB · ${l.ram} ${gb(ramQ8)} / ${gb(ramQ6)} / ${gb(ramQ4)} GB"
+    private fun gb(v: Double) = java.lang.String.format(java.util.Locale.ROOT, if (v < 10) "%.2f" else "%.1f", v)
+}
+
+data class AiSizeLabels(val params: String, val diskQ8: String, val ram: String)
 
 /** A headed list: a company (Frontier), a domain (Specialist), or a tier (Medium / Small). */
 data class AiCatalogueGroup(val id: String, val label: String, val models: List<AiCatalogueModel>)
@@ -30,12 +43,24 @@ class AiCatalogue private constructor(root: JSONObject, sharedTasks: List<AiTask
     val frontier: List<AiCatalogueGroup> = root.getJSONObject("frontier").getJSONArray("companies").objs().map(::group)
     val specialist: List<AiCatalogueGroup> = root.getJSONObject("specialist").getJSONArray("domains").objs().map(::group)
 
+    private val sizeCfg = root.getJSONObject("sizes")
+    val sizeLabels = sizeCfg.getJSONObject("labels").let { AiSizeLabels(it.getString("params"), it.getString("disk_q8"), it.getString("ram")) }
+
+    /** The size columns of [m] from its declared params; null when it declares none or they do not parse. */
+    fun sizes(m: AiCatalogueModel): AiSizes? {
+        val b = Regex("""^\s*([0-9]*\.?[0-9]+)\s*[Bb]\s*$""").find(m.params)?.groupValues?.get(1)?.toDoubleOrNull() ?: return null
+        val bpw = sizeCfg.getJSONObject("bits_per_weight")
+        val over = sizeCfg.getDouble("ram_overhead_gb")
+        fun disk(q: String) = b * bpw.getDouble(q) / 8
+        return AiSizes(m.params, disk("q8"), disk("q8") + over, disk("q6") + over, disk("q4") + over)
+    }
+
     private val toolsRows = root.getJSONObject("tools_models").getJSONArray("models").objs()
 
     /** Cloud Tools' chat models of one tier ("medium" = 7B to 32B, "small" = at most 4B), as one list. */
     fun tier(tier: String): List<AiCatalogueModel> = toolsRows.filter { it.getString("tier") == tier }.map {
         val or = it.optString("openrouter_id")
-        AiCatalogueModel(or.ifEmpty { it.getString("id") }, it.getString("name"), it.getString("params") + " · " + it.getString("role"), local = or.isEmpty())
+        AiCatalogueModel(or.ifEmpty { it.getString("id") }, it.getString("name"), it.getString("params") + " · " + it.getString("role"), local = or.isEmpty(), params = it.getString("params"))
     }
 
     val groups: List<AiTaskGroup> = root.getJSONObject("tasks").getJSONArray("groups").objs().map { g ->
@@ -53,7 +78,7 @@ class AiCatalogue private constructor(root: JSONObject, sharedTasks: List<AiTask
     val tasks: List<AiTask> = (sharedTasks + groups.flatMap { g -> g.categories.flatMap { c -> c.items.mapNotNull { it.task } } }).distinctBy { it.id }
 
     private fun group(o: JSONObject) = AiCatalogueGroup(o.getString("id"), o.getString("label"), o.getJSONArray("models").objs().map {
-        AiCatalogueModel(it.getString("id"), it.getString("name"), it.optString("note"))
+        AiCatalogueModel(it.getString("id"), it.getString("name"), it.optString("note"), params = it.optString("params"))
     })
 
     companion object {

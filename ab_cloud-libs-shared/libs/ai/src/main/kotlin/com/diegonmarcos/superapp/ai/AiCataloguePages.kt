@@ -97,7 +97,7 @@ fun AiModelCatalogue(chat: AiChatState, theme: AiTheme, fetch: CatalogueFetch = 
                 "specialist" -> cat.specialist
                 else -> listOf(AiCatalogueGroup(tab, cat.tabs.first { it.id == tab }.label, cat.tier(tab)))
             }
-            groups.forEach { g -> ModelGroup(chat, theme, g, done) }
+            groups.forEach { g -> ModelGroup(chat, theme, g, cat, done) }
         }
     }
 }
@@ -133,7 +133,7 @@ private fun ColumnScope.CorePage(chat: AiChatState, theme: AiTheme, core: CoreSo
 
 /** One headed list of a declared tab: its models, a tap picks. */
 @Composable
-private fun ModelGroup(chat: AiChatState, theme: AiTheme, g: AiCatalogueGroup, done: () -> Unit) {
+private fun ModelGroup(chat: AiChatState, theme: AiTheme, g: AiCatalogueGroup, cat: AiCatalogue, done: () -> Unit) {
     val c = theme.colors
     val t = theme.type
     val m = theme.metrics
@@ -148,6 +148,7 @@ private fun ModelGroup(chat: AiChatState, theme: AiTheme, g: AiCatalogueGroup, d
             val sub = listOf(mod.id.takeUnless { mod.local }.orEmpty(), mod.sub, if (mod.local) theme.strings.localOnly else if (!listed) theme.strings.notListed else "")
                 .filter { it.isNotBlank() }.joinToString(" · ")
             if (sub.isNotEmpty()) Text(sub, color = c.text2, style = t.style(t.label))
+            cat.sizes(mod)?.let { Text(it.text(cat.sizeLabels), color = c.text2, style = t.style(t.label), modifier = Modifier.testTag(AiTags.catSizes(mod.id))) }
         }
     }
 }

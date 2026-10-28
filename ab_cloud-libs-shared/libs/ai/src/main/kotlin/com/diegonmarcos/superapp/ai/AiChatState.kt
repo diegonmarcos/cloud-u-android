@@ -206,12 +206,15 @@ object AiTags {
     const val CATALOGUE_CLOSE = "ai_catalogue_close"
     fun catTab(id: String) = "ai_cat_tab_$id"
     fun catRow(id: String) = "ai_cat_row_$id"
+    fun catSizes(id: String) = "ai_cat_sizes_$id"
     /** The Task Catalogue page and a task group's header. */
     const val TASK_PAGE = "ai_catalogue_tasks"
     const val TASK_CLOSE = "ai_task_catalogue_close"
     fun taskGroup(id: String) = "ai_task_group_$id"
     fun mode(id: String) = "ai_mode_$id"
     fun mcp(name: String) = "ai_mcp_$name"
+    /** The context-usage line above the composer bar. */
+    const val CONTEXT = "ai_context_usage"
     const val SESSIONS = "ai_sessions"
     const val DRAWER = "ai_drawer"
     const val DRAWER_NEW = "ai_drawer_new"

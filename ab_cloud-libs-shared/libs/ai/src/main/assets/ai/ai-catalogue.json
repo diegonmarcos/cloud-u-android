@@ -145,7 +145,8 @@
         "models": [
           {
             "id": "google/medgemma-27b-it",
-            "name": "MedGemma 27B"
+            "name": "MedGemma 27B",
+            "params": "27B"
           }
         ]
       },
@@ -696,5 +697,19 @@
         ]
       }
     ]
+  },
+  "sizes": {
+    "_doc": "The Model Catalogue's size columns, computed from a row's declared `params` (billions, e.g. 0.36B / 7B): Param size is the declared text; Q8 disk = params x bits_per_weight.q8 / 8 GB; RAM at Q8 / Q6 / Q4 = that quant's disk size + ram_overhead_gb (runtime and a small KV cache). Bits per weight are llama.cpp's GGUF Q8_0, Q6_K and Q4_K_M. A row with no declared params shows no sizes (nothing is guessed). Cloud Code reads the same block.",
+    "bits_per_weight": {
+      "q8": 8.5,
+      "q6": 6.5625,
+      "q4": 4.85
+    },
+    "ram_overhead_gb": 0.5,
+    "labels": {
+      "params": "Params",
+      "disk_q8": "Q8 disk",
+      "ram": "RAM Q8 / Q6 / Q4"
+    }
   }
 }

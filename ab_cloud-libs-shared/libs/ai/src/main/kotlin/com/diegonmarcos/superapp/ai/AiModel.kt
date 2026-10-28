@@ -5,6 +5,8 @@ data class AiMsg(
     val role: String, val content: String,
     /** An assistant answer's "agent · model" line (Cloud Code shows it under each answer); "" = none. */
     val meta: String = "",
+    /** Tokens the backend REPORTED for this answer (prompt incl. history, completion); 0 = none reported. */
+    val prompt: Long = 0, val completion: Long = 0,
 )
 
 /** One chat session as the host stores it. */
@@ -15,6 +17,8 @@ data class AiModel(
     val id: String, val name: String, val nativeWeb: Boolean = false, val free: Boolean = false,
     /** Data hints for the Model picker's tabs (ai-design.json model_tabs): the catalogue section id (A0 = Code) and the tier a data row declares (small / medium). */
     val section: String = "", val tier: String = "",
+    /** The model's context window in tokens as the live list reports it (`context_length`); 0 = not reported. */
+    val context: Long = 0,
 )
 
 /**

@@ -171,7 +171,7 @@ class AiStandardHost(
             val why = reply.error ?: "no choices in the answer"
             return AiOutcome(asked, if (reply.transport) listOfNotNull(via, why).joinToString(": ") else why, emptyList())
         }
-        val answered = asked.copy(messages = asked.messages + AiMsg("assistant", answer, listOfNotNull(agent?.label, model.takeIf { m -> m.isNotBlank() && (agent == null || agent.modelFor(m) != null) }).joinToString(" · ")), updated = System.currentTimeMillis())
+        val answered = asked.copy(messages = asked.messages + AiMsg("assistant", answer, listOfNotNull(agent?.label, model.takeIf { m -> m.isNotBlank() && (agent == null || agent.modelFor(m) != null) }).joinToString(" · "), reply.usage?.prompt ?: 0, reply.usage?.completion ?: 0), updated = System.currentTimeMillis())
         store.put(answered)
         return AiOutcome(answered, null, reply.citations)
     }

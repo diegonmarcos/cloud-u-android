@@ -156,6 +156,10 @@ data class AiStrings(
     val noAgentLine: String = "No agent",
     val notListed: String = "not listed by the gateway",
     val noUsage: String = "The backend has reported no usage yet. Tokens and cost appear here once an answer carries them.",
+    /** The context-usage line: used / limit / percent, and the same without a reported limit; per-answer tokens. */
+    val contextLine: String = "Context %s / %s tokens (%s%%)",
+    val contextUsed: String = "Context %s tokens",
+    val answerTokens: String = "%s in · %s out",
     val noSystem: String = "No standing system prompt.",
     val close: String = "Close",
 )
@@ -448,7 +452,8 @@ private fun Bubble(msg: AiMsg, max: Dp, theme: AiTheme, design: AiDesign) {
         Column(Modifier.widthIn(max = max).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(theme.metrics.tiny)) {
             if (theme.markdown) AiMarkdownText(msg.content, theme, Modifier.fillMaxWidth(), design.metric("chat_font").sp, design.metric("chat_line_height"))
             else Text(msg.content, color = c.text, style = TextStyle(fontSize = chatSp, lineHeight = chatSp * design.metric("chat_line_height")))
-            if (msg.meta.isNotBlank()) Text(msg.meta, color = c.text2, fontSize = design.metric("meta_font").sp)
+            val line = listOf(msg.meta, AiContext.answer(msg, theme.strings.answerTokens)).filter { it.isNotBlank() }.joinToString(" · ")
+            if (line.isNotBlank()) Text(line, color = c.text2, fontSize = design.metric("meta_font").sp)
         }
     }
 }
@@ -520,6 +525,9 @@ private fun Composer(chat: AiChatState, theme: AiTheme, design: AiDesign, decl: 
                     .clickable(enabled = !chat.sending, onClick = onSend).testTag(AiTags.CHAT_SEND),
                 contentAlignment = Alignment.Center,
             ) { theme.icon(AiIcons.ARROW_UP, m.icon, c.onAi, theme.strings.send) }
+        }
+        AiContext.line(chat.session, chat.models.firstOrNull { it.id == chat.model }?.context ?: 0, theme.strings)?.let {
+            Text(it, color = c.text2, fontSize = design.metric("meta_font").sp, modifier = Modifier.testTag(AiTags.CONTEXT))
         }
         AiComposerBar(chat, theme, design, decl, onCatalogue = onCatalogue, onAttach = onAttach)
     }

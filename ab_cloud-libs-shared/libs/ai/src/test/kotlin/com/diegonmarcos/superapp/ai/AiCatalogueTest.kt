@@ -92,4 +92,16 @@ class AiCatalogueTest {
     @Test fun theDesignNoLongerCarriesTheOldPickerTabs() {
         assertFalse(JSONObject(File(dir, "ai-design.json").readText()).has("model_tabs"))
     }
+
+    @Test fun sizeColumnsAreComputedFromDeclaredParamsOnly() {
+        val m = cat.tier("small").first { it.name == "smollm2-360m-instruct" }
+        val z = cat.sizes(m)!!
+        assertEquals(0.36 * 8.5 / 8, z.diskQ8, 1e-9)
+        assertEquals(z.diskQ8 + 0.5, z.ramQ8, 1e-9)
+        assertTrue(z.ramQ8 > z.ramQ6 && z.ramQ6 > z.ramQ4)
+        assertTrue(z.text(cat.sizeLabels).startsWith("Params 0.36B · Q8 disk 0.38 GB · RAM Q8 / Q6 / Q4 0.88 / "))
+        assertEquals(null, cat.sizes(AiCatalogueModel("x/y", "no params")))
+        for (t in listOf("small", "medium")) assertTrue(t, cat.tier(t).all { cat.sizes(it) != null })
+        assertNotNull(cat.sizes(cat.specialist.flatMap { it.models }.first { it.params.isNotEmpty() }))
+    }
 }

@@ -171,6 +171,7 @@ object AiProtocol {
             AiModel(
                 id = id, name = m.str("name") ?: id,
                 nativeWeb = params != null && (0 until params.length()).any { params.optString(it) == nativeWebParam },
+                context = m.optLong("context_length"),
                 free = pricing != null && pricing.optString("prompt") == "0" && pricing.optString("completion") == "0",
             )
         }.sortedBy { it.name.lowercase() }
