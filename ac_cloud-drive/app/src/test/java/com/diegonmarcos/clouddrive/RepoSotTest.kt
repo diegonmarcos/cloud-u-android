@@ -93,10 +93,10 @@ class RepoSotTest {
     }
 
     @Test fun renamesComeFromTheRegistry() {
-        val front = decl.byGithub("Projects___")!!
-        assertTrue("ffront -> Projects -> Projects___ (#731, #1224, hub suffix #1244) is the registry's rename", "ffront" in front.renamedFrom && "Projects" in front.renamedFrom)
-        assertTrue("the drive family carries the same device-side rename", family.renames["ffront"] == "Projects___" && family.renames["Projects"] == "Projects___")
-        assertTrue("cloud -> cloud___ (#1244) reaches the drive family", family.renames["cloud"] == "cloud___")
+        val front = decl.byGithub("Projects-___")!!
+        assertTrue("ffront -> Projects -> Projects-___ (#731, #1224, hub suffix #1244) is the registry's rename", "ffront" in front.renamedFrom && "Projects" in front.renamedFrom)
+        assertTrue("the drive family carries the same device-side rename", family.renames["ffront"] == "Projects-___" && family.renames["Projects"] == "Projects-___")
+        assertTrue("cloud -> cloud___ -> cloud-___ (#1244) reaches the drive family", family.renames["cloud"] == "cloud-___" && family.renames["cloud___"] == "cloud-___" && family.renames["Projects___"] == "Projects-___")
         assertEquals("front-diegonmarcos", family.repos.first { it.name == "diegonmarcos.github.io" }.renamedFrom.single())
         assertTrue("cloud-mobile is not a repository", sot["repos"]!!.jsonArray.none { it.jsonObject["name"]!!.jsonPrimitive.content == "cloud-mobile" })
         assertTrue(sot["renames"]!!.jsonArray.any { val o = it.jsonObject; o["from"]!!.jsonPrimitive.content == "cloud-mobile" && o["to"]!!.jsonPrimitive.content == "cloud-superapp" })

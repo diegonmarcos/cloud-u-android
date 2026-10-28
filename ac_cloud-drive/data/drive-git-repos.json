@@ -25,14 +25,14 @@
  ],
  "repos": [
   {
-   "name": "cloud___",
-   "label": "cloud___",
+   "name": "cloud-___",
+   "label": "cloud-___",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
    "notes": "The fleet hub repository (repos.json, clone.sh)",
-   "renamed_from": ["cloud"]
+   "renamed_from": ["cloud", "cloud___"]
   },
   {
    "name": "cloud-me-pvt-my-ai",
@@ -101,14 +101,14 @@
    "renamed_from": ["front-diegonmarcos"]
   },
   {
-   "name": "Projects___",
-   "label": "Projects___",
+   "name": "Projects-___",
+   "label": "Projects-___",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
    "notes": "The fleet's front-end tree. #731 renamed upstream from `ffront` (2026-10-01): `renamed_from` makes the seed worker MOVE a device's git/ffront clone to git/front and repoint its origin, instead of cloning a second copy beside it.",
-   "renamed_from": ["ffront", "front", "Projects"]
+   "renamed_from": ["ffront", "front", "Projects", "Projects___"]
   },
   {
    "name": "cloud_db_assets-cdn",

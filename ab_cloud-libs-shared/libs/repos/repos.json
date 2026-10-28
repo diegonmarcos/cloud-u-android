@@ -15,6 +15,12 @@
   },
   "repos": [
     {
+      "name": "CG-___",
+      "repo": "diegonmarcos/CG-___",
+      "private": false,
+      "doc": "Project master for the CG family (CG-circus, CG-galaxy, CG-galaxy-gaia, CG-unity, CG-voxel-rust): its own repos.json subset plus committed symlinks, same model as front, cloud and lecole-42. Created 2026-10-26 (#1204)."
+    },
+    {
       "name": "CG-circus",
       "repo": "diegonmarcos/CG-circus",
       "private": false,
@@ -45,26 +51,20 @@
       "doc": "Voxel engine in Rust (vox-rust build plan under docs/)."
     },
     {
-      "name": "CG___",
-      "repo": "diegonmarcos/CG___",
-      "private": false,
-      "doc": "Project master for the CG family (CG-circus, CG-galaxy, CG-galaxy-gaia, CG-unity, CG-voxel-rust): its own repos.json subset plus committed symlinks, same model as front, cloud and lecole-42. Created 2026-10-26 (#1204)."
-    },
-    {
       "name": "DeepSc-X",
       "repo": "diegonmarcos/DeepSc-X",
       "private": false,
       "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; the matching front-labtools project c-Stk_DsX/sailytics moves here with the labtools split (#1218). #1224."
     },
     {
-      "name": "DeepSc___",
-      "repo": "diegonmarcos/DeepSc___",
+      "name": "DeepSc-___",
+      "repo": "diegonmarcos/DeepSc-___",
       "private": false,
       "doc": "Project master for the DeepSc family (DeepSc-X; Stark.x moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
     },
     {
-      "name": "DuckPeng___",
-      "repo": "diegonmarcos/DuckPeng___",
+      "name": "DuckPeng-___",
+      "repo": "diegonmarcos/DuckPeng-___",
       "private": false,
       "doc": "Project master for the DuckPeng family: the CG hub and the cloud hub (Leaf.y moved to the cloud-me-pub-profiles family 2026-10-28). Its own repos.json subset plus committed symlinks. Created 2026-10-27 (#1224)."
     },
@@ -75,16 +75,22 @@
       "doc": "Blmbrg (fin terminal, market watch, news): README and deployer wiring skeleton; the matching front-labtools projects b-Nxs_Blmmbrg/* move here with the labtools split (#1218). #1224."
     },
     {
+      "name": "Fin-CM-___",
+      "repo": "diegonmarcos/Fin-CM-___",
+      "private": false,
+      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+    },
+    {
       "name": "Fin-CM-mqpm",
       "repo": "diegonmarcos/Fin-CM-mqpm",
       "private": false,
       "doc": "MQPM / StochBates: README and deployer wiring skeleton, no content yet (#1224)."
     },
     {
-      "name": "Fin-CM___",
-      "repo": "diegonmarcos/Fin-CM___",
+      "name": "Projects-___",
+      "repo": "diegonmarcos/Projects-___",
       "private": false,
-      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume."
     },
     {
       "name": "Projects-endeavours",
@@ -99,10 +105,10 @@
       "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_CG-Zirkus, a-Lfy_C3, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX."
     },
     {
-      "name": "Projects___",
-      "repo": "diegonmarcos/Projects___",
+      "name": "cloud-___",
+      "repo": "diegonmarcos/cloud-___",
       "private": false,
-      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume."
+      "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`."
     },
     {
       "name": "cloud-a-docs",
@@ -121,6 +127,18 @@
       "repo": "diegonmarcos/cloud-h-webapps-2",
       "private": false,
       "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloud-me-pub-___",
+      "repo": "diegonmarcos/cloud-me-pub-___",
+      "private": false,
+      "doc": "Hub of the public cloud-me family (Cloud-Me-Pub): the cloud-me-pub-profiles hub and cloud-me-pub-shared (the pub data repo is archived). Its own repos.json subset plus committed symlinks; lists no private repo. Created 2026-10-28."
+    },
+    {
+      "name": "cloud-me-pub-profiles-___",
+      "repo": "diegonmarcos/cloud-me-pub-profiles-___",
+      "private": false,
+      "doc": "Hub of the cloud-me-pub-profiles family (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree): its own repos.json subset plus committed symlinks, same model as CG, Fin-CM and cloud. Was cloud-me-profiles (the b_Profiles, Lnktree and myAstro sources); content split into cloud-me-pub-profiles-prf-prs and cloud-me-pub-profiles-_lnktree 2026-10-28."
     },
     {
       "name": "cloud-me-pub-profiles-_lnktree",
@@ -153,22 +171,16 @@
       "doc": "Stark.x company site (published at /stark/), moved from front-endeavours a_Companies/stark (#1224); renamed from DeepSc-StarkX into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
     },
     {
-      "name": "cloud-me-pub-profiles___",
-      "repo": "diegonmarcos/cloud-me-pub-profiles___",
-      "private": false,
-      "doc": "Hub of the cloud-me-pub-profiles family (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree): its own repos.json subset plus committed symlinks, same model as CG, Fin-CM and cloud. Was cloud-me-profiles (the b_Profiles, Lnktree and myAstro sources); content split into cloud-me-pub-profiles-prf-prs and cloud-me-pub-profiles-_lnktree 2026-10-28."
-    },
-    {
       "name": "cloud-me-pub-shared",
       "repo": "diegonmarcos/cloud-me-pub-shared",
       "private": false,
       "doc": "Sources of the b_MyData group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
-      "name": "cloud-me-pub___",
-      "repo": "diegonmarcos/cloud-me-pub___",
-      "private": false,
-      "doc": "Hub of the public cloud-me family (Cloud-Me-Pub): the cloud-me-pub-profiles hub and cloud-me-pub-shared (the pub data repo is archived). Its own repos.json subset plus committed symlinks; lists no private repo. Created 2026-10-28."
+      "name": "cloud-me-pvt-___",
+      "repo": "diegonmarcos/cloud-me-pvt-___",
+      "private": true,
+      "doc": "Hub of the private cloud-me family (Cloud-Me-Pvt): its own repos.json subset plus committed symlinks to the private cloud-me repos. Private repo. Created 2026-10-28."
     },
     {
       "name": "cloud-me-pvt-cgc",
@@ -207,12 +219,6 @@
       "doc": "Personal notes (Obsidian vault)."
     },
     {
-      "name": "cloud-me-pvt___",
-      "repo": "diegonmarcos/cloud-me-pvt___",
-      "private": true,
-      "doc": "Hub of the private cloud-me family (Cloud-Me-Pvt): its own repos.json subset plus committed symlinks to the private cloud-me repos. Private repo. Created 2026-10-28."
-    },
-    {
       "name": "cloud-t-infra",
       "repo": "diegonmarcos/cloud-t-infra",
       "private": false,
@@ -241,12 +247,6 @@
       "repo": "diegonmarcos/cloud-u-linux",
       "private": false,
       "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloud-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
-    },
-    {
-      "name": "cloud___",
-      "repo": "diegonmarcos/cloud___",
-      "private": false,
-      "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`."
     },
     {
       "name": "cloud_db_LFS",
