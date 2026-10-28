@@ -33,13 +33,14 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 
+private fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+
 /**
  * #1225 the native half of Web Serial, WebUSB and Web NFC, over fake backends (a USB host with scripted devices and transfers, an NFC
  * radio, a chooser that picks what the test says) and the real CdcAcmSerial; replies are held to web-hardware-contract.json.
  * The fakes are test doubles for the radio and the cable only: the product code carries no sample devices.
  */
 class WebHardwareCoreTest {
-    private fun hex(b: ByteArray) = b.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
     private fun ep(n: Int, dirIn: Boolean, type: String = "bulk", size: Int = 64) = HwUsbEndpoint(n, dirIn, type, size)
 
     // An Arduino-style CDC device: control interface 0 (ACM, interrupt IN), data interface 1 (bulk IN 1, bulk OUT 2).
@@ -416,7 +417,7 @@ class WebHardwareCoreTest {
         assertEquals("opening twice is fine", 0, ok("usb.open", call("usb.open", obj("device" to d))).length())
     }
 
-    @Test fun `claim, transfer in, transfer out, control, halt: the whole WebUSB flow over the real endpoints`() {
+    @Test fun `claim, transfer in, transfer out, control, halt, the whole WebUSB flow over the real endpoints`() {
         val d = openUsb("1209:abcd"); usb.calls.clear()
         ok("usb.selectConfiguration", call("usb.selectConfiguration", obj("device" to d, "configurationValue" to 1)))
         ok("usb.claimInterface", call("usb.claimInterface", obj("device" to d, "interfaceNumber" to 0)))
