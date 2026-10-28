@@ -7,8 +7,8 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.Parcel
 import android.os.ResultReceiver
+import com.diegonmarcos.superapp.core.CrossProcess
 import com.diegonmarcos.superapp.core.StoreNotifyGate
 
 /**
@@ -72,16 +72,7 @@ object UnpackAfterInstall {
      * #1121 on the phone). Written to a Parcel and read back, only the binder is left, so the receiving
      * app sees the framework class alone.
      */
-    fun receiverForSending(local: ResultReceiver): ResultReceiver {
-        val p = Parcel.obtain()
-        try {
-            local.writeToParcel(p, 0)
-            p.setDataPosition(0)
-            return ResultReceiver.CREATOR.createFromParcel(p)
-        } finally {
-            p.recycle()
-        }
-    }
+    fun receiverForSending(local: ResultReceiver): ResultReceiver = CrossProcess.plainResultReceiver(local)
 
     /** The explicit start; call after the install has landed. Never blocks, never throws. */
     fun run(ctx: Context, pkg: String) {
