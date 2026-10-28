@@ -24,7 +24,7 @@
       "name": "CG-circus",
       "repo": "diegonmarcos/CG-circus",
       "private": false,
-      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloud-webapps-2 #1204; myAstro moved to cloud-me-profiles #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloud-h-webapps-2 #1204; myAstro moved to cloud-me-profiles #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "CG-galaxy",
@@ -129,6 +129,18 @@
       "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`."
     },
     {
+      "name": "cloud-h-webapps",
+      "repo": "diegonmarcos/cloud-h-webapps",
+      "private": false,
+      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
+    },
+    {
+      "name": "cloud-h-webapps-2",
+      "repo": "diegonmarcos/cloud-h-webapps-2",
+      "private": false,
+      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
       "name": "cloud-me-containers",
       "repo": "diegonmarcos/cloud-me-containers",
       "private": true,
@@ -211,18 +223,6 @@
       "repo": "diegonmarcos/cloud-u-linux",
       "private": false,
       "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloud-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
-    },
-    {
-      "name": "cloud-webapps",
-      "repo": "diegonmarcos/cloud-webapps",
-      "private": false,
-      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
-    },
-    {
-      "name": "cloud-webapps-2",
-      "repo": "diegonmarcos/cloud-webapps-2",
-      "private": false,
-      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "cloud_db_LFS",
