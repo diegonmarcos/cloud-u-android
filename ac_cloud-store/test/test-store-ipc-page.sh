@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # #ipc Cloud Store > Access > IPC: the fleet's IPC Mesh (a0_docs/eng-specs/fleet-ipc.md).
-#   S1 build.json::ui access.pages: ipc ("IPC") right after mesh ("Apps Mesh"), 2..8 pages (nav rule)
+#   S1 build.json::ui access.pages: ipc ("IPC") after Apps MCP-API (#1211), itself right after mesh ("Apps Mesh"), 2..8 pages (nav rule)
 #   S2 AccessPage routes PAGE_IPC to libs:appstore's shared IpcMeshPage — the composable SuperApp's
 #      Configs > Network > IPC draws too; no second copy anywhere in the fleet
 #   S3 the page draws exactly IpcMesh.rows (one row per member, and per declared endpoint unfolded),
@@ -29,7 +29,7 @@ check() {  # check <root> -> number of failures (printed)
 import json, sys
 s = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'access')
 ids = [p['id'] for p in s['pages']]; lab = {p['id']: p['label'] for p in s['pages']}
-sys.exit(0 if 'ipc' in ids and ids.index('ipc') == ids.index('mesh') + 1 and lab['ipc'] == 'IPC' and 2 <= len(ids) <= 8 else 1)
+sys.exit(0 if 'ipc' in ids and ids.index('ipc') == ids.index('mcpapi') + 1 and ids.index('mcpapi') == ids.index('mesh') + 1 and lab['ipc'] == 'IPC' and 2 <= len(ids) <= 8 else 1)
 PY
   grep -q 'const val PAGE_IPC = "ipc"' "$AP" && grep -q 'PAGE_IPC -> IpcMeshPage()' "$AP" \
     && ok "S2 AccessPage routes ipc to the shared IpcMeshPage" || bad "S2 AccessPage does not route ipc to IpcMeshPage"

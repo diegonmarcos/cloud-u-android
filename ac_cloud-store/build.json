@@ -388,6 +388,11 @@
             "icon": "lan"
           },
           {
+            "id": "mcpapi",
+            "label": "Apps MCP-API",
+            "icon": "api"
+          },
+          {
             "id": "ipc",
             "label": "IPC",
             "icon": "swap_horiz"

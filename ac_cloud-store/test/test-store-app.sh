@@ -164,7 +164,7 @@ feeds = json.load(open(sys.argv[2]))['feeds'] if os.path.exists(sys.argv[2]) els
 pg = lambda i: [p.get('id') for p in secs.get(i, {}).get('pages') or []]
 ok = (ui.get('bottom_nav') == ['cloud', 'phone', 'search', 'feed', 'access']
       and set(ui['bottom_nav']) <= set(secs) and 'settings' in secs and 'mesh' not in secs and 'perms' not in secs
-      and pg('access') == ['mesh', 'ipc', 'identity', 'android', 'cloud']
+      and pg('access') == ['mesh', 'mcpapi', 'ipc', 'identity', 'android', 'cloud']
       and pg('phone') == ['installed', 'declared'] and 'search' in secs and pg('search') == []
       and (pg('feed') == [f['id'] for f in feeds] if feeds else len(pg('feed')) >= 2)
       and ui.get('default_section') == 'search')

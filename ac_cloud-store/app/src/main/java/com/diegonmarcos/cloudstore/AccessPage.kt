@@ -46,12 +46,13 @@ import com.diegonmarcos.superapp.appstore.StoreDensity
 import com.diegonmarcos.superapp.appstore.AppsMeshFragment
 import com.diegonmarcos.superapp.appstore.FleetIdentityPage
 import com.diegonmarcos.superapp.appstore.IpcMeshPage
+import com.diegonmarcos.superapp.appstore.AppsMcpApiPage
 import androidx.fragment.compose.AndroidFragment
 import com.diegonmarcos.superapp.updater.Fleet
 
 /**
- * Store > Access: Apps Mesh, IPC, Identity, Android Perms and Cloud Perms, one bottom-nav destination whose
- * top tabs (build.json::ui access.pages: mesh, ipc, identity, android, cloud) MainActivity draws with PageTabs.
+ * Store > Access: Apps Mesh, Apps MCP-API, IPC, Identity, Android Perms and Cloud Perms, one bottom-nav destination whose
+ * top tabs (build.json::ui access.pages: mesh, mcpapi, ipc, identity, android, cloud) MainActivity draws with PageTabs.
  * #ipc IPC is the fleet's IPC Mesh (libs:appstore IpcMeshPage): every IPC endpoint each member exposes.
  * Apps Mesh left the Cloud page; the permissions page that was here split in two - the OS's own
  * runtime grants, and the constellation permission - one page each instead of two panes per app.
@@ -66,6 +67,8 @@ import com.diegonmarcos.superapp.updater.Fleet
 fun AccessPage(page: String) {
     when (page) {
         PAGE_MESH -> AndroidFragment<AppsMeshFragment>(Modifier.fillMaxSize())
+        // #1211 Apps MCP-API: the endpoints each Store > Cloud > Apps app declares (libs:appstore AppsMcpApiPage).
+        PAGE_MCPAPI -> AppsMcpApiPage()
         // #ipc IPC Mesh: the same shared composable SuperApp > Configs > Network > IPC draws (libs:appstore).
         PAGE_IPC -> IpcMeshPage()
         // Identity: the same shared composable SuperApp > Configs > Apps Mesh > Identity draws (libs:appstore).
@@ -76,6 +79,7 @@ fun AccessPage(page: String) {
 }
 
 const val PAGE_MESH = "mesh"
+const val PAGE_MCPAPI = "mcpapi"
 const val PAGE_IPC = "ipc"
 const val PAGE_IDENTITY = "identity"
 const val PAGE_ANDROID = "android"

@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# #1211 Cloud Store > Access > Apps MCP-API.
+#   M1 build.json access.pages: mcpapi ("Apps MCP-API") right after mesh
+#   M2 AccessPage routes PAGE_MCPAPI to libs:appstore's AppsMcpApiPage (one definition)
+#   M3 assets/apps-mcp-api.json declares the three kinds (mcp, debug, app), the apps group exists in the baked
+#      fleet source, every `apps` entry names a member of that group, and the shared debug default has GET + POST
+#   M4 the page draws every row through StoreRow.Item and reports what is missing
+# Then each planted defect must turn it red.
+set -u
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$HERE/../.." && pwd)"
+LIB="ab_cloud-libs-shared/libs/appstore/src/main"
+check() {
+  local R="$1" f=0
+  ok()  { echo "  PASS: $1"; }
+  bad() { echo "  FAIL: $1"; f=$((f+1)); }
+  local BJ="$R/ac_cloud-store/build.json" AP="$R/ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt"
+  local AS="$R/$LIB/assets/apps-mcp-api.json" PG="$R/$LIB/java/com/diegonmarcos/superapp/appstore/AppsMcpApiPage.kt"
+  local FL="$R/aa_cloud-superapp/data/constellation-fleet.json"
+  for x in "$BJ" "$AP" "$AS" "$PG" "$FL"; do [ -f "$x" ] || { bad "missing ${x#$R/}"; return 1; }; done
+  python3 -I - "$BJ" <<'PY' && ok "M1 mcpapi right after mesh, labelled Apps MCP-API" || bad "M1 Access pages do not put Apps MCP-API right after Apps Mesh"
+import json, sys
+s = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'access')
+ids = [p['id'] for p in s['pages']]; lab = {p['id']: p['label'] for p in s['pages']}
+sys.exit(0 if 'mcpapi' in ids and ids.index('mcpapi') == ids.index('mesh') + 1 and lab['mcpapi'] == 'Apps MCP-API' else 1)
+PY
+  grep -q 'PAGE_MCPAPI -> AppsMcpApiPage()' "$AP" && grep -q 'const val PAGE_MCPAPI = "mcpapi"' "$AP" \
+    && ok "M2 AccessPage routes mcpapi to AppsMcpApiPage" || bad "M2 AccessPage does not route mcpapi"
+  [ "$(grep -rl --include=*.kt 'fun AppsMcpApiPage(' "$R"/a[abc]_* 2>/dev/null | wc -l)" = 1 ] && ok "M2 one AppsMcpApiPage" || bad "M2 not exactly one AppsMcpApiPage"
+  python3 -I - "$AS" "$FL" <<'PY' && ok "M3 asset: kinds, apps group members, shared GET+POST debug default" || bad "M3 asset is inconsistent with the fleet or lacks the shared debug default"
+import json, sys
+a = json.load(open(sys.argv[1]))
+groups = json.load(open(sys.argv[2]))['groups']
+g = next((x for x in groups if x['id'] == a['apps_group']), None)
+ok = g is not None and [k['id'] for k in a['kinds']] == ['mcp', 'debug', 'app']
+ok = ok and all(i in g['members'] for i in a['apps'])
+ok = ok and all(k in ('mcp', 'debug', 'app') for e in a['apps'].values() for k in e)
+ok = ok and {e['method'] for e in a['shared_debug']['endpoints']} >= {'GET', 'POST'} and a['shared_debug']['base'].endswith('/c3-infra-api')
+sys.exit(0 if ok else 1)
+PY
+  grep -q 'StoreRow.Item(' "$PG" && grep -q 'r.missing(decl.kinds)' "$PG" && ok "M4 rows are StoreRow.Item and show what is missing" || bad "M4 page does not draw StoreRow.Item with the missing report"
+  return $f
+}
+check "$ROOT"; real=$?
+echo "planted defects:"
+M=0
+mut() {  # mut <label> <file> <from> <to>
+  local T; T="$(mktemp -d)"; mkdir -p "$T/ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore" "$T/$LIB/assets" "$T/$LIB/java/com/diegonmarcos/superapp/appstore" "$T/aa_cloud-superapp/data"
+  cp "$ROOT/ac_cloud-store/build.json" "$T/ac_cloud-store/"; cp "$ROOT/ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt" "$T/ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/"
+  cp "$ROOT/$LIB/assets/apps-mcp-api.json" "$T/$LIB/assets/"; cp "$ROOT/$LIB/java/com/diegonmarcos/superapp/appstore/AppsMcpApiPage.kt" "$T/$LIB/java/com/diegonmarcos/superapp/appstore/"
+  cp "$ROOT/aa_cloud-superapp/data/constellation-fleet.json" "$T/aa_cloud-superapp/data/"
+  python3 -I - "$T/$2" "$3" "$4" <<'PY'
+import sys
+p, a, b = sys.argv[1:]
+s = open(p).read(); assert a in s, a; open(p, 'w').write(s.replace(a, b, 1))
+PY
+  if check "$T" >/dev/null 2>&1; then echo "  NOT CAUGHT: $1"; M=$((M+1)); else echo "  caught: $1"; fi
+  rm -rf "$T"
+}
+mut "route dropped" ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt 'PAGE_MCPAPI -> AppsMcpApiPage()' 'PAGE_MCPAPI -> IpcMeshPage()'
+mut "page order" ac_cloud-store/build.json '"id": "mcpapi"' '"id": "mcpapi2"'
+mut "shared debug loses POST" $LIB/assets/apps-mcp-api.json '"method": "POST"' '"method": "GET"'
+mut "entry for a non-member" $LIB/assets/apps-mcp-api.json '"aa_cloud-superapp": {' '"nonexistent-app": {'
+mut "own row drawn" $LIB/java/com/diegonmarcos/superapp/appstore/AppsMcpApiPage.kt 'StoreRow.Item(' 'StoreRow.Card('
+[ "$real" = 0 ] && [ "$M" = 0 ] && { echo "OK: Apps MCP-API page holds; every planted defect is caught"; exit 0; }
+echo "FAIL"; exit 1

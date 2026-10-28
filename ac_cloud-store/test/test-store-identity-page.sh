@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Cloud Store > Access > Identity: libs:appstore's FleetIdentityPage (the page SuperApp > Configs > Apps Mesh > Identity draws).
-#   I1 build.json::ui access.pages are exactly mesh, ipc, identity, android, cloud, in that order ("Identity" labelled)
+#   I1 build.json::ui access.pages are exactly mesh, mcpapi, ipc, identity, android, cloud, in that order ("Identity" labelled)
 #   I2 AccessPage routes PAGE_IDENTITY to the shared FleetIdentityPage
 #   I3 one FleetIdentityPage in the fleet (no second copy)
 #   I4 build.json::ui._doc names the Identity tab
@@ -22,11 +22,11 @@ check() {  # check <root> -> number of failures
   local BJ="$R/ac_cloud-store/build.json" AP="$R/ac_cloud-store/app/src/main/java/com/diegonmarcos/cloudstore/AccessPage.kt"
   local FI="$R/ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/FleetIdentity.kt"
   for x in "$BJ" "$AP" "$FI"; do [ -f "$x" ] || { bad "missing ${x#$R/}"; return 1; }; done
-  python3 - "$BJ" <<'PY' && ok "I1 Access = mesh, ipc, identity, android, cloud" || bad "I1 Access pages are not mesh, ipc, identity, android, cloud in order"
+  python3 - "$BJ" <<'PY' && ok "I1 Access = mesh, mcpapi, ipc, identity, android, cloud" || bad "I1 Access pages are not mesh, mcpapi, ipc, identity, android, cloud in order"
 import json, sys
 s = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'access')
 ids = [p['id'] for p in s['pages']]
-sys.exit(0 if ids == ['mesh', 'ipc', 'identity', 'android', 'cloud'] and s['pages'][2]['label'] == 'Identity' else 1)
+sys.exit(0 if ids == ['mesh', 'mcpapi', 'ipc', 'identity', 'android', 'cloud'] and s['pages'][3]['label'] == 'Identity' else 1)
 PY
   grep -q 'const val PAGE_IDENTITY = "identity"' "$AP" && grep -q 'PAGE_IDENTITY -> FleetIdentityPage()' "$AP" \
     && ok "I2 AccessPage routes identity to the shared FleetIdentityPage" || bad "I2 AccessPage does not route identity to FleetIdentityPage"

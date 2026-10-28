@@ -1,0 +1,26 @@
+{
+  "_doc": "#1211 Store > Access > Apps MCP-API: what each app in Store > Cloud > Apps (the fleet group `apps_group`) declares as endpoints, in three kinds. An app's entry under `apps` (keyed by its fleet id) lists its own endpoints per kind; a kind it does not list is MISSING and the page says so. Nothing here is invented: an endpoint appears only when the app serves it. The `debug` kind has a default, the shared lib (`shared_debug`): every app inherits those GET + POST routes of c3-infra-api unless its entry sets `debug` itself.",
+  "apps_group": "apps",
+  "kinds": [
+    {"id": "mcp", "label": "MCP", "what": "tools an agent calls over MCP"},
+    {"id": "debug", "label": "API-Debug", "what": "routes that report the app's own state and logs"},
+    {"id": "app", "label": "API-App", "what": "the app's own functional API"}
+  ],
+  "shared_debug": {
+    "lib": "libs:core LogUpload",
+    "service": "c3-infra-api",
+    "base": "https://api.diegonmarcos.com/c3-infra-api",
+    "endpoints": [
+      {"method": "GET", "path": "/pub/health", "what": "service health, public"},
+      {"method": "POST", "path": "/public/logs", "what": "a redacted log dump as {source, log}"}
+    ]
+  },
+  "apps": {
+    "aa_cloud-superapp": {
+      "app": [
+        {"method": "GET", "path": "/api/fleet/apps", "what": "the fleet roster this phone sees"},
+        {"method": "GET", "path": "/api/fleet/endpoints", "what": "every member's endpoint catalogue"}
+      ]
+    }
+  }
+}
