@@ -283,9 +283,9 @@ if (!(navPages('git') instanceof List) || navPages('git').isEmpty()) {
         throw new GradleException("build.json::ui.bottom_nav / ui.sections must declare the ${sid} page, a former Sync page (#1149, #1173)")
     }
 }
-// #1173 Fsync (Backup, Folders Sync) and Mounts (Rclone, FUSE) each carry their second row: a page with no strip would draw one body only.
-[fsync: ['backup', 'folders'], mounts: ['rclone', 'fuse']].each { sid, ids ->
-    if (navPages(sid)?.collect { it.id } != ids) {
+// #1173 Mounts (Rclone, FUSE) carries its second row; #1216 Fsync's main page is the folder sync rules and declares no sub-pages (no strip).
+[fsync: [], mounts: ['rclone', 'fuse']].each { sid, ids ->
+    if ((navPages(sid) ?: []).collect { it.id } != ids) {
         throw new GradleException("build.json::ui.sections[${sid}].pages must declare ${ids} in that order (#1173)")
     }
 }
