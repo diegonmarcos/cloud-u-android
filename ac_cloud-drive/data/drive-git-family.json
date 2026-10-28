@@ -25,8 +25,8 @@
  ],
  "family": [
   {
-   "name": "cloud-___",
-   "label": "cloud-___",
+   "name": "cloudy-___",
+   "label": "cloudy-___",
    "seed": true,
    "notes": "The fleet hub repository (repos.json, clone.sh)"
   },
@@ -36,32 +36,32 @@
    "notes": "The owner's memory + product backlog. cloud-code's Backlog tab reads and writes it HERE, through the shared store (#575 proof case) — no second clone."
   },
   {
-   "name": "cloud-t-infra",
-   "label": "cloud-t-infra",
+   "name": "cloudy-t-infra",
+   "label": "cloudy-t-infra",
    "seed": true,
    "notes": "Infrastructure declarations, keys, CI"
   },
   {
-   "name": "cloud-u-desktop",
-   "label": "cloud-u-desktop",
+   "name": "cloudy-u-desktop",
+   "label": "cloudy-u-desktop",
    "seed": true,
    "notes": "Desktop-NixOS twin of the cloud"
   },
   {
-   "name": "cloud-u-android",
-   "label": "cloud-u-android",
+   "name": "cloudy-u-android",
+   "label": "cloudy-u-android",
    "seed": true,
    "notes": "This app's own repository"
   },
   {
-   "name": "cloud-u-containers",
-   "label": "cloud-u-containers",
+   "name": "cloudy-u-containers",
+   "label": "cloudy-u-containers",
    "seed": true,
    "notes": "Container compose declarations"
   },
   {
-   "name": "cloud-u-linux",
-   "label": "cloud-u-linux",
+   "name": "cloudy-u-linux",
+   "label": "cloudy-u-linux",
    "seed": true,
    "notes": "Linux fleet configs"
   },
@@ -78,8 +78,8 @@
    "notes": "The fleet's front-end tree. #731 renamed upstream from `ffront` (2026-10-01): `renamed_from` makes the seed worker MOVE a device's git/ffront clone to git/front and repoint its origin, instead of cloning a second copy beside it."
   },
   {
-   "name": "cloud_db_assets-cdn",
-   "label": "cloud_db_assets-cdn",
+   "name": "cloudy_db_assets-cdn",
+   "label": "cloudy_db_assets-cdn",
    "seed": true,
    "notes": "Static assets. #629 CORRECTED: the prose here contradicted the flag beside it — it IS seeded."
   },

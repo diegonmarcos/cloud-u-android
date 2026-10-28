@@ -25,14 +25,14 @@
  ],
  "repos": [
   {
-   "name": "cloud-___",
-   "label": "cloud-___",
+   "name": "cloudy-___",
+   "label": "cloudy-___",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
    "notes": "The fleet hub repository (repos.json, clone.sh)",
-   "renamed_from": ["cloud", "cloud___"]
+   "renamed_from": ["cloud", "cloud___", "cloud-___"]
   },
   {
    "name": "cloud-me-pvt-my-ai",
@@ -44,51 +44,54 @@
    "renamed_from": ["cloud-data-my-ai-memory", "cloud-me-my-ai"]
   },
   {
-   "name": "cloud-t-infra",
-   "label": "cloud-t-infra",
+   "name": "cloudy-t-infra",
+   "label": "cloudy-t-infra",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
    "notes": "Infrastructure declarations, keys, CI",
-   "renamed_from": ["cloud-infra"]
+   "renamed_from": ["cloud-infra", "cloud-t-infra"]
   },
   {
-   "name": "cloud-u-desktop",
-   "label": "cloud-u-desktop",
+   "name": "cloudy-u-desktop",
+   "label": "cloudy-u-desktop",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
    "notes": "Desktop-NixOS twin of the cloud",
-   "renamed_from": ["cloud-infra-desktop"]
+   "renamed_from": ["cloud-infra-desktop", "cloud-u-desktop"]
   },
   {
-   "name": "cloud-u-android",
-   "label": "cloud-u-android",
+   "name": "cloudy-u-android",
+   "label": "cloudy-u-android",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
-   "notes": "This app's own repository"
+   "notes": "This app's own repository",
+   "renamed_from": ["cloud-u-android"]
   },
   {
-   "name": "cloud-u-containers",
-   "label": "cloud-u-containers",
+   "name": "cloudy-u-containers",
+   "label": "cloudy-u-containers",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
-   "notes": "Container compose declarations"
+   "notes": "Container compose declarations",
+   "renamed_from": ["cloud-u-containers"]
   },
   {
-   "name": "cloud-u-linux",
-   "label": "cloud-u-linux",
+   "name": "cloudy-u-linux",
+   "label": "cloudy-u-linux",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
-   "notes": "Linux fleet configs"
+   "notes": "Linux fleet configs",
+   "renamed_from": ["cloud-u-linux"]
   },
   {
    "name": "diegonmarcos.github.io",
@@ -111,14 +114,14 @@
    "renamed_from": ["ffront", "front", "Projects", "Projects___"]
   },
   {
-   "name": "cloud_db_assets-cdn",
-   "label": "cloud_db_assets-cdn",
+   "name": "cloudy_db_assets-cdn",
+   "label": "cloudy_db_assets-cdn",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
    "notes": "Static assets. #629 CORRECTED: the prose here contradicted the flag beside it — it IS seeded.",
-   "renamed_from": ["front-assets-cdn"]
+   "renamed_from": ["front-assets-cdn", "cloud_db_assets-cdn"]
   },
   {
    "name": "z-archived_front-data",

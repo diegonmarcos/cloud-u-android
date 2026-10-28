@@ -14,6 +14,6 @@
 
 [submodule "cloud"]
 	path = cloud
-	url = git@github.com:diegonmarcos/cloud-___.git
+	url = git@github.com:diegonmarcos/cloudy-___.git
 	shallow = true
 	ignore = all

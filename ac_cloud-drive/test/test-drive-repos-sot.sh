@@ -48,7 +48,7 @@ node "$APP/tools/gen-drive-git-repos.js" --check >/dev/null 2>&1 && ok "drive-gi
 echo "── R3 the reorganisations ──"
 node -e '
 const r=require(process.argv[1]), f=require(process.argv[2]); const e=[];
-for (const n of ["cloud-h-webapps","cloud-me-pvt-containers"]) { const x=r.repos.find(y=>y.name===n); if(!x) e.push(n+" not registered"); else if(x.status==="pending_creation") e.push(n+" still pending_creation (repo exists; registry must not say so)"); if (f.family.some(y=>y.name===n)) e.push(n+" is in the drive family"); }
+for (const n of ["cloudy-h-webapps","cloud-me-pvt-containers"]) { const x=r.repos.find(y=>y.name===n); if(!x) e.push(n+" not registered"); else if(x.status==="pending_creation") e.push(n+" still pending_creation (repo exists; registry must not say so)"); if (f.family.some(y=>y.name===n)) e.push(n+" is in the drive family"); }
 if (r.repos.some(x=>x.name==="cloud-mobile")) e.push("cloud-mobile is a repo");
 if (!(r.renames||[]).some(x=>x.from==="cloud-mobile"&&x.to==="cloud-superapp")) e.push("cloud-mobile->cloud-superapp not declared");
 if (e.length){console.error(e.join("\n"));process.exit(1)}' "$DATA/repos.sot.json" "$DATA/drive-git-family.json" && ok "webapps/me-containers registered (not pending) + not offered; cloud-superapp rename declared" || bad "reorganisations missing"
@@ -78,14 +78,14 @@ echo "── R7 #1238 the LFS flag is declarative and flows registry -> libs:rep
 node -e '
 const r=require(process.argv[1]); const e=[];
 const l=r.repos.filter(x=>x.lfs===true);
-if(!l.length) e.push("no registry entry declares lfs:true (cloud_db_LFS must)");
-if(!l.some(x=>x.name==="cloud_db_LFS")) e.push("cloud_db_LFS is not lfs:true");
+if(!l.length) e.push("no registry entry declares lfs:true (cloudy_db_LFS must)");
+if(!l.some(x=>x.name==="cloudy_db_LFS")) e.push("cloudy_db_LFS is not lfs:true");
 if(r.repos.some(x=>"lfs" in x && x.lfs!==true)) e.push("lfs must be true or absent");
-if(e.length){console.error(e.join("\n"));process.exit(1)}' "$DATA/repos.sot.json" && ok "the registry copy declares lfs:true (cloud_db_LFS)" || bad "registry copy lacks the declarative lfs flag"
+if(e.length){console.error(e.join("\n"));process.exit(1)}' "$DATA/repos.sot.json" && ok "the registry copy declares lfs:true (cloudy_db_LFS)" || bad "registry copy lacks the declarative lfs flag"
 cmp -s "$DATA/repos.sot.json" "$APP/../ab_cloud-libs-shared/libs/repos/repos.sot.json" && ok "libs:repos mirror carries the same lfs flag (byte-identical)" || bad "libs:repos copy differs"
 grep -q 'lfs: (r.lfs == true)' "$g" && ok "build.gradle bakes the lfs flag into REPOS_SOT_B64" || bad "build.gradle does not bake lfs"
 grep -q 'fun lfsOf(github: String): Boolean?' "$k" && grep -q 'r.bool("lfs")' "$k" && ok "Declarations parses lfs and exposes lfsOf (null = unlisted)" || bad "Declarations does not expose lfs"
-! grep -rn 'cloud_db_LFS' "$APP/app/src/main/java" >/dev/null 2>&1 && ok "no repo name is hardcoded as LFS in Kotlin" || bad "a repo name is hardcoded in Kotlin"
+! grep -rn 'cloudy_db_LFS' "$APP/app/src/main/java" >/dev/null 2>&1 && ok "no repo name is hardcoded as LFS in Kotlin" || bad "a repo name is hardcoded in Kotlin"
 
 echo "── R6 the copy equals the declared url ──"
 url="$(node -e 'console.log(require(process.argv[1]).storage.repos_source.url)' "$APP/build.json")"

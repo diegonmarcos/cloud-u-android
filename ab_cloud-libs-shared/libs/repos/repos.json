@@ -24,7 +24,7 @@
       "name": "CG-circus",
       "repo": "diegonmarcos/CG-circus",
       "private": false,
-      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloud-h-webapps-2 #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloudy-h-webapps-2 #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "CG-galaxy",
@@ -105,30 +105,6 @@
       "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_CG-Zirkus, a-Lfy_C3, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX."
     },
     {
-      "name": "cloud-___",
-      "repo": "diegonmarcos/cloud-___",
-      "private": false,
-      "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`."
-    },
-    {
-      "name": "cloud-a-docs",
-      "repo": "diegonmarcos/cloud-a-docs",
-      "private": true,
-      "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-pvt-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester."
-    },
-    {
-      "name": "cloud-h-webapps",
-      "repo": "diegonmarcos/cloud-h-webapps",
-      "private": false,
-      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
-    },
-    {
-      "name": "cloud-h-webapps-2",
-      "repo": "diegonmarcos/cloud-h-webapps-2",
-      "private": false,
-      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
-    },
-    {
       "name": "cloud-me-pub-___",
       "repo": "diegonmarcos/cloud-me-pub-___",
       "private": false,
@@ -186,7 +162,7 @@
       "name": "cloud-me-pvt-cgc",
       "repo": "diegonmarcos/cloud-me-pvt-cgc",
       "private": true,
-      "doc": "The PRIVATE half of the cgc pipeline (pvt surface: the private repos -> cloud-cgc-pvt-mcp). A thin orchestrator rendered from cloud-u-containers_cgc at a pinned sha, so private-repo runs and logs stay private. Was cloud-u-containers_cgc-pvt; renamed 2026-10-10 into the private cloud-me family (split-outs are named <parent>_<name>; every cloud-u-* repo is public)."
+      "doc": "The PRIVATE half of the cgc pipeline (pvt surface: the private repos -> cloud-cgc-pvt-mcp). A thin orchestrator rendered from cloudy-u-containers_cgc at a pinned sha, so private-repo runs and logs stay private. Was cloud-u-containers_cgc-pvt; renamed 2026-10-10 into the private cloud-me family (split-outs are named <parent>_<name>; every cloud-u-* repo is public)."
     },
     {
       "name": "cloud-me-pvt-configs",
@@ -219,50 +195,80 @@
       "doc": "Personal notes (Obsidian vault)."
     },
     {
-      "name": "cloud-t-infra",
-      "repo": "diegonmarcos/cloud-t-infra",
+      "name": "cloudy-___",
+      "repo": "diegonmarcos/cloudy-___",
+      "private": false,
+      "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`."
+    },
+    {
+      "name": "cloudy-a-docs",
+      "repo": "diegonmarcos/cloudy-a-docs",
+      "private": true,
+      "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-pvt-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester."
+    },
+    {
+      "name": "cloudy-h-webapps",
+      "repo": "diegonmarcos/cloudy-h-webapps",
+      "private": false,
+      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
+    },
+    {
+      "name": "cloudy-h-webapps-2",
+      "repo": "diegonmarcos/cloudy-h-webapps-2",
+      "private": false,
+      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloudy-t-infra",
+      "repo": "diegonmarcos/cloudy-t-infra",
       "private": false,
       "doc": "Fleet: services, infra, the derive engine (1_cloud-configs). Renamed from cloud-infra 2026-10-23 (#1136)."
     },
     {
-      "name": "cloud-u-containers",
-      "repo": "diegonmarcos/cloud-u-containers",
+      "name": "cloudy-u-android",
+      "repo": "diegonmarcos/cloudy-u-android",
+      "private": false,
+      "doc": "Android client."
+    },
+    {
+      "name": "cloudy-u-containers",
+      "repo": "diegonmarcos/cloudy-u-containers",
       "private": false,
       "doc": "The containerised services a_solutions ships: one dir per service, each with build.json. Mounted back into cloud-infra as a submodule at a_solutions/ so the ship engine keeps globbing a_solutions/*/build.json."
     },
     {
-      "name": "cloud-u-containers_cgc",
-      "repo": "diegonmarcos/cloud-u-containers_cgc",
+      "name": "cloudy-u-containers_cgc",
+      "repo": "diegonmarcos/cloudy-u-containers_cgc",
       "private": false,
-      "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloud-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha."
+      "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloudy-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha."
     },
     {
-      "name": "cloud-u-desktop",
-      "repo": "diegonmarcos/cloud-u-desktop",
+      "name": "cloudy-u-desktop",
+      "repo": "diegonmarcos/cloudy-u-desktop",
       "private": false,
       "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)."
     },
     {
-      "name": "cloud-u-linux",
-      "repo": "diegonmarcos/cloud-u-linux",
+      "name": "cloudy-u-linux",
+      "repo": "diegonmarcos/cloudy-u-linux",
       "private": false,
-      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloud-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
+      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloudy-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
     },
     {
-      "name": "cloud_db_LFS",
-      "repo": "diegonmarcos/cloud_db_LFS",
+      "name": "cloudy_db_LFS",
+      "repo": "diegonmarcos/cloudy_db_LFS",
       "private": true,
       "doc": "Large binary artefacts (git-lfs) for cloud-me-pvt-data (was cloud-data)."
     },
     {
-      "name": "cloud_db_assets-cdn",
-      "repo": "diegonmarcos/cloud_db_assets-cdn",
+      "name": "cloudy_db_assets-cdn",
+      "repo": "diegonmarcos/cloudy_db_assets-cdn",
       "private": false,
       "doc": "Static assets served from the CDN. Renamed from front-assets-cdn 2026-10-27 (#1217)."
     },
     {
-      "name": "cloud_db_infra-ops-obsv_configs-sync",
-      "repo": "diegonmarcos/cloud_db_infra-ops-obsv_configs-sync",
+      "name": "cloudy_db_infra-ops-obsv_configs-sync",
+      "repo": "diegonmarcos/cloudy_db_infra-ops-obsv_configs-sync",
       "private": false,
       "doc": "Configs-sync engine data repo: the consolidated fleet config SoT (from 1_cloud-configs) served by c3-infra-api/mcp. Created 2026-10-25 (#1197 programme); public."
     },
