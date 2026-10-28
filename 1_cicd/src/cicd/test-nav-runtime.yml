@@ -204,10 +204,6 @@ jobs:
           adb shell cmd role add-role-holder --user 0 android.app.role.DIALER "$PKG" || true
           adb shell cmd role add-role-holder --user 0 android.app.role.CALL_SCREENING "$PKG" || true
           adb shell settings put global adb_wifi_enabled 0 || true
-          # no WebGL in WebView on the software-GPU emulator: Lnktree's fullscreen WebGL2 shader background killed
-          # the whole emulator about 4 s after load (runs 40679943894, 40758904504); pages fall back to their static
-          # background. WebView reads this file on a debuggable system image; the walk checks the chrome, not WebGL.
-          adb shell "echo '_ --disable-webgl --disable-3d-apis' > /data/local/tmp/webview-command-line" || true
           # stream the log from the start: a dead emulator takes a post-run `logcat -d` with it, the stream keeps what came before
           adb logcat -v threadtime "*:W" ActivityManager:I chromium:I WindowManager:I > walk-out/logcat-stream.txt 2>&1 &
           LOGCAT_PID=$!
@@ -232,7 +228,10 @@ jobs:
           target: google_apis
           profile: pixel_5
           ram-size: 4096M
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          # swangle_indirect (ANGLE on SwiftShader Vulkan), not swiftshader_indirect: the legacy GLES translator crashed the
+          # whole emulator process about 4 s into Lnktree's fullscreen WebGL2 shader (runs 40679943894, 40758904504,
+          # 40786793663); a WebView command-line file did not help (release WebView ignores it). (#1198)
+          emulator-options: -no-window -gpu swangle_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: ./walk.sh
 
