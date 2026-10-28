@@ -50,6 +50,23 @@ def shell(cmd, timeout=90):
     return adb("shell", cmd, timeout=timeout).stdout
 
 
+SECTION_BUDGET = 900  # seconds one section may take; a wedged emulator must fail the section, not hold the job to its 120 minute limit
+
+
+class SectionTimeout(Exception):
+    pass
+
+
+def emulator_alive():
+    """True while adb answers and system_server runs (the walk once lost its launcher and could open nothing after)."""
+    try:
+        if adb("get-state", timeout=20).stdout.strip() != "device":
+            return False
+        return shell("echo ok", timeout=20).strip() == "ok" and bool(shell("pidof system_server", timeout=20).strip())
+    except Exception:
+        return False
+
+
 class Node:
     __slots__ = ("rid", "text", "desc", "l", "t", "r", "b", "scrollable", "clickable", "pkg", "cls")
 
@@ -775,13 +792,29 @@ class Walk:
             self.results.append({"section": "-", "page": "launch", "label": "launch", "status": "FAIL", "checks": {},
                                  "failures": ["the shared bottom nav never appeared within 60 s of launch (no %s*)" % ITEM], "seconds": 60})
         else:
+            import signal
+
+            def _alarm(_sig, _frm):
+                raise SectionTimeout("section exceeded %d s" % SECTION_BUDGET)
+
+            signal.signal(signal.SIGALRM, _alarm)
             for sid in self.bottom + [s for s in self.sections if s not in self.bottom]:
+                if not emulator_alive():
+                    self.results.append({"section": sid, "page": "-", "label": sid, "status": "FAIL", "checks": {},
+                                         "failures": ["emulator unresponsive (adb or system_server gone): remaining sections not walked"], "seconds": 0})
+                    break
+                signal.alarm(SECTION_BUDGET)
                 try:
                     self.visit_section(sid)
                 except Exception as ex:  # a driver fault must show as a failed page, never as silence
                     self.results.append({"section": sid, "page": "-", "label": sid, "status": "FAIL", "checks": {},
                                          "failures": ["driver error: %r" % ex], "seconds": 0})
-                    self.evidence("%s_driver_error" % sid)
+                    try:
+                        self.evidence("%s_driver_error" % sid)
+                    except Exception:
+                        pass
+                finally:
+                    signal.alarm(0)
         self.report()
 
     def report(self):
