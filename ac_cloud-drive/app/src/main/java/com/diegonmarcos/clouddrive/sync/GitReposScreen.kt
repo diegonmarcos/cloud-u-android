@@ -195,6 +195,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     var sortAscending by remember { mutableStateOf(true) }
     val tableScroll = rememberScrollState()
     var settingsFor by remember { mutableStateOf<ManagedRepo?>(null) }
+    // #1238 the row whose full-screen status window is open (TableEntry.key; "" = none).
+    var statusFor by remember { mutableStateOf("") }
     var showHistory by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf("") }
     var login by remember { mutableStateOf(GitLogin()) }
@@ -270,7 +272,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     fun tableRow(name: String, owner: String, declaredPrivate: Boolean?, listedUrl: String = ""): RepoTableRow {
         val cloned = clonedByName[name]
         val url = cloned?.remoteUrl?.takeIf { it.isNotBlank() } ?: listedUrl
-        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[it.id] }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes })
+        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[it.id] }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes }, Declarations.repoSot.lfsOf(name))
     }
     // Pull-to-refresh re-reads the REST facts of every repository the table lists (GitHub-listed or declared; the fleet's own git is not GitHub).
     fun refreshTargets(): List<Pair<String, String>> {
@@ -783,12 +785,12 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         items(sortedEntries, key = { it.key }) { e ->
             val cloned = e.cloned
             GitRepoRow(
-                name = e.label, repoName = e.name, cells = e.row, scroll = tableScroll, fork = e.fork, source = e.source,
+                name = e.label, repoName = e.name, cells = e.row, scroll = tableScroll, fork = e.fork,
                 repo = cloned, glance = cloned?.let { glances[it.id] }, running = cloned?.let { running[it.id] },
                 cloning = e.name in cloning, expanded = expanded == e.key,
                 // A second tap on the same repo closes its menu; a tap on another repo moves it.
                 onToggle = { expanded = RepoTable.toggle(expanded, e.key) },
-                onClone = e.onClone,
+                onOpenStatus = { statusFor = e.key },
             )
             if (e.note.isNotBlank()) Text(
                 e.note, Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
@@ -991,6 +993,14 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
     }
 
+    // #1238 the full-screen status window of the tapped row: what the app already knows, no mock data; Clone repo is its last section.
+    entries.firstOrNull { it.key == statusFor }?.let { e ->
+        RepoStatusWindow(
+            name = e.name, owner = e.owner, row = e.row, repo = e.cloned, glance = e.cloned?.let { glances[it.id] },
+            cloneUrl = e.cloneUrl.ifBlank { page.cloneUrl(e.name, Declarations.REMOTE_HTTPS) }, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
+            cloning = e.name in cloning, fmt = fmt, onClone = e.onClone, onClose = { statusFor = "" },
+        )
+    }
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
     if (confirmPullAll) {
         AlertDialog(
@@ -1236,14 +1246,13 @@ private fun GitRepoRow(
     cells: RepoTableRow,
     scroll: ScrollState,
     fork: Boolean,
-    source: String = "",
     repo: ManagedRepo?,
     glance: GitSyncCoordinator.Glance?,
     running: GitSyncCoordinator.Running?,
     cloning: Boolean,
     expanded: Boolean,
     onToggle: () -> Unit,
-    onClone: () -> Unit,
+    onOpenStatus: () -> Unit,
 ) {
     val light = lightOf(repo, glance)
     // #1138 THE TABLE ROW: the light and the name, then one cell per column, then the clone / disclosure
@@ -1255,17 +1264,16 @@ private fun GitRepoRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(Modifier.horizontalScroll(scroll).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
+            // #1238 the leftmost column is the status icon on its own: a tap opens the full-screen status window.
+            RepoStatusCell(light, name, onOpenStatus)
             Column(Modifier.width(DriveMetrics.tableName)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    StatusDot(light, name)
-                    Spacer(Modifier.width(DriveMetrics.pad))
                     Text(name, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (fork) CapsuleBadge(stringResource(R.string.git_fork))
                 }
                 // What the cells cannot say: the clone folder is gone, a conflict, or an unfinished merge / rebase.
-                if (source.isNotBlank()) Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (repo == null && !cloning) Text(stringResource(R.string.git_not_cloned), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                else if (repo != null && glance != null && glance.gone) Text(stringResource(R.string.sync_glance_gone), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // #1238 no "GitHub" (the listing's label) and no "Not Cloned" text under a repo that is not cloned: the status window says it.
+                if (repo != null && glance != null && glance.gone) Text(stringResource(R.string.sync_glance_gone), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (repo != null && (glance == null || !glance.read)) Text(stringResource(R.string.sync_glance_unchecked), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 else if (repo != null && glance != null && glance.error != null) Text(
                     statusErrorText(RepoStatus.errorKind(glance.error), glance.error), style = MaterialTheme.typography.labelSmall,
@@ -1280,7 +1288,7 @@ private fun GitRepoRow(
             Box(Modifier.width(DriveMetrics.tableName), contentAlignment = Alignment.CenterEnd) {
                 when {
                     cloning -> Text(stringResource(R.string.git_cloning), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    repo == null -> Pill(stringResource(R.string.sync_clone_into_store), onClone, filled = true)
+                    // #1238 the Clone repo button left the row: it is the last section of the status window.
                     else -> Icon(
                         if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
                         contentDescription = stringResource(if (expanded) R.string.git_collapse else R.string.git_expand),
@@ -1323,7 +1331,7 @@ internal fun RepoStatusLegend() {
 
 /** The STATUS block at the top of the open repository panel: cloned, branch, dirty, ahead/behind, not pushed, last fetch, last error. */
 @Composable
-private fun RepoStatusBlock(b: RepoStatus.Block, fmt: DateFormat) {
+internal fun RepoStatusBlock(b: RepoStatus.Block, fmt: DateFormat) {
     val dash = RepoTable.DASH
     Column(Modifier.fillMaxWidth().padding(top = DriveMetrics.gapWide).testTag(DriveTags.SYNC_GIT_STATUS_BLOCK)) {
         Text(stringResource(R.string.repo_status_title), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -163,7 +163,7 @@ def reposSot = new groovy.json.JsonSlurper().parse(reposSotFile)
 if (reposSot._schema != 'cloud-repos/v1') throw new GradleException("repos.sot.json _schema is '${reposSot._schema}', expected cloud-repos/v1")
 def reposSotSlim = reposSot.repos.collect { r ->
     [name: r.name, github: r.url.toString().replaceFirst(/^.*[\/:]/, '').replaceFirst(/\.git$/, ''),
-     private: (r.private == true), pending: (r.status == 'pending_creation'), renamed_from: (r.renamed_from ?: [])]
+     private: (r.private == true), pending: (r.status == 'pending_creation'), renamed_from: (r.renamed_from ?: []), lfs: (r.lfs == true)]
 }
 def reposSotB64 = b64(reposSotSlim)
 ((gitReposFile.exists() ? new groovy.json.JsonSlurper().parse(gitReposFile) : [repos: []]).repos ?: []).each { fr ->

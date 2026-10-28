@@ -291,10 +291,12 @@ object Declarations {
         val renames: Map<String, String> get() = repos.flatMap { r -> r.renamedFrom.map { it to r.name } }.toMap()
     }
     /** #1073 one entry of the repo registry (_git-repos-master/repos.json) as baked in REPOS_SOT_B64. [github] is the GitHub repository name; [pending] = not created yet, so nothing may clone or list it. */
-    data class RepoSotEntry(val name: String, val github: String, val private: Boolean, val pending: Boolean, val renamedFrom: List<String> = emptyList())
+    data class RepoSotEntry(val name: String, val github: String, val private: Boolean, val pending: Boolean, val renamedFrom: List<String> = emptyList(), val lfs: Boolean = false)
     /** The registry, the ONE list of repositories; the Sync > Git family is held to it. */
     data class RepoSotDecl(val repos: List<RepoSotEntry>) {
         fun byGithub(github: String): RepoSotEntry? = repos.firstOrNull { it.github == github }
+        /** #1238 true = the registry declares `lfs: true` for it, false = listed and normal, null = the registry does not list it (unknown, never guessed). */
+        fun lfsOf(github: String): Boolean? = byGithub(github)?.lfs
         /** true only for a repository the registry lists AND has created. */
         fun cloneable(github: String): Boolean = byGithub(github)?.let { !it.pending } ?: false
     }
@@ -562,7 +564,7 @@ object Declarations {
 
     fun parseRepoSot(text: String): RepoSotDecl = RepoSotDecl(objects(element(text)).mapNotNull { r ->
         val name = r.str("name"); if (name.isBlank()) return@mapNotNull null
-        RepoSotEntry(name, r.str("github", name), r.bool("private"), r.bool("pending"), r.strings("renamed_from"))
+        RepoSotEntry(name, r.str("github", name), r.bool("private"), r.bool("pending"), r.strings("renamed_from"), r.bool("lfs"))
     })
 
     /** #1073 a family repository survives only when the registry lists it and it exists: a pending_creation repo is never offered for clone or seed. */

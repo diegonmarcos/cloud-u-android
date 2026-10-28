@@ -93,4 +93,11 @@ class RepoStatusTest {
         assertTrue(RepoActions.UNPUSHED in RepoActions.GROUPS.first { it.group == RepoGroup.GOTO }.actions)
         assertEquals(RepoActions.Route.RUN, RepoActions.route(RepoActions.UNPUSHED))
     }
+
+    @Test fun `#1238 the status window offers Clone only for a repo with no clone, a progress word while cloning, nothing once cloned`() {
+        assertEquals(RepoStatus.CloneAction.CLONE, RepoStatus.cloneAction(cloned = false, cloning = false))
+        assertEquals(RepoStatus.CloneAction.CLONING, RepoStatus.cloneAction(cloned = false, cloning = true))
+        assertEquals(RepoStatus.CloneAction.NONE, RepoStatus.cloneAction(cloned = true, cloning = false))
+        assertEquals(RepoStatus.CloneAction.NONE, RepoStatus.cloneAction(cloned = true, cloning = true))
+    }
 }

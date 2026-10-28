@@ -92,6 +92,15 @@ object RepoStatus {
         )
     }
 
+    /** #1238 what the status window's last section offers: Clone for a repository with no clone, a progress word while it clones, nothing for a clone that exists. */
+    enum class CloneAction { CLONE, CLONING, NONE }
+
+    fun cloneAction(cloned: Boolean, cloning: Boolean): CloneAction = when {
+        cloned -> CloneAction.NONE
+        cloning -> CloneAction.CLONING
+        else -> CloneAction.CLONE
+    }
+
     /** The commits a push would send: the newest [ahead] entries of the branch's log (the log is newest first). */
     fun unpushed(log: List<GitCommitInfo>, ahead: Int?): List<GitCommitInfo> = if (ahead == null || ahead <= 0) emptyList() else log.take(ahead)
 }

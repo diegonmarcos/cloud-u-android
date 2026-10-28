@@ -103,4 +103,36 @@ class RepoTableTest {
         ))
         assertEquals(RepoTable.Summary(total = 4, cloned = 3, notCloned = 1, dirty = 2, ahead = 2, behind = 2), s)
     }
+
+    @Test fun `#1238 the columns are declared in order - status first, name second, LFS right after Pvt-Pub`() {
+        val cols = RepoColumn.entries
+        assertEquals(RepoColumn.STATUS, cols.first())
+        assertEquals(RepoColumn.NAME, cols[1])
+        assertEquals(RepoColumn.LFS, cols[cols.indexOf(RepoColumn.VISIBILITY) + 1])
+    }
+
+    @Test fun `#1238 the LFS cell prints LFS or Normal from the registry flag and a dash when the registry does not list the repo`() {
+        assertEquals("LFS", RepoTable.lfs(true, "LFS", "Normal"))
+        assertEquals("Normal", RepoTable.lfs(false, "LFS", "Normal"))
+        assertEquals("—", RepoTable.lfs(null, "LFS", "Normal"))
+    }
+
+    @Test fun `#1238 LFS sorts normal before lfs ascending and unknown sinks`() {
+        val rows = listOf(row("a").copy(lfs = true), row("b").copy(lfs = false), row("c").copy(lfs = null))
+        assertEquals(listOf("b", "a", "c"), names(rows, RepoColumn.LFS, true))
+        assertEquals(listOf("a", "b", "c"), names(rows, RepoColumn.LFS, false))
+    }
+
+    @Test fun `#1238 the status column sorts by the real status kind`() {
+        val rows = listOf(row("a").copy(status = RepoStatus.Kind.CLEAN), row("b").copy(status = RepoStatus.Kind.NOT_CLONED), row("c").copy(status = RepoStatus.Kind.DIRTY), row("d"))
+        assertEquals(listOf("b", "c", "a", "d"), names(rows, RepoColumn.STATUS, true))
+    }
+
+    @Test fun `#1238 a row carries the registry lfs flag and the status kind it was built from`() {
+        val notCloned = RepoTable.rowOf("r", false, false, null, null, lfs = true)
+        assertEquals(true, notCloned.lfs); assertEquals(RepoStatus.Kind.NOT_CLONED, notCloned.status)
+        val clean = RepoTable.rowOf("r", false, true, GitSyncCoordinator.Glance(branch = "main", upstream = "origin/main", read = true), null, lfs = false)
+        assertEquals(false, clean.lfs); assertEquals(RepoStatus.Kind.CLEAN, clean.status)
+        assertNull(RepoTable.rowOf("r", false, false, null, null).lfs)
+    }
 }

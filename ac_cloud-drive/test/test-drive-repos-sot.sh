@@ -74,6 +74,19 @@ cp "$APP/data/drive-git-family.json" "$T/app/data/drive-git-family.json"
 echo " " >> "$T/app/data/drive-git-repos.json"
 node "$T/app/tools/gen-drive-git-repos.js" --check >/dev/null 2>&1 && bad "--check accepted a hand-edited generated file" || ok "--check fails on a hand-edited drive-git-repos.json"
 
+echo "── R7 #1238 the LFS flag is declarative and flows registry -> libs:repos copy -> baked -> Declarations ──"
+node -e '
+const r=require(process.argv[1]); const e=[];
+const l=r.repos.filter(x=>x.lfs===true);
+if(!l.length) e.push("no registry entry declares lfs:true (cloud_db_LFS must)");
+if(!l.some(x=>x.name==="cloud_db_LFS")) e.push("cloud_db_LFS is not lfs:true");
+if(r.repos.some(x=>"lfs" in x && x.lfs!==true)) e.push("lfs must be true or absent");
+if(e.length){console.error(e.join("\n"));process.exit(1)}' "$DATA/repos.sot.json" && ok "the registry copy declares lfs:true (cloud_db_LFS)" || bad "registry copy lacks the declarative lfs flag"
+cmp -s "$DATA/repos.sot.json" "$APP/../ab_cloud-libs-shared/libs/repos/repos.sot.json" && ok "libs:repos mirror carries the same lfs flag (byte-identical)" || bad "libs:repos copy differs"
+grep -q 'lfs: (r.lfs == true)' "$g" && ok "build.gradle bakes the lfs flag into REPOS_SOT_B64" || bad "build.gradle does not bake lfs"
+grep -q 'fun lfsOf(github: String): Boolean?' "$k" && grep -q 'r.bool("lfs")' "$k" && ok "Declarations parses lfs and exposes lfsOf (null = unlisted)" || bad "Declarations does not expose lfs"
+! grep -rn 'cloud_db_LFS' "$APP/app/src/main/java" >/dev/null 2>&1 && ok "no repo name is hardcoded as LFS in Kotlin" || bad "a repo name is hardcoded in Kotlin"
+
 echo "── R6 the copy equals the declared url ──"
 url="$(node -e 'console.log(require(process.argv[1]).storage.repos_source.url)' "$APP/build.json")"
 if fetch_registry "$url" "$T/live.json" && node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$T/live.json" 2>/dev/null; then

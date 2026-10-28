@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -31,16 +32,20 @@ import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.IconCatalog
 import com.diegonmarcos.clouddrive.ui.Pill
+import com.diegonmarcos.clouddrive.ui.StatusDot
+import com.diegonmarcos.clouddrive.ui.StatusLight
 
 /** #1138 the repo table's column width: the name column is wide, every other column is one table cell. */
 internal fun repoCellModifier(c: RepoColumn): Modifier =
-    Modifier.width(if (c == RepoColumn.NAME) DriveMetrics.tableName else DriveMetrics.tableCell).padding(horizontal = DriveMetrics.gap)
+    Modifier.width(when (c) { RepoColumn.NAME -> DriveMetrics.tableName; RepoColumn.STATUS -> DriveMetrics.tap; else -> DriveMetrics.tableCell }).padding(horizontal = DriveMetrics.gap)
 
 @Composable
 private fun columnLabel(c: RepoColumn): String = stringResource(when (c) {
+    RepoColumn.STATUS -> R.string.repo_col_status
     RepoColumn.NAME -> R.string.repo_col_name
     RepoColumn.PROVIDER -> R.string.repo_col_provider
     RepoColumn.VISIBILITY -> R.string.repo_col_vis
+    RepoColumn.LFS -> R.string.repo_col_lfs
     RepoColumn.SIZE_MAIN -> R.string.repo_col_size_main
     RepoColumn.SIZE_TOTAL -> R.string.repo_col_size_total
     RepoColumn.SIZE_DISK -> R.string.repo_col_size_disk
@@ -62,14 +67,14 @@ internal fun RepoTableHeader(column: RepoColumn, ascending: Boolean, scroll: Scr
                 Text(
                     columnLabel(c) + arrow, repoCellModifier(c).clickable { onSort(c) },
                     style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
-                    textAlign = if (c == RepoColumn.NAME) TextAlign.Start else TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    textAlign = when (c) { RepoColumn.NAME -> TextAlign.Start; RepoColumn.STATUS -> TextAlign.Center; else -> TextAlign.End }, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
             }
         }
     }
 }
 
-/** The eight fact cells after the name, in column order. */
+/** The nine fact cells after the name, in column order (the leftmost STATUS cell is [RepoStatusCell]). */
 @Composable
 internal fun RepoCells(r: RepoTableRow) {
     val yes = stringResource(R.string.manage_yes)
@@ -77,6 +82,7 @@ internal fun RepoCells(r: RepoTableRow) {
     val texts = listOf(
         RepoColumn.PROVIDER to (r.provider ?: RepoTable.DASH),
         RepoColumn.VISIBILITY to RepoTable.visibility(r.isPrivate, stringResource(R.string.repo_vis_pvt), stringResource(R.string.repo_vis_pub)),
+        RepoColumn.LFS to RepoTable.lfs(r.lfs, stringResource(R.string.repo_lfs_lfs), stringResource(R.string.repo_lfs_normal)),
         RepoColumn.SIZE_MAIN to RepoTable.size(r.sizeMainBytes),
         RepoColumn.SIZE_TOTAL to RepoTable.size(r.sizeTotalBytes),
         RepoColumn.SIZE_DISK to RepoTable.size(r.sizeDiskBytes),
@@ -87,6 +93,16 @@ internal fun RepoCells(r: RepoTableRow) {
     texts.forEach { (c, t) ->
         Text(t, repoCellModifier(c), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, textAlign = TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+}
+
+/** #1238 the leftmost cell: the status icon; a tap on it (not on the row) opens the repository's full-screen status window. */
+@Composable
+internal fun RepoStatusCell(light: StatusLight.State, name: String, onOpen: () -> Unit) {
+    Box(
+        repoCellModifier(RepoColumn.STATUS).heightIn(min = DriveMetrics.tap).testTag(DriveTags.SYNC_GIT_STATUS_CELL)
+            .clickable(onClickLabel = stringResource(R.string.repo_status_open), onClick = onOpen),
+        contentAlignment = Alignment.Center,
+    ) { StatusDot(light, name) }
 }
 
 @Composable

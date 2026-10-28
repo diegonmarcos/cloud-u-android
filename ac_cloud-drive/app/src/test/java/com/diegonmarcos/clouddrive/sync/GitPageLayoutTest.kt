@@ -109,4 +109,39 @@ class GitPageLayoutTest {
         assertTrue(tableUi.contains("RepoColumn.SIZE_DISK to RepoTable.size(r.sizeDiskBytes)"))
         assertTrue(src.contains("diskSizes[File(it.path).absolutePath]?.bytes"))
     }
+
+    private val window = File(root, "app/src/main/java/com/diegonmarcos/clouddrive/sync/RepoStatusWindow.kt").readText()
+    private val strings = File(root, "app/src/main/res/values/strings.xml").readText()
+    private val rowFn = src.substring(src.indexOf("private fun GitRepoRow("), src.indexOf("private fun lightOf("))
+
+    @Test fun `#1238 the row has the status icon cell first, no GitHub or Not Cloned text and no Clone button`() {
+        assertTrue("the status cell comes before the name column", rowFn.indexOf("RepoStatusCell(light, name, onOpenStatus)") in 0 until rowFn.indexOf("Column(Modifier.width(DriveMetrics.tableName))"))
+        assertFalse("no Not cloned text under the row", rowFn.contains("git_not_cloned"))
+        assertFalse("the listing label (GitHub) is not drawn under the row", rowFn.contains("source: String") || rowFn.contains("Text(source"))
+        assertFalse("the Clone button left the row", rowFn.contains("sync_clone_into_store") || rowFn.contains("onClone"))
+        assertFalse("the dot is no longer inside the name cell", rowFn.contains("StatusDot("))
+        assertFalse("the Not cloned string is gone", strings.contains("name=\"git_not_cloned\""))
+        assertTrue(src.contains("onOpenStatus = { statusFor = e.key }"))
+        assertTrue(tableUi.contains("fun RepoStatusCell(") && tableUi.contains("DriveTags.SYNC_GIT_STATUS_CELL"))
+    }
+
+    @Test fun `#1238 the LFS column is declared, labelled, printed from the registry and never hardcoded`() {
+        assertTrue(tableUi.contains("RepoColumn.LFS -> R.string.repo_col_lfs"))
+        assertTrue(tableUi.contains("RepoColumn.LFS to RepoTable.lfs(r.lfs"))
+        assertTrue("the row reads the registry flag", src.contains("Declarations.repoSot.lfsOf(name)"))
+        val vis = tableUi.indexOf("RepoColumn.VISIBILITY to"); val lfs = tableUi.indexOf("RepoColumn.LFS to")
+        assertTrue("LFS is the cell right after Pvt/Pub", vis in 0 until lfs && tableUi.substring(vis, lfs).lines().size == 2)
+        for (f in listOf(src, tableUi, window)) assertFalse("no repo name is hardcoded as LFS", f.contains("cloud_db_LFS"))
+    }
+
+    @Test fun `#1238 the status window is full screen, shows what the app knows, and holds Clone repo as its last section`() {
+        assertTrue(window.contains("usePlatformDefaultWidth = false") && window.contains("fillMaxSize()") && window.contains("DriveTags.SYNC_GIT_STATUS_WINDOW"))
+        for (needle in listOf("RepoStatusBlock(", "R.string.repo_meta_k_path", "R.string.repo_meta_k_remote", "R.string.repo_meta_k_last_sync", "R.string.repo_meta_k_lfs", "R.string.repo_meta_k_visibility", "R.string.repo_meta_k_upstream", "RepoStatus.block(")) assertTrue(needle, window.contains(needle))
+        val actions = window.indexOf("R.string.repo_status_window_actions")
+        assertTrue("Clone is after the metadata table", window.indexOf("RepoMetaTable(") in 0 until window.indexOf("R.string.sync_clone_into_store"))
+        assertTrue("Clone is in the actions section, the last one", actions in 0 until window.indexOf("R.string.sync_clone_into_store"))
+        assertTrue(window.contains("RepoStatus.cloneAction(repo != null, cloning)") && window.contains("DriveTags.SYNC_GIT_STATUS_CLONE"))
+        assertTrue("the screen shows the window for the tapped row and passes the row's own clone", src.contains("RepoStatusWindow(") && src.contains("onClone = e.onClone, onClose = { statusFor = \"\" }"))
+        assertFalse("no hardcoded dp in the window", Regex("\\d\\.dp").containsMatchIn(window))
+    }
 }

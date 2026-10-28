@@ -40,7 +40,8 @@ class RepoSotTest {
             "name" to r["name"]!!, "github" to JsonPrimitive(github),
             "private" to JsonPrimitive(r["private"]?.jsonPrimitive?.boolean == true),
             "pending" to JsonPrimitive(r["status"]?.jsonPrimitive?.content == "pending_creation"),
-            "renamed_from" to (r["renamed_from"] ?: JsonArray(emptyList()))))
+            "renamed_from" to (r["renamed_from"] ?: JsonArray(emptyList())),
+            "lfs" to JsonPrimitive(r["lfs"]?.jsonPrimitive?.boolean == true)))
     }).toString()
 
     private val decl = Declarations.parseRepoSot(baked())
@@ -98,6 +99,19 @@ class RepoSotTest {
         assertEquals("front-diegonmarcos", family.repos.first { it.name == "diegonmarcos.github.io" }.renamedFrom.single())
         assertTrue("cloud-mobile is not a repository", sot["repos"]!!.jsonArray.none { it.jsonObject["name"]!!.jsonPrimitive.content == "cloud-mobile" })
         assertTrue(sot["renames"]!!.jsonArray.any { val o = it.jsonObject; o["from"]!!.jsonPrimitive.content == "cloud-mobile" && o["to"]!!.jsonPrimitive.content == "cloud-superapp" })
+    }
+
+    @Test fun lfsComesFromTheRegistryFieldNeverFromKotlin() {
+        // #1238 the LFS | Normal column: the registry's declarative `lfs: true`, read through the baked copy.
+        assertEquals("cloud_db_LFS is the LFS repository", true, decl.lfsOf("cloud_db_LFS"))
+        val declared = sot["repos"]!!.jsonArray.map { it.jsonObject }
+        assertTrue("the registry declares at least one lfs repo", declared.any { it["lfs"]?.jsonPrimitive?.boolean == true })
+        for (r in declared) {
+            val github = r["url"]!!.jsonPrimitive.content.substringAfterLast('/').substringAfterLast(':').removeSuffix(".git")
+            assertEquals("$github: lfs is exactly the registry's flag (absent = normal)", r["lfs"]?.jsonPrimitive?.boolean == true, decl.lfsOf(github))
+        }
+        assertEquals("a repository the registry does not list is unknown, not normal", null, decl.lfsOf("no-such-repo-in-the-registry"))
+        assertEquals("a registry without the field parses as normal", false, Declarations.parseRepoSot("""[{"name":"x","github":"x","private":false,"pending":false}]""").lfsOf("x"))
     }
 
     @Test fun blankAndBrokenRegistryParseToEmptyAndListNothing() {

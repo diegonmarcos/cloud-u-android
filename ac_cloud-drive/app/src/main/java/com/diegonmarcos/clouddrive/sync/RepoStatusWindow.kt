@@ -1,0 +1,114 @@
+package com.diegonmarcos.clouddrive.sync
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
+import com.diegonmarcos.clouddrive.ui.DriveTags
+import com.diegonmarcos.clouddrive.ui.Pill
+import com.diegonmarcos.clouddrive.ui.StatusDot
+import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
+import java.text.DateFormat
+import java.util.Date
+
+@Composable
+private fun kindText(k: RepoStatus.Kind): String = stringResource(when (k) {
+    RepoStatus.Kind.NOT_CLONED -> R.string.repo_kind_not_cloned
+    RepoStatus.Kind.READING -> R.string.repo_kind_reading
+    RepoStatus.Kind.MISSING -> R.string.repo_kind_missing
+    RepoStatus.Kind.ERROR -> R.string.repo_kind_error
+    RepoStatus.Kind.CONFLICT -> R.string.repo_kind_conflict
+    RepoStatus.Kind.DIRTY -> R.string.repo_kind_dirty
+    RepoStatus.Kind.BEHIND -> R.string.repo_kind_behind
+    RepoStatus.Kind.AHEAD -> R.string.repo_kind_ahead
+    RepoStatus.Kind.CLEAN -> R.string.repo_kind_clean
+})
+
+/**
+ * #1238 THE FULL-SCREEN STATUS WINDOW of one repository, opened by a tap on the leftmost status icon of its table row.
+ * Everything in it is a fact the app already holds (the clone registry, the status reader's glance, the cached remote
+ * stats, the registry's declarative flags); nothing is invented. Sections, top to bottom: the state, the STATUS block
+ * (cloned, branch, dirty, ahead/behind, unpushed, last fetch, last error), the metadata table (path, remote URL, last sync,
+ * LFS, visibility, sizes) and, LAST, the actions: the Clone repo button that used to sit in the table row.
+ */
+@Composable
+internal fun RepoStatusWindow(
+    name: String,
+    owner: String,
+    row: RepoTableRow,
+    repo: ManagedRepo?,
+    glance: GitSyncCoordinator.Glance?,
+    cloneUrl: String,
+    remote: RepoRemoteStats.Stats?,
+    cloning: Boolean,
+    fmt: DateFormat,
+    onClone: () -> Unit,
+    onClose: () -> Unit,
+) {
+    val kind = RepoStatus.kindOf(repo != null, glance)
+    val block = RepoStatus.block(repo != null, glance)
+    val unknown = stringResource(R.string.repo_unknown)
+    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Surface(Modifier.fillMaxSize().testTag(DriveTags.SYNC_GIT_STATUS_WINDOW), color = MaterialTheme.colorScheme.background) {
+            Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = DriveMetrics.sectionInset)) {
+                Row(Modifier.fillMaxWidth().padding(vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
+                    StatusDot(RepoStatus.light(kind), name)
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.repo_status_window_title), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Pill(stringResource(R.string.repo_status_window_close), onClose)
+                }
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
+                    Text(stringResource(R.string.repo_status_window_state, kindText(kind)), style = MaterialTheme.typography.bodyMedium)
+                    RepoStatusBlock(block, fmt)
+                    RepoMetaTable(listOf(
+                        stringResource(R.string.repo_meta_k_name) to name,
+                        stringResource(R.string.repo_meta_k_owner) to owner,
+                        stringResource(R.string.repo_meta_k_path) to (repo?.path ?: RepoTable.DASH),
+                        stringResource(R.string.repo_meta_k_branch) to (block.branch ?: RepoTable.DASH),
+                        stringResource(R.string.repo_meta_k_upstream) to (block.upstream ?: RepoTable.DASH),
+                        stringResource(R.string.repo_meta_k_last_sync) to
+                            if (repo != null && repo.lastSyncEpochSeconds > 0) fmt.format(Date(repo.lastSyncEpochSeconds * 1000)) + " · " + repo.lastSyncSummary else stringResource(R.string.sync_never),
+                        stringResource(R.string.repo_meta_k_lfs) to RepoTable.lfs(row.lfs, stringResource(R.string.repo_lfs_lfs), stringResource(R.string.repo_lfs_normal)),
+                        stringResource(R.string.repo_meta_k_visibility) to RepoTable.visibility(row.isPrivate, stringResource(R.string.repo_vis_pvt), stringResource(R.string.repo_vis_pub)),
+                        stringResource(R.string.repo_meta_k_provider) to (row.provider ?: RepoTable.DASH),
+                        stringResource(R.string.repo_meta_k_remote) to (repo?.remoteUrl?.takeIf { it.isNotBlank() } ?: cloneUrl).ifBlank { stringResource(R.string.git_meta_no_remote) },
+                        stringResource(R.string.repo_meta_k_default_branch) to (remote?.defaultBranch ?: unknown),
+                        stringResource(R.string.repo_meta_k_size) to (RepoTable.size(row.sizeMainBytes) + " / " + RepoTable.size(row.sizeTotalBytes)),
+                        stringResource(R.string.repo_meta_k_size_disk) to RepoTable.size(row.sizeDiskBytes),
+                        stringResource(R.string.repo_meta_k_branches) to RepoTable.count(row.branches),
+                    ))
+                    // LAST SECTION: the actions. Clone repo lives here, not in the table row (#1238).
+                    Text(stringResource(R.string.repo_status_window_actions), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = DriveMetrics.pad))
+                    when (RepoStatus.cloneAction(repo != null, cloning)) {
+                        RepoStatus.CloneAction.CLONE -> Pill(stringResource(R.string.sync_clone_into_store), onClone, modifier = Modifier.testTag(DriveTags.SYNC_GIT_STATUS_CLONE), filled = true)
+                        RepoStatus.CloneAction.CLONING -> Text(stringResource(R.string.git_cloning), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        RepoStatus.CloneAction.NONE -> Text(stringResource(R.string.repo_status_window_cloned_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = DriveMetrics.listBottom))
+                }
+            }
+        }
+    }
+}

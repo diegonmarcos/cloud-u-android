@@ -1,7 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
-/** #1138 the Sync ▸ Git repo table's columns, in display order. */
-enum class RepoColumn { NAME, PROVIDER, VISIBILITY, SIZE_MAIN, SIZE_TOTAL, SIZE_DISK, BRANCHES, DIRTY, AHEAD_BEHIND }
+/** #1138 the Sync ▸ Git repo table's columns, in display order. #1238: STATUS is the leftmost (the status icon, its tap opens the full status window) and LFS follows Pvt/Pub. */
+enum class RepoColumn { STATUS, NAME, PROVIDER, VISIBILITY, LFS, SIZE_MAIN, SIZE_TOTAL, SIZE_DISK, BRANCHES, DIRTY, AHEAD_BEHIND }
 
 /**
  * One table row's facts. A fact the page could not read (not cloned, not fetched yet, no upstream) is
@@ -21,6 +21,10 @@ data class RepoTableRow(
     val provider: String? = null,
     /** #1195 the clone's bytes on this phone's disk (cached walk); null = not cloned / not measured yet. */
     val sizeDiskBytes: Long? = null,
+    /** #1238 the registry's declarative `lfs` flag: true = LFS repository, false = normal, null = the registry does not list it (prints the dash). */
+    val lfs: Boolean? = null,
+    /** #1238 the leftmost column's kind (RepoStatus.kindOf); null = not computed. */
+    val status: RepoStatus.Kind? = null,
 )
 
 /** #1138 the table's pure rules: ranking, sorting, how each cell prints and where its facts come from. */
@@ -33,9 +37,11 @@ object RepoTable {
         if (column == current) column to !ascending else column to true
 
     private fun key(r: RepoTableRow, c: RepoColumn): Comparable<*>? = when (c) {
+        RepoColumn.STATUS -> r.status?.ordinal
         RepoColumn.NAME -> r.name.lowercase()
         RepoColumn.PROVIDER -> r.provider?.lowercase()
         RepoColumn.VISIBILITY -> r.isPrivate?.let { if (it) 1 else 0 }
+        RepoColumn.LFS -> r.lfs?.let { if (it) 1 else 0 }
         RepoColumn.SIZE_MAIN -> r.sizeMainBytes
         RepoColumn.SIZE_TOTAL -> r.sizeTotalBytes
         RepoColumn.SIZE_DISK -> r.sizeDiskBytes
@@ -72,6 +78,8 @@ object RepoTable {
     fun size(bytes: Long?): String = if (bytes == null) DASH else GitRepoScan.humanBytes(bytes)
     fun count(n: Int?): String = n?.toString() ?: DASH
     fun visibility(isPrivate: Boolean?, pvt: String, pub: String): String = when (isPrivate) { null -> DASH; true -> pvt; false -> pub }
+    /** #1238 the LFS | Normal cell: [lfs] is the registry's flag; unknown (not in the registry) prints the dash, never a guess. */
+    fun lfs(lfs: Boolean?, lfsWord: String, normalWord: String): String = when (lfs) { null -> DASH; true -> lfsWord; false -> normalWord }
     fun dirty(files: Int?, yes: String, no: String): String = when {
         files == null -> DASH
         files == 0 -> no
@@ -84,7 +92,7 @@ object RepoTable {
      * glance (the git engine's status, no network) and whether the clone exists. [declaredPrivate] is the
      * listing's flag when there is one; the REST answer fills it for a repo no listing named.
      */
-    fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null, diskBytes: Long? = null): RepoTableRow {
+    fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null, diskBytes: Long? = null, lfs: Boolean? = null): RepoTableRow {
         val local = cloned && glance != null && glance.read && !glance.gone && glance.error == null
         return RepoTableRow(
             name = name,
@@ -98,6 +106,8 @@ object RepoTable {
             provider = provider,
             // A size is only ever shown for a clone that exists; a stale cache entry of a removed clone prints the dash.
             sizeDiskBytes = if (cloned) diskBytes else null,
+            lfs = lfs,
+            status = RepoStatus.kindOf(cloned, glance),
         )
     }
 }
