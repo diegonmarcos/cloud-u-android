@@ -64,10 +64,10 @@ jobs:
           repository: diegonmarcos/cloud-t-infra
           path: .inputs/cloud-infra
 
-      - name: Checkout cloud-me-profiles (linktree input)
+      - name: Checkout cloud-me-pub-profiles-_lnktree (linktree input)
         uses: actions/checkout@v4
         with:
-          repository: diegonmarcos/cloud-me-profiles
+          repository: diegonmarcos/cloud-me-pub-profiles-_lnktree
           path: .inputs/profiles
 
       # regen.sh takes all three inputs as positional args, so it needs no
