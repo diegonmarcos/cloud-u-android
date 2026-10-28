@@ -450,7 +450,18 @@ class Walk:
         for step in list(up) + [pid]:
             if self.open_dropdown() is None:
                 return "the title dropdown did not open (descending to %s)" % pid
-            if not self.pick(step):
+            # the section page behind the crumb can still be drawing (Cloud Search's jobs page on a loaded 2-core emulator): the
+            # dropdown then lists the stale neighbourhood for a moment, so the entry is polled for, not read once
+            picked = self.pick(step)
+            for _ in range(3):
+                if picked:
+                    break
+                self.back_if_dropdown()
+                settle(2.5)
+                if self.open_dropdown() is None:
+                    return "the title dropdown did not open (descending to %s)" % pid
+                picked = self.pick(step)
+            if not picked:
                 self.back_if_dropdown()
                 if not self.strip_tab(step):
                     return "the dropdown lists no entry for page %s (via %s)" % (pid, step)
