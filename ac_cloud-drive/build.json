@@ -743,16 +743,16 @@
             "caption": "cloud-u-linux"
           },
           {
+            "repo": "cloud_db_assets-cdn",
+            "caption": "cloud_db_assets-cdn"
+          },
+          {
             "repo": "diegonmarcos.github.io",
             "caption": "diegonmarcos.github.io"
           },
           {
             "repo": "front",
             "caption": "front"
-          },
-          {
-            "repo": "cloud_db_assets-cdn",
-            "caption": "cloud_db_assets-cdn"
           },
           {
             "repo": "z-archived_front-data",
