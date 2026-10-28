@@ -92,9 +92,9 @@ class RepoSotTest {
     }
 
     @Test fun renamesComeFromTheRegistry() {
-        val front = decl.byGithub("front")!!
-        assertTrue("ffront -> front (#731) is the registry's rename", "ffront" in front.renamedFrom)
-        assertTrue("the drive family carries the same device-side rename", family.renames["ffront"] == "front")
+        val front = decl.byGithub("Projects")!!
+        assertTrue("ffront -> Projects (#731, front renamed Projects #1224) is the registry's rename", "ffront" in front.renamedFrom)
+        assertTrue("the drive family carries the same device-side rename", family.renames["ffront"] == "Projects")
         assertEquals("front-diegonmarcos", family.repos.first { it.name == "diegonmarcos.github.io" }.renamedFrom.single())
         assertTrue("cloud-mobile is not a repository", sot["repos"]!!.jsonArray.none { it.jsonObject["name"]!!.jsonPrimitive.content == "cloud-mobile" })
         assertTrue(sot["renames"]!!.jsonArray.any { val o = it.jsonObject; o["from"]!!.jsonPrimitive.content == "cloud-mobile" && o["to"]!!.jsonPrimitive.content == "cloud-superapp" })

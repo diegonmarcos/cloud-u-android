@@ -109,14 +109,14 @@
    "renamed_from": ["front-diegonmarcos"]
   },
   {
-   "name": "front",
-   "label": "front",
+   "name": "Projects",
+   "label": "Projects",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
    "seed": true,
    "notes": "The fleet's front-end tree. #731 renamed upstream from `ffront` (2026-10-01): `renamed_from` makes the seed worker MOVE a device's git/ffront clone to git/front and repoint its origin, instead of cloning a second copy beside it.",
-   "renamed_from": ["ffront"]
+   "renamed_from": ["ffront", "front"]
   },
   {
    "name": "cloud_db_assets-cdn",

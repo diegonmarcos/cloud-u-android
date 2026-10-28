@@ -15,6 +15,114 @@
   },
   "repos": [
     {
+      "name": "CG",
+      "repo": "diegonmarcos/CG",
+      "private": false,
+      "doc": "Project master for the CG family (CG-circus, CG-galaxy, CG-galaxy-gaia, CG-unity, CG-voxel-rust): its own repos.json subset plus committed symlinks, same model as front, cloud and lecole-42. Created 2026-10-26 (#1204)."
+    },
+    {
+      "name": "CG-circus",
+      "repo": "diegonmarcos/CG-circus",
+      "private": false,
+      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloud-webapps-2 #1204; myAstro moved to cloud-me-profiles #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "CG-galaxy",
+      "repo": "diegonmarcos/CG-galaxy",
+      "private": false,
+      "doc": "Sources of the b_Projects group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "CG-galaxy-gaia",
+      "repo": "diegonmarcos/CG-galaxy-gaia",
+      "private": true,
+      "doc": "Front-end experiment."
+    },
+    {
+      "name": "CG-unity",
+      "repo": "diegonmarcos/CG-unity",
+      "private": true,
+      "doc": "Unity asset pipeline (unity-asset-vm: upkg2gltf, fetch-and-convert) plus its assets. Was front-asset-cdn, the predecessor of front-assets-cdn; renamed 2026-08-18 to match what it actually holds - the CDN itself is front-assets-cdn."
+    },
+    {
+      "name": "CG-voxel-rust",
+      "repo": "diegonmarcos/CG-voxel-rust",
+      "private": false,
+      "doc": "Voxel engine in Rust (vox-rust build plan under docs/)."
+    },
+    {
+      "name": "DeepSc",
+      "repo": "diegonmarcos/DeepSc",
+      "private": false,
+      "doc": "Project master for the DeepSc family (DeepSc-StarkX, DeepSc-X): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "DeepSc-StarkX",
+      "repo": "diegonmarcos/DeepSc-StarkX",
+      "private": false,
+      "doc": "Stark.x company site (published at /stark/), moved from front-endeavours a_Companies/stark (#1224); front-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "DeepSc-X",
+      "repo": "diegonmarcos/DeepSc-X",
+      "private": false,
+      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; the matching front-labtools project c-Stk_DsX/sailytics moves here with the labtools split (#1218). #1224."
+    },
+    {
+      "name": "DuckPeng",
+      "repo": "diegonmarcos/DuckPeng",
+      "private": false,
+      "doc": "Project master for the DuckPeng family: the CG hub, the cloud hub and DuckPeng-LeafY. Its own repos.json subset plus committed symlinks. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "DuckPeng-LeafY",
+      "repo": "diegonmarcos/DuckPeng-LeafY",
+      "private": false,
+      "doc": "Leaf.y company site (published at /leafy/), moved from front-endeavours a_Companies/leafy (#1224); front-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "Fin-CM",
+      "repo": "diegonmarcos/Fin-CM",
+      "private": false,
+      "doc": "Project master for the Fin-CM family (Fin-CM-NexusZ, Fin-CM-mqpm, Fin-CM-Blmbrg): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "Fin-CM-Blmbrg",
+      "repo": "diegonmarcos/Fin-CM-Blmbrg",
+      "private": false,
+      "doc": "Blmbrg (fin terminal, market watch, news): README and deployer wiring skeleton; the matching front-labtools projects b-Nxs_Blmmbrg/* move here with the labtools split (#1218). #1224."
+    },
+    {
+      "name": "Fin-CM-NexusZ",
+      "repo": "diegonmarcos/Fin-CM-NexusZ",
+      "private": false,
+      "doc": "Nexus.z company site (published at /nexus/), moved from front-endeavours a_Companies/nexus (#1224); front-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "Fin-CM-mqpm",
+      "repo": "diegonmarcos/Fin-CM-mqpm",
+      "private": false,
+      "doc": "MQPM / StochBates: README and deployer wiring skeleton, no content yet (#1224)."
+    },
+    {
+      "name": "Projects",
+      "repo": "diegonmarcos/Projects",
+      "private": false,
+      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume."
+    },
+    {
+      "name": "Projects-endeavours",
+      "repo": "diegonmarcos/Projects-endeavours",
+      "private": false,
+      "doc": "Sources of the a_Companies group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "Projects-labtools",
+      "repo": "diegonmarcos/Projects-labtools",
+      "private": false,
+      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_CG-Zirkus, a-Lfy_C3, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX."
+    },
+    {
       "name": "cloud",
       "repo": "diegonmarcos/cloud",
       "private": false,
@@ -43,6 +151,18 @@
       "repo": "diegonmarcos/cloud-me-notes",
       "private": true,
       "doc": "Personal notes (Obsidian vault)."
+    },
+    {
+      "name": "cloud-me-others",
+      "repo": "diegonmarcos/cloud-me-others",
+      "private": false,
+      "doc": "Sources of the b_MyData group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloud-me-profiles",
+      "repo": "diegonmarcos/cloud-me-profiles",
+      "private": false,
+      "doc": "Sources of the b_Profiles group (plus Lnktree, moved in from front-linktree #1217, and c_Circus/myAstro, moved in from CG-circus #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "cloud-me_cgc",
@@ -99,16 +219,82 @@
       "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
     },
     {
+      "name": "cloud-webapps-2",
+      "repo": "diegonmarcos/cloud-webapps-2",
+      "private": false,
+      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
       "name": "cloud_db_LFS",
       "repo": "diegonmarcos/cloud_db_LFS",
       "private": true,
       "doc": "Large binary artefacts (git-lfs) for cloud-me-data-pvt (was cloud-data)."
     },
     {
+      "name": "cloud_db_assets-cdn",
+      "repo": "diegonmarcos/cloud_db_assets-cdn",
+      "private": false,
+      "doc": "Static assets served from the CDN. Renamed from front-assets-cdn 2026-10-27 (#1217)."
+    },
+    {
       "name": "cloud_db_infra-ops-obsv_configs-sync",
       "repo": "diegonmarcos/cloud_db_infra-ops-obsv_configs-sync",
       "private": false,
       "doc": "Configs-sync engine data repo: the consolidated fleet config SoT (from 1_cloud-configs) served by c3-infra-api/mcp. Created 2026-10-25 (#1197 programme); public."
+    },
+    {
+      "name": "front-diegonmarcos",
+      "repo": "diegonmarcos/diegonmarcos.github.io",
+      "private": false,
+      "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud."
+    },
+    {
+      "name": "z-archived_front-data",
+      "repo": "diegonmarcos/z-archived_front-data",
+      "private": false,
+      "doc": "Front-end content and data. Renamed z-archived_front-data 2026-10-23; to be archived on GitHub (owner click)."
+    },
+    {
+      "name": "z-archived_front-feeds",
+      "repo": "diegonmarcos/z-archived_front-feeds",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into CG-circus; renamed z-archived_front-feeds, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-individual",
+      "repo": "diegonmarcos/z-archived_front-individual",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-profiles (b_Profiles); renamed z-archived_front-individual, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-linktree",
+      "repo": "diegonmarcos/z-archived_front-linktree",
+      "private": false,
+      "doc": "Superseded 2026-10-27 (#1217): linktree sources moved into cloud-me-profiles (Lnktree); renamed z-archived_front-linktree. Originally split from diegonmarcos.github.io (#1072)."
+    },
+    {
+      "name": "z-archived_front-media",
+      "repo": "diegonmarcos/z-archived_front-media",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-profiles (b_Profiles); renamed z-archived_front-media, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-others",
+      "repo": "diegonmarcos/z-archived_front-others",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into CG-circus; renamed z-archived_front-others, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-projects",
+      "repo": "diegonmarcos/z-archived_front-projects",
+      "private": false,
+      "doc": "Superseded 2026-10-24 by the 12 per-group front repos (#1072); renamed z-archived_front-projects, to be archived on GitHub (owner click)."
+    },
+    {
+      "name": "z-archived_front-warehouse",
+      "repo": "diegonmarcos/z-archived_front-warehouse",
+      "private": false,
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into front-endeavours; renamed z-archived_front-warehouse, to be archived on GitHub (owner click)"
     }
   ],
   "_doc_hubs": "cloud and front are the HUB repos — the symlink farms. They are mirrored FIRST-CLASS, not skipped: their committed symlinks are the navigation layer, and because every member is a sibling here exactly as it is in ~/git, a link like cloud/cloud-infra -> ../cloud-infra resolves INSIDE the mirror. That is what makes this a usable copy of the workspace rather than a pile of unrelated directories. A link to something not mirrored (cloud-vault, cloud-u-android) dangles, which the farms' own doc already treats as meaning 'a repo you have not cloned yet'."

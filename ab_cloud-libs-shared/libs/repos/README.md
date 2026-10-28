@@ -37,7 +37,7 @@ tree.
 `repos.json` is derived from the one registry, `git-repos-master/repos.json`,
 vendored byte-for-byte as `repos.sot.json` (refreshed by git-repos-master's
 `./clone.sh --sync`): every non-`pending_creation` entry of the `a_cloud` and
-`b_front` groups, minus `exclude`. Regenerate with `./sync.sh --refresh-list`;
+`b_front`/`b_projects` groups, minus `exclude`. Regenerate with `./sync.sh --refresh-list`;
 `./sync.sh --check-list` fails when `repos.json` is stale (#1073).
 
 In the registry `name` is the **local directory** and `url` is the **GitHub

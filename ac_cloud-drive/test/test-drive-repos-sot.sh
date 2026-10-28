@@ -37,7 +37,7 @@ LIBS="$ROOT/ab_cloud-libs-shared/libs/repos"
 python3 - "$LIBS" <<'PY' && ok "libs:repos repos.json is derived from repos.sot.json (no pending, none missing)" || bad "libs:repos repos.json is stale vs repos.sot.json (run libs/repos/sync.sh --refresh-list)"
 import json,sys
 d=sys.argv[1]; reg=json.load(open(d+'/repos.sot.json')); lst=json.load(open(d+'/repos.json'))
-ex=set(lst['exclude']); want=sorted(r['name'] for r in reg['repos'] if r.get('group') in ('a_cloud','b_front') and r.get('status')!='pending_creation' and r['name'] not in ex)
+ex=set(lst['exclude']); want=sorted(r['name'] for r in reg['repos'] if r.get('group') in ('a_cloud','b_front','b_projects') and r.get('status')!='pending_creation' and r['name'] not in ex)
 have=sorted(r['name'] for r in lst['repos'])
 if want!=have: print('want-have',sorted(set(want)-set(have)),'have-want',sorted(set(have)-set(want))); sys.exit(1)
 PY

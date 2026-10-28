@@ -84,7 +84,7 @@ assert reg.get('_schema')=='cloud-repos/v1', 'repos.sot.json is not cloud-repos/
 ex=set(d['exclude'])
 out=[]
 for r in sorted(reg['repos'], key=lambda r:r['name']):
-    if r.get('group') not in ('a_cloud','b_front'): continue   # the cloud + front projects, as the two farms were
+    if r.get('group') not in ('a_cloud','b_front','b_projects'): continue   # the cloud + front projects, as the two farms were
     if r.get('status')=='pending_creation' or r['name'] in ex: continue
     out.append(collections.OrderedDict([
         ("name",r['name']),
