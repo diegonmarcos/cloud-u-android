@@ -75,6 +75,7 @@ import json, sys
 d = json.load(open(sys.argv[1]))
 d["exempt"] = {"ac_cloud-old": "Batch Z (synthetic): this fixture app has not migrated yet."}
 d["variants"] = {"_doc": "synthetic: no app is a declared exception until a test makes it one"}
+d["duplicate_page_ids"] = {"_doc": "synthetic: the fixture fleet has no app with duplicate page ids (the real ledger names real apps, N12 rejects names the tree lacks)"}
 d["web"] = dict(d["web"], apps={})
 json.dump(d, open(sys.argv[2], "w"))
 PY
