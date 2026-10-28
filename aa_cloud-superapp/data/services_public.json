@@ -445,7 +445,7 @@
     "vm": "oci-A1-f_0",
     "public_url": "vault.diegonmarcos.com",
     "auth": "none",
-    "private_dns": "vaultwarden.app:8880",
+    "private_dns": "vaultwarden:8880",
     "port": 8880,
     "category": "mic"
   }

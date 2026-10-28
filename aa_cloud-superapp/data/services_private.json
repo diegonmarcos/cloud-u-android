@@ -10,6 +10,16 @@
     "db_engine": null
   },
   {
+    "name": "embeddings-api",
+    "service": "embeddings-api",
+    "vm": "oci-A1-f_0",
+    "private_dns": "embeddings-api.mesh.diegonmarcos.com:7997",
+    "port": 7997,
+    "protocol": "http",
+    "category": "agi",
+    "db_engine": null
+  },
+  {
     "name": "jev-sidecar",
     "service": "jev-sidecar",
     "vm": "oci-A1-f_0",
@@ -197,6 +207,16 @@
     "port": null,
     "protocol": "tcp",
     "category": "net",
+    "db_engine": null
+  },
+  {
+    "name": "configs-sync",
+    "service": "configs-sync",
+    "vm": "oci-A1-f_0",
+    "private_dns": "configs-sync",
+    "port": null,
+    "protocol": "none",
+    "category": "obs",
     "db_engine": null
   },
   {
