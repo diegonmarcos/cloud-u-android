@@ -51,7 +51,7 @@
   },
   "diagnostics": {
     "_doc": "Same shape as ac_cloud-ide::diagnostics. Baked into BuildConfig.LOG_SINK_URL / LOG_SINK_STREAM once the fork's build.gradle is patched to read it (not done yet — no patches/ series exists). EMPTY behavior until wired: cloud push disabled. Data-driven — never hardcode in Kotlin.",
-    "log_sink_url": "https://c3-pub.diegonmarcos.com/analytics-api/openobserve",
+    "log_sink_url": "https://api.diegonmarcos.com/pub/analytics/openobserve",
     "log_sink_stream": "cloud-gallery",
     "enabled": true
   },
