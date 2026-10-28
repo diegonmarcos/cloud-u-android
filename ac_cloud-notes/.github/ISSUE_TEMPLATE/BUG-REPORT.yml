@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to fill out this bug report!
-        Check out this [link](https://github.com/diegonmarcos/cloud-u-android/blob/canary/docs/issue-triaging.md)
+        Check out this [link](https://github.com/diegonmarcos/cloudy-u-android/blob/canary/docs/issue-triaging.md)
         to learn how we manage issues and when your issue will be processed.
   - type: textarea
     id: what-happened

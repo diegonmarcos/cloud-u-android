@@ -464,7 +464,7 @@ tasks.register('fetchFleetTools') {
                 return
             }
             def p = ['gh', 'release', 'download', 'my-watchdog-latest',
-                     '--repo', 'diegonmarcos/cloud-u-linux',
+                     '--repo', 'diegonmarcos/cloudy-u-linux',
                      '--pattern', asset, '--output', out.absolutePath, '--clobber'].execute()
             p.waitForProcessOutput(System.out, System.err)
             if (p.exitValue() != 0 || !out.exists()) {

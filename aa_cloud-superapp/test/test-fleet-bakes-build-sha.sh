@@ -176,7 +176,7 @@ _mut "an existing app (nav) stops baking" ac_cloud-nav/app/build.gradle \
 _mut "the sidecar back to HEAD alone" 1_cicd/src/scripts/cloud-android-publish-gate.sh \
      'COMMIT="${GITHUB_SHA:-$(git -C "$ROOT" rev-parse HEAD)}"' 'COMMIT="$(git -C "$ROOT" rev-parse HEAD)"'
 _mut "a new fleet app nobody wired" aa_cloud-superapp/data/constellation-fleet.json \
-     '"repo_url":"https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-calc"' '"repo_url":"https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-nonexistent"'
+     '"repo_url":"https://github.com/diegonmarcos/cloudy-u-android/tree/main/ac_cloud-calc"' '"repo_url":"https://github.com/diegonmarcos/cloudy-u-android/tree/main/ac_cloud-nonexistent"'
 _mut "c3-webserver (tauri) drops the versionName suffix" ac_cloud-c3-webserver/src-tauri/gen/android/app/build.gradle.kts \
      ' (sha-$gitShortSha)"' '"'
 _mut "chat (react-native) GIT_SHORT_SHA gone" ac_cloud-chat/android/app/build.gradle \

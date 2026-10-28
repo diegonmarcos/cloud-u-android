@@ -416,7 +416,7 @@
           "licence": "MIT (fleet shared libs)"
         }
       ],
-      "source": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-code"
+      "source": "https://github.com/diegonmarcos/cloudy-u-android/tree/main/ac_cloud-code"
     },
     "design": "ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai-design.json",
     "tasks": "ab_cloud-libs-shared/libs/ai/src/main/assets/ai/ai-tasks.json",

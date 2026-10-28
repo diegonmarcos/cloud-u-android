@@ -25,7 +25,7 @@
 
 Cloud Notes requires every contributor to sign the [Contributor License Agreement](../.github/CLA.md) before a pull request can be **merged**. The `license/cla` status check on your PR stays red — and blocks the merge — until every committer on the PR has signed. Signing takes less than a minute, so do it before (or right after) opening your first PR:
 
-1. Open **<https://cla-assistant.io/diegonmarcos/cloud-u-android>**.
+1. Open **<https://cla-assistant.io/diegonmarcos/cloudy-u-android>**.
 2. Sign in with your GitHub account and agree.
 
 If you opened your PR before signing, the CLA-assistant bot will have left a comment on it with a signing link. After signing, click the **recheck** link in that same comment (or push a new commit) to refresh the check.
@@ -76,7 +76,7 @@ Install the Rust toolchain via [rustup](https://rustup.rs/). The required versio
 #### Linux & macOS
 
 ```sh
-git clone https://github.com/diegonmarcos/cloud-u-android
+git clone https://github.com/diegonmarcos/cloudy-u-android
 cd Cloud Notes
 ```
 
@@ -92,7 +92,7 @@ Once Developer Mode is enabled, execute the following command with administrator
 # Enable symbolic links
 git config --global core.symlinks true
 # Clone the repository
-git clone https://github.com/diegonmarcos/cloud-u-android
+git clone https://github.com/diegonmarcos/cloudy-u-android
 ```
 
 ### Install dependencies
@@ -111,7 +111,7 @@ Run the following script. It will build the native module at [`packages/frontend
 yarn cloud-notes @cloud-notes/native build
 ```
 
-> Note: use `strip` from system instead of `binutils` if you are running macOS. [See problem here](https://github.com/diegonmarcos/cloud-u-android/discussions/2840)
+> Note: use `strip` from system instead of `binutils` if you are running macOS. [See problem here](https://github.com/diegonmarcos/cloudy-u-android/discussions/2840)
 
 ### Build Server Dependencies
 
@@ -192,7 +192,7 @@ yarn typecheck
 1. Make sure you have [signed the CLA](#sign-the-cla-first).
 2. Fork the repository and create your branch from **`canary`** (the default development branch).
 3. Make your changes. Add or update tests where it makes sense, and run `yarn lint`, `yarn typecheck` and the relevant test suites locally.
-4. Open the PR against the `canary` branch of `diegonmarcos/cloud-u-android`.
+4. Open the PR against the `canary` branch of `diegonmarcos/cloudy-u-android`.
 5. Give the PR a title that follows [Conventional Commits](https://www.conventionalcommits.org/) — this is enforced by the `PR Title Lint` CI check:
 
    ```text
@@ -215,7 +215,7 @@ yarn typecheck
 ## Troubleshooting
 
 - **`yarn install` fails or complains about the Node/Yarn version** — check that `node -v` matches [`.nvmrc`](../.nvmrc) (`fnm use` / `nvm use`) and that Corepack is enabled (`yarn -v` should print `4.x`, not `1.x`).
-- **Native module fails to build on macOS** — make sure `strip` is the system one, not the one from `binutils` ([details](https://github.com/diegonmarcos/cloud-u-android/discussions/2840)).
+- **Native module fails to build on macOS** — make sure `strip` is the system one, not the one from `binutils` ([details](https://github.com/diegonmarcos/cloudy-u-android/discussions/2840)).
 - **`EPERM: operation not permitted, symlink` on Windows** — enable Developer Mode and symlinks before cloning; see [Windows](#windows).
 - **App fails to start after pulling the latest `canary`** — dependencies or Rust bindings may have changed: re-run `yarn install` and `yarn cloud-notes @cloud-notes/native build`.
 - **Playwright can't find browsers** — run `npx playwright install`.

@@ -3022,7 +3022,7 @@
    "licence": "LicenseRef-NoLicenseGranted",
    "licence_source": "licenses/curated.json"
   },
-  "fetched:diegonmarcos/cloud-u-linux:da_dtk/commands/provision/fish/fish-functions/fish_greeting.fish": {
+  "fetched:diegonmarcos/cloudy-u-linux:da_dtk/commands/provision/fish/fish-functions/fish_greeting.fish": {
    "kind": "fetched",
    "declared_in": [
     "ab_cloud-terminal-store/store.json"
@@ -3032,7 +3032,7 @@
    "licence": "PolyForm-Noncommercial-1.0.0",
    "licence_source": "ab_cloud-terminal-store/store.json::linux_tools.licence (holder Diego Nepomuceno Marcos)"
   },
-  "fetched:diegonmarcos/cloud-u-linux:da_linux-account/linux-account": {
+  "fetched:diegonmarcos/cloudy-u-linux:da_linux-account/linux-account": {
    "kind": "fetched",
    "declared_in": [
     "ab_cloud-terminal-store/store.json"
@@ -3042,7 +3042,7 @@
    "licence": "PolyForm-Noncommercial-1.0.0",
    "licence_source": "ab_cloud-terminal-store/store.json::linux_tools.licence (holder Diego Nepomuceno Marcos)"
   },
-  "fetched:diegonmarcos/cloud-u-linux:da_linux-store/linux-store": {
+  "fetched:diegonmarcos/cloudy-u-linux:da_linux-store/linux-store": {
    "kind": "fetched",
    "declared_in": [
     "ab_cloud-terminal-store/store.json"

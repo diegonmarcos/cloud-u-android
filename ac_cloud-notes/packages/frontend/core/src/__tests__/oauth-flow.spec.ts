@@ -53,7 +53,7 @@ describe('oauth flow mode', () => {
   test('wraps external redirects with redirect-proxy', () => {
     expect(
       resolveOAuthRedirect(
-        'https://github.com/diegonmarcos/cloud-u-android',
+        'https://github.com/diegonmarcos/cloudy-u-android',
         'https://notes.diegonmarcos.com'
       )
     ).toBe(

@@ -175,7 +175,7 @@ TARGETS = {
     # still exists in paca, so restoring it is a tile, not a board.
     "lf-dp-cloud-c3": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
     # Paca was dropped (#361): the six tiles without a board open their project's GitHub repo.
-    "lf-dp-cloud-apk": "https://github.com/diegonmarcos/cloud-u-android",
+    "lf-dp-cloud-apk": "https://github.com/diegonmarcos/cloudy-u-android",
     "nx-cm-mqpm": "https://github.com/diegonmarcos/Fin-CM-mqpm",
     "lf-cg-zirkus": "https://github.com/diegonmarcos/CG-circus",
     "lf-cg-galaxy": "https://github.com/diegonmarcos/CG-galaxy",

@@ -74,7 +74,7 @@ front:
 worker:
   replicaCount: 1
   image:
-    repository: ghcr.io/diegonmarcos/cloud-u-android
+    repository: ghcr.io/diegonmarcos/cloudy-u-android
     tag: ''
   env: 'production'
   nodeOptions: '--max-old-space-size=3072'

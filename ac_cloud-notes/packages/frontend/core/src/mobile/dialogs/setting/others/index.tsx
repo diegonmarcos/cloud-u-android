@@ -14,7 +14,7 @@ export const OthersGroup = () => {
       />
       <RowLayout
         label={t['com.cloud-notes.mobile.setting.others.github']()}
-        href="https://github.com/diegonmarcos/cloud-u-android"
+        href="https://github.com/diegonmarcos/cloudy-u-android"
       />
 
       <RowLayout

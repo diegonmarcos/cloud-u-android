@@ -71,7 +71,7 @@ No keystore is cached or generated in CI. Missing either secret → the build fa
 > 1. Mint at `github.com/settings/personal-access-tokens/new` — owner
 >    `diegonmarcos`, repository access **only** `diegonmarcos/cloud-me-pvt-vault`,
 >    permission **Contents: Read**.
-> 2. `gh secret set ANDROID_SIGNING_VAULT_TOKEN -R diegonmarcos/cloud-u-android`
+> 2. `gh secret set ANDROID_SIGNING_VAULT_TOKEN -R diegonmarcos/cloudy-u-android`
 > 3. Re-run any ship workflow to confirm.
 >
 > A read-only **deploy key** on cloud-vault is the other correct option, but it
@@ -83,7 +83,7 @@ No keystore is cached or generated in CI. Missing either secret → the build fa
 > `ea_*` app trees out of `cloud-infra-desktop` carried the `ship-cloud-*.yml` workflows
 > but *not* these two secrets, so every ship run failed with
 > `Input required and not supplied: token` until they were re-set on
-> `diegonmarcos/cloud-u-android`. Secrets are write-only — they cannot be copied
+> `diegonmarcos/cloudy-u-android`. Secrets are write-only — they cannot be copied
 > between repos, only re-supplied. `cloud-infra-desktop` keeps its own copies because
 > `ship-cloud-infra-desktop-termux-boot.yml` still signs with the same key.
 

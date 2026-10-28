@@ -127,7 +127,7 @@ mutate "the fleet pin is a branch, not a commit" \
 mutate "the artifact asset name does not address its content (#618)" \
     'd["artifact"]["asset"]="cloud-rootfs-{abi}.tar.zst"'
 mutate "the artifact url is written out instead of derived (#618)" \
-    'd["artifact"]["url"]="https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/x.tar.zst"'
+    'd["artifact"]["url"]="https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/x.tar.zst"'
 mutate "rootfs.json is not in the artifact identity (#618)" \
     'd["artifact"]["identity_files"]=[p for p in d["artifact"]["identity_files"] if not p.endswith("rootfs.json")]'
 mutate "#737: store.json (the toolset) is not in the artifact identity" \

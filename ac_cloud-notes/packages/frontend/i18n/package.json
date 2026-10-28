@@ -15,7 +15,7 @@
   "keywords": [],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/diegonmarcos/cloud-u-android.git"
+    "url": "git+https://github.com/diegonmarcos/cloudy-u-android.git"
   },
   "dependencies": {
     "@cloud-notes/debug": "workspace:*",

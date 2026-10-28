@@ -10,7 +10,7 @@ export const relatedLinks = [
   {
     icon: <GithubIcon />,
     title: 'GitHub',
-    link: 'https://github.com/diegonmarcos/cloud-u-android',
+    link: 'https://github.com/diegonmarcos/cloudy-u-android',
   },
   {
     icon: <TwitterIcon />,

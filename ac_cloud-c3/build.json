@@ -401,7 +401,7 @@
           "missing": ["traffic split between versions", "error rate before and after a deploy"]
         }
       ],
-      "release": {"owner": "diegonmarcos", "repo": "cloud-u-android", "workflow": "Ship"}
+      "release": {"owner": "diegonmarcos", "repo": "cloudy-u-android", "workflow": "Ship"}
     },
     "apps_page": {
       "_doc": "THE Apps tab's Services and Tools pages (view-only). `tools` are the individual engines, each `source` a dotted path into cloud-infra's _cloud-data-consolidated.json (services.<name> | native.<name>); data/gen_infra_slice.py reads those paths and every host, zone, rule and port list from the export into data/infra_slice.json, so no host list is typed here. `services` are the composites: each names the tools it uses (a tool's 'used by' list is the inverse, derived) and the `views` it renders over the slice (InfraViews.kt has one renderer per view id; test-c3-shell.sh T9 diffs both ways). A tool's printed name is derived from its id (#351).",
@@ -731,7 +731,7 @@
           "repos": [
             {
               "owner": "diegonmarcos",
-              "repo": "cloud-u-android",
+              "repo": "cloudy-u-android",
               "label": "android"
             },
             {
@@ -756,7 +756,7 @@
           "repos": [
             {
               "owner": "diegonmarcos",
-              "repo": "cloud-u-android",
+              "repo": "cloudy-u-android",
               "label": "android"
             },
             {
@@ -801,17 +801,17 @@
             },
             {
               "owner": "diegonmarcos",
-              "repo": "cloud-u-android",
+              "repo": "cloudy-u-android",
               "label": "cloud-u-android"
             },
             {
               "owner": "diegonmarcos",
-              "repo": "cloud-u-containers",
+              "repo": "cloudy-u-containers",
               "label": "cloud-u-containers"
             },
             {
               "owner": "diegonmarcos",
-              "repo": "cloud-u-linux",
+              "repo": "cloudy-u-linux",
               "label": "cloud-u-linux"
             },
             {

@@ -19,10 +19,10 @@
     "cache_minutes": 15,
     "_doc_cache_minutes": "Mirrors GitHubFeed.TTL_MS exactly. A phone that opens this app and the SuperApp's Analytics card inside the same window must not spend the quota twice for the same answer.",
     "repos": [
-      { "owner": "diegonmarcos", "repo": "cloud-u-android",       "label": "android" },
+      { "owner": "diegonmarcos", "repo": "cloudy-u-android",       "label": "android" },
       { "owner": "diegonmarcos", "repo": "cloud-infra",           "label": "cloud" },
-      { "owner": "diegonmarcos", "repo": "cloud-u-containers",    "label": "containers" },
-      { "owner": "diegonmarcos", "repo": "cloud-u-linux",         "label": "linux" },
+      { "owner": "diegonmarcos", "repo": "cloudy-u-containers",    "label": "containers" },
+      { "owner": "diegonmarcos", "repo": "cloudy-u-linux",         "label": "linux" },
       { "owner": "diegonmarcos", "repo": "diegonmarcos.github.io", "label": "front" }
     ],
     "_doc_repos": "The five repos that actually run CI. A SUPERSET of the SuperApp Analytics card's three (android/cloud/front) on purpose: the card is the glance and is deliberately narrow, the app is the detail. Every entry is verified to answer 200 on api.github.com/repos/<owner>/<repo> — the exclusions cloud-infra's own GH Repos card documents (cloud-android and cloud-unix are 301 rename-aliases, `front` and cloud-mykonsole-dtk are 404) apply here identically and are why those four names are absent."

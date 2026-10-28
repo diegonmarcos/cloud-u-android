@@ -118,7 +118,7 @@ class GitPageTest {
         assertTrue("every public repository is in a declared name family", names.all { page.inNameFamilies(it) })
         assertFalse("the rule is a rule, not a rubber stamp", page.inNameFamilies("back-Algo"))
         assertEquals("alphabetical by name", names.sorted(), names)
-        assertTrue("#608 names this repository explicitly", "cloud-u-android" in names)
+        assertTrue("#608 names this repository explicitly", "cloudy-u-android" in names)
         // The seeded set of the shared store is a SUBSET of the page's public set: a repository
         // the store clones on first run must be one the page can show.
         val seeded = Declarations.parseGitFamily(File(root, "data/drive-git-repos.json").readText()).repos.filter { it.seed }
@@ -141,7 +141,7 @@ class GitPageTest {
         val https = page.remoteMode(Declarations.REMOTE_HTTPS)!!
         val ssh = page.remoteMode(Declarations.REMOTE_SSH)!!
         val readonly = page.remoteMode(Declarations.REMOTE_READONLY)!!
-        val name = "cloud-u-android"
+        val name = "cloudy-u-android"
         assertEquals(https.urlFor(owner, name), page.cloneUrl(name))
         assertTrue(page.cloneUrl(name).startsWith("https://"))
         assertTrue(page.cloneUrl(name).endsWith("/$owner/$name.git"))

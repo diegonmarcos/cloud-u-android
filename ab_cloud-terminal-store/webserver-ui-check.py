@@ -25,7 +25,7 @@ import urllib.parse, urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 LIB = os.path.join(REPO, "ab_cloud-libs-shared/libs/fleet-webserver")
-RAW = "https://raw.githubusercontent.com/diegonmarcos/cloud-u-linux"
+RAW = "https://raw.githubusercontent.com/diegonmarcos/cloudy-u-linux"
 MARKERS = {
     "folder tree (left)": ['id="sidebar"', 'id="file-list"', 'id="path-bar"'],
     "viewer (right)": ['id="right-panel"', 'id="viewer"'],

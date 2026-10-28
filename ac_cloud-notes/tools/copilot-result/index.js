@@ -11,7 +11,7 @@ const { ok } = await new WebClient(SLACK_BOT_TOKEN).chat.postMessage({
   blocks: render(
     `# Cloud Notes Copilot Test ${COPILOT_RESULT}
 
-- [${BRANCH_NAME?.replace('refs/heads/', '') || BRANCH_SHA}](https://github.com/diegonmarcos/cloud-u-android/commit/${BRANCH_SHA})
+- [${BRANCH_NAME?.replace('refs/heads/', '') || BRANCH_SHA}](https://github.com/diegonmarcos/cloudy-u-android/commit/${BRANCH_SHA})
 `
   ),
 });

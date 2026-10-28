@@ -113,7 +113,7 @@
   },
   "publish": {
     "_doc": "Where publish-qalc.sh puts a build: its own immutable tag per publish (prefix + UTC timestamp), one asset per ABI because the bytes are per ABI. What the Cloud Libs build USES is data/qalc-pin.json, a separate file so that adopting a build does not re-trigger the builder.",
-    "release_repo": "diegonmarcos/cloud-u-android",
+    "release_repo": "diegonmarcos/cloudy-u-android",
     "release_tag_prefix": "lib-calc-native-",
     "asset_template": "libqalc-{abi}.so",
     "max_asset_bytes": 94371840

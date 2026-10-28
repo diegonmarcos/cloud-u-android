@@ -67,9 +67,9 @@
         "image": "cloud-unix-termux-boot",
         "tag": "latest",
         "asset": "Cloud-Unix-Termux-Boot.apk",
-        "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Unix-Termux-Boot.apk",
-        "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/a_solutions/ae-tool_termux-boot",
-        "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-unix-termux-boot",
+        "release_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Unix-Termux-Boot.apk",
+        "repo_url": "https://github.com/diegonmarcos/cloudy-u-android/tree/main/a_solutions/ae-tool_termux-boot",
+        "ghcr_page": "https://github.com/diegonmarcos/cloudy-u-android/pkgs/container/cloud-unix-termux-boot",
         "blocked": false,
         "kind": "lib"
       }
@@ -3012,7 +3012,7 @@
                 "id": "lf-dp-cloud-apk",
                 "label": "Lf.y-D&P-Cloud-apk",
                 "icon": "ic_p_sol_other",
-                "target": "https://github.com/diegonmarcos/cloud-u-android"
+                "target": "https://github.com/diegonmarcos/cloudy-u-android"
               },
               {
                 "_doc": "Lf.y-D&P-Cloud-C3 (was Lf-C3-D&P-7321): the paca board of the C3 D&P project; the uuid is unchanged because the board is unchanged (#1212, owner names).",
@@ -4203,7 +4203,7 @@
             "repos": [
               {
                 "owner": "diegonmarcos",
-                "repo": "cloud-u-android",
+                "repo": "cloudy-u-android",
                 "label": "android"
               },
               {
@@ -4228,7 +4228,7 @@
             "repos": [
               {
                 "owner": "diegonmarcos",
-                "repo": "cloud-u-android",
+                "repo": "cloudy-u-android",
                 "label": "android"
               },
               {
@@ -4273,17 +4273,17 @@
               },
               {
                 "owner": "diegonmarcos",
-                "repo": "cloud-u-android",
+                "repo": "cloudy-u-android",
                 "label": "cloud-u-android"
               },
               {
                 "owner": "diegonmarcos",
-                "repo": "cloud-u-containers",
+                "repo": "cloudy-u-containers",
                 "label": "cloud-u-containers"
               },
               {
                 "owner": "diegonmarcos",
-                "repo": "cloud-u-linux",
+                "repo": "cloudy-u-linux",
                 "label": "cloud-u-linux"
               },
               {
@@ -6380,11 +6380,11 @@
       "repos": [
         {
           "label": "unix",
-          "url": "https://github.com/diegonmarcos/cloud-u-android"
+          "url": "https://github.com/diegonmarcos/cloudy-u-android"
         },
         {
           "label": "cloud",
-          "url": "https://github.com/diegonmarcos/cloud-t-infra"
+          "url": "https://github.com/diegonmarcos/cloudy-t-infra"
         },
         {
           "label": "front",
@@ -8213,7 +8213,7 @@
         "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.comms.dialer",
         "install_package": "com.diegonmarcos.comms.dialer",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-dialer.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-dialer.apk",
         "forks": {}
       },
       {
@@ -8223,7 +8223,7 @@
         "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.cloudcontacts",
         "install_package": "com.diegonmarcos.cloudcontacts",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Contacts.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Contacts.apk",
         "forks": {}
       },
       {
@@ -8232,7 +8232,7 @@
         "folder": "prod_chat",
         "hub_package": "com.diegonmarcos.comms.chat",
         "install_package": "com.diegonmarcos.comms.chat",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-chat.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-chat.apk",
         "forks": {}
       },
       {
@@ -8242,7 +8242,7 @@
         "folder": "prod_mail",
         "hub_package": "com.diegonmarcos.comms.mail",
         "install_package": "com.diegonmarcos.comms.mail",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-mail.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-mail.apk",
         "forks": {}
       },
       {
@@ -8253,7 +8253,7 @@
         "_doc_alt_package": "The store ships a resigned STOCK Element X, so the installed applicationId is io.element.android.x, not hub_package (same fact the fleet records as alt_id). Without this the Suite/Comms tile can't see the installed app and offers a fresh install of something already on the phone. Remove once the matrix fork is repackaged to hub_package.",
         "alt_package": "io.element.android.x",
         "install_package": "com.diegonmarcos.comms.matrix",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-matrix.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-matrix.apk",
         "forks": {}
       },
       {
@@ -8261,7 +8261,7 @@
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.ide",
         "install_package": "com.diegonmarcos.ide",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-MyTerminal.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-MyTerminal.apk",
         "forks": {
           "files": "com.diegonmarcos.ide.files",
           "utils": "com.diegonmarcos.ide.utils",
@@ -8274,7 +8274,7 @@
         "folder": "prod_terminals",
         "hub_package": "cld.termux",
         "install_package": "cld.termux",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-terminal.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-terminal.apk",
         "forks": {}
       },
       {
@@ -8283,7 +8283,7 @@
         "folder": "prod_terminals",
         "hub_package": "cld.termux.nix",
         "install_package": "cld.termux.nix",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-nixdroid.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-nixdroid.apk",
         "forks": {}
       },
       {
@@ -8293,7 +8293,7 @@
         "folder": "prod_terminals",
         "hub_package": "com.diegonmarcos.code",
         "install_package": "com.diegonmarcos.code",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Code.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Code.apk",
         "forks": {}
       },
       {
@@ -8303,7 +8303,7 @@
         "site": "Navigation",
         "hub_package": "com.diegonmarcos.cloudnav",
         "install_package": "com.diegonmarcos.cloudnav",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Nav.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Nav.apk",
         "forks": {}
       },
       {
@@ -8312,7 +8312,7 @@
         "folder": "prod_plan",
         "hub_package": "com.diegonmarcos.cloudagenda",
         "install_package": "com.diegonmarcos.cloudagenda",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Tasks.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Tasks.apk",
         "forks": {}
       },
       {
@@ -8320,7 +8320,7 @@
         "folder": "hlth_news",
         "hub_package": "com.diegonmarcos.cloudnews",
         "install_package": "com.diegonmarcos.cloudnews",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-News.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-News.apk",
         "forks": {}
       },
       {
@@ -8329,7 +8329,7 @@
         "folder": "sys_keyboards",
         "hub_package": "com.diegonmarcos.cloudkeyboard",
         "install_package": "com.diegonmarcos.cloudkeyboard",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Keyboard.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Keyboard.apk",
         "forks": {}
       },
       {
@@ -8338,7 +8338,7 @@
         "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudwallet",
         "install_package": "com.diegonmarcos.cloudwallet",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Wallet.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Wallet.apk",
         "forks": {}
       },
       {
@@ -8347,7 +8347,7 @@
         "folder": "sys_settings",
         "hub_package": "com.diegonmarcos.cloudme",
         "install_package": "com.diegonmarcos.cloudme",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Me.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Me.apk",
         "forks": {}
       },
       {
@@ -8356,7 +8356,7 @@
         "folder": "prod_web",
         "hub_package": "com.diegonmarcos.cloudbrowser",
         "install_package": "com.diegonmarcos.cloudbrowser",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Browser.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Browser.apk",
         "forks": {}
       },
       {
@@ -8366,7 +8366,7 @@
         "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudvault",
         "install_package": "com.diegonmarcos.cloudvault",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Vault.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Vault.apk",
         "forks": {}
       },
       {
@@ -8375,7 +8375,7 @@
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.watchdog",
         "install_package": "com.diegonmarcos.watchdog",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/C3-Watchdog.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/C3-Watchdog.apk",
         "forks": {}
       },
       {
@@ -8384,7 +8384,7 @@
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.morpheus",
         "install_package": "com.diegonmarcos.morpheus",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/C3-Morpheus.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/C3-Morpheus.apk",
         "forks": {}
       },
       {
@@ -8394,7 +8394,7 @@
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.watchtower",
         "install_package": "com.diegonmarcos.watchtower",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/C3-WatchTower.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/C3-WatchTower.apk",
         "forks": {}
       },
       {
@@ -8404,7 +8404,7 @@
         "site": "Cloud Portal",
         "hub_package": "com.diegonmarcos.cloudc3",
         "install_package": "com.diegonmarcos.cloudc3",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-C3.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-C3.apk",
         "forks": {}
       },
       {
@@ -8413,7 +8413,7 @@
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.cloudwebserver",
         "install_package": "com.diegonmarcos.cloudwebserver",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-C3-WebServer.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-C3-WebServer.apk",
         "forks": {}
       },
       {
@@ -8422,7 +8422,7 @@
         "folder": "media_video",
         "hub_package": "com.diegonmarcos.cloudmediacenter",
         "install_package": "com.diegonmarcos.cloudmediacenter",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-media-center.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-media-center.apk",
         "forks": {}
       },
       {
@@ -8432,7 +8432,7 @@
         "folder": "media_video",
         "hub_package": "com.diegonmarcos.mediacenter",
         "install_package": "com.diegonmarcos.mediacenter",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-gallery.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-gallery.apk",
         "forks": {}
       },
       {
@@ -8441,7 +8441,7 @@
         "folder": "prod_docs",
         "hub_package": "com.diegonmarcos.cloudoffice",
         "install_package": "com.diegonmarcos.cloudoffice",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Office.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Office.apk",
         "forks": {}
       },
       {
@@ -8450,7 +8450,7 @@
         "folder": "prod_storage",
         "hub_package": "cld.camera",
         "install_package": "cld.camera",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Camera.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Camera.apk",
         "forks": {}
       },
       {
@@ -8459,7 +8459,7 @@
         "folder": "prod_docs",
         "hub_package": "com.diegonmarcos.cloudnotes",
         "install_package": "com.diegonmarcos.cloudnotes",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Notes.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Notes.apk",
         "forks": {}
       },
       {
@@ -8469,7 +8469,7 @@
         "folder": "prod_docs",
         "hub_package": "com.diegonmarcos.cloudwriter",
         "install_package": "com.diegonmarcos.cloudwriter",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Writer.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Writer.apk",
         "forks": {}
       },
       {
@@ -8478,7 +8478,7 @@
         "folder": "prod_utils",
         "hub_package": "com.diegonmarcos.cloudcalc",
         "install_package": "com.diegonmarcos.cloudcalc",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Calc.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Calc.apk",
         "forks": {}
       },
       {
@@ -8487,7 +8487,7 @@
         "folder": "prod_ai",
         "hub_package": "com.diegonmarcos.cloudsearch",
         "install_package": "com.diegonmarcos.cloudsearch",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Search.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Search.apk",
         "forks": {}
       },
       {
@@ -8496,7 +8496,7 @@
         "folder": "prod_ai",
         "hub_package": "com.diegonmarcos.cloudsuperintel",
         "install_package": "com.diegonmarcos.cloudsuperintel",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-SuperIntel.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-SuperIntel.apk",
         "forks": {}
       },
       {
@@ -8505,7 +8505,7 @@
         "folder": "prod_ai",
         "hub_package": "com.diegonmarcos.cloudkgstore",
         "install_package": "com.diegonmarcos.cloudkgstore",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-KG-Store.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-KG-Store.apk",
         "forks": {}
       },
       {
@@ -8514,7 +8514,7 @@
         "folder": "prod_ai",
         "hub_package": "com.diegonmarcos.cloudtoolssmallllms",
         "install_package": "com.diegonmarcos.cloudtoolssmallllms",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Tools-Small-LLMs.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Tools-Small-LLMs.apk",
         "forks": {}
       },
       {
@@ -8523,7 +8523,7 @@
         "folder": "sys_stores",
         "hub_package": "com.diegonmarcos.cloudstore",
         "install_package": "com.diegonmarcos.cloudstore",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Store.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Store.apk",
         "forks": {}
       },
       {
@@ -8532,7 +8532,7 @@
         "folder": "sys_settings",
         "hub_package": "com.diegonmarcos.cloudaccount",
         "install_package": "com.diegonmarcos.cloudaccount",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Account.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Account.apk",
         "forks": {}
       },
       {
@@ -8541,7 +8541,7 @@
         "folder": "prod_storage",
         "hub_package": "com.diegonmarcos.clouddrive",
         "install_package": "com.diegonmarcos.clouddrive",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Drive.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Drive.apk",
         "forks": {}
       }
     ],

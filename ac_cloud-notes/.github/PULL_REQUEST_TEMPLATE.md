@@ -12,7 +12,7 @@ Types: feat fix docs style refactor perf test build ci chore revert
 
 ## Checklist
 
-- [ ] I have signed the [Cloud Notes Contributor License Agreement](https://cla-assistant.io/diegonmarcos/cloud-u-android) — required before merge; the `license/cla` check must be green ([how it works](https://github.com/diegonmarcos/cloud-u-android/blob/canary/docs/BUILDING.md#sign-the-cla-first))
+- [ ] I have signed the [Cloud Notes Contributor License Agreement](https://cla-assistant.io/diegonmarcos/cloudy-u-android) — required before merge; the `license/cla` check must be green ([how it works](https://github.com/diegonmarcos/cloudy-u-android/blob/canary/docs/BUILDING.md#sign-the-cla-first))
 - [ ] The PR targets the `canary` branch and its title follows [Conventional Commits](https://www.conventionalcommits.org/)
 - [ ] Tests are added or updated where it makes sense
 - [ ] `yarn lint` and `yarn typecheck` pass locally

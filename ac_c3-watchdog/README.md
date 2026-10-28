@@ -102,8 +102,8 @@ off the proot launcher's environ.
    ssh; now it is fetched from the release):
    ```sh
    mkdir -p ~/.cache/c3-watchdog/bin && cd ~/.cache/c3-watchdog/bin
-   curl -fsSL -o my-watchdog-tui https://github.com/diegonmarcos/cloud-u-linux/releases/download/my-watchdog-latest/my-watchdog-tui-aarch64
-   curl -fsSL -o my-watchdog     https://github.com/diegonmarcos/cloud-u-linux/releases/download/my-watchdog-latest/my-watchdog-aarch64
+   curl -fsSL -o my-watchdog-tui https://github.com/diegonmarcos/cloudy-u-linux/releases/download/my-watchdog-latest/my-watchdog-tui-aarch64
+   curl -fsSL -o my-watchdog     https://github.com/diegonmarcos/cloudy-u-linux/releases/download/my-watchdog-latest/my-watchdog-aarch64
    chmod +x my-watchdog my-watchdog-tui
    (nohup ./my-watchdog --no-tray >/dev/null 2>&1 &)
    (nohup ./my-watchdog-tui android-bridge >> ~/.cache/c3-watchdog/bridge.log 2>&1 &)

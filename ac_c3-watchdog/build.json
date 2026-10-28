@@ -9,17 +9,17 @@
     "entry": "build.sh",
     "external_inputs": [
       {
-        "repo": "diegonmarcos/cloud-u-linux",
+        "repo": "diegonmarcos/cloudy-u-linux",
         "tag": "c3-watchdog-latest",
         "asset": "c3-watchdog-aarch64"
       },
       {
-        "repo": "diegonmarcos/cloud-u-linux",
+        "repo": "diegonmarcos/cloudy-u-linux",
         "tag": "c3-watchdog-latest",
         "asset": "c3-watchdog-tui-aarch64"
       },
       {
-        "repo": "diegonmarcos/cloud-u-linux",
+        "repo": "diegonmarcos/cloudy-u-linux",
         "tag": "c3-watchdog-latest",
         "asset": "c3-watchdog-app.html"
       }
@@ -49,7 +49,7 @@
     },
     "tools": {
       "_doc": "Where libs:watchdog fetches the binaries it SHIPS. The APK carries them; nothing is ever installed on the phone. aarch64 static musl, because that is every Android device this decade and musl does not care which libc the environment has \u2014 or whether it has one.",
-      "repo": "diegonmarcos/cloud-u-linux",
+      "repo": "diegonmarcos/cloudy-u-linux",
       "tag": "c3-watchdog-latest",
       "ui_asset": "c3-watchdog-app.html"
     }

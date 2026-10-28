@@ -83,7 +83,7 @@ def _asset_and_tag(root, app):
 
 def release_baselines(root, apps):
     """{app: commit or None} from each app's <asset>.source sidecar."""
-    repo = os.environ.get("GITHUB_REPOSITORY", "diegonmarcos/cloud-u-android")
+    repo = os.environ.get("GITHUB_REPOSITORY", "diegonmarcos/cloudy-u-android")
     cache, out = {}, {}
     for app in apps:
         asset, tag = _asset_and_tag(root, app)

@@ -102,7 +102,7 @@ const FeedbackIcon = ({ type }: { type: Flag['feedbackType'] }) => {
 const feedbackLink: Record<NonNullable<Flag['feedbackType']>, string> = {
   discord: BUILD_CONFIG.discordUrl,
   email: 'mailto:support@toeverything.info',
-  github: 'https://github.com/diegonmarcos/cloud-u-android/issues',
+  github: 'https://github.com/diegonmarcos/cloudy-u-android/issues',
 };
 
 const ExperimentalFeaturesItem = ({

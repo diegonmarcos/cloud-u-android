@@ -50,7 +50,7 @@
         "asset_name": "bootstrap.zip",
         "artifact": {
           "_doc": "#618 — the baked zip is ~400 MB, so it is not baked directly into THIS app's APK. It used to be an APK asset, which made every one-line app fix a 400 MB update that every phone re-downloaded in full just to get the code. #628 Slice 2 changed the TRANSPORT again: rather than a bare GH release asset TermuxInstaller downloads at runtime (the shape this block described through Slice 1), the bytes now ship inside the companion APK declared at release.companions[] (id rootfs-nixdroid) — a real, installed, signature-verified sibling package with no network involved at all. This block remains the content-address DECLARATION (identity_files → the 12-hex version every asset name below is built from); it no longer names a publish step, because there is nothing left to upload here — the companion machinery publishes the APK that carries these bytes, gated on its own paths_from so an app-code change never touches it.",
-          "repo": "diegonmarcos/cloud-u-android",
+          "repo": "diegonmarcos/cloudy-u-android",
           "tag": "latest",
           "asset": "cloud-nixdroid-bootstrap-{id}-{abi}.zip",
           "url": "https://github.com/{repo}/releases/download/{tag}/{asset}",
@@ -114,7 +114,7 @@
         "source": "self_built",
         "self_built": {
           "_doc": "#847 -- the zip the bake starts from when source is self_built: built by .github/workflows/build-nixdroid-bootstrap.yml from bootstrap-src/ (upstream nix-on-droid release-24.05's bootstrap derivation, evaluated against default_packages.nixpkgs_pin) and published to OUR release, so neither the third-party host nor nixpkgs 24.05 is in the build path and the zip's nix/bash/glibc are the same store paths the baked profile reuses. CI run 37152352348 built these bytes (aarch64 68,103,357 B / 6000 entries, x86_64 69,592,864 B). The top-level url_base/release/archs stay as the declared fallback (set source to anything else to bake from them) and as the 24.05 proot ac_cloud-termux/rootfs/verify-rootfs.sh fetches as its #795 mutant.",
-          "url_base": "https://github.com/diegonmarcos/cloud-u-android/releases/download",
+          "url_base": "https://github.com/diegonmarcos/cloudy-u-android/releases/download",
           "release": "nixdroid-bootstrap-7fc927a68576",
           "archs": {
             "arm64-v8a": {

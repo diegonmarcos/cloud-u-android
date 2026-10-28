@@ -69,7 +69,7 @@ class StoreMeshMirrorTest {
         id = id, label = id, pkg = "com.example.$id", altId = null,
         registry = "ghcr.io", namespace = "diegonmarcos", image = id, tag = "latest",
         asset = asset, assets = emptyMap(),
-        releaseUrl = "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/$asset",
+        releaseUrl = "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/$asset",
         repoUrl = "", ghcrPage = "", blocked = false, kind = "lib",
     )
 
@@ -80,8 +80,8 @@ class StoreMeshMirrorTest {
 
     @Test fun `a GitHub release-download URL maps onto git-proxy-api's mesh name and port`() {
         assertEquals(
-            "http://git-proxy-api.mesh.diegonmarcos.com:8123/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Wallet.apk",
-            MeshMirror.urlFor("https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Lib-Wallet.apk"))
+            "http://git-proxy-api.mesh.diegonmarcos.com:8123/releases/diegonmarcos/cloudy-u-android/latest/assets/Cloud-Lib-Wallet.apk",
+            MeshMirror.urlFor("https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Lib-Wallet.apk"))
         assertNull(MeshMirror.urlFor("https://example.com/a.apk"))
         assertNull(MeshMirror.urlFor(""))
     }
@@ -96,7 +96,7 @@ class StoreMeshMirrorTest {
 
     @Test fun `fetch downloads from the mirror and verifies against the mirror's sidecar`() {
         val seen = CopyOnWriteArrayList<String>()
-        val p = "/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Mesh.apk"
+        val p = "/releases/diegonmarcos/cloudy-u-android/latest/assets/Cloud-Lib-Mesh.apk"
         mirror(mapOf(p to (200 to apk), "$p.sha256" to (200 to "$apkSha  Cloud-Lib-Mesh.apk\n".toByteArray())), seen).use { ss ->
             MeshMirror.bases = listOf("http://127.0.0.1:${ss.localPort}")
             val got = MeshMirror.fetch(ApplicationProvider.getApplicationContext(), app("lib-mesh", "Cloud-Lib-Mesh.apk"))
@@ -112,7 +112,7 @@ class StoreMeshMirrorTest {
 
     @Test fun `a dead first origin falls through to the next one`() {
         val seen = CopyOnWriteArrayList<String>()
-        val p = "/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Two.apk"
+        val p = "/releases/diegonmarcos/cloudy-u-android/latest/assets/Cloud-Lib-Two.apk"
         val dead = ServerSocket(0).let { val port = it.localPort; it.close(); port }
         mirror(mapOf(p to (200 to apk), "$p.sha256" to (200 to apkSha.toByteArray())), seen).use { ss ->
             MeshMirror.bases = listOf("http://127.0.0.1:$dead", "http://127.0.0.1:${ss.localPort}")
@@ -123,7 +123,7 @@ class StoreMeshMirrorTest {
     }
 
     @Test fun `bytes that do not match the sidecar are refused and dropped`() {
-        val p = "/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-Bad.apk"
+        val p = "/releases/diegonmarcos/cloudy-u-android/latest/assets/Cloud-Lib-Bad.apk"
         mirror(mapOf(p to (200 to apk), "$p.sha256" to (200 to "b".repeat(64).toByteArray())), CopyOnWriteArrayList()).use { ss ->
             MeshMirror.bases = listOf("http://127.0.0.1:${ss.localPort}")
             val ctx = ApplicationProvider.getApplicationContext<Application>()
@@ -137,7 +137,7 @@ class StoreMeshMirrorTest {
 
     @Test fun `no sidecar on the mirror means no download - never a size-only fallback`() {
         val seen = CopyOnWriteArrayList<String>()
-        val p = "/releases/diegonmarcos/cloud-u-android/latest/assets/Cloud-Lib-NoSha.apk"
+        val p = "/releases/diegonmarcos/cloudy-u-android/latest/assets/Cloud-Lib-NoSha.apk"
         mirror(mapOf(p to (200 to apk)), seen).use { ss ->
             MeshMirror.bases = listOf("http://127.0.0.1:${ss.localPort}")
             val t = runCatching { MeshMirror.fetch(ApplicationProvider.getApplicationContext(), app("lib-nosha", "Cloud-Lib-NoSha.apk")) }

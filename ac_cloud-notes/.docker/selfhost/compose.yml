@@ -1,7 +1,7 @@
 name: cloud-notes
 services:
   cloud-notes:
-    image: ghcr.io/diegonmarcos/cloud-u-android:stable
+    image: ghcr.io/diegonmarcos/cloudy-u-android:stable
     container_name: cloud_notes_server
     ports:
       - '3010:3010'
@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
 
   cloud_notes_migration:
-    image: ghcr.io/diegonmarcos/cloud-u-android:stable
+    image: ghcr.io/diegonmarcos/cloudy-u-android:stable
     container_name: cloud_notes_migration_job
     volumes:
       - ./data/storage:/root/.cloud-notes/storage

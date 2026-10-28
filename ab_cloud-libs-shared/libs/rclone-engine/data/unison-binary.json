@@ -11,7 +11,7 @@
  "binaries": {
   "arm64-v8a": {
    "origin": "built",
-   "url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/unison-static-2.53.8-r1/unison-2.53.8-linux-aarch64-musl-static.tar.gz",
+   "url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/unison-static-2.53.8-r1/unison-2.53.8-linux-aarch64-musl-static.tar.gz",
    "dir": "unison-2.53.8-linux-aarch64-musl-static",
    "tar_sha256": "bb239a7e8f3aa07138810b54375657779b6f616716f568648ff6459275ebfd62",
    "binary_sha256": "49d14995c44a2fa236c41c42c0a6d89f84847adc636b381f5a9d3f9a4714ebea",

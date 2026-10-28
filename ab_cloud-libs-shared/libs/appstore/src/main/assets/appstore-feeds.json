@@ -7,9 +7,9 @@
       "id": "commits",
       "label": "Commits",
       "blurb": "The repository's commit feed, newest first. Read-only: a row opens the commit on GitHub.",
-      "url": "https://api.github.com/repos/diegonmarcos/cloud-u-android/commits?per_page=50",
+      "url": "https://api.github.com/repos/diegonmarcos/cloudy-u-android/commits?per_page=50",
       "proxy": {
-        "url": "https://api.diegonmarcos.com/git/repos/diegonmarcos/cloud-u-android/commits?per_page=50",
+        "url": "https://api.diegonmarcos.com/git/repos/diegonmarcos/cloudy-u-android/commits?per_page=50",
         "items": "commits",
         "ref": "{sha}",
         "title": "{message}",
@@ -25,9 +25,9 @@
       "id": "cicd",
       "label": "CI · CD",
       "blurb": "The CI-CD run feed, newest first. A run still going is drawn neutral, not red — unfinished is not failed. A row opens the run's own log page.",
-      "url": "https://api.github.com/repos/diegonmarcos/cloud-u-android/actions/runs?per_page=50",
+      "url": "https://api.github.com/repos/diegonmarcos/cloudy-u-android/actions/runs?per_page=50",
       "proxy": {
-        "url": "https://api.diegonmarcos.com/git/repos/diegonmarcos/cloud-u-android/runs?per_page=50",
+        "url": "https://api.diegonmarcos.com/git/repos/diegonmarcos/cloudy-u-android/runs?per_page=50",
         "items": "runs",
         "ref": "{conclusion}",
         "title": "{display_title}",

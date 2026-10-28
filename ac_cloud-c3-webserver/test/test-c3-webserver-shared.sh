@@ -18,7 +18,7 @@ LIB="$(cd "$APP/../ab_cloud-libs-shared/libs/fleet-webserver" && pwd)" || { echo
 FAILURES=0
 pass() { echo "  PASS  $*"; }; fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 LINUX="${LINUX_REPO:-}"
-[ -f "$LINUX/da_my-webserver/src/lib/browse.html" ] || { echo "ERROR LINUX_REPO must be a checkout of diegonmarcos/cloud-u-linux (got '${LINUX}') — an unchecked mirror is not a pass"; exit 1; }
+[ -f "$LINUX/da_my-webserver/src/lib/browse.html" ] || { echo "ERROR LINUX_REPO must be a checkout of diegonmarcos/cloudy-u-linux (got '${LINUX}') — an unchecked mirror is not a pass"; exit 1; }
 
 echo "── cloud-c3-webserver: one UI, mirrored byte for byte ──"
 "$LIB/sync.sh" --check >/dev/null 2>&1 && pass "V1 vendor/ matches VENDOR.sha256" || fail "V1 vendor/ does not match VENDOR.sha256"

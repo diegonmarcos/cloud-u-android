@@ -47,7 +47,7 @@ if [ -z "$APK" ]; then
 import json,sys
 d=json.load(open(sys.argv[1]))
 r=d['release']['gh_release']
-print('https://github.com/diegonmarcos/cloud-u-android/releases/download/%s/%s' % (r['rolling_tag'], r['asset_name']))
+print('https://github.com/diegonmarcos/cloudy-u-android/releases/download/%s/%s' % (r['rolling_tag'], r['asset_name']))
 " "$BUILD_JSON")"
     url="$repo"
   fi

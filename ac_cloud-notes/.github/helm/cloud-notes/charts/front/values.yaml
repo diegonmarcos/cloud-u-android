@@ -1,6 +1,6 @@
 replicaCount: 1
 image:
-  repository: ghcr.io/diegonmarcos/cloud-u-android
+  repository: ghcr.io/diegonmarcos/cloudy-u-android
   pullPolicy: IfNotPresent
   tag: ''
 

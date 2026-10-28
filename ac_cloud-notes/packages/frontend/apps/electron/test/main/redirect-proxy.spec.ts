@@ -48,7 +48,7 @@ describe('redirect proxy allowlist', () => {
       )
     ).toEqual({
       allow: true,
-      redirectTarget: 'https://github.com/diegonmarcos/cloud-u-android',
+      redirectTarget: 'https://github.com/diegonmarcos/cloudy-u-android',
     });
   });
 

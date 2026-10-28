@@ -119,6 +119,6 @@ class AboutActivity : SimpleActivity() {
     private companion object {
         const val UPSTREAM_URL = "https://github.com/FossifyOrg/Phone"
         const val LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
-        const val SOURCE_URL = "https://github.com/diegonmarcos/cloud-u-android"
+        const val SOURCE_URL = "https://github.com/diegonmarcos/cloudy-u-android"
     }
 }

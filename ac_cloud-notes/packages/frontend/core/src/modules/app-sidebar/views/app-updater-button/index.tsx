@@ -200,7 +200,7 @@ export function AppUpdaterButton({
         }
       } else {
         urlService.openPopupWindow(
-          `https://github.com/diegonmarcos/cloud-u-android/releases/tag/v${updateAvailable.version}`
+          `https://github.com/diegonmarcos/cloudy-u-android/releases/tag/v${updateAvailable.version}`
         );
       }
     } else if (changelogUnread) {

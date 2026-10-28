@@ -154,8 +154,8 @@ jobs:
           issue-title: Please confirm to release docker image
           issue-body: |
             Env: ${{ needs.prepare.outputs.BUILD_TYPE }}
-            Candidate: ghcr.io/diegonmarcos/cloud-u-android:${{ needs.prepare.outputs.BUILD_TYPE }}-${{ needs.prepare.outputs.GIT_SHORT_HASH }}
-            Tag: ghcr.io/diegonmarcos/cloud-u-android:${{ needs.prepare.outputs.BUILD_TYPE }}
+            Candidate: ghcr.io/diegonmarcos/cloudy-u-android:${{ needs.prepare.outputs.BUILD_TYPE }}-${{ needs.prepare.outputs.GIT_SHORT_HASH }}
+            Tag: ghcr.io/diegonmarcos/cloudy-u-android:${{ needs.prepare.outputs.BUILD_TYPE }}
 
             > comment with "approve", "approved", "lgtm", "yes" to approve
             > comment with "deny", "denied", "no" to deny
@@ -171,8 +171,8 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Tag Image
         run: |
-          docker buildx imagetools create --tag ghcr.io/diegonmarcos/cloud-u-android:${{needs.prepare.outputs.BUILD_TYPE}} ghcr.io/diegonmarcos/cloud-u-android:${{needs.prepare.outputs.BUILD_TYPE}}-${{needs.prepare.outputs.GIT_SHORT_HASH}}
-          docker buildx imagetools create --tag ghcr.io/diegonmarcos/cloud-u-android:${{needs.prepare.outputs.APP_VERSION}} ghcr.io/diegonmarcos/cloud-u-android:${{needs.prepare.outputs.BUILD_TYPE}}-${{needs.prepare.outputs.GIT_SHORT_HASH}}
+          docker buildx imagetools create --tag ghcr.io/diegonmarcos/cloudy-u-android:${{needs.prepare.outputs.BUILD_TYPE}} ghcr.io/diegonmarcos/cloudy-u-android:${{needs.prepare.outputs.BUILD_TYPE}}-${{needs.prepare.outputs.GIT_SHORT_HASH}}
+          docker buildx imagetools create --tag ghcr.io/diegonmarcos/cloudy-u-android:${{needs.prepare.outputs.APP_VERSION}} ghcr.io/diegonmarcos/cloudy-u-android:${{needs.prepare.outputs.BUILD_TYPE}}-${{needs.prepare.outputs.GIT_SHORT_HASH}}
 
   desktop:
     name: Release Desktop

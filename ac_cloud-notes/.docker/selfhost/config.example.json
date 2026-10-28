@@ -1,5 +1,5 @@
 {
-  "$schema": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/config.schema.json",
+  "$schema": "https://github.com/diegonmarcos/cloudy-u-android/releases/latest/download/config.schema.json",
   "server": {
     "name": "Cloud Notes Self Hosted Server"
   },

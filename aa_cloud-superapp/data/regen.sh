@@ -70,9 +70,9 @@ regen_constellation() {
     #
     # `/releases/download/<tag>/<asset>` names the tag and resolves to nothing
     # else, so no later publish can hijack it.
-    local rel="https://github.com/diegonmarcos/cloud-u-android/releases"
-    local tree="https://github.com/diegonmarcos/cloud-u-android/tree/main"
-    local pkg="https://github.com/diegonmarcos/cloud-u-android/pkgs/container"
+    local rel="https://github.com/diegonmarcos/cloudy-u-android/releases"
+    local tree="https://github.com/diegonmarcos/cloudy-u-android/tree/main"
+    local pkg="https://github.com/diegonmarcos/cloudy-u-android/pkgs/container"
 
     # ── Per-ABI release assets: { "<abi>": "<gh_asset>", … } ──────────────────
     # A fleet entry carried ONE flat `asset`/`release_url`, taken from

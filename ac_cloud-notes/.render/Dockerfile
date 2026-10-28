@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # Adds a start script to the published Cloud Notes image. Nothing is compiled here.
-FROM ghcr.io/diegonmarcos/cloud-u-android:stable
+FROM ghcr.io/diegonmarcos/cloudy-u-android:stable
 
 COPY --chmod=0755 start.sh /usr/local/bin/render-start.sh
 

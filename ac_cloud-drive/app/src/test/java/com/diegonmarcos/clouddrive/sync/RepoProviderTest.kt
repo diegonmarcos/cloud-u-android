@@ -18,7 +18,7 @@ class RepoProviderTest {
     private fun of(url: String) = RepoProvider.labelOf(url, decl)
 
     @Test fun `the declared map names GitHub, GitLab and the Cloud Gitea, and everything else is Other`() {
-        assertEquals("GitHub", of("https://github.com/diegonmarcos/cloud-u-android.git"))
+        assertEquals("GitHub", of("https://github.com/diegonmarcos/cloudy-u-android.git"))
         assertEquals("GitLab", of("https://gitlab.com/group/sub/project.git"))
         assertEquals("Gitea", of("https://git.diegonmarcos.com/diegonmarcos/x.git"))
         assertEquals("Gitea", of("http://10.0.0.6:3002/diegonmarcos/x.git"))

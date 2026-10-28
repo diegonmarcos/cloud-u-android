@@ -23,7 +23,7 @@ export const embed: InitFn = (collection: Workspace, id: string) => {
     store.addBlock(
       'cloud-notes:embed-github',
       {
-        url: 'https://github.com/diegonmarcos/cloud-u-android/pull/5453',
+        url: 'https://github.com/diegonmarcos/cloudy-u-android/pull/5453',
       },
       noteId
     );

@@ -30,8 +30,8 @@ body:
     attributes:
       label: Are you willing to submit a PR?
       description: >
-        (Optional) We encourage you to submit a [Pull Request](https://github.com/diegonmarcos/cloud-u-android/pulls) (PR) to help improve Cloud Notes for everyone, especially if you have a good understanding of how to implement a fix or feature.
-        See the Cloud Notes [Contributing Guide](https://github.com/diegonmarcos/cloud-u-android/blob/canary/CONTRIBUTING.md) to get started.
+        (Optional) We encourage you to submit a [Pull Request](https://github.com/diegonmarcos/cloudy-u-android/pulls) (PR) to help improve Cloud Notes for everyone, especially if you have a good understanding of how to implement a fix or feature.
+        See the Cloud Notes [Contributing Guide](https://github.com/diegonmarcos/cloudy-u-android/blob/canary/CONTRIBUTING.md) to get started.
       options:
         - label: Yes I'd like to help by submitting a PR!
   - type: checkboxes

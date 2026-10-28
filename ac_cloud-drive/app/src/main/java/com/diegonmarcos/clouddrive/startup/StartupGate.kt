@@ -143,4 +143,4 @@ private fun openInstall(ctx: Context) {
     runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(INSTALL_URL)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
-private const val INSTALL_URL = "https://github.com/diegonmarcos/cloud-u-android/releases/tag/latest"
+private const val INSTALL_URL = "https://github.com/diegonmarcos/cloudy-u-android/releases/tag/latest"

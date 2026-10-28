@@ -2,7 +2,7 @@
   "_comment": "ticket #470 — the ONE declaration of the glibc root filesystem this terminal ships inside its APK and enters through proot, so a fresh install is ready for agent coding with no network and no first-run installs. It does NOT carry a copy of the fleet tool belt: `shared_toolbelt` points at cloud-u-containers/_shared/agent-toolbelt.json (#509) by commit sha, and every apt package, tarball and verified binary declared there is installed here too. The keys below are ONLY what a phone terminal needs on top of what every AI container already gets, and the tester fails if any of them repeats a shared entry, so this can never grow into a second copy of that list. Read by rootfs/build-rootfs.sh (CI builds the tree), rootfs/verify-rootfs.sh (CI proves it runs under the proot that ships) and app/build.gradle (asset directory name).",
   "shared_toolbelt": {
     "_doc": "Why a pinned fetch and not a copy: the two repositories are separate git histories, so a file cannot be shared by path. Both are public, so CI reads the file at this exact commit from raw.githubusercontent.com. The commit sha is the content address: bumping it is an edit to THIS file, which moves the publish gate's source identity, so a tool-belt change republishes the APK instead of hiding outside the gate. Bump `ref` to the latest commit that touched `path` when the fleet list changes.",
-    "repo": "diegonmarcos/cloud-u-containers",
+    "repo": "diegonmarcos/cloudy-u-containers",
     "ref": "3a8f7a445988ec8076dd33246bf427aa84b05245",
     "path": "_shared/agent-toolbelt.json"
   },
@@ -86,7 +86,7 @@
       "url": "https://github.com/bcpierce00/unison/releases/download/v{version}/unison-{version}-{arch}.tar.gz",
       "url_by_arch": {
         "amd64": "https://github.com/bcpierce00/unison/releases/download/v{version}/unison-{version}-{arch}.tar.gz",
-        "arm64": "https://github.com/diegonmarcos/cloud-u-android/releases/download/unison-static-{version}-r1/unison-{version}-{arch}.tar.gz"
+        "arm64": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/unison-static-{version}-r1/unison-{version}-{arch}.tar.gz"
       },
       "arch_names": {
         "amd64": "ubuntu-22.04-x86_64-static",
@@ -214,7 +214,7 @@
   "_doc_asset_dir": "APK assets/<asset_dir>/ holds rootfs.sha256, rootfs.url, proot and enter.sh — four small files, NOT the tree. #618: the tree is fetched once from the artifact declared below, verified against rootfs.sha256 and cached. The app stages the small files under $PREFIX/var/lib/<asset_dir>/, fetches the tarball next to them, and enter.sh extracts it there on first shell.",
   "artifact": {
     "_doc": "#618 — the rootfs tarball is a SEPARATELY VERSIONED release asset, not APK bytes. It is ~400 MB and it changes only when the declaration below changes, while the APK's code changes constantly; baked in, every one-line app fix made every phone re-download 400 MB. Published to the app's own rolling GH release (the same channel and the same repo as the APK, so no new infrastructure and no new host), fetched on first run and whenever the declared digest moves, and never again.",
-    "repo": "diegonmarcos/cloud-u-android",
+    "repo": "diegonmarcos/cloudy-u-android",
     "tag": "latest",
     "asset": "cloud-rootfs-{id}-{abi}.tar.zst",
     "url": "https://github.com/{repo}/releases/download/{tag}/{asset}",

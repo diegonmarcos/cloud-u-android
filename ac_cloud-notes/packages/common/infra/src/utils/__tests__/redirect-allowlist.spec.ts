@@ -13,7 +13,7 @@ describe('redirect allowlist', () => {
 
   test('allows trusted domains and subdomains', () => {
     expect(
-      isAllowedRedirectTarget('https://github.com/diegonmarcos/cloud-u-android', {
+      isAllowedRedirectTarget('https://github.com/diegonmarcos/cloudy-u-android', {
         currentHostname: 'self.example.com',
       })
     ).toBe(true);

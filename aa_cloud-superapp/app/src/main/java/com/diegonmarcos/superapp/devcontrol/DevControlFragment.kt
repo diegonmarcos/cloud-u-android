@@ -1499,7 +1499,7 @@ class DevControlFragment : KitComposeFragment() {
         // reconstructing them, and a variant whose asset does not follow the tag
         // convention can no longer produce a confidently-wrong URL.
         val apkUrl = me?.abiReleaseUrl?.takeIf { it.isNotBlank() }
-            ?: "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-SuperApp.apk"
+            ?: "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-SuperApp.apk"
 
         row("APK", apkUrl)
         // The sidecar is what makes the URL trustworthy rather than merely

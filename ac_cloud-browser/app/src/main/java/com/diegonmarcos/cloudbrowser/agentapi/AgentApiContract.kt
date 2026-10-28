@@ -44,7 +44,7 @@ object AgentApiContract {
     const val MAX_REDIRECTS = 3
     const val GROUP_MAX_CHARS = 40
     const val TIMEOUT_MS = 15_000
-    const val USER_AGENT = "CloudBrowserAgentFetch/1 (read-only; +https://github.com/diegonmarcos/cloud-u-android)"
+    const val USER_AGENT = "CloudBrowserAgentFetch/1 (read-only; +https://github.com/diegonmarcos/cloudy-u-android)"
 
     sealed interface OpenParsed {
         data class Ok(val url: String, val group: String) : OpenParsed

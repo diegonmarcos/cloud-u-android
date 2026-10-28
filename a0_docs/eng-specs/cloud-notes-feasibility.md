@@ -16,7 +16,7 @@ analysis below is kept as the historical record of the licence and toolchain
 investigation that made the #469 vendoring possible; it predates both commits
 and its "nothing was shipped" framing no longer holds.
 
-Investigated against upstream `diegonmarcos/cloud-u-android` at canary
+Investigated against upstream `diegonmarcos/cloudy-u-android` at canary
 `cfda4858d550c46ec1cd0b574801d7becdd6625b` (2026-09-09), release train
 `v0.27.5`.
 

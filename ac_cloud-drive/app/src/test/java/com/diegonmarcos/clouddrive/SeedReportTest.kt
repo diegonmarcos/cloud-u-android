@@ -108,7 +108,7 @@ class SeedReportTest {
      * is INCOMPLETE so the worker retries; with the grant the gate steps aside for the clone loop.
      */
     @Test fun aFreshPhoneWithoutStorageNamesEveryRepositoryAndRetries() {
-        val names = listOf("cloud", "cloud-u-android", "front", "front-data")
+        val names = listOf("cloudy-___", "cloudy-u-android", "front", "front-data")
         val report = SeedReport.withoutStorage(names, hasStorage = false)
         assertTrue("a fresh phone without the grant must produce a report, not a silent pass", report != null)
         assertEquals(names, report!!.outcomes.map { it.name })

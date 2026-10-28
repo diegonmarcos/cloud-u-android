@@ -56,7 +56,7 @@ describe('testing for client update', () => {
       expectReleaseList.map(({ version }) => {
         return [
           http.get(
-            `https://github.com/diegonmarcos/cloud-u-android/releases/download/v${version}/latest.yml`,
+            `https://github.com/diegonmarcos/cloudy-u-android/releases/download/v${version}/latest.yml`,
             async req => {
               const buffer = await fs.readFile(
                 path.join(

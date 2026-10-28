@@ -24,7 +24,7 @@ class UpdateLinksTest {
             "the manifest carries the DIRECT download; the page around it is derived from that " +
                 "same string. Composing it out of literals instead would be a second copy of " +
                 "the repository address, free to point at the old place after a move",
-            "https://github.com/diegonmarcos/cloud-u-android/releases/tag/latest",
+            "https://github.com/diegonmarcos/cloudy-u-android/releases/tag/latest",
             UpdateLinks.releasePageUrl(MAIL_RELEASE_URL),
         )
     }
@@ -33,9 +33,9 @@ class UpdateLinksTest {
         assertEquals(
             "an immutable per-build release has its own tag. Hardcoding 'latest' here would " +
                 "send every one of them to the rolling release instead",
-            "https://github.com/diegonmarcos/cloud-u-android/releases/tag/v2026.09.11",
+            "https://github.com/diegonmarcos/cloudy-u-android/releases/tag/v2026.09.11",
             UpdateLinks.releasePageUrl(
-                "https://github.com/diegonmarcos/cloud-u-android/releases/download/v2026.09.11/cloud-comms-mail.apk",
+                "https://github.com/diegonmarcos/cloudy-u-android/releases/download/v2026.09.11/cloud-comms-mail.apk",
             ),
         )
     }
@@ -48,13 +48,13 @@ class UpdateLinksTest {
             "" to "the empty string",
             "   " to "whitespace",
             "not a url at all" to "prose",
-            "https://github.com/diegonmarcos/cloud-u-android" to "the repository root",
-            "https://github.com/diegonmarcos/cloud-u-android/releases/tag/latest"
+            "https://github.com/diegonmarcos/cloudy-u-android" to "the repository root",
+            "https://github.com/diegonmarcos/cloudy-u-android/releases/tag/latest"
                 to "a release PAGE, which is the output and not the input",
             "http://github.com/o/r/releases/download/latest/x.apk" to "plain HTTP",
-            "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest"
+            "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest"
                 to "a tag with no asset after it",
-            "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/nested/x.apk"
+            "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/nested/x.apk"
                 to "an extra path segment, which a loose match would swallow",
         )
         val wrong = notReleaseUrls.mapNotNull { (url, why) ->
@@ -68,10 +68,10 @@ class UpdateLinksTest {
         // of what stands between the owner and a substituted binary, so a URL that
         // dropped to http:// must not be rendered as if it were the published one.
         assertNull(
-            UpdateLinks.releasePageUrl("http://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-mail.apk"),
+            UpdateLinks.releasePageUrl("http://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-mail.apk"),
         )
         assertNull(
-            UpdateLinks.assetName("http://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-mail.apk"),
+            UpdateLinks.assetName("http://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-mail.apk"),
         )
     }
 
@@ -205,7 +205,7 @@ class UpdateLinksTest {
          *  the file itself by [MailFleetEntryTest]; repeated here as the input these
          *  derivations are exercised with. */
         const val MAIL_RELEASE_URL =
-            "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-mail.apk"
+            "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-mail.apk"
 
         /** Every state the updater can publish, one of each. */
         val ALL_STATES: List<State> = listOf(

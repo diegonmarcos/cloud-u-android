@@ -110,7 +110,7 @@ jobs:
       - name: Checkout cloud-u-linux (the source of the web UI the phone serves)
         uses: actions/checkout@v4
         with:
-          repository: diegonmarcos/cloud-u-linux
+          repository: diegonmarcos/cloudy-u-linux
           path: .cloud-u-linux
           fetch-depth: 1
 

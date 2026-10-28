@@ -22,7 +22,7 @@
     "models_url": "https://openrouter.ai/api/v1/models",
     "account_provider": "openrouter",
     "default_model": "openrouter/auto",
-    "referer": "https://github.com/diegonmarcos/cloud-u-android",
+    "referer": "https://github.com/diegonmarcos/cloudy-u-android",
     "web_plugin": "web",
     "native_web_param": "web_search_options"
   },

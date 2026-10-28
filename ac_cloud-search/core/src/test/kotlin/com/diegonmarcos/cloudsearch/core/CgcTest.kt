@@ -44,7 +44,7 @@ class CgcTest {
 
     @Test fun aResultOpensOnTheWebAtItsLine() {
         val pub = cfg.index("cgc")!!
-        assertEquals("https://github.com/diegonmarcos/cloud-u-android/blob/main/a/B.kt#L12", pub.web("cloud-u-android", "a/B.kt", 12))
+        assertEquals("https://github.com/diegonmarcos/cloudy-u-android/blob/main/a/B.kt#L12", pub.web("cloud-u-android", "a/B.kt", 12))
         assertEquals("a repo name maps to its GitHub repository", "https://github.com/diegonmarcos/diegonmarcos.github.io/blob/main/x.md#L1", pub.web("front-diegonmarcos", "x.md", null))
     }
 

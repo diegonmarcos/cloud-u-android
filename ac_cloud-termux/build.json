@@ -33,22 +33,22 @@
         },
         "external_inputs": [
           {
-            "repo": "diegonmarcos/cloud-u-linux",
+            "repo": "diegonmarcos/cloudy-u-linux",
             "tag": "my-watchdog-latest",
             "asset": "my-watchdog-aarch64"
           },
           {
-            "repo": "diegonmarcos/cloud-u-linux",
+            "repo": "diegonmarcos/cloudy-u-linux",
             "tag": "my-watchdog-latest",
             "asset": "my-watchdog-tui-aarch64"
           },
           {
-            "repo": "diegonmarcos/cloud-u-linux",
+            "repo": "diegonmarcos/cloudy-u-linux",
             "tag": "my-watchdog-latest",
             "asset": "my-watchdog-x86_64"
           },
           {
-            "repo": "diegonmarcos/cloud-u-linux",
+            "repo": "diegonmarcos/cloudy-u-linux",
             "tag": "my-watchdog-latest",
             "asset": "my-watchdog-tui-x86_64"
           }

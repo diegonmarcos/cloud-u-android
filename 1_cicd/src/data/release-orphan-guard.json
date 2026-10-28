@@ -1,6 +1,6 @@
 {
   "_doc": "#637 — every asset on the rolling release must be referenced by a fleet-manifest row (apps[].asset / apps[].assets{}; lib rows are apps rows with kind lib, so a declared lib is covered by the same read). Sidecars (<asset>.sha256, <asset>.source) belong to the asset they name. Read by 1_cicd/src/scripts/cloud-android-release-orphan-guard.py. The bare rootfs tarballs and nixdroid bootstrap zips sat on the release for days after #628 made them unreachable because nothing compared the release against what the fleet still names.",
-  "repo": "diegonmarcos/cloud-u-android",
+  "repo": "diegonmarcos/cloudy-u-android",
   "tag": "latest",
   "manifest": "aa_cloud-superapp/data/constellation-fleet.json",
   "sidecars": [

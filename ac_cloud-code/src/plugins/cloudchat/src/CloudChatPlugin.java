@@ -240,7 +240,7 @@ public class CloudChatPlugin extends CordovaPlugin {
             }
             if (token != null) {
                 c.setRequestProperty("Authorization", "Bearer " + token);
-                c.setRequestProperty("HTTP-Referer", "https://github.com/diegonmarcos/cloud-u-android");
+                c.setRequestProperty("HTTP-Referer", "https://github.com/diegonmarcos/cloudy-u-android");
                 c.setRequestProperty("X-Title", "Cloud Code");
             }
             if (body != null) {

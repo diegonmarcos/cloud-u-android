@@ -14,11 +14,11 @@ import json, os, sys, urllib.request
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import c3_routes
-URL = "https://raw.githubusercontent.com/diegonmarcos/cloud-t-infra/main/1_cloud-configs/dist/_cloud-data-consolidated.json"
+URL = "https://raw.githubusercontent.com/diegonmarcos/cloudy-t-infra/main/1_cloud-configs/dist/_cloud-data-consolidated.json"
 bj = json.load(open(os.path.join(HERE, "..", "build.json")))
 decl = bj["ui"]["apps_page"]
 src = sys.argv[1] if len(sys.argv) > 1 else None
-CADDY_URL = "https://raw.githubusercontent.com/diegonmarcos/cloud-u-containers/main/infra-sec_caddy/build.json"
+CADDY_URL = "https://raw.githubusercontent.com/diegonmarcos/cloudy-u-containers/main/infra-sec_caddy/build.json"
 caddy_src = sys.argv[2] if len(sys.argv) > 2 else None
 d = json.load(open(src)) if src else json.load(urllib.request.urlopen(URL))
 S = d["services"]

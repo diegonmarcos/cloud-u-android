@@ -156,11 +156,11 @@
       "repos": [
         {
           "label": "unix",
-          "url": "https://github.com/diegonmarcos/cloud-u-android"
+          "url": "https://github.com/diegonmarcos/cloudy-u-android"
         },
         {
           "label": "cloud",
-          "url": "https://github.com/diegonmarcos/cloud-t-infra"
+          "url": "https://github.com/diegonmarcos/cloudy-t-infra"
         },
         {
           "label": "front",

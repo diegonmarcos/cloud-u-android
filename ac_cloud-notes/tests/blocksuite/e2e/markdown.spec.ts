@@ -643,7 +643,7 @@ test.describe('markdown inline-text', () => {
     await undoByKeyboard(page);
     await assertRichTexts(page, ['']);
 
-    // https://github.com/diegonmarcos/cloud-u-android/issues/9410
+    // https://github.com/diegonmarcos/cloudy-u-android/issues/9410
     await waitNextFrame(page);
     await type(page, 'test**bold** ');
     await assertRichTextInlineDeltas(page, [

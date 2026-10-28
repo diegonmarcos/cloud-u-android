@@ -5,11 +5,11 @@
   "main": "./dist/main.js",
   "author": "toeverything",
   "repository": {
-    "url": "https://github.com/diegonmarcos/cloud-u-android",
+    "url": "https://github.com/diegonmarcos/cloudy-u-android",
     "type": "git"
   },
   "description": "Cloud Notes Desktop App",
-  "homepage": "https://github.com/diegonmarcos/cloud-u-android",
+  "homepage": "https://github.com/diegonmarcos/cloudy-u-android",
   "exports": {
     "./helper/exposed": "./src/helper/exposed.ts",
     "./main/exposed": "./src/main/exposed.ts",

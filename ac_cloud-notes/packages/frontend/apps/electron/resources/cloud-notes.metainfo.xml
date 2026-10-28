@@ -4,11 +4,11 @@
   <name>Cloud Notes</name>
   <summary>Productivity and note-taking app</summary>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>MIT AND LicenseRef-proprietary=https://github.com/diegonmarcos/cloud-u-android/blob/canary/LICENSE</project_license>
+  <project_license>MIT AND LicenseRef-proprietary=https://github.com/diegonmarcos/cloudy-u-android/blob/canary/LICENSE</project_license>
   <url type="homepage">https://notes.diegonmarcos.com</url>
-  <url type="bugtracker">https://github.com/diegonmarcos/cloud-u-android/issues</url>
+  <url type="bugtracker">https://github.com/diegonmarcos/cloudy-u-android/issues</url>
   <url type="help">https://notes.diegonmarcos.com/</url>
-  <url type="vcs-browser">https://github.com/diegonmarcos/cloud-u-android</url>
+  <url type="vcs-browser">https://github.com/diegonmarcos/cloudy-u-android</url>
   <url type="contribute">https://notes.diegonmarcos.com/contributing</url>
   <developer id="app.cloudnotes.pro">
     <name>cloud-notes</name>
@@ -65,7 +65,7 @@
   </screenshots>
   <releases>
     <release version="0.27.5" date="2026-09-09">
-      <url>https://github.com/diegonmarcos/cloud-u-android/releases/tag/v0.27.5</url>
+      <url>https://github.com/diegonmarcos/cloudy-u-android/releases/tag/v0.27.5</url>
     </release>
   </releases>
 </component>

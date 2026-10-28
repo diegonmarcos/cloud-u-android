@@ -21,7 +21,7 @@ import org.robolectric.RobolectricTestRunner
  * #1073 cloud-drive reads ONE repo list: _git-repos-master/repos.json, vendored as data/repos.sot.json
  * (build.json storage.repos_source). Held here, by the parser the phone runs: the copy is the pinned one,
  * every Sync > Git repository is listed by the registry and created, visibility agrees, and a
- * pending_creation repository (cloud-h-webapps, cloud-me-pvt-containers) is never offered for clone or seed.
+ * pending_creation repository (cloudy-h-webapps, cloud-me-pvt-containers) is never offered for clone or seed.
  * (The libs:repos copy lives outside this module's CI checkout; test/test-drive-repos-sot.sh R1 holds it byte-identical.)
  */
 @RunWith(RobolectricTestRunner::class)
@@ -69,9 +69,9 @@ class RepoSotTest {
     }
 
     @Test fun pendingRepositoriesAreDeclaredAndNeverCloneable() {
-        // cloud-h-webapps and cloud-me-pvt-containers were pending_creation when #1073 landed and the registry has since
+        // cloudy-h-webapps and cloud-me-pvt-containers were pending_creation when #1073 landed and the registry has since
         // created them (2026-10-21): the real registry now lists both as created and cloneable...
-        for (n in listOf("cloud-h-webapps", "cloud-me-pvt-containers")) {
+        for (n in listOf("cloudy-h-webapps", "cloud-me-pvt-containers")) {
             val e = decl.byGithub(n)
             assertTrue("$n must be declared in the registry", e != null)
             assertFalse("$n is created in the registry", e!!.pending)
@@ -79,14 +79,14 @@ class RepoSotTest {
         }
         // ...so the pending rule is held on the registry as it was, rebuilt by the same parser: the real entries plus the two as pending.
         fun pending(n: String) = JsonObject(mapOf("name" to JsonPrimitive(n), "github" to JsonPrimitive(n), "private" to JsonPrimitive(false), "pending" to JsonPrimitive(true), "renamed_from" to JsonArray(emptyList())))
-        val registry = Declarations.parseRepoSot(JsonArray(json.parseToJsonElement(baked()).jsonArray.filter { e -> e.jsonObject["name"]!!.jsonPrimitive.content !in setOf("cloud-h-webapps", "cloud-me-pvt-containers") } + listOf(pending("cloud-h-webapps"), pending("cloud-me-pvt-containers"))).toString())
-        for (n in listOf("cloud-h-webapps", "cloud-me-pvt-containers")) {
+        val registry = Declarations.parseRepoSot(JsonArray(json.parseToJsonElement(baked()).jsonArray.filter { e -> e.jsonObject["name"]!!.jsonPrimitive.content !in setOf("cloudy-h-webapps", "cloud-me-pvt-containers") } + listOf(pending("cloudy-h-webapps"), pending("cloud-me-pvt-containers"))).toString())
+        for (n in listOf("cloudy-h-webapps", "cloud-me-pvt-containers")) {
             val e = registry.byGithub(n)
             assertTrue("$n must be declared in the registry", e != null)
             assertTrue("$n is pending", e!!.pending)
             assertFalse(registry.cloneable(n))
         }
-        val withPending = Declarations.GitFamilyDecl(family.instances, family.repos + family.repos.first().copy(name = "cloud-h-webapps", seed = true, private = false))
+        val withPending = Declarations.GitFamilyDecl(family.instances, family.repos + family.repos.first().copy(name = "cloudy-h-webapps", seed = true, private = false))
         assertEquals("a pending repository is dropped from the family", family.repos.map { it.name }, Declarations.restrictToRegistry(withPending, registry).repos.map { it.name })
         val unknown = Declarations.GitFamilyDecl(family.instances, family.repos + family.repos.first().copy(name = "not-in-the-registry"))
         assertFalse("an unlisted repository is dropped", Declarations.restrictToRegistry(unknown, decl).repos.any { it.name == "not-in-the-registry" })

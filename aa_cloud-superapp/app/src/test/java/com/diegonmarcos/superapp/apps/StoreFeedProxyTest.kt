@@ -79,20 +79,20 @@ class StoreFeedProxyTest {
         return FeedViewer.parse(d)
     }
 
-    private val proxyCommits = """{"repo":"diegonmarcos/cloud-u-android","cached_at":"t","commits":[
+    private val proxyCommits = """{"repo":"diegonmarcos/cloudy-u-android","cached_at":"t","commits":[
         {"sha":"abcdef1234","message":"feat: one\n\nbody","author":"Diego","date":"2026-10-03T10:00:00Z","html_url":"https://github.com/x/commit/abcdef1234"}]}"""
-    private val proxyRuns = """{"repo":"diegonmarcos/cloud-u-android","cached_at":"t","runs":[
+    private val proxyRuns = """{"repo":"diegonmarcos/cloudy-u-android","cached_at":"t","runs":[
         {"name":"ship","display_title":"feat: one","status":"completed","conclusion":"failure","created_at":"2026-10-03","html_url":"https://github.com/x/runs/1","path":".github/workflows/ship.yml"}]}"""
     private val ghCommits = """[{"sha":"1111111aaa","html_url":"https://github.com/x/c/1","commit":{"message":"direct","author":{"name":"Gh","date":"d"}}}]"""
 
-    private val CP = "/fleet/git/repos/diegonmarcos/cloud-u-android/commits"
-    private val RP = "/fleet/git/repos/diegonmarcos/cloud-u-android/runs"
-    private val GC = "/gh/repos/diegonmarcos/cloud-u-android/commits"
+    private val CP = "/fleet/git/repos/diegonmarcos/cloudy-u-android/commits"
+    private val RP = "/fleet/git/repos/diegonmarcos/cloudy-u-android/runs"
+    private val GC = "/gh/repos/diegonmarcos/cloudy-u-android/commits"
 
     @Test fun `the shipped declaration points both feeds at the fleet git-proxy, per_page 50 as data`() {
         val feeds = FeedViewer.parse(shipped()).associateBy { it.id }
-        assertEquals("https://api.diegonmarcos.com/git/repos/diegonmarcos/cloud-u-android/commits?per_page=50", feeds.getValue("commits").proxy)
-        assertEquals("https://api.diegonmarcos.com/git/repos/diegonmarcos/cloud-u-android/runs?per_page=50", feeds.getValue("cicd").proxy)
+        assertEquals("https://api.diegonmarcos.com/git/repos/diegonmarcos/cloudy-u-android/commits?per_page=50", feeds.getValue("commits").proxy)
+        assertEquals("https://api.diegonmarcos.com/git/repos/diegonmarcos/cloudy-u-android/runs?per_page=50", feeds.getValue("cicd").proxy)
         assertEquals("commits", feeds.getValue("commits").proxyShape.items)
         assertEquals("runs", feeds.getValue("cicd").proxyShape.items)
         // the public fallback stays GitHub's own shape

@@ -37,7 +37,7 @@ class StoreMigrationTest {
         File(dir, ".git/HEAD").writeText("ref: refs/heads/main\n")
     }
 
-    private val declared = setOf("cloud", "cloud-infra", "cloud-u-android", "cloud-u-linux")
+    private val declared = setOf("cloudy-___", "cloud-infra", "cloudy-u-android", "cloudy-u-linux")
 
     /** The completeness ladder is what every decision rests on, so it is asserted directly. */
     @Test fun completenessScoresTheThreeThingsThatMakeACopyUsable() {
@@ -58,14 +58,14 @@ class StoreMigrationTest {
     /** A stray clone at the store root, a declared repo, is moved under git_subdir; content survives. */
     @Test fun straysAtRootAreMovedIntoTheGitFolder() {
         val root = tmp()
-        clone(File(root, "cloud"))
+        clone(File(root, "cloudy-___"))
         val moves = StoreMigration.migrate(root, "git", declared)
         assertEquals(1, moves.size)
         assertTrue("the stray must be reported moved: " + moves.first().decision, moves.first().moved)
-        assertFalse("the old root clone must be gone", File(root, "cloud").exists())
+        assertFalse("the old root clone must be gone", File(root, "cloudy-___").exists())
         val dest = File(root, "git/cloud")
         assertTrue("the clone must now live under git/", File(dest, ".git").exists())
-        assertEquals("cloud", File(dest, "README.md").readText())
+        assertEquals("cloudy-___", File(dest, "README.md").readText())
     }
 
     /** A repository already under git_subdir is not a stray and is never touched (idempotent). */
@@ -79,21 +79,21 @@ class StoreMigrationTest {
     }
 
     /**
-     * THE cloud-u-linux CASE, measured on the device: the ROOT copy is complete and the git/ copy is
+     * THE cloudy-u-linux CASE, measured on the device: the ROOT copy is complete and the git/ copy is
      * an empty husk. The complete copy must win — a migration that "never overwrites an existing
      * clone" strands it at the root forever.
      */
     @Test fun theCompleteRootCopyReplacesAnIncompleteGitCopy() {
         val root = tmp()
-        clone(File(root, "cloud-u-linux"), content = "KEEP")
-        husk(File(root, "git/cloud-u-linux"))
+        clone(File(root, "cloudy-u-linux"), content = "KEEP")
+        husk(File(root, "git/cloudy-u-linux"))
         val moves = StoreMigration.migrate(root, "git", declared)
         assertEquals(1, moves.size)
         assertTrue("the complete root copy must be moved: " + moves.first().decision, moves.first().moved)
-        assertFalse("the stray must not survive its own migration", File(root, "cloud-u-linux").exists())
-        assertEquals("KEEP", File(root, "git/cloud-u-linux/README.md").readText())
-        assertTrue("the survivor must verify complete", StoreMigration.isComplete(File(root, "git/cloud-u-linux")))
-        assertFalse("the parked husk must be gone", File(root, "git/cloud-u-linux.incomplete").exists())
+        assertFalse("the stray must not survive its own migration", File(root, "cloudy-u-linux").exists())
+        assertEquals("KEEP", File(root, "git/cloudy-u-linux/README.md").readText())
+        assertTrue("the survivor must verify complete", StoreMigration.isComplete(File(root, "git/cloudy-u-linux")))
+        assertFalse("the parked husk must be gone", File(root, "git/cloudy-u-linux.incomplete").exists())
     }
 
     /**
@@ -103,20 +103,20 @@ class StoreMigrationTest {
      */
     @Test fun theRedundantRootHuskIsRemovedWhenGitIsComplete() {
         val root = tmp()
-        husk(File(root, "cloud"))
+        husk(File(root, "cloudy-___"))
         clone(File(root, "git/cloud"), content = "KEEP")
         val moves = StoreMigration.migrate(root, "git", declared)
         assertEquals(1, moves.size)
         assertFalse(moves.first().moved)
         assertTrue("the redundant stray must be reported removed: " + moves.first().decision, moves.first().removed)
-        assertFalse("the redundant root husk must be gone", File(root, "cloud").exists())
+        assertFalse("the redundant root husk must be gone", File(root, "cloudy-___").exists())
         assertEquals("the complete copy must be untouched", "KEEP", File(root, "git/cloud/README.md").readText())
     }
 
     /** Two husks: nothing is complete, so NOTHING is deleted — a migration never destroys an only copy. */
     @Test fun neitherCopyCompleteMeansNothingIsDeleted() {
         val root = tmp()
-        husk(File(root, "cloud"))
+        husk(File(root, "cloudy-___"))
         husk(File(root, "git/cloud"))
         val moves = StoreMigration.migrate(root, "git", declared)
         assertEquals(1, moves.size)
@@ -130,12 +130,12 @@ class StoreMigrationTest {
     /** Two complete copies: git/ is proven good, so the root duplicate goes and the survivor is intact. */
     @Test fun bothCompleteKeepsTheGitCopyAndDropsTheDuplicate() {
         val root = tmp()
-        clone(File(root, "cloud"), content = "STRAY")
+        clone(File(root, "cloudy-___"), content = "STRAY")
         clone(File(root, "git/cloud"), content = "KEEP")
         val moves = StoreMigration.migrate(root, "git", declared)
         assertEquals(1, moves.size)
         assertTrue(moves.first().removed)
-        assertFalse(File(root, "cloud").exists())
+        assertFalse(File(root, "cloudy-___").exists())
         assertEquals("KEEP", File(root, "git/cloud/README.md").readText())
     }
 
@@ -143,7 +143,7 @@ class StoreMigrationTest {
     @Test fun undeclaredFoldersAndPlainDirsAreIgnored() {
         val root = tmp()
         clone(File(root, "my-photos"))            // a clone, but not a declared repo name
-        File(root, "cloud").apply { mkdirs(); File(this, "notes.txt").writeText("x") } // declared name, not a clone
+        File(root, "cloudy-___").apply { mkdirs(); File(this, "notes.txt").writeText("x") } // declared name, not a clone
         val moves = StoreMigration.migrate(root, "git", declared)
         assertTrue("neither is a stray to migrate: " + moves.map { it.decision }, moves.isEmpty())
         assertTrue(File(root, "my-photos/.git").exists())
@@ -154,7 +154,7 @@ class StoreMigrationTest {
     /** A user folder sharing a declared name is never deleted even when git/ holds the real clone. */
     @Test fun aPlainUserFolderIsNeverDeletedForTheCompleteClone() {
         val root = tmp()
-        File(root, "cloud").apply { mkdirs(); File(this, "notes.txt").writeText("mine") }
+        File(root, "cloudy-___").apply { mkdirs(); File(this, "notes.txt").writeText("mine") }
         clone(File(root, "git/cloud"))
         val moves = StoreMigration.migrate(root, "git", declared)
         assertEquals(1, moves.size)

@@ -9,7 +9,7 @@ projects:
             name: cloud-notes
             runtime: docker
             plan: standard
-            # The Dockerfile adds a start script to ghcr.io/diegonmarcos/cloud-u-android:stable. It runs migrations and the server
+            # The Dockerfile adds a start script to ghcr.io/diegonmarcos/cloudy-u-android:stable. It runs migrations and the server
             dockerfilePath: ./.render/Dockerfile
             dockerContext: ./.render
             healthCheckPath: /info

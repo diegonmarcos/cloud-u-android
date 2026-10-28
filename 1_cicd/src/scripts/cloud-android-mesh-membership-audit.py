@@ -97,7 +97,7 @@ def main(argv):
     gaps = audited = 0
     with tempfile.TemporaryDirectory() as tmp:
         for r in rows:
-            got = subprocess.run(["gh", "release", "download", "latest", "-R", "diegonmarcos/cloud-u-android",
+            got = subprocess.run(["gh", "release", "download", "latest", "-R", "diegonmarcos/cloudy-u-android",
                                   "-p", r["asset"], "-D", tmp, "--clobber"], capture_output=True, text=True)
             apk = os.path.join(tmp, r["asset"])
             if got.returncode != 0 or not os.path.isfile(apk):

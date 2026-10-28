@@ -13,7 +13,7 @@ import java.util.Locale
 object WeatherModel {
 
     /** MET Norway's terms REQUIRE an identifying User-Agent; anonymous calls get 403. */
-    const val USER_AGENT = "CloudSuperApp/1.0 github.com/diegonmarcos/cloud-u-android"
+    const val USER_AGENT = "CloudSuperApp/1.0 github.com/diegonmarcos/cloudy-u-android"
 
     /** How far ahead the rain chance looks: "will I need an umbrella soon". */
     const val RAIN_WINDOW_H = 6

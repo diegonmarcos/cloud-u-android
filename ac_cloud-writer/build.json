@@ -819,7 +819,7 @@
       "shortcut_action": "page:config/store-cloud"
     },
     "_doc_fallback_url": "Only when the SuperApp is not installed: the rolling release, where both serving apps (Cloud-Writer.apk, Cloud-Keyboard.apk) are published.",
-    "fallback_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest",
+    "fallback_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/latest",
     "_doc_bind_wait_ms": "How long the status probe waits for the ITextTools bind before calling the peer silent. bindService answers through a callback, so the probe that ran without this wait read a current Cloud Keyboard as too old (#800). 3000 = libs:ml-l-image-mlkit ImageScanBackendService.ACCOUNT_WAIT_MS, the fleet's other wait for the same bind.",
     "bind_wait_ms": 3000
   },

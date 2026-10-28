@@ -37,21 +37,21 @@ class MailFleetEntryTest {
             "Configs ▸ Update's APK row opens this, and :libs:updater downloads it. Two " +
                 "different strings would mean the page advertises one artefact and the button " +
                 "fetches another",
-            "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-mail.apk",
+            "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-mail.apk",
             mail["release_url"],
         )
     }
 
     @Test fun `the repository URL points at this app's own tree`() {
         assertEquals(
-            "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-mail",
+            "https://github.com/diegonmarcos/cloudy-u-android/tree/main/ac_cloud-mail",
             mail["repo_url"],
         )
     }
 
     @Test fun `the package page is this app's own GHCR container`() {
         assertEquals(
-            "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-comms-mail",
+            "https://github.com/diegonmarcos/cloudy-u-android/pkgs/container/cloud-comms-mail",
             mail["ghcr_page"],
         )
     }
@@ -83,7 +83,7 @@ class MailFleetEntryTest {
     @Test fun `the release page derives from the manifest's own download URL`() {
         val releaseUrl = mail.getValue("release_url")
         assertEquals(
-            "https://github.com/diegonmarcos/cloud-u-android/releases/tag/latest",
+            "https://github.com/diegonmarcos/cloudy-u-android/releases/tag/latest",
             UpdateLinks.releasePageUrl(releaseUrl),
         )
         assertEquals(

@@ -311,7 +311,7 @@ class DeclarationsTest {
         assertTrue("the store would start empty", seeded.isNotEmpty())
         assertEquals("private repositories must never be seeded", emptyList<String>(), seeded.filter { it.private }.map { it.name })
         assertTrue(family.repos.filter { it.private }.none { it.seed })
-        assertEquals("https://github.com/diegonmarcos/cloud-t-infra.git", family.cloneUrl(family.repos.first { it.name == "cloud-t-infra" }))
+        assertEquals("https://github.com/diegonmarcos/cloudy-t-infra.git", family.cloneUrl(family.repos.first { it.name == "cloudy-t-infra" }))
         val mirrors = Declarations.parseMirrorJobs(Json.parseToJsonElement(File(data, "drive-mirror-jobs.json").readText()).jsonObject["jobs"].toString())
         assertTrue(mirrors.isNotEmpty()); assertTrue("declared mirror paths are relative", mirrors.all { !it.source.startsWith("/") && !it.destination.startsWith("/") })
         val remotes = Declarations.parseRemotes(Json.parseToJsonElement(File(data, "drive-remotes.json").readText()).jsonObject["remotes"].toString())

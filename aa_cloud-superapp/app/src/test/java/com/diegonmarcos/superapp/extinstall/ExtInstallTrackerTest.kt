@@ -15,7 +15,7 @@ class ExtInstallTrackerTest {
     private val board = JobBoard()
     private val t = ExtInstallTracker(board) { clock }
     private val pkg = "com.diegonmarcos.cloud.chat"
-    private val url = "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-chat.apk"
+    private val url = "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/cloud-comms-chat.apk"
 
     private fun job(stage: String) = UpdateProgress.Job(pkg, pkg, "Chat", stage)
     private fun phase() = t.snapshot(pkg)!!.phase

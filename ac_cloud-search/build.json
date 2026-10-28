@@ -210,7 +210,7 @@
     }
   },
   "search": {
-    "user_agent": "CloudSearch/0.1 (+https://github.com/diegonmarcos/cloud-u-android)",
+    "user_agent": "CloudSearch/0.1 (+https://github.com/diegonmarcos/cloudy-u-android)",
     "timeout_ms": 15000,
     "cache_ttl_minutes": 60,
     "recent_days": 7,
@@ -1553,7 +1553,7 @@
       "chat_url": "https://openrouter.ai/api/v1/chat/completions",
       "models_url": "https://openrouter.ai/api/v1/models",
       "default_model": "openrouter/auto",
-      "referer": "https://github.com/diegonmarcos/cloud-u-android",
+      "referer": "https://github.com/diegonmarcos/cloudy-u-android",
       "title": "cloud-search",
       "timeout_ms": 60000,
       "catalog_ttl_hours": 24,

@@ -187,6 +187,6 @@ private fun AboutPage() {
     Head("Navigation")
     com.diegonmarcos.superapp.navbartop2.NavModeConfigCard(MainActivity.NAV.sections)
     Head("Licence")
-    Body("Part of the Cloud constellation (diegonmarcos/cloud-u-android).")
+    Body("Part of the Cloud constellation (diegonmarcos/cloudy-u-android).")
     Note("The licence of every file and the attribution for the open-source components built in (Shizuku API, libadb-android, BouncyCastle, AndroidX, Compose) are in LICENSING.md and licenses/inventory.json in the repository.")
 }

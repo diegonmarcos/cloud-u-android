@@ -135,7 +135,7 @@ engine symlink target per-solution** — extend `build.json` instead.
 ## Getting started
 
 ```sh
-git clone --recurse-submodules git@github.com:diegonmarcos/cloud-u-android.git
+git clone --recurse-submodules git@github.com:diegonmarcos/cloudy-u-android.git
 cd cloud-u-android
 ./build.sh deps        # check / install system deps
 ./build.sh workflow    # materialise hooks, .github/, .gitmodules from src

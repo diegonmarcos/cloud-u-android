@@ -8,7 +8,7 @@ In previous examples, we demonstrated how a `doc` collaborates with an `editor`.
 
 ## Block Tree Basics
 
-In BlockSuite, each `doc` object manages an independent block tree composed of various types of blocks. These blocks can be defined through the [`BlockSchema`](./block-schema.md), which specifies their fields and permissible nesting relationships among different block types. Each block type has a unique `block.flavour`, following a `namespace:name` naming structure. Since the preset editors in BlockSuite are derived from the [Cloud Notes](https://github.com/diegonmarcos/cloud-u-android) project, the default editable blocks use the `cloud-notes` prefix.
+In BlockSuite, each `doc` object manages an independent block tree composed of various types of blocks. These blocks can be defined through the [`BlockSchema`](./block-schema.md), which specifies their fields and permissible nesting relationships among different block types. Each block type has a unique `block.flavour`, following a `namespace:name` naming structure. Since the preset editors in BlockSuite are derived from the [Cloud Notes](https://github.com/diegonmarcos/cloudy-u-android) project, the default editable blocks use the `cloud-notes` prefix.
 
 To manipulate blocks, you can utilize several primary APIs under `doc`:
 

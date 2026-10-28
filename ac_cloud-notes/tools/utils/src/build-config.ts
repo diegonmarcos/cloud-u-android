@@ -43,7 +43,7 @@ export function getBuildConfig(
         appVersion: pkg.version,
         // editorVersion: pkg.dependencies['@blocksuite/cloud-notes'],
         editorVersion: pkg.version,
-        githubUrl: 'https://github.com/diegonmarcos/cloud-u-android',
+        githubUrl: 'https://github.com/diegonmarcos/cloudy-u-android',
         changelogUrl: 'https://notes.diegonmarcos.com/what-is-new',
         downloadUrl: 'https://notes.diegonmarcos.com/download',
         pricingUrl: 'https://notes.diegonmarcos.com/pricing',
@@ -58,14 +58,14 @@ export function getBuildConfig(
       return {
         ...this.stable,
         appBuildType: 'beta' as const,
-        changelogUrl: 'https://github.com/diegonmarcos/cloud-u-android/releases',
+        changelogUrl: 'https://github.com/diegonmarcos/cloudy-u-android/releases',
       };
     },
     get internal() {
       return {
         ...this.stable,
         appBuildType: 'internal' as const,
-        changelogUrl: 'https://github.com/diegonmarcos/cloud-u-android/releases',
+        changelogUrl: 'https://github.com/diegonmarcos/cloudy-u-android/releases',
       };
     },
     // canary will be aggressive and enable all features
@@ -73,7 +73,7 @@ export function getBuildConfig(
       return {
         ...this.stable,
         appBuildType: 'canary' as const,
-        changelogUrl: 'https://github.com/diegonmarcos/cloud-u-android/releases',
+        changelogUrl: 'https://github.com/diegonmarcos/cloudy-u-android/releases',
       };
     },
   };

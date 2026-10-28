@@ -101,5 +101,5 @@ pub fn linux_repo() -> PathBuf {
             return c.clone();
         }
     }
-    panic!("the cloud-u-linux checkout was not found: set LINUX_REPO to a checkout of diegonmarcos/cloud-u-linux (da_my-webserver/src must be present). Tried {:?}", cands);
+    panic!("the cloud-u-linux checkout was not found: set LINUX_REPO to a checkout of diegonmarcos/cloudy-u-linux (da_my-webserver/src must be present). Tried {:?}", cands);
 }

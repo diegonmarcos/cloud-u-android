@@ -178,7 +178,7 @@
       "shortcut_action": "page:config/store-cloud"
     },
     "_doc_fallback_url": "Only when the SuperApp is not installed: the rolling GitHub release asset release.gh_release publishes.",
-    "fallback_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Keyboard.apk"
+    "fallback_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/latest/download/Cloud-Keyboard.apk"
   },
   "analytics": {
     "_doc": "Consumed by :libs:analytics, which reads THIS file (rootDir) at build time and bakes the values into BuildConfig. Both backends are single-site today, so every app reports into the same site and is told apart by .app — give each app its own site_id once per-app sites exist in Umami/Matomo.",

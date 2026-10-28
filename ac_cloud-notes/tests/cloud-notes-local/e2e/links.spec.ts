@@ -1144,7 +1144,7 @@ test('should add HTTP protocol into link automatically', async ({ page }) => {
 
   await page.keyboard.press('Space');
 
-  const link = 'https://github.com/diegonmarcos/cloud-u-android';
+  const link = 'https://github.com/diegonmarcos/cloudy-u-android';
 
   const { toolbar, switchViewBtn, cardViewBtn } = toolbarButtons(page);
 

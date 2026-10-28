@@ -77,8 +77,8 @@ class TerminalGitTest {
     // A temp path, NOT a device path: #603's rule is that the shared store's absolute location
     // is written down nowhere but SharedStore (test-drive-shared-store.sh enforces it over
     // src/ including this suite). Nothing here depends on where dest is, only on its parent.
-    private val dest = File(System.getProperty("java.io.tmpdir"), "cloud-drive-git/cloud-u-android")
-    private val url = "https://github.com/diegonmarcos/cloud-u-android.git"
+    private val dest = File(System.getProperty("java.io.tmpdir"), "cloud-drive-git/cloudy-u-android")
+    private val url = "https://github.com/diegonmarcos/cloudy-u-android.git"
 
     @Test
     fun `the declaration resolves to the terminal, with no placeholder left`() {

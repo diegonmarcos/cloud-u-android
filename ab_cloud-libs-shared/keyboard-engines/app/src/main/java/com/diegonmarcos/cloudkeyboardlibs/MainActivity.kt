@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
                             .clickable {
                                 startActivity(
                                     Intent(Intent.ACTION_VIEW,
-                                        Uri.parse("https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Keyboard-Libs.apk"))
+                                        Uri.parse("https://github.com/diegonmarcos/cloudy-u-android/releases/latest/download/Cloud-Keyboard-Libs.apk"))
                                 )
                             }
                             .padding(horizontal = 24.dp, vertical = 12.dp),
