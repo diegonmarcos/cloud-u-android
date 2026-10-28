@@ -66,7 +66,7 @@ g2() {
     grep -qE 'Pill\(stringResource\(R\.string\.sync_resolve_conflicts, glance\.conflicts\), \{ actions\.openEngine\(EngineActivity\.ENGINE_GIT, repo\.path\) \}, filled = true\)' "$1" &&
     # #1175 the light's rule moved to RepoStatus (pure, JVM-tested): a conflict is never green.
     grep -qE 'g\.conflicts > 0 -> Kind\.CONFLICT' "$SRC/sync/RepoStatus.kt" &&
-    grep -qE 'Kind\.DIRTY, Kind\.CONFLICT, Kind\.ERROR -> StatusLight\.State\.OFF' "$SRC/sync/RepoStatus.kt" &&
+    grep -qE 'CONFLICT\(StatusLight\.State\.OFF\)' "$SRC/sync/RepoStatus.kt" &&
     grep -qE 'RepoStatus\.light\(RepoStatus\.kindOf\(' "$1"
 }
 # g6 <GitSyncWorker.kt> : the worker decides per repository through SyncSchedule.isDue with the repo's own period and rule
@@ -79,6 +79,12 @@ if grep -qE 'data class Glance\(' "$COORD" && for f in branch upstream ahead beh
 if grep -qE 'GitEngine\(ctx, dir\)\.use \{ e ->' "$COORD" && grep -qE 'val s = e\.status\(\)' "$COORD"; then pass "the glance is GitEngine.status(), not a second git"; else fail "the coordinator does not read GitEngine.status()"; fi
 if grep -rqE 'org\.eclipse\.jgit' "$SRC"; then fail "the app imports JGit directly — the library is the engine"; else pass "no JGit in the app: every verb goes through libs:git-sync"; fi
 if grep -qE 'RepoRegistry\(File\(ctx\.filesDir, GitSyncWorker\.REGISTRY_FILE\)\)' "$COORD" && grep -qE 'const val REGISTRY_FILE = "git-sync/repos\.json"' "$WORKER" && grep -qE 'RepoRegistry\(File\(context\.filesDir, "git-sync/repos\.json"\)\)' "$LIB_SCREEN"; then pass "card, worker and engine screen read the SAME registry"; else fail "registry paths differ"; fi
+
+echo "── G1b a cloned repository never renders ? once its status is read ──"
+# The page open ALWAYS requests the local status read (the #1195 gate had left every row on "?"), every read kind is a declared non-? light, the JVM fixture asserts it.
+if sed -n '/fun onPageOpened()/,/^    }/p' "$COORD" | grep -qE 'statusReader\.request\(list\.map' \
+   && ! grep -E '^\s+(CLEAN|AHEAD|BEHIND|DIVERGED|DIRTY|NO_UPSTREAM|CONFLICT|ERROR)\(StatusLight\.State\.(UNKNOWN|UNVERIFIABLE)' "$SRC/sync/RepoStatus.kt" >/dev/null \
+   && grep -qF 'never renders a question mark' "$APP/app/src/test/java/com/diegonmarcos/clouddrive/sync/RepoStatusTest.kt"; then pass "page open reads local status; every read kind has a non-? light; JVM fixture pins it"; else fail "a cloned repo can render ? after its status was read"; fi
 
 echo "── G2 the card ──"
 g2 "$CARDS" && pass "conflicts in the off colour, a red light, and a Resolve pill that opens the engine" || fail "conflicts are not surfaced on the card"

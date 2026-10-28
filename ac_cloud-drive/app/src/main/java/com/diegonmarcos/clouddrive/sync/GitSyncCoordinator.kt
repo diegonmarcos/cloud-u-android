@@ -209,14 +209,17 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     }.getOrDefault(false)
 
     /**
-     * #850 / #1195 the page opened. The table renders from what is cached: this loads the registry and the persisted
-     * size cache and nothing else. Status reads, fetches, pulls and size walks run only when the page's Settings
+     * #850 / #1195 the page opened. The table renders from what is cached: this loads the registry, the persisted
+     * size cache and the cached local status read. Status reads, fetches, pulls and size walks run only when the page's Settings
      * ask for them ([AutoChecks.plan], all off by default); a plain pull additionally keeps its declared Wi-Fi-only
      * constraint. Called from the page's LaunchedEffect(Unit): once per entry, never per recomposition.
      */
     fun onPageOpened() {
         scope.launch {
-            loadRegistry()
+            val list = loadRegistry()
+            // The LOCAL status (no network, cached by ttl, bounded, off the main thread) is read on every open: without
+            // it every cloned row stayed on "?" (the #1195 gate made the read opt-in and nothing else triggered it).
+            statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) })
             runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.OPEN))
         }
     }

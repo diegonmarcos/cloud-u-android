@@ -627,7 +627,7 @@
     <string name="repo_col_name">Name</string>
     <string name="repo_col_provider">Provider</string>
     <string name="repo_act_unpushed">Show unpushed commits</string>
-    <string name="repo_legend">Status icon: ● read, nothing local at risk (clean, ahead or behind) · ○ needs you (uncommitted changes, conflict or a failed status read; the reason is under the name) · ? no status to show (not cloned, or still reading)</string>
+    <string name="repo_legend">Status icon: ● read, nothing local at risk (clean, ahead or behind) · ○ needs you (uncommitted changes, conflict, diverged, no upstream or a failed status read; the reason is under the name) · ? no status to show (not cloned, or still reading)</string>
     <string name="repo_status_title">STATUS</string>
     <string name="repo_status_cloned">Cloned: %1$s</string>
     <string name="repo_status_branch">Branch: %1$s · upstream %2$s</string>
@@ -666,6 +666,8 @@
     <string name="repo_kind_error">status could not be read</string>
     <string name="repo_kind_conflict">conflicts</string>
     <string name="repo_kind_dirty">uncommitted changes</string>
+    <string name="repo_kind_diverged">diverged: unpushed commits and new remote commits</string>
+    <string name="repo_kind_no_upstream">no upstream branch to compare with</string>
     <string name="repo_kind_behind">behind the remote</string>
     <string name="repo_kind_ahead">ahead of the remote</string>
     <string name="repo_kind_clean">clean, in sync</string>

@@ -820,7 +820,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
 
     GitPageFrame(
         refreshing = refreshingRemote,
-        onRefresh = { coordinator.refreshRemoteStats(refreshTargets(), login.token) },
+        onRefresh = { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token) },
         modifier = modifier,
     ) {
         // #642 WHAT THE HANDOFF DID, at the top of the page, above every row that could have

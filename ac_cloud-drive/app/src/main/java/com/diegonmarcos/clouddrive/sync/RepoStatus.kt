@@ -14,7 +14,17 @@ import com.diegonmarcos.cloudlib.gitsync.GitCommitInfo
  * named kind, a legend entry and a tooltip.
  */
 object RepoStatus {
-    enum class Kind { NOT_CLONED, READING, MISSING, ERROR, CONFLICT, DIRTY, BEHIND, AHEAD, CLEAN }
+    /**
+     * The row states, declaratively: each kind carries its light (glyph + colour come from [StatusLight]) and the
+     * label is the matching `repo_kind_*` string. A read clone is never UNKNOWN: only NOT_CLONED and READING draw "?"
+     * (MISSING too: the folder is gone, nothing can be read).
+     */
+    enum class Kind(val light: StatusLight.State) {
+        NOT_CLONED(StatusLight.State.UNKNOWN), READING(StatusLight.State.UNKNOWN), MISSING(StatusLight.State.UNVERIFIABLE),
+        ERROR(StatusLight.State.OFF), CONFLICT(StatusLight.State.OFF), DIRTY(StatusLight.State.OFF),
+        DIVERGED(StatusLight.State.OFF), NO_UPSTREAM(StatusLight.State.OFF),
+        BEHIND(StatusLight.State.ON), AHEAD(StatusLight.State.ON), CLEAN(StatusLight.State.ON),
+    }
 
     /** The kind of one row: [cloned] says whether a clone is registered, [g] is the status reader's last answer for it. */
     fun kindOf(cloned: Boolean, g: GitSyncCoordinator.Glance?): Kind = when {
@@ -24,18 +34,15 @@ object RepoStatus {
         g.error != null -> Kind.ERROR
         g.conflicts > 0 -> Kind.CONFLICT
         g.changed > 0 -> Kind.DIRTY
+        g.upstream == null -> Kind.NO_UPSTREAM
+        g.ahead > 0 && g.behind > 0 -> Kind.DIVERGED
         g.behind > 0 -> Kind.BEHIND
         g.ahead > 0 -> Kind.AHEAD
         else -> Kind.CLEAN
     }
 
-    /** The light: a read status is green when nothing local is at risk, hollow when something needs the owner; "?" only when nothing can be said. */
-    fun light(kind: Kind): StatusLight.State = when (kind) {
-        Kind.CLEAN, Kind.AHEAD, Kind.BEHIND -> StatusLight.State.ON
-        Kind.DIRTY, Kind.CONFLICT, Kind.ERROR -> StatusLight.State.OFF
-        Kind.MISSING -> StatusLight.State.UNVERIFIABLE
-        Kind.NOT_CLONED, Kind.READING -> StatusLight.State.UNKNOWN
-    }
+    /** The light of a kind (see [Kind.light]). */
+    fun light(kind: Kind): StatusLight.State = kind.light
 
     /** Why a status probe failed, in classes a sentence can be chosen for. */
     enum class ErrorKind { TIMEOUT, NOT_A_REPOSITORY, PERMISSION, AUTH, ENGINE, OTHER }

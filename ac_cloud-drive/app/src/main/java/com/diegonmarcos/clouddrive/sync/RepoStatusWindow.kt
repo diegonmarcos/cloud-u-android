@@ -39,6 +39,8 @@ private fun kindText(k: RepoStatus.Kind): String = stringResource(when (k) {
     RepoStatus.Kind.ERROR -> R.string.repo_kind_error
     RepoStatus.Kind.CONFLICT -> R.string.repo_kind_conflict
     RepoStatus.Kind.DIRTY -> R.string.repo_kind_dirty
+    RepoStatus.Kind.DIVERGED -> R.string.repo_kind_diverged
+    RepoStatus.Kind.NO_UPSTREAM -> R.string.repo_kind_no_upstream
     RepoStatus.Kind.BEHIND -> R.string.repo_kind_behind
     RepoStatus.Kind.AHEAD -> R.string.repo_kind_ahead
     RepoStatus.Kind.CLEAN -> R.string.repo_kind_clean

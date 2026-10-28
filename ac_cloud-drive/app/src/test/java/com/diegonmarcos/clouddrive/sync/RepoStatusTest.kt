@@ -19,9 +19,22 @@ class RepoStatusTest {
     @Test fun `a status that was read decides the kind, with the reader's precedence`() {
         assertEquals(Kind.CLEAN, RepoStatus.kindOf(true, g()))
         assertEquals(Kind.AHEAD, RepoStatus.kindOf(true, g(ahead = 2)))
-        assertEquals(Kind.BEHIND, RepoStatus.kindOf(true, g(ahead = 2, behind = 1)))
+        assertEquals(Kind.DIVERGED, RepoStatus.kindOf(true, g(ahead = 2, behind = 1)))
+        assertEquals(Kind.BEHIND, RepoStatus.kindOf(true, g(behind = 1)))
         assertEquals(Kind.DIRTY, RepoStatus.kindOf(true, g(changed = 1, behind = 3)))
         assertEquals(Kind.CONFLICT, RepoStatus.kindOf(true, g(changed = 1, conflicts = 1)))
+    }
+
+    @Test fun `no upstream is its own kind, below dirty and above clean, and never draws a question mark`() {
+        assertEquals(Kind.NO_UPSTREAM, RepoStatus.kindOf(true, g(upstream = null)))
+        assertEquals(Kind.DIRTY, RepoStatus.kindOf(true, g(upstream = null, changed = 1)))
+        assertEquals(StatusLight.State.OFF, RepoStatus.light(Kind.NO_UPSTREAM))
+        assertEquals(StatusLight.State.OFF, RepoStatus.light(Kind.DIVERGED))
+    }
+
+    @Test fun `a cloned repository whose status was read never renders a question mark, whatever it says`() {
+        val reads = listOf(g(), g(ahead = 1), g(behind = 1), g(ahead = 1, behind = 1), g(changed = 1), g(conflicts = 1, changed = 1), g(upstream = null), g(error = "boom"))
+        for (r in reads) assert(StatusLight.glyph(RepoStatus.light(RepoStatus.kindOf(true, r))) != "?") { "a read clone drew ? for $r" }
     }
 
     @Test fun `a cloned repository that was never synced still shows its real status, not a question mark`() {
