@@ -1,7 +1,7 @@
 {
   "_warning": "GENERATED — DO NOT EDIT. Derived by 1_cloud-configs/src/derive/derive-mcp-json.ts (writeProjectMcp) from the same inputs as dist/mcp.json.",
   "_schema": "mcp-servers/v1",
-  "_doc": "Owner decision 31: mesh first (no auth), else public https://mcp.diegonmarcos.com/<svc>/mcp with Authorization: Bearer $FLEET_BEARER (fallback $AUTHELIA_BEARER_TOKEN). No OAuth/DCR. Set FLEET_BEARER in the Claude Code cloud environment secrets / your shell. Bridge: .claude/mcp-connect.mjs.",
+  "_doc": "Owner decision 31: mesh first (no auth), else public https://c3-pvt.diegonmarcos.com/<container>/mcp with Authorization: Bearer $FLEET_BEARER (fallback $AUTHELIA_BEARER_TOKEN). No OAuth/DCR. Set FLEET_BEARER in the Claude Code cloud environment secrets / your shell. Bridge: .claude/mcp-connect.mjs.",
   "mcpServers": {
     "cloud-cgc-pub-mcp": {
       "type": "stdio",
@@ -11,7 +11,7 @@
         "--mesh",
         "https://c3-cloud-cgc-pub-mcp.mesh.diegonmarcos.com/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/cloud-cgc-pub-mcp/mcp"
+        "https://c3-pvt.diegonmarcos.com/cloud-cgc-pub-mcp/mcp"
       ]
     },
     "cloud-cgc-pvt-mcp": {
@@ -22,7 +22,7 @@
         "--mesh",
         "http://10.0.0.6:3107/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/cloud-cgc-pvt-mcp/mcp"
+        "https://c3-pvt.diegonmarcos.com/cloud-cgc-pvt-mcp/mcp"
       ]
     },
     "cloud-drive-mcp": {
@@ -33,12 +33,12 @@
         "--mesh",
         "https://c3-cloud-drive-mcp.mesh.diegonmarcos.com/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/cloud-drive-mcp/mcp"
+        "https://c3-pvt.diegonmarcos.com/cloud-drive-mcp/mcp"
       ]
     },
     "cloud-infra-mcp": {
       "type": "http",
-      "url": "https://mcp.diegonmarcos.com/c3-infra-mcp/mcp",
+      "url": "https://c3-pvt.diegonmarcos.com/cloud-infra-mcp/mcp",
       "headers": {
         "Authorization": "Bearer ${AUTHELIA_BEARER_TOKEN:-}"
       },
@@ -52,7 +52,7 @@
         "--mesh",
         "https://c3-cloud-mail-mcp.mesh.diegonmarcos.com/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/mail-mcp/mcp"
+        "https://c3-pvt.diegonmarcos.com/cloud-mail-mcp/mcp"
       ]
     },
     "cloud-mattermost-mcp": {
@@ -63,7 +63,7 @@
         "--mesh",
         "https://c3-cloud-mattermost-mcp.mesh.diegonmarcos.com/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/mattermost-mcp/mcp"
+        "https://c3-pvt.diegonmarcos.com/cloud-mattermost-mcp/mcp"
       ]
     },
     "cloud-services-mcp": {
@@ -74,7 +74,7 @@
         "--mesh",
         "https://c3-cloud-services-mcp.mesh.diegonmarcos.com/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/c3-services-mcp/mcp"
+        "https://c3-pvt.diegonmarcos.com/cloud-services-mcp/mcp"
       ]
     },
     "cloud-superapp-mcp": {
@@ -85,7 +85,7 @@
         "--mesh",
         "https://c3-cloud-superapp-mcp.mesh.diegonmarcos.com/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/cloud-superapp-mcp/mcp"
+        "https://c3-pvt.diegonmarcos.com/cloud-superapp-mcp/mcp"
       ]
     },
     "cloud-vault-mcp": {
@@ -96,7 +96,7 @@
         "--mesh",
         "http://10.0.0.6:3111/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/cloud-vault-mcp/mcp"
+        "https://c3-pvt.diegonmarcos.com/cloud-vault-mcp/mcp"
       ]
     },
     "google-personal-mcp": {
@@ -107,7 +107,7 @@
         "--mesh",
         "https://c3-google-personal-mcp.mesh.diegonmarcos.com/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/g-personal/mcp"
+        "https://c3-pvt.diegonmarcos.com/google-personal-mcp/mcp"
       ]
     },
     "google-workspace-mcp": {
@@ -118,7 +118,7 @@
         "--mesh",
         "https://c3-google-workspace-mcp.mesh.diegonmarcos.com/mcp",
         "--public",
-        "https://mcp.diegonmarcos.com/g-workspace/mcp"
+        "https://c3-pvt.diegonmarcos.com/google-workspace-mcp/mcp"
       ]
     }
   }

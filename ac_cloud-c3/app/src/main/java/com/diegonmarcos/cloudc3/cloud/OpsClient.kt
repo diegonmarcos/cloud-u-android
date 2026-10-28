@@ -23,7 +23,7 @@ import java.net.URL
  * is the box, the service is what systemd runs inside it.
  *
  * EVERY CALL IS AUTHENTICATED. These routes sit behind Caddy's forward_auth on
- * api.diegonmarcos.com/c3-infra-api, so an Authelia bearer is mandatory. The
+ * c3-pvt.diegonmarcos.com/c3-infra-api, so an Authelia bearer is mandatory. The
  * token is the one libs:ops already keeps for Dagu ([com.diegonmarcos.superapp
  * .ops.dagu.DaguPrefs]) — reused rather than re-collected, because a second
  * place to paste the same token is a second place for it to go stale.

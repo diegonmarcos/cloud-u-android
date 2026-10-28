@@ -6364,7 +6364,7 @@
     "_doc_profile_default": "Seeds the drawer-header identity row + the Configs/Profile form + the Virtual Business Card. User-editable at runtime via ProfileFragment (persisted in ProfilePrefs SharedPreferences); these values are only the FIRST-RUN defaults. Photo URIs (picture, banner) are NOT seeded — they're picked by the user via the gallery picker in Configs → Profile.",
     "_doc_profile_sync": "Where the user profile is mirrored so the fleet operator has an out-of-band contact channel when the update chain breaks. Baked as UI_PROFILE_SYNC_URL; an empty url disables sync entirely (ProfileSync no-ops, nothing is queued or sent). MUST be https — ProfileSyncClient refuses plain http rather than sending personal data in clear text. Contract: aa_cloud-superapp/docs/profile-sync-contract.md.",
     "profile_sync": {
-      "url": "https://api.diegonmarcos.com/c3-infra-api/fleet/profile"
+      "url": "https://c3-pvt.diegonmarcos.com/c3-infra-api/fleet/profile"
     },
     "profile_default": {
       "name": "Diego Coelho Marcos",
@@ -8078,11 +8078,11 @@
         },
         {
           "title": "c3-infra-api",
-          "subtitle": "Rust • oci-apps • api.diegonmarcos.com/c3-infra-api"
+          "subtitle": "Rust • oci-apps • c3-pvt.diegonmarcos.com/c3-infra-api"
         },
         {
           "title": "c3-services-api",
-          "subtitle": "Rust • oci-apps • api.diegonmarcos.com/c3-services-api"
+          "subtitle": "Rust • oci-apps • c3-pvt.diegonmarcos.com/c3-services-api"
         },
         {
           "title": "Drift report",
@@ -10411,7 +10411,7 @@
     },
     "_doc_c3_ops": "Where the C3 container sheet's Actions tab POSTs. c3-infra-api's operations routes, reached through the same public base the front portal uses. The API distinguishes a CONTAINER from its SERVICE — /vms/{vm}/containers/{name}/{start,stop,restart,update} against /vms/{vm}/services/{service}/{start,stop} — which is why the sheet shows Container Actions and App Actions as two lists rather than one: they are two different operations with different blast radius, and the infrastructure already says so. AUTHENTICATED: this path is behind Caddy forward_auth, so every call carries the Authelia bearer libs:ops already stores for Dagu. Empty base_url disables the Actions tab's network buttons and says so; Infos needs no network at all.",
     "c3_ops": {
-      "base_url": "https://api.diegonmarcos.com/c3-infra-api"
+      "base_url": "https://c3-pvt.diegonmarcos.com/c3-infra-api"
     }
   },
   "deploy": {

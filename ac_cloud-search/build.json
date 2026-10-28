@@ -1586,7 +1586,7 @@
         "max_age_days": 365
       },
       "price_service": {
-        "url": "https://api.diegonmarcos.com/scrappers/prices?q={q}&brands={brands}",
+        "url": "https://c3-pvt.diegonmarcos.com/scrappers-api/prices?q={q}&brands={brands}",
         "ttl_minutes": 30
       },
       "categories": [
