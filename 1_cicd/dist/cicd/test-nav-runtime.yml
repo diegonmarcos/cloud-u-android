@@ -204,6 +204,10 @@ jobs:
           adb shell cmd role add-role-holder --user 0 android.app.role.DIALER "$PKG" || true
           adb shell cmd role add-role-holder --user 0 android.app.role.CALL_SCREENING "$PKG" || true
           adb shell settings put global adb_wifi_enabled 0 || true
+          # no WebGL in WebView on the software-GPU emulator: Lnktree's fullscreen WebGL2 shader background killed
+          # the whole emulator about 4 s after load (runs 40679943894, 40758904504); pages fall back to their static
+          # background. WebView reads this file on a debuggable system image; the walk checks the chrome, not WebGL.
+          adb shell "echo '_ --disable-webgl --disable-3d-apis' > /data/local/tmp/webview-command-line" || true
           # stream the log from the start: a dead emulator takes a post-run `logcat -d` with it, the stream keeps what came before
           adb logcat -v threadtime "*:W" ActivityManager:I chromium:I WindowManager:I > walk-out/logcat-stream.txt 2>&1 &
           LOGCAT_PID=$!
