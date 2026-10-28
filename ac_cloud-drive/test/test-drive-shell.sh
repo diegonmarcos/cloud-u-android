@@ -273,8 +273,8 @@ if "backups" in ui:
     print("    ui still carries a top-level backups block: it moved into ui.configs at #603"); bad = 1
 cfg_pages = next(s for s in ui["sections"] if s["id"] == "configs")["pages"]
 pages = [p["id"] for p in cfg_pages]
-if pages != ["general", "webserver", "backups", "others", "git"]:
-    print("    ui.configs.pages is %s, not the owner's order general/webserver/backups/others/git (#609 moved git/rclone/mounts to ui.sync)" % pages); bad = 1
+if pages != ["general", "git", "fsync", "mounts", "webserver"]:
+    print("    ui.configs.pages is %s, not the owner's order general/git/fsync/mounts/webserver (#1216)" % pages); bad = 1
 if any(not p.get("label") or not p.get("icon") for p in cfg_pages):
     print("    a Configs sub-page lacks a label or an icon"); bad = 1
 if any(s["id"] == "sync" for s in ui["sections"]):
@@ -283,7 +283,7 @@ sync_sec = next(s for s in ui["sections"] if s["id"] == "git").get("pages", [])
 sync_pages = [p["id"] for p in sync_sec]
 if sync_pages != ["me", "cloud"]:
     print("    ui.sections[git].pages is %s, not me/cloud (#1149)" % sync_pages); bad = 1
-for sid, want in (("fsync", ["backup", "folders"]), ("mounts", ["rclone", "fuse"])):
+for sid, want in (("fsync", []), ("mounts", ["rclone", "fuse"])):
     got = [p["id"] for p in next(s for s in ui["sections"] if s["id"] == sid).get("pages", [])]
     if got != want:
         print("    ui.sections[%s].pages is %s, not %s (#1173)" % (sid, got, "/".join(want))); bad = 1
@@ -369,7 +369,7 @@ if "<package>" not in (vol.get("constellation_path") or ""):
 sys.exit(bad)
 PYTHON
 }
-# d12_fsync <build.json> <drive-apps.json> : the Rsync page is now Fsync (#1173) with Backup and Folders Sync; the tile routes there
+# d12_fsync <build.json> <drive-apps.json> : the Rsync page is now Fsync (#1173) with the folder sync rules as its one page (#1216); the tile routes there
 d12_fsync() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, sys
@@ -383,14 +383,14 @@ if page is None:
 if page.get("label") != "Fsync":
     print("    the fsync section is labelled %r, not 'Fsync' (#1173)" % page.get("label")); bad = 1
 sub = [(p.get("id"), p.get("label"), p.get("icon")) for p in page.get("pages", [])]
-if [(i, l) for i, l, _ in sub] != [("backup", "Backup"), ("folders", "Folders Sync")] or any(not ic for _, _, ic in sub):
-    print("    fsync sub-pages are %s, not Backup then Folders Sync, each with an icon (#1173)" % sub); bad = 1
+if sub:
+    print("    fsync declares sub-pages %s: its main page is the folder sync rules and nothing else (#1216)" % sub); bad = 1
 tile = next((a for a in apps if a.get("label") == "Fsync"), None)
 if tile is None:
     print("    no Fsync tile in the Apps grid"); sys.exit(1)
 route = tile.get("route") or {}
-if (route.get("tab"), route.get("page")) != ("fsync", "backup"):
-    print("    Apps > Fsync routes to %r, not {fsync, backup} (#1173)" % route); bad = 1
+if (route.get("tab"), route.get("page")) != ("fsync", None):
+    print("    Apps > Fsync routes to %r, not the Fsync page itself, {fsync} (#1216)" % route); bad = 1
 sys.exit(bad)
 PYTHON
 }
@@ -433,7 +433,7 @@ for required in "$VOLUMES_KT" "$RULES_JSON" "$REMOTES_JSON" "$CONN_JSON"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 d12_classes "$BJ" "$VOLUMES_KT" && pass "four volume classes in the #604 order, dispatched by VolumesScreen; their filters are declared too" || fail "the #604 volume classes are not what build.json declares"
-d12_fsync "$BJ" "$APPS_JSON" && pass "Fsync is a bottom-nav section (Backup, Folders Sync) and the Apps tile routes there; no rsync id remains" || fail "the Rsync→Fsync rename or its route is not done"
+d12_fsync "$BJ" "$APPS_JSON" && pass "Fsync is a bottom-nav section (folder sync rules, no sub-pages) and the Apps tile routes there; no rsync id remains" || fail "the Rsync→Fsync rename or its route is not done"
 d12_rules "$RULES_JSON" && pass "no sync rule and no Unison pair is declared in the APK: the Fsync page is real state, Unison policy only" || fail "sample rules or pairs are declared again (#1173)"
 d12_machines "$BJ" "$CONN_JSON" && pass "every connection's machine kind is a class that renders it" || fail "a connection would vanish between Cloud-Containers and Cloud-Machines"
 for f in UI_VOLUMES_B64 UI_CONSTELLATION_B64 SYNC_RULES_B64; do
@@ -499,7 +499,7 @@ d11_structure "$TMP/swapped-nav.json" >/dev/null && fail "D11 passed a reordered
 grep -v '"folder" -> Icons.Filled.Folder' "$CATALOG" > "$TMP/no-folder.kt"
 cmp -s "$CATALOG" "$TMP/no-folder.kt" && fail "the catalog mutation changed nothing (tester is stale)"
 d3 "$BJ" "$TMP/no-folder.kt" >/dev/null && fail "D3 passed a catalog without the folder glyph (tester is vacuous)" || pass "a glyph dropped from IconCatalog → D3 RED"
-sed 's/"backups" -> BackupsScreen/"backup" -> BackupsScreen/' "$CONFIGS" > "$TMP/configs.kt"
+sed 's/"mounts" -> ConfigsMountsPage/"mountz" -> ConfigsMountsPage/' "$CONFIGS" > "$TMP/configs.kt"
 cmp -s "$CONFIGS" "$TMP/configs.kt" && fail "the configs mutation changed nothing (tester is stale)"
 d2 "$BJ" "$TMP/configs.kt" >/dev/null && fail "D2 passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in ConfigsScreen → D2 RED"
 sed 's/"me" -> GitReposScreen/"mee" -> GitReposScreen/' "$SYNC_KT" > "$TMP/sync.kt"

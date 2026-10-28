@@ -51,7 +51,7 @@ import org.json.JSONObject
 private enum class Stage { PICK, NAME, ASK, AUTH, REVIEW, SHARED, DONE }
 
 @Composable
-fun RemoteWizard(storage: StorageCoordinator, editing: String?, onDismiss: () -> Unit) {
+fun RemoteWizard(storage: StorageCoordinator, editing: String?, presetType: String? = null, presetName: String? = null, presetValues: Map<String, String> = emptyMap(), onDismiss: () -> Unit) {
     val providers by storage.providers.collectAsState()
     val loading by storage.providersLoading.collectAsState()
     val loadError by storage.providersError.collectAsState()
@@ -80,6 +80,15 @@ fun RemoteWizard(storage: StorageCoordinator, editing: String?, onDismiss: () ->
     val uri = LocalUriHandler.current
 
     DisposableEffect(Unit) { onDispose { handle?.cancel() } }
+
+    // #1216 a provider line of Configs > Mounts starts the wizard at the name step with its backend, name and public options filled
+    LaunchedEffect(presetType, providers.size) {
+        if (editing == null && presetType != null && provider == null && providers.isNotEmpty()) {
+            providers.firstOrNull { it.name == presetType }?.let { pr ->
+                provider = pr; name = presetName.orEmpty(); presetValues.forEach { (k, v) -> values[k] = v }; stage = Stage.NAME
+            }
+        }
+    }
 
     // edit: read the remote back from rclone, then choose its provider schema
     LaunchedEffect(editing, providers.size) {

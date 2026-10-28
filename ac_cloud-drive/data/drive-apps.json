@@ -51,8 +51,7 @@
       "label": "Fsync",
       "icon": "🔁",
       "route": {
-        "tab": "fsync",
-        "page": "backup"
+        "tab": "fsync"
       }
     },
     {

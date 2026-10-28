@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -63,10 +64,9 @@ import java.util.Date
 import kotlinx.coroutines.launch
 
 /**
- * #1173 FSYNC: the old Rsync page renamed, with two sub-pages on the second row (icons from libs:ui-icons, declared in
- * build.json ui.sections[fsync].pages): Backup (rsync, one way, to an SSH host or a guest folder) and Folders Sync (Unison, two ways,
- * conflicts listed). Everything drawn is real state: the jobs and pairs the user made and what their last runs said. This
- * file routes the strip like the Git page does; each body owns its LazyColumn, which rides the shell's one chrome-collapse connection.
+ * #1216 FSYNC: the folder sync rules (Unison, two ways, conflicts listed) as the section's main page; the former Backup sub-page is
+ * gone and build.json ui.sections[fsync] declares no sub-pages, so there is no strip. Everything drawn is real state: the pairs the
+ * user made and what their last runs said. The body owns its LazyColumn, which rides the shell's one chrome-collapse connection.
  */
 @Composable
 fun FsyncPageScreen(
@@ -93,12 +93,15 @@ fun FsyncPageScreen(
             subtitle = pages.firstOrNull { it.id == current }?.label,
             actions = { TerminalIslandAction(actions, ::say) },
         )
-        NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
-        AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "fsync_page", modifier = Modifier.weight(1f)) { id ->
-            when (id) {
-                "backup" -> FsyncBackupScreen(storage, actions, prefs, ::say)
-                "folders" -> FolderSyncScreen(rclone, storage, actions, prefs, ::say)
-                else -> EmptyState(Icons.Filled.Sync, stringResource(R.string.chrome_unknown_tab), "")
+        // #1216 the page is the folder sync rules; a section that declares sub-pages would still get its strip.
+        if (pages.isEmpty()) Box(Modifier.weight(1f)) { FolderSyncScreen(rclone, storage, actions, prefs, ::say) }
+        else {
+            NavBarTopSecondRow(pages = pages, selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.SYNC_STRIP), underTopChrome = false)
+            AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "fsync_page", modifier = Modifier.weight(1f)) { id ->
+                when (id) {
+                    "folders" -> FolderSyncScreen(rclone, storage, actions, prefs, ::say)
+                    else -> EmptyState(Icons.Filled.Sync, stringResource(R.string.chrome_unknown_tab), "")
+                }
             }
         }
         SnackbarHost(snackbar)
@@ -121,112 +124,6 @@ internal fun AccountLine(storage: StorageCoordinator, actions: DriveActions) {
     }
 }
 
-@Composable
-fun FsyncBackupScreen(storage: StorageCoordinator, actions: DriveActions, prefs: DrivePrefs, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
-    val jobs by storage.backups.collectAsState()
-    val running by storage.backupRunning.collectAsState()
-    val notes by storage.backupNotes.collectAsState()
-    val rsync by storage.rsyncReady.collectAsState()
-    val snap by storage.accountSnapshot.collectAsState()
-    // #1195 stored jobs render at once; the rsync probe and the account read run only when the Settings ask (or Refresh is tapped).
-    AutoRefreshEffects(AutoChecks.Page.FSYNC, prefs, { storage.refreshBackups(deep = false); storage.refreshAccount(deep = false) }, { storage.refreshBackups(); storage.refreshAccount() })
-    var open by rememberSaveable { mutableStateOf("") }
-    var adding by remember { mutableStateOf(false) }
-    val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
-    LazyColumn(modifier.fillMaxSize()) {
-        item {
-            PageActionsBar(
-                AutoChecks.Page.FSYNC, prefs,
-                listOf(
-                    BarAction(stringResource(R.string.backup_new), { adding = true }, icon = Icons.Filled.Backup),
-                    BarAction(stringResource(R.string.fsync_refresh), { storage.refreshBackups(); storage.refreshAccount() }, icon = Icons.Filled.Sync),
-                    BarAction(stringResource(R.string.fsync_run_all), { jobs.filter { it.id !in running }.forEach { storage.runBackup(it) } }, enabled = rsync == "ready" && jobs.isNotEmpty(), icon = Icons.Filled.PlayArrow),
-                ),
-            )
-        }
-        item {
-            Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.backup_engine), style = MaterialTheme.typography.labelMedium)
-                    Text(if (rsync == null) stringResource(R.string.backup_engine_checking) else if (rsync == "ready") "rsync" else rsync.orEmpty(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-                StatusLightRow(StatusLight.of(rsync?.let { it == "ready" }), stringResource(R.string.backup_engine))
-            }
-        }
-        item { AccountLine(storage, actions) }
-        item {
-            val key = snap
-            Text(
-                if (key != null && key.hasSshKey) stringResource(R.string.backup_ssh_key_present, key.sshPublic.split(' ').take(2).lastOrNull().orEmpty().take(16) + "…") else stringResource(R.string.backup_ssh_key_absent),
-                Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        item { SectionHeader(stringResource(R.string.backup_section), count = jobs.size) }
-        if (jobs.isEmpty()) item { EmptyState(Icons.Filled.Backup, stringResource(R.string.backup_empty), stringResource(R.string.backup_empty_hint), actionLabel = stringResource(R.string.backup_new)) { adding = true } }
-        items(jobs, key = { "backup-" + it.id }) { job ->
-            val isRunning = job.id in running
-            val target = when (val t = job.target) { is BackupJobs.Target.Local -> t.path; is BackupJobs.Target.Ssh -> "${t.user}@${t.host}:${t.path}" }
-            TapCard(
-                job.name, expanded = open == "b-" + job.id, onToggle = { open = TapPanel.toggle(open, "b-" + job.id) },
-                badge = stringResource(if (job.mirror) R.string.backup_mirror_badge else R.string.backup_copy_badge),
-                light = if (isRunning) StatusLight.State.UNKNOWN else StatusLight.of(job.lastExit?.let { it == 0 }),
-                summary = "${job.source}  →  $target", summaryMonospace = true, tag = DriveTags.RSYNC_RULE_CARD,
-            ) {
-                Text(
-                    notes[job.id] ?: if (job.lastRunEpochSeconds > 0) stringResource(R.string.backup_last, fmt.format(Date(job.lastRunEpochSeconds * 1000)), job.lastSummary) else stringResource(R.string.backup_never),
-                    Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis,
-                )
-                if (isRunning) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(vertical = DriveMetrics.gap))
-                PillRow {
-                    Pill(stringResource(R.string.backup_run), { storage.runBackup(job) }, icon = Icons.Filled.PlayArrow, filled = true, enabled = !isRunning && rsync == "ready")
-                    Pill(stringResource(R.string.storage_delete), { storage.removeBackup(job) }, enabled = !isRunning, danger = true)
-                }
-            }
-        }
-    }
-    if (adding) NewBackupDialog(onDismiss = { adding = false }, onCreate = { job -> storage.addBackup(job) { why -> if (why == null) adding = false else onMessage(why) } })
-}
-
-@Composable
-private fun NewBackupDialog(onDismiss: () -> Unit, onCreate: (BackupJobs.Job) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var source by remember { mutableStateOf("") }
-    var ssh by remember { mutableStateOf(true) }
-    var host by remember { mutableStateOf("") }
-    var user by remember { mutableStateOf("") }
-    var port by remember { mutableStateOf("22") }
-    var dest by remember { mutableStateOf("") }
-    var mirror by remember { mutableStateOf(false) }
-    var useKey by remember { mutableStateOf(true) }
-    val job = BackupJobs.Job(
-        id = UnisonPairs.slug(name), name = name.trim(), source = source.trim(),
-        target = if (ssh) BackupJobs.Target.Ssh(user.trim(), host.trim(), port.toIntOrNull() ?: 0, dest.trim()) else BackupJobs.Target.Local(dest.trim()),
-        mirror = mirror, useKey = ssh && useKey,
-    )
-    val problem = if (name.isBlank() && source.isBlank() && dest.isBlank()) null else BackupJobs.refusal(job)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.backup_dialog_title)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                FormField(stringResource(R.string.backup_f_name), name, { name = it })
-                FormField(stringResource(R.string.backup_f_source), source, { source = it })
-                SwitchRow(stringResource(R.string.backup_f_ssh), ssh, { ssh = it })
-                if (ssh) {
-                    FormField(stringResource(R.string.backup_f_host), host, { host = it })
-                    FormField(stringResource(R.string.backup_f_user), user, { user = it })
-                    FormField(stringResource(R.string.backup_f_port), port, { port = it }, number = true)
-                    SwitchRow(stringResource(R.string.backup_f_usekey), useKey, { useKey = it })
-                }
-                FormField(stringResource(R.string.backup_f_dest), dest, { dest = it })
-                SwitchRow(stringResource(R.string.backup_f_mirror), mirror, { mirror = it })
-                if (problem != null) NoteText(problem, error = true)
-            }
-        },
-        confirmButton = { TextButton(onClick = { onCreate(job) }, enabled = BackupJobs.refusal(job) == null) { Text(stringResource(R.string.storage_add)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.storage_cancel)) } },
-    )
-}
 
 @Composable
 fun FolderSyncScreen(rclone: RcloneCoordinator, storage: StorageCoordinator, actions: DriveActions, prefs: DrivePrefs, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {

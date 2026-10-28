@@ -26,19 +26,21 @@ import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.PillRow
+import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.StatusLight
 
 /**
- * #603 CONFIGS ▸ GENERAL — #579's Configs page, unchanged in substance and now one of the
- * six declared sub-pages: storage access (a StatusLight that is a LOOK at the grant, with
- * the Grant pill), Sign in (#587, the fleet's shared libs:auth surface, applied by
- * DriveAuthApply), the Files defaults, and the declared sync schedule (read-only, it is
- * build.json's). Removable storage and About moved to ▸ Others.
+ * #1216 CONFIGS ▸ GENERAL in four parts: Explorer (storage access, Sign in #587 via libs:auth applied by DriveAuthApply,
+ * the Files defaults), Manage (the Data scan choice), Agents (the screenshot agent switch), then removable storage,
+ * the privileged shell and About (the former Others page, folded in). The declared sync schedule rides under Explorer
+ * (read-only, it is build.json's).
  */
 @Composable
-fun GeneralPage(prefs: DrivePrefs, actions: DriveActions, hasAccess: Boolean, modifier: Modifier = Modifier) {
+fun GeneralPage(prefs: DrivePrefs, actions: DriveActions, hasAccess: Boolean, rcloneVersion: String? = null, modifier: Modifier = Modifier) {
     val snap by prefs.snapshot.collectAsState()
     LazyColumn(modifier.fillMaxSize()) {
+        // #1216 General is three sections named after the tabs they configure, then what used to be Others.
+        item { SectionHeader(stringResource(R.string.configs_section_explorer)) }
         item {
             DriveCard(stringResource(R.string.configs_storage_access), light = StatusLight.of(hasAccess), summary = stringResource(R.string.configs_storage_access_body), tag = DriveTags.CONFIGS_CARD) {
                 if (!hasAccess) PillRow { Pill(stringResource(R.string.files_grant_access), { actions.requestStorageAccess() }, filled = true) }
@@ -57,6 +59,20 @@ fun GeneralPage(prefs: DrivePrefs, actions: DriveActions, hasAccess: Boolean, mo
                 ToggleRow(stringResource(R.string.configs_thumbnails), snap.thumbnails) { prefs.setThumbnails(it) }
             }
         }
+        item { SectionHeader(stringResource(R.string.configs_section_manage)) }
+        item {
+            DriveCard(stringResource(R.string.configs_manage_data), tag = DriveTags.CONFIGS_CARD) {
+                Text(stringResource(R.string.configs_manage_data_body), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ToggleRow(stringResource(R.string.configs_manage_folders), snap.let { prefs.dataFolders() }) { prefs.setDataFolders(it) }
+            }
+        }
+        item { SectionHeader(stringResource(R.string.configs_section_agents)) }
+        item {
+            DriveCard(stringResource(R.string.configs_agent_screenshots), tag = DriveTags.CONFIGS_CARD) {
+                Text(stringResource(R.string.configs_agent_screenshots_body), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ToggleRow(stringResource(R.string.configs_agent_screenshots_on), snap.let { prefs.screenshotAgentEnabled() }) { prefs.setScreenshotAgentEnabled(it) }
+            }
+        }
         item {
             DriveCard(
                 stringResource(R.string.configs_sync_schedule), light = StatusLight.State.UNVERIFIABLE,
@@ -64,6 +80,8 @@ fun GeneralPage(prefs: DrivePrefs, actions: DriveActions, hasAccess: Boolean, mo
                 tag = DriveTags.CONFIGS_CARD,
             ) { Text(stringResource(R.string.configs_sync_schedule_body), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+        item { SectionHeader(stringResource(R.string.configs_section_device)) }
+        item { OthersSection(prefs, actions, rcloneVersion) }
     }
 }
 

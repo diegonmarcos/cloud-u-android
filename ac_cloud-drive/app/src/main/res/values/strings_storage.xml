@@ -14,29 +14,6 @@
     <string name="storage_account_missing">Cloud Account is not installed or does not answer: remotes, keys and pairs stay on this phone until it does</string>
 
     <!-- Fsync > Backup (rsync) -->
-    <string name="backup_engine">rsync in the Termux guest</string>
-    <string name="backup_engine_checking">checking…</string>
-    <string name="backup_section">Backup jobs</string>
-    <string name="backup_new">New job</string>
-    <string name="backup_empty">No backup job yet</string>
-    <string name="backup_empty_hint">A job mirrors a folder of the Termux guest to an SSH host or another guest folder with rsync, one way</string>
-    <string name="backup_run">Run now</string>
-    <string name="backup_never">Never run</string>
-    <string name="backup_last">Last run %1$s · %2$s</string>
-    <string name="backup_mirror_badge">mirror · deletes extras</string>
-    <string name="backup_copy_badge">copy only</string>
-    <string name="backup_ssh_key_present">Cloud Account holds an ed25519 key: %1$s</string>
-    <string name="backup_ssh_key_absent">Cloud Account holds no SSH key yet: create one in Account to back up to an SSH host</string>
-    <string name="backup_dialog_title">New backup job</string>
-    <string name="backup_f_name">Name</string>
-    <string name="backup_f_source">Source folder in the Termux guest</string>
-    <string name="backup_f_ssh">Destination is an SSH host</string>
-    <string name="backup_f_host">Host (name or mesh name)</string>
-    <string name="backup_f_user">User</string>
-    <string name="backup_f_port">Port</string>
-    <string name="backup_f_dest">Destination folder (absolute)</string>
-    <string name="backup_f_mirror">Mirror: delete files that are not in the source</string>
-    <string name="backup_f_usekey">Authenticate with the key from Cloud Account</string>
 
     <!-- Fsync > Folders Sync (Unison) -->
     <string name="unison_add">New pair</string>
@@ -127,4 +104,26 @@
     <string name="fuse_f_mountpoint">Mountpoint in the guest (absolute)</string>
     <string name="fuse_f_cache">VFS cache mode</string>
     <string name="fuse_f_readonly">Read only</string>
+    <!-- #1216 Configs split into General / Git / Fsync / Mounts; provider mounts -->
+    <string name="configs_section_explorer">Explorer</string>
+    <string name="configs_section_manage">Manage</string>
+    <string name="configs_section_agents">Agents</string>
+    <string name="configs_section_device">Device</string>
+    <string name="configs_manage_data">Data scan</string>
+    <string name="configs_manage_data_body">Manage > Data ranks everything in shared storage that is not an app.</string>
+    <string name="configs_manage_folders">Include folders in Data</string>
+    <string name="configs_agent_screenshots">Screenshot agent</string>
+    <string name="configs_agent_screenshots_body">Reads every new screenshot on this phone (text and labels) and writes the result for other fleet apps.</string>
+    <string name="configs_agent_screenshots_on">Run the screenshot agent</string>
+    <string name="configs_fsync_servers">Servers, APIs and SFTPs</string>
+    <string name="configs_fsync_body">The hosts the folder sync rules can use, from the declared connections. Keys and hosts are owned by Cloud Account.</string>
+    <string name="configs_fsync_empty">No server, API or SFTP is declared</string>
+    <string name="configs_mounts_providers">Providers</string>
+    <string name="configs_mounts_none">No mount provider is declared.</string>
+    <string name="configs_mounts_others">%1$d other rclone remote(s) on this phone</string>
+    <string name="configs_mounts_configured">Remote configured in rclone.conf. Mount it on Mounts > FUSE.</string>
+    <string name="configs_mounts_setup">Set up</string>
+    <string name="fuse_providers_section">Provider mounts</string>
+    <string name="fuse_provider_missing">No rclone remote named %1$s yet: set it up in Configs > Mounts.</string>
+    <string name="fuse_provider_wrong_type">The rclone remote %1$s is not a %2$s remote: edit it in Configs > Mounts.</string>
 </resources>

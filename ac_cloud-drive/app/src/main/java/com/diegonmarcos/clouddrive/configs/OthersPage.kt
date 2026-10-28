@@ -3,13 +3,12 @@ package com.diegonmarcos.clouddrive.configs
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,18 +35,17 @@ import com.diegonmarcos.clouddrive.ui.StatusLight
 import com.diegonmarcos.superapp.adbdebug.AdbShellPage
 
 /**
- * #603 CONFIGS ▸ OTHERS — what is neither an engine's configuration nor a daily setting:
- * the removable-storage SAF grant (the volumes themselves are browsed from the Volumes
- * tab) and About. Both came out of #579's single Configs page when it became six.
+ * #1216 the former Configs ▸ Others page, now the last section of Configs ▸ General (the page is gone): the
+ * removable-storage SAF grant (the volumes themselves are browsed from Explorer), the privileged shell and About.
  */
 @Composable
-fun OthersPage(prefs: DrivePrefs, actions: DriveActions, rcloneVersion: String?, modifier: Modifier = Modifier) {
+fun OthersSection(prefs: DrivePrefs, actions: DriveActions, rcloneVersion: String?, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val snap by prefs.snapshot.collectAsState()
     val hasAccess = remember { Places.hasAllFilesAccess(ctx) }
     val volumes = remember(snap, hasAccess) { Places.discovered(ctx, snap, hasAccess).filter { it.kind == Places.Kind.PATH } }
-    LazyColumn(modifier.fillMaxSize()) {
-        item {
+    Column(modifier.fillMaxWidth()) {
+        run {
             val granted = snap.treeGrantUri != null
             DriveCard(
                 stringResource(R.string.configs_removable), light = StatusLight.of(granted, observed = false),
@@ -65,8 +63,8 @@ fun OthersPage(prefs: DrivePrefs, actions: DriveActions, rcloneVersion: String?,
             }
         }
         // The privileged shell is the lib's ONE page (adb-shell-one-place.json); Manage > Apps only reads its result.
-        item { AdbShellPage() }
-        item {
+        AdbShellPage()
+        run {
             DriveCard(stringResource(R.string.configs_about), summary = BuildConfig.VERSION_NAME, tag = DriveTags.CONFIGS_CARD) {
                 AboutRow(stringResource(R.string.configs_version), BuildConfig.VERSION_NAME + " · " + BuildConfig.VERSION_CODE)
                 AboutRow(stringResource(R.string.configs_built), BuildConfig.BUILD_TIMESTAMP)

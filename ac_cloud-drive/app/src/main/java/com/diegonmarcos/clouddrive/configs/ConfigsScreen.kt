@@ -26,7 +26,8 @@ import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
-import com.diegonmarcos.clouddrive.backups.BackupsScreen
+import com.diegonmarcos.clouddrive.storage.StorageCoordinator
+import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
 import com.diegonmarcos.clouddrive.backups.MirrorRunner
 import com.diegonmarcos.clouddrive.sync.GitPart
 import com.diegonmarcos.clouddrive.sync.GitReposScreen
@@ -41,12 +42,10 @@ import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 
 /**
- * #609 CONFIGS: ONE island whose strip is build.json::ui.configs.pages — General (#579's Configs cards),
- * Webserver (opens cloud-c3-webserver), Backups (moved in from its own tab at #603), Others and Git (the sign-in
- * cards, host settings and pull settings that used to sit above the Git page's table). Rclone
- * and Mounts moved OUT to the new Sync tab (SyncScreen). The strip is tabs inside the
- * tab, not a stack — back leaves the app. Every one of the three is a screen that
- * already existed: this file routes, it does not draw a card.
+ * #1216 CONFIGS: ONE island whose strip is build.json ui.sections[configs].pages: General (sections Explorer, Manage, Agents, then
+ * the former Others content), Git (the sign-in cards, host settings and pull settings), Fsync (servers, APIs and SFTPs), Mounts
+ * (rclone setup, one line per provider incl. Others) and Webserver (opens cloud-c3-webserver). The Backups and Others pages are gone.
+ * The strip is tabs inside the tab, not a stack — back leaves the app. This file routes, it does not draw a card.
  *
  * The dispatch on a page id is the ONE place Kotlin names them; test-drive-shell.sh diffs
  * it against the declaration in both directions.
@@ -62,6 +61,8 @@ fun ConfigsScreen(
     hasAccess: Boolean,
     rcloneVersion: String?,
     git: GitSyncCoordinator,
+    storage: StorageCoordinator,
+    rclone: RcloneCoordinator,
     page: String? = null,
     onPageConsumed: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -79,10 +80,10 @@ fun ConfigsScreen(
         NavBarTopSecondRow(pages = Declarations.navPages("configs"), selectedId = current, onSelect = { current = it.id }, modifier = Modifier.padding(horizontal = DriveMetrics.gap).testTag(DriveTags.CONFIGS_STRIP), underTopChrome = false)
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "configs_page", modifier = Modifier.weight(1f)) { id ->
             when (id) {
-                "backups" -> BackupsScreen(mirrors, prefs)
-                "general" -> GeneralPage(prefs, actions, hasAccess)
+                "general" -> GeneralPage(prefs, actions, hasAccess, rcloneVersion)
                 "webserver" -> WebserverPage(actions)
-                "others" -> OthersPage(prefs, actions, rcloneVersion)
+                "fsync" -> ConfigsFsyncPage(storage, actions)
+                "mounts" -> ConfigsMountsPage(storage, rclone, prefs)
                 "git" -> GitReposScreen(git, actions, rememberGitNextRun(), view = GitView.ME, prefs = prefs, part = GitPart.SETUP)
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
             }

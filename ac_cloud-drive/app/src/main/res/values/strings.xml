@@ -688,7 +688,6 @@
     <string name="auto_interval">Check interval while the page is open</string>
     <string name="auto_interval_off">Off</string>
     <string name="fsync_refresh">Refresh</string>
-    <string name="fsync_run_all">Run all</string>
     <string name="mounts_refresh">Refresh</string>
     <string name="repo_bulk_stash_push">Stash &amp; Push all</string>
     <string name="repo_summary">%1$d repos · %2$d cloned · %3$d not cloned · %4$d dirty · %5$d ahead · %6$d behind</string>

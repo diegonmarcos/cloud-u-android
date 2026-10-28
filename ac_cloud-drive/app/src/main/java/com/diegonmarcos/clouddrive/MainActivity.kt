@@ -250,7 +250,7 @@ class MainActivity : ComponentActivity(), DriveActions {
                     "git" -> GitPageScreen(git, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
                     "fsync" -> FsyncPageScreen(storage, rclone, this, prefs, jumpPage, onPageConsumed = { jumpPage = null })
                     "mounts" -> MountsPageScreen(storage, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
-                    "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, git, jumpPage, onPageConsumed = { jumpPage = null })
+                    "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, git, storage, rclone, jumpPage, onPageConsumed = { jumpPage = null })
                     else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)
                 }
             }

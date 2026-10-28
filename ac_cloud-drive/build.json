@@ -170,19 +170,7 @@
         "id": "fsync",
         "label": "Fsync",
         "icon": "sync",
-        "_doc": "#1173 the former Rsync page, renamed, with two sub-pages on the second row (PageTabs, icons from libs:ui-icons): Backup = rsync, one-way mirror of a Termux-guest folder to an SSH host or another guest folder (sync/FsyncPage.kt FsyncBackupScreen, storage/BackupJobs.kt), and Folders Sync = Unison, two-way with conflict detection and keep-A / keep-B / keep-both (FolderSyncScreen over UnisonCoordinator). Everything the page draws is real state: the jobs and pairs the user made and the last result of each run; the APK declares no job, rule or pair.",
-        "pages": [
-          {
-            "id": "backup",
-            "label": "Backup",
-            "icon": "backup"
-          },
-          {
-            "id": "folders",
-            "label": "Folders Sync",
-            "icon": "folder"
-          }
-        ]
+        "_doc": "#1216 the Fsync page is the folder sync rules and nothing else: Unison two-way pairs with conflict detection and keep-A / keep-B / keep-both (sync/FsyncPage.kt FolderSyncScreen over UnisonCoordinator). The former Backup sub-page (rsync mirror jobs) is gone, so the section declares no sub-pages and draws no strip. The servers, APIs and SFTP hosts the rules talk to are set up in Configs > Fsync. Everything drawn is real state: the pairs the user made and the last result of each run; the APK declares no job, rule or pair."
       },
       {
         "id": "mounts",
@@ -206,7 +194,7 @@
         "id": "configs",
         "label": "Configs",
         "icon": "settings",
-        "_doc": "#603 the strip inside the Configs island — ONE declaration. #609 moved Git, Rclone and Mounts OUT into ui.sections[sync].pages above, leaving four sub-pages in the owner's order: General (#579's Configs page: storage access, sign-in, Files defaults, the declared schedule), Webserver (opens cloud-c3-webserver, ui.webserver), Backups (moved in from its own top-level tab at #603 — the declared mirror/rsync jobs with cancellable progress) and Others (removable storage, about).",
+        "_doc": "#1216 the strip inside the Configs island, ONE declaration: General (sections Explorer, Manage, Agents, then removable storage and About: the former Others page is folded in), Git (the sign-in auths), Fsync (the servers, APIs and SFTP hosts the folder sync rules use, read from ui.sync.config_fsync and data/drive-connections.json), Mounts (rclone setup, one line per provider of ui.sync.mounts.providers, Others last) and Webserver (opens cloud-c3-webserver). The Backups page is gone.",
         "pages": [
           {
             "id": "general",
@@ -214,24 +202,24 @@
             "icon": "settings"
           },
           {
-            "id": "webserver",
-            "label": "Webserver",
-            "icon": "dns"
-          },
-          {
-            "id": "backups",
-            "label": "Backups",
-            "icon": "backup"
-          },
-          {
-            "id": "others",
-            "label": "Others",
-            "icon": "help_outline"
-          },
-          {
             "id": "git",
             "label": "Git",
             "icon": "commit"
+          },
+          {
+            "id": "fsync",
+            "label": "Fsync",
+            "icon": "sync"
+          },
+          {
+            "id": "mounts",
+            "label": "Mounts",
+            "icon": "lan"
+          },
+          {
+            "id": "webserver",
+            "label": "Webserver",
+            "icon": "dns"
           }
         ]
       }
@@ -514,6 +502,21 @@
         {"id": "codeberg", "label": "Codeberg", "icon": "public", "kind": "gitea", "api_base": "https://codeberg.org/api/v1", "repos_path": "/user/repos?limit=50", "token_url": "https://codeberg.org/user/settings/applications", "needs_user": true, "user_label": "Username", "max_pages": 4},
         {"id": "azure", "label": "Azure DevOps", "icon": "dns", "kind": "azure", "api_base": "https://dev.azure.com/{user}", "repos_path": "/_apis/git/repositories?api-version=7.1", "token_url": "https://dev.azure.com/", "needs_user": true, "user_label": "Organisation", "clone_user": "pat", "max_pages": 1}
       ],
+      "_doc_mounts": "#1216 Mounts > FUSE and Configs > Mounts, one line per provider, in render order. Each line names the rclone remote the mount reads (`remote`, created by the user in Configs > Mounts through the rclone setup flow; the APK holds NO key, the credential lives in rclone.conf and Cloud Account), the rclone backend that remote must be (`rclone_type`, and `rclone_provider` for s3), the `path` inside it, the `endpoint` when it is fixed by the provider, and whether the mount is `read_only`. The mount itself is the existing FuseWire rclone mount at /root/mnt/<id>. `others: true` is the free line: any other rclone remote, added through the wizard. Cloudflare IA is R2's Infrequent Access storage class (a second remote on the same account, `storage_class` STANDARD_IA). GitHub LFS has no rclone backend of its own: it is the repository's LFS objects read over HTTPS from media.githubusercontent.com through rclone's http backend, read only (a private repository needs the user's token as an http header on the remote).",
+      "mounts": {
+        "providers": [
+          {"id": "r2", "label": "Cloudflare R2", "icon": "cloud", "remote": "r2", "rclone_type": "s3", "rclone_provider": "Cloudflare", "endpoint": "", "path": "", "read_only": false},
+          {"id": "cf-ia", "label": "Cloudflare IA", "icon": "cloud", "remote": "r2_ia", "rclone_type": "s3", "rclone_provider": "Cloudflare", "endpoint": "", "path": "", "read_only": false, "storage_class": "STANDARD_IA"},
+          {"id": "oracle-s3", "label": "Oracle S3", "icon": "storage", "remote": "oracle_s3", "rclone_type": "s3", "rclone_provider": "Other", "endpoint": "objectstorage.eu-marseille-1.oraclecloud.com", "path": "", "read_only": false},
+          {"id": "hetzner-s3", "label": "Hetzner S3", "icon": "dns", "remote": "hetzner_s3", "rclone_type": "s3", "rclone_provider": "Other", "endpoint": "fsn1.your-objectstorage.com", "path": "", "read_only": false},
+          {"id": "gh-lfs", "label": "GitHub LFS", "icon": "commit", "remote": "gh_lfs", "rclone_type": "http", "rclone_provider": "", "endpoint": "https://media.githubusercontent.com/media/diegonmarcos/cloud-data-lfs/main/", "path": "", "read_only": true},
+          {"id": "others", "label": "Others", "icon": "lan", "others": true}
+        ]
+      },
+      "_doc_config_fsync": "#1216 Configs > Fsync lists the servers, APIs and SFTP hosts the folder sync rules can use: the entries of data/drive-connections.json whose `kind` is one of `connection_kinds`, drawn with the same row as the Cloud volumes, none invented here.",
+      "config_fsync": {
+        "connection_kinds": ["ssh", "borg", "bup", "http-api", "webdav", "s3"]
+      },
       "git_periods_minutes": [
         15,
         30,

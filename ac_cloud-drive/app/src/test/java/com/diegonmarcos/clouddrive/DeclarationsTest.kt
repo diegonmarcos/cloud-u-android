@@ -76,9 +76,9 @@ class DeclarationsTest {
 
     @Test fun configsPages() {
         val configs = configs()
-        // #609 Git/Rclone/Mounts moved OUT to ui.sections[sync].pages. The owner's order: General (#579's Configs
-        // page), Webserver (opens cloud-c3-webserver), Backups (its own tab at #603) and Others.
-        assertEquals(listOf("general", "webserver", "backups", "others", "git"), configs.pages.map { it.id })
+        // #1216 the owner's split: General, Git (auths), Fsync (servers/APIs/SFTPs), Mounts (rclone setup), then Webserver
+        // (opens cloud-c3-webserver). The Backups and Others pages are gone.
+        assertEquals(listOf("general", "git", "fsync", "mounts", "webserver"), configs.pages.map { it.id })
         assertTrue(configs.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
     }
 
@@ -98,13 +98,33 @@ class DeclarationsTest {
         assertEquals(emptyList<String>(), bar.problems())
     }
 
+    @Test fun mountProvidersAreDeclaredNotCoded() {
+        // #1216 Mounts > FUSE and Configs > Mounts: the five providers and the free Others line come from ui.sync.mounts.providers.
+        val lines = Declarations.parseMountProviders(section("sync"))
+        assertEquals(listOf("r2", "cf-ia", "oracle-s3", "hetzner-s3", "gh-lfs", "others"), lines.map { it.id })
+        assertEquals(listOf("Cloudflare R2", "Cloudflare IA", "Oracle S3", "Hetzner S3", "GitHub LFS", "Others"), lines.map { it.label })
+        assertEquals("only the last line is the free one", listOf(false, false, false, false, false, true), lines.map { it.others })
+        assertTrue("every real line names its rclone remote and backend", lines.filter { !it.others }.all { it.remote.isNotBlank() && it.rcloneType.isNotBlank() })
+        assertEquals(listOf("s3", "s3", "s3", "s3", "http"), lines.filter { !it.others }.map { it.rcloneType })
+        assertTrue("GitHub LFS is read only", lines.first { it.id == "gh-lfs" }.readOnly)
+        assertEquals("STANDARD_IA", lines.first { it.id == "cf-ia" }.storageClass)
+        val unknown = lines.map { it.icon }.filter { it.isNotBlank() }.filterNot { IconCatalog.knows(it) }
+        assertEquals("provider icons unknown to IconCatalog: $unknown", emptyList<String>(), unknown)
+        // no secret in the declaration: the APK is public
+        val text = section("sync")
+        val mounts = Json.parseToJsonElement(text).jsonObject["mounts"].toString().lowercase()
+        listOf("secret", "password", "token", "access_key", "private_key").forEach { assertFalse("mounts block mentions $it", mounts.contains("\"$it")) }
+        assertEquals(emptyList<Declarations.MountProviderDecl>(), Declarations.parseMountProviders(""))
+        assertEquals(emptyList<String>(), Declarations.parseFsyncKinds(""))
+        assertTrue("Configs > Fsync lists declared connection kinds", Declarations.parseFsyncKinds(section("sync")).containsAll(listOf("ssh", "borg")))
+    }
+
     @Test fun syncPagesAndPeriods() {
         val sync = sync()
-        // #1149 the former Sync pages are bottom-nav sections: Git (Me, Cloud), Fsync (Backup, Folders Sync), Mounts (Rclone, FUSE) (#1173).
+        // #1149 the former Sync pages are bottom-nav sections: Git (Me, Cloud), Fsync (folder sync rules, #1216), Mounts (Rclone, FUSE) (#1173).
         assertEquals(listOf("git", "fsync", "mounts"), sync.pages.map { it.id })
         assertEquals(listOf("me", "cloud"), nav().section("git")!!.pages.map { it.id })
-        assertEquals(listOf("backup", "folders"), nav().section("fsync")!!.pages.map { it.id })
-        assertEquals(listOf("Backup", "Folders Sync"), nav().section("fsync")!!.pages.map { it.label })
+        assertEquals("#1216 Fsync's main page is the folder sync rules: no sub-pages", emptyList<String>(), nav().section("fsync")!!.pages.map { it.id })
         assertEquals(listOf("rclone", "fuse"), nav().section("mounts")!!.pages.map { it.id })
         assertEquals(listOf("Rclone", "FUSE"), nav().section("mounts")!!.pages.map { it.label })
         assertNull("the old Rsync id is gone, not kept as a second name", nav().section("rsync"))

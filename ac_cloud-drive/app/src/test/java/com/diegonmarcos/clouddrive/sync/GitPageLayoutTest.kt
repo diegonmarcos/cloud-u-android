@@ -71,7 +71,7 @@ class GitPageLayoutTest {
 
     @Test fun `#1195 git fsync and mounts share one actions bar with the settings sheet and one tap-to-open row`() {
         assertTrue(tableUi.contains("PageActionsBar("))
-        assertEquals("two Fsync bars (backup, folders)", 2, Regex("PageActionsBar\\(").findAll(fsync).count())
+        assertEquals("one Fsync bar (#1216: folders only)", 1, Regex("PageActionsBar\\(").findAll(fsync).count())
         assertEquals("two Mounts bars (rclone, fuse)", 2, Regex("PageActionsBar\\(").findAll(mounts).count())
         assertTrue(File(dir, "TablePage.kt").readText().contains("AutoSettingsSheet(page, prefs)"))
         assertEquals(1, Regex("fun AutoSettingsSheet\\(").findAll(File(dir, "TablePage.kt").readText()).count())

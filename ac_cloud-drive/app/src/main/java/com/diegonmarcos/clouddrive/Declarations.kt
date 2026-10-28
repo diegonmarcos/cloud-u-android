@@ -36,6 +36,8 @@ object Declarations {
     /** #609 the Configs strip: three sub-pages (Git/Rclone/Mounts moved out to ui.sync.pages). */
     data class ConfigsDecl(val pages: List<PageDecl>)
     /** #609 the Sync strip: Git/Rclone/Mounts, moved back out of Configs, plus the per-repository period choices the Git page offers, plus #608's Git page itself. */
+    /** #1216 one line of ui.sync.mounts.providers; [others] is the free line (no remote of its own). */
+    data class MountProviderDecl(val id: String, val label: String, val icon: String, val remote: String, val rcloneType: String, val rcloneProvider: String, val endpoint: String, val path: String, val readOnly: Boolean, val storageClass: String, val others: Boolean)
     data class SyncDecl(val pages: List<PageDecl>, val gitPeriodsMinutes: List<Int>, val git: GitPageDecl)
 
     // ── #608 THE SYNC ▸ GIT PAGE, declared (build.json::ui.sync.git) ────────
@@ -317,6 +319,10 @@ object Declarations {
     /** #1149 Git > Cloud's public list (ui.sync.cloud_list) and Git > Me's extra hosts (ui.sync.git_hosts). */
     val cloudList: GitHostsDecl.CloudListDecl by lazy { GitHostsDecl.parseCloud(decode(BuildConfig.UI_SYNC_B64)) }
     val gitHosts: List<GitHostsDecl.GitHostDecl> by lazy { GitHostsDecl.parseHosts(decode(BuildConfig.UI_SYNC_B64)) }
+    /** #1216 the provider lines of Mounts > FUSE and Configs > Mounts (ui.sync.mounts.providers), in declared order. */
+    val mountProviders: List<MountProviderDecl> by lazy { parseMountProviders(decode(BuildConfig.UI_SYNC_B64)) }
+    /** #1216 the connection kinds Configs > Fsync lists (ui.sync.config_fsync.connection_kinds). */
+    val fsyncConnectionKinds: List<String> by lazy { parseFsyncKinds(decode(BuildConfig.UI_SYNC_B64)) }
     /** The Provider column's declared host -> provider map (ui.sync.providers). */
     val providers: GitHostsDecl.ProvidersDecl by lazy { GitHostsDecl.parseProviders(decode(BuildConfig.UI_SYNC_B64)) }
     /** #1149 every section the shell can show: the bottom-nav ones plus the ones the top bar opens (AI, Configs). */
@@ -401,6 +407,22 @@ object Declarations {
         val o = element(text) as? JsonObject ?: return SyncDecl(pages, emptyList(), EMPTY_GIT_PAGE)
         val periods = (o["git_periods_minutes"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }?.filter { it >= 15 } ?: emptyList()
         return SyncDecl(pages, periods, parseGitPage(o["git"]))
+    }
+
+    fun parseMountProviders(text: String): List<MountProviderDecl> {
+        val o = element(text) as? JsonObject ?: return emptyList()
+        val m = o["mounts"] as? JsonObject ?: return emptyList()
+        return objects(m["providers"]).mapNotNull { p ->
+            val id = p.str("id"); if (id.isBlank()) return@mapNotNull null
+            val others = p.bool("others")
+            if (!others && p.str("remote").isBlank()) return@mapNotNull null
+            MountProviderDecl(id, p.str("label", id), p.str("icon"), p.str("remote"), p.str("rclone_type"), p.str("rclone_provider"), p.str("endpoint"), p.str("path"), p.bool("read_only"), p.str("storage_class"), others)
+        }
+    }
+
+    fun parseFsyncKinds(text: String): List<String> {
+        val o = element(text) as? JsonObject ?: return emptyList()
+        return ((o["config_fsync"] as? JsonObject)?.strings("connection_kinds")) ?: emptyList()
     }
 
     /** #608 the Git page's own declaration. A missing block yields the EMPTY page — the

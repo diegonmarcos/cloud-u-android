@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.clouddrive.Declarations
+import com.diegonmarcos.clouddrive.storage.MountProviders
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.EngineActivity
@@ -189,13 +190,16 @@ fun FuseMountsScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, act
     var open by rememberSaveable { mutableStateOf("") }
     var adding by remember { mutableStateOf(false) }
     val usable = verdict?.usable == true
+    val remotes by rclone.remotes.collectAsState()
+    val providerIds = Declarations.mountProviders.map { it.id }.toSet()
+    val ownSpecs = specs.filter { it.id !in providerIds }
     LazyColumn(modifier.fillMaxSize()) {
         item {
             PageActionsBar(
                 AutoChecks.Page.MOUNTS, prefs,
                 listOf(
                     BarAction(stringResource(R.string.fuse_new), { adding = true }, icon = Icons.Filled.Lan),
-                    BarAction(stringResource(R.string.fuse_check), { storage.refreshAccount(); storage.refreshFuse() }, icon = Icons.Filled.Sync),
+                    BarAction(stringResource(R.string.fuse_check), { rclone.refresh(); storage.refreshAccount(); storage.refreshFuse() }, icon = Icons.Filled.Sync),
                 ),
             )
         }
@@ -211,9 +215,42 @@ fun FuseMountsScreen(storage: StorageCoordinator, rclone: RcloneCoordinator, act
         }
         item { AccountLine(storage, actions) }
         if (verdict != null && !usable) item { NoteText(stringResource(R.string.fuse_fallback_hint), Modifier.padding(horizontal = DriveMetrics.sectionInset)) }
-        item { SectionHeader(stringResource(R.string.fuse_section), count = specs.size) }
-        if (specs.isEmpty()) item { EmptyState(Icons.Filled.Lan, stringResource(R.string.fuse_empty), stringResource(R.string.fuse_empty_hint), actionLabel = stringResource(R.string.fuse_new)) { adding = true } }
-        items(specs, key = { "fuse-" + it.id }) { s ->
+        // #1216 one line per declared provider (ui.sync.mounts.providers): the same FuseWire mount, its spec derived from the line
+        val lines = Declarations.mountProviders.filter { !it.others }
+        val remoteTypes = remotes.associate { it.name to it.type }
+        if (lines.isNotEmpty()) {
+            item { SectionHeader(stringResource(R.string.fuse_providers_section), count = lines.size) }
+            items(lines, key = { "prov-" + it.id }) { d ->
+                val spec = MountProviders.specFor(d)!!
+                val st = MountProviders.state(d, remoteTypes, live)
+                val isServing = d.id in serving
+                val working = d.id in busy
+                TapCard(d.label, expanded = open == "p-" + d.id, onToggle = { open = TapPanel.toggle(open, "p-" + d.id) }, badge = d.rcloneType, light = when (st) { MountProviders.State.MOUNTED -> StatusLight.State.ON; MountProviders.State.READY -> StatusLight.State.OFF; else -> StatusLight.State.UNKNOWN }, summary = "${spec.source}  →  ${spec.mountpoint}", summaryMonospace = true, tag = DriveTags.SYNC_MOUNT_CARD) {
+                    Text(
+                        notes[d.id] ?: when (st) {
+                            MountProviders.State.MISSING -> stringResource(R.string.fuse_provider_missing, d.remote)
+                            MountProviders.State.WRONG_TYPE -> stringResource(R.string.fuse_provider_wrong_type, d.remote, d.rcloneType)
+                            MountProviders.State.MOUNTED -> stringResource(R.string.fuse_mounted)
+                            MountProviders.State.READY -> stringResource(R.string.fuse_not_mounted) + if (d.readOnly) " · ro" else ""
+                        },
+                        Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 4, overflow = TextOverflow.Ellipsis,
+                    )
+                    if (working) LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(vertical = DriveMetrics.gap))
+                    PillRow {
+                        if (st == MountProviders.State.MOUNTED) Pill(stringResource(R.string.fuse_unmount), { storage.unmount(specs.firstOrNull { it.id == d.id } ?: spec) }, enabled = !working)
+                        else Pill(stringResource(R.string.fuse_mount), {
+                            val known = specs.firstOrNull { it.id == d.id }
+                            if (known != null) storage.mount(known)
+                            else storage.addFuse(spec) { why -> if (why == null) storage.mount(spec) else onMessage(why) }
+                        }, filled = true, enabled = st == MountProviders.State.READY && usable && !working && !isServing)
+                        if (specs.any { it.id == d.id }) Pill(stringResource(R.string.storage_delete), { storage.removeFuse(spec) }, enabled = !working && st != MountProviders.State.MOUNTED && !isServing, danger = true)
+                    }
+                }
+            }
+        }
+        item { SectionHeader(stringResource(R.string.fuse_section), count = ownSpecs.size) }
+        if (ownSpecs.isEmpty()) item { EmptyState(Icons.Filled.Lan, stringResource(R.string.fuse_empty), stringResource(R.string.fuse_empty_hint), actionLabel = stringResource(R.string.fuse_new)) { adding = true } }
+        items(ownSpecs, key = { "fuse-" + it.id }) { s ->
             val mounted = FuseWire.isMounted(live, s)
             val isServing = s.id in serving
             val working = s.id in busy

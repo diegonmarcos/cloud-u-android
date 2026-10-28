@@ -118,14 +118,14 @@ class DriveScreenshotTest {
         assertTrue("Configs (three dots) is the top-right control: $button in $bar", button.right > bar.right - 12 * density && button.top >= bar.top)
         assertTrue("the strip sits under the bar: $strip vs $bar", strip.top >= bar.bottom)
         val order = Declarations.configs.pages.map { it.id }
-        assertEquals(listOf("general", "webserver", "backups", "others", "git"), order)
+        assertEquals(listOf("general", "git", "fsync", "mounts", "webserver"), order)
         // The strip is a View-hosted pager, so its tab labels are not always in the Compose tree: when they are all
         // there, they must read left to right in the declared order (the declaration itself is asserted above).
         val lefts = Declarations.configs.pages.mapNotNull { p ->
             compose.onAllNodesWithText(p.label, useUnmergedTree = true).fetchSemanticsNodes().map { it.boundsInRoot }
                 .firstOrNull { it.top >= strip.top - 1 && it.bottom <= strip.bottom + 1 }?.left
         }
-        if (lefts.size == order.size) assertTrue("strip tabs follow General, Webserver, Backups, Others: $lefts", lefts.zipWithNext().all { (a, b) -> a < b })
+        if (lefts.size == order.size) assertTrue("strip tabs follow General, Git, Fsync, Mounts, Webserver: $lefts", lefts.zipWithNext().all { (a, b) -> a < b })
         assertTrue("the capture is the A37 window: ${bmp.width}x${bmp.height}", bmp.width == 1080 && bmp.height in 1800..2400)
     }
 
