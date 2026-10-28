@@ -101,7 +101,7 @@ fi
 #   - every prerequisite present  -> `linux-store switch` runs in the BACKGROUND (rule 1: a login
 #     is never held up by it), logged to ~/.linux-store/first-switch.log, never retried by itself;
 #   - any missing                 -> ONE line on a terminal saying what, and the command to run.
-# Prerequisites are the git base, the cloud-me_configs declaration for the configs-user and an age
+# Prerequisites are the git base, the cloud-me-pvt-configs declaration for the configs-user and an age
 # key. Only their existence is tested: no key is read, written, generated or logged, and the
 # switch itself decrypts with the owner's own key (SOPS_AGE_KEY_FILE or sops's default path).
 # Always returns 0 and tolerates `set -eu` in whatever sourced this.
@@ -118,12 +118,12 @@ cloud_linux_first_start() {
     _lmiss=""
     [ -d "$_lbase" ] || _lmiss="$_lmiss git base,"
     _ldecl="${LINUX_STORE_DECLARATION:-}"
-    if [ -z "$_ldecl" ] && [ -f "$_lbase/cloud-me_configs/configs.json" ] && command -v jq >/dev/null 2>&1; then
+    if [ -z "$_ldecl" ] && [ -f "$_lbase/cloud-me-pvt-configs/configs.json" ] && command -v jq >/dev/null 2>&1; then
         _lup="$(jq -r --arg u "${LINUX_STORE_USER:-diego-admin}" '.configs_users[]? | select(.id == $u) | .path // empty' \
-            "$_lbase/cloud-me_configs/configs.json" 2>/dev/null)" || _lup=""
-        [ -z "$_lup" ] || _ldecl="$_lbase/cloud-me_configs/$_lup/deb-user-configs/linux-store.json"
+            "$_lbase/cloud-me-pvt-configs/configs.json" 2>/dev/null)" || _lup=""
+        [ -z "$_lup" ] || _ldecl="$_lbase/cloud-me-pvt-configs/$_lup/deb-user-configs/linux-store.json"
     fi
-    [ -n "$_ldecl" ] && [ -f "$_ldecl" ] || _lmiss="$_lmiss cloud-me_configs,"
+    [ -n "$_ldecl" ] && [ -f "$_ldecl" ] || _lmiss="$_lmiss cloud-me-pvt-configs,"
     _lkey="${SOPS_AGE_KEY_FILE:-${XDG_CONFIG_HOME:-$_lh/.config}/sops/age/keys.txt}"
     [ -s "$_lkey" ] || [ -n "${SOPS_AGE_KEY:-}" ] || _lmiss="$_lmiss age key,"
     if [ -n "$_lmiss" ]; then

@@ -170,7 +170,7 @@
         },
         {
           "label": "vault",
-          "url": "https://github.com/diegonmarcos/cloud-me_vault"
+          "url": "https://github.com/diegonmarcos/cloud-me-pvt-vault"
         }
       ],
       "consolidated_config": "cloud/2_configs/dist/_cloud-data-consolidated.json"

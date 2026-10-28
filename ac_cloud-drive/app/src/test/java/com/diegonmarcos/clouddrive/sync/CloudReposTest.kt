@@ -13,7 +13,7 @@ class CloudReposTest {
 
     private val body = "[" + listOf(
         item("front-data"), item("cloud-u-android"), item("cloud-data", private = true), item("Cloud-Notes"), item("cloud"),
-        item("_git-repos-master"), item("my-cloud"), item("cloud-me-my-ai", private = true), item("cloud-t-infra", fork = true),
+        item("_git-repos-master"), item("my-cloud"), item("cloud-me-pvt-my-ai", private = true), item("cloud-t-infra", fork = true),
     ).joinToString(",") + "]"
 
     @Test fun keepsPublicReposWhoseNameStartsWithTheDeclaredPrefix() {
@@ -24,7 +24,7 @@ class CloudReposTest {
 
     @Test fun aPrivateRepoIsDroppedEvenWhenTheNameMatches() {
         val out = CloudRepos.filter(GitHubRepos.parse(body), "cloud")
-        assertTrue("cloud-data" !in out.map { it.name } && "cloud-me-my-ai" !in out.map { it.name })
+        assertTrue("cloud-data" !in out.map { it.name } && "cloud-me-pvt-my-ai" !in out.map { it.name })
     }
 
     @Test fun theNameMustSTARTWithThePrefixNotContainIt() {

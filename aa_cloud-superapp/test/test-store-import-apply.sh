@@ -29,7 +29,7 @@ APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$APP/.." && pwd)"
 LIB="$ROOT/ab_cloud-libs-shared/libs"
 VAULT=""
-for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs}" "$ROOT/../cloud-vault/C_A1-configs" "$ROOT/../cloud-me_vault/C_A1-configs"; do
+for v in "${CLOUD_VAULT:+$CLOUD_VAULT/C_A1-configs}" "$ROOT/../cloud-vault/C_A1-configs" "$ROOT/../cloud-me-pvt-vault/C_A1-configs"; do
   [ -n "$v" ] && [ -f "$v/schema.json" ] && VAULT="$v" && break
 done
 

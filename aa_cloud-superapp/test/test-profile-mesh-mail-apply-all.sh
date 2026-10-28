@@ -43,7 +43,7 @@ JMAP="$LIB/mail/src/main/java/com/diegonmarcos/superapp/mail/JmapPrefs.kt"
 PREFS="$ROOT/app/src/main/java/com/diegonmarcos/superapp/network/WireGuardPrefs.kt"
 MESH="$ROOT/app/src/main/java/com/diegonmarcos/superapp/network/AccountMesh.kt"
 STR="$LIB/account/src/main/res/values/strings.xml"
-VAULT_SRC="$ROOT/../../cloud-me_vault/C_A1-configs/mesh/sources.json"
+VAULT_SRC="$ROOT/../../cloud-me-pvt-vault/C_A1-configs/mesh/sources.json"
 
 echo "T1 four profiles stored by name, one active, the key in ONE slot"
 has "$PREFS" 'fun saveProfiles(profiles: Map<String, String>)' "WireGuardPrefs stores a named profile set"

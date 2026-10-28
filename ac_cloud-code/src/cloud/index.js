@@ -135,7 +135,7 @@ async function renderBacklogView(panel, title, entry, ...extra) {
 			body.replaceChildren(
 				el("p", {}, `Cannot read ${dir}${file}`),
 				el("p", { className: "cloud-muted" }, String(err?.message || err)),
-				el("p", { className: "cloud-muted" }, "The backlog repository is private: clone it with Cloud Drive (Sync ▸ Git ▸ cloud-me-my-ai ▸ Clone / open) and it appears here through the shared store. Or point this tab at another 1.1.Product-Backlog/dist/ folder."),
+				el("p", { className: "cloud-muted" }, "The backlog repository is private: clone it with Cloud Drive (Sync ▸ Git ▸ cloud-a-docs ▸ Clone / open) and it appears here through the shared store. Or point this tab at another 1.1.Product-Backlog/dist/ folder."),
 				grant,
 			);
 		}

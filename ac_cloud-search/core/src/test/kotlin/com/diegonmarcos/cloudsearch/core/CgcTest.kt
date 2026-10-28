@@ -25,7 +25,7 @@ class CgcTest {
         assertEquals("cgc-pvt-mcp", pvt.service)
         assertFalse(pub.needsAccount)
         assertTrue(pvt.needsAccount)
-        assertEquals(listOf("cloud-data", "cloud-me-my-ai"), pvt.repos)
+        assertEquals(listOf("cloud-data", "cloud-me-pvt-my-ai"), pvt.repos)
         assertTrue("no private repository is reachable through the public index", pub.repos.none { it in pvt.repos })
         assertNull(cfg.index("ghost"))
         assertTrue(cfg.threshold in 0.0..1.0)

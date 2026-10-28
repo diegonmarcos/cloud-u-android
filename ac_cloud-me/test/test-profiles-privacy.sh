@@ -4,7 +4,7 @@
 # data/values/record in a json name) appears anywhere in the repo, if a schema carries a value, status or expiry,
 # or if a Health/DD page file carries anything but a profile_record block, a web fragment (url + inject only) and links,
 # or if the bundled web pages (data/web/mysocials/data-profile-*.json.js, the schema as the page reads it) carry a value. The owner's values live in the
-# private repo cloud-me-data-pvt (profiles/<id>.data.json) and on the device. It plants each violation in a scratch
+# private repo cloud-me-pvt-data (profiles/<id>.data.json) and on the device. It plants each violation in a scratch
 # copy first and requires RED, then checks the real tree.
 set -euo pipefail
 cd "$(dirname "$0")/.."

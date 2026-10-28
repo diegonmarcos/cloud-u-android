@@ -141,7 +141,7 @@ def world(init_path, key=True, base=True, decl=True, switched=False):
     if base:
         os.makedirs(gitbase)
     if decl and base:
-        cfg = os.path.join(gitbase, "cloud-me_configs")
+        cfg = os.path.join(gitbase, "cloud-me-pvt-configs")
         os.makedirs(os.path.join(cfg, "A", "deb-user-configs"))
         json.dump({"configs_users": [{"id": "diego-admin", "path": "A"}]}, open(os.path.join(cfg, "configs.json"), "w"))
         json.dump({}, open(os.path.join(cfg, "A", "deb-user-configs", "linux-store.json"), "w"))
@@ -205,7 +205,7 @@ def lcase(init_path, tag):
         if len(lines) != 1:
             v.append("L1 nothing present must print exactly ONE line, got %d: %r" % (len(lines), notice))
         else:
-            for need in ("git base", "cloud-me_configs", "age key", "linux-store switch"):
+            for need in ("git base", "cloud-me-pvt-configs", "age key", "linux-store switch"):
                 if need not in lines[0]:
                     v.append("L1 the one line must name %r: %r" % (need, lines[0]))
         if log:

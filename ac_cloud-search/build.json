@@ -2150,7 +2150,7 @@
           "health_path": "/health",
           "repos": [
             "cloud-data",
-            "cloud-me-my-ai"
+            "cloud-me-pvt-my-ai"
           ],
           "needs_account": true,
           "web_url": "https://github.com/diegonmarcos/{repo}/blob/main/{path}#L{line}",

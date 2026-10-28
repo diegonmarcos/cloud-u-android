@@ -42,7 +42,7 @@ import org.json.JSONObject
  * Profile > Social, Health and DD are the same kind of page (cloud-me-profiles b_Profiles/mySocials). Health and DD
  * add `"inject":"health"|"dd"`: the bundled page is the public SCHEMA only and reads "Locked — sign in";
  * once the page has loaded, the owner's values from the on-device store (imported from the private repo
- * cloud-me-data-pvt, profiles/<id>.data.json) are handed to `window.CloudMeProfile.inject(...)`. The values
+ * cloud-me-pvt-data, profiles/<id>.data.json) are handed to `window.CloudMeProfile.inject(...)`. The values
  * never ship in assets. `CloudMeBridge.importData()` lets the page ask for that import.
  */
 @Composable
