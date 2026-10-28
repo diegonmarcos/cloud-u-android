@@ -2149,7 +2149,7 @@
           "mcp_path": "/mcp",
           "health_path": "/health",
           "repos": [
-            "cloud-data",
+            "cloud-me-pvt-data",
             "cloud-me-pvt-my-ai"
           ],
           "needs_account": true,

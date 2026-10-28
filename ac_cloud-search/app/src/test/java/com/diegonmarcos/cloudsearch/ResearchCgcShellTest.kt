@@ -196,7 +196,7 @@ class ResearchCgcShellTest {
         compose.setContent { SearchShell(state) }
         search("cgc", "me_semantic", "secrets layout")
         waitText(CgcTags.STATUS, "Private index not built yet: No octocode index for project cloud-data")
-        assertEquals("cloud-data", http.calls.last { it.third.getString("method") == "tools/call" }.third.getJSONObject("params").getJSONObject("arguments").getString("repo"))
+        assertEquals("cloud-me-pvt-data", http.calls.last { it.third.getString("method") == "tools/call" }.third.getJSONObject("params").getJSONObject("arguments").getString("repo"))
         assertTrue("the bearer never goes to a mesh name", http.calls.all { !it.second.containsKey("Authorization") })
         assertFalse(compose.onAllNodesWithTag(CgcTags.hit(0)).fetchSemanticsNodes().isNotEmpty())
     }

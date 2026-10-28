@@ -25,7 +25,7 @@ class CgcTest {
         assertEquals("cgc-pvt-mcp", pvt.service)
         assertFalse(pub.needsAccount)
         assertTrue(pvt.needsAccount)
-        assertEquals(listOf("cloud-data", "cloud-me-pvt-my-ai"), pvt.repos)
+        assertEquals(listOf("cloud-me-pvt-data", "cloud-me-pvt-my-ai"), pvt.repos)
         assertTrue("no private repository is reachable through the public index", pub.repos.none { it in pvt.repos })
         assertNull(cfg.index("ghost"))
         assertTrue(cfg.threshold in 0.0..1.0)
@@ -129,8 +129,8 @@ class CgcTest {
     }
 
     @Test fun theToolArgumentsAreTheServicesOwn() {
-        val s = Cgc.semanticArgs("cloud-data", "find the mcp client", 0.3)
-        assertEquals("find the mcp client", s.getString("query")); assertEquals("cloud-data", s.getString("repo"))
+        val s = Cgc.semanticArgs("cloud-me-pvt-data", "find the mcp client", 0.3)
+        assertEquals("find the mcp client", s.getString("query")); assertEquals("cloud-me-pvt-data", s.getString("repo"))
         assertEquals("json", s.getString("format")); assertEquals(0.3, s.getDouble("threshold"), 1e-9); assertEquals("all", s.getString("mode"))
         val g = Cgc.graphSearchArgs("r", "q")
         assertEquals("search", g.getString("operation")); assertEquals("q", g.getString("query")); assertEquals("json", g.getString("format"))

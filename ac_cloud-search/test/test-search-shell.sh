@@ -627,7 +627,7 @@ mutate things-debug-op-dropped "$J/debugapi/SearchDebugApi.kt" 's.replace("\"thi
 
 mutate cgc-service-undeclared build.json 's.replace("\"service\": \"cgc-pvt-mcp\"", "\"service\": \"cgc-ghost-mcp\"")' "S14 search.cgc index mecgc names service cgc-ghost-mcp"
 mutate private-index-opened build.json 's.replace("\"needs_account\": true", "\"needs_account\": false")' "S14 the private index mecgc does not wait"
-mutate repo-in-both-indexes build.json 's.replace("\"cloud-data\",\n            \"cloud-me-pvt-my-ai\"", "\"cloud-data\",\n            \"cloud-u-android\"")' "S14 a repository is in both"
+mutate repo-in-both-indexes build.json 's.replace("\"cloud-me-pvt-data\",\n            \"cloud-me-pvt-my-ai\"", "\"cloud-data\",\n            \"cloud-u-android\"")' "S14 a repository is in both"
 mutate news-service-ghost build.json 's.replace("\"service\": \"news\"", "\"service\": \"newz\"")' "S14 search.research.news.service is not a fleet_endpoints service"
 mutate cgc-section-undispatched "$J/ui/SearchShell.kt" 's.replace("\"cgc\" -> CgcSection(state)", "")' "S14 SearchShell does not dispatch News, Research and the CGC section"
 mutate graph-tool-dropped "$J/data/FleetCalls.kt" 's.replace("Cgc.GRAPH_TOOL", "\"x\"")' "S14 FleetCalls does not call both tools"
