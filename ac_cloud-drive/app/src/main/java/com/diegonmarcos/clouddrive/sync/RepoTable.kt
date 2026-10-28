@@ -1,7 +1,7 @@
 package com.diegonmarcos.clouddrive.sync
 
 /** #1138 the Sync ▸ Git repo table's columns, in display order. #1238: STATUS is the leftmost (the status icon, its tap opens the full status window) and LFS follows Pvt/Pub. */
-enum class RepoColumn { STATUS, NAME, PROVIDER, VISIBILITY, LFS, SIZE_MAIN, SIZE_TOTAL, SIZE_DISK, BRANCHES, DIRTY, AHEAD_BEHIND }
+enum class RepoColumn { STATUS, NAME, PROVIDER, VISIBILITY, LFS, SIZE_MAIN, SIZE_TOTAL, SIZE_DISK, BRANCHES, DIRTY, AHEAD_BEHIND, LAST_COMMIT }
 
 /**
  * One table row's facts. A fact the page could not read (not cloned, not fetched yet, no upstream) is
@@ -25,6 +25,8 @@ data class RepoTableRow(
     val lfs: Boolean? = null,
     /** #1238 the leftmost column's kind (RepoStatus.kindOf); null = not computed. */
     val status: RepoStatus.Kind? = null,
+    /** #1256 the last commit's time (epoch ms): the local HEAD commit when cloned, else the forge's pushed_at; null = unknown. */
+    val lastCommitMs: Long? = null,
 )
 
 /** #1138 the table's pure rules: ranking, sorting, how each cell prints and where its facts come from. */
@@ -49,7 +51,26 @@ object RepoTable {
         RepoColumn.DIRTY -> r.dirtyFiles
         // Ahead first, then behind: one number that orders by ahead and breaks ties by behind.
         RepoColumn.AHEAD_BEHIND -> if (r.ahead == null || r.behind == null) null else r.ahead.toLong() * 1_000_000L + r.behind
+        RepoColumn.LAST_COMMIT -> r.lastCommitMs
     }
+
+    /** #1256 the Last commit cell: relative ("now", "5m", "3h", "2d", "4mo", "1y"); the full timestamp is the status window's. */
+    fun age(ms: Long?, now: Long): String {
+        if (ms == null || ms <= 0) return DASH
+        val s = ((now - ms) / 1000).coerceAtLeast(0)
+        return when {
+            s < 60 -> "now"
+            s < 3600 -> "${s / 60}m"
+            s < 86_400 -> "${s / 3600}h"
+            s < 86_400L * 30 -> "${s / 86_400}d"
+            s < 86_400L * 365 -> "${s / (86_400L * 30)}mo"
+            else -> "${s / (86_400L * 365)}y"
+        }
+    }
+
+    /** #1256 which time the Last commit column shows: the clone's own HEAD commit when cloned and read, else the forge's pushed_at. */
+    fun lastCommit(cloned: Boolean, localHeadMs: Long?, remotePushedMs: Long?): Long? =
+        (if (cloned) localHeadMs?.takeIf { it > 0 } else null) ?: remotePushedMs?.takeIf { it > 0 }
 
     /** [items] ordered by [column]; unknown values always sink to the bottom whichever the direction; ties break by name. */
     fun <T> sort(items: List<T>, column: RepoColumn, ascending: Boolean, row: (T) -> RepoTableRow): List<T> {
@@ -92,7 +113,7 @@ object RepoTable {
      * glance (the git engine's status, no network) and whether the clone exists. [declaredPrivate] is the
      * listing's flag when there is one; the REST answer fills it for a repo no listing named.
      */
-    fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null, diskBytes: Long? = null, lfs: Boolean? = null): RepoTableRow {
+    fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null, diskBytes: Long? = null, lfs: Boolean? = null, localHeadMs: Long? = null): RepoTableRow {
         val local = cloned && glance != null && glance.read && !glance.gone && glance.error == null && !glance.large
         val tree = local && glance!!.level != "light"
         return RepoTableRow(
@@ -109,6 +130,7 @@ object RepoTable {
             sizeDiskBytes = if (cloned) diskBytes else null,
             lfs = lfs,
             status = RepoStatus.kindOf(cloned, glance),
+            lastCommitMs = lastCommit(cloned, localHeadMs, remote?.pushedAtMs),
         )
     }
 }

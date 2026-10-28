@@ -113,8 +113,17 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         // #850 the glances ARE the one reader's statuses, entry by entry as each ends — a
         // slow repository no longer holds every other row on "reading…".
         // The persisted cache first (file read on IO): the table renders from it at once, no check runs by itself.
+        // #1259 THE CACHE IS READ BEFORE THE FIRST RENDER: the constructor (built off the main thread, MainActivity's
+        // LaunchedEffect on IO) loads the persisted statuses AND the clone registry synchronously, so a re-created
+        // coordinator (activity re-created after minimize / restart) hands the table its last rows and icons on its first
+        // frame. They used to load in a coroutine, so the first frames had NO registry (every row "not cloned" = "?") and
+        // no glances. Keys are re-canonicalised against the current registry (a rename between two runs still matches).
+        val cached = runCatching { statusCache.load() }.getOrDefault(emptyMap())
+        statusReader.seed(rekey(cached) { Declarations.repoSot.canonical(it) })
+        glances.value = statusReader.statuses.value.mapValues { (_, st) -> glanceOf(st) }
+        runCatching { registry.load() }.getOrNull()?.let { repos.value = it }
+        runCatching { history.load() }.getOrNull()?.let { events.value = it }
         scope.launch {
-            withContext(Dispatchers.IO) { runCatching { statusCache.load() }.getOrDefault(emptyMap()) }.let { statusReader.seed(it) }
             statusReader.statuses.collect { m ->
                 glances.value = m.mapValues { (_, s) -> glanceOf(s) }
                 withContext(Dispatchers.IO) { runCatching { statusCache.save(m) } }
@@ -286,11 +295,12 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     val fullProgress = MutableStateFlow<FullProgress?>(null)
 
     /** "Light check all": refs only, forced, one worker; this is also what runs on open. */
-    fun lightCheckAll() { scope.launch { val list = loadRegistry(); statusReader.request(list.map { GitStatusReader.Target(statusKey(it), File(it.path)) }, force = true, level = GitStatusReader.Level.LIGHT) } }
+    fun lightCheckAll() { scope.launch { val list = loadRegistry(); statusReader.request(list.map { GitStatusReader.Target(statusKey(it), File(it.path)) }, force = true, level = GitStatusReader.Level.LIGHT) }; scanUnlisted(); refreshLastCommits() }
 
     /** "Full check all": MANUAL only. Adds the dirty / worktree scan, one repository at a time with the per-repo timeout; the size guard marks huge / LFS repositories LARGE (each is confirmed individually in its status window). Progress is published; [cancelStatusReads] stops it. */
     fun fullCheckAll() {
         if (fullProgress.value != null) return
+        scanUnlisted(GitStatusReader.Level.FULL); refreshLastCommits()
         scope.launch {
             val list = loadRegistry()
             val started = System.currentTimeMillis()
@@ -643,28 +653,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             // never the full URL (a listing URL could carry a credential in its userinfo) and
             // never the token, which travels only through GitCredentialStore.
             DriveDebugLog.i(ctx, TAG, "clone start: host=${hostOf(url)} dest=${dir.name} auth=$authKind")
-            val result = withContext(Dispatchers.IO) {
-                val id = RepoRegistry.idFor(dir.absolutePath)
-                val managed = ManagedRepo(id = id, name = name, path = dir.absolutePath, remoteUrl = url, authKind = authKind, authUsername = username, sshKeyPath = sshKeyPath)
-                if (token.isNotBlank()) credentials.setSecret(id, token)
-                runCatching {
-                    // cloud-shared-store: not in cld.termux's uid -> clone inside it (CLOUD_EXEC).
-                    if (StoreGit.useExec(ctx)) {
-                        if (StoreGit.isRepository(ctx, dir)) GitOpResult(true, "already cloned")
-                        else StoreGit.clone(ctx, url, dir, token, depth = cloneDepth.value.takeIf { it > 0 }).also { if (!it.ok) error(it.summary + " " + it.details) }
-                    }
-                    else if (GitEngine.isRepository(dir)) GitOpResult(true, "already cloned")
-                    else { (if (cloneDepth.value > 0) GitEngine.clone(ctx, url, dir, auth = authFor(managed), depth = cloneDepth.value) else GitEngine.clone(ctx, url, dir, auth = authFor(managed))).close(); GitOpResult(true, "cloned into ${dir.name}") }
-                }.getOrElse {
-                    val why = it.message ?: it.toString()
-                    // #669 a fleet-session clone that fails must name its NEXT STEP —
-                    // a redirect means the gate, not gitea, answered (sign in again);
-                    // a 401/403 means the fleet itself refused. Never a silent
-                    // fall-through to another host: this is the only URL attempted.
-                    GitOpResult(false, if (authKind == AUTH_SESSION) FleetGit.explainCloneFailure(why) else why)
-                }
-                    .also { if (it.ok) registry.upsert(managed) }
-            }
+            val result = withContext(Dispatchers.IO) { cloneBlocking(name, url, authKind, username, token, sshKeyPath, cloneDepth.value.takeIf { it > 0 }) }
             val now = System.currentTimeMillis() / 1000
             withContext(Dispatchers.IO) {
                 history.append(SyncEvent(now, RepoRegistry.idFor(dir.absolutePath), name, SyncHistory.TRIGGER_MANUAL, result.ok, "clone: ${result.summary}", result.details))
@@ -677,14 +666,228 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         }
     }
 
+
+    /** The clone itself, blocking (IO): the store's exec path or the engine, [depth] null = full history; registers on success. Shared by [cloneInto] and [cloneMissing]. */
+    private fun cloneBlocking(name: String, url: String, authKind: String, username: String, token: String, sshKeyPath: String, depth: Int?): GitOpResult {
+                val dir = SharedStore.repoDir(name)
+                val id = RepoRegistry.idFor(dir.absolutePath)
+                val managed = ManagedRepo(id = id, name = name, path = dir.absolutePath, remoteUrl = url, authKind = authKind, authUsername = username, sshKeyPath = sshKeyPath)
+                if (token.isNotBlank()) credentials.setSecret(id, token)
+                return runCatching {
+                    // cloud-shared-store: not in cld.termux's uid -> clone inside it (CLOUD_EXEC).
+                    if (StoreGit.useExec(ctx)) {
+                        if (StoreGit.isRepository(ctx, dir)) GitOpResult(true, "already cloned")
+                        else StoreGit.clone(ctx, url, dir, token, depth = depth).also { if (!it.ok) error(it.summary + " " + it.details) }
+                    }
+                    else if (GitEngine.isRepository(dir)) GitOpResult(true, "already cloned")
+                    else { (if (depth != null) GitEngine.clone(ctx, url, dir, auth = authFor(managed), depth = depth) else GitEngine.clone(ctx, url, dir, auth = authFor(managed))).close(); GitOpResult(true, "cloned into ${dir.name}") }
+                }.getOrElse {
+                    val why = it.message ?: it.toString()
+                    // #669 a fleet-session clone that fails must name its NEXT STEP —
+                    // a redirect means the gate, not gitea, answered (sign in again);
+                    // a 401/403 means the fleet itself refused. Never a silent
+                    // fall-through to another host: this is the only URL attempted.
+                    GitOpResult(false, if (authKind == AUTH_SESSION) FleetGit.explainCloneFailure(why) else why)
+                }
+                    .also { if (it.ok) registry.upsert(managed) }
+    }
+
+    // ── #1254 the declared depth commands: Clone all (depth 1) and Keep depth 1, bulk and per repository ──
+
+    /** One registry repository the page could clone, with the credential the row's own clone would use. */
+    data class CloneTarget(val name: String, val url: String, val authKind: String, val username: String, val token: String)
+
+    /** The depth command in flight or last finished (progress, and every repository's outcome for the status window). */
+    val depthRun = MutableStateFlow<BulkDepth.Run?>(null)
+    private var depthJob: kotlinx.coroutines.Job? = null
+
+    /** Every clone on the device the page can see: the registry's clones, the store's git folder and the registry folders' parents (one level), and the unlisted scan. */
+    private fun existingClones(list: List<ManagedRepo>): List<BulkDepth.Existing> {
+        val roots = (listOf(SharedStore.gitRoot()) + list.mapNotNull { File(it.path).parentFile }).distinctBy { it.absolutePath }
+        val reg = list.filter { File(it.path).exists() || runCatching { StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, File(it.path)) }.getOrDefault(false) }
+            .map { BulkDepth.Existing(it.path, it.remoteUrl.ifBlank { LocalRepos.originOf(File(it.path)) }) }
+        val scanned = runCatching { LocalRepos.scan(roots) }.getOrDefault(emptyList()).map { BulkDepth.Existing(it.dir.absolutePath, it.origin) }
+        return reg + scanned + unlisted.value.map { BulkDepth.Existing(it.path, it.origin) }
+    }
+
+    /**
+     * #1254 CLONE MISSING at the declared depth: ONE clone per repository — a target whose repository already has a clone
+     * ANYWHERE the page can see (by origin URL, renamed_from chains folded in; or its destination already holds a repository)
+     * is skipped and reported, never cloned a second time. At most the declared workers at once; [cancelDepthRun] stops the
+     * ones not started yet (a clone in flight finishes); the status cache is re-read after.
+     */
+    fun cloneMissing(action: Declarations.GitDepthActionDecl, targets: List<CloneTarget>): kotlinx.coroutines.Job? = startDepth(action) {
+        val list = withContext(Dispatchers.IO) { registry.load() }
+        val plan = withContext(Dispatchers.IO) {
+            BulkDepth.planClones(targets.map { BulkDepth.Target(it.name, it.url) }, existingClones(list)) { Declarations.repoSot.canonical(it) }
+        }
+        val todo = targets.filter { t -> plan.toClone.any { it.name == t.name } && t.name !in cloning.value }
+        depthRun.update { it?.copy(total = todo.size + plan.held.size, done = plan.held.size, skipped = plan.held.mapValues { (_, p) -> "already cloned at $p" }) }
+        bounded(action, todo) { t ->
+            if (withContext(Dispatchers.IO) { StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, SharedStore.repoDir(t.name)) || GitEngine.isRepository(SharedStore.repoDir(t.name)) }) {
+                t.name to Outcome.SKIP to "already cloned at ${SharedStore.repoDir(t.name).absolutePath}"
+            } else {
+                cloning.update { it + t.name }
+                val r = try { withContext(Dispatchers.IO) { cloneBlocking(t.name, t.url, t.authKind, t.username, t.token, "", action.depth) } } finally { cloning.update { it - t.name } }
+                withContext(Dispatchers.IO) { history.append(SyncEvent(System.currentTimeMillis() / 1000, RepoRegistry.idFor(SharedStore.repoDir(t.name).absolutePath), t.name, SyncHistory.TRIGGER_MANUAL, r.ok, "${action.id}: ${r.summary}", r.details)) }
+                t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to r.summary
+            }
+        }
+    }
+
+    /**
+     * #1254 KEEP DEPTH in place for every registered clone, or only [only]: the gate ([BulkDepth.keepSkip]) is read from the
+     * clone itself first — dirty, conflicted, mid-merge, no upstream or ahead is SKIPPED and reported; the rest are shrunk by the
+     * terminal-root wire's `keep_depth` (which checks the gate again). Same single clone, nothing re-cloned.
+     */
+    fun keepDepth(action: Declarations.GitDepthActionDecl, only: ManagedRepo? = null): kotlinx.coroutines.Job? = startDepth(action) {
+        val list = only?.let { listOf(it) } ?: withContext(Dispatchers.IO) { registry.load() }
+        depthRun.update { it?.copy(total = list.size) }
+        val token = lazy { declaredToken() }
+        bounded(action, list) { repo ->
+            if (running.value.containsKey(repo.id)) return@bounded repo.name to Outcome.SKIP to "an operation is already running"
+            running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
+            try {
+                withContext(Dispatchers.IO) {
+                    val dir = File(repo.path)
+                    val cloned = runCatching { GitEngine.isRepository(dir) || (StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, dir)) }.getOrDefault(false)
+                    val skip = if (!cloned) BulkDepth.SKIP_NOT_CLONED else runCatching {
+                        GitEngine(ctx, dir).use { e -> val st = e.status(); BulkDepth.keepSkip(true, st.files.size - st.conflicts.size, st.conflicts.size, st.ahead, st.upstream, st.repositoryState) }
+                    }.getOrElse { "unreadable: ${it.message}" }
+                    if (skip != null) return@withContext repo.name to Outcome.SKIP to skip
+                    val r = RepoCompound.raw(ctx, dir, "keep_depth", org.json.JSONObject().put("depth", action.depth), authFor(repo) { token.value })
+                    record(repo, action.id, r, SyncHistory.TRIGGER_MANUAL)
+                    statusReader.invalidate(statusKey(repo))
+                    val why = r.details.ifBlank { r.summary }
+                    repo.name to (if (r.ok) Outcome.OK else if (why.contains("skipped:")) Outcome.SKIP else Outcome.FAIL) to (if (r.ok) "kept depth ${action.depth}" else why.take(300))
+                }
+            } finally { running.update { it - repo.id } }
+        }
+    }
+
+    private enum class Outcome { OK, SKIP, FAIL }
+
+    /** One depth command at a time; the run state and the job are the coordinator's, so a page close does not lose them. */
+    private fun startDepth(action: Declarations.GitDepthActionDecl, body: suspend kotlinx.coroutines.CoroutineScope.() -> Unit): kotlinx.coroutines.Job? {
+        if (depthRun.value?.finished == false) return null
+        depthRun.value = BulkDepth.Run(action.id, action.kind, total = 0)
+        return scope.launch {
+            try { body() }
+            finally {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                    depthRun.update { it?.copy(ended = true) }
+                    DriveDebugLog.i(ctx, TAG, "${action.id}: " + (depthRun.value?.let { "${it.ok.size} ok, ${it.skipped.size} skipped, ${it.failed.size} failed" + if (it.cancelled) ", cancelled" else "" } ?: ""))
+                    refresh(force = true).join()
+                    refreshLastCommits()
+                }
+            }
+        }.also { depthJob = it }
+    }
+
+    /** At most the declared workers at once; each item's outcome lands in [depthRun] as it ends. */
+    private suspend fun <T> kotlinx.coroutines.CoroutineScope.bounded(action: Declarations.GitDepthActionDecl, items: List<T>, one: suspend (T) -> Pair<Pair<String, Outcome>, String>) {
+        val gate = kotlinx.coroutines.sync.Semaphore(action.workers)
+        items.map { item ->
+            launch {
+                gate.acquire()
+                try {
+                    val (head, msg) = one(item); val (name, o) = head
+                    depthRun.update { r -> r?.copy(done = r.done + 1,
+                        ok = if (o == Outcome.OK) r.ok + (name to msg) else r.ok,
+                        skipped = if (o == Outcome.SKIP) r.skipped + (name to msg) else r.skipped,
+                        failed = if (o == Outcome.FAIL) r.failed + (name to msg) else r.failed) }
+                } finally { gate.release() }
+            }
+        }.joinAll()
+    }
+
+    /** Stop the depth command: nothing new starts; an operation already running ends on its own. */
+    fun cancelDepthRun() { depthRun.update { it?.copy(cancelled = true) }; depthJob?.cancel() }
+
+    // ── #1255 the Unlisted git folders: declared roots, bounded walk, statuses in the ONE reader (so in StatusCache) ──
+
+    val unlisted = MutableStateFlow<List<UnlistedRepos.Folder>>(emptyList())
+        .also { f -> scope.launch(Dispatchers.IO) { f.value = UnlistedRepos.decode(pagePrefs.getString(KEY_UNLISTED, null)) } }
+    val scanningUnlisted = MutableStateFlow(false)
+
+    /** Walk the declared roots (bounded by the declared depth, folder count and deadline), keep the folders the registry does not list, persist them and light-check them. Pull-to-refresh and check-all only. */
+    fun scanUnlisted(level: GitStatusReader.Level = GitStatusReader.Level.LIGHT) {
+        if (!scanningUnlisted.compareAndSet(false, true)) return
+        scope.launch {
+            try {
+                val found = withContext(Dispatchers.IO) {
+                    val d = Declarations.sync.git.unlisted
+                    val list = registry.load()
+                    val vars = mapOf(
+                        "store_git" to listOf(SharedStore.gitRoot().absolutePath),
+                        "repo_parents" to list.mapNotNull { File(it.path).parentFile?.absolutePath }.distinct(),
+                        "external" to listOfNotNull(runCatching { android.os.Environment.getExternalStorageDirectory().absolutePath }.getOrNull()),
+                        "files" to listOf(ctx.filesDir.absolutePath),
+                    )
+                    val roots = UnlistedRepos.expandRoots(d.roots, vars)
+                    val walked = UnlistedRepos.walk(roots, d.maxDepth, d.maxDirs, System.currentTimeMillis() + d.timeoutSeconds * 1000L)
+                    val ids = Declarations.repoSot.repos.map { BulkDepth.identity(it.github, Declarations.repoSot::canonical) }.toSet()
+                    UnlistedRepos.unlisted(walked, ids, Declarations.repoSot::canonical).also { pagePrefs.edit().putString(KEY_UNLISTED, UnlistedRepos.encode(it)).apply() }
+                }
+                unlisted.value = found
+                statusReader.request(found.map { GitStatusReader.Target(UnlistedRepos.statusKey(it.path), File(it.path)) }, force = true, level = level)
+            } finally { scanningUnlisted.value = false }
+        }
+    }
+
+    // ── #1256 Last commit (local HEAD time per clone, cached), and the persisted filters and sort ──
+
+    val lastCommits = MutableStateFlow<Map<String, Long>>(emptyMap())
+        .also { f -> scope.launch(Dispatchers.IO) { f.value = decodeTimes(pagePrefs.getString(KEY_LAST_COMMITS, null)) } }
+
+    /** Read the HEAD commit time of every registered clone (one log entry each, IO), persist it. Check-all and pull-to-refresh only. */
+    fun refreshLastCommits() {
+        scope.launch(Dispatchers.IO) {
+            val out = registry.load().mapNotNull { r ->
+                runCatching { GitEngine(ctx, File(r.path)).use { e -> e.log(max = 1).firstOrNull()?.time?.let { File(r.path).absolutePath to it * 1000 } } }.getOrNull()
+            }.toMap()
+            lastCommits.value = out
+            pagePrefs.edit().putString(KEY_LAST_COMMITS, out.entries.joinToString("\n") { it.key + "\t" + it.value }).apply()
+        }
+    }
+
+    val filterSelection = MutableStateFlow<Map<String, String>>(emptyMap())
+        .also { f -> scope.launch(Dispatchers.IO) { f.value = RepoFilters.decode(pagePrefs.getString(KEY_FILTERS, null)) } }
+    fun setFilter(id: String, option: String) {
+        filterSelection.update { if (option == RepoFilters.ALL) it - id else it + (id to option) }
+        val enc = RepoFilters.encode(filterSelection.value)
+        scope.launch(Dispatchers.IO) { pagePrefs.edit().putString(KEY_FILTERS, enc).apply() }
+    }
+
+    val sort = MutableStateFlow(RepoTable.DEFAULT_SORT to true)
+        .also { f -> scope.launch(Dispatchers.IO) { f.value = RepoFilters.decodeSort(pagePrefs.getString(KEY_SORT, null)) } }
+    fun setSort(column: RepoColumn, ascending: Boolean) {
+        sort.value = column to ascending
+        scope.launch(Dispatchers.IO) { pagePrefs.edit().putString(KEY_SORT, RepoFilters.encodeSort(column, ascending)).apply() }
+    }
+
     companion object {
         private const val TAG = "GitSync"
+        const val KEY_UNLISTED = "git.unlisted"
+        const val KEY_LAST_COMMITS = "git.last_commits"
+        const val KEY_FILTERS = "git.filters"
+        const val KEY_SORT = "git.sort"
+
+        fun decodeTimes(s: String?): Map<String, Long> = s.orEmpty().lineSequence().mapNotNull { l -> l.split('\t').takeIf { it.size == 2 }?.let { p -> p[1].toLongOrNull()?.let { p[0] to it } } }.toMap()
 
         /**
          * THE ONE KEY of a repository's status: the canonical registry name (a clone folder under an old name and its
          * renamed row are the same repository). The reader's cache, the glances and every row lookup use this and nothing else.
          */
         fun statusKey(repo: ManagedRepo, canonical: (String) -> String = { Declarations.repoSot.canonical(it) }): String = canonical(File(repo.path).name)
+
+        /** #1259 the row's glance: by [statusKey], else by the folder's own name (an entry keyed before a registry rename reached this process). */
+        fun glanceFor(repo: ManagedRepo, glances: Map<String, Glance>): Glance? = glances[statusKey(repo)] ?: glances[File(repo.path).name]
+
+        /** #1259 cached keys mapped to the CURRENT canonical name (unlisted folders keep their path key); the newest entry wins a collision. */
+        fun rekey(m: Map<String, GitStatusReader.Status>, canonical: (String) -> String): Map<String, GitStatusReader.Status> =
+            m.entries.groupBy { (k, _) -> if (k.startsWith(UnlistedRepos.KEY_PREFIX)) k else canonical(k) }
+                .mapValues { (_, v) -> v.maxBy { it.value.readAtMs }.value }
 
         /** #871 the git verbs run in the engine APK, so the shared status probe needs a Context to find it: the one the coordinators were built with. */
         @Volatile private var engineContext: Context? = null

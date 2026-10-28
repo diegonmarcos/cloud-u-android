@@ -52,6 +52,7 @@ private fun columnLabel(c: RepoColumn): String = stringResource(when (c) {
     RepoColumn.BRANCHES -> R.string.repo_col_branches
     RepoColumn.DIRTY -> R.string.repo_col_dirty
     RepoColumn.AHEAD_BEHIND -> R.string.repo_col_ab
+    RepoColumn.LAST_COMMIT -> R.string.repo_col_last_commit
 })
 
 /** The sortable header: a tap on a column sorts by it, a second tap flips the direction. Scrolls with the rows ([scroll] is shared). */
@@ -89,6 +90,7 @@ internal fun RepoCells(r: RepoTableRow) {
         RepoColumn.BRANCHES to RepoTable.count(r.branches),
         RepoColumn.DIRTY to RepoTable.dirty(r.dirtyFiles, yes, no),
         RepoColumn.AHEAD_BEHIND to RepoTable.aheadBehind(r.ahead, r.behind),
+        RepoColumn.LAST_COMMIT to RepoTable.age(r.lastCommitMs, System.currentTimeMillis()),
     )
     texts.forEach { (c, t) ->
         Text(t, repoCellModifier(c), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, textAlign = TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)

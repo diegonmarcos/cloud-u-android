@@ -68,6 +68,17 @@ object Declarations {
 
     /** One per-repository operation. [destructive] ⇒ the row asks before running it. */
     data class GitOpDecl(val id: String, val label: String, val icon: String, val destructive: Boolean)
+    /**
+     * #1254 one DECLARED depth command of the Git page (ui.sync.git.depth_actions): [kind] clone_missing (shallow clone of
+     * every registry repo with no clone anywhere on the device) or keep_depth (shrink a clean, fully pushed clone back to
+     * [depth] in place); [scope] all = the bulk bar, repo = the row's detail; [workers] bounds the concurrency.
+     */
+    data class GitDepthActionDecl(val id: String, val label: String, val icon: String, val kind: String, val scope: String, val depth: Int, val workers: Int, val confirm: Boolean)
+    /** #1255 the Unlisted git folders section (ui.sync.git.unlisted): root templates, walk bounds. */
+    data class GitUnlistedDecl(val label: String = "", val roots: List<String> = emptyList(), val maxDepth: Int = 2, val maxDirs: Int = 2000, val timeoutSeconds: Int = 30)
+    /** #1256 one declared filter of the Git page's filter row: its options, the first one is the "all" default. */
+    data class GitFilterOptionDecl(val id: String, val label: String)
+    data class GitFilterDecl(val id: String, val label: String, val options: List<GitFilterOptionDecl>)
 
     /** What `origin` can be switched to. [readOnly] ⇒ the page refuses push / force push. */
     data class GitRemoteModeDecl(val id: String, val label: String, val icon: String, val url: String, val readOnly: Boolean) {
@@ -149,7 +160,17 @@ object Declarations {
         val status: GitStatusDecl = GitStatusDecl(),
         /** #850 the page's "Auto pull on open" setting (ui.sync.git.auto_pull). */
         val autoPull: GitAutoPullDecl = GitAutoPullDecl(),
+        /** #1254 the declared depth commands (bulk and per repo). */
+        val depthActions: List<GitDepthActionDecl> = emptyList(),
+        /** #1255 the Unlisted git folders scan. */
+        val unlisted: GitUnlistedDecl = GitUnlistedDecl(),
+        /** #1256 the filter row. */
+        val filters: List<GitFilterDecl> = emptyList(),
+        /** #1258 Activity Logs (was History): how many entries its view lists. */
+        val activityMax: Int = 50,
     ) {
+        fun depthActions(scope: String): List<GitDepthActionDecl> = depthActions.filter { it.scope == scope }
+        fun depthAction(id: String): GitDepthActionDecl? = depthActions.firstOrNull { it.id == id }
         fun op(id: String): GitOpDecl? = ops.firstOrNull { it.id == id }
         fun remoteMode(id: String): GitRemoteModeDecl? = remoteModes.firstOrNull { it.id == id }
         /** The declared HTTPS clone URL of [name] under the declared owner — the default for every clone. */
@@ -291,7 +312,7 @@ object Declarations {
         val renames: Map<String, String> get() = repos.flatMap { r -> r.renamedFrom.map { it to r.name } }.toMap()
     }
     /** #1073 one entry of the repo registry (_git-repos-master/repos.json) as baked in REPOS_SOT_B64. [github] is the GitHub repository name; [pending] = not created yet, so nothing may clone or list it. */
-    data class RepoSotEntry(val name: String, val github: String, val private: Boolean, val pending: Boolean, val renamedFrom: List<String> = emptyList(), val lfs: Boolean = false) {
+    data class RepoSotEntry(val name: String, val github: String, val private: Boolean, val pending: Boolean, val renamedFrom: List<String> = emptyList(), val lfs: Boolean = false, /** #1256 a hub repository (the registry entry carries `parent_hub`). */ val hub: Boolean = false) {
         /** The registry's naming convention for a retired repository (z-archived_*): hidden from the table unless the owner opens the Archived group. */
         val archived: Boolean get() = github.startsWith("z-archived") || name.startsWith("z-archived")
     }
@@ -310,6 +331,8 @@ object Declarations {
         fun byGithub(github: String): RepoSotEntry? = repos.firstOrNull { it.github == github }
         /** #1238 true = the registry declares `lfs: true` for it, false = listed and normal, null = the registry does not list it (unknown, never guessed). */
         fun lfsOf(github: String): Boolean? = byGithub(github)?.lfs
+        /** #1256 true = a hub, false = a member, null = not in the registry. */
+        fun hubOf(github: String): Boolean? = byGithub(canonical(github))?.hub
         /** true only for a repository the registry lists AND has created. */
         fun cloneable(github: String): Boolean = byGithub(github)?.let { !it.pending } ?: false
     }
@@ -490,6 +513,20 @@ object Declarations {
                 val id = p.str("id"); if (id.isBlank()) null else GitOpDecl(id, p.str("label", id), p.str("icon"), p.bool("destructive"))
             },
             historyMax = (o.int("history_max") ?: 30).coerceAtLeast(1),
+            depthActions = objects(o["depth_actions"]).mapNotNull { a ->
+                val id = a.str("id"); val kind = a.str("kind"); val scope = a.str("scope")
+                if (id.isBlank() || kind !in DEPTH_KINDS || scope !in DEPTH_SCOPES) null
+                else GitDepthActionDecl(id, a.str("label", id), a.str("icon"), kind, scope, (a.int("depth") ?: 1).coerceIn(1, 1000), (a.int("workers") ?: 1).coerceIn(1, 4), a.bool("confirm"))
+            },
+            unlisted = (o["unlisted"] as? JsonObject)?.let { u ->
+                GitUnlistedDecl(u.str("label"), u.strings("roots"), (u.int("max_depth") ?: 2).coerceIn(0, 6), (u.int("max_dirs") ?: 2000).coerceIn(1, 100_000), (u.int("timeout_seconds") ?: 30).coerceIn(1, 600))
+            } ?: GitUnlistedDecl(),
+            activityMax = ((o["activity_logs"] as? JsonObject)?.int("max_entries") ?: 50).coerceIn(1, 1000),
+            filters = objects(o["filters"]).mapNotNull { f ->
+                val id = f.str("id")
+                val opts = objects(f["options"]).mapNotNull { x -> x.str("id").takeIf { it.isNotBlank() }?.let { GitFilterOptionDecl(it, x.str("label", it)) } }
+                if (id.isBlank() || opts.isEmpty()) null else GitFilterDecl(id, f.str("label", id), opts)
+            },
             nameFamilies = o.strings("name_families"),
             // #642 absent block -> null -> the page says git handoff is not configured rather
             // than firing an intent with an empty action, which resolves to nothing in silence.
@@ -592,7 +629,7 @@ object Declarations {
         val repos = list.mapNotNull { r ->
             val name = r.str("name"); if (name.isBlank()) return@mapNotNull null
             val github = r.str("github").ifBlank { r.str("url").substringAfterLast('/').substringAfterLast(':').removeSuffix(".git").ifBlank { name } }
-            RepoSotEntry(name, github, r.bool("private"), r.bool("pending") || r.str("status") == "pending_creation", r.strings("renamed_from"), r.bool("lfs"))
+            RepoSotEntry(name, github, r.bool("private"), r.bool("pending") || r.str("status") == "pending_creation", r.strings("renamed_from"), r.bool("lfs"), r.bool("is_hub") || r.str("parent_hub").isNotBlank())
         }
         val records = o?.let { objects(it["renames"]) }.orEmpty().mapNotNull { x -> x.str("from").takeIf { it.isNotBlank() }?.let { f -> x.str("to").takeIf { it.isNotBlank() }?.let { t -> f to t } } }.toMap()
         return RepoSotDecl(repos, records)
@@ -674,6 +711,13 @@ object Declarations {
     /** #608 the declared remote modes, by id. */
     const val REMOTE_HTTPS = "https"
     const val REMOTE_SSH = "ssh"
+    /** #1254 the depth command kinds and scopes GitReposScreen dispatches on (test-drive-git-depth.sh diffs both ways). */
+    const val DEPTH_CLONE_MISSING = "clone_missing"
+    const val DEPTH_KEEP = "keep_depth"
+    const val DEPTH_SCOPE_ALL = "all"
+    const val DEPTH_SCOPE_REPO = "repo"
+    val DEPTH_KINDS = setOf(DEPTH_CLONE_MISSING, DEPTH_KEEP)
+    val DEPTH_SCOPES = setOf(DEPTH_SCOPE_ALL, DEPTH_SCOPE_REPO)
     const val REMOTE_READONLY = "readonly"
 
     /** #608 the Git page's two sections and the personal section's two groups, by id. */

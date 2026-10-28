@@ -70,6 +70,8 @@ internal fun RepoStatusWindow(
     onClone: () -> Unit,
     onCheckWorktree: () -> Unit = {},
     onClose: () -> Unit,
+    /** #1254 this repository's outcome in the last depth command (ok / skipped: why / failed: why); null = not part of one. */
+    depthOutcome: String? = null,
 ) {
     val kind = RepoStatus.kindOf(repo != null, glance)
     val block = RepoStatus.block(repo != null, glance)
@@ -91,6 +93,7 @@ internal fun RepoStatusWindow(
                     // Debug line: the exact path read and the reader's outcome, so a "?" can never be silent again.
                     Text(RepoStatus.debugLine(repo?.path.orEmpty(), glance), Modifier.testTag(DriveTags.SYNC_GIT_DEBUG_LINE), style = MaterialTheme.typography.labelSmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     RepoStatusBlock(block, fmt)
+                    depthOutcome?.let { Text(stringResource(R.string.repo_depth_outcome, it), style = MaterialTheme.typography.bodySmall, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace) }
                     RepoMetaTable(listOf(
                         stringResource(R.string.repo_meta_k_name) to name,
                         stringResource(R.string.repo_meta_k_owner) to owner,
@@ -107,6 +110,7 @@ internal fun RepoStatusWindow(
                         stringResource(R.string.repo_meta_k_size) to (RepoTable.size(row.sizeMainBytes) + " / " + RepoTable.size(row.sizeTotalBytes)),
                         stringResource(R.string.repo_meta_k_size_disk) to RepoTable.size(row.sizeDiskBytes),
                         stringResource(R.string.repo_meta_k_branches) to RepoTable.count(row.branches),
+                        stringResource(R.string.repo_meta_k_last_commit) to (row.lastCommitMs?.let { fmt.format(Date(it)) + " (" + RepoTable.age(it, System.currentTimeMillis()) + ")" } ?: RepoTable.DASH),
                     ))
                     // LAST SECTION: the actions. Clone repo lives here, not in the table row (#1238).
                     Text(stringResource(R.string.repo_status_window_actions), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = DriveMetrics.pad))

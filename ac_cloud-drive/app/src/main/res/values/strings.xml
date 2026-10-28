@@ -200,7 +200,7 @@
     <string name="sync_empty_hint">Clone a declared one below, or add a folder</string>
     <string name="sync_now">Sync now</string>
     <string name="sync_open">Open folder</string>
-    <string name="sync_history">History</string>
+    <string name="sync_history">Activity Logs</string>
     <string name="sync_settings">Settings</string>
     <string name="sync_resolve_conflicts">Resolve %1$d conflict(s)</string>
     <string name="sync_glance_reading">reading…</string>
@@ -220,8 +220,8 @@
     <string name="sync_step_pushing">pushing</string>
     <string name="sync_step_uninterruptible">cannot be interrupted while pushing</string>
     <string name="sync_clone_into_store">Clone into store</string>
-    <string name="sync_history_section">History</string>
-    <string name="sync_history_empty">No sync has run yet</string>
+    <string name="sync_history_section">Activity Logs</string>
+    <string name="sync_history_empty">No activity yet</string>
     <string name="sync_trigger_manual">manual</string>
     <string name="sync_trigger_scheduled">scheduled</string>
     <string name="sync_settings_auto">Sync on a schedule</string>
@@ -800,4 +800,21 @@
     <string name="git_cloud_loading">Listing the public repositories…</string>
     <string name="git_cloud_failed">Could not list from GitHub (%1$s). Showing the declared public set.</string>
     <string name="git_cloud_count">Public repositories of %1$s starting with %2$s: %3$d</string>
+    <!-- #1254 depth commands, #1255 unlisted git folders, #1256 filters and Last commit -->
+    <string name="repo_col_last_commit">Last commit</string>
+    <string name="repo_meta_k_last_commit">Last commit</string>
+    <string name="repo_depth_cancel">Cancel</string>
+    <string name="repo_depth_progress">%1$s: %2$d of %3$d · %4$d ok · %5$d skipped · %6$d failed</string>
+    <string name="repo_depth_done">%1$s finished: %2$d of %3$d · %4$d ok · %5$d skipped · %6$d failed</string>
+    <string name="repo_depth_cancelled">%1$s cancelled: %2$d of %3$d · %4$d ok · %5$d skipped · %6$d failed</string>
+    <string name="repo_depth_report">Depth report</string>
+    <string name="repo_depth_outcome">Last depth command: %1$s</string>
+    <string name="repo_depth_confirm_keep">Shrinks every clean, fully pushed clone to depth %1$d in place: fetch --depth %1$d, reset to the remote default branch, reflog expire, gc. Clones with uncommitted or unpushed work are skipped and reported. The remote is never written and nothing is re-cloned.</string>
+    <string name="repo_depth_confirm_keep_one">Shrinks %1$s to depth %2$d in place: fetch --depth %2$d, reset to the remote default branch, reflog expire, gc. Refused when it has uncommitted or unpushed work. The remote is never written.</string>
+    <string name="repo_depth_confirm_clone">Clones every registry repository that has no clone on this device yet, depth %1$d. A repository already cloned anywhere (any folder name, any old name) is never cloned twice.</string>
+    <string name="repo_group_depth">Depth</string>
+    <string name="repo_filters_title">Filters</string>
+    <string name="repo_unlisted_title">Unlisted git folders</string>
+    <string name="repo_unlisted_none">No unlisted git folder found yet (pull to refresh or check all to scan).</string>
+    <string name="repo_unlisted_no_remote">no remote</string>
 </resources>

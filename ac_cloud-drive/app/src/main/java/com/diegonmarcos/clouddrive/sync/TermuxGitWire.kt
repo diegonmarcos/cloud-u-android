@@ -22,7 +22,7 @@ object TermuxGitWire {
     data class Plan(val script: String, val stdin: String = "", val network: Boolean = false)
 
     /** Verbs that answer a GitOpResult. #1138 adds the compound ones the engine APK has no verb for (RepoCompound sends them). */
-    val OPS = setOf("push", "force_push", "fetch", "pull", "force_pull", "sync", "force_push_lease", "merge_upstream", "stash", "shrink", "checkout_main")
+    val OPS = setOf("push", "force_push", "fetch", "pull", "force_pull", "sync", "force_push_lease", "merge_upstream", "stash", "shrink", "checkout_main", "keep_depth")
 
     private const val FS = "%x1f"
     private const val RS = "%x1e"
@@ -86,6 +86,20 @@ object TermuxGitWire {
             "checkout_main" -> ok(g(dir, "checkout main") + " 2>/dev/null || " + g(dir, "checkout master"))
             "shrink" -> a.optInt("depth", 0).takeIf { it in 1..1000 }?.let { d ->
                 ok(gAuthed(dir, "fetch --depth $d ${q(remote)}") + "; " + g(dir, "reflog expire --expire=now --all") + "; " + g(dir, "gc --prune=now -q"), true, header)
+            } ?: (null to "bad depth")
+            // #1254 KEEP DEPTH: the SAME clone, shrunk in place. It re-checks the gate the page already applied (clean, an
+            // upstream, nothing unpushed: exit 4 names which), fetches ONLY the remote's default branch at depth N, points that
+            // branch at it, then drops the reflog and the unreachable objects. Never re-clones, never writes the remote.
+            "keep_depth" -> if (!Regex("[A-Za-z0-9._-]+").matches(remote)) null to "bad remote name" else a.optInt("depth", 0).takeIf { it in 1..1000 }?.let { d ->
+                val r = q(remote)
+                ok("[ -z \"\$(" + g(dir, "status --porcelain") + ")\" ] || { echo 'skipped: uncommitted changes' >&2; exit 4; }; " +
+                    "U=\"\$(" + g(dir, "rev-parse --abbrev-ref --symbolic-full-name '@{u}'") + " 2>/dev/null)\" || { echo 'skipped: no upstream' >&2; exit 4; }; " +
+                    "[ \"\$(" + g(dir, "rev-list --count '@{u}..HEAD'") + ")\" = 0 ] || { echo 'skipped: unpushed commits' >&2; exit 4; }; " +
+                    "B=\"\$(" + g(dir, "symbolic-ref --short refs/remotes/$r/HEAD") + " 2>/dev/null || true)\"; B=\"\${B#$remote/}\"; [ -n \"\$B\" ] || B=\"\${U#*/}\"; " +
+                    gAuthed(dir, "fetch -q --depth $d $r \"+refs/heads/\$B:refs/remotes/$remote/\$B\"") + "; " +
+                    g(dir, "checkout -q -B \"\$B\" \"refs/remotes/$remote/\$B\"") + "; " +
+                    g(dir, "branch -q --set-upstream-to=\"$remote/\$B\" \"\$B\"") + "; " +
+                    g(dir, "reflog expire --expire=now --all") + "; " + g(dir, "gc --prune=now -q") + "; echo \"kept depth $d on \$B\"", true, header)
             } ?: (null to "bad depth")
             "sync" -> ok("H=\"\$(cat)\"; " + g(dir, "add -A") + "; " + g(dir, "diff --cached --quiet") + " || " +
                 g(dir, "-c user.name=${q(a.optString("name"))} -c user.email=${q(a.optString("email"))} commit -q -m ${q(a.optString("message"))}") + "; " +

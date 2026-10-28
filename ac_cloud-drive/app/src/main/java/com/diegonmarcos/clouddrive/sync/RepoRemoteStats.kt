@@ -36,16 +36,21 @@ object RepoRemoteStats {
         val isPrivate: Boolean,
         val defaultBranch: String,
         val fetchedAtMs: Long,
+        /** #1256 the forge's pushed_at (epoch ms); 0 = unknown. */
+        val pushedAtMs: Long = 0,
     )
 
     /** What `GET /repos/{owner}/{name}` says that the table needs. */
-    data class RepoInfo(val sizeKb: Long, val isPrivate: Boolean, val defaultBranch: String)
+    data class RepoInfo(val sizeKb: Long, val isPrivate: Boolean, val defaultBranch: String, val pushedAtMs: Long = 0)
 
     fun parseRepo(text: String): RepoInfo? {
         val o = runCatching { json.parseToJsonElement(text) }.getOrNull() as? JsonObject ?: return null
         val size = (o["size"] as? JsonPrimitive)?.longOrNull ?: return null
-        return RepoInfo(size, (o["private"] as? JsonPrimitive)?.booleanOrNull ?: false, o.str("default_branch").ifBlank { "main" })
+        return RepoInfo(size, (o["private"] as? JsonPrimitive)?.booleanOrNull ?: false, o.str("default_branch").ifBlank { "main" }, isoMs(o.str("pushed_at")))
     }
+
+    /** An ISO-8601 instant as epoch ms; 0 when blank or unreadable. */
+    fun isoMs(s: String): Long = if (s.isBlank()) 0 else runCatching { java.time.Instant.parse(s).toEpochMilli() }.getOrDefault(0)
 
     /** The depth-1 snapshot size: the sum of every `blob` entry's `size` in a recursive tree answer; null when unreadable. */
     fun parseTreeBytes(text: String): Long? {
@@ -103,7 +108,7 @@ object RepoRemoteStats {
             m.forEach { (k, s) ->
                 put(k, buildJsonObject {
                     put("total_kb", s.sizeTotalKb); put("main_bytes", s.sizeMainBytes); put("branches", s.branches.toLong())
-                    put("private", s.isPrivate); put("default_branch", s.defaultBranch); put("at", s.fetchedAtMs)
+                    put("private", s.isPrivate); put("default_branch", s.defaultBranch); put("at", s.fetchedAtMs); put("pushed_at", s.pushedAtMs)
                 })
             }
         }.toString()
@@ -117,7 +122,7 @@ object RepoRemoteStats {
                 val branches = (s["branches"] as? JsonPrimitive)?.longOrNull
                 val at = (s["at"] as? JsonPrimitive)?.longOrNull
                 if (total == null || main == null || branches == null || at == null) null
-                else k to Stats(total, main, branches.toInt(), (s["private"] as? JsonPrimitive)?.booleanOrNull ?: false, s.str("default_branch"), at)
+                else k to Stats(total, main, branches.toInt(), (s["private"] as? JsonPrimitive)?.booleanOrNull ?: false, s.str("default_branch"), at, (s["pushed_at"] as? JsonPrimitive)?.longOrNull ?: 0)
             }.toMap()
         }
 
@@ -162,7 +167,7 @@ object RepoRemoteStats {
             ?: return Result.failure(IllegalStateException("unreadable tree answer"))
         val br = get("$repoUrl/branches?per_page=1", token).getOrElse { return Result.failure(it) }.let { branchCount(it.body, it.link) }
             ?: return Result.failure(IllegalStateException("unreadable branches answer"))
-        return Result.success(Stats(info.sizeKb, tree, br, info.isPrivate, info.defaultBranch, now))
+        return Result.success(Stats(info.sizeKb, tree, br, info.isPrivate, info.defaultBranch, now, info.pushedAtMs))
     }
 
     /** The newest workflow runs of a repository (the CI/CD feed), as display lines. */

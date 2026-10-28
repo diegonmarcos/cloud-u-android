@@ -129,7 +129,7 @@ class GitStatusReader(
                     val cached = _statuses.value[t.id]
                     // A FULL result also satisfies a LIGHT ask; a LIGHT one does not satisfy a FULL ask.
                     val wanted = if (t.onDemand) Level.FULL else level
-                    val fresh = cached != null && cached.terminal && now - cached.readAtMs < ttlMs && cached.level.ordinal >= wanted.ordinal
+                    val fresh = cached != null && cached.terminal && now - cached.readAtMs < ttlMs && cached.level.ordinal >= wanted.ordinal && t.id !in stale
                     if (fresh && !force) false else { inFlight += t.id; true }
                 }
             }
@@ -137,9 +137,19 @@ class GitStatusReader(
             // Keep the last value visible while re-reading; only a never-read row shows READING.
             _statuses.update { m -> if (m.containsKey(t.id)) m else m + (t.id to Status(State.READING)) }
             val epochAtAsk = epoch
-            val job = scope.launch { readOne(t, if (t.onDemand) Level.FULL else level, epochAtAsk) }
+            // #1259 a read cancelled BEFORE its coroutine ever ran (the page closed right after a check-all) never reaches
+            // readOne's finally: without this its row stayed READING ("?") and its id stayed claimed, so every later check
+            // skipped it until the process died. Only a job that never ran is cleaned here (a run one cleans itself).
+            val ran = java.util.concurrent.atomic.AtomicBoolean(false)
+            val job = scope.launch { ran.set(true); readOne(t, if (t.onDemand) Level.FULL else level, epochAtAsk) }
             synchronized(jobs) { jobs += job }
-            job.invokeOnCompletion { synchronized(jobs) { jobs -= job } }
+            job.invokeOnCompletion {
+                synchronized(jobs) { jobs -= job }
+                if (!ran.get()) {
+                    synchronized(inFlight) { inFlight -= t.id }
+                    _statuses.update { m -> if (m[t.id]?.terminal == false) m - t.id else m }
+                }
+            }
             started += job
         }
         return scope.launch { started.joinAll() }
@@ -159,9 +169,13 @@ class GitStatusReader(
     }
 
     /** Drop [id]'s cached entry so the next request reads it, e.g. after a pull. */
-    fun invalidate(id: String) {
-        _statuses.update { m -> m[id]?.let { m + (id to it.copy(readAtMs = 0)) } ?: m }
-    }
+    fun invalidate(id: String) { synchronized(inFlight) { stale += id } }
+
+    /** #1259 ids whose cached value is known stale (an operation changed the clone): the next request re-reads them, the value stays shown AND persisted meanwhile (it used to be zeroed, which dropped it from StatusCache). */
+    private val stale = HashSet<String>()
+
+    /** Whether [id] is claimed by a read in flight (tests and the debug route). */
+    fun claimed(id: String): Boolean = synchronized(inFlight) { id in inFlight }
 
     private suspend fun readOne(t: Target, level: Level, epochAtAsk: Int) {
         val full = level == Level.FULL
@@ -246,7 +260,7 @@ class GitStatusReader(
     /** True while [id] has a probe running (including one abandoned past its timeout). */
     fun busy(id: String): Boolean = synchronized(inFlight) { id in inFlight }
 
-    private fun publish(id: String, s: Status) = _statuses.update { it + (id to s) }
+    private fun publish(id: String, s: Status) { synchronized(inFlight) { stale -= id }; _statuses.update { it + (id to s) } }
 
     companion object {
         /** The precedence the row's light follows: an uncommitted change outranks the remote. */

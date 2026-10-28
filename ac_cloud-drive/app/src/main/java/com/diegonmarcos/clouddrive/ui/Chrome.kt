@@ -168,6 +168,13 @@ object DriveTags {
     const val SYNC_GIT_STATUS_CLONE = "sync_git_status_clone"
     const val SYNC_GIT_STATUS_CHECK = "sync_git_status_check"
     const val SYNC_GIT_FULL_PROGRESS = "sync_git_full_progress"
+    const val SYNC_GIT_DEPTH_BAR = "sync_git_depth_bar"
+    const val SYNC_GIT_DEPTH_PROGRESS = "sync_git_depth_progress"
+    const val SYNC_GIT_DEPTH_REPORT = "sync_git_depth_report"
+    const val SYNC_GIT_FILTER_ROW = "sync_git_filter_row"
+    const val SYNC_GIT_UNLISTED = "sync_git_unlisted"
+    const val SYNC_GIT_ACTIVITY_BUTTON = "sync_git_activity_button"
+    const val SYNC_GIT_ACTIVITY_WINDOW = "sync_git_activity_window"
     const val SYNC_GIT_UNPUSHED = "sync_git_unpushed"
     const val SYNC_GIT_LOGIN = "sync_git_login"
     /** #642 the one line that reports what the cloud-terminal git handoff resolved to. */

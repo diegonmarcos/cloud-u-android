@@ -197,13 +197,23 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     val refreshingRemote by coordinator.refreshingRemote.collectAsState()
     val cloneDepth by coordinator.cloneDepth.collectAsState()
     val cloneSsh by coordinator.cloneViaSsh.collectAsState()
-    var sortColumn by remember { mutableStateOf(RepoTable.DEFAULT_SORT) }
-    var sortAscending by remember { mutableStateOf(true) }
+    // #1256 the sort and the filters are the coordinator's, persisted in the page prefs: they survive page changes and minimize.
+    val sortState by coordinator.sort.collectAsState()
+    val sortColumn = sortState.first
+    val sortAscending = sortState.second
+    val filterSel by coordinator.filterSelection.collectAsState()
+    val lastCommits by coordinator.lastCommits.collectAsState()
+    // #1254 the declared depth command in flight or last finished; #1255 the unlisted git folders.
+    val depthRun by coordinator.depthRun.collectAsState()
+    val unlistedFolders by coordinator.unlisted.collectAsState()
+    var depthConfirm by remember { mutableStateOf<Declarations.GitDepthActionDecl?>(null) }
+    var showDepthReport by remember { mutableStateOf(false) }
     val tableScroll = rememberScrollState()
     var settingsFor by remember { mutableStateOf<ManagedRepo?>(null) }
     // #1238 the row whose full-screen status window is open (TableEntry.key; "" = none).
     var statusFor by remember { mutableStateOf("") }
-    var showHistory by remember { mutableStateOf(false) }
+    // #1258 Activity Logs (was History): a top button opens it as its own view.
+    var showActivity by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf("") }
     var login by remember { mutableStateOf(GitLogin()) }
     var listing by remember { mutableStateOf(GitListing()) }
@@ -282,7 +292,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     fun tableRow(name: String, owner: String, declaredPrivate: Boolean?, listedUrl: String = ""): RepoTableRow {
         val cloned = clonedByName[name]
         val url = cloned?.remoteUrl?.takeIf { it.isNotBlank() } ?: listedUrl
-        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { glances[GitSyncCoordinator.statusKey(it)] }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes }, Declarations.repoSot.lfsOf(name))
+        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { GitSyncCoordinator.glanceFor(it, glances) }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes }, Declarations.repoSot.lfsOf(name), cloned?.let { lastCommits[File(it.path).absolutePath] })
     }
     // Pull-to-refresh re-reads the REST facts of every repository the table lists (GitHub-listed or declared; the fleet's own git is not GitHub).
     fun refreshTargets(): List<Pair<String, String>> {
@@ -704,6 +714,22 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
     }
 
+    /**
+     * #1254 a declared bulk depth command. clone_missing: every repository of the REGISTRY list (not pending, not retired) is a
+     * candidate, at its declared clone URL with the page's credential; the coordinator drops each one already cloned anywhere
+     * on the device. keep_depth: every registered clone.
+     */
+    fun runDepthAll(a: Declarations.GitDepthActionDecl) {
+        when (a.kind) {
+            Declarations.DEPTH_CLONE_MISSING -> coordinator.cloneMissing(a, Declarations.repoSot.repos.filter { !it.pending && !it.archived }.map { r ->
+                val ssh = cloneSsh && login.sshKeyPath.isNotBlank()
+                GitSyncCoordinator.CloneTarget(r.github, page.cloneUrl(r.github, if (ssh) Declarations.REMOTE_SSH else Declarations.REMOTE_HTTPS),
+                    if (ssh) GitSyncCoordinator.AUTH_SSH else GitSyncCoordinator.AUTH_HTTPS, login.identity, if (ssh) "" else login.token)
+            })
+            Declarations.DEPTH_KEEP -> coordinator.keepDepth(a)
+        }
+    }
+
     // THE ONE TABLE: every repository of every listing (GitHub, Cloud Gitea, the other hosts, the clones no listing named)
     // is one entry; public and private are not separate groups, the header sorts the lot (default: name, then visibility).
     val allEntries: List<TableEntry> = buildList {
@@ -759,7 +785,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
     // Retired repositories (z-archived_*) sit in a collapsed Archived group: counted, hidden until the owner opens it.
     val archivedCount = allEntries.count { Declarations.repoSot.isArchived(it.name) }
-    val entries = if (showArchived) allEntries else allEntries.filterNot { Declarations.repoSot.isArchived(it.name) }
+    val entries = RepoFilters.apply(if (showArchived) allEntries else allEntries.filterNot { Declarations.repoSot.isArchived(it.name) }, filterSel) { e ->
+        RepoFilters.Facts(e.cloned != null, e.row.status, e.row.lfs, e.row.isPrivate, Declarations.repoSot.hubOf(e.name), unlisted = false)
+    }
     val sortedEntries = RepoTable.sort(entries, sortColumn, sortAscending) { it.row }
     val summary = RepoTable.summarize(entries.map { (it.cloned != null) to it.row })
 
@@ -779,6 +807,12 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                         RepoActions.Bulk.STASH_PUSH_ALL -> coordinator.runCompoundAll(RepoActions.STASH_PUSH)
                     }
                 }
+                // #1254 the DECLARED depth commands over every repository (ui.sync.git.depth_actions, scope all), then #1258 Activity Logs.
+                DepthBar(page.depthActions(Declarations.DEPTH_SCOPE_ALL), running = depthRun?.finished == false, onAction = { a -> if (a.confirm) depthConfirm = a else runDepthAll(a) },
+                    onCancel = { coordinator.cancelDepthRun() }, onActivity = { showActivity = true })
+                depthRun?.let { r -> DepthProgress(r, onOpen = { showDepthReport = true }) }
+                // #1256 the FILTER row, its own row under the actions: declared filters, combined, persisted.
+                RepoFilterRow(page.filters, filterSel) { id, opt -> coordinator.setFilter(id, opt) }
                 RepoSummaryLine(summary)
                 RepoCheckProgressLine(RepoStatus.progress(repos.map { GitSyncCoordinator.statusKey(it) }.distinct(), glances), fmt)
                 fullProgress?.let { p -> Text(stringResource(R.string.repo_full_progress, p.done, p.total), Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset).testTag(DriveTags.SYNC_GIT_FULL_PROGRESS), style = MaterialTheme.typography.labelSmall) }
@@ -799,7 +833,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         stickyHeader(key = "table-header") {
             RepoTableHeader(sortColumn, sortAscending, tableScroll) { c ->
                 val next = RepoTable.tap(c, sortColumn, sortAscending)
-                sortColumn = next.first; sortAscending = next.second
+                coordinator.setSort(next.first, next.second)
                 expanded = ""
             }
         }
@@ -807,8 +841,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             val cloned = e.cloned
             GitRepoRow(
                 name = e.label, repoName = e.name, cells = e.row, scroll = tableScroll, fork = e.fork,
-                repo = cloned, glance = cloned?.let { glances[GitSyncCoordinator.statusKey(it)] }, running = cloned?.let { running[it.id] },
-                icons = RepoStatus.icons(cloned != null, cloned?.let { glances[GitSyncCoordinator.statusKey(it)] }, cloned?.let { running.containsKey(it.id) } == true, events, cloned?.id.orEmpty()),
+                repo = cloned, glance = cloned?.let { GitSyncCoordinator.glanceFor(it, glances) }, running = cloned?.let { running[it.id] },
+                icons = RepoStatus.icons(cloned != null, cloned?.let { GitSyncCoordinator.glanceFor(it, glances) }, cloned?.let { running.containsKey(it.id) } == true, events, cloned?.id.orEmpty()),
                 cloning = e.name in cloning, expanded = expanded == e.key,
                 // A second tap on the same repo closes its menu; a tap on another repo moves it.
                 onToggle = { expanded = RepoTable.toggle(expanded, e.key) },
@@ -829,7 +863,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             if (expanded == e.key && cloned != null) {
                 GitRepoOpsBox(
                     repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
-                    running = running[cloned.id], glance = glances[GitSyncCoordinator.statusKey(cloned)], fmt = fmt,
+                    running = running[cloned.id], glance = GitSyncCoordinator.glanceFor(cloned, glances), fmt = fmt,
                     coordinator = coordinator, actions = actions,
                     repoName = e.name, owner = e.owner, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
                     cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned }, onClose = { expanded = "" },
@@ -842,7 +876,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
 
     GitPageFrame(
         refreshing = refreshingRemote,
-        onRefresh = { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token) },
+        onRefresh = { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token); coordinator.scanUnlisted(); coordinator.refreshLastCommits() },
         modifier = modifier,
     ) {
         // #642 WHAT THE HANDOFF DID, at the top of the page, above every row that could have
@@ -999,6 +1033,10 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     if (!setup) tableBlock()
                     // #1149 LOCAL REPOS PARENTLESS: folders holding a .git that are not named like their origin.
                     if (!setup && prefs != null) item(key = "parentless") { ParentlessPanel(parentRoots, prefs) { coordinator.refresh(force = true) } }
+                    // #1255 UNLISTED GIT FOLDERS: git folders under the declared roots that no registry repository matches (or with no remote).
+                    if (!setup && RepoFilters.showUnlisted(filterSel)) item(key = "unlisted") {
+                        UnlistedPanel(page.unlisted.label, unlistedFolders, glances, events, fmt)
+                    }
                 }
                 else -> item { EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "") }
             }
@@ -1006,25 +1044,30 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
 
         if (view == GitView.ME && !setup && repos.isEmpty()) item { EmptyState(Icons.Filled.Commit, stringResource(R.string.sync_empty_title), stringResource(R.string.sync_empty_hint)) }
 
-        if (view == GitView.ME && !setup) item {
-            SectionHeader(stringResource(R.string.sync_history_section), count = events.size, action = if (showHistory) stringResource(R.string.chrome_close) else stringResource(R.string.sync_history)) { showHistory = !showHistory }
-        }
-        if (showHistory && !setup) {
-            if (events.isEmpty()) item { Text(stringResource(R.string.sync_history_empty), Modifier.padding(horizontal = DriveMetrics.sectionInset), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            items(events.take(50), key = { "${it.epochSeconds}-${it.repoId}" }) { e -> HistoryRow(e, fmt) }
-        }
     }
 
     // #1238 the full-screen status window of the tapped row: what the app already knows, no mock data; Clone repo is its last section.
     entries.firstOrNull { it.key == statusFor }?.let { e ->
         RepoStatusWindow(
-            name = e.name, owner = e.owner, row = e.row, repo = e.cloned, glance = e.cloned?.let { glances[GitSyncCoordinator.statusKey(it)] },
-            icons = RepoStatus.icons(e.cloned != null, e.cloned?.let { glances[GitSyncCoordinator.statusKey(it)] }, e.cloned?.let { running.containsKey(it.id) } == true, events, e.cloned?.id.orEmpty()),
+            name = e.name, owner = e.owner, row = e.row, repo = e.cloned, glance = e.cloned?.let { GitSyncCoordinator.glanceFor(it, glances) },
+            icons = RepoStatus.icons(e.cloned != null, e.cloned?.let { GitSyncCoordinator.glanceFor(it, glances) }, e.cloned?.let { running.containsKey(it.id) } == true, events, e.cloned?.id.orEmpty()),
             cloneUrl = e.cloneUrl.ifBlank { page.cloneUrl(e.name, Declarations.REMOTE_HTTPS) }, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
-            cloning = e.name in cloning, fmt = fmt, onClone = e.onClone, onCheckWorktree = { e.cloned?.let { coordinator.checkWorktree(it) } }, onClose = { statusFor = "" },
+            cloning = e.name in cloning, fmt = fmt, onClone = e.onClone, depthOutcome = depthRun?.outcomeOf(e.name), onCheckWorktree = { e.cloned?.let { coordinator.checkWorktree(it) } }, onClose = { statusFor = "" },
         )
     }
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
+    // #1258 ACTIVITY LOGS: the one sync / operation history, opened from the top button, full screen.
+    if (showActivity) ActivityLogsWindow(events, fmt, onClose = { showActivity = false }) { e -> HistoryRow(e, fmt) }
+    if (showDepthReport) depthRun?.let { r -> DepthReportWindow(r, onCancel = { coordinator.cancelDepthRun() }, onClose = { showDepthReport = false }) }
+    depthConfirm?.let { a ->
+        AlertDialog(
+            onDismissRequest = { depthConfirm = null },
+            title = { Text(a.label) },
+            text = { Text(stringResource(if (a.kind == Declarations.DEPTH_KEEP) R.string.repo_depth_confirm_keep else R.string.repo_depth_confirm_clone, a.depth)) },
+            confirmButton = { TextButton(onClick = { runDepthAll(a); depthConfirm = null }) { Text(a.label) } },
+            dismissButton = { TextButton(onClick = { depthConfirm = null }) { Text(stringResource(R.string.chrome_cancel)) } },
+        )
+    }
     if (confirmPullAll) {
         AlertDialog(
             onDismissRequest = { confirmPullAll = false },
@@ -1408,6 +1451,7 @@ private fun GitRepoOpsBox(
     var prs by remember(repo.id) { mutableStateOf<List<String>?>(null) }
     var unpushed by remember(repo.id) { mutableStateOf<Result<List<com.diegonmarcos.cloudlib.gitsync.GitCommitInfo>>?>(null) }
     var message by remember(repo.id) { mutableStateOf("") }
+    var depthAsk by remember(repo.id) { mutableStateOf<Declarations.GitDepthActionDecl?>(null) }
     val readOnly = page.remoteMode(Declarations.REMOTE_READONLY)?.urlFor(page.owner, repoName) == repo.remoteUrl &&
         repo.authKind == GitSyncCoordinator.AUTH_NONE
     LaunchedEffect(repo.id) { coordinator.loadDetails(repo, page.historyMax) }
@@ -1502,6 +1546,8 @@ private fun GitRepoOpsBox(
                 onAction = { act(it) },
             )
         }
+        // #1254 the DECLARED per-repository depth commands (scope repo) that act on a clone: Keep depth N, asked first when declared so.
+        DepthPills(page.depthActions(Declarations.DEPTH_SCOPE_REPO).filter { it.kind == Declarations.DEPTH_KEEP }, enabled = running == null) { a -> if (a.confirm) depthAsk = a else coordinator.keepDepth(a, repo) }
         if (readOnly) Text(stringResource(R.string.git_readonly_blocked), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         result?.let { r ->
             Text(
@@ -1646,6 +1692,15 @@ private fun GitRepoOpsBox(
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.chrome_cancel)) } },
         )
     }
+    depthAsk?.let { a ->
+        AlertDialog(
+            onDismissRequest = { depthAsk = null },
+            title = { Text(a.label) },
+            text = { Text(stringResource(R.string.repo_depth_confirm_keep_one, repo.name, a.depth)) },
+            confirmButton = { TextButton(onClick = { coordinator.keepDepth(a, repo); depthAsk = null }) { Text(a.label) } },
+            dismissButton = { TextButton(onClick = { depthAsk = null }) { Text(stringResource(R.string.chrome_cancel)) } },
+        )
+    }
 }
 
 /**
@@ -1701,6 +1756,10 @@ private fun GitRepoNotClonedBox(
             },
             unavailable = { RepoActions.needsClone(it) },
         )
+        // #1254 the DECLARED per-repository clone at depth N: the same one-clone rule as the bulk command (an existing clone anywhere is reported, not doubled).
+        DepthPills(page.depthActions(Declarations.DEPTH_SCOPE_REPO).filter { it.kind == Declarations.DEPTH_CLONE_MISSING }, enabled = !cloning) { a ->
+            coordinator.cloneMissing(a, listOf(GitSyncCoordinator.CloneTarget(repoName, url, GitSyncCoordinator.AUTH_HTTPS, "", "")))
+        }
         Text(stringResource(R.string.repo_not_cloned_why), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         when (panel) {
             RepoActions.PRS -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {

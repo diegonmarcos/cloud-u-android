@@ -94,7 +94,7 @@ if grep -qF 'fun cancelAll()' "$SRC/sync/GitStatusReader.kt" && grep -qF 'tooLar
 echo "── G2 the card ──"
 g2 "$CARDS" && pass "conflicts in the off colour, a red light, and a Resolve pill that opens the engine" || fail "conflicts are not surfaced on the card"
 for s in sync_now sync_open sync_history sync_settings sync_last sync_never sync_auto sync_manual sync_glance_reading sync_glance_gone sync_glance_unreadable sync_clean sync_changed; do
-    grep -qE "R\.string\.$s\b" "$CARDS" "$TABLE_UI" && pass "card prints $s" || fail "card lacks $s"
+    grep -qE "R\.string\.$s\b" "$CARDS" "$TABLE_UI" "$SRC/sync/GitDepthUi.kt" && pass "card prints $s" || fail "card lacks $s"
 done
 if grep -qE 'StatusLightRow|light = light' "$CARDS" && grep -qE 'tag = DriveTags\.SYNC_REPO_CARD' "$CARDS"; then pass "the card is a DriveCard with a StatusLight and its tag"; else fail "the repo card is not the shared card"; fi
 if grep -qE '"↑\$ahead ↓\$behind"' "$TABLE" && grep -qE 'if \(glance\.repositoryState != "SAFE"\)' "$CARDS" && grep -qE 'R\.string\.git_meta_branch, glance\?\.branch' "$CARDS"; then pass "the dense row's glance (#1138 table): ↑ahead ↓behind and the dirty count in their cells, state when not SAFE; the upstream is in the Metadata panel (#608)"; else fail "the glance line is incomplete"; fi
@@ -113,7 +113,8 @@ if grep -qE 'listOf\("none" to R\.string\.sync_auth_none, "https" to R\.string\.
 echo "── G5 history ──"
 if grep -qE 'class SyncHistory\(private val file: File, private val cap: Int = CAP\)' "$HIST" && grep -qE 'const val CAP = 200' "$HIST" && grep -qE 'const val TRIGGER_MANUAL' "$HIST" && grep -qE 'const val TRIGGER_SCHEDULED' "$HIST"; then pass "SyncHistory is app-owned, capped, with the two triggers"; else fail "SyncHistory shape wrong"; fi
 if grep -qE 'history\.append\(SyncEvent\(now, repo\.id, repo\.name, SyncHistory\.TRIGGER_MANUAL' "$COORD" && grep -qE 'history\.append\(SyncEvent\(at, repo\.id, repo\.name, SyncHistory\.TRIGGER_SCHEDULED' "$WORKER"; then pass "both the card's sync and the worker write the history"; else fail "a sync path does not write the history"; fi
-if grep -qE 'private fun HistoryRow\(e: SyncEvent' "$CARDS" && grep -qE 'items\(events\.take\(50\)' "$CARDS" && grep -qE 'testTag\(DriveTags\.SYNC_HISTORY\)' "$CARDS"; then pass "the history is rendered (last 50, per-repo inline)"; else fail "history not rendered"; fi
+# #1258 the history is ACTIVITY LOGS: its own view (GitDepthUi ActivityLogsWindow, bounded by the declared max), opened from a top button.
+if grep -qE 'private fun HistoryRow\(e: SyncEvent' "$CARDS" && grep -qE 'items\(events\.take\(Declarations\.sync\.git\.activityMax\)' "$SRC/sync/GitDepthUi.kt" && grep -qE 'testTag\(DriveTags\.SYNC_HISTORY\)' "$CARDS" && grep -qF 'ActivityLogsWindow(events, fmt' "$CARDS"; then pass "the activity logs are rendered (declared max, own view, per-repo inline)"; else fail "activity logs not rendered"; fi
 
 echo "── G6 the scheduler decides per repository ──"
 g6 "$WORKER" && pass "the worker asks SyncSchedule.isDue with the repo's own period and rule and skips the rest" || fail "the worker does not decide per repository"
