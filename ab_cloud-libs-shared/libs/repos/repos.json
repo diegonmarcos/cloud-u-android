@@ -24,7 +24,7 @@
       "name": "CG-circus",
       "repo": "diegonmarcos/CG-circus",
       "private": false,
-      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloud-h-webapps-2 #1204; myAstro moved to Me-Profiles-Prf-Prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloud-h-webapps-2 #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "CG-galaxy",
@@ -54,7 +54,7 @@
       "name": "DeepSc",
       "repo": "diegonmarcos/DeepSc",
       "private": false,
-      "doc": "Project master for the DeepSc family (DeepSc-X; Stark.x moved to the Me-Profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+      "doc": "Project master for the DeepSc family (DeepSc-X; Stark.x moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
     },
     {
       "name": "DeepSc-X",
@@ -66,13 +66,13 @@
       "name": "DuckPeng",
       "repo": "diegonmarcos/DuckPeng",
       "private": false,
-      "doc": "Project master for the DuckPeng family: the CG hub and the cloud hub (Leaf.y moved to the Me-Profiles family 2026-10-28). Its own repos.json subset plus committed symlinks. Created 2026-10-27 (#1224)."
+      "doc": "Project master for the DuckPeng family: the CG hub and the cloud hub (Leaf.y moved to the cloud-me-pub-profiles family 2026-10-28). Its own repos.json subset plus committed symlinks. Created 2026-10-27 (#1224)."
     },
     {
       "name": "Fin-CM",
       "repo": "diegonmarcos/Fin-CM",
       "private": false,
-      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the Me-Profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
     },
     {
       "name": "Fin-CM-Blmbrg",
@@ -85,42 +85,6 @@
       "repo": "diegonmarcos/Fin-CM-mqpm",
       "private": false,
       "doc": "MQPM / StochBates: README and deployer wiring skeleton, no content yet (#1224)."
-    },
-    {
-      "name": "Me-Profiles",
-      "repo": "diegonmarcos/Me-Profiles",
-      "private": false,
-      "doc": "Hub of the Me-Profiles family (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree): its own repos.json subset plus committed symlinks, same model as CG, Fin-CM and cloud. Was cloud-me-profiles (the b_Profiles, Lnktree and myAstro sources); content split into Me-Profiles-Prf-Prs and Me-Profiles-_Lnktree 2026-10-28."
-    },
-    {
-      "name": "Me-Profiles-Leaf.y",
-      "repo": "diegonmarcos/Me-Profiles-Leaf.y",
-      "private": false,
-      "doc": "Leaf.y company site (published at /leafy/), moved from front-endeavours a_Companies/leafy (#1224); renamed from DuckPeng-LeafY into the Me-Profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
-    },
-    {
-      "name": "Me-Profiles-Nexus.z",
-      "repo": "diegonmarcos/Me-Profiles-Nexus.z",
-      "private": false,
-      "doc": "Nexus.z company site (published at /nexus/), moved from front-endeavours a_Companies/nexus (#1224); renamed from Fin-CM-NexusZ into the Me-Profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
-    },
-    {
-      "name": "Me-Profiles-Prf-Prs",
-      "repo": "diegonmarcos/Me-Profiles-Prf-Prs",
-      "private": false,
-      "doc": "Professional and personal profile sites: b_Profiles (myprofile, mySocials, cv_pdf, cv_web, landpage) and c_Circus/myAstro, split 2026-10-28 out of cloud-me-profiles (Me-Profiles); snapshot copy, paths mirror the original layout."
-    },
-    {
-      "name": "Me-Profiles-Stark.x",
-      "repo": "diegonmarcos/Me-Profiles-Stark.x",
-      "private": false,
-      "doc": "Stark.x company site (published at /stark/), moved from front-endeavours a_Companies/stark (#1224); renamed from DeepSc-StarkX into the Me-Profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
-    },
-    {
-      "name": "Me-Profiles-_Lnktree",
-      "repo": "diegonmarcos/Me-Profiles-_Lnktree",
-      "private": false,
-      "doc": "Linktree sources (Lnktree/linktree, linktree_mindmap, linktree_pixel-world, linktree_icon-view), split 2026-10-28 out of cloud-me-profiles (Me-Profiles); published URLs unchanged."
     },
     {
       "name": "Projects",
@@ -150,7 +114,7 @@
       "name": "cloud-a-docs",
       "repo": "diegonmarcos/cloud-a-docs",
       "private": true,
-      "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester."
+      "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-pvt-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester."
     },
     {
       "name": "cloud-h-webapps",
@@ -165,40 +129,52 @@
       "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
-      "name": "cloud-me-containers",
-      "repo": "diegonmarcos/cloud-me-containers",
-      "private": true,
-      "doc": "The owner's own (cloud-me) containers. Created 2026-10-21 (private)."
-    },
-    {
-      "name": "cloud-me-data-pvt",
-      "repo": "diegonmarcos/cloud-me-data-pvt",
-      "private": true,
-      "doc": "Generated fleet config consumed by cloud's services."
-    },
-    {
-      "name": "cloud-me-my-ai",
-      "repo": "diegonmarcos/cloud-me-my-ai",
-      "private": true,
-      "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here."
-    },
-    {
-      "name": "cloud-me-notes",
-      "repo": "diegonmarcos/cloud-me-notes",
-      "private": true,
-      "doc": "Personal notes (Obsidian vault)."
-    },
-    {
-      "name": "cloud-me-others",
-      "repo": "diegonmarcos/cloud-me-others",
-      "private": false,
-      "doc": "Sources of the b_MyData group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
-    },
-    {
       "name": "cloud-me-pub",
       "repo": "diegonmarcos/cloud-me-pub",
       "private": false,
-      "doc": "Hub of the public cloud-me family (Cloud-Me-Pub): the Me-Profiles hub, cloud-me-others and cloud-me_data-pub. Its own repos.json subset plus committed symlinks; lists no private repo. Created 2026-10-28."
+      "doc": "Hub of the public cloud-me family (Cloud-Me-Pub): the cloud-me-pub-profiles hub and cloud-me-pub-shared (the pub data repo is archived). Its own repos.json subset plus committed symlinks; lists no private repo. Created 2026-10-28."
+    },
+    {
+      "name": "cloud-me-pub-profiles",
+      "repo": "diegonmarcos/cloud-me-pub-profiles",
+      "private": false,
+      "doc": "Hub of the cloud-me-pub-profiles family (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree): its own repos.json subset plus committed symlinks, same model as CG, Fin-CM and cloud. Was cloud-me-profiles (the b_Profiles, Lnktree and myAstro sources); content split into cloud-me-pub-profiles-prf-prs and cloud-me-pub-profiles-_lnktree 2026-10-28."
+    },
+    {
+      "name": "cloud-me-pub-profiles-_lnktree",
+      "repo": "diegonmarcos/cloud-me-pub-profiles-_lnktree",
+      "private": false,
+      "doc": "Linktree sources (Lnktree/linktree, linktree_mindmap, linktree_pixel-world, linktree_icon-view), split 2026-10-28 out of cloud-me-profiles (cloud-me-pub-profiles); published URLs unchanged."
+    },
+    {
+      "name": "cloud-me-pub-profiles-leaf.y",
+      "repo": "diegonmarcos/cloud-me-pub-profiles-leaf.y",
+      "private": false,
+      "doc": "Leaf.y company site (published at /leafy/), moved from front-endeavours a_Companies/leafy (#1224); renamed from DuckPeng-LeafY into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "cloud-me-pub-profiles-nexus.z",
+      "repo": "diegonmarcos/cloud-me-pub-profiles-nexus.z",
+      "private": false,
+      "doc": "Nexus.z company site (published at /nexus/), moved from front-endeavours a_Companies/nexus (#1224); renamed from Fin-CM-NexusZ into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "cloud-me-pub-profiles-prf-prs",
+      "repo": "diegonmarcos/cloud-me-pub-profiles-prf-prs",
+      "private": false,
+      "doc": "Professional and personal profile sites: b_Profiles (myprofile, mySocials, cv_pdf, cv_web, landpage) and c_Circus/myAstro, split 2026-10-28 out of cloud-me-profiles (cloud-me-pub-profiles); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloud-me-pub-profiles-stark.x",
+      "repo": "diegonmarcos/cloud-me-pub-profiles-stark.x",
+      "private": false,
+      "doc": "Stark.x company site (published at /stark/), moved from front-endeavours a_Companies/stark (#1224); renamed from DeepSc-StarkX into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "cloud-me-pub-shared",
+      "repo": "diegonmarcos/cloud-me-pub-shared",
+      "private": false,
+      "doc": "Sources of the b_MyData group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "cloud-me-pvt",
@@ -207,22 +183,46 @@
       "doc": "Hub of the private cloud-me family (Cloud-Me-Pvt): its own repos.json subset plus committed symlinks to the private cloud-me repos. Private repo. Created 2026-10-28."
     },
     {
-      "name": "cloud-me_cgc",
-      "repo": "diegonmarcos/cloud-me_cgc",
+      "name": "cloud-me-pvt-cgc",
+      "repo": "diegonmarcos/cloud-me-pvt-cgc",
       "private": true,
       "doc": "The PRIVATE half of the cgc pipeline (pvt surface: the private repos -> cloud-cgc-pvt-mcp). A thin orchestrator rendered from cloud-u-containers_cgc at a pinned sha, so private-repo runs and logs stay private. Was cloud-u-containers_cgc-pvt; renamed 2026-10-10 into the private cloud-me family (split-outs are named <parent>_<name>; every cloud-u-* repo is public)."
     },
     {
-      "name": "cloud-me_configs",
-      "repo": "diegonmarcos/cloud-me_configs",
+      "name": "cloud-me-pvt-configs",
+      "repo": "diegonmarcos/cloud-me-pvt-configs",
       "private": true,
-      "doc": "Private configs (cloud-me family). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it. (/home/user/cloud-vault is just a second clone of cloud-me_vault, not a separate repo.)"
+      "doc": "Private configs (cloud-me family). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it. (/home/user/cloud-vault is just a second clone of cloud-me-pvt-vault, not a separate repo.)"
     },
     {
-      "name": "cloud-me_data-pub",
-      "repo": "diegonmarcos/cloud-me_data-pub",
-      "private": false,
-      "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it."
+      "name": "cloud-me-pvt-containers",
+      "repo": "diegonmarcos/cloud-me-pvt-containers",
+      "private": true,
+      "doc": "The owner's own (cloud-me) containers. Created 2026-10-21 (private)."
+    },
+    {
+      "name": "cloud-me-pvt-data",
+      "repo": "diegonmarcos/cloud-me-pvt-data",
+      "private": true,
+      "doc": "Generated fleet config consumed by cloud's services."
+    },
+    {
+      "name": "cloud-me-pvt-legacy",
+      "repo": "diegonmarcos/cloud-me-pvt-legacy",
+      "private": true,
+      "doc": "The original cloud-me repo (cloud-me family, near empty), kept as is under the pvt family. Registered 2026-10-28 (was unregistered_ok since #1073)."
+    },
+    {
+      "name": "cloud-me-pvt-my-ai",
+      "repo": "diegonmarcos/cloud-me-pvt-my-ai",
+      "private": true,
+      "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here."
+    },
+    {
+      "name": "cloud-me-pvt-notes",
+      "repo": "diegonmarcos/cloud-me-pvt-notes",
+      "private": true,
+      "doc": "Personal notes (Obsidian vault)."
     },
     {
       "name": "cloud-t-infra",
@@ -258,7 +258,7 @@
       "name": "cloud_db_LFS",
       "repo": "diegonmarcos/cloud_db_LFS",
       "private": true,
-      "doc": "Large binary artefacts (git-lfs) for cloud-me-data-pvt (was cloud-data)."
+      "doc": "Large binary artefacts (git-lfs) for cloud-me-pvt-data (was cloud-data)."
     },
     {
       "name": "cloud_db_assets-cdn",
@@ -279,6 +279,18 @@
       "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud."
     },
     {
+      "name": "z-archived_cloud-me-pub-data",
+      "repo": "diegonmarcos/z-archived_cloud-me-pub-data",
+      "private": false,
+      "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it."
+    },
+    {
+      "name": "z-archived_cloud-me-pvt-data-private",
+      "repo": "diegonmarcos/z-archived_cloud-me-pvt-data-private",
+      "private": true,
+      "doc": "Archived 2026-10-28: stale skeleton (per-app backups, AI sessions, Maps history, Financial), superseded by cloud-me-pvt-data; was cloud-me_data-private, registered then renamed z-archived_ the same day."
+    },
+    {
       "name": "z-archived_front-data",
       "repo": "diegonmarcos/z-archived_front-data",
       "private": false,
@@ -294,19 +306,19 @@
       "name": "z-archived_front-individual",
       "repo": "diegonmarcos/z-archived_front-individual",
       "private": false,
-      "doc": "Superseded 2026-10-25 (#1196): its projects moved into Me-Profiles-Prf-Prs (b_Profiles); renamed z-archived_front-individual, to be archived on GitHub (owner click)"
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-pub-profiles-prf-prs (b_Profiles); renamed z-archived_front-individual, to be archived on GitHub (owner click)"
     },
     {
       "name": "z-archived_front-linktree",
       "repo": "diegonmarcos/z-archived_front-linktree",
       "private": false,
-      "doc": "Superseded 2026-10-27 (#1217): linktree sources moved into Me-Profiles-_Lnktree (Lnktree); renamed z-archived_front-linktree. Originally split from diegonmarcos.github.io (#1072)."
+      "doc": "Superseded 2026-10-27 (#1217): linktree sources moved into cloud-me-pub-profiles-_lnktree (Lnktree); renamed z-archived_front-linktree. Originally split from diegonmarcos.github.io (#1072)."
     },
     {
       "name": "z-archived_front-media",
       "repo": "diegonmarcos/z-archived_front-media",
       "private": false,
-      "doc": "Superseded 2026-10-25 (#1196): its projects moved into Me-Profiles-Prf-Prs (b_Profiles); renamed z-archived_front-media, to be archived on GitHub (owner click)"
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-pub-profiles-prf-prs (b_Profiles); renamed z-archived_front-media, to be archived on GitHub (owner click)"
     },
     {
       "name": "z-archived_front-others",

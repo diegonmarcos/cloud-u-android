@@ -34,13 +34,13 @@
    "notes": "The fleet hub repository (repos.json, clone.sh)"
   },
   {
-   "name": "cloud-me-my-ai",
-   "label": "cloud-me-my-ai",
+   "name": "cloud-me-pvt-my-ai",
+   "label": "cloud-me-pvt-my-ai",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "private": true,
    "notes": "The owner's memory + product backlog. cloud-code's Backlog tab reads and writes it HERE, through the shared store (#575 proof case) — no second clone.",
-   "renamed_from": ["cloud-data-my-ai-memory"]
+   "renamed_from": ["cloud-data-my-ai-memory", "cloud-me-my-ai"]
   },
   {
    "name": "cloud-t-infra",
@@ -61,15 +61,6 @@
    "seed": true,
    "notes": "Desktop-NixOS twin of the cloud",
    "renamed_from": ["cloud-infra-desktop"]
-  },
-  {
-   "name": "cloud-me_data-pub",
-   "label": "cloud-me_data-pub",
-   "github_owner": "diegonmarcos",
-   "gitea_owner": "diego",
-   "public": true,
-   "seed": true,
-   "notes": "The owner's PUBLIC data (the public half of cloud-me). Public per the live API (an unauthenticated GET answers 200); the private cloud-me* repositories are NOT here."
   },
   {
    "name": "cloud-u-android",

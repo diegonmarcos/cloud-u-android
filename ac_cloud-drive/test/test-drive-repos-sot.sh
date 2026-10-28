@@ -5,7 +5,7 @@
 #       and identical to the libs:repos copy
 #   R2  data/drive-git-repos.json is exactly what tools/gen-drive-git-repos.js makes from
 #       drive-git-family.json + the copy (no hand edit, no second list)
-#   R3  the reorganisations reached the list: cloud-h-webapps + cloud-me-containers are registered
+#   R3  the reorganisations reached the list: cloud-h-webapps + cloud-me-pvt-containers are registered
 #       (created, so NOT pending_creation) and absent from the family, no cloud-mobile repo, the cloud-superapp rename declared
 #   R4  app/build.gradle bakes the copy (REPOS_SOT_B64) and fails the build on drift; Declarations.kt filters
 #       gitFamily through the registry
@@ -48,7 +48,7 @@ node "$APP/tools/gen-drive-git-repos.js" --check >/dev/null 2>&1 && ok "drive-gi
 echo "── R3 the reorganisations ──"
 node -e '
 const r=require(process.argv[1]), f=require(process.argv[2]); const e=[];
-for (const n of ["cloud-h-webapps","cloud-me-containers"]) { const x=r.repos.find(y=>y.name===n); if(!x) e.push(n+" not registered"); else if(x.status==="pending_creation") e.push(n+" still pending_creation (repo exists; registry must not say so)"); if (f.family.some(y=>y.name===n)) e.push(n+" is in the drive family"); }
+for (const n of ["cloud-h-webapps","cloud-me-pvt-containers"]) { const x=r.repos.find(y=>y.name===n); if(!x) e.push(n+" not registered"); else if(x.status==="pending_creation") e.push(n+" still pending_creation (repo exists; registry must not say so)"); if (f.family.some(y=>y.name===n)) e.push(n+" is in the drive family"); }
 if (r.repos.some(x=>x.name==="cloud-mobile")) e.push("cloud-mobile is a repo");
 if (!(r.renames||[]).some(x=>x.from==="cloud-mobile"&&x.to==="cloud-superapp")) e.push("cloud-mobile->cloud-superapp not declared");
 if (e.length){console.error(e.join("\n"));process.exit(1)}' "$DATA/repos.sot.json" "$DATA/drive-git-family.json" && ok "webapps/me-containers registered (not pending) + not offered; cloud-superapp rename declared" || bad "reorganisations missing"
@@ -62,13 +62,13 @@ grep -q 'restrictToRegistry(parseGitFamily(decode(BuildConfig.GIT_REPOS_B64)), r
 
 echo "── R5 the generator bites ──"
 cp -r "$APP" "$T/app"
-node -e 'const fs=require("fs"),p=process.argv[1]+"/data/repos.sot.json",r=JSON.parse(fs.readFileSync(p));r.repos.find(x=>x.name==="cloud-me-my-ai").status="pending_creation";fs.writeFileSync(p,JSON.stringify(r))' "$T/app"
+node -e 'const fs=require("fs"),p=process.argv[1]+"/data/repos.sot.json",r=JSON.parse(fs.readFileSync(p));r.repos.find(x=>x.name==="cloud-me-pvt-my-ai").status="pending_creation";fs.writeFileSync(p,JSON.stringify(r))' "$T/app"
 node "$T/app/tools/gen-drive-git-repos.js" >/dev/null 2>&1 && bad "generator accepted a pending repo" || ok "generator refuses a pending_creation repo"
 cp "$APP/data/repos.sot.json" "$T/app/data/repos.sot.json"
 node -e 'const fs=require("fs"),p=process.argv[1]+"/data/drive-git-family.json",f=JSON.parse(fs.readFileSync(p));f.family.push({name:"nowhere-repo",label:"x"});fs.writeFileSync(p,JSON.stringify(f))' "$T/app"
 node "$T/app/tools/gen-drive-git-repos.js" >/dev/null 2>&1 && bad "generator accepted an unlisted repo" || ok "generator refuses a repo the registry does not list"
 cp "$APP/data/drive-git-family.json" "$T/app/data/drive-git-family.json"
-node -e 'const fs=require("fs"),p=process.argv[1]+"/data/drive-git-family.json",f=JSON.parse(fs.readFileSync(p));f.family.find(x=>x.name==="cloud-me-my-ai").seed=true;fs.writeFileSync(p,JSON.stringify(f))' "$T/app"
+node -e 'const fs=require("fs"),p=process.argv[1]+"/data/drive-git-family.json",f=JSON.parse(fs.readFileSync(p));f.family.find(x=>x.name==="cloud-me-pvt-my-ai").seed=true;fs.writeFileSync(p,JSON.stringify(f))' "$T/app"
 node "$T/app/tools/gen-drive-git-repos.js" >/dev/null 2>&1 && bad "generator accepted a private seed" || ok "generator refuses a private repo marked seed"
 cp "$APP/data/drive-git-family.json" "$T/app/data/drive-git-family.json"
 echo " " >> "$T/app/data/drive-git-repos.json"
