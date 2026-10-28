@@ -81,10 +81,11 @@ if grep -rqE 'org\.eclipse\.jgit' "$SRC"; then fail "the app imports JGit direct
 if grep -qE 'RepoRegistry\(File\(ctx\.filesDir, GitSyncWorker\.REGISTRY_FILE\)\)' "$COORD" && grep -qE 'const val REGISTRY_FILE = "git-sync/repos\.json"' "$WORKER" && grep -qE 'RepoRegistry\(File\(context\.filesDir, "git-sync/repos\.json"\)\)' "$LIB_SCREEN"; then pass "card, worker and engine screen read the SAME registry"; else fail "registry paths differ"; fi
 
 echo "── G1b a cloned repository never renders ? once its status is read ──"
-# The page open ALWAYS requests the local status read (the #1195 gate had left every row on "?"), every read kind is a declared non-? light, the JVM fixture asserts it.
-if sed -n '/fun onPageOpened()/,/^    }/p' "$COORD" | grep -qE 'statusReader\.request\(list\.map' \
+# The page open starts NO status read (the table renders from the persisted cache; an empty cache says "not checked yet"); the checks run on pull-to-refresh / Light check all / Full check all. Every read kind is a declared non-? light, the JVM fixture asserts it.
+if ! sed -n '/fun onPageOpened()/,/^    }/p' "$COORD" | grep -qE 'statusReader\.request\(' \
+   && grep -qF 'onRefresh = { coordinator.refresh(force = true)' "$CARDS" && grep -qF 'NOT_CHECKED(StatusLight.State.UNVERIFIABLE)' "$SRC/sync/RepoStatus.kt" \
    && ! grep -E '^\s+(CLEAN|AHEAD|BEHIND|DIVERGED|DIRTY|NO_UPSTREAM|CONFLICT|ERROR)\(StatusLight\.State\.(UNKNOWN|UNVERIFIABLE)' "$SRC/sync/RepoStatus.kt" >/dev/null \
-   && grep -qF 'never renders a question mark' "$APP/app/src/test/java/com/diegonmarcos/clouddrive/sync/RepoStatusTest.kt"; then pass "page open reads local status; every read kind has a non-? light; JVM fixture pins it"; else fail "a cloned repo can render ? after its status was read"; fi
+   && grep -qF 'never renders a question mark' "$APP/app/src/test/java/com/diegonmarcos/clouddrive/sync/RepoStatusTest.kt"; then pass "page open reads nothing (cache); pull-to-refresh checks; every read kind has a non-? light; JVM fixture pins it"; else fail "a cloned repo can render ? after its status was read"; fi
 
 echo "── G1c cheap-first, bounded, cancellable status; live registry ──"
 if grep -qF 'fun cancelAll()' "$SRC/sync/GitStatusReader.kt" && grep -qF 'tooLarge(t.dir)' "$SRC/sync/GitStatusReader.kt" && grep -qF 'RepoCheap.tooLarge(dir, d.maxAutoFiles, d.maxScanMs)' "$COORD" \
