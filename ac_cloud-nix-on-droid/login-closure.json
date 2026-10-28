@@ -9,7 +9,11 @@
     "python3": "#665: 74 MB compressed, deliberately out",
     "dig": "bind drags a large closure",
     "host": "bind drags a large closure",
-    "agy": "a vendor tarball with no nixpkgs attr; termux installs it from rootfs.json"
+    "agy": "a vendor tarball with no nixpkgs attr; termux installs it from rootfs.json",
+    "unison": "#1173: Cloud Drive Fsync/Mounts run in the termux guest through CLOUD_EXEC; this terminal is not that guest, and unison needs the exact version both ends run",
+    "rclone": "#1173: Cloud Drive Mounts tool of the termux guest only; about 60 MB unpacked against a zip already near its size ceiling",
+    "sshfs": "#1173: a FUSE mount, and proot has no /dev/fuse, so it could not run in this terminal; the termux guest owns the mounts",
+    "fusermount3": "#1173: FUSE helper for sshfs/rclone mounts, which only the termux guest runs; proot here has no /dev/fuse"
   },
   "_doc_size_ceiling_bytes": "#665 GUARD 4 -- the baked bootstrap.zip may not exceed this many bytes; verify_login_closure.py fails the bake otherwise, so an attr addition that blows the budget goes red instead of silently shipping. Set from CI, not estimated: run 37136574917 (b7b8f5db) baked arm64-v8a 617,165,630 B and x86_64 624,469,103 B after #737 widened the toolset; 660,000,000 is ~5.7% over the larger ABI. Raising it is a deliberate data edit here; it lives in this file, not build.json, so it moves no rootfs content address. #847: lowered to 635,000,000 after the bake moved to the self-built bootstrap (shared nix/glibc closure): run 37152526841 baked arm64-v8a 598,203,514 B and x86_64 604,618,048 B; 635,000,000 is ~5% over the larger ABI. #846: lowered to 630,000,000 when the bake started cutting -doc/-man/-dev outputs (21 store paths, 4,392,294 B off the x86_64 zip of run 37152526841 when the cut is applied to it: 600,225,754 B, verified by this gate's DT_NEEDED check); 630,000,000 is ~5% over that. #846 goose full strip (stripAllList): run 37182510177 baked arm64-v8a 579,881,525 B and x86_64 592,330,341 B; lowered to 622,000,000, ~5% over the larger ABI. Raised to 666,000,000 after run 39036876717 (a71b4031: my-webserver baked into the profile by ea687d9b, plus the ~/flakes templates and android-host wrappers of e29166af, ~20 KB) baked arm64-v8a 622,289,655 B and x86_64 634,826,123 B; 666,000,000 is ~5% over the larger ABI.",
   "scan": [
