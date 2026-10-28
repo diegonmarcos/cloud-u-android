@@ -75,7 +75,8 @@ class GitPageLayoutTest {
         assertEquals("two Mounts bars (rclone, fuse)", 2, Regex("PageActionsBar\\(").findAll(mounts).count())
         assertTrue(File(dir, "TablePage.kt").readText().contains("AutoSettingsSheet(page, prefs)"))
         assertEquals(1, Regex("fun AutoSettingsSheet\\(").findAll(File(dir, "TablePage.kt").readText()).count())
-        assertTrue(fsync.contains("TapCard(") && mounts.contains("TapCard(") && File(dir, "UnisonScreens.kt").readText().contains("onClick = onToggle"))
+        // #1216 Fsync's tap-to-open row is the Unison pair card (onClick = onToggle, wired to TapPanel.toggle in FsyncPage); the Backup TapCard left with the Backup page.
+        assertTrue(fsync.contains("onToggle = { open = TapPanel.toggle(open, it) }") && mounts.contains("TapCard(") && File(dir, "UnisonScreens.kt").readText().contains("onClick = onToggle"))
         for (f in listOf(fsync, mounts)) assertTrue("tap again closes the panel", f.contains("TapPanel.toggle(open"))
         assertEquals("one rule for the toggle", "if (open == tapped) \"\" else tapped", File(dir, "TablePage.kt").readText().lines().first { it.contains("fun toggle") }.substringAfter("=").trim())
     }
