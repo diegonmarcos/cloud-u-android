@@ -136,7 +136,8 @@ class GitStatusReader(
             if (!claim) continue
             // Keep the last value visible while re-reading; only a never-read row shows READING.
             _statuses.update { m -> if (m.containsKey(t.id)) m else m + (t.id to Status(State.READING)) }
-            val job = scope.launch { readOne(t, if (t.onDemand) Level.FULL else level) }
+            val epochAtAsk = epoch
+            val job = scope.launch { readOne(t, if (t.onDemand) Level.FULL else level, epochAtAsk) }
             synchronized(jobs) { jobs += job }
             job.invokeOnCompletion { synchronized(jobs) { jobs -= job } }
             started += job
@@ -146,8 +147,11 @@ class GitStatusReader(
 
     private val jobs = HashSet<Job>()
 
+    /** Bumped by [cancelAll]: a read asked before the bump never starts its probe after it, whatever the order the cancellations arrive in. */
+    @Volatile private var epoch = 0
+
     /** The screen closed: every read still waiting its turn (or awaited) is cancelled; a probe already running cannot be killed, so its repository stays claimed until it returns. */
-    fun cancelAll() { synchronized(jobs) { jobs.toList() }.forEach { it.cancel() } }
+    fun cancelAll() { epoch++; synchronized(jobs) { jobs.toList() }.forEach { it.cancel() } }
 
     /** Seed terminal entries read in an earlier process (the persisted cache); never overwrites an entry already here. */
     fun seed(entries: Map<String, Status>) {
@@ -159,13 +163,14 @@ class GitStatusReader(
         _statuses.update { m -> m[id]?.let { m + (id to it.copy(readAtMs = 0)) } ?: m }
     }
 
-    private suspend fun readOne(t: Target, level: Level) {
+    private suspend fun readOne(t: Target, level: Level, epochAtAsk: Int) {
         val full = level == Level.FULL
         val queuedAt = clock()  
         var stuck = false
         try {
             val status = try {
                 (if (full) fullPermits else permits).withPermit {
+                    if (epochAtAsk != epoch) throw kotlinx.coroutines.CancellationException("status reads cancelled")
                     val begin = clock()
                     val done = CompletableDeferred<Result<Probe?>>()
                     val deferred = java.util.concurrent.atomic.AtomicReference<RepoCheap.Head?>(null)
