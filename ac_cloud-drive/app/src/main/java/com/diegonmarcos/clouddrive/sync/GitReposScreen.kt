@@ -175,6 +175,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     }
     // The registry (baked snapshot, replaced by the newer live copy when RepoSotLive fetched one) feeds the declared fallback, so a stale build never lists names the registry has since renamed or retired.
     val sotRev by coordinator.sotRev.collectAsState()
+    val fullProgress by coordinator.fullProgress.collectAsState()
     val registryRows = remember(sotRev) {
         Declarations.repoSot.repos.filter { !it.private && !it.pending && page.inNameFamilies(it.github) }.map { Declarations.GitPublicRepoDecl(it.github, it.github) }.sortedBy { it.name }
     }
@@ -768,16 +769,18 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         // is the sticky item right below them and stays pinned while the rows scroll.
         item(key = "table-bulk") {
             Column {
-                RepoBulkBar(busy = bulk?.finished == false || running.isNotEmpty(), prefs = prefs, onRefreshSizes = { coordinator.refreshSizes(force = true) }) { b ->
+                RepoBulkBar(busy = bulk?.finished == false || running.isNotEmpty(), prefs = prefs, onRefreshSizes = { coordinator.refreshSizes(force = true) }, fullRunning = fullProgress != null, onCancelChecks = { coordinator.cancelStatusReads() }) { b ->
                     expanded = ""
                     when (b) {
-                        RepoActions.Bulk.CHECK_ALL -> { coordinator.refresh(force = true); coordinator.refreshRemoteStats(refreshTargets(), login.token); coordinator.refreshSizes(force = true) }
+                        RepoActions.Bulk.CHECK_FULL -> coordinator.fullCheckAll()
+                        RepoActions.Bulk.CHECK_ALL -> { coordinator.lightCheckAll(); coordinator.refreshRemoteStats(refreshTargets(), login.token); coordinator.refreshSizes(force = true) }
                         RepoActions.Bulk.SYNC_ALL -> coordinator.runCompoundAll(RepoActions.SYNC_NO_WINNER)
                         RepoActions.Bulk.CLONE_ALL -> entries.filter { it.cloned == null && it.name !in cloning }.forEach { it.onClone() }
                         RepoActions.Bulk.STASH_PUSH_ALL -> coordinator.runCompoundAll(RepoActions.STASH_PUSH)
                     }
                 }
                 RepoSummaryLine(summary)
+                fullProgress?.let { p -> Text(stringResource(R.string.repo_full_progress, p.done, p.total), Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset).testTag(DriveTags.SYNC_GIT_FULL_PROGRESS), style = MaterialTheme.typography.labelSmall) }
                 RepoStatusLegend()
                 if (archivedCount > 0) Text(
                     stringResource(if (showArchived) R.string.repo_archived_hide else R.string.repo_archived_show, archivedCount),
@@ -1282,7 +1285,7 @@ private fun GitRepoRow(
     ) {
         Row(Modifier.horizontalScroll(scroll).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
             // #1238 the leftmost column is the status icon on its own: a tap opens the full-screen status window.
-            RepoStatusCell(light, name, onOpenStatus)
+            RepoStatusCell(light, name, onOpenStatus, RepoStatus.levelCaption(glance, System.currentTimeMillis()))
             Column(Modifier.width(DriveMetrics.tableName)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(name, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1355,9 +1358,10 @@ internal fun RepoStatusBlock(b: RepoStatus.Block, fmt: DateFormat) {
         MetaLine(stringResource(R.string.repo_status_cloned, stringResource(if (b.cloned) R.string.manage_yes else R.string.manage_no)))
         MetaLine(stringResource(R.string.repo_status_branch, b.branch ?: dash, b.upstream ?: stringResource(R.string.git_meta_no_upstream)))
         MetaLine(
-            if (b.dirty == null) stringResource(R.string.repo_status_dirty_unknown)
+            if (b.dirty == null) stringResource(if (b.level == "light") R.string.repo_status_dirty_light else R.string.repo_status_dirty_unknown)
             else stringResource(R.string.repo_status_dirty, b.dirty!!, b.modified ?: 0, b.untracked ?: 0, b.conflicts ?: 0),
         )
+        if (b.level != null && b.readAtMs != null) MetaLine(stringResource(if (b.level == "light") R.string.repo_status_level_light else R.string.repo_status_level_full, RepoStatus.ageWord(System.currentTimeMillis() - b.readAtMs)))
         MetaLine(stringResource(R.string.repo_status_ab, b.ahead?.toString() ?: dash, b.behind?.toString() ?: dash))
         MetaLine(stringResource(R.string.repo_status_unpushed, b.unpushed?.toString() ?: dash))
         MetaLine(stringResource(R.string.repo_status_fetch, b.lastFetchMs?.let { fmt.format(Date(it)) } ?: stringResource(R.string.repo_status_never)))

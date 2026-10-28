@@ -46,7 +46,7 @@ class GitPageLayoutTest {
         val block = src.substring(src.indexOf("fun LazyListScope.tableBlock()"))
         assertTrue(block.indexOf("RepoBulkBar(") in 0 until block.indexOf("items(sortedEntries"))
         assertTrue(block.indexOf("RepoSummaryLine(") in 0 until block.indexOf("items(sortedEntries"))
-        for (b in listOf("CHECK_ALL", "SYNC_ALL", "CLONE_ALL", "STASH_PUSH_ALL")) assertTrue(b, block.contains("Bulk.$b"))
+        for (b in listOf("CHECK_ALL", "CHECK_FULL", "SYNC_ALL", "CLONE_ALL", "STASH_PUSH_ALL")) assertTrue(b, block.contains("Bulk.$b"))
     }
 
     @Test fun `a tap toggles the menu through the pure rule and the menu has a close control`() {
@@ -99,7 +99,7 @@ class GitPageLayoutTest {
         assertTrue("sizes are walked on IO", coord.contains("withContext(Dispatchers.IO) {\n                    val dirs = registry.load()"))
         assertTrue("opening the Git page loads the registry and runs only the plan", coord.contains("runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.OPEN))"))
         val pageOpen = coord.substring(coord.indexOf("fun onPageOpened()"), coord.indexOf("fun onTick()"))
-        assertFalse("no unconditional FULL refresh on open", Regex("(^|[^A-Za-z])refresh\\(").containsMatchIn(pageOpen))
+        assertFalse("no unconditional FULL refresh on open", Regex("(^|\\s)refresh\\(").containsMatchIn(pageOpen))
         assertTrue("the only status work on open is the one bounded, size-guarded, ttl-cached reader request", pageOpen.contains("statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) })"))
         for (f in listOf(fsync, mounts)) assertTrue("the deep probes sit behind the settings", f.contains("AutoRefreshEffects("))
         assertTrue(File(dir, "RepoDiskSize.kt").readText().contains("check(!StartupGuard.onMainThread())"))

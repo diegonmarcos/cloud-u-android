@@ -84,7 +84,7 @@ object Declarations {
     }
 
     /** #850 the status reader's bounds: per-repository timeout, how many are read at once, cache age. */
-    data class GitStatusDecl(val timeoutSeconds: Int = 20, val concurrency: Int = 1, val ttlSeconds: Int = 60, val maxAutoFiles: Int = 3000, val maxScanMs: Long = 1500)
+    data class GitStatusDecl(val timeoutSeconds: Int = 20, val concurrency: Int = 1, val ttlSeconds: Int = 60, val maxAutoFiles: Int = 3000, val maxScanMs: Long = 1500, val logWindow: Int = 100)
 
     /**
      * #850 "Auto pull on open": [defaultOn] is the setting before the owner touches it, the
@@ -454,7 +454,8 @@ object Declarations {
         return GitPageDecl(
             status = GitStatusDecl(
                 timeoutSeconds = (st.int("timeout_seconds") ?: 20).coerceIn(1, 600),
-                concurrency = (st.int("concurrency") ?: 1).coerceIn(1, 4),
+                concurrency = (((st["modes"] as? JsonObject)?.get("light") as? JsonObject)?.int("workers") ?: st.int("concurrency") ?: 1).coerceIn(1, 2),
+                logWindow = (((st["modes"] as? JsonObject)?.get("light") as? JsonObject)?.int("log_window_commits") ?: 100).coerceIn(10, 1000),
                 ttlSeconds = (st.int("ttl_seconds") ?: 60).coerceAtLeast(0),
                 maxAutoFiles = (st.int("max_auto_files") ?: 3000).coerceAtLeast(1),
                 maxScanMs = (st.int("max_scan_ms") ?: 1500).toLong().coerceAtLeast(1),

@@ -81,6 +81,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         val read: Boolean = false,
         /** Size guard: the worktree was NOT scanned (too large for the unattended pass); branch / upstream are real, counts are not. */
         val large: Boolean = false,
+        /** "light" = refs only (the working tree was NOT looked at), "full" = worktree scanned; "" = not read. */
+        val level: String = "",
         /** #850 the reader's terminal word: clean / ahead / behind / dirty / not_cloned / error. */
         val state: String = "",
         /** #850 when this glance was read (epoch ms) — the cache's timestamp. */
@@ -267,8 +269,32 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     /** The owner asked for ONE clone's working-tree status (status window): the size guard does not apply, one repository, forced. */
     fun checkWorktree(repo: ManagedRepo) { statusReader.request(listOf(GitStatusReader.Target(repo.id, File(repo.path), onDemand = true)), force = true) }
 
+    /** Progress of the manual FULL check: done of total repositories, null = none running. */
+    data class FullProgress(val done: Int, val total: Int)
+    val fullProgress = MutableStateFlow<FullProgress?>(null)
+
+    /** "Light check all": refs only, forced, one worker; this is also what runs on open. */
+    fun lightCheckAll() { scope.launch { val list = loadRegistry(); statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) }, force = true, level = GitStatusReader.Level.LIGHT) } }
+
+    /** "Full check all": MANUAL only. Adds the dirty / worktree scan, one repository at a time with the per-repo timeout; the size guard marks huge / LFS repositories LARGE (each is confirmed individually in its status window). Progress is published; [cancelStatusReads] stops it. */
+    fun fullCheckAll() {
+        if (fullProgress.value != null) return
+        scope.launch {
+            val list = loadRegistry()
+            val started = System.currentTimeMillis()
+            fullProgress.value = FullProgress(0, list.size)
+            val job = statusReader.request(list.map { GitStatusReader.Target(it.id, File(it.path)) }, force = true, level = GitStatusReader.Level.FULL)
+            while (job.isActive) {
+                val st = statusReader.statuses.value
+                fullProgress.value = FullProgress(list.count { st[it.id]?.let { s -> s.terminal && s.level == GitStatusReader.Level.FULL && s.readAtMs >= started } == true }, list.size)
+                kotlinx.coroutines.delay(300)
+            }
+            fullProgress.value = null
+        }
+    }
+
     /** The Git page closed: stop the reads still queued. */
-    fun cancelStatusReads() { statusReader.cancelAll() }
+    fun cancelStatusReads() { statusReader.cancelAll(); fullProgress.value = null }
 
     /** Fetch every clone (the declared fetch op, one running op per repository). */
     fun fetchAll() { repos.value.forEach { runOp(it, OP_FETCH) } }
@@ -656,6 +682,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 timeoutMs = d.timeoutSeconds * 1000L,
                 concurrency = d.concurrency,
                 ttlMs = d.ttlSeconds * 1000L,
+                lightProbe = ::probeLight,
                 tooLarge = { dir -> Declarations.repoSot.lfsOf(dir.name) == true || RepoCheap.tooLarge(dir, d.maxAutoFiles, d.maxScanMs) },
             )
         }
@@ -668,6 +695,21 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 untracked = s.files.count { !it.conflicting && it.unstaged == com.diegonmarcos.cloudlib.gitsync.GitChange.UNTRACKED },
                 fetchedAtMs = File(dir, ".git/FETCH_HEAD").lastModified(),
             )
+        }
+
+        /** LIGHT probe: branch + upstream from .git, the two tips from the engine's branch list, the local log window; never the worktree. */
+        fun probeLight(dir: File): GitStatusReader.Probe {
+            val head = RepoCheap.head(dir)
+            val fetched = File(dir, ".git/FETCH_HEAD").lastModified()
+            if (head.branch == null || head.upstream == null) return GitStatusReader.Probe(head.branch, head.upstream, 0, 0, 0, 0, fetchedAtMs = fetched)
+            return GitEngine(engineContext ?: error("no coordinator has been built yet, so there is no Context to reach the git sync engine with"), dir).use { e ->
+                val br = e.branches()
+                val localSha = br.firstOrNull { !it.isRemote && it.name == head.branch }?.sha
+                val remoteSha = br.firstOrNull { it.isRemote && it.name == head.upstream }?.sha
+                val log = if (localSha != null && remoteSha != null && localSha != remoteSha) e.log(max = Declarations.sync.git.status.logWindow).map { it.sha } else emptyList()
+                val r = RepoCheap.aheadBehind(localSha, remoteSha, log)
+                GitStatusReader.Probe(head.branch, head.upstream, r?.ahead ?: 0, r?.behind ?: 0, 0, 0, fetchedAtMs = fetched)
+            }
         }
 
         const val PREFS_PAGE = "cloud-drive-prefs"
@@ -692,10 +734,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         fun glanceOf(s: GitStatusReader.Status): Glance = when (s.state) {
             GitStatusReader.State.READING -> Glance()
             GitStatusReader.State.NOT_CLONED -> Glance(gone = true, read = true, state = "not_cloned", readAtMs = s.readAtMs)
-            GitStatusReader.State.LARGE -> Glance(s.probe?.branch, s.probe?.upstream, read = true, large = true, state = "large", readAtMs = s.readAtMs)
-            GitStatusReader.State.ERROR -> Glance(error = s.reason ?: "unknown", read = true, state = "error", readAtMs = s.readAtMs)
+            GitStatusReader.State.LARGE -> Glance(s.probe?.branch, s.probe?.upstream, read = true, large = true, state = "large", readAtMs = s.readAtMs, level = "full")
+            GitStatusReader.State.ERROR -> Glance(error = s.reason ?: "unknown", read = true, state = "error", readAtMs = s.readAtMs, level = s.level.name.lowercase())
             else -> s.probe!!.let { p ->
-                Glance(p.branch, p.upstream, p.ahead, p.behind, p.changed, p.conflicts, p.repositoryState, read = true, state = s.state.name.lowercase(), readAtMs = s.readAtMs, untracked = p.untracked, fetchedAtMs = p.fetchedAtMs)
+                Glance(p.branch, p.upstream, p.ahead, p.behind, p.changed, p.conflicts, p.repositoryState, read = true, state = s.state.name.lowercase(), readAtMs = s.readAtMs, untracked = p.untracked, fetchedAtMs = p.fetchedAtMs, level = s.level.name.lowercase())
             }
         }
 

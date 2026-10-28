@@ -97,12 +97,17 @@ internal fun RepoCells(r: RepoTableRow) {
 
 /** #1238 the leftmost cell: the status icon; a tap on it (not on the row) opens the repository's full-screen status window. */
 @Composable
-internal fun RepoStatusCell(light: StatusLight.State, name: String, onOpen: () -> Unit) {
+internal fun RepoStatusCell(light: StatusLight.State, name: String, onOpen: () -> Unit, caption: String = "") {
     Box(
         repoCellModifier(RepoColumn.STATUS).heightIn(min = DriveMetrics.tap).testTag(DriveTags.SYNC_GIT_STATUS_CELL)
             .clickable(onClickLabel = stringResource(R.string.repo_status_open), onClick = onOpen),
         contentAlignment = Alignment.Center,
-    ) { StatusDot(light, name) }
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            StatusDot(light, name)
+            if (caption.isNotBlank()) Text(caption, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        }
+    }
 }
 
 @Composable
@@ -188,20 +193,22 @@ internal fun RepoActionGroupsView(
 
 /** The bulk bar: ABOVE the column header, one pill per [RepoActions.Bulk] command over every repo, then the Settings gear (the shared PageActionsBar). */
 @Composable
-internal fun RepoBulkBar(busy: Boolean, prefs: DrivePrefs?, onRefreshSizes: () -> Unit, onBulk: (RepoActions.Bulk) -> Unit) {
+internal fun RepoBulkBar(busy: Boolean, prefs: DrivePrefs?, onRefreshSizes: () -> Unit, fullRunning: Boolean = false, onCancelChecks: () -> Unit = {}, onBulk: (RepoActions.Bulk) -> Unit) {
     PageActionsBar(
         AutoChecks.Page.GIT, prefs,
         RepoActions.Bulk.entries.map { b ->
             BarAction(
                 stringResource(when (b) {
                     RepoActions.Bulk.CHECK_ALL -> R.string.repo_bulk_check
+                    RepoActions.Bulk.CHECK_FULL -> R.string.repo_bulk_check_full
                     RepoActions.Bulk.SYNC_ALL -> R.string.repo_bulk_sync
                     RepoActions.Bulk.CLONE_ALL -> R.string.repo_bulk_clone
                     RepoActions.Bulk.STASH_PUSH_ALL -> R.string.repo_bulk_stash_push
                 }),
-                { onBulk(b) }, enabled = !busy || b == RepoActions.Bulk.CHECK_ALL,
+                { onBulk(b) }, enabled = !busy || b == RepoActions.Bulk.CHECK_ALL || (b == RepoActions.Bulk.CHECK_FULL && !fullRunning),
             )
-        } + BarAction(stringResource(R.string.repo_bulk_sizes), onRefreshSizes),
+        } + BarAction(stringResource(R.string.repo_bulk_sizes), onRefreshSizes) +
+            (if (fullRunning) listOf(BarAction(stringResource(R.string.repo_bulk_cancel_checks), onCancelChecks)) else emptyList()),
         tag = DriveTags.SYNC_GIT_BULK_BAR,
     )
 }

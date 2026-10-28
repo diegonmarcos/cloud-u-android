@@ -59,7 +59,7 @@ class RepoSchedulerTest {
     @Test fun aLargeRepositoryIsSkippedByThePassAndReadOnDemand() = runBlocking {
         val probed = ConcurrentList()
         val reader = GitStatusReader(probe = { probed.add(it.name); probe() }, timeoutMs = 5_000, concurrency = 1, ttlMs = 60_000, tooLarge = { it.name == "big" })
-        withTimeout(5_000) { reader.request(listOf(clone("big"), clone("small"))).join() }
+        withTimeout(5_000) { reader.request(listOf(clone("big"), clone("small")), level = GitStatusReader.Level.FULL).join() }
         assertEquals(listOf("small"), probed.items)
         assertEquals(GitStatusReader.State.LARGE, reader.statuses.value["big"]!!.state)
         assertTrue(reader.statuses.value["big"]!!.terminal)
@@ -70,6 +70,61 @@ class RepoSchedulerTest {
         withTimeout(5_000) { reader.request(listOf(clone("big", onDemand = true)), force = true).join() }
         assertEquals(listOf("small", "big"), probed.items)
         assertEquals(GitStatusReader.State.CLEAN, reader.statuses.value["big"]!!.state)
+    }
+
+    @Test fun lightLevelNeverTouchesTheWorktreeAndFullIsOneAtATime() = runBlocking {
+        val light = ConcurrentList(); val full = ConcurrentList()
+        val now = AtomicInteger(); val peak = AtomicInteger()
+        val reader = GitStatusReader(
+            probe = { d -> val n = now.incrementAndGet(); peak.updateAndGet { maxOf(it, n) }; Thread.sleep(20); now.decrementAndGet(); full.add(d.name); GitStatusReader.Probe("main", "origin/main", 0, 0, 2, 0) },
+            lightProbe = { d -> light.add(d.name); GitStatusReader.Probe("main", "origin/main", 1, 0, 0, 0) },
+            timeoutMs = 5_000, concurrency = 2, ttlMs = 60_000, tooLarge = { it.name == "big" },
+        )
+        val ts = listOf(clone("a"), clone("big"), clone("c"))
+        withTimeout(5_000) { reader.request(ts).join() }
+        assertEquals("light reads every repository, large ones too, with the refs probe only", listOf("a", "big", "c"), light.items.sorted())
+        assertTrue("no worktree probe in the light pass", full.items.isEmpty())
+        val s = reader.statuses.value
+        assertTrue(s.values.all { it.level == GitStatusReader.Level.LIGHT && it.state == GitStatusReader.State.AHEAD })
+        // a fresh LIGHT result is not read again by another LIGHT ask
+        withTimeout(5_000) { reader.request(ts).join() }
+        assertEquals(3, light.items.size)
+        // FULL upgrades it: the worktree is scanned, one at a time, the large one is skipped (confirmed individually later)
+        withTimeout(5_000) { reader.request(ts, level = GitStatusReader.Level.FULL).join() }
+        assertEquals(listOf("a", "c"), full.items.sorted())
+        assertEquals(1, peak.get())
+        assertEquals(GitStatusReader.Level.FULL, reader.statuses.value["a"]!!.level)
+        assertEquals(GitStatusReader.State.DIRTY, reader.statuses.value["a"]!!.state)
+        assertEquals(GitStatusReader.State.LARGE, reader.statuses.value["big"]!!.state)
+        // a fresh FULL result satisfies a later LIGHT ask: it is not downgraded
+        withTimeout(5_000) { reader.request(ts).join() }
+        assertEquals(GitStatusReader.State.DIRTY, reader.statuses.value["a"]!!.state)
+        assertEquals(GitStatusReader.Level.FULL, reader.statuses.value["a"]!!.level)
+        // confirmed individually: the large repository is scanned now
+        withTimeout(5_000) { reader.request(listOf(clone("big", onDemand = true)), force = true).join() }
+        assertEquals(GitStatusReader.State.DIRTY, reader.statuses.value["big"]!!.state)
+    }
+
+    @Test fun lightGlanceHasNoDirtyCount_andTheCaptionNamesLevelAndAge() {
+        val st = GitStatusReader.Status(GitStatusReader.State.AHEAD, GitStatusReader.Probe("main", "origin/main", 2, 0, 0, 0), readAtMs = 1_000, level = GitStatusReader.Level.LIGHT)
+        val g = GitSyncCoordinator.glanceOf(st)
+        assertEquals("light", g.level)
+        assertEquals(null, RepoStatus.block(true, g).dirty)
+        assertEquals(2, RepoStatus.block(true, g).ahead)
+        assertEquals(null, RepoTable.rowOf("x", null, true, g, null).dirtyFiles)
+        assertEquals("L 5m", RepoStatus.levelCaption(g, 1_000 + 5 * 60_000))
+        val full = GitSyncCoordinator.glanceOf(st.copy(level = GitStatusReader.Level.FULL, probe = GitStatusReader.Probe("main", "origin/main", 0, 0, 3, 0)))
+        assertEquals("F <1m", RepoStatus.levelCaption(full, 1_500))
+        assertEquals("F 2h", RepoStatus.levelCaption(full, 1_000 + 2 * 3_600_000))
+        assertEquals(3, RepoTable.rowOf("x", null, true, full, null).dirtyFiles)
+        assertEquals("", RepoStatus.levelCaption(null, 5)); assertEquals("", RepoStatus.levelCaption(GitSyncCoordinator.Glance(), 5))
+    }
+
+    @Test fun aheadBehindFromRefsOnly() {
+        assertEquals(RepoCheap.Refs(0, 0, false), RepoCheap.aheadBehind("a", "a", emptyList()))
+        assertEquals(RepoCheap.Refs(2, 0, false), RepoCheap.aheadBehind("c", "a", listOf("c", "b", "a")))
+        assertEquals("remote tip unknown locally: behind, exact count needs the full check", RepoCheap.Refs(0, 1, true), RepoCheap.aheadBehind("c", "z", listOf("c", "b", "a")))
+        assertNull(RepoCheap.aheadBehind("c", null, emptyList()))
     }
 
     private class ConcurrentList { val items = java.util.Collections.synchronizedList(mutableListOf<String>()); fun add(s: String) { items.add(s) } }

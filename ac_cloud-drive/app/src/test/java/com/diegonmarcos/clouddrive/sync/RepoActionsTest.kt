@@ -41,7 +41,7 @@ class RepoActionsTest {
     }
 
     @Test fun `the bulk bar is Check all, Sync all, Clone all, Stash and Push all, and stash-push is a compound verb`() {
-        assertEquals(listOf(RepoActions.Bulk.CHECK_ALL, RepoActions.Bulk.SYNC_ALL, RepoActions.Bulk.CLONE_ALL, RepoActions.Bulk.STASH_PUSH_ALL), RepoActions.Bulk.entries)
+        assertEquals(listOf(RepoActions.Bulk.CHECK_ALL, RepoActions.Bulk.CHECK_FULL, RepoActions.Bulk.SYNC_ALL, RepoActions.Bulk.CLONE_ALL, RepoActions.Bulk.STASH_PUSH_ALL), RepoActions.Bulk.entries)
         assertTrue(RepoActions.isCompound(RepoActions.STASH_PUSH))
         assertEquals("sync all has no winner", "sync_no_winner", RepoActions.SYNC_NO_WINNER)
     }

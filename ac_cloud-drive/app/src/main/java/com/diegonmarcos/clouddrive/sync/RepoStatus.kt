@@ -79,6 +79,9 @@ object RepoStatus {
         val lastFetchMs: Long?,
         val error: ErrorKind?,
         val errorDetail: String?,
+        /** "light" (refs only: dirty is unknown) / "full" / null = not read. */
+        val level: String? = null,
+        val readAtMs: Long? = null,
     ) {
         val dirty: Int? get() = if (modified == null || untracked == null) null else modified + untracked + (conflicts ?: 0)
     }
@@ -87,20 +90,36 @@ object RepoStatus {
         val kind = kindOf(cloned, g)
         val read = cloned && g != null && g.read && !g.gone && g.error == null
         val counts = read && !g!!.large
+        val tree = counts && g.level != "light"
         return Block(
             kind = kind, cloned = cloned,
             branch = if (read) g!!.branch else null,
             upstream = if (read) g!!.upstream else null,
-            modified = if (counts) (g!!.changed - g.untracked).coerceAtLeast(0) else null,
-            untracked = if (counts) g!!.untracked else null,
-            conflicts = if (counts) g!!.conflicts else null,
+            modified = if (tree) (g!!.changed - g.untracked).coerceAtLeast(0) else null,
+            untracked = if (tree) g!!.untracked else null,
+            conflicts = if (tree) g!!.conflicts else null,
             ahead = if (counts && g!!.upstream != null) g.ahead else null,
             behind = if (counts && g!!.upstream != null) g.behind else null,
             unpushed = if (counts && g!!.upstream != null) g.ahead else null,
             lastFetchMs = if (counts && g!!.fetchedAtMs > 0) g.fetchedAtMs else null,
             error = if (kind == Kind.ERROR) errorKind(g?.error) else null,
             errorDetail = if (kind == Kind.ERROR) g?.error else null,
+            level = if (read) g!!.level.ifBlank { null } else null,
+            readAtMs = if (read && g!!.readAtMs > 0) g.readAtMs else null,
         )
+    }
+
+    /** The icon's caption: which level the cached result came from and its age, "L 5m" (light, refs only) / "F 2h" (full, worktree scanned); "" = nothing read. */
+    fun levelCaption(g: GitSyncCoordinator.Glance?, now: Long): String {
+        if (g == null || !g.read || g.level.isBlank() || g.readAtMs <= 0) return ""
+        return (if (g.level == "light") "L " else "F ") + ageWord((now - g.readAtMs).coerceAtLeast(0))
+    }
+
+    fun ageWord(ms: Long): String = when {
+        ms < 60_000 -> "<1m"
+        ms < 3_600_000 -> "${ms / 60_000}m"
+        ms < 86_400_000 -> "${ms / 3_600_000}h"
+        else -> "${ms / 86_400_000}d"
     }
 
     /** #1238 what the status window's last section offers: Clone for a repository with no clone, a progress word while it clones, nothing for a clone that exists. */

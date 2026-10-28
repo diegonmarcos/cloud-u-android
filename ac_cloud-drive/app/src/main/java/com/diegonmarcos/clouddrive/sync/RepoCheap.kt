@@ -22,6 +22,20 @@ object RepoCheap {
         return Head(branch, upstreamOf(runCatching { File(gitDir, "config").takeIf { it.isFile }?.readText() }.getOrNull().orEmpty(), branch))
     }
 
+    /**
+     * Ahead / behind from REFS ONLY (no worktree, no object parsing): [localSha] and [remoteSha] are the tips of the branch
+     * and its upstream, [localLog] is the newest-first sha list of the branch (bounded). Equal tips = 0/0; the remote tip
+     * inside the local history = ahead by its index; otherwise the remote holds commits this history lacks: behind >= 1
+     * ([approx] = the exact counts need the full check). null = no upstream tip to compare with.
+     */
+    data class Refs(val ahead: Int, val behind: Int, val approx: Boolean)
+    fun aheadBehind(localSha: String?, remoteSha: String?, localLog: List<String>): Refs? {
+        if (localSha == null || remoteSha == null) return null
+        if (localSha == remoteSha) return Refs(0, 0, false)
+        val i = localLog.indexOf(remoteSha)
+        return if (i >= 0) Refs(i, 0, false) else Refs(0, 1, true)
+    }
+
     /** Pure: the `[branch "<b>"]` section's remote and merge as `<remote>/<b>`, null when the section is absent or incomplete. */
     fun upstreamOf(config: String, branch: String): String? {
         var inSection = false; var remote: String? = null; var merge: String? = null

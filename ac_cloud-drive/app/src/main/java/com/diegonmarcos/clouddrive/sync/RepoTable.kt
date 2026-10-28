@@ -94,13 +94,14 @@ object RepoTable {
      */
     fun rowOf(name: String, declaredPrivate: Boolean?, cloned: Boolean, glance: GitSyncCoordinator.Glance?, remote: RepoRemoteStats.Stats?, provider: String? = null, diskBytes: Long? = null, lfs: Boolean? = null): RepoTableRow {
         val local = cloned && glance != null && glance.read && !glance.gone && glance.error == null && !glance.large
+        val tree = local && glance!!.level != "light"
         return RepoTableRow(
             name = name,
             isPrivate = declaredPrivate ?: remote?.isPrivate,
             sizeMainBytes = remote?.sizeMainBytes,
             sizeTotalBytes = remote?.let { it.sizeTotalKb * 1024 },
             branches = remote?.branches,
-            dirtyFiles = if (local) glance!!.changed + glance.conflicts else null,
+            dirtyFiles = if (tree) glance!!.changed + glance.conflicts else null,
             ahead = if (local && glance!!.upstream != null) glance.ahead else null,
             behind = if (local && glance!!.upstream != null) glance.behind else null,
             provider = provider,

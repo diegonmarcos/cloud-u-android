@@ -52,7 +52,12 @@ class GitStatusReader(
     private val isRepository: (File) -> Boolean = { com.diegonmarcos.cloudlib.gitsync.GitEngine.isRepository(it) },
     /** Is [dir] too large for the unattended worktree scan (size guard)? true = the row ends LARGE ("tap to check") and no probe runs; an on-demand [Target] bypasses it. */
     private val tooLarge: (File) -> Boolean = { false },
+    /** LIGHT level: refs only (cloned, branch, upstream, ahead/behind from refs), NO worktree walk. Defaults to [probe] so a reader built with one probe behaves as before. */
+    private val lightProbe: (File) -> Probe = probe,
 ) {
+    /** What a result was read with: LIGHT never looked at the working tree (dirty is unknown), FULL did. */
+    enum class Level { LIGHT, FULL }
+
     /** What one `git status` says, before it is classified. */
     data class Probe(
         val branch: String?,
@@ -76,6 +81,7 @@ class GitStatusReader(
         val reason: String? = null,
         val readAtMs: Long = 0,
         val tookMs: Long = 0,
+        val level: Level = Level.FULL,
     ) {
         val terminal: Boolean get() = state != State.READING
 
@@ -96,6 +102,8 @@ class GitStatusReader(
     data class Target(val id: String, val dir: File, /** The owner asked for this one (status window): the size guard does not apply. */ val onDemand: Boolean = false)
 
     private val permits = Semaphore(concurrency.coerceAtLeast(1))
+    /** FULL reads are always one repository at a time, whatever the light concurrency. */
+    private val fullPermits = Semaphore(1)
     private val inFlight = HashSet<String>()
     private val threadSeq = AtomicInteger()
 
@@ -107,7 +115,7 @@ class GitStatusReader(
      * ended (already-fresh and already-in-flight repositories start nothing). Safe to call
      * on every composition: it is idempotent while a read is running.
      */
-    fun request(targets: List<Target>, force: Boolean = false): Job {
+    fun request(targets: List<Target>, force: Boolean = false, level: Level = Level.LIGHT): Job {
         val now = clock()
         val started = mutableListOf<Job>()
         for (t in targets) {
@@ -115,14 +123,16 @@ class GitStatusReader(
                 if (t.id in inFlight) false
                 else {
                     val cached = _statuses.value[t.id]
-                    val fresh = cached != null && cached.terminal && now - cached.readAtMs < ttlMs
+                    // A FULL result also satisfies a LIGHT ask; a LIGHT one does not satisfy a FULL ask.
+                    val wanted = if (t.onDemand) Level.FULL else level
+                    val fresh = cached != null && cached.terminal && now - cached.readAtMs < ttlMs && cached.level.ordinal >= wanted.ordinal
                     if (fresh && !force) false else { inFlight += t.id; true }
                 }
             }
             if (!claim) continue
             // Keep the last value visible while re-reading; only a never-read row shows READING.
             _statuses.update { m -> if (m.containsKey(t.id)) m else m + (t.id to Status(State.READING)) }
-            val job = scope.launch { readOne(t) }
+            val job = scope.launch { readOne(t, if (t.onDemand) Level.FULL else level) }
             synchronized(jobs) { jobs += job }
             job.invokeOnCompletion { synchronized(jobs) { jobs -= job } }
             started += job
@@ -140,10 +150,11 @@ class GitStatusReader(
         _statuses.update { m -> m[id]?.let { m + (id to it.copy(readAtMs = 0)) } ?: m }
     }
 
-    private suspend fun readOne(t: Target) {
+    private suspend fun readOne(t: Target, level: Level) {
+        val full = level == Level.FULL
         var stuck = false
         try {
-            permits.withPermit {
+            (if (full) fullPermits else permits).withPermit {
                 val begin = clock()
                 val done = CompletableDeferred<Result<Probe?>>()
                 val deferred = java.util.concurrent.atomic.AtomicReference<RepoCheap.Head?>(null)
@@ -151,6 +162,7 @@ class GitStatusReader(
                     // null = not a clone (checked here, on the probe thread: a store repository is asked of cld.termux).
                     val r = runCatching {
                         if (!isRepository(t.dir)) null
+                        else if (!full) lightProbe(t.dir)
                         else if (!t.onDemand && tooLarge(t.dir)) { deferred.set(RepoCheap.head(t.dir)); null }
                         else probe(t.dir)
                     }
@@ -177,12 +189,12 @@ class GitStatusReader(
                             if (!done.isCompleted) { stuckIds += t.id; stuck = true }
                         }
                         thread.interrupt()
-                        Status(State.ERROR, reason = "timeout after " + if (timeoutMs >= 1000) "${timeoutMs / 1000}s" else "${timeoutMs}ms", readAtMs = clock(), tookMs = took)
+                        Status(State.ERROR, reason = "timeout after " + if (timeoutMs >= 1000) "${timeoutMs / 1000}s" else "${timeoutMs}ms", readAtMs = clock(), tookMs = took, level = level)
                     }
                     r.isFailure -> Status(State.ERROR, reason = r.exceptionOrNull()?.let { it.message ?: it.javaClass.simpleName } ?: "unknown", readAtMs = clock(), tookMs = took)
-                    deferred.get() != null -> deferred.get()!!.let { h -> Status(State.LARGE, Probe(h.branch, h.upstream, 0, 0, 0, 0), readAtMs = clock(), tookMs = took) }
+                    deferred.get() != null -> deferred.get()!!.let { h -> Status(State.LARGE, Probe(h.branch, h.upstream, 0, 0, 0, 0), readAtMs = clock(), tookMs = took, level = Level.FULL) }
                     r.getOrNull() == null -> Status(State.NOT_CLONED, readAtMs = clock(), tookMs = took)
-                    else -> classify(r.getOrThrow()!!, clock(), took)
+                    else -> classify(r.getOrThrow()!!, clock(), took).copy(level = level)
                 }
                 publish(t.id, status)
             }
