@@ -25,6 +25,14 @@ public val LocalNavChromeCollapse: ProvidableCompositionLocal<BottomNavCollapse?
 public const val CHROME_SINK_TAG: Int = 0x7e001157
 
 /**
+ * #1257 the room the bottom bar keeps under the content, in dp: the bar's EXPANDED height plus the bottom system-bar inset,
+ * constant while the bar collapses or hides (so the content's viewport never changes size), 0 while the keyboard has the bar
+ * away. Provided by the fleet's bottom-nav host; a page that draws UNDER the bar pads its scroller by it instead of typing a dp.
+ */
+public val LocalNavBottomClearance: ProvidableCompositionLocal<androidx.compose.ui.unit.Dp> =
+    staticCompositionLocalOf { androidx.compose.ui.unit.Dp(0f) }
+
+/**
  * Owns the chrome's scroll connection unless an outer host already does: [content] gets it, and everything inside (the
  * first row, the second row, the bottom nav, and any scrollable page) is wired to the same one.
  */

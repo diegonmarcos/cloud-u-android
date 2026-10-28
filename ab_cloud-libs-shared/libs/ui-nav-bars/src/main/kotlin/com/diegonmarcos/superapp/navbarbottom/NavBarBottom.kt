@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.semantics.CollectionInfo
 import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.Role
@@ -54,6 +56,7 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
+import com.diegonmarcos.superapp.bottomnav.LocalNavBottomClearance
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlTokens
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
 import com.diegonmarcos.superapp.bottomnav.chromeScroll
@@ -179,6 +182,12 @@ public fun NavBarBottom(
 /** The content slot of [NavBarBottomHost]: the SAME tag libs:bottomnav's BottomNavHost gives its content. */
 public const val NAV_BAR_BOTTOM_CONTENT_TAG: String = "bottomnav_content"
 
+/** #1257 the bar's slot under the content: it keeps the bar's EXPANDED height while the bar collapses or hides. */
+public const val NAV_BAR_BOTTOM_SLOT_TAG: String = "bottomnav_slot"
+
+/** #1257 the slot re-measures only while the bar is fully expanded (rest state), so a collapse or a hide never shrinks it. */
+public fun navBottomSlotShouldMeasure(collapsed: Boolean, hidden: Boolean): Boolean = !collapsed && !hidden
+
 /**
  * The fleet's bottom-nav host (#1154), the successor of libs:bottomnav's BottomNavHost: [content] above the bar on the shared
  * page gradient (libs:theme-background), ending where the bar's clearance begins, and scrolling the content collapses the bar
@@ -199,16 +208,28 @@ public fun NavBarBottomHost(
     val own = rememberBottomNavCollapse()
     val collapse = inherited ?: own
     val insets = bottomNavInsets()
-    androidx.compose.runtime.CompositionLocalProvider(LocalNavChromeCollapse provides collapse) {
+    // #1257 THE BAR'S SLOT KEEPS THE BAR'S EXPANDED HEIGHT (its own measure: cell height + margin + the bottom system-bar inset).
+    // The bar used to leave the column while a drag was in progress (HIDDEN) and shrink when collapsed, so the content's
+    // viewport grew during the drag and shrank again on release: a list scrolled to its end lost its last rows below the
+    // new bottom edge every time the owner reached for them. With a constant slot the viewport never changes size; the bar
+    // collapses and hides INSIDE its slot. The slot's height is published as LocalNavBottomClearance (read by pages, never typed).
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    var expandedPx by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val ime = navHiddenByIme()
+    val slot = if (ime) 0.dp else with(density) { expandedPx.toDp() }
+    androidx.compose.runtime.CompositionLocalProvider(LocalNavChromeCollapse provides collapse, LocalNavBottomClearance provides slot) {
     Column(modifier.fillMaxSize().themeBackground(dark)) {
         // The bar clears the bottom system bar itself, so the content must not clear it a second time (consumed for the content ONLY).
         Box(
             Modifier.weight(1f).fillMaxWidth()
-                .then(if (navHiddenByIme()) Modifier else Modifier.consumeWindowInsets(insets.only(WindowInsetsSides.Bottom)))
+                .then(if (ime) Modifier else Modifier.consumeWindowInsets(insets.only(WindowInsetsSides.Bottom)))
                 .then(if (inherited == null) Modifier.chromeScroll(own) else Modifier)
                 .testTag(NAV_BAR_BOTTOM_CONTENT_TAG),
         ) { content() }
-        NavBarBottom(entries, selectedId, onSelect, dark, collapsed = collapse.collapsed)
+        Box(Modifier.fillMaxWidth().heightIn(min = slot).testTag(NAV_BAR_BOTTOM_SLOT_TAG), contentAlignment = Alignment.BottomCenter) {
+            NavBarBottom(entries, selectedId, onSelect, dark, collapsed = collapse.collapsed,
+                modifier = Modifier.onSizeChanged { sz -> if (navBottomSlotShouldMeasure(collapse.collapsed, collapse.hidden)) expandedPx = sz.height })
+        }
     }
     }
 }

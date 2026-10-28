@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -128,6 +129,31 @@ class NavBarBottomTest {
         compose.onNodeWithTag("page").performTouchInput { swipeDown() }
         compose.waitForIdle()
         assertEquals("labels return on scroll up", 1, labelsOf("mail"))
+    }
+
+    @Test fun `the page keeps its size while the bar collapses and hides, so its last row stays reachable (#1257)`() {
+        compose.setContent {
+            val entries = listOf(
+                BottomNavEntry("home", "Home", rememberVectorPainter(Icons.Filled.Home)),
+                BottomNavEntry("mail", "Mail", rememberVectorPainter(Icons.Filled.Mail)),
+            )
+            NavBarBottomHost(entries, "home", {}) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).testTag("page")) { Spacer(Modifier.height(6000.dp)) }
+            }
+        }
+        compose.waitForIdle()
+        val expanded = compose.onNodeWithTag(NAV_BAR_BOTTOM_CONTENT_TAG).fetchSemanticsNode().boundsInRoot
+        val slot = compose.onNodeWithTag(NAV_BAR_BOTTOM_SLOT_TAG).fetchSemanticsNode().boundsInRoot
+        assertTrue("the slot holds the expanded bar", slot.height >= BottomSpec.HEIGHT.value - 1f)
+        compose.onNodeWithTag("page").performTouchInput { swipeUp() }
+        compose.waitForIdle()
+        val collapsed = compose.onNodeWithTag(NAV_BAR_BOTTOM_CONTENT_TAG).fetchSemanticsNode().boundsInRoot
+        assertEquals("the content's bottom edge does not move when the bar collapses", expanded.bottom, collapsed.bottom, 1f)
+        val bar = compose.onNodeWithTag(BottomTags.BAR).fetchSemanticsNode().boundsInRoot
+        assertTrue("the collapsed bar still sits below the content", collapsed.bottom <= bar.top + 1f)
+        assertTrue(navBottomSlotShouldMeasure(collapsed = false, hidden = false))
+        assertFalse(navBottomSlotShouldMeasure(collapsed = true, hidden = false))
+        assertFalse(navBottomSlotShouldMeasure(collapsed = true, hidden = true))
     }
 
     @Test fun `the keyboard hides the bar and the page takes its room (#1160)`() {

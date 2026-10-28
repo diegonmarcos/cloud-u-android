@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
@@ -17,6 +18,7 @@ import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.sync.GitPageFrame
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -99,6 +101,22 @@ class GitPageFrameTest {
         compose.waitForIdle()
         scrollToEnd(rows.size)
         assertLastAboveBar("chrome restored")
+    }
+
+    @Test fun `#1257 with the nav EXPANDED the last row is reachable after a scroll that collapsed it`() {
+        open(rows.size)
+        scrollToEnd(rows.size)
+        val listBefore = compose.onNodeWithTag(DriveTags.SYNC_GIT_LIST).fetchSemanticsNode().boundsInRoot
+        compose.onNodeWithTag(DriveTags.SYNC_GIT_LIST).performTouchInput { swipeUp() }
+        compose.waitForIdle()
+        compose.onNodeWithTag(DriveTags.SYNC_GIT_LIST).performTouchInput { swipeDown() }
+        compose.waitForIdle()
+        scrollToEnd(rows.size)
+        assertTrue("the nav is expanded again (every label shown)", compose.onAllNodesWithTag(BottomNavTags.label("git"), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() ||
+            compose.onAllNodesWithTag(BottomNavTags.ISLAND).fetchSemanticsNodes().isNotEmpty())
+        val listAfter = compose.onNodeWithTag(DriveTags.SYNC_GIT_LIST).fetchSemanticsNode().boundsInRoot
+        assertEquals("the list's viewport keeps its size through collapse and restore", listBefore.bottom, listAfter.bottom, 1f)
+        assertLastAboveBar("nav expanded after a collapse")
     }
 
     private companion object { const val LAST = "git_frame_last_item" }
