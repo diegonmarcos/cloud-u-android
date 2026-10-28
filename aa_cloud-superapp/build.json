@@ -3010,7 +3010,7 @@
                 "_doc": "Lf.y-D&P-Cloud-apk (#1212, owner names). No paca board yet - index target (an invented uuid would 404), uuid to follow via task 182.",
                 "id": "lf-dp-cloud-apk",
                 "label": "Lf.y-D&P-Cloud-apk",
-                "icon": "ic_p_c3_reports",
+                "icon": "ic_p_sol_other",
                 "target": "https://paca.diegonmarcos.com/projects"
               },
               {
