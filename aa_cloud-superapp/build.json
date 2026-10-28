@@ -3008,11 +3008,11 @@
             "title": "Projects W",
             "tiles": [
               {
-                "_doc": "Lf.y-D&P-Cloud-apk (#1212, owner names). No paca board yet - index target (an invented uuid would 404), uuid to follow via task 182.",
+                "_doc": "Lf.y-D&P-Cloud-apk (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
                 "id": "lf-dp-cloud-apk",
                 "label": "Lf.y-D&P-Cloud-apk",
                 "icon": "ic_p_sol_other",
-                "target": "https://paca.diegonmarcos.com/projects"
+                "target": "https://github.com/diegonmarcos/cloud-u-android"
               },
               {
                 "_doc": "Lf.y-D&P-Cloud-C3 (was Lf-C3-D&P-7321): the paca board of the C3 D&P project; the uuid is unchanged because the board is unchanged (#1212, owner names).",
@@ -3022,18 +3022,18 @@
                 "target": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d"
               },
               {
-                "_doc": "Lf.y-CG-Galaxy (#1212, owner names). No paca board yet - index target (an invented uuid would 404), uuid to follow via task 182.",
+                "_doc": "Lf.y-CG-Galaxy (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
                 "id": "lf-cg-galaxy",
                 "label": "Lf.y-CG-Galaxy",
                 "icon": "ic_pm_boards",
-                "target": "https://paca.diegonmarcos.com/projects"
+                "target": "https://github.com/diegonmarcos/CG-galaxy"
               },
               {
-                "_doc": "Lf.y-CG-Zirkus (#1212, owner names). No paca board yet - index target (an invented uuid would 404), uuid to follow via task 182.",
+                "_doc": "Lf.y-CG-Zirkus (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
                 "id": "lf-cg-zirkus",
                 "label": "Lf.y-CG-Zirkus",
                 "icon": "ic_p_sol_pro",
-                "target": "https://paca.diegonmarcos.com/projects"
+                "target": "https://github.com/diegonmarcos/CG-circus"
               },
               {
                 "_doc": "Owner-ordered group divider in Projects W (#1212): a bare character, not a control; Sections.TileGroup.destinations drops it.",
@@ -3042,18 +3042,18 @@
                 "separator": true
               },
               {
-                "_doc": "Nx.z-CM-MQPM (#1212, owner names). No paca board yet - index target (an invented uuid would 404), uuid to follow via task 182.",
+                "_doc": "Nx.z-CM-MQPM (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
                 "id": "nx-cm-mqpm",
                 "label": "Nx.z-CM-MQPM",
                 "icon": "ic_p_markets_prices",
-                "target": "https://paca.diegonmarcos.com/projects"
+                "target": "https://github.com/diegonmarcos/Fin-CM-mqpm"
               },
               {
-                "_doc": "Nx.z-CM-Blmbrg (#1212, owner names). No paca board yet - index target (an invented uuid would 404), uuid to follow via task 182.",
+                "_doc": "Nx.z-CM-Blmbrg (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
                 "id": "nx-cm-blmbrg",
                 "label": "Nx.z-CM-Blmbrg",
                 "icon": "ic_p_markets_prices",
-                "target": "https://paca.diegonmarcos.com/projects"
+                "target": "https://github.com/diegonmarcos/Fin-CM-Blmbrg"
               },
               {
                 "_doc": "Owner-ordered group divider in Projects W (#1212): a bare character, not a control; Sections.TileGroup.destinations drops it.",
@@ -3062,11 +3062,11 @@
                 "separator": true
               },
               {
-                "_doc": "St.x-DeepSc-X (#1212, owner names). No paca board yet - index target (an invented uuid would 404), uuid to follow via task 182.",
+                "_doc": "St.x-DeepSc-X (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
                 "id": "st-deepsc-x",
                 "label": "St.x-DeepSc-X",
                 "icon": "ic_p_sol_tools",
-                "target": "https://paca.diegonmarcos.com/projects"
+                "target": "https://github.com/diegonmarcos/DeepSc-X"
               }
             ]
           },

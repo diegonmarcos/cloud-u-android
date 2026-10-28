@@ -174,15 +174,13 @@ TARGETS = {
     # removed the PM C3 tile that pinned the other uuid here; the board itself
     # still exists in paca, so restoring it is a tile, not a board.
     "lf-dp-cloud-c3": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
-    # The three boards that do not exist in paca yet address the project INDEX, not a uuid. Pinning
-    # that here is the point: the day task 182 creates a board and wires its uuid, this line fails
-    # and says so, instead of the placeholder quietly outliving the board it was standing in for.
-    "lf-dp-cloud-apk": "https://paca.diegonmarcos.com/projects",
-    "nx-cm-mqpm": "https://paca.diegonmarcos.com/projects",
-    "lf-cg-zirkus": "https://paca.diegonmarcos.com/projects",
-    "lf-cg-galaxy": "https://paca.diegonmarcos.com/projects",
-    "nx-cm-blmbrg": "https://paca.diegonmarcos.com/projects",
-    "st-deepsc-x": "https://paca.diegonmarcos.com/projects",
+    # Paca was dropped (#361): the six tiles without a board open their project's GitHub repo.
+    "lf-dp-cloud-apk": "https://github.com/diegonmarcos/cloud-u-android",
+    "nx-cm-mqpm": "https://github.com/diegonmarcos/Fin-CM-mqpm",
+    "lf-cg-zirkus": "https://github.com/diegonmarcos/CG-circus",
+    "lf-cg-galaxy": "https://github.com/diegonmarcos/CG-galaxy",
+    "nx-cm-blmbrg": "https://github.com/diegonmarcos/Fin-CM-Blmbrg",
+    "st-deepsc-x": "https://github.com/diegonmarcos/DeepSc-X",
     "myhealth":    "extapp:cloud-me#page:health/home",
     "mystudy":     "extapp:cloud-me#page:study/cv",
     "myachieves":  "extapp:cloud-me#page:achieves/personal",
@@ -257,6 +255,7 @@ for title, want_order in ROWS.items():
         assert target, f"{title}: tile {tid} has no target — it would be a dead tap"
         assert t.get("icon"), f"{title}: tile {tid} has no icon"
         assert tid in TARGETS, f"{title}: tile {tid} is not in the pinned target table"
+        assert target.rstrip("/") != "https://paca.diegonmarcos.com/projects", f"{title}: tile {tid} still targets the paca project index placeholder"
         assert target == TARGETS[tid], (tid, target, "!=", TARGETS[tid])
         if target.startswith("extapp:"):
             app = target.removeprefix("extapp:").split("#", 1)[0]
