@@ -43,12 +43,17 @@ public object ChromeWebScroll {
             // With no finger on the page a negative offset is never the reader scrolling back (that restores from the finger's own downward
             // travel in onTouch): it is the page re-laying itself out (images failing or loading, scroll anchoring), and it must not undo a collapse.
             if (!fingerDown && delta < 0f) return
+            // #1198 a page that scrolls ITSELF while it loads (Lnktree: scroll anchoring, an intro scrollIntoView) is not a reader: with no
+            // touch on this page since it loaded, no scroll may collapse the chrome (run 40810784156 left it shrunk on an untouched page)
+            if (!touched) return
             if (fingerDown) t.onDragDelta(delta) else t.onScrollDelta(delta)
         }
 
         /** The page under the finger has something to scroll (an inner container, or the document). */
         @Volatile private var innerScrollable = false
         private var dragged = false
+        /** The reader has touched the page since it loaded: only then can a scroll without a finger (a fling) be theirs. */
+        @Volatile var touched = false
 
         @JavascriptInterface
         fun setScrollable(on: Int) { innerScrollable = on != 0 }
@@ -62,7 +67,7 @@ public object ChromeWebScroll {
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { fingerDown = true; lastY = e.y; downY = e.y; dragged = false; innerScrollable = false }
+                MotionEvent.ACTION_DOWN -> { touched = true; fingerDown = true; lastY = e.y; downY = e.y; dragged = false; innerScrollable = false }
                 // A finger dragging DOWN reads UP the page: the chrome comes back even when the page cannot scroll further
                 // (it sits at its top, or the scroller is an inner container the bridge cannot see).
                 MotionEvent.ACTION_MOVE -> {
@@ -95,5 +100,8 @@ public object ChromeWebScroll {
     }
 
     /** Install the inner-scroller reporter in the loaded page (call from onPageFinished). */
-    public fun inject(webView: WebView) { webView.evaluateJavascript(SCRIPT, null) }
+    public fun inject(webView: WebView) {
+        feeds[webView]?.touched = false   // a newly loaded page starts untouched
+        webView.evaluateJavascript(SCRIPT, null)
+    }
 }
