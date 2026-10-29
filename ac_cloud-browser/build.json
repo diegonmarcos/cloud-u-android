@@ -135,11 +135,18 @@
       "_doc_dir": "#868 the fleet's bottom island + NavDecl, shared BY REFERENCE: MainActivity's island carries Browser | Search | Configs. The web tabs, the address bar and every overlay stay libs:browser's own UI.",
       "dir": "../ab_cloud-libs-shared/libs/bottomnav"
     },
+    "libs:perms": {
+      "dir": "../ab_cloud-libs-shared/libs/perms",
+      "type": "library",
+      "depends_on": [],
+      "comment": "#1274 the permission contract: the catalogue asset (perms-catalogue.json: every runtime / special / app-op / adb-only grant with its SDK window, exact settings page, highlight key, adb line and the features that need it), the live status reader, the settings opener, the auto-request batch planner, the ADB block generator, PermsNeeds and the PermsLink deep link. Feature libs (wifi, bluetooth) use it to show a banner that opens the host's Permissions page; they never ask themselves. Renders nothing."
+    },
     "libs:bluetooth": {
       "dir": "../ab_cloud-libs-shared/libs/bluetooth",
       "type": "library",
       "depends_on": [
-        "libs:ui-icons"
+        "libs:ui-icons",
+        "libs:perms"
       ],
       "_doc": "#1222 the Bluetooth stack behind the Web Bluetooth polyfill (navigator.bluetooth): libs:browser's WebBluetoothBridge drives its GattSession, shared BY REFERENCE with the SuperApp's Configs > Fleet > Bluetooth page (#1221)."
     },

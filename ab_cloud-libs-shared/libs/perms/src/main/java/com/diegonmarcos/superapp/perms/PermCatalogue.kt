@@ -1,11 +1,11 @@
-package com.diegonmarcos.superapp.core.perms
+package com.diegonmarcos.superapp.perms
 
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * The permission catalogue (#1274): every permission, special access, app-op and adb-only grant the app and its libs can
- * use, read from the data asset `perms-catalogue.json` (libs:core assets). Nothing about a permission is hard-coded in
+ * use, read from the data asset `perms-catalogue.json` (libs:perms assets). Nothing about a permission is hard-coded in
  * Kotlin: id, group, kind, section, SDK range, the settings page that grants it, the label to look for there, the adb
  * command and the features that need it all come from the asset. Pure (org.json only): JVM-tested.
  */

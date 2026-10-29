@@ -109,7 +109,7 @@ open class ShellActivity : AppCompatActivity(),
     SearchOpener,
     com.diegonmarcos.superapp.apptabs.AppTabsHost,
     com.diegonmarcos.superapp.adbdebug.AdbShellHost,
-    com.diegonmarcos.superapp.core.perms.PermsHost,
+    com.diegonmarcos.superapp.perms.PermsHost,
     LauncherNavController.NavHost {
 
     /** Must match REAPPLY_SENTINEL in the stalwart sorter (crate/src/main.rs). */

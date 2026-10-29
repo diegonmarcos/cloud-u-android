@@ -168,6 +168,12 @@
       "dir": "../ab_cloud-libs-shared/libs/light",
       "type": "library"
     },
+    "libs:perms": {
+      "dir": "../ab_cloud-libs-shared/libs/perms",
+      "type": "library",
+      "depends_on": [],
+      "comment": "#1274 the permission contract: the catalogue asset (perms-catalogue.json: every runtime / special / app-op / adb-only grant with its SDK window, exact settings page, highlight key, adb line and the features that need it), the live status reader, the settings opener, the auto-request batch planner, the ADB block generator, PermsNeeds and the PermsLink deep link. Feature libs (wifi, bluetooth) use it to show a banner that opens the host's Permissions page; they never ask themselves. Renders nothing."
+    },
     "libs:bluetooth": {
       "_doc": "#1264 Measure > Bluetooth: libs:bluetooth's BluetoothPanel shared BY REFERENCE with the SuperApp's Configs > Fleet > Bluetooth (one GATT stack, the advertising analyzer, the locator). Its runtime permissions are merged from the lib's manifest and asked for by the panel's own gate, from a tap. A `gui` lib (1_cicd/src/data/lib-classes.json).",
       "dir": "../ab_cloud-libs-shared/libs/bluetooth",

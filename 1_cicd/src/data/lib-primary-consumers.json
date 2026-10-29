@@ -19,6 +19,7 @@
     "ui-nav-bars": "ac_cloud-mail",
     "core": null,
     "crash": null,
+    "perms": null,
     "databackend": "ac_cloud-contacts",
     "decisions": "ac_cloud-calc",
     "devtools": null,

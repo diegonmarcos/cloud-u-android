@@ -93,7 +93,7 @@ class PermissionsFragment : KitComposeFragment() {
     // ── #1274 catalogue section: the ONE place that asks for permissions ──
     /** Re-read key of the catalogue rows only: bumped on resume and after every grant, never tears the fragment down. */
     private var centerEpoch by mutableIntStateOf(0)
-    private var highlight by mutableStateOf<com.diegonmarcos.superapp.core.perms.PermsLink.Request?>(null)
+    private var highlight by mutableStateOf<com.diegonmarcos.superapp.perms.PermsLink.Request?>(null)
     private var adbResults by mutableStateOf<List<AdbRunResult>>(emptyList())
     private var adbRunning by mutableStateOf(false)
     private var autoStarted = false
@@ -108,19 +108,19 @@ class PermissionsFragment : KitComposeFragment() {
 
     private fun autoNext() {
         val act = activity ?: return
-        val cat = com.diegonmarcos.superapp.core.perms.Perms.catalogue(act)
-        val vars = com.diegonmarcos.superapp.core.perms.Perms.vars(act)
-        val batch = com.diegonmarcos.superapp.core.perms.AutoRequestPlanner.batches(cat,
-            { com.diegonmarcos.superapp.core.perms.PermStatusReader.status(act, it, act, vars) }, askedThisSession).firstOrNull()
+        val cat = com.diegonmarcos.superapp.perms.Perms.catalogue(act)
+        val vars = com.diegonmarcos.superapp.perms.Perms.vars(act)
+        val batch = com.diegonmarcos.superapp.perms.AutoRequestPlanner.batches(cat,
+            { com.diegonmarcos.superapp.perms.PermStatusReader.status(act, it, act, vars) }, askedThisSession).firstOrNull()
         if (batch.isNullOrEmpty()) { autoChain = false; centerEpoch++; return }
         askBatch(batch)
     }
 
-    private fun askBatch(batch: List<com.diegonmarcos.superapp.core.perms.PermEntry>) {
+    private fun askBatch(batch: List<com.diegonmarcos.superapp.perms.PermEntry>) {
         val perms = batch.map { it.permission }.filter { it.isNotEmpty() }.distinct()
         if (perms.isEmpty()) return
         askedThisSession.addAll(perms)
-        com.diegonmarcos.superapp.core.perms.PermAskLog.markAsked(requireContext(), perms)
+        com.diegonmarcos.superapp.perms.PermAskLog.markAsked(requireContext(), perms)
         runCatching { centerLauncher.launch(perms.toTypedArray()) }.onFailure { autoChain = false }
     }
 
@@ -672,7 +672,7 @@ class PermissionsFragment : KitComposeFragment() {
         super.onResume()
         // #1274 live status: the catalogue rows re-read on every resume (back from a settings page). Only centerEpoch
         // moves, so this cannot start the detach/attach loop described below.
-        com.diegonmarcos.superapp.core.perms.PermsLink.consume()?.let { highlight = it }
+        com.diegonmarcos.superapp.perms.PermsLink.consume()?.let { highlight = it }
         centerEpoch++
         val before = specialAtBuild ?: return
         if (com.diegonmarcos.superapp.system.SpecialPerms.snapshot(requireContext()) != before)

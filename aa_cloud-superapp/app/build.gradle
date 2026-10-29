@@ -1075,6 +1075,8 @@ dependencies {
     implementation project(':libs:bluetooth')
     // libs:wifi (#1263) - the WiFi analyzer page (Configs > Setup > Network > WiFi): scans, channels, link, tools, logs.
     implementation project(':libs:wifi')
+    // libs:perms (#1274) - the permission contract the Permissions page draws and every feature banner links through.
+    implementation project(':libs:perms')
     // libs:datamanager — per-app usage + network DATA providers (feeds the
     // Phone smart folders + Suite/Phone Active Apps). Sibling of libs:battery.
     implementation project(':libs:datamanager')

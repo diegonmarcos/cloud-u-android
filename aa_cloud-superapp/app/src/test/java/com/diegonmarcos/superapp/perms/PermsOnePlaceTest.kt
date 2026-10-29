@@ -16,7 +16,7 @@ import java.io.File
 class PermsOnePlaceTest {
     private val root = File("../..")
     private val libs = File(root, "ab_cloud-libs-shared/libs")
-    private val catalogue = JSONObject(File(libs, "core/src/main/assets/perms-catalogue.json").readText())
+    private val catalogue = JSONObject(File(libs, "perms/src/main/assets/perms-catalogue.json").readText())
     private val app = File(root, "aa_cloud-superapp")
 
     private val forbidden = listOf(
@@ -66,7 +66,7 @@ class PermsOnePlaceTest {
 
     @Test fun `the shell hosts the page and the nav walk reaches it`() {
         val shell = File(app, "app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt").readText()
-        assertTrue(shell.contains("core.perms.PermsHost") && shell.contains("override fun openPermsPage(): Boolean { openSectionPage(\"config\", \"perms\")"))
+        assertTrue(shell.contains("perms.PermsHost") && shell.contains("override fun openPermsPage(): Boolean { openSectionPage(\"config\", \"perms\")"))
         val pages = File(app, "app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt").readText()
         assertTrue(Regex("pageId == \"perms\"\\s*->\\s*\\n?\\s*com.diegonmarcos.superapp.configs.PermissionsFragment").containsMatchIn(pages))
         // The nav walk drives every ui.sections[].pages id of build.json (cloud-android-nav-walk.py pages_of).

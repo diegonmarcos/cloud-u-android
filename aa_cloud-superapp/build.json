@@ -239,6 +239,7 @@
         "libs:light",
         "libs:bluetooth",
         "libs:wifi",
+        "libs:perms",
         "libs:datamanager",
         "libs:launcher-onehand",
         "libs:launcher-zoomies",
@@ -439,11 +440,18 @@
       "type": "library",
       "comment": "The Light tool (#1155) shared by reference: LightModel (rules, plain Kotlin), LightAndroid (torch, clock, prefs, the Off-action foreground service, manifest-merged) and LightPanel (the Compose page). The SuperApp's LightActivity and Cloud Calc's Toolkit > Light page both draw LightPanel over the one Light engine; the engine's rules are tested in app/src/test/.../light/LightEngineTest.kt."
     },
+    "libs:perms": {
+      "dir": "../ab_cloud-libs-shared/libs/perms",
+      "type": "library",
+      "depends_on": [],
+      "comment": "#1274 the permission contract: the catalogue asset (perms-catalogue.json: every runtime / special / app-op / adb-only grant with its SDK window, exact settings page, highlight key, adb line and the features that need it), the live status reader, the settings opener, the auto-request batch planner, the ADB block generator, PermsNeeds and the PermsLink deep link. Feature libs (wifi, bluetooth) use it to show a banner that opens the host's Permissions page; they never ask themselves. Renders nothing."
+    },
     "libs:bluetooth": {
       "dir": "../ab_cloud-libs-shared/libs/bluetooth",
       "type": "library",
       "depends_on": [
-        "libs:ui-icons"
+        "libs:ui-icons",
+        "libs:perms"
       ],
       "comment": "#1221 Android Bluetooth as one shared lib: scan with filters and RSSI, connect, bond, GATT discovery, read / write / notify / indicate, descriptors, MTU, known-service decoding from the declared UUID catalog (assets/bluetooth/gatt-catalog.json), the ATT log and the Dev tools, and the five-tab Compose page (BluetoothPanel). The SuperApp draws it in Configs > Fleet > Bluetooth (BluetoothFragment); Cloud Browser's Web Bluetooth polyfill (#1222) drives the same GattSession. Runtime permissions are in the lib manifest. Its rules are tested in app/src/test/.../bluetooth/."
     },
@@ -451,7 +459,8 @@
       "dir": "../ab_cloud-libs-shared/libs/wifi",
       "type": "library",
       "depends_on": [
-        "libs:ui-icons"
+        "libs:ui-icons",
+        "libs:perms"
       ],
       "comment": "#1263 the Wi-Fi analyzer as one shared lib, app-agnostic (the host injects WifiHostConfig; this app passes build.json wifi_analyzer): WifiManager scans within the throttle, ScanResult parsing (channel math, width, standard, security / PMF / WPS, 802.11mc / az, MLO), the IEEE OUI vendor table and regulatory channel plans as assets, channel rating, the connected link (ConnectivityManager / LinkProperties / WifiInfo), RTT ranging, network tools (ping, traceroute, DNS, port scan, NSD / SSDP / sweep / NetBIOS discovery, throughput), heatmap, roaming log, CSV / JSON / PCAP export, and the five-tab Compose page (WifiPanel). The SuperApp draws it in Configs > Setup > Network > WiFi (WifiFragment); Cloud Calc embeds the same panel. Its rules are tested in app/src/test/.../wifi/."
     },

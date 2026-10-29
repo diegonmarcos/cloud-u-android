@@ -1,14 +1,14 @@
 package com.diegonmarcos.superapp.perms
 
 import com.diegonmarcos.superapp.configs.AdbResult
-import com.diegonmarcos.superapp.core.perms.AdbScript
-import com.diegonmarcos.superapp.core.perms.AutoRequestPlanner
-import com.diegonmarcos.superapp.core.perms.PermCatalogue
-import com.diegonmarcos.superapp.core.perms.PermEntry
-import com.diegonmarcos.superapp.core.perms.PermKind
-import com.diegonmarcos.superapp.core.perms.PermSection
-import com.diegonmarcos.superapp.core.perms.PermState
-import com.diegonmarcos.superapp.core.perms.PermStatus
+import com.diegonmarcos.superapp.perms.AdbScript
+import com.diegonmarcos.superapp.perms.AutoRequestPlanner
+import com.diegonmarcos.superapp.perms.PermCatalogue
+import com.diegonmarcos.superapp.perms.PermEntry
+import com.diegonmarcos.superapp.perms.PermKind
+import com.diegonmarcos.superapp.perms.PermSection
+import com.diegonmarcos.superapp.perms.PermState
+import com.diegonmarcos.superapp.perms.PermStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -17,7 +17,7 @@ import java.io.File
 
 /** #1274 the permission catalogue (data asset), applicability, the open-time auto-request batching and the ADB block. */
 class PermsCatalogueTest {
-    private val asset = File("../../ab_cloud-libs-shared/libs/core/src/main/assets/perms-catalogue.json")
+    private val asset = File("../../ab_cloud-libs-shared/libs/perms/src/main/assets/perms-catalogue.json")
     private val cat = PermCatalogue.parse(asset.readText())
     private fun e(id: String) = cat.byId(id) ?: error("no entry $id")
 

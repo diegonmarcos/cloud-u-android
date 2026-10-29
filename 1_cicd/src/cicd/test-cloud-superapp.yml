@@ -62,6 +62,7 @@ on:
       - "ab_cloud-libs-shared/libs/mail/**"
       - "ab_cloud-libs-shared/libs/net/**"
       - "ab_cloud-libs-shared/libs/ops/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ab_cloud-libs-shared/libs/search/**"
       - "ab_cloud-libs-shared/libs/shared-store/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"

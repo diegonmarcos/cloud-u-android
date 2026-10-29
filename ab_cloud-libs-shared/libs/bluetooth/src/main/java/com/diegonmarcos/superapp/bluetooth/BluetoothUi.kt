@@ -158,12 +158,12 @@ internal fun PermissionGate(controller: BleController, s: BleState) {
     if (missing.isNotEmpty()) {
         // #1274 the lib never asks: the banner opens the app's Permissions page on its entries.
         val feature = if (android.os.Build.VERSION.SDK_INT >= 31) "bluetooth" else "bluetooth-legacy"
-        val need = remember(missing) { com.diegonmarcos.superapp.core.perms.PermsNeeds.missing(ctx, feature) }
+        val need = remember(missing) { com.diegonmarcos.superapp.perms.PermsNeeds.missing(ctx, feature) }
         BtCard(Modifier.testTag("bluetooth:perms-banner")) {
             BtTitle("Permissions needed")
-            BtMuted(if (need.isNotEmpty()) com.diegonmarcos.superapp.core.perms.PermsNeeds.labels(need) else BlePermissions.describe(missing))
+            BtMuted(if (need.isNotEmpty()) com.diegonmarcos.superapp.perms.PermsNeeds.labels(need) else BlePermissions.describe(missing))
             BtButton("Open Permissions", primary = true) {
-                com.diegonmarcos.superapp.core.perms.PermsLink.open(ctx, "Bluetooth", need.map { it.id }.ifEmpty { listOf("bt_scan", "bt_connect", "fine_location") })
+                com.diegonmarcos.superapp.perms.PermsLink.open(ctx, "Bluetooth", need.map { it.id }.ifEmpty { listOf("bt_scan", "bt_connect", "fine_location") })
             }
         }
     } else if (!s.supported) {
@@ -434,6 +434,6 @@ private fun PermissionMatrix() {
             }
         }
         BtMuted("Grant them (or all at once over adb) on the Permissions page.")
-        BtButton("Open Permissions") { com.diegonmarcos.superapp.core.perms.PermsLink.open(ctx, "Bluetooth", listOf("bt_scan", "bt_connect", "bt_advertise", "fine_location")) }
+        BtButton("Open Permissions") { com.diegonmarcos.superapp.perms.PermsLink.open(ctx, "Bluetooth", listOf("bt_scan", "bt_connect", "bt_advertise", "fine_location")) }
     }
 }

@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.core.perms
+package com.diegonmarcos.superapp.perms
 
 import android.app.Activity
 import android.app.AlarmManager

@@ -31,17 +31,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.diegonmarcos.superapp.core.perms.AdbLine
-import com.diegonmarcos.superapp.core.perms.AdbScript
-import com.diegonmarcos.superapp.core.perms.PermEntry
-import com.diegonmarcos.superapp.core.perms.PermKind
-import com.diegonmarcos.superapp.core.perms.PermSection
-import com.diegonmarcos.superapp.core.perms.PermState
-import com.diegonmarcos.superapp.core.perms.PermStatus
-import com.diegonmarcos.superapp.core.perms.PermStatusReader
-import com.diegonmarcos.superapp.core.perms.Perms
-import com.diegonmarcos.superapp.core.perms.PermsLink
-import com.diegonmarcos.superapp.core.perms.PermsSettings
+import com.diegonmarcos.superapp.perms.AdbLine
+import com.diegonmarcos.superapp.perms.AdbScript
+import com.diegonmarcos.superapp.perms.PermEntry
+import com.diegonmarcos.superapp.perms.PermKind
+import com.diegonmarcos.superapp.perms.PermSection
+import com.diegonmarcos.superapp.perms.PermState
+import com.diegonmarcos.superapp.perms.PermStatus
+import com.diegonmarcos.superapp.perms.PermStatusReader
+import com.diegonmarcos.superapp.perms.Perms
+import com.diegonmarcos.superapp.perms.PermsLink
+import com.diegonmarcos.superapp.perms.PermsSettings
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /** One row's resolved state for the catalogue section (#1274). */
@@ -101,23 +101,23 @@ internal fun PermsCenterSection(
             Row(Modifier.fillMaxWidth().padding(top = 4.dp).background(p.accent.copy(alpha = 0.18f)).padding(6.dp).testTag("perms:highlight"),
                 verticalAlignment = Alignment.CenterVertically) {
                 Text("Requested by ${highlight.feature}: $n permission(s) highlighted below", fontSize = 11.sp, color = p.textPrimary, modifier = Modifier.weight(1f))
-                Btn("Show all", tag = "perms:highlight-clear") { onClearHighlight() }
+                PermsCenterButton("Show all", tag = "perms:highlight-clear") { onClearHighlight() }
             }
         }
         val dialogable = rows.filter { it.entry.kind == PermKind.RUNTIME && it.entry.autoRequest && it.status.state == PermState.DENIED }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
-            Btn(if (missingOnly) "✓ Missing only" else "Missing only", tag = "perms:filter-missing", fill = true) { missingOnly = !missingOnly }
-            Btn("Ask all again (${dialogable.size})", tag = "perms:ask-all", fill = true) { onAutoAgain() }
+            PermsCenterButton(if (missingOnly) "✓ Missing only" else "Missing only", tag = "perms:filter-missing", fill = true) { missingOnly = !missingOnly }
+            PermsCenterButton("Ask all again (${dialogable.size})", tag = "perms:ask-all", fill = true) { onAutoAgain() }
         }
         // ── Grant all via ADB ──
         val lines = remember(rows) { adbLinesFor(ctx, rows) }
         Row(Modifier.fillMaxWidth().padding(top = 3.dp)) {
-            Btn("Copy ADB block (${lines.size})", tag = "perms:adb-copy", fill = true) {
+            PermsCenterButton("Copy ADB block (${lines.size})", tag = "perms:adb-copy", fill = true) {
                 copy(ctx, AdbScript.block(lines, ctx.packageName))
                 Toast.makeText(ctx, "Copied ${lines.size} adb commands", Toast.LENGTH_SHORT).show()
             }
-            if (channelName != null) Btn(if (adbRunning) "Running…" else "Run via $channelName", tag = "perms:adb-run", fill = true) { if (!adbRunning) onRunAdb() }
-            else Btn("ADB not connected ›", tag = "perms:adb-connect", fill = true) { onOpenAdbShell() }
+            if (channelName != null) PermsCenterButton(if (adbRunning) "Running…" else "Run via $channelName", tag = "perms:adb-run", fill = true) { if (!adbRunning) onRunAdb() }
+            else PermsCenterButton("ADB not connected ›", tag = "perms:adb-connect", fill = true) { onOpenAdbShell() }
         }
         if (adbResults.isNotEmpty()) Column(Modifier.fillMaxWidth().padding(top = 2.dp).testTag("perms:adb-results")) {
             Text("ADB: ${adbResults.count { it.ok }} ok · ${adbResults.count { !it.ok }} failed", fontSize = 10.5.sp, color = p.textPrimary.copy(alpha = 0.7f))
@@ -166,14 +166,14 @@ private fun CatalogueRow(r: PermRowState, highlighted: Boolean, ctx: Context, on
             when {
                 r.status.state == PermState.GRANTED || r.status.state == PermState.NOT_APPLICABLE -> {}
                 e.kind == PermKind.RUNTIME && e.autoRequest && r.status.state == PermState.DENIED ->
-                    Btn("Request", tag = "perms:request:${e.id}") { onAskRuntime(listOf(e)) }
+                    PermsCenterButton("Request", tag = "perms:request:${e.id}") { onAskRuntime(listOf(e)) }
                 e.kind == PermKind.ADB_ONLY && e.settings == null ->
-                    Btn("Copy adb", tag = "perms:copy:${e.id}") {
+                    PermsCenterButton("Copy adb", tag = "perms:copy:${e.id}") {
                         val l = AdbScript.lines(listOf(e), Perms.vars(ctx))
                         copy(ctx, l.joinToString("\n") { it.forComputer() })
                         Toast.makeText(ctx, "Copied", Toast.LENGTH_SHORT).show()
                     }
-                else -> Btn("Open ›", tag = "perms:open:${e.id}") {
+                else -> PermsCenterButton("Open ›", tag = "perms:open:${e.id}") {
                     if (!PermsSettings.open(ctx, e)) Toast.makeText(ctx, "No settings page for ${e.label} on this device", Toast.LENGTH_LONG).show()
                     else if (e.lookFor.isNotBlank()) Toast.makeText(ctx, "Look for: ${e.lookFor}", Toast.LENGTH_LONG).show()
                 }
@@ -190,7 +190,7 @@ private fun CatalogueRow(r: PermRowState, highlighted: Boolean, ctx: Context, on
 }
 
 @Composable
-private fun RowScope.Btn(label: String, tag: String, fill: Boolean = false, onClick: () -> Unit) {
+private fun RowScope.PermsCenterButton(label: String, tag: String, fill: Boolean = false, onClick: () -> Unit) {
     Text(label, fontSize = 11.sp, maxLines = 2, textAlign = TextAlign.Center, color = Color.White,
         modifier = (if (fill) Modifier.weight(1f) else Modifier).padding(horizontal = 1.5.dp).background(Color(0xFF7C3AED))
             .clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 3.dp).testTag(tag))

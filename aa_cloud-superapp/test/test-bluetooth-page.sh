@@ -82,7 +82,7 @@ grep -q 'BluetoothPanel(controller, tab)' "$KT/configs/BluetoothFragment.kt" && 
   && ok "the fragment draws BluetoothPanel over the shared BluetoothHub controller" || bad "the fragment does not draw the lib's panel"
 grep -q 'LazyColumn' "$LK/BluetoothUi.kt" && ok "the panel body is a LazyColumn (a scroll the shell sees)" || bad "the panel body is not scrollable by the shell"
 grep -q 'UiIcons.vector' "$LK/BluetoothUi.kt" && ! grep -q 'androidx.compose.material.icons' "$LK"/*.kt && ok "icons come from libs:ui-icons, none from material directly" || bad "an icon is not from libs:ui-icons"
-for w in 'Path-loss exponent' 'Classic discovery' 'Export JSON' 'Export CSV' 'Beep: faster when closer' 'Raw hex write' 'Notify stream' 'Test payloads' 'Bluetooth ATT event log' 'Reload services' 'Request MTU' 'Signal floor' 'Subscribe all' 'adb shell pm grant' 'Bond'; do
+for w in 'Path-loss exponent' 'Classic discovery' 'Export JSON' 'Export CSV' 'Beep: faster when closer' 'Raw hex write' 'Notify stream' 'Test payloads' 'Bluetooth ATT event log' 'Reload services' 'Request MTU' 'Signal floor' 'Subscribe all' 'Open Permissions' 'Bond'; do
   grep -rq "$w" "$LK" && ok "the page offers: $w" || bad "the page lacks: $w"
 done
 

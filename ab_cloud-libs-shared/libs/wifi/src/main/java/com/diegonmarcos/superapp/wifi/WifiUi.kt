@@ -6,8 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import com.diegonmarcos.superapp.core.perms.PermsLink
-import com.diegonmarcos.superapp.core.perms.PermsNeeds
+import com.diegonmarcos.superapp.perms.PermsLink
+import com.diegonmarcos.superapp.perms.PermsNeeds
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

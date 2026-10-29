@@ -1582,11 +1582,11 @@
     "perm_ask_tracker": {
       "kind": "prefs",
       "class": "device",
-      "doc": "Set of permissions already asked on this install; permission-asked tracker. #1274 libs:core PermAskLog shares it with the app's PermAskTracker (one record of what was asked).",
+      "doc": "Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked).",
       "used_by": [
         "aa_cloud-superapp",
         "ac_cloud-nav",
-        "lib-core"
+        "lib-perms"
       ]
     },
     "phone_notif_store": {
@@ -2516,6 +2516,7 @@
         "lib-mail",
         "lib-net",
         "lib-ops",
+        "lib-perms",
         "lib-search",
         "lib-shared-store",
         "lib-shizuku-adb-debug-tools",
@@ -2727,6 +2728,7 @@
         "lib-devtools",
         "lib-fleetconfig-model",
         "lib-model-catalogue",
+        "lib-perms",
         "lib-text-tools",
         "lib-theme-background",
         "lib-ui-icons",
@@ -2824,6 +2826,7 @@
         "lib-ml-l-sound",
         "lib-model-catalogue",
         "lib-nfc",
+        "lib-perms",
         "lib-text-tools",
         "lib-theme-background",
         "lib-ui-icons",
@@ -4075,6 +4078,9 @@
           "doc": "Downloaded Vosk model files (re-downloadable); the selected model name is declared/held in the host app prefs, not in this lib"
         }
       ]
+    },
+    "lib-perms": {
+      "items": []
     }
   },
   "_doc_items": "apps[].items / libs[].items: configuration kept OUTSIDE a declared store (files, a fork's own database). `store` names the declared store that actually holds it (the contract moves it when that store is portable); `via: install` = reproduced by installing the same build (baked from git); `via: connect` = re-fetched from the vault on Connect. Anything else with a migrating class is a named gap in the coverage."
