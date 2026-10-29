@@ -49,7 +49,7 @@
       "schema": "cloud-repos/v1",
       "refresh_minutes": 30,
       "_doc_refresh": "The baked copy can be older than the live registry (the APK ships a snapshot). When the Git table opens, RepoSotLive asks `url` with a conditional GET (If-None-Match; a 304 transfers nothing) at most every refresh_minutes, caches the body and its ETag in the app's files dir, and the cached copy replaces the baked one at runtime (renames, archived, lfs, visibility).",
-      "sha256": "6feb5ad038ac365e03f642dda085a28cfb709d453f28518a5e6c00388d18f656",
+      "sha256": "3d768b6556081e0f29e2e4f636183f86297098e103062309ac2b3d101bea3238",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },

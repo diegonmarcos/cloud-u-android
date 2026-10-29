@@ -1,252 +1,1026 @@
 {
-  "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `./clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
+  "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `./clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. GENERATED from repos.v3.json by gen-registry.js: edit repos.v3.json, never this file. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
   "_schema": "cloud-repos/v1",
-
   "_self_doc": "_git-repos-master is the only repo of the account with no entry here. It is the index; an entry would give it a symlink to its own parent directory, which is a loop, not information.",
-
   "_visibility_doc": "`private` mirrors GitHub visibility as of 2026-08-20 and only drives the \"(private)\" hint in `--list` plus a clearer message when a clone fails for lack of credentials. It grants nothing.",
-
   "_lfs_doc": "`lfs` is optional. `true` = the repository stores its large files in git-lfs, so a plain clone fetches pointers until `git lfs pull`; absent = a normal repository. Declarative: the libs:repos mirror and the cloud-drive repos table (LFS | Normal column) read this field, nothing hardcodes which repo is LFS.",
-
-  "_hub_submodule_doc": "Hub hierarchy (declarative, #3ff19f58). A hub entry carries `parent_hub`, a member entry carries `hub`; z-archived_* entries carry neither. Every repo except the top (_git-repos-master) gets its hub (member) or its parent hub (hub) as a git submodule at the one fixed path `0_hub/<hub-name>`, URL https://github.com/diegonmarcos/<hub>.git, pinned to the hub main. Only the upward link is a submodule; hubs keep symlinks to members (no cycles). A public repo never gets a private hub (would leak its name/URL): repos-sot.js reports such cases and they are skipped. Guard: `node repos-sot.js check-hubs [--remote]`.",
+  "_hub_submodule_doc": "Hub hierarchy (declarative, #3ff19f58). A hub entry carries `parent_hub`, a member entry carries `hub`; z-archived_* entries are members of the hub z-archived-___ (#1291); 7.Others entries (farm 7.Others) carry neither and have no hub submodule. Every repo except the top (_git-repos-master) gets its hub (member) or its parent hub (hub) as a git submodule at the one fixed path `0_hub/<hub-name>`, URL https://github.com/diegonmarcos/<hub>.git, pinned to the hub main. Only the upward link is a submodule; hubs keep symlinks to members (no cycles). A public repo never gets a private hub (would leak its name/URL): repos-sot.js reports such cases and they are skipped. Guard: `node repos-sot.js check-hubs [--remote]`.",
   "_status_doc": "`status` is optional. Absent = the repo exists and is cloned/linked as usual. `pending_creation` = declared on purpose, but the GitHub repo is NOT created yet: every farmer (clone.sh, the cloud-drive seed, the libs:repos mirror, the fleet dotfiles guard) must SKIP it - no clone, no symlink, no seed - and the guard fails if a pending entry is treated as live. Flip it by deleting the field in the same commit that creates the repo. `parts` (optional) lists named sub-trees that live INSIDE the same repo, declared as placeholders so farmers and docs know the planned layout before any file moves; a part is never a repo of its own and is never cloned or linked.",
   "_renames_doc": "`renames` records an old name -> new name for things that are not (or not only) repos, so a path that still says the old name is findable and a guard can flag it. `kind: repo` = a repository rename (the entry also carries `renamed_from`); `kind: app-folder` = a folder/app inside a repo. Farmers never create the old name.",
   "renames": [
-    { "from": "DeepSc-Tools", "to": "CAD-Simulators", "kind": "repo", "since": "2026-10-28", "ticket": "#1261", "doc": "GitHub repo renamed and made public (CAD and simulators, not only DeepSc)." },
-    { "from": "Fin-CM-___", "to": "Fin-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The Fin hub covers more than capital markets (Fin-CM-* and Fin-Corporate), so it drops the CM." },
-    { "from": "cloud-___", "to": "cloudy-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-u-android", "to": "cloudy-u-android", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-u-containers", "to": "cloudy-u-containers", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-u-containers_cgc", "to": "cloudy-u-containers_cgc", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-u-desktop", "to": "cloudy-u-desktop", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-u-linux", "to": "cloudy-u-linux", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-t-infra", "to": "cloudy-t-infra", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-h-webapps", "to": "cloudy-h-webapps", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-h-webapps-2", "to": "cloudy-h-webapps-2", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud-a-docs", "to": "cloudy-a-docs", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud_db_assets-cdn", "to": "cloudy_db_assets-cdn", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud_db_infra-ops-obsv_configs-sync", "to": "cloudy_db_infra-ops-obsv_configs-sync", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "cloud_db_LFS", "to": "cloudy_db_LFS", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name." },
-    { "from": "lecole-42", "to": "lecole-42-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "d_lecole project master renamed with the -___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "cloud-me-pub-profiles", "to": "cloud-me-pub-profiles-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "cloud-me-pub-profiles___", "to": "cloud-me-pub-profiles-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "cloud-me-pub", "to": "cloud-me-pub-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "cloud-me-pub___", "to": "cloud-me-pub-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "cloud-me-pvt", "to": "cloud-me-pvt-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "cloud-me-pvt___", "to": "cloud-me-pvt-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "cloud", "to": "cloudy-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "cloud___", "to": "cloudy-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "Projects", "to": "Projects-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "Projects___", "to": "Projects-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "CG", "to": "CG-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "CG___", "to": "CG-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "Fin-CM", "to": "Fin-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "Fin-CM___", "to": "Fin-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "DeepSc", "to": "DeepSc-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "DeepSc___", "to": "DeepSc-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "DuckPeng", "to": "DuckPeng-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect." },
-    { "from": "DuckPeng___", "to": "DuckPeng-___", "kind": "repo", "since": "2026-10-28", "ticket": "#1244", "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first." },
-    { "from": "cloud-webapps", "to": "cloudy-h-webapps", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed; every reference follows, none rely on the redirect. Published URL /cloud-webapps/ unchanged." },
-    { "from": "cloud-webapps-2", "to": "cloudy-h-webapps-2", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed; every reference follows, none rely on the redirect. Published URLs unchanged." },
-    { "from": "cloud-data-lfs", "to": "cloudy_db_LFS", "kind": "repo", "since": "2026-10-28", "ticket": "#1224", "doc": "GitHub repo is cloudy_db_LFS; the registry name followed it." },
-    { "from": "a_Companies/leafy", "to": "cloud-me-pub-profiles-leaf.y", "kind": "app-folder", "since": "2026-10-27", "ticket": "#1224", "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/leafy is now a symlink. Published URL /leafy/ unchanged." },
-    { "from": "a_Companies/nexus", "to": "cloud-me-pub-profiles-nexus.z", "kind": "app-folder", "since": "2026-10-27", "ticket": "#1224", "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/nexus is now a symlink. Published URL /nexus/ unchanged." },
-    { "from": "a_Companies/stark", "to": "cloud-me-pub-profiles-stark.x", "kind": "app-folder", "since": "2026-10-27", "ticket": "#1224", "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/stark is now a symlink. Published URL /stark/ unchanged." },
-    { "from": "git-repos-master", "to": "_git-repos-master", "kind": "self", "since": "2026-10-28", "doc": "Leading underscore so the index sorts first." },
-    { "from": "front", "to": "Projects", "kind": "repo", "since": "2026-10-28", "doc": "Front family renamed Projects." },
-    { "from": "front-endeavours", "to": "Projects-endeavours", "kind": "repo", "since": "2026-10-28", "doc": "Front family renamed Projects." },
-    { "from": "front-labtools", "to": "Projects-labtools", "kind": "repo", "since": "2026-10-28", "doc": "Front family renamed Projects." },
-    { "from": "b_front", "to": "b_projects", "kind": "group", "since": "2026-10-28", "doc": "Front family renamed Projects." },
-    { "from": "front-assets-cdn", "to": "cloudy_db_assets-cdn", "kind": "repo", "since": "2026-10-27", "ticket": "#1217", "doc": "GitHub repo renamed." },
-    { "from": "front-circus", "to": "CG-circus", "kind": "repo", "since": "2026-10-26", "ticket": "#1204", "doc": "GitHub repo renamed." },
-    { "from": "front-galaxy", "to": "CG-galaxy", "kind": "repo", "since": "2026-10-26", "ticket": "#1204", "doc": "GitHub repo renamed." },
-    { "from": "front-galaxy-gaia", "to": "CG-galaxy-gaia", "kind": "repo", "since": "2026-10-26", "ticket": "#1204", "doc": "GitHub repo renamed." },
-    { "from": "front-unity", "to": "CG-unity", "kind": "repo", "since": "2026-10-26", "ticket": "#1204", "doc": "GitHub repo renamed." },
-    { "from": "front-companies", "to": "front-endeavours", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "GitHub repo renamed; now also holds Warehouse." },
-    { "from": "front-others", "to": "z-archived_front-others", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "Emptied into CG-circus; archived." },
-    { "from": "front-feeds", "to": "z-archived_front-feeds", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "Emptied into CG-circus; archived." },
-    { "from": "front-warehouse", "to": "z-archived_front-warehouse", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "Emptied into front-endeavours; archived." },
-    { "from": "front-individual", "to": "z-archived_front-individual", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "Emptied into Me-Profiles-Prf-Prs; archived." },
-    { "from": "front-media", "to": "z-archived_front-media", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "Emptied into Me-Profiles-Prf-Prs; archived." },
-    { "from": "front-linktree", "to": "z-archived_front-linktree", "kind": "repo", "since": "2026-10-28", "ticket": "#1217", "doc": "GitHub repo renamed." },
-    { "from": "cloud-me-profiles", "to": "cloud-me-pub-profiles", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed; it is now the hub of the Me-Profiles family. Content split into Me-Profiles-Prf-Prs and Me-Profiles-_Lnktree. Published URLs unchanged." },
-    { "from": "DuckPeng-LeafY", "to": "cloud-me-pub-profiles-leaf.y", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the Me-Profiles family. Published URL /leafy/ unchanged." },
-    { "from": "Fin-CM-NexusZ", "to": "cloud-me-pub-profiles-nexus.z", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the Me-Profiles family. Published URL /nexus/ unchanged." },
-    { "from": "DeepSc-StarkX", "to": "cloud-me-pub-profiles-stark.x", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the Me-Profiles family. Published URL /stark/ unchanged." },
-    { "from": "front-profiles", "to": "cloud-me-pub-profiles", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "GitHub repo renamed (later cloud-me-profiles, then Me-Profiles); the Pages overlay list and the registry follow." },
-    { "from": "front-mydata", "to": "cloud-me-pub-shared", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "GitHub repo renamed; the Pages overlay list and the registry follow." },
-    { "from": "front-suite", "to": "cloudy-h-webapps-2", "kind": "repo", "since": "2026-10-25", "ticket": "#1196", "doc": "GitHub repo renamed; the Pages overlay list and the registry follow." },
-    { "from": "cloud-me-others", "to": "cloud-me-pub-shared", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pub family. Published URLs unchanged." },
-    { "from": "cloud-me_data-pub", "to": "z-archived_cloud-me-pub-data", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pub family. Published URLs unchanged." },
-    { "from": "cloud-me-pub-data", "to": "z-archived_cloud-me-pub-data", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo archived (superseded by cloud-me-pvt-data); renamed with the z-archived_ prefix." },
-    { "from": "Me-Profiles", "to": "cloud-me-pub-profiles", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged." },
-    { "from": "Me-Profiles-Leaf.y", "to": "cloud-me-pub-profiles-leaf.y", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged." },
-    { "from": "Me-Profiles-Nexus.z", "to": "cloud-me-pub-profiles-nexus.z", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged." },
-    { "from": "Me-Profiles-Stark.x", "to": "cloud-me-pub-profiles-stark.x", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged." },
-    { "from": "Me-Profiles-Prf-Prs", "to": "cloud-me-pub-profiles-prf-prs", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged." },
-    { "from": "Me-Profiles-_Lnktree", "to": "cloud-me-pub-profiles-_lnktree", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged." },
-    { "from": "cloud-me-pvt-legacy", "to": "z-archived_cloud-me-pvt-legacy", "kind": "repo", "since": "2026-10-28", "doc": "Old cloud-me umbrella superseded by the cloud-me-pvt hub (my-account/ moved there); archived." },
-    { "from": "cloud-me", "to": "cloud-me-pvt-legacy", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the private cloud-me family; registered under its new name 2026-10-28 (it was an unregistered_ok entry)." },
-    { "from": "cloud-me-containers", "to": "cloud-me-pvt-containers", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pvt family." },
-    { "from": "cloud-me-data-pvt", "to": "cloud-me-pvt-data", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pvt family." },
-    { "from": "cloud-me_data-private", "to": "z-archived_cloud-me-pvt-data-private", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the private cloud-me family; registered under its new name 2026-10-28 (it was an unregistered_ok entry)." },
-    { "from": "cloud-me-pvt-data-private", "to": "z-archived_cloud-me-pvt-data-private", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo archived (superseded by cloud-me-pvt-data); renamed with the z-archived_ prefix." },
-    { "from": "cloud-me-my-ai", "to": "cloud-me-pvt-my-ai", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pvt family." },
-    { "from": "cloud-me-notes", "to": "cloud-me-pvt-notes", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pvt family." },
-    { "from": "cloud-me_cgc", "to": "cloud-me-pvt-cgc", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pvt family." },
-    { "from": "cloud-me_configs", "to": "cloud-me-pvt-configs", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pvt family." },
-    { "from": "cloud-me_vault", "to": "cloud-me-pvt-vault", "kind": "repo", "since": "2026-10-28", "doc": "GitHub repo renamed into the cloud-me-pvt family." },
-    { "from": "cloud-mobile", "to": "cloud-superapp", "kind": "app-folder", "since": "2026-10-21", "ticket": "#1073",
-      "doc": "The SuperApp web replica folder (front/a-Portals/cloud-mobile) is now cloud-superapp, matching the APK folder aa_cloud-superapp. The deployed page URL https://diegonmarcos.github.io/cloud-mobile/ is a SITE path owned by #1062/#1072 and moves with that deploy split, not here." },
-    { "from": "ffront", "to": "front", "kind": "repo", "since": "2026-10-01", "ticket": "#731",
-      "doc": "GitHub repo diegonmarcos/ffront was renamed front; the registry url followed on 2026-10-21 (it still said ffront)." }
+    {
+      "from": "DeepSc-Tools",
+      "to": "CAD-Simulators",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1261",
+      "doc": "GitHub repo renamed and made public (CAD and simulators, not only DeepSc)."
+    },
+    {
+      "from": "Fin-CM-___",
+      "to": "Fin-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The Fin hub covers more than capital markets (Fin-CM-* and Fin-Corporate), so it drops the CM."
+    },
+    {
+      "from": "cloud-___",
+      "to": "cloudy-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-u-android",
+      "to": "cloudy-u-android",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-u-containers",
+      "to": "cloudy-u-containers",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-u-containers_cgc",
+      "to": "cloudy-u-containers_cgc",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-u-desktop",
+      "to": "cloudy-u-desktop",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-u-linux",
+      "to": "cloudy-u-linux",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-t-infra",
+      "to": "cloudy-t-infra",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-h-webapps",
+      "to": "cloudy-h-webapps",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-h-webapps-2",
+      "to": "cloudy-h-webapps-2",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud-a-docs",
+      "to": "cloudy-a-docs",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud_db_assets-cdn",
+      "to": "cloudy_db_assets-cdn",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud_db_infra-ops-obsv_configs-sync",
+      "to": "cloudy_db_infra-ops-obsv_configs-sync",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "cloud_db_LFS",
+      "to": "cloudy_db_LFS",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "The cloud project is renamed cloudy; the cloud-me-* family keeps its name."
+    },
+    {
+      "from": "lecole-42",
+      "to": "lecole-42-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "d_lecole project master renamed with the -___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "cloud-me-pub-profiles",
+      "to": "cloud-me-pub-profiles-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "cloud-me-pub-profiles___",
+      "to": "cloud-me-pub-profiles-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "cloud-me-pub",
+      "to": "cloud-me-pub-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "cloud-me-pub___",
+      "to": "cloud-me-pub-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "cloud-me-pvt",
+      "to": "cloud-me-pvt-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "cloud-me-pvt___",
+      "to": "cloud-me-pvt-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "cloud",
+      "to": "cloudy-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "cloud___",
+      "to": "cloudy-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "Projects",
+      "to": "Projects-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "Projects___",
+      "to": "Projects-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "CG",
+      "to": "CG-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "CG___",
+      "to": "CG-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "Fin-CM",
+      "to": "Fin-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "Fin-CM___",
+      "to": "Fin-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "DeepSc",
+      "to": "DeepSc-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "DeepSc___",
+      "to": "DeepSc-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "DuckPeng",
+      "to": "DuckPeng-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Hub repo renamed with the ___ hub suffix; every reference follows, none rely on the redirect."
+    },
+    {
+      "from": "DuckPeng___",
+      "to": "DuckPeng-___",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1244",
+      "doc": "Intermediate hub name; the final form is <name>-___ so hubs sort first."
+    },
+    {
+      "from": "cloud-webapps",
+      "to": "cloudy-h-webapps",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed; every reference follows, none rely on the redirect. Published URL /cloud-webapps/ unchanged."
+    },
+    {
+      "from": "cloud-webapps-2",
+      "to": "cloudy-h-webapps-2",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed; every reference follows, none rely on the redirect. Published URLs unchanged."
+    },
+    {
+      "from": "cloud-data-lfs",
+      "to": "cloudy_db_LFS",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1224",
+      "doc": "GitHub repo is cloudy_db_LFS; the registry name followed it."
+    },
+    {
+      "from": "a_Companies/leafy",
+      "to": "cloud-me-pub-profiles-leaf.y",
+      "kind": "app-folder",
+      "since": "2026-10-27",
+      "ticket": "#1224",
+      "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/leafy is now a symlink. Published URL /leafy/ unchanged."
+    },
+    {
+      "from": "a_Companies/nexus",
+      "to": "cloud-me-pub-profiles-nexus.z",
+      "kind": "app-folder",
+      "since": "2026-10-27",
+      "ticket": "#1224",
+      "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/nexus is now a symlink. Published URL /nexus/ unchanged."
+    },
+    {
+      "from": "a_Companies/stark",
+      "to": "cloud-me-pub-profiles-stark.x",
+      "kind": "app-folder",
+      "since": "2026-10-27",
+      "ticket": "#1224",
+      "doc": "Folder of front-endeavours moved to its own repo; front-endeavours a_Companies/stark is now a symlink. Published URL /stark/ unchanged."
+    },
+    {
+      "from": "git-repos-master",
+      "to": "_git-repos-master",
+      "kind": "self",
+      "since": "2026-10-28",
+      "doc": "Leading underscore so the index sorts first."
+    },
+    {
+      "from": "front",
+      "to": "Projects",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "Front family renamed Projects."
+    },
+    {
+      "from": "front-endeavours",
+      "to": "Projects-endeavours",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "Front family renamed Projects."
+    },
+    {
+      "from": "front-labtools",
+      "to": "Projects-labtools",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "Front family renamed Projects."
+    },
+    {
+      "from": "b_front",
+      "to": "b_projects",
+      "kind": "group",
+      "since": "2026-10-28",
+      "doc": "Front family renamed Projects."
+    },
+    {
+      "from": "front-assets-cdn",
+      "to": "cloudy_db_assets-cdn",
+      "kind": "repo",
+      "since": "2026-10-27",
+      "ticket": "#1217",
+      "doc": "GitHub repo renamed."
+    },
+    {
+      "from": "front-circus",
+      "to": "CG-circus",
+      "kind": "repo",
+      "since": "2026-10-26",
+      "ticket": "#1204",
+      "doc": "GitHub repo renamed."
+    },
+    {
+      "from": "front-galaxy",
+      "to": "CG-galaxy",
+      "kind": "repo",
+      "since": "2026-10-26",
+      "ticket": "#1204",
+      "doc": "GitHub repo renamed."
+    },
+    {
+      "from": "front-galaxy-gaia",
+      "to": "CG-galaxy-gaia",
+      "kind": "repo",
+      "since": "2026-10-26",
+      "ticket": "#1204",
+      "doc": "GitHub repo renamed."
+    },
+    {
+      "from": "front-unity",
+      "to": "CG-unity",
+      "kind": "repo",
+      "since": "2026-10-26",
+      "ticket": "#1204",
+      "doc": "GitHub repo renamed."
+    },
+    {
+      "from": "front-companies",
+      "to": "front-endeavours",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "GitHub repo renamed; now also holds Warehouse."
+    },
+    {
+      "from": "front-others",
+      "to": "z-archived_front-others",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "Emptied into CG-circus; archived."
+    },
+    {
+      "from": "front-feeds",
+      "to": "z-archived_front-feeds",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "Emptied into CG-circus; archived."
+    },
+    {
+      "from": "front-warehouse",
+      "to": "z-archived_front-warehouse",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "Emptied into front-endeavours; archived."
+    },
+    {
+      "from": "front-individual",
+      "to": "z-archived_front-individual",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "Emptied into Me-Profiles-Prf-Prs; archived."
+    },
+    {
+      "from": "front-media",
+      "to": "z-archived_front-media",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "Emptied into Me-Profiles-Prf-Prs; archived."
+    },
+    {
+      "from": "front-linktree",
+      "to": "z-archived_front-linktree",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "ticket": "#1217",
+      "doc": "GitHub repo renamed."
+    },
+    {
+      "from": "cloud-me-profiles",
+      "to": "cloud-me-pub-profiles",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed; it is now the hub of the Me-Profiles family. Content split into Me-Profiles-Prf-Prs and Me-Profiles-_Lnktree. Published URLs unchanged."
+    },
+    {
+      "from": "DuckPeng-LeafY",
+      "to": "cloud-me-pub-profiles-leaf.y",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the Me-Profiles family. Published URL /leafy/ unchanged."
+    },
+    {
+      "from": "Fin-CM-NexusZ",
+      "to": "cloud-me-pub-profiles-nexus.z",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the Me-Profiles family. Published URL /nexus/ unchanged."
+    },
+    {
+      "from": "DeepSc-StarkX",
+      "to": "cloud-me-pub-profiles-stark.x",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the Me-Profiles family. Published URL /stark/ unchanged."
+    },
+    {
+      "from": "front-profiles",
+      "to": "cloud-me-pub-profiles",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "GitHub repo renamed (later cloud-me-profiles, then Me-Profiles); the Pages overlay list and the registry follow."
+    },
+    {
+      "from": "front-mydata",
+      "to": "cloud-me-pub-shared",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "GitHub repo renamed; the Pages overlay list and the registry follow."
+    },
+    {
+      "from": "front-suite",
+      "to": "cloudy-h-webapps-2",
+      "kind": "repo",
+      "since": "2026-10-25",
+      "ticket": "#1196",
+      "doc": "GitHub repo renamed; the Pages overlay list and the registry follow."
+    },
+    {
+      "from": "cloud-me-others",
+      "to": "cloud-me-pub-shared",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pub family. Published URLs unchanged."
+    },
+    {
+      "from": "cloud-me_data-pub",
+      "to": "z-archived_cloud-me-pub-data",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pub family. Published URLs unchanged."
+    },
+    {
+      "from": "cloud-me-pub-data",
+      "to": "z-archived_cloud-me-pub-data",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo archived (superseded by cloud-me-pvt-data); renamed with the z-archived_ prefix."
+    },
+    {
+      "from": "Me-Profiles",
+      "to": "cloud-me-pub-profiles",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged."
+    },
+    {
+      "from": "Me-Profiles-Leaf.y",
+      "to": "cloud-me-pub-profiles-leaf.y",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged."
+    },
+    {
+      "from": "Me-Profiles-Nexus.z",
+      "to": "cloud-me-pub-profiles-nexus.z",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged."
+    },
+    {
+      "from": "Me-Profiles-Stark.x",
+      "to": "cloud-me-pub-profiles-stark.x",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged."
+    },
+    {
+      "from": "Me-Profiles-Prf-Prs",
+      "to": "cloud-me-pub-profiles-prf-prs",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged."
+    },
+    {
+      "from": "Me-Profiles-_Lnktree",
+      "to": "cloud-me-pub-profiles-_lnktree",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pub family (intermediate name of the Me-Profiles move). Published URLs unchanged."
+    },
+    {
+      "from": "cloud-me-pvt-legacy",
+      "to": "z-archived_cloud-me-pvt-legacy",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "Old cloud-me umbrella superseded by the cloud-me-pvt hub (my-account/ moved there); archived."
+    },
+    {
+      "from": "cloud-me",
+      "to": "cloud-me-pvt-legacy",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the private cloud-me family; registered under its new name 2026-10-28 (it was an unregistered_ok entry)."
+    },
+    {
+      "from": "cloud-me-containers",
+      "to": "cloud-me-pvt-containers",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pvt family."
+    },
+    {
+      "from": "cloud-me-data-pvt",
+      "to": "cloud-me-pvt-data",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pvt family."
+    },
+    {
+      "from": "cloud-me_data-private",
+      "to": "z-archived_cloud-me-pvt-data-private",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the private cloud-me family; registered under its new name 2026-10-28 (it was an unregistered_ok entry)."
+    },
+    {
+      "from": "cloud-me-pvt-data-private",
+      "to": "z-archived_cloud-me-pvt-data-private",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo archived (superseded by cloud-me-pvt-data); renamed with the z-archived_ prefix."
+    },
+    {
+      "from": "cloud-me-my-ai",
+      "to": "cloud-me-pvt-my-ai",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pvt family."
+    },
+    {
+      "from": "cloud-me-notes",
+      "to": "cloud-me-pvt-notes",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pvt family."
+    },
+    {
+      "from": "cloud-me_cgc",
+      "to": "cloud-me-pvt-cgc",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pvt family."
+    },
+    {
+      "from": "cloud-me_configs",
+      "to": "cloud-me-pvt-configs",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pvt family."
+    },
+    {
+      "from": "cloud-me_vault",
+      "to": "cloud-me-pvt-vault",
+      "kind": "repo",
+      "since": "2026-10-28",
+      "doc": "GitHub repo renamed into the cloud-me-pvt family."
+    },
+    {
+      "from": "cloud-mobile",
+      "to": "cloud-superapp",
+      "kind": "app-folder",
+      "since": "2026-10-21",
+      "ticket": "#1073",
+      "doc": "The SuperApp web replica folder (front/a-Portals/cloud-mobile) is now cloud-superapp, matching the APK folder aa_cloud-superapp. The deployed page URL https://diegonmarcos.github.io/cloud-mobile/ is a SITE path owned by #1062/#1072 and moves with that deploy split, not here."
+    },
+    {
+      "from": "ffront",
+      "to": "front",
+      "kind": "repo",
+      "since": "2026-10-01",
+      "ticket": "#731",
+      "doc": "GitHub repo diegonmarcos/ffront was renamed front; the registry url followed on 2026-10-21 (it still said ffront)."
+    },
+    {
+      "from": "01.CG",
+      "to": "2.CG",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "02.Cloudy",
+      "to": "1.1.Cloudy",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "03.Cloud-me",
+      "to": "1.2.Cloud-me",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "04.Fin",
+      "to": "3.Fin",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "05.DeepSc",
+      "to": "4.DeepSc",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "06.Lecole-42",
+      "to": "5.Lecole-42",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "07.Projects",
+      "to": "6.Projects",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "08.Others",
+      "to": "7.Others",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "09.Archived",
+      "to": "8.Archived",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1295",
+      "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    }
   ],
   "unregistered_ok": [
-    { "name": "_git-repos-master", "reason": "this index itself (see _self_doc)" },
-    { "name": "z-archived_My-ai-memory", "reason": "on GitHub but not indexed here as of 2026-10-21 (#1073); owner to decide: register or archive" },
-    { "name": "z-archived_c3-infra-plugin", "reason": "archived; the c3-infra plugin source of truth moved to cloudy-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra" }
+    {
+      "name": "_git-repos-master",
+      "reason": "this index itself (see _self_doc)"
+    }
   ],
   "_unregistered_doc": "GitHub repos (by GitHub name) that exist but deliberately have no entry. cloud-infra's repos-sot tester fails when the fetched GitHub inventory holds a repo that is neither registered above nor listed here, and when a pending_creation repo already shows up in the inventory (flip its status).",
   "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know.",
   "consumers": [
-    { "repo": "lecole-42-___", "what": "d_lecole project master (hub): repos.json subset + clone/link script", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
-    { "repo": "_git-repos-master", "what": "clone.sh + committed symlink farm", "reads": "repos.json (itself)", "guard": "9_others/test/test-repos-sot.sh" },
-    { "repo": "cloudy-___", "what": "cloud hub: holds THE cloud family file (2_vault + a_cloud, full hierarchy, every field of the registry for those repos); cloudy-t-infra keeps a byte copy", "reads": "repos.json (family subset)", "guard": "check-repos-sot.sh (in the cloud repo)" },
-    { "repo": "CG-___", "what": "CG project master subset", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
-    { "repo": "Fin-___", "what": "Fin project master subset (Fin-CM-mqpm, Fin-CM-Blmbrg, Fin-Corporate)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
-    { "repo": "DeepSc-___", "what": "DeepSc project master subset (X)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
-    { "repo": "DuckPeng-___", "what": "DuckPeng project master subset (CG, cloud)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
-    { "repo": "cloud-me-pub-profiles-___", "what": "cloud-me-pub-profiles hub subset (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
-    { "repo": "cloud-me-pub-___", "what": "Cloud-Me-Pub hub subset (public cloud-me family; no private names)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
-    { "repo": "cloud-me-pvt-___", "what": "Cloud-Me-Pvt hub subset (private cloud-me family members; the hub itself is public, its CI is budget-limited)", "reads": "repos.json (subset)", "guard": "node repos-sot.js check-subset (run from _git-repos-master)" },
-    { "repo": "Projects-___", "what": "Projects master subset", "reads": "repos.json (subset)", "guard": "check-repos-sot.sh (in the Projects repo)" },
-    { "repo": "cloudy-t-infra", "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory", "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy of cloud/repos.json, the cloud family only)", "guard": "9_others/test/repos-sot.test.sh (registered in 9_others/test-registry.json)" },
-    { "repo": "cloudy-u-android", "what": "libs:repos mirror list, cloud-drive Sync > Git list, cloud-drive seed/clone targets", "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies)", "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt" },
-    { "repo": "cloudy-u-desktop", "what": "NixOS/home-manager twin: embeds only the `cloud` index submodule, keeps no repo list", "reads": "none (submodule of cloud)", "guard": "n/a" },
-    { "repo": "cloudy-u-linux", "what": "dtk/linux-account: no repo list of its own", "reads": "none", "guard": "n/a" },
-    { "repo": "cloud-me-pvt-my-ai", "what": "layout.json dotfile map + per-repo a_commits snapshots: keyed by repo name, no list of its own", "reads": "none", "guard": "n/a" }
+    {
+      "repo": "lecole-42-___",
+      "what": "d_lecole project master (hub): repos.json subset + clone/link script",
+      "reads": "repos.json (subset)",
+      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+    },
+    {
+      "repo": "_git-repos-master",
+      "what": "clone.sh + committed symlink farm",
+      "reads": "repos.json (itself)",
+      "guard": "9_others/test/test-repos-sot.sh"
+    },
+    {
+      "repo": "cloudy-___",
+      "what": "cloud hub: holds THE cloud family file (2_vault + a_cloud, full hierarchy, every field of the registry for those repos); cloudy-t-infra keeps a byte copy",
+      "reads": "repos.json (family subset)",
+      "guard": "check-repos-sot.sh (in the cloud repo)"
+    },
+    {
+      "repo": "CG-___",
+      "what": "CG project master subset",
+      "reads": "repos.json (subset)",
+      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+    },
+    {
+      "repo": "Fin-___",
+      "what": "Fin project master subset (Fin-CM-mqpm, Fin-CM-Blmbrg, Fin-Corporate)",
+      "reads": "repos.json (subset)",
+      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+    },
+    {
+      "repo": "DeepSc-___",
+      "what": "DeepSc project master subset (X)",
+      "reads": "repos.json (subset)",
+      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+    },
+    {
+      "repo": "DuckPeng-___",
+      "what": "DuckPeng project master subset (CG, cloud)",
+      "reads": "repos.json (subset)",
+      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+    },
+    {
+      "repo": "cloud-me-pub-profiles-___",
+      "what": "cloud-me-pub-profiles hub subset (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree)",
+      "reads": "repos.json (subset)",
+      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+    },
+    {
+      "repo": "cloud-me-pub-___",
+      "what": "Cloud-Me-Pub hub subset (public cloud-me family; no private names)",
+      "reads": "repos.json (subset)",
+      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+    },
+    {
+      "repo": "cloud-me-pvt-___",
+      "what": "Cloud-Me-Pvt hub subset (private cloud-me family members; the hub itself is public, its CI is budget-limited)",
+      "reads": "repos.json (subset)",
+      "guard": "node repos-sot.js check-subset (run from _git-repos-master)"
+    },
+    {
+      "repo": "Projects-___",
+      "what": "Projects master subset",
+      "reads": "repos.json (subset)",
+      "guard": "check-repos-sot.sh (in the Projects repo)"
+    },
+    {
+      "repo": "cloudy-t-infra",
+      "what": "fleet dotfiles manifest fleet.repos, derive-repo-map, github-repos inventory",
+      "reads": "1_cloud-configs/src/inputs/repos.sot.json (byte copy of cloud/repos.json, the cloud family only)",
+      "guard": "9_others/test/repos-sot.test.sh (registered in 9_others/test-registry.json)"
+    },
+    {
+      "repo": "cloudy-u-android",
+      "what": "libs:repos mirror list, cloud-drive Sync > Git list, cloud-drive seed/clone targets",
+      "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies)",
+      "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt"
+    },
+    {
+      "repo": "cloudy-u-desktop",
+      "what": "NixOS/home-manager twin: embeds only the `cloud` index submodule, keeps no repo list",
+      "reads": "none (submodule of cloud)",
+      "guard": "n/a"
+    },
+    {
+      "repo": "cloudy-u-linux",
+      "what": "dtk/linux-account: no repo list of its own",
+      "reads": "none",
+      "guard": "n/a"
+    },
+    {
+      "repo": "cloud-me-pvt-my-ai",
+      "what": "layout.json dotfile map + per-repo a_commits snapshots: keyed by repo name, no list of its own",
+      "reads": "none",
+      "guard": "n/a"
+    }
   ],
-
   "base_dir_doc": "Where clones live. Override with $CLOUD_GIT_BASE; otherwise ~/cloud-shared-store/git — every repo lives in that ONE place, on every machine. Clones are NEVER placed inside this repo — repo_master holds relative symlinks (../../<name> from a group directory) pointing out to them, committed, so `ls <group>/` is the inventory and a dangling link is just a repo you have not cloned yet.",
   "shared_store_dir": "cloud-shared-store",
   "base_dir_default": "~/cloud-shared-store/git",
-
   "_path_doc": "`path` is where the clone actually sits under base_dir; it defaults to `name`. No entry sets it since 2026-10-23: the d_lecole repos were renamed lecole-42_* and now sit at the root of base_dir, so the old ~/cloud-shared-store/git/lecole-42/ folder is only a stale machine-local directory (owner step: move or re-clone).",
-
   "_archived_doc": "FairEmail and octocode forks were deleted on GitHub on 2026-08-18 — FairEmail was fully reproduced by unix/aa_cloud-mail/patches, octocode was 0 commits ahead of Muvon/octocode. Nothing else has been archived. The ten d_lecole repos were deregistered the same day and are registered again as of 2026-08-20; they were never gone, only unindexed.",
-
   "_fleet_files_doc": "Files that MUST be byte-identical in every repo that has the module they belong to, and where the one authoritative copy lives. `./clone.sh --sync` copies each `from` (resolved under base_dir) to each `to` in every cloned repo that has the entry's `requires` path. `requires` is the OPT-IN and it is explicit on purpose: the obvious shortcut — 'copy where the destination's parent directory exists' — is wrong for any destination at the repo ROOT, because the root always exists. That rule put .mcp.json into all sixteen repos that have no dotfiles module at all (cloud-notes, cloudy-u-linux, every lecole-42 entry) on its first run. `requires` names the directory that proves the module is present, so a root-level file is gated by the module it belongs to rather than by its own location.\n\nThis exists because 'one shared implementation, many callers' was only ever true by hand. It was not: deploy-dotfiles.sh had already drifted in cloud-infra-desktop (missing the whole claude-SoT refresh block) and was MISSING outright in four repos whose build.sh calls it, and .mcp.json's own _doc admitted 'propagated by hand — nothing automates that hop', which is how cloud-vault ended up without the cloud-infra-mcp headersHelper while cloud had it. Every one of those was a file claiming, in its own header, to be the same file as another.\n\nADDING a file here is the whole registration: no code change. `from` is <repo>/<path> under base_dir; a `to` list means one source lands at several destinations (mcp.json is both the dotfiles-module source AND the deployed root file, so a repo is consistent whether or not its build.sh has run).",
   "fleet_files": [
     {
       "from": "cloudy-___/repos.json",
-      "to": ["1_cloud-configs/src/inputs/repos.sot.json"],
+      "to": [
+        "1_cloud-configs/src/inputs/repos.sot.json"
+      ],
       "requires": "1_cloud-configs/src/inputs",
       "doc": "#1073/#1224 cloud-infra: byte copy of the CLOUD family file (cloudy-___/repos.json: 2_vault + a_cloud only, full hierarchy), NOT of the full registry; the source its fleet-manifest and derive guards read (9_others/test/repos-sot.test.sh fails on any difference)."
     },
     {
       "from": "_git-repos-master/repos.json",
-      "to": ["ac_cloud-drive/data/repos.sot.json", "ab_cloud-libs-shared/libs/repos/repos.sot.json"],
+      "to": [
+        "ac_cloud-drive/data/repos.sot.json",
+        "ab_cloud-libs-shared/libs/repos/repos.sot.json"
+      ],
       "requires": "ac_cloud-drive/data",
       "doc": "#1073 cloudy-u-android: byte copy of THIS registry, baked into cloud-drive at build time (build.json storage.repos_source) and read by libs:repos sync.sh --refresh-list. Guards: ac_cloud-drive/test/test-drive-repos-sot.sh, RepoSotTest.kt."
     },
     {
       "from": "_git-repos-master/.claude/SESSION-SURVIVAL.md",
-      "to": [".claude/SESSION-SURVIVAL.md"],
+      "to": [
+        ".claude/SESSION-SURVIVAL.md"
+      ],
       "requires": ".claude",
       "doc": "Shell-death recovery runbook from the 2026-10-15 incident (Bash sandbox died after a glob delete in /tmp). Every repo's CLAUDE.md imports it via `@.claude/SESSION-SURVIVAL.md` so every session has it. requires is .claude because sync_all refuses entries without one."
     },
     {
       "from": "cloudy-t-infra/1_cloud-configs/dist/mcp.json",
-      "to": ["_dotfiles/apps/src/root/mcp.json", ".mcp.json"],
+      "to": [
+        "_dotfiles/apps/src/root/mcp.json",
+        ".mcp.json"
+      ],
       "requires": "_dotfiles/apps/src/root",
       "doc": "GENERATED by cloud-infra 1_cloud-configs/src/derive/derive-mcp-json.ts from the .mcp blocks in a_solutions/*/build.json. Regenerate there (./9_others/build.sh dotfiles in cloud-infra does it), then --sync to spread it. Only cloud-infra HAS 1_cloud-configs, which is exactly why the other twelve repos could never refresh themselves."
     },
     {
       "from": "cloudy-t-infra/1_cloud-configs/dist/mcp.json",
-      "to": ["0_apps/src/root/mcp.json", ".mcp.json"],
+      "to": [
+        "0_apps/src/root/mcp.json",
+        ".mcp.json"
+      ],
       "requires": "0_apps/src/root",
       "doc": "GENERATED by cloud-infra 1_cloud-configs/src/derive/derive-mcp-json.ts from the .mcp blocks in a_solutions/*/build.json. Regenerate there (./9_others/build.sh dotfiles in cloud-infra does it), then --sync to spread it. Only cloud-infra HAS 1_cloud-configs, which is exactly why the other twelve repos could never refresh themselves."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/settings.json",
-      "to": ["_dotfiles/apps/src/claude/settings.json", ".claude/settings.json"],
+      "to": [
+        "_dotfiles/apps/src/claude/settings.json",
+        ".claude/settings.json"
+      ],
       "requires": "_dotfiles/apps/src/claude",
       "doc": "Project-scoped Claude Code settings. Ultimate SoT is da_my-ai/data/claude/settings.project.json; cloud-infra's copy is refreshed from it by deploy-dotfiles.sh, and cloud-infra is the `from` here because it is the only repo whose build reliably runs that refresh. This file gates which MCP servers are dialed at all (disabledMcpjsonServers), so drift here is invisible: a server disabled by a stale copy appears in NEITHER the connected nor the failed list, and reads as missing rather than off."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/settings.json",
-      "to": ["0_apps/src/claude/settings.json", ".claude/settings.json"],
+      "to": [
+        "0_apps/src/claude/settings.json",
+        ".claude/settings.json"
+      ],
       "requires": "0_apps/src/claude",
       "doc": "Project-scoped Claude Code settings. Ultimate SoT is da_my-ai/data/claude/settings.project.json; cloud-infra's copy is refreshed from it by deploy-dotfiles.sh, and cloud-infra is the `from` here because it is the only repo whose build reliably runs that refresh. This file gates which MCP servers are dialed at all (disabledMcpjsonServers), so drift here is invisible: a server disabled by a stale copy appears in NEITHER the connected nor the failed list, and reads as missing rather than off."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/mcp-auth-headers.sh",
-      "to": ["_dotfiles/apps/src/claude/mcp-auth-headers.sh", ".claude/mcp-auth-headers.sh"],
+      "to": [
+        "_dotfiles/apps/src/claude/mcp-auth-headers.sh",
+        ".claude/mcp-auth-headers.sh"
+      ],
       "requires": "_dotfiles/apps/src/claude",
       "doc": "The headersHelper .mcp.json points at. Must travel WITH the .mcp.json that references it — a repo whose mcp.json names a helper it does not ship gets a silent {} and an unexplained 403."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/mcp-auth-headers.sh",
-      "to": ["0_apps/src/claude/mcp-auth-headers.sh", ".claude/mcp-auth-headers.sh"],
+      "to": [
+        "0_apps/src/claude/mcp-auth-headers.sh",
+        ".claude/mcp-auth-headers.sh"
+      ],
       "requires": "0_apps/src/claude",
       "doc": "The headersHelper .mcp.json points at. Must travel WITH the .mcp.json that references it — a repo whose mcp.json names a helper it does not ship gets a silent {} and an unexplained 403."
     },
     {
       "from": "cloudy-t-infra/9_others/src/deploy-dotfiles.sh",
-      "to": ["9_others/src/deploy-dotfiles.sh"],
+      "to": [
+        "9_others/src/deploy-dotfiles.sh"
+      ],
       "requires": "9_others/src",
       "doc": "THE shared dotfiles deploy implementation. Every repo's 9_others/build.sh calls `sh $SCRIPT_DIR/src/deploy-dotfiles.sh` — including four that did not ship the file at all, so their dotfiles verb failed. cloud-infra is the source because it is the only repo whose copy is exercised end-to-end (it alone runs the derive refresh path inside it)."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/settings.json",
-      "to": ["ac_cloud-vault/.claude/settings.json"],
+      "to": [
+        "ac_cloud-vault/.claude/settings.json"
+      ],
       "requires": "ac_cloud-vault/.claude",
       "doc": "cloudy-u-android/ac_cloud-vault: a bare .claude/settings.json, no module around it. Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/settings.json",
-      "to": ["da_dtk/_dotfiles/apps/src/claude/settings.json", "da_dtk/_dotfiles/apps/dist/dotfiles/claude/settings.json", "da_dtk/.claude/settings.json"],
+      "to": [
+        "da_dtk/_dotfiles/apps/src/claude/settings.json",
+        "da_dtk/_dotfiles/apps/dist/dotfiles/claude/settings.json",
+        "da_dtk/.claude/settings.json"
+      ],
       "requires": "da_dtk/_dotfiles/apps/src/claude",
       "doc": "cloudy-u-linux/da_dtk: carries its own 0_apps module (src, dist and the deployed .claude). Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/settings.json",
-      "to": ["da_dtk/0_apps/src/claude/settings.json", "da_dtk/0_apps/dist/dotfiles/claude/settings.json", "da_dtk/.claude/settings.json"],
+      "to": [
+        "da_dtk/0_apps/src/claude/settings.json",
+        "da_dtk/0_apps/dist/dotfiles/claude/settings.json",
+        "da_dtk/.claude/settings.json"
+      ],
       "requires": "da_dtk/0_apps/src/claude",
       "doc": "cloudy-u-linux/da_dtk: carries its own 0_apps module (src, dist and the deployed .claude). Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/settings.json",
-      "to": ["others/_dotfiles/apps/src/claude/settings.json", "others/_dotfiles/apps/dist/dotfiles/claude/settings.json"],
+      "to": [
+        "others/_dotfiles/apps/src/claude/settings.json",
+        "others/_dotfiles/apps/dist/dotfiles/claude/settings.json"
+      ],
       "requires": "others/_dotfiles/apps/src/claude",
       "doc": "cloud-me-pvt-vault/others: a vendored copy of the cloud module (src and dist; no deployed .claude). Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
     },
     {
       "from": "cloudy-t-infra/_dotfiles/apps/src/claude/settings.json",
-      "to": ["others/0_apps/src/claude/settings.json", "others/0_apps/dist/dotfiles/claude/settings.json"],
+      "to": [
+        "others/0_apps/src/claude/settings.json",
+        "others/0_apps/dist/dotfiles/claude/settings.json"
+      ],
       "requires": "others/0_apps/src/claude",
       "doc": "cloud-me-pvt-vault/others: a vendored copy of the cloud module (src and dist; no deployed .claude). Nested module copy of the project settings: a sub-project directory that carries its own copy of the module (or just the file) because it is worked on from its own directory, where the repo-root .claude/ is not the one Claude Code loads. Not covered by the repo-root entry above (its `requires` and paths are root-relative), so it was never refreshed and drifted: ac_cloud-vault, da_dtk and others/ all lacked autoMode and the 2026-10-09 rules. The test-claude-sot.sh settings-verbatim check lists these same paths."
     },
     {
       "from": "_git-repos-master/.claude/skills/c3-infra",
-      "to": [".claude/skills/c3-infra"],
+      "to": [
+        ".claude/skills/c3-infra"
+      ],
       "requires": ".claude",
       "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloudy-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. c3-infra skill + rules/*.md."
     },
     {
       "from": "_git-repos-master/.claude/hooks/c3",
-      "to": [".claude/hooks/c3"],
+      "to": [
+        ".claude/hooks/c3"
+      ],
       "requires": ".claude",
       "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloudy-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. c3-infra PreToolUse guard hooks and tests, wired in settings.json hooks."
     },
     {
       "from": "_git-repos-master/.claude/agents",
-      "to": [".claude/agents"],
+      "to": [
+        ".claude/agents"
+      ],
       "requires": ".claude",
       "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloudy-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. lean agents build/explore/ops/review/general-purpose."
     }
   ],
-
+  "_farm_doc": "`farm` is the folder of this repo's committed symlink in _git-repos-master (#1291, #1295): one top folder per area or project, named <code>.<Name> after its node in repos.v3.json (1.1.Cloudy, 2.CG, ...), sub-folders nested by the hub chain (a sub-hub and its members sit one folder deeper than the parent hub), plus the Fin split Corporate / Capital-Markets. The link is <farm>/<name> -> ../ repeated (depth+1) times + <path or name>. Top folders and their order are rendered into `farms` from the source tree. `group` is the LEGACY family key (2_vault, a_cloud, b_projects, c_gh, d_lecole): it no longer places links, it stays only because readers filter on it (cloudy-___ family file, cloudy-u-android libs:repos sync and its test, the d_lecole school rule). Guard: `node repos-sot.js check`.",
+  "farms": {
+    "1.1.Cloudy": "Cloudy (1.1): hub cloudy-___ and its members. The cloudy project: fleet infrastructure, services, devices, data and docs.",
+    "1.2.Cloud-me": "Cloud-Me (1.2): hub cloud-me-___ and its members. The owner's personal cloud: public profiles and shared data, private configs, data and secrets.",
+    "2.CG": "CG (2): hub CG-___ and its members. Computer graphics: 3D worlds, engines and media production.",
+    "3.Fin": "Financial (3): hub Fin-___ and its members. Finance: capital markets and corporate finance. The hub Fin-___ is the area home (3.0).",
+    "4.DeepSc": "Deep Science (4): hub DeepSc-___ and its members. Deep science projects and CAD / simulation tools.",
+    "5.Lecole-42": "42 (5): hub lecole-42-___ and its members. 42 school coursework (a school, not a project): one project per curriculum repo.",
+    "6.Projects": "Projects (6): hub Projects-___ and its members. Projects (formerly Front): endeavours, lab tools and DuckPeng.",
+    "7.Others": "Others (7): no hub. Loose GitHub repos with no project hub (profile README, GitHub Pages site).",
+    "8.Archived": "Archived (8): hub z-archived-___ and its members. Every z-archived_* repo, under the hub z-archived-___."
+  },
   "groups": {
     "2_vault": "Secrets (sops/age) — every credential the fleet uses. Numbered so it sorts ahead of the lettered groups: it is the one repo whose absence breaks the others.",
     "a_cloud": "The cloud project — infrastructure, services, data, devices and the tooling built for them. Its own project master is `cloud`, which indexes this same set minus the account-level repos.",
@@ -254,152 +1028,1024 @@
     "c_gh": "Account-level GitHub repos — things that exist because GitHub requires a repo for them, not because they are a project.",
     "d_lecole": "42 / l'École coursework and its experiments. Project master is `lecole-42`; every member is lecole-42_<thing> (or lecole-42-projects), cloned at the root of base_dir like the other groups."
   },
-
   "repos": [
-    { "name": "cloud-me-pvt-vault", "group": "2_vault", "hub": "cloud-me-pvt-___", "url": "git@github.com:diegonmarcos/cloud-me-pvt-vault.git", "private": true, "renamed_from": ["cloud-vault", "cloud-me_vault"],
-      "doc": "Secrets (sops/age) only. Twin of cloud-me-pvt-configs (same top-level folders: Containers, Apks, Terminal, Desktop-GUI, Linux-Server, Shared, plus Identity). Since 2026-10-28 (#1253) it also holds the container secrets formerly in cloud-me-pvt-containers (Containers/) and the secrets/, sso-oidc/, vault-mtls/ bundles formerly in cloud-me-pvt-data." },
-
-    { "name": "cloudy-___", "group": "a_cloud", "parent_hub": "_git-repos-master", "url": "git@github.com:diegonmarcos/cloudy-___.git", "private": false, "renamed_from": ["cloud", "cloud___", "cloud-___"],
-      "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`." },
-    { "name": "cloudy-t-infra", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-t-infra.git", "private": false, "renamed_from": ["cloud-infra", "cloud-t-infra"],
-      "doc": "Fleet: services, infra, the derive engine (1_cloud-configs). Renamed from cloud-infra 2026-10-23 (#1136)." },
-    { "name": "cloudy-u-desktop", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-u-desktop.git", "private": false, "renamed_from": ["cloud-infra-desktop", "cloud-u-desktop"],
-      "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)." },
-    { "name": "cloudy-u-android", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-u-android.git", "private": false, "renamed_from": ["cloud-u-android"],
-      "doc": "Android client." },
-    { "name": "cloudy-u-containers", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-u-containers.git", "private": false, "renamed_from": ["cloud-u-containers"],
-      "doc": "The containerised services a_solutions ships: one dir per service, each with build.json. Mounted back into cloud-infra as a submodule at a_solutions/ so the ship engine keeps globbing a_solutions/*/build.json." },
-    { "name": "cloudy-u-containers_cgc", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-u-containers_cgc.git", "private": false, "renamed_from": ["cloud-u-containers_cgc"],
-      "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloudy-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha." },
-    { "name": "cloud-me-pvt-cgc", "group": "a_cloud", "hub": "cloud-me-pvt-___", "url": "git@github.com:diegonmarcos/cloud-me-pvt-cgc.git", "private": true, "renamed_from": ["cloud-me_cgc"],
-      "doc": "The PRIVATE half of the cgc pipeline (pvt surface: the private repos -> cloud-cgc-pvt-mcp). A thin orchestrator rendered from cloudy-u-containers_cgc at a pinned sha, so private-repo runs and logs stay private. Was cloud-u-containers_cgc-pvt; renamed 2026-10-10 into the private cloud-me family (split-outs are named <parent>_<name>; every cloud-u-* repo is public)." },
-    { "name": "cloud-me-pvt-configs", "group": "a_cloud", "hub": "cloud-me-pvt-___", "url": "git@github.com:diegonmarcos/cloud-me-pvt-configs.git", "private": true, "renamed_from": ["cloud-me_configs"],
-      "doc": "Deployable configs, no secrets. Twin of cloud-me-pvt-vault (same top-level folders: Containers, Apks, Terminal, Desktop-GUI, Linux-Server, Shared; #1253). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it." },
-    { "name": "cloudy-u-linux", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-u-linux.git", "private": false, "renamed_from": ["cloud-u-linux"],
-      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloudy-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs." },
-    { "name": "cloud-me-pvt-data", "group": "a_cloud", "hub": "cloud-me-pvt-___", "url": "git@github.com:diegonmarcos/cloud-me-pvt-data.git", "private": true, "renamed_from": ["cloud-data", "cloud-me-data-pvt"],
-      "doc": "Data only (journal, logs, reports, profiles, health, Pages). Its secrets/, sso-oidc/ and vault-mtls/ moved to cloud-me-pvt-vault on 2026-10-28 (#1253)." },
-    { "name": "cloudy_db_LFS", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy_db_LFS.git", "private": true, "lfs": true, "renamed_from": ["cloud-data-lfs", "cloud_db_LFS"],
-      "doc": "Large binary artefacts (git-lfs) for cloud-me-pvt-data (was cloud-data)." },
-    { "name": "cloud-me-pvt-my-ai", "group": "a_cloud", "hub": "cloud-me-pvt-___", "url": "git@github.com:diegonmarcos/cloud-me-pvt-my-ai.git", "private": true, "renamed_from": ["cloud-data-my-ai-memory", "cloud-me-my-ai"],
-      "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here." },
-    { "name": "cloudy-a-docs", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-a-docs.git", "private": true, "renamed_from": ["cloud-a-docs"],
-      "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-pvt-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester." },
-    { "name": "cloud-me-pvt-notes", "group": "a_cloud", "hub": "cloud-me-pvt-___", "url": "git@github.com:diegonmarcos/cloud-me-pvt-notes.git", "private": true, "renamed_from": ["cloud-notes", "cloud-me-notes"],
-      "doc": "Personal notes (Obsidian vault)." },
-    { "name": "cloudy-h-webapps", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-h-webapps.git", "private": false, "renamed_from": ["cloud-webapps", "cloud-h-webapps"],
-      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps." },
-    { "name": "cloud-me-pvt-containers", "group": "a_cloud", "hub": "cloud-me-pvt-___", "url": "git@github.com:diegonmarcos/cloud-me-pvt-containers.git", "private": true, "renamed_from": ["cloud-me-containers"],
-      "doc": "Superseded 2026-10-28 (#1253): its sops files now live in cloud-me-pvt-vault Containers/ (subtree merge, history kept). Frozen source; to be archived as z-archived_cloud-me-pvt-containers once consumers are confirmed off it." },
-    { "name": "cloudy_db_infra-ops-obsv_configs-sync", "group": "a_cloud", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy_db_infra-ops-obsv_configs-sync.git", "private": false, "renamed_from": ["cloud_db_infra-ops-obsv_configs-sync"],
-      "doc": "Configs-sync engine data repo: the consolidated fleet config SoT (from 1_cloud-configs) served by c3-infra-api/mcp. Created 2026-10-25 (#1197 programme); public." },
-    { "name": "z-archived_cloud-me-pvt-legacy", "group": "a_cloud", "url": "git@github.com:diegonmarcos/z-archived_cloud-me-pvt-legacy.git", "private": true, "renamed_from": ["cloud-me", "cloud-me-pvt-legacy"],
-      "doc": "The original cloud-me repo (cloud-me family, near empty), kept as is under the pvt family. Registered 2026-10-28 (was unregistered_ok since #1073)." },
-    { "name": "z-archived_cloud-me-pvt-data-private", "group": "a_cloud", "url": "git@github.com:diegonmarcos/z-archived_cloud-me-pvt-data-private.git", "private": true, "renamed_from": ["cloud-me_data-private", "cloud-me-pvt-data-private"],
-      "doc": "Archived 2026-10-28: stale skeleton (per-app backups, AI sessions, Maps history, Financial), superseded by cloud-me-pvt-data; was cloud-me_data-private, registered then renamed z-archived_ the same day." },
-    { "name": "cloud-me-___", "group": "a_cloud", "parent_hub": "_git-repos-master", "url": "git@github.com:diegonmarcos/cloud-me-___.git", "private": false, "doc": "Top hub of the cloud-me project (the owner's configs across the cloud): an index above the two sub-hubs cloud-me-pub-___ and cloud-me-pvt-___, its own repos.json subset (only those two) plus committed symlinks, same model as cloudy-___ and CG-___. Created 2026-10-28 (#1244)." },
-    { "name": "cloud-me-pub-___", "group": "a_cloud", "parent_hub": "cloud-me-___", "url": "git@github.com:diegonmarcos/cloud-me-pub-___.git", "private": false, "renamed_from": ["cloud-me-pub", "cloud-me-pub___"],
-      "doc": "Hub of the public cloud-me family (Cloud-Me-Pub): the cloud-me-pub-profiles hub and cloud-me-pub-shared (the pub data repo is archived). Its own repos.json subset plus committed symlinks; lists no private repo. Created 2026-10-28." },
-    { "name": "cloud-me-pvt-___", "group": "a_cloud", "parent_hub": "cloud-me-___", "url": "git@github.com:diegonmarcos/cloud-me-pvt-___.git", "private": false, "renamed_from": ["cloud-me-pvt", "cloud-me-pvt___"],
-      "doc": "Hub of the private cloud-me family (Cloud-Me-Pvt): its own repos.json subset plus committed symlinks to the private cloud-me repos. Public (owner rule: hubs are always public; holds only symlinks and submodule pointers). Created 2026-10-28." },
-    { "name": "z-archived_cloud-me-pub-data", "group": "a_cloud", "url": "git@github.com:diegonmarcos/z-archived_cloud-me-pub-data.git", "private": false, "renamed_from": ["cloud-me_data-pub", "cloud-me-pub-data"],
-      "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it." },
-
-    { "name": "Projects-___", "group": "b_projects", "parent_hub": "_git-repos-master", "url": "git@github.com:diegonmarcos/Projects-___.git", "private": false, "renamed_from": ["ffront", "front", "Projects", "Projects___"],
-      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume." },
-    { "name": "front-diegonmarcos", "group": "b_projects", "hub": "Projects-___", "url": "git@github.com:diegonmarcos/diegonmarcos.github.io.git", "private": false,
-      "parts": [ { "name": "Lnktree", "path": "cloud-me-pub-profiles-_lnktree", "status": "split", "ticket": "#1217", "doc": "Moved 2026-10-27 from front-linktree (a_Portals) into cloud-me-pub-profiles-_lnktree (Lnktree); front-linktree is superseded and to be archived." }, { "name": "a_Companies", "path": "Projects-endeavours", "status": "split", "ticket": "#1072", "doc": "Split out 2026-10-24 from front-projects into front-endeavours; the Pages workflow overlays it." }, { "name": "a_Individual", "path": "cloud-me-pub-profiles-prf-prs", "status": "split", "ticket": "#1196", "doc": "Moved 2026-10-25 into cloud-me-pub-profiles-prf-prs (b_Profiles); front repo front-individual is superseded and archived." }, { "name": "a_Projects", "path": "Projects-endeavours", "status": "split", "ticket": "#1196", "doc": "Moved 2026-10-25 into front-endeavours; front repo front-warehouse is superseded and archived." }, { "name": "b_Data", "path": "CG-circus", "status": "split", "ticket": "#1196", "doc": "Moved 2026-10-25 into front-circus; front repo front-feeds is superseded and archived." }, { "name": "b_Media", "path": "cloud-me-pub-profiles-prf-prs", "status": "split", "ticket": "#1196", "doc": "Moved 2026-10-25 into cloud-me-pub-profiles-prf-prs (b_Profiles); front repo front-media is superseded and archived." }, { "name": "b_MyData", "path": "cloud-me-pub-shared", "status": "split", "ticket": "#1072", "doc": "Split out 2026-10-24 from front-projects into cloud-me-pub-shared; the Pages workflow overlays it." }, { "name": "b_Profiles", "path": "cloud-me-pub-profiles-prf-prs", "status": "split", "ticket": "#1072", "doc": "Split out 2026-10-24 from front-projects into cloud-me-pub-profiles-prf-prs; the Pages workflow overlays it." }, { "name": "b_Projects", "path": "CG-galaxy", "status": "split", "ticket": "#1072", "doc": "Split out 2026-10-24 from front-projects into front-galaxy; the Pages workflow overlays it." }, { "name": "c_Circus", "path": "CG-circus", "status": "split", "ticket": "#1072", "doc": "Split out 2026-10-24 from front-projects into front-circus; the Pages workflow overlays it." }, { "name": "a-Lfy_CG-Zirkus", "path": "CG-circus", "status": "split", "ticket": "#1218", "doc": "Music projects, moved with history 2026-10-28 into CG-circus (5c01204), laid out 2026-10-29 as Music-Production/{Music-DAW,Music-Mixer} plus Video-Production and Game-Production (#1280); labtools removed it in 741bb8b." }, { "name": "a-Lfy_C3", "path": "Projects-labtools", "status": "split", "ticket": "#1218", "doc": "README only for now." }, { "name": "b-Nxs_PA", "path": "Fin-CM-mqpm", "status": "split", "ticket": "#1218", "doc": "Central bank, moved with history 2026-10-28 into Fin-CM-mqpm (src/central_bank, 92b18a0); labtools removed it in 741bb8b." }, { "name": "b-Nxs_Blmmbrg", "path": "Fin-CM-Blmbrg", "status": "split", "ticket": "#1218", "doc": "fin-terminal, market_watch, news, moved with history 2026-10-28 into Fin-CM-Blmbrg (src/, 47950ae), then laid out as FIN TERMINAL 2026-10-29 (#1279): src/{CentralBank, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal}; labtools removed it in 741bb8b." }, { "name": "c-Stk_DsX", "path": "CAD-Simulators", "status": "split", "ticket": "#1218", "doc": "sailytics, moved with history 2026-10-28 into CAD-Simulators (457f89f), now Simulators/sailytics (#1279, was tools/sailytics); labtools removed it in 741bb8b." }, { "name": "c_Suite", "path": "cloudy-h-webapps-2", "status": "split", "ticket": "#1072", "doc": "Split out 2026-10-24 from front-projects into cloud-webapps-2; the Pages workflow overlays it." }, { "name": "e-Others", "path": "CG-circus", "status": "split", "ticket": "#1196", "doc": "Moved 2026-10-25 into front-circus; front repo front-others is superseded and archived." } ],
-      "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud." },
-    { "name": "z-archived_front-linktree", "group": "b_projects", "url": "git@github.com:diegonmarcos/z-archived_front-linktree.git", "private": false, "renamed_from": ["front-linktree"],
-      "doc": "Superseded 2026-10-27 (#1217): linktree sources moved into cloud-me-pub-profiles-_lnktree (Lnktree); renamed z-archived_front-linktree. Originally split from diegonmarcos.github.io (#1072)." },
-    { "name": "Projects-endeavours", "group": "b_projects", "hub": "Projects-___", "url": "git@github.com:diegonmarcos/Projects-endeavours.git", "private": false, "renamed_from": ["front-companies", "front-endeavours"],
-      "doc": "Sources of the a_Companies group, split from front-projects (#1072); snapshot copy, paths mirror the original layout." },
-    { "name": "z-archived_front-individual", "group": "b_projects", "url": "git@github.com:diegonmarcos/z-archived_front-individual.git", "private": false, "renamed_from": ["front-individual"],
-      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-pub-profiles-prf-prs (b_Profiles); renamed z-archived_front-individual, to be archived on GitHub (owner click)" },
-    { "name": "z-archived_front-warehouse", "group": "b_projects", "url": "git@github.com:diegonmarcos/z-archived_front-warehouse.git", "private": false, "renamed_from": ["front-warehouse"],
-      "doc": "Superseded 2026-10-25 (#1196): its projects moved into front-endeavours; renamed z-archived_front-warehouse, to be archived on GitHub (owner click)" },
-    { "name": "z-archived_front-feeds", "group": "b_projects", "url": "git@github.com:diegonmarcos/z-archived_front-feeds.git", "private": false, "renamed_from": ["front-feeds"],
-      "doc": "Superseded 2026-10-25 (#1196): its projects moved into CG-circus; renamed z-archived_front-feeds, to be archived on GitHub (owner click)" },
-    { "name": "z-archived_front-media", "group": "b_projects", "url": "git@github.com:diegonmarcos/z-archived_front-media.git", "private": false, "renamed_from": ["front-media"],
-      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-pub-profiles-prf-prs (b_Profiles); renamed z-archived_front-media, to be archived on GitHub (owner click)" },
-    { "name": "cloud-me-pub-shared", "group": "b_projects", "hub": "cloud-me-pub-___", "url": "git@github.com:diegonmarcos/cloud-me-pub-shared.git", "private": false, "renamed_from": ["front-mydata", "cloud-me-others"],
-      "doc": "Sources of the b_MyData group, split from front-projects (#1072); snapshot copy, paths mirror the original layout." },
-    { "name": "cloud-me-pub-profiles-___", "group": "b_projects", "parent_hub": "cloud-me-pub-___", "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-___.git", "private": false, "renamed_from": ["front-profiles", "cloud-me-profiles", "Me-Profiles", "cloud-me-pub-profiles", "cloud-me-pub-profiles___"],
-      "doc": "Hub of the cloud-me-pub-profiles family (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree): its own repos.json subset plus committed symlinks, same model as CG, Fin-CM and cloud. Was cloud-me-profiles (the b_Profiles, Lnktree and myAstro sources); content split into cloud-me-pub-profiles-prf-prs and cloud-me-pub-profiles-_lnktree 2026-10-28." },
-    { "name": "cloud-me-pub-profiles-prf-prs", "group": "b_projects", "hub": "cloud-me-pub-profiles-___", "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-prf-prs.git", "private": false, "renamed_from": ["Me-Profiles-Prf-Prs"],
-      "doc": "Professional and personal profile sites: b_Profiles (myprofile, mySocials, cv_pdf, cv_web, landpage) and c_Circus/myAstro, split 2026-10-28 out of cloud-me-profiles (cloud-me-pub-profiles); snapshot copy, paths mirror the original layout." },
-    { "name": "cloud-me-pub-profiles-_lnktree", "group": "b_projects", "hub": "cloud-me-pub-profiles-___", "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-_lnktree.git", "private": false, "renamed_from": ["Me-Profiles-_Lnktree"],
-      "doc": "Linktree sources (Lnktree/linktree, linktree_mindmap, linktree_pixel-world, linktree_icon-view), split 2026-10-28 out of cloud-me-profiles (cloud-me-pub-profiles); published URLs unchanged." },
-    { "name": "CG-galaxy", "group": "b_projects", "hub": "CG-___", "url": "git@github.com:diegonmarcos/CG-galaxy.git", "private": false, "renamed_from": ["front-galaxy"],
-      "doc": "Sources of the b_Projects group, split from front-projects (#1072); snapshot copy, paths mirror the original layout." },
-    { "name": "CG-___", "group": "b_projects", "parent_hub": "Projects-___", "url": "git@github.com:diegonmarcos/CG-___.git", "private": false, "renamed_from": ["CG", "CG___"],
-      "doc": "Project master for the CG family (CG-circus, CG-galaxy, CG-galaxy-gaia, CG-unity, CG-voxel-rust): its own repos.json subset plus committed symlinks, same model as front, cloud and lecole-42. Created 2026-10-26 (#1204)." },
-    { "name": "CG-circus", "group": "b_projects", "hub": "CG-___", "url": "git@github.com:diegonmarcos/CG-circus.git", "private": false, "renamed_from": ["front-circus"],
-      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloudy-h-webapps-2 #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout." },
-    { "name": "Fin-___", "group": "b_projects", "parent_hub": "Projects-___", "url": "git@github.com:diegonmarcos/Fin-___.git", "private": false, "renamed_from": ["Fin-CM", "Fin-CM___", "Fin-CM-___"],
-      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)." },
-    { "name": "cloud-me-pub-profiles-nexus.z", "group": "b_projects", "hub": "cloud-me-pub-profiles-___", "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-nexus.z.git", "private": false, "renamed_from": ["Fin-CM-NexusZ", "Me-Profiles-Nexus.z"],
-      "doc": "Nexus.z company site (published at /nexus/), moved from front-endeavours a_Companies/nexus (#1224); renamed from Fin-CM-NexusZ into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo." },
-    { "name": "Fin-Corporate", "group": "b_projects", "hub": "Fin-___", "url": "git@github.com:diegonmarcos/Fin-Corporate.git", "private": false, "doc": "Corporate finance (Nexus.z, Field Finance, Project Corporate); member of the Fin-___ hub. Created 2026-10-28." },
-    { "name": "Fin-CM-mqpm", "group": "b_projects", "hub": "Fin-___", "url": "git@github.com:diegonmarcos/Fin-CM-mqpm.git", "private": false,
-      "doc": "MQPM / StochBates: README and deployer wiring skeleton; src/central_bank moved here with history 2026-10-28 from labtools b-Nxs_PA (#1218, 92b18a0). #1224." },
-    { "name": "Fin-CM-Blmbrg", "group": "b_projects", "hub": "Fin-___", "url": "git@github.com:diegonmarcos/Fin-CM-Blmbrg.git", "private": false,
-      "doc": "Blmbrg (FIN TERMINAL: CentralBank pointer, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal under src/): README and deployer wiring skeleton; the former front-labtools projects b-Nxs_Blmmbrg/* moved here with history 2026-10-28 (#1218, 47950ae), laid out 2026-10-29 (#1279). #1224." },
-    { "name": "DeepSc-___", "group": "b_projects", "parent_hub": "Projects-___", "url": "git@github.com:diegonmarcos/DeepSc-___.git", "private": false, "renamed_from": ["DeepSc", "DeepSc___"],
-      "doc": "Project master for the DeepSc family (DeepSc-X; Stark.x moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)." },
-    { "name": "cloud-me-pub-profiles-stark.x", "group": "b_projects", "hub": "cloud-me-pub-profiles-___", "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-stark.x.git", "private": false, "renamed_from": ["DeepSc-StarkX", "Me-Profiles-Stark.x"],
-      "doc": "Stark.x company site (published at /stark/), moved from front-endeavours a_Companies/stark (#1224); renamed from DeepSc-StarkX into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo." },
-    { "name": "DeepSc-X", "group": "b_projects", "hub": "DeepSc-___", "url": "git@github.com:diegonmarcos/DeepSc-X.git", "private": false,
-      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; #1224. The former front-labtools project c-Stk_DsX/sailytics moved to CAD-Simulators Simulators/sailytics (was tools/sailytics) 2026-10-28 (#1218, 457f89f)." },
-    { "name": "CAD-Simulators", "group": "b_projects", "hub": "DeepSc-___", "url": "git@github.com:diegonmarcos/CAD-Simulators.git", "private": false, "renamed_from": ["DeepSc-Tools"],
-      "doc": "CAD and simulators (renamed from DeepSc-Tools and made public 2026-10-28, #1261): first tool is CAD with MCP servers for agentic 3D modelling (FreeCAD, Blender, AutoCAD/DXF as pinned upstream submodules: Structural-Designer/OpenCAD (FreeCAD, AutoCAD) and Simulators (Blender); sailytics in Simulators; layout Structural-Designer + Simulators since #1279). #1255." },
-    { "name": "DuckPeng-___", "group": "b_projects", "parent_hub": "Projects-___", "url": "git@github.com:diegonmarcos/DuckPeng-___.git", "private": false, "renamed_from": ["DuckPeng", "DuckPeng___"],
-      "doc": "Project master for the DuckPeng family: the CG hub and the cloud hub (Leaf.y moved to the cloud-me-pub-profiles family 2026-10-28). Its own repos.json subset plus committed symlinks. Created 2026-10-27 (#1224)." },
-    { "name": "cloud-me-pub-profiles-leaf.y", "group": "b_projects", "hub": "cloud-me-pub-profiles-___", "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-leaf.y.git", "private": false, "renamed_from": ["DuckPeng-LeafY", "Me-Profiles-Leaf.y"],
-      "doc": "Leaf.y company site (published at /leafy/), moved from front-endeavours a_Companies/leafy (#1224); renamed from DuckPeng-LeafY into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo." },
-    { "name": "Projects-labtools", "group": "b_projects", "hub": "Projects-___", "url": "git@github.com:diegonmarcos/Projects-labtools.git", "private": false, "renamed_from": ["front-labtools"],
-      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Fin-CM-mqpm, Fin-CM-Blmbrg, CAD-Simulators (labtools 741bb8b, 2026-10-28)." },
-    { "name": "cloudy-h-webapps-2", "group": "b_projects", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy-h-webapps-2.git", "private": false, "renamed_from": ["front-suite", "cloud-webapps-2", "cloud-h-webapps-2"],
-      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout." },
-    { "name": "z-archived_front-others", "group": "b_projects", "url": "git@github.com:diegonmarcos/z-archived_front-others.git", "private": false, "renamed_from": ["front-others"],
-      "doc": "Superseded 2026-10-25 (#1196): its projects moved into CG-circus; renamed z-archived_front-others, to be archived on GitHub (owner click)" },
-    { "name": "z-archived_front-projects", "group": "b_projects", "url": "git@github.com:diegonmarcos/z-archived_front-projects.git", "private": false, "renamed_from": ["front-projects"],
-      "doc": "Superseded 2026-10-24 by the 12 per-group front repos (#1072); renamed z-archived_front-projects, to be archived on GitHub (owner click)." },
-    { "name": "cloudy_db_assets-cdn", "group": "b_projects", "hub": "cloudy-___", "url": "git@github.com:diegonmarcos/cloudy_db_assets-cdn.git", "private": false, "renamed_from": ["front-assets-cdn", "cloud_db_assets-cdn"],
-      "doc": "Static assets served from the CDN. Renamed from front-assets-cdn 2026-10-27 (#1217)." },
-    { "name": "z-archived_front-data", "group": "b_projects", "url": "git@github.com:diegonmarcos/z-archived_front-data.git", "private": false, "renamed_from": ["front-data"],
-      "doc": "Front-end content and data. Renamed z-archived_front-data 2026-10-23; to be archived on GitHub (owner click)." },
-    { "name": "CG-voxel-rust", "group": "b_projects", "hub": "CG-___", "url": "git@github.com:diegonmarcos/CG-voxel-rust.git", "private": false,
-      "doc": "Voxel engine in Rust (vox-rust build plan under docs/)." },
-    { "name": "CG-galaxy-gaia", "group": "b_projects", "hub": "CG-___", "url": "git@github.com:diegonmarcos/CG-galaxy-gaia.git", "private": true, "renamed_from": ["front-galaxy-gaia"],
-      "doc": "Front-end experiment." },
-    { "name": "CG-unity", "group": "b_projects", "hub": "CG-___", "url": "git@github.com:diegonmarcos/CG-unity.git", "private": true, "renamed_from": ["front-unity"],
-      "doc": "Unity asset pipeline (unity-asset-vm: upkg2gltf, fetch-and-convert) plus its assets. Was front-asset-cdn, the predecessor of front-assets-cdn; renamed 2026-08-18 to match what it actually holds - the CDN itself is front-assets-cdn." },
-
-    { "name": "front-gh-profile-diegonmarcos", "group": "c_gh", "hub": "Projects-___", "url": "git@github.com:diegonmarcos/diegonmarcos.git", "private": false,
-      "doc": "GitHub profile README repo (diegonmarcos). Cloned under a descriptive front-* name because 'diegonmarcos' at the root of ~/cloud-shared-store/git says nothing about what it is." },
-
-    { "name": "lecole-42-___", "group": "d_lecole", "school": "42", "parent_hub": "_git-repos-master", "url": "git@github.com:diegonmarcos/lecole-42-___.git", "private": false, "renamed_from": ["lecole-42"],
-      "doc": "Project master for the 42 coursework: its own repos.json plus a clone/link script that symlinks the ten lecole-42* repos. Public (owner rule: hubs are always public) although lecole-42-projects and lecole-42_dev stay private; the hub holds only symlinks. Created 2026-10-23 (#1136)." },
-    { "name": "lecole-42-projects", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42-projects.git", "private": true, "renamed_from": ["lecole42"],
-      "doc": "The 42 curriculum itself." },
-    { "name": "lecole-42_back-Algo", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_back-Algo.git", "private": false, "renamed_from": ["back-Algo"],
-      "doc": "Algorithms coursework." },
-    { "name": "lecole-42_back-Graphic", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_back-Graphic.git", "private": false, "renamed_from": ["back-Graphic"],
-      "doc": "Graphics coursework." },
-    { "name": "lecole-42_back-System", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_back-System.git", "private": false, "renamed_from": ["back-System"],
-      "doc": "Systems coursework." },
-    { "name": "lecole-42_cyber-Cyberwarfare", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_cyber-Cyberwarfare.git", "private": false, "renamed_from": ["cyber-Cyberwarfare"],
-      "doc": "Security coursework." },
-    { "name": "lecole-42_dev", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_dev.git", "private": true, "renamed_from": ["dev"],
-      "doc": "Scratch and experiments." },
-    { "name": "lecole-42_ml-Agentic", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_ml-Agentic.git", "private": false, "renamed_from": ["ml-Agentic"],
-      "doc": "Agentic-AI work." },
-    { "name": "lecole-42_ml-DataScience", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_ml-DataScience.git", "private": false, "renamed_from": ["ml-DataScience"],
-      "doc": "Data-science work. Was the whole of the b_data_science group, which held one repo and then none." },
-    { "name": "lecole-42_ml-MachineLearning", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_ml-MachineLearning.git", "private": false, "renamed_from": ["ml-MachineLearning"],
-      "doc": "Machine-learning work." },
-    { "name": "lecole-42_ops-Mylibs", "group": "d_lecole", "school": "42", "hub": "lecole-42-___", "url": "git@github.com:diegonmarcos/lecole-42_ops-Mylibs.git", "private": false, "renamed_from": ["ops-Mylibs"],
-      "doc": "Personal libraries." }
+    {
+      "name": "cloudy-___",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "parent_hub": "_git-repos-master",
+      "url": "git@github.com:diegonmarcos/cloudy-___.git",
+      "private": false,
+      "renamed_from": [
+        "cloud",
+        "cloud___",
+        "cloud-___"
+      ],
+      "doc": "Project master for the cloud project: a repos.json subset of this file plus committed symlinks. Had a symlink here but no entry until 2026-08-20 — the drift that made `ls a_cloud/` disagree with `--list`."
+    },
+    {
+      "name": "cloudy-u-android",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-u-android.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-u-android"
+      ],
+      "doc": "Android client."
+    },
+    {
+      "name": "cloudy-t-infra",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-t-infra.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-infra",
+        "cloud-t-infra"
+      ],
+      "doc": "Fleet: services, infra, the derive engine (1_cloud-configs). Renamed from cloud-infra 2026-10-23 (#1136)."
+    },
+    {
+      "name": "cloudy-u-containers",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-u-containers.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-u-containers"
+      ],
+      "doc": "The containerised services a_solutions ships: one dir per service, each with build.json. Mounted back into cloud-infra as a submodule at a_solutions/ so the ship engine keeps globbing a_solutions/*/build.json."
+    },
+    {
+      "name": "cloudy-u-containers_cgc",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-u-containers_cgc.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-u-containers_cgc"
+      ],
+      "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloudy-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha."
+    },
+    {
+      "name": "cloudy_db_assets-cdn",
+      "farm": "1.1.Cloudy",
+      "group": "b_projects",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy_db_assets-cdn.git",
+      "private": false,
+      "renamed_from": [
+        "front-assets-cdn",
+        "cloud_db_assets-cdn"
+      ],
+      "doc": "Static assets served from the CDN. Renamed from front-assets-cdn 2026-10-27 (#1217)."
+    },
+    {
+      "name": "cloudy_db_infra-ops-obsv_configs-sync",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy_db_infra-ops-obsv_configs-sync.git",
+      "private": false,
+      "renamed_from": [
+        "cloud_db_infra-ops-obsv_configs-sync"
+      ],
+      "doc": "Configs-sync engine data repo: the consolidated fleet config SoT (from 1_cloud-configs) served by c3-infra-api/mcp. Created 2026-10-25 (#1197 programme); public."
+    },
+    {
+      "name": "cloudy_db_LFS",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy_db_LFS.git",
+      "private": true,
+      "lfs": true,
+      "renamed_from": [
+        "cloud-data-lfs",
+        "cloud_db_LFS"
+      ],
+      "doc": "Large binary artefacts (git-lfs) for cloud-me-pvt-data (was cloud-data)."
+    },
+    {
+      "name": "cloudy-u-desktop",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-u-desktop.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-infra-desktop",
+        "cloud-u-desktop"
+      ],
+      "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)."
+    },
+    {
+      "name": "cloudy-a-docs",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-a-docs.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-a-docs"
+      ],
+      "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-pvt-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester."
+    },
+    {
+      "name": "cloudy-u-linux",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-u-linux.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-u-linux"
+      ],
+      "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloudy-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
+    },
+    {
+      "name": "cloudy-h-webapps",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-h-webapps.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-webapps",
+        "cloud-h-webapps"
+      ],
+      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
+    },
+    {
+      "name": "cloudy-h-webapps-2",
+      "farm": "1.1.Cloudy",
+      "group": "b_projects",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-h-webapps-2.git",
+      "private": false,
+      "renamed_from": [
+        "front-suite",
+        "cloud-webapps-2",
+        "cloud-h-webapps-2"
+      ],
+      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloud-me-___",
+      "farm": "1.2.Cloud-me",
+      "group": "a_cloud",
+      "parent_hub": "_git-repos-master",
+      "url": "git@github.com:diegonmarcos/cloud-me-___.git",
+      "private": false,
+      "doc": "Top hub of the cloud-me project (the owner's configs across the cloud): an index above the two sub-hubs cloud-me-pub-___ and cloud-me-pvt-___, its own repos.json subset (only those two) plus committed symlinks, same model as cloudy-___ and CG-___. Created 2026-10-28 (#1244)."
+    },
+    {
+      "name": "cloud-me-pub-___",
+      "farm": "1.2.Cloud-me/Pub",
+      "group": "a_cloud",
+      "parent_hub": "cloud-me-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pub-___.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-me-pub",
+        "cloud-me-pub___"
+      ],
+      "doc": "Hub of the public cloud-me family (Cloud-Me-Pub): the cloud-me-pub-profiles hub and cloud-me-pub-shared (the pub data repo is archived). Its own repos.json subset plus committed symlinks; lists no private repo. Created 2026-10-28."
+    },
+    {
+      "name": "cloud-me-pub-profiles-___",
+      "farm": "1.2.Cloud-me/Pub/Profiles",
+      "group": "b_projects",
+      "parent_hub": "cloud-me-pub-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-___.git",
+      "private": false,
+      "renamed_from": [
+        "front-profiles",
+        "cloud-me-profiles",
+        "Me-Profiles",
+        "cloud-me-pub-profiles",
+        "cloud-me-pub-profiles___"
+      ],
+      "doc": "Hub of the cloud-me-pub-profiles family (Leaf.y, Nexus.z, Stark.x, Prf-Prs, _Lnktree): its own repos.json subset plus committed symlinks, same model as CG, Fin-CM and cloud. Was cloud-me-profiles (the b_Profiles, Lnktree and myAstro sources); content split into cloud-me-pub-profiles-prf-prs and cloud-me-pub-profiles-_lnktree 2026-10-28."
+    },
+    {
+      "name": "cloud-me-pub-profiles-_lnktree",
+      "farm": "1.2.Cloud-me/Pub/Profiles",
+      "group": "b_projects",
+      "hub": "cloud-me-pub-profiles-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-_lnktree.git",
+      "private": false,
+      "renamed_from": [
+        "Me-Profiles-_Lnktree"
+      ],
+      "doc": "Linktree sources (Lnktree/linktree, linktree_mindmap, linktree_pixel-world, linktree_icon-view), split 2026-10-28 out of cloud-me-profiles (cloud-me-pub-profiles); published URLs unchanged."
+    },
+    {
+      "name": "cloud-me-pub-profiles-leaf.y",
+      "farm": "1.2.Cloud-me/Pub/Profiles",
+      "group": "b_projects",
+      "hub": "cloud-me-pub-profiles-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-leaf.y.git",
+      "private": false,
+      "renamed_from": [
+        "DuckPeng-LeafY",
+        "Me-Profiles-Leaf.y"
+      ],
+      "doc": "Leaf.y company site (published at /leafy/), moved from front-endeavours a_Companies/leafy (#1224); renamed from DuckPeng-LeafY into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "cloud-me-pub-profiles-nexus.z",
+      "farm": "1.2.Cloud-me/Pub/Profiles",
+      "group": "b_projects",
+      "hub": "cloud-me-pub-profiles-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-nexus.z.git",
+      "private": false,
+      "renamed_from": [
+        "Fin-CM-NexusZ",
+        "Me-Profiles-Nexus.z"
+      ],
+      "doc": "Nexus.z company site (published at /nexus/), moved from front-endeavours a_Companies/nexus (#1224); renamed from Fin-CM-NexusZ into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "cloud-me-pub-profiles-prf-prs",
+      "farm": "1.2.Cloud-me/Pub/Profiles",
+      "group": "b_projects",
+      "hub": "cloud-me-pub-profiles-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-prf-prs.git",
+      "private": false,
+      "renamed_from": [
+        "Me-Profiles-Prf-Prs"
+      ],
+      "doc": "Professional and personal profile sites: b_Profiles (myprofile, mySocials, cv_pdf, cv_web, landpage) and c_Circus/myAstro, split 2026-10-28 out of cloud-me-profiles (cloud-me-pub-profiles); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloud-me-pub-profiles-stark.x",
+      "farm": "1.2.Cloud-me/Pub/Profiles",
+      "group": "b_projects",
+      "hub": "cloud-me-pub-profiles-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pub-profiles-stark.x.git",
+      "private": false,
+      "renamed_from": [
+        "DeepSc-StarkX",
+        "Me-Profiles-Stark.x"
+      ],
+      "doc": "Stark.x company site (published at /stark/), moved from front-endeavours a_Companies/stark (#1224); renamed from DeepSc-StarkX into the cloud-me-pub-profiles family 2026-10-28; Projects-endeavours keeps a symlink to this repo."
+    },
+    {
+      "name": "cloud-me-pub-shared",
+      "farm": "1.2.Cloud-me/Pub",
+      "group": "b_projects",
+      "hub": "cloud-me-pub-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pub-shared.git",
+      "private": false,
+      "renamed_from": [
+        "front-mydata",
+        "cloud-me-others"
+      ],
+      "doc": "Sources of the b_MyData group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloud-me-pvt-___",
+      "farm": "1.2.Cloud-me/Pvt",
+      "group": "a_cloud",
+      "parent_hub": "cloud-me-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pvt-___.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-me-pvt",
+        "cloud-me-pvt___"
+      ],
+      "doc": "Hub of the private cloud-me family (Cloud-Me-Pvt): its own repos.json subset plus committed symlinks to the private cloud-me repos. Public (owner rule: hubs are always public; holds only symlinks and submodule pointers). Created 2026-10-28."
+    },
+    {
+      "name": "cloud-me-pvt-my-ai",
+      "farm": "1.2.Cloud-me/Pvt",
+      "group": "a_cloud",
+      "hub": "cloud-me-pvt-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pvt-my-ai.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-data-my-ai-memory",
+        "cloud-me-my-ai"
+      ],
+      "doc": "Claude Code's durable state and the source it runs from. ~/.claude symlinks in, not out: a_sessions/<instance>/ holds transcripts, file-history, shell-snapshots and history.jsonl; b_projects/ holds MEMORY.md and memory-entries; a_commits/ snapshots every commit object of every repo here."
+    },
+    {
+      "name": "cloud-me-pvt-cgc",
+      "farm": "1.2.Cloud-me/Pvt",
+      "group": "a_cloud",
+      "hub": "cloud-me-pvt-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pvt-cgc.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-me_cgc"
+      ],
+      "doc": "The PRIVATE half of the cgc pipeline (pvt surface: the private repos -> cloud-cgc-pvt-mcp). A thin orchestrator rendered from cloudy-u-containers_cgc at a pinned sha, so private-repo runs and logs stay private. Was cloud-u-containers_cgc-pvt; renamed 2026-10-10 into the private cloud-me family (split-outs are named <parent>_<name>; every cloud-u-* repo is public)."
+    },
+    {
+      "name": "cloud-me-pvt-configs",
+      "farm": "1.2.Cloud-me/Pvt",
+      "group": "a_cloud",
+      "hub": "cloud-me-pvt-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pvt-configs.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-me_configs"
+      ],
+      "doc": "Deployable configs, no secrets. Twin of cloud-me-pvt-vault (same top-level folders: Containers, Apks, Terminal, Desktop-GUI, Linux-Server, Shared; #1253). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it."
+    },
+    {
+      "name": "cloud-me-pvt-containers",
+      "farm": "1.2.Cloud-me/Pvt",
+      "group": "a_cloud",
+      "hub": "cloud-me-pvt-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pvt-containers.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-me-containers"
+      ],
+      "doc": "Superseded 2026-10-28 (#1253): its sops files now live in cloud-me-pvt-vault Containers/ (subtree merge, history kept). Frozen source; to be archived as z-archived_cloud-me-pvt-containers once consumers are confirmed off it."
+    },
+    {
+      "name": "cloud-me-pvt-data",
+      "farm": "1.2.Cloud-me/Pvt",
+      "group": "a_cloud",
+      "hub": "cloud-me-pvt-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pvt-data.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-data",
+        "cloud-me-data-pvt"
+      ],
+      "doc": "Data only (journal, logs, reports, profiles, health, Pages). Its secrets/, sso-oidc/ and vault-mtls/ moved to cloud-me-pvt-vault on 2026-10-28 (#1253)."
+    },
+    {
+      "name": "cloud-me-pvt-notes",
+      "farm": "1.2.Cloud-me/Pvt",
+      "group": "a_cloud",
+      "hub": "cloud-me-pvt-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pvt-notes.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-notes",
+        "cloud-me-notes"
+      ],
+      "doc": "Personal notes (Obsidian vault)."
+    },
+    {
+      "name": "cloud-me-pvt-vault",
+      "farm": "1.2.Cloud-me/Pvt",
+      "group": "2_vault",
+      "hub": "cloud-me-pvt-___",
+      "url": "git@github.com:diegonmarcos/cloud-me-pvt-vault.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-vault",
+        "cloud-me_vault"
+      ],
+      "doc": "Secrets (sops/age) only. Twin of cloud-me-pvt-configs (same top-level folders: Containers, Apks, Terminal, Desktop-GUI, Linux-Server, Shared, plus Identity). Since 2026-10-28 (#1253) it also holds the container secrets formerly in cloud-me-pvt-containers (Containers/) and the secrets/, sso-oidc/, vault-mtls/ bundles formerly in cloud-me-pvt-data."
+    },
+    {
+      "name": "CG-___",
+      "farm": "2.CG",
+      "group": "b_projects",
+      "parent_hub": "_git-repos-master",
+      "url": "git@github.com:diegonmarcos/CG-___.git",
+      "private": false,
+      "renamed_from": [
+        "CG",
+        "CG___"
+      ],
+      "doc": "Project master for the CG family (CG-circus, CG-galaxy, CG-galaxy-gaia, CG-unity, CG-voxel-rust): its own repos.json subset plus committed symlinks, same model as front, cloud and lecole-42. Created 2026-10-26 (#1204)."
+    },
+    {
+      "name": "CG-galaxy",
+      "farm": "2.CG",
+      "group": "b_projects",
+      "hub": "CG-___",
+      "url": "git@github.com:diegonmarcos/CG-galaxy.git",
+      "private": false,
+      "renamed_from": [
+        "front-galaxy"
+      ],
+      "doc": "Sources of the b_Projects group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "CG-galaxy-gaia",
+      "farm": "2.CG",
+      "group": "b_projects",
+      "hub": "CG-___",
+      "url": "git@github.com:diegonmarcos/CG-galaxy-gaia.git",
+      "private": true,
+      "renamed_from": [
+        "front-galaxy-gaia"
+      ],
+      "doc": "Front-end experiment."
+    },
+    {
+      "name": "CG-unity",
+      "farm": "2.CG",
+      "group": "b_projects",
+      "hub": "CG-___",
+      "url": "git@github.com:diegonmarcos/CG-unity.git",
+      "private": true,
+      "renamed_from": [
+        "front-unity"
+      ],
+      "doc": "Unity asset pipeline (unity-asset-vm: upkg2gltf, fetch-and-convert) plus its assets. Was front-asset-cdn, the predecessor of front-assets-cdn; renamed 2026-08-18 to match what it actually holds - the CDN itself is front-assets-cdn."
+    },
+    {
+      "name": "CG-voxel-rust",
+      "farm": "2.CG",
+      "group": "b_projects",
+      "hub": "CG-___",
+      "url": "git@github.com:diegonmarcos/CG-voxel-rust.git",
+      "private": false,
+      "doc": "Voxel engine in Rust (vox-rust build plan under docs/)."
+    },
+    {
+      "name": "CG-circus",
+      "farm": "2.CG",
+      "group": "b_projects",
+      "hub": "CG-___",
+      "url": "git@github.com:diegonmarcos/CG-circus.git",
+      "private": false,
+      "renamed_from": [
+        "front-circus"
+      ],
+      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloudy-h-webapps-2 #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "Fin-___",
+      "farm": "3.Fin",
+      "group": "b_projects",
+      "parent_hub": "_git-repos-master",
+      "url": "git@github.com:diegonmarcos/Fin-___.git",
+      "private": false,
+      "renamed_from": [
+        "Fin-CM",
+        "Fin-CM___",
+        "Fin-CM-___"
+      ],
+      "doc": "Project master for the Fin-CM family (Fin-CM-mqpm, Fin-CM-Blmbrg; Nexus.z moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "Fin-CM-mqpm",
+      "farm": "3.Fin/Capital-Markets",
+      "group": "b_projects",
+      "hub": "Fin-___",
+      "url": "git@github.com:diegonmarcos/Fin-CM-mqpm.git",
+      "private": false,
+      "doc": "MQPM / StochBates: README and deployer wiring skeleton; src/central_bank moved here with history 2026-10-28 from labtools b-Nxs_PA (#1218, 92b18a0). #1224."
+    },
+    {
+      "name": "Fin-CM-Blmbrg",
+      "farm": "3.Fin/Capital-Markets",
+      "group": "b_projects",
+      "hub": "Fin-___",
+      "url": "git@github.com:diegonmarcos/Fin-CM-Blmbrg.git",
+      "private": false,
+      "doc": "Blmbrg (FIN TERMINAL: CentralBank pointer, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal under src/): README and deployer wiring skeleton; the former front-labtools projects b-Nxs_Blmmbrg/* moved here with history 2026-10-28 (#1218, 47950ae), laid out 2026-10-29 (#1279). #1224."
+    },
+    {
+      "name": "Fin-Corporate",
+      "farm": "3.Fin/Corporate",
+      "group": "b_projects",
+      "hub": "Fin-___",
+      "url": "git@github.com:diegonmarcos/Fin-Corporate.git",
+      "private": false,
+      "doc": "Corporate finance (Nexus.z, Field Finance, Project Corporate); member of the Fin-___ hub. Created 2026-10-28."
+    },
+    {
+      "name": "DeepSc-___",
+      "farm": "4.DeepSc",
+      "group": "b_projects",
+      "parent_hub": "_git-repos-master",
+      "url": "git@github.com:diegonmarcos/DeepSc-___.git",
+      "private": false,
+      "renamed_from": [
+        "DeepSc",
+        "DeepSc___"
+      ],
+      "doc": "Project master for the DeepSc family (DeepSc-X; Stark.x moved to the cloud-me-pub-profiles family 2026-10-28): its own repos.json subset plus committed symlinks, same model as CG, front and cloud. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "DeepSc-X",
+      "farm": "4.DeepSc",
+      "group": "b_projects",
+      "hub": "DeepSc-___",
+      "url": "git@github.com:diegonmarcos/DeepSc-X.git",
+      "private": false,
+      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; #1224. The former front-labtools project c-Stk_DsX/sailytics moved to CAD-Simulators Simulators/sailytics (was tools/sailytics) 2026-10-28 (#1218, 457f89f)."
+    },
+    {
+      "name": "CAD-Simulators",
+      "farm": "4.DeepSc",
+      "group": "b_projects",
+      "hub": "DeepSc-___",
+      "url": "git@github.com:diegonmarcos/CAD-Simulators.git",
+      "private": false,
+      "renamed_from": [
+        "DeepSc-Tools"
+      ],
+      "doc": "CAD and simulators (renamed from DeepSc-Tools and made public 2026-10-28, #1261): first tool is CAD with MCP servers for agentic 3D modelling (FreeCAD, Blender, AutoCAD/DXF as pinned upstream submodules: Structural-Designer/OpenCAD (FreeCAD, AutoCAD) and Simulators (Blender); sailytics in Simulators; layout Structural-Designer + Simulators since #1279). #1255."
+    },
+    {
+      "name": "lecole-42-___",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "parent_hub": "_git-repos-master",
+      "url": "git@github.com:diegonmarcos/lecole-42-___.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "lecole-42"
+      ],
+      "doc": "Project master for the 42 coursework: its own repos.json plus a clone/link script that symlinks the ten lecole-42* repos. Public (owner rule: hubs are always public) although lecole-42-projects and lecole-42_dev stay private; the hub holds only symlinks. Created 2026-10-23 (#1136)."
+    },
+    {
+      "name": "lecole-42_back-Algo",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_back-Algo.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "back-Algo"
+      ],
+      "doc": "Algorithms coursework."
+    },
+    {
+      "name": "lecole-42_back-Graphic",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_back-Graphic.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "back-Graphic"
+      ],
+      "doc": "Graphics coursework."
+    },
+    {
+      "name": "lecole-42_back-System",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_back-System.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "back-System"
+      ],
+      "doc": "Systems coursework."
+    },
+    {
+      "name": "lecole-42_ops-Mylibs",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_ops-Mylibs.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "ops-Mylibs"
+      ],
+      "doc": "Personal libraries."
+    },
+    {
+      "name": "lecole-42-projects",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42-projects.git",
+      "private": true,
+      "school": "42",
+      "renamed_from": [
+        "lecole42"
+      ],
+      "doc": "The 42 curriculum itself."
+    },
+    {
+      "name": "lecole-42_ml-Agentic",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_ml-Agentic.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "ml-Agentic"
+      ],
+      "doc": "Agentic-AI work."
+    },
+    {
+      "name": "lecole-42_ml-DataScience",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_ml-DataScience.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "ml-DataScience"
+      ],
+      "doc": "Data-science work. Was the whole of the b_data_science group, which held one repo and then none."
+    },
+    {
+      "name": "lecole-42_ml-MachineLearning",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_ml-MachineLearning.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "ml-MachineLearning"
+      ],
+      "doc": "Machine-learning work."
+    },
+    {
+      "name": "lecole-42_cyber-Cyberwarfare",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_cyber-Cyberwarfare.git",
+      "private": false,
+      "school": "42",
+      "renamed_from": [
+        "cyber-Cyberwarfare"
+      ],
+      "doc": "Security coursework."
+    },
+    {
+      "name": "lecole-42_dev",
+      "farm": "5.Lecole-42",
+      "group": "d_lecole",
+      "hub": "lecole-42-___",
+      "url": "git@github.com:diegonmarcos/lecole-42_dev.git",
+      "private": true,
+      "school": "42",
+      "renamed_from": [
+        "dev"
+      ],
+      "doc": "Scratch and experiments."
+    },
+    {
+      "name": "Projects-___",
+      "farm": "6.Projects",
+      "group": "b_projects",
+      "parent_hub": "_git-repos-master",
+      "url": "git@github.com:diegonmarcos/Projects-___.git",
+      "private": false,
+      "renamed_from": [
+        "ffront",
+        "front",
+        "Projects",
+        "Projects___"
+      ],
+      "doc": "Project master for the front-end: its own repos.json plus committed symlinks to the front repos. Cloned as the bare 'front' (repo was ffront until #731, now front) so ~/cloud-shared-store/git/front/<member> resolves through the farm — which is what the ~/cloud-shared-store/git/front/front-data/... paths in cloud-infra already assume."
+    },
+    {
+      "name": "Projects-endeavours",
+      "farm": "6.Projects",
+      "group": "b_projects",
+      "hub": "Projects-___",
+      "url": "git@github.com:diegonmarcos/Projects-endeavours.git",
+      "private": false,
+      "renamed_from": [
+        "front-companies",
+        "front-endeavours"
+      ],
+      "doc": "Sources of the a_Companies group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "Projects-labtools",
+      "farm": "6.Projects",
+      "group": "b_projects",
+      "hub": "Projects-___",
+      "url": "git@github.com:diegonmarcos/Projects-labtools.git",
+      "private": false,
+      "renamed_from": [
+        "front-labtools"
+      ],
+      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Fin-CM-mqpm, Fin-CM-Blmbrg, CAD-Simulators (labtools 741bb8b, 2026-10-28)."
+    },
+    {
+      "name": "DuckPeng-___",
+      "farm": "6.Projects/DuckPeng",
+      "group": "b_projects",
+      "parent_hub": "Projects-___",
+      "url": "git@github.com:diegonmarcos/DuckPeng-___.git",
+      "private": false,
+      "renamed_from": [
+        "DuckPeng",
+        "DuckPeng___"
+      ],
+      "doc": "Project master for the DuckPeng family: the CG hub and the cloud hub (Leaf.y moved to the cloud-me-pub-profiles family 2026-10-28). Its own repos.json subset plus committed symlinks. Created 2026-10-27 (#1224)."
+    },
+    {
+      "name": "front-gh-profile-diegonmarcos",
+      "farm": "7.Others",
+      "group": "c_gh",
+      "url": "git@github.com:diegonmarcos/diegonmarcos.git",
+      "private": false,
+      "doc": "GitHub profile README repo (diegonmarcos). Cloned under a descriptive front-* name because 'diegonmarcos' at the root of ~/cloud-shared-store/git says nothing about what it is."
+    },
+    {
+      "name": "front-diegonmarcos",
+      "farm": "7.Others",
+      "group": "b_projects",
+      "url": "git@github.com:diegonmarcos/diegonmarcos.github.io.git",
+      "private": false,
+      "parts": [
+        {
+          "name": "Lnktree",
+          "path": "cloud-me-pub-profiles-_lnktree",
+          "status": "split",
+          "ticket": "#1217",
+          "doc": "Moved 2026-10-27 from front-linktree (a_Portals) into cloud-me-pub-profiles-_lnktree (Lnktree); front-linktree is superseded and to be archived."
+        },
+        {
+          "name": "a_Companies",
+          "path": "Projects-endeavours",
+          "status": "split",
+          "ticket": "#1072",
+          "doc": "Split out 2026-10-24 from front-projects into front-endeavours; the Pages workflow overlays it."
+        },
+        {
+          "name": "a_Individual",
+          "path": "cloud-me-pub-profiles-prf-prs",
+          "status": "split",
+          "ticket": "#1196",
+          "doc": "Moved 2026-10-25 into cloud-me-pub-profiles-prf-prs (b_Profiles); front repo front-individual is superseded and archived."
+        },
+        {
+          "name": "a_Projects",
+          "path": "Projects-endeavours",
+          "status": "split",
+          "ticket": "#1196",
+          "doc": "Moved 2026-10-25 into front-endeavours; front repo front-warehouse is superseded and archived."
+        },
+        {
+          "name": "b_Data",
+          "path": "CG-circus",
+          "status": "split",
+          "ticket": "#1196",
+          "doc": "Moved 2026-10-25 into front-circus; front repo front-feeds is superseded and archived."
+        },
+        {
+          "name": "b_Media",
+          "path": "cloud-me-pub-profiles-prf-prs",
+          "status": "split",
+          "ticket": "#1196",
+          "doc": "Moved 2026-10-25 into cloud-me-pub-profiles-prf-prs (b_Profiles); front repo front-media is superseded and archived."
+        },
+        {
+          "name": "b_MyData",
+          "path": "cloud-me-pub-shared",
+          "status": "split",
+          "ticket": "#1072",
+          "doc": "Split out 2026-10-24 from front-projects into cloud-me-pub-shared; the Pages workflow overlays it."
+        },
+        {
+          "name": "b_Profiles",
+          "path": "cloud-me-pub-profiles-prf-prs",
+          "status": "split",
+          "ticket": "#1072",
+          "doc": "Split out 2026-10-24 from front-projects into cloud-me-pub-profiles-prf-prs; the Pages workflow overlays it."
+        },
+        {
+          "name": "b_Projects",
+          "path": "CG-galaxy",
+          "status": "split",
+          "ticket": "#1072",
+          "doc": "Split out 2026-10-24 from front-projects into front-galaxy; the Pages workflow overlays it."
+        },
+        {
+          "name": "c_Circus",
+          "path": "CG-circus",
+          "status": "split",
+          "ticket": "#1072",
+          "doc": "Split out 2026-10-24 from front-projects into front-circus; the Pages workflow overlays it."
+        },
+        {
+          "name": "a-Lfy_CG-Zirkus",
+          "path": "CG-circus",
+          "status": "split",
+          "ticket": "#1218",
+          "doc": "Music projects, moved with history 2026-10-28 into CG-circus (5c01204), laid out 2026-10-29 as Music-Production/{Music-DAW,Music-Mixer} plus Video-Production and Game-Production (#1280); labtools removed it in 741bb8b."
+        },
+        {
+          "name": "a-Lfy_C3",
+          "path": "Projects-labtools",
+          "status": "split",
+          "ticket": "#1218",
+          "doc": "README only for now."
+        },
+        {
+          "name": "b-Nxs_PA",
+          "path": "Fin-CM-mqpm",
+          "status": "split",
+          "ticket": "#1218",
+          "doc": "Central bank, moved with history 2026-10-28 into Fin-CM-mqpm (src/central_bank, 92b18a0); labtools removed it in 741bb8b."
+        },
+        {
+          "name": "b-Nxs_Blmmbrg",
+          "path": "Fin-CM-Blmbrg",
+          "status": "split",
+          "ticket": "#1218",
+          "doc": "fin-terminal, market_watch, news, moved with history 2026-10-28 into Fin-CM-Blmbrg (src/, 47950ae), then laid out as FIN TERMINAL 2026-10-29 (#1279): src/{CentralBank, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal}; labtools removed it in 741bb8b."
+        },
+        {
+          "name": "c-Stk_DsX",
+          "path": "CAD-Simulators",
+          "status": "split",
+          "ticket": "#1218",
+          "doc": "sailytics, moved with history 2026-10-28 into CAD-Simulators (457f89f), now Simulators/sailytics (#1279, was tools/sailytics); labtools removed it in 741bb8b."
+        },
+        {
+          "name": "c_Suite",
+          "path": "cloudy-h-webapps-2",
+          "status": "split",
+          "ticket": "#1072",
+          "doc": "Split out 2026-10-24 from front-projects into cloud-webapps-2; the Pages workflow overlays it."
+        },
+        {
+          "name": "e-Others",
+          "path": "CG-circus",
+          "status": "split",
+          "ticket": "#1196",
+          "doc": "Moved 2026-10-25 into front-circus; front repo front-others is superseded and archived."
+        }
+      ],
+      "doc": "Front-end: the published site and its derive job (1_front-configs). Cloned as 'front-diegonmarcos', not after its repo name (diegonmarcos.github.io) — every front member is front-<thing>, and the bare 'front' now belongs to the project master, exactly as 'cloud' does for a_cloud."
+    },
+    {
+      "name": "z-archived-___",
+      "farm": "8.Archived",
+      "parent_hub": "_git-repos-master",
+      "url": "git@github.com:diegonmarcos/z-archived-___.git",
+      "private": false,
+      "doc": "Hub of the archived repos (every z-archived_*): repos.json subset, clone.sh, README; created 2026-10-29 (#1291). Its members carry hub z-archived-___ and mount it at 0_hub/z-archived-___."
+    },
+    {
+      "name": "z-archived_cloud-me-pub-data",
+      "farm": "8.Archived",
+      "group": "a_cloud",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_cloud-me-pub-data.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-me_data-pub",
+        "cloud-me-pub-data"
+      ],
+      "doc": "The owner's PUBLIC data (the public half of cloud-me). Added 2026-10-21 (#1073): cloud-drive seeded it but this registry did not list it."
+    },
+    {
+      "name": "z-archived_cloud-me-pvt-data-private",
+      "farm": "8.Archived",
+      "group": "a_cloud",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_cloud-me-pvt-data-private.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-me_data-private",
+        "cloud-me-pvt-data-private"
+      ],
+      "doc": "Archived 2026-10-28: stale skeleton (per-app backups, AI sessions, Maps history, Financial), superseded by cloud-me-pvt-data; was cloud-me_data-private, registered then renamed z-archived_ the same day."
+    },
+    {
+      "name": "z-archived_cloud-me-pvt-legacy",
+      "farm": "8.Archived",
+      "group": "a_cloud",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_cloud-me-pvt-legacy.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-me",
+        "cloud-me-pvt-legacy"
+      ],
+      "doc": "The original cloud-me repo (cloud-me family, near empty), kept as is under the pvt family. Registered 2026-10-28 (was unregistered_ok since #1073)."
+    },
+    {
+      "name": "z-archived_front-data",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_front-data.git",
+      "private": false,
+      "renamed_from": [
+        "front-data"
+      ],
+      "doc": "Front-end content and data. Renamed z-archived_front-data 2026-10-23; to be archived on GitHub (owner click)."
+    },
+    {
+      "name": "z-archived_front-feeds",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_front-feeds.git",
+      "private": false,
+      "renamed_from": [
+        "front-feeds"
+      ],
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into CG-circus; renamed z-archived_front-feeds, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-individual",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_front-individual.git",
+      "private": false,
+      "renamed_from": [
+        "front-individual"
+      ],
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-pub-profiles-prf-prs (b_Profiles); renamed z-archived_front-individual, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-linktree",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_front-linktree.git",
+      "private": false,
+      "renamed_from": [
+        "front-linktree"
+      ],
+      "doc": "Superseded 2026-10-27 (#1217): linktree sources moved into cloud-me-pub-profiles-_lnktree (Lnktree); renamed z-archived_front-linktree. Originally split from diegonmarcos.github.io (#1072)."
+    },
+    {
+      "name": "z-archived_front-media",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_front-media.git",
+      "private": false,
+      "renamed_from": [
+        "front-media"
+      ],
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into cloud-me-pub-profiles-prf-prs (b_Profiles); renamed z-archived_front-media, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-others",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_front-others.git",
+      "private": false,
+      "renamed_from": [
+        "front-others"
+      ],
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into CG-circus; renamed z-archived_front-others, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_front-projects",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_front-projects.git",
+      "private": false,
+      "renamed_from": [
+        "front-projects"
+      ],
+      "doc": "Superseded 2026-10-24 by the 12 per-group front repos (#1072); renamed z-archived_front-projects, to be archived on GitHub (owner click)."
+    },
+    {
+      "name": "z-archived_front-warehouse",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_front-warehouse.git",
+      "private": false,
+      "renamed_from": [
+        "front-warehouse"
+      ],
+      "doc": "Superseded 2026-10-25 (#1196): its projects moved into front-endeavours; renamed z-archived_front-warehouse, to be archived on GitHub (owner click)"
+    },
+    {
+      "name": "z-archived_c3-infra-plugin",
+      "farm": "8.Archived",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_c3-infra-plugin.git",
+      "private": true,
+      "doc": "Archived former c3-infra plugin repo; the plugin source of truth is cloudy-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra. Registered 2026-10-29 (#1291) so 09.Archived holds every z-archived_*."
+    },
+    {
+      "name": "z-archived_My-ai-memory",
+      "farm": "8.Archived",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_My-ai-memory.git",
+      "private": true,
+      "doc": "Archived AI memory repo. Registered 2026-10-29 (#1291) so 09.Archived holds every z-archived_*."
+    }
   ]
 }
