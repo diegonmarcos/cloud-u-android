@@ -85,7 +85,7 @@ class GitPageLayoutTest {
         assertFalse("the row is clickable whether or not it is cloned", src.contains(".clickable(enabled = repo != null"))
         assertTrue(src.contains("expanded == e.key && cloned == null"))
         assertTrue(src.contains("GitRepoNotClonedBox("))
-        for (needle in listOf("R.string.repo_act_open_web", "R.string.sync_clone_into_store", "R.string.repo_act_copy_url", "RepoActions.PRS", "RepoActions.needsClone(it)", "R.string.repo_not_cloned_why")) assertTrue(needle, src.contains(needle))
+        for (needle in listOf("R.string.repo_act_open_web", "R.string.sync_clone_into_store", "R.string.repo_act_copy_url", "RepoActions.PRS", "RepoActions.needsClone(id)", "R.string.repo_not_cloned_why")) assertTrue(needle, src.contains(needle))
     }
 
     @Test fun `#1195 the pages open without disk, process or network work in their composables`() {
