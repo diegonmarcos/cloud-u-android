@@ -670,13 +670,13 @@ class PermissionsFragment : KitComposeFragment() {
     private var specialAtBuild: Map<com.diegonmarcos.superapp.system.SpecialPerms.Kind, Boolean>? = null
     override fun onResume() {
         super.onResume()
+        val before = specialAtBuild
+        if (before != null && com.diegonmarcos.superapp.system.SpecialPerms.snapshot(requireContext()) != before)
+            view?.post { if (isAdded) rebuildFragment() }
         // #1274 live status: the catalogue rows re-read on every resume (back from a settings page). Only centerEpoch
         // moves, so this cannot start the detach/attach loop described below.
         com.diegonmarcos.superapp.perms.PermsLink.consume()?.let { highlight = it }
         centerEpoch++
-        val before = specialAtBuild ?: return
-        if (com.diegonmarcos.superapp.system.SpecialPerms.snapshot(requireContext()) != before)
-            view?.post { if (isAdded) rebuildFragment() }
     }
 
     // NO onResume->rebuildFragment: rebuildFragment() detaches+attaches this
