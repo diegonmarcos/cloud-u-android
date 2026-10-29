@@ -35,7 +35,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 5 | 0 | 100% |
 | cloud-mail | `com.diegonmarcos.comms.mail` | 11 | 2 | 84% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 2 | 9 | 18% |
-| cloud-me | `com.diegonmarcos.cloudme` | 12 | 0 | 100% |
+| cloud-me | `com.diegonmarcos.cloudme` | 13 | 0 | 100% |
 | cloud-gallery | `com.diegonmarcos.mediacenter` | 6 | 1 | 85% |
 | cloud-myterminal | `com.diegonmarcos.ide` | 7 | 0 | 100% |
 | cloud-nav | `com.diegonmarcos.cloudnav` | 13 | 0 | 100% |
@@ -52,7 +52,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 4 | 2 | 66% |
 | cloud-kg-store | `com.diegonmarcos.cloudkgstore` | 4 | 2 | 66% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 10 | 2 | 83% |
-| **fleet** | | **309** | **54** | **85%** |
+| **fleet** | | **310** | **54** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -731,6 +731,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 | `permissions_asked` | prefs | device | no | Cloud Me: one boolean per runtime permission, set once the system dialog has been shown for it, so the start-up prompt is never repeated; the new phone asks afresh, so it never migrates. |
 | `profile_dd_user` | prefs | config | yes | Cloud Me > Profile > DD (due diligence) dossier values, one JSON string under 'data' (field id to value, status, expiry), imported from the private store. Special-category data: it stays on the device and in the encrypted backup, never in a public repo; the schema (labels only) is the public asset. |
 | `profile_health_user` | prefs | config | yes | Cloud Me > Profile > Health record values, one JSON string under 'data' (field id to value, status, expiry), imported from the private store. Special-category data: it stays on the device and in the encrypted backup, never in a public repo; the schema (labels only) is the public asset. |
+| `repo_tree` | prefs | config | yes | Cloud Me > Lnktree > Proj (#1298): which nodes of the repository tree are expanded, one string set under 'expanded' (registry node codes such as 1.2 or 1.2.1). A view preference of the owner: it migrates so the tree reopens as it was left. |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
@@ -740,7 +741,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 |---|---|---|
 | `assets/health_*.json (from ac_cloud-me/data/health)` | config | #1180 Cloud Me > Health declared content (plan, formulas, home clusters, workout programme) is baked from git into the build, so a new phone gets it by installing the same build; the user's own entries are the health_user store. |
 
-Coverage: 12 covered, 0 gaps.
+Coverage: 13 covered, 0 gaps.
 
 ## cloud-gallery — `com.diegonmarcos.mediacenter`
 

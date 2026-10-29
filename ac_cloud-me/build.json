@@ -826,10 +826,9 @@
       }
     ],
     "repo_tree": {
-      "_doc": "#1298 Lnktree > Proj: the registry outline as a collapsible tree. outline_asset is libs:repos repos.outline.json (byte-equal copy in data/repos, guarded by RepoOutlineTest and libs/repos/sync.sh --check-outline). group is the second-row group whose label opens the FULL tree. areas maps each page of that group to a registry area code, in registry order (a guard holds them equal to the outline's areas minus omit). labels overrides a registry label for a chip (area 5 is 42 in the registry, area 6 Projects is shown as Front). Expansion state is the SharedPreferences store prefs (one set of expanded node codes). A leaf opens the fleet app whose constellation repo_url is its url when there is one, else its GitHub url.",
+      "_doc": "#1298 Lnktree > Proj: the registry outline as a collapsible tree. outline_asset is libs:repos repos.outline.json (byte-equal copy in data/repos, guarded by RepoOutlineTest and libs/repos/sync.sh --check-outline). group is the second-row group whose label opens the FULL tree. areas maps each page of that group to a registry area code, in registry order (a guard holds them equal to the outline's areas minus omit). labels overrides a registry label for a chip (area 5 is 42 in the registry, area 6 Projects is shown as Front). Expansion state is the SharedPreferences store repo_tree (one set of expanded node codes, declared in fleet-config.json). A leaf opens the fleet app whose constellation repo_url is its url when there is one, else its GitHub url.",
       "outline_asset": "repos.outline.json",
       "group": "proj",
-      "prefs": "repo_tree",
       "areas": [
         {"page": "area-unix", "code": "1"},
         {"page": "area-cg", "code": "2"},

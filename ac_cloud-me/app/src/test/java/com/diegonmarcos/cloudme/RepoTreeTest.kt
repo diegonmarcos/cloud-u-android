@@ -98,11 +98,11 @@ class RepoTreeTest {
 
     @Test fun `the expansion state is persisted and reloaded`() {
         val ctx = RuntimeEnvironment.getApplication()
-        val store = RepoTreeStore(ctx, config.prefs)
+        val store = RepoTreeStore(ctx)
         val m = RepoTreeModel(store.load())
         assertTrue(m.expanded.isEmpty())
         m.toggle("1.2"); m.toggle("1.2.1"); store.save(m.expanded)
-        val again = RepoTreeModel(RepoTreeStore(ctx, config.prefs).load())
+        val again = RepoTreeModel(RepoTreeStore(ctx).load())
         assertEquals(setOf("1.2", "1.2.1"), again.expanded)
         assertTrue(again.rows(config.area(outline, "1")!!.children).any { it.node.label == "Profiles" })
     }

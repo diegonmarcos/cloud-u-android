@@ -71,7 +71,7 @@ fun RepoTreeScreen(areaCode: String?, modifier: Modifier = Modifier, config: Rep
     val roots = remember(outline, areaCode) {
         if (areaCode == null) config.shown(outline) else config.area(outline, areaCode)?.children.orEmpty()
     }
-    val store = remember(config.prefs) { RepoTreeStore(ctx, config.prefs) }
+    val store = remember { RepoTreeStore(ctx) }
     val model = remember(store) { RepoTreeModel(store.load()) }
     // The model is plain; this counter is what recomposes the list after a toggle.
     var version by remember { mutableStateOf(0) }

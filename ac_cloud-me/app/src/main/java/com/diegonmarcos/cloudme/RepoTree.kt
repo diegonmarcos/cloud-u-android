@@ -69,7 +69,6 @@ internal fun JSONArray?.objects(): List<JSONObject> =
 /** build.json::ui.repo_tree, plus the fleet apps (constellation repo_url -> package) app/build.gradle adds. */
 data class RepoTreeConfig(
     val group: String,
-    val prefs: String,
     val outlineAsset: String,
     /** Area page id -> registry area code, in declared (registry) order. */
     val areas: List<Pair<String, String>>,
@@ -93,7 +92,6 @@ data class RepoTreeConfig(
     companion object {
         fun parse(o: JSONObject): RepoTreeConfig = RepoTreeConfig(
             group = o.optString("group"),
-            prefs = o.optString("prefs", "repo_tree"),
             outlineAsset = o.optString("outline_asset", "repos.outline.json"),
             areas = o.optJSONArray("areas").objects().map { it.optString("page") to it.optString("code") },
             omit = o.optJSONArray("omit")?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() } ?: emptySet(),
@@ -105,7 +103,7 @@ data class RepoTreeConfig(
         /** The baked declaration (BuildConfig.UI_REPO_TREE_B64); fail-soft to "no Proj tree". */
         val baked: RepoTreeConfig by lazy {
             runCatching { parse(JSONObject(String(Base64.decode(BuildConfig.UI_REPO_TREE_B64, Base64.DEFAULT)))) }
-                .getOrDefault(RepoTreeConfig("", "repo_tree", "repos.outline.json", emptyList(), emptySet(), emptyMap(), emptyMap()))
+                .getOrDefault(RepoTreeConfig("", "repos.outline.json", emptyList(), emptySet(), emptyMap(), emptyMap()))
         }
     }
 }
@@ -143,9 +141,9 @@ class RepoTreeModel(initial: Set<String> = emptySet()) {
     }
 }
 
-/** The persisted expansion state: one string set in the SharedPreferences store ui.repo_tree.prefs. */
-class RepoTreeStore(ctx: Context, name: String) {
-    private val prefs = ctx.getSharedPreferences(name, Context.MODE_PRIVATE)
+/** The persisted expansion state: one string set in the SharedPreferences store `repo_tree` (declared in fleet-config.json). */
+class RepoTreeStore(ctx: Context) {
+    private val prefs = ctx.getSharedPreferences("repo_tree", Context.MODE_PRIVATE)
     fun load(): Set<String> = prefs.getStringSet(KEY, emptySet())?.toSet() ?: emptySet()
     fun save(expanded: Set<String>) { prefs.edit().putStringSet(KEY, expanded.toSet()).apply() }
     companion object { const val KEY = "expanded" }

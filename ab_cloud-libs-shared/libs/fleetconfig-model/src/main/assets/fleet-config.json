@@ -1079,6 +1079,14 @@
         "ac_cloud-me"
       ]
     },
+    "repo_tree": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Cloud Me > Lnktree > Proj (#1298): which nodes of the repository tree are expanded, one string set under 'expanded' (registry node codes such as 1.2 or 1.2.1). A view preference of the owner: it migrates so the tree reopens as it was left.",
+      "used_by": [
+        "ac_cloud-me"
+      ]
+    },
     "profile_dd_user": {
       "kind": "prefs",
       "class": "config",
