@@ -1,0 +1,51 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║                                                                  ║
+# ║   GENERATED FILE — DO NOT EDIT                                   ║
+# ║                                                                  ║
+# ║   Source : _git-repos-master/9_others/templates/readme/readme-check.yml
+# ║   Engine : _git-repos-master/repos-sot.js sync-readmes
+# ║   Rebuild: node repos-sot.js sync-readmes <clone>
+# ║                                                                  ║
+# ║   Manual edits will be overwritten on next build.                ║
+# ║                                                                  ║
+# ╚══════════════════════════════════════════════════════════════════╝
+#
+# README drift guard (#1303): README.md must equal a fresh render of _dotfiles/readme/
+# (template.md.tpl + node.json + readme.json). Node only, no install, a few seconds.
+name: readme-check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - '_dotfiles/readme/**'
+      - '.github/workflows/readme-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - '_dotfiles/readme/**'
+      - '.github/workflows/readme-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: readme-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  readme-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            README.md
+            _dotfiles/readme
+          sparse-checkout-cone-mode: false
+      - name: README.md equals the render of _dotfiles/readme/
+        run: sh _dotfiles/readme/render-readme.sh --check

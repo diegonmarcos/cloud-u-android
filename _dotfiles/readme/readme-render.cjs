@@ -3,7 +3,7 @@
 // SOURCE: _git-repos-master/readme-render.js. Every repo carries a byte copy as _dotfiles/readme/readme-render.cjs (written by
 // `node repos-sot.js sync-readmes`); DO NOT EDIT the copies.
 //
-// A repo's README.md = template (_dotfiles/readme/template.md.tpl, hub or repo variant)
+// A repo's README.md = template (_dotfiles/readme/template.md.tpl: hub, repo, archived or profile variant)
 //                    + node.json  (its registry node, rendered from projects-repos.json; DO NOT EDIT)
 //                    + readme.json (optional, hand-owned: title, intro, sections[] of repo-specific prose).
 //
@@ -45,7 +45,7 @@ function nodeData(x, name) {
   return {
     schema: 'readme-node/v1',
     generated_by: '_git-repos-master readme-render.js nodeData() from projects-repos.json; DO NOT EDIT (node repos-sot.js sync-readmes)',
-    name: r.name, label: r.label || r.name, code: r.code, kind: isHub ? 'hub' : 'repo',
+    name: r.name, label: r.label || r.name, code: r.code, kind: isHub ? 'hub' : 'repo', variant: variant(r),
     description: r.description || (own && own.description) || '',
     visibility: r.visibility, url: r.url, developer: r.developer || '', farm: r.farm || '',
     breadcrumb: crumbs,
@@ -54,7 +54,14 @@ function nodeData(x, name) {
     members: isHub ? x.repos.filter(m => m.up === r.name && m.status !== 'pending_creation')
       .map(m => ({ code: m.code, name: m.name, url: m.url, visibility: m.visibility, kind: m.kind, description: m.description || '' })) : [],
     tree: r.visibility === 'private' ? null : treeLines(r.tree && r.tree.entries, 3),
+    ...(variant(r) === 'archived' ? { old_names: (r.renamed_from || []).filter(o => o !== r.github), history: r.doc || '' } : {}),
   };
+}
+// template variant: hub | repo | archived (z-archived_* repos) | profile (the GitHub profile README repo, role "profile")
+function variant(r) {
+  if (r.kind === 'hub') return 'hub';
+  if (r.name.startsWith('z-archived_')) return 'archived';
+  return r.role === 'profile' ? 'profile' : 'repo';
 }
 
 // ---- existing README.md -> readme.json (one-time migration; lossless split on "## ") ----
@@ -96,6 +103,7 @@ function blocks(n, rd) {
     hub: n.hub ? `[${n.hub.name}](${n.hub.url}) \`${n.hub.code}\`` : '—',
     hub_name: n.hub ? n.hub.name : '', hub_url: n.hub ? n.hub.url : '',
     members, member_count: String(n.members.length),
+    old_names: (n.old_names || []).map(o => `\`${o}\``).join(', '), history: n.history || '',
     tree: n.tree ? (n.tree.length ? '```\n' + n.name + '/\n' + n.tree.join('\n') + '\n```' : '_No folders._')
       : '_Private repository: its folder tree is not published in the registry._',
   };
@@ -120,7 +128,7 @@ function renderRepo(root) {
   return render(JSON.parse(fs.readFileSync(path.join(kit, 'node.json'), 'utf8')), rd, fs.readFileSync(path.join(kit, 'template.md.tpl'), 'utf8'));
 }
 
-module.exports = { nodeData, render, renderRepo, migrate, treeLines, KIT, HUB_SECTIONS };
+module.exports = { nodeData, variant, render, renderRepo, migrate, treeLines, KIT, HUB_SECTIONS };
 
 if (require.main === module) {
   const args = process.argv.slice(2), check = args.includes('--check');

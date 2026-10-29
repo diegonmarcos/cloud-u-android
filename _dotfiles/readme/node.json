@@ -5,6 +5,7 @@
   "label": "cloudy-u-android",
   "code": "1.1.1.1",
   "kind": "repo",
+  "variant": "repo",
   "description": "Android Parallel Space / Virtual Engine — data-ownership workspace built on the cloud/ declarative framework",
   "visibility": "public",
   "url": "https://github.com/diegonmarcos/cloudy-u-android",
