@@ -17,6 +17,10 @@ object LegacyRoutes {
         "house/manage" to "buro/assets",
         "house" to "buro/assets",
         "me/tasks" to "duties/tasks",
+        // #1299 the section took the name Lnktree, so its embedded linktree site page is lnktree-site (a page id equal
+        // to its section id draws two title-menu entries with one tag).
+        "me/lnktree" to "lnktree/lnktree-site",
+        "lnktree/lnktree" to "lnktree/lnktree-site",
         "buro/summary" to "buro/ids",
         "buro/docs" to "buro/assets",
         "buro/fin" to "buro/cashflow",

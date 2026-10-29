@@ -204,14 +204,14 @@ for gone in ("house", "work"):
         bad("pages", f"the retired {gone} section is declared again")
     if os.path.isdir(os.path.join(app, "data/ui", gone)):
         bad("pages", f"data/ui/{gone} is back")
-if [p["id"] for p in secs.get("lnktree", {}).get("pages", [])] != ["professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree", "area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"]:
+if [p["id"] for p in secs.get("lnktree", {}).get("pages", [])] != ["professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree-site", "area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"]:
     bad("pages", "Lnktree pages are not Professional, Leaf.y, Nexus.z, Stark.x, Personal, Social, Health, DD, Astro, Lnktree, Unix, CG, Capital, HardTech, Lecole42, Front")
 _me = secs.get("lnktree", {})
-if _me.get("nav_mode") != "horizontal_two_rows" or {g["id"]: g["pages"] for g in _me.get("groups", [])} != {"prof": ["professional", "leafy", "nexus", "stark"], "pers": ["personal", "social", "health", "dd", "astro", "lnktree"], "proj": ["area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"]}:
+if _me.get("nav_mode") != "horizontal_two_rows" or {g["id"]: g["pages"] for g in _me.get("groups", [])} != {"prof": ["professional", "leafy", "nexus", "stark"], "pers": ["personal", "social", "health", "dd", "astro", "lnktree-site"], "proj": ["area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"]}:
     bad("pages", "Lnktree is not the three rows Prof / Pers / Proj")
-if [p["id"] for p in _me.get("pages", []) if p.get("separator_before")] != ["leafy", "health", "lnktree"]:
+if [p["id"] for p in _me.get("pages", []) if p.get("separator_before")] != ["leafy", "health", "lnktree-site"]:
     bad("pages", "Lnktree row separators are not before Leaf.y, Health, Lnktree")
-for _pid, _u in (("leafy", "https://diegonmarcos.github.io/leafy/"), ("nexus", "https://diegonmarcos.github.io/nexus/"), ("stark", "https://diegonmarcos.github.io/stark/"), ("astro", "https://diegonmarcos.github.io/myAstro/"), ("lnktree", "https://linktree.diegonmarcos.com/")):
+for _pid, _u in (("leafy", "https://diegonmarcos.github.io/leafy/"), ("nexus", "https://diegonmarcos.github.io/nexus/"), ("stark", "https://diegonmarcos.github.io/stark/"), ("astro", "https://diegonmarcos.github.io/myAstro/"), ("lnktree-site", "https://linktree.diegonmarcos.com/")):
     _f = os.path.join(app, f"data/ui/lnktree/{_pid}.json")
     _b = json.load(open(_f, encoding="utf-8")) if os.path.exists(_f) else []
     if len(_b) != 1 or _b[0].get("id") != "web" or _b[0].get("url") != _u:

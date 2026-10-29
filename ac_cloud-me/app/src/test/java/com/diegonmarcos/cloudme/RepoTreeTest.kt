@@ -165,5 +165,10 @@ class RepoTreeTest {
         assertEquals("lnktree" to "leafy", LegacyRoutes.resolve("me", "leafy"))
         assertEquals("lnktree" to null, LegacyRoutes.resolve("me", null))
         assertEquals("duties" to "tasks", LegacyRoutes.resolve("me", "tasks"))
+        assertEquals("lnktree" to "lnktree-site", LegacyRoutes.resolve("me", "lnktree"))
+        for (sec in ui.getJSONArray("sections").objects()) {
+            fun ids(o: JSONObject): List<String> = o.optJSONArray("pages").objects().flatMap { listOf(it.getString("id")) + ids(it) }
+            assertFalse("section ${sec.getString("id")} declares a page with its own id", sec.getString("id") in ids(sec))
+        }
     }
 }

@@ -30,7 +30,7 @@ class BuroLlcDeclTest {
         assertEquals(listOf("health", "study", "achieves", "lnktree", "duties", "buro", "llc"), bar)
         assertEquals(listOf("Health", "Study", "Achieves", "Lnktree", "Duties", "Buro", "LLC"), bar.map { sections.getValue(it).getString("label") })
         assertFalse("house" in sections); assertFalse("work" in sections)
-        assertEquals(listOf("professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree", "area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"), ids(sections.getValue("lnktree").getJSONArray("pages")))
+        assertEquals(listOf("professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree-site", "area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"), ids(sections.getValue("lnktree").getJSONArray("pages")))
         assertEquals(listOf("tasks"), ids(sections.getValue("duties").getJSONArray("pages")))
     }
 
@@ -124,17 +124,17 @@ class BuroLlcDeclTest {
         val me = sections.getValue("lnktree")
         assertEquals("horizontal_two_rows", me.getString("nav_mode"))
         assertEquals(mapOf("prof" to listOf("professional", "leafy", "nexus", "stark"),
-            "pers" to listOf("personal", "social", "health", "dd", "astro", "lnktree"),
+            "pers" to listOf("personal", "social", "health", "dd", "astro", "lnktree-site"),
             "proj" to listOf("area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front")), groups("lnktree"))
         val pages = me.getJSONArray("pages")
         val sep = (0 until pages.length()).map { pages.getJSONObject(it) }.filter { it.optBoolean("separator_before") }.map { it.getString("id") }
-        assertEquals(listOf("leafy", "health", "lnktree"), sep)
+        assertEquals(listOf("leafy", "health", "lnktree-site"), sep)
     }
 
     @Test fun `the five published sites are embedded by their https URL`() {
         val want = mapOf("leafy" to "https://diegonmarcos.github.io/leafy/", "nexus" to "https://diegonmarcos.github.io/nexus/",
             "stark" to "https://diegonmarcos.github.io/stark/", "astro" to "https://diegonmarcos.github.io/myAstro/",
-            "lnktree" to "https://linktree.diegonmarcos.com/")
+            "lnktree-site" to "https://linktree.diegonmarcos.com/")
         for ((p, url) in want) {
             val b = page("lnktree", p).getJSONObject(0)
             assertEquals("fragment", b.getString("kind")); assertEquals("web", b.getString("id")); assertEquals(url, b.getString("url"))

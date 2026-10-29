@@ -47,7 +47,7 @@ class LegacyRoutesTest {
     }
 
     @Test fun `every destination of the table is a declared page`() {
-        val old = listOf("work" to "employed", "work" to "endeavours", "work" to null, "house" to "manage", "house" to null, "me" to "tasks",
+        val old = listOf("work" to "employed", "work" to "endeavours", "work" to null, "house" to "manage", "house" to null, "me" to "tasks", "me" to "lnktree",
             "buro" to "summary", "buro" to "docs", "buro" to "fin", "buro" to "acct", "buro" to "budget", "buro" to "portfolio")
         for ((s, p) in old) {
             val (ns, np) = LegacyRoutes.resolve(s, p)

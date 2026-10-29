@@ -539,7 +539,7 @@
             "id": "pers",
             "label": "Pers",
             "icon": "person",
-            "pages": ["personal", "social", "health", "dd", "astro", "lnktree"]
+            "pages": ["personal", "social", "health", "dd", "astro", "lnktree-site"]
           },
           {
             "id": "proj",
@@ -597,7 +597,7 @@
             "icon": "ic_world"
           },
           {
-            "id": "lnktree",
+            "id": "lnktree-site",
             "label": "Lnktree",
             "icon": "ic_link_tile",
             "separator_before": true
