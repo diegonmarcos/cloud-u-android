@@ -679,6 +679,14 @@ class Walk:
             settle(1.0)
             nodes3 = dump() or []
             back = self.chrome(nodes3)
+            # a heavy embedded site (me/leafy, run 40805138692) lands the restore a few frames late; its evidence shot showed the full
+            # chrome back: poll for it (same end state asserted: first row, every label, full bar)
+            for _ in range(6):
+                if back["row"] and len(back["labels"]) >= before["items"]:
+                    break
+                settle(1.2)
+                nodes3 = dump() or nodes3
+                back = self.chrome(nodes3)
             if not back["row"]:
                 fails.append("P3 scrolled back up: the first row did not return")
             if len(back["labels"]) < before["items"]:
