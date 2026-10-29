@@ -1,0 +1,10 @@
+# Addressing and exposure (tickets #1100, #1104, #1116, #1117, #1123)
+- Caddy is the SoT for routing and exposure, declared in cloudy-u-containers build.json and rendered by the Nix generator. Why: one place to audit. Guard: fleet-addressing guard in CI.
+- Mesh first, public second: clients use the mesh name; the public c3-pvt path with a bearer is the fallback (Android, MCP). Why: the mesh is the trust boundary and works without auth. Guard: .claude/mcp-connect.mjs does mesh then public.
+- Tiers: c3-pub.diegonmarcos.com is Cloudflare-proxied with an explicit unauthenticated allowlist; c3-pvt.diegonmarcos.com/{container} takes an Authelia session cookie OR a bearer; www and the apex are unauthenticated HTML only. Why: Caddy renders a few sites instead of about 341. Guard: fleet-addressing guard rejects wildcard public routes.
+- Every API container is named `{name}-api` (MCP servers stay `*-mcp`); the api.* host is deleted. Why: predictable addresses. Guard: fleet-addressing guard.
+- Mesh names live in the mesh namespace (for example `<container>.mesh.diegonmarcos.com`), never under a public TLD; `.app` is a real TLD and leaked a vault login hash to a stranger's host. Why: ticket #1123. Guard: guard rejecting public-TLD mesh names (ticket #1123).
+- The vault is never put behind an edge gate its client cannot satisfy: mesh address first, public fallback via per-device mTLS (`verify_if_given`), no tokens in URLs. Why: an edge 401/403 once wiped the cached vault; the Bitwarden client sends no bearer. Guard: none.
+- Exposure is WG-only and fail-closed: `wg_only ?? true`; only the explicit public allowlist is reachable publicly. Why: default-deny. Guard: sec_scan, obs_debug_test routes.
+- Never bypass the OS resolver (Hickory); Caddy itself uses raw WG-IP fallback routes. Why: resolver bypass breaks mesh names. Guard: none.
+- Cloud Vault opens offline: unlock locally by device biometric; a failed refresh never wipes the cache; sync sign-in is a non-blocking notice. Why: owner was locked out offline (#1116, #1119). Guard: test-vault-offline-unlock.sh, emulator job.

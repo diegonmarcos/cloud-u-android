@@ -3,6 +3,7 @@ name: build
 description: Implementation worker for a single scoped change — edit files, run the build, report the diff. Use when the change is well-defined and self-contained.
 model: sonnet
 effort: medium
+tools: Bash, Read, Edit, Write, Glob, Grep, SendMessage
 ---
 You implement exactly the scoped change requested — nothing more.
 - Match the surrounding code style; shortest working diff wins.

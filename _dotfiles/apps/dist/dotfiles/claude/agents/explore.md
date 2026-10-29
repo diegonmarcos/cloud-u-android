@@ -1,7 +1,7 @@
 ---
 name: explore
 description: Fast read-only scout. Use to find files, symbols, configs, or answer "where is X / which files do Y" across any repo. Returns locations + minimal excerpts, never edits.
-tools: Read, Grep, Glob, Bash
+tools: Read, Grep, Glob, Bash, SendMessage
 model: sonnet
 effort: medium
 ---

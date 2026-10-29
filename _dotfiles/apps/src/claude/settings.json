@@ -5,7 +5,7 @@
 
   "_deliberately_absent": "Everything from settings.base.json that carries a @HOME@ path: statusLine.command, and env GIT_BASE / NODE_PATH / AUTHELIA_OIDC_CREDENTIALS_DIR / AUTHELIA_OIDC_TOKENS_DIR. unix substitutes @HOME@ with config.home.homeDirectory at nix eval time, per machine. A committed file has no such step, so those paths would harden to one person's home directory and be wrong in every clone — the same failure .mcp.json had as a symlink to /home/diego/.mcp.json. They stay in ~/.claude, where the substitution happens.",
 
-  "_also_absent": "enabledPlugins. Those name @cloud-marketplace and @claude-plugins-official entries that are installed per-machine; enabling a plugin that is not installed is noise in every clone that lacks it. Plugin choice stays user-level.",
+  "_also_absent": "Plugin choice stays user-level EXCEPT c3-infra (see enabledPlugins below): the other @cloud-marketplace and @claude-plugins-official entries are installed per-machine, and enabling a plugin that is not installed is noise in every clone that lacks it.",
 
   "alwaysThinkingEnabled": true,
 
@@ -35,8 +35,38 @@
     "_defaultMode_doc": "2026-10-15 OWNER DECISION: every session from every repo starts as full root (bypassPermissions) with every tool and MCP server allowed. Supersedes the earlier note that defaultMode stays user-level. Note: this file is committed to public repos, so anyone who clones one also gets this default.",
     "defaultMode": "bypassPermissions",
     "_doc": "2026-09-06: populated by the repo owner's explicit decision, reversing the earlier 'left empty on purpose'. That text held that pre-approval is a per-person trust choice; in practice the auto-mode classifier blocked plain `git commit`, `npx tsc --noEmit` and a curl to the fleet's OWN MCP mid-incident — five denials in a row, read-only steps included — so a session whose whole job is to run the fleet through c3-infra-mcp could not ship a fix. These rules pre-approve the tools that ARE the control plane: the shell, the file tools, and the MCP servers. Allow rules stay in force under auto mode (autoMode.classifyAllShell is unset, i.e. false), so matched calls never reach the classifier. defaultMode stays user-level on purpose: settings.base.json sets \"auto\", and forcing a mode from a committed file would override that choice for anyone who clones this repo.",
-    "allow": ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch", "WebSearch", "NotebookEdit", "Agent", "Skill", "mcp__cloud-infra-mcp", "mcp__cloud-cgc-pub-mcp", "mcp__cloud-cgc-pvt-mcp", "mcp__cloud-services-mcp", "mcp__cloud-vault-mcp", "mcp__cloud-drive-mcp", "mcp__cloud-mail-mcp", "mcp__cloud-mattermost-mcp", "mcp__cloud-superapp-mcp", "mcp__google-personal-mcp", "mcp__google-workspace-mcp", "mcp__github", "mcp__Claude_Code_Remote", "mcp__claude-code-remote"],
-    "deny": []
+    "allow": ["Bash", "Read", "Edit", "Write", "Glob", "Grep", "WebFetch", "WebSearch", "NotebookEdit", "Agent", "Skill", "mcp__cloud-infra-mcp", "mcp__cloud-cgc-pub-mcp", "mcp__cloud-cgc-pvt-mcp", "mcp__cloud-services-mcp", "mcp__cloud-vault-mcp", "mcp__cloud-drive-mcp", "mcp__cloud-mail-mcp", "mcp__cloud-mattermost-mcp", "mcp__cloud-superapp-mcp", "mcp__google-personal-mcp", "mcp__google-workspace-mcp", "mcp__Claude_Code_Remote", "mcp__claude-code-remote"],
+    "deny": [
+      "Artifact",
+      "ArtifactComments",
+      "ArtifactData",
+      "DesignSync",
+      "Workflow",
+      "CronCreate",
+      "CronDelete",
+      "CronList",
+      "ScheduleWakeup",
+      "EnterPlanMode",
+      "ExitPlanMode",
+      "EnterWorktree",
+      "ExitWorktree",
+      "TaskCreate",
+      "TaskGet",
+      "TaskList",
+      "TaskUpdate",
+      "NotebookEdit",
+      "ReportFindings",
+      "ShowOnboardingRolePicker",
+      "SearchSkills",
+      "SuggestSkills",
+      "ListSkills",
+      "SearchPlugins",
+      "SuggestPluginInstall",
+      "ListPlugins",
+      "SearchMcpRegistry",
+      "SuggestConnectors",
+      "ListConnectors"
+    ]
   },
 
   "autoMode": {
@@ -54,5 +84,39 @@
       "Committing and pushing to main across every diegonmarcos/* repository, adding repos to the session, and dispatching/cancelling GitHub Actions and Ship deploys are pre-authorised fleet operations."
     ],
     "_doc_cloud_sessions": "2026-10-09: in a Claude Code cloud session these rules are read only when the session has ONE repository, and the session's mode dropdown still decides. In Auto, calls the classifier refuses are refused outright (pushes to cloud-infra main and worktree cleanup were refused all day although 'Bash' is allowed). Use 'Accept edits' for fleet work: refusals become approval prompts instead."
-  }
+  },
+  "disableClaudeAiConnectors": true,
+  "_disableClaudeAiConnectors_doc": "2026-10-23 owner decision: claude.ai account connectors (Gmail, Calendar, Drive) stay in claude.ai chat only; Claude Code uses the fleet MCPs from .mcp.json. Applies to terminal/IDE/SDK sessions; cloud sessions take connectors from the session's own connector settings.",
+
+  "deniedMcpServers": [{"serverName": "github"}],
+  "_deniedMcpServers_doc": "2026-10-23 owner decision: the GitHub MCP (~60 tools, ~28k tokens per session/agent) is redundant; use gh CLI (proxy-authenticated) and cloud-infra-mcp devops_workflows_gha_*. permissions.allow no longer lists mcp__github.",
+
+  "_hooks_doc": "c3-infra guard hooks (cloud-marketplace/c3-infra/hooks). Cloud sessions do not install plugins, so deploy-dotfiles copies the scripts to <repo>/.claude/hooks/c3 and this block wires them. Declared ONCE: the retired sync-to-repo.sh appended a fresh copy on every run. StopFailure(rate_limit) -> ai-usage-post.sh (#1151): cloud sessions run no statusLine and no hook input carries rate_limits, so the only usage fact a cloud session can publish to c3-infra-api is that it was rate limited; the percentages come from the statusLine path (claude-ai-usage-post.sh via statusline-assets). It reads C3_AI_USAGE_TOKEN (or mints from the AUTHELIA_* client credentials the cloud environment injects) and is a no-op without a token.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/c3\"/no-pkill-pgrep-f.sh"},
+          {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/c3\"/no-glob-rm-tmp.sh"},
+          {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/c3\"/no-local-gradle.sh"},
+          {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/c3\"/main-only-push.sh"},
+          {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/c3\"/no-branch-create.sh"},
+          {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/c3\"/no-secrets-commit.sh"},
+          {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/c3\"/no-mass-delete.sh"}
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "matcher": "rate_limit",
+        "hooks": [
+          {"type": "command", "command": "\"$CLAUDE_PROJECT_DIR/.claude/hooks/c3\"/ai-usage-post.sh", "timeout": 5}
+        ]
+      }
+    ]
+  },
+
+  "_enabledPlugins_doc": "c3-infra lives in cloud-marketplace (this SoT). Skill and agents are also copied into <repo>/.claude/ by deploy-dotfiles, which is what cloud sessions load.",
+  "enabledPlugins": {"c3-infra@cloud-marketplace": true}
 }
