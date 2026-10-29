@@ -316,7 +316,13 @@ class Walk:
         return bool(shell("pidof %s" % self.pkg).strip())
 
     def foreground(self):
-        return self.pkg in shell("dumpsys activity activities | grep -E 'topResumedActivity|mResumedActivity'")
+        # one dumpsys on a loaded emulator can time out or land between two activities of the app (Cloud Nav routes, run
+        # 40798012538: the page dump showed the app on top); three reads, the app must be on top in one of them
+        for i in range(3):
+            if self.pkg in shell("dumpsys activity activities | grep -E 'topResumedActivity|mResumedActivity'", timeout=30):
+                return True
+            settle(1.0)
+        return False
 
     def app_anr(self):
         """An ANR of the app under test since the last `logcat -c`, with the emulator's load: real main-thread work shows up as an

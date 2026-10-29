@@ -228,6 +228,9 @@ jobs:
           target: google_apis
           profile: pixel_5
           ram-size: 4096M
+          # all 4 vCPUs of the runner, not the action's default 2: heavy embedded sites starved the 2-core guest and the walk read
+          # half-drawn chrome (run 40798012538: leafy, stark, lnktree, Cloud Nav routes)
+          cores: 4
           # swangle_indirect (ANGLE on SwiftShader Vulkan), not swiftshader_indirect: the legacy GLES translator crashed the
           # whole emulator process about 4 s into Lnktree's fullscreen WebGL2 shader (runs 40679943894, 40758904504,
           # 40786793663); a WebView command-line file did not help (release WebView ignores it). (#1198)
