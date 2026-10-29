@@ -1,5 +1,5 @@
 {
-  "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `./clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. GENERATED from repos.v3.json by gen-registry.js: edit repos.v3.json, never this file. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
+  "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `./clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. GENERATED from projects-repos.json by gen-registry.js: edit projects-repos.json, never this file. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
   "_schema": "cloud-repos/v1",
   "_self_doc": "_git-repos-master is the only repo of the account with no entry here. It is the index; an entry would give it a symlink to its own parent directory, which is a loop, not information.",
   "_visibility_doc": "`private` mirrors GitHub visibility as of 2026-08-20 and only drives the \"(private)\" hint in `--list` plus a clearer message when a clone fails for lack of credentials. It grants nothing.",
@@ -691,7 +691,7 @@
     },
     {
       "from": "04.Fin",
-      "to": "3.Fin",
+      "to": "3.Capital",
       "kind": "farm-folder",
       "since": "2026-10-29",
       "ticket": "#1295",
@@ -704,6 +704,22 @@
       "since": "2026-10-29",
       "ticket": "#1295",
       "doc": "Farm folders renumbered to the area/project codes of repos.v3.json."
+    },
+    {
+      "from": "3.Fin",
+      "to": "3.Capital",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1296",
+      "doc": "Area renamed (Financial to Capital); the farm folder follows."
+    },
+    {
+      "from": "4.DeepSc",
+      "to": "4.HardTech",
+      "kind": "farm-folder",
+      "since": "2026-10-29",
+      "ticket": "#1296",
+      "doc": "Area renamed (Deep Science to HardTech); the farm folder follows."
     },
     {
       "from": "06.Lecole-42",
@@ -1009,13 +1025,13 @@
       "doc": "Directory entry mirrored by clone.sh --sync (ticket #1126). Source of truth: cloudy-u-linux da_my-ai/data/claude/cloud-marketplace/c3-infra (the c3-infra-plugin repo is archived as z-archived_c3-infra-plugin); cloud sessions do not install plugins, so each repo carries a copy. lean agents build/explore/ops/review/general-purpose."
     }
   ],
-  "_farm_doc": "`farm` is the folder of this repo's committed symlink in _git-repos-master (#1291, #1295): one top folder per area or project, named <code>.<Name> after its node in repos.v3.json (1.1.Cloudy, 2.CG, ...), sub-folders nested by the hub chain (a sub-hub and its members sit one folder deeper than the parent hub), plus the Fin split Corporate / Capital-Markets. The link is <farm>/<name> -> ../ repeated (depth+1) times + <path or name>. Top folders and their order are rendered into `farms` from the source tree. `group` is the LEGACY family key (2_vault, a_cloud, b_projects, c_gh, d_lecole): it no longer places links, it stays only because readers filter on it (cloudy-___ family file, cloudy-u-android libs:repos sync and its test, the d_lecole school rule). Guard: `node repos-sot.js check`.",
+  "_farm_doc": "`farm` is the folder of this repo's committed symlink in _git-repos-master (#1291, #1295): one top folder per area or project, named <code>.<Name> after its node in projects-repos.json (1.1.Cloudy, 2.CG, ...), sub-folders nested by the hub chain (a sub-hub and its members sit one folder deeper than the parent hub), plus the Fin split Corporate / Capital-Markets. The link is <farm>/<name> -> ../ repeated (depth+1) times + <path or name>. Top folders and their order are rendered into `farms` from the source tree. `group` is the LEGACY family key (2_vault, a_cloud, b_projects, c_gh, d_lecole): it no longer places links, it stays only because readers filter on it (cloudy-___ family file, cloudy-u-android libs:repos sync and its test, the d_lecole school rule). Guard: `node repos-sot.js check`.",
   "farms": {
     "1.1.Cloudy": "Cloudy (1.1): hub cloudy-___ and its members. The cloudy project: fleet infrastructure, services, devices, data and docs.",
     "1.2.Cloud-me": "Cloud-Me (1.2): hub cloud-me-___ and its members. The owner's personal cloud: public profiles and shared data, private configs, data and secrets.",
     "2.CG": "CG (2): hub CG-___ and its members. Computer graphics: 3D worlds, engines and media production.",
-    "3.Fin": "Financial (3): hub Fin-___ and its members. Finance: capital markets and corporate finance. The hub Fin-___ is the area home (3.0).",
-    "4.DeepSc": "Deep Science (4): hub DeepSc-___ and its members. Deep science projects and CAD / simulation tools.",
+    "3.Capital": "Capital (3): hub Fin-___ and its members. Capital: capital markets and corporate finance. The hub Fin-___ is the area home (3.0).",
+    "4.HardTech": "HardTech (4): hub DeepSc-___ and its members. HardTech: deep science projects and CAD / simulation tools.",
     "5.Lecole-42": "42 (5): hub lecole-42-___ and its members. 42 school coursework (a school, not a project): one project per curriculum repo.",
     "6.Projects": "Projects (6): hub Projects-___ and its members. Projects (formerly Front): endeavours, lab tools and DuckPeng.",
     "7.Others": "Others (7): no hub. Loose GitHub repos with no project hub (profile README, GitHub Pages site).",
@@ -1482,7 +1498,7 @@
     },
     {
       "name": "Fin-___",
-      "farm": "3.Fin",
+      "farm": "3.Capital",
       "group": "b_projects",
       "parent_hub": "_git-repos-master",
       "url": "git@github.com:diegonmarcos/Fin-___.git",
@@ -1496,7 +1512,7 @@
     },
     {
       "name": "Fin-CM-mqpm",
-      "farm": "3.Fin/Capital-Markets",
+      "farm": "3.Capital/Capital-Markets",
       "group": "b_projects",
       "hub": "Fin-___",
       "url": "git@github.com:diegonmarcos/Fin-CM-mqpm.git",
@@ -1504,17 +1520,8 @@
       "doc": "MQPM / StochBates: README and deployer wiring skeleton; src/central_bank moved here with history 2026-10-28 from labtools b-Nxs_PA (#1218, 92b18a0). #1224."
     },
     {
-      "name": "Fin-CM-Blmbrg",
-      "farm": "3.Fin/Capital-Markets",
-      "group": "b_projects",
-      "hub": "Fin-___",
-      "url": "git@github.com:diegonmarcos/Fin-CM-Blmbrg.git",
-      "private": false,
-      "doc": "Blmbrg (FIN TERMINAL: CentralBank pointer, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal under src/): README and deployer wiring skeleton; the former front-labtools projects b-Nxs_Blmmbrg/* moved here with history 2026-10-28 (#1218, 47950ae), laid out 2026-10-29 (#1279). #1224."
-    },
-    {
       "name": "Fin-Corporate",
-      "farm": "3.Fin/Corporate",
+      "farm": "3.Capital/Corporate",
       "group": "b_projects",
       "hub": "Fin-___",
       "url": "git@github.com:diegonmarcos/Fin-Corporate.git",
@@ -1522,8 +1529,17 @@
       "doc": "Corporate finance (Nexus.z, Field Finance, Project Corporate); member of the Fin-___ hub. Created 2026-10-28."
     },
     {
+      "name": "Fin-CM-Blmbrg",
+      "farm": "3.Capital/Capital-Markets",
+      "group": "b_projects",
+      "hub": "Fin-___",
+      "url": "git@github.com:diegonmarcos/Fin-CM-Blmbrg.git",
+      "private": false,
+      "doc": "Blmbrg (FIN TERMINAL: CentralBank pointer, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal under src/): README and deployer wiring skeleton; the former front-labtools projects b-Nxs_Blmmbrg/* moved here with history 2026-10-28 (#1218, 47950ae), laid out 2026-10-29 (#1279). #1224."
+    },
+    {
       "name": "DeepSc-___",
-      "farm": "4.DeepSc",
+      "farm": "4.HardTech",
       "group": "b_projects",
       "parent_hub": "_git-repos-master",
       "url": "git@github.com:diegonmarcos/DeepSc-___.git",
@@ -1536,7 +1552,7 @@
     },
     {
       "name": "DeepSc-X",
-      "farm": "4.DeepSc",
+      "farm": "4.HardTech",
       "group": "b_projects",
       "hub": "DeepSc-___",
       "url": "git@github.com:diegonmarcos/DeepSc-X.git",
@@ -1545,7 +1561,7 @@
     },
     {
       "name": "CAD-Simulators",
-      "farm": "4.DeepSc",
+      "farm": "4.HardTech",
       "group": "b_projects",
       "hub": "DeepSc-___",
       "url": "git@github.com:diegonmarcos/CAD-Simulators.git",
