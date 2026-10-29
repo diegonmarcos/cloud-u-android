@@ -83,6 +83,7 @@ ac_cloud-news/build.json	diagnostics.log_sink_url	pending	request endpoint read 
 ac_cloud-office/build.json	upstream.online.configure.--with-info-url	link	a link the user opens in the browser or a WebView page; no request is made by the app
 ac_cloud-search/build.json	search.things.price_service.url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-store/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
+ac_cloud-store/build.json	apps_mcp_api.shared_debug.base	link	catalog entry: the Store > Access > Apps MCP-API page lists the shared API-Debug base (#1211); the page makes no request, libs:core LogUpload owns the call
 ac_cloud-tasks/build.json	analytics.matomo.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-tasks/build.json	analytics.umami.endpoint	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
 ac_cloud-tasks/build.json	diagnostics.log_sink_url	pending	request endpoint read from build config; its consumer is not yet routed through libs:fleet-endpoints
