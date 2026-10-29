@@ -46,6 +46,9 @@ public object ChromeWebScroll {
             // #1198 a page that scrolls ITSELF while it loads (Lnktree: scroll anchoring, an intro scrollIntoView) is not a reader: with no
             // touch on this page since it loaded, no scroll may collapse the chrome (run 40810784156 left it shrunk on an untouched page)
             if (!touched) return
+            // #1198 a fling carries on the finger's last direction: after a drag that read UP the page, a downward scroll with no finger
+            // is the page settling itself (Lnktree's scroll snap, run 40816094632), and it must not collapse the chrome the reader brought back
+            if (!fingerDown && delta > 0f && readingUp) return
             if (fingerDown) t.onDragDelta(delta) else t.onScrollDelta(delta)
         }
 
@@ -54,6 +57,8 @@ public object ChromeWebScroll {
         private var dragged = false
         /** The reader has touched the page since it loaded: only then can a scroll without a finger (a fling) be theirs. */
         @Volatile var touched = false
+        /** The finger's last travel read UP the page (it moved down the screen). */
+        private var readingUp = false
 
         @JavascriptInterface
         fun setScrollable(on: Int) { innerScrollable = on != 0 }
@@ -67,7 +72,7 @@ public object ChromeWebScroll {
 
         override fun onTouch(v: View, e: MotionEvent): Boolean {
             when (e.actionMasked) {
-                MotionEvent.ACTION_DOWN -> { touched = true; fingerDown = true; lastY = e.y; downY = e.y; dragged = false; innerScrollable = false }
+                MotionEvent.ACTION_DOWN -> { touched = true; readingUp = false; fingerDown = true; lastY = e.y; downY = e.y; dragged = false; innerScrollable = false }
                 // A finger dragging DOWN reads UP the page: the chrome comes back even when the page cannot scroll further
                 // (it sits at its top, or the scroller is an inner container the bridge cannot see).
                 MotionEvent.ACTION_MOVE -> {
@@ -77,7 +82,7 @@ public object ChromeWebScroll {
                     if (!dragged && downY - e.y > 2 * SLOP && (v.canScrollVertically(1) || innerScrollable)) { dragged = true; target?.onDragDelta(1f) }
                     lastY = e.y
                 }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { fingerDown = false; target?.onRelease() }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { readingUp = e.y - downY > SLOP; fingerDown = false; target?.onRelease() }
             }
             return false
         }
