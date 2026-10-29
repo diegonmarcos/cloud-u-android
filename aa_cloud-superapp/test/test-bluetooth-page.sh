@@ -36,22 +36,22 @@ probs = []
 b = pages.get('bluetooth')
 if not b: print('no bluetooth page'); sys.exit()
 if b.get('group') != 'Fleet' or b.get('label') != 'Bluetooth' or b.get('hidden'): probs.append('page = %r' % b)
-want = ['bluetooth-find', 'bluetooth-connect', 'bluetooth-interact', 'bluetooth-debug', 'bluetooth-dev']
+want = ['bluetooth-find', 'bluetooth-analyze', 'bluetooth-locate', 'bluetooth-connect', 'bluetooth-interact', 'bluetooth-debug', 'bluetooth-dev']
 if b.get('tabs') != want: probs.append('tabs = %r' % b.get('tabs'))
-for t, label in zip(want, ['Find', 'Connect', 'Interact', 'Debug', 'Dev']):
+for t, label in zip(want, ['Find', 'Analyze', 'Locate', 'Connect', 'Interact', 'Debug', 'Dev']):
     p = pages.get(t)
     if not p or p.get('label') != label or not p.get('hidden') or not p.get('icon'): probs.append('tab %s = %r' % (t, p))
 print('; '.join(probs) or 'OK')
 PY
-)" "bluetooth: Fleet, label Bluetooth, tabs Find | Connect | Interact | Debug | Dev, each a hidden page with an icon"
-for tab in find connect interact debug dev; do
+)" "bluetooth: Fleet, label Bluetooth, tabs Find | Analyze | Locate | Connect | Interact | Debug | Dev, each a hidden page with an icon"
+for tab in find analyze locate connect interact debug dev; do
   grep -qE "pageId == \"bluetooth-$tab\" +-> .*BluetoothFragment.newInstance\(.*BtTab\." "$KT/launcher/SectionPages.kt" \
     && ok "config/bluetooth-$tab routes to BluetoothFragment" || bad "config/bluetooth-$tab is not routed"
 done
-python3 - "$LK/BluetoothUi.kt" <<'PY' && ok "BtTab ids are exactly find, connect, interact, debug, dev" || bad "BtTab ids drifted from the declared tabs"
+python3 - "$LK/BluetoothUi.kt" <<'PY' && ok "BtTab ids are exactly find, analyze, locate, connect, interact, debug, dev" || bad "BtTab ids drifted from the declared tabs"
 import re, sys
-ids = re.findall(r'(?:Find|Connect|Interact|Debug|Dev)\("(\w+)"', open(sys.argv[1]).read())
-sys.exit(0 if ids == ['find', 'connect', 'interact', 'debug', 'dev'] else 1)
+ids = re.findall(r'(?:Find|Analyze|Locate|Connect|Interact|Debug|Dev)\("(\w+)"', open(sys.argv[1]).read())
+sys.exit(0 if ids == ['find', 'analyze', 'locate', 'connect', 'interact', 'debug', 'dev'] else 1)
 PY
 
 echo "== B2: Configs declares the two rows =="
@@ -82,7 +82,7 @@ grep -q 'BluetoothPanel(controller, tab)' "$KT/configs/BluetoothFragment.kt" && 
   && ok "the fragment draws BluetoothPanel over the shared BluetoothHub controller" || bad "the fragment does not draw the lib's panel"
 grep -q 'LazyColumn' "$LK/BluetoothUi.kt" && ok "the panel body is a LazyColumn (a scroll the shell sees)" || bad "the panel body is not scrollable by the shell"
 grep -q 'UiIcons.vector' "$LK/BluetoothUi.kt" && ! grep -q 'androidx.compose.material.icons' "$LK"/*.kt && ok "icons come from libs:ui-icons, none from material directly" || bad "an icon is not from libs:ui-icons"
-for w in 'Raw hex write' 'Notify stream' 'Test payloads' 'Bluetooth ATT event log' 'Reload services' 'Request MTU' 'Signal floor' 'Subscribe all' 'adb shell pm grant' 'Bond'; do
+for w in 'Path-loss exponent' 'Classic discovery' 'Export JSON' 'Export CSV' 'Beep: faster when closer' 'Raw hex write' 'Notify stream' 'Test payloads' 'Bluetooth ATT event log' 'Reload services' 'Request MTU' 'Signal floor' 'Subscribe all' 'adb shell pm grant' 'Bond'; do
   grep -rq "$w" "$LK" && ok "the page offers: $w" || bad "the page lacks: $w"
 done
 

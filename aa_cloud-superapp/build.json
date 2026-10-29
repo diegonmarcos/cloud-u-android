@@ -4737,7 +4737,7 @@
         "nav_mode": "horizontal_two_rows",
         "groups": [
           {"id": "setup", "label": "Setup", "icon": "ic_settings", "pages": ["profile", "store", "perms", "controls", "onehand", "notify", "firewall", "dns", "webserver", "wg", "apps-access", "adb-shell", "presets", "panels", "panels-ui", "panels-tools", "store-cloud", "store-phone", "update", "kde_connect", "animations"]},
-          {"id": "fleet", "label": "Fleet", "icon": "ic_hub", "pages": ["bluetooth", "c3", "kde", "bluetooth-find", "bluetooth-connect", "bluetooth-interact", "bluetooth-debug", "bluetooth-dev"]},
+          {"id": "fleet", "label": "Fleet", "icon": "ic_hub", "pages": ["bluetooth", "c3", "kde", "bluetooth-find", "bluetooth-analyze", "bluetooth-locate", "bluetooth-connect", "bluetooth-interact", "bluetooth-debug", "bluetooth-dev"]},
           {"id": "observability", "label": "Observability", "icon": "ic_monitor_heart", "pages": ["agents", "diagnostics", "logcat", "about", "battery", "agents-superapp", "agents-fleet"]}
         ],
         "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Setup\", \"Apps\", \"Network\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Setup \u25b8 Apps + Setup \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array. #723 (#878 relabelled: group Watchdog is now Setup, subgroups Setup/Mesh are Apps/Network): OWNER REGROUP (Agents): the order is Launcher, Apps, Setup. Apps is a group with no subgroup and holds C3 · Peer Control · Agents (C3 and Peer Control moved out of Setup ▸ Network with their ids unchanged, so page:config/c3 and page:config/kde are the same links; the Network separator went with them, see removed_pages). Before that regroup, the Setup group had THREE sub-sections in this order — Apps (Account · Permissions · Store), Network (WireGuard · Peer Control) and Observability (About) — and the AI page is gone (see removed_pages). #REORG 2026-10: Configs is exactly THREE sections, in this order: Setup (subgroups Apps = Account/Permissions/Store, Launcher = Presets/Controls/One-Hand/Notify, Network), Fleet (the former Apps group: C3 · Peer Control · Agents) and Observability (About). No ids changed, so every page:config/<id> link is intact. #733: Network is Cloud Mesh (the wg page, relabelled) · Peer Control · Apps Mesh (the Store's mesh page, reached from here too).",
@@ -4859,7 +4859,7 @@
             "id": "bluetooth",
             "label": "Bluetooth",
             "icon": "ic_bluetooth",
-            "tabs": ["bluetooth-find", "bluetooth-connect", "bluetooth-interact", "bluetooth-debug", "bluetooth-dev"],
+            "tabs": ["bluetooth-find", "bluetooth-analyze", "bluetooth-locate", "bluetooth-connect", "bluetooth-interact", "bluetooth-debug", "bluetooth-dev"],
             "group": "Fleet"
           },
           {
@@ -4960,6 +4960,20 @@
             "id": "bluetooth-find",
             "label": "Find",
             "icon": "ic_search",
+            "hidden": true
+          },
+          {
+            "_doc": "Bluetooth tab (#1264): the scanner as an analyzer - parsed advertising data (flags, service UUIDs, service data, manufacturer data named from libs/bluetooth assets/bluetooth/company-ids.json, iBeacon / AltBeacon / Eddystone), RSSI history with smoothing and a log-distance estimate, classic discovery, bonded devices, JSON / CSV export. The same tab Cloud Calc's Measure > Bluetooth shows. hidden = reached through the Bluetooth strip.",
+            "id": "bluetooth-analyze",
+            "label": "Analyze",
+            "icon": "ic_bluetooth",
+            "hidden": true
+          },
+          {
+            "_doc": "Bluetooth tab (#1264): the RSSI locator - one device's smoothed signal, warmer / colder trend, proximity bar, distance estimate and a beep that speeds up as it gets closer. hidden = reached through the Bluetooth strip.",
+            "id": "bluetooth-locate",
+            "label": "Locate",
+            "icon": "ic_bluetooth",
             "hidden": true
           },
           {

@@ -28,6 +28,11 @@ data class BleState(
     val telemetryLabel: String = "",
     val busy: String = "",
     val message: String = "",
+    /** #1264 analyzer: RSSI per address (newest last), classic inquiry running, the locator's target, the path-loss exponent. */
+    val history: Map<String, List<Int>> = emptyMap(),
+    val discovering: Boolean = false,
+    val locate: String? = null,
+    val pathLoss: Double = 2.0,
 ) {
     val selectedDevice: BleDevice? get() = selected?.let { seen[it] ?: bonded.firstOrNull { b -> b.address == it } }
 }
@@ -63,12 +68,14 @@ class BleController(
 
     fun setQuery(q: ScanQuery) = edit { it.copy(query = q) }
 
-    fun startScan() {
+    /** [fresh] clears the list and histories (Find, Analyze); the locator resumes without losing its target. */
+    fun startScan(fresh: Boolean = true) {
         if (!adapter.supported) { edit { it.copy(scanError = "This device has no Bluetooth LE") }; return }
         if (!adapter.enabled) { edit { it.copy(scanError = "Bluetooth is off") }; return }
-        edit { it.copy(scanning = true, scanError = "", seen = emptyMap()) }
+        edit { if (fresh) it.copy(scanning = true, scanError = "", seen = it.seen.filterValues { d -> d.classic && it.discovering }, history = emptyMap())
+            else it.copy(scanning = true, scanError = "") }
         log.add(LogKind.Sys, "Scan started (${state.value.query.filterId})")
-        val ok = adapter.startScan({ d -> edit { s -> s.copy(seen = s.seen + (d.address to (s.seen[d.address]?.merge(d) ?: d))) } }) { err ->
+        val ok = adapter.startScan({ d -> sighting(d) }) { err ->
             log.add(LogKind.Error, "Scan failed: $err"); edit { it.copy(scanning = false, scanError = err) }
         }
         if (!ok) edit { it.copy(scanning = false, scanError = "Scan refused (permission missing?)") }
@@ -79,6 +86,42 @@ class BleController(
         if (state.value.scanning) log.add(LogKind.Sys, "Scan stopped")
         edit { it.copy(scanning = false) }
     }
+
+    /** One sighting (LE advertisement or classic inquiry result): merged into [BleState.seen], its RSSI appended to the history. */
+    fun sighting(d: BleDevice) = edit { s ->
+        val h = if (d.rssi > -127) ((s.history[d.address] ?: emptyList()) + d.rssi).takeLast(MAX_HISTORY) else s.history[d.address].orEmpty()
+        s.copy(seen = s.seen + (d.address to (s.seen[d.address]?.merge(d) ?: d)), history = s.history + (d.address to h))
+    }
+
+    // ---- Analyze (#1264) ----
+
+    /** Classic (BR/EDR) inquiry, about 12 s; found devices join the same list with the `classic` mark. */
+    fun startDiscovery() {
+        if (!adapter.supported || !adapter.enabled) { edit { it.copy(scanError = if (!adapter.supported) "No Bluetooth on this device" else "Bluetooth is off") }; return }
+        edit { it.copy(discovering = true, scanError = "") }
+        log.add(LogKind.Sys, "Classic discovery started")
+        val ok = adapter.startDiscovery({ d -> sighting(d.copy(classic = true)) }) { log.add(LogKind.Sys, "Classic discovery finished"); edit { it.copy(discovering = false) } }
+        if (!ok) edit { it.copy(discovering = false, scanError = "Classic discovery refused (permission missing?)") }
+    }
+
+    fun stopDiscovery() { adapter.cancelDiscovery(); edit { it.copy(discovering = false) } }
+
+    fun setLocate(address: String?) = edit { it.copy(locate = address) }
+
+    fun setPathLoss(n: Double) = edit { it.copy(pathLoss = n.coerceIn(1.5, 5.0)) }
+
+    /** The parsed advertisement of [d] (an empty one when it carried no raw record). */
+    fun advertisement(d: BleDevice): Advertisement = Hex.parse(d.raw)?.let { AdvParser.parse(it) } ?: Advertisement()
+
+    /** Smoothed RSSI of [address] over its history, and the distance it implies for [d]'s one-metre reference. */
+    fun smoothed(address: String, s: BleState = state.value): Double? = AdvParser.smooth(s.history[address].orEmpty())
+
+    fun distance(d: BleDevice, s: BleState = state.value): Double? {
+        val rssi = smoothed(d.address, s) ?: d.rssi.toDouble()
+        return AdvParser.distanceMeters(rssi.toInt(), advertisement(d).txAt1m ?: d.txPower?.minus(41), s.pathLoss)
+    }
+
+    fun exportRows(s: BleState = state.value): List<BleExport.Row> = BleExport.rows(s.seen.values + s.bonded.filter { b -> b.address !in s.seen }, s.history, s.pathLoss)
 
     /** The scan result, filtered by the current query. */
     fun visible(s: BleState = state.value): List<BleDevice> = BleFilters.apply(s.seen.values, s.query, catalog)
@@ -206,7 +249,7 @@ class BleController(
         refreshBonded()
     }
 
-    fun close() { stopScan(); session.unobserve(this) }
+    fun close() { stopScan(); stopDiscovery(); session.unobserve(this) }
 
-    companion object { const val MAX_SAMPLES = 60 }
+    companion object { const val MAX_SAMPLES = 60; const val MAX_HISTORY = 120 }
 }

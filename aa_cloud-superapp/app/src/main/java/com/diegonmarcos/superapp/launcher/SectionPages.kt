@@ -100,6 +100,8 @@ object SectionPages {
         // Configs ▸ Fleet ▸ Bluetooth (#1221): the `bluetooth` page declares `tabs`, so the strip branch at the top answered it;
         // these are its five tabs, one fragment over libs:bluetooth's page and the one shared stack.
         sectionId == "config" && pageId == "bluetooth-find" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Find)
+        sectionId == "config" && pageId == "bluetooth-analyze" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Analyze)
+        sectionId == "config" && pageId == "bluetooth-locate" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Locate)
         sectionId == "config" && pageId == "bluetooth-connect" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Connect)
         sectionId == "config" && pageId == "bluetooth-interact" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Interact)
         sectionId == "config" && pageId == "bluetooth-debug" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Debug)

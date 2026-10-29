@@ -13,6 +13,12 @@ object BluetoothHub {
     @Volatile private var controller: BleController? = null
     @Volatile private var session: GattSession? = null
     @Volatile private var catalog: GattCatalog? = null
+    @Volatile private var companies: CompanyIds? = null
+
+    /** #1264 the vendor vocabulary the analyzer names manufacturer data with (assets/bluetooth/company-ids.json). */
+    fun companies(ctx: Context): CompanyIds = companies ?: synchronized(this) {
+        companies ?: CompanyIds.load(ctx.applicationContext).also { companies = it }
+    }
 
     fun catalog(ctx: Context): GattCatalog = catalog ?: synchronized(this) {
         catalog ?: GattCatalog.load(ctx.applicationContext).also { catalog = it }

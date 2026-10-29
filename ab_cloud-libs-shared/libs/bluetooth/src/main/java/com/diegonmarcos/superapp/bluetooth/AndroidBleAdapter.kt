@@ -67,7 +67,12 @@ class AndroidBleAdapter(context: Context) : BleAdapter {
             override fun onScanFailed(errorCode: Int) { onFailed("scan failed, code $errorCode") }
         }
         return runCatching {
-            scanner.startScan(null, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), cb)
+            val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
+            // #1264 extended advertising (BT 5) when the controller has it: the analyzer sees long payloads and coded-PHY devices.
+            if (Build.VERSION.SDK_INT >= 26 && runCatching { bt?.isLeExtendedAdvertisingSupported == true }.getOrDefault(false)) {
+                settings.setLegacy(false).setPhy(ScanSettings.PHY_LE_ALL_SUPPORTED)
+            }
+            scanner.startScan(null, settings.build(), cb)
             scanCb = cb
             true
         }.getOrDefault(false)
@@ -94,12 +99,57 @@ class AndroidBleAdapter(context: Context) : BleAdapter {
             connectable = connectable,
             bonded = r.device.bondState == BluetoothDevice.BOND_BONDED,
             lastSeenMs = System.currentTimeMillis(),
+            raw = rec?.bytes?.let { Hex.format(it, "") }.orEmpty(),
+            phy = if (Build.VERSION.SDK_INT >= 26) phyName(r.primaryPhy) + (if (r.secondaryPhy != ScanResult.PHY_UNUSED) "/" + phyName(r.secondaryPhy) else "") +
+                (if (!r.isLegacy) " ext" else "") else "",
         )
+    }
+
+    private fun phyName(p: Int): String = when (p) { 1 -> "1M"; 2 -> "2M"; 3 -> "Coded"; else -> "-" }
+
+    // ---- classic discovery (#1264) ----
+
+    private var discoveryReceiver: BroadcastReceiver? = null
+
+    @Suppress("DEPRECATION")
+    override fun startDiscovery(onFound: (BleDevice) -> Unit, onDone: () -> Unit): Boolean = runCatching {
+        val a = bt ?: return false
+        cancelDiscovery()
+        val rx = object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, i: Intent?) {
+                when (i?.action) {
+                    BluetoothDevice.ACTION_FOUND -> {
+                        val dev = deviceOf(i) ?: return
+                        val rssi = i.getShortExtra(BluetoothDevice.EXTRA_RSSI, Short.MIN_VALUE).toInt()
+                        val cls: android.bluetooth.BluetoothClass? = if (Build.VERSION.SDK_INT >= 33)
+                            i.getParcelableExtra(BluetoothDevice.EXTRA_CLASS, android.bluetooth.BluetoothClass::class.java)
+                        else i.getParcelableExtra(BluetoothDevice.EXTRA_CLASS)
+                        onFound(BleDevice(dev.address, runCatching { dev.name }.getOrNull() ?: i.getStringExtra(BluetoothDevice.EXTRA_NAME),
+                            if (rssi == Short.MIN_VALUE.toInt()) -127 else rssi, bonded = runCatching { dev.bondState == BluetoothDevice.BOND_BONDED }.getOrDefault(false),
+                            classic = runCatching { dev.type != BluetoothDevice.DEVICE_TYPE_LE }.getOrDefault(true), lastSeenMs = System.currentTimeMillis(), deviceClass = cls?.deviceClass))
+                    }
+                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> { onDone(); cancelDiscovery() }
+                }
+            }
+        }
+        val f = IntentFilter(BluetoothDevice.ACTION_FOUND).apply { addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED) }
+        // ACTION_FOUND comes from the system Bluetooth process: the receiver must be exported to hear it.
+        if (Build.VERSION.SDK_INT >= 33) ctx.registerReceiver(rx, f, Context.RECEIVER_EXPORTED) else ctx.registerReceiver(rx, f)
+        discoveryReceiver = rx
+        if (!a.startDiscovery()) { cancelDiscovery(); return false }
+        true
+    }.getOrDefault(false)
+
+    override fun cancelDiscovery() {
+        runCatching { bt?.cancelDiscovery() }
+        discoveryReceiver?.let { runCatching { ctx.unregisterReceiver(it) } }
+        discoveryReceiver = null
     }
 
     override fun bonded(): List<BleDevice> = runCatching {
         bt?.bondedDevices.orEmpty().map {
-            BleDevice(it.address, it.name, rssi = -127, bonded = true, classic = it.type == BluetoothDevice.DEVICE_TYPE_CLASSIC)
+            BleDevice(it.address, it.name, rssi = -127, bonded = true, classic = it.type == BluetoothDevice.DEVICE_TYPE_CLASSIC,
+                deviceClass = runCatching { it.bluetoothClass?.deviceClass }.getOrNull())
         }
     }.getOrDefault(emptyList())
 
@@ -254,6 +304,7 @@ class AndroidBleAdapter(context: Context) : BleAdapter {
     /** Drops every connection and receiver (the host calls it when it goes away). */
     fun close() {
         stopScan()
+        cancelDiscovery()
         synchronized(gatts) { gatts.values.forEach { runCatching { it.close() } }; gatts.clear() }
         if (bondRegistered) { runCatching { ctx.unregisterReceiver(bondReceiver) }; bondRegistered = false }
     }

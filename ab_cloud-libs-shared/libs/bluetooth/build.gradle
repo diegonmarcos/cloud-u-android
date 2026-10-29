@@ -29,6 +29,7 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+    testOptions { unitTests.returnDefaultValues = true }
 }
 
 dependencies {
@@ -41,4 +42,9 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.core:core-ktx:1.13.1'
+
+    // #1264 the lib's own JVM suite (src/test): the advertising parser, beacons, distance, export, the company table. org.json is the
+    // real implementation (android.jar only stubs it), so CompanyIds.parse runs as on the phone.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
 }

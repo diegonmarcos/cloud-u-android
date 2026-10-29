@@ -52,9 +52,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.uiicons.UiIcons
 
-/** The five tabs of the Bluetooth page (#1221). [id] is the page id suffix in build.json (`bluetooth-find`, ...). */
+/** The tabs of the Bluetooth page (#1221; Analyze and Locate #1264). [id] is the page id suffix in build.json (`bluetooth-find`, ...). */
 enum class BtTab(val id: String, val label: String) {
-    Find("find", "Find"), Connect("connect", "Connect"), Interact("interact", "Interact"), Debug("debug", "Debug"), Dev("dev", "Dev");
+    Find("find", "Find"), Analyze("analyze", "Analyze"), Locate("locate", "Locate"), Connect("connect", "Connect"), Interact("interact", "Interact"),
+    Debug("debug", "Debug"), Dev("dev", "Dev");
 
     companion object { fun of(id: String?): BtTab = entries.firstOrNull { it.id == id } ?: Find }
 }
@@ -75,6 +76,8 @@ fun BluetoothPanel(controller: BleController, tab: BtTab, modifier: Modifier = M
         item("gate") { PermissionGate(controller, s) }
         when (tab) {
             BtTab.Find -> findTab(controller, s, onOpenTab)
+            BtTab.Analyze -> analyzeTab(controller, s, onOpenTab)
+            BtTab.Locate -> locateTab(controller, s)
             BtTab.Connect -> connectTab(controller, s, onOpenTab)
             BtTab.Interact -> interactTab(controller, s)
             BtTab.Debug -> debugTab(controller, s)

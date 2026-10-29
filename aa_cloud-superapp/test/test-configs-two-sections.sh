@@ -227,9 +227,9 @@ import json
 print(len(next(s for s in json.load(open('$BJ'))['ui']['sections']
                if s['id'] == 'config')['pages']))
 ")
-[ "$COUNT" = 36 ] \
-  && ok "36 config pages declared — the set T5 walks is the whole set (#1221: plus bluetooth and its five hidden tabs; #649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
-  || bad "$COUNT config pages, expected 36 — a page was added or DELETED, and T5 cannot report a page that is gone"
+[ "$COUNT" = 38 ] \
+  && ok "38 config pages declared — the set T5 walks is the whole set (#1221: plus bluetooth and its five hidden tabs; #1264: plus its Analyze and Locate tabs; #649: 22 minus launcher; #723: minus ai and its 5 tabs; #733: plus apps-mesh; #740: plus dns; plus firewall; plus the hidden About ▸ Battery; Agents regroup: minus the Network separator, plus agents and its two tabs; #ipc: plus ipc; Controls merge: plus panels, panels-ui and panels-tools; Apps Mesh strip: plus apps-mesh-members and identity)" \
+  || bad "$COUNT config pages, expected 38 — a page was added or DELETED, and T5 cannot report a page that is gone"
 
 echo "== T6: ACTIONS IS UNTOUCHED =="
 # The owner said to keep it as it is. Three things make that true: the same three
@@ -303,7 +303,7 @@ echo "== T9: NO PAGE WAS LOST — the id set before the regroup == the id set no
 # id to BEFORE below.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
-BEFORE = {'presets', 'controls', 'onehand', 'notify', 'launcher',
+BEFORE = {'bluetooth-analyze', 'bluetooth-locate', 'presets', 'controls', 'onehand', 'notify', 'launcher',
           'profile', 'wg', 'kde', 'ai', 'perms', 'store', 'about',
           'websearch', 'localsearch', 'textenhance', 'library', 'tokens',
           'store-cloud', 'store-phone',

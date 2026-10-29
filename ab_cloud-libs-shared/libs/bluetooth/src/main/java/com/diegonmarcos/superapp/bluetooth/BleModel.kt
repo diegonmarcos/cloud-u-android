@@ -12,6 +12,10 @@ data class BleDevice(
     val bonded: Boolean = false,
     val classic: Boolean = false,
     val lastSeenMs: Long = 0L,
+    /** #1264 the raw scan record as hex (AdvParser reads it), the classic class of device, the primary / secondary PHY. */
+    val raw: String = "",
+    val deviceClass: Int? = null,
+    val phy: String = "",
 ) {
     val label: String get() = name?.takeIf { it.isNotBlank() } ?: "Unnamed"
 
@@ -22,6 +26,10 @@ data class BleDevice(
         manufacturer = manufacturer + newer.manufacturer,
         txPower = newer.txPower ?: txPower,
         bonded = newer.bonded || bonded,
+        raw = newer.raw.ifEmpty { raw },
+        deviceClass = newer.deviceClass ?: deviceClass,
+        classic = newer.classic || classic,
+        phy = newer.phy.ifEmpty { phy },
     )
 }
 
@@ -111,4 +119,8 @@ interface BleAdapter {
     fun requestMtu(address: String, mtu: Int): Boolean
     fun readRssi(address: String): Boolean
     fun bond(address: String): Boolean
+
+    /** #1264 classic (BR/EDR) inquiry: each found device, then [onDone] when the inquiry ends. False when it could not start. */
+    fun startDiscovery(onFound: (BleDevice) -> Unit, onDone: () -> Unit): Boolean = false
+    fun cancelDiscovery() {}
 }
