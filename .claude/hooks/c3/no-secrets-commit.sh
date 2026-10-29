@@ -12,7 +12,9 @@ if printf '%s' "$CMD" | grep -Eq '(^|[;&|(]\s*)git(\s+-C\s+\S+)?\s+commit(\s|$)'
     gitleaks protect --staged --no-banner $CFG -s "$D" >/dev/null 2>&1 || {
       [ $? -eq 1 ] && block no-secrets-commit 'gitleaks found a secret in the staged changes. Unstage it and move it to sops.'; }
   else
-    if git -C "$D" diff --cached -U0 2>/dev/null | grep -E '^\+[^+]' | grep -Eqi "$PAT"; then
+    # #1291 allowlist: dated task folder names (TASK-20260323-04_..., TASK-net-20260508-01_..., task-2026-02-15-...)
+    # contain "sk-" inside the word TASK; only that exact shape is neutralised, real sk-... keys stay blocked
+    if git -C "$D" diff --cached -U0 2>/dev/null | grep -E '^\+[^+]' | sed -E 's#([Tt][Aa][Ss][Kk])-(([a-z]+-)?[0-9]{8}-[0-9]{2}_|[0-9]{4}-[0-9]{2}-[0-9]{2}-)#\1_\2#g' | grep -Eqi "$PAT"; then
       block no-secrets-commit 'plaintext secret pattern in the staged changes. Unstage it and move it to sops.'
     fi
   fi

@@ -64,3 +64,12 @@ description = "UPPER_CASE secret-named key assigned a quoted literal (env / toml
 regex = '''[A-Z0-9_]*(TOKEN|SECRET|PASSWORD|PASSWD|API_KEY|APIKEY|PRIVATE_KEY)[A-Z0-9_]*[[:space:]]*[:=][[:space:]]*["'][^"'$[:space:]{}<>]{16,}["']'''
 keywords = ["token", "secret", "password", "passwd", "api_key", "apikey", "private_key"]
 entropy = 3.0
+
+# #1123 (owner-approved): Caddy site-address lines for the fleet-only mesh namespace look like
+# `generic-api-key` to gitleaks (a long hyphenated host such as c3-infra-api.mesh.diegonmarcos.com).
+# A host name is not a secret. The allowance is a LINE regex anchored to exactly a site address
+# (mesh hosts, optional comma list, optional opening brace) so nothing else is silenced.
+[[allowlists]]
+description = "mesh.diegonmarcos.com Caddy site-address lines (host names, not credentials)"
+regexTarget = "line"
+regexes = ['''^[[:space:]]*([a-z0-9*][a-z0-9._*-]*\.mesh\.diegonmarcos\.com(, )?)+[[:space:]]*(\{)?[[:space:]]*$''']
