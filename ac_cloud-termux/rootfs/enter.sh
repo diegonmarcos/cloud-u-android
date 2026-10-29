@@ -75,7 +75,7 @@ wipe_rootfs() {
 # wipe_rootfs end
 
 # unpack_rootfs begin
-# startup-step: unpack_rootfs
+# (part of startup-step wipe_stale_root: the unpack that follows the wipe; termux-only, nix has no rootfs tarball)
 # Every login session and UnpackService (TerminalDebugApi.prepare after an update or a
 # Store install) runs this file, so several unpackers can start at once. 2026-10-28 two of
 # them wiped and extracted the same tree concurrently: hundreds of "Cannot stat", "Directory
