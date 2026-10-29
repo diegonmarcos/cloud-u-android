@@ -163,6 +163,9 @@ PYTHON
 echo "── D1 tabs: declared ↔ dispatched ──"
 d1 "$BJ" "$MAIN" && pass "ui.bottom_nav sections are unique, labelled, iconed; MainActivity dispatches exactly them" || fail "tabs: declaration and dispatch disagree"
 if grep -qE 'BuildConfig\.UI_DEFAULT_SECTION' "$DECL" && grep -qE 'Declarations\.defaultTab' "$SHELL_KT"; then pass "the default tab is the declared one"; else fail "default tab not read from the declaration"; fi
+# #1300 the owner's rule: the app opens on the Git page, declared (ui.default_section), never a restored last page
+if [ "$(jq -r '.ui.default_section' "$BJ")" = "git" ]; then pass "ui.default_section is git (the app opens on the Git page)"; else fail "ui.default_section is not git (#1300)"; fi
+if grep -qE 'SharedPreferences|prefs\.(get|put)[A-Za-z]*\(.*(tab|section|last)' "$SHELL_KT"; then fail "DriveShell persists a last page (#1300: cold start is always Git)"; else pass "DriveShell persists no last page"; fi
 
 echo "── D2 configs pages: declared ↔ dispatched ──"
 d2 "$BJ" "$CONFIGS" && pass "ui.sections[configs].pages dispatch matches" || fail "configs pages: declaration and dispatch disagree"

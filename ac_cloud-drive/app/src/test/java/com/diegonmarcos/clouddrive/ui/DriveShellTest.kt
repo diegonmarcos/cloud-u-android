@@ -98,6 +98,7 @@ class DriveShellTest {
         // Every declared tab is an item of the island, left to right in declared order.
         val lefts = tabs.map { t -> compose.onNodeWithTag(BottomNavTags.item(t.id)).fetchSemanticsNode().boundsInRoot.left }
         assertTrue("island items follow the declared order: $lefts", lefts.zipWithNext().all { (a, b) -> a < b })
+        assertEquals("#1300 a cold start opens on the Git page", "git", Declarations.defaultTab)
         compose.onNodeWithTag(BottomNavTags.item(Declarations.defaultTab)).assertIsSelected()
         compose.onNodeWithText("content:" + Declarations.defaultTab).assertIsDisplayed()
         // Selecting another declared tab swaps the content and moves the pill.

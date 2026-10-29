@@ -56,7 +56,7 @@ class DeclarationsTest {
         assertTrue("AI and Configs are sections the top bar opens, not island items", tabs.none { it.id == "ai" || it.id == "configs" } && nav().section("ai") != null && nav().section("configs") != null)
         assertEquals(emptyList<String>(), nav().problems())
         assertTrue(tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
-        assertEquals("explorer", nav().default()?.id)
+        assertEquals("#1300 the app opens on the Git page", "git", nav().default()?.id)
         assertTrue(tabs.map { it.id }.contains(nav().default()?.id))
     }
 
