@@ -94,6 +94,6 @@ class BulkDepthTest {
         assertNotNull(page.depthAction("clone_all_depth1")); assertNotNull(page.depthAction("keep_depth1_all"))
         assertTrue(page.depthActions.all { (if (it.kind == Declarations.DEPTH_CLONE_BARE) it.depth == 0 else it.depth == 1) && it.workers in 1..4 })
         assertTrue("shrinking every clone asks first", all.first { it.kind == Declarations.DEPTH_KEEP }.confirm)
-        assertTrue("no declared id collides with a RepoActions id", page.depthActions.none { a -> RepoActions.GROUPS.any { a.id in it.actions } })
+        assertTrue("no declared id collides with a RepoActions id", page.depthActions.none { a -> a.id in RepoActions.PAGE_IDS })
     }
 }

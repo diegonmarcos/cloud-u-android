@@ -113,8 +113,8 @@ class RepoStatusTest {
         assertEquals("abcdef01", RepoStatus.unpushed(log, 1).single().shortSha)
     }
 
-    @Test fun `the action sits in the Goto group and is a plain reader`() {
-        assertTrue(RepoActions.UNPUSHED in RepoActions.GROUPS.first { it.group == RepoGroup.GOTO }.actions)
+    @Test fun `the action sits in the Workflow group and is a plain reader`() {
+        assertTrue(RepoActions.UNPUSHED in RepoActions.PAGE_IDS && RepoActions.G_WORKFLOW in RepoActions.GROUP_ORDER)
         assertEquals(RepoActions.Route.RUN, RepoActions.route(RepoActions.UNPUSHED))
     }
 
