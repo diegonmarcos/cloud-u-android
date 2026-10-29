@@ -36,7 +36,7 @@ cfg = json.load(open(policy))
 for prefix in cfg["allow"]:
     os.makedirs(os.path.join(fx, prefix), exist_ok=True)
     open(os.path.join(fx, prefix, "placeholder.txt"), "w").write("allowed tree\n")
-for e in cfg["exempt"] + cfg.get("probe", []):
+for e in cfg["exempt"] + cfg.get("probe", []) + [{"path": f} for f in cfg.get("registry_data", {}).get("files", [])]:
     dst = os.path.join(fx, e["path"])
     os.makedirs(os.path.dirname(dst), exist_ok=True)
     shutil.copy(os.path.join(root, e["path"]), dst)
@@ -105,6 +105,23 @@ expect_green "a public resolver inside the SuperApp, the declared DNS layer" \
     "aa_cloud-superapp/data/dns-presets.json" '{"cloudflare": "1.1.1.1"}'
 expect_green "firestack's own DNS transports" \
     "ab_cloud-libs-shared/libs/firewall/doh.go" 'const u = "https://1.1.1.1/dns-query"'
+
+# Registry codes (#1298): a "code" field naming 1.1.1.1 in a registry data file is a node id, green;
+# a real 1.1.1.1 DNS use anywhere (other files, or other lines of that file) stays red.
+reg="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["registry_data"]["files"][0])' "$POLICY")"
+cp "$FX/$reg" "$W/savedreg"
+printf '{\n  "code": "1.1.1.1",\n  "code": "1.0.0.1"\n}\n' > "$FX/$reg"
+if judge; then ok "registry codes (1.1.1.1, 1.0.0.1) as JSON code fields: green"
+else bad "registry codes flagged: $(grep -m1 FAIL "$W/out")"; fi
+printf '{\n  "code": "1.1.1.1",\n  "dns": "1.1.1.1"\n}\n' > "$FX/$reg"
+if judge; then bad "registry file: MUTATION SURVIVED, a real 1.1.1.1 DNS server beside a code is green"
+else ok "a real 1.1.1.1 DNS server in a registry file (not a code field): red"; fi
+cp "$W/savedreg" "$FX/$reg"
+expect_red "a real 1.1.1.1 DNS server in Kotlin" \
+    "ac_cloud-probe/Dns11.kt" 'val dns = listOf(InetAddress.getByName("1.1.1.1"))'
+expect_red "a 1.1.1.1 code field outside the declared registry files" \
+    "ac_cloud-probe/other.json" '  "code": "1.1.1.1",'
+rm -f "$FX/ac_cloud-probe/Dns11.kt" "$FX/ac_cloud-probe/other.json"
 
 # An exemption excuses one text in one file: the same file gaining another resolver is red.
 first="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["exempt"][0]["path"])' "$POLICY")"

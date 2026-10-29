@@ -37,6 +37,8 @@ def scan(root, cfg):
     # Every match of a rule contains one of its needles, so a file holding no needle at all
     # is skipped without running a single pattern: almost every file in the fleet.
     needles = [n for r in cfg["rules"].values() for n in r["needles"]]
+    reg = cfg.get("registry_data", {"files": [], "line_pattern": "$^"})
+    reg_rx, reg_files = re.compile(reg["line_pattern"]), tuple(reg["files"])
     findings = []
     for path in tracked(root):
         if not path.startswith(tuple(cfg["scan"])):
@@ -57,6 +59,8 @@ def scan(root, cfg):
             for name, (rx, suffixes) in rules.items():
                 if suffixes and not path.endswith(suffixes):
                     continue
+                if path in reg_files and reg_rx.match(line):
+                    continue  # a registry node code, not an address (policy _doc_registry)
                 if rx.search(line) and not path.startswith(tuple(cfg["allow"])):
                     findings.append((path, n, name, line.strip()))
     return findings
@@ -88,6 +92,9 @@ def main(argv):
         if missing:
             bad.append("%s [probe] the on-device DNS probe lost %s (policy _doc_probe)"
                        % (e["path"], ", ".join(repr(m) for m in missing)))
+    for f in cfg.get("registry_data", {}).get("files", []):
+        if not os.path.isfile(os.path.join(root, f)):
+            stale.append("registry data file %s does not exist, delete it from registry_data" % f)
     for prefix in cfg["allow"]:
         if not os.path.isdir(os.path.join(root, prefix)):
             stale.append("allowed tree %s does not exist" % prefix)
