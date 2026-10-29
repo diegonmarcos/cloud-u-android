@@ -113,7 +113,7 @@ class WifiLibTest {
         assertTrue(c.nsdTypes.contains("_googlecast._tcp")); assertEquals("https", c.portNames[443])
         assertTrue(PortSpec.parse(c.portDefaultSpec, c.portMax) != null)
         val o = WifiConfig.parse(asset("wifi-config.json"), """{"ping":{"count":3},"_doc":"x"}""")
-        assertEquals(3, o.pingCount); assertEquals("1.1.1.1", o.pingDefaultHost)
+        assertEquals(3, o.pingCount); assertEquals("example.com", o.pingDefaultHost)
         assertEquals(20, WifiConfig.parse(asset("wifi-config.json"), "not json").pingCount)
     }
 
