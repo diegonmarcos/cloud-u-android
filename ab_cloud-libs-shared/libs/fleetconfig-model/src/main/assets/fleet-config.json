@@ -1582,10 +1582,11 @@
     "perm_ask_tracker": {
       "kind": "prefs",
       "class": "device",
-      "doc": "Set of permissions already asked on this install; permission-asked tracker.",
+      "doc": "Set of permissions already asked on this install; permission-asked tracker. #1274 libs:core PermAskLog shares it with the app's PermAskTracker (one record of what was asked).",
       "used_by": [
         "aa_cloud-superapp",
-        "ac_cloud-nav"
+        "ac_cloud-nav",
+        "lib-core"
       ]
     },
     "phone_notif_store": {
