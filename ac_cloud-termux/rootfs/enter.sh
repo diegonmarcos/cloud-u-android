@@ -82,10 +82,10 @@ wipe_rootfs() {
 # renamed before its status could be extracted", "Cannot hard link", then a failed unpack and
 # the plain Termux shell. So: (1) one unpacker at a time, a lock in var/lib/cloud-rootfs that
 # every entry point takes; the next caller waits, then re-reads the stamp and finds the work
-# done; (2) the tarball goes into a fresh rootfs.new.<pid>, is checked, stamped and only then
-# swapped in with two renames; the old root becomes rootfs.old.<pid> and is deleted after the
-# swap, never while anything extracts into it; (3) tar never tries to chown (an app uid
-# cannot); (4) a failed unpack deletes only its own staging dir, the working root stays.
+# done; (2) the old root is renamed to rootfs.old.<pid> and the tarball is extracted at the final path
+# (link2symlink links are absolute: no staging dir), checked and stamped; the old root is deleted
+# after the unpack, never while anything extracts into it, and comes back if the unpack fails; (3) tar never tries to chown (an app uid
+# cannot); (4) a failed unpack removes its partial tree and puts the previous root back.
 LOCKDIR="$HERE/var/lib/cloud-rootfs"
 UNPACK_OLD=""
 UNPACK_ERR=""
@@ -119,34 +119,37 @@ unpack_rootfs() {  # $1 = wanted digest; 0 = $ROOTFS holds it (UNPACK_OLD = old 
     fi
     echo "Unpacking the agent toolbelt (first start after install or update)..." >&2
     live="$ROOTFS"
-    for d in "$HERE"/rootfs.new.* "$HERE"/rootfs.old.*; do   # left by an unpacker that died; nobody extracts while we hold the lock
+    for d in "$HERE"/rootfs.old.* "$HERE"/rootfs.new.*; do   # left by an unpacker that died; nobody extracts while we hold the lock
         [ -d "$d" ] || continue
         ROOTFS="$d"; wipe_rootfs; rm -rf "$d" >/dev/null 2>&1 || true
     done
     ROOTFS="$live"
-    new="$HERE/rootfs.new.$$"
-    mkdir -p "$new"
-    # Android forbids hard links in app storage; --link2symlink emulates the
-    # rootfs's (claude's bin/claude.exe is one) and proot resolves them later.
-    if zstd -dc "$HERE/rootfs.tar.zst" | "$HERE/proot" --link2symlink -0 \
-            tar --no-same-owner --no-same-permissions -xf - -C "$new" \
-        && [ -f "$new/etc/passwd" ]; then
-        :
-    else
-        ROOTFS="$new"; wipe_rootfs; rm -rf "$new" >/dev/null 2>&1 || true; ROOTFS="$live"
-        rootfs_unlock; UNPACK_ERR="unpacking the rootfs failed (the previous root, if any, is unchanged)"; return 1
-    fi
-    echo "$1" > "$new/.cloud-rootfs.sha256"
-    # The root's /tmp is scratch an update has no reason to touch: it moves into the new root.
-    if [ -d "$ROOTFS/tmp" ] && [ ! -L "$ROOTFS/tmp" ]; then
-        rm -rf "$new/tmp" >/dev/null 2>&1 || true
-        mv "$ROOTFS/tmp" "$new/tmp" 2>/dev/null || true
-    fi
+    # The old root steps aside with one rename; the new tree is extracted AT ITS FINAL PATH. Not into a
+    # staging dir that is renamed afterwards: --link2symlink writes the emulated hard links (claude's
+    # bin/claude.exe is one) as symlinks to absolute host paths, so a tree extracted elsewhere and moved
+    # keeps links into a directory that no longer exists (2026-10-29: `claude: not on PATH`).
     if [ -e "$ROOTFS" ] || [ -L "$ROOTFS" ]; then
         UNPACK_OLD="$HERE/rootfs.old.$$"
-        mv "$ROOTFS" "$UNPACK_OLD" || { rootfs_unlock; UNPACK_ERR="the old root could not be moved aside"; return 1; }
+        mv "$ROOTFS" "$UNPACK_OLD" || { UNPACK_OLD=""; rootfs_unlock; UNPACK_ERR="the old root could not be moved aside"; return 1; }
     fi
-    mv "$new" "$ROOTFS" || { [ -z "$UNPACK_OLD" ] || mv "$UNPACK_OLD" "$ROOTFS"; rootfs_unlock; UNPACK_ERR="the new root could not be moved in"; return 1; }
+    mkdir -p "$ROOTFS"
+    # Android forbids hard links in app storage; --link2symlink emulates the
+    # rootfs's and proot resolves them later.
+    if zstd -dc "$HERE/rootfs.tar.zst" | "$HERE/proot" --link2symlink -0 \
+            tar --no-same-owner --no-same-permissions -xf - -C "$ROOTFS" \
+        && [ -f "$ROOTFS/etc/passwd" ]; then
+        :
+    else
+        wipe_rootfs; rm -rf "$ROOTFS" >/dev/null 2>&1 || true
+        if [ -n "$UNPACK_OLD" ]; then mv "$UNPACK_OLD" "$ROOTFS" 2>/dev/null || true; UNPACK_OLD=""; fi
+        rootfs_unlock; UNPACK_ERR="unpacking the rootfs failed (the previous root, if any, is unchanged)"; return 1
+    fi
+    echo "$1" > "$ROOTFS/.cloud-rootfs.sha256"
+    # The root's /tmp is scratch an update has no reason to touch: it moves into the new root.
+    if [ -n "$UNPACK_OLD" ] && [ -d "$UNPACK_OLD/tmp" ] && [ ! -L "$UNPACK_OLD/tmp" ]; then
+        rm -rf "$ROOTFS/tmp" >/dev/null 2>&1 || true
+        mv "$UNPACK_OLD/tmp" "$ROOTFS/tmp" 2>/dev/null || true
+    fi
     rm -f "$HERE/rootfs.tar.zst"
     rootfs_unlock
     echo "cloud-rootfs: unpacked $1" >&2

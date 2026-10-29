@@ -105,6 +105,7 @@ all() {  # $1 = enter.sh; prints every violation
     run_concurrent "$1"; check_concurrent
     broken_root_kept "$1"
     run_broken "$1"; check_broken
+    grep -q -- '-C "\$ROOTFS"' "$1" || echo "R7 the tarball is not extracted at its final path (link2symlink links are absolute)"
     grep -q 'tar --no-same-owner' "$1" || echo "R6 tar may try to chown (no --no-same-owner)"
 }
 
@@ -119,8 +120,8 @@ mutant() {  # $1 = sed expr, $2 = what it breaks, $3 = rule that must fire
     if all "$T/mut.sh" | grep -q "^$3"; then echo "ok   mutation proved: $2 goes red"; else echo "FAIL MUTATION SURVIVED: $2"; fail=1; fi
 }
 mutant 's|^    rootfs_lock$|    :|' "no single-flight lock" R2
-mutant 's|-C "\$new"|-C "$ROOTFS"|' "extracting over the live root" R
+mutant 's|^        UNPACK_OLD="\$HERE/rootfs.old.\$\$"$|        UNPACK_OLD=""|' "extracting over the live root" R
 mutant 's|tar --no-same-owner --no-same-permissions|tar|' "tar that chowns" R6
-mutant 's|ROOTFS="\$new"; wipe_rootfs; rm -rf "\$new" >/dev/null 2>&1 \|\| true; ROOTFS="\$live"|:|' "a failure that leaves its staging dir" R5
+mutant 's|if \[ -n "\$UNPACK_OLD" \]; then mv "\$UNPACK_OLD" "\$ROOTFS" 2>/dev/null \|\| true; UNPACK_OLD=""; fi|:|' "a failure that does not put the previous root back" R5
 
 [ "$fail" -eq 0 ] && echo "PASS rootfs unpack concurrency" || { echo "FAILED rootfs unpack concurrency"; exit 1; }
