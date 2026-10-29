@@ -49,6 +49,28 @@ object StoreGit {
         return GitOpResult(r.ok, if (r.ok) "synced (in cld.termux)" else "sync in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
+    /** #1282 the guest path of a store folder (the bare root), for scripts that build paths under it. */
+    fun guestOf(dir: File): String = guest(dir)
+
+    /** #1282 a bare mirror at [guestDir] (BareClones.path in guest form); [depth] 0 = full history. Never touches a working clone. */
+    fun bareClone(ctx: Context, url: String, guestDir: String, token: String, depth: Int): GitOpResult {
+        val r = StoreExec(ctx).job("set -e; mkdir -p \"\$(dirname ${q(guestDir)})\"; " + authed(BareClones.cloneArgs(url, guestDir, depth) { q(it) }), stdin = token)
+        return GitOpResult(r.ok, if (r.ok) "bare mirror at $guestDir" else "bare clone in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
+    }
+
+    /** #1282 `git remote update --prune` of an existing mirror: the one-bare rule's update instead of a second clone. */
+    fun bareUpdate(ctx: Context, guestDir: String, token: String): GitOpResult {
+        val r = StoreExec(ctx).job("set -e; " + authed(BareClones.updateArgs(guestDir) { q(it) }), stdin = token)
+        return GitOpResult(r.ok, if (r.ok) "bare mirror updated at $guestDir" else "bare update in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
+    }
+
+    /** #1282 every mirror under the bare root (two levels: <owner>/<repo>.git) with its origin, read in the guest. */
+    fun listBare(ctx: Context, bareRoot: File): List<BareClones.Mirror> = runCatching {
+        val g = guest(bareRoot)
+        val r = StoreExec(ctx).run("for d in ${q(g)}/*/*.git; do [ -d \"\$d\" ] || continue; printf '%s\\t%s\\n' \"\$d\" \"\$(git --git-dir=\"\$d\" config remote.origin.url 2>/dev/null)\"; done", timeoutMs = 30_000)
+        if (!r.ok) emptyList() else r.out.lineSequence().filter { it.isNotBlank() }.map { BareClones.Mirror(it.substringBefore('\t'), it.substringAfter('\t', "")) }.toList()
+    }.getOrDefault(emptyList())
+
     /** `git rev-parse` in the guest: is [dir] a repository (EXEC mode's GitEngine.isRepository). */
     fun isRepository(ctx: Context, dir: File): Boolean =
         runCatching { StoreExec(ctx).run("git -C ${q(guest(dir))} rev-parse --git-dir >/dev/null 2>&1", timeoutMs = 30_000).ok }.getOrDefault(false)

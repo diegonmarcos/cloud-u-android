@@ -4,7 +4,7 @@
 # ║ filter row + Last commit + persisted sort, Activity Logs, and the bottom ║
 # ║ nav's constant slot. Gradle proves it compiles; this proves the shape.   ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
-#   D1 depth commands are DATA: ui.sync.git.depth_actions declares clone_missing and keep_depth in both scopes; the page
+#   D1 depth commands are DATA: ui.sync.git.depth_actions declares clone_missing, keep_depth and clone_bare (#1282) in both scopes; the page
 #      dispatches on Declarations.DEPTH_* kinds only, and every declared kind has a handler and every handler a kind.
 #   D2 ONE CLONE PER REPOSITORY: the clone path plans through BulkDepth.planClones over every existing clone (registry,
 #      store scan, unlisted scan) with the registry canonical (renamed_from), and re-checks the destination.
@@ -34,19 +34,31 @@ FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 
-d1() { python3 - "$1" "$2" <<'PY'
+d1() { python3 - "$1" "$2" "$SRC/Declarations.kt" <<'PY'
 import json, re, sys
 g = json.load(open(sys.argv[1]))["ui"]["sync"]["git"]
 page = open(sys.argv[2]).read()
+decl = open(sys.argv[3]).read()
 acts = g.get("depth_actions") or []
 kinds = {(a["kind"], a["scope"]) for a in acts}
-need = {(k, s) for k in ("clone_missing", "keep_depth") for s in ("all", "repo")}
+need = {(k, s) for k in ("clone_missing", "keep_depth", "clone_bare") for s in ("all", "repo")}
 bad = 0
 if not need <= kinds: print("    depth_actions lacks", sorted(need - kinds)); bad = 1
-if any(a.get("depth") != 1 for a in acts): print("    every declared depth command is depth 1"); bad = 1
-handled = set(re.findall(r"Declarations\.(DEPTH_CLONE_MISSING|DEPTH_KEEP)\b", page))
-if handled != {"DEPTH_CLONE_MISSING", "DEPTH_KEEP"}: print("    the page does not dispatch both kinds:", handled); bad = 1
-if re.search(r'"(clone_all_depth1|keep_depth1_all|clone_repo_depth1|keep_repo_depth1)"', page): print("    a declared id is typed into the page"); bad = 1
+if any(a.get("depth") != 1 for a in acts if a["kind"] != "clone_bare"): print("    every declared shallow depth command is depth 1"); bad = 1
+if any(a.get("depth") != 0 for a in acts if a["kind"] == "clone_bare"): print("    clone_bare declares full history (depth 0), the backup form"); bad = 1
+# #1282 declared kinds <-> Declarations constants <-> page handlers, both ways.
+consts = dict((v, k) for k, v in re.findall(r'const val (DEPTH_[A-Z_]+) = "([a-z_]+)"', decl) if not k.startswith("DEPTH_SCOPE"))
+known = set(re.search(r"val DEPTH_KINDS = setOf\(([^)]*)\)", decl).group(1).replace(" ", "").split(","))
+declared = {a["kind"] for a in acts}
+for k in declared:
+    c = consts.get(k)
+    if not c or c not in known: print("    declared kind has no Declarations constant in DEPTH_KINDS:", k); bad = 1
+    elif not re.search(r"Declarations\." + c + r" ->", page): print("    the page has no bulk handler for", k); bad = 1
+    elif not re.search(r"it\.kind == Declarations\." + c + r"\b", page): print("    the page has no per-repository handler for", k); bad = 1
+for c in known:
+    kind = next((k for k, v in consts.items() if v == c), None)
+    if kind not in declared: print("    handled kind is not declared:", c); bad = 1
+if re.search(r'"(clone_all_depth1|keep_depth1_all|clone_repo_depth1|keep_repo_depth1|clone_all_bare|clone_repo_bare)"', page): print("    a declared id is typed into the page"); bad = 1
 sys.exit(bad)
 PY
 }

@@ -244,6 +244,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      */
     fun onPageOpened() {
         refreshRegistry()
+        refreshBare()
         scope.launch {
             val list = loadRegistry()
             // #1256 the one exception: an EMPTY last-commit cache (first open) is filled once from the local HEADs.
@@ -776,6 +777,51 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     }
 
     private enum class Outcome { OK, SKIP, FAIL }
+
+    // ── #1282 Clone bare: ONE bare mirror per repository under the declared bare root (BareClones), the working clone untouched ──
+
+    /** Canonical identity -> mirror path, for the page's "bare ✓" indicator; read on IO by [refreshBare]. */
+    val bareMirrors = MutableStateFlow<Map<String, String>>(emptyMap())
+
+    private fun bareRoot(): File = File(SharedStore.gitRoot(), Declarations.sync.git.bareRoot)
+
+    private fun listMirrors(): List<BareClones.Mirror> = if (StoreGit.useExec(ctx)) StoreGit.listBare(ctx, bareRoot()) else emptyList()
+
+    fun refreshBare() { scope.launch(Dispatchers.IO) { bareMirrors.value = BareClones.index(listMirrors()) { Declarations.repoSot.canonical(it) } } }
+
+    /**
+     * #1282 CLONE BARE at the declared depth (0 = full history): a target whose repository already has a mirror (origin URL,
+     * renamed_from chains folded in) is UPDATED with `git remote update --prune`, never cloned twice; the rest get
+     * `git clone --mirror` at <store git>/<bare_root>/<owner>/<repo>.git. Bounded workers, cancel-safe, each outcome in the
+     * status window and Activity Logs. git runs in cld.termux; without it the run says so and changes nothing.
+     */
+    fun cloneBare(action: Declarations.GitDepthActionDecl, targets: List<CloneTarget>): kotlinx.coroutines.Job? = startDepth(action) {
+        val canonical: (String) -> String = { Declarations.repoSot.canonical(it) }
+        if (!withContext(Dispatchers.IO) { StoreGit.useExec(ctx) }) {
+            depthRun.update { it?.copy(total = targets.size, done = targets.size, failed = targets.associate { t -> t.name to "bare clones run git in cld.termux, which is not answering; nothing changed" }) }
+            return@startDepth
+        }
+        val plan = withContext(Dispatchers.IO) { BareClones.plan(targets.map { BareClones.Target(it.name, it.url) }, listMirrors(), canonical) }
+        val gitGuest = withContext(Dispatchers.IO) { runCatching { StoreGit.guestOf(SharedStore.gitRoot()) }.getOrNull() }
+        val work = targets.filter { t -> t.name in plan.toUpdate || plan.toClone.any { it.name == t.name } }
+        depthRun.update { it?.copy(total = work.size) }
+        val fallbackToken = lazy { runCatching { declaredToken() }.getOrDefault("") }
+        bounded(action, work) { t0 ->
+            val t = if (t0.token.isBlank()) t0.copy(token = fallbackToken.value) else t0
+            val r = withContext(Dispatchers.IO) {
+                val at = plan.toUpdate[t.name]
+                if (at != null) StoreGit.bareUpdate(ctx, at, t.token)
+                else {
+                    val dest = gitGuest?.let { BareClones.path(it, Declarations.sync.git.bareRoot, t.url, t.name, canonical) }
+                    if (dest == null) GitOpResult(false, "no safe bare path for ${t.name}")
+                    else StoreGit.bareClone(ctx, t.url, dest, t.token, action.depth)
+                }
+            }
+            withContext(Dispatchers.IO) { history.append(SyncEvent(System.currentTimeMillis() / 1000, "bare:" + t.name, t.name, SyncHistory.TRIGGER_MANUAL, r.ok, "${action.id}: ${r.summary}", r.details)) }
+            t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to r.summary
+        }
+        withContext(Dispatchers.IO) { bareMirrors.value = BareClones.index(listMirrors(), canonical) }
+    }
 
     /** One depth command at a time; the run state and the job are the coordinator's, so a page close does not lose them. */
     private fun startDepth(action: Declarations.GitDepthActionDecl, body: suspend kotlinx.coroutines.CoroutineScope.() -> Unit): kotlinx.coroutines.Job? {

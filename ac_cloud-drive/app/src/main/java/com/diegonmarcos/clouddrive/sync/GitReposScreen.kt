@@ -729,6 +729,10 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     if (ssh) GitSyncCoordinator.AUTH_SSH else GitSyncCoordinator.AUTH_HTTPS, login.identity, if (ssh) "" else login.token)
             })
             Declarations.DEPTH_KEEP -> coordinator.keepDepth(a)
+            // #1282 one bare mirror per registry repository (an existing mirror is updated, never doubled).
+            Declarations.DEPTH_CLONE_BARE -> coordinator.cloneBare(a, Declarations.repoSot.repos.filter { !it.pending && !it.archived }.map { r ->
+                GitSyncCoordinator.CloneTarget(r.github, page.cloneUrl(r.github, Declarations.REMOTE_HTTPS), GitSyncCoordinator.AUTH_HTTPS, login.identity, login.token)
+            })
         }
     }
 
@@ -1065,7 +1069,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         AlertDialog(
             onDismissRequest = { depthConfirm = null },
             title = { Text(a.label) },
-            text = { Text(stringResource(if (a.kind == Declarations.DEPTH_KEEP) R.string.repo_depth_confirm_keep else R.string.repo_depth_confirm_clone, a.depth)) },
+            text = { Text(if (a.kind == Declarations.DEPTH_CLONE_BARE) stringResource(R.string.repo_bare_confirm, Declarations.sync.git.bareRoot) else stringResource(if (a.kind == Declarations.DEPTH_KEEP) R.string.repo_depth_confirm_keep else R.string.repo_depth_confirm_clone, a.depth)) },
             confirmButton = { TextButton(onClick = { runDepthAll(a); depthConfirm = null }) { Text(a.label) } },
             dismissButton = { TextButton(onClick = { depthConfirm = null }) { Text(stringResource(R.string.chrome_cancel)) } },
         )
@@ -1550,6 +1554,8 @@ private fun GitRepoOpsBox(
         }
         // #1254 the DECLARED per-repository depth commands (scope repo) that act on a clone: Keep depth N, asked first when declared so.
         DepthPills(page.depthActions(Declarations.DEPTH_SCOPE_REPO).filter { it.kind == Declarations.DEPTH_KEEP }, enabled = running == null) { a -> if (a.confirm) depthAsk = a else coordinator.keepDepth(a, repo) }
+        // #1282 Clone bare beside the depth commands: a mirror under the declared bare root; the working clone is untouched.
+        BareLine(coordinator, repo.name, repo.remoteUrl)
         if (readOnly) Text(stringResource(R.string.git_readonly_blocked), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         result?.let { r ->
             Text(
@@ -1762,6 +1768,7 @@ private fun GitRepoNotClonedBox(
         DepthPills(page.depthActions(Declarations.DEPTH_SCOPE_REPO).filter { it.kind == Declarations.DEPTH_CLONE_MISSING }, enabled = !cloning) { a ->
             coordinator.cloneMissing(a, listOf(GitSyncCoordinator.CloneTarget(repoName, url, GitSyncCoordinator.AUTH_HTTPS, "", "")))
         }
+        BareLine(coordinator, repoName, url)
         Text(stringResource(R.string.repo_not_cloned_why), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         when (panel) {
             RepoActions.PRS -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
@@ -1903,4 +1910,16 @@ private fun RepoSettingsSheet(repo: ManagedRepo, coordinator: GitSyncCoordinator
             dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text(stringResource(R.string.chrome_keep)) } },
         )
     }
+}
+
+/** #1282 the per-repository Clone bare pill (declared, scope repo) and the "bare ✓" indicator when a mirror already holds it. */
+@Composable
+private fun BareLine(coordinator: GitSyncCoordinator, name: String, url: String) {
+    val mirrors by coordinator.bareMirrors.collectAsState()
+    val depthRun by coordinator.depthRun.collectAsState()
+    val at = mirrors[BulkDepth.identity(url.ifBlank { name }) { Declarations.repoSot.canonical(it) }]
+    DepthPills(Declarations.sync.git.depthActions(Declarations.DEPTH_SCOPE_REPO).filter { it.kind == Declarations.DEPTH_CLONE_BARE }, enabled = depthRun?.finished != false) { a ->
+        coordinator.cloneBare(a, listOf(GitSyncCoordinator.CloneTarget(name, url, GitSyncCoordinator.AUTH_HTTPS, "", "")))
+    }
+    if (at != null) Text(stringResource(R.string.repo_bare_present, at), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }

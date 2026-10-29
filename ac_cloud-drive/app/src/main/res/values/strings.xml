@@ -222,6 +222,8 @@
     <string name="sync_clone_into_store">Clone into store</string>
     <string name="sync_history_section">Activity Logs</string>
     <string name="sync_history_empty">No activity yet</string>
+    <string name="repo_bare_present">bare ✓ %1$s</string>
+    <string name="repo_bare_confirm">Mirror every repository as a bare clone under %1$s (full history). Existing mirrors are updated, working clones are not touched.</string>
     <string name="activity_copy_all">Copy all</string>
     <string name="activity_copy_filtered">Copy filtered</string>
     <string name="activity_share">Share</string>

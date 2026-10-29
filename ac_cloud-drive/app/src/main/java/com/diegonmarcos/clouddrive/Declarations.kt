@@ -168,6 +168,8 @@ object Declarations {
         val filters: List<GitFilterDecl> = emptyList(),
         /** #1258 Activity Logs (was History): how many entries its view lists. */
         val activityMax: Int = 50,
+        /** #1282 where Clone bare puts the mirrors, relative to the store's git folder: <bare_root>/<owner>/<repo>.git. */
+        val bareRoot: String = "_bare",
     ) {
         fun depthActions(scope: String): List<GitDepthActionDecl> = depthActions.filter { it.scope == scope }
         fun depthAction(id: String): GitDepthActionDecl? = depthActions.firstOrNull { it.id == id }
@@ -519,12 +521,14 @@ object Declarations {
             depthActions = objects(o["depth_actions"]).mapNotNull { a ->
                 val id = a.str("id"); val kind = a.str("kind"); val scope = a.str("scope")
                 if (id.isBlank() || kind !in DEPTH_KINDS || scope !in DEPTH_SCOPES) null
-                else GitDepthActionDecl(id, a.str("label", id), a.str("icon"), kind, scope, (a.int("depth") ?: 1).coerceIn(1, 1000), (a.int("workers") ?: 1).coerceIn(1, 4), a.bool("confirm"))
+                // #1282 a bare mirror's depth 0 = full history (its declared default: the bare copy is the backup form).
+                else GitDepthActionDecl(id, a.str("label", id), a.str("icon"), kind, scope, if (kind == DEPTH_CLONE_BARE) (a.int("depth") ?: 0).coerceIn(0, 1000) else (a.int("depth") ?: 1).coerceIn(1, 1000), (a.int("workers") ?: 1).coerceIn(1, 4), a.bool("confirm"))
             },
             unlisted = (o["unlisted"] as? JsonObject)?.let { u ->
                 GitUnlistedDecl(u.str("label"), u.strings("roots"), (u.int("max_depth") ?: 2).coerceIn(0, 6), (u.int("max_dirs") ?: 2000).coerceIn(1, 100_000), (u.int("timeout_seconds") ?: 30).coerceIn(1, 600))
             } ?: GitUnlistedDecl(),
             activityMax = ((o["activity_logs"] as? JsonObject)?.int("max_entries") ?: 50).coerceIn(1, 1000),
+            bareRoot = o.str("bare_root", "_bare").takeIf { com.diegonmarcos.clouddrive.sync.BareClones.validRoot(it) } ?: "_bare",
             filters = objects(o["filters"]).mapNotNull { f ->
                 val id = f.str("id")
                 val opts = objects(f["options"]).mapNotNull { x -> x.str("id").takeIf { it.isNotBlank() }?.let { GitFilterOptionDecl(it, x.str("label", it)) } }
@@ -719,7 +723,9 @@ object Declarations {
     const val DEPTH_KEEP = "keep_depth"
     const val DEPTH_SCOPE_ALL = "all"
     const val DEPTH_SCOPE_REPO = "repo"
-    val DEPTH_KINDS = setOf(DEPTH_CLONE_MISSING, DEPTH_KEEP)
+    /** #1282 a bare mirror per repository under ui.sync.git.bare_root (BareClones). */
+    const val DEPTH_CLONE_BARE = "clone_bare"
+    val DEPTH_KINDS = setOf(DEPTH_CLONE_MISSING, DEPTH_KEEP, DEPTH_CLONE_BARE)
     val DEPTH_SCOPES = setOf(DEPTH_SCOPE_ALL, DEPTH_SCOPE_REPO)
     const val REMOTE_READONLY = "readonly"
 
