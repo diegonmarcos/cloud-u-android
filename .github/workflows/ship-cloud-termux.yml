@@ -46,7 +46,7 @@ on:
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       - "ab_cloud-libs-shared/libs/sysdns/**"
-      - "ab_cloud-libs-shared/libs/perms/**"   # #1274 the Permissions page this app hosts
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ac_cloud-termux/**"
 permissions:
   contents: write   # gh release upload

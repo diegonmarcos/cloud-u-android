@@ -1,97 +1,99 @@
 package com.diegonmarcos.superapp.perms
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.Typeface
 import android.os.Bundle
-import android.view.View
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 
 /**
  * #1274 the Permissions page libs:perms hosts in any app without a [PermsHost] page of its own (Calc, Browser, Nav,
- * Keyboard, Drive, Store, ...), and in contexts with no activity at all (an IME, a plugin, a service). It is the one place
- * in that app that asks: opened by [PermsLink.open] it lists the requesting feature's entries first and highlighted,
+ * Keyboard, Drive, Store, ...), and for contexts with no activity at all (an IME, a plugin, a notification). It is the one
+ * place in that app that asks: opened by [PermsLink.open] it lists the requesting feature's entries first and highlighted,
  * then every other applicable entry this app declares. Runtime entries go through the system dialog, the rest through
- * [PermsSettings.open] (the exact settings page). Plain Views on purpose: no Compose or theme dependency in the host.
+ * [PermsSettings.open] (the exact settings page). Re-read on every resume, so a grant made in Settings shows on return.
  */
-class PermsActivity : Activity() {
-    private lateinit var list: LinearLayout
-    private var feature = ""
-    private var ids: Set<String> = emptySet()
+class PermsActivity : ComponentActivity() {
+    private var tick by mutableIntStateOf(0)
+
+    private val ask = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        feature = intent.getStringExtra(EXTRA_FEATURE).orEmpty()
-        ids = intent.getStringArrayExtra(EXTRA_IDS)?.toSet().orEmpty()
-        val pad = dp(16)
-        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad, pad, pad) }
-        setContentView(ScrollView(this).apply { addView(list) })
+        val feature = intent.getStringExtra(EXTRA_FEATURE).orEmpty()
+        val ids = intent.getStringArrayExtra(EXTRA_IDS)?.toSet().orEmpty()
+        setContent {
+            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+                Surface { Page(feature, ids, tick) }
+            }
+        }
     }
 
-    override fun onResume() { super.onResume(); render() }
+    override fun onResume() { super.onResume(); tick++ }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        render()
-    }
-
-    private fun render() {
-        list.removeAllViews()
+    @Composable
+    private fun Page(feature: String, ids: Set<String>, @Suppress("UNUSED_PARAMETER") tick: Int) {
         val vars = Perms.vars(this)
         val decl = Perms.declared(this)
         val rows = rows(Perms.catalogue(this).entries, ids) { PermStatusReader.status(this, it, this, vars, decl) }
-        list.addView(TextView(this).apply {
-            text = if (feature.isEmpty()) "Permissions" else "Permissions needed by $feature"
-            textSize = 20f; setTypeface(typeface, Typeface.BOLD); tag = "perms:title"
-        })
         val askable = rows.filter { it.wanted && it.status.missing && it.entry.kind == PermKind.RUNTIME }.map { it.entry }
-        if (askable.isNotEmpty()) list.addView(Button(this).apply {
-            text = "Grant all needed"; tag = "perms:grant-all"
-            setOnClickListener { ask(askable) }
-        })
-        if (rows.isEmpty()) list.addView(TextView(this).apply { text = "This app needs no permission." })
-        for (r in rows) list.addView(row(r))
-    }
-
-    private fun row(r: Row): View = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL; setPadding(0, dp(10), 0, dp(10)); tag = "perms:row:${r.entry.id}"
-        addView(TextView(context).apply {
-            text = r.entry.label; textSize = 16f
-            if (r.wanted) setTypeface(typeface, Typeface.BOLD)
-        })
-        addView(TextView(context).apply {
-            text = listOf(stateText(r.status.state), r.status.reason, r.entry.lookFor).filter { it.isNotBlank() }.joinToString(" · ")
-            textSize = 13f
-        })
-        if (r.status.missing && r.entry.kind != PermKind.ADB_ONLY) addView(Button(context).apply {
-            text = if (r.entry.kind == PermKind.RUNTIME && r.status.state != PermState.PERMANENTLY_DENIED) "Grant" else "Open settings"
-            tag = "perms:grant:${r.entry.id}"
-            setOnClickListener {
-                if (r.entry.kind == PermKind.RUNTIME && r.status.state != PermState.PERMANENTLY_DENIED) ask(listOf(r.entry))
-                else PermsSettings.open(this@PermsActivity, r.entry)
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(if (feature.isEmpty()) "Permissions" else "Permissions needed by $feature",
+                style = MaterialTheme.typography.titleLarge, modifier = Modifier.testTag("perms:title"))
+            if (askable.isNotEmpty()) Button(onClick = { request(askable) }, modifier = Modifier.testTag("perms:grant-all")) { Text("Grant all needed") }
+            if (rows.isEmpty()) Text("This app needs no permission.")
+            for (r in rows) Row(Modifier.fillMaxWidth().testTag("perms:row:${r.entry.id}"), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(r.entry.label, fontWeight = if (r.wanted) FontWeight.Bold else FontWeight.Normal)
+                    Text(listOf(stateText(r.status.state), r.status.reason, r.entry.lookFor).filter { it.isNotBlank() }.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                if (r.status.missing && r.entry.kind != PermKind.ADB_ONLY) {
+                    val dialog = r.entry.kind == PermKind.RUNTIME && r.status.state != PermState.PERMANENTLY_DENIED
+                    OutlinedButton(onClick = { if (dialog) request(listOf(r.entry)) else PermsSettings.open(this@PermsActivity, r.entry) },
+                        modifier = Modifier.testTag("perms:grant:${r.entry.id}")) { Text(if (dialog) "Grant" else "Open settings") }
+                }
             }
-        })
+        }
     }
 
-    private fun ask(entries: List<PermEntry>) {
+    private fun request(entries: List<PermEntry>) {
         val perms = entries.map { it.permission }.filter { it.isNotEmpty() }.distinct()
         if (perms.isEmpty()) return
         PermAskLog.markAsked(this, perms)
-        requestPermissions(perms.toTypedArray(), REQ)
+        ask.launch(perms.toTypedArray())
     }
-
-    private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
     data class Row(val entry: PermEntry, val status: PermStatus, val wanted: Boolean)
 
     companion object {
         const val EXTRA_FEATURE = "com.diegonmarcos.perms.FEATURE"
         const val EXTRA_IDS = "com.diegonmarcos.perms.IDS"
-        private const val REQ = 1274
 
         fun intent(ctx: Context, feature: String, ids: Collection<String>): Intent =
             Intent(ctx, PermsActivity::class.java)

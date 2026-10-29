@@ -6,6 +6,8 @@
 // that host a Permissions page or a feature lib need this.
 plugins {
     id 'com.android.library'
+    // PermsActivity is Compose; the compiler is resolved from each consuming root build (declared `apply false` there).
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 if (project.extensions.findByName('kotlin') == null) {
     apply plugin: 'org.jetbrains.kotlin.android'
@@ -18,6 +20,8 @@ android {
     defaultConfig {
         minSdk 26
     }
+
+    buildFeatures { compose = true }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -33,4 +37,9 @@ kotlin {
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.activity:activity-compose:1.9.3'
 }

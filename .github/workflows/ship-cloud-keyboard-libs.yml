@@ -66,6 +66,7 @@ on:
       - "ab_cloud-libs-shared/libs/translate/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/voice/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
 permissions:
   contents: write
   packages: write

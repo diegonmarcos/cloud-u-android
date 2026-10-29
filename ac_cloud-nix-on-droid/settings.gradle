@@ -20,3 +20,6 @@ project(':libs:crash').projectDir = new File(rootDir, '../ab_cloud-libs-shared/l
 // reads THIS app's build.json::shizuku_client at build time (BuildConfig) and its
 // RishBridge/SuperappBridgeChannel run at launch + enter time.
 project(':libs:shizuku-adb-debug-tools').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/shizuku-adb-debug-tools')
+// #1274 libs:shizuku-adb-debug-tools compiles libs:perms (PermsShell: the one place a pm grant line is written): the include is not optional.
+include ':libs:perms'
+project(':libs:perms').projectDir = new File(rootDir, '../ab_cloud-libs-shared/libs/perms')

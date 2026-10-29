@@ -85,14 +85,20 @@ class PermsOnePlaceTest {
         assertTrue(needsPerms.containsAll(listOf("libs:wifi", "libs:browser", "libs:maps", "libs:voice", "libs:disk", "libs:appstore")))
         val missing = ArrayList<String>()
         var apps = 0
-        root.listFiles().orEmpty().filter { File(it, "build.json").isFile }.forEach { app ->
-            val modules = runCatching { JSONObject(File(app, "build.json").readText()).optJSONObject("modules") }.getOrNull() ?: return@forEach
-            val embeds = modules.keys().asSequence().filter { it in needsPerms }.toList()
+        // Every Gradle root (an app, keyboard-engines, ...): its settings.gradle includes plus its build.json modules.
+        val include = Regex("['\"]:libs:([\\w-]+)['\"]")
+        root.walkTopDown().maxDepth(3).filter { it.name == "settings.gradle" || it.name == "settings.gradle.kts" }.forEach { sg ->
+            val dir = sg.parentFile
+            val modules = File(dir, "build.json").takeIf { it.isFile }
+                ?.let { runCatching { JSONObject(it.readText()).optJSONObject("modules") }.getOrNull() }
+            val libsIn = include.findAll(sg.readText()).map { "libs:" + it.groupValues[1] }.toSet() +
+                (modules?.keys()?.asSequence()?.toSet() ?: emptySet())
+            val embeds = libsIn.filter { it in needsPerms }
             if (embeds.isEmpty()) return@forEach
             apps++
-            if (!modules.has("libs:perms")) missing += "${app.name} embeds $embeds without libs:perms"
+            if ("libs:perms" !in libsIn) missing += "${dir.relativeTo(root)} embeds $embeds without libs:perms"
         }
-        assertTrue("found no app embedding a perms lib", apps >= 5)
+        assertTrue("found no app embedding a perms lib", apps >= 10)
         assertEquals(emptyList<String>(), missing)
     }
 

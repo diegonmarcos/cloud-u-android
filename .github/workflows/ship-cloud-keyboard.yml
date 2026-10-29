@@ -65,7 +65,7 @@ on:
       - "ab_cloud-libs-shared/libs/translate/**"
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/voice/**"
-      - "ab_cloud-libs-shared/libs/perms/**"   # #1274 the Permissions page this app hosts
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ac_cloud-keyboard/**"
 permissions:
   contents: write

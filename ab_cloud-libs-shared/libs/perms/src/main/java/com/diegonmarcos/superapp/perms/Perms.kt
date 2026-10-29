@@ -255,30 +255,14 @@ object PermsLink {
 }
 
 /**
- * The one "Permissions needed → Open Permissions" banner (#1274), for libs drawn with Views. A Compose lib draws its own
- * row with [title] and [BUTTON] and calls [PermsLink.open] from the button; the wording stays the same everywhere.
+ * The one "Permissions needed → Open Permissions" banner wording (#1274). A lib draws its own row (in its own Compose
+ * style) with [title] and [BUTTON] and calls [PermsLink.open] from the button; the wording stays the same everywhere.
  */
 object PermsBanner {
     const val BUTTON = "Open Permissions"
 
     fun title(entries: List<PermEntry>): String =
         if (entries.isEmpty()) "Permissions needed" else "Permissions needed: " + PermsNeeds.labels(entries)
-
-    /** A banner for [feature]'s missing [entries]; null when nothing is missing. */
-    fun view(ctx: Context, feature: String, entries: List<PermEntry>): android.view.View? {
-        if (entries.isEmpty()) return null
-        return android.widget.LinearLayout(ctx).apply {
-            orientation = android.widget.LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            tag = "$feature:perms-banner"
-            addView(android.widget.TextView(ctx).apply { text = title(entries) },
-                android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            addView(android.widget.Button(ctx).apply {
-                text = BUTTON
-                setOnClickListener { PermsLink.open(ctx, feature, entries.map { it.id }) }
-            })
-        }
-    }
 }
 
 /** The shell lines that grant a permission (adb, Shizuku, the embedded channel): written here only (#1274). */
