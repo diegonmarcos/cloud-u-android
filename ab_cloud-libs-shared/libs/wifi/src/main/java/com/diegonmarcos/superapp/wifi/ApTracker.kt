@@ -29,7 +29,7 @@ class ApTracker(
             val width = ChannelMath.widthMhz(r.widthCode)
             val smoothed = if (prev == null) r.rssi.toDouble() else if (fresh) alpha * r.rssi + (1 - alpha) * prev.smoothed else prev.smoothed
             val hist = if (!fresh && prev != null) prev.history else ((prev?.history ?: emptyList()) + RssiSample(seen, r.rssi)).takeLast(historyMax)
-            val ssid = r.ssid.trim('"')
+            val ssid = Ssid.unquote(r.ssid)
             aps[key] = AccessPoint(
                 bssid = key, ssid = ssid, hidden = ssid.isEmpty() || ssid.all { it == '\u0000' },
                 freqMhz = r.freqMhz, centerMhz = ChannelMath.centre(r.freqMhz, r.centerFreq0, r.centerFreq1, r.widthCode, band),
@@ -95,4 +95,9 @@ data class RssiThresholds(val excellent: Int = -55, val good: Int = -67, val fai
     fun quality(rssi: Int): Int = (2 * (rssi + 100)).coerceIn(0, 100)
     /** An SNR estimate: Android exposes no noise reading, so the declared noise floor stands in for it. */
     fun snr(rssi: Int): Int = rssi - noiseFloor
+}
+
+/** Android wraps a UTF-8 SSID in ONE pair of double quotes; only that pair is removed, so an SSID that itself starts or ends with '"' survives. */
+object Ssid {
+    fun unquote(s: String): String = if (s.length >= 2 && s.first() == '"' && s.last() == '"') s.substring(1, s.length - 1) else s
 }

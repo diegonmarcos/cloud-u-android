@@ -77,7 +77,7 @@ class AndroidWifiSource(private val ctx: Context) {
 
     @Suppress("DEPRECATION")
     private fun toRaw(r: ScanResult, bootNow: Long): RawScan {
-        val ssid = if (Build.VERSION.SDK_INT >= 33) r.wifiSsid?.toString()?.trim('"') ?: r.SSID.orEmpty() else r.SSID.orEmpty()
+        val ssid = if (Build.VERSION.SDK_INT >= 33) r.wifiSsid?.toString()?.let(Ssid::unquote) ?: r.SSID.orEmpty() else r.SSID.orEmpty()
         var mld: String? = null; var linkId = -1; var links = emptyList<MloLink>()
         if (Build.VERSION.SDK_INT >= 33) runCatching {
             mld = r.apMldMacAddress?.toString()
@@ -144,7 +144,7 @@ class AndroidWifiSource(private val ctx: Context) {
                 MloLink(l.linkId, l.apMacAddress?.toString().orEmpty(), when (l.band) { 1 -> Band.B24; 2 -> Band.B5; 8 -> Band.B6; else -> Band.Unknown }, l.channel)
             }
         }
-        val ssid = info?.ssid?.trim('"')?.takeIf { it != "<unknown ssid>" }.orEmpty()
+        val ssid = info?.ssid?.let(Ssid::unquote)?.takeIf { it != "<unknown ssid>" }.orEmpty()
         return LinkSnapshot(
             ssid = ssid, bssid = info?.bssid.orEmpty().lowercase().takeIf { it != "02:00:00:00:00:00" }.orEmpty(),
             rssi = info?.rssi ?: -127, freqMhz = info?.frequency ?: 0, linkMbps = info?.linkSpeed ?: -1,

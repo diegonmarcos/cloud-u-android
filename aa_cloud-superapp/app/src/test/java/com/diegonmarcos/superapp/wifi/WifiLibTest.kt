@@ -246,6 +246,13 @@ class WifiLibTest {
 
     // ---- export ----
 
+    @Test fun `only the wrapping quote pair is stripped from an ssid`() {
+        assertEquals("home", Ssid.unquote("\"home\""))
+        assertEquals("caf\u00e9, \"2\"", Ssid.unquote("caf\u00e9, \"2\""))
+        assertEquals("\"x\"", Ssid.unquote("\"\"x\"\""))
+        assertEquals("\"", Ssid.unquote("\""))
+    }
+
     @Test fun `csv, json and pcap exports`() {
         val aps = listOf(ap("f0:d1:a9:00:00:01", "café, \"2\"", 5180, -55, 2, 5210, "[RSN-SAE-CCMP][MFPR][MFPC]"), ap("00:11:22:33:44:55", "", 2437, -70, caps = "[ESS]"))
         val csv = Export.csv(aps).trimEnd().lines()
