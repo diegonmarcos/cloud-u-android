@@ -349,7 +349,56 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         }
     }
 
-    fun save(repo: ManagedRepo) { scope.launch { withContext(Dispatchers.IO) { registry.upsert(repo) }; refresh() } }
+    // #1289 every save re-applies the ONE periodic worker, so a repository's AutoSync period is what it ticks at.
+    fun save(repo: ManagedRepo) { scope.launch { withContext(Dispatchers.IO) { registry.upsert(repo); runCatching { com.diegonmarcos.clouddrive.GitSyncWorker.schedule(ctx) } }; refresh() } }
+
+    /** #1289 Configs-AutoSync: On/Off and every [minutes] (floored at WorkManager's 15), stored on the repository. */
+    fun setAutoSync(repo: ManagedRepo, on: Boolean, minutes: Long) {
+        val (enabled, period) = AutoSyncPlan.toggled(on, minutes, com.diegonmarcos.clouddrive.Declarations.sync.git.repoMenu.autoSync.defaultMinutes)
+        save(repo.copy(autoSync = enabled, syncIntervalMinutes = period))
+    }
+
+    /** #1289 Workflow: the working tree's status (List Dirty / List Conflicts / Solve Conflicts read it), off the main thread. */
+    suspend fun workTree(repo: ManagedRepo): Result<com.diegonmarcos.cloudlib.gitsync.GitStatusSnapshot> = withContext(Dispatchers.IO) {
+        runCatching { GitEngine(ctx, File(repo.path)).use { it.status() } }
+    }
+
+    /**
+     * #1289 Workflow > Solve Conflicts: run a [RepoWorkflow.Plan] the owner confirmed. Each file is resolved (ours / theirs,
+     * staged) or staged as edited, then the merge or cherry-pick is committed or the rebase continued. NEVER a push.
+     */
+    fun solveConflicts(repo: ManagedRepo, plan: RepoWorkflow.Plan) {
+        if (!plan.ready || running.value.containsKey(repo.id)) return
+        running.update { it + (repo.id to Running(repo.id, Step.COMMITTING)) }
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                val done = runCatching {
+                    val dir = File(repo.path)
+                    val lines = mutableListOf<String>()
+                    GitEngine(ctx, dir).use { e ->
+                        for (step in plan.steps) when (step) {
+                            is RepoWorkflow.Step.Resolve -> { e.resolve(step.path, step.side); lines += "kept ${step.side.name.lowercase()}: ${step.path}" }
+                            is RepoWorkflow.Step.Stage -> { e.markResolved(step.path); lines += "staged as edited: ${step.path}" }
+                            is RepoWorkflow.Step.Continue -> when (step.what) {
+                                RepoWorkflow.InProgress.REBASE -> {
+                                    val r = RepoCompound.raw(ctx, dir, "rebase_continue", org.json.JSONObject().put("name", repo.authorName.ifBlank { DEFAULT_AUTHOR }).put("email", repo.authorEmail.ifBlank { DEFAULT_EMAIL }), authFor(repo))
+                                    if (!r.ok) return@runCatching GitOpResult(false, "solve conflicts: files staged, rebase --continue refused", (lines + r.details.ifBlank { r.summary }).joinToString("\n"))
+                                    lines += "rebase continued"
+                                }
+                                RepoWorkflow.InProgress.NONE -> Unit
+                                else -> { val c = e.commit("Resolve conflicts", repo.authorName.ifBlank { DEFAULT_AUTHOR }, repo.authorEmail.ifBlank { DEFAULT_EMAIL }); lines += "committed ${c.shortSha}" }
+                            }
+                        }
+                    }
+                    GitOpResult(true, "solve conflicts: ${plan.steps.count { it !is RepoWorkflow.Step.Continue }} file(s) resolved, not pushed", lines.joinToString("\n"))
+                }.getOrElse { GitOpResult(false, "solve conflicts failed: " + (it.message ?: it.toString())) }
+                record(repo, RepoActions.SOLVE_CONFLICTS, done, SyncHistory.TRIGGER_MANUAL)
+            }
+            opResults.update { it + (repo.id to result) }
+            running.update { it - repo.id }
+            reread(repo)
+        }
+    }
 
     fun remove(repo: ManagedRepo) { scope.launch { withContext(Dispatchers.IO) { registry.remove(repo.id); credentials.clear(repo.id) }; refresh() } }
 

@@ -13,31 +13,12 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** #1138 the grouped actions: their order, that no declared operation is lost, the confirmation gates, and the new git verbs' scripts. */
+/** #1138 the actions (#1289: grouping and order are RepoMenuTest's), the confirmation gates, and the new git verbs' scripts. */
 class RepoActionsTest {
     private val root = File(System.getProperty("user.dir")).let { if (File(it, "build.json").isFile) it else it.parentFile }
     private val page: Declarations.GitPageDecl by lazy {
         val b: JsonObject = Json { ignoreUnknownKeys = true }.parseToJsonElement(File(root, "build.json").readText()).jsonObject
         Declarations.parseGitPage(b["ui"]!!.jsonObject["sync"]!!.jsonObject["git"])
-    }
-
-    @Test fun `the groups render in the owner's order, Sync first and Clone settings last`() {
-        assertEquals(
-            listOf(RepoGroup.SYNC, RepoGroup.STEPS, RepoGroup.GOTO, RepoGroup.WORKFLOW, RepoGroup.REPO_CLEAN, RepoGroup.DANGEROUS, RepoGroup.OTHERS, RepoGroup.CLONE_SETTINGS),
-            RepoActions.GROUPS.map { it.group },
-        )
-    }
-
-    @Test fun `each group holds its actions in order`() {
-        fun of(g: RepoGroup) = RepoActions.GROUPS.first { it.group == g }.actions
-        assertEquals(listOf("sync_no_winner", "sync_remote_wins", "sync_local_wins"), of(RepoGroup.SYNC))
-        assertEquals(listOf("fetch", "pull", "push", "commit", "stats"), of(RepoGroup.STEPS))
-        assertEquals(listOf("checkout_main", "branches", "unpushed", "open_folder", "web"), of(RepoGroup.GOTO))
-        assertEquals(listOf("history", "runs", "actions", "prs"), of(RepoGroup.WORKFLOW))
-        assertEquals(listOf("remote", "metadata", "sync_now", "hooks", "size", "settings"), of(RepoGroup.OTHERS))
-        assertEquals(listOf("force_pull", "force_push"), of(RepoGroup.DANGEROUS))
-        assertEquals(listOf("clean_1", "clean_5", "clean_10"), of(RepoGroup.REPO_CLEAN))
-        assertEquals(listOf("clone_full", "clone_depth1", "clone_oauth", "clone_ssh"), of(RepoGroup.CLONE_SETTINGS))
     }
 
     @Test fun `the bulk bar is Check all, Sync all, Clone all, Stash and Push all, and stash-push is a compound verb`() {
@@ -50,19 +31,9 @@ class RepoActionsTest {
         assertEquals("Cloud Gitea (Self-hosted)", page.ways.first { it.rung == "gitea" }.label)
     }
 
-    @Test fun `every declared operation sits in exactly one group`() {
-        val placed = RepoActions.GROUPS.flatMap { it.actions }
-        assertEquals("an action sits in two groups", placed.size, placed.toSet().size)
-        for (op in page.ops) assertEquals("declared operation ${op.id} must be in exactly one group", 1, placed.count { it == op.id })
-    }
-
-    @Test fun `the declared destructive operations are exactly the Dangerous group`() {
-        assertEquals(page.ops.filter { it.destructive }.map { it.id }.sorted(), RepoActions.DANGEROUS.sorted())
-    }
-
     @Test fun `Dangerous and Repo clean ask first, every other action runs on the tap`() {
         for (id in RepoActions.DANGEROUS + RepoActions.REPO_CLEAN) assertEquals("$id must be gated", RepoActions.Route.CONFIRM, RepoActions.route(id))
-        for (id in RepoActions.GROUPS.flatMap { it.actions } - (RepoActions.DANGEROUS + RepoActions.REPO_CLEAN).toSet()) assertEquals("$id must not be gated", RepoActions.Route.RUN, RepoActions.route(id))
+        for (id in page.repoMenu.allIds - (RepoActions.DANGEROUS + RepoActions.REPO_CLEAN).toSet()) assertEquals("$id must not be gated", RepoActions.Route.RUN, RepoActions.route(id))
     }
 
     @Test fun `repo clean keeps depth 1, 5 or 10 and the sync verbs and the trim are the compound ones`() {
@@ -118,6 +89,6 @@ class RepoActionsTest {
         for (id in listOf("web", RepoActions.PRS, RepoActions.RUNS, RepoActions.CLONE_FULL, RepoActions.CLONE_DEPTH1, RepoActions.CLONE_OAUTH, RepoActions.CLONE_SSH)) assertFalse(id, RepoActions.needsClone(id))
         for (id in listOf("fetch", "pull", "push", "commit", "stats", RepoActions.OPEN_FOLDER, RepoActions.CHECKOUT_MAIN, RepoActions.BRANCHES, RepoActions.UNPUSHED, RepoActions.SYNC_NO_WINNER, RepoActions.STASH_PUSH, "force_pull", "force_push", RepoActions.CLEAN_1, "size", "hooks", RepoActions.SYNC_NOW, RepoActions.SETTINGS)) assertTrue(id, RepoActions.needsClone(id))
         // Every action of every group is either available without a clone or explained as needing one: nothing is silently missing.
-        RepoActions.GROUPS.flatMap { it.actions }.forEach { id -> assertEquals(id !in RepoActions.NO_CLONE_NEEDED, RepoActions.needsClone(id)) }
+        page.repoMenu.allIds.forEach { id -> assertEquals(id !in RepoActions.NO_CLONE_NEEDED, RepoActions.needsClone(id)) }
     }
 }

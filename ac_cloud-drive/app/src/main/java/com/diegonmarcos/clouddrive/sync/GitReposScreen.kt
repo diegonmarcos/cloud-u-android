@@ -133,7 +133,7 @@ import kotlinx.coroutines.withContext
  * #1138 THE LIST IS A TABLE (RepoTable): tap a header to sort by it, tap again to flip; Name, Pvt/Pub,
  * Size main, Size total, Branches, Dirty and Ahead/Behind per row, the remote facts from the cached REST
  * answer (pull to refresh) and the local ones from the git engine's status. An expanded repository shows
- * its actions grouped one row per command type (RepoActions.GROUPS).
+ * its actions grouped one row per command type (#1289 the declared ui.sync.git.repo_menu groups).
  *
  * Every clone lands in the store's git folder (#606, SharedStore.gitRoot), the same folder
  * and the same registry the first-run seed uses.
@@ -873,7 +873,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     coordinator = coordinator, actions = actions,
                     repoName = e.name, owner = e.owner, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
                     cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned }, onClose = { expanded = "" },
-                    row = e.row, isPrivate = e.isPrivate,
+                    row = e.row, isPrivate = e.isPrivate, nextRunMinutes = nextRunMinutes,
+                    repoint = { from, to -> prefs?.let { p -> LocalRepoRefs.repoint(ctx.applicationContext, p, from, to).let { r -> ctx.getString(R.string.parentless_refs, r.repos, r.jobs, r.bookmarks) } }.orEmpty() },
                 )
             }
             Hairline()
@@ -1448,10 +1449,19 @@ private fun GitRepoOpsBox(
     onClose: () -> Unit,
     row: RepoTableRow,
     isPrivate: Boolean?,
+    /** #1289 minutes until the periodic worker next ticks (null = not known); Configs-AutoSync's next-run line. */
+    nextRunMinutes: Long? = null,
+    /** #1288/#1289 Others > Rename re-points the registry, jobs and bookmarks at the moved folder. */
+    repoint: (File, File) -> String = { _, _ -> "" },
 ) {
     val ctx = LocalContext.current
     val off = colorResource(R.color.status_light_off)
     var panel by remember(repo.id) { mutableStateOf("") }
+    // #1289 Workflow: the working tree read when a Workflow panel opens, the per-file choices, the confirms.
+    var tree by remember(repo.id) { mutableStateOf<Result<com.diegonmarcos.cloudlib.gitsync.GitStatusSnapshot>?>(null) }
+    var choices by remember(repo.id) { mutableStateOf<Map<String, RepoWorkflow.Choice>>(emptyMap()) }
+    var solveAsk by remember(repo.id) { mutableStateOf<RepoWorkflow.Plan?>(null) }
+    var folderAsk by remember(repo.id) { mutableStateOf<FolderConfirm?>(null) }
     var confirm by remember(repo.id) { mutableStateOf<String?>(null) }
     var runs by remember(repo.id) { mutableStateOf<List<String>?>(null) }
     var prs by remember(repo.id) { mutableStateOf<List<String>?>(null) }
@@ -1470,6 +1480,10 @@ private fun GitRepoOpsBox(
     val aheadNow = glance?.takeIf { it.read && it.upstream != null }?.ahead
     LaunchedEffect(repo.id, panel, aheadNow) {
         if (panel == RepoActions.UNPUSHED) unpushed = if (aheadNow == null) Result.success(emptyList()) else coordinator.unpushedCommits(repo, aheadNow)
+    }
+
+    LaunchedEffect(repo.id, panel, running == null) {
+        if (panel in WORKFLOW_PANELS && running == null) tree = coordinator.workTree(repo)
     }
 
     LaunchedEffect(repo.id, panel) {
@@ -1501,7 +1515,8 @@ private fun GitRepoOpsBox(
         if (RepoActions.route(id) == RepoActions.Route.CONFIRM) { confirm = id; return }
         when (id) {
             RepoActions.SYNC_NO_WINNER, RepoActions.SYNC_REMOTE_WINS, RepoActions.SYNC_LOCAL_WINS -> coordinator.runCompound(repo, id)
-            RepoActions.OPEN_FOLDER -> actions.openEngine(EngineActivity.ENGINE_GIT, repo.path)
+            // #1289 Goto > Folder: the clone's folder in Drive Files (Explorer ▸ Local).
+            RepoActions.OPEN_FOLDER -> actions.openInFiles(repo.path)
             RepoActions.CHECKOUT_MAIN -> coordinator.checkoutMain(repo)
             RepoActions.BRANCHES, RepoActions.PRS, RepoActions.UNPUSHED -> panel = if (panel == id) "" else id
             RepoActions.SYNC_NOW -> coordinator.syncNow(repo)
@@ -1511,7 +1526,22 @@ private fun GitRepoOpsBox(
             RepoActions.CLONE_DEPTH1 -> coordinator.setCloneDepth(1)
             RepoActions.CLONE_OAUTH -> coordinator.setCloneViaSsh(false)
             RepoActions.CLONE_SSH -> coordinator.setCloneViaSsh(true)
-            else -> page.op(id)?.let { declared(it) }
+            RepoActions.LIST_DIRTY, RepoActions.LIST_CONFLICTS, RepoActions.SOLVE_CONFLICTS -> { panel = if (panel == id) "" else id; choices = emptyMap() }
+            else -> {
+                // #1289 Clone: a declared scope-repo depth command, dispatched on its kind (the id stays in build.json).
+                page.depthActions(Declarations.DEPTH_SCOPE_REPO).firstOrNull { it.id == id }?.let {
+                    val target = GitSyncCoordinator.CloneTarget(repo.name, repo.remoteUrl, GitSyncCoordinator.AUTH_HTTPS, "", "")
+                    when {
+                        it.kind == Declarations.DEPTH_KEEP -> if (it.confirm) depthAsk = it else coordinator.keepDepth(it, repo)
+                        it.kind == Declarations.DEPTH_CLONE_BARE -> coordinator.cloneBare(it, listOf(target))
+                        it.kind == Declarations.DEPTH_CLONE_MISSING -> coordinator.cloneMissing(it, listOf(target))
+                    }
+                    return
+                }
+                // #1289 Others: the declared folder commands on this clone's folder (each asks first, Delete strictly when dirty).
+                page.folderActions.firstOrNull { it.id == id }?.let { folderAsk = FolderConfirm(it, listOf(FolderActions.Target(repo.path, repo.remoteUrl, repoName))); return }
+                page.op(id)?.let { declared(it) }
+            }
         }
     }
 
@@ -1540,7 +1570,7 @@ private fun GitRepoOpsBox(
             if (running.step == GitSyncCoordinator.Step.PUSHING) Text(stringResource(R.string.sync_step_uninterruptible), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        // #1138 THE OPERATIONS, GROUPED: one row per command type, chips wrapping, in RepoActions.GROUPS order.
+        // #1138 THE OPERATIONS, GROUPED: one row per command type, chips wrapping, #1289 in the declared ui.sync.git.repo_menu order.
         Box(Modifier.testTag(DriveTags.SYNC_GIT_OPS)) {
             RepoActionGroupsView(
                 page = page, busy = running != null,
@@ -1550,12 +1580,11 @@ private fun GitRepoOpsBox(
                 },
                 active = { id -> id == panel || (id == RepoActions.CLONE_FULL && cloneDepth == 0) || (id == RepoActions.CLONE_DEPTH1 && cloneDepth == 1) || (id == RepoActions.CLONE_OAUTH && !cloneSsh) || (id == RepoActions.CLONE_SSH && cloneSsh) },
                 onAction = { act(it) },
+                slot = { g -> if (g.id == RepoActions.G_AUTOSYNC) { AutoSyncControls(repo, page.repoMenu.autoSync, g, nextRunMinutes, coordinator); true } else false },
             )
         }
-        // #1254 the DECLARED per-repository depth commands (scope repo) that act on a clone: Keep depth N, asked first when declared so.
-        DepthPills(page.depthActions(Declarations.DEPTH_SCOPE_REPO).filter { it.kind == Declarations.DEPTH_KEEP }, enabled = running == null) { a -> if (a.confirm) depthAsk = a else coordinator.keepDepth(a, repo) }
-        // #1282 Clone bare beside the depth commands: a mirror under the declared bare root; the working clone is untouched.
-        BareLine(coordinator, repo.name, repo.remoteUrl)
+        // #1282 the "bare present" line under the menu: a mirror under the declared bare root already holds this repository.
+        BarePresent(coordinator, repo.name, repo.remoteUrl)
         if (readOnly) Text(stringResource(R.string.git_readonly_blocked), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         result?.let { r ->
             Text(
@@ -1653,6 +1682,43 @@ private fun GitRepoOpsBox(
                 if (d == null || d.loading) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
                 else MetaLine(stringResource(R.string.git_size_line, GitRepoScan.humanBytes(d.size.bytes), d.size.files, d.size.folders, GitRepoScan.humanBytes(d.size.gitBytes)))
             }
+            // #1289 Workflow: List Dirty / List Conflicts / Solve Conflicts, from the one status read.
+            in WORKFLOW_PANELS -> Column(Modifier.padding(top = DriveMetrics.gapWide).testTag(DriveTags.SYNC_GIT_WORKFLOW), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
+                val t = tree
+                if (t == null) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
+                else t.fold(
+                    onFailure = { MetaLine(stringResource(R.string.sync_glance_unreadable, it.message ?: it.javaClass.simpleName)) },
+                    onSuccess = { snap ->
+                        val conflicts = RepoWorkflow.conflicts(snap)
+                        when (panel) {
+                            RepoActions.LIST_DIRTY -> RepoWorkflow.dirty(snap).let { list ->
+                                if (list.isEmpty()) Text(stringResource(R.string.repo_wf_clean), style = MaterialTheme.typography.bodySmall)
+                                else list.forEach { MetaLine(it.code + " " + it.path) }
+                            }
+                            RepoActions.LIST_CONFLICTS -> if (conflicts.isEmpty()) Text(stringResource(R.string.repo_wf_no_conflicts), style = MaterialTheme.typography.bodySmall) else conflicts.forEach { MetaLine("UU " + it) }
+                            else -> {
+                                if (conflicts.isEmpty()) Text(stringResource(R.string.repo_wf_no_conflicts), style = MaterialTheme.typography.bodySmall)
+                                conflicts.forEach { path ->
+                                    MetaLine(path)
+                                    PillRow {
+                                        Pill(stringResource(R.string.repo_wf_ours), { choices = choices + (path to RepoWorkflow.Choice.OURS) }, filled = choices[path] == RepoWorkflow.Choice.OURS)
+                                        Pill(stringResource(R.string.repo_wf_theirs), { choices = choices + (path to RepoWorkflow.Choice.THEIRS) }, filled = choices[path] == RepoWorkflow.Choice.THEIRS)
+                                        Pill(stringResource(R.string.repo_wf_editor), {
+                                            actions.openEngine(EngineActivity.ENGINE_EDITOR, File(repo.path, path).absolutePath)
+                                            choices = choices + (path to RepoWorkflow.Choice.EDITED)
+                                        }, filled = choices[path] == RepoWorkflow.Choice.EDITED)
+                                    }
+                                }
+                                val plan = RepoWorkflow.solvePlan(conflicts, choices, snap.repositoryState)
+                                if (conflicts.isNotEmpty()) PillRow {
+                                    Pill(stringResource(R.string.repo_wf_stage_continue), { solveAsk = plan }, filled = true, enabled = plan.ready && running == null)
+                                }
+                                if (plan.missing.isNotEmpty() && conflicts.isNotEmpty()) Text(stringResource(R.string.repo_wf_missing, plan.missing.size), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    },
+                )
+            }
         }
         RepoMetaTable(listOf(
             stringResource(R.string.repo_meta_k_name) to repoName,
@@ -1700,6 +1766,27 @@ private fun GitRepoOpsBox(
             dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(R.string.chrome_cancel)) } },
         )
     }
+    solveAsk?.let { plan ->
+        AlertDialog(
+            onDismissRequest = { solveAsk = null },
+            title = { Text(stringResource(R.string.repo_wf_confirm_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
+                    plan.steps.forEach { st ->
+                        MetaLine(when (st) {
+                            is RepoWorkflow.Step.Resolve -> stringResource(if (st.side == com.diegonmarcos.cloudlib.gitsync.ConflictSide.OURS) R.string.repo_wf_step_ours else R.string.repo_wf_step_theirs, st.path)
+                            is RepoWorkflow.Step.Stage -> stringResource(R.string.repo_wf_step_stage, st.path)
+                            is RepoWorkflow.Step.Continue -> stringResource(R.string.repo_wf_step_continue, st.what.name.lowercase())
+                        })
+                    }
+                    Text(stringResource(R.string.repo_wf_never_push), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            confirmButton = { TextButton(onClick = { coordinator.solveConflicts(repo, plan); solveAsk = null; choices = emptyMap() }) { Text(stringResource(R.string.repo_wf_stage_continue)) } },
+            dismissButton = { TextButton(onClick = { solveAsk = null }) { Text(stringResource(R.string.chrome_cancel)) } },
+        )
+    }
+    folderAsk?.let { c -> FolderConfirmDialog(c, coordinator, repoint, onDone = { folderAsk = null }) }
     depthAsk?.let { a ->
         AlertDialog(
             onDismissRequest = { depthAsk = null },
@@ -1760,15 +1847,20 @@ private fun GitRepoNotClonedBox(
                     RepoActions.CLONE_DEPTH1 -> coordinator.setCloneDepth(1)
                     RepoActions.CLONE_OAUTH -> coordinator.setCloneViaSsh(false)
                     RepoActions.CLONE_SSH -> coordinator.setCloneViaSsh(true)
+                    // #1254 Clone (depth 1) / Clone bare from the Clone group: the same one-clone rule as the bulk command.
+                    else -> page.depthActions(Declarations.DEPTH_SCOPE_REPO).firstOrNull { it.id == id }?.let {
+                        val target = GitSyncCoordinator.CloneTarget(repoName, url, GitSyncCoordinator.AUTH_HTTPS, "", "")
+                        when {
+                            it.kind == Declarations.DEPTH_CLONE_MISSING -> coordinator.cloneMissing(it, listOf(target))
+                            it.kind == Declarations.DEPTH_CLONE_BARE -> coordinator.cloneBare(it, listOf(target))
+                        }
+                    }
                 }
             },
-            unavailable = { RepoActions.needsClone(it) },
+            // A clone that does not exist yet can be made from here; everything else that needs it is drawn disabled.
+            unavailable = { id -> page.depthActions(Declarations.DEPTH_SCOPE_REPO).firstOrNull { it.id == id }?.let { it.kind == Declarations.DEPTH_KEEP || cloning } ?: RepoActions.needsClone(id) },
         )
-        // #1254 the DECLARED per-repository clone at depth N: the same one-clone rule as the bulk command (an existing clone anywhere is reported, not doubled).
-        DepthPills(page.depthActions(Declarations.DEPTH_SCOPE_REPO).filter { it.kind == Declarations.DEPTH_CLONE_MISSING }, enabled = !cloning) { a ->
-            coordinator.cloneMissing(a, listOf(GitSyncCoordinator.CloneTarget(repoName, url, GitSyncCoordinator.AUTH_HTTPS, "", "")))
-        }
-        BareLine(coordinator, repoName, url)
+        BarePresent(coordinator, repoName, url)
         Text(stringResource(R.string.repo_not_cloned_why), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         when (panel) {
             RepoActions.PRS -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
@@ -1912,14 +2004,47 @@ private fun RepoSettingsSheet(repo: ManagedRepo, coordinator: GitSyncCoordinator
     }
 }
 
-/** #1282 the per-repository Clone bare pill (declared, scope repo) and the "bare ✓" indicator when a mirror already holds it. */
+/** #1282 the "bare ✓" indicator when a mirror already holds this repository (the Clone bare chip sits in the menu's Clone group). */
 @Composable
-private fun BareLine(coordinator: GitSyncCoordinator, name: String, url: String) {
+private fun BarePresent(coordinator: GitSyncCoordinator, name: String, url: String) {
     val mirrors by coordinator.bareMirrors.collectAsState()
-    val depthRun by coordinator.depthRun.collectAsState()
     val at = mirrors[BulkDepth.identity(url.ifBlank { name }) { Declarations.repoSot.canonical(it) }]
-    DepthPills(Declarations.sync.git.depthActions(Declarations.DEPTH_SCOPE_REPO).filter { it.kind == Declarations.DEPTH_CLONE_BARE }, enabled = depthRun?.finished != false) { a ->
-        coordinator.cloneBare(a, listOf(GitSyncCoordinator.CloneTarget(name, url, GitSyncCoordinator.AUTH_HTTPS, "", "")))
-    }
     if (at != null) Text(stringResource(R.string.repo_bare_present, at), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
+
+/**
+ * #1289 CONFIGS-AUTOSYNC of one repository: the On/Off switch and "Every X mins" (declared options, default 15, floor 15),
+ * stored on the repository and served by the ONE periodic GitSyncWorker (re-applied on save); the line under says when it next runs.
+ */
+@Composable
+private fun AutoSyncControls(repo: ManagedRepo, decl: Declarations.GitAutoSyncDecl, g: Declarations.GitMenuGroupDecl, tickInMinutes: Long?, coordinator: GitSyncCoordinator) {
+    val lang = java.util.Locale.getDefault().language
+    val period = AutoSyncPlan.minutes(repo.syncIntervalMinutes, decl.defaultMinutes)
+    Column(Modifier.testTag(DriveTags.SYNC_GIT_AUTOSYNC), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
+        g.items.firstOrNull { it.id == RepoActions.AUTOSYNC_TOGGLE }?.let { item ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Switch(checked = repo.autoSync, onCheckedChange = { coordinator.setAutoSync(repo, it, repo.syncIntervalMinutes) }, modifier = Modifier.testTag(DriveTags.SYNC_GIT_MENU_ITEM + "_" + item.id))
+                Spacer(Modifier.width(DriveMetrics.pad))
+                Text(item.labelFor(lang) + ": " + stringResource(if (repo.autoSync) R.string.repo_autosync_on else R.string.repo_autosync_off), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        g.items.firstOrNull { it.id == RepoActions.AUTOSYNC_EVERY }?.let { item ->
+            FlowPills(decl.optionsMinutes.map { m -> m to runCatching { item.labelFor(lang).format(m) }.getOrDefault("$m") }, period) { m -> coordinator.setAutoSync(repo, repo.autoSync, m) }
+        }
+        val next = AutoSyncPlan.nextRunMinutes(repo.autoSync, period, repo.lastSyncEpochSeconds, System.currentTimeMillis() / 1000, tickInMinutes)
+        Text(
+            if (next == null) stringResource(R.string.repo_autosync_next_off) else stringResource(R.string.repo_autosync_next, next),
+            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun FlowPills(options: List<Pair<Long, String>>, selected: Long, onPick: (Long) -> Unit) {
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
+        options.forEach { (m, label) -> Pill(label, { onPick(m) }, filled = m == selected) }
+    }
+}
+
+/** #1289 the Workflow panels that read the working tree. */
+private val WORKFLOW_PANELS = setOf(RepoActions.LIST_DIRTY, RepoActions.LIST_CONFLICTS, RepoActions.SOLVE_CONFLICTS)

@@ -131,18 +131,6 @@ internal fun RepoCheckProgressLine(p: RepoStatus.Progress, fmt: java.text.DateFo
     )
 }
 
-@Composable
-private fun groupTitle(g: RepoGroup): String = stringResource(when (g) {
-    RepoGroup.SYNC -> R.string.repo_group_sync
-    RepoGroup.STEPS -> R.string.repo_group_steps
-    RepoGroup.GOTO -> R.string.repo_group_goto
-    RepoGroup.WORKFLOW -> R.string.repo_group_workflow
-    RepoGroup.DANGEROUS -> R.string.repo_group_dangerous
-    RepoGroup.REPO_CLEAN -> R.string.repo_group_clean
-    RepoGroup.OTHERS -> R.string.repo_group_others
-    RepoGroup.CLONE_SETTINGS -> R.string.repo_group_clone
-})
-
 /** The label of one action: a string of its own for the added ids and the renamed declared ones, else the declared label. */
 @Composable
 internal fun actionLabel(id: String, declared: Declarations.GitOpDecl?): String = when (id) {
@@ -172,9 +160,11 @@ internal fun actionLabel(id: String, declared: Declarations.GitOpDecl?): String 
 }
 
 /**
- * The repository detail's actions: ONE ROW PER COMMAND TYPE in [RepoActions.GROUPS] order, each row a
- * title and chips that wrap onto as many lines as they need. Dangerous chips are red. [active] is the
- * chip to draw filled (the open panel or the current clone setting); [onAction] receives the action id.
+ * #1289 The repository detail's menu: the DECLARED groups of ui.sync.git.repo_menu in their declared order, each a
+ * title and its items (chips that wrap, or one item per line for a `lines` group); a `danger` subgroup is titled and
+ * drawn red. Labels are the declared ones in the device language ([Declarations.GitMenuItemDecl.labelFor]), else
+ * [actionLabel]. [active] is the chip to draw filled; [onAction] receives the item id; [slot] draws a group the page
+ * renders itself (Configs-AutoSync) and returns true when it did.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -186,30 +176,53 @@ internal fun RepoActionGroupsView(
     onAction: (String) -> Unit,
     /** #1195 an action that cannot run now (a not-cloned repository: clone-required ones), drawn disabled. */
     unavailable: (String) -> Boolean = { false },
+    slot: @Composable (Declarations.GitMenuGroupDecl) -> Boolean = { false },
 ) {
+    val lang = java.util.Locale.getDefault().language
     Column(Modifier.fillMaxWidth().padding(top = DriveMetrics.pad), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
-        RepoActions.GROUPS.forEach { g ->
-            val danger = g.group == RepoGroup.DANGEROUS
-            Text(
-                groupTitle(g.group), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
-                color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
-                g.actions.forEach { id ->
-                    val op = page.op(id)
-                    val isClone = g.group == RepoGroup.CLONE_SETTINGS
-                    Pill(
-                        actionLabel(id, op), { onAction(id) },
-                        icon = op?.let { IconCatalog.vectorOrDefault(it.icon) },
-                        filled = active(id),
-                        // Clone settings and the readers stay available while an operation runs; the verbs wait.
-                        enabled = (!busy || isClone || g.group == RepoGroup.GOTO) && !(op != null && blocked(op)) && !unavailable(id),
-                        danger = danger,
-                    )
+        page.repoMenu.groups.forEach { g ->
+            Column(Modifier.testTag(DriveTags.SYNC_GIT_MENU_GROUP + "_" + g.id), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
+                Text(
+                    g.labelFor(lang), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold,
+                    color = if (g.danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (!slot(g)) {
+                    MenuItems(page, g, g.id, g.danger, lang, busy, blocked, active, onAction, unavailable)
+                    g.subgroups.forEach { sub ->
+                        Text(
+                            sub.labelFor(lang), Modifier.padding(top = DriveMetrics.gap),
+                            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold,
+                            color = if (sub.danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        MenuItems(page, sub, g.id, sub.danger || g.danger, lang, busy, blocked, active, onAction, unavailable)
+                    }
                 }
             }
         }
     }
+}
+
+/** #1289 one group's (or subgroup's) items: wrapping chips, or one per line for a `lines` group. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MenuItems(
+    page: Declarations.GitPageDecl, g: Declarations.GitMenuGroupDecl, groupId: String, danger: Boolean, lang: String, busy: Boolean,
+    blocked: (Declarations.GitOpDecl) -> Boolean, active: (String) -> Boolean, onAction: (String) -> Unit, unavailable: (String) -> Boolean,
+) {
+    val chip: @Composable (Declarations.GitMenuItemDecl) -> Unit = { item ->
+        val op = page.op(item.id)
+        Pill(
+            item.labelFor(lang).ifBlank { actionLabel(item.id, op) }, { onAction(item.id) },
+            icon = op?.let { IconCatalog.vectorOrDefault(it.icon) },
+            filled = active(item.id),
+            // Settings, auth and the readers stay available while an operation runs; the verbs wait.
+            enabled = (!busy || groupId in RepoActions.ALWAYS_ON_GROUPS) && !(op != null && blocked(op)) && !unavailable(item.id),
+            danger = danger,
+            modifier = Modifier.testTag(DriveTags.SYNC_GIT_MENU_ITEM + "_" + item.id),
+        )
+    }
+    if (g.lines) Column(verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) { g.items.forEach { chip(it) } }
+    else FlowRow(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) { g.items.forEach { chip(it) } }
 }
 
 /** The bulk bar: ABOVE the column header, one pill per [RepoActions.Bulk] command over every repo, then the Settings gear (the shared PageActionsBar). */

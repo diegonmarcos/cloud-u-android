@@ -40,7 +40,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** One pending confirm: the command, its folders, and (Delete) the guard read from each clone. */
-private data class FolderConfirm(val action: Declarations.GitFolderActionDecl, val targets: List<FolderActions.Target>)
+internal data class FolderConfirm(val action: Declarations.GitFolderActionDecl, val targets: List<FolderActions.Target>)
 
 /**
  * #1288 THE ONE FOLDER TABLE of the Parentless and Unlisted git folders sections: the main table's header ([RepoTableHeader],
@@ -130,7 +130,7 @@ internal fun FolderRepoTable(
 }
 
 @Composable
-private fun FolderConfirmDialog(c: FolderConfirm, coordinator: GitSyncCoordinator, repoint: (java.io.File, java.io.File) -> String, onDone: () -> Unit) {
+internal fun FolderConfirmDialog(c: FolderConfirm, coordinator: GitSyncCoordinator, repoint: (java.io.File, java.io.File) -> String, onDone: () -> Unit) {
     val isDelete = c.action.kind == Declarations.FOLDER_DELETE
     // Delete reads each clone first: uncommitted changes and unpushed commits decide the strict (typed) confirm.
     var guards by remember(c) { mutableStateOf<Map<String, FolderActions.Guard>?>(if (isDelete) null else emptyMap()) }

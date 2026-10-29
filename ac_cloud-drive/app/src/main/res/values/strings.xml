@@ -753,14 +753,6 @@
     <string name="repo_meta_k_last_sync">Last sync</string>
     <string name="repo_meta_k_size">Size (main / total)</string>
     <string name="repo_meta_k_branches">Branches</string>
-    <string name="repo_group_sync">Sync</string>
-    <string name="repo_group_steps">Steps</string>
-    <string name="repo_group_goto">Goto</string>
-    <string name="repo_group_workflow">Workflow</string>
-    <string name="repo_group_dangerous">Dangerous</string>
-    <string name="repo_group_clean">Repo clean (local history)</string>
-    <string name="repo_group_others">Others</string>
-    <string name="repo_group_clone">Clone settings</string>
     <string name="repo_act_sync_no_winner">Sync: no winner</string>
     <string name="repo_act_sync_remote_wins">Sync: remote wins</string>
     <string name="repo_act_sync_local_wins">Sync: local wins</string>
@@ -821,7 +813,6 @@
     <string name="repo_depth_confirm_keep">Shrinks every clean, fully pushed clone to depth %1$d in place: fetch --depth %1$d, reset to the remote default branch, reflog expire, gc. Clones with uncommitted or unpushed work are skipped and reported. The remote is never written and nothing is re-cloned.</string>
     <string name="repo_depth_confirm_keep_one">Shrinks %1$s to depth %2$d in place: fetch --depth %2$d, reset to the remote default branch, reflog expire, gc. Refused when it has uncommitted or unpushed work. The remote is never written.</string>
     <string name="repo_depth_confirm_clone">Clones every registry repository that has no clone on this device yet, depth %1$d. A repository already cloned anywhere (any folder name, any old name) is never cloned twice.</string>
-    <string name="repo_group_depth">Depth</string>
     <string name="repo_filters_title">Filters</string>
     <string name="repo_unlisted_title">Unlisted git folders</string>
     <string name="repo_unlisted_none">No unlisted git folder found yet (pull to refresh or check all to scan).</string>
@@ -842,4 +833,21 @@
     <string name="mount_keeper_guide_done">Done</string>
     <string name="mount_keeper_fix">Fix</string>
     <string name="mount_keeper_all_ok">Background permissions OK</string>
+    <string name="repo_wf_clean">Nothing uncommitted</string>
+    <string name="repo_wf_no_conflicts">No unmerged paths</string>
+    <string name="repo_wf_ours">Keep ours</string>
+    <string name="repo_wf_theirs">Keep theirs</string>
+    <string name="repo_wf_editor">Open in editor</string>
+    <string name="repo_wf_stage_continue">Stage and continue</string>
+    <string name="repo_wf_missing">%1$d file(s) still need a choice</string>
+    <string name="repo_wf_confirm_title">Solve conflicts</string>
+    <string name="repo_wf_step_ours">keep ours: %1$s</string>
+    <string name="repo_wf_step_theirs">keep theirs: %1$s</string>
+    <string name="repo_wf_step_stage">stage as edited: %1$s</string>
+    <string name="repo_wf_step_continue">continue the %1$s</string>
+    <string name="repo_wf_never_push">Nothing is pushed: push stays your own tap.</string>
+    <string name="repo_autosync_on">On</string>
+    <string name="repo_autosync_off">Off</string>
+    <string name="repo_autosync_next">Next run in about %1$d min</string>
+    <string name="repo_autosync_next_off">Auto sync is off: no run scheduled</string>
 </resources>

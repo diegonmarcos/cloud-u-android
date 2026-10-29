@@ -23,4 +23,6 @@ interface DriveActions {
     fun launchApp(packageName: String, fallbackUrl: String): Boolean
     /** #613 deep-link to the fleet's auth Profile (cloud-sa): launch [pkg] carrying [target] as the [extra]. False when it is not installed. */
     fun openAuthProfile(pkg: String, target: String, extra: String): Boolean
+    /** #1289 reveal [path] in Explorer ▸ Local (Drive Files). Default no-op for a host without the Files tab. */
+    fun openInFiles(path: String) {}
 }

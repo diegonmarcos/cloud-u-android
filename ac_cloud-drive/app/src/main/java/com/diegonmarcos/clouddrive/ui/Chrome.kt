@@ -181,6 +181,11 @@ object DriveTags {
     const val SYNC_GIT_ACTIVITY_BUTTON = "sync_git_activity_button"
     const val SYNC_GIT_ACTIVITY_WINDOW = "sync_git_activity_window"
     const val SYNC_GIT_UNPUSHED = "sync_git_unpushed"
+    /** #1289 the per-repository menu: one tag per declared group and per item (suffix _<id>). */
+    const val SYNC_GIT_MENU_GROUP = "sync_git_menu_group"
+    const val SYNC_GIT_MENU_ITEM = "sync_git_menu_item"
+    const val SYNC_GIT_WORKFLOW = "sync_git_workflow"
+    const val SYNC_GIT_AUTOSYNC = "sync_git_autosync"
     const val SYNC_GIT_LOGIN = "sync_git_login"
     /** #642 the one line that reports what the cloud-terminal git handoff resolved to. */
     const val SYNC_GIT_HANDOFF = "sync_git_handoff"

@@ -107,6 +107,26 @@ object Declarations {
      * toggle's value is then persisted per device; [requireUnmetered] keeps it off mobile data
      * (Wi-Fi only), the same constraint git_sync and the seed declare.
      */
+    /** #1289 one item of the per-repository menu (ui.sync.git.repo_menu): the id the page dispatches on, its label and translations. */
+    data class GitMenuItemDecl(val id: String, val label: String, val i18n: Map<String, String> = emptyMap()) {
+        fun labelFor(lang: String): String = i18n[lang]?.takeIf { it.isNotBlank() } ?: label
+    }
+    /** #1289 one group (or subgroup) of the per-repository menu; [lines] = one item per line, [danger] = drawn red and every item asks first. */
+    data class GitMenuGroupDecl(
+        val id: String, val label: String, val i18n: Map<String, String> = emptyMap(), val lines: Boolean = false,
+        val danger: Boolean = false, val items: List<GitMenuItemDecl> = emptyList(), val subgroups: List<GitMenuGroupDecl> = emptyList(),
+    ) {
+        fun labelFor(lang: String): String = i18n[lang]?.takeIf { it.isNotBlank() } ?: label
+        /** Every item id of this group and its subgroups, in render order. */
+        val allIds: List<String> get() = items.map { it.id } + subgroups.flatMap { it.allIds }
+    }
+    /** #1289 the per-repository Configs-AutoSync defaults; [defaultMinutes] and every option are never under [minMinutes] (WorkManager's floor). */
+    data class GitAutoSyncDecl(val defaultOn: Boolean = false, val defaultMinutes: Long = 15, val minMinutes: Long = 15, val optionsMinutes: List<Long> = listOf(15, 30, 60, 180, 360))
+    data class GitRepoMenuDecl(val groups: List<GitMenuGroupDecl> = emptyList(), val autoSync: GitAutoSyncDecl = GitAutoSyncDecl()) {
+        fun group(id: String): GitMenuGroupDecl? = groups.firstOrNull { it.id == id }
+        fun item(id: String): GitMenuItemDecl? = groups.asSequence().flatMap { g -> (g.items + g.subgroups.flatMap { it.items }).asSequence() }.firstOrNull { it.id == id }
+        val allIds: List<String> get() = groups.flatMap { it.allIds }
+    }
     data class GitAutoPullDecl(val defaultOn: Boolean = false, val requireUnmetered: Boolean = true)
 
     /** One repository of the declared public set. */
@@ -179,6 +199,8 @@ object Declarations {
         val folderActions: List<GitFolderActionDecl> = emptyList(),
         /** #1288 where Archive moves a folder, relative to the store's git folder. */
         val archiveRoot: String = "z-archived",
+        /** #1289 the per-repository menu: groups, items, order, labels (ui.sync.git.repo_menu). */
+        val repoMenu: GitRepoMenuDecl = GitRepoMenuDecl(),
     ) {
         fun folderAction(kind: String): GitFolderActionDecl? = folderActions.firstOrNull { it.kind == kind }
         fun depthActions(scope: String): List<GitDepthActionDecl> = depthActions.filter { it.scope == scope }
@@ -544,6 +566,7 @@ object Declarations {
                 if (id.isBlank() || kind !in FOLDER_KINDS) null else GitFolderActionDecl(id, a.str("label", id), a.str("icon"), kind, (a.int("workers") ?: 1).coerceIn(1, 4), a.bool("confirm", true))
             },
             archiveRoot = o.str("archive_root", "z-archived").takeIf { com.diegonmarcos.clouddrive.sync.BareClones.validRoot(it) } ?: "z-archived",
+            repoMenu = parseRepoMenu(o["repo_menu"]),
             filters = objects(o["filters"]).mapNotNull { f ->
                 val id = f.str("id")
                 val opts = objects(f["options"]).mapNotNull { x -> x.str("id").takeIf { it.isNotBlank() }?.let { GitFilterOptionDecl(it, x.str("label", it)) } }
@@ -574,6 +597,28 @@ object Declarations {
             publicRepos = objects(o["public_repos"]).mapNotNull { r ->
                 val name = r.str("repo"); if (name.isBlank()) null else GitPublicRepoDecl(name, r.str("caption", name))
             },
+        )
+    }
+
+    /** #1289 ui.sync.git.repo_menu: a group or item without an id is dropped; minutes are floored at min_minutes (15 = WorkManager's floor). */
+    fun parseRepoMenu(e: JsonElement?): GitRepoMenuDecl {
+        val o = e as? JsonObject ?: return GitRepoMenuDecl()
+        fun i18n(x: JsonObject): Map<String, String> = (x["i18n"] as? JsonObject)?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k to it } }?.toMap().orEmpty()
+        fun group(g: JsonObject): GitMenuGroupDecl? {
+            val id = g.str("id"); if (id.isBlank()) return null
+            return GitMenuGroupDecl(
+                id, g.str("label", id), i18n(g), g.str("layout") == "lines", g.bool("danger"),
+                objects(g["items"]).mapNotNull { x -> x.str("id").takeIf { it.isNotBlank() }?.let { GitMenuItemDecl(it, x.str("label", it), i18n(x)) } },
+                objects(g["subgroups"]).mapNotNull { group(it) },
+            )
+        }
+        val a = o["autosync"] as? JsonObject ?: JsonObject(emptyMap())
+        val floor = (a.int("min_minutes") ?: 15).toLong().coerceAtLeast(15)
+        val options = ((a["options_minutes"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull?.toLong() } ?: emptyList()).filter { it >= floor }.distinct()
+        val def = (a.int("default_minutes") ?: 15).toLong().coerceAtLeast(floor)
+        return GitRepoMenuDecl(
+            groups = objects(o["groups"]).mapNotNull { group(it) },
+            autoSync = GitAutoSyncDecl(a.bool("default_on", false), def, floor, options.ifEmpty { listOf(def) }),
         )
     }
 

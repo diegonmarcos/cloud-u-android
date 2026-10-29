@@ -1,13 +1,11 @@
 package com.diegonmarcos.clouddrive.sync
 
-/** #1138 the command types of a repository's detail, one row (wrapping chips) each, in this order. */
-enum class RepoGroup { SYNC, STEPS, GOTO, WORKFLOW, DANGEROUS, REPO_CLEAN, OTHERS, CLONE_SETTINGS }
-
 /**
- * #1138 THE GROUPED ACTIONS of a repository's detail, as data. A declared operation (build.json
- * ui.sync.git.ops) keeps its declared id and its dispatch; the ids added here are the compound sync
- * verbs, the history trim, the extra readers and the clone settings. [GROUPS] is the render order and
- * [route] the confirmation gate, both pure so the JVM suite pins them.
+ * #1138 THE ACTIONS of a repository's detail. A declared operation (build.json ui.sync.git.ops) keeps
+ * its declared id and its dispatch; the ids added here are the compound sync verbs, the history trim,
+ * the extra readers, the clone settings and (#1289) the Workflow and AutoSync items. #1289 the GROUPING,
+ * order and labels are data (ui.sync.git.repo_menu); [route] is the confirmation gate, pure so the JVM
+ * suite pins it.
  */
 object RepoActions {
     const val SYNC_NO_WINNER = "sync_no_winner"
@@ -32,21 +30,35 @@ object RepoActions {
     const val CLONE_SSH = "clone_ssh"
     const val CLONE_OAUTH = "clone_oauth"
 
-    data class Group(val group: RepoGroup, val actions: List<String>)
+    const val LIST_DIRTY = "list_dirty"
+    const val LIST_CONFLICTS = "list_conflicts"
+    const val SOLVE_CONFLICTS = "solve_conflicts"
+    const val AUTOSYNC_TOGGLE = "autosync_toggle"
+    const val AUTOSYNC_EVERY = "autosync_every"
 
-    val GROUPS: List<Group> = listOf(
-        Group(RepoGroup.SYNC, listOf(SYNC_NO_WINNER, SYNC_REMOTE_WINS, SYNC_LOCAL_WINS)),
-        Group(RepoGroup.STEPS, listOf("fetch", "pull", "push", "commit", "stats")),
-        Group(RepoGroup.GOTO, listOf(CHECKOUT_MAIN, BRANCHES, UNPUSHED, OPEN_FOLDER, "web")),
-        Group(RepoGroup.WORKFLOW, listOf("history", RUNS, "actions", PRS)),
-        Group(RepoGroup.REPO_CLEAN, listOf(CLEAN_1, CLEAN_5, CLEAN_10)),
-        Group(RepoGroup.DANGEROUS, listOf("force_pull", "force_push")),
-        Group(RepoGroup.OTHERS, listOf("remote", "metadata", SYNC_NOW, "hooks", "size", SETTINGS)),
-        Group(RepoGroup.CLONE_SETTINGS, listOf(CLONE_FULL, CLONE_DEPTH1, CLONE_OAUTH, CLONE_SSH)),
+    /** #1289 the menu's group ids, in the order build.json declares them (RepoMenuTest pins both). */
+    const val G_GOTO = "goto"
+    const val G_CLONE = "clone"
+    const val G_SYNC = "sync"
+    const val G_MANUAL = "manual_sync"
+    const val G_WORKFLOW = "workflow"
+    const val G_CLEAN = "repo_clean"
+    const val G_OTHERS = "others"
+    const val G_AUTH = "configs_auth"
+    const val G_AUTOSYNC = "configs_autosync"
+    val GROUP_ORDER = listOf(G_GOTO, G_CLONE, G_SYNC, G_MANUAL, G_WORKFLOW, G_CLEAN, G_OTHERS, G_AUTH, G_AUTOSYNC)
+    /** Groups whose chips stay usable while an operation runs (settings and readers; the verbs wait). */
+    val ALWAYS_ON_GROUPS = setOf(G_GOTO, G_CLONE, G_AUTH, G_AUTOSYNC)
+
+    /** The ids every action handler of the page knows besides the declared ops and depth/folder actions. */
+    val PAGE_IDS: Set<String> = setOf(
+        SYNC_NO_WINNER, SYNC_REMOTE_WINS, SYNC_LOCAL_WINS, META_BRANCH, META_SYNC, OPEN_FOLDER, CHECKOUT_MAIN, BRANCHES, PRS, UNPUSHED,
+        RUNS, CLEAN_1, CLEAN_5, CLEAN_10, SYNC_NOW, SETTINGS, CLONE_FULL, CLONE_DEPTH1, CLONE_SSH, CLONE_OAUTH,
+        LIST_DIRTY, LIST_CONFLICTS, SOLVE_CONFLICTS, AUTOSYNC_TOGGLE, AUTOSYNC_EVERY,
     )
 
-    val DANGEROUS: List<String> get() = GROUPS.first { it.group == RepoGroup.DANGEROUS }.actions
-    val REPO_CLEAN: List<String> get() = GROUPS.first { it.group == RepoGroup.REPO_CLEAN }.actions
+    val DANGEROUS: List<String> = listOf("force_pull", "force_push")
+    val REPO_CLEAN: List<String> = listOf(CLEAN_1, CLEAN_5, CLEAN_10)
 
     /** The depth a Repo clean id keeps, or 0 when [id] is not one. */
     fun cleanDepth(id: String): Int = when (id) { CLEAN_1 -> 1; CLEAN_5 -> 5; CLEAN_10 -> 10; else -> 0 }

@@ -80,6 +80,9 @@ import androidx.compose.ui.platform.LocalContext
  * builds an Intent.
  */
 class MainActivity : ComponentActivity(), DriveActions {
+    /** #1289 the shell's openPath, set by the composition; [openInFiles] reveals a folder through it. */
+    private var openInFilesHook: ((String) -> Unit)? = null
+    override fun openInFiles(path: String) { openInFilesHook?.invoke(path) }
 
     private lateinit var prefs: DrivePrefs
     /** #730 the all-files grant as last seen, so onResume can tell the moment it ARRIVES. */
@@ -234,6 +237,7 @@ class MainActivity : ComponentActivity(), DriveActions {
         var jumpPage by remember { mutableStateOf<String?>(null) }
         val jump: (String, String) -> Unit = { tab, page -> jumpPage = page.ifBlank { null }; jumpTab = tab }
         val openPath: (String) -> Unit = { path -> filesController?.reveal(path); jumpPage = Declarations.PAGE_LOCAL; jumpTab = Declarations.SECTION_EXPLORER }
+        openInFilesHook = openPath
         val syncAll: () -> Unit = { gitOrNull?.let { g -> g.repos.value.filter { it.autoSync }.forEach { g.syncNow(it) } } }
 
         // #1106 the startup sequence: terminal installed -> started -> $HOME ready -> mounted -> the shell.

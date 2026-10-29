@@ -74,17 +74,6 @@ internal fun DepthReportWindow(r: BulkDepth.Run, onCancel: () -> Unit, onClose: 
     }
 }
 
-/** The per-repository depth chips (scope repo) under a row's grouped actions. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun DepthPills(actions: List<Declarations.GitDepthActionDecl>, enabled: Boolean, onAction: (Declarations.GitDepthActionDecl) -> Unit) {
-    if (actions.isEmpty()) return
-    Text(stringResource(R.string.repo_group_depth), Modifier.padding(top = DriveMetrics.pad), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
-        actions.forEach { a -> Pill(a.label, { onAction(a) }, icon = IconCatalog.vectorOrDefault(a.icon), enabled = enabled) }
-    }
-}
-
 /** #1256 THE FILTER ROW: one labelled group per declared filter, its options as chips (the selected one filled). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
