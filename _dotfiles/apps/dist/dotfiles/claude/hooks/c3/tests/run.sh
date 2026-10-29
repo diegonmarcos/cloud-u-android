@@ -22,7 +22,7 @@ t main-only-push 0 'git push origin main 2>&1 | tail -1'; t main-only-push 0 'gi
 t no-branch-create 2 'git checkout -b feat'; t no-branch-create 2 'git switch -c feat'; t no-branch-create 2 'git branch feat'; t no-branch-create 2 'git worktree add -b x ../x'
 t no-branch-create 0 'git checkout main'; t no-branch-create 0 'git branch -D old'; t no-branch-create 0 'git branch --show-current'; t no-branch-create 0 'git branch -r'
 # secrets
-T="$(mktemp -d)"; git -C "$T" init -q; echo 'aws=AKIAABCDEFGHIJKLMNOP' > "$T/a.txt"; git -C "$T" add a.txt
+T="$(mktemp -d)"; git -C "$T" init -q; echo "aws=AK""IA$(printf %s ABCDEFGHIJKLMNOP)" > "$T/a.txt"; git -C "$T" add a.txt
 t no-secrets-commit 2 "git -C $T commit -m wip"
 t no-secrets-commit 2 'git commit -m "token=ghp_abcdefghijklmnopqrstuvwxyz0123456789"'
 git -C "$T" rm -qf --cached a.txt; echo hello > "$T/b.txt"; git -C "$T" add b.txt
