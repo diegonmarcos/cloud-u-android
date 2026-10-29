@@ -292,7 +292,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     fun tableRow(name: String, owner: String, declaredPrivate: Boolean?, listedUrl: String = ""): RepoTableRow {
         val cloned = clonedByName[name]
         val url = cloned?.remoteUrl?.takeIf { it.isNotBlank() } ?: listedUrl
-        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { GitSyncCoordinator.glanceFor(it, glances) }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes }, Declarations.repoSot.lfsOf(name), cloned?.let { lastCommits[File(it.path).absolutePath] })
+        return RepoTable.rowOf(name, declaredPrivate, cloned != null, cloned?.let { GitSyncCoordinator.glanceFor(it, glances) }, remoteStats[RepoRemoteStats.keyOf(owner, name)], RepoProvider.labelOf(url, Declarations.providers), cloned?.let { diskSizes[File(it.path).absolutePath]?.bytes }, Declarations.repoSot.lfsOf(name), cloned?.let { lastCommits[LastCommits.keyOf(it.path)] })
     }
     // Pull-to-refresh re-reads the REST facts of every repository the table lists (GitHub-listed or declared; the fleet's own git is not GitHub).
     fun refreshTargets(): List<Pair<String, String>> {
@@ -301,6 +301,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             listing.repos.map { it.owner.ifBlank { page.owner } to it.name } +
             repos.map { Declarations.repoSot.canonical(File(it.path).name) }.filter { it !in named }.map { page.owner to it }
     }
+    // #1256 the Last commit fallback of a not-cloned row is the forge's pushed_at: fetched once when nothing cached has it.
+    LaunchedEffect(Unit) { coordinator.fillRemoteStatsOnce(refreshTargets(), login.token) }
 
     // #642 what the last handoff to cloud-terminal-nix resolved to. Never empty after a
     // clone attempt: a handoff that reported nothing is the silent no-op this feature exists

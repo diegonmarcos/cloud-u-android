@@ -13,7 +13,7 @@
 #   D4 bounded, cancel-safe, refreshed: a Semaphore of the declared workers, cancelDepthRun, NonCancellable refresh.
 #   U1 Unlisted git folders: declared roots/bounds, statuses through the ONE reader (so StatusCache), scanned only from
 #      pull-to-refresh and check-all.
-#   F1 filters: declared ids == RepoFilters.HANDLED both ways; selection and sort persisted; LAST_COMMIT column labelled.
+#   F1 filters: declared ids == RepoFilters.HANDLED both ways; selection and sort persisted; LAST_COMMIT column labelled; last-commit key canonical both sides, first-open fill, failures logged.
 #   A1 Activity Logs: the strings say Activity Logs; no History section at the page's bottom; a top button opens it.
 #   N1 the bottom-nav host keeps a constant slot (no viewport resize on collapse/hide) and publishes LocalNavBottomClearance.
 set -uo pipefail
@@ -83,6 +83,13 @@ if ids != handled: print("    declared", sorted(ids), "!= handled", sorted(handl
 for t in ("coordinator.setSort(", "coordinator.setFilter(", "RepoFilters.apply("):
     if t not in page: print("    page lacks", t); bad = 1
 if "var sortColumn by remember" in page: print("    the sort is not persisted"); bad = 1
+# #1256 Last commit: one key both sides, first-open fill, pushed_at fill, failures logged.
+for t in ("lastCommits[LastCommits.keyOf(", "coordinator.fillRemoteStatsOnce("):
+    if t not in page: print("    page lacks", t); bad = 1
+import os
+coord = open(os.path.join(os.path.dirname(sys.argv[3]), "GitSyncCoordinator.kt")).read()
+for t in ("LastCommits.keyOf(r.path)", "LastCommits.needsFirstFill(", "\"last commit "):
+    if t not in coord: print("    coordinator lacks", t); bad = 1
 sys.exit(bad)
 PY
 }

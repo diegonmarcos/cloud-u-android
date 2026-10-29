@@ -245,7 +245,9 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     fun onPageOpened() {
         refreshRegistry()
         scope.launch {
-            loadRegistry()
+            val list = loadRegistry()
+            // #1256 the one exception: an EMPTY last-commit cache (first open) is filled once from the local HEADs.
+            if (LastCommits.needsFirstFill(withContext(Dispatchers.IO) { decodeTimes(pagePrefs.getString(KEY_LAST_COMMITS, null)) }, list.size)) refreshLastCommits()
             // NO status work here: the table shows the persisted cache; a check runs only on an explicit owner action (pull-to-refresh, Light / Full check all, the status window).
             runPlan(AutoChecks.plan(autoSettings(), AutoChecks.Trigger.OPEN))
         }
@@ -598,6 +600,14 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         }
     }
 
+    /** #1256 first open only: no cached entry carries the forge's pushed_at (the Last commit fallback), so read the remote facts once. */
+    fun fillRemoteStatsOnce(targets: List<Pair<String, String>>, extraToken: String = "") {
+        scope.launch {
+            val cached = withContext(Dispatchers.IO) { RepoRemoteStats.Cache.load(pagePrefs) }
+            if (targets.isNotEmpty() && LastCommits.needsRemoteFill(cached.values)) refreshRemoteStats(targets, extraToken)
+        }
+    }
+
     /** The CI/CD run feed of one repository: newest runs as display lines, or the failure sentence. */
     suspend fun runFeed(owner: String, name: String): Result<List<String>> = withContext(Dispatchers.IO) {
         RepoRemoteStats.fetchRuns(Declarations.sync.git.api.baseUrl, owner, name, declaredToken())
@@ -848,9 +858,13 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     /** Read the HEAD commit time of every registered clone (one log entry each, IO), persist it. Check-all and pull-to-refresh only. */
     fun refreshLastCommits() {
         scope.launch(Dispatchers.IO) {
-            val out = registry.load().mapNotNull { r ->
-                runCatching { GitEngine(ctx, File(r.path)).use { e -> e.log(max = 1).firstOrNull()?.time?.let { File(r.path).absolutePath to it * 1000 } } }.getOrNull()
+            val list = registry.load()
+            val out = list.mapNotNull { r ->
+                runCatching { GitEngine(ctx, File(r.path)).use { e -> e.log(max = 1).firstOrNull()?.time } }
+                    .onFailure { DriveDebugLog.e(ctx, TAG, "last commit ${File(r.path).name}: ${it.message}") }
+                    .getOrNull()?.let(LastCommits::msOf)?.let { LastCommits.keyOf(r.path) to it }
             }.toMap()
+            DriveDebugLog.i(ctx, TAG, "last commits: ${out.size}/${list.size} clones read")
             lastCommits.value = out
             pagePrefs.edit().putString(KEY_LAST_COMMITS, out.entries.joinToString("\n") { it.key + "\t" + it.value }).apply()
         }
