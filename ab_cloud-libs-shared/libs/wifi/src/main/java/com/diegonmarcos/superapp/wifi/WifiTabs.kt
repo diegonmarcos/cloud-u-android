@@ -212,7 +212,7 @@ private fun DnsCard(c: WifiController, s: WifiState) {
         WTitle(t(R.string.wifi_tool_dns), "search")
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             WField(name, t(R.string.wifi_name), "dns", { name = it }, Modifier.weight(1f))
-            WButton(t(R.string.wifi_lookup), primary = true, tag = "dns-go") { c.dns(name) }
+            WButton(t(R.string.wifi_lookup), primary = true, tag = "dns-go") { c.lookup(name) }
         }
         WMuted("DNS: " + s.link.dns.joinToString(", ").ifEmpty { "-" } + if (s.link.privateDnsActive) " · DoT ${s.link.privateDnsServer}" else "")
         s.dns.take(5).forEach { a ->

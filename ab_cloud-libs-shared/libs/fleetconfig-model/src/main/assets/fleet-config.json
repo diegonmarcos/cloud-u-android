@@ -1447,6 +1447,14 @@
         "aa_cloud-superapp"
       ]
     },
+    "mount-keeper": {
+      "kind": "prefs",
+      "class": "device",
+      "doc": "Ids of the mounts the sticky foreground MountKeeperService keeps alive on this phone; live FUSE mounts are per-device, so the set is rebuilt on the new phone.",
+      "used_by": [
+        "ac_cloud-drive"
+      ]
+    },
     "mounts-credentials": {
       "kind": "encrypted",
       "class": "secret",
@@ -2515,7 +2523,8 @@
         "lib-ui-icons",
         "lib-ui-kit",
         "lib-updater",
-        "lib-webserver"
+        "lib-webserver",
+        "lib-wifi"
       ],
       "items": [
         {

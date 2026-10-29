@@ -73,7 +73,7 @@ data class WifiConfig(
                 throttleLimit = sc.optInt("throttle_limit", 4), throttleWindowMs = sc.optLong("throttle_window_ms", 120_000),
                 dfsPenalty = ra.optDouble("dfs_penalty", 0.5), nonOverlap24 = ints(ra.optJSONArray("non_overlap_24")).ifEmpty { listOf(1, 6, 11) },
                 pingCount = pi.optInt("count", 20).coerceIn(1, 1000), pingIntervalS = pi.optDouble("interval_s", 0.2).coerceAtLeast(0.2),
-                pingTimeoutS = pi.optInt("timeout_s", 2), pingDefaultHost = pi.optString("default_host", "1.1.1.1"),
+                pingTimeoutS = pi.optInt("timeout_s", 2), pingDefaultHost = pi.optString("default_host", "example.com"),
                 traceMaxHops = tr.optInt("max_hops", 30).coerceIn(1, 64), traceTimeoutS = tr.optInt("timeout_s", 1),
                 dnsDefaultName = dn.optString("default_name", "example.com"),
                 portMax = ps.optInt("max_ports", 1024).coerceIn(1, 65535), portConcurrency = ps.optInt("concurrency", 64).coerceIn(1, 256),

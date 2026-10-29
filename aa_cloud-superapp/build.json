@@ -3068,7 +3068,7 @@
                 "_doc": "Nx.z-CM-Blmbrg (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
                 "id": "nx-cm-blmbrg",
                 "label": "Nx.z-CM-Blmbrg",
-                "icon": "ic_p_markets_prices",
+                "icon": "ic_p_markets_terminal",
                 "target": "https://github.com/diegonmarcos/Fin-CM-Blmbrg"
               },
               {

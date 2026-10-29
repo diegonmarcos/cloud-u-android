@@ -78,6 +78,9 @@
     "ac_cloud-drive/app": {
       "base_language": "en"
     },
+    "ab_cloud-libs-shared/libs/wifi": {
+      "base_language": "host"
+    },
     "ab_cloud-libs-shared/libs/mail": {
       "base_language": "host"
     },

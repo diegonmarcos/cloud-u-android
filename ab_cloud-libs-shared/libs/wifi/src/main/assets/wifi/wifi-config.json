@@ -37,7 +37,7 @@
   "count": 20,
   "interval_s": 0.2,
   "timeout_s": 2,
-  "default_host": "1.1.1.1"
+  "default_host": "example.com"
  },
  "traceroute": {
   "max_hops": 30,

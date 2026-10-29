@@ -96,7 +96,7 @@ class NetTools(private val ctx: Context, private val cfg: WifiConfig) {
 
     // ---- DNS ----
 
-    suspend fun dns(name: String, net: Network?): DnsAnswer = withContext(Dispatchers.IO) {
+    suspend fun resolve(name: String, net: Network?): DnsAnswer = withContext(Dispatchers.IO) {
         val t0 = System.nanoTime()
         try {
             val addrs = if (net != null) net.getAllByName(name).toList() else InetAddress.getAllByName(name).toList()

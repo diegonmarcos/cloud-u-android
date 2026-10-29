@@ -339,7 +339,7 @@ for want in ("GitSync", "Fsync"):
     if tile.get("package"): print("    %s declares a package: it is an in-app route, not an installed app" % want); bad = 1
 sys.exit(bad)
 PYTHON
-if tr '\n' ' ' <"$THEME" | grep -qE 'CompositionLocalProvider\( *LocalContentColor provides text,'; then pass "the dark theme provides LocalContentColor: no Text() inherits material3's Color.Black on the dark page"; else fail "DriveTheme does not provide LocalContentColor - every Text() without an explicit colour prints BLACK on the dark page"; fi
+if grep -qE 'CompositionLocalProvider\( *LocalContentColor provides text,' <<<"$(tr '\n' ' ' <"$THEME")"; then pass "the dark theme provides LocalContentColor: no Text() inherits material3's Color.Black on the dark page"; else fail "DriveTheme does not provide LocalContentColor - every Text() without an explicit colour prints BLACK on the dark page"; fi
 for a in android:textColorPrimary android:textColorSecondary colorOnSurface; do
     grep -qE "<item name=\"$a\">@color/drive_text" "$THEMES" && pass "Theme.CloudDrive names $a" || fail "Theme.CloudDrive does not override $a - an inflated View falls back to a framework ink"
 done

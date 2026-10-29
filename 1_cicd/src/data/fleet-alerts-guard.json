@@ -257,6 +257,12 @@
       "kind": "progress",
       "notify_calls": 1,
       "why": "#903 the dataSync foreground service a running Store batch holds: re-posts its own ongoing notification with the Store bar's progress line (StoreStages.progress().text), throttled to once a second. The batch's RESULTS go through FleetAlerts."
+    },
+    {
+      "path": "ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/mounts/MountKeeperService.kt",
+      "kind": "foreground_service",
+      "notify_calls": 1,
+      "why": "The sticky foreground service that keeps the user's mounts alive re-posts its own ongoing notification with the live mount count. The ongoing line a foreground service must hold, not an alert about the fleet."
     }
   ]
 }

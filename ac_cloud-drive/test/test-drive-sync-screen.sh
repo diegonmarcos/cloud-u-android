@@ -82,7 +82,7 @@ if grep -qE 'RepoRegistry\(File\(ctx\.filesDir, GitSyncWorker\.REGISTRY_FILE\)\)
 
 echo "── G1b a cloned repository never renders ? once its status is read ──"
 # The page open starts NO status read (the table renders from the persisted cache; an empty cache says "not checked yet"); the checks run on pull-to-refresh / Light check all / Full check all. Every read kind is a declared non-? light, the JVM fixture asserts it.
-if ! sed -n '/fun onPageOpened()/,/^    }/p' "$COORD" | grep -qE 'statusReader\.request\(' \
+if ! grep -qE 'statusReader\.request\(' <<<"$(sed -n '/fun onPageOpened()/,/^    }/p' "$COORD")" \
    && grep -qF 'onRefresh = { coordinator.refresh(force = true)' "$CARDS" && grep -qF 'NOT_CHECKED(StatusLight.State.UNVERIFIABLE)' "$SRC/sync/RepoStatus.kt" \
    && ! grep -E '^\s+(CLEAN|AHEAD|BEHIND|DIVERGED|DIRTY|NO_UPSTREAM|CONFLICT|ERROR)\(StatusLight\.State\.(UNKNOWN|UNVERIFIABLE)' "$SRC/sync/RepoStatus.kt" >/dev/null \
    && grep -qF 'never renders a question mark' "$APP/app/src/test/java/com/diegonmarcos/clouddrive/sync/RepoStatusTest.kt"; then pass "page open reads nothing (cache); pull-to-refresh checks; every read kind has a non-? light; JVM fixture pins it"; else fail "a cloned repo can render ? after its status was read"; fi
@@ -128,7 +128,7 @@ echo "── G7 declared, not cloned (#608: a DENSE ROW, not a card) ──"
 # the private/fork facts ride the row as badges. test-drive-git-page.sh owns the rest.
 # #669 the declared shape is the FALLBACK for rows with no listing item; a listed row clones
 # its own listing's URL (test-drive-git-auth-chain.sh C10 owns that rule and its mutations).
-if grep -qE 'ifBlank \{ page\.cloneUrl\(name, mode\) \}' "$CARDS" && grep -qE 'Pill\(stringResource\(R\.string\.sync_clone_into_store\), onClone, modifier = Modifier\.testTag\(DriveTags\.SYNC_GIT_STATUS_CLONE\), filled = true\)' "$SRC/sync/RepoStatusWindow.kt" && ! sed -n '/private fun GitRepoRow(/,/private fun lightOf(/p' "$CARDS" | grep -q 'sync_clone_into_store'; then pass "Clone into store is the status window's action (#1238), not the table row's; the declared URL is composed once, as the no-listing fallback"; else fail "clone-into-store composition missing (window) or still in the row"; fi
+if grep -qE 'ifBlank \{ page\.cloneUrl\(name, mode\) \}' "$CARDS" && grep -qE 'Pill\(stringResource\(R\.string\.sync_clone_into_store\), onClone, modifier = Modifier\.testTag\(DriveTags\.SYNC_GIT_STATUS_CLONE\), filled = true\)' "$SRC/sync/RepoStatusWindow.kt" && ! grep -q 'sync_clone_into_store' <<<"$(sed -n '/private fun GitRepoRow(/,/private fun lightOf(/p' "$CARDS")"; then pass "Clone into store is the status window's action (#1238), not the table row's; the declared URL is composed once, as the no-listing fallback"; else fail "clone-into-store composition missing (window) or still in the row"; fi
 if grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$CARDS" && grep -qE 'RepoTable\.visibility\(r\.isPrivate, stringResource\(R\.string\.repo_vis_pvt\)' "$TABLE_UI"; then pass "the dense row is tagged and carries the Pvt/Pub column (#1138; it was a private badge)"; else fail "declared cards incomplete"; fi
 
 # g8 <MountsPage.kt> <FsyncPage.kt> <StorageCoordinator.kt> : #1173 the Rclone, FUSE and Backup pages: tagged cards whose lights are LOOKS at the thing, run state held across tabs

@@ -256,9 +256,9 @@ class WifiController(
 
     fun stopTrace() { traceJob?.cancel() }
 
-    fun dns(name: String) {
+    fun lookup(name: String) {
         scope.launch {
-            val a = tools.dns(name.trim(), net())
+            val a = tools.resolve(name.trim(), net())
             _state.update { s -> s.copy(dns = (listOf(a) + s.dns).take(20)) }
         }
     }

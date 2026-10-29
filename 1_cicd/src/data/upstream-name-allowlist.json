@@ -173,6 +173,17 @@
         "ac_cloud-notes/packages/common/reader/__tests__/__snapshots__/reader.spec.ts.snap"
       ],
       "reason": "Expected output of reading two stored documents written before the rename (binary fixtures next to it): their raw block data, text and links are the old ones, only the flavour fields the reader reports are current."
+    },
+    {
+      "id": "ieee-oui-vendor",
+      "category": "external-identifier",
+      "paths": [
+        "ab_cloud-libs-shared/libs/wifi/src/main/assets/wifi/oui.tsv"
+      ],
+      "patterns": [
+        "(?<=\\t)Affinegy$"
+      ],
+      "reason": "IEEE OUI registry row: the vendor name registered for 58:1C:BD is the company's own name, copied verbatim from the IEEE MA-L list (#1263)."
     }
   ]
 }
