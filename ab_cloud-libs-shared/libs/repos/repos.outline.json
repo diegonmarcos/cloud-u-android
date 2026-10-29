@@ -13,6 +13,9 @@
    "label": "Unix",
    "icon": "🐧",
    "description": "The Unix estate: the cloudy fleet and the owner's personal cloud.",
+   "show_in": [
+    "lnktree"
+   ],
    "children": [
     {
      "code": "1.1",
@@ -423,6 +426,9 @@
    "label": "CG",
    "icon": "🎮",
    "description": "Computer graphics: 3D worlds, engines and media production.",
+   "show_in": [
+    "lnktree"
+   ],
    "children": [
     {
      "code": "2.1",
@@ -533,6 +539,9 @@
    "label": "Capital",
    "icon": "💹",
    "description": "Capital: capital markets and corporate finance. The hub Fin-___ is the area home (3.0).",
+   "show_in": [
+    "lnktree"
+   ],
    "children": [
     {
      "code": "3.1",
@@ -627,6 +636,9 @@
    "label": "HardTech",
    "icon": "🔬",
    "description": "HardTech: deep science projects and CAD / simulation tools.",
+   "show_in": [
+    "lnktree"
+   ],
    "children": [
     {
      "code": "4.1",
@@ -701,6 +713,9 @@
    "label": "42",
    "icon": "🎓",
    "description": "42 school coursework (a school, not a project): one project per curriculum repo.",
+   "show_in": [
+    "lnktree"
+   ],
    "children": [
     {
      "code": "5.1",
@@ -991,6 +1006,9 @@
    "label": "Projects",
    "icon": "🎨",
    "description": "Projects (formerly Front): endeavours, lab tools and DuckPeng.",
+   "show_in": [
+    "lnktree"
+   ],
    "children": [
     {
      "code": "6.1",

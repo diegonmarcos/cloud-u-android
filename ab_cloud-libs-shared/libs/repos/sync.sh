@@ -129,6 +129,7 @@ def leaf(n):
 def node(n):
     o={"code":n['code'],"kind":n['kind'],"name":n['name'],"label":n.get('label') or n['name'],"icon":n.get('icon',''),
        "description":n.get('description','')}
+    if n.get('show_in'): o["show_in"]=n['show_in']
     if n.get('children'): o["children"]=[node(c) for c in n['children']]
     if n.get('repos'): o["repos"]=[leaf(x) for x in n['repos']]
     return o

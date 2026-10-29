@@ -80,7 +80,6 @@ checkPages = { sectionId, pages, dir ->
     }
 }
 (buildJson.ui.sections ?: []).each { s -> checkPages(s.id, s.pages ?: [], s.id) }
-def uiSectionsB64     = b64(buildJson.ui.sections ?: [])
 // #868 the bar is ONE declaration: ui.bottom_nav (ids, in order) + ui.default_section, read at
 // runtime through libs:bottomnav's NavDecl together with UI_SECTIONS_B64.
 def uiBottomNav       = (buildJson.ui.bottom_nav ?: []).join(',')
@@ -119,6 +118,17 @@ if (repoTreeDecl) {
     def owner = (buildJson.ui.sections ?: []).find { s -> (s.groups ?: []).any { it.id == repoTreeDecl.group } }
     if (owner == null) throw new GradleException("ui.repo_tree.group '${repoTreeDecl.group}' is not a declared ui.sections[].groups id")
 }
+// Each Proj chip's label is its registry area's name, read from the outline here: build.json declares NO label for it.
+def areaLabels = repoOutline.areas.collectEntries { [(it.code.toString()): (it.label ?: it.name).toString()] }
+def areaPageCodes = (repoTreeDecl.areas ?: []).collectEntries { [(it.page.toString()): it.code.toString()] }
+def labelAreaPages
+labelAreaPages = { pages -> pages.collect { p ->
+    def q = new LinkedHashMap(p)
+    if (areaPageCodes.containsKey(p.id.toString())) q.label = areaLabels[areaPageCodes[p.id.toString()]]
+    if (p.pages) q.pages = labelAreaPages(p.pages)
+    q
+} }
+def uiSectionsB64 = b64((buildJson.ui.sections ?: []).collect { s -> new LinkedHashMap(s) + [pages: labelAreaPages(s.pages ?: [])] })
 def fleetRepoApps = new groovy.json.JsonSlurper().parse(new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')).apps
     .findAll { it.repo_url && it.package }.collect { [url: it.repo_url.toString(), package: it.package.toString()] }
 def uiRepoTreeB64 = b64(repoTreeDecl + [fleet_apps: fleetRepoApps])

@@ -1433,6 +1433,9 @@
       "label": "Unix",
       "icon": "🐧",
       "banner": "cloud.gif",
+      "show_in": [
+        "lnktree"
+      ],
       "developer": "Leaf.y",
       "description": "The Unix estate: the cloudy fleet and the owner's personal cloud.",
       "hub": null,
@@ -1735,6 +1738,9 @@
       "label": "CG",
       "icon": "🎮",
       "banner": "circus.gif",
+      "show_in": [
+        "lnktree"
+      ],
       "developer": "Leaf.y",
       "description": "Computer graphics: 3D worlds, engines and media production.",
       "hub": "CG-___",
@@ -1835,6 +1841,9 @@
       "label": "Capital",
       "icon": "💹",
       "banner": "nexus.webp",
+      "show_in": [
+        "lnktree"
+      ],
       "developer": "Nexus.z",
       "description": "Capital: capital markets and corporate finance. The hub Fin-___ is the area home (3.0).",
       "hub": "Fin-___",
@@ -1934,6 +1943,9 @@
       "label": "HardTech",
       "icon": "🔬",
       "banner": "structural.gif",
+      "show_in": [
+        "lnktree"
+      ],
       "developer": "Stark.x",
       "description": "HardTech: deep science projects and CAD / simulation tools.",
       "hub": "DeepSc-___",
@@ -2018,6 +2030,9 @@
       "label": "42",
       "icon": "🎓",
       "banner": "repos.gif",
+      "show_in": [
+        "lnktree"
+      ],
       "developer": "lecole42",
       "description": "42 school coursework (a school, not a project): one project per curriculum repo.",
       "hub": "lecole-42-___",
@@ -2323,6 +2338,9 @@
       "label": "Projects",
       "icon": "🎨",
       "banner": "lab-tools.gif",
+      "show_in": [
+        "lnktree"
+      ],
       "developer": "Projects",
       "description": "Projects (formerly Front): endeavours, lab tools and DuckPeng.",
       "hub": "Projects-___",

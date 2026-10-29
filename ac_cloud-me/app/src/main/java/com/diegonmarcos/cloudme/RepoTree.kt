@@ -29,6 +29,8 @@ data class RepoNode(
     val description: String = "",
     val children: List<RepoNode> = emptyList(),
     val repo: RepoLeaf? = null,
+    /** The registry's area flag `show_in` (consumer surfaces that list this area); empty off an area. */
+    val showIn: Set<String> = emptySet(),
 ) {
     val isContainer: Boolean get() = children.isNotEmpty()
 
@@ -59,6 +61,7 @@ object RepoOutline {
         return RepoNode(
             o.optString("code"), o.optString("kind"), o.optString("label").ifBlank { o.optString("name") },
             o.optString("icon"), o.optString("description"), kids + repos,
+            showIn = o.optJSONArray("show_in")?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() } ?: emptySet(),
         )
     }
 }
@@ -72,15 +75,12 @@ data class RepoTreeConfig(
     val outlineAsset: String,
     /** Area page id -> registry area code, in declared (registry) order. */
     val areas: List<Pair<String, String>>,
-    val omit: Set<String>,
-    val labels: Map<String, String>,
     val fleetApps: Map<String, String>,
 ) {
     fun areaCodeFor(pageId: String): String? = areas.firstOrNull { it.first == pageId }?.second
 
-    /** The areas the full tree shows: the outline's, minus [omit], with the declared label overrides. */
-    fun shown(outline: List<RepoNode>): List<RepoNode> =
-        outline.filter { it.code !in omit }.map { a -> labels[a.code]?.let { a.copy(label = it) } ?: a }
+    /** The areas the full tree shows: the outline's own, as the registry flags them (`show_in` has [SURFACE]); no label is overridden here. */
+    fun shown(outline: List<RepoNode>): List<RepoNode> = outline.filter { SURFACE in it.showIn }
 
     /** One area's tree (its projects), or empty when the outline lacks it. */
     fun area(outline: List<RepoNode>, code: String): RepoNode? = shown(outline).firstOrNull { it.code == code }
@@ -90,12 +90,13 @@ data class RepoTreeConfig(
         fleetApps[leaf.url.trimEnd('/')]?.let { RepoTarget.App(it, leaf.url) } ?: RepoTarget.Url(leaf.url)
 
     companion object {
+        /** The registry `show_in` value of the areas Lnktree > Proj lists. */
+        const val SURFACE = "lnktree"
+
         fun parse(o: JSONObject): RepoTreeConfig = RepoTreeConfig(
             group = o.optString("group"),
             outlineAsset = o.optString("outline_asset", "repos.outline.json"),
             areas = o.optJSONArray("areas").objects().map { it.optString("page") to it.optString("code") },
-            omit = o.optJSONArray("omit")?.let { a -> (0 until a.length()).map { a.optString(it) }.toSet() } ?: emptySet(),
-            labels = o.optJSONObject("labels")?.let { l -> l.keys().asSequence().associateWith { l.optString(it) } } ?: emptyMap(),
             fleetApps = o.optJSONArray("fleet_apps").objects()
                 .associate { it.optString("url").trimEnd('/') to it.optString("package") },
         )
@@ -103,7 +104,7 @@ data class RepoTreeConfig(
         /** The baked declaration (BuildConfig.UI_REPO_TREE_B64); fail-soft to "no Proj tree". */
         val baked: RepoTreeConfig by lazy {
             runCatching { parse(JSONObject(String(Base64.decode(BuildConfig.UI_REPO_TREE_B64, Base64.DEFAULT)))) }
-                .getOrDefault(RepoTreeConfig("", "repos.outline.json", emptyList(), emptySet(), emptyMap(), emptyMap()))
+                .getOrDefault(RepoTreeConfig("", "repos.outline.json", emptyList(), emptyMap()))
         }
     }
 }

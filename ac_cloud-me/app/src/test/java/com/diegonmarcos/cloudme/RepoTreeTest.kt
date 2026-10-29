@@ -112,8 +112,8 @@ class RepoTreeTest {
     @Test fun `the area filter shows one area's projects and the full tree omits Others and Archived`() {
         assertEquals(listOf("Galaxy", "Zirkus"), config.area(outline, "2")!!.children.map { it.label })
         assertEquals(listOf("1", "2", "3", "4", "5", "6"), config.shown(outline).map { it.code })
-        assertEquals("Front", config.area(outline, "6")!!.label)
-        assertEquals("Lecole42", config.area(outline, "5")!!.label)
+        assertEquals("the registry names, unrenamed", "Projects", config.area(outline, "6")!!.label)
+        assertEquals("42", config.area(outline, "5")!!.label)
         assertEquals(null, config.area(outline, "8"))
     }
 
@@ -134,15 +134,31 @@ class RepoTreeTest {
         assertEquals(config.group, proj.getString("id"))
         val rowPages = strings(proj.getJSONArray("pages"))
         assertEquals("every Proj chip is a declared area and nothing else", config.areas.map { it.first }, rowPages)
-        assertEquals("the Proj areas == the registry areas (minus the declared omissions), in registry order",
-            outline.map { it.code }.filter { it !in config.omit }, config.areas.map { it.second })
-        val pageLabels = lnktree.getJSONArray("pages").objects().associate { it.getString("id") to it.getString("label") }
-        assertEquals(listOf("Unix", "CG", "Capital", "HardTech", "Lecole42", "Front"), rowPages.map { pageLabels.getValue(it) })
+        assertEquals("the Proj areas == the registry areas flagged show_in lnktree, in registry order",
+            outline.filter { RepoTreeConfig.SURFACE in it.showIn }.map { it.code }, config.areas.map { it.second })
+        assertEquals(listOf("1", "2", "3", "4", "5", "6"), config.areas.map { it.second })
+        val baked = Sections.byId("lnktree")!!
         for ((page, code) in config.areas) {
-            assertEquals("chip $page reads its area's label", config.area(outline, code)!!.label, pageLabels.getValue(page))
+            assertEquals("chip $page reads its area's registry name", outline.first { it.code == code }.name, baked.page(page)!!.label)
             val block = JSONArray(BuroLlcTestData.text("data/ui/lnktree/$page.json")).getJSONObject(0)
             assertEquals("fragment", block.getString("kind")); assertEquals("repo_tree", block.getString("id"))
             assertEquals(code, block.getString("area"))
+        }
+    }
+
+    @Test fun `build json ui repo_tree holds no label or name override and every chip label is the registry area name`() {
+        val tree = ui.getJSONObject("repo_tree")
+        assertEquals("no labels/omit/names: only the structure", setOf("_doc", "outline_asset", "group", "areas"), tree.keys().asSequence().toSet())
+        for (a in tree.getJSONArray("areas").objects())
+            assertEquals("an area entry is page + registry code only", setOf("page", "code"), a.keys().asSequence().toSet())
+        val pages = lnktree.getJSONArray("pages").objects().associateBy { it.getString("id") }
+        for ((page, _) in config.areas)
+            assertFalse("page $page declares no label of its own (the build reads it from the outline)", pages.getValue(page).has("label"))
+        val baked = Sections.byId("lnktree")!!
+        for ((page, code) in config.areas) {
+            val area = outline.first { it.code == code }
+            assertEquals("chip $page == registry area $code name", area.name, baked.page(page)!!.label)
+            assertEquals(area.name, area.label)
         }
     }
 
