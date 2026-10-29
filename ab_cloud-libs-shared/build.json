@@ -3139,7 +3139,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-28",
+        "pricing_as_of": "2026-10-29",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -3147,8 +3147,8 @@
             "open": true,
             "params_b": 8,
             "quant": ["fp8", "bf16"],
-            "trained_for": ["translation"],
-            "prompt": 0.02, "completion": 0.04,
+            "trained_for": [],
+            "prompt": 0.05, "completion": 0.08,
             "note": "Cheapest and smallest row; translation-ranked, best for short fixes."
           },
           {
@@ -3186,7 +3186,7 @@
             "open": true,
             "params_b": 31,
             "quant": ["bf16", "fp4", "fp8"],
-            "trained_for": ["roleplay", "translation", "trivia"],
+            "trained_for": ["marketing", "roleplay", "translation", "trivia"],
             "prompt": 0.2, "completion": 0.4,
             "note": "Translation-ranked, served at four precisions; more headroom than the 26B."
           },
@@ -3232,7 +3232,7 @@
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
             "trained_for": ["academia", "finance", "legal", "programming", "roleplay", "technology"],
-            "prompt": 0.014, "completion": 7,
+            "prompt": 0.006, "completion": 7,
             "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
           {
@@ -3241,7 +3241,7 @@
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.15, "completion": 0.5,
+            "prompt": 0.0457, "completion": 0.0742,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {
