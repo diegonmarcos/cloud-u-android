@@ -247,6 +247,8 @@ dependencies {
     // #1264 Measure > Bluetooth and Measure > NFC: the shared pages (libs:bluetooth with the SuperApp, libs:nfc), drawn as-is.
     implementation project(':libs:bluetooth')
     implementation project(':libs:nfc')
+    // #1264 Measure > WiFi: libs:wifi's page (#1263), the SuperApp's Configs > Setup > Network > WiFi.
+    implementation project(':libs:wifi')
     // The Sound tools' maths (#772): plain JVM, mutation-tested on its own (sound/build.gradle).
     implementation project(':sound')
     // #772 the Decisions client (Http, Decision) the Jev and Sound screens hold; shared with the image engine.

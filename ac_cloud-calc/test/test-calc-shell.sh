@@ -491,14 +491,15 @@ if "LaunchedEffect" in "".join(l for l in ss.split("\n") if ".launch(" in l):
 
 # C17 #1264 Measure > Bluetooth and Measure > NFC.
 libs_dir = os.environ.get("CALC_SHARED_LIBS") or os.path.join(app, "..", "ab_cloud-libs-shared", "libs")
-for page in ("bluetooth", "nfc"):
+for page in ("wifi", "bluetooth", "nfc"):
     if sec_of.get(page) != "measure":
         bad.append("C17 the measure section must hold the %s page, found %r" % (page, sec_of.get(page)))
 def lib_tabs(rel, enum):
     t = open(os.path.join(libs_dir, rel), encoding="utf-8").read()
     m = re.search(r"enum class " + enum + r"\(.*?\{(.*?);", t, re.S)
     return set(re.findall(r'\w+\("([\w-]+)"', m.group(1))) if m else set()
-for kind, rel, enum in (("bluetooth", "bluetooth/src/main/java/com/diegonmarcos/superapp/bluetooth/BluetoothUi.kt", "BtTab"),
+for kind, rel, enum in (("wifi", "wifi/src/main/java/com/diegonmarcos/superapp/wifi/WifiUi.kt", "WifiTab"),
+                        ("bluetooth", "bluetooth/src/main/java/com/diegonmarcos/superapp/bluetooth/BluetoothUi.kt", "BtTab"),
                         ("nfc", "nfc/src/main/java/com/diegonmarcos/superapp/nfc/NfcUi.kt", "NfcTab")):
     tabs = lib_tabs(rel, enum)
     if not tabs:
@@ -518,10 +519,10 @@ for kind, rel, enum in (("bluetooth", "bluetooth/src/main/java/com/diegonmarcos/
     if lib not in bj["modules"] or lib not in bj["modules"]["app"]["depends_on"] or ("project(':%s')" % lib) not in gr2:
         bad.append("C17 %s must be a declared module, an app dependency and in app/build.gradle" % lib)
 rs = code(os.path.join(src, "ui", "RadioScreens.kt"))
-for tok in ("BluetoothPanel(", "NfcPanel(", "BluetoothHub.controller(", "NfcHub.controller("):
+for tok in ("WifiPanel(", "BluetoothPanel(", "NfcPanel(", "WifiHub.controller(", "BluetoothHub.controller(", "NfcHub.controller("):
     if tok not in rs:
         bad.append("C17 ui/RadioScreens.kt must call %s (the shared page, over the lib's hub)" % tok)
-for tok in ("BluetoothLeScanner", "BluetoothGatt", "startDiscovery(", "enableReaderMode", "readerCallback", "IsoDep", "MifareUltralight"):
+for tok in ("startScan(", "getScanResults", "BluetoothLeScanner", "BluetoothGatt", "startDiscovery(", "enableReaderMode", "readerCallback", "IsoDep", "MifareUltralight"):
     if tok in all_src:
         bad.append("C17 %s in the app: the radios are libs:bluetooth's and libs:nfc's alone" % tok)
 man = open(os.path.join(app, "app", "src", "main", "AndroidManifest.xml"), encoding="utf-8").read()
@@ -643,6 +644,7 @@ mutate radio-bt-page-gone build.json 's.replace("\"id\": \"bluetooth\",\n       
 mutate radio-nfc-tab-typo build.json 's.replace("\"tab\": \"history\"\n        },\n        \"_doc\": \"#1264 libs:nfc", "\"tab\": \"histroy\"\n        },\n        \"_doc\": \"#1264 libs:nfc", 1)' "C17 mode nfc_history names NfcTab"
 mutate radio-bt-tab-missing build.json 's.replace("\"tab\": \"locate\"", "\"tab\": \"find\"", 1)' "has no bluetooth mode"
 mutate radio-nfc-lib-undeclared app/build.gradle 's.replace(":libs:nfc\x27)", ":libs:nfcx\x27)")' "C17 libs:nfc must be a declared module"
+mutate radio-wifi-lib-undeclared app/build.gradle 's.replace(":libs:wifi\x27)", ":libs:wifix\x27)")' "C17 libs:wifi must be a declared module"
 mutate radio-own-panel "$J/ui/RadioScreens.kt" 's.replace("NfcPanel(controller", "MyNfc(controller")' "C17 ui/RadioScreens.kt must call NfcPanel("
 mutate radio-own-reader "$J/ui/RadioScreens.kt" 's + "\nprivate fun r(a: android.app.Activity) = android.nfc.NfcAdapter.getDefaultAdapter(a).enableReaderMode(a, null, 0, null)\n"' "C17 enableReaderMode in the app"
 mutate topbar-scaffold-gone "$J/ui/CalcShell.kt" 's.replace("NavBarTopFirstRowScaffold(", "NavBarTopFirstRowScaffoldx(")' "C15 ui/CalcShell.kt must draw the shared bars"

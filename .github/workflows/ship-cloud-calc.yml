@@ -60,6 +60,7 @@ on:
       - "ab_cloud-libs-shared/libs/nfc/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/theme-background/**"
+      - "ab_cloud-libs-shared/libs/wifi/**"
       - "ab_cloud-libs-shared/libs/ui-icons/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ac_cloud-calc/**"

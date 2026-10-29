@@ -371,6 +371,7 @@
     <!-- #1264 Measure > Bluetooth and Measure > NFC (the pages themselves are libs:bluetooth's and libs:nfc's). -->
     <string name="radio_bt_title">Bluetooth</string>
     <string name="radio_bt_why">Bluetooth scans need the nearby-devices permission (location on Android 11 and older). Nothing is asked until you tap Grant.</string>
+    <string name="radio_wifi_why">Wi-Fi scans need location (nearby Wi-Fi devices on Android 13+). Nothing is asked until you tap Grant; Android limits apps to four scans every two minutes.</string>
     <string name="radio_nfc_title">NFC</string>
     <string name="radio_nfc_why">NFC reads tags only while this page is open. Tag reads stay on the phone; the history leaves it only when you export it.</string>
 </resources>

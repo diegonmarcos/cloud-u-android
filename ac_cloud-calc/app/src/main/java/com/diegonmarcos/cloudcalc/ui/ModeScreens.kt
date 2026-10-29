@@ -121,6 +121,7 @@ fun ModeScreen(mode: Declarations.Mode) {
             "light" -> LightMode(mode)
             "bluetooth" -> BluetoothMode(mode)
             "nfc" -> NfcMode(mode)
+            "wifi" -> WifiMode(mode)
             "recorder" -> RecorderMode(mode)
             "tracker_link" -> TrackerLinkMode(mode)
             "sensor_group" -> SensorGroupMode(mode)

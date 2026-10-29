@@ -89,5 +89,5 @@
 {"compiled_by":["ac_cloud-wallet"],"description":"Wallet surface: cards, tickets, calendar and the mail connector.","engines":[],"id":"wallet","ml":false},
 {"compiled_by":["ac_c3-watchdog"],"description":"The ssh bridge Cloud C3's watchdog uses, shared by reference.","engines":[],"id":"watchdog","ml":false},
 {"compiled_by":["aa_cloud-superapp"],"description":"The HTTP serving engine, free of every other fleet dependency.","engines":[],"id":"webserver","ml":false},
-{"compiled_by":["aa_cloud-superapp"],"description":"The Wi-Fi analyzer: scans within the throttle, AP list with vendor / security / standard / RTT / MLO, channel graph and rating per regulatory plan, the connected link, network tools (ping, traceroute, DNS, port scan, LAN discovery, throughput, RTT, locator), heatmap and exports, and the WiFi page, shared by the SuperApp and Cloud Calc.","engines":[],"id":"wifi","ml":false}
+{"compiled_by":["aa_cloud-superapp","ac_cloud-calc"],"description":"The Wi-Fi analyzer: scans within the throttle, AP list with vendor / security / standard / RTT / MLO, channel graph and rating per regulatory plan, the connected link, network tools (ping, traceroute, DNS, port scan, LAN discovery, throughput, RTT, locator), heatmap and exports, and the WiFi page, shared by the SuperApp and Cloud Calc.","engines":[],"id":"wifi","ml":false}
 ]}

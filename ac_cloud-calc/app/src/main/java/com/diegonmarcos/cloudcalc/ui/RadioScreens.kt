@@ -20,9 +20,13 @@ import com.diegonmarcos.superapp.bluetooth.BtTab
 import com.diegonmarcos.superapp.nfc.NfcHub
 import com.diegonmarcos.superapp.nfc.NfcPanel
 import com.diegonmarcos.superapp.nfc.NfcTab
+import com.diegonmarcos.superapp.wifi.WifiHostConfig
+import com.diegonmarcos.superapp.wifi.WifiHub
+import com.diegonmarcos.superapp.wifi.WifiPanel
+import com.diegonmarcos.superapp.wifi.WifiTab
 import org.json.JSONObject
 
-// #1264 Measure > Bluetooth and Measure > NFC: the shared libs' pages, one tab per declared mode (spec.tab). No radio code of
+// #1264 Measure > WiFi, Measure > Bluetooth and Measure > NFC: the shared libs' pages, one tab per declared mode (spec.tab). No radio code of
 // this app's own: the permissions are the libs' (merged manifests; Bluetooth's runtime ones asked for by BluetoothPanel's gate, from
 // a tap), the controllers are the libs' process-wide hubs, so a tab switch keeps the connection, the last tag and the history.
 
@@ -51,5 +55,16 @@ fun NfcMode(mode: Declarations.Mode) {
     Column(Modifier.fillMaxSize().padding(CalcMetrics.gutter)) {
         RadioHeader(R.string.radio_nfc_why)
         NfcPanel(controller, NfcTab.of(tabOf(mode)))
+    }
+}
+
+@Composable
+fun WifiMode(mode: Declarations.Mode) {
+    val ctx = LocalContext.current
+    val controller = remember { WifiHub.controller(ctx.applicationContext, WifiHostConfig(appLabel = "Cloud Calc")) }
+    val state = LocalCalcState.current
+    Column(Modifier.fillMaxSize().padding(CalcMetrics.gutter)) {
+        RadioHeader(R.string.radio_wifi_why)
+        WifiPanel(controller, WifiTab.of(tabOf(mode)), bottomClearance = 24.dp) { next -> state.show("wifi_" + next.id) }
     }
 }
