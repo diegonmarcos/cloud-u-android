@@ -71,6 +71,9 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
 
     // #1164 the page's scroll feeds the shell's one chrome collapse (first row, second row, bottom nav).
     val collapse = com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse.current
+    // #1198 a page opens with the chrome in full: the collapse is the shell's ONE state, so a page left scrolled (Leaf.y) handed its
+    // hidden first row to the next one, and a page at its top (Lnktree) had no scroll up to bring it back (run 40805138692)
+    androidx.compose.runtime.LaunchedEffect(url) { collapse?.restore() }
     // #1198 a remote page (Lnktree) can lose its renderer process; an unhandled loss takes the whole app down
     // (WebViewClient.onRenderProcessGone returns false -> the process is killed). Handle it and build a fresh WebView.
     var generation by remember { mutableStateOf(0) }
