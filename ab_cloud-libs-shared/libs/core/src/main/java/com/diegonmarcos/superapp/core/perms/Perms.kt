@@ -46,7 +46,7 @@ object Perms {
         }.getOrNull().orEmpty()
         val admin = runCatching {
             @Suppress("DEPRECATION")
-            pm.queryBroadcastReceivers(Intent(DevicePolicyManager.ACTION_DEVICE_ADMIN_ENABLED).setPackage(pkg), 0).firstOrNull()
+            pm.queryBroadcastReceivers(Intent(android.app.admin.DeviceAdminReceiver.ACTION_DEVICE_ADMIN_ENABLED).setPackage(pkg), 0).firstOrNull()
                 ?.activityInfo?.let { ComponentName(it.packageName, it.name).flattenToString() }
         }.getOrNull().orEmpty()
         return mapOf(
