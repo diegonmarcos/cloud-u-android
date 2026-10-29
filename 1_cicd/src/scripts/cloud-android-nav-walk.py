@@ -50,6 +50,7 @@ def shell(cmd, timeout=90):
     return adb("shell", cmd, timeout=timeout).stdout
 
 
+PAGE_BUDGET = 240  # seconds per page in a section's budget
 SECTION_BUDGET = 900  # seconds one section may take; a wedged emulator must fail the section, not hold the job to its 120 minute limit
 
 
@@ -640,6 +641,14 @@ class Walk:
             fails.append("P3 the UI could not be read after scrolling")
             return checks, fails
         after = self.chrome(nodes2)
+        # a fling over a heavy embedded site (me/leafy, run 40790949210) keeps the page scrolling after the finger lifts, and the bar
+        # returns in its shrunk form only when that scroll settles: poll for it (same end state asserted: row away, bottom bar back)
+        for _ in range(6):
+            if after["row"] or after["items"]:
+                break
+            settle(1.2)
+            nodes2 = dump() or nodes2
+            after = self.chrome(nodes2)
         checks["metrics"] = "bar %d->%d tabs %d->%d labels %d->%d" % (before["bar_h"], after["bar_h"], before["tab_h"], after["tab_h"], len(before["labels"]), len(after["labels"]))
         collapsed = not after["row"]
         sig1 = self.signature(nodes2, *self.content_box(nodes2)) if after["row"] else None
@@ -795,7 +804,7 @@ class Walk:
             import signal
 
             def _alarm(_sig, _frm):
-                raise SectionTimeout("section exceeded %d s" % SECTION_BUDGET)
+                raise SectionTimeout("section exceeded its time budget")
 
             signal.signal(signal.SIGALRM, _alarm)
             for sid in self.bottom + [s for s in self.sections if s not in self.bottom]:
@@ -803,7 +812,9 @@ class Walk:
                     self.results.append({"section": sid, "page": "-", "label": sid, "status": "FAIL", "checks": {},
                                          "failures": ["emulator unresponsive (adb or system_server gone): remaining sections not walked"], "seconds": 0})
                     break
-                signal.alarm(SECTION_BUDGET)
+                # the budget grows with the section's pages: Cloud Me's "me" holds 10 embedded sites at 1.5 to 3.3 min each on the
+                # emulator and overran a flat 900 s while alive (run 40790949210); a wedged emulator is still caught per section
+                signal.alarm(max(SECTION_BUDGET, PAGE_BUDGET * (1 + len(pages_of(self.sections.get(sid) or {})))))
                 try:
                     self.visit_section(sid)
                 except Exception as ex:  # a driver fault must show as a failed page, never as silence
