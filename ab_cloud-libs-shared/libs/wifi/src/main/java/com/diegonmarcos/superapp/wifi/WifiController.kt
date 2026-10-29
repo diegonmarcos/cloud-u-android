@@ -125,7 +125,11 @@ class WifiController(
             while (isActive) {
                 sampleLink()
                 val s = _state.value
-                if (s.auto && tick % (cfg.autoIntervalMs / 1000).coerceAtLeast(5) == 0L) scanNow(fromAuto = true)
+                // #1274 environment re-read every 5 s (a grant on the Permissions page shows up without reopening the tab).
+                if (tick % 5 == 0L) refreshEnv()
+                // Auto schedules itself inside the budget (ScanThrottle.autoDue) and otherwise relies on the passive
+                // SCAN_RESULTS_AVAILABLE broadcast (src.listen) for results other apps' scans produce.
+                if (s.auto && throttle.autoDue(System.currentTimeMillis(), lastAutoAt, cfg.autoIntervalMs)) scanNow(fromAuto = true)
                 tick++
                 delay(1000)
             }
@@ -144,6 +148,14 @@ class WifiController(
     fun refreshEnv() {
         val thr = src.throttleEnabled
         if (thr != null) throttle.enabled = thr
+        val hadMissing = _state.value.missing.isNotEmpty()
+        val nowMissing = WifiPermissions.missing(ctx)
+        if (hadMissing && nowMissing.isEmpty()) {
+            // Location just granted: the cached results are readable now, show them at once and refresh once.
+            _state.update { it.copy(missing = nowMissing, error = "") }
+            event("permissions granted: reading results")
+            scope.launch { pull(false); scanNow() }
+        }
         _state.update {
             it.copy(supported = src.supported, enabled = src.enabled, missing = WifiPermissions.missing(ctx), locationOn = WifiPermissions.locationOn(ctx),
                 throttleSetting = thr, caps = DeviceCaps(src.is5GhzSupported, src.is6GhzSupported, src.wifi7Supported, src.rttSupported, src.rttAvailable, src.isStaApConcurrency))
@@ -154,18 +166,31 @@ class WifiController(
 
     fun setAuto(on: Boolean) = _state.update { it.copy(auto = on) }
 
-    /** Ask Android for a scan if the throttle window has room; a refusal is recorded so the page can say why. */
+    private var lastAutoAt = 0L
+
+    /**
+     * Ask Android for a scan if the throttle window has room; a refusal is recorded so the page can say why. #1274: nothing
+     * is asked while a permission, location services or Wi-Fi is missing (the call would only be refused), a refused call
+     * backs off one slot instead of being counted, and the budget is never spent below 0: the cached results are pulled
+     * passively instead.
+     */
     fun scanNow(fromAuto: Boolean = false) {
         refreshEnv()
         val now = System.currentTimeMillis()
+        if (fromAuto) lastAutoAt = now
+        val s = _state.value
+        if (s.missing.isNotEmpty() || !s.locationOn || !s.enabled) {
+            if (!fromAuto) event("scan not requested: " + when { s.missing.isNotEmpty() -> "permission missing"; !s.locationOn -> "location off"; else -> "Wi-Fi off" })
+            pull(false); return
+        }
         if (!throttle.canScan(now)) {
             if (!fromAuto) event("scan skipped: throttled until ${java.text.SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(java.util.Date(throttle.nextAllowedAt(now)))}")
-            updateThrottle(now); return
+            updateThrottle(now); pull(false); return
         }
         val ok = src.startScan()
-        throttle.record(now)
-        _state.update { it.copy(lastScanAt = now, lastRefusedAt = if (ok) it.lastRefusedAt else now, error = if (ok) "" else src.lastError.ifEmpty { "Android refused the scan (throttled or Wi-Fi off); showing cached results" }) }
-        if (!ok) event("scan refused by Android") else event("scan requested")
+        if (ok) throttle.record(now) else throttle.refuse(now)
+        _state.update { it.copy(lastScanAt = if (ok) now else it.lastScanAt, lastRefusedAt = if (ok) it.lastRefusedAt else now, error = if (ok) "" else src.lastError.ifEmpty { "Android refused the scan (throttled or Wi-Fi off); showing cached results" }) }
+        if (!ok) event("scan refused by Android") else event(if (fromAuto) "auto scan requested" else "scan requested")
         updateThrottle(now)
         pull(false)
     }

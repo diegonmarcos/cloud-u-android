@@ -6,8 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import com.diegonmarcos.superapp.core.perms.PermsLink
+import com.diegonmarcos.superapp.core.perms.PermsNeeds
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -195,21 +195,18 @@ internal fun openSettings(ctx: Context, action: String, data: Uri? = null) {
 @Composable
 internal fun WifiGate(c: WifiController, s: WifiState) {
     val ctx = LocalContext.current
-    var asked by rememberSaveable { mutableStateOf(false) }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { asked = true; c.refreshEnv(); c.scanNow() }
     when {
         !s.supported -> WCard { WTitle(t(R.string.wifi_unsupported), "router") }
-        s.missing.isNotEmpty() -> WCard(Modifier.testTag("wifi:permissions")) {
-            WTitle(t(R.string.wifi_perm_title), "key")
-            WMuted(t(R.string.wifi_perm_body) + if (android.os.Build.VERSION.SDK_INT >= 33) " " + t(R.string.wifi_perm_body_33) else "")
-            WMuted(WifiPermissions.describe(s.missing), mono = true)
-            WRow {
-                WButton(t(R.string.wifi_grant), primary = true, tag = "grant") { ask.launch(s.missing.toTypedArray()) }
-                WButton(t(R.string.wifi_app_settings), tag = "app-settings") { openSettings(ctx, Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName)) }
-            }
-            if (asked) {
-                WMuted(t(R.string.wifi_denied_hint))
-                WifiPermissions.adbGrants(ctx.packageName).forEach { WMuted(it, mono = true) }
+        // #1274 the lib never asks: a compact banner deep-links to the app's Permissions page, highlighting its entries.
+        s.missing.isNotEmpty() -> {
+            val need = remember(s.missing) { PermsNeeds.missing(ctx, "wifi") }
+            WCard(Modifier.testTag("wifi:perms-banner")) {
+                WTitle(t(R.string.wifi_perm_title), "key")
+                WMuted(t(R.string.wifi_perm_body))
+                WMuted(if (need.isNotEmpty()) PermsNeeds.labels(need) else WifiPermissions.describe(s.missing), mono = true)
+                WButton(t(R.string.wifi_open_perms), primary = true, tag = "open-perms") {
+                    PermsLink.open(ctx, "Wi-Fi", need.map { it.id }.ifEmpty { listOf("fine_location", "coarse_location", "nearby_wifi") })
+                }
             }
         }
         !s.locationOn -> WCard {

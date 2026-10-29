@@ -115,7 +115,7 @@ M="$LIB/src/main/AndroidManifest.xml"
 grep -q 'android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"' "$M" && grep -q 'android.permission.BLUETOOTH_CONNECT' "$M" \
   && grep -q 'ACCESS_FINE_LOCATION" android:maxSdkVersion="30"' "$M" && grep -q 'android.permission.BLUETOOTH" android:maxSdkVersion="30"' "$M" \
   && ok "manifest: SCAN (never for location) + CONNECT, legacy BLUETOOTH + location to API 30" || bad "the lib manifest permissions are wrong"
-grep -q 'BlePermissions' "$LK/BluetoothUi.kt" && grep -q 'RequestMultiplePermissions' "$LK/BluetoothUi.kt" && ok "the page asks for the runtime permissions in context" || bad "the page never asks for the permissions"
+grep -q 'BlePermissions' "$LK/BluetoothUi.kt" && grep -q 'PermsLink.open' "$LK/BluetoothUi.kt" && ! grep -q 'RequestMultiplePermissions' "$LK/BluetoothUi.kt" && ok "the page sends missing permissions to the Permissions page (#1274), never asks itself" || bad "the page asks for permissions itself or never links to the Permissions page"
 
 echo "== B6: registered like every shared lib =="
 check "$(python3 - "$ROOT" <<'PY'

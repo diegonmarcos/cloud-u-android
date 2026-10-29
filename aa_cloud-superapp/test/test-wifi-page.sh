@@ -96,7 +96,7 @@ for w in 'startScan' 'isScanThrottleEnabled' 'is80211mcResponder' 'is80211azNtbR
          'WifiRttManager' 'FLAG_INCLUDE_LOCATION_INFO' 'isPrivateDnsActive' 'NET_CAPABILITY_CAPTIVE_PORTAL' 'leaseDuration' 'mtu' \
          'NsdManager' 'M-SEARCH' 'nodeStatusRequest' 'isReachable' 'portScan' 'traceroute' 'getAllByName' 'download' 'upload' \
          'ToneGenerator' 'Heatmap' 'Roaming' 'Export.pcap' 'CreateDocument' 'ACTION_SEND' 'SpectrumChart' 'TimeChart' 'Sparkline' \
-         'ChannelRating.best' 'congestion' 'groupBySsid' 'ApSort' 'ACTION_APPLICATION_DEVELOPMENT_SETTINGS' 'ACTION_LOCATION_SOURCE_SETTINGS' 'adbGrants'; do
+         'ChannelRating.best' 'congestion' 'groupBySsid' 'ApSort' 'ACTION_APPLICATION_DEVELOPMENT_SETTINGS' 'ACTION_LOCATION_SOURCE_SETTINGS' 'PermsNeeds.missing'; do
   grep -rq -- "$w" "$LK" && ok "the lib has: $w" || bad "the lib lacks: $w"
 done
 
@@ -139,8 +139,8 @@ grep -q 'NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation"' "$
   && ok "manifest: NEARBY (neverForLocation, as the app), fine location, Wi-Fi / network state, multicast, internet" || bad "the lib manifest permissions are wrong"
 grep -q 'NEARBY_WIFI_DEVICES"' "$APP/app/src/main/AndroidManifest.xml" && grep -A1 'NEARBY_WIFI_DEVICES"' "$APP/app/src/main/AndroidManifest.xml" | grep -q neverForLocation \
   && ok "the app's own NEARBY_WIFI_DEVICES carries the same flag (the manifest merge cannot conflict)" || bad "the app and the lib disagree on NEARBY_WIFI_DEVICES"
-grep -q 'RequestMultiplePermissions' "$LK/WifiUi.kt" && grep -q 'WifiPermissions.missing' "$LK/WifiController.kt" && grep -q 'locationOn' "$LK/WifiUi.kt" \
-  && ok "the page asks for the permissions in context and checks location services" || bad "the page never asks for the permissions"
+! grep -q 'RequestMultiplePermissions' "$LK/WifiUi.kt" && grep -q 'PermsLink.open' "$LK/WifiUi.kt" && grep -q 'WifiPermissions.missing' "$LK/WifiController.kt" && grep -q 'locationOn' "$LK/WifiUi.kt" \
+  && ok "the page links missing permissions to the Permissions page (#1274) and checks location services" || bad "the page asks for permissions itself or never links to the Permissions page"
 
 echo "== W6: registered like every shared lib =="
 check "$(python3 - "$ROOT" <<'PY'

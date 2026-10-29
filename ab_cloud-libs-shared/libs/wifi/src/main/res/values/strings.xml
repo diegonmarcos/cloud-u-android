@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- #1263 libs:wifi strings (English, the default). Generated from one table with values-es/strings.xml: every key exists in both. -->
 <resources>
-    <string name="wifi_perm_title">Wi-Fi scan permission needed</string>
-    <string name="wifi_perm_body">Android treats nearby Wi-Fi networks as location data: scan results, the connected SSID / BSSID and RTT distance need precise location.</string>
-    <string name="wifi_perm_body_33">Android 13+ also asks for Nearby Wi-Fi devices.</string>
-    <string name="wifi_grant">Grant</string>
-    <string name="wifi_denied_hint">If the dialog no longer appears, grant it in the app settings or with adb:</string>
-    <string name="wifi_app_settings">App settings</string>
+    <string name="wifi_perm_title">Permissions needed</string>
+    <string name="wifi_perm_body">Wi-Fi scanning needs these permissions. The Permissions page grants them.</string>
+    <string name="wifi_open_perms">Open Permissions</string>
     <string name="wifi_location_off_title">Location services are off</string>
     <string name="wifi_location_off_body">Android returns no scan results while location is off.</string>
     <string name="wifi_open_settings">Open settings</string>

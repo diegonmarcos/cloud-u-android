@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- #1263 libs:wifi strings (Spanish). Generated from one table with values/strings.xml: every key exists in both. -->
 <resources>
-    <string name="wifi_perm_title">Se necesita permiso para escanear Wi-Fi</string>
-    <string name="wifi_perm_body">Android trata las redes Wi-Fi cercanas como datos de ubicación: los resultados del escaneo, el SSID / BSSID conectado y la distancia RTT necesitan ubicación precisa.</string>
-    <string name="wifi_perm_body_33">Android 13+ también pide Dispositivos Wi-Fi cercanos.</string>
-    <string name="wifi_grant">Conceder</string>
-    <string name="wifi_denied_hint">Si el diálogo ya no aparece, concédelo en los ajustes de la app o con adb:</string>
-    <string name="wifi_app_settings">Ajustes de la app</string>
+    <string name="wifi_perm_title">Permisos necesarios</string>
+    <string name="wifi_perm_body">El escaneo Wi-Fi necesita estos permisos. La página de Permisos los concede.</string>
+    <string name="wifi_open_perms">Abrir Permisos</string>
     <string name="wifi_location_off_title">La ubicación está desactivada</string>
     <string name="wifi_location_off_body">Android no devuelve resultados de escaneo con la ubicación desactivada.</string>
     <string name="wifi_open_settings">Abrir ajustes</string>

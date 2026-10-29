@@ -9,6 +9,7 @@ import android.os.Build
 /**
  * What a Wi-Fi scan needs on this API level (#1263). Every level: fine location (scan results, SSID / BSSID of the connected
  * network and RTT ranging are location data to Android) and location services switched on. API 33+: NEARBY_WIFI_DEVICES as well.
+ * Read-only (#1274): the lib checks; asking and granting belong to the app's Permissions page (core perms contract).
  */
 object WifiPermissions {
     fun required(sdk: Int = Build.VERSION.SDK_INT): List<String> =
@@ -27,7 +28,4 @@ object WifiPermissions {
     }
 
     fun describe(perms: List<String>): String = perms.joinToString(", ") { it.substringAfterLast('.') }
-
-    /** The adb commands that grant the same, for the owner's shell. */
-    fun adbGrants(pkg: String, sdk: Int = Build.VERSION.SDK_INT): List<String> = required(sdk).map { "adb shell pm grant $pkg $it" }
 }

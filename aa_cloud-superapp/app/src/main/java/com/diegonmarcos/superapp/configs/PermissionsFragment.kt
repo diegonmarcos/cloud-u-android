@@ -90,6 +90,81 @@ class PermissionsFragment : KitComposeFragment() {
                 "That permission is required by Android to create a WiFi Direct group", Toast.LENGTH_LONG).show()
         }
 
+    // ── #1274 catalogue section: the ONE place that asks for permissions ──
+    /** Re-read key of the catalogue rows only: bumped on resume and after every grant, never tears the fragment down. */
+    private var centerEpoch by mutableIntStateOf(0)
+    private var highlight by mutableStateOf<com.diegonmarcos.superapp.core.perms.PermsLink.Request?>(null)
+    private var adbResults by mutableStateOf<List<AdbRunResult>>(emptyList())
+    private var adbRunning by mutableStateOf(false)
+    private var autoStarted = false
+
+    /** One system dialog per batch; the result moves to the next batch. The session set guarantees no loop. */
+    private val centerLauncher =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) {
+            centerEpoch++
+            if (autoChain) view?.post { if (isAdded) autoNext() }
+        }
+    private var autoChain = false
+
+    private fun autoNext() {
+        val act = activity ?: return
+        val cat = com.diegonmarcos.superapp.core.perms.Perms.catalogue(act)
+        val vars = com.diegonmarcos.superapp.core.perms.Perms.vars(act)
+        val batch = com.diegonmarcos.superapp.core.perms.AutoRequestPlanner.batches(cat,
+            { com.diegonmarcos.superapp.core.perms.PermStatusReader.status(act, it, act, vars) }, askedThisSession).firstOrNull()
+        if (batch.isNullOrEmpty()) { autoChain = false; centerEpoch++; return }
+        askBatch(batch)
+    }
+
+    private fun askBatch(batch: List<com.diegonmarcos.superapp.core.perms.PermEntry>) {
+        val perms = batch.map { it.permission }.filter { it.isNotEmpty() }.distinct()
+        if (perms.isEmpty()) return
+        askedThisSession.addAll(perms)
+        com.diegonmarcos.superapp.core.perms.PermAskLog.markAsked(requireContext(), perms)
+        runCatching { centerLauncher.launch(perms.toTypedArray()) }.onFailure { autoChain = false }
+    }
+
+    private fun startAuto(force: Boolean) {
+        if (force) askedThisSession.clear()
+        autoChain = true
+        autoNext()
+    }
+
+    private fun runAdbBlock(rows: List<PermRowState>) {
+        val plane = shellPlane() ?: return
+        val ctx = requireContext().applicationContext
+        val lines = adbLinesFor(ctx, rows)
+        adbRunning = true; adbResults = emptyList()
+        Thread {
+            val out = ArrayList<AdbRunResult>()
+            for (l in lines) {
+                val o = runCatching { plane.exec(ctx, l.command) }.getOrNull()
+                out += AdbRunResult(l, AdbResult.ok(o), o ?: "no answer from ${plane.name()}")
+                view?.post { adbResults = out.toList() }
+            }
+            view?.post { adbRunning = false; centerEpoch++ }
+        }.start()
+    }
+
+    @Composable
+    private fun CatalogueHead() {
+        val act = requireActivity()
+        val rows = remember(centerEpoch) { readPermRows(act, act) }
+        val plane = remember(centerEpoch) { shellPlane() }
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            if (!autoStarted) { autoStarted = true; startAuto(force = false) }
+        }
+        PermsCenterSection(
+            rows = rows, highlight = highlight, channelName = plane?.name(), adbResults = adbResults, adbRunning = adbRunning,
+            onClearHighlight = { highlight = null },
+            onAskRuntime = { askBatch(it) },
+            onAutoAgain = { startAuto(force = true) },
+            onRunAdb = { runAdbBlock(rows) },
+            onOpenAdbShell = { com.diegonmarcos.superapp.adbdebug.AdbShellLink.open(ctxAny()) },
+            ctx = act,
+        )
+    }
+
     /** Redraw key: bumping it re-reads every row (the old detach+attach, without tearing the fragment down). */
     private var epoch by mutableIntStateOf(0)
 
@@ -98,6 +173,8 @@ class PermissionsFragment : KitComposeFragment() {
     private fun ctxAny(): Context = requireContext()
 
     companion object {
+        /** Runtime permissions already handed to the dialog in this process: the auto-request never asks one twice per run. */
+        private val askedThisSession: MutableSet<String> = java.util.Collections.synchronizedSet(HashSet())
         fun newInstance() = PermissionsFragment()
         private val DARK_VIOLET = 0xFF4C1D95.toInt()
     }
@@ -128,6 +205,7 @@ class PermissionsFragment : KitComposeFragment() {
         val pages = remember { buildPageItems(ctxAny()) }
         val pagesMissing = pages.count { it.granted == false }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 10.dp, top = 8.dp, end = 10.dp, bottom = 16.dp)) {
+        CatalogueHead()
         Small("${perms.size - runtimeMissing.size + priv.size - privMissing.size} granted here · " +
             "${runtimeMissing.size + privMissing.size} missing here · $pagesMissing need a system page")
 
@@ -592,6 +670,10 @@ class PermissionsFragment : KitComposeFragment() {
     private var specialAtBuild: Map<com.diegonmarcos.superapp.system.SpecialPerms.Kind, Boolean>? = null
     override fun onResume() {
         super.onResume()
+        // #1274 live status: the catalogue rows re-read on every resume (back from a settings page). Only centerEpoch
+        // moves, so this cannot start the detach/attach loop described below.
+        com.diegonmarcos.superapp.core.perms.PermsLink.consume()?.let { highlight = it }
+        centerEpoch++
         val before = specialAtBuild ?: return
         if (com.diegonmarcos.superapp.system.SpecialPerms.snapshot(requireContext()) != before)
             view?.post { if (isAdded) rebuildFragment() }

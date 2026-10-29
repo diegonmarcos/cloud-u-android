@@ -109,6 +109,7 @@ open class ShellActivity : AppCompatActivity(),
     SearchOpener,
     com.diegonmarcos.superapp.apptabs.AppTabsHost,
     com.diegonmarcos.superapp.adbdebug.AdbShellHost,
+    com.diegonmarcos.superapp.core.perms.PermsHost,
     LauncherNavController.NavHost {
 
     /** Must match REAPPLY_SENTINEL in the stalwart sorter (crate/src/main.rs). */
@@ -2008,6 +2009,9 @@ open class ShellActivity : AppCompatActivity(),
 
     /** Every chip that opens the ADB Shell page (the embedded Store's bar, Permissions, Dev control) lands on Configs > ADB Shell, in the frame. */
     override fun openAdbShellInFrame(): Boolean { openSectionPage("config", "adb-shell"); return true }
+
+    /** #1274 every feature banner's "Open Permissions" lands on Configs > Setup > Perms (PermsLink carries the highlight). */
+    override fun openPermsPage(): Boolean { openSectionPage("config", "perms"); return true }
 
     // ── HomeDrawerFragment delegate (data-driven from Sections) ──────────
 

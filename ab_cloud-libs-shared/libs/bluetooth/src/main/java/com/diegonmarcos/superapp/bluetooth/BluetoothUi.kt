@@ -145,16 +145,26 @@ internal fun BtRow(content: @Composable () -> Unit) {
 internal fun PermissionGate(controller: BleController, s: BleState) {
     val ctx = LocalContext.current
     var missing by remember { mutableStateOf(BlePermissions.missing(ctx)) }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-        missing = BlePermissions.missing(ctx); controller.refreshAdapter()
-    }
     val enable = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { controller.refreshAdapter() }
+    // Re-read while something is missing: the grant happens on the Permissions page, not here.
     DisposableEffect(Unit) { missing = BlePermissions.missing(ctx); onDispose { } }
+    androidx.compose.runtime.LaunchedEffect(missing.isEmpty()) {
+        while (missing.isNotEmpty()) {
+            kotlinx.coroutines.delay(1500)
+            val now = BlePermissions.missing(ctx)
+            if (now != missing) { missing = now; controller.refreshAdapter() }
+        }
+    }
     if (missing.isNotEmpty()) {
-        BtCard(Modifier.testTag("bluetooth:permissions")) {
-            BtTitle("Bluetooth permission needed")
-            BtMuted(BlePermissions.describe(missing))
-            BtButton("Grant", primary = true) { ask.launch(missing.toTypedArray()) }
+        // #1274 the lib never asks: the banner opens the app's Permissions page on its entries.
+        val feature = if (android.os.Build.VERSION.SDK_INT >= 31) "bluetooth" else "bluetooth-legacy"
+        val need = remember(missing) { com.diegonmarcos.superapp.core.perms.PermsNeeds.missing(ctx, feature) }
+        BtCard(Modifier.testTag("bluetooth:perms-banner")) {
+            BtTitle("Permissions needed")
+            BtMuted(if (need.isNotEmpty()) com.diegonmarcos.superapp.core.perms.PermsNeeds.labels(need) else BlePermissions.describe(missing))
+            BtButton("Open Permissions", primary = true) {
+                com.diegonmarcos.superapp.core.perms.PermsLink.open(ctx, "Bluetooth", need.map { it.id }.ifEmpty { listOf("bt_scan", "bt_connect", "fine_location") })
+            }
         }
     } else if (!s.supported) {
         BtCard { BtTitle("No Bluetooth LE on this device"); BtMuted("Nothing can be scanned or connected.") }
@@ -415,7 +425,6 @@ internal fun preferredWrite(catalog: GattCatalog, writable: List<GattCharacteris
 @Composable
 private fun PermissionMatrix() {
     val ctx = LocalContext.current
-    val pkg = ctx.packageName
     BtCard {
         BtTitle("Permissions")
         BlePermissions.required().forEach { p ->
@@ -424,7 +433,7 @@ private fun PermissionMatrix() {
                 BtPill(if (ok) "granted" else "missing", if (ok) BtOk else BtBad); BtMuted(p.substringAfterLast('.'))
             }
         }
-        BtMuted("Grant over adb without dialogs:")
-        BlePermissions.required().forEach { BtMuted("adb shell pm grant $pkg $it", mono = true) }
+        BtMuted("Grant them (or all at once over adb) on the Permissions page.")
+        BtButton("Open Permissions") { com.diegonmarcos.superapp.core.perms.PermsLink.open(ctx, "Bluetooth", listOf("bt_scan", "bt_connect", "bt_advertise", "fine_location")) }
     }
 }
