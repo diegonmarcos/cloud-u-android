@@ -91,9 +91,13 @@ UNPACK_OLD=""
 UNPACK_ERR=""
 rootfs_lock() {
     mkdir -p "$LOCKDIR"
-    if command -v flock >/dev/null 2>&1; then
-        exec 9>"$LOCKDIR/unpack.lock"
-        flock 9 && return 0
+    # fd 9 holds the lock file open in THIS shell. The flock child gets a dup of it on fd 8
+    # (`8>&9`): Android's /system/bin/sh (mksh) opens `exec 9>` close-on-exec, so a bare
+    # `flock 9` ran with no fd 9 and failed "flock: 9: Bad file descriptor" on the CLOUD_EXEC
+    # path (Cloud Drive's clone, 2026-10-27). A dup shares the open file description, so the
+    # lock stays held by fd 9 after flock exits, in mksh, dash and bash alike.
+    if command -v flock >/dev/null 2>&1 && { exec 9>"$LOCKDIR/unpack.lock"; } 2>/dev/null; then
+        flock 8 8>&9 2>/dev/null && return 0
         exec 9>&-
     fi
     # No flock: mkdir is atomic; a lock whose owner is gone is taken over.
