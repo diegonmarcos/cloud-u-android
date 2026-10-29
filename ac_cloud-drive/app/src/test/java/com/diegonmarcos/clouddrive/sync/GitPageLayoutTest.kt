@@ -142,7 +142,7 @@ class GitPageLayoutTest {
         assertTrue("Clone is after the metadata table", window.indexOf("RepoMetaTable(") in 0 until window.indexOf("R.string.sync_clone_into_store"))
         assertTrue("Clone is in the actions section, the last one", actions in 0 until window.indexOf("R.string.sync_clone_into_store"))
         assertTrue(window.contains("RepoStatus.cloneAction(repo != null, cloning)") && window.contains("DriveTags.SYNC_GIT_STATUS_CLONE"))
-        assertTrue("the screen shows the window for the tapped row and passes the row's own clone", src.contains("RepoStatusWindow(") && src.contains("onClone = e.onClone, onCheckWorktree = { e.cloned?.let { coordinator.checkWorktree(it) } }, onClose = { statusFor = \"\" }"))
+        assertTrue("the screen shows the window for the tapped row and passes the row's own clone", src.contains("RepoStatusWindow(") && src.contains("onClone = e.onClone,") && src.contains("onCheckWorktree = { e.cloned?.let { coordinator.checkWorktree(it) } }, onClose = { statusFor = \"\" }"))
         assertFalse("no hardcoded dp in the window", Regex("\\d\\.dp").containsMatchIn(window))
     }
 }
