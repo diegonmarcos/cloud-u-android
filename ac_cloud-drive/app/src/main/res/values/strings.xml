@@ -222,6 +222,15 @@
     <string name="sync_clone_into_store">Clone into store</string>
     <string name="sync_history_section">Activity Logs</string>
     <string name="sync_history_empty">No activity yet</string>
+    <string name="activity_copy_all">Copy all</string>
+    <string name="activity_copy_filtered">Copy filtered</string>
+    <string name="activity_share">Share</string>
+    <string name="activity_copy_entry">Copy</string>
+    <string name="activity_copied">Copied</string>
+    <string name="activity_filter_all">All</string>
+    <string name="activity_filter_failed">Failed</string>
+    <string name="activity_filter_ok">OK</string>
+    <string name="activity_filter_query">Filter by repository or text</string>
     <string name="sync_trigger_manual">manual</string>
     <string name="sync_trigger_scheduled">scheduled</string>
     <string name="sync_settings_auto">Sync on a schedule</string>

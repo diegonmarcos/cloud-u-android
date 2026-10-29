@@ -128,10 +128,10 @@ internal fun UnlistedPanel(label: String, folders: List<UnlistedRepos.Folder>, g
 
 /** #1258 ACTIVITY LOGS (formerly History): the shared sync / operation history, newest first, its own full-screen view. */
 @Composable
-internal fun ActivityLogsWindow(events: List<SyncEvent>, fmt: DateFormat, onClose: () -> Unit, row: @Composable (SyncEvent) -> Unit) {
+internal fun ActivityLogsWindow(events: List<SyncEvent>, fmt: DateFormat, onClose: () -> Unit, @Suppress("UNUSED_PARAMETER") row: @Composable (SyncEvent) -> Unit) {
     FullWindow(stringResource(R.string.sync_history_section), DriveTags.SYNC_GIT_ACTIVITY_WINDOW, onClose) {
-        if (events.isEmpty()) Text(stringResource(R.string.sync_history_empty), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        LazyColumn(Modifier.fillMaxWidth()) { items(events.take(Declarations.sync.git.activityMax), key = { "${it.epochSeconds}-${it.repoId}-${it.summary.hashCode()}" }) { e -> row(e) } }
+        // Copy / Copy all / Copy filtered / Share, tap-to-expand and empty-entry filtering live in ActivityLog.kt; [row] stays for callers.
+        ActivityLogsView(events, fmt)
     }
 }
 

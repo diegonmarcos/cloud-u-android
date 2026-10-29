@@ -1,6 +1,8 @@
 package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
+import com.diegonmarcos.clouddrive.Declarations
+import com.diegonmarcos.clouddrive.SharedStore
 import com.diegonmarcos.cloudlib.gitsync.GitAuth
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
 import com.diegonmarcos.cloudlib.gitsync.GitOpResult
@@ -43,9 +45,21 @@ internal object RepoCompound {
         val who = JSONObject().put("name", name).put("email", email)
         return when {
             id == RepoActions.SYNC_NO_WINNER -> {
+                // Identity by origin URL + the registry's renamed_from chains (SyncNoWinner): an old-named clone is its current repository.
+                val origin = repo.remoteUrl.ifBlank { runCatching { LocalRepos.originOf(dir) }.getOrDefault("") }
+                val id = SyncNoWinner.identify(repo.name, origin, Declarations.repoSot::canonical)
+                if (id.renamed) {
+                    val other = SharedStore.repoDir(id.current)
+                    val held = other.absolutePath != dir.absolutePath && runCatching { (StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, other)) || GitEngine.isRepository(other) }.getOrDefault(false)
+                    SyncNoWinner.duplicateOf(id, repo.name, held)?.let { return GitOpResult(false, "sync-no-winner: $it", "origin: $origin\nclone: ${dir.absolutePath}\ncurrent clone: ${other.absolutePath}") }
+                }
                 val r = raw(ctx, dir, "merge_upstream", who, auth)
-                if (r.ok) GitOpResult(true, "sync-no-winner: fetched and merged", r.details)
-                else GitOpResult(false, "sync-no-winner: " + (if (r.details.contains("merge conflict")) "conflict, merge aborted, nothing changed" else "not merged"), r.details.ifBlank { r.summary })
+                if (r.ok) GitOpResult(true, "sync-no-winner: fetched and merged" + (if (id.renamed) " (renamed: now ${id.current})" else ""), r.details)
+                else {
+                    val st = runCatching { GitEngine(ctx, dir).use { it.status() } }.getOrNull()
+                    val why = SyncNoWinner.explain(r.details + "\n" + r.summary, st?.ahead ?: -1, st?.behind ?: -1, id, repo.name)
+                    GitOpResult(false, "sync-no-winner: $why", r.details.ifBlank { r.summary })
+                }
             }
             id == RepoActions.SYNC_REMOTE_WINS -> {
                 val dirty = GitEngine(ctx, dir).use { it.status().files.isNotEmpty() }
