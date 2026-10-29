@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.Parcel
 import android.os.ResultReceiver
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -40,22 +39,18 @@ class CrossProcessTest {
         assertSame(plain, CrossProcess.plainResultReceiver(plain))
     }
 
-    private fun wire(i: Intent): String {
-        val p = Parcel.obtain()
-        try {
-            i.writeToParcel(p, 0)
-            return String(p.marshall(), Charsets.UTF_16LE)
-        } finally {
-            p.recycle()
-        }
-    }
+    /** The class name a Parcelable extra writes to the wire is its runtime class (Parcel.writeParcelable writes
+     *  getClass().getName()). Robolectric cannot marshall a Binder-backed ResultReceiver (NotSerializableException),
+     *  so the test reads the extra's runtime class instead of the marshalled bytes. */
+    @Suppress("DEPRECATION")
+    private fun wireClass(i: Intent, key: String): String = (i.extras!!.get(key) as Any).javaClass.name
 
     /** What reaches the other process: the class names in the intent's bytes. None of ours may be there. */
     @Test fun theWireNamesNoAppClass() {
-        val raw = wire(Intent("x").putExtra("receiver", Mine()))
+        val raw = wireClass(Intent("x").putExtra("receiver", Mine()), "receiver")
         assertTrue("control: a raw subclass puts its own class name on the wire", raw.contains("CrossProcessTest"))
-        val safe = wire(CrossProcess.putPlainResultReceiver(Intent("x"), "receiver", Mine()))
+        val safe = wireClass(CrossProcess.putPlainResultReceiver(Intent("x"), "receiver", Mine()), "receiver")
         assertFalse("the plain receiver still names an app class", safe.contains("CrossProcessTest"))
-        assertTrue(safe.contains("android.os.ResultReceiver"))
+        assertEquals("android.os.ResultReceiver", safe)
     }
 }
