@@ -615,20 +615,29 @@ class Walk:
         sig0 = self.signature(nodes, top, bottom)
         x = self.w // 2
         y1, y2 = int(top + (bottom - top) * 0.8), int(top + (bottom - top) * 0.2)
-        # HIDDEN: drag up and keep the finger on the screen; everything must be gone while it is down
-        motion("DOWN", x, y1)
-        steps = 8
-        for i in range(1, steps + 1):
-            motion("MOVE", x, y1 + (y2 - y1) * i // steps)
-            time.sleep(0.05)
-        # the exit animation of the bars may need a moment on the 2-core emulator: poll for the bars to be gone
+        # HIDDEN: drag up and keep the finger on the screen; everything must be gone while it is down.
+        # A heavy embedded site (me/leafy, run 40822135662) can still be loading when the first drag lands and ignores it: the
+        # same assertion is kept, the hold is only repeated (up to 3 drags, finger lifted between them) until the page takes it
         held = []
-        for _ in range(6):
-            settle(0.8)
-            held = dump() or []
-            h0 = self.chrome(held)
-            if not (h0["row"] or find(held, ISLAND) is not None or h0["items"] or find(held, STRIP) is not None or h0["tabs"]):
+        for attempt in range(3):
+            motion("DOWN", x, y1)
+            steps = 8
+            for i in range(1, steps + 1):
+                motion("MOVE", x, y1 + (y2 - y1) * i // steps)
+                time.sleep(0.05)
+            # the exit animation of the bars may need a moment on the 2-core emulator: poll for the bars to be gone
+            gone = False
+            for _ in range(6):
+                settle(0.8)
+                held = dump() or []
+                h0 = self.chrome(held)
+                if not (h0["row"] or find(held, ISLAND) is not None or h0["items"] or find(held, STRIP) is not None or h0["tabs"]):
+                    gone = True
+                    break
+            if gone or attempt == 2:
                 break
+            motion("UP", x, y2)
+            settle(2.0)
         motion("UP", x, y2)
         settle(0.5)
         swipe(x, y1, y2)
