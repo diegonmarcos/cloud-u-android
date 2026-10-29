@@ -291,6 +291,10 @@ public object UiIcons {
         "ic_bluetooth" to Icons.Outlined.Bluetooth,
         "bluetooth_find" to Icons.Outlined.BluetoothSearching,
         "bluetooth_connected" to Icons.Outlined.BluetoothConnected,
+        // #1264 Cloud Calc > Measure: the WiFi, Bluetooth and NFC pages.
+        "wifi" to Icons.Outlined.Wifi,
+        "bluetooth" to Icons.Outlined.Bluetooth,
+        "nfc" to Icons.Outlined.Nfc,
         )
     }
 
