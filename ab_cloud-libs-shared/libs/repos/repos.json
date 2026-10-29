@@ -15,6 +15,12 @@
   },
   "repos": [
     {
+      "name": "CAD-Simulators",
+      "repo": "diegonmarcos/CAD-Simulators",
+      "private": false,
+      "doc": "CAD and simulators (renamed from DeepSc-Tools and made public 2026-10-28, #1261): first tool is CAD with MCP servers for agentic 3D modelling (FreeCAD, Blender, AutoCAD/DXF as pinned upstream submodules: Structural-Designer/OpenCAD (FreeCAD, AutoCAD) and Simulators (Blender); sailytics in Simulators; layout Structural-Designer + Simulators since #1279). #1255."
+    },
+    {
       "name": "CG-___",
       "repo": "diegonmarcos/CG-___",
       "private": false,
@@ -54,7 +60,7 @@
       "name": "DeepSc-X",
       "repo": "diegonmarcos/DeepSc-X",
       "private": false,
-      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; the matching front-labtools project c-Stk_DsX/sailytics moves here with the labtools split (#1218). #1224."
+      "doc": "Deep-ScX / saylitics: README and deployer wiring skeleton; #1224. The former front-labtools project c-Stk_DsX/sailytics moved to CAD-Simulators Simulators/sailytics (was tools/sailytics) 2026-10-28 (#1218, 457f89f)."
     },
     {
       "name": "DeepSc-___",
@@ -72,13 +78,13 @@
       "name": "Fin-CM-Blmbrg",
       "repo": "diegonmarcos/Fin-CM-Blmbrg",
       "private": false,
-      "doc": "Blmbrg (fin terminal, market watch, news): README and deployer wiring skeleton; the matching front-labtools projects b-Nxs_Blmmbrg/* move here with the labtools split (#1218). #1224."
+      "doc": "Blmbrg (FIN TERMINAL: CentralBank pointer, Fin-Terminal, GDELT-News, MarketWatch, DataScience-ML-Terminal under src/): README and deployer wiring skeleton; the former front-labtools projects b-Nxs_Blmmbrg/* moved here with history 2026-10-28 (#1218, 47950ae), laid out 2026-10-29 (#1279). #1224."
     },
     {
       "name": "Fin-CM-mqpm",
       "repo": "diegonmarcos/Fin-CM-mqpm",
       "private": false,
-      "doc": "MQPM / StochBates: README and deployer wiring skeleton, no content yet (#1224)."
+      "doc": "MQPM / StochBates: README and deployer wiring skeleton; src/central_bank moved here with history 2026-10-28 from labtools b-Nxs_PA (#1218, 92b18a0). #1224."
     },
     {
       "name": "Fin-Corporate",
@@ -108,7 +114,7 @@
       "name": "Projects-labtools",
       "repo": "diegonmarcos/Projects-labtools",
       "private": false,
-      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_CG-Zirkus, a-Lfy_C3, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX."
+      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Fin-CM-mqpm, Fin-CM-Blmbrg, CAD-Simulators (labtools 741bb8b, 2026-10-28)."
     },
     {
       "name": "cloud-me-___",
@@ -167,8 +173,8 @@
     {
       "name": "cloud-me-pvt-___",
       "repo": "diegonmarcos/cloud-me-pvt-___",
-      "private": true,
-      "doc": "Hub of the private cloud-me family (Cloud-Me-Pvt): its own repos.json subset plus committed symlinks to the private cloud-me repos. Private repo. Created 2026-10-28."
+      "private": false,
+      "doc": "Hub of the private cloud-me family (Cloud-Me-Pvt): its own repos.json subset plus committed symlinks to the private cloud-me repos. Public (owner rule: hubs are always public; holds only symlinks and submodule pointers). Created 2026-10-28."
     },
     {
       "name": "cloud-me-pvt-cgc",
@@ -180,19 +186,19 @@
       "name": "cloud-me-pvt-configs",
       "repo": "diegonmarcos/cloud-me-pvt-configs",
       "private": true,
-      "doc": "Private configs (cloud-me family). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it. (/home/user/cloud-vault is just a second clone of cloud-me-pvt-vault, not a separate repo.)"
+      "doc": "Deployable configs, no secrets. Twin of cloud-me-pvt-vault (same top-level folders: Containers, Apks, Terminal, Desktop-GUI, Linux-Server, Shared; #1253). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it."
     },
     {
       "name": "cloud-me-pvt-containers",
       "repo": "diegonmarcos/cloud-me-pvt-containers",
       "private": true,
-      "doc": "The owner's own (cloud-me) containers. Created 2026-10-21 (private)."
+      "doc": "Superseded 2026-10-28 (#1253): its sops files now live in cloud-me-pvt-vault Containers/ (subtree merge, history kept). Frozen source; to be archived as z-archived_cloud-me-pvt-containers once consumers are confirmed off it."
     },
     {
       "name": "cloud-me-pvt-data",
       "repo": "diegonmarcos/cloud-me-pvt-data",
       "private": true,
-      "doc": "Generated fleet config consumed by cloud's services."
+      "doc": "Data only (journal, logs, reports, profiles, health, Pages). Its secrets/, sso-oidc/ and vault-mtls/ moved to cloud-me-pvt-vault on 2026-10-28 (#1253)."
     },
     {
       "name": "cloud-me-pvt-my-ai",
