@@ -831,6 +831,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 }
                 unlisted.value = found
                 statusReader.request(found.map { GitStatusReader.Target(UnlistedRepos.statusKey(it.path), File(it.path)) }, force = true, level = level)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // A failed scan must never take the app down: keep the last cached list.
+                android.util.Log.w("GitSync", "unlisted scan failed", e)
             } finally { scanningUnlisted.value = false }
         }
     }

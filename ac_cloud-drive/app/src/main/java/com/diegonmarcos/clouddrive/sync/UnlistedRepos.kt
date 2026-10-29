@@ -16,7 +16,7 @@ object UnlistedRepos {
     /** The root templates with their {placeholders} expanded; a template whose placeholder has no value is dropped. */
     fun expandRoots(templates: List<String>, vars: Map<String, List<String>>): List<File> =
         templates.flatMap { t ->
-            val ph = Regex("""\{([a-z_]+)}""").find(t)?.groupValues?.get(1)
+            val ph = Regex("""\{([a-z_]+)\}""").find(t)?.groupValues?.get(1)
             if (ph == null) listOf(t) else vars[ph].orEmpty().map { v -> t.replace("{$ph}", v) }
         }.filter { it.isNotBlank() }.map { File(it) }.distinctBy { it.absolutePath }
 
