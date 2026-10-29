@@ -40,6 +40,8 @@ public final class SharedStoreMigration {
         if (marker.exists()) return;
         final File zip = archive(activity.getPackageName());
         final boolean storageReadable = Environment.getExternalStorageDirectory().canRead();
+        // Optional: no backup, nothing to offer. A fresh install provisions everything declaratively.
+        if (!zip.isFile()) { if (storageReadable) mark(marker); return; }
         String body = activity.getString(R.string.shared_store_migration_body)
             + (zip.isFile() ? activity.getString(R.string.shared_store_migration_restore, zip.getAbsolutePath())
                             : activity.getString(R.string.shared_store_migration_no_backup, zip.getAbsolutePath()));
