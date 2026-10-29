@@ -89,9 +89,11 @@ class PermsOnePlaceTest {
         val include = Regex("['\"]:libs:([\\w-]+)['\"]")
         root.walkTopDown().maxDepth(3).filter { it.name == "settings.gradle" || it.name == "settings.gradle.kts" }.forEach { sg ->
             val dir = sg.parentFile
-            val modules = File(dir, "build.json").takeIf { it.isFile }
+            val text = sg.readText()
+            // build.json modules count only where settings.gradle builds its graph from them (a hardcoded root ignores them).
+            val modules = File(dir, "build.json").takeIf { it.isFile && text.contains(".modules") }
                 ?.let { runCatching { JSONObject(it.readText()).optJSONObject("modules") }.getOrNull() }
-            val libsIn = include.findAll(sg.readText()).map { "libs:" + it.groupValues[1] }.toSet() +
+            val libsIn = include.findAll(text).map { "libs:" + it.groupValues[1] }.toSet() +
                 (modules?.keys()?.asSequence()?.toSet() ?: emptySet())
             val embeds = libsIn.filter { it in needsPerms }
             if (embeds.isEmpty()) return@forEach

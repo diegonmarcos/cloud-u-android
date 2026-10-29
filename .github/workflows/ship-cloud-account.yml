@@ -59,6 +59,7 @@ on:
       - "ab_cloud-libs-shared/libs/fleetconfig-model/**"
       - "ab_cloud-libs-shared/libs/mail/**"
       - "ab_cloud-libs-shared/libs/net/**"
+      - "ab_cloud-libs-shared/libs/perms/**"
       - "ab_cloud-libs-shared/libs/shared-store/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
@@ -67,7 +68,6 @@ on:
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ab_cloud-libs-shared/libs/updater/**"
-      - "ab_cloud-libs-shared/libs/perms/**"
       - "ac_cloud-account/**"
       - "!ac_cloud-account/web/**"
 permissions:
