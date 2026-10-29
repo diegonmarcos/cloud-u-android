@@ -45,7 +45,7 @@ cloud-u-android/
 │   │   ├── scripts/             # cloud-android-<system>-<tech>-<action>-*.sh
 │   │   ├── cicd/                # GHA workflow YAMLs (→ .github/workflows/)
 │   │   ├── actions/             # GHA composite actions (→ .github/actions/)
-│   │   ├── hooks/               # Git hooks (→ 0_git/dist/hooks, active via .gitconfig)
+│   │   ├── hooks/               # Git hooks (→ _dotfiles/git/dist/hooks, active via .gitconfig)
 │   │   └── modules/             # .gitmodules template
 │   └── dist/                    # GENERATED — never edited by hand
 │

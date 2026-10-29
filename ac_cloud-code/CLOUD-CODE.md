@@ -191,7 +191,7 @@ time by `tools/resolve-targets.py` into `targets.gen.json::chat`:
   per-request approval switch, so it is sent as an instruction (via=prompt); hidden for
   OpenRouter direct (no tools).
 - **MCP** — none for OpenClaw and the OpenRouter backends; the gateway's live `/v1/mcp/status` for Hermes and Goose, else the fleet's derived
-  `.mcp.json` names (`0_apps/src/root/mcp.json`); toggles saved per agent. The gateway has no
+  `.mcp.json` names (`_dotfiles/apps/src/root/mcp.json`); toggles saved per agent. The gateway has no
   per-request server switch yet, so the toggles are advisory there (the sheet says so).
 - **More** — `nav.json::chat.functions`, filtered by the gateway's live `/health.plugins`:
   gateway sessions (resume one), tool search, models, health; Headroom / RTK / Caveman /

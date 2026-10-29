@@ -164,8 +164,8 @@ noul on `obs_finops_*_costs_history`).
 
 | # | Hook | Use | Risk |
 |---|---|---|---|
-| D1 | Desktop Claude Code `cloud-infra-desktop/0_apps/src/claude/settings.json` has no `hooks` block | add the container's PermissionRequest + UserPromptSubmit registrations pointing at the nix `jev-gate` binary (settings.base.json in the HM flake) | gating-by-allow only, never deny |
-| D2 | git hooks `cloud-infra/0_git/src/hooks/{pre-commit,pre-push}` + `0_apps/src/githooks/{leak-scan,history-gate}` (same set in cloud-infra-desktop) | new commit-msg guard: noul "message describes the staged diff"; noul "diff looks like a secret the regexes missed" — after `redact`, never for vault paths | advisory (stderr warning); the static leak-scan stays the boundary |
+| D1 | Desktop Claude Code `cloud-infra-desktop/_dotfiles/apps/src/claude/settings.json` has no `hooks` block | add the container's PermissionRequest + UserPromptSubmit registrations pointing at the nix `jev-gate` binary (settings.base.json in the HM flake) | gating-by-allow only, never deny |
+| D2 | git hooks `cloud-infra/_dotfiles/git/src/hooks/{pre-commit,pre-push}` + `_dotfiles/apps/src/githooks/{leak-scan,history-gate}` (same set in cloud-infra-desktop) | new commit-msg guard: noul "message describes the staged diff"; noul "diff looks like a secret the regexes missed" — after `redact`, never for vault paths | advisory (stderr warning); the static leak-scan stays the boundary |
 | D3 | post-merge / post-checkout | skip | — |
 | D4 | goose / hermes desktop configs, zsh hooks, termux boot and keep-alive, session-sync / rollover | the gate's `client_configs` already reads `~/.config/goose/config.yaml` and `~/.hermes/config.yaml`; install the plugin into `~/.agents/plugins` and hermes' plugins dir from the package | unverified: `ba_flakes_desktop` (the HM flake) is not in this clone |
 

@@ -95,16 +95,11 @@
    "kind": "repo-meta",
    "what": "editor settings"
   },
-  "0_apps": {
+  "_dotfiles": {
    "licence": "LicenseRef-NoLicenseGranted",
    "kind": "own",
-   "what": "app index / launch scripts",
+   "what": "repo dotfile declarations (_dotfiles convention, #1290): apps/ = app index / launch scripts and editor/agent configs, git/ = git config (gitignore, attributes, hooks)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
-  },
-  "0_git": {
-   "licence": "LicenseRef-NoLicenseGranted",
-   "kind": "repo-meta",
-   "what": "git config (gitignore, attributes)"
   },
   "0_hub": {
    "licence": "LicenseRef-NoLicenseGranted",

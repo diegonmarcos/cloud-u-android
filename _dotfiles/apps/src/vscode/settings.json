@@ -1,5 +1,5 @@
 {
-  "// doc": "Repo-scoped VS Code settings, deployed from 0_apps/src/vscode. Machine/user preferences (theme, font, keybindings) do NOT belong here — only things that should hold for anyone opening this repo.",
+  "// doc": "Repo-scoped VS Code settings, deployed from _dotfiles/apps/src/vscode. Machine/user preferences (theme, font, keybindings) do NOT belong here — only things that should hold for anyone opening this repo.",
 
   "// generated-dirs": "dist/ and .github/workflows/ are build OUTPUT (see 9_others and 9_others). Hiding them from search stops every grep returning the source and its 3 generated copies; they stay visible in the explorer so they can still be opened.",
   "search.exclude": {

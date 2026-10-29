@@ -151,7 +151,7 @@ only name Android extracts, and git will look for the literal string `git-remote
 Everything else git needs it already has.
 
 Two non-git names appeared in the SSH-remote push trace and are worth recording because they are *repo* config,
-not git's transport: this repo's `0_git/dist/hooks/pre-push` pulls in `bash`, `coreutils/basename`, `gnused/sed`,
+not git's transport: this repo's `_dotfiles/git/dist/hooks/pre-push` pulls in `bash`, `coreutils/basename`, `gnused/sed`,
 `gettext`, `envsubst`, `uname` via `git-submodule` (a shell script, one of the non-symlink files in exec-path).
 Those are avoidable (`core.hooksPath=/dev/null` removed them all); the transport helper is not.
 
@@ -807,7 +807,7 @@ only honest (a)-class candidates, worth **1,094,405 compressed bytes** — 0.28%
 ## 4. Table 3 — the GNU-vs-toybox risk, per call site
 
 A tool whose GNU behaviour something depends on is not a free win at any size. Scanned `ab_cloud-terminal-store/`,
-`ac_cloud-nix-on-droid/`, `ac_cloud-termux/rootfs/` and the `0_git/` hooks — 30 script files.
+`ac_cloud-nix-on-droid/`, `ac_cloud-termux/rootfs/` and the `_dotfiles/git/` hooks — 30 script files.
 
 ```
 $ grep -rn 'sed -i\|sed --in-place' $D            # GNU in-place edit
@@ -853,7 +853,7 @@ $ printf '10\n2\n33\n4\n' | env -i /system/bin/toybox sort -n | tr '\n' ' '   ->
 $ printf '10\n2\n33\n4\n' | sort -n | tr '\n' ' '                            ->  2 4 10 33
 ```
 
-Byte-identical, including the BRE interval `\{0,1\}`. The `0_git/` hooks use `sort -u`, `sed 's/^/  /'` and
+Byte-identical, including the BRE interval `\{0,1\}`. The `_dotfiles/git/` hooks use `sort -u`, `sed 's/^/  /'` and
 `grep -E` only — all POSIX — and they run on a developer machine, not the phone.
 
 **Verdict for Table 3: zero GNU-only dependants on the phone side.** The (a)-class candidates are safe. They are

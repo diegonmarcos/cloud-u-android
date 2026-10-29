@@ -9,7 +9,7 @@ a second machine, anyone else's checkout — has no user config at all and would
 otherwise have no agents.
 
 Those copies are **generated, not hand-mirrored**. cloud-infra's
-`9_others/src/deploy-dotfiles.sh` refreshes `0_apps/src/claude/` from this
+`9_others/src/deploy-dotfiles.sh` refreshes `_dotfiles/apps/src/claude/` from this
 directory before deploying, so this is the only place to edit. The instruction
 it replaced — "edit there, then re-copy here" — is exactly what let this
 README drift between the two copies.

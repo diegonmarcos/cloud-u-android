@@ -2,7 +2,7 @@
 # ║                                                                  ║
 # ║   GENERATED FILE — DO NOT EDIT                                   ║
 # ║                                                                  ║
-# ║   Source : 0_apps/src/root/gitleaks.toml
+# ║   Source : _dotfiles/apps/src/root/gitleaks.toml
 # ║   Engine : 9_others/src/deploy-dotfiles.sh
 # ║   Rebuild: ./9_others/build.sh
 # ║                                                                  ║
@@ -12,7 +12,7 @@
 
 # Leak-scan rules — ONE declaration for every public repo of the fleet.
 #
-# Source : cloud-infra/0_apps/src/root/gitleaks.toml
+# Source : cloud-infra/_dotfiles/apps/src/root/gitleaks.toml
 # Emitted: 9_others/build.sh fleet → <repo>/.gitleaks.toml (public repos only,
 #          manifest.json:public_root_targets). Edit here, never in a repo copy.
 #

@@ -5,7 +5,7 @@
 
 # ── Secrets & Credentials (reinforces global gitignore) ──
 # KEEP IN SYNC WITH:
-#   Pre-commit hook: 0_git/src/hooks/pre-commit  (blocks even git add -f)
+#   Pre-commit hook: _dotfiles/git/src/hooks/pre-commit  (blocks even git add -f)
 #   Global gitignore: ~/git/cloud-infra-desktop/ba_flakes_desktop/src/modules/programs/git.nix
 #   Global gitignore: ~/git/cloud-infra-desktop/bb_flakes_termux/src/modules/programs/git.nix
 ## Decrypted secrets output

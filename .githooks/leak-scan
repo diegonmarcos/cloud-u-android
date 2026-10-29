@@ -1,6 +1,6 @@
 #!/bin/sh
 # leak-scan — the ONE local scanner behind the pre-commit hook and the
-# build-time dist/ gate. Emitted fleet-wide from cloud-infra/0_apps/src/githooks/
+# build-time dist/ gate. Emitted fleet-wide from cloud-infra/_dotfiles/apps/src/githooks/
 # (public repos only); edit there, never in a repo copy.
 #
 #   leak-scan --staged          lines ADDED in the index      (pre-commit)

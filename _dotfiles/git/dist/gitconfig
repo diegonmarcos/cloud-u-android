@@ -1,5 +1,5 @@
 [core]
-	hooksPath = 0_git/dist/hooks
+	hooksPath = _dotfiles/git/dist/hooks
 [pull]
 	rebase = true
 [submodule]

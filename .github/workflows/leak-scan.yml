@@ -2,7 +2,7 @@
 # ║                                                                  ║
 # ║   GENERATED FILE — DO NOT EDIT                                   ║
 # ║                                                                  ║
-# ║   Source : 0_apps/src/github/workflows/leak-scan.yml
+# ║   Source : _dotfiles/apps/src/github/workflows/leak-scan.yml
 # ║   Engine : 9_others/src/deploy-dotfiles.sh
 # ║   Rebuild: ./9_others/build.sh
 # ║                                                                  ║
@@ -13,8 +13,8 @@
 # Leak scan — every push to a public repo is checked for secrets; a hit turns
 # the run RED.
 #
-# Source : cloud-infra/0_apps/src/github/workflows/leak-scan.yml
-# Emitted: 9_others/build.sh fleet → every PUBLIC repo in 0_apps/src/manifest.json
+# Source : cloud-infra/_dotfiles/apps/src/github/workflows/leak-scan.yml
+# Emitted: 9_others/build.sh fleet → every PUBLIC repo in _dotfiles/apps/src/manifest.json
 #          (public_targets). Edit there, never in a repo copy.
 # Rules  : .gitleaks.toml in the same repo, emitted from the same declaration.
 #

@@ -85,7 +85,7 @@ cloud-android-<system>-<technology>-<action>-<tool>.sh
 
 ## Hooks (`src/hooks/`)
 
-Deployed to `0_git/dist/hooks/`, active via `.gitconfig` `core.hooksPath`.
+Deployed to `_dotfiles/git/dist/hooks/`, active via `.gitconfig` `core.hooksPath`.
 
 | Hook | Purpose |
 |------|---------|

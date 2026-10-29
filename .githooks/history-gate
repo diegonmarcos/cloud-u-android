@@ -1,6 +1,6 @@
 #!/bin/sh
 # history-gate — refuse any history that a secret purge removed. Emitted
-# fleet-wide from cloud-infra/0_apps/src/githooks/ (public repos only); edit
+# fleet-wide from cloud-infra/_dotfiles/apps/src/githooks/ (public repos only); edit
 # there, never in a repo copy.
 #
 #   history-gate <rev>...      exit 1 if any <rev> contains a purged commit

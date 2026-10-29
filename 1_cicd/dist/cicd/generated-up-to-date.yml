@@ -230,7 +230,7 @@ jobs:
           # Restore BEFORE asserting, so a failed assertion cannot leave the
           # working tree dirty for anything that runs after it.
           git checkout -- .
-          git clean -fd 1_cicd 0_apps 0_git > /dev/null
+          git clean -fd 1_cicd _dotfiles/apps _dotfiles/git > /dev/null
 
           case "$drift" in
             *".github/workflows/health.yml"*) ;;

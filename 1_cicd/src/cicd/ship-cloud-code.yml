@@ -41,8 +41,8 @@ on:
       # dirs, shared data manifests and this workflow file. A STATIC lib this
       # app compiles is watched above: any change in it ships every consumer.
       # fleet-refresh.yml (schedule only) ships the app for a moved cross-app dir.
-      #   input: "0_apps/src/root/mcp.json"
       #   input: "1_cicd/src/cicd/ship-cloud-code.yml"
+      #   input: "_dotfiles/apps/src/root/mcp.json"
       #   input: "ac_cloud-account/app/src/main/AndroidManifest.xml"
       #   input: "ac_cloud-account/build.json"
       #   input: "ac_cloud-c3/data/services_private.json"

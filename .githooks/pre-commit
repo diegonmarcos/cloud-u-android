@@ -4,7 +4,7 @@
 # ║                                                                  ║
 # ║   GENERATED FILE — DO NOT EDIT                                   ║
 # ║                                                                  ║
-# ║   Source : 0_apps/src/githooks/pre-commit
+# ║   Source : _dotfiles/apps/src/githooks/pre-commit
 # ║   Engine : 9_others/src/deploy-dotfiles.sh
 # ║   Rebuild: ./9_others/build.sh
 # ║                                                                  ║
@@ -13,7 +13,7 @@
 # ╚══════════════════════════════════════════════════════════════════╝
 
 # pre-commit — refuse a commit that adds a secret-shaped value.
-# Emitted fleet-wide from cloud-infra/0_apps/src/githooks/ (public repos only).
+# Emitted fleet-wide from cloud-infra/_dotfiles/apps/src/githooks/ (public repos only).
 # Active when core.hooksPath=.githooks (`9_others/build.sh fleet` wires it where
-# unset); repos with their own 0_git hooks chain to this file from there.
+# unset); repos with their own _dotfiles/git hooks chain to this file from there.
 exec sh "$(git rev-parse --show-toplevel)/.githooks/leak-scan" --staged
