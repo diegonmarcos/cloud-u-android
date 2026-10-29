@@ -761,7 +761,7 @@
     }
   ],
   "_unregistered_doc": "GitHub repos (by GitHub name) that exist but deliberately have no entry. cloud-infra's repos-sot tester fails when the fetched GitHub inventory holds a repo that is neither registered above nor listed here, and when a pending_creation repo already shows up in the inventory (flip its status).",
-  "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know.",
+  "_consumers_doc": "Every symlink farmer / list reader of this account and where it takes its list from. THIS FILE is the only editable source; each consumer holds either a byte copy (fleet_files, refreshed by `./clone.sh --sync`) or a subset it must keep consistent with this file (`node repos-sot.js check-subset <file>`). A consumer's own drift guard fails when its copy differs from this file or names a repo this file does not know. `copies` (optional, per consumer) declares every file the consumer holds that is rendered here, so all of them live in this one place: {from, to[], pin?} is a byte copy of a rendered file (pin = {file, path}: a JSON field in the consumer that pins the copy by sha256, rewritten in place), {run, check, writes[]} is a consumer-side derive command run from the clone root after the copies (an argument starting with @ is a rendered file here, by absolute path). `node gen-registry.js` runs `node sync-consumers.js` after rendering: it writes the copies into every consumer clone found next to this repo (by registry name, GitHub name or a former name) and prints `consumer not refreshed` for a consumer with no clone (never a failure); committing in the consumer stays a separate, explicit step. `node sync-consumers.js --check` exits 1 when a present clone holds a stale copy.",
   "consumers": [
     {
       "repo": "lecole-42-___",
@@ -837,9 +837,59 @@
     },
     {
       "repo": "cloudy-u-android",
-      "what": "libs:repos mirror list, cloud-drive Sync > Git list, cloud-drive seed/clone targets",
-      "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies)",
-      "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt"
+      "what": "libs:repos mirror list + v3 outline, cloud-drive Sync > Git list, cloud-drive seed/clone targets, Cloud Me Lnktree > Proj repo tree",
+      "reads": "ac_cloud-drive/data/repos.sot.json + ab_cloud-libs-shared/libs/repos/repos.sot.json (byte copies of repos.json, pinned by ac_cloud-drive/build.json storage.repos_source.sha256), ab_cloud-libs-shared/libs/repos/repos-github.sot.json (byte copy of repos-github.json) and the outline derived from it: libs/repos/repos.outline.json + ac_cloud-me/data/repos/repos.outline.json",
+      "guard": "ac_cloud-drive/test/test-drive-repos-sot.sh + RepoSotTest.kt + drive-repos-sot-pin-guard.yml; libs/repos/sync.sh --check-outline + RepoTreeTest.kt",
+      "copies": [
+        {
+          "from": "repos.json",
+          "to": [
+            "ac_cloud-drive/data/repos.sot.json",
+            "ab_cloud-libs-shared/libs/repos/repos.sot.json"
+          ],
+          "pin": {
+            "file": "ac_cloud-drive/build.json",
+            "path": "storage.repos_source.sha256"
+          }
+        },
+        {
+          "from": "repos-github.json",
+          "to": [
+            "ab_cloud-libs-shared/libs/repos/repos-github.sot.json"
+          ]
+        },
+        {
+          "run": [
+            "node",
+            "ac_cloud-drive/tools/gen-drive-git-repos.js"
+          ],
+          "check": [
+            "node",
+            "ac_cloud-drive/tools/gen-drive-git-repos.js",
+            "--check"
+          ],
+          "writes": [
+            "ac_cloud-drive/data/drive-git-repos.json"
+          ]
+        },
+        {
+          "run": [
+            "bash",
+            "ab_cloud-libs-shared/libs/repos/sync.sh",
+            "--refresh-outline",
+            "@repos-github.json"
+          ],
+          "check": [
+            "bash",
+            "ab_cloud-libs-shared/libs/repos/sync.sh",
+            "--check-outline"
+          ],
+          "writes": [
+            "ab_cloud-libs-shared/libs/repos/repos.outline.json",
+            "ac_cloud-me/data/repos/repos.outline.json"
+          ]
+        }
+      ]
     },
     {
       "repo": "cloudy-u-desktop",

@@ -537,8 +537,8 @@
     {
      "code": "3.1",
      "kind": "project",
-     "name": "CM-MQPM",
-     "label": "CM-MQPM",
+     "name": "Macro-Central-Bank",
+     "label": "Macro-Central-Bank",
      "icon": "📈",
      "description": "Capital markets: MQPM, StochBates and quant projects.",
      "children": [
@@ -565,26 +565,26 @@
     {
      "code": "3.2",
      "kind": "project",
-     "name": "CM-Blmbrg",
-     "label": "CM-Blmbrg",
-     "icon": "📰",
-     "description": "Capital markets: Blmbrg terminal, market watch and news.",
+     "name": "Micro-Asset-Management",
+     "label": "Micro-Asset-Management",
+     "icon": "🏢",
+     "description": "Corporate finance (WACC). Fin-Corporate holds only a README so far: no WACC material inside it yet.",
      "children": [
       {
        "code": "3.2.1",
        "kind": "family",
-       "name": "Terminal",
-       "label": "Terminal",
+       "name": "Corporate",
+       "label": "Corporate",
        "icon": "",
        "description": "",
        "repos": [
         {
          "code": "3.2.1.1",
-         "name": "Fin-CM-Blmbrg",
-         "registry_name": "Fin-CM-Blmbrg",
-         "url": "https://github.com/diegonmarcos/Fin-CM-Blmbrg",
+         "name": "Fin-Corporate",
+         "registry_name": "Fin-Corporate",
+         "url": "https://github.com/diegonmarcos/Fin-Corporate",
          "private": false,
-         "description": "Blmbrg — fin-term, market watch and news"
+         "description": "Fin: Corporate finance"
         }
        ]
       }
@@ -593,26 +593,26 @@
     {
      "code": "3.3",
      "kind": "project",
-     "name": "CORP-Wacc",
-     "label": "CORP-Wacc",
-     "icon": "🏢",
-     "description": "Corporate finance (WACC). Fin-Corporate holds only a README so far: no WACC material inside it yet.",
+     "name": "Stack-Fin-Terminal",
+     "label": "Stack-Fin-Terminal",
+     "icon": "📰",
+     "description": "Capital markets: Blmbrg terminal, market watch and news.",
      "children": [
       {
        "code": "3.3.1",
        "kind": "family",
-       "name": "Corporate",
-       "label": "Corporate",
+       "name": "Terminal",
+       "label": "Terminal",
        "icon": "",
        "description": "",
        "repos": [
         {
          "code": "3.3.1.1",
-         "name": "Fin-Corporate",
-         "registry_name": "Fin-Corporate",
-         "url": "https://github.com/diegonmarcos/Fin-Corporate",
+         "name": "Fin-CM-Blmbrg",
+         "registry_name": "Fin-CM-Blmbrg",
+         "url": "https://github.com/diegonmarcos/Fin-CM-Blmbrg",
          "private": false,
-         "description": "Fin: Corporate finance"
+         "description": "Blmbrg — fin-term, market watch and news"
         }
        ]
       }
@@ -639,8 +639,8 @@
     {
      "code": "4.2",
      "kind": "project",
-     "name": "DeepSc-X",
-     "label": "DeepSc-X",
+     "name": "DeepXTech",
+     "label": "DeepXTech",
      "icon": "🧬",
      "description": "Deep science projects.",
      "children": [
@@ -667,8 +667,8 @@
     {
      "code": "4.3",
      "kind": "project",
-     "name": "CAD-Simulators",
-     "label": "CAD-Simulators",
+     "name": "Stack-CAD-Simulators",
+     "label": "Stack-CAD-Simulators",
      "icon": "📐",
      "description": "Agentic CAD (MCP) and simulators.",
      "children": [
