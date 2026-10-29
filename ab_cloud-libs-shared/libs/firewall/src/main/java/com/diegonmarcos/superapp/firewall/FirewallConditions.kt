@@ -8,7 +8,6 @@ import android.os.Process
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.PowerManager
-import android.provider.Settings
 
 /**
  * Reads the live conditions the rules are keyed on — all no-root:
@@ -75,6 +74,6 @@ object FirewallConditions {
         return foregroundPkg(ctx) != pkg
     }
 
-    /** Intent action to send the user to the usage-access grant screen. */
-    const val USAGE_ACCESS_SETTINGS = Settings.ACTION_USAGE_ACCESS_SETTINGS
+    /** #1274 the catalogue feature (perms-catalogue.json) whose entries this lib needs; the host's Permissions page asks. */
+    const val PERMS_FEATURE = "firewall"
 }

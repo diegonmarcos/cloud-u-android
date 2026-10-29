@@ -65,8 +65,8 @@ check() {
 
   # 2. no-permission state
   printf '%s' "$ph" | has 'if (StoreSizes.needsGrantRow(sizeGranted))' && ok "Phone draws the grant row by StoreSizes.needsGrantRow" || bad "Phone's grant row is not gated by StoreSizes.needsGrantRow"
-  printf '%s' "$ph" | has 'StoreSizeProbe.grantIntents(ctx)' && ok "the grant row opens the usage-access screen" || bad "the grant row does not open StoreSizeProbe.grantIntents"
-  printf '%s' "$pr" | has 'PermsGrant.settingsAction(PERMISSION)' && ok "usage access opens through Android Perms' own PermsGrant.settingsAction" || bad "the probe has its own settings action, not PermsGrant's"
+  printf '%s' "$ph" | has 'StoreSizeProbe.openPermissions(ctx)' && ok "the grant row opens the Permissions page (#1274)" || bad "the grant row does not open StoreSizeProbe.openPermissions"
+  printf '%s' "$pr" | has 'PermsLink.open(ctx, PERMS_FEATURE, listOf("usage_access"))' && ok "usage access opens through libs:perms PermsLink on the catalogue entry" || bad "the probe opens a settings page of its own"
   printf '%s' "$pr" | has 'const val PERMISSION = "android.permission.PACKAGE_USAGE_STATS"' && ok "the probe's permission is PACKAGE_USAGE_STATS" || bad "the probe names another permission"
   printf '%s' "$pr" | has 'queryStatsForPackage' && ok "full sizes come from StorageStatsManager.queryStatsForPackage" || bad "no queryStatsForPackage"
   printf '%s' "$pr" | has 'ai.sourceDir' && printf '%s' "$pr" | has 'splitSourceDirs' && printf '%s' "$pr" | has 'StoreSizes.Size.apkOnly' && printf '%s' "$pr" | has '?: apk(ctx, pkg)' \

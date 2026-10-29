@@ -21,9 +21,10 @@ import java.util.WeakHashMap
  *
  * Web Serial, WebUSB and Web NFC (#1225) are the siblings of this file: WebHardware.kt, with the same shape (bridge, contract, core, Compose chooser, grants).
  *
- * [requestPermissions] asks Android for the Bluetooth permissions in the host's UI (the fragment's launcher).
+ * [needsPermissions] is told which Bluetooth permissions the app lacks: the host shows the "Permissions needed" banner that opens
+ * the Permissions page (#1274); this class never asks Android itself.
  */
-class WebBluetooth(private val ctx: Context, private val requestPermissions: (Array<String>, (Boolean) -> Unit) -> Unit) {
+class WebBluetooth(private val ctx: Context, private val needsPermissions: (Array<String>, (Boolean) -> Unit) -> Unit) {
     private val main = Handler(Looper.getMainLooper())
     private val cores = WeakHashMap<WebView, WebBluetoothCore>()
     private val prefsGrants by lazy { WebBleGrants(PrefsKv(ctx.getSharedPreferences("web_bluetooth_grants", Context.MODE_PRIVATE))) }
@@ -31,7 +32,7 @@ class WebBluetooth(private val ctx: Context, private val requestPermissions: (Ar
 
     private val permissions = object : WebBlePermissions {
         override fun missing(): List<String> = BlePermissions.missing(ctx)
-        override fun request(perms: List<String>, done: (Boolean) -> Unit) { main.post { requestPermissions(perms.toTypedArray(), done) } }
+        override fun request(perms: List<String>, done: (Boolean) -> Unit) { main.post { needsPermissions(perms.toTypedArray(), done) } }
     }
 
     /** Call once per WebView, before it loads anything. A private tab's grants live in memory and end with the tab. */

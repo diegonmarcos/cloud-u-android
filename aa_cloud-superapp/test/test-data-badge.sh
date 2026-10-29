@@ -84,7 +84,7 @@ import sys
 s, m = open(sys.argv[1]).read(), open(sys.argv[2]).read()
 if 'hasUsageAccess' not in s:                   print('never checks the grant')
 elif 'Usage access needed' not in m:            print('the badge does not say the grant is missing')
-elif 'USAGE_ACCESS_SETTINGS' not in s or 'Grant access' not in m: print('no grant button')
+elif 'PermsActivity.intent(this, DataUsageProvider.PERMS_FEATURE, listOf("usage_access"))' not in s or 'Grant access' not in m: print('no grant button (the Permissions page, #1274)')
 else:                                           print('OK')
 PY
 )" "missing grant -> titled, explained, with a Grant access button"

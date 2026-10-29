@@ -6,7 +6,6 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -226,12 +225,6 @@ class MapsMapFragment : KitComposeFragment() {
     // Persisted so it survives style switches / process death. Applied lazily
     // — the pref read needs a Context, unavailable until onCreateView.
     private var manual3d by mutableStateOf(false)
-
-    private val locPermLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) fetchAndCenter()
-            else toast("Location permission denied")
-        }
 
     override fun palette(): KitPalette = MapsInk.palette()
 
@@ -582,7 +575,11 @@ class MapsMapFragment : KitComposeFragment() {
         val ctx = context ?: return
         val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
-        if (granted) fetchAndCenter() else locPermLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (granted) fetchAndCenter() else {
+            // #1274 the host's Permissions page asks for location; this lib never does.
+            toast("Permissions needed: Precise location")
+            context?.let { MapsPermissions.openPermissions(it, listOf(Manifest.permission.ACCESS_FINE_LOCATION)) }
+        }
     }
 
     // ── style switching ──────────────────────────────────────────────

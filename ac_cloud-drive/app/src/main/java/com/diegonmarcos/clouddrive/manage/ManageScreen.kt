@@ -124,7 +124,7 @@ fun AppsPage(prefs: DrivePrefs, collect: (android.content.Context) -> AppSnapsho
         if (!s.usageAccess) {
             Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap).testTag(DriveTags.APPS_USAGE_GRANT), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.manage_apps_usage_missing), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                Pill(stringResource(R.string.disk_grant_usage), { AppSizes.grantIntents(ctx).firstOrNull { runCatching { ctx.startActivity(it) }.isSuccess } }, filled = true)
+                Pill(stringResource(R.string.disk_grant_usage), { AppSizes.openPermissions(ctx) }, filled = true)
             }
         }
         if (s.shell == null) {

@@ -305,7 +305,7 @@ class SetupRunbook(private val ctx: Context) {
     /** `pm grant <self> WRITE_SECURE_SETTINGS` over the live channel, so adb_wifi_enabled survives a reboot. */
     private fun selfGrant(ch: ShellChannel) {
         if (HostShell.canWriteSecureSettings(ctx)) return
-        runCatching { ch.exec(ctx, "pm grant ${ctx.packageName} android.permission.WRITE_SECURE_SETTINGS 2>&1") }
+        runCatching { ch.exec(ctx, com.diegonmarcos.superapp.perms.PermsShell.grant(ctx.packageName, "android.permission.WRITE_SECURE_SETTINGS") + " 2>&1") }
         HostShell.keepWirelessDebuggingOn(ctx)
     }
 

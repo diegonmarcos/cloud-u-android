@@ -23,7 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
-import com.diegonmarcos.superapp.appstore.PermsGrant
+import com.diegonmarcos.superapp.perms.PermsGrant
 import com.diegonmarcos.superapp.appstore.PermsGrantDevice
 import com.diegonmarcos.superapp.appstore.StoreBar
 import kotlin.concurrent.thread

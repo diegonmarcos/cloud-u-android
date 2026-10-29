@@ -76,6 +76,7 @@ on:
       - "ab_cloud-libs-shared/libs/ui-kit/**"
       - "ab_cloud-libs-shared/libs/ui-nav-bars/**"
       - "ab_cloud-libs-shared/libs/updater/**"
+      - "ab_cloud-libs-shared/libs/perms/**"   # #1274 the Permissions page this app hosts
       - "ac_cloud-nav/**"
       - "!ac_cloud-nav/web/**"
 permissions:

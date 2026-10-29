@@ -230,10 +230,23 @@ class BrowserHostFragment : Fragment() {
 
     private val roleRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { }
 
-    /** #802 a site was allowed a permission the APP does not hold yet: Android asks first. */
-    private var permDone: ((Boolean) -> Unit)? = null
-    private val permRequest = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
-        permDone?.invoke(r.values.all { it }); permDone = null
+    /**
+     * #802 / #1274 a site was allowed a permission the APP does not hold yet. The Permissions page is the one place that
+     * asks (libs:perms): the site is refused this time and a "Permissions needed" panel opens that page on the entries;
+     * the next request after the grant goes through.
+     */
+    private fun permsNeeded(androidPerms: Collection<String>) {
+        if (!isAdded || androidPerms.isEmpty()) return
+        val ctx = requireContext()
+        val ids = com.diegonmarcos.superapp.perms.PermsNeeds.idsFor(ctx, androidPerms)
+        val entries = ids.mapNotNull { com.diegonmarcos.superapp.perms.Perms.catalogue(ctx).byId(it) }
+        overlay { close ->
+            BrowserTextPanel(com.diegonmarcos.superapp.perms.PermsBanner.title(entries),
+                "Cloud Browser needs this before a site can use it.",
+                listOf(SheetRow("perms", com.diegonmarcos.superapp.perms.PermsBanner.BUTTON)),
+                onPick = { close(); com.diegonmarcos.superapp.perms.PermsLink.open(ctx, PERMS_FEATURE, ids) },
+                onClose = { close() })
+        }
     }
 
     /** #802 Profile ▸ Import file: a CSV / Firefox / Bitwarden / own-JSON export, merged into the profile. */
@@ -637,7 +650,7 @@ class BrowserHostFragment : Fragment() {
      * a native device chooser and per-origin permission memory (WebBluetooth.kt). Android's own Bluetooth permission is asked here.
      */
     private val webBluetooth by lazy {
-        WebBluetooth(requireContext()) { perms, done -> permDone = done; permRequest.launch(perms) }
+        WebBluetooth(requireContext()) { perms, done -> done(false); permsNeeded(perms.toList()) }
     }
 
     /** #1225 Web Serial, WebUSB and Web NFC: the same shape as Web Bluetooth (WebHardware.kt); Android asks its own USB permission, NFC uses reader mode on this activity. */
@@ -1359,8 +1372,7 @@ class BrowserHostFragment : Fragment() {
         val perm = android.Manifest.permission.POST_NOTIFICATIONS
         if (androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), perm) == android.content.pm.PackageManager.PERMISSION_GRANTED) return
         if (!downloads.firstNotificationAsk()) return
-        permDone = null
-        runCatching { permRequest.launch(arrayOf(perm)) }
+        permsNeeded(listOf(perm))
     }
 
     /** Pin [url] to the launcher; it opens here (MainActivity takes VIEW intents). */
@@ -1454,7 +1466,7 @@ class BrowserHostFragment : Fragment() {
         val need = perms.flatMap { it.android }.filter {
             androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), it) != android.content.pm.PackageManager.PERMISSION_GRANTED
         }
-        if (need.isEmpty()) done(true) else { permDone = done; permRequest.launch(need.toTypedArray()) }
+        if (need.isEmpty()) done(true) else { done(false); permsNeeded(need) }
     }
 
     private fun showSiteSettings(host: String) {
@@ -2557,6 +2569,8 @@ class BrowserHostFragment : Fragment() {
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     companion object {
+        /** #1274 the catalogue feature (perms-catalogue.json) whose entries Cloud Browser needs. */
+        const val PERMS_FEATURE = "browser"
         private const val TAG = "Browser"
         /** The declared menu section drawn as the icon row, and the one the Settings page lists. */
         private const val ICON_SECTION = "icons"

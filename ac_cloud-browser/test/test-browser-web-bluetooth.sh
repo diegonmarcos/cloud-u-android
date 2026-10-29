@@ -68,7 +68,7 @@ grep -q 'core.handle(WebBluetoothCore.originOf(w.url), text)' "$W" && grep -q 'm
 grep -q 'WebViewFeature.DOCUMENT_START_SCRIPT' "$W" && grep -q 'addDocumentStartJavaScript' "$W" && grep -q 'w.evaluateJavascript(script(), null)' "$W" && ok "W4 installed at document start, with a page-start fallback" || bad "W4 the install paths are missing"
 grep -q '@JavascriptInterface' "$W" && grep -q 'JS_BRIDGE = "AndroidWebBluetooth"' "$W" && grep -q 'AndroidWebBluetooth' "$JS" && ok "W4 one JS interface, named the same on both sides" || bad "W4 the interface name drifted"
 grep -q 'webBluetooth.attach(this, tab.isPrivate)' "$F" && grep -q 'webBluetooth.onPageStarted(it)' "$F" && grep -q 'webBluetooth.detach(it)' "$F" && ok "W4 BrowserHostFragment attaches, re-injects on navigation and detaches" || bad "W4 the fragment does not wire it"
-grep -q 'permDone = done; permRequest.launch(perms)' "$F" && ok "W4 Android's Bluetooth permission is asked through the fragment's launcher" || bad "W4 no permission launcher"
+grep -q 'done(false); permsNeeded(perms.toList())' "$F" && ! grep -q 'RequestMultiplePermissions' "$F" && ok "W4 a missing Bluetooth permission opens the Permissions banner (#1274), never Android's dialog from here" || bad "W4 the browser asks Android itself"
 grep -q '__ALIASES__' "$JS" && grep -q 'catalog.services' "$W" && ok "W4 the Web Bluetooth names come from libs:bluetooth's catalog, not a table in the polyfill" || bad "W4 the alias table is not data"
 
 echo "== W5: the native rules =="

@@ -108,6 +108,7 @@ android {
 }
 
 dependencies {
+    implementation project(':libs:perms')   // #1274 PermsLink: the host's Permissions page asks, not this lib
     // SuperApp addition (NOT upstream): on-device translator behind the
     // TRANSLATE toolbar key. Injected by patches/0001-translate-toolbar.patch;
     // the KeyCode.TRANSLATE handler in InputLogic calls into this module.

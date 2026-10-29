@@ -99,9 +99,9 @@ if 'name="store_fleet_stop_no_channel"' in strings: ok("the no-channel message i
 else: bad("store_fleet_stop_no_channel is not in strings.xml")
 
 print("== T4: App settings is Android's own app-details page ==")
-if "Settings.ACTION_APPLICATION_DETAILS_SETTINGS" in fn(actions, "appInfo") and \
+if "PermsPages.appInfoIntent(pkg)" in fn(actions, "appInfo") and \
         re.search(r'"app_settings" ->(?:(?!\n\s*"\w+" ->).)*PhoneAppActions\.appInfo\(', da, re.S):
-    ok("app_settings opens ACTION_APPLICATION_DETAILS_SETTINGS for the package")
+    ok("app_settings opens the package's app-details page through libs:perms PermsPages (#1274)")
 else: bad("app_settings does not open ACTION_APPLICATION_DETAILS_SETTINGS")
 if re.search(r'"direct_install" ->\s*directInstall\(', da) and "BootstrapInstall.launch(" in fn(sheet, "directInstall"):
     ok("Direct install on Details is the BootstrapInstall floor")

@@ -159,12 +159,12 @@ class FirewallDialog : DialogFragment() {
         editing?.let { app -> RuleEditor(app, apps.firstOrNull { it.first == app }?.second ?: app.packageName) }
         if (usagePrompt) {
             KitConfirmDialog(
-                title = "Usage access needed",
-                text = "\"No background data\" needs Usage Access to detect which app is in the foreground. Grant it now?",
-                confirmLabel = "Open settings", dismissLabel = "Later",
+                title = "Permissions needed",
+                text = "\"No background data\" needs Usage access to detect which app is in the foreground.",
+                confirmLabel = com.diegonmarcos.superapp.perms.PermsBanner.BUTTON, dismissLabel = "Later",
                 onConfirm = {
                     usagePrompt = false
-                    runCatching { startActivity(android.content.Intent(FirewallConditions.USAGE_ACCESS_SETTINGS)) }
+                    com.diegonmarcos.superapp.perms.PermsLink.open(requireContext(), FirewallConditions.PERMS_FEATURE, listOf("usage_access"))
                 },
                 onDismiss = { usagePrompt = false },
             )

@@ -4,8 +4,6 @@ package helium314.keyboard.settings.screens
 import android.Manifest
 import android.content.Context
 import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -233,15 +231,12 @@ fun createCorrectionSettings(context: Context) = listOf(
     ) { setting ->
         val activity = LocalContext.current.getActivity() ?: return@Setting
         var granted by remember { mutableStateOf(PermissionsUtil.checkAllPermissionsGranted(activity, Manifest.permission.READ_CONTACTS)) }
-        val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            granted = it
-            if (granted)
-                activity.prefs().edit { putBoolean(setting.key, true) }
-        }
         SwitchPreference(setting, Defaults.PREF_USE_CONTACTS,
             allowCheckedChange = {
+                // SuperApp #1274: the Permissions page (libs:perms) asks for contacts; the switch turns on once granted.
+                granted = PermissionsUtil.checkAllPermissionsGranted(activity, Manifest.permission.READ_CONTACTS)
                 if (it && !granted) {
-                    launcher.launch(Manifest.permission.READ_CONTACTS)
+                    com.diegonmarcos.superapp.perms.PermsLink.open(activity, "keyboard", listOf("contacts_read"))
                     false
                 } else true
             }

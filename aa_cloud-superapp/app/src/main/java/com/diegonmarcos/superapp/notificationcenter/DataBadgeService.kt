@@ -9,7 +9,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -138,13 +137,12 @@ class DataBadgeService : Service() {
             .apply { if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@DataBadgeService, NOTIF_ID)) }
         for (a in card.actions) {
             val pi = when (a.act) {
+                // #1274 both grants open the Permissions page (libs:perms) on the entry, never a settings page from here.
                 Act.GRANT -> PendingIntent.getActivity(this, RC_GRANT,
-                    Intent(DataUsageProvider.USAGE_ACCESS_SETTINGS, Uri.parse("package:$packageName"))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    com.diegonmarcos.superapp.perms.PermsActivity.intent(this, DataUsageProvider.PERMS_FEATURE, listOf("usage_access")),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                 Act.GRANT_PHONE -> PendingIntent.getActivity(this, RC_GRANT_PHONE,
-                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    com.diegonmarcos.superapp.perms.PermsActivity.intent(this, DataUsageProvider.PERMS_FEATURE, listOf("phone_state")),
                     PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                 Act.REFRESH -> PendingIntent.getService(this, RC_REFRESH,
                     Intent(this, DataBadgeService::class.java).setAction(ACTION_REFRESH),

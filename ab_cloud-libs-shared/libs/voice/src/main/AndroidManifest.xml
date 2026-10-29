@@ -5,14 +5,4 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <application>
-        <!-- An InputMethodService cannot request runtime permissions, so the
-             VOICE key bounces through this transparent activity to obtain
-             RECORD_AUDIO, then finishes. -->
-        <activity
-            android:name=".VoicePermissionActivity"
-            android:exported="false"
-            android:excludeFromRecents="true"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
-    </application>
 </manifest>

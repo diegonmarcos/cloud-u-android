@@ -42,6 +42,7 @@ android {
 }
 
 dependencies {
+    implementation project(':libs:perms')   // #1274 PermsLink: the host's Permissions page asks, not this lib
     implementation project(':libs:core')
     // #1222 navigator.bluetooth for pages: WebBluetoothBridge drives libs:bluetooth's GattSession.
     implementation project(':libs:bluetooth')

@@ -1,8 +1,5 @@
 package com.diegonmarcos.cloudnav.maps
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +19,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -52,22 +50,6 @@ class MapsConfigFragment : KitComposeFragment() {
     /** Bumped to make the page read its prefs and the DB again (a resume, a pick, a finished action). */
     private var tick by mutableIntStateOf(0)
 
-    /** Runtime-permission flow for Start. After the system dialog, if perms
-     *  are STILL missing (permanently denied, or background-location which the
-     *  dialog can't grant), fall back to opening app-details settings so the
-     *  user can grant them — Start never silently no-ops. */
-    private val trackerPermLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
-            val ctx = context ?: return@registerForActivityResult
-            if (MapsPermissions.missing(ctx).isEmpty()) {
-                LocationTrackerService.startTracking(ctx)
-            } else {
-                Toast.makeText(ctx, "Grant Location (all the time) + Notifications to start tracking", Toast.LENGTH_LONG).show()
-                openAppSettings(ctx)
-            }
-            tick++
-        }
-
     /** SAF file-picker for "Import JSON" — parses the picked file off-thread
      *  and inserts every trip as a Stop (see [MapsImport]). */
     private val importLauncher =
@@ -87,15 +69,6 @@ class MapsConfigFragment : KitComposeFragment() {
                 }
             }.start()
         }
-
-    private fun openAppSettings(ctx: android.content.Context) {
-        runCatching {
-            startActivity(
-                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}"))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-        }
-    }
 
     override fun onResume() {
         super.onResume()
@@ -147,16 +120,18 @@ class MapsConfigFragment : KitComposeFragment() {
             color = p.textSecondary, style = MaterialTheme.typography.bodyMedium)
         Gap(12)
         if (missing.isNotEmpty()) {
-            Text("Needs: " + missing.joinToString(", ") {
-                it.substringAfterLast('.').replace('_', ' ').lowercase()
-            } + "  ← tap Start to request", color = p.warn, style = MaterialTheme.typography.bodySmall)
+            // #1274 the banner: the host's Permissions page asks (onResume re-reads on the way back).
+            Row(Modifier.fillMaxWidth().testTag("maps:perms-banner"), verticalAlignment = Alignment.CenterVertically) {
+                Text("Permissions needed: " + missing.joinToString(", ") {
+                    it.substringAfterLast('.').replace('_', ' ').lowercase()
+                }, color = p.warn, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                MapsButton(com.diegonmarcos.superapp.perms.PermsBanner.BUTTON, onClick = { MapsPermissions.openPermissions(ctx, missing) })
+            }
         }
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MapsButton("Start", modifier = Modifier.weight(1f), enabled = !running, onClick = {
                 if (missing.isNotEmpty()) {
-                    // Auto-open the permission grant (system dialog); the launcher
-                    // callback falls back to app settings if anything's left.
-                    trackerPermLauncher.launch(missing.toTypedArray())
+                    MapsPermissions.openPermissions(ctx, missing)
                 } else {
                     LocationTrackerService.startTracking(ctx)
                     tick++

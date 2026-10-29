@@ -665,11 +665,8 @@ class StorePhoneFragment : KitComposeFragment() {
         }
     }
 
-    /** The one-tap grant: the usage-access screen (this app's own toggle first, the list as fallback). */
-    private fun grantUsageAccess(ctx: Context) {
-        for (i in StoreSizeProbe.grantIntents(ctx)) if (runCatching { startActivity(i) }.isSuccess) return
-        Toast.makeText(ctx, ctx.getString(R.string.store_phone_size_grant_failed), Toast.LENGTH_LONG).show()
-    }
+    /** #1274 the one-tap grant: the host's Permissions page on usage access; this lib never opens a settings page. */
+    private fun grantUsageAccess(ctx: Context) = StoreSizeProbe.openPermissions(ctx)
 
     /** Check all: rebuild the rows, then probe every one off the main thread. */
     private fun checkAll() = reload {

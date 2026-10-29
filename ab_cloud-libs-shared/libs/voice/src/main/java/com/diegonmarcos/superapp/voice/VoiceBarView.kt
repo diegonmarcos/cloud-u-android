@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioFormat
 import android.media.AudioRecord
@@ -130,10 +129,9 @@ class VoiceBarView @JvmOverloads constructor(
         if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO)
             != PackageManager.PERMISSION_GRANTED
         ) {
-            hint = "Grant microphone, then tap the mic key again"
-            ctx.startActivity(
-                Intent(ctx, VoicePermissionActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
+            // #1274 an IME has no activity: PermsLink opens the Permissions page libs:perms hosts in this app.
+            hint = "Permissions needed: Microphone, then tap the mic key again"
+            com.diegonmarcos.superapp.perms.PermsLink.open(ctx, "voice", listOf("microphone"))
             onCloseRequest?.run() // close; user re-taps after granting
             return
         }

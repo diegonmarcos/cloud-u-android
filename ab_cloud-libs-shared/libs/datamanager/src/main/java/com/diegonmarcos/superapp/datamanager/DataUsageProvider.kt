@@ -87,10 +87,9 @@ object DataUsageProvider {
         mode == AppOpsManager.MODE_ALLOWED
     }.getOrDefault(false)
 
-    /** The settings screen the user must visit to grant it. Callers start
-     *  this intent action directly — the same one PermissionsFragment's
-     *  "Set Usage Access" button uses. */
-    const val USAGE_ACCESS_SETTINGS = android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS
+    /** #1274 the catalogue feature (perms-catalogue.json) whose entries this lib needs; the host's Permissions page
+     *  is the one place that grants them (usage_access, phone_state). */
+    const val PERMS_FEATURE = "datamanager"
 
     // ── periods ───────────────────────────────────────────────────────
     /** Midnight (local) at the start of today. */

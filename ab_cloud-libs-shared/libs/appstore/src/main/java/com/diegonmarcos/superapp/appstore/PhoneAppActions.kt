@@ -5,7 +5,6 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
 import com.diegonmarcos.superapp.updater.Fleet
 import org.json.JSONObject
@@ -166,8 +165,7 @@ object PhoneAppActions {
 
     /** Android's own settings page for [pkg] — App info here, App settings on
      *  a fleet row's Details sheet, and where the platform's Force stop lives. */
-    fun appInfo(pkg: String) =
-        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
+    fun appInfo(pkg: String) = com.diegonmarcos.superapp.perms.PermsPages.appInfoIntent(pkg)
 
     /**
      * Force-stop [pkg] through the shell channel ladder — the ONE Stop door,

@@ -9,9 +9,10 @@ import org.junit.Test
 import java.io.File
 
 /**
- * #1274 the Permissions page is the ONE place that asks: no contract lib requests a permission or starts a permission
- * settings page itself, the Wi-Fi and Bluetooth banners go through PermsLink, the page is in the nav walk, and Wi-Fi Auto
- * mode stays inside Android's scan budget.
+ * #1274 the Permissions page is the ONE place that asks: no lib of ab_cloud-libs-shared/libs (all of them, only libs:perms
+ * allowlisted) requests a permission, starts a permission settings page or writes a pm grant line itself; the feature
+ * banners go through PermsLink, every app that embeds such a lib hosts the page (PermsHost or libs:perms PermsActivity),
+ * the page is in the nav walk, and Wi-Fi Auto mode stays inside Android's scan budget.
  */
 class PermsOnePlaceTest {
     private val root = File("../..")
@@ -25,18 +26,26 @@ class PermsOnePlaceTest {
         "MANAGE_ALL_FILES_ACCESS_PERMISSION", "ACTION_MANAGE_OVERLAY_PERMISSION", "MANAGE_OVERLAY_PERMISSION",
         "REQUEST_IGNORE_BATTERY_OPTIMIZATIONS", "IGNORE_BATTERY_OPTIMIZATION_SETTINGS", "USAGE_ACCESS_SETTINGS",
         "NOTIFICATION_LISTENER_SETTINGS", "ACTION_ACCESSIBILITY_SETTINGS", "MANAGE_WRITE_SETTINGS", "MANAGE_UNKNOWN_APP_SOURCES",
-        "REQUEST_SCHEDULE_EXACT_ALARM", "NOTIFICATION_POLICY_ACCESS_SETTINGS", "pm grant",
+        "REQUEST_SCHEDULE_EXACT_ALARM", "NOTIFICATION_POLICY_ACCESS_SETTINGS", "pm grant", "ACTION_ADD_DEVICE_ADMIN",
     )
     private val comments = Regex("//[^\\n]*|/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL)
 
     /** The forbidden calls in one source text, comments stripped. */
     private fun violations(text: String): List<String> { val code = comments.replace(text, ""); return forbidden.filter { code.contains(it) } }
 
-    private fun contractLibs(): List<String> = catalogue.getJSONArray("contract_libs").let { a -> (0 until a.length()).map { a.getString(it) } }
+    private fun allowlist(): Set<String> = catalogue.getJSONArray("contract_allowlist").let { a -> (0 until a.length()).map { a.getString(it) } }.toSet()
 
-    @Test fun `no contract lib asks for a permission or opens a permission settings page`() {
+    /** Every Gradle lib of the shared tree (a directory with a build.gradle), the allowlist (libs:perms) left out. */
+    private fun contractLibs(): List<String> =
+        libs.listFiles().orEmpty().filter { it.isDirectory && (File(it, "build.gradle").isFile || File(it, "build.gradle.kts").isFile) }
+            .map { it.name }.filter { it !in allowlist() }.sorted()
+
+    @Test fun `no lib asks for a permission or opens a permission settings page`() {
+        assertEquals("only libs:perms may ask", setOf("perms"), allowlist())
         val libsList = contractLibs()
-        assertTrue(libsList.containsAll(listOf("wifi", "bluetooth", "nfc", "mounts")))
+        assertTrue("the guard lost the fleet: ${libsList.size} libs", libsList.size > 60)
+        assertTrue(libsList.containsAll(listOf("wifi", "bluetooth", "nfc", "mounts", "light", "battery", "browser", "maps", "kde-connect",
+            "appstore", "firewall", "voice", "disk", "datamanager", "keyboard", "account", "shizuku-adb-debug-tools")))
         val hits = ArrayList<String>()
         var scanned = 0
         for (l in libsList) {
@@ -46,8 +55,45 @@ class PermsOnePlaceTest {
                 violations(f.readText()).forEach { hits += "${f.relativeTo(libs)}: $it" }
             }
         }
-        assertTrue("guard scanned nothing", scanned > 10)
-        assertEquals("feature libs must go through PermsNeeds + PermsLink", emptyList<String>(), hits)
+        assertTrue("guard scanned nothing", scanned > 1000)
+        assertEquals("libs must go through PermsNeeds + PermsLink (libs:perms owns asking)", emptyList<String>(), hits)
+    }
+
+    /** The libs migrated off their own asking (#1274): each opens the page on its catalogue feature, which declares entries. */
+    @Test fun `each migrated lib declares its needs and opens the Permissions page`() {
+        val features = HashSet<String>()
+        val entries = catalogue.getJSONArray("entries")
+        for (i in 0 until entries.length()) entries.getJSONObject(i).getJSONArray("features").let { a -> (0 until a.length()).forEach { features += a.getString(it) } }
+        for (lib in listOf("browser", "maps", "kde-connect", "appstore", "firewall", "voice", "disk", "datamanager", "keyboard")) {
+            assertTrue("$lib: no catalogue entry declares it", lib in features)
+            val src = File(libs, "$lib/src/main").walkTopDown().filter { it.isFile && it.extension == "kt" }.joinToString("\n") { it.readText() }
+            assertTrue("$lib never opens the Permissions page", src.contains("PermsLink.open("))
+            assertTrue("$lib does not name its feature \"$lib\"", src.contains("\"$lib\""))
+            assertTrue("$lib does not compile libs:perms", File(libs, "$lib/build.gradle").readText().contains("':libs:perms'"))
+        }
+        assertFalse("the voice bouncer activity is back", File(libs, "voice/src/main/java/com/diegonmarcos/superapp/voice/VoicePermissionActivity.kt").exists())
+    }
+
+    /** Permissions are per package: an app without a PermsHost page gets libs:perms' PermsActivity, so it must embed libs:perms. */
+    @Test fun `every app that embeds a perms lib hosts the Permissions page`() {
+        val manifest = File(libs, "perms/src/main/AndroidManifest.xml").readText()
+        assertTrue(manifest.contains("android:name=\".PermsActivity\"") && manifest.contains("android:exported=\"false\""))
+        val perms = File(libs, "perms/src/main/java/com/diegonmarcos/superapp/perms/Perms.kt").readText()
+        assertTrue("PermsLink no longer falls back to the lib's page", perms.contains("ctx.startActivity(PermsActivity.intent(ctx, feature, ids))"))
+        val needsPerms = libs.listFiles().orEmpty().filter { File(it, "build.gradle").isFile && File(it, "build.gradle").readText().contains("':libs:perms'") }
+            .map { "libs:${it.name}" }.toSet()
+        assertTrue(needsPerms.containsAll(listOf("libs:wifi", "libs:browser", "libs:maps", "libs:voice", "libs:disk", "libs:appstore")))
+        val missing = ArrayList<String>()
+        var apps = 0
+        root.listFiles().orEmpty().filter { File(it, "build.json").isFile }.forEach { app ->
+            val modules = runCatching { JSONObject(File(app, "build.json").readText()).optJSONObject("modules") }.getOrNull() ?: return@forEach
+            val embeds = modules.keys().asSequence().filter { it in needsPerms }.toList()
+            if (embeds.isEmpty()) return@forEach
+            apps++
+            if (!modules.has("libs:perms")) missing += "${app.name} embeds $embeds without libs:perms"
+        }
+        assertTrue("found no app embedding a perms lib", apps >= 5)
+        assertEquals(emptyList<String>(), missing)
     }
 
     @Test fun `the guard sees each kind of violation (planted)`() {

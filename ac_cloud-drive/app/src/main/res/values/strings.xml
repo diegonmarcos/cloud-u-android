@@ -530,13 +530,13 @@
     <string name="git_gh_clone_no_credential">gh holds no GitHub credential, so %1$s was not cloned — tap Sign in with GitHub, then Clone.</string>
     <!-- #813 Home ▸ Disk Management (libs:disk) -->
     <string name="disk_grant_files">Grant all-files access</string>
-    <string name="disk_grant_usage">Grant usage access</string>
+    <string name="disk_grant_usage">Open Permissions</string>
 
     <!-- Manage (Apps / Data) and Agents -->
     <string name="manage_apps_title">Apps</string>
     <string name="manage_apps_subtitle">%1$d apps · shell: %2$s</string>
     <string name="manage_apps_no_shell">none</string>
-    <string name="manage_apps_usage_missing">Sizes of other apps need usage access. Without it they show —. Connect it in Configs ▸ Others.</string>
+    <string name="manage_apps_usage_missing">Permissions needed: Usage access. Without it other apps\' sizes show —.</string>
     <string name="manage_apps_shell_hint">Running and RAM of other apps need the privileged shell (SuperApp or Shizuku). Without it they show —. Connect it in Configs ▸ Others.</string>
     <string name="manage_apps_col_name">App</string>
     <string name="manage_apps_col_total">Total</string>

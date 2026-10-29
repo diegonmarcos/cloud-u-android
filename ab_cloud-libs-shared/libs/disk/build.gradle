@@ -30,4 +30,5 @@ android {
 
 dependencies {
     api project(':libs:disk-scan')
+    implementation project(':libs:perms')   // #1274 PermsLink: the host's Permissions page asks, not this lib
 }

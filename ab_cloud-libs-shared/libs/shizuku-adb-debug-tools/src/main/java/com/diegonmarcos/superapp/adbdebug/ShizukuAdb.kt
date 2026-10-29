@@ -157,12 +157,12 @@ object ShizukuAdb {
      * permission the package never asked for.
      */
     fun grant(ctx: Context, perm: String): GrantResult {
-        val cmd = "pm grant ${ctx.packageName} $perm"
+        val cmd = com.diegonmarcos.superapp.perms.PermsShell.grant(ctx.packageName, perm)
         val out = ShellChannels.active(ctx)?.exec(ctx, cmd)
             ?: exec(ctx, cmd)
             ?: return GrantResult(false, false, "No shell channel — start Shizuku or pair adb")
         val held = ctx.checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED
-        return GrantResult(true, held, out.ifBlank { "(no output — pm grant is silent on success)" })
+        return GrantResult(true, held, out.ifBlank { "(no output — the grant is silent on success)" })
     }
 
     data class GrantResult(val ran: Boolean, val held: Boolean, val output: String)

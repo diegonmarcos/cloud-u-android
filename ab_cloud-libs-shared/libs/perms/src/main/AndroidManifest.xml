@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- #1274 the Permissions page every app that embeds libs:perms hosts, merged in by the manifest merger.
+             Android permissions belong to one package, so an app's banner must open ITS OWN page (a deep link to
+             SuperApp would grant SuperApp, not this app). SuperApp hosts its fuller page through PermsHost instead. -->
+        <activity
+            android:name=".PermsActivity"
+            android:exported="false"
+            android:label="Permissions"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Material.Dialog.NoActionBar" />
+    </application>
+</manifest>

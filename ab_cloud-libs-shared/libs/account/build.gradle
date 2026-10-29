@@ -132,6 +132,7 @@ kotlin {
 }
 
 dependencies {
+    implementation project(':libs:perms')   // #1274 PermsLink: the host's Permissions page asks, not this lib
     implementation project(':libs:core')
     implementation project(':libs:databackend')       // DataBackendClient: the gh engine binding
     implementation project(':libs:fleetconfig-model') // FleetPolicy: the manifest + policy the Fleet tab plans with; FleetEndpointsContract

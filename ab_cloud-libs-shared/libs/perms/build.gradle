@@ -1,6 +1,7 @@
 // libs:perms (#1274): the permission contract. The host app's Permissions page is the ONE place that asks for,
 // checks and opens the settings of any permission; feature libs (wifi, bluetooth, nfc, mounts, ...) declare their needs
-// in assets/perms-catalogue.json `features`, read PermsNeeds.missing and deep-link with PermsLink.open. Renders nothing.
+// in assets/perms-catalogue.json `features`, read PermsNeeds.missing and deep-link with PermsLink.open. The only UI it
+// renders is PermsActivity: the Permissions page of an app with no PermsHost page of its own (permissions are per package).
 // Out of libs:core on purpose: core is the mesh lib every fleet app compiles under a line budget, and only the apps
 // that host a Permissions page or a feature lib need this.
 plugins {

@@ -95,6 +95,7 @@ android {
 }
 
 dependencies {
+    implementation project(':libs:perms')   // #1274 PermsLink: the host's Permissions page asks, not this lib
     implementation project(':libs:core')
     // #868 the page-tab strip (PageTabsView): the Timeline host's Explored | Daily | Stops row.
     implementation project(':libs:bottomnav')

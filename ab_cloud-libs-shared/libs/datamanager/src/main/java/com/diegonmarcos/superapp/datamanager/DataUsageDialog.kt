@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -99,11 +98,12 @@ class DataUsageDialog : DialogFragment() {
     /** Bumped to re-read every provider (a grant, or the Recheck button). */
     private var revision by mutableIntStateOf(0)
 
-    /** Standard runtime-permission contract — the same androidx contract
-     *  PermissionsFragment drives its bulk request with. */
-    private val phoneStatePermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { revision++ }
+    /** #1274 back from the host's Permissions page: re-read every provider. */
+    override fun onResume() { super.onResume(); revision++ }
+
+    /** The "Open Permissions" banner action: the host's Permissions page on [ids]; this lib never asks itself. */
+    private fun openPerms(ids: List<String>) =
+        com.diegonmarcos.superapp.perms.PermsLink.open(requireContext(), DataUsageProvider.PERMS_FEATURE, ids)
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
@@ -169,16 +169,11 @@ class DataUsageDialog : DialogFragment() {
                         .padding(start = 12.dp, top = 4.dp, end = 4.dp, bottom = 4.dp))
             }
 
-            // Usage access is the ONE hard gate. Reuse the existing grant flow —
-            // the same settings screen Configs/About → Permissions opens.
+            // Usage access is the ONE hard gate; the host's Permissions page grants it (#1274).
             if (!DataUsageProvider.hasUsageAccess(ctx)) {
-                Card("Usage Access required") {
+                Card("Permissions needed: Usage access") {
                     Small("Per-app data usage is read from NetworkStatsManager, which needs the Usage Access special grant. It's the same grant the battery per-app estimate and the Phone smart folders use — granting it once unlocks all of them.")
-                    Pill("Open Usage Access settings") {
-                        runCatching {
-                            startActivity(android.content.Intent(DataUsageProvider.USAGE_ACCESS_SETTINGS))
-                        }
-                    }
+                    Pill(com.diegonmarcos.superapp.perms.PermsBanner.BUTTON) { openPerms(listOf("usage_access")) }
                     Pill("Recheck") { revision++ }
                 }
                 return@Column
@@ -314,19 +309,15 @@ class DataUsageDialog : DialogFragment() {
         }
     }
 
-    /** Per-subscription card, with a tap-to-grant row when READ_PHONE_STATE
+    /** Per-subscription card, with a Permissions banner when READ_PHONE_STATE
      *  is missing. Degrades to the aggregate mobile figure, never hides. */
     @Composable
     private fun SimCard(start: Long, end: Long, rev: Int) {
         val ctx = LocalContext.current
         Card("By SIM") {
             if (!DataUsageProvider.hasPhoneState(ctx)) {
-                Small("Splitting mobile data per SIM / eSIM needs the Phone permission (READ_PHONE_STATE) to list your active subscriptions. Without it only the aggregate mobile total above is available.")
-                Pill("Grant Phone permission") {
-                    runCatching {
-                        phoneStatePermission.launch(android.Manifest.permission.READ_PHONE_STATE)
-                    }
-                }
+                Small("Permissions needed: Phone. Splitting mobile data per SIM / eSIM needs it (READ_PHONE_STATE) to list your active subscriptions. Without it only the aggregate mobile total above is available.")
+                Pill(com.diegonmarcos.superapp.perms.PermsBanner.BUTTON) { openPerms(listOf("phone_state")) }
                 return@Card
             }
             val subs = remember(start, rev) {

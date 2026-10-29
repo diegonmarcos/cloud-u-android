@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.appstore
 
-import com.diegonmarcos.superapp.appstore.PermsGrant.Kind
+import com.diegonmarcos.superapp.perms.PermsGrant
+import com.diegonmarcos.superapp.perms.PermsGrant.Kind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

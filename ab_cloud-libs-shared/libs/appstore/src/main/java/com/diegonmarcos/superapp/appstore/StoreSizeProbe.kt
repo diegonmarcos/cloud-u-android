@@ -37,11 +37,11 @@ object StoreSizeProbe {
         mode == AppOpsManager.MODE_ALLOWED
     }.getOrDefault(false)
 
-    /** The grant screen, the one Access ▸ Android Perms opens for this permission ([PermsGrant.settingsAction]). */
-    fun grantIntents(ctx: Context): List<Intent> = listOf(
-        Intent(PermsGrant.settingsAction(PERMISSION), android.net.Uri.parse("package:${ctx.packageName}")),
-        Intent(PermsGrant.settingsAction(PERMISSION)),
-    )
+    /** #1274 the catalogue feature (perms-catalogue.json) whose entries the Store's size column needs. */
+    const val PERMS_FEATURE = "appstore"
+
+    /** The "Open Permissions" action: the host's Permissions page on usage access. */
+    fun openPermissions(ctx: Context) = com.diegonmarcos.superapp.perms.PermsLink.open(ctx, PERMS_FEATURE, listOf("usage_access"))
 
     /** What the cache holds for [pkg], or null (not measured, or not installed). Never blocks. */
     fun cached(pkg: String): StoreSizes.Size? = cache[pkg]

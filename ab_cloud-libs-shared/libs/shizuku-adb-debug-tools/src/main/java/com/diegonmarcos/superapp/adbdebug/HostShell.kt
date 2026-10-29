@@ -73,7 +73,7 @@ object HostShell {
     fun selfGrant(ctx: Context): Boolean {
         if (canWriteSecureSettings(ctx)) return true
         val out = EmbeddedAdbChannel.exec(ctx,
-            "pm grant ${ctx.packageName} android.permission.WRITE_SECURE_SETTINGS 2>&1")
+            com.diegonmarcos.superapp.perms.PermsShell.grant(ctx.packageName, "android.permission.WRITE_SECURE_SETTINGS") + " 2>&1")
         Log.i(TAG, "grant WRITE_SECURE_SETTINGS -> ${out?.trim()?.take(160) ?: "no output"}")
         return canWriteSecureSettings(ctx)
     }

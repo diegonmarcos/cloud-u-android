@@ -213,6 +213,10 @@ object PermsNeeds {
     }
 
     fun labels(entries: List<PermEntry>): String = entries.joinToString(", ") { it.label }
+
+    /** The catalogue ids of manifest [permissions] (android.permission.*), catalogue order; unknown ones dropped. */
+    fun idsFor(ctx: Context, permissions: Collection<String>): List<String> =
+        Perms.catalogue(ctx).entries.filter { it.permission.isNotEmpty() && it.permission in permissions }.map { it.id }.distinct()
 }
 
 /** An activity that hosts the Permissions page in its own frame (SuperApp's shell: Configs > Setup > Perms). */
@@ -238,12 +242,57 @@ object PermsLink {
             if (host != null && runCatching { host.openPermsPage() }.getOrDefault(false)) return
             c = c.baseContext
         }
-        // An app with no Permissions page: its App info page, scrolled to Permissions.
+        // An app with no Permissions page of its own (or no activity at all: an IME, a plugin): the page libs:perms
+        // hosts in this same package. Permissions are per package, so it is never another app's page.
         pending = null
+        if (runCatching { ctx.startActivity(PermsActivity.intent(ctx, feature, ids)) }.isSuccess) return
         runCatching {
             ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName))
                 .putExtra(PermsSettings.EXTRA_FRAGMENT_ARG_KEY, "permission_settings")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
+}
+
+/**
+ * The one "Permissions needed → Open Permissions" banner (#1274), for libs drawn with Views. A Compose lib draws its own
+ * row with [title] and [BUTTON] and calls [PermsLink.open] from the button; the wording stays the same everywhere.
+ */
+object PermsBanner {
+    const val BUTTON = "Open Permissions"
+
+    fun title(entries: List<PermEntry>): String =
+        if (entries.isEmpty()) "Permissions needed" else "Permissions needed: " + PermsNeeds.labels(entries)
+
+    /** A banner for [feature]'s missing [entries]; null when nothing is missing. */
+    fun view(ctx: Context, feature: String, entries: List<PermEntry>): android.view.View? {
+        if (entries.isEmpty()) return null
+        return android.widget.LinearLayout(ctx).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            tag = "$feature:perms-banner"
+            addView(android.widget.TextView(ctx).apply { text = title(entries) },
+                android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(android.widget.Button(ctx).apply {
+                text = BUTTON
+                setOnClickListener { PermsLink.open(ctx, feature, entries.map { it.id }) }
+            })
+        }
+    }
+}
+
+/** The shell lines that grant a permission (adb, Shizuku, the embedded channel): written here only (#1274). */
+object PermsShell {
+    fun grant(pkg: String, permission: String): String = "pm grant $pkg $permission"
+    fun appop(pkg: String, op: String, mode: String = "allow"): String = "appops set $pkg $op $mode"
+}
+
+/** Settings pages that are not a permission of this app but still live here, so no other lib builds such an intent. */
+object PermsPages {
+    /** Another (or this) package's App info page (also where the platform's Force stop lives). */
+    fun appInfoIntent(pkg: String): Intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
+
+    fun openAppInfo(ctx: Context, pkg: String): Boolean = runCatching {
+        ctx.startActivity(appInfoIntent(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.isSuccess
 }

@@ -1,11 +1,9 @@
 package com.diegonmarcos.cloudnav.maps
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 
 /**
@@ -21,8 +19,8 @@ import androidx.core.content.ContextCompat
  *      for the foreground service's persistent notification.
  *
  * Helper exposes a single [missing] function returning the list of
- * still-needed permissions in the correct order. Callers should
- * request them in that order — never bundle FINE + BACKGROUND in one
+ * still-needed permissions in the correct order; [openPermissions] hands
+ * them to the host's Permissions page (#1274), which asks them in that order — never bundle FINE + BACKGROUND in one
  * dialog (BACKGROUND is silently denied if FINE isn't already
  * granted at request time).
  */
@@ -52,14 +50,22 @@ object MapsPermissions {
      *  this to gate the Start/Stop button. */
     fun allGranted(ctx: Context): Boolean = missing(ctx).isEmpty()
 
-    /** Fire the runtime request. Caller must implement
-     *  [Activity.onRequestPermissionsResult] (or use the modern
-     *  ActivityResultContracts.RequestMultiplePermissions). The
-     *  helper just batches the OS call. */
-    fun request(activity: Activity, perms: List<String>, requestCode: Int) {
-        if (perms.isEmpty()) return
-        ActivityCompat.requestPermissions(activity, perms.toTypedArray(), requestCode)
+    /** #1274 the catalogue feature (perms-catalogue.json) whose entries the tracker needs. */
+    const val PERMS_FEATURE = "maps"
+
+    /** The catalogue ids of [perms] (manifest names), in order: what the banner hands to the Permissions page. */
+    fun entryIds(perms: List<String>): List<String> = perms.mapNotNull {
+        when (it) {
+            Manifest.permission.ACCESS_FINE_LOCATION -> "fine_location"
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION -> "background_location"
+            "android.permission.POST_NOTIFICATIONS" -> "notifications"
+            else -> null
+        }
     }
+
+    /** The "Open Permissions" banner action: the host's Permissions page asks, in the order above; this lib never does. */
+    fun openPermissions(ctx: Context, perms: List<String> = missing(ctx)) =
+        com.diegonmarcos.superapp.perms.PermsLink.open(ctx, PERMS_FEATURE, entryIds(perms))
 
     /** True when fine+background+post-notifications are ALL granted
      *  AND foreground service can run. Used by the service itself

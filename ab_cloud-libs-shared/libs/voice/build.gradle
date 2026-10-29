@@ -58,6 +58,7 @@ android {
 }
 
 dependencies {
+    implementation project(':libs:perms')   // #1274 PermsLink: the host's Permissions page asks, not this lib
     api project(':libs:ui-kit')   // CloudKitTheme + the IME host VoiceBarView is built on
     // VoiceBarView is Compose; the BOM is the one every Compose module in the fleet resolves.
     implementation platform('androidx.compose:compose-bom:2025.11.01')

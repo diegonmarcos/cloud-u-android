@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.appstore
 
+import com.diegonmarcos.superapp.perms.PermsGrant
 import android.app.AppOpsManager
 import android.content.Context
 import android.content.pm.PackageManager

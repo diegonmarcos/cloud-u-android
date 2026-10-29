@@ -1,6 +1,7 @@
-package com.diegonmarcos.superapp.appstore
+package com.diegonmarcos.superapp.perms
 
 /**
+ * #1274 lives in libs:perms, the one lib that may name permission grants and their settings pages.
  * Store > Access > Android Perms, as pure rules (no Android): the permission filter, the
  * alphabetical order, and the "grant missing perms" plan. The page only draws these and feeds
  * them what PackageManager says; the shell goes through [GrantChannel], so a fake stands in.
@@ -90,8 +91,8 @@ object PermsGrant {
     data class Step(val pkg: String, val label: String, val perm: String, val kind: Kind) {
         /** The shell command that grants it. */
         fun command(): String = when (kind) {
-            Kind.APPOP -> "appops set $pkg ${appOp(perm)} allow"
-            else -> "pm grant $pkg $perm"
+            Kind.APPOP -> PermsShell.appop(pkg, appOp(perm).orEmpty())
+            else -> PermsShell.grant(pkg, perm)
         }
     }
 

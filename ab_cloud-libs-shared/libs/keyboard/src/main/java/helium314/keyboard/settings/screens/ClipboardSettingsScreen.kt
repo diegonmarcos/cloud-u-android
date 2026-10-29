@@ -2,8 +2,6 @@
 package helium314.keyboard.settings.screens
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.widget.Toast
@@ -64,25 +62,14 @@ fun ClipboardSettingsScreen(onClickBack: () -> Unit) {
 
 /**
  * Export/import use a fixed path outside the app sandbox ([ClipboardDao.exportDir]), which needs
- * all-files access. Returns true when we already have it; otherwise sends the user to the system
- * grant screen and returns false, so they retry the action once it is granted.
+ * all-files access. Returns true when we already have it; otherwise opens the Permissions page on it
+ * (SuperApp #1274) and returns false, so they retry the action once it is granted.
  */
 private fun ensureAllFilesAccess(ctx: Context): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()) return true
     Toast.makeText(ctx, R.string.clipboard_needs_storage_access, Toast.LENGTH_LONG).show()
-    val appSpecific = Intent(
-        android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-        Uri.parse("package:${ctx.packageName}")
-    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    // some OEM builds ship no app-specific screen; fall back to the global list
-    runCatching { ctx.startActivity(appSpecific) }.onFailure {
-        runCatching {
-            ctx.startActivity(
-                Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            )
-        }
-    }
+    // SuperApp #1274: the Permissions page (libs:perms) is the one place that asks; this screen never opens a settings page.
+    com.diegonmarcos.superapp.perms.PermsLink.open(ctx, "keyboard", listOf("all_files"))
     return false
 }
 

@@ -353,6 +353,6 @@ object PermsPlan {
     /** The Settings screen a NEEDS_USER row opens: the declared action, else the app's own details page. */
     fun settingsIntent(item: Item): Intent =
         (if (item.kind == Kind.USER && item.arg.isNotEmpty()) Intent(item.arg)
-         else Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", item.pkg, null)))
+         else com.diegonmarcos.superapp.perms.PermsPages.appInfoIntent(item.pkg))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 }

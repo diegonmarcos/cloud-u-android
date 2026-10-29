@@ -586,7 +586,7 @@
     <string name="clipboard_import_json_summary">Sustituye el portapapeles por el contenido de .cloud-keyboard/clipboard</string>
     <string name="clipboard_import_replace_warning">Esto sustituye los %d elementos guardados actualmente. Las imágenes se conservan; los elementos de texto y los fijados se reescriben a partir de los archivos exportados.</string>
     <string name="clipboard_import_success">Se han importado %d elementos</string>
-    <string name="clipboard_needs_storage_access">Concede el acceso a todos los archivos y vuelve a pulsar</string>
+    <string name="clipboard_needs_storage_access">Permisos necesarios: acceso a todos los archivos. Concédelo en la página de Permisos y vuelve a pulsar</string>
     <string name="clipboard_pin_choose_list">Fijar en una lista</string>
     <string name="clipboard_pin_new_list">+ Lista nueva</string>
     <string name="clipboard_rename_list">Cambiar el nombre de la lista</string>

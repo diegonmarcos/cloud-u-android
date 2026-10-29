@@ -17,7 +17,7 @@
 #   K4  THE DRY RUN IS THE RUN. DiskEngine.clean executes the previewed plan it
 #       is handed, and the API runs a clean only with run=1 AND confirm=1.
 #   K5  THE GRANT IS A BUTTON. Usage access is asked for through
-#       AppSizes.grantIntents (#639), started from a Pill, never a text line.
+#       AppSizes.openPermissions (#639, #1274: the Permissions page), started from a Pill, never a text line.
 #   K6  /api/disk/* IS REGISTERED AND DECLARED. DriveDebugApi registers the disk
 #       group on the shared server; build.json's debug_api lists it.
 #
@@ -61,7 +61,7 @@ k4() {
     [ "$(grep -c 'if (q\["confirm"\] != "1") ok(false' "$1")" -eq 1 ] || return 1
     [ "$(grep -c 'if (q\["run"\] == "1")' "$1")" -eq 1 ]
 }
-k5() { [ "$(grep -c 'AppSizes.grantIntents(ctx)' "$1")" -ge 1 ] && [ "$(grep -c 'Pill(stringResource(R.string.disk_grant_usage), { AppSizes.grantIntents(ctx)' "$1")" -eq 1 ]; }
+k5() { [ "$(grep -c 'AppSizes.openPermissions(ctx)' "$1")" -ge 1 ] && [ "$(grep -c 'Pill(stringResource(R.string.disk_grant_usage), { AppSizes.openPermissions(ctx)' "$1")" -eq 1 ]; }
 k6() {
     [ "$(_code "$1" | grep -c 'DiskDebugApi.register(app)')" -eq 1 ] || return 1
     [ "$(grep -c 'AppDebugServer.route(' "$2")" -ge 1 ] || return 1
@@ -73,7 +73,7 @@ k1 "$GRID" && pass "K1 the Apps grid sizes itself (no row-count height, no neste
 k2 "$APPS" "$SCREEN" && pass "K2 the Disk Management tile routes to Manage ▸ Apps" || fail "K2"
 k3 "$DD" && pass "K3 the Store APK cache is previewed and cleared through ApkCache's proven-installed half only" || fail "K3"
 k4 "$ENG" && pass "K4 the clean runs the previewed plan; the API deletes only with run=1&confirm=1" || fail "K4"
-k5 "$SCREEN" && pass "K5 usage access is a button over AppSizes.grantIntents" || fail "K5"
+k5 "$SCREEN" && pass "K5 usage access is a button over AppSizes.openPermissions" || fail "K5"
 k6 "$API" "$DAPI" "$BJ" && pass "K6 /api/disk/* registered on the shared server and declared" || fail "K6"
 
 echo "== M mutation-proof =="
@@ -101,7 +101,7 @@ _stage; _sub "$W/DiskEngine.kt" 'val res = CleanPlan.run(preview.plan, { p -> si
 _red "K4 the run re-plans instead of executing the previewed plan" k4 "$W/DiskEngine.kt"
 _stage; _sub "$W/DiskEngine.kt" 'if (q["confirm"] != "1") ok(false' 'if (false) ok(false'
 _red "K4 the API cleans without confirm" k4 "$W/DiskEngine.kt"
-_stage; _sub "$W/ManageScreen.kt" 'Pill(stringResource(R.string.disk_grant_usage), { AppSizes.grantIntents(ctx)' 'Text(stringResource(R.string.disk_grant_usage)); Pill("", {'
+_stage; _sub "$W/ManageScreen.kt" 'Pill(stringResource(R.string.disk_grant_usage), { AppSizes.openPermissions(ctx)' 'Text(stringResource(R.string.disk_grant_usage)); Pill("", {'
 _red "K5 the grant becomes a sentence" k5 "$W/ManageScreen.kt"
 _stage; _sub "$W/DriveDebugApi.kt" 'com.diegonmarcos.clouddrive.disk.DiskDebugApi.register(app)' ''
 _red "K6 the disk routes stop being registered" k6 "$W/DriveDebugApi.kt" "$W/DiskDebugApi.kt" "$W/build.json"
