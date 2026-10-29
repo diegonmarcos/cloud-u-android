@@ -1261,6 +1261,14 @@
         "lib-browser"
       ]
     },
+    "nfc_history": {
+      "kind": "prefs",
+      "class": "content",
+      "doc": "#1264 libs:nfc's scan history: one JSON array (key entries, at most 500 rows) of tag scans - time, UID, type, technologies, the NDEF summary, a note. Never a Wi-Fi key or any tag secret. The user's own data, exported as JSON / CSV from Measure > NFC > History. Kept by libs:nfc, so every app that compiles it (Cloud Calc) carries it.",
+      "used_by": [
+        "lib-nfc"
+      ]
+    },
     "light_prefs": {
       "kind": "prefs",
       "class": "config",
@@ -2793,6 +2801,7 @@
       "schema_version": 1,
       "libs": [
         "lib-ai",
+        "lib-bluetooth",
         "lib-bottomnav",
         "lib-core",
         "lib-crash",
@@ -2804,10 +2813,12 @@
         "lib-ml-l-image",
         "lib-ml-l-sound",
         "lib-model-catalogue",
+        "lib-nfc",
         "lib-text-tools",
         "lib-theme-background",
         "lib-ui-icons",
-        "lib-ui-nav-bars"
+        "lib-ui-nav-bars",
+        "lib-wifi"
       ],
       "items": [
         {

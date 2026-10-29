@@ -390,7 +390,7 @@ Coverage: 10 covered, 0 gaps.
 
 ## cloud-calc — `com.diegonmarcos.cloudcalc`
 
-Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-light, lib-ml-l-image, lib-ml-l-sound, lib-model-catalogue, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-nav-bars.
+Module `ac_cloud-calc`; libs: lib-ai, lib-bluetooth, lib-bottomnav, lib-core, lib-crash, lib-databackend, lib-decisions, lib-devtools, lib-fleetconfig-model, lib-light, lib-ml-l-image, lib-ml-l-sound, lib-model-catalogue, lib-nfc, lib-text-tools, lib-theme-background, lib-ui-icons, lib-ui-nav-bars, lib-wifi.
 
 | store | kind | class | migrates | doc |
 |---|---|---|---|---|
@@ -407,6 +407,7 @@ Module `ac_cloud-calc`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-da
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `light_prefs` | prefs | config | yes | #1155 the Light tool's settings: default light (rear/front/both), mode (spotlight/flashing) and strobe rate (capped at 3 Hz), rear and front intensity, timer on/duration, keep-on. Preferences of the user, so they move with the phone. Kept by libs:light, so every app that compiles it (the SuperApp, Cloud Calc's Toolkit > Light) carries it. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nfc_history` | prefs | content | no | #1264 libs:nfc's scan history: one JSON array (key entries, at most 500 rows) of tag scans - time, UID, type, technologies, the NDEF summary, a note. Never a Wi-Fi key or any tag secret. The user's own data, exported as JSON / CSV from Measure > NFC > History. Kept by libs:nfc, so every app that compiles it (Cloud Calc) carries it. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
