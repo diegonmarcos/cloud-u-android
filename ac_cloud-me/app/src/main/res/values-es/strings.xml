@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spanish strings of Cloud Me (#1298/#1299). English is the base language; app/build.gradle resConfigs decides which locales ship. -->
+<resources>
+    <string name="repo_tree_title">Proyectos</string>
+    <string name="repo_tree_expand_all">Expandir todo</string>
+    <string name="repo_tree_collapse_all">Contraer todo</string>
+    <string name="repo_tree_close">Cerrar</string>
+    <string name="repo_tree_empty">El índice de repositorios está vacío.</string>
+    <string name="repo_tree_private">Privado</string>
+    <string name="repo_tree_public">Público</string>
+    <string name="section_lnktree">Lnktree</string>
+</resources>

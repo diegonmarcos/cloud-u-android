@@ -80,6 +80,8 @@ public val SecondRowGroupDropdownMax: Dp = 320.dp
  *    listing that group's pages, a "|" divider, then that group's pages as horizontally scrollable icon chips (the selected
  *    one highlighted and named). Rows compact with the shared scroll collapse like [NavBarTopSecondRow].
  * [selectedId] is the shown page's id (a leaf); a pick from the chips or the dropdown calls [onSelect].
+ * [onGroupIndex] (#1298) is asked first when a group label is tapped: true = the app opened its own surface for that
+ * group (Cloud Me's Proj opens the whole repo outline), so the default page-list dropdown stays closed.
  */
 @Composable
 public fun NavBarTopSecondRows(
@@ -95,6 +97,7 @@ public fun NavBarTopSecondRows(
     iconFor: @Composable (NavPage) -> Painter? = { null },
     compact: Boolean = LocalNavChromeCollapse.current?.collapsed ?: false,
     hidden: Boolean = LocalNavChromeCollapse.current?.hidden ?: false,
+    onGroupIndex: (NavGroup) -> Boolean = { false },
 ) {
     if (section.rows != SecondRowMode.ManyRows) {
         NavBarTopSecondRow(section.pages, selectedId, onSelect, modifier, dark, onReselect, underTopChrome, flushTop, surface, iconFor, compact, hidden)
@@ -138,7 +141,7 @@ public fun NavBarTopSecondRows(
         ) {
             groups.forEach { g ->
                 Row(Modifier.fillMaxWidth().testTag(SecondRowGroupTags.row(g.id)), verticalAlignment = Alignment.CenterVertically) {
-                    GroupIndex(g, selectedId, onSelect, palette.island, palette.onIsland, palette.accentOnIsland, tabHeight, labelWidth)
+                    GroupIndex(g, selectedId, onSelect, palette.island, palette.onIsland, palette.accentOnIsland, tabHeight, labelWidth, onGroupIndex)
                     Text("|", Modifier.testTag(SecondRowGroupTags.divider(g.id)), color = palette.inkDim)
                     Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()).selectableGroup(), verticalAlignment = Alignment.CenterVertically) {
                         g.pages.forEachIndexed { i, page ->
@@ -180,12 +183,13 @@ private fun GroupIndex(
     accent: androidx.compose.ui.graphics.Color,
     height: Dp,
     width: Dp,
+    onGroupIndex: (NavGroup) -> Boolean = { false },
 ) {
     var open by remember { mutableStateOf(false) }
     Box {
         Box(
             Modifier.width(width).height(height).clip(RoundedCornerShape(SecondRowSpec.TAB_RADIUS))
-                .clickable(role = Role.Button) { open = true }
+                .clickable(role = Role.Button) { if (!onGroupIndex(group)) open = true }
                 
                 .testTag(SecondRowGroupTags.index(group.id)),
             contentAlignment = Alignment.Center,

@@ -30,9 +30,14 @@ object LegacyRoutes {
         val hit = moved["$section/${page.orEmpty()}".trimEnd('/')]
         // A page of a retired section that the table does not list still opens the section's new home.
         val fallback = if (hit == null && section in RETIRED_SECTIONS) moved.getValue(section) else null
+        // #1299 a RENAMED section keeps every page: the old id is an alias of the new one (me -> lnktree).
+        if (hit == null && fallback == null) RENAMED_SECTIONS[section]?.let { return it to page }
         val to = hit ?: fallback ?: return section to page
         return to.substringBefore('/') to to.substringAfter('/', "").ifBlank { null }
     }
 
     private val RETIRED_SECTIONS = setOf("work", "house")
+
+    /** #1299 Profile (`me`) is now Lnktree: old deep links, shortcuts and saved state name `me`. */
+    private val RENAMED_SECTIONS: Map<String, String> = mapOf("me" to "lnktree")
 }

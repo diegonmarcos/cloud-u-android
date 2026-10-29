@@ -42,8 +42,8 @@ import org.robolectric.annotation.GraphicsMode
  *
  *  - every tab is drawn as an icon; NO tab but the selected one draws its name;
  *  - a tap moves the name with the selection;
- *  - Settings is two visible entries, Profile and Configs, each opening its own section;
- *  - the bar reads Health, Study, Achieves, Profile, Duties, Buro, LLC.
+ *  - Settings is two visible entries, Lnktree and Configs, each opening its own section;
+ *  - the bar reads Health, Study, Achieves, Lnktree, Duties, Buro, LLC.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp-xxhdpi")
@@ -123,15 +123,15 @@ class MeTabsTest {
     }
 
     @Test
-    fun `Profile and Configs are the sections the top bar's icons open`() {
-        assertEquals(listOf("Profile", "Configs"), Sections.settings().map { it.label })
+    fun `Lnktree and Configs are the sections the top bar's icons open`() {
+        assertEquals(listOf("Lnktree", "Configs"), Sections.settings().map { it.label })
         assertTrue("the declared top bar has the hamburger and the inline actions", MeTopBar.decl.drawer && MeTopBar.decl.inlineActions)
     }
 
     @Test
-    fun `the bar reads Health, Study, Achieves, Profile, Duties, Buro, LLC`() {
+    fun `the bar reads Health, Study, Achieves, Lnktree, Duties, Buro, LLC`() {
         assertEquals(
-            listOf("Health", "Study", "Achieves", "Profile", "Duties", "Buro", "LLC"),
+            listOf("Health", "Study", "Achieves", "Lnktree", "Duties", "Buro", "LLC"),
             Sections.bottom().map { it.label },
         )
         assertTrue("a launch section is back on the bar", Sections.bottom().none { it.target.isNotBlank() })

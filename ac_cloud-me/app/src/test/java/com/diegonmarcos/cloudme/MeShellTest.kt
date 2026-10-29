@@ -73,13 +73,13 @@ class MeShellTest {
     private val opened = mutableListOf<String>()
     private val targets = mutableListOf<String>()
     private val pagesOpened = mutableListOf<Pair<String, String>>()
-    private var selected by mutableStateOf<String?>("me")
+    private var selected by mutableStateOf<String?>("lnktree")
 
     private fun show() {
         compose.setContent {
             CloudKitTheme(KitPalette(Color.Black, Color.DarkGray, Color.White, Color.LightGray, Color.Magenta, Color.Gray, Color.Black)) {
                 MeShell(
-                    "Profile", selected, onOpen = { opened += it; selected = it }, onTarget = { targets += it },
+                    "Lnktree", selected, onOpen = { opened += it; selected = it }, onTarget = { targets += it },
                     onOpenPage = { section, page -> pagesOpened += section to page },
                 ) {
                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).testTag(PAGE)) { Spacer(Modifier.height(6000.dp)) }
@@ -110,13 +110,13 @@ class MeShellTest {
         compose.onNodeWithTag(TopBarTags.CONFIGS).performClick()
         compose.waitForIdle()
         assertEquals(listOf(MeTopBar.AI_TARGET), targets)
-        assertEquals(listOf("me", "configs"), opened)
+        assertEquals(listOf("lnktree", "configs"), opened)
     }
 
     @Test
     fun `tapping the title island lists the shown section's hierarchy and a pick opens that page (#1154)`() {
         show()
-        val section = Sections.byId("me")!!
+        val section = Sections.byId("lnktree")!!
         compose.onNodeWithTag(TopBarTags.TITLE).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(TopFirstRowTags.entry(section.id)).assertIsDisplayed()

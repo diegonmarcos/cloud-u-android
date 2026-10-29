@@ -69,3 +69,18 @@ There deliberately is none. `ab_cloud-libs-shared/lib-apks` builds **one APK per
 module** and finds modules by looking for a `build.gradle` in each child of
 `libs/`. Adding one here would produce an APK containing other repositories'
 source. This is a data directory that happens to live under `libs/`.
+
+## The v3 outline (#1298)
+
+`repos.outline.json` is the registry's hierarchy (areas → projects → [sub-categories →] families → repos, every node
+with its registry code; a repo leaf carries GitHub name, url, private and description). It is DERIVED from
+`_git-repos-master/repos-github.json` (generated there from `repos.v3.json`), vendored byte-for-byte as
+`repos-github.sot.json`. Nothing in it is typed by hand.
+
+```sh
+./sync.sh --refresh-outline [file]   # re-vendor repos-github.json (from [file], else GitHub) and regenerate
+./sync.sh --check-outline            # exit 1 when the outline or a consumer copy is stale
+```
+
+Consumers ship a byte-equal copy, written by the same command: Cloud Me (`ac_cloud-me/data/repos/repos.outline.json`,
+Lnktree > Proj), held equal by its RepoTreeTest.

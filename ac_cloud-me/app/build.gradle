@@ -105,6 +105,23 @@ def calEngineDecl = buildJson.engines?.cal
 if (calEngineDecl == null) {
     throw new GradleException("build.json::engines.cal is not declared — Agenda would bind nothing")
 }
+// #1298 Lnktree > Proj: build.json::ui.repo_tree (which group, which area page is which registry area code) and the fleet
+// apps a repo leaf can open (constellation repo_url -> package; a repo with no app opens its GitHub url). The tree itself
+// is the asset data/repos/repos.outline.json (libs:repos), read when the page opens. A declared area page the outline
+// does not hold, or a group that is not declared, fails the build instead of drawing an empty tree on the phone.
+def repoTreeDecl = buildJson.ui.repo_tree ?: [:]
+def repoOutline  = new groovy.json.JsonSlurper().parse(file('../data/repos/repos.outline.json'))
+if (repoTreeDecl) {
+    def outlineCodes = repoOutline.areas.collect { it.code.toString() }
+    (repoTreeDecl.areas ?: []).each { a ->
+        if (!(a.code.toString() in outlineCodes)) throw new GradleException("ui.repo_tree area ${a.page} names code ${a.code}, which repos.outline.json does not hold")
+    }
+    def owner = (buildJson.ui.sections ?: []).find { s -> (s.groups ?: []).any { it.id == repoTreeDecl.group } }
+    if (owner == null) throw new GradleException("ui.repo_tree.group '${repoTreeDecl.group}' is not a declared ui.sections[].groups id")
+}
+def fleetRepoApps = new groovy.json.JsonSlurper().parse(new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')).apps
+    .findAll { it.repo_url && it.package }.collect { [url: it.repo_url.toString(), package: it.package.toString()] }
+def uiRepoTreeB64 = b64(repoTreeDecl + [fleet_apps: fleetRepoApps])
 def calEngineFleet = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.find { it.id == calEngineDecl.fleet }
 if (calEngineFleet == null) {
     throw new GradleException(
@@ -150,6 +167,7 @@ android {
         buildConfigField "String", "UI_SETTINGS",          "\"${uiSettings}\""
         buildConfigField "String", "UI_EXTERNAL_APPS_B64", "\"${uiExternalAppsB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermsRuntimeB64}\""
+        buildConfigField "String", "UI_REPO_TREE_B64",     "\"${uiRepoTreeB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",  "\"${profile.name ?: ''}\""
         buildConfigField "String", "UI_PROFILE_EMAIL", "\"${profile.email ?: ''}\""
         buildConfigField "String", "CAL_ENGINE_PACKAGE",      "\"${calEnginePackage}\""
@@ -196,6 +214,8 @@ android {
             assets.srcDirs += file('../data/web')
             // Health and DD record SCHEMAS (labels only, no values; test-profiles-privacy.sh enforces it): data/profiles/profiles/<id>.schema.json.
             assets.srcDirs += file('../data/profiles')
+            // #1298 libs:repos' registry outline (byte-equal copy, guarded), read by Lnktree > Proj: repos.outline.json at the asset root.
+            assets.srcDirs += file('../data/repos')
         }
     }
 

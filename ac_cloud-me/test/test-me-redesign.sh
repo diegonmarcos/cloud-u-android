@@ -47,8 +47,8 @@ def strings(o):
         for v in o: yield from strings(v)
 
 # ---- N1 nav order
-want_ids = ["health", "study", "achieves", "me", "duties", "buro", "llc"]
-want_labels = ["Health", "Study", "Achieves", "Profile", "Duties", "Buro", "LLC"]
+want_ids = ["health", "study", "achieves", "lnktree", "duties", "buro", "llc"]
+want_labels = ["Health", "Study", "Achieves", "Lnktree", "Duties", "Buro", "LLC"]
 if ui.get("bottom_nav") != want_ids:
     bad("nav-order", f"ui.bottom_nav is {ui.get('bottom_nav')}, wanted {want_ids}")
 if [secs[i]["label"] for i in ui.get("bottom_nav", []) if i in secs] != want_labels:
@@ -90,8 +90,8 @@ for s in secs.values():
 
 # ---- N3 top bar: the fleet's AppTopBar, inline actions; ui.settings names the sections Profile and Configs open
 st = ui.get("settings")
-if st != ["me", "configs"] or [secs[i]["label"] for i in (st or []) if i in secs] != ["Profile", "Configs"]:
-    bad("settings", f"ui.settings is {st}; wanted the sections Profile and Configs, in that order")
+if st != ["lnktree", "configs"] or [secs[i]["label"] for i in (st or []) if i in secs] != ["Lnktree", "Configs"]:
+    bad("settings", f"ui.settings is {st}; wanted the sections Lnktree and Configs, in that order")
 for p in kt(MAIN):
     if re.search(r"\bDropdownMenu\b|Icons\.Filled\.Settings|Icons\.[A-Za-z.]*\.Menu\b", code(p)):
         bad("settings", f"{os.path.relpath(p, app)} draws a Settings dropdown or its own hamburger")
@@ -204,18 +204,18 @@ for gone in ("house", "work"):
         bad("pages", f"the retired {gone} section is declared again")
     if os.path.isdir(os.path.join(app, "data/ui", gone)):
         bad("pages", f"data/ui/{gone} is back")
-if [p["id"] for p in secs.get("me", {}).get("pages", [])] != ["professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree"]:
-    bad("pages", "Profile pages are not Professional, Leaf.y, Nexus.z, Stark.x, Personal, Social, Health, DD, Astro, Lnktree")
-_me = secs.get("me", {})
-if _me.get("nav_mode") != "horizontal_two_rows" or {g["id"]: g["pages"] for g in _me.get("groups", [])} != {"prof": ["professional", "leafy", "nexus", "stark"], "pers": ["personal", "social", "health", "dd", "astro", "lnktree"]}:
-    bad("pages", "Profile is not the two rows Prof / Pers")
+if [p["id"] for p in secs.get("lnktree", {}).get("pages", [])] != ["professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree", "area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"]:
+    bad("pages", "Lnktree pages are not Professional, Leaf.y, Nexus.z, Stark.x, Personal, Social, Health, DD, Astro, Lnktree, Unix, CG, Capital, HardTech, Lecole42, Front")
+_me = secs.get("lnktree", {})
+if _me.get("nav_mode") != "horizontal_two_rows" or {g["id"]: g["pages"] for g in _me.get("groups", [])} != {"prof": ["professional", "leafy", "nexus", "stark"], "pers": ["personal", "social", "health", "dd", "astro", "lnktree"], "proj": ["area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"]}:
+    bad("pages", "Lnktree is not the three rows Prof / Pers / Proj")
 if [p["id"] for p in _me.get("pages", []) if p.get("separator_before")] != ["leafy", "health", "lnktree"]:
-    bad("pages", "Profile row separators are not before Leaf.y, Health, Lnktree")
+    bad("pages", "Lnktree row separators are not before Leaf.y, Health, Lnktree")
 for _pid, _u in (("leafy", "https://diegonmarcos.github.io/leafy/"), ("nexus", "https://diegonmarcos.github.io/nexus/"), ("stark", "https://diegonmarcos.github.io/stark/"), ("astro", "https://diegonmarcos.github.io/myAstro/"), ("lnktree", "https://linktree.diegonmarcos.com/")):
-    _f = os.path.join(app, f"data/ui/me/{_pid}.json")
+    _f = os.path.join(app, f"data/ui/lnktree/{_pid}.json")
     _b = json.load(open(_f, encoding="utf-8")) if os.path.exists(_f) else []
     if len(_b) != 1 or _b[0].get("id") != "web" or _b[0].get("url") != _u:
-        bad("pages", f"Profile > {_pid} is not the embedded page {_u}")
+        bad("pages", f"Lnktree > {_pid} is not the embedded page {_u}")
 _ex = os.path.join(app, "data/ui/achieves/experiences.json")
 _eb = json.load(open(_ex, encoding="utf-8")) if os.path.exists(_ex) else []
 if len(_eb) != 1 or _eb[0].get("kind") != "ledger" or _eb[0].get("store") != "experiences_user" or [l["collection"] for l in _eb[0].get("ledgers", [])] != ["done", "todo"]:
@@ -348,7 +348,7 @@ only() { # <check id>: nothing but that id is red in the real tree
   local r; r="$(check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | cut -f1 | sort -u | grep -x "$1" || true)"
   [ -z "$r" ]
 }
-for t in "nav-order|the bar reads Health, Study, Achieves, Profile, Duties, Buro, LLC" \
+for t in "nav-order|the bar reads Health, Study, Achieves, Lnktree, Duties, Buro, LLC" \
          "tab-style|page tabs show every name at rest and only the selected name when scrolled down (#1159)" \
          "settings|the top bar is the fleet AppTopBar: hamburger, AI, Profile, Configs, no dropdown" \
          "achieves|Achieves renders the owner's text (B1, B2, B3, region table with its link)" \

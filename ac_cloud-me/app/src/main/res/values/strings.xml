@@ -11,4 +11,13 @@
     <string name="cal_engine_old_title">Calendar engine too old</string>
     <string name="cal_engine_old">The calendar engine on this phone (%1$s) speaks contract %2$d and this Cloud Me needs %3$d — update it from Store ▸ Cloud Constellation ▸ Libs.</string>
     <string name="cal_engine_failed_title">The calendar engine did not answer</string>
+    <!-- #1298 Lnktree > Proj, the repository tree. #1299 the section name is Lnktree in every language (the bar label itself is build.json). -->
+    <string name="repo_tree_title">Projects</string>
+    <string name="repo_tree_expand_all">Expand all</string>
+    <string name="repo_tree_collapse_all">Collapse all</string>
+    <string name="repo_tree_close">Close</string>
+    <string name="repo_tree_empty">The repository outline is empty.</string>
+    <string name="repo_tree_private">Private</string>
+    <string name="repo_tree_public">Public</string>
+    <string name="section_lnktree">Lnktree</string>
 </resources>

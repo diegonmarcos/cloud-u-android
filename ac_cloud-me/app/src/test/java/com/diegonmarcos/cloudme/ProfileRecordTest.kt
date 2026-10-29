@@ -73,11 +73,11 @@ class ProfileRecordTest {
 
     @Test fun `Profile declares the three new pages and each is an embedded web page`() {
         val ui = JSONObject(BuroLlcTestData.text("build.json")).getJSONObject("ui").getJSONArray("sections")
-        val me = (0 until ui.length()).map { ui.getJSONObject(it) }.first { it.getString("id") == "me" }.getJSONArray("pages")
+        val me = (0 until ui.length()).map { ui.getJSONObject(it) }.first { it.getString("id") == "lnktree" }.getJSONArray("pages")
         val ids = (0 until me.length()).map { me.getJSONObject(it).getString("id") }
         for (p in listOf("social", "health", "dd")) assertTrue(p in ids)
         for (p in listOf("health", "dd")) {
-            val stack = org.json.JSONArray(BuroLlcTestData.text("data/ui/me/$p.json"))
+            val stack = org.json.JSONArray(BuroLlcTestData.text("data/ui/lnktree/$p.json"))
             // Embedded render of the website page (like Professional and Personal); values are injected after load.
             assertEquals("fragment", stack.getJSONObject(0).getString("kind"))
             assertEquals("mysocials/$p.html", stack.getJSONObject(0).getString("url"))

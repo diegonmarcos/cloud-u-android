@@ -266,6 +266,9 @@ ab_cloud-libs-shared/libs/repos/*
 !ab_cloud-libs-shared/libs/repos/repos.sot.json
 !ab_cloud-libs-shared/libs/repos/sync.sh
 !ab_cloud-libs-shared/libs/repos/README.md
+## #1298 the v3 outline and its vendored source describe the registry too (not a mirror).
+!ab_cloud-libs-shared/libs/repos/repos.outline.json
+!ab_cloud-libs-shared/libs/repos/repos-github.sot.json
 ## ac_cloud-tasks's first local ./gradlew run surfaced it, but the gap
 ## Re-ignore Gradle/Kotlin daemon caches inside the whitelisted aa_cloud-superapp/
 aa_cloud-superapp/.cache/

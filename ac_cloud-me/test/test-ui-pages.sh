@@ -184,9 +184,9 @@ for s in secs:
 bar = [by_id[i] for i in bar_ids if i in by_id]
 
 # Mirror NavDecl.bottomSections() — the order is the declared order. Diego's
-# Owner order: Health, Study, Achieves, Profile, Duties, Buro, LLC, left to right.
+# Owner order: Health, Study, Achieves, Lnktree, Duties, Buro, LLC, left to right.
 bar_order = [s.get("label") for s in bar]
-EXPECTED_BAR_ORDER = ["Health", "Study", "Achieves", "Profile", "Duties", "Buro", "LLC"]
+EXPECTED_BAR_ORDER = ["Health", "Study", "Achieves", "Lnktree", "Duties", "Buro", "LLC"]
 if bar_order != EXPECTED_BAR_ORDER:
     bad.append(f"bottom bar order is {bar_order}, expected {EXPECTED_BAR_ORDER}")
 

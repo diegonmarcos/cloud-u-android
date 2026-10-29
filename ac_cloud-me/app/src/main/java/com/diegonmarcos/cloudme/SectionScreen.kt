@@ -87,6 +87,10 @@ fun SectionScreen(sectionId: String, requestedPage: String?, modifier: Modifier 
     // dropped, so stepping out of a container takes its strip with it.
     val levels = listOf(section.pages) + chain.dropLast(1).map { it.pages }
     val sideMenu = nav.rows == SecondRowMode.SideMenu && section.pages.size > 1
+    // #1298 the group build.json::ui.repo_tree.group names (Lnktree's Proj): its label opens the WHOLE repo outline.
+    var fullTree by rememberSaveable(sectionId) { mutableStateOf(false) }
+    val repoGroup = RepoTreeConfig.baked.group
+    if (fullTree) RepoTreeFullDialog(onDismiss = { fullTree = false })
     val body: @Composable (Int) -> Unit = { from ->
         Column(Modifier.fillMaxSize()) {
             levels.forEachIndexed { level, siblings ->
@@ -99,6 +103,7 @@ fun SectionScreen(sectionId: String, requestedPage: String?, modifier: Modifier 
                         NavBarTopSecondRows(
                             section = nav, selectedId = chain.getOrNull(0)?.id, onSelect = onSelect,
                             dark = true, underTopChrome = false, iconFor = icon,
+                            onGroupIndex = { g -> (repoGroup.isNotBlank() && g.id == repoGroup).also { if (it) fullTree = true } },
                         )
                     } else {
                         NavBarTopSecondRow(
@@ -146,6 +151,8 @@ private fun PageContent(section: Section, page: Page, modifier: Modifier) {
             "tasks" -> TasksScreen(modifier, single.optString("subject"), single.optString("open"))
             "files" -> FilesScreen(single, modifier)
             "web" -> WebPage(single, modifier)
+            // #1298 Lnktree > Proj > <area>: that registry area's tree (repos.outline.json, libs:repos).
+            "repo_tree" -> RepoTreeScreen(single.optString("area"), modifier)
             else -> StackScreen(stack, modifier)
         }
     } else {

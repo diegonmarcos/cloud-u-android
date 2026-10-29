@@ -27,10 +27,10 @@ class BuroLlcDeclTest {
     @Test fun `the bar is Health Study Achieves Profile Duties Buro LLC and House and Work are gone`() {
         val ui = JSONObject(BuroLlcTestData.text("build.json")).getJSONObject("ui")
         val bar = ui.getJSONArray("bottom_nav").let { a -> (0 until a.length()).map { a.getString(it) } }
-        assertEquals(listOf("health", "study", "achieves", "me", "duties", "buro", "llc"), bar)
-        assertEquals(listOf("Health", "Study", "Achieves", "Profile", "Duties", "Buro", "LLC"), bar.map { sections.getValue(it).getString("label") })
+        assertEquals(listOf("health", "study", "achieves", "lnktree", "duties", "buro", "llc"), bar)
+        assertEquals(listOf("Health", "Study", "Achieves", "Lnktree", "Duties", "Buro", "LLC"), bar.map { sections.getValue(it).getString("label") })
         assertFalse("house" in sections); assertFalse("work" in sections)
-        assertEquals(listOf("professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree"), ids(sections.getValue("me").getJSONArray("pages")))
+        assertEquals(listOf("professional", "leafy", "nexus", "stark", "personal", "social", "health", "dd", "astro", "lnktree", "area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front"), ids(sections.getValue("lnktree").getJSONArray("pages")))
         assertEquals(listOf("tasks"), ids(sections.getValue("duties").getJSONArray("pages")))
     }
 
@@ -120,11 +120,12 @@ class BuroLlcDeclTest {
         assertTrue("the own ventures are still there", cards(side) >= 1)
     }
 
-    @Test fun `Profile is two rows Prof and Pers with the declared separators`() {
-        val me = sections.getValue("me")
+    @Test fun `Lnktree is three rows Prof, Pers and Proj with the declared separators`() {
+        val me = sections.getValue("lnktree")
         assertEquals("horizontal_two_rows", me.getString("nav_mode"))
         assertEquals(mapOf("prof" to listOf("professional", "leafy", "nexus", "stark"),
-            "pers" to listOf("personal", "social", "health", "dd", "astro", "lnktree")), groups("me"))
+            "pers" to listOf("personal", "social", "health", "dd", "astro", "lnktree"),
+            "proj" to listOf("area-unix", "area-cg", "area-capital", "area-hardtech", "area-lecole42", "area-front")), groups("lnktree"))
         val pages = me.getJSONArray("pages")
         val sep = (0 until pages.length()).map { pages.getJSONObject(it) }.filter { it.optBoolean("separator_before") }.map { it.getString("id") }
         assertEquals(listOf("leafy", "health", "lnktree"), sep)
@@ -135,7 +136,7 @@ class BuroLlcDeclTest {
             "stark" to "https://diegonmarcos.github.io/stark/", "astro" to "https://diegonmarcos.github.io/myAstro/",
             "lnktree" to "https://linktree.diegonmarcos.com/")
         for ((p, url) in want) {
-            val b = page("me", p).getJSONObject(0)
+            val b = page("lnktree", p).getJSONObject(0)
             assertEquals("fragment", b.getString("kind")); assertEquals("web", b.getString("id")); assertEquals(url, b.getString("url"))
         }
     }
