@@ -204,7 +204,7 @@ internal fun LazyListScope.locateTab(c: BleController, s: BleState) {
                 if (!s.scanning) BtButton("LE scan", primary = true, tag = "lo-scan") { c.startScan() }
                 val near = s.seen.values.sortedByDescending { it.rssi }.take(15)
                 if (near.isEmpty()) BtMuted("Nothing seen yet.")
-                near.forEach { d -> BtChoice("${d.label}  ${d.rssi} dBm  ${d.address}") { c.setLocate(d.address) } }
+                near.forEach { d -> BtChoice("${d.label}  ${d.rssi} dBm  ${d.address}", selected = false) { c.setLocate(d.address) } }
             }
         }
         return
