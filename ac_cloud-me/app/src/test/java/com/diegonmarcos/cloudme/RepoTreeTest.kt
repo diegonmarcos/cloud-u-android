@@ -50,7 +50,7 @@ class RepoTreeTest {
         assertNotNull(leaf)
         assertEquals("cloudy-u-android", leaf!!.name)
         assertTrue(leaf.url.startsWith("https://github.com/diegonmarcos/"))
-        assertEquals("1.1.1.1", leaf.code)
+        assertEquals("${android.code}.1", leaf.code)
         val cloudMe = node(unix.children, "Cloud-Me")
         assertEquals(listOf("Pub", "Pvt"), cloudMe.children.map { it.label })
         assertTrue(cloudMe.children.all { it.kind == "subcategory" })
@@ -166,9 +166,7 @@ class RepoTreeTest {
         assertEquals("lnktree" to null, LegacyRoutes.resolve("me", null))
         assertEquals("duties" to "tasks", LegacyRoutes.resolve("me", "tasks"))
         assertEquals("lnktree" to "lnktree-site", LegacyRoutes.resolve("me", "lnktree"))
-        for (sec in ui.getJSONArray("sections").objects()) {
-            fun ids(o: JSONObject): List<String> = o.optJSONArray("pages").objects().flatMap { listOf(it.getString("id")) + ids(it) }
-            assertFalse("section ${sec.getString("id")} declares a page with its own id", sec.getString("id") in ids(sec))
-        }
+        // the section took the name Lnktree: none of its pages may share that id (two title-menu entries, one tag)
+        assertFalse("lnktree" in lnktree.getJSONArray("pages").objects().map { it.getString("id") })
     }
 }

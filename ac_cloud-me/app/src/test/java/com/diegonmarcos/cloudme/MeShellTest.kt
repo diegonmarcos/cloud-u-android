@@ -120,7 +120,8 @@ class MeShellTest {
         compose.onNodeWithTag(TopBarTags.TITLE).performClick()
         compose.waitForIdle()
         compose.onNodeWithTag(TopFirstRowTags.entry(section.id)).assertIsDisplayed()
-        for (p in section.pages) compose.onNodeWithTag(TopFirstRowTags.entry(p.id)).assertIsDisplayed()
+        // Lnktree lists 16 pages (#1298 Proj): the later entries are reached by scrolling the menu.
+        for (p in section.pages) compose.onNodeWithTag(TopFirstRowTags.entry(p.id)).performScrollTo().assertIsDisplayed()
         val last = section.pages.last()
         compose.onNodeWithTag(TopFirstRowTags.entry(last.id)).performClick()
         compose.waitForIdle()
