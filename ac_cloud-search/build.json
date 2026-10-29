@@ -2133,9 +2133,7 @@
             "front-diegonmarcos",
             "front-data"
           ],
-          "repo_names": {
-            "front-diegonmarcos": "diegonmarcos.github.io"
-          },
+          "repo_names": {"cloud-u-android": "cloudy-u-android", "cloud-u-containers": "cloudy-u-containers", "cloud-infra": "cloudy-t-infra", "cloud-infra-desktop": "cloudy-u-desktop", "front-diegonmarcos": "diegonmarcos.github.io", "front-data": "z-archived_front-data"},
           "needs_account": false,
           "web_url": "https://github.com/diegonmarcos/{repo}/blob/main/{path}#L{line}",
           "drive_fleet": "drive",

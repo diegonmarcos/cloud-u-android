@@ -151,9 +151,8 @@ class MeshRelay(
         private var lastDial = 0L
         val up: Boolean get() = ws != null
 
-        init {
-            if (udp != null) Thread({ pumpOut() }, "mesh-relay-udp-${route.listen}").apply { isDaemon = true }.start()
-        }
+        /** Owns [udp]'s receive; joined on [close] (see there). */
+        private val pump: Thread? = udp?.let { Thread({ pumpOut() }, "mesh-relay-udp-${route.listen}").apply { isDaemon = true; start() } }
 
         /** WireGuard -> relay. */
         private fun pumpOut() {
@@ -210,9 +209,14 @@ class MeshRelay(
             runCatching { udp?.close() }
             ws?.let { runCatching { it.close() } }
             ws = null
+            // DatagramSocket is NIO-backed (JDK 13+): closing it while pumpOut is blocked in receive() defers the
+            // real descriptor close until that thread leaves receive, so the port would still be bound when
+            // stop() returns. Waiting for the pump makes "stopped" mean "the port is free".
+            pump?.takeIf { it !== Thread.currentThread() }?.join(JOIN_MS)
         }
 
         companion object {
+            const val JOIN_MS = 2_000L
             /** A route whose loopback port could not be bound: listed with the reason, carrying nothing. */
             fun failed(relay: MeshRelay, spec: RelaySpec, route: RelaySpec.Route, t: Throwable) =
                 Leg(relay, spec, route, null).apply { error = "cannot listen on $LOOPBACK:${route.listen}: ${relay.why(t)}"; closed = true }
