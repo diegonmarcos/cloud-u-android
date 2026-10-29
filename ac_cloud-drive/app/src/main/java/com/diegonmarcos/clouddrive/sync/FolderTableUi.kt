@@ -1,0 +1,178 @@
+package com.diegonmarcos.clouddrive.sync
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import com.diegonmarcos.clouddrive.Declarations
+import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
+import com.diegonmarcos.clouddrive.ui.DriveTags
+import com.diegonmarcos.clouddrive.ui.Hairline
+import com.diegonmarcos.clouddrive.ui.Pill
+import com.diegonmarcos.clouddrive.ui.SectionHeader
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/** One pending confirm: the command, its folders, and (Delete) the guard read from each clone. */
+private data class FolderConfirm(val action: Declarations.GitFolderActionDecl, val targets: List<FolderActions.Target>)
+
+/**
+ * #1288 THE ONE FOLDER TABLE of the Parentless and Unlisted git folders sections: the main table's header ([RepoTableHeader],
+ * [RepoTable.COLUMNS], sortable the same way), status cell ([RepoStatusCell]) and fact cells ([RepoCells]); facts a bare folder
+ * has not got print the dash ([FolderTable.rowOf]). Each row carries the declared folder commands ([kinds] filters which);
+ * every run goes through [GitSyncCoordinator.runFolderAction], the depth runner. [bulk] = a "Rename all" style pill.
+ */
+@Composable
+internal fun FolderRepoTable(
+    tableId: String,
+    title: String,
+    hint: String,
+    empty: String,
+    rows: List<FolderActions.Target>?,
+    glances: Map<String, GitSyncCoordinator.Glance>,
+    lastCommits: Map<String, Long>,
+    run: BulkDepth.Run?,
+    kinds: List<String>,
+    coordinator: GitSyncCoordinator,
+    subtitle: @Composable (FolderActions.Target) -> String,
+    bulk: Pair<String, String>? = null,
+    repoint: (java.io.File, java.io.File) -> String = { _, _ -> "" },
+    onOpenReport: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
+    val scroll = rememberScrollState()
+    var sort by remember { mutableStateOf(RepoTable.DEFAULT_SORT to true) }
+    var confirm by remember { mutableStateOf<FolderConfirm?>(null) }
+    var open by remember { mutableStateOf("") }
+    val actions = kinds.mapNotNull { Declarations.sync.git.folderAction(it) }
+    val busy = run?.finished == false
+    val list = rows
+
+    Column(modifier.fillMaxWidth()) {
+        SectionHeader(title, count = list?.size)
+        if (hint.isNotBlank()) Text(hint, Modifier.padding(horizontal = DriveMetrics.sectionInset), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (list != null && list.isEmpty()) Text(empty, Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall)
+        if (!list.isNullOrEmpty()) {
+            bulk?.let { (kind, label) ->
+                Declarations.sync.git.folderAction(kind)?.let { a ->
+                    Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), horizontalArrangement = Arrangement.End) {
+                        Pill(label, { confirm = FolderConfirm(a, list) }, filled = true, enabled = !busy, modifier = Modifier.testTag(DriveTags.PARENTLESS_ALL + "_" + tableId))
+                    }
+                }
+            }
+            RepoTableHeader(sort.first, sort.second, scroll, tag = DriveTags.folderTableHeader(tableId)) { c -> sort = RepoTable.tap(c, sort.first, sort.second) }
+            val cells = list.associate { t ->
+                t.path to FolderTable.rowOf(t, glances[UnlistedRepos.statusKey(t.path)], t.origin.takeIf { it.isNotBlank() }?.let { RepoProvider.labelOf(it, Declarations.providers) }, lastCommits[LastCommits.keyOf(t.path)])
+            }
+            RepoTable.sort(list, sort.first, sort.second) { cells.getValue(it.path) }.forEach { t ->
+                val row = cells.getValue(t.path)
+                val g = glances[UnlistedRepos.statusKey(t.path)]
+                Row(Modifier.fillMaxWidth().heightIn(min = DriveMetrics.rowHeight).testTag(DriveTags.parentlessRow(tableId + "_" + t.name)), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.horizontalScroll(scroll).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
+                        RepoStatusCell(RepoStatus.icons(true, g, false, emptyList(), ""), t.name, { open = if (open == t.path) "" else t.path }, RepoStatus.levelCaption(g, System.currentTimeMillis()))
+                        Column(Modifier.width(DriveMetrics.tableName).clickable { open = if (open == t.path) "" else t.path }) {
+                            Text(t.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(subtitle(t), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        RepoCells(row)
+                    }
+                }
+                if (open == t.path) Text(
+                    t.path + "\n" + t.origin.ifBlank { stringResource(R.string.repo_unlisted_no_remote) }, Modifier.padding(horizontal = DriveMetrics.sectionInset),
+                    style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.tight), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide, Alignment.End)) {
+                    actions.forEach { a ->
+                        Pill(a.label, { confirm = FolderConfirm(a, listOf(t)) }, enabled = !busy, danger = a.kind == Declarations.FOLDER_DELETE,
+                            modifier = Modifier.testTag(DriveTags.folderAction(a.kind, t.name)))
+                    }
+                }
+                Hairline()
+            }
+        }
+        // The outcome of the last folder command (the full list is the depth report; every line is in Activity Logs too).
+        if (run != null && run.kind in Declarations.FOLDER_KINDS && list != null) {
+            run.lines().take(REPORT_LINES).forEach { line ->
+                Text(line, Modifier.padding(horizontal = DriveMetrics.sectionInset), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace,
+                    color = if (line.startsWith("ok ")) MaterialTheme.colorScheme.onSurfaceVariant else colorResource(R.color.status_light_off))
+            }
+            Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset), horizontalArrangement = Arrangement.End) { Pill(stringResource(R.string.repo_depth_report), onOpenReport) }
+        }
+    }
+
+    confirm?.let { c -> FolderConfirmDialog(c, coordinator, repoint, onDone = { confirm = null }) }
+}
+
+@Composable
+private fun FolderConfirmDialog(c: FolderConfirm, coordinator: GitSyncCoordinator, repoint: (java.io.File, java.io.File) -> String, onDone: () -> Unit) {
+    val isDelete = c.action.kind == Declarations.FOLDER_DELETE
+    // Delete reads each clone first: uncommitted changes and unpushed commits decide the strict (typed) confirm.
+    var guards by remember(c) { mutableStateOf<Map<String, FolderActions.Guard>?>(if (isDelete) null else emptyMap()) }
+    var typed by remember(c) { mutableStateOf("") }
+    if (isDelete) LaunchedEffect(c) { guards = withContext(Dispatchers.IO) { c.targets.associate { it.path to coordinator.deleteGuard(it.path) } } }
+    val strict = guards?.filterValues { it.strict }.orEmpty()
+    // The typed confirm is per folder: one strict folder at a time (the per-row chip), so the typed name is unambiguous.
+    val strictName = strict.keys.singleOrNull()?.let { java.io.File(it).name }
+    val canGo = guards != null && (strict.isEmpty() || (strictName != null && FolderActions.typedOk(typed, strictName)))
+    AlertDialog(
+        onDismissRequest = onDone,
+        title = { Text(stringResource(R.string.folder_confirm_title, c.action.label, c.targets.size)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
+                Text(stringResource(when (c.action.kind) {
+                    Declarations.FOLDER_RENAME -> R.string.folder_confirm_rename
+                    Declarations.FOLDER_ARCHIVE -> R.string.folder_confirm_archive
+                    else -> R.string.folder_confirm_delete
+                }, Declarations.sync.git.archiveRoot))
+                c.targets.take(PREVIEW).forEach { t ->
+                    Text(t.name + if (c.action.kind == Declarations.FOLDER_RENAME) " → " + t.repoName else "", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelSmall)
+                    guards?.get(t.path)?.takeIf { it.strict }?.let { g ->
+                        g.reasons().forEach { Text("  ! $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
+                        g.changed.take(PREVIEW).forEach { Text("    $it", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelSmall) }
+                    }
+                }
+                if (c.targets.size > PREVIEW) Text(stringResource(R.string.parentless_confirm_more, c.targets.size - PREVIEW), style = MaterialTheme.typography.labelSmall)
+                if (isDelete && guards == null) Text(stringResource(R.string.folder_delete_reading), style = MaterialTheme.typography.labelSmall)
+                if (strictName != null) OutlinedTextField(typed, { typed = it }, Modifier.fillMaxWidth().testTag(DriveTags.FOLDER_DELETE_TYPED),
+                    label = { Text(stringResource(R.string.folder_delete_type, strictName)) }, singleLine = true)
+                if (strict.size > 1) Text(stringResource(R.string.folder_delete_one_at_a_time), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                coordinator.runFolderAction(c.action, c.targets, typed = if (strictName != null && canGo) strict.keys else emptySet(), repoint = repoint)
+                onDone()
+            }, enabled = canGo, modifier = Modifier.testTag(DriveTags.FOLDER_CONFIRM)) { Text(c.action.label) }
+        },
+        dismissButton = { TextButton(onClick = onDone) { Text(stringResource(R.string.chrome_cancel)) } },
+    )
+}
+
+private const val PREVIEW = 8
+private const val REPORT_LINES = 6

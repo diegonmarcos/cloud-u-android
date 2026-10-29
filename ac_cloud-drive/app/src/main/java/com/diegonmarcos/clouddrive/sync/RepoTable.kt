@@ -33,6 +33,8 @@ data class RepoTableRow(
 object RepoTable {
     const val DASH = "—"
     val DEFAULT_SORT = RepoColumn.NAME
+    /** #1288 THE column set and order of every repo table (the main one, Parentless, Unlisted): the one header draws exactly these. */
+    val COLUMNS: List<RepoColumn> = RepoColumn.entries.toList()
 
     /** The sort after a header tap: the same column flips direction, another column starts ascending. */
     fun tap(column: RepoColumn, current: RepoColumn, ascending: Boolean): Pair<RepoColumn, Boolean> =
@@ -133,4 +135,15 @@ object RepoTable {
             lastCommitMs = lastCommit(cloned, localHeadMs, remote?.pushedAtMs),
         )
     }
+}
+
+/**
+ * #1288 the Parentless and Unlisted git folders tables: the SAME columns as the main table ([RepoTable.COLUMNS]), the same
+ * header and cells; a fact a bare folder cannot have (Pvt/Pub, LFS, the forge's sizes and branches) is null and prints the dash.
+ */
+object FolderTable {
+    val COLUMNS: List<RepoColumn> get() = RepoTable.COLUMNS
+
+    fun rowOf(t: FolderActions.Target, glance: GitSyncCoordinator.Glance?, provider: String?, lastCommitMs: Long?): RepoTableRow =
+        RepoTable.rowOf(t.name, declaredPrivate = null, cloned = true, glance = glance, remote = null, provider = provider, diskBytes = null, lfs = null, localHeadMs = lastCommitMs)
 }

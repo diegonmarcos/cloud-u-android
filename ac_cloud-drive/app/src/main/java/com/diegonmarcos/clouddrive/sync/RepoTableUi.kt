@@ -57,13 +57,13 @@ private fun columnLabel(c: RepoColumn): String = stringResource(when (c) {
 
 /** The sortable header: a tap on a column sorts by it, a second tap flips the direction. Scrolls with the rows ([scroll] is shared). */
 @Composable
-internal fun RepoTableHeader(column: RepoColumn, ascending: Boolean, scroll: ScrollState, onSort: (RepoColumn) -> Unit) {
+internal fun RepoTableHeader(column: RepoColumn, ascending: Boolean, scroll: ScrollState, tag: String = DriveTags.SYNC_GIT_TABLE_HEADER, onSort: (RepoColumn) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).heightIn(min = DriveMetrics.tap).testTag(DriveTags.SYNC_GIT_TABLE_HEADER),
+        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).heightIn(min = DriveMetrics.tap).testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(Modifier.horizontalScroll(scroll).padding(horizontal = DriveMetrics.sectionInset), verticalAlignment = Alignment.CenterVertically) {
-            RepoColumn.entries.forEach { c ->
+            RepoTable.COLUMNS.forEach { c ->
                 val arrow = if (c == column) (if (ascending) " ▲" else " ▼") else ""
                 Text(
                     columnLabel(c) + arrow, repoCellModifier(c).clickable { onSort(c) },

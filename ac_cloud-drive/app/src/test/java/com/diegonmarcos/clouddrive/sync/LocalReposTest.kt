@@ -108,19 +108,28 @@ class LocalReposTest {
         assertTrue("it is no longer parentless", LocalRepos.parentless(LocalRepos.scan(listOf(root))).isEmpty())
     }
 
-    @Test fun renameRefusesWhenTheTargetExistsAndTouchesNothing() {
+    @Test fun renameToATakenNameBecomesConflictAndTouchesTheOtherFolderNot() {
         val root = tmp()
         val d = repo(root, "my-copy", "https://h/o/cloud-notes.git")
         val clash = File(root, "cloud-notes").apply { mkdirs() }
         File(clash, "mine.txt").writeText("do not overwrite")
         val out = LocalRepos.rename(LocalRepos.parentless(LocalRepos.scan(listOf(root))).single())
-        assertTrue(out is LocalRepos.Outcome.TargetExists)
-        assertTrue(d.isDirectory)
+        assertTrue(out is LocalRepos.Outcome.Renamed && out.conflict)
+        assertEquals("cloud-notes___CONFLICT", (out as LocalRepos.Outcome.Renamed).to.name)
+        assertFalse(d.exists())
+        assertTrue(File(root, "cloud-notes___CONFLICT/.git").isDirectory)
         assertEquals("do not overwrite", File(clash, "mine.txt").readText())
-        // a plain FILE of that name refuses too
-        clash.deleteRecursively(); File(root, "cloud-notes").writeText("file")
-        assertTrue(LocalRepos.rename(LocalRepos.parentless(LocalRepos.scan(listOf(root))).single()) is LocalRepos.Outcome.TargetExists)
-        assertTrue(d.isDirectory)
+        assertEquals(listOf("mine.txt"), clash.list()!!.toList())
+    }
+
+    @Test fun renameCountsConflictsUpAndAPlainFileCountsAsTaken() {
+        val root = tmp()
+        File(root, "cloud-notes").writeText("file")
+        File(root, "cloud-notes___CONFLICT").mkdirs()
+        repo(root, "my-copy", "https://h/o/cloud-notes.git")
+        val out = LocalRepos.rename(LocalRepos.parentless(LocalRepos.scan(listOf(root))).single { it.dir.name == "my-copy" })
+        assertEquals("cloud-notes___CONFLICT2", (out as LocalRepos.Outcome.Renamed).to.name)
+        assertEquals("file", File(root, "cloud-notes").readText())
     }
 
     @Test fun renameRefusesAnUnusableNameAndAMissingFolder() {
@@ -131,7 +140,7 @@ class LocalReposTest {
         assertTrue(d.isDirectory)
     }
 
-    @Test fun renameAllRenamesEveryRowAndRefusesOnlyTheOnesWhoseTargetExists() {
+    @Test fun renameAllRenamesEveryRowAndSendsAClashToConflict() {
         val root = tmp()
         repo(root, "one", "https://h/o/alpha.git")
         repo(root, "two", "https://h/o/beta.git")
@@ -140,10 +149,10 @@ class LocalReposTest {
         val rows = LocalRepos.parentless(LocalRepos.scan(listOf(root)))
         assertEquals(listOf("one", "three", "two"), rows.map { it.dir.name })
         val out = LocalRepos.renameAll(rows)
-        assertEquals(listOf("Renamed", "Renamed", "TargetExists"), out.map { it::class.simpleName })
+        assertEquals(listOf(false, false, true), out.map { (it as LocalRepos.Outcome.Renamed).conflict })
         assertTrue(File(root, "alpha/.git").isDirectory)
         assertTrue(File(root, "gamma/.git").isDirectory)
-        assertTrue("the refused one is untouched", File(root, "two/.git").isDirectory)
+        assertTrue("the clashing one went to ___CONFLICT", File(root, "beta___CONFLICT/.git").isDirectory)
         assertFalse(File(root, "beta/.git").exists())
     }
 
@@ -152,8 +161,9 @@ class LocalReposTest {
         repo(root, "one", "https://h/o/same.git")
         repo(root, "two", "https://h/o/same.git")
         val out = LocalRepos.renameAll(LocalRepos.parentless(LocalRepos.scan(listOf(root))))
-        assertEquals(listOf("Renamed", "TargetExists"), out.map { it::class.simpleName })
-        assertTrue(File(root, "two/.git").isDirectory)
+        assertEquals(listOf("same", "same___CONFLICT"), out.map { (it as LocalRepos.Outcome.Renamed).to.name })
+        assertTrue(File(root, "same/.git").isDirectory)
+        assertTrue(File(root, "same___CONFLICT/.git").isDirectory)
     }
 
     // ── the references that follow a rename ─────────────────────────────────────────────────

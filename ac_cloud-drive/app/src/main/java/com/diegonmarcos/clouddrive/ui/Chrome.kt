@@ -123,6 +123,11 @@ object DriveTags {
     const val PARENTLESS_ALL = "drive_git_parentless_all"
     const val PARENTLESS_CONFIRM = "drive_git_parentless_confirm"
     fun parentlessRow(name: String) = "drive_git_parentless_row_$name"
+    /** #1288 the folder tables (Parentless, Unlisted): their header, a row's command chip, the typed Delete confirm. */
+    fun folderTableHeader(table: String) = "drive_git_folder_header_$table"
+    fun folderAction(kind: String, name: String) = "drive_git_folder_${kind}_$name"
+    const val FOLDER_CONFIRM = "drive_git_folder_confirm"
+    const val FOLDER_DELETE_TYPED = "drive_git_folder_delete_typed"
     fun hostCard(id: String) = "drive_git_host_$id"
     fun hostToken(id: String) = "drive_git_host_token_$id"
     fun hostSignIn(id: String) = "drive_git_host_signin_$id"

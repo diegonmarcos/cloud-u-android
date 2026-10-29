@@ -25,8 +25,9 @@ object LocalRepos {
 
     sealed interface Outcome {
         val from: File
-        data class Renamed(override val from: File, val to: File) : Outcome
-        /** A folder or file of that name is already there: nothing was touched. */
+        /** [conflict] = the repository name was taken, so the folder became <name>___CONFLICT[n] (#1288). */
+        data class Renamed(override val from: File, val to: File, val conflict: Boolean = false) : Outcome
+        /** Every name, the conflict names included, is already there: nothing was touched. */
         data class TargetExists(override val from: File, val to: File) : Outcome
         data class Missing(override val from: File) : Outcome
         /** The repository name is not a usable folder name (a path separator, a dot name). */
@@ -102,19 +103,20 @@ object LocalRepos {
 
     private fun usable(name: String): Boolean = name.isNotBlank() && name != "." && name != ".." && '/' !in name && '\u0000' !in name
 
-    /** Rename [p]'s folder to its repository's name. REFUSES, touching nothing, when anything is already called that. */
+    /**
+     * Rename [p]'s folder to its repository's name. #1288 when anything is already called that, the folder becomes
+     * <name>___CONFLICT (then ___CONFLICT2 ...: [FolderActions.conflictName]); nothing is ever overwritten or merged.
+     */
     fun rename(p: Parentless): Outcome {
-        val to = p.target
-        return when {
-            !p.dir.isDirectory -> Outcome.Missing(p.dir)
-            !usable(p.repoName) -> Outcome.Invalid(p.dir, p.repoName)
-            to.exists() -> Outcome.TargetExists(p.dir, to)
-            p.dir.renameTo(to) -> Outcome.Renamed(p.dir, to)
-            else -> Outcome.Failed(p.dir, to)
-        }
+        val parent = p.dir.parentFile ?: return Outcome.Missing(p.dir)
+        if (!p.dir.isDirectory) return Outcome.Missing(p.dir)
+        if (!usable(p.repoName)) return Outcome.Invalid(p.dir, p.repoName)
+        val name = FolderActions.renameTarget(p.repoName) { File(parent, it).exists() } ?: return Outcome.TargetExists(p.dir, p.target)
+        val to = File(parent, name)
+        return if (p.dir.renameTo(to)) Outcome.Renamed(p.dir, to, conflict = name != p.repoName) else Outcome.Failed(p.dir, to)
     }
 
-    /** [rename] each row in order; a refused row does not stop the others, and two rows wanting one name cannot both win. */
+    /** [rename] each row in order; a failed row does not stop the others, and two rows wanting one name cannot both win (the second gets ___CONFLICT). */
     fun renameAll(rows: List<Parentless>): List<Outcome> = rows.map { rename(it) }
 
     /**

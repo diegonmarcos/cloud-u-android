@@ -860,6 +860,113 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     /** Stop the depth command: nothing new starts; an operation already running ends on its own. */
     fun cancelDepthRun() { depthRun.update { it?.copy(cancelled = true) }; depthJob?.cancel() }
 
+    // ── #1288 the per-folder commands of the Parentless and Unlisted tables (ui.sync.git.folder_actions): Rename, Archive, Delete ──
+
+    /** <store git>/<archive_root>, or null when the declared root is unsafe. */
+    fun archiveDir(): File? = FolderActions.archiveDir(SharedStore.gitRoot(), Declarations.sync.git.archiveRoot)
+
+    /** The guest path when the store is reached through cld.termux, else null (java.io on the folder itself). */
+    private fun execGuest(dir: File): String? = runCatching { if (StoreGit.useExec(ctx)) StoreGit.guestOf(dir) else null }.getOrNull()
+
+    /** What Delete must show before it runs: uncommitted changes and unpushed commits read from the clone (blocking: call on IO). */
+    fun deleteGuard(path: String): FolderActions.Guard {
+        val dir = File(path)
+        return runCatching {
+            val g = execGuest(dir)
+            if (g != null) {
+                val r = StoreExec(ctx).run(FolderActions.guardScript(g) { StoreExec.q(it) }, timeoutMs = 30_000)
+                if (r.exit == 2) FolderActions.Guard(emptyList(), null, "not readable in cld.termux") else FolderActions.parseGuard(r.out)
+            } else GitEngine(ctx, dir).use { e ->
+                val st = e.status()
+                FolderActions.Guard(st.files.map { it.path }, if (st.upstream.isNullOrBlank()) null else st.ahead)
+            }
+        }.getOrElse { FolderActions.Guard(emptyList(), null, it.message ?: it.toString()) }
+    }
+
+    /** Move one folder; refuses when the destination exists (cld.termux checks again, so a race never merges two folders). */
+    private fun moveFolder(from: File, to: File): GitOpResult {
+        if (to.exists()) return GitOpResult(false, "refused: ${to.name} already exists")
+        val gf = execGuest(from); val gt = execGuest(to)
+        if (gf != null && gt != null) {
+            val r = StoreExec(ctx).run(FolderActions.moveScript(gf, gt) { StoreExec.q(it) }, timeoutMs = 120_000)
+            return GitOpResult(r.ok, when (r.exit) { 0 -> "moved"; 16 -> "the folder is gone"; 17 -> "refused: ${to.name} already exists"; else -> "move in cld.termux failed (exit ${r.exit})" }, (r.out + "\n" + r.err).trim().takeLast(2000))
+        }
+        to.parentFile?.mkdirs()
+        return if (from.renameTo(to)) GitOpResult(true, "moved") else GitOpResult(false, "the move failed (nothing changed)")
+    }
+
+    private fun renameFolder(t: FolderActions.Target, repoint: (File, File) -> String): Pair<Outcome, String> {
+        val dir = File(t.path); val parent = dir.parentFile
+        if (parent == null || !dir.isDirectory) return Outcome.FAIL to "the folder is gone"
+        if (!FolderActions.usableName(t.repoName)) return Outcome.SKIP to "no usable repository name in its origin"
+        if (dir.name.equals(t.repoName, ignoreCase = true)) return Outcome.SKIP to "already named ${t.repoName}"
+        val name = FolderActions.renameTarget(t.repoName) { File(parent, it).exists() } ?: return Outcome.FAIL to "every ${t.repoName}${FolderActions.CONFLICT} name is taken; nothing changed"
+        val to = File(parent, name)
+        val r = moveFolder(dir, to)
+        if (!r.ok) return Outcome.FAIL to r.summary
+        val refs = runCatching { repoint(dir, to) }.getOrDefault("")
+        val head = if (name != t.repoName) "${t.repoName} already exists: renamed to $name (nothing overwritten or merged)" else "renamed to $name"
+        return Outcome.OK to (head + if (refs.isNotBlank()) "; $refs" else "")
+    }
+
+    private fun archiveFolder(t: FolderActions.Target): Pair<Outcome, String> {
+        val dir = File(t.path)
+        val root = archiveDir() ?: return Outcome.FAIL to "the declared archive_root is not a safe path"
+        if (!dir.isDirectory) return Outcome.FAIL to "the folder is gone"
+        if (FolderActions.insideArchive(dir, root)) return Outcome.SKIP to "already in ${root.name}"
+        val name = FolderActions.archiveName(dir.name, System.currentTimeMillis()) { File(root, it).exists() } ?: return Outcome.FAIL to "no free name in ${root.name}"
+        val to = File(root, name)
+        val r = moveFolder(dir, to)
+        return if (r.ok) Outcome.OK to "archived to ${root.name}/$name" else Outcome.FAIL to r.summary
+    }
+
+    private fun deleteFolder(t: FolderActions.Target, typed: Set<String>): Pair<Outcome, String> {
+        val dir = File(t.path)
+        if (!dir.isDirectory) return Outcome.SKIP to "the folder is gone"
+        if (dir.absolutePath == SharedStore.gitRoot().absolutePath || dir.parentFile == null) return Outcome.FAIL to "refused: not a single repository folder"
+        val guard = deleteGuard(t.path)
+        if (guard.strict && t.path !in typed) return Outcome.SKIP to "not deleted, needs the typed confirm: " + guard.reasons().joinToString("; ")
+        val g = execGuest(dir)
+        val ok = if (g != null) StoreExec(ctx).run(FolderActions.deleteScript(g) { StoreExec.q(it) }, timeoutMs = 300_000).ok
+        else File(dir, ".git").exists() && dir.deleteRecursively()
+        return if (ok) Outcome.OK to "deleted the local folder (the remote is untouched)" + (if (guard.strict) "; discarded: " + guard.reasons().joinToString("; ") else "")
+        else Outcome.FAIL to "the delete failed or was refused (not a git folder)"
+    }
+
+    /**
+     * #1288 RUN ONE DECLARED FOLDER COMMAND over [targets] through the depth runner ([startDepth] + [bounded]): one run at a time,
+     * at most the declared workers, Cancel stops what has not started, each outcome in the depth report and Activity Logs.
+     * [typed] = the paths whose strict Delete the owner confirmed by typing the name; [repoint] re-points saved paths after a rename.
+     */
+    fun runFolderAction(action: Declarations.GitFolderActionDecl, targets: List<FolderActions.Target>, typed: Set<String> = emptySet(), repoint: (File, File) -> String = { _, _ -> "" }): kotlinx.coroutines.Job? {
+        val run = action.asRun()
+        return startDepth(run) {
+            depthRun.update { it?.copy(total = targets.size) }
+            bounded(run, targets) { t ->
+                withContext(Dispatchers.IO) {
+                    val (o, msg) = runCatching {
+                        when (action.kind) {
+                            Declarations.FOLDER_RENAME -> renameFolder(t, repoint)
+                            Declarations.FOLDER_ARCHIVE -> archiveFolder(t)
+                            Declarations.FOLDER_DELETE -> deleteFolder(t, typed)
+                            else -> Outcome.FAIL to "unknown folder command ${action.kind}"
+                        }
+                    }.getOrElse { Outcome.FAIL to (it.message ?: it.toString()) }
+                    history.append(SyncEvent(System.currentTimeMillis() / 1000, "folder:" + t.path, t.name, SyncHistory.TRIGGER_MANUAL, o != Outcome.FAIL, "${action.id}: $msg", t.path))
+                    t.name to o to msg
+                }
+            }
+            withContext(Dispatchers.IO) { events.value = history.load() }
+            scanUnlisted()
+        }
+    }
+
+    /** #1288 light status reads for folder-table rows (the Parentless table), keyed like the unlisted ones in the ONE reader. */
+    fun requestFolderStatus(paths: List<String>) {
+        if (paths.isEmpty()) return
+        statusReader.request(paths.map { GitStatusReader.Target(UnlistedRepos.statusKey(it), File(it)) })
+    }
+
     // ── #1255 the Unlisted git folders: declared roots, bounded walk, statuses in the ONE reader (so in StatusCache) ──
 
     val unlisted = MutableStateFlow<List<UnlistedRepos.Folder>>(emptyList())
@@ -881,7 +988,9 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                         "files" to listOf(ctx.filesDir.absolutePath),
                     )
                     val roots = UnlistedRepos.expandRoots(d.roots, vars)
-                    val walked = UnlistedRepos.walk(roots, d.maxDepth, d.maxDirs, System.currentTimeMillis() + d.timeoutSeconds * 1000L)
+                    // #1288 the archive root is not walked: an archived folder is not unlisted.
+                    val archive = archiveDir()
+                    val walked = UnlistedRepos.walk(roots, d.maxDepth, d.maxDirs, System.currentTimeMillis() + d.timeoutSeconds * 1000L) { f -> archive != null && FolderActions.insideArchive(f, archive) }
                     val ids = Declarations.repoSot.repos.map { BulkDepth.identity(it.github, Declarations.repoSot::canonical) }.toSet()
                     UnlistedRepos.unlisted(walked, ids, Declarations.repoSot::canonical).also { pagePrefs.edit().putString(KEY_UNLISTED, UnlistedRepos.encode(it)).apply() }
                 }

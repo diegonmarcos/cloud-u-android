@@ -104,26 +104,29 @@ internal fun RepoFilterRow(filters: List<Declarations.GitFilterDecl>, selection:
 
 /** #1255 UNLISTED GIT FOLDERS: path, remote (or none) and the same three status icons, from the ONE reader's cached statuses. */
 @Composable
-internal fun UnlistedPanel(label: String, folders: List<UnlistedRepos.Folder>, glances: Map<String, GitSyncCoordinator.Glance>, events: List<SyncEvent>, fmt: DateFormat) {
-    val decl = Declarations.sync.git.status.icons
-    Column(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad).testTag(DriveTags.SYNC_GIT_UNLISTED), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
-        Text(label.ifBlank { stringResource(R.string.repo_unlisted_title) } + " (${folders.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        if (folders.isEmpty()) Text(stringResource(R.string.repo_unlisted_none), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        folders.forEach { f ->
-            val g = glances[UnlistedRepos.statusKey(f.path)]
-            val icons = RepoStatus.icons(true, g, false, events, "")
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
-                StatusDot(RepoStatus.lightOf("local", icons.local, decl), f.path)
-                StatusDot(RepoStatus.lightOf("server", icons.server, decl), f.path)
-                StatusDot(RepoStatus.lightOf("sync", icons.sync, decl), f.path)
-                Column(Modifier.weight(1f)) {
-                    Text(f.path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(f.origin.ifBlank { stringResource(R.string.repo_unlisted_no_remote) } + (g?.readAtMs?.takeIf { it > 0 }?.let { " · " + fmt.format(java.util.Date(it)) } ?: ""),
-                        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            }
-        }
-    }
+internal fun UnlistedPanel(
+    label: String,
+    folders: List<UnlistedRepos.Folder>,
+    glances: Map<String, GitSyncCoordinator.Glance>,
+    lastCommits: Map<String, Long>,
+    run: BulkDepth.Run?,
+    coordinator: GitSyncCoordinator,
+    onOpenReport: () -> Unit,
+) {
+    // #1288 the ONE folder table (the main table's columns and header); Archive / Delete per row, Rename when the origin names a repository.
+    FolderRepoTable(
+        tableId = "unlisted",
+        title = label.ifBlank { stringResource(R.string.repo_unlisted_title) },
+        hint = "",
+        empty = stringResource(R.string.repo_unlisted_none),
+        rows = folders.map { FolderActions.Target(it.path, it.origin, LocalRepos.repoNameOf(it.origin)) },
+        glances = glances, lastCommits = lastCommits, run = run,
+        kinds = listOf(Declarations.FOLDER_RENAME, Declarations.FOLDER_ARCHIVE, Declarations.FOLDER_DELETE),
+        coordinator = coordinator,
+        subtitle = { it.origin.ifBlank { stringResource(R.string.repo_unlisted_no_remote) } },
+        onOpenReport = onOpenReport,
+        modifier = Modifier.padding(vertical = DriveMetrics.pad).testTag(DriveTags.SYNC_GIT_UNLISTED),
+    )
 }
 
 /** #1258 ACTIVITY LOGS (formerly History): the shared sync / operation history, newest first, its own full-screen view. */

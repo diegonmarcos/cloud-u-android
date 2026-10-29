@@ -74,6 +74,11 @@ object Declarations {
      * [depth] in place); [scope] all = the bulk bar, repo = the row's detail; [workers] bounds the concurrency.
      */
     data class GitDepthActionDecl(val id: String, val label: String, val icon: String, val kind: String, val scope: String, val depth: Int, val workers: Int, val confirm: Boolean)
+    /** #1288 one DECLARED per-folder command of the Parentless / Unlisted tables (ui.sync.git.folder_actions): [kind] rename_to_repo, archive or delete_local. */
+    data class GitFolderActionDecl(val id: String, val label: String, val icon: String, val kind: String, val workers: Int, val confirm: Boolean) {
+        /** The same runner as the depth commands: a folder command is a depth command of scope "folder". */
+        fun asRun(): GitDepthActionDecl = GitDepthActionDecl(id, label, icon, kind, Declarations.DEPTH_SCOPE_FOLDER, 0, workers, confirm)
+    }
     /** #1255 the Unlisted git folders section (ui.sync.git.unlisted): root templates, walk bounds. */
     data class GitUnlistedDecl(val label: String = "", val roots: List<String> = emptyList(), val maxDepth: Int = 2, val maxDirs: Int = 2000, val timeoutSeconds: Int = 30)
     /** #1256 one declared filter of the Git page's filter row: its options, the first one is the "all" default. */
@@ -170,7 +175,12 @@ object Declarations {
         val activityMax: Int = 50,
         /** #1282 where Clone bare puts the mirrors, relative to the store's git folder: <bare_root>/<owner>/<repo>.git. */
         val bareRoot: String = "_bare",
+        /** #1288 the per-folder commands (Rename, Archive, Delete) of the Parentless and Unlisted tables. */
+        val folderActions: List<GitFolderActionDecl> = emptyList(),
+        /** #1288 where Archive moves a folder, relative to the store's git folder. */
+        val archiveRoot: String = "z-archived",
     ) {
+        fun folderAction(kind: String): GitFolderActionDecl? = folderActions.firstOrNull { it.kind == kind }
         fun depthActions(scope: String): List<GitDepthActionDecl> = depthActions.filter { it.scope == scope }
         fun depthAction(id: String): GitDepthActionDecl? = depthActions.firstOrNull { it.id == id }
         fun op(id: String): GitOpDecl? = ops.firstOrNull { it.id == id }
@@ -529,6 +539,11 @@ object Declarations {
             } ?: GitUnlistedDecl(),
             activityMax = ((o["activity_logs"] as? JsonObject)?.int("max_entries") ?: 50).coerceIn(1, 1000),
             bareRoot = o.str("bare_root", "_bare").takeIf { com.diegonmarcos.clouddrive.sync.BareClones.validRoot(it) } ?: "_bare",
+            folderActions = objects(o["folder_actions"]).mapNotNull { a ->
+                val id = a.str("id"); val kind = a.str("kind")
+                if (id.isBlank() || kind !in FOLDER_KINDS) null else GitFolderActionDecl(id, a.str("label", id), a.str("icon"), kind, (a.int("workers") ?: 1).coerceIn(1, 4), a.bool("confirm", true))
+            },
+            archiveRoot = o.str("archive_root", "z-archived").takeIf { com.diegonmarcos.clouddrive.sync.BareClones.validRoot(it) } ?: "z-archived",
             filters = objects(o["filters"]).mapNotNull { f ->
                 val id = f.str("id")
                 val opts = objects(f["options"]).mapNotNull { x -> x.str("id").takeIf { it.isNotBlank() }?.let { GitFilterOptionDecl(it, x.str("label", it)) } }
@@ -727,6 +742,13 @@ object Declarations {
     const val DEPTH_CLONE_BARE = "clone_bare"
     val DEPTH_KINDS = setOf(DEPTH_CLONE_MISSING, DEPTH_KEEP, DEPTH_CLONE_BARE)
     val DEPTH_SCOPES = setOf(DEPTH_SCOPE_ALL, DEPTH_SCOPE_REPO)
+    /** #1288 the per-folder command kinds the Parentless / Unlisted tables dispatch on (test-drive-git-folder-actions.sh diffs both ways). */
+    const val FOLDER_RENAME = "rename_to_repo"
+    const val FOLDER_ARCHIVE = "archive"
+    const val FOLDER_DELETE = "delete_local"
+    val FOLDER_KINDS = setOf(FOLDER_RENAME, FOLDER_ARCHIVE, FOLDER_DELETE)
+    /** #1288 the runner's scope of a folder command (never declared in depth_actions). */
+    const val DEPTH_SCOPE_FOLDER = "folder"
     const val REMOTE_READONLY = "readonly"
 
     /** #608 the Git page's two sections and the personal section's two groups, by id. */

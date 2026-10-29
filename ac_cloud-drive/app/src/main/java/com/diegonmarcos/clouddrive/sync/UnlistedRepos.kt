@@ -21,13 +21,14 @@ object UnlistedRepos {
         }.filter { it.isNotBlank() }.map { File(it) }.distinctBy { it.absolutePath }
 
     /** Breadth-first, bounded: every git working folder under [roots] (a root that is itself a repository counts). */
-    fun walk(roots: List<File>, maxDepth: Int, maxDirs: Int, deadlineMs: Long, now: () -> Long = System::currentTimeMillis): List<Folder> {
+    fun walk(roots: List<File>, maxDepth: Int, maxDirs: Int, deadlineMs: Long, now: () -> Long = System::currentTimeMillis, skip: (File) -> Boolean = { false }): List<Folder> {
         val out = LinkedHashMap<String, Folder>()
         var seen = 0
         val queue = ArrayDeque<Pair<File, Int>>()
         roots.filter { it.isDirectory }.forEach { queue.add(it to 0) }
         while (queue.isNotEmpty() && seen < maxDirs && now() < deadlineMs) {
             val (d, depth) = queue.removeFirst(); seen++
+            if (skip(d)) continue
             if (File(d, ".git").exists()) { out.putIfAbsent(d.absolutePath, Folder(d.absolutePath, LocalRepos.originOf(d))); continue }
             if (depth >= maxDepth) continue
             d.listFiles().orEmpty().filter { it.isDirectory && !it.name.startsWith(".") && it.name != "Android" }.sortedBy { it.name.lowercase() }

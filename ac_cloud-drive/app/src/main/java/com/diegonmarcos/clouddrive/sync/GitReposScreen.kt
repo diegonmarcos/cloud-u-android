@@ -1038,10 +1038,10 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     // #1149 ONE TABLE for every listing above: the sticky header, the bulk bar, the rows.
                     if (!setup) tableBlock()
                     // #1149 LOCAL REPOS PARENTLESS: folders holding a .git that are not named like their origin.
-                    if (!setup && prefs != null) item(key = "parentless") { ParentlessPanel(parentRoots, prefs) { coordinator.refresh(force = true) } }
+                    if (!setup && prefs != null) item(key = "parentless") { ParentlessPanel(parentRoots, prefs, coordinator, glances, lastCommits, depthRun, onOpenReport = { showDepthReport = true }) { coordinator.refresh(force = true) } }
                     // #1255 UNLISTED GIT FOLDERS: git folders under the declared roots that no registry repository matches (or with no remote).
                     if (!setup && RepoFilters.showUnlisted(filterSel)) item(key = "unlisted") {
-                        UnlistedPanel(page.unlisted.label, unlistedFolders, glances, events, fmt)
+                        UnlistedPanel(page.unlisted.label, unlistedFolders, glances, lastCommits, depthRun, coordinator, onOpenReport = { showDepthReport = true })
                     }
                 }
                 else -> item { EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "") }
