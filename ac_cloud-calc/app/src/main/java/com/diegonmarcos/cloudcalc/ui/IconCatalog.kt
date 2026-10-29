@@ -3,6 +3,11 @@ package com.diegonmarcos.cloudcalc.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.BluetoothSearching
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Nfc
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.DirectionsWalk
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.FlashlightOn
@@ -77,6 +82,11 @@ object IconCatalog {
         "explore" -> Icons.Filled.Explore
         "bedtime" -> Icons.Filled.Bedtime
         "apps" -> Icons.Filled.Apps
+        "bluetooth" -> Icons.Filled.Bluetooth
+        "bluetooth_searching" -> Icons.Filled.BluetoothSearching
+        "nfc" -> Icons.Filled.Nfc
+        "wifi" -> Icons.Filled.Wifi
+        "edit" -> Icons.Filled.Edit
         "restaurant" -> Icons.Filled.Restaurant
         else -> fallback
     }

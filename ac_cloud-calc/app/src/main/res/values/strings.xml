@@ -368,4 +368,9 @@
     <string name="recorder_error">The recording could not be saved: %1$s</string>
     <string name="tracker_why">The Tracker lives in Cloud Navigation (timeline, steps, sleep). These buttons open it at that page.</string>
     <string name="tracker_missing">Cloud Navigation is not installed on this phone, so there is no Tracker to open. Install it from the Store.</string>
+    <!-- #1264 Measure > Bluetooth and Measure > NFC (the pages themselves are libs:bluetooth's and libs:nfc's). -->
+    <string name="radio_bt_title">Bluetooth</string>
+    <string name="radio_bt_why">Bluetooth scans need the nearby-devices permission (location on Android 11 and older). Nothing is asked until you tap Grant.</string>
+    <string name="radio_nfc_title">NFC</string>
+    <string name="radio_nfc_why">NFC reads tags only while this page is open. Tag reads stay on the phone; the history leaves it only when you export it.</string>
 </resources>

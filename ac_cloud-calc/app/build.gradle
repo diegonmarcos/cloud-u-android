@@ -244,6 +244,9 @@ dependencies {
     implementation project(':libs:ai')
     // Toolkit > Light: the Light tool (rules, torch service, LightPanel page) shared with the SuperApp's Primary Tools Light.
     implementation project(':libs:light')
+    // #1264 Measure > Bluetooth and Measure > NFC: the shared pages (libs:bluetooth with the SuperApp, libs:nfc), drawn as-is.
+    implementation project(':libs:bluetooth')
+    implementation project(':libs:nfc')
     // The Sound tools' maths (#772): plain JVM, mutation-tested on its own (sound/build.gradle).
     implementation project(':sound')
     // #772 the Decisions client (Http, Decision) the Jev and Sound screens hold; shared with the image engine.

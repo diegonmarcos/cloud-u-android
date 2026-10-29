@@ -122,7 +122,9 @@
         "libs:ml-l-sound",
         "sheet",
         "libs:ai",
-        "libs:light"
+        "libs:light",
+        "libs:bluetooth",
+        "libs:nfc"
       ]
     },
     "sheet": {
@@ -163,6 +165,16 @@
     "libs:light": {
       "_doc": "Toolkit > Light: the Light tool (#1155) shared BY REFERENCE with the SuperApp's Primary Tools Light. LightPanel is the page, Light.engine the one engine; the torch service is merged from the lib's manifest. A `gui` lib (1_cicd/src/data/lib-classes.json).",
       "dir": "../ab_cloud-libs-shared/libs/light",
+      "type": "library"
+    },
+    "libs:bluetooth": {
+      "_doc": "#1264 Measure > Bluetooth: libs:bluetooth's BluetoothPanel shared BY REFERENCE with the SuperApp's Configs > Fleet > Bluetooth (one GATT stack, the advertising analyzer, the locator). Its runtime permissions are merged from the lib's manifest and asked for by the panel's own gate, from a tap. A `gui` lib (1_cicd/src/data/lib-classes.json).",
+      "dir": "../ab_cloud-libs-shared/libs/bluetooth",
+      "type": "library"
+    },
+    "libs:nfc": {
+      "_doc": "#1264 Measure > NFC: libs:nfc's NfcPanel, the standard tag analyzer (reader mode for NfcA/B/F/V, IsoDep, NDEF, NdefFormatable, MIFARE Ultralight page read; NDEF parse / write / format; scan history export). The NFC permission is install-time, merged from the lib's manifest. A `gui` lib.",
+      "dir": "../ab_cloud-libs-shared/libs/nfc",
       "type": "library"
     },
     "libs:model-catalogue": {
@@ -1704,6 +1716,16 @@
             "id": "camera",
             "label": "Camera",
             "icon": "camera"
+          },
+          {
+            "id": "bluetooth",
+            "label": "Bluetooth",
+            "icon": "bluetooth"
+          },
+          {
+            "id": "nfc",
+            "label": "NFC",
+            "icon": "nfc"
           }
         ]
       },
@@ -3506,6 +3528,127 @@
         "tab": "camera",
         "kind": "camera_text",
         "_doc": "#772 OCR a photo through the image engine; every number found is a chip that sends itself, or their sum, to the calculator (build.json::camera.ocr.send_to_mode)."
+      },
+      {
+        "id": "bt_find",
+        "label": "Find",
+        "icon": "bluetooth_searching",
+        "tab": "bluetooth",
+        "kind": "bluetooth",
+        "spec": {
+          "tab": "find"
+        },
+        "_doc": "#1264 libs:bluetooth's BluetoothPanel tab find: Scan for LE devices with filters; pick one to connect."
+      },
+      {
+        "id": "bt_analyze",
+        "label": "Analyze",
+        "icon": "graphic_eq",
+        "tab": "bluetooth",
+        "kind": "bluetooth",
+        "spec": {
+          "tab": "analyze"
+        },
+        "_doc": "#1264 libs:bluetooth's BluetoothPanel tab analyze: Advertising parser: AD structures, beacons (iBeacon, AltBeacon, Eddystone), vendor by company id, RSSI history and distance."
+      },
+      {
+        "id": "bt_locate",
+        "label": "Locate",
+        "icon": "explore",
+        "tab": "bluetooth",
+        "kind": "bluetooth",
+        "spec": {
+          "tab": "locate"
+        },
+        "_doc": "#1264 libs:bluetooth's BluetoothPanel tab locate: Hot / cold finder on one device's RSSI, with a beep."
+      },
+      {
+        "id": "bt_connect",
+        "label": "Connect",
+        "icon": "bluetooth",
+        "tab": "bluetooth",
+        "kind": "bluetooth",
+        "spec": {
+          "tab": "connect"
+        },
+        "_doc": "#1264 libs:bluetooth's BluetoothPanel tab connect: Connect, bond and list GATT services."
+      },
+      {
+        "id": "bt_interact",
+        "label": "Interact",
+        "icon": "swap",
+        "tab": "bluetooth",
+        "kind": "bluetooth",
+        "spec": {
+          "tab": "interact"
+        },
+        "_doc": "#1264 libs:bluetooth's BluetoothPanel tab interact: Read, write and subscribe to characteristics, decoded from the GATT catalog."
+      },
+      {
+        "id": "bt_debug",
+        "label": "Debug",
+        "icon": "memory",
+        "tab": "bluetooth",
+        "kind": "bluetooth",
+        "spec": {
+          "tab": "debug"
+        },
+        "_doc": "#1264 libs:bluetooth's BluetoothPanel tab debug: The GATT log."
+      },
+      {
+        "id": "bt_dev",
+        "label": "Dev",
+        "icon": "build",
+        "tab": "bluetooth",
+        "kind": "bluetooth",
+        "spec": {
+          "tab": "dev"
+        },
+        "_doc": "#1264 libs:bluetooth's BluetoothPanel tab dev: Developer tools: raw writes and declared test payloads."
+      },
+      {
+        "id": "nfc_scan",
+        "label": "Scan",
+        "icon": "nfc",
+        "tab": "nfc",
+        "kind": "nfc",
+        "spec": {
+          "tab": "scan"
+        },
+        "_doc": "#1264 libs:nfc's NfcPanel tab scan: Tap a tag: UID, ATQA / SAK, ATS, technologies, max size, writable / read-only, MIFARE Ultralight pages, and every NDEF record decoded with its hex / ASCII dump."
+      },
+      {
+        "id": "nfc_write",
+        "label": "Write",
+        "icon": "edit",
+        "tab": "nfc",
+        "kind": "nfc",
+        "spec": {
+          "tab": "write"
+        },
+        "_doc": "#1264 libs:nfc's NfcPanel tab write: Write Text, URI, Smart poster, Wi-Fi, AAR, MIME or External records to your own tag, or erase it; a blank tag can be formatted to NDEF."
+      },
+      {
+        "id": "nfc_history",
+        "label": "History",
+        "icon": "history",
+        "tab": "nfc",
+        "kind": "nfc",
+        "spec": {
+          "tab": "history"
+        },
+        "_doc": "#1264 libs:nfc's NfcPanel tab history: Every scan, exported as JSON or CSV through the share sheet."
+      },
+      {
+        "id": "nfc_status",
+        "label": "Status",
+        "icon": "settings",
+        "tab": "nfc",
+        "kind": "nfc",
+        "spec": {
+          "tab": "status"
+        },
+        "_doc": "#1264 libs:nfc's NfcPanel tab status: NFC on / off with the system settings link (apps cannot switch NFC), reader mode, card emulation support."
       },
       {
         "id": "world",

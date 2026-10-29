@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// libs:nfc (#1264): the phone's NFC as one shared lib, a standard tag analyzer. The rules are plain Kotlin over bytes (Bytes: hex and
+// the hex / ASCII dump; Ndef: the NDEF parser and builder for every TNF, well-known Text / URI / Smart Poster, MIME, External, AAR,
+// Wi-Fi WSC and Bluetooth handover; NfcCatalog: the declared data; NfcHistory: the scan log and its JSON / CSV export), the Android
+// half (NfcReader: tag info over NfcA / B / F / V, IsoDep, NDEF, NdefFormatable and MIFARE Ultralight page read, plus NDEF write /
+// format on the user's own tags; NfcController: reader mode, the pending write, the history) and the Compose page (NfcPanel: Scan,
+// Write, History, Status). No keys, no authentication, no payment cards: IC manufacturers, SAK meanings and NXP products are DATA
+// (assets/nfc/nfc-catalog.json). Cloud Calc draws NfcPanel in Measure > NFC. The NFC permission is in this lib's manifest.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    // The compiler is resolved from each consuming root build (declared `apply false` there).
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.nfc'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures { compose = true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    testOptions { unitTests.returnDefaultValues = true }
+}
+
+dependencies {
+    implementation platform('androidx.compose:compose-bom:2025.11.01')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'androidx.core:core-ktx:1.13.1'
+
+    // The lib's own JVM suite (src/test): the NDEF parser / builder, the dump, the catalog, the history export. org.json is the real implementation (android.jar only stubs it).
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20240303'
+}

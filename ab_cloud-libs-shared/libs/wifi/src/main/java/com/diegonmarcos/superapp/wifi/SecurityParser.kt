@@ -12,7 +12,9 @@ object SecurityParser {
     fun parse(caps: String): Security {
         val kinds = LinkedHashSet<String>()
         val ciphers = LinkedHashSet<String>()
-        var wps = false; var pmfC = false; var pmfR = false; var enterprise = false; var ft = false
+        // PMF blocks may follow the RSN block they qualify, so they are read first.
+        val up = caps.uppercase()
+        var wps = false; var pmfC = up.contains("[MFPC]"); var pmfR = up.contains("[MFPR]"); var enterprise = false; var ft = false
         for (b in BLOCK.findAll(caps).map { it.groupValues[1].uppercase() }) {
             when {
                 b == "WEP" -> kinds += "WEP"

@@ -119,6 +119,8 @@ fun ModeScreen(mode: Declarations.Mode) {
             "jev_models" -> JevModelsMode(mode)
             "jev_test" -> JevTestMode(mode)
             "light" -> LightMode(mode)
+            "bluetooth" -> BluetoothMode(mode)
+            "nfc" -> NfcMode(mode)
             "recorder" -> RecorderMode(mode)
             "tracker_link" -> TrackerLinkMode(mode)
             "sensor_group" -> SensorGroupMode(mode)

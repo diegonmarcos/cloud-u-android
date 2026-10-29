@@ -1,0 +1,113 @@
+{
+ "_doc": "#1264 THE declared NFC vocabulary of libs:nfc (NfcCatalog.parse): IC manufacturers by UID byte 0 (ISO/IEC 7816-6), SAK meanings, NXP GET_VERSION products of the Type 2 family with their user memory, ISO 15693 manufacturers. Data only, no keys: adding a product is a row here, no Kotlin.",
+ "ic_manufacturers": {
+  "01": "Motorola",
+  "02": "STMicroelectronics",
+  "03": "Hitachi",
+  "04": "NXP Semiconductors",
+  "05": "Infineon Technologies",
+  "06": "Cylink",
+  "07": "Texas Instruments",
+  "08": "Fujitsu",
+  "09": "Matsushita",
+  "0A": "NEC",
+  "0B": "Oki",
+  "0C": "Toshiba",
+  "0D": "Mitsubishi",
+  "0E": "Samsung",
+  "0F": "Hynix",
+  "10": "LG Semiconductors",
+  "12": "INSIDE Technology",
+  "15": "Atmel",
+  "16": "EM Microelectronic",
+  "1A": "Sony",
+  "1F": "Melexis",
+  "28": "Renesas",
+  "2B": "Maxim",
+  "33": "AMIC",
+  "39": "Silicon Craft",
+  "44": "Gentag",
+  "4F": "Shanghai Fudan"
+ },
+ "sak": {
+  "00": "MIFARE Ultralight / NTAG (NFC Forum Type 2)",
+  "08": "MIFARE Classic 1K",
+  "09": "MIFARE Mini",
+  "10": "MIFARE Plus 2K (SL2)",
+  "11": "MIFARE Plus 4K (SL2)",
+  "18": "MIFARE Classic 4K",
+  "20": "ISO 14443-4 (DESFire, Plus SL3, JCOP, payment card)",
+  "28": "MIFARE Classic 1K emulation + ISO 14443-4 (SmartMX / JCOP)",
+  "38": "MIFARE Classic 4K emulation + ISO 14443-4 (SmartMX / JCOP)",
+  "88": "MIFARE Classic 1K (Infineon)"
+ },
+ "nxp_versions": [
+  {
+   "version": "0004030101000B03",
+   "name": "MIFARE Ultralight EV1 (MF0UL11)",
+   "user_pages": 12
+  },
+  {
+   "version": "0004030201000B03",
+   "name": "MIFARE Ultralight EV1 (MF0ULH11)",
+   "user_pages": 12
+  },
+  {
+   "version": "0004030101000E03",
+   "name": "MIFARE Ultralight EV1 (MF0UL21)",
+   "user_pages": 32
+  },
+  {
+   "version": "0004030201000E03",
+   "name": "MIFARE Ultralight EV1 (MF0ULH21)",
+   "user_pages": 32
+  },
+  {
+   "version": "0004040101000B03",
+   "name": "NTAG210",
+   "user_pages": 12
+  },
+  {
+   "version": "0004040101000E03",
+   "name": "NTAG212",
+   "user_pages": 32
+  },
+  {
+   "version": "0004040201000F03",
+   "name": "NTAG213",
+   "user_pages": 36
+  },
+  {
+   "version": "0004040201001103",
+   "name": "NTAG215",
+   "user_pages": 126
+  },
+  {
+   "version": "0004040201001303",
+   "name": "NTAG216",
+   "user_pages": 222
+  },
+  {
+   "version": "0004040401000F03",
+   "name": "NTAG213 TT",
+   "user_pages": 36
+  },
+  {
+   "version": "0004040502011303",
+   "name": "NTAG I2C 1K",
+   "user_pages": 222
+  },
+  {
+   "version": "0004040502011503",
+   "name": "NTAG I2C 2K",
+   "user_pages": 478
+  }
+ ],
+ "iso15693_manufacturers": {
+  "02": "STMicroelectronics",
+  "04": "NXP Semiconductors",
+  "05": "Infineon Technologies",
+  "07": "Texas Instruments",
+  "16": "EM Microelectronic"
+ }
+}

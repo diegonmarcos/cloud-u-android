@@ -57,6 +57,11 @@
 #       build.json::sensors has a unique id, a known source, a formula measure/SensorMath.kt names,
 #       and its group has a sensor_group mode; each runtime permission a sensor names is declared in the
 #       manifest and is asked for from a tap (onClick) alone.
+#   C17 #1264 Measure > Bluetooth and Measure > NFC are the shared libs' pages: the measure section holds the bluetooth and nfc
+#       pages; every bluetooth / nfc mode names a real BtTab / NfcTab id in spec.tab and every tab has a mode; libs:bluetooth and
+#       libs:nfc are declared modules and app dependencies; ui/RadioScreens.kt draws BluetoothPanel( and NfcPanel( over the libs'
+#       hubs; no app source touches the radios itself (BluetoothLeScanner, enableReaderMode, IsoDep...; the Sensors page's NFC
+#       on/off reading is the one NfcAdapter use), and the app manifest does not redeclare the Bluetooth runtime permissions.
 #   MUT each property, broken on a copy (and the edit proven to have landed), goes red.
 #
 # OWN-SOURCE ONLY: reads ac_cloud-calc and nothing else. python3 + grep.
@@ -64,6 +69,8 @@ set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP="$(cd "$HERE/.." && pwd)"
+# C17 reads the shared libs' tab enums; mutation copies hold the app only, so the real libs dir is passed in.
+export CALC_SHARED_LIBS="$APP/../ab_cloud-libs-shared/libs"
 for f in "$APP/build.json" "$APP/app/src/main/AndroidManifest.xml" \
          "$APP/app/src/main/java/com/diegonmarcos/cloudcalc/ui/ModeScreens.kt" \
          "$APP/app/src/main/java/com/diegonmarcos/cloudcalc/ui/IconCatalog.kt" \
@@ -482,6 +489,46 @@ for line in ss.split("\n"):
 if "LaunchedEffect" in "".join(l for l in ss.split("\n") if ".launch(" in l):
     bad.append("C16 a Sensors permission request sits in a LaunchedEffect: it must wait for Allow")
 
+# C17 #1264 Measure > Bluetooth and Measure > NFC.
+libs_dir = os.environ.get("CALC_SHARED_LIBS") or os.path.join(app, "..", "ab_cloud-libs-shared", "libs")
+for page in ("bluetooth", "nfc"):
+    if sec_of.get(page) != "measure":
+        bad.append("C17 the measure section must hold the %s page, found %r" % (page, sec_of.get(page)))
+def lib_tabs(rel, enum):
+    t = open(os.path.join(libs_dir, rel), encoding="utf-8").read()
+    m = re.search(r"enum class " + enum + r"\(.*?\{(.*?);", t, re.S)
+    return set(re.findall(r'\w+\("([\w-]+)"', m.group(1))) if m else set()
+for kind, rel, enum in (("bluetooth", "bluetooth/src/main/java/com/diegonmarcos/superapp/bluetooth/BluetoothUi.kt", "BtTab"),
+                        ("nfc", "nfc/src/main/java/com/diegonmarcos/superapp/nfc/NfcUi.kt", "NfcTab")):
+    tabs = lib_tabs(rel, enum)
+    if not tabs:
+        bad.append("C17 cannot read %s's %s ids" % (rel, enum)); continue
+    declared = [m_ for m_ in modes if m_.get("kind") == kind]
+    got = set()
+    for m_ in declared:
+        t = (m_.get("spec") or {}).get("tab")
+        if m_.get("tab") != kind:
+            bad.append("C17 mode %s (kind %s) must sit on the %s page" % (m_["id"], kind, kind))
+        if t not in tabs:
+            bad.append("C17 mode %s names %s tab %r, not one of %s" % (m_["id"], enum, t, sorted(tabs)))
+        got.add(t)
+    for t in sorted(tabs - got):
+        bad.append("C17 %s tab %r has no %s mode in build.json::ui.modes" % (enum, t, kind))
+    lib = "libs:" + kind
+    if lib not in bj["modules"] or lib not in bj["modules"]["app"]["depends_on"] or ("project(':%s')" % lib) not in gr2:
+        bad.append("C17 %s must be a declared module, an app dependency and in app/build.gradle" % lib)
+rs = code(os.path.join(src, "ui", "RadioScreens.kt"))
+for tok in ("BluetoothPanel(", "NfcPanel(", "BluetoothHub.controller(", "NfcHub.controller("):
+    if tok not in rs:
+        bad.append("C17 ui/RadioScreens.kt must call %s (the shared page, over the lib's hub)" % tok)
+for tok in ("BluetoothLeScanner", "BluetoothGatt", "startDiscovery(", "enableReaderMode", "readerCallback", "IsoDep", "MifareUltralight"):
+    if tok in all_src:
+        bad.append("C17 %s in the app: the radios are libs:bluetooth's and libs:nfc's alone" % tok)
+man = open(os.path.join(app, "app", "src", "main", "AndroidManifest.xml"), encoding="utf-8").read()
+for perm in ("BLUETOOTH_SCAN", "BLUETOOTH_CONNECT"):
+    if perm in man:
+        bad.append("C17 the app manifest redeclares %s: it is merged from the lib's manifest" % perm)
+
 for b in bad:
     print("  FAIL  " + b)
 sys.exit(1 if bad else 0)
@@ -520,7 +567,7 @@ PY
 }
 J='app/src/main/java/com/diegonmarcos/cloudcalc'
 mutate tab-without-mode build.json 's.replace("\"tab\": \"graph\"", "\"tab\": \"calc\"")' "C1 tab graph has no mode"
-mutate mode-orphan-tab build.json 's.replace("\"tab\": \"history\"", "\"tab\": \"nowhere\"", 1)' "names tab nowhere"
+mutate mode-orphan-tab build.json 's.replace("\"tab\": \"history\",", "\"tab\": \"nowhere\",", 1)' "names tab nowhere"
 mutate kind-without-renderer "$J/ui/ModeScreens.kt" 's.replace("\"plot\" -> PlotMode(mode)", "")' "C2 kind plot is declared"
 mutate dead-renderer "$J/ui/ModeScreens.kt" 's.replace("\"history\" -> HistoryMode(mode)", "\"history\" -> HistoryMode(mode)\n            \"abacus\" -> HistoryMode(mode)")' "C2 ModeScreen renders kind abacus"
 mutate mode-icon-misspelt build.json 's.replace("\"icon\": \"science\"", "\"icon\": \"sciense\"")' "C3 mode scientific icon"
@@ -592,6 +639,12 @@ mutate sensor-group-unshown build.json 's.replace("\"spec\": {\n          \"grou
 mutate sensor-perm-auto "$J/ui/SensorScreens.kt" 's + "\nprivate fun auto(l: androidx.activity.result.ActivityResultLauncher<String>) = l.launch(\"x\")\n"' "asks for a permission outside a tap"
 mutate nav-order-swapped build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\"", "\"bottom_nav\": [\"calculator\", \"ai\", \"sheet\"")' "C15 ui.bottom_nav must be exactly"
 mutate configs-on-bar build.json 's.replace("\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"toolkit\"]", "\"bottom_nav\": [\"calculator\", \"sheet\", \"ai\", \"measure\", \"settings\"]")' "C15 ui.bottom_nav must be exactly"
+mutate radio-bt-page-gone build.json 's.replace("\"id\": \"bluetooth\",\n            \"label\"", "\"id\": \"bluetoothx\",\n            \"label\"", 1)' "C17 the measure section must hold the bluetooth page"
+mutate radio-nfc-tab-typo build.json 's.replace("\"tab\": \"history\"\n        },\n        \"_doc\": \"#1264 libs:nfc", "\"tab\": \"histroy\"\n        },\n        \"_doc\": \"#1264 libs:nfc", 1)' "C17 mode nfc_history names NfcTab"
+mutate radio-bt-tab-missing build.json 's.replace("\"tab\": \"locate\"", "\"tab\": \"find\"", 1)' "has no bluetooth mode"
+mutate radio-nfc-lib-undeclared app/build.gradle 's.replace(":libs:nfc\x27)", ":libs:nfcx\x27)")' "C17 libs:nfc must be a declared module"
+mutate radio-own-panel "$J/ui/RadioScreens.kt" 's.replace("NfcPanel(controller", "MyNfc(controller")' "C17 ui/RadioScreens.kt must call NfcPanel("
+mutate radio-own-reader "$J/ui/RadioScreens.kt" 's + "\nprivate fun r(a: android.app.Activity) = android.nfc.NfcAdapter.getDefaultAdapter(a).enableReaderMode(a, null, 0, null)\n"' "C17 enableReaderMode in the app"
 mutate topbar-scaffold-gone "$J/ui/CalcShell.kt" 's.replace("NavBarTopFirstRowScaffold(", "NavBarTopFirstRowScaffoldx(")' "C15 ui/CalcShell.kt must draw the shared bars"
 mutate topbar-own-configs-button "$J/ui/CalcShell.kt" 's + "\nprivate fun ConfigsButton() { CircleShape }\n"' "C15 ui/CalcShell.kt still draws its own chrome"
 mutate topbar-configs-unwired "$J/ui/CalcShell.kt" 's.replace("onConfigs = { state.openConfigs() }", "onConfigs = { }")' "C15 ui/CalcShell.kt must draw the shared bars"
