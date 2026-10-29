@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- #1263 Wi-Fi analyzer. Scans and connection info: ACCESS_WIFI_STATE / CHANGE_WIFI_STATE (startScan), ACCESS_NETWORK_STATE
+         (ConnectivityManager), INTERNET (ping, DNS, port scan, discovery, throughput), CHANGE_WIFI_MULTICAST_STATE (SSDP / mDNS).
+         Scan results, SSID / BSSID and RTT ranging need location on every API level (fine location; location services on), and
+         NEARBY_WIFI_DEVICES from API 33. NEARBY_WIFI_DEVICES carries neverForLocation exactly as the SuperApp declares it, so the
+         merge never conflicts; the page asks for fine location as well, which is what RTT and scan results require. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Wi-Fi and RTT are optional hardware: a host stays installable without them. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi.rtt" android:required="false" />
+</manifest>

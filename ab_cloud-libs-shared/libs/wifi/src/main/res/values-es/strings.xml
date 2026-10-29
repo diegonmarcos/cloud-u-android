@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #1263 libs:wifi strings (Spanish). Generated from one table with values/strings.xml: every key exists in both. -->
+<resources>
+    <string name="wifi_perm_title">Se necesita permiso para escanear Wi-Fi</string>
+    <string name="wifi_perm_body">Android trata las redes Wi-Fi cercanas como datos de ubicación: los resultados del escaneo, el SSID / BSSID conectado y la distancia RTT necesitan ubicación precisa.</string>
+    <string name="wifi_perm_body_33">Android 13+ también pide Dispositivos Wi-Fi cercanos.</string>
+    <string name="wifi_grant">Conceder</string>
+    <string name="wifi_denied_hint">Si el diálogo ya no aparece, concédelo en los ajustes de la app o con adb:</string>
+    <string name="wifi_app_settings">Ajustes de la app</string>
+    <string name="wifi_location_off_title">La ubicación está desactivada</string>
+    <string name="wifi_location_off_body">Android no devuelve resultados de escaneo con la ubicación desactivada.</string>
+    <string name="wifi_open_settings">Abrir ajustes</string>
+    <string name="wifi_off_title">El Wi-Fi está apagado</string>
+    <string name="wifi_turn_on">Activar</string>
+    <string name="wifi_unsupported">Este dispositivo no tiene Wi-Fi</string>
+    <string name="wifi_scan">Escanear</string>
+    <string name="wifi_auto">Auto</string>
+    <string name="wifi_throttle_title">Límite de escaneo</string>
+    <string name="wifi_throttle_body">Android permite a una app en primer plano 4 escaneos cada 2 minutos (1 cada 30 min en segundo plano). Opciones de desarrollador › Limitación de búsqueda de Wi-Fi quita el límite (Android 10+).</string>
+    <string name="wifi_throttle_state" formatted="true">Quedan %1$d de %2$d escaneos · siguiente hueco %3$s</string>
+    <string name="wifi_throttle_off">Límite DESACTIVADO (opción de desarrollador): escaneos ilimitados</string>
+    <string name="wifi_throttle_unknown">El ajuste del límite se puede leer desde Android 11</string>
+    <string name="wifi_dev_options">Opciones de desarrollador</string>
+    <string name="wifi_now">ahora</string>
+    <string name="wifi_last_scan" formatted="true">Último escaneo %1$s · %2$d resultados</string>
+    <string name="wifi_search">SSID, BSSID o fabricante</string>
+    <string name="wifi_sort">Orden</string>
+    <string name="wifi_group">Agrupar por SSID</string>
+    <string name="wifi_hide_hidden">Ocultar ocultas</string>
+    <string name="wifi_open_only">Solo abiertas</string>
+    <string name="wifi_rtt_only">Solo RTT</string>
+    <string name="wifi_stale">Ocultar antiguas</string>
+    <string name="wifi_min_signal" formatted="true">Señal mínima %1$d dBm</string>
+    <string name="wifi_networks" formatted="true">Redes (%1$d)</string>
+    <string name="wifi_no_aps">Aún no hay redes. Pulsa Escanear.</string>
+    <string name="wifi_age" formatted="true">hace %1$s</string>
+    <string name="wifi_locate">Localizar</string>
+    <string name="wifi_range">Distancia (RTT)</string>
+    <string name="wifi_heat_target">Objetivo del mapa</string>
+    <string name="wifi_copy">Copiar</string>
+    <string name="wifi_interference" formatted="true">Interferencia %1$d/100</string>
+    <string name="wifi_first_seen" formatted="true">Visto por primera vez %1$s</string>
+    <string name="wifi_band">Banda</string>
+    <string name="wifi_plan">Dominio regulatorio</string>
+    <string name="wifi_spectrum">Espectro</string>
+    <string name="wifi_ratings">Puntuación de canales</string>
+    <string name="wifi_best" formatted="true">Mejor canal: %1$s</string>
+    <string name="wifi_best_none">Ningún canal de este plan en esta banda</string>
+    <string name="wifi_congestion" formatted="true">Congestión %1$d/100 · %2$d APs · canal más cargado %3$d APs</string>
+    <string name="wifi_time_graph">Señal en el tiempo</string>
+    <string name="wifi_dfs">DFS</string>
+    <string name="wifi_rating_note">10 = libre. Cada AP carga los canales que solapa, según su señal; los canales DFS pierden medio punto (un radar puede forzar el cambio de canal).</string>
+    <string name="wifi_link_title">Red conectada</string>
+    <string name="wifi_not_connected">Sin conexión Wi-Fi</string>
+    <string name="wifi_l_ssid">SSID</string>
+    <string name="wifi_l_bssid">BSSID</string>
+    <string name="wifi_l_vendor">Fabricante</string>
+    <string name="wifi_l_signal">Señal</string>
+    <string name="wifi_l_quality">Calidad</string>
+    <string name="wifi_l_snr">SNR (estimada)</string>
+    <string name="wifi_l_freq">Frecuencia</string>
+    <string name="wifi_l_speed">Velocidad de enlace</string>
+    <string name="wifi_l_txrx">TX / RX</string>
+    <string name="wifi_l_max">TX / RX máx.</string>
+    <string name="wifi_l_std">Estándar</string>
+    <string name="wifi_l_security">Seguridad</string>
+    <string name="wifi_l_iface">Interfaz</string>
+    <string name="wifi_l_ipv4">IPv4</string>
+    <string name="wifi_l_gateway">Puerta de enlace</string>
+    <string name="wifi_l_dns">DNS</string>
+    <string name="wifi_l_dhcp">Servidor DHCP</string>
+    <string name="wifi_l_lease">Concesión DHCP</string>
+    <string name="wifi_l_mtu">MTU</string>
+    <string name="wifi_l_ipv6">IPv6</string>
+    <string name="wifi_l_domains">Dominios de búsqueda</string>
+    <string name="wifi_l_proxy">Proxy</string>
+    <string name="wifi_l_captive">Portal cautivo</string>
+    <string name="wifi_l_validated">Internet validado</string>
+    <string name="wifi_l_metered">Medida</string>
+    <string name="wifi_l_private_dns">DNS privado</string>
+    <string name="wifi_l_bw">Ancho de banda estimado</string>
+    <string name="wifi_l_mac">Aleatorización de MAC</string>
+    <string name="wifi_l_mld">MLD Wi-Fi 7</string>
+    <string name="wifi_l_links">Enlaces MLO</string>
+    <string name="wifi_yes">Sí</string>
+    <string name="wifi_no">No</string>
+    <string name="wifi_active">activo</string>
+    <string name="wifi_off">desactivado</string>
+    <string name="wifi_roaming">Registro de roaming</string>
+    <string name="wifi_no_roams">Aún no hay roaming ni reconexiones.</string>
+    <string name="wifi_device_caps">Este dispositivo</string>
+    <string name="wifi_caps_line" formatted="true">5 GHz %1$s · 6 GHz %2$s · Wi-Fi 7 %3$s · RTT %4$s · STA+AP %5$s</string>
+    <string name="wifi_tool_ping">Ping, latencia, jitter, pérdida</string>
+    <string name="wifi_host">Host</string>
+    <string name="wifi_gateway">Puerta de enlace</string>
+    <string name="wifi_start">Iniciar</string>
+    <string name="wifi_stop">Parar</string>
+    <string name="wifi_ping_stats" formatted="true">enviados %1$d · recibidos %2$d · pérdida %3$.1f%% · mín %4$.1f / media %5$.1f / máx %6$.1f ms · jitter %7$.1f ms</string>
+    <string name="wifi_tool_trace">Traceroute</string>
+    <string name="wifi_trace_note">Pings con TTL limitado: cada salto es el router que respondió Tiempo excedido.</string>
+    <string name="wifi_tool_dns">Consulta DNS</string>
+    <string name="wifi_lookup">Consultar</string>
+    <string name="wifi_name">Nombre</string>
+    <string name="wifi_tool_ports">Escaneo de puertos</string>
+    <string name="wifi_ports">Puertos</string>
+    <string name="wifi_ports_note" formatted="true">Escanea solo equipos propios o autorizados. Máximo %1$d puertos.</string>
+    <string name="wifi_ports_progress" formatted="true">%1$d / %2$d probados · %3$d abiertos</string>
+    <string name="wifi_tool_lan">Dispositivos de la red</string>
+    <string name="wifi_discover">Descubrir</string>
+    <string name="wifi_lan_note">mDNS / NSD, SSDP y luego un barrido acotado de esta /24 con nombres NetBIOS. Sin tabla ARP (Android 10+ la oculta).</string>
+    <string name="wifi_lan_progress" formatted="true">%1$s · %2$d / %3$d hosts · %4$d dispositivos</string>
+    <string name="wifi_tool_tp">Rendimiento</string>
+    <string name="wifi_tp_endpoint" formatted="true">Servidor: %1$s</string>
+    <string name="wifi_down">Descarga</string>
+    <string name="wifi_up">Subida</string>
+    <string name="wifi_tool_rtt">Distancia RTT (802.11mc / az)</string>
+    <string name="wifi_rtt_unsupported">Este dispositivo no tiene Wi-Fi RTT.</string>
+    <string name="wifi_rtt_unavailable">RTT no está disponible ahora (Wi-Fi o ubicación desactivados).</string>
+    <string name="wifi_rtt_none">No hay respondedores 802.11mc a la vista. Escanea primero.</string>
+    <string name="wifi_continuous">Continuo</string>
+    <string name="wifi_once">Una vez</string>
+    <string name="wifi_tool_locator">Localizador de señal (frío / caliente)</string>
+    <string name="wifi_locator_note">Camina: el pitido se acelera al subir la señal. El AP conectado se actualiza cada segundo; los demás al ritmo de escaneo.</string>
+    <string name="wifi_sound">Sonido</string>
+    <string name="wifi_warmer">Más caliente</string>
+    <string name="wifi_colder">Más frío</string>
+    <string name="wifi_steady">Estable</string>
+    <string name="wifi_target" formatted="true">Objetivo: %1$s</string>
+    <string name="wifi_no_target">Elige una red en Escanear (Localizar) o conéctate a una.</string>
+    <string name="wifi_heatmap">Mapa de calor</string>
+    <string name="wifi_heat_body" formatted="true">Colócate en un punto y toca su celda: se graban %1$d muestras de un segundo del objetivo.</string>
+    <string name="wifi_clear">Borrar</string>
+    <string name="wifi_export">Exportar</string>
+    <string name="wifi_share">Compartir</string>
+    <string name="wifi_save">Guardar</string>
+    <string name="wifi_export_note">CSV / JSON: el escaneo con historial. PCAP: una baliza sintetizada por AP (canal y señal radiotap) para Wireshark; Android no da modo monitor a las apps.</string>
+    <string name="wifi_events">Registro de eventos</string>
+    <string name="wifi_no_events">Nada registrado aún.</string>
+    <string name="wifi_too_big">Demasiado grande para compartir como texto: usa Guardar.</string>
+    <string name="wifi_oui" formatted="true">%1$d fabricantes cargados</string>
+</resources>

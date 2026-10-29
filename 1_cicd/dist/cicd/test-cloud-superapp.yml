@@ -41,6 +41,7 @@ on:
       - "ab_cloud-libs-shared/libs/auth/**"
       - "ab_cloud-libs-shared/libs/battery/**"
       - "ab_cloud-libs-shared/libs/bluetooth/**"
+      - "ab_cloud-libs-shared/libs/wifi/**"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/chat/**"
       - "ab_cloud-libs-shared/libs/core/**"

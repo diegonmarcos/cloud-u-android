@@ -238,6 +238,7 @@
         "libs:battery",
         "libs:light",
         "libs:bluetooth",
+        "libs:wifi",
         "libs:datamanager",
         "libs:launcher-onehand",
         "libs:launcher-zoomies",
@@ -445,6 +446,14 @@
         "libs:ui-icons"
       ],
       "comment": "#1221 Android Bluetooth as one shared lib: scan with filters and RSSI, connect, bond, GATT discovery, read / write / notify / indicate, descriptors, MTU, known-service decoding from the declared UUID catalog (assets/bluetooth/gatt-catalog.json), the ATT log and the Dev tools, and the five-tab Compose page (BluetoothPanel). The SuperApp draws it in Configs > Fleet > Bluetooth (BluetoothFragment); Cloud Browser's Web Bluetooth polyfill (#1222) drives the same GattSession. Runtime permissions are in the lib manifest. Its rules are tested in app/src/test/.../bluetooth/."
+    },
+    "libs:wifi": {
+      "dir": "../ab_cloud-libs-shared/libs/wifi",
+      "type": "library",
+      "depends_on": [
+        "libs:ui-icons"
+      ],
+      "comment": "#1263 the Wi-Fi analyzer as one shared lib, app-agnostic (the host injects WifiHostConfig; this app passes build.json wifi_analyzer): WifiManager scans within the throttle, ScanResult parsing (channel math, width, standard, security / PMF / WPS, 802.11mc / az, MLO), the IEEE OUI vendor table and regulatory channel plans as assets, channel rating, the connected link (ConnectivityManager / LinkProperties / WifiInfo), RTT ranging, network tools (ping, traceroute, DNS, port scan, NSD / SSDP / sweep / NetBIOS discovery, throughput), heatmap, roaming log, CSV / JSON / PCAP export, and the five-tab Compose page (WifiPanel). The SuperApp draws it in Configs > Setup > Network > WiFi (WifiFragment); Cloud Calc embeds the same panel. Its rules are tested in app/src/test/.../wifi/."
     },
     "libs:datamanager": {
       "dir": "../ab_cloud-libs-shared/libs/datamanager",
@@ -760,6 +769,13 @@
         {"id": "c", "label": "C", "action": "open_cloud_calc", "points": [[0.707,-0.707],[0.423,-0.906],[0.087,-0.996],[-0.259,-0.966],[-0.574,-0.819],[-0.819,-0.574],[-0.966,-0.259],[-0.996,0.087],[-0.906,0.423],[-0.707,0.707],[-0.423,0.906],[-0.087,0.996],[0.259,0.966],[0.574,0.819]]}
       ]
     }
+  },
+  "_doc_wifi_analyzer": "#1263 the WiFi page's host config, baked into BuildConfig.WIFI_ANALYZER_B64 and deep-merged by libs:wifi over its assets/wifi/wifi-config.json (any key of that file may be overridden here). throughput = the endpoint Tools > Throughput downloads from / uploads to ({bytes} becomes the byte budget); ping.default_host = the public host of the latency test; scan = the auto-scan interval and Android's foreground throttle (4 scans / 2 min); rssi = the signal thresholds the page colours by.",
+  "wifi_analyzer": {
+    "throughput": {"download_url": "https://speed.cloudflare.com/__down?bytes={bytes}", "upload_url": "https://speed.cloudflare.com/__up", "bytes": 25000000, "upload_bytes": 10000000, "max_seconds": 15},
+    "ping": {"default_host": "1.1.1.1", "count": 20},
+    "scan": {"auto_interval_ms": 30000, "throttle_limit": 4, "throttle_window_ms": 120000},
+    "rssi": {"excellent": -55, "good": -67, "fair": -75, "poor": -85, "noise_floor_dbm": -95}
   },
   "privileged_channel": {
     "default_on": false,
@@ -4736,7 +4752,7 @@
         "_doc_nav_mode": "#1221 horizontal_two_rows: the second row of Configs is one row per declared group, each [group label] | [that group's page icons]. Fleet reads Bluetooth | C3 Fleet Control (| Peer Control); Observability reads Agents | Diagnostics Logcat About; Setup keeps the rest. Every page of the section is in exactly one group (the nav-shape guard, N10), the hidden tab pages with their parent. The groups only REFERENCE pages: the Configs grid headings still come from each page's group / subgroup.",
         "nav_mode": "horizontal_two_rows",
         "groups": [
-          {"id": "setup", "label": "Setup", "icon": "ic_settings", "pages": ["profile", "store", "perms", "controls", "onehand", "notify", "firewall", "dns", "webserver", "wg", "apps-access", "adb-shell", "presets", "panels", "panels-ui", "panels-tools", "store-cloud", "store-phone", "update", "kde_connect", "animations"]},
+          {"id": "setup", "label": "Setup", "icon": "ic_settings", "pages": ["profile", "store", "perms", "controls", "onehand", "notify", "firewall", "dns", "webserver", "wg", "apps-access", "adb-shell", "wifi", "wifi-scan", "wifi-channels", "wifi-link", "wifi-tools", "wifi-log", "presets", "panels", "panels-ui", "panels-tools", "store-cloud", "store-phone", "update", "kde_connect", "animations"]},
           {"id": "fleet", "label": "Fleet", "icon": "ic_hub", "pages": ["bluetooth", "c3", "kde", "bluetooth-find", "bluetooth-analyze", "bluetooth-locate", "bluetooth-connect", "bluetooth-interact", "bluetooth-debug", "bluetooth-dev"]},
           {"id": "observability", "label": "Observability", "icon": "ic_monitor_heart", "pages": ["agents", "diagnostics", "logcat", "about", "battery", "agents-superapp", "agents-fleet"]}
         ],
@@ -4851,6 +4867,15 @@
             "id": "adb-shell",
             "label": "ADB Shell",
             "icon": "ic_terminal",
+            "group": "Setup",
+            "subgroup": "Network"
+          },
+          {
+            "_doc": "#1263 Configs ▸ Setup ▸ Network ▸ WiFi: the phone's Wi-Fi analyzer as a page over libs:wifi (WifiFragment draws WifiPanel), right after ADB Shell. Five tabs over one process-wide controller, so scans, the throttle window and running tools survive a tab switch: Scan (live AP list: SSID / BSSID / vendor from the IEEE OUI asset, smoothed RSSI + sparkline, band / channel / width / centre, 802.11 standard, security incl. WPA3 / OWE / Enterprise / PMF / WPS, hidden, 802.11mc / az RTT, Wi-Fi 7 MLO, age; filter, sort, search, group by SSID; the scan throttle state), Channels (spectrum per band, channel rating and best-channel recommendation per regulatory plan, congestion, RSSI over time), Link (the connected network: speeds, frequency, signal / quality / SNR estimate, IPv4 / IPv6 / gateway / DNS / DHCP lease / MTU, captive / validated / metered / private DNS, MAC randomization, roaming log), Tools (ping / jitter / loss, traceroute, DNS, bounded port scan, LAN discovery via NSD / SSDP / sweep / NetBIOS, throughput to build.json wifi_analyzer.throughput, RTT ranging, hot / cold locator) and Log (heatmap grid, events, CSV / JSON / PCAP export and share). Vendors, channel plans and defaults are DATA in the lib's assets; this app's overrides are build.json wifi_analyzer. hidden tabs: reached through the WiFi strip.",
+            "id": "wifi",
+            "label": "WiFi",
+            "icon": "ic_wifi",
+            "tabs": ["wifi-scan", "wifi-channels", "wifi-link", "wifi-tools", "wifi-log"],
             "group": "Setup",
             "subgroup": "Network"
           },
@@ -5002,6 +5027,41 @@
             "id": "bluetooth-dev",
             "label": "Dev",
             "icon": "ic_code",
+            "hidden": true
+          },
+          {
+            "_doc": "WiFi tab: the live AP list, filters and the scan throttle (#1263). hidden = reached through the WiFi strip, not as its own Configs tile.",
+            "id": "wifi-scan",
+            "label": "Scan",
+            "icon": "ic_search",
+            "hidden": true
+          },
+          {
+            "_doc": "WiFi tab: spectrum, channel rating, best channel, RSSI over time (#1263). hidden = reached through the WiFi strip, not as its own Configs tile.",
+            "id": "wifi-channels",
+            "label": "Channels",
+            "icon": "ic_monitor_heart",
+            "hidden": true
+          },
+          {
+            "_doc": "WiFi tab: the connected network and the roaming log (#1263). hidden = reached through the WiFi strip, not as its own Configs tile.",
+            "id": "wifi-link",
+            "label": "Link",
+            "icon": "ic_world",
+            "hidden": true
+          },
+          {
+            "_doc": "WiFi tab: ping, traceroute, DNS, port scan, LAN discovery, throughput, RTT, locator (#1263). hidden = reached through the WiFi strip, not as its own Configs tile.",
+            "id": "wifi-tools",
+            "label": "Tools",
+            "icon": "ic_terminal",
+            "hidden": true
+          },
+          {
+            "_doc": "WiFi tab: heatmap, event log, export and share (#1263). hidden = reached through the WiFi strip, not as its own Configs tile.",
+            "id": "wifi-log",
+            "label": "Log",
+            "icon": "ic_p_logs",
             "hidden": true
           },
           {

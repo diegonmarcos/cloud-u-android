@@ -106,6 +106,13 @@ object SectionPages {
         sectionId == "config" && pageId == "bluetooth-interact" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Interact)
         sectionId == "config" && pageId == "bluetooth-debug" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Debug)
         sectionId == "config" && pageId == "bluetooth-dev" -> com.diegonmarcos.superapp.configs.BluetoothFragment.newInstance(com.diegonmarcos.superapp.bluetooth.BtTab.Dev)
+        // Configs ▸ Setup ▸ Network ▸ WiFi (#1263): the `wifi` page declares `tabs`, so the strip branch at the top answered it;
+        // these are its five tabs, one fragment over libs:wifi's page and the one shared controller.
+        sectionId == "config" && pageId == "wifi-scan" -> com.diegonmarcos.superapp.configs.WifiFragment.newInstance(com.diegonmarcos.superapp.wifi.WifiTab.Scan)
+        sectionId == "config" && pageId == "wifi-channels" -> com.diegonmarcos.superapp.configs.WifiFragment.newInstance(com.diegonmarcos.superapp.wifi.WifiTab.Channels)
+        sectionId == "config" && pageId == "wifi-link" -> com.diegonmarcos.superapp.configs.WifiFragment.newInstance(com.diegonmarcos.superapp.wifi.WifiTab.Link)
+        sectionId == "config" && pageId == "wifi-tools" -> com.diegonmarcos.superapp.configs.WifiFragment.newInstance(com.diegonmarcos.superapp.wifi.WifiTab.Tools)
+        sectionId == "config" && pageId == "wifi-log" -> com.diegonmarcos.superapp.configs.WifiFragment.newInstance(com.diegonmarcos.superapp.wifi.WifiTab.Log)
         // Store's two tabs (#563). The `store` page itself declares `tabs`, so
         // the strip branch at the top already answered it.
         // #865 each Store page is wrapped: once Cloud Store is installed it shows

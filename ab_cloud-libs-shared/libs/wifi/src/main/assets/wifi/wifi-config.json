@@ -1,0 +1,150 @@
+{
+ "_doc": "#1263 the Wi-Fi analyzer defaults: tabs, thresholds, smoothing, scan throttle, tools and their bounds, discovery service types, port names. A host overrides any key through WifiHostConfig (the SuperApp: build.json wifi_analyzer).",
+ "tabs": [
+  "scan",
+  "channels",
+  "link",
+  "tools",
+  "log"
+ ],
+ "rssi": {
+  "excellent": -55,
+  "good": -67,
+  "fair": -75,
+  "poor": -85,
+  "noise_floor_dbm": -95
+ },
+ "smoothing": {
+  "alpha": 0.35,
+  "history": 90,
+  "stale_ms": 45000,
+  "drop_ms": 600000
+ },
+ "scan": {
+  "auto_interval_ms": 30000,
+  "throttle_limit": 4,
+  "throttle_window_ms": 120000
+ },
+ "rating": {
+  "dfs_penalty": 0.5,
+  "non_overlap_24": [
+   1,
+   6,
+   11
+  ]
+ },
+ "ping": {
+  "count": 20,
+  "interval_s": 0.2,
+  "timeout_s": 2,
+  "default_host": "1.1.1.1"
+ },
+ "traceroute": {
+  "max_hops": 30,
+  "timeout_s": 1
+ },
+ "dns": {
+  "default_name": "example.com"
+ },
+ "port_scan": {
+  "max_ports": 1024,
+  "concurrency": 64,
+  "timeout_ms": 400,
+  "default_spec": "21-23,25,53,80,110,139,143,443,445,548,554,631,993,995,1883,3389,5000,5353,7000,8000,8008,8009,8080,8443,8883,9100,32400,62078"
+ },
+ "sweep": {
+  "concurrency": 48,
+  "timeout_ms": 700,
+  "probe_ports": [
+   80,
+   443,
+   22,
+   445,
+   139,
+   53,
+   8008,
+   8080,
+   62078,
+   5353
+  ],
+  "ssdp_ms": 3000,
+  "nsd_ms": 6000,
+  "netbios_ms": 600
+ },
+ "nsd_types": [
+  "_http._tcp",
+  "_https._tcp",
+  "_googlecast._tcp",
+  "_airplay._tcp",
+  "_raop._tcp",
+  "_ipp._tcp",
+  "_ipps._tcp",
+  "_printer._tcp",
+  "_pdl-datastream._tcp",
+  "_ssh._tcp",
+  "_sftp-ssh._tcp",
+  "_smb._tcp",
+  "_afpovertcp._tcp",
+  "_hap._tcp",
+  "_homekit._tcp",
+  "_matter._tcp",
+  "_spotify-connect._tcp",
+  "_companion-link._tcp",
+  "_device-info._tcp",
+  "_workstation._tcp",
+  "_sonos._tcp",
+  "_amzn-wplay._tcp",
+  "_androidtvremote2._tcp",
+  "_mqtt._tcp",
+  "_home-assistant._tcp"
+ ],
+ "throughput": {
+  "download_url": "https://speed.cloudflare.com/__down?bytes={bytes}",
+  "upload_url": "https://speed.cloudflare.com/__up",
+  "bytes": 25000000,
+  "upload_bytes": 10000000,
+  "max_seconds": 15
+ },
+ "locator": {
+  "min_interval_ms": 80,
+  "max_interval_ms": 1400,
+  "tone_ms": 60
+ },
+ "heatmap": {
+  "rows": 6,
+  "cols": 6,
+  "samples": 5
+ },
+ "ports": {
+  "21": "ftp",
+  "22": "ssh",
+  "23": "telnet",
+  "25": "smtp",
+  "53": "dns",
+  "80": "http",
+  "110": "pop3",
+  "139": "netbios",
+  "143": "imap",
+  "443": "https",
+  "445": "smb",
+  "548": "afp",
+  "554": "rtsp",
+  "631": "ipp",
+  "993": "imaps",
+  "995": "pop3s",
+  "1883": "mqtt",
+  "3389": "rdp",
+  "5000": "upnp",
+  "5353": "mdns",
+  "7000": "airplay",
+  "8000": "http-alt",
+  "8008": "cast",
+  "8009": "cast",
+  "8080": "http-proxy",
+  "8443": "https-alt",
+  "8883": "mqtts",
+  "9100": "jetdirect",
+  "32400": "plex",
+  "62078": "iphone-sync"
+ }
+}

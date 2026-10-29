@@ -150,6 +150,10 @@ def uiMainMenuJson   = groovy.json.JsonOutput.toJson(buildJson.ui.main_menu ?: [
 def uiMainMenuB64    = uiMainMenuJson.bytes.encodeBase64().toString()
 def uiSamplesJson    = groovy.json.JsonOutput.toJson(buildJson.ui.page_samples ?: [:])
 def uiSamplesB64     = uiSamplesJson.bytes.encodeBase64().toString()
+// #1263 build.json::wifi_analyzer - the WiFi page's endpoints / thresholds / tool bounds, deep-merged by libs:wifi over its own
+// assets/wifi/wifi-config.json (WifiHostConfig). Small: a plain base64 field.
+def wifiAnalyzerJson = groovy.json.JsonOutput.toJson(buildJson.wifi_analyzer ?: [:])
+def wifiAnalyzerB64  = wifiAnalyzerJson.bytes.encodeBase64().toString()
 def uiGroupsJson     = groovy.json.JsonOutput.toJson(buildJson.ui.home_groups ?: [])
 def uiGroupsB64      = uiGroupsJson.bytes.encodeBase64().toString()
 // Status-bar Line 0 animated pets — single source of truth in
@@ -798,6 +802,7 @@ android {
         buildConfigField "String", "GIT_SHORT_SHA",         "\"${shortSha}\""
         buildConfigField "String", "BUILD_TIMESTAMP",       "\"${buildTimestamp}\""
         buildConfigField "String", "UI_SECTIONS_B64",       "\"${uiSectionsB64}\""
+        buildConfigField "String", "WIFI_ANALYZER_B64",     "\"${wifiAnalyzerB64}\""
         // javac caps ONE string constant at 65,535 UTF-8 bytes (JVMS 4.4.7, CONSTANT_Utf8).
         // The fleet manifest's base64 crossed that on 2026-09-24 — 68,072 bytes at 72
         // entries, once the four #567 engine libraries registered — and every consumer's
@@ -1068,6 +1073,8 @@ dependencies {
     implementation project(':libs:light')
     // libs:bluetooth (#1221) - the Bluetooth page (Configs > Fleet > Bluetooth): scan, connect, GATT, decoding, ATT log, Dev tools.
     implementation project(':libs:bluetooth')
+    // libs:wifi (#1263) - the WiFi analyzer page (Configs > Setup > Network > WiFi): scans, channels, link, tools, logs.
+    implementation project(':libs:wifi')
     // libs:datamanager — per-app usage + network DATA providers (feeds the
     // Phone smart folders + Suite/Phone Active Apps). Sibling of libs:battery.
     implementation project(':libs:datamanager')
