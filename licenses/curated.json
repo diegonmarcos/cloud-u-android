@@ -382,10 +382,10 @@
    "what": "CG-Omniverse app (Galaxy, Game Store, VR Store pages behind Cloud > Lnktree)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
-  "ad_Capital-FinTerm": {
+  "ad_Capital-Stack-FinTerminal": {
    "licence": "LicenseRef-NoLicenseGranted",
    "kind": "own",
-   "what": "Capital-FinTerm app (FI | EQ | EX | NW | PM | MY-PM terminal pages behind Cloud > Lnktree)",
+   "what": "Capital-Stack-FinTerminal app (FI | EQ | EX | NW | PM | MY-PM terminal pages behind Cloud > Lnktree)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
   "ad_Hardtech-CAD": {

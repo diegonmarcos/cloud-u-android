@@ -73,7 +73,7 @@ for d in sorted(os.listdir(root)):
 if seen < 30: bad.append("F2 only %d app folders were examined - the detection matched too little" % seen)
 
 # F3
-LNK = {"ad_CG-Omniverse": "cg-omniverse", "ad_Capital-FinTerm": "capital-finterm", "ad_Hardtech-CAD": "hardtech-cad", "ad_Hardtech-Sim2Real": "hardtech-sim2real"}
+LNK = {"ad_CG-Omniverse": "cg-omniverse", "ad_Capital-Stack-FinTerminal": "capital-stack-finterminal", "ad_Hardtech-CAD": "hardtech-cad", "ad_Hardtech-Sim2Real": "hardtech-sim2real"}
 tpl = read("1_cicd/src/templates/test-lnktree-app.sh")
 for d, name in LNK.items():
     if not os.path.isfile(os.path.join(root, d, "build.json")): bad.append("F3 the Lnktree app folder %s does not exist" % d); continue

@@ -3087,7 +3087,7 @@
             ]
           },
           {
-            "_doc": "Lnktree (was 'Projects W'; owner 2026-10-30): four tiles, each LAUNCHING a real app of the Lnktree family (#1335, extapp:cg-omniverse, capital-finterm, hardtech-cad, hardtech-sim2real; folders ad_*, 1_cicd/src/data/app-families.json). The pages live in the apps (their build.json::ui), no in-app page is left here. The two '|' rules are the owner's grouping: Omniverse | FinTerm | CAD Sim2Real. The row id stays 'Lnktree' = the title; the old project tiles (Lf.y/Nx.z/St.x repos) are gone.",
+            "_doc": "Lnktree (was 'Projects W'; owner 2026-10-30): four tiles, each LAUNCHING a real app of the Lnktree family (#1335, extapp:cg-omniverse, capital-stack-finterminal, hardtech-cad, hardtech-sim2real; folders ad_*, 1_cicd/src/data/app-families.json). The pages live in the apps (their build.json::ui), no in-app page is left here. The two '|' rules are the owner's grouping: Omniverse | FinTerm | CAD Sim2Real. The row id stays 'Lnktree' = the title; the old project tiles (Lf.y/Nx.z/St.x repos) are gone.",
             "title": "Lnktree",
             "tiles": [
               {
@@ -3108,7 +3108,7 @@
                 "id": "finterm",
                 "label": "FinTerm",
                 "icon": "ic_p_markets_terminal",
-                "target": "extapp:capital-finterm"
+                "target": "extapp:capital-stack-finterminal"
               },
               {
                 "_doc": "Group divider (owner: Omniverse | FinTerm | CAD Sim2Real): a bare character, not a control.",
@@ -8676,12 +8676,12 @@
         "forks": {}
       },
       {
-        "_doc": "#1335 Capital-FinTerm (ad_Capital-FinTerm, published by ship-capital-finterm.yml): the Lnktree family app (1_cicd/src/data/app-families.json) behind the Cloud > Lnktree tile of the same name; every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ad_Capital-FinTerm/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map.",
-        "id": "capital-finterm",
+        "_doc": "#1335 Capital-Stack-FinTerminal (ad_Capital-Stack-FinTerminal, published by ship-capital-stack-finterminal.yml): the Lnktree family app (1_cicd/src/data/app-families.json) behind the Cloud > Lnktree tile of the same name; every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ad_Capital-Stack-FinTerminal/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map.",
+        "id": "capital-stack-finterminal",
         "folder": "prod_utils",
         "hub_package": "com.diegonmarcos.capitalfinterm",
         "install_package": "com.diegonmarcos.capitalfinterm",
-        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Capital-FinTerm.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Capital-Stack-FinTerminal.apk",
         "forks": {}
       },
       {

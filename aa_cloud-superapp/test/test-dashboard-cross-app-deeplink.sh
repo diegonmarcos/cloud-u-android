@@ -169,7 +169,7 @@ TARGETS = {
     "me":        "extapp:cloud-me",
     # #1335: the Lnktree row's tiles LAUNCH the Lnktree family apps (test-lnktree-row.sh pins the row, ad_*/test/test-lnktree-app.sh the pages).
     "omniverse": "extapp:cg-omniverse",
-    "finterm": "extapp:capital-finterm",
+    "finterm": "extapp:capital-stack-finterminal",
     "cad": "extapp:hardtech-cad",
     "sim2real": "extapp:hardtech-sim2real",
     "myhealth":    "extapp:cloud-me#page:health/home",

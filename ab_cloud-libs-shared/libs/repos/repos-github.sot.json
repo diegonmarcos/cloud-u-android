@@ -65,8 +65,8 @@
           "description": "CG area app (Galaxy, Game Store, VR Store) behind the SuperApp's Cloud > Lnktree row."
         },
         {
-          "name": "Capital-FinTerm",
-          "path": "ad_Capital-FinTerm",
+          "name": "Capital-Stack-FinTerminal",
+          "path": "ad_Capital-Stack-FinTerminal",
           "description": "Capital area app: the FI | EQ | EX | NW | PM | MY-PM terminal tabs behind the SuperApp's Cloud > Lnktree row."
         },
         {

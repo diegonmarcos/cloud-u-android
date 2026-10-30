@@ -1,0 +1,387 @@
+{
+  "launcher_icon": {
+    "_doc": "The launcher icon, generated from this declaration by 1_cicd/src/scripts/cloud-android-launcher-icons.py (pattern + category colours + glyphs in 1_cicd/src/data/launcher-icons.json). Never edit the generated res files.",
+    "glyph": "finterm",
+    "category": "lnktree",
+    "res": "app/src/main/res"
+  },
+  "name": "capital-stack-finterminal",
+  "display_name": "Capital-Stack-FinTerminal",
+  "description": "Capital-Stack-FinTerminal: the Capital area's capital-markets terminal as an Android app behind the SuperApp's Cloud > Lnktree row. Six tabs on the shared bottom nav, FI | EQ | EX | NW | PM | MY-PM, each entry a dashboard drawn from a DECLARED source (data/sources.json): Cloud-Fincept / fin_api on the private mesh first (with a Start / Stop / Restart control for its container), the key-free public sources (FRED, DBnomics, IMF, World Bank, GDELT) as fallback, and dashed placeholders where a source needs a key you add in Config > Sources (stored encrypted on the phone). MY-PM is a simple local holdings list. Every figure shown is what its source returned, with its date and attribution.",
+  "category": "android",
+  "android": {
+    "application_id": "com.diegonmarcos.capitalfinterm",
+    "_doc_application_id": "The Lnktree family (1_cicd/src/data/app-families.json): com.diegonmarcos. + the app's name with its separators dropped, as cloudcalc / cloudsearch for the Cloud family.",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 35,
+    "version_code": 1,
+    "version_name": "0.1.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ]
+  },
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: Shared/Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + Shared/Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
+    "vault_keystore": "Shared/Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "Shared/Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
+  },
+  "diagnostics": {
+    "log_sink_url": "",
+    "log_sink_stream": "capital-stack-finterminal"
+  },
+  "release": {
+    "artifact": {
+      "debug": "Capital-Stack-FinTerminal.apk",
+      "release": "Capital-Stack-FinTerminal-release.apk"
+    },
+    "variants": [
+      {
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a",
+          "armeabi-v7a"
+        ],
+        "artifact_debug": "Capital-Stack-FinTerminal.apk",
+        "gh_asset": "Capital-Stack-FinTerminal.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest"
+      },
+      {
+        "id": "x86_64",
+        "abis": [
+          "x86_64"
+        ],
+        "supported_abis": [
+          "x86_64",
+          "x86"
+        ],
+        "artifact_debug": "Capital-Stack-FinTerminal-x86_64.apk",
+        "gh_asset": "Capital-Stack-FinTerminal-x86_64.apk",
+        "ghcr_tag_suffix": "-x86_64",
+        "update_tag": "latest-x86_64"
+      }
+    ],
+    "auto_update": {
+      "enabled": false,
+      "tag": "latest",
+      "interval_hours": 6,
+      "require_unmetered_network": true,
+      "require_charging": false,
+      "install_mode": "silent",
+      "_doc_max_installs_per_pass": "Most install sessions ONE unattended background pass may open. A background pass cannot show the system install dialog (Android 10+ blocks background activity starts), so each install it starts leaves a tap-to-install notification holding a PackageInstaller session until the user answers it. Unbounded, one pass over the 40-entry fleet opens 40 and the installer hits Android's 50-session cap - 'Too many active sessions for UID'. The remainder is picked up by the next pass. User-initiated 'Update all' is NOT capped: it runs in the foreground where the dialog appears and sessions resolve at once.",
+      "max_installs_per_pass": 3,
+      "_doc_enabled": "Off because this app compiles no libs:updater: the Store updates it, as it does Cloud Calc and Cloud Search."
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "capital-stack-finterminal",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Capital-Stack-FinTerminal.apk",
+      "draft": false,
+      "prerelease": false,
+      "generate_release_notes": false
+    },
+    "phone_install": {
+      "default_tag": "latest",
+      "target_dir": "~/storage/downloads",
+      "asset_name": "Capital-Stack-FinTerminal.apk"
+    }
+  },
+  "modules": {
+    "_doc": "Single source of truth for the Gradle module graph; settings.gradle iterates it. No `logic` lib is compiled in (lib-classes L4): the Store installs and updates this app, as it does Cloud Calc.",
+    "app": {
+      "type": "application",
+      "depends_on": [
+        "libs:core",
+        "libs:bottomnav",
+        "libs:ui-icons",
+        "libs:ui-nav-bars",
+        "libs:theme-background",
+        "libs:ui-kit"
+      ]
+    },
+    "libs:core": {
+      "dir": "../ab_cloud-libs-shared/libs/core",
+      "type": "library"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Not linked in app/build.gradle: libs:core pulls it in with an `api` dependency, which makes this app a fleet mesh member with the debug API.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:crash": {
+      "_doc": "#1122 libs:core `api`s this module (the default crash handler, the local crash sink and the generic crash screen); listed so settings.gradle resolves the path and the ship workflow's path triggers see it, not linked in the app's own gradle.",
+      "dir": "../ab_cloud-libs-shared/libs/crash",
+      "type": "library"
+    },
+    "libs:fleetconfig-model": {
+      "_doc": "#873 libs:core `api`s this module (the setup provider every app serves); listed so settings.gradle resolves the path.",
+      "dir": "../ab_cloud-libs-shared/libs/fleetconfig-model",
+      "type": "library"
+    },
+    "libs:bottomnav": {
+      "_doc": "#868 the fleet's NavDecl (ui.bottom_nav/ui.sections baked into BuildConfig), the top-bar scaffold's drawer and the scroll collapse, shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "libs:ui-icons": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-icons",
+      "type": "library",
+      "_doc": "#1160 the nav icon catalog (name to ImageVector, tinted or brand): every nav glyph of every app, shared BY REFERENCE; libs:bottomnav depends on it."
+    },
+    "libs:ui-nav-bars": {
+      "dir": "../ab_cloud-libs-shared/libs/ui-nav-bars",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:theme-background": {
+      "dir": "../ab_cloud-libs-shared/libs/theme-background",
+      "type": "library",
+      "_doc": "#1154 shared navigation and theme design, shared BY REFERENCE."
+    },
+    "libs:ui-kit": {
+      "_doc": "2026-10-16 owner decision: all apps are Compose. The fleet's Compose kit (CloudKitTheme, KitPalette, KitCard, KitSettingsRow, KitButton), shared BY REFERENCE.",
+      "dir": "../ab_cloud-libs-shared/libs/ui-kit",
+      "type": "library"
+    }
+  },
+  "tests": {
+    "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3"
+      ]
+    },
+    "unit": {
+      "_doc": "This app's JVM suite in app/src/test: Pages, Holdings, Catalog (the catalog and the entry-to-source mapping), Dashboards, FredCsv, Forward (derivation), Providers, Engine (fake network), Priority (Cloud-Fincept first, public fallback), Control (mesh-only, confirmation), SourceKeys.",
+      "task": ":app:testDebugUnitTest",
+      "enabled": true
+    }
+  },
+  "ui": {
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl) of Capital-Stack-FinTerminal: the sections on the bottom bar in order, a hidden Config (the gear of the first row: Sources, About) and a hidden About. #1335 ui.stacks[<section>] is the page of that section: a list of entries drawn by declared KIND (Pages.kt: entry, section_title, holdings, about, dashboard, sources). A `dashboard` entry (every FinTerm entry) has a title, a one-line subtitle and `dashboard`, the id of its dashboard in data/dashboards.json; the dashboard names its declared source(s) in data/sources.json (the catalog, with endpoints, auth, coverage and the tabs/entries each source feeds), so no address is typed in this file or in Kotlin. The `sources` kind is Config > Sources: the catalog by category and the user's own API keys, stored encrypted on the phone. An `entry` (still drawn for the other Lnktree apps' shape) has ONE declared source for its target: `site` (the label of a link of aa_cloud-superapp/data/linktree.json), `registry` (a code of aa_cloud-superapp/build.json ui.app_urls.registry_sites) or `repo` + `path`; app/build.gradle resolves them at BUILD time from the SuperApp's own declarations and bakes UI_TARGETS_B64. A `planned` entry has a note and no source and is drawn greyed. Market figures are never declared here: a dashboard shows what its source returns, with its date and attribution.",
+    "bottom_nav": [
+      "fi",
+      "eq",
+      "ex",
+      "nw",
+      "pm",
+      "my-pm"
+    ],
+    "default_section": "fi",
+    "sections": [
+      {
+        "id": "fi",
+        "label": "FI",
+        "icon": "account_balance",
+        "pages": []
+      },
+      {
+        "id": "eq",
+        "label": "EQ",
+        "icon": "trending_up",
+        "pages": []
+      },
+      {
+        "id": "ex",
+        "label": "EX",
+        "icon": "payments",
+        "pages": []
+      },
+      {
+        "id": "nw",
+        "label": "NW",
+        "icon": "rss_feed",
+        "pages": []
+      },
+      {
+        "id": "pm",
+        "label": "PM",
+        "icon": "pie_chart",
+        "pages": []
+      },
+      {
+        "id": "my-pm",
+        "label": "MY-PM",
+        "icon": "wallet",
+        "pages": []
+      },
+      {
+        "id": "about",
+        "label": "About",
+        "icon": "info",
+        "pages": []
+      },
+      {
+        "id": "config",
+        "label": "Config",
+        "icon": "settings",
+        "pages": []
+      }
+    ],
+    "stacks": {
+      "fi": [
+        {
+          "kind": "dashboard",
+          "title": "Yield Curves",
+          "subtitle": "Spot, forward and zero curves, US and major sovereigns",
+          "dashboard": "yield_curves"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Forward Rates",
+          "subtitle": "Forward rate curves and the paths they imply",
+          "dashboard": "forward_rates"
+        },
+        {
+          "kind": "dashboard",
+          "title": "World Interest Rate Probabilities",
+          "subtitle": "Market-implied central bank rate paths",
+          "dashboard": "rate_probabilities"
+        },
+        {
+          "kind": "dashboard",
+          "title": "World Bonds",
+          "subtitle": "Sovereign bond yields and spreads by country",
+          "dashboard": "world_bonds"
+        }
+      ],
+      "eq": [
+        {
+          "kind": "dashboard",
+          "title": "World Equity Indices",
+          "subtitle": "Major equity index levels and moves worldwide",
+          "dashboard": "world_equity_indices"
+        }
+      ],
+      "ex": [
+        {
+          "kind": "dashboard",
+          "title": "FX",
+          "subtitle": "Comprehensive real-time currency pricing, matrix crosses, spot rates, and forwards",
+          "dashboard": "fx"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Onshore USD Rates",
+          "subtitle": "Onshore USD rate benchmarks and curves",
+          "dashboard": "onshore_usd_rates"
+        }
+      ],
+      "nw": [
+        {
+          "kind": "dashboard",
+          "title": "News",
+          "subtitle": "Global news from the GDELT feed",
+          "dashboard": "news"
+        }
+      ],
+      "pm": [
+        {
+          "kind": "dashboard",
+          "title": "Portfolio & Risk Analytics",
+          "subtitle": "Comprehensive portfolio tracking, attribution analysis, factor exposures and scenario stress testing for well-known portfolios",
+          "dashboard": "portfolio_risk"
+        },
+        {
+          "kind": "section_title",
+          "title": "Model portfolios: bonds / equity"
+        },
+        {
+          "kind": "dashboard",
+          "title": "40/60",
+          "subtitle": "40% bonds, 60% equity",
+          "dashboard": "mp_40_60"
+        },
+        {
+          "kind": "dashboard",
+          "title": "70/30",
+          "subtitle": "70% bonds, 30% equity",
+          "dashboard": "mp_70_30"
+        },
+        {
+          "kind": "dashboard",
+          "title": "60/40",
+          "subtitle": "60% bonds, 40% equity",
+          "dashboard": "mp_60_40"
+        },
+        {
+          "kind": "dashboard",
+          "title": "30/70",
+          "subtitle": "30% bonds, 70% equity",
+          "dashboard": "mp_30_70"
+        },
+        {
+          "kind": "section_title",
+          "title": "Model portfolios: DM / EM"
+        },
+        {
+          "kind": "dashboard",
+          "title": "70/30 DM/EM",
+          "subtitle": "70% Developed Markets, 30% Emerging Markets",
+          "dashboard": "mp_70_30_DM_EM"
+        },
+        {
+          "kind": "dashboard",
+          "title": "60/40 DM/EM",
+          "subtitle": "60% Developed Markets, 40% Emerging Markets",
+          "dashboard": "mp_60_40_DM_EM"
+        },
+        {
+          "kind": "dashboard",
+          "title": "40/60 DM/EM",
+          "subtitle": "40% Developed Markets, 60% Emerging Markets",
+          "dashboard": "mp_40_60_DM_EM"
+        },
+        {
+          "kind": "dashboard",
+          "title": "30/70 DM/EM",
+          "subtitle": "30% Developed Markets, 70% Emerging Markets",
+          "dashboard": "mp_30_70_DM_EM"
+        }
+      ],
+      "my-pm": [
+        {
+          "kind": "holdings",
+          "title": "Personal portfolio",
+          "subtitle": "Your holdings: ticker, quantity, cost, kept on this phone"
+        }
+      ],
+      "about": [
+        {
+          "kind": "about"
+        }
+      ],
+      "config": [
+        {
+          "kind": "sources",
+          "title": "Sources",
+          "subtitle": "The data sources behind every dashboard, and your own API keys (kept encrypted on this phone)"
+        },
+        {
+          "kind": "about"
+        }
+      ]
+    }
+  }
+}

@@ -2251,10 +2251,10 @@
     "holdings": {
       "kind": "prefs",
       "class": "content",
-      "doc": "The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-FinTerm's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content.",
+      "doc": "The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-Stack-FinTerminal's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content.",
       "used_by": [
         "ad_CG-Omniverse",
-        "ad_Capital-FinTerm",
+        "ad_Capital-Stack-FinTerminal",
         "ad_Hardtech-CAD",
         "ad_Hardtech-Sim2Real"
       ]
@@ -2262,9 +2262,9 @@
     "capital_finterm_source_keys": {
       "kind": "encrypted",
       "class": "secret",
-      "doc": "Capital-FinTerm's own data-source API keys (Config > Sources, #1335): one entry per source id of data/sources.json (Polygon, Alpha Vantage, Databento, Fincept Data API, ...), pasted by the user. EncryptedSharedPreferences (key names AES-256-SIV, values AES-256-GCM) under an Android Keystore AES-256-GCM master key, opened through libs:crash SafeEncryptedPrefs; never shown again, never logged, never in git. A credential: migrates through the vault.",
+      "doc": "Capital-Stack-FinTerminal's own data-source API keys (Config > Sources, #1335): one entry per source id of data/sources.json (Polygon, Alpha Vantage, Databento, Fincept Data API, ...), pasted by the user. EncryptedSharedPreferences (key names AES-256-SIV, values AES-256-GCM) under an Android Keystore AES-256-GCM master key, opened through libs:crash SafeEncryptedPrefs; never shown again, never logged, never in git. A credential: migrates through the vault.",
       "used_by": [
-        "ad_Capital-FinTerm"
+        "ad_Capital-Stack-FinTerminal"
       ]
     }
   },
@@ -4021,9 +4021,9 @@
       ],
       "items": []
     },
-    "capital-finterm": {
+    "capital-stack-finterminal": {
       "package": "com.diegonmarcos.capitalfinterm",
-      "module": "ad_Capital-FinTerm",
+      "module": "ad_Capital-Stack-FinTerminal",
       "schema_version": 1,
       "libs": [
         "lib-bottomnav",

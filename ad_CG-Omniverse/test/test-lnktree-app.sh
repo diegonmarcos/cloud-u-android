@@ -4,7 +4,7 @@
 # ╚══════════════════════════════════════════════════════════════════╝
 #
 # #1335 THE SHARED TEMPLATE: 1_cicd/src/templates/test-lnktree-app.sh, copied verbatim to <app>/test/test-lnktree-app.sh
-# for CG-Omniverse, Capital-FinTerm, Hardtech-CAD and Hardtech-Sim2Real (it derives the app from its own location, so the
+# for CG-Omniverse, Capital-Stack-FinTerminal, Hardtech-CAD and Hardtech-Sim2Real (it derives the app from its own location, so the
 # four copies are identical; aa_cloud-superapp/test/test-app-families.sh holds them to the template). Static, no build, no
 # network, no device. It certifies, for THIS app, from the sources alone:
 #   P1  the declaration: build.json parses; name is the lower-case slug the family pattern accepts, display_name is the
@@ -54,8 +54,8 @@ EXPECT = {
     "sources": {"Galaxy": ("registry", "2.1.1")},
     "planned": ["Game Store", "VR Store"],
   },
-  "ad_Capital-FinTerm": {
-    "name": "capital-finterm", "display": "Capital-FinTerm", "pkg": "com.diegonmarcos.capitalfinterm",
+  "ad_Capital-Stack-FinTerminal": {
+    "name": "capital-stack-finterminal", "display": "Capital-Stack-FinTerminal", "pkg": "com.diegonmarcos.capitalfinterm",
     "nav": [("fi", "FI"), ("eq", "EQ"), ("ex", "EX"), ("nw", "NW"), ("pm", "PM"), ("my-pm", "MY-PM")],
     "pages": {
       "fi": [("dashboard", "Yield Curves"), ("dashboard", "Forward Rates"), ("dashboard", "World Interest Rate Probabilities"), ("dashboard", "World Bonds")],
@@ -226,7 +226,7 @@ for h in exp.get("hidden", []):
     if h not in by_id: bad.append("P6 ui.sections declares no hidden %s section" % h)
     elif h in ui.get("bottom_nav", []): bad.append("P6 the %s section is on the bottom bar" % h)
     if h == "config" and re.findall(r'SECTION_CONFIG\s*=\s*"([^"]+)"', decl_kt) != ["config"]: bad.append("P6 Decl.kt names no SECTION_CONFIG = \"config\"")
-if exp["name"] == "capital-finterm" and [e.get("kind") for e in stacks.get("my-pm", [])] != ["holdings"]: bad.append("P6 MY-PM is not the holdings list")
+if exp["name"] == "capital-stack-finterminal" and [e.get("kind") for e in stacks.get("my-pm", [])] != ["holdings"]: bad.append("P6 MY-PM is not the holdings list")
 
 # P7
 joined = "\n".join(sources.values())

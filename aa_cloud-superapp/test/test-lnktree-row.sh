@@ -78,7 +78,7 @@ def problems(bj, lt, reg, panels, sections, targets, icons):
     tiles = [t for t in row["tiles"] if not t.get("separator")]
     if [t.get("label") for t in tiles] != ["Omniverse", "FinTerm", "CAD", "Sim2Real"]:
         out.append("T1 tiles are %r, want Omniverse FinTerm CAD Sim2Real" % [t.get("label") for t in tiles])
-    want_t = {"Omniverse": "extapp:cg-omniverse", "FinTerm": "extapp:capital-finterm", "CAD": "extapp:hardtech-cad", "Sim2Real": "extapp:hardtech-sim2real"}
+    want_t = {"Omniverse": "extapp:cg-omniverse", "FinTerm": "extapp:capital-stack-finterminal", "CAD": "extapp:hardtech-cad", "Sim2Real": "extapp:hardtech-sim2real"}
     for t in tiles:
         if t.get("target") != want_t.get(t.get("label")): out.append("T1 tile %s targets %r" % (t.get("label"), t.get("target")))
     for t in tiles:
@@ -168,7 +168,7 @@ def keepsec(b, l, r, a): b["ui"]["sections"].append({"id": "finterm", "label": "
 mut("the finterm section left in the SuperApp", "T2", keepsec)
 def noext(b, l, r, a): b["ui"]["external_apps"] = [e for e in b["ui"]["external_apps"] if e.get("id") != "hardtech-cad"]
 mut("an app missing from ui.external_apps", "T2", noext)
-def badpkg(b, l, r, a): next(e for e in b["ui"]["external_apps"] if e.get("id") == "capital-finterm")["install_package"] = "com.example.other"
+def badpkg(b, l, r, a): next(e for e in b["ui"]["external_apps"] if e.get("id") == "capital-stack-finterminal")["install_package"] = "com.example.other"
 mut("external app with another package", "T2", badpkg)
 def oldtarget(b, l, r, a): row(b)["tiles"][0]["target"] = "page:cloud/omniverse"
 mut("a tile pointing back at an in-app page", "T1", oldtarget)
