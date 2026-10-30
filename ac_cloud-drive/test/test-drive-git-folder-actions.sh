@@ -125,8 +125,9 @@ echo "── N registry names (#1317) ──"
 n1 "$COORD" "$SRC/sync/LocalRepos.kt" "$SRC/sync/ParentlessPanel.kt" "$BJ" && pass "origin names fold through renamed_from; Fix origin + auto_fix declared; lists refresh" || fail "registry names"
 echo "── I self entry and .incoming (#1317) ──"
 SYNC="$SRC/sync"
-i1() { grep -qF 'rm -rf ${q(into)}; {' "$1" && grep -qF 'rc=\$?; rm -rf ${q(into)}' "$1" && grep -qF '!isIncoming(it)' "$2" && grep -qF 'LocalRepos.isIncoming(d)' "$3" && grep -qF 'repoSot.listed.map' "$4" && grep -qF 'x.strings("renamed_from")' "$5" || { echo "    self entry / .incoming guards missing"; return 1; }; }
-I_ARGS=("$SYNC/ExecCopier.kt" "$SYNC/LocalRepos.kt" "$SYNC/UnlistedRepos.kt" "$COORD" "$DECL")
+i1() { grep -qF 'rm -rf ${q(into)}; {' "$1" && grep -qF 'rc=\$?; rm -rf ${q(into)}' "$1" && grep -qF '!isIncoming(it)' "$2" && grep -qF 'LocalRepos.isIncoming(d)' "$3" && grep -qF 'sot.listed' "$4" && grep -qF 'x.strings("renamed_from")' "$5" || { echo "    self entry / .incoming guards missing"; return 1; }; }
+# #1315 the listed set (repos + self) is consumed by the ONE inventory classification (sync/inventory/RepoInventory), not the coordinator.
+I_ARGS=("$SYNC/ExecCopier.kt" "$SYNC/LocalRepos.kt" "$SYNC/UnlistedRepos.kt" "$SYNC/inventory/RepoInventory.kt" "$DECL")
 i1 "${I_ARGS[@]}" && pass "stale .incoming cleared first and on failure, never listed; self entry folded into listed" || fail "self/.incoming"
 echo "── H header parity ──"
 h1 && pass "Parentless/Unlisted use the main header, cells and status icons" || fail "header parity"
@@ -148,7 +149,7 @@ python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); del b["ui"]["sync"]
 n1 "$COORD" "$SRC/sync/LocalRepos.kt" "$SRC/sync/ParentlessPanel.kt" "$TMP/b2.json" >/dev/null && fail "N1 passed without stale_origin (vacuous)" || pass "stale_origin removed → N1 RED"
 sed 's/rm -rf ${q(into)}; {/{/' "$SYNC/ExecCopier.kt" > "$TMP/x1.kt"; i1 "$TMP/x1.kt" "${I_ARGS[@]:1}" >/dev/null && fail "I1 passed a copy that keeps a stale incoming (vacuous)" || pass "stale incoming not cleared → I1 RED"
 sed 's/!isIncoming(it) \&\& //' "$SYNC/LocalRepos.kt" > "$TMP/x2.kt"; i1 "${I_ARGS[0]}" "$TMP/x2.kt" "${I_ARGS[@]:2}" >/dev/null && fail "I1 passed an incoming row (vacuous)" || pass ".incoming listed → I1 RED"
-sed 's/repoSot.listed.map/repoSot.repos.map/' "$COORD" > "$TMP/x3.kt"; i1 "${I_ARGS[@]:0:3}" "$TMP/x3.kt" "$DECL" >/dev/null && fail "I1 passed without the self entry (vacuous)" || pass "self not folded into listed → I1 RED"
+sed 's/sot\.listed/sot.repos/' "$SYNC/inventory/RepoInventory.kt" > "$TMP/x3.kt"; i1 "${I_ARGS[@]:0:3}" "$TMP/x3.kt" "$DECL" >/dev/null && fail "I1 passed without the self entry (vacuous)" || pass "self not folded into listed → I1 RED"
 k1 "$BJ" "$COORD" "$DECL" >/dev/null && r1 "$COORD" "$DECL" "$RULES" >/dev/null && h1 >/dev/null && e1 "$COORD" >/dev/null && n1 "$COORD" "$SRC/sync/LocalRepos.kt" "$SRC/sync/ParentlessPanel.kt" "$BJ" >/dev/null && i1 "${I_ARGS[@]}" >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 
 echo

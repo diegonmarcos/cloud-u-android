@@ -15,6 +15,8 @@ import com.diegonmarcos.cloudlib.gitsync.GitOpResult
 import com.diegonmarcos.cloudlib.gitsync.GitRemoteInfo
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
+import com.diegonmarcos.clouddrive.sync.inventory.InventoryScript
+import com.diegonmarcos.clouddrive.sync.inventory.RepoInventory
 import com.diegonmarcos.clouddrive.sync.store.StoreShell
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -1126,34 +1128,97 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         .also { f -> scope.launch(Dispatchers.IO) { f.value = UnlistedRepos.decode(pagePrefs.getString(KEY_UNLISTED, null)) } }
     val scanningUnlisted = MutableStateFlow(false)
 
-    /** Walk the declared roots (bounded by the declared depth, folder count and deadline), keep the folders the registry does not list, persist them and light-check them. Pull-to-refresh and check-all only. */
+    // ── #1315 THE ONE INVENTORY: one discovery pass (the store through the one shell, the rest through java.io), classified once ──
+
+    /** The last inventory (persisted entries re-classified at start, replaced by every pass); null until the first pass or load. */
+    val inventory = MutableStateFlow<RepoInventory.Inventory?>(null)
+        .also { f -> scope.launch(Dispatchers.IO) { runCatching { InventoryScript.decode(pagePrefs.getString(KEY_INVENTORY, null)) }.getOrDefault(emptyList()).takeIf { it.isNotEmpty() }?.let { f.value = classifyInventory(it, 0L, "cache") } } }
+
+    private fun classifyInventory(entries: List<InventoryScript.Entry>, now: Long, via: String, truncated: Boolean = false, malformed: Int = 0): RepoInventory.Inventory =
+        RepoInventory.classify(entries, RegistryNames.live(), Declarations.repoSot, repos.value.map { File(it.path).absolutePath }.toSet(), now, via, truncated, malformed)
+
+    /** The declared roots with their placeholders expanded (host form). */
+    private fun inventoryRoots(list: List<ManagedRepo>): List<File> = UnlistedRepos.expandRoots(Declarations.sync.git.unlisted.roots, mapOf(
+        "store_git" to listOf(SharedStore.gitRoot().absolutePath),
+        "repo_parents" to list.mapNotNull { File(it.path).parentFile?.absolutePath }.distinct(),
+        "external" to listOfNotNull(runCatching { android.os.Environment.getExternalStorageDirectory().absolutePath }.getOrNull()),
+        "files" to listOf(ctx.filesDir.absolutePath),
+    ))
+
+    /**
+     * ONE pass, blocking (IO): the roots inside the store through ONE script on the shell (cld.termux sees the store whatever this
+     * app's uid), the roots outside it through the java.io walk of the same shape; without cld.termux every root walks in java.io.
+     * The archive root is never entered (#1288). Returns the entries and how they were read.
+     */
+    private fun discover(list: List<ManagedRepo>): Triple<List<InventoryScript.Entry>, String, Int> {
+        val d = Declarations.sync.git.unlisted
+        val inv = Declarations.sync.git.inventory
+        val roots = inventoryRoots(list)
+        val archive = archiveDir()
+        val route = shell.route
+        val (storeRoots, ioRoots) = if (route.viaTermux) roots.partition { route.inStore(it.absolutePath) } else emptyList<File>() to roots
+        val out = ArrayList<InventoryScript.Entry>()
+        var via = ""
+        var malformed = 0
+        if (storeRoots.isNotEmpty()) {
+            val r = shell.run(InventoryScript.build(storeRoots.mapNotNull { route.guest(it.absolutePath) }, d.maxDepth, inv.debris) { StoreShell.q(it) }, timeoutMs = d.timeoutSeconds.coerceAtMost(110) * 1000)
+            if (r.exit == StoreShell.REFUSED) DriveDebugLog.e(ctx, TAG, "inventory: cld.termux refused: ${r.err}")
+            val p = InventoryScript.parse(r.out) { g -> route.host(g) }
+            val archiveHost = archive?.absolutePath
+            out += p.entries.filter { e -> archiveHost == null || !(e.path == archiveHost || e.path.startsWith("$archiveHost/")) }
+            malformed += p.malformed
+            via = "exec"
+        }
+        if (ioRoots.isNotEmpty()) {
+            out += InventoryScript.walkIo(ioRoots, d.maxDepth, d.maxDirs, System.currentTimeMillis() + d.timeoutSeconds * 1000L, inv.debris) { f -> archive != null && FolderActions.insideArchive(f, archive) }
+            via = if (via.isEmpty()) "files" else "exec+files"
+        }
+        return Triple(out.distinctBy { it.path }, via, malformed)
+    }
+
+    /**
+     * #1315 auto_register: a clone the pass found under a registry name that the managed list lacks is registered (name, path,
+     * origin; the declared credential path serves it), so the table says cloned and the scheduler syncs it. Never removes anything.
+     */
+    private fun autoRegister(inv: RepoInventory.Inventory, list: List<ManagedRepo>): Int {
+        if (!Declarations.sync.git.inventory.autoRegister) return 0
+        val known = list.map { File(it.path).absolutePath }.toSet()
+        var n = 0
+        inv.rows.filter { (it.cls == RepoInventory.RepoClass.REGISTERED || it.cls == RepoInventory.RepoClass.STALE_ORIGIN || it.cls == RepoInventory.RepoClass.MISNAMED) && it.path !in known }.forEach { row ->
+            runCatching {
+                registry.upsert(ManagedRepo(id = RepoRegistry.idFor(row.path), name = row.name, path = row.path, remoteUrl = row.origin, authKind = if (row.origin.isBlank()) AUTH_NONE else AUTH_HTTPS))
+                DriveDebugLog.i(ctx, TAG, "inventory: registered ${row.name} at ${row.path}")
+                n++
+            }.onFailure { DriveDebugLog.e(ctx, TAG, "inventory: could not register ${row.name}: ${it.message}") }
+        }
+        return n
+    }
+
+    /** The pass, published: the inventory, the Unlisted section's rows (derived), the managed list (after auto_register), and the statuses of the new rows. */
     fun scanUnlisted(level: GitStatusReader.Level = GitStatusReader.Level.LIGHT) {
         if (!scanningUnlisted.compareAndSet(false, true)) return
         scope.launch {
             try {
-                val found = withContext(Dispatchers.IO) {
-                    val d = Declarations.sync.git.unlisted
+                val (inv, found) = withContext(Dispatchers.IO) {
                     val list = registry.load()
-                    val vars = mapOf(
-                        "store_git" to listOf(SharedStore.gitRoot().absolutePath),
-                        "repo_parents" to list.mapNotNull { File(it.path).parentFile?.absolutePath }.distinct(),
-                        "external" to listOfNotNull(runCatching { android.os.Environment.getExternalStorageDirectory().absolutePath }.getOrNull()),
-                        "files" to listOf(ctx.filesDir.absolutePath),
-                    )
-                    val roots = UnlistedRepos.expandRoots(d.roots, vars)
-                    // #1288 the archive root is not walked: an archived folder is not unlisted.
-                    val archive = archiveDir()
-                    val walked = UnlistedRepos.walk(roots, d.maxDepth, d.maxDirs, System.currentTimeMillis() + d.timeoutSeconds * 1000L) { f -> archive != null && FolderActions.insideArchive(f, archive) }
-                    val ids = Declarations.repoSot.listed.map { BulkDepth.identity(it.github, Declarations.repoSot::canonical) }.toSet()
-                    UnlistedRepos.unlisted(walked, ids, Declarations.repoSot::canonical).also { pagePrefs.edit().putString(KEY_UNLISTED, UnlistedRepos.encode(it)).apply() }
+                    val (entries, via, malformed) = discover(list)
+                    var inv = RepoInventory.classify(entries, RegistryNames.live(), Declarations.repoSot, list.map { File(it.path).absolutePath }.toSet(), System.currentTimeMillis(), via, malformed = malformed)
+                    if (autoRegister(inv, list) > 0) inv = RepoInventory.classify(entries, RegistryNames.live(), Declarations.repoSot, registry.load().map { File(it.path).absolutePath }.toSet(), System.currentTimeMillis(), via, malformed = malformed)
+                    pagePrefs.edit().putString(KEY_INVENTORY, InventoryScript.encode(entries)).apply()
+                    val unlistedRows = inv.of(RepoInventory.RepoClass.UNLISTED).map { UnlistedRepos.Folder(it.path, it.origin) }
+                    pagePrefs.edit().putString(KEY_UNLISTED, UnlistedRepos.encode(unlistedRows)).apply()
+                    DriveDebugLog.i(ctx, TAG, "inventory ($via): " + inv.counts.entries.joinToString(", ") { "${it.value} ${it.key.name.lowercase()}" } + if (malformed > 0) ", $malformed unreadable" else "")
+                    inv to unlistedRows
                 }
+                inventory.value = inv
                 unlisted.value = found
+                loadRegistry()
                 statusReader.request(found.map { GitStatusReader.Target(UnlistedRepos.statusKey(it.path), File(it.path)) }, force = true, level = level)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
                 // A failed scan must never take the app down: keep the last cached list.
-                android.util.Log.w("GitSync", "unlisted scan failed", e)
+                DriveDebugLog.e(ctx, TAG, "inventory failed: ${e.message ?: e.javaClass.simpleName}")
             } finally { scanningUnlisted.value = false }
         }
     }
@@ -1196,6 +1261,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     companion object {
         private const val TAG = "GitSync"
         const val KEY_UNLISTED = "git.unlisted"
+        /** #1315 the last inventory pass's entries (InventoryScript.encode), re-classified at start. */
+        const val KEY_INVENTORY = "git.inventory"
         const val KEY_LAST_COMMITS = "git.last_commits"
         const val KEY_FILTERS = "git.filters"
         const val KEY_SORT = "git.sort"

@@ -40,6 +40,13 @@ class RegistryNames(private val sot: Declarations.RepoSotDecl) {
         return folder.equals(e.name, true) || folder.equals(e.github, true)
     }
 
+    /**
+     * #1315 THE ONE IDENTITY of a repository name or URL: the lower-case CURRENT GitHub name, every retired name (renamed_from
+     * chains, the registry's rename records, the `self` entry) folded in; a name the registry does not know is itself, lower-case;
+     * "" when there is no name at all. Two folders with one identity hold the same repository.
+     */
+    fun identity(nameOrUrl: String): String = BulkDepth.identity(nameOrUrl) { githubName(it) }
+
     companion object {
         /** No registry known: every name is itself (the pre-#1317 behaviour, for callers without one). */
         @Volatile private var memo: Pair<Declarations.RepoSotDecl, RegistryNames>? = null
