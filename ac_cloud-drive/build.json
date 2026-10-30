@@ -49,7 +49,7 @@
       "schema": "cloud-repos/v1",
       "refresh_minutes": 30,
       "_doc_refresh": "The baked copy can be older than the live registry (the APK ships a snapshot). When the Git table opens, RepoSotLive asks `url` with a conditional GET (If-None-Match; a 304 transfers nothing) at most every refresh_minutes, caches the body and its ETag in the app's files dir, and the cached copy replaces the baked one at runtime (renames, archived, lfs, visibility).",
-      "sha256": "8884795c70707e9d07cfbe0daf03e54f9503e88c71810bb10cf009d43e2b1ec1",
+      "sha256": "13b630eac0822bffa50f9e998dc8bddb2c9cc6b910149cc1ec98fe4d3a284b91",
       "family": "data/drive-git-family.json",
       "generated": "data/drive-git-repos.json"
     },
@@ -733,11 +733,17 @@
           { "id": "keep_depth1_all", "label": "Keep depth 1 (all)", "icon": "storage", "kind": "keep_depth", "scope": "all", "depth": 1, "workers": 2, "confirm": true },
           { "id": "clone_repo_depth1", "label": "Clone (depth 1)", "icon": "download", "kind": "clone_missing", "scope": "repo", "depth": 1, "workers": 1, "confirm": false },
           { "id": "keep_repo_depth1", "label": "Keep depth 1", "icon": "storage", "kind": "keep_depth", "scope": "repo", "depth": 1, "workers": 1, "confirm": true },
-          { "id": "clone_all_bare", "label": "Clone all bare", "icon": "download", "kind": "clone_bare", "scope": "all", "depth": 0, "workers": 2, "confirm": true },
-          { "id": "clone_repo_bare", "label": "Clone bare", "icon": "download", "kind": "clone_bare", "scope": "repo", "depth": 0, "workers": 1, "confirm": false }
+          { "id": "clone_all_bare", "label": "Clone all bare", "icon": "download", "kind": "clone_bare", "scope": "all", "depth": 1, "workers": 2, "confirm": true },
+          { "id": "clone_repo_bare", "label": "Clone bare", "icon": "download", "kind": "clone_bare", "scope": "repo", "depth": 1, "workers": 1, "confirm": false }
         ],
-        "_doc_bare": "#1282 clone_bare: ONE bare mirror per repository (git clone --mirror, run in cld.termux) at <store git>/<bare_root>/<owner>/<repo>.git, identity by origin URL + renamed_from chains (sync/BareClones.kt). depth 0 = full history: the declared default, because the bare copy is the backup form. An existing mirror is updated (git remote update --prune), never cloned twice; the working clone is never touched. Results land in the status window and Activity Logs; a mirrored repository shows bare ✓ in its detail.",
+        "_doc_bare": "#1282 clone_bare: ONE bare mirror per repository (git clone --mirror --depth N, run in cld.termux) at <store git>/<bare_root>/<owner>/<repo>.git, identity by origin URL + renamed_from chains (sync/BareClones.kt). #1314 bare mirrors are depth 1: no working tree and only the latest commit per ref (depth 0 would mean full history, no longer the declared default). An existing mirror is updated, never cloned twice: at depth > 0 with git fetch --prune --depth N origin (remote update would keep all new history and grow a shallow mirror), and a mirror that is not shallow or is deeper than N is shrunk in place (the depth fetch, reflog expire --expire=now --all, gc --prune=now) with the bytes freed reported in Activity Logs; never while another git job runs on that repo. The working clone is never touched. Results land in the status window and Activity Logs; a mirrored repository shows bare ✓ in its detail.",
         "bare_root": "_bare",
+        "_doc_stale_pack_cleanup": "#1313 STALE TEMP PACKS: an interrupted clone or fetch leaks its temp pack into objects/pack (JGit incoming_<digits>.pack/.idx, C git tmp_pack_*, tmp_idx_*, tmp_rev_*), hundreds of MB each. sync/StalePackCleaner deletes a file only when its name matches `patterns`, it never matches pack-* (a real pack, .idx, .rev, .keep is never touched whatever the patterns say), it is a regular file and not a symlink, it is older than min_age_hours, and NO git job is running (clone, fetch, pull, push, depth or bare command: the whole pass is skipped). It only looks in objects/pack of every working clone (<git>/<clone>/.git) and every bare mirror (<git>/<bare_root>/<owner>/<repo>.git). It runs at app start and before each bulk pull / scheduled sync cycle, off the UI thread, and says one line in Activity Logs (\"Cleaned 4 stale pack files (1.2 GB)\") only when it deleted something.",
+        "stale_pack_cleanup": {
+          "enabled": true,
+          "min_age_hours": 6,
+          "patterns": ["incoming_*.pack", "incoming_*.idx", "tmp_pack_*", "tmp_idx_*", "tmp_rev_*"]
+        },
         "_doc_folder_actions": "#1288 THE PER-FOLDER COMMANDS of the Local Repos Parentless and Unlisted git folders tables, as data: each entry is a chip on a row and the page dispatches on `kind` alone (test-drive-git-folder-actions.sh diffs the kinds both ways). rename_to_repo = rename the folder to its origin's repository name; when a folder of that name exists the source becomes <name>___CONFLICT (then ___CONFLICT2, ___CONFLICT3 ...), nothing is overwritten or merged. archive = move the folder into <store git>/<archive_root>/; a name taken there gets __<yyyyMMdd-HHmmss> (then -2, -3 ...). delete_local = delete the LOCAL folder only (the remote is never touched); uncommitted changes or unpushed commits (or no upstream to compare with) are listed and the owner types the folder name to confirm. Every run goes through the same bounded, cancel-safe runner as depth_actions (cld.termux when the store needs it); each outcome lands in the depth report and Activity Logs.",
         "folder_actions": [
           { "id": "folder_rename", "label": "Rename", "icon": "folder", "kind": "rename_to_repo", "workers": 1, "confirm": true },

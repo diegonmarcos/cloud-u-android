@@ -367,7 +367,7 @@
            "registry_name": "cloud-me-pvt-containers",
            "url": "https://github.com/diegonmarcos/cloud-me-pvt-containers",
            "private": true,
-           "description": "Private container configs and secrets for the cloud-me family"
+           "description": "Superseded by cloud-me-pvt-configs Linux-Containers (to archive, owner)"
           }
          ]
         },

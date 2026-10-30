@@ -536,7 +536,7 @@
       "registry_name": "cloud-me-pvt-containers",
       "hub": "cloud-me-pvt-___",
       "farm": "1.2.Cloud-me/Pvt",
-      "description": "Private container configs and secrets for the cloud-me family"
+      "description": "Superseded by cloud-me-pvt-configs Linux-Containers (to archive, owner)"
     },
     {
       "family": "Data",

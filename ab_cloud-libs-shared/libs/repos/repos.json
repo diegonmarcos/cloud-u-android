@@ -180,13 +180,13 @@
       "name": "cloud-me-pvt-configs",
       "repo": "diegonmarcos/cloud-me-pvt-configs",
       "private": true,
-      "doc": "Deployable configs, no secrets. Twin of cloud-me-pvt-vault (same top-level folders: Containers, Apks, Terminal, Desktop-GUI, Linux-Server, Shared; #1253). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it."
+      "doc": "Deployable configs, no secrets. The one config repo (#1310): top folders Apks, Linux-Desktop, Linux-Terminal, Linux-Containers, Shared; twin of cloud-me-pvt-vault (same folders plus Identity; renamed from Desktop-GUI/Terminal/Containers, Linux-Server/b3-cloud-fleet moved into Linux-Containers). cloud-me-pvt-containers merged into Linux-Containers/ 2026-10-30 (non-secret files, history kept; its sops files stay only in the vault). Added 2026-10-15: it existed but was missing here, so clone.sh and --sync skipped it."
     },
     {
       "name": "cloud-me-pvt-containers",
       "repo": "diegonmarcos/cloud-me-pvt-containers",
       "private": true,
-      "doc": "Superseded 2026-10-28 (#1253): its sops files now live in cloud-me-pvt-vault Containers/ (subtree merge, history kept). Frozen source; to be archived as z-archived_cloud-me-pvt-containers once consumers are confirmed off it."
+      "doc": "Superseded: merged into cloud-me-pvt-configs Linux-Containers/ 2026-10-30 (#1310, non-secret files with history); its sops files live only in cloud-me-pvt-vault Linux-Containers/ (#1253). Contents left intact. To archive (owner) as z-archived_cloud-me-pvt-containers: the rename is refused by the session proxy."
     },
     {
       "name": "cloud-me-pvt-data",
