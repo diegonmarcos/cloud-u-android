@@ -2224,10 +2224,10 @@
         "aa_cloud-superapp"
       ]
     },
-    "permissions_asked": {
+    "me_perm_walk": {
       "kind": "prefs",
       "class": "device",
-      "doc": "Cloud Me: one boolean per runtime permission, set once the system dialog has been shown for it, so the start-up prompt is never repeated; the new phone asks afresh, so it never migrates.",
+      "doc": "Cloud Me Configs > Perms walk: how many times Health Connect was asked (it stops showing its request after two declines) and which special-access settings pages the start-up walk already opened once. Runtime asks live in libs:perms' perm_ask_tracker. The new phone asks afresh, so it never migrates.",
       "used_by": [
         "ac_cloud-me"
       ]
@@ -3338,6 +3338,7 @@
         "lib-fin",
         "lib-fleetconfig-model",
         "lib-health",
+        "lib-perms",
         "lib-theme-background",
         "lib-ui-icons",
         "lib-ui-kit",
