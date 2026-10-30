@@ -1289,6 +1289,9 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         scope.launch(Dispatchers.IO) { pagePrefs.edit().putString(KEY_FILTERS, enc).apply() }
     }
 
+    /** #1315 every filter back to its declared default (the Clear button). */
+    fun clearFilters() { filterSelection.value = emptyMap(); scope.launch(Dispatchers.IO) { pagePrefs.edit().remove(KEY_FILTERS).apply() } }
+
     val sort = MutableStateFlow(RepoTable.DEFAULT_SORT to true)
         .also { f -> scope.launch(Dispatchers.IO) { f.value = RepoFilters.decodeSort(pagePrefs.getString(KEY_SORT, null)) } }
     fun setSort(column: RepoColumn, ascending: Boolean) {

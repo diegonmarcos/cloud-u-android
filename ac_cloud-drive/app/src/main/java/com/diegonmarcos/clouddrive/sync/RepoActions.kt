@@ -71,8 +71,6 @@ object RepoActions {
     /** The compound sync verbs and the history trim run through [GitSyncCoordinator.runCompound]. */
     fun isCompound(id: String): Boolean = id == STASH_PUSH || id == SYNC_NO_WINNER || id == SYNC_REMOTE_WINS || id == SYNC_LOCAL_WINS || cleanDepth(id) > 0
 
-    /** The first row of the page: bulk commands over every repo, in this order (Cloud Store's bulk-bar shape). Plain sync = no winner. */
-    enum class Bulk { CHECK_ALL, CHECK_FULL, SYNC_ALL, CLONE_ALL, STASH_PUSH_ALL }
 
     /**
      * #1195 what a repository that is NOT cloned can still do: open it on the web, read its pull requests and CI runs

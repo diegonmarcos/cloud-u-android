@@ -636,7 +636,6 @@
     <string name="repo_col_name">Name</string>
     <string name="repo_col_provider">Provider</string>
     <string name="repo_act_unpushed">Show unpushed commits</string>
-    <string name="repo_legend">Status icon: ● read, nothing local at risk (clean, ahead or behind) · ○ needs you (uncommitted changes, conflict, diverged, no upstream or a failed status read; the reason is under the name) · ? no status to show (not cloned, or still reading)</string>
     <string name="repo_status_title">STATUS</string>
     <string name="repo_status_cloned">Cloned: %1$s</string>
     <string name="repo_status_branch">Branch: %1$s · upstream %2$s</string>
@@ -677,8 +676,6 @@
     <string name="repo_kind_conflict">conflicts</string>
     <string name="repo_kind_dirty">uncommitted changes</string>
     <string name="repo_kind_large">large repo: working tree not scanned, tap to check</string>
-    <string name="repo_archived_show">Archived (%1$d): tap to show</string>
-    <string name="repo_archived_hide">Archived (%1$d) shown: tap to hide</string>
     <string name="repo_check_worktree">Check working tree</string>
     <string name="repo_kind_diverged">diverged: unpushed commits and new remote commits</string>
     <string name="repo_kind_no_upstream">no upstream branch to compare with</string>
@@ -702,16 +699,10 @@
     <string name="repo_prs_open_web">Open PRs on the web</string>
     <string name="repo_menu_close">Close menu</string>
     <string name="repo_meta_table_title">Repository metadata</string>
-    <string name="repo_bulk_check">Light check all</string>
-    <string name="repo_bulk_check_full">Full check all</string>
-    <string name="repo_bulk_cancel_checks">Cancel checks</string>
     <string name="repo_full_progress">Full check %1$d / %2$d (one repository at a time)</string>
     <string name="repo_status_dirty_light">Dirty: not checked (light check reads refs only)</string>
     <string name="repo_status_level_light">Checked: light (refs only), %1$s ago</string>
     <string name="repo_status_level_full">Checked: full (working tree scanned), %1$s ago</string>
-    <string name="repo_bulk_sync">Sync all</string>
-    <string name="repo_bulk_clone">Clone all</string>
-    <string name="repo_bulk_sizes">Refresh sizes</string>
     <string name="repo_col_size_disk">Size on disk</string>
     <string name="repo_act_copy_url">Copy URL</string>
     <string name="repo_act_open_web">Open on web</string>
@@ -731,8 +722,6 @@
     <string name="auto_interval_off">Off</string>
     <string name="fsync_refresh">Refresh</string>
     <string name="mounts_refresh">Refresh</string>
-    <string name="repo_bulk_stash_push">Stash &amp; Push all</string>
-    <string name="repo_check_progress">last check: %1$s / %2$d of %3$d done</string>
     <string name="repo_section_local">LOCAL (working copy)</string>
     <string name="repo_section_server">SERVER (against the remote)</string>
     <string name="repo_section_sync">SYNC (last sync job)</string>
@@ -740,7 +729,6 @@
     <string name="repo_sync_never_ran">no sync, fetch, push or pull has run yet</string>
     <string name="repo_sync_ok_at">ok, %1$s ago: %2$s</string>
     <string name="repo_sync_failed">failed, %1$s ago: %2$s</string>
-    <string name="repo_summary">%1$d repos · %2$d cloned · %3$d not cloned · %4$d dirty · %5$d ahead · %6$d behind</string>
     <string name="repo_meta_k_name">Name</string>
     <string name="repo_meta_k_owner">Owner</string>
     <string name="repo_meta_k_visibility">Visibility</string>
@@ -815,7 +803,6 @@
     <string name="repo_depth_confirm_keep">Shrinks every clean, fully pushed clone to depth %1$d in place: fetch --depth %1$d, reset to the remote default branch, reflog expire, gc. Clones with uncommitted or unpushed work are skipped and reported. The remote is never written and nothing is re-cloned.</string>
     <string name="repo_depth_confirm_keep_one">Shrinks %1$s to depth %2$d in place: fetch --depth %2$d, reset to the remote default branch, reflog expire, gc. Refused when it has uncommitted or unpushed work. The remote is never written.</string>
     <string name="repo_depth_confirm_clone">Clones every registry repository that has no clone on this device yet, depth %1$d. A repository already cloned anywhere (any folder name, any old name) is never cloned twice.</string>
-    <string name="repo_filters_title">Filters</string>
     <string name="repo_unlisted_title">Unlisted git folders</string>
     <string name="repo_unlisted_none">No unlisted git folder found yet (pull to refresh or check all to scan).</string>
     <string name="repo_unlisted_no_remote">no remote</string>

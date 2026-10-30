@@ -180,6 +180,15 @@ object DriveTags {
     const val SYNC_GIT_UNLISTED = "sync_git_unlisted"
     /** #1315 the inventory's own sections (suffixed _duplicates / _bare / _debris). */
     const val SYNC_GIT_INVENTORY = "sync_git_inventory"
+    /** #1315 the declared top bar: the toolbar, one tag per group button (suffix _<group id>) and per menu item (_<item id>), the job line, the search, the Filters button, the quick rail, the sheet (suffix _<filter id> per block). */
+    const val SYNC_GIT_TOP_BAR = "sync_git_top_bar"
+    const val SYNC_GIT_TOP_GROUP = "sync_git_top_group"
+    const val SYNC_GIT_TOP_ITEM = "sync_git_top_item"
+    const val SYNC_GIT_JOB_LINE = "sync_git_job_line"
+    const val SYNC_GIT_SEARCH = "sync_git_search"
+    const val SYNC_GIT_FILTERS_BUTTON = "sync_git_filters_button"
+    const val SYNC_GIT_QUICK_FILTERS = "sync_git_quick_filters"
+    const val SYNC_GIT_FILTER_SHEET = "sync_git_filter_sheet"
     const val SYNC_GIT_ACTIVITY_BUTTON = "sync_git_activity_button"
     const val SYNC_GIT_ACTIVITY_WINDOW = "sync_git_activity_window"
     const val SYNC_GIT_UNPUSHED = "sync_git_unpushed"

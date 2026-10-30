@@ -21,8 +21,14 @@ class RepoActionsTest {
         Declarations.parseGitPage(b["ui"]!!.jsonObject["sync"]!!.jsonObject["git"])
     }
 
-    @Test fun `the bulk bar is Check all, Sync all, Clone all, Stash and Push all, and stash-push is a compound verb`() {
-        assertEquals(listOf(RepoActions.Bulk.CHECK_ALL, RepoActions.Bulk.CHECK_FULL, RepoActions.Bulk.SYNC_ALL, RepoActions.Bulk.CLONE_ALL, RepoActions.Bulk.STASH_PUSH_ALL), RepoActions.Bulk.entries)
+    @Test fun `the bulk verbs are declared top-bar items, and stash-push is a compound verb`() {
+        // #1315 the bar is data (ui.sync.git.top_bar): Sync all / Stash & push all / Fetch all / Pull all reference the compound and op ids.
+        val b: JsonObject = Json { ignoreUnknownKeys = true }.parseToJsonElement(File(root, "build.json").readText()).jsonObject
+        val page = Declarations.parseGitPage(b["ui"]!!.jsonObject["sync"]!!.jsonObject["git"])
+        val items = page.topBar.groups.flatMap { it.items }
+        assertTrue(items.any { it.kind == "compound" && it.op == RepoActions.SYNC_NO_WINNER })
+        assertTrue(items.any { it.kind == "compound" && it.op == RepoActions.STASH_PUSH && it.danger && it.confirm })
+        assertTrue(items.any { it.kind == "pull" && it.force } && items.any { it.kind == "pull" && !it.force })
         assertTrue(RepoActions.isCompound(RepoActions.STASH_PUSH))
         assertEquals("sync all has no winner", "sync_no_winner", RepoActions.SYNC_NO_WINNER)
     }

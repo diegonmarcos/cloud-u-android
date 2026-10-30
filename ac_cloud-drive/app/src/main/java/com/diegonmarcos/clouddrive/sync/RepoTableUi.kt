@@ -121,16 +121,6 @@ internal fun RepoStatusCell(icons: RepoStatus.Icons, name: String, onOpen: () ->
     }
 }
 
-/** "last check: <time> / n of m done": the owner sees the checks progress and finish. */
-@Composable
-internal fun RepoCheckProgressLine(p: RepoStatus.Progress, fmt: java.text.DateFormat) {
-    Text(
-        stringResource(R.string.repo_check_progress, if (p.lastCheckMs > 0) fmt.format(java.util.Date(p.lastCheckMs)) else stringResource(R.string.sync_never), p.done, p.total),
-        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_CHECK_PROGRESS),
-        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
 /** The label of one action: a string of its own for the added ids and the renamed declared ones, else the declared label. */
 @Composable
 internal fun actionLabel(id: String, declared: Declarations.GitOpDecl?): String = when (id) {
@@ -223,38 +213,6 @@ private fun MenuItems(
     }
     if (g.lines) Column(verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) { g.items.forEach { chip(it) } }
     else FlowRow(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) { g.items.forEach { chip(it) } }
-}
-
-/** The bulk bar: ABOVE the column header, one pill per [RepoActions.Bulk] command over every repo, then the Settings gear (the shared PageActionsBar). */
-@Composable
-internal fun RepoBulkBar(busy: Boolean, prefs: DrivePrefs?, onRefreshSizes: () -> Unit, fullRunning: Boolean = false, onCancelChecks: () -> Unit = {}, onBulk: (RepoActions.Bulk) -> Unit) {
-    PageActionsBar(
-        AutoChecks.Page.GIT, prefs,
-        RepoActions.Bulk.entries.map { b ->
-            BarAction(
-                stringResource(when (b) {
-                    RepoActions.Bulk.CHECK_ALL -> R.string.repo_bulk_check
-                    RepoActions.Bulk.CHECK_FULL -> R.string.repo_bulk_check_full
-                    RepoActions.Bulk.SYNC_ALL -> R.string.repo_bulk_sync
-                    RepoActions.Bulk.CLONE_ALL -> R.string.repo_bulk_clone
-                    RepoActions.Bulk.STASH_PUSH_ALL -> R.string.repo_bulk_stash_push
-                }),
-                { onBulk(b) }, enabled = !busy || b == RepoActions.Bulk.CHECK_ALL || (b == RepoActions.Bulk.CHECK_FULL && !fullRunning),
-            )
-        } + BarAction(stringResource(R.string.repo_bulk_sizes), onRefreshSizes) +
-            (if (fullRunning) listOf(BarAction(stringResource(R.string.repo_bulk_cancel_checks), onCancelChecks)) else emptyList()),
-        tag = DriveTags.SYNC_GIT_BULK_BAR,
-    )
-}
-
-/** The status summary line under the bulk bar. */
-@Composable
-internal fun RepoSummaryLine(s: RepoTable.Summary) {
-    Text(
-        stringResource(R.string.repo_summary, s.total, s.cloned, s.notCloned, s.dirty, s.ahead, s.behind),
-        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_SUMMARY),
-        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 /** The repo metadata as a key | value table; the values are selectable (long-press, copy). */

@@ -8,6 +8,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -284,7 +285,12 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     val seedTally by produceState("") { value = withContext(Dispatchers.IO) { StoreSeedWorker.lastReport(ctx).trim().lines().lastOrNull().orEmpty() } }
     // A clone folder under an OLD name (cloud-infra) is the same repository as its renamed row (cloudy-t-infra): keyed by the current name, never listed twice.
     val clonedByName = repos.associateBy { Declarations.repoSot.canonical(File(it.path).name) }
-    var showArchived by remember { mutableStateOf(false) }
+    // #1315 the declared top bar's own state: the search, the Filters sheet, the legend, a confirmation in flight, the executor's jobs.
+    var query by remember { mutableStateOf("") }
+    var showFilters by remember { mutableStateOf(false) }
+    var showLegend by remember { mutableStateOf(false) }
+    var topConfirm by remember { mutableStateOf<Declarations.GitTopItemDecl?>(null) }
+    val jobsState by coordinator.jobs.jobs.collectAsState()
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
 
     // #1138 one table row of one repository: the cached remote facts and the local glance, no network here.
@@ -789,58 +795,73 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             }
         }
     }
-    // Retired repositories (z-archived_*) sit in a collapsed Archived group: counted, hidden until the owner opens it.
-    val archivedCount = allEntries.count { Declarations.repoSot.isArchived(it.name) }
-    val entries = RepoFilters.apply(if (showArchived) allEntries else allEntries.filterNot { Declarations.repoSot.isArchived(it.name) }, filterSel) { e ->
-        RepoFilters.Facts(e.cloned != null, e.row.status, e.row.lfs, e.row.isPrivate, Declarations.repoSot.hubOf(e.name), unlisted = false)
+    // #1315 the DECLARED filters (predicates as data) and the search leave the rows; archived rows are a filter whose default hides them.
+    val factsOf: (TableEntry) -> RepoFilters.Facts = { e ->
+        RepoFilters.Facts(e.cloned != null, e.row.status, e.row.lfs, e.row.isPrivate, Declarations.repoSot.hubOf(e.name),
+            archived = Declarations.repoSot.isArchived(e.name), level = e.cloned?.let { GitSyncCoordinator.glanceFor(it, glances)?.level }.orEmpty(), name = e.name)
     }
+    val entries = RepoFilters.apply(allEntries, page.filters, filterSel, query, factsOf)
+    fun countsOf(f: Declarations.GitFilterDecl): Map<String, Int> = RepoFilters.counts(allEntries, page.filters, filterSel, query, f, factsOf)
     val sortedEntries = RepoTable.sort(entries, sortColumn, sortAscending) { it.row }
     val summary = RepoTable.summarize(entries.map { (it.cloned != null) to it.row })
 
-    // The table block: the sticky column header (BELOW the sign-in cards), the bulk bar and summary, then the rows.
+    // #1315 THE TOP BAR's dispatch: every declared item on its `kind` alone (test-drive-git-top-bar.sh diffs the kinds both ways);
+    // a scoped verb works on the clones the filters and the search leave; confirm / danger ask first with that count.
+    val scopeTargets: List<ManagedRepo> = sortedEntries.mapNotNull { it.cloned }
+    val writingJob: String? = jobsState.firstOrNull { !it.finished && it.kind !in CHECK_KINDS }?.label
+    val jobLine: com.diegonmarcos.clouddrive.sync.jobs.GitJobs.State? = jobsState.firstOrNull { !it.finished } ?: jobsState.lastOrNull()
+    val checkProgress = RepoStatus.progress(repos.map { GitSyncCoordinator.statusKey(it) }.distinct(), glances)
+    val summaryLine = GitTopBarState.summary(
+        page.topBar.counters, entries.size, entries.count { it.cloned != null }, entries.count { it.row.status?.light == StatusLight.State.OFF },
+        entries.count { (it.row.ahead ?: 0) > 0 }, entries.count { (it.row.behind ?: 0) > 0 },
+        if (checkProgress.lastCheckMs > 0) RepoStatus.ageWord(System.currentTimeMillis() - checkProgress.lastCheckMs) + " (${checkProgress.done}/${checkProgress.total})" else "", page.topBar::label,
+    )
+    fun runTopItem(item: Declarations.GitTopItemDecl) {
+        expanded = ""
+        when (item.kind) {
+            "check_light" -> coordinator.lightCheckAll()
+            "check_full" -> coordinator.fullCheckAll()
+            "check_remote" -> coordinator.refreshRemoteStats(refreshTargets(), login.token)
+            "check_sizes" -> coordinator.refreshSizes(force = true)
+            "scan_inventory" -> coordinator.scanUnlisted()
+            "cancel_checks" -> coordinator.cancelStatusReads()
+            "op" -> if (item.op == GitSyncCoordinator.OP_FETCH) coordinator.fetchAll(scopeTargets)
+            "compound" -> coordinator.runCompoundAll(item.op, scopeTargets)
+            "pull" -> coordinator.pullAll(force = item.force, only = scopeTargets.map { it.id }.toSet())
+            "depth" -> page.depthAction(item.action)?.let { a -> if (a.confirm) depthConfirm = a else runDepthAll(a) }
+            "open_activity" -> showActivity = true
+            "open_report" -> showDepthReport = true
+            "toggle_filter" -> page.filters.firstOrNull { it.id == item.filter }?.let { f -> coordinator.setFilter(f.id, RepoFilters.toggle(f, filterSel, item.option)) }
+            "legend" -> showLegend = true
+        }
+    }
+    fun onTopItem(item: Declarations.GitTopItemDecl) { if ((item.confirm || item.danger) && item.kind != "depth") topConfirm = item else runTopItem(item) }
+
+    // The table block: the ONE sticky block (toolbar, job line, search, rail, summary, column header), then the rows.
     fun LazyListScope.tableBlock() {
         // #1195 ORDER: the actions bar (bulk buttons + Settings gear), the summary and the legend come FIRST; the sortable column header
         // is the sticky item right below them and stays pinned while the rows scroll.
-        item(key = "table-bulk") {
-            Column {
-                RepoBulkBar(busy = bulk?.finished == false || running.isNotEmpty(), prefs = prefs, onRefreshSizes = { coordinator.refreshSizes(force = true) }, fullRunning = fullProgress != null, onCancelChecks = { coordinator.cancelStatusReads() }) { b ->
-                    expanded = ""
-                    when (b) {
-                        RepoActions.Bulk.CHECK_FULL -> coordinator.fullCheckAll()
-                        RepoActions.Bulk.CHECK_ALL -> { coordinator.lightCheckAll(); coordinator.refreshRemoteStats(refreshTargets(), login.token); coordinator.refreshSizes(force = true) }
-                        RepoActions.Bulk.SYNC_ALL -> coordinator.runCompoundAll(RepoActions.SYNC_NO_WINNER)
-                        RepoActions.Bulk.CLONE_ALL -> entries.filter { it.cloned == null && it.name !in cloning }.forEach { it.onClone() }
-                        RepoActions.Bulk.STASH_PUSH_ALL -> coordinator.runCompoundAll(RepoActions.STASH_PUSH)
-                    }
-                }
-                // #1254 the DECLARED depth commands over every repository (ui.sync.git.depth_actions, scope all), then #1258 Activity Logs.
-                DepthBar(page.depthActions(Declarations.DEPTH_SCOPE_ALL), running = depthRun?.finished == false, onAction = { a -> if (a.confirm) depthConfirm = a else runDepthAll(a) },
-                    onCancel = { coordinator.cancelDepthRun() }, onActivity = { showActivity = true })
-                depthRun?.let { r -> DepthProgress(r, onOpen = { showDepthReport = true }) }
-                // #1256 the FILTER row, its own row under the actions: declared filters, combined, persisted.
-                RepoFilterRow(page.filters, filterSel) { id, opt -> coordinator.setFilter(id, opt) }
-                RepoSummaryLine(summary)
-                RepoCheckProgressLine(RepoStatus.progress(repos.map { GitSyncCoordinator.statusKey(it) }.distinct(), glances), fmt)
+        // #1315 ONE STICKY BLOCK: the declared toolbar, the job line, the search + Filters, the quick-filter rail, the summary and the column header.
+        stickyHeader(key = "table-top") {
+            Column(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+                GitTopBar(page.topBar, prefs, enabledReason = { item -> GitTopBarState.reason(item, writingJob, scopeTargets.size, page.topBar::label) }, onItem = ::onTopItem)
+                GitJobLine(jobLine, page.topBar::label, onCancel = { jobLine?.let { coordinator.jobs.cancel(it.id) } }, onDismiss = { jobLine?.let { coordinator.jobs.dismiss(it.id) } },
+                    onOpen = { if (depthRun != null) showDepthReport = true else showActivity = true })
                 fullProgress?.let { p -> Text(stringResource(R.string.repo_full_progress, p.done, p.total), Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset).testTag(DriveTags.SYNC_GIT_FULL_PROGRESS), style = MaterialTheme.typography.labelSmall) }
-                RepoStatusLegend()
-                if (archivedCount > 0) Text(
-                    stringResource(if (showArchived) R.string.repo_archived_hide else R.string.repo_archived_show, archivedCount),
-                    Modifier.fillMaxWidth().clickable { showArchived = !showArchived }.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
-                    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary,
-                )
-                // #642 what the last clone handoff did, right under the bulk bar that can trigger it: no press of Clone is silent.
+                GitSearchRow(page.topBar, query, { query = it }, RepoFilters.active(page.filters, filterSel), onFilters = { showFilters = true }, onClear = { coordinator.clearFilters(); query = "" })
+                QuickFilterRail(page.filters, filterSel, ::countsOf) { f, o -> coordinator.setFilter(f.id, RepoFilters.toggle(f, filterSel, o)) }
+                Text(summaryLine, Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_SUMMARY), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // #642 what the last clone handoff did, right under the bar that can trigger it: no press of Clone is silent.
                 if (handoff.isNotBlank()) Text(
                     handoff,
                     Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_HANDOFF).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-        }
-        stickyHeader(key = "table-header") {
-            RepoTableHeader(sortColumn, sortAscending, tableScroll) { c ->
-                val next = RepoTable.tap(c, sortColumn, sortAscending)
-                coordinator.setSort(next.first, next.second)
-                expanded = ""
+                RepoTableHeader(sortColumn, sortAscending, tableScroll) { c ->
+                    val next = RepoTable.tap(c, sortColumn, sortAscending)
+                    coordinator.setSort(next.first, next.second)
+                    expanded = ""
+                }
             }
         }
         items(sortedEntries, key = { it.key }) { e ->
@@ -1041,7 +1062,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     // #1149 LOCAL REPOS PARENTLESS: folders holding a .git that are not named like their origin.
                     if (!setup && prefs != null) item(key = "parentless") { ParentlessPanel(prefs, coordinator, glances, lastCommits, depthRun, onOpenReport = { showDepthReport = true }) { coordinator.refresh(force = true) } }
                     // #1255 UNLISTED GIT FOLDERS: git folders under the declared roots that no registry repository matches (or with no remote).
-                    if (!setup && RepoFilters.showUnlisted(filterSel)) item(key = "unlisted") {
+                    if (!setup) item(key = "unlisted") {
                         UnlistedPanel(page.unlisted.label, unlistedFolders, glances, lastCommits, depthRun, coordinator, onOpenReport = { showDepthReport = true })
                     }
                     // #1315 THE ONE INVENTORY's other sections: duplicate clones, bare mirrors, leftover folders (drawn only when they have rows).
@@ -1068,6 +1089,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // #1258 ACTIVITY LOGS: the one sync / operation history, opened from the top button, full screen.
     if (showActivity) ActivityLogsWindow(events, fmt, onClose = { showActivity = false }) { e -> HistoryRow(e, fmt) }
     if (showDepthReport) depthRun?.let { r -> DepthReportWindow(r, onCancel = { coordinator.cancelDepthRun() }, onClose = { showDepthReport = false }) }
+    topConfirm?.let { item -> GitTopConfirm(item, page.topBar, scopeTargets.size, onConfirm = { runTopItem(item); topConfirm = null }, onDismiss = { topConfirm = null }, cancelLabel = stringResource(R.string.chrome_cancel)) }
+    if (showFilters) GitFilterSheet(page.topBar, page.filters, filterSel, ::countsOf, onPick = { f, o -> coordinator.setFilter(f.id, RepoFilters.toggle(f, filterSel, o)) }, onClear = { coordinator.clearFilters(); query = "" }, onDismiss = { showFilters = false })
+    if (showLegend) GitLegendDialog(page.topBar, page.status.icons, { showLegend = false }, stringResource(R.string.repo_status_window_close))
     depthConfirm?.let { a ->
         AlertDialog(
             onDismissRequest = { depthConfirm = null },
@@ -1396,16 +1420,6 @@ internal fun statusErrorText(kind: RepoStatus.ErrorKind?, detail: String?): Stri
         RepoStatus.ErrorKind.OTHER -> stringResource(R.string.repo_err_other, d)
         null -> stringResource(R.string.repo_status_none)
     }
-}
-
-/** The legend of the leading status icon: what each glyph means, so no "?" is left unexplained. */
-@Composable
-internal fun RepoStatusLegend() {
-    Text(
-        stringResource(R.string.repo_legend),
-        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_LEGEND),
-        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
 }
 
 /** The STATUS block at the top of the open repository panel: cloned, branch, dirty, ahead/behind, not pushed, last fetch, last error. */
@@ -2054,3 +2068,6 @@ private fun FlowPills(options: List<Pair<Long, String>>, selected: Long, onPick:
 
 /** #1289 the Workflow panels that read the working tree. */
 private val WORKFLOW_PANELS = setOf(RepoActions.LIST_DIRTY, RepoActions.LIST_CONFLICTS, RepoActions.SOLVE_CONFLICTS)
+
+/** #1315 the job kinds that read only (a check never counts as "a command is running" for the menus). */
+private val CHECK_KINDS = setOf("check_light", "check_full", "check_remote", "check_sizes", "scan_inventory", GitSyncCoordinator.CLEANUP_DEBRIS)

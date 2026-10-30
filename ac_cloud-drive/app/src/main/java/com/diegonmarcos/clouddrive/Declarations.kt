@@ -94,9 +94,36 @@ object Declarations {
         /** The declared label for [key], else the key itself spelled out (a missing label is visible, never a crash). */
         fun label(key: String): String = labels[key] ?: key.replace('_', ' ')
     }
-    /** #1256 one declared filter of the Git page's filter row: its options, the first one is the "all" default. */
-    data class GitFilterOptionDecl(val id: String, val label: String)
-    data class GitFilterDecl(val id: String, val label: String, val options: List<GitFilterOptionDecl>)
+    /**
+     * #1256/#1315 one declared filter of the Git page and its options. An option's MEANING is data: [kinds] (RepoStatus.Kind names,
+     * lower-case), [cloned], [lfs], [private], [hub], [archived] (null = not looked at), [level] ("full" = only a worktree-scanned row);
+     * every predicate given must hold. [quick] = drawn on the quick-filter rail. The filter's [default] option is the one an empty
+     * selection means ("all" unless declared, e.g. archived = hidden); [layout] is a hint for the sheet.
+     */
+    data class GitFilterOptionDecl(
+        val id: String, val label: String, val quick: Boolean = false, val kinds: List<String> = emptyList(),
+        val cloned: Boolean? = null, val lfs: Boolean? = null, val private: Boolean? = null, val hub: Boolean? = null, val archived: Boolean? = null, val level: String = "",
+    )
+    data class GitFilterDecl(val id: String, val label: String, val options: List<GitFilterOptionDecl>, val layout: String = "chips", val default: String = "all") {
+        fun option(id: String): GitFilterOptionDecl? = options.firstOrNull { it.id == id }
+    }
+    /**
+     * #1315 THE TOP BAR as data (ui.sync.git.top_bar): groups in order, each one split-menu button; an item is dispatched on
+     * [kind] alone (GitReposScreen's `when (item.kind)`): check_light | check_full | check_remote | check_sizes | scan_inventory |
+     * cancel_checks | op | compound | pull | depth | open_activity | open_report | toggle_filter | legend. [scope] filtered = the
+     * rows the filters and the search leave, all = every registered clone; [confirm] asks first naming the target count; [danger]
+     * is drawn red and always confirms; [exclusive] = refused while another writing job runs.
+     */
+    data class GitTopItemDecl(
+        val id: String, val kind: String, val label: String, val hint: String = "", val icon: String = "", val op: String = "", val action: String = "",
+        val force: Boolean = false, val scope: String = "filtered", val confirm: Boolean = false, val danger: Boolean = false, val exclusive: Boolean = true,
+        val filter: String = "", val option: String = "",
+    )
+    data class GitTopGroupDecl(val id: String, val label: String, val icon: String, val items: List<GitTopItemDecl>)
+    data class GitTopBarDecl(val groups: List<GitTopGroupDecl> = emptyList(), val search: Boolean = true, val searchPlaceholder: String = "", val counters: List<String> = emptyList(), val labels: Map<String, String> = emptyMap()) {
+        fun label(key: String): String = labels[key] ?: key.replace('_', ' ')
+        fun item(id: String): GitTopItemDecl? = groups.flatMap { it.items }.firstOrNull { it.id == id }
+    }
 
     /** What `origin` can be switched to. [readOnly] ⇒ the page refuses push / force push. */
     data class GitRemoteModeDecl(val id: String, val label: String, val icon: String, val url: String, val readOnly: Boolean) {
@@ -204,6 +231,8 @@ object Declarations {
         val unlisted: GitUnlistedDecl = GitUnlistedDecl(),
         /** #1256 the filter row. */
         val filters: List<GitFilterDecl> = emptyList(),
+        /** #1315 the top bar (ui.sync.git.top_bar). */
+        val topBar: GitTopBarDecl = GitTopBarDecl(),
         /** #1258 Activity Logs (was History): how many entries its view lists. */
         val activityMax: Int = 50,
         /** #1282 where Clone bare puts the mirrors, relative to the store's git folder: <bare_root>/<owner>/<repo>.git. */
@@ -471,6 +500,7 @@ object Declarations {
     private fun element(text: String): JsonElement? = if (text.isBlank()) null else runCatching { json.parseToJsonElement(text) }.getOrNull()
     private fun JsonObject.str(key: String, default: String = ""): String = (this[key] as? JsonPrimitive)?.contentOrNull ?: default
     private fun JsonObject.bool(key: String, default: Boolean = false): Boolean = (this[key] as? JsonPrimitive)?.booleanOrNull ?: default
+    private fun JsonObject.boolOrNull(key: String): Boolean? = (this[key] as? JsonPrimitive)?.booleanOrNull
     private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull
     private fun JsonObject.strings(key: String): List<String> = (this[key] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull } ?: emptyList()
     private fun objects(e: JsonElement?): List<JsonObject> = (e as? JsonArray)?.mapNotNull { it as? JsonObject } ?: emptyList()
@@ -613,9 +643,28 @@ object Declarations {
             } ?: GitStalePackDecl(),
             filters = objects(o["filters"]).mapNotNull { f ->
                 val id = f.str("id")
-                val opts = objects(f["options"]).mapNotNull { x -> x.str("id").takeIf { it.isNotBlank() }?.let { GitFilterOptionDecl(it, x.str("label", it)) } }
-                if (id.isBlank() || opts.isEmpty()) null else GitFilterDecl(id, f.str("label", id), opts)
+                val opts = objects(f["options"]).mapNotNull { x ->
+                    x.str("id").takeIf { it.isNotBlank() }?.let {
+                        GitFilterOptionDecl(it, x.str("label", it), x.bool("quick"), x.strings("kinds").map { k -> k.lowercase() },
+                            x.boolOrNull("cloned"), x.boolOrNull("lfs"), x.boolOrNull("private"), x.boolOrNull("hub"), x.boolOrNull("archived"), x.str("level"))
+                    }
+                }
+                if (id.isBlank() || opts.isEmpty()) null else GitFilterDecl(id, f.str("label", id), opts, f.str("layout", "chips"), f.str("default", "all").takeIf { d -> opts.any { it.id == d } } ?: opts.first().id)
             },
+            topBar = (o["top_bar"] as? JsonObject)?.let { t ->
+                GitTopBarDecl(
+                    objects(t["groups"]).mapNotNull { g ->
+                        val gid = g.str("id"); if (gid.isBlank()) return@mapNotNull null
+                        GitTopGroupDecl(gid, g.str("label"), g.str("icon"), objects(g["items"]).mapNotNull { i ->
+                            val iid = i.str("id"); val kind = i.str("kind")
+                            if (iid.isBlank() || kind !in TOP_KINDS) null else GitTopItemDecl(iid, kind, i.str("label", iid), i.str("hint"), i.str("icon"), i.str("op"), i.str("action"),
+                                i.bool("force"), i.str("scope", "filtered"), i.bool("confirm"), i.bool("danger"), i.bool("exclusive", true), i.str("filter"), i.str("option"))
+                        })
+                    },
+                    t.bool("search", true), t.str("search_placeholder"), t.strings("counters"),
+                    (t["labels"] as? JsonObject)?.entries?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k to it } }?.toMap().orEmpty(),
+                )
+            } ?: GitTopBarDecl(),
             nameFamilies = o.strings("name_families"),
             // #642 absent block -> null -> the page says git handoff is not configured rather
             // than firing an intent with an empty action, which resolves to nothing in silence.
@@ -845,6 +894,8 @@ object Declarations {
     val FOLDER_KINDS = setOf(FOLDER_RENAME, FOLDER_ARCHIVE, FOLDER_DELETE, FOLDER_REPOINT)
     /** #1288 the runner's scope of a folder command (never declared in depth_actions). */
     const val DEPTH_SCOPE_FOLDER = "folder"
+    /** #1315 the top bar's item kinds (ui.sync.git.top_bar.groups[].items[].kind), dispatched by GitReposScreen; test-drive-git-top-bar.sh diffs both ways. */
+    val TOP_KINDS = setOf("check_light", "check_full", "check_remote", "check_sizes", "scan_inventory", "cancel_checks", "op", "compound", "pull", "depth", "open_activity", "open_report", "toggle_filter", "legend")
     const val REMOTE_READONLY = "readonly"
 
     /** #608 the Git page's two sections and the personal section's two groups, by id. */

@@ -1,5 +1,6 @@
 package com.diegonmarcos.clouddrive.sync
 
+import com.diegonmarcos.clouddrive.Declarations
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -32,7 +33,8 @@ class GitPageLayoutTest {
     }
 
     @Test fun `the column header is sticky and is the single header`() {
-        assertTrue("the header must be a stickyHeader", src.contains("stickyHeader(key = \"table-header\")"))
+        // #1315 ONE sticky block: the declared toolbar, the job line, the search + Filters, the quick rail, the summary and the column header.
+        assertTrue("the top block must be a stickyHeader", src.contains("stickyHeader(key = \"table-top\")"))
         assertEquals("exactly one header emission", 1, Regex("RepoTableHeader\\(sortColumn").findAll(src).count())
     }
 
@@ -42,11 +44,13 @@ class GitPageLayoutTest {
         assertEquals("one rows block", 1, Regex("items\\(sortedEntries").findAll(src).count())
     }
 
-    @Test fun `the bulk bar comes before the rows and covers the four commands`() {
+    @Test fun `the declared top bar comes before the rows and dispatches every declared kind`() {
         val block = src.substring(src.indexOf("fun LazyListScope.tableBlock()"))
-        assertTrue(block.indexOf("RepoBulkBar(") in 0 until block.indexOf("items(sortedEntries"))
-        assertTrue(block.indexOf("RepoSummaryLine(") in 0 until block.indexOf("items(sortedEntries"))
-        for (b in listOf("CHECK_ALL", "CHECK_FULL", "SYNC_ALL", "CLONE_ALL", "STASH_PUSH_ALL")) assertTrue(b, block.contains("Bulk.$b"))
+        assertTrue(block.indexOf("GitTopBar(page.topBar") in 0 until block.indexOf("items(sortedEntries"))
+        assertTrue(block.indexOf("Text(summaryLine") in 0 until block.indexOf("items(sortedEntries"))
+        // #1315 no Kotlin list of bulk commands: every kind of ui.sync.git.top_bar has a branch, nothing else does.
+        for (k in Declarations.TOP_KINDS) assertTrue(k, src.contains("\"$k\" ->"))
+        assertFalse(src.contains("RepoActions.Bulk"))
     }
 
     @Test fun `a tap toggles the menu through the pure rule and the menu has a close control`() {
@@ -61,12 +65,15 @@ class GitPageLayoutTest {
 
     @Test fun `#1195 the actions bar sits above the column header and the header is the sticky item right below it`() {
         val block = src.substring(src.indexOf("fun LazyListScope.tableBlock()"))
-        val bar = block.indexOf("RepoBulkBar(")
-        val header = block.indexOf("stickyHeader(key = \"table-header\")")
+        val sticky = block.indexOf("stickyHeader(key = \"table-top\")")
+        val bar = block.indexOf("GitTopBar(page.topBar")
+        val header = block.indexOf("RepoTableHeader(sortColumn")
         val rows = block.indexOf("items(sortedEntries")
-        assertTrue("bulk bar, then sticky header, then rows", bar in 0 until header && header < rows)
-        assertTrue("the bar is its own item, not inside the sticky header", block.substring(0, header).contains("item(key = \"table-bulk\")"))
-        assertTrue("the bar carries the Settings gear", tableUi.contains("PageActionsBar(") && tableUi.contains("AutoChecks.Page.GIT, prefs"))
+        // #1315 the declared toolbar, then the column header, both INSIDE the one sticky block, then the rows.
+        assertTrue("sticky block, toolbar, header, rows", sticky in 0 until bar && bar < header && header < rows)
+        assertFalse("no second plain item above the block", block.substring(0, sticky).contains("item(key = \"table-bulk\")"))
+        val topBar = File(dir, "GitTopBar.kt").readText()
+        assertTrue("the bar carries the Settings gear", topBar.contains("AutoSettingsSheet(AutoChecks.Page.GIT, prefs)"))
     }
 
     @Test fun `#1195 git fsync and mounts share one actions bar with the settings sheet and one tap-to-open row`() {

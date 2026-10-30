@@ -65,12 +65,15 @@ cp "$OUT/ui.xml" "$OUT/ui-open.xml"
 # 1. no check ran by itself: the icons say "not_checked", never a read in flight
 grep -q "$NAME local not_checked" "$OUT/ui-open.xml" || fail "opening the page should show 'not checked yet' for the fixture (no automatic check): $(grep -o "$NAME [a-z]* [a-z_]*" "$OUT/ui-open.xml" | head -3 | tr '\n' ';')"
 
-# 2. the owner's explicit action: pull to refresh (a drag from the top) and the "Light check all" button; then wait at most 15 s for terminal icons
+# 2. the owner's explicit action: pull to refresh (a drag from the top) and the Check menu's "Light check" item; then wait at most 15 s for terminal icons
 for i in $(seq 1 25); do adb shell input swipe $((W/2)) $((H*30/100)) $((W/2)) $((H*80/100)) 200; done
 sleep 1
 adb shell input swipe $((W/2)) $((H*30/100)) $((W/2)) $((H*80/100)) 600
 sleep 1
-tap '^Light check all$' || fail "no Light check all button"
+# #1315 the declared top bar: Light check sits in the Check menu
+tap '^Check$' || fail "no Check menu button"
+sleep 1
+tap '^Light check$' || fail "no Light check item"
 t0=$(date +%s); ok=0
 while [ $(( $(date +%s) - t0 )) -lt 15 ]; do
   sleep 1

@@ -110,12 +110,17 @@ u1() {
 }
 f1() { python3 - "$BJ" "$1" "$2" <<'PY'
 import json, re, sys
-ids = {f["id"] for f in json.load(open(sys.argv[1]))["ui"]["sync"]["git"]["filters"]}
+filters = json.load(open(sys.argv[1]))["ui"]["sync"]["git"]["filters"]
 src = open(sys.argv[2]).read()
-handled = set(re.search(r"val HANDLED = setOf\(([^)]*)\)", src).group(1).replace('"', "").replace(" ", "").split(","))
 page = open(sys.argv[3]).read()
 bad = 0
-if ids != handled: print("    declared", sorted(ids), "!= handled", sorted(handled)); bad = 1
+# #1315 an option's meaning is DECLARED (predicates), never a Kind name in RepoFilters
+preds = ("kinds", "cloned", "lfs", "private", "hub", "archived", "level")
+for f in filters:
+    for o in f["options"]:
+        if o["id"] != "all" and f.get("default", "all") == "all" and not any(k in o for k in preds): print("    option without a predicate:", f["id"], o["id"]); bad = 1
+if re.search(r'"(dirty|clean|ahead|behind|conflict)"\s*->', src): print("    RepoFilters names a Kind"); bad = 1
+if "val HANDLED" in src: print("    RepoFilters still carries a hard-coded HANDLED set"); bad = 1
 for t in ("coordinator.setSort(", "coordinator.setFilter(", "RepoFilters.apply("):
     if t not in page: print("    page lacks", t); bad = 1
 if "var sortColumn by remember" in page: print("    the sort is not persisted"); bad = 1
@@ -132,7 +137,8 @@ PY
 a1() {
     grep -qF '<string name="sync_history">Activity Logs</string>' "$STR" && grep -qF '<string name="sync_history_section">Activity Logs</string>' "$STR" || { echo "    strings still say History"; return 1; }
     ! grep -qE 'SectionHeader\(stringResource\(R\.string\.sync_history_section\)' "$1" || { echo "    the History section is still at the bottom"; return 1; }
-    grep -qF 'onActivity = { showActivity = true }' "$1" || { echo "    no top button opens Activity Logs"; return 1; }
+    grep -qF '"open_activity" -> showActivity = true' "$1" || { echo "    no top-bar item opens Activity Logs"; return 1; }
+    python3 -c 'import json,sys; g=json.load(open(sys.argv[1]))["ui"]["sync"]["git"]["top_bar"]; assert any(i["kind"]=="open_activity" for grp in g["groups"] for i in grp["items"])' "$BJ" || { echo "    Activity Logs is not a declared top-bar item"; return 1; }
 }
 n1() { for t in 'heightIn(min = slot)' 'LocalNavBottomClearance provides slot' 'navBottomSlotShouldMeasure(collapse.collapsed, collapse.hidden)'; do grep -qF "$t" "$1" || { echo "    host lacks $t"; return 1; }; done; }
 
@@ -175,7 +181,7 @@ sed 's/gc --prune=now; fi; /true; fi; /' "$SRC/sync/BareClones.kt" > "$TMP/bc2.k
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [a.update(depth=0) for a in b["ui"]["sync"]["git"]["depth_actions"] if a["kind"]=="clone_bare"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/b0.json"
 BJ0="$BJ"; BJ="$TMP/b0.json"; d1 "$BJ" "$PAGE" >/dev/null && fail "D1 passed bare depth 0 (vacuous)" || pass "bare depth 0 → D1 RED"; BJ="$BJ0"
 sed 's/BulkDepth.planClones(/listOf(/' "$COORD" > "$TMP/c.kt"; d2 "$TMP/c.kt" >/dev/null && fail "D2 passed without the plan (vacuous)" || pass "one-clone plan removed → D2 RED"
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["git"]["filters"].append({"id":"bogus","options":[{"id":"all"}]}); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/b.json"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["git"]["filters"].append({"id":"bogus","options":[{"id":"all"},{"id":"meaningless","label":"?"}]}); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/b.json"
 BJ0="$BJ"; BJ="$TMP/b.json"; f1 "$FILT" "$PAGE" >/dev/null && fail "F1 passed an unhandled filter (vacuous)" || pass "undeclared filter meaning → F1 RED"; BJ="$BJ0"
 sed 's/heightIn(min = slot)/fillMaxWidth()/' "$HOST" > "$TMP/h.kt"; n1 "$TMP/h.kt" >/dev/null && fail "N1 passed a resizing slot (vacuous)" || pass "constant slot removed → N1 RED"
 d1 "$BJ" "$PAGE" >/dev/null && d2 "$COORD" >/dev/null && d3 "$WIRE" "$COORD" >/dev/null && f1 "$FILT" "$PAGE" >/dev/null && n1 "$HOST" >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"

@@ -35,32 +35,6 @@ import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.StatusDot
 import java.text.DateFormat
 
-/**
- * #1254 the declared depth commands' row (scope all) and, at its end, #1258's Activity Logs button: the second row of the
- * page's top bar, under the bulk bar. Cancel shows while a depth command runs.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun DepthBar(actions: List<Declarations.GitDepthActionDecl>, running: Boolean, onAction: (Declarations.GitDepthActionDecl) -> Unit, onCancel: () -> Unit, onActivity: () -> Unit) {
-    FlowRow(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_DEPTH_BAR),
-        horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
-        actions.forEach { a -> Pill(a.label, { onAction(a) }, icon = IconCatalog.vectorOrDefault(a.icon), enabled = !running) }
-        if (running) Pill(stringResource(R.string.repo_depth_cancel), onCancel, danger = true)
-        Pill(stringResource(R.string.sync_history), onActivity, modifier = Modifier.testTag(DriveTags.SYNC_GIT_ACTIVITY_BUTTON), icon = IconCatalog.vectorOrDefault("history"))
-    }
-}
-
-/** The one-line progress of the depth command; a tap opens the full report (skipped and failed repositories with why). */
-@Composable
-internal fun DepthProgress(r: BulkDepth.Run, onOpen: () -> Unit) {
-    val text = stringResource(
-        if (r.finished) (if (r.cancelled) R.string.repo_depth_cancelled else R.string.repo_depth_done) else R.string.repo_depth_progress,
-        r.actionId, r.done, r.total, r.ok.size, r.skipped.size, r.failed.size,
-    )
-    Text(text, Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.tight).testTag(DriveTags.SYNC_GIT_DEPTH_PROGRESS),
-        style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-}
-
 /** #1254 the status window of a depth command: every repository's outcome, skipped (dirty / ahead / already cloned) and failed first. */
 @Composable
 internal fun DepthReportWindow(r: BulkDepth.Run, onCancel: () -> Unit, onClose: () -> Unit) {
@@ -70,23 +44,6 @@ internal fun DepthReportWindow(r: BulkDepth.Run, onCancel: () -> Unit, onClose: 
         if (!r.finished) Pill(stringResource(R.string.repo_depth_cancel), onCancel, danger = true)
         LazyColumn(Modifier.fillMaxWidth()) {
             items(r.lines()) { l -> Text(l, Modifier.padding(vertical = DriveMetrics.tight), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
-        }
-    }
-}
-
-/** #1256 THE FILTER ROW: one labelled group per declared filter, its options as chips (the selected one filled). */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun RepoFilterRow(filters: List<Declarations.GitFilterDecl>, selection: Map<String, String>, onSelect: (String, String) -> Unit) {
-    if (filters.isEmpty()) return
-    Column(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_FILTER_ROW), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
-        Text(stringResource(R.string.repo_filters_title), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
-            filters.forEach { f ->
-                val cur = selection[f.id] ?: RepoFilters.ALL
-                Text(f.label, Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelSmall)
-                f.options.forEach { o -> Pill(o.label, { onSelect(f.id, o.id) }, filled = o.id == cur) }
-            }
         }
     }
 }
@@ -121,7 +78,7 @@ internal fun UnlistedPanel(
 /** #1258 ACTIVITY LOGS (formerly History): the shared sync / operation history, newest first, its own full-screen view. */
 @Composable
 internal fun ActivityLogsWindow(events: List<SyncEvent>, fmt: DateFormat, onClose: () -> Unit, @Suppress("UNUSED_PARAMETER") row: @Composable (SyncEvent) -> Unit) {
-    FullWindow(stringResource(R.string.sync_history_section), DriveTags.SYNC_GIT_ACTIVITY_WINDOW, onClose) {
+    FullWindow(stringResource(R.string.sync_history), DriveTags.SYNC_GIT_ACTIVITY_WINDOW, onClose) {
         // Copy / Copy all / Copy filtered / Share, tap-to-expand and empty-entry filtering live in ActivityLog.kt; [row] stays for callers.
         ActivityLogsView(events, fmt)
     }
