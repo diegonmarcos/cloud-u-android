@@ -439,6 +439,17 @@
         "health": "/health"
       },
       {
+        "id": "fin-api",
+        "kind": "api",
+        "source": "cloud-u-containers/user-fin_fin-api/build.json",
+        "_doc": "Capital-FinTerm's primary data source (Cloud-Fincept / fin_api): the FinceptTerminal backend on oci-apps (container fin-api, containers.app.port 8340). Its retired public host answers 302 to sign-in (#1104) and api.diegonmarcos.com/fin-api is wg_only, so it is MESH-ONLY: fin-api.mesh.diegonmarcos.com:8340 (10.0.0.6), GET /health, /api/v1/info, /api/v1/topics, /api/v1/topics/{topic}/peek.",
+        "mesh_dns": "fin-api.mesh.diegonmarcos.com",
+        "mesh_port": 8340,
+        "mesh_scheme": "http",
+        "policy": "mesh_only",
+        "health": "/health"
+      },
+      {
         "id": "c3-infra-api",
         "kind": "api",
         "source": "cloud-u-containers/infra-api_c3-infra-api/build.json",

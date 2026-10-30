@@ -18,6 +18,8 @@ data class Entry(
     val path: String,
     val planned: Boolean,
     val note: String,
+    /** The id of the dashboard (data/dashboards.json) a `dashboard` entry opens. */
+    val dashboard: String,
 )
 
 object Pages {
@@ -26,6 +28,8 @@ object Pages {
     const val KIND_SECTION_TITLE = "section_title"
     const val KIND_HOLDINGS = "holdings"
     const val KIND_ABOUT = "about"
+    const val KIND_DASHBOARD = "dashboard"
+    const val KIND_SOURCES = "sources"
 
     /** The entries declared for [sectionId] in the stacks JSON (empty when the section declares none). */
     fun entries(stacks: String, sectionId: String): List<Entry> {
@@ -41,6 +45,7 @@ object Pages {
                 path = o.optString("path"),
                 planned = o.optBoolean("planned", false),
                 note = o.optString("note"),
+                dashboard = o.optString("dashboard"),
             )
         }
     }

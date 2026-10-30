@@ -1,0 +1,60 @@
+{
+  "_doc": "The container control of Config > Sources (above Cloud-Fincept): Start / Stop / Restart of the FinceptTerminal container through c3-infra-api, over the PRIVATE MESH ONLY. The base address is the fleet endpoint `api.fleet_endpoint` (ac_cloud-account/build.json::fleet_endpoints, mesh_dns:mesh_port, baked into FLEET_MESH_B64 by app/build.gradle); on the mesh the connection is WireGuard-authenticated, so no bearer is sent (the public c3-pvt route would need the Authelia bearer and is deliberately not used). Off the mesh the control is disabled and says so. Status is read from api.status_path (docker ps status text of the VM's containers).",
+  "container": {
+    "id": "cloud_fincept",
+    "vm": "oci-apps",
+    "name": "fin-api",
+    "source": "cloud_fincept",
+    "label": "FinceptTerminal (fin-api)"
+  },
+  "api": {
+    "fleet_endpoint": "c3-infra-api",
+    "mesh_only": true,
+    "auth": "none_on_mesh",
+    "health_path": "/health",
+    "status_path": "/health/deployed/{vm}",
+    "action_path": "/vms/{vm}/containers/{name}/{action}",
+    "action_method": "POST",
+    "probe_timeout_ms": 3000,
+    "call_timeout_ms": 30000
+  },
+  "states": {
+    "running_prefix": "Up",
+    "unhealthy_marker": "(unhealthy)",
+    "ids": [
+      "running",
+      "stopped",
+      "unhealthy",
+      "unknown"
+    ]
+  },
+  "actions": [
+    {
+      "id": "start",
+      "label": "Start",
+      "confirm": false,
+      "enabled_when": [
+        "stopped"
+      ]
+    },
+    {
+      "id": "stop",
+      "label": "Stop",
+      "confirm": true,
+      "enabled_when": [
+        "running",
+        "unhealthy"
+      ]
+    },
+    {
+      "id": "restart",
+      "label": "Restart",
+      "confirm": true,
+      "enabled_when": [
+        "running",
+        "unhealthy",
+        "stopped"
+      ]
+    }
+  ]
+}

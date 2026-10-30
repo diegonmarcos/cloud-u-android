@@ -17,8 +17,14 @@ object Decl {
     val stacks: String by lazy { decode(BuildConfig.UI_STACKS_B64) }
     val targets: String by lazy { decode(BuildConfig.UI_TARGETS_B64) }
 
+    /** The private mesh's base addresses (fleet endpoint id to address), baked by app/build.gradle from the fleet declaration: nothing is typed here. */
+    val fleetMesh: Map<String, String> by lazy { Mesh.parse(decode(BuildConfig.FLEET_MESH_B64)) }
+
     /** The one section Kotlin dispatches on: the gear on the first row opens it (declared in ui.sections, not on the bottom bar). */
     const val SECTION_ABOUT = "about"
+
+    /** The hidden Config section the gear on the first row opens: Sources (the catalog and the user's keys) and About. */
+    const val SECTION_CONFIG = "config"
 
     private fun decode(b64: String): String = String(Base64.decode(b64, Base64.NO_WRAP), Charsets.UTF_8)
 }

@@ -11,14 +11,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.diegonmarcos.capitalfinterm.AssetData
 import com.diegonmarcos.capitalfinterm.BuildConfig
+import com.diegonmarcos.capitalfinterm.DashStatus
+import com.diegonmarcos.capitalfinterm.Dashboards
 import com.diegonmarcos.capitalfinterm.Decl
 import com.diegonmarcos.capitalfinterm.Entry
 import com.diegonmarcos.capitalfinterm.Pages
@@ -27,13 +34,24 @@ import com.diegonmarcos.superapp.uikit.GroupTitle
 import com.diegonmarcos.superapp.uikit.KitCard
 import com.diegonmarcos.superapp.uikit.KitSectionHeader
 import com.diegonmarcos.superapp.uikit.KitSettingsRow
+import com.diegonmarcos.superapp.uikit.KitStatePill
 import com.diegonmarcos.superapp.uikit.LocalKitPalette
 
 /** A section's page: its declared entries (ui.stacks[section]) drawn by kind. Nothing here is typed text: the words are build.json's. */
 @Composable
-fun SectionPage(sectionId: String) {
+fun SectionPage(sectionId: String, onOpenConfig: () -> Unit) {
     val ctx = LocalContext.current
     val entries = remember(sectionId) { Pages.entries(Decl.stacks, sectionId) }
+    val sources = remember { AssetData.sources(ctx) }
+    val dashboards = remember { AssetData.dashboards(ctx) }
+    var openId by rememberSaveable(sectionId) { mutableStateOf("") }
+    if (openId.isNotEmpty()) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp).testTag(Tags.PAGE),
+            verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            DashboardPage(openId, onBack = { openId = "" }, onOpenSources = onOpenConfig)
+        }
+        return
+    }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp).testTag(Tags.PAGE),
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -43,6 +61,8 @@ fun SectionPage(sectionId: String) {
                 Pages.KIND_SECTION_TITLE -> GroupTitle(e.title)
                 Pages.KIND_HOLDINGS -> HoldingsPanel()
                 Pages.KIND_ABOUT -> AboutPanel()
+                Pages.KIND_SOURCES -> SourcesPanel()
+                Pages.KIND_DASHBOARD -> DashboardRow(e, dashboards.firstOrNull { it.id == e.dashboard }?.let { Dashboards.status(it, sources) }) { openId = e.dashboard }
                 else -> EntryRow(e, Pages.resolve(e, Decl.targets)) { url -> openUrl(ctx, url) }
             }
         }
@@ -71,6 +91,19 @@ private fun EntryRow(e: Entry, url: String?, onOpen: (String) -> Unit) {
     }
 }
 
+/** One `dashboard` entry: title, one-line description and the dashboard's status (live, partly live, needs a key); opens its dashboard. */
+@Composable
+private fun DashboardRow(e: Entry, status: DashStatus?, onOpen: () -> Unit) {
+    KitCard(Modifier.testTag(Tags.entry(e.title))) {
+        KitSettingsRow(
+            title = e.title,
+            subtitle = e.subtitle,
+            onClick = onOpen,
+            trailing = if (status == null) null else ({ val (word, state) = statusPill(status); KitStatePill(word, state) }),
+        )
+    }
+}
+
 @Composable
 private fun AboutPanel() {
     KitCard {
@@ -78,6 +111,6 @@ private fun AboutPanel() {
     }
 }
 
-private fun openUrl(ctx: Context, url: String) {
+internal fun openUrl(ctx: Context, url: String) {
     runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }

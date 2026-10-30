@@ -31,11 +31,22 @@ object Tags {
     const val TICKER = "holdings_ticker"
     const val QUANTITY = "holdings_quantity"
     const val COST = "holdings_cost"
+    const val CONTROL = "container_control"
+    const val MESH_ONLY = "container_mesh_only"
+    fun action(id: String): String = "container_action:$id"
+    const val BACK = "dash_back"
+    const val REFRESH = "dash_refresh"
+    const val CHART = "dash_chart"
+    const val PLACEHOLDER = "dash_placeholder"
+    const val OPEN_SOURCES = "dash_open_sources"
     fun entry(title: String): String = "entry:$title"
+    fun panel(id: String): String = "panel:$id"
+    fun source(id: String): String = "source:$id"
+    fun key(id: String): String = "key:$id"
 }
 
 /**
- * The shell: the shared first row (Profile at the top right opens Cloud Account, the gear opens the About section), the shared
+ * The shell: the shared first row (Profile at the top right opens Cloud Account, the gear opens the Config section (Sources, About)), the shared
  * bottom nav, the shared page gradient and the shared scroll collapse, all from libs (#1154, #1157). Which sections exist is
  * build.json::ui, read through [Decl.nav]; what a section's page shows is ui.stacks, drawn by [SectionPage].
  */
@@ -50,7 +61,7 @@ fun AppShell() {
             hierarchy = sec?.let { titleHierarchy(it, null) }.orEmpty(),
             onNavigate = { e -> section = e.sectionId },
             onAccount = rememberAccountLauncher(),
-            onConfigs = { section = Decl.SECTION_ABOUT },
+            onConfigs = { section = Decl.SECTION_CONFIG },
             dark = true,
         ) {
             NavBarBottomHost(
@@ -59,7 +70,7 @@ fun AppShell() {
                 onSelect = { section = it.id },
                 modifier = Modifier.testTag(Tags.SHELL),
             ) {
-                SectionPage(section)
+                SectionPage(section, onOpenConfig = { section = Decl.SECTION_CONFIG })
             }
         }
     }

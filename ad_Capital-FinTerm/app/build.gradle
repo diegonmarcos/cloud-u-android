@@ -39,6 +39,22 @@ def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'capital-finterm'
 
 def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
 
+// The private mesh's base addresses, from the one fleet declaration (ac_cloud-account/build.json::fleet_endpoints) through fleet-urls.gradle:
+// the fleet endpoints that data/sources.json (fleet_endpoint) and data/control.json (api.fleet_endpoint) name. No address is typed in this app.
+apply from: "$rootDir/../ab_cloud-libs-shared/libs/fleet-urls.gradle"
+def dataSources = new groovy.json.JsonSlurper().parse(file('../data/sources.json'))
+def dataControl = new groovy.json.JsonSlurper().parse(file('../data/control.json'))
+def meshIds = new TreeSet<String>()
+dataSources.sources.each { if (it.fleet_endpoint) meshIds.add(it.fleet_endpoint as String) }
+if (dataControl.api?.fleet_endpoint) meshIds.add(dataControl.api.fleet_endpoint as String)
+def meshUrls = new TreeMap<String, String>()
+meshIds.each { id ->
+    def u = fleetMeshUrl(id)
+    if (!u) throw new GradleException("fleet endpoint '${id}' (data/sources.json, data/control.json) has no mesh address in ac_cloud-account/build.json::fleet_endpoints")
+    meshUrls[id] = u
+}
+def fleetMeshB64 = b64(meshUrls)
+
 // ── the declarations, baked ────────────────────────────────────────────────
 // #868 ui.bottom_nav + ui.sections + ui.default_section are THE navigation declaration (libs:bottomnav's NavDecl); Decl.kt is the only decoder.
 if (!buildJson.ui?.bottom_nav || !buildJson.ui?.sections)
@@ -121,7 +137,13 @@ android {
         buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
         buildConfigField "String", "UI_STACKS_B64",      "\"${uiStacksB64}\""
         buildConfigField "String", "UI_TARGETS_B64",     "\"${uiTargetsB64}\""
+        buildConfigField "String", "FLEET_MESH_B64",     "\"${fleetMeshB64}\""
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+    }
+
+    // The declared data (data/sources.json, data/dashboards.json) ships as assets: Kotlin names no source, endpoint or dashboard.
+    sourceSets {
+        main { assets.srcDirs = ['src/main/assets', '../data'] }
     }
 
     buildFeatures {
@@ -184,6 +206,8 @@ dependencies {
     implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'androidx.core:core-ktx:1.15.0'
+    // The user's API keys: EncryptedSharedPreferences through libs:crash SafeEncryptedPrefs (which compiles against it only).
+    implementation 'androidx.security:security-crypto:1.1.0'
     // themes.xml's parent, Theme.Material3.Dark.NoActionBar, lives here.
     implementation 'com.google.android.material:material:1.12.0'
 

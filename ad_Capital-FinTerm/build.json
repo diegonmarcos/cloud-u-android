@@ -7,7 +7,7 @@
   },
   "name": "capital-finterm",
   "display_name": "Capital-FinTerm",
-  "description": "Capital-FinTerm: the Capital area's capital-markets terminal as an Android app behind the SuperApp's Cloud > Lnktree row. Six tabs on the shared bottom nav, FI | EQ | EX | NW | PM | MY-PM: fixed income, equity, FX, news, portfolio and risk, and a personal portfolio (a simple local holdings list, nothing fetched or priced). Entries open the Capital-Stack-Fin-Terminal web apps and the GDELT news page through addresses read at build time from the SuperApp's declarations, or are planned and greyed; no price, rate or chart is drawn that is not real.",
+  "description": "Capital-FinTerm: the Capital area's capital-markets terminal as an Android app behind the SuperApp's Cloud > Lnktree row. Six tabs on the shared bottom nav, FI | EQ | EX | NW | PM | MY-PM, each entry a dashboard drawn from a DECLARED source (data/sources.json): Cloud-Fincept / fin_api on the private mesh first (with a Start / Stop / Restart control for its container), the key-free public sources (FRED, DBnomics, IMF, World Bank, GDELT) as fallback, and dashed placeholders where a source needs a key you add in Config > Sources (stored encrypted on the phone). MY-PM is a simple local holdings list. Every figure shown is what its source returned, with its date and attribution.",
   "category": "android",
   "android": {
     "application_id": "com.diegonmarcos.capitalfinterm",
@@ -173,13 +173,13 @@
       ]
     },
     "unit": {
-      "_doc": "This app's JVM suite in app/src/test: Pages (the entries of a declared stack and where each leads) and Holdings (the local list).",
+      "_doc": "This app's JVM suite in app/src/test: Pages, Holdings, Catalog (the catalog and the entry-to-source mapping), Dashboards, FredCsv, Forward (derivation), Providers, Engine (fake network), Priority (Cloud-Fincept first, public fallback), Control (mesh-only, confirmation), SourceKeys.",
       "task": ":app:testDebugUnitTest",
       "enabled": true
     }
   },
   "ui": {
-    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl) of Capital-FinTerm: the sections on the bottom bar in order, and a hidden About behind the gear of the first row. #1335 ui.stacks[<section>] is the page of that section: a list of entries drawn by declared KIND (Pages.kt: entry, section_title, holdings, about). An `entry` has a title, a one-line subtitle and ONE declared source for its target: `site` (the label of a link of aa_cloud-superapp/data/linktree.json), `registry` (a code of aa_cloud-superapp/build.json ui.app_urls.registry_sites) or `repo` + `path` (a repo under ui.app_urls.repo_base); app/build.gradle resolves them at BUILD time from the SuperApp's own declarations (fails if one does not resolve) and bakes UI_TARGETS_B64, so no address is typed in this file or in Kotlin. A `planned` entry has a note and no source and is drawn greyed. No price, rate or chart is declared: nothing real to show yet.",
+    "_doc": "#868 THE nav declaration (libs:bottomnav NavDecl) of Capital-FinTerm: the sections on the bottom bar in order, a hidden Config (the gear of the first row: Sources, About) and a hidden About. #1335 ui.stacks[<section>] is the page of that section: a list of entries drawn by declared KIND (Pages.kt: entry, section_title, holdings, about, dashboard, sources). A `dashboard` entry (every FinTerm entry) has a title, a one-line subtitle and `dashboard`, the id of its dashboard in data/dashboards.json; the dashboard names its declared source(s) in data/sources.json (the catalog, with endpoints, auth, coverage and the tabs/entries each source feeds), so no address is typed in this file or in Kotlin. The `sources` kind is Config > Sources: the catalog by category and the user's own API keys, stored encrypted on the phone. An `entry` (still drawn for the other Lnktree apps' shape) has ONE declared source for its target: `site` (the label of a link of aa_cloud-superapp/data/linktree.json), `registry` (a code of aa_cloud-superapp/build.json ui.app_urls.registry_sites) or `repo` + `path`; app/build.gradle resolves them at BUILD time from the SuperApp's own declarations and bakes UI_TARGETS_B64. A `planned` entry has a note and no source and is drawn greyed. Market figures are never declared here: a dashboard shows what its source returns, with its date and attribution.",
     "bottom_nav": [
       "fi",
       "eq",
@@ -231,120 +231,133 @@
         "label": "About",
         "icon": "info",
         "pages": []
+      },
+      {
+        "id": "config",
+        "label": "Config",
+        "icon": "settings",
+        "pages": []
       }
     ],
     "stacks": {
       "fi": [
         {
+          "kind": "dashboard",
           "title": "Yield Curves",
           "subtitle": "Spot, forward and zero curves, US and major sovereigns",
-          "site": "Fin Terminal"
+          "dashboard": "yield_curves"
         },
         {
+          "kind": "dashboard",
           "title": "Forward Rates",
           "subtitle": "Forward rate curves and the paths they imply",
-          "site": "Fin Terminal"
+          "dashboard": "forward_rates"
         },
         {
+          "kind": "dashboard",
           "title": "World Interest Rate Probabilities",
           "subtitle": "Market-implied central bank rate paths",
-          "site": "CentralBank"
+          "dashboard": "rate_probabilities"
         },
         {
+          "kind": "dashboard",
           "title": "World Bonds",
           "subtitle": "Sovereign bond yields and spreads by country",
-          "site": "Fin Terminal"
+          "dashboard": "world_bonds"
         }
       ],
       "eq": [
         {
+          "kind": "dashboard",
           "title": "World Equity Indices",
           "subtitle": "Major equity index levels and moves worldwide",
-          "site": "MarketWatch"
+          "dashboard": "world_equity_indices"
         }
       ],
       "ex": [
         {
+          "kind": "dashboard",
           "title": "FX",
           "subtitle": "Comprehensive real-time currency pricing, matrix crosses, spot rates, and forwards",
-          "site": "Fin Terminal"
+          "dashboard": "fx"
         },
         {
+          "kind": "dashboard",
           "title": "Onshore USD Rates",
           "subtitle": "Onshore USD rate benchmarks and curves",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "onshore_usd_rates"
         }
       ],
       "nw": [
         {
+          "kind": "dashboard",
           "title": "News",
           "subtitle": "Global news from the GDELT feed",
-          "site": "GDELT News"
+          "dashboard": "news"
         }
       ],
       "pm": [
         {
+          "kind": "dashboard",
           "title": "Portfolio & Risk Analytics",
           "subtitle": "Comprehensive portfolio tracking, attribution analysis, factor exposures and scenario stress testing for well-known portfolios",
-          "planned": true,
-          "note": "Planned: analytics coming"
+          "dashboard": "portfolio_risk"
         },
         {
           "kind": "section_title",
           "title": "Model portfolios: bonds / equity"
         },
         {
+          "kind": "dashboard",
           "title": "40/60",
           "subtitle": "40% bonds, 60% equity",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "mp_40_60"
         },
         {
+          "kind": "dashboard",
           "title": "70/30",
           "subtitle": "70% bonds, 30% equity",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "mp_70_30"
         },
         {
+          "kind": "dashboard",
           "title": "60/40",
           "subtitle": "60% bonds, 40% equity",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "mp_60_40"
         },
         {
+          "kind": "dashboard",
           "title": "30/70",
           "subtitle": "30% bonds, 70% equity",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "mp_30_70"
         },
         {
           "kind": "section_title",
           "title": "Model portfolios: DM / EM"
         },
         {
+          "kind": "dashboard",
           "title": "70/30 DM/EM",
           "subtitle": "70% Developed Markets, 30% Emerging Markets",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "mp_70_30_DM_EM"
         },
         {
+          "kind": "dashboard",
           "title": "60/40 DM/EM",
           "subtitle": "60% Developed Markets, 40% Emerging Markets",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "mp_60_40_DM_EM"
         },
         {
+          "kind": "dashboard",
           "title": "40/60 DM/EM",
           "subtitle": "40% Developed Markets, 60% Emerging Markets",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "mp_40_60_DM_EM"
         },
         {
+          "kind": "dashboard",
           "title": "30/70 DM/EM",
           "subtitle": "30% Developed Markets, 70% Emerging Markets",
-          "planned": true,
-          "note": "Planned: coming"
+          "dashboard": "mp_30_70_DM_EM"
         }
       ],
       "my-pm": [
@@ -355,6 +368,16 @@
         }
       ],
       "about": [
+        {
+          "kind": "about"
+        }
+      ],
+      "config": [
+        {
+          "kind": "sources",
+          "title": "Sources",
+          "subtitle": "The data sources behind every dashboard, and your own API keys (kept encrypted on this phone)"
+        },
         {
           "kind": "about"
         }

@@ -2258,6 +2258,14 @@
         "ad_Hardtech-CAD",
         "ad_Hardtech-Sim2Real"
       ]
+    },
+    "capital_finterm_source_keys": {
+      "kind": "encrypted",
+      "class": "secret",
+      "doc": "Capital-FinTerm's own data-source API keys (Config > Sources, #1335): one entry per source id of data/sources.json (Polygon, Alpha Vantage, Databento, Fincept Data API, ...), pasted by the user. EncryptedSharedPreferences (key names AES-256-SIV, values AES-256-GCM) under an Android Keystore AES-256-GCM master key, opened through libs:crash SafeEncryptedPrefs; never shown again, never logged, never in git. A credential: migrates through the vault.",
+      "used_by": [
+        "ad_Capital-FinTerm"
+      ]
     }
   },
   "bundle": {

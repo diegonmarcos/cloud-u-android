@@ -1,0 +1,521 @@
+{
+  "_doc": "THE SOURCE CATALOG of Capital-FinTerm (#1335), modelled on FinceptTerminal (open source, Fincept-Corporation/FinceptTerminal; public feeds + your own API keys, 100+ connectors: FRED, DBnomics, IMF, World Bank, Polygon, Databento, Deribit, news, RSS, geopolitical, AIS). Everything the app knows about a data source is here and nowhere else: Kotlin names no address. Read by Catalog.kt (Config > Sources, the dashboards) and by test/test-finterm-sources.sh, which holds it to build.json::ui.stacks and data/dashboards.json.",
+  "_doc_fields": "id: stable key (also the key slot of the stored API key). name, category (FI-Macro | Equity-Exchange | Options | News-Alt), coverage: one line. endpoint: base address ('' when the user maps it: user_endpoint true). docs: the provider's documentation. auth.type: none | free_key | paid; auth.key_in: where a key goes when the connector is wired (query | header | basic | oauth | message) and its name; auth.signup: where to get a free key. connector: the Kotlin provider that fetches it live (Providers.kt: fred_series, dbnomics_series, imf_datamapper, worldbank_indicator, gdelt_artlist) or null while only the placeholder layout exists. feeds: the FinTerm tab (build.json::ui bottom_nav id) and the entry titles of that tab this source feeds ('*' = every entry of the tab): EVERY entry must be fed by at least one source (the guard). priority: lower is tried first (the source order of a panel: the highest-priority source that feeds the entry and declares a primary route for the panel, then the panel's own source as fallback). primary: true marks THE primary source (Cloud-Fincept, shown first in Config > Sources with its container control). fleet_endpoint: the id in ac_cloud-account/build.json::fleet_endpoints whose MESH base address app/build.gradle bakes (FLEET_MESH_B64), so no mesh address is typed anywhere. paths: the source's declared API paths under that base. container: the id of the container in data/control.json. attribution: shown on the source's card (open-source upstream and its licence).",
+  "_doc_keys": "Stored on this phone only, in EncryptedSharedPreferences under an Android Keystore AES-256-GCM key (libs:crash SafeEncryptedPrefs); never logged, never in git, never sent anywhere but this source.",
+  "categories": [
+    "FI-Macro",
+    "Equity-Exchange",
+    "Options",
+    "News-Alt"
+  ],
+  "sources": [
+    {
+      "id": "cloud_fincept",
+      "name": "Cloud-Fincept / fin_api (private mesh)",
+      "category": "Equity-Exchange",
+      "primary": true,
+      "priority": 0,
+      "coverage": "The FinceptTerminal backend (fin-api) running on oci-apps: 35 data connectors (FRED, DBnomics, IMF, World Bank, Polygon, Yahoo, Kraken, ...), 7 analytics modules, 17 brokers, 6 investor personas, MCP tools, behind one DataHub. PRIMARY source of every FinTerm entry while the phone is on the mesh.",
+      "endpoint": "",
+      "fleet_endpoint": "fin-api",
+      "container": "cloud_fincept",
+      "docs": "https://github.com/Fincept-Corporation/FinceptTerminal",
+      "paths": {
+        "health": "/health",
+        "info": "/api/v1/info",
+        "topics": "/api/v1/topics",
+        "peek": "/api/v1/topics/{topic}/peek",
+        "personas": "/api/v1/personas",
+        "mcp_tools": "/api/v1/mcp/tools",
+        "ws": "/api/v1/ws"
+      },
+      "auth": {
+        "type": "none",
+        "note": "Private WireGuard mesh only (the mesh name resolves nowhere else); no key, no public route. Off the mesh every dashboard falls back to the public sources."
+      },
+      "connector": "fincept_topic",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "*"
+          ]
+        },
+        {
+          "tab": "eq",
+          "entries": [
+            "*"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "*"
+          ]
+        },
+        {
+          "tab": "nw",
+          "entries": [
+            "*"
+          ]
+        },
+        {
+          "tab": "pm",
+          "entries": [
+            "*"
+          ]
+        }
+      ],
+      "aliases": [
+        "fin_api",
+        "fin-api",
+        "cloud-fincept"
+      ],
+      "service": "cloud-u-containers/user-fin_fin-api (container fin-api on oci-apps, image ghcr.io/diegonmarcos/fin-api, port 8340, mesh name fin-api.mesh.diegonmarcos.com)",
+      "attribution": "FinceptTerminal (upstream, Fincept Corporation), AGPL-3.0; this fleet runs its Rust port as fin-api"
+    },
+    {
+      "id": "fred",
+      "name": "FRED (St. Louis Fed)",
+      "category": "FI-Macro",
+      "coverage": "US Treasury par yields DGS1MO-DGS30, policy and overnight rates (SOFR, EFFR, IORB), H.10 FX, major equity index levels, macro indicators; 800k+ series",
+      "endpoint": "https://fred.stlouisfed.org/graph/fredgraph.csv",
+      "docs": "https://fred.stlouisfed.org/docs/api/fred/",
+      "auth": {
+        "type": "none",
+        "note": "The public fredgraph.csv endpoint needs no key (one request per series; the date window is honoured for a single series only)."
+      },
+      "connector": "fred_series",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Yield Curves",
+            "Forward Rates"
+          ]
+        },
+        {
+          "tab": "eq",
+          "entries": [
+            "World Equity Indices"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "FX",
+            "Onshore USD Rates"
+          ]
+        }
+      ],
+      "priority": 10
+    },
+    {
+      "id": "dbnomics",
+      "name": "DBnomics",
+      "category": "FI-Macro",
+      "coverage": "100M+ series from 90+ providers: central bank policy rates (BIS), OECD long-term government yields, international macro",
+      "endpoint": "https://api.db.nomics.world/v22",
+      "docs": "https://api.db.nomics.world/v22/apidocs",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key."
+      },
+      "connector": "dbnomics_series",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "World Interest Rate Probabilities",
+            "World Bonds"
+          ]
+        }
+      ],
+      "priority": 10
+    },
+    {
+      "id": "imf",
+      "name": "IMF DataMapper",
+      "category": "FI-Macro",
+      "coverage": "World Economic Outlook indicators for ~200 countries, including general government gross debt (% of GDP)",
+      "endpoint": "https://www.imf.org/external/datamapper/api/v1",
+      "docs": "https://www.imf.org/external/datamapper/api/help",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key."
+      },
+      "connector": "imf_datamapper",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "World Bonds"
+          ]
+        }
+      ],
+      "priority": 10
+    },
+    {
+      "id": "worldbank",
+      "name": "World Bank Open Data",
+      "category": "FI-Macro",
+      "coverage": "Development and macro indicators for 200+ economies (inflation, debt, growth)",
+      "endpoint": "https://api.worldbank.org/v2",
+      "docs": "https://datahelpdesk.worldbank.org/knowledgebase/articles/889392",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key."
+      },
+      "connector": "worldbank_indicator",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "World Bonds"
+          ]
+        }
+      ],
+      "priority": 10
+    },
+    {
+      "id": "alpha_vantage",
+      "name": "Alpha Vantage",
+      "category": "FI-Macro",
+      "coverage": "Custom provider: FX, equities, Treasury yields and economic indicators (free tier is rate limited)",
+      "endpoint": "https://www.alphavantage.co/query",
+      "docs": "https://www.alphavantage.co/documentation/",
+      "auth": {
+        "type": "free_key",
+        "key_in": {
+          "where": "query",
+          "name": "apikey"
+        },
+        "signup": "https://www.alphavantage.co/support/#api-key",
+        "note": "Free key from the sign-up page."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Yield Curves"
+          ]
+        },
+        {
+          "tab": "eq",
+          "entries": [
+            "World Equity Indices"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "FX"
+          ]
+        }
+      ],
+      "priority": 20
+    },
+    {
+      "id": "premium_fi",
+      "name": "Premium fixed-income feed (custom)",
+      "category": "FI-Macro",
+      "coverage": "Your own paid fixed-income provider (rate-futures implied probabilities, sovereign curves, onshore USD rates): you map its endpoint and key",
+      "endpoint": "",
+      "docs": "",
+      "auth": {
+        "type": "paid",
+        "key_in": {
+          "where": "header",
+          "name": "Authorization"
+        },
+        "note": "Bring your own subscription; the feed is mapped by you, nothing is shipped."
+      },
+      "user_endpoint": true,
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Yield Curves",
+            "World Interest Rate Probabilities",
+            "World Bonds"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "Onshore USD Rates"
+          ]
+        }
+      ],
+      "priority": 20
+    },
+    {
+      "id": "fincept_data_api",
+      "name": "Fincept Data API",
+      "category": "Equity-Exchange",
+      "coverage": "Aggregator of 2,000+ sources and 423k instruments across NYSE, NASDAQ, AMEX, CBOE and OTC; 500+ REST endpoints, free tier",
+      "endpoint": "https://api.fincept.in",
+      "docs": "https://docs.fincept.in",
+      "auth": {
+        "type": "free_key",
+        "key_in": {
+          "where": "header",
+          "name": "X-API-Key"
+        },
+        "signup": "https://fincept.in",
+        "note": "Free Fincept account key; Pro raises the limits."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "World Bonds"
+          ]
+        },
+        {
+          "tab": "eq",
+          "entries": [
+            "*"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "*"
+          ]
+        },
+        {
+          "tab": "pm",
+          "entries": [
+            "*"
+          ]
+        }
+      ],
+      "priority": 20
+    },
+    {
+      "id": "polygon",
+      "name": "Polygon.io",
+      "category": "Equity-Exchange",
+      "coverage": "Real-time and historical US equities, options, FX and crypto; custom provider with your key",
+      "endpoint": "https://api.polygon.io",
+      "docs": "https://polygon.io/docs",
+      "auth": {
+        "type": "free_key",
+        "key_in": {
+          "where": "query",
+          "name": "apiKey"
+        },
+        "signup": "https://polygon.io/dashboard/signup",
+        "note": "Free plan key (delayed, rate limited); real-time is paid."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "eq",
+          "entries": [
+            "*"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "FX"
+          ]
+        },
+        {
+          "tab": "pm",
+          "entries": [
+            "*"
+          ]
+        }
+      ],
+      "priority": 20
+    },
+    {
+      "id": "databento",
+      "name": "Databento",
+      "category": "Equity-Exchange",
+      "coverage": "Institutional market data with L2 depth (MBP/MBO) for US equities and futures",
+      "endpoint": "https://hist.databento.com",
+      "docs": "https://databento.com/docs",
+      "auth": {
+        "type": "paid",
+        "key_in": {
+          "where": "basic",
+          "name": "api_key"
+        },
+        "note": "Paid, usage billed by Databento; the key is the HTTP basic user."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "eq",
+          "entries": [
+            "World Equity Indices"
+          ]
+        },
+        {
+          "tab": "pm",
+          "entries": [
+            "Portfolio & Risk Analytics"
+          ]
+        }
+      ],
+      "priority": 20
+    },
+    {
+      "id": "deribit",
+      "name": "Deribit",
+      "category": "Options",
+      "coverage": "Crypto options and futures: instruments, order books, implied volatility, Greeks",
+      "endpoint": "https://www.deribit.com/api/v2",
+      "docs": "https://docs.deribit.com",
+      "auth": {
+        "type": "free_key",
+        "key_in": {
+          "where": "oauth",
+          "name": "client_id:client_secret"
+        },
+        "signup": "https://www.deribit.com",
+        "note": "Public market data needs no auth; a free API client id/secret unlocks account data and higher limits."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "pm",
+          "entries": [
+            "Portfolio & Risk Analytics"
+          ]
+        }
+      ],
+      "priority": 20
+    },
+    {
+      "id": "gdelt",
+      "name": "GDELT",
+      "category": "News-Alt",
+      "coverage": "Global news events and articles in 100+ languages, updated every 15 minutes (DOC 2.0 API)",
+      "endpoint": "https://api.gdeltproject.org/api/v2",
+      "docs": "https://blog.gdeltproject.org/gdelt-doc-2-0-api-debuts/",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key; one request every 5 seconds."
+      },
+      "connector": "gdelt_artlist",
+      "feeds": [
+        {
+          "tab": "nw",
+          "entries": [
+            "News"
+          ]
+        }
+      ],
+      "priority": 10
+    },
+    {
+      "id": "custom_rss",
+      "name": "Custom RSS feeds",
+      "category": "News-Alt",
+      "coverage": "Any RSS/Atom feed you map (central banks, wires, blogs)",
+      "endpoint": "",
+      "docs": "",
+      "auth": {
+        "type": "none",
+        "note": "You supply the feed address; an optional key is kept like any other."
+      },
+      "user_endpoint": true,
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "nw",
+          "entries": [
+            "News"
+          ]
+        }
+      ],
+      "priority": 10
+    },
+    {
+      "id": "gov_releases",
+      "name": "Government releases (Federal Reserve press feed)",
+      "category": "News-Alt",
+      "coverage": "Official press releases: Federal Reserve monetary policy and regulatory statements (RSS); more agencies are added by mapping their feeds",
+      "endpoint": "https://www.federalreserve.gov/feeds/press_all.xml",
+      "docs": "https://www.federalreserve.gov/feeds/feeds.htm",
+      "auth": {
+        "type": "none",
+        "note": "Public RSS, no key."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "nw",
+          "entries": [
+            "News"
+          ]
+        }
+      ],
+      "priority": 10
+    },
+    {
+      "id": "acled",
+      "name": "ACLED (geopolitical tracker)",
+      "category": "News-Alt",
+      "coverage": "Armed conflict and protest events worldwide, geocoded and dated",
+      "endpoint": "https://acleddata.com/api/acled/read",
+      "docs": "https://acleddata.com/acled-api-documentation",
+      "auth": {
+        "type": "free_key",
+        "key_in": {
+          "where": "query",
+          "name": "key"
+        },
+        "signup": "https://acleddata.com/register",
+        "note": "Free researcher key plus the e-mail it was issued to."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "nw",
+          "entries": [
+            "News"
+          ]
+        }
+      ],
+      "priority": 20
+    },
+    {
+      "id": "aisstream",
+      "name": "AISstream (maritime AIS vessel tracking)",
+      "category": "News-Alt",
+      "coverage": "Live AIS vessel positions worldwide (terrestrial and satellite), WebSocket stream",
+      "endpoint": "wss://stream.aisstream.io/v0/stream",
+      "docs": "https://aisstream.io/documentation",
+      "auth": {
+        "type": "free_key",
+        "key_in": {
+          "where": "message",
+          "name": "APIKey"
+        },
+        "signup": "https://aisstream.io",
+        "note": "Free key; sent in the first WebSocket message."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "nw",
+          "entries": [
+            "News"
+          ]
+        }
+      ],
+      "priority": 20
+    }
+  ],
+  "_doc_priority": "Cloud-Fincept (0) first when the phone reaches the mesh; the key-free public sources (10) next; the keyed ones (20) last. A panel falls back series by series: a topic the container has not published (404) is read from the public source.",
+  "_doc_fin_api": "Cloud-Fincept and the owner's `fin_api` are ONE service: the FinceptTerminal Rust backend declared in cloud-u-containers/user-fin_fin-api (build.json name fin-api, 'Fincept Terminal backend'). Its retired public host answers 302 to sign-in (#1104); the declared private forms are the mesh name (fin-api.mesh.diegonmarcos.com:8340, 10.0.0.6) and the c3-pvt path; the app uses the mesh only. Own-fleet sources (priority 0) are tried before the public ones (10) and the keyed ones (20): what each serves decides it, and fin_api serves every connector the public ones do plus the analytics."
+}

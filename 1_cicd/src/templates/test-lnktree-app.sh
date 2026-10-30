@@ -58,21 +58,20 @@ EXPECT = {
     "name": "capital-finterm", "display": "Capital-FinTerm", "pkg": "com.diegonmarcos.capitalfinterm",
     "nav": [("fi", "FI"), ("eq", "EQ"), ("ex", "EX"), ("nw", "NW"), ("pm", "PM"), ("my-pm", "MY-PM")],
     "pages": {
-      "fi": [("entry", "Yield Curves"), ("entry", "Forward Rates"), ("entry", "World Interest Rate Probabilities"), ("entry", "World Bonds")],
-      "eq": [("entry", "World Equity Indices")],
-      "ex": [("entry", "FX"), ("entry", "Onshore USD Rates")],
-      "nw": [("entry", "News")],
-      "pm": [("entry", "Portfolio & Risk Analytics"), ("section_title", "Model portfolios: bonds / equity"),
-             ("entry", "40/60"), ("entry", "70/30"), ("entry", "60/40"), ("entry", "30/70"),
+      "fi": [("dashboard", "Yield Curves"), ("dashboard", "Forward Rates"), ("dashboard", "World Interest Rate Probabilities"), ("dashboard", "World Bonds")],
+      "eq": [("dashboard", "World Equity Indices")],
+      "ex": [("dashboard", "FX"), ("dashboard", "Onshore USD Rates")],
+      "nw": [("dashboard", "News")],
+      "pm": [("dashboard", "Portfolio & Risk Analytics"), ("section_title", "Model portfolios: bonds / equity"),
+             ("dashboard", "40/60"), ("dashboard", "70/30"), ("dashboard", "60/40"), ("dashboard", "30/70"),
              ("section_title", "Model portfolios: DM / EM"),
-             ("entry", "70/30 DM/EM"), ("entry", "60/40 DM/EM"), ("entry", "40/60 DM/EM"), ("entry", "30/70 DM/EM")],
+             ("dashboard", "70/30 DM/EM"), ("dashboard", "60/40 DM/EM"), ("dashboard", "40/60 DM/EM"), ("dashboard", "30/70 DM/EM")],
       "my-pm": [("holdings", "Personal portfolio")],
+      "config": [("sources", "Sources"), ("about", None)],
     },
-    "sources": {"Yield Curves": ("site", "Fin Terminal"), "Forward Rates": ("site", "Fin Terminal"), "World Bonds": ("site", "Fin Terminal"),
-                "FX": ("site", "Fin Terminal"), "World Interest Rate Probabilities": ("site", "CentralBank"),
-                "World Equity Indices": ("site", "MarketWatch"), "News": ("site", "GDELT News")},
-    "planned": ["Onshore USD Rates", "Portfolio & Risk Analytics", "40/60", "70/30", "60/40", "30/70",
-                "70/30 DM/EM", "60/40 DM/EM", "40/60 DM/EM", "30/70 DM/EM"],
+    "hidden": ["config"],
+    "sources": {},
+    "planned": [],
     "fx": "Comprehensive real-time currency pricing, matrix crosses, spot rates, and forwards",
   },
   "ad_Hardtech-CAD": {
@@ -143,7 +142,7 @@ extra = sorted(set(stacks) - set(exp["pages"]) - {"about"})
 if extra: bad.append("P2 ui.stacks declares pages for undeclared sections: %s" % extra)
 entries = [e for lst in stacks.values() for e in lst if e.get("kind", "entry") == "entry"]
 if "fx" in exp:
-    fx = next((e for e in entries if e.get("title") == "FX"), {})
+    fx = next((e for lst in stacks.values() for e in lst if e.get("title") == "FX"), {})
     if fx.get("subtitle") != exp["fx"]: bad.append("P2 FX description is %r, want %r" % (fx.get("subtitle"), exp["fx"]))
 for e in entries:
     if not e.get("subtitle"): bad.append("P2 entry %r has no one-line description" % e.get("title"))
@@ -216,13 +215,17 @@ for lst in stacks.values():
 declared_kinds = {e.get("kind", "entry") for lst in stacks.values() for e in lst}
 named_kinds = set(re.findall(r'KIND_\w+\s*=\s*"([^"]+)"', pages_kt))
 for k in sorted(declared_kinds - named_kinds): bad.append("P6 build.json declares the kind %r that Pages.kt does not name" % k)
-for k in sorted(named_kinds - declared_kinds - {"holdings", "section_title"}): bad.append("P6 Pages.kt names the kind %r that build.json never declares" % k)
-for k, const in (("section_title", "KIND_SECTION_TITLE"), ("holdings", "KIND_HOLDINGS"), ("about", "KIND_ABOUT")):
+for k in sorted(named_kinds - declared_kinds - {"holdings", "section_title", "entry"}): bad.append("P6 Pages.kt names the kind %r that build.json never declares" % k)
+for k, const in (("section_title", "KIND_SECTION_TITLE"), ("holdings", "KIND_HOLDINGS"), ("about", "KIND_ABOUT"), ("dashboard", "KIND_DASHBOARD"), ("sources", "KIND_SOURCES")):
     if k in named_kinds and const not in page_kt: bad.append("P6 SectionPage does not draw %s" % const)
 if "about" not in by_id: bad.append("P6 ui.sections declares no hidden about section")
 elif "about" in ui.get("bottom_nav", []): bad.append("P6 the about section is on the bottom bar")
 if re.findall(r'SECTION_ABOUT\s*=\s*"([^"]+)"', decl_kt) != ["about"]: bad.append("P6 Decl.kt names no SECTION_ABOUT = \"about\"")
 if [e.get("kind") for e in stacks.get("about", [])] != ["about"]: bad.append("P6 the about page is not one about entry")
+for h in exp.get("hidden", []):
+    if h not in by_id: bad.append("P6 ui.sections declares no hidden %s section" % h)
+    elif h in ui.get("bottom_nav", []): bad.append("P6 the %s section is on the bottom bar" % h)
+    if h == "config" and re.findall(r'SECTION_CONFIG\s*=\s*"([^"]+)"', decl_kt) != ["config"]: bad.append("P6 Decl.kt names no SECTION_CONFIG = \"config\"")
 if exp["name"] == "capital-finterm" and [e.get("kind") for e in stacks.get("my-pm", [])] != ["holdings"]: bad.append("P6 MY-PM is not the holdings list")
 
 # P7
@@ -267,7 +270,9 @@ mutant "an entry vanishes"                "jedit \"[s.pop() for s in d['ui']['st
 mutant "an address is typed"              "jedit \"d['ui']['stacks']['about'][0]['subtitle']='see https://example.org/a'\""                    "P4 build.json::ui spells the address"
 mutant "an address is typed in Kotlin"    "echo 'val x = \"https://example.org/a\"' >> $KT/Pages.kt"                                           "P4 Pages.kt spells the address"
 mutant "the build script stops reading the sources" "sed -i 's#aa_cloud-superapp/data/linktree.json#nowhere.json#' $SCRIPT"                     "P4 $SCRIPT does not read"
+if python3 -c "import json,sys;sys.exit(0 if any(e.get('planned') for l in json.load(open(sys.argv[1]))['ui']['stacks'].values() for e in l) else 1)" "$APP/build.json"; then
 mutant "a planned entry loses its note"   "jedit \"[e.pop('note',None) for s in d['ui']['stacks'].values() for e in s if e.get('planned')]\""    "P5 planned entry"
+fi
 mutant "a market figure is declared"      "jedit \"d['ui']['stacks']['about'][0]['price']=1.5\""                                               "P5 entry"
 mutant "a kind is declared that is not drawn" "jedit \"d['ui']['stacks']['about'].append({'kind':'chart','title':'x'})\""                       "P6 build.json declares the kind"
 mutant "about leaves Decl"                "sed -i 's/SECTION_ABOUT = \"about\"/SECTION_ABOUT = \"gone\"/' $KT/Decl.kt"                          "P6 Decl.kt names no SECTION_ABOUT"
