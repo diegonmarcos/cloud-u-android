@@ -790,11 +790,12 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             }
             // Any clone the store holds that no listing named: shown, never hidden (the scheduler still syncs it).
             val named = listing.repos.map { it.name }.toSet() + cloudListing.repos.map { it.name }.toSet() + hostsState.hosts.values.flatMap { h -> h.repos.map { it.name } }.toSet()
-            repos.filter { Declarations.repoSot.canonical(File(it.path).name) !in named }.forEach { r ->
+            // The store can hold the same clone twice (one id, two records): one row each, or LazyColumn throws on the repeated key.
+            repos.filter { Declarations.repoSot.canonical(File(it.path).name) !in named }.distinctBy { it.id }.forEach { r ->
                 add(TableEntry("other-" + r.id, r.name, r.name, page.owner, null, false, "", tableRow(Declarations.repoSot.canonical(File(r.path).name), page.owner, null), r, {}, ""))
             }
         }
-    }
+    }.distinctBy { it.key } // a LazyColumn key must be unique: a repo listed twice keeps its first row
     // #1315 the DECLARED filters (predicates as data) and the search leave the rows; archived rows are a filter whose default hides them.
     val factsOf: (TableEntry) -> RepoFilters.Facts = { e ->
         RepoFilters.Facts(e.cloned != null, e.row.status, e.row.lfs, e.row.isPrivate, Declarations.repoSot.hubOf(e.name),
