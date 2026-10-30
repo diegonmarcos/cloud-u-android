@@ -100,7 +100,8 @@ if "freed" not in store: print("    the freed bytes are not reported"); bad = 1
 sys.exit(bad)
 PYB
 }
-d4() { for t in 'kotlinx.coroutines.sync.Semaphore(action.workers)' 'fun cancelDepthRun()' 'NonCancellable' 'refresh(force = true).join()'; do grep -qF "$t" "$1" || { echo "    coordinator lacks $t"; return 1; }; done; }
+# #1315 the bound, the cancel and the never-cancelled finaliser are the ONE executor's (sync/jobs/GitJobs); the coordinator declares the workers and re-reads after.
+d4() { for t in 'workers = action.workers' 'fun cancelDepthRun()' 'jobs.cancel(' 'refresh(force = true).join()'; do grep -qF "$t" "$1" || { echo "    coordinator lacks $t"; return 1; }; done; J="$(dirname "$1")/jobs/GitJobs.kt"; for t in 'Semaphore(spec.workers' 'withContext(NonCancellable)'; do grep -qF "$t" "$J" || { echo "    GitJobs lacks $t"; return 1; }; done; }
 u1() {
     python3 -c 'import json,sys; u=json.load(open(sys.argv[1]))["ui"]["sync"]["git"]["unlisted"]; assert u["roots"] and u["max_depth"]>0 and u["timeout_seconds"]>0' "$BJ" || { echo "    unlisted not declared"; return 1; }
     grep -qF 'UnlistedRepos.statusKey(it.path)' "$1" && grep -qF 'statusReader.request(found.map' "$1" || { echo "    unlisted statuses bypass the one reader"; return 1; }

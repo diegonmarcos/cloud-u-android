@@ -17,6 +17,7 @@ import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
 import com.diegonmarcos.clouddrive.sync.inventory.InventoryScript
 import com.diegonmarcos.clouddrive.sync.inventory.RepoInventory
+import com.diegonmarcos.clouddrive.sync.jobs.GitJobs
 import com.diegonmarcos.clouddrive.sync.store.StoreShell
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -40,6 +41,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     private val credentials = GitCredentialStore(ctx)
     /** #1315 the ONE runner of store scripts and the ONE host<->guest translation (sync/store). */
     private val shell: StoreShell = StoreShell.of(ctx)
+    /** #1315 the ONE executor of every git and folder job (sync/jobs): bounded, locked per path, exclusive, cancellable, accounted. */
+    val jobs: GitJobs = GitJobs(scope)
 
     init { engineContext = ctx.applicationContext }
 
@@ -180,11 +183,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * the history and the debug log exactly as a single runOp's does.
      */
     fun pullAll(force: Boolean, trigger: String = SyncHistory.TRIGGER_MANUAL, only: Set<String>? = null): kotlinx.coroutines.Job? {
-        if (!bulkRunning.compareAndSet(false, true)) return null
         val opId = if (force) OP_FORCE_PULL else OP_PULL
+        val probe = GitJobs.Spec(opId, opId, opId, emptyList()) { GitJobs.Outcome(GitJobs.Status.SKIP, "") }
+        if (jobs.refusal(probe) != null) return null
         bulk.value = BulkPull(force, trigger, total = Int.MAX_VALUE)
         return scope.launch {
-          try {
             sweepStalePacks(ownBulk = true)?.join()
             val list = withContext(Dispatchers.IO) {
                 registry.load().filter { only == null || it.name in only || it.id in only }
@@ -192,38 +195,38 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             }
             bulk.value = BulkPull(force, trigger, list.size)
             val token = lazy { declaredToken() }
-            val gate = kotlinx.coroutines.sync.Semaphore(Declarations.sync.git.status.concurrency)
-            list.map { repo ->
-                launch {
-                    gate.acquire()
-                    try {
-                        if (running.value.containsKey(repo.id)) {
-                            bulk.update { b -> b?.copy(done = b.done + 1, results = b.results + (repo.name to GitOpResult(false, "skipped: an operation is already running"))) }
-                            return@launch
-                        }
-                        running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
-                        val result = withContext(Dispatchers.IO) { perform(repo, opId, "", { token.value }, trigger) }
-                        opResults.update { it + (repo.id to result) }
-                        running.update { it - repo.id }
-                        statusReader.invalidate(statusKey(repo))
-                        bulk.update { b -> b?.copy(done = b.done + 1, results = b.results + (repo.name to result)) }
-                    } finally { gate.release() }
+            val byPath = list.associateBy { File(it.path).absolutePath }
+            // #1315 ONE executor: bounded by the declared concurrency, one job per path, exclusive with every other writing job.
+            val job = jobs.submit(GitJobs.Spec(opId, opId, opId, list.map { GitJobs.Target(File(it.path).absolutePath, it.name) }, workers = Declarations.sync.git.status.concurrency, exclusive = true,
+                onEnd = {
+                    DriveDebugLog.i(ctx, TAG, "pull-all ${opId} ($trigger): ${list.size} repos, ${bulk.value?.failed ?: 0} failed")
+                    refresh().join()
+                }) { t ->
+                val repo = byPath.getValue(t.path)
+                if (running.value.containsKey(repo.id)) {
+                    bulk.update { b -> b?.copy(done = b.done + 1, results = b.results + (repo.name to GitOpResult(false, "skipped: an operation is already running"))) }
+                    return@Spec GitJobs.Outcome(GitJobs.Status.SKIP, GitJobs.LOCKED)
                 }
-            }.joinAll()
-            DriveDebugLog.i(ctx, TAG, "pull-all ${opId} ($trigger): ${list.size} repos, ${bulk.value?.failed ?: 0} failed")
-          } finally { bulkRunning.set(false) }
-            refresh().join()
+                running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
+                val result = try { withContext(Dispatchers.IO) { perform(repo, opId, "", { token.value }, trigger) } } finally { running.update { it - repo.id } }
+                opResults.update { it + (repo.id to result) }
+                statusReader.invalidate(statusKey(repo))
+                bulk.update { b -> b?.copy(done = b.done + 1, results = b.results + (repo.name to result)) }
+                GitJobs.Outcome(if (result.ok) GitJobs.Status.OK else GitJobs.Status.FAIL, result.summary, result.details)
+            })
+            if (job == null) bulk.value = BulkPull(force, trigger, 0) else job.join()
         }
     }
 
-    private val bulkRunning = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** A pull-all job is running (#1315 read off the one executor). */
+    private fun bulkRunning(): Boolean = jobs.latest(OP_PULL, OP_FORCE_PULL)?.finished == false
 
     // ── #1313 stale temp packs (ui.sync.git.stale_pack_cleanup): StalePackCleaner ──
 
     private val staleSweeping = java.util.concurrent.atomic.AtomicBoolean(false)
 
     private fun gitJobRunning(ownBulk: Boolean): Boolean =
-        StalePackCleaner.busy(running.value.size, cloning.value.size, depthRun.value?.finished == false, !ownBulk && bulkRunning.get())
+        StalePackCleaner.busy(running.value.size, cloning.value.size, depthRun.value?.finished == false, !ownBulk && bulkRunning())
 
     /**
      * Delete the abandoned incoming_* / tmp_pack* files of every clone and bare mirror (declared patterns, older than the
@@ -320,7 +323,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         if (AutoChecks.Work.PULL_ALL in work) {
             val on = withContext(Dispatchers.IO) { pagePrefs.getBoolean(KEY_AUTO_PULL, Declarations.sync.git.autoPull.defaultOn) }
             autoPullOnOpen.value = on
-            autoPullNote.value = when (val d = autoPullDecision(on, Declarations.sync.git.autoPull.requireUnmetered, unmetered(), bulkRunning.get())) {
+            autoPullNote.value = when (val d = autoPullDecision(on, Declarations.sync.git.autoPull.requireUnmetered, unmetered(), bulkRunning())) {
                 AUTO_PULL_GO -> { pullAll(force = false, trigger = TRIGGER_OPEN); "" }
                 else -> d
             }
@@ -359,7 +362,8 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     fun cancelStatusReads() { statusReader.cancelAll(); fullProgress.value = null }
 
     /** Fetch every clone (the declared fetch op, one running op per repository). */
-    fun fetchAll() { repos.value.forEach { runOp(it, OP_FETCH) } }
+    /** Fetch every clone of [only] (default: every registered clone): ONE bounded job, one op per repository. */
+    fun fetchAll(only: List<ManagedRepo>? = null) { bulkOps(OP_FETCH, only ?: repos.value) { repo -> perform(repo, OP_FETCH, "", { declaredToken() }, SyncHistory.TRIGGER_MANUAL) } }
 
     // ── #1195 size on disk: walked in the background, cached by fingerprint, shown from the cache ──
 
@@ -448,44 +452,34 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * verbs so the card can name the step in flight. The outcome lands in the history
      * and the registry, and the card re-reads its glance.
      */
-    fun syncNow(repo: ManagedRepo) {
-        if (running.value.containsKey(repo.id)) return
-        running.update { it + (repo.id to Running(repo.id, Step.STAGING)) }
-        scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                runCatching {
-                    GitEngine(ctx, File(repo.path)).use { e ->
-                        val steps = mutableListOf<String>()
-                        e.stageAll()
-                        running.update { it + (repo.id to Running(repo.id, Step.COMMITTING)) }
-                        if (e.status().staged.isNotEmpty()) {
-                            val c = e.commit(repo.syncMessage, repo.authorName.ifBlank { DEFAULT_AUTHOR }, repo.authorEmail.ifBlank { DEFAULT_EMAIL })
-                            steps += "committed ${c.shortSha}"
-                        } else steps += "nothing to commit"
-                        if (e.remotes().none { it.name == "origin" }) return@use GitOpResult(true, steps.joinToString(", ") + ", no remote 'origin'")
-                        running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
-                        val pulled = e.pull(rebase = repo.pullRebase, auth = authFor(repo))
-                        steps += pulled.summary
-                        if (!pulled.ok) return@use GitOpResult(false, steps.joinToString(", "), pulled.details)
-                        running.update { it + (repo.id to Running(repo.id, Step.PUSHING)) }
-                        val pushed = e.push(auth = authFor(repo))
-                        steps += pushed.summary
-                        GitOpResult(pushed.ok, steps.joinToString(", "), pushed.details)
-                    }
-                }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
+    fun syncNow(repo: ManagedRepo) = single(repo, RepoActions.SYNC_NOW, Step.STAGING) {
+        val result = runCatching {
+            GitEngine(ctx, File(repo.path)).use { e ->
+                val steps = mutableListOf<String>()
+                e.stageAll()
+                running.update { it + (repo.id to Running(repo.id, Step.COMMITTING)) }
+                if (e.status().staged.isNotEmpty()) {
+                    val c = e.commit(repo.syncMessage, repo.authorName.ifBlank { DEFAULT_AUTHOR }, repo.authorEmail.ifBlank { DEFAULT_EMAIL })
+                    steps += "committed ${c.shortSha}"
+                } else steps += "nothing to commit"
+                if (e.remotes().none { it.name == "origin" }) return@use GitOpResult(true, steps.joinToString(", ") + ", no remote 'origin'")
+                running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
+                val pulled = e.pull(rebase = repo.pullRebase, auth = authFor(repo))
+                steps += pulled.summary
+                if (!pulled.ok) return@use GitOpResult(false, steps.joinToString(", "), pulled.details)
+                running.update { it + (repo.id to Running(repo.id, Step.PUSHING)) }
+                val pushed = e.push(auth = authFor(repo))
+                steps += pushed.summary
+                GitOpResult(pushed.ok, steps.joinToString(", "), pushed.details)
             }
-            val now = System.currentTimeMillis() / 1000
-            withContext(Dispatchers.IO) {
-                registry.upsert(repo.copy(lastSyncEpochSeconds = now, lastSyncSummary = result.summary))
-                history.append(SyncEvent(now, repo.id, repo.name, SyncHistory.TRIGGER_MANUAL, result.ok, result.summary, result.details))
-                // On-device debug log: the SAME sentence the history holds — the engine's own
-                // summary, never a credential (the token lives in GitCredentialStore alone).
-                if (result.ok) DriveDebugLog.i(ctx, TAG, "sync ${repo.name}: ${result.summary}")
-                else DriveDebugLog.e(ctx, TAG, "sync ${repo.name} FAILED: ${result.summary} ${result.details}".trim())
-            }
-            running.update { it - repo.id }
-            reread(repo)
-        }
+        }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
+        val now = System.currentTimeMillis() / 1000
+        registry.upsert(repo.copy(lastSyncEpochSeconds = now, lastSyncSummary = result.summary))
+        history.append(SyncEvent(now, repo.id, repo.name, SyncHistory.TRIGGER_MANUAL, result.ok, result.summary, result.details))
+        // On-device debug log: the SAME sentence the history holds — the engine's own summary, never a credential.
+        if (result.ok) DriveDebugLog.i(ctx, TAG, "sync ${repo.name}: ${result.summary}")
+        else DriveDebugLog.e(ctx, TAG, "sync ${repo.name} FAILED: ${result.summary} ${result.details}".trim())
+        result
     }
 
     // ── #608 the Sync ▸ Git page's per-repository operations ────────────────
@@ -553,19 +547,12 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * The two destructive ids are NOT special-cased here: the row confirms before it calls.
      */
     fun runOp(repo: ManagedRepo, opId: String, message: String = "") {
-        if (running.value.containsKey(repo.id)) return
         val step = when (opId) {
             OP_COMMIT -> Step.COMMITTING
             OP_PULL, OP_FORCE_PULL, OP_FETCH -> Step.PULLING
             else -> Step.PUSHING
         }
-        running.update { it + (repo.id to Running(repo.id, step)) }
-        scope.launch {
-            val result = withContext(Dispatchers.IO) { perform(repo, opId, message, { declaredToken() }, SyncHistory.TRIGGER_MANUAL) }
-            opResults.update { it + (repo.id to result) }
-            running.update { it - repo.id }
-            reread(repo)
-        }
+        single(repo, opId, step) { perform(repo, opId, message, { declaredToken() }, SyncHistory.TRIGGER_MANUAL) }
     }
 
     /** ONE operation on ONE repository, recorded — the shared body of [runOp] and [pullAll]. Blocking. */
@@ -618,32 +605,57 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * (git inside cld.termux for the shared store). The confirmation for Repo clean is the page's.
      */
     fun runCompound(repo: ManagedRepo, id: String) {
-        if (running.value.containsKey(repo.id) || !RepoActions.isCompound(id)) return
-        running.update { it + (repo.id to Running(repo.id, if (id == RepoActions.SYNC_LOCAL_WINS) Step.PUSHING else Step.PULLING)) }
-        scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                val done = runCatching { RepoCompound.run(ctx, repo, id, authFor(repo)) }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
-                record(repo, id, done, SyncHistory.TRIGGER_MANUAL)
-            }
-            opResults.update { it + (repo.id to result) }
-            running.update { it - repo.id }
-            reread(repo)
+        if (!RepoActions.isCompound(id)) return
+        single(repo, id, if (id == RepoActions.SYNC_LOCAL_WINS) Step.PUSHING else Step.PULLING) {
+            record(repo, id, runCatching { RepoCompound.run(ctx, repo, id, authFor(repo)) }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }, SyncHistory.TRIGGER_MANUAL)
         }
     }
 
     /** The bulk bar: [id] on every registered clone ([runCompound] per repository; each answers in its own row). */
-    fun runCompoundAll(id: String) { repos.value.forEach { runCompound(it, id) } }
+    /** The bulk bar: [id] on every clone of [only] (default: every registered clone) through ONE bounded job; each answers in its own row. */
+    fun runCompoundAll(id: String, only: List<ManagedRepo>? = null) {
+        if (!RepoActions.isCompound(id)) return
+        bulkOps(id, only ?: repos.value) { repo -> record(repo, id, runCatching { RepoCompound.run(ctx, repo, id, authFor(repo)) }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }, SyncHistory.TRIGGER_MANUAL) }
+    }
+
+    /**
+     * #1315 ONE job for a verb over many clones: at most ui.sync.git.jobs.workers at once, one job per path, exclusive with
+     * the other writing jobs; the per-row step and result are published as for a single op. Returns null when refused.
+     */
+    private fun bulkOps(id: String, targets: List<ManagedRepo>, op: (ManagedRepo) -> GitOpResult): kotlinx.coroutines.Job? {
+        val byPath = targets.associateBy { File(it.path).absolutePath }
+        val step = if (id == RepoActions.SYNC_LOCAL_WINS || id == OP_PUSH) Step.PUSHING else Step.PULLING
+        return jobs.submit(GitJobs.Spec(id, id, id, targets.map { GitJobs.Target(File(it.path).absolutePath, it.name) }, workers = Declarations.sync.git.jobs.workers, exclusive = true,
+            onEnd = { refresh().join() }) { t ->
+            val repo = byPath.getValue(t.path)
+            if (running.value.containsKey(repo.id)) return@Spec GitJobs.Outcome(GitJobs.Status.SKIP, GitJobs.LOCKED)
+            running.update { it + (repo.id to Running(repo.id, step)) }
+            val result = try { withContext(Dispatchers.IO) { op(repo) } } finally { running.update { it - repo.id } }
+            opResults.update { it + (repo.id to result) }
+            statusReader.invalidate(statusKey(repo))
+            GitJobs.Outcome(if (result.ok) GitJobs.Status.OK else GitJobs.Status.FAIL, result.summary, result.details)
+        })
+    }
+
+    /**
+     * #1315 ONE op on ONE clone through the executor: not exclusive (reads and single verbs run beside a bulk job) but the
+     * path is locked, so a folder command never moves a clone a verb is working in. [body] runs on IO and answers the result.
+     */
+    private fun single(repo: ManagedRepo, id: String, step: Step, body: () -> GitOpResult) {
+        if (running.value.containsKey(repo.id)) return
+        running.update { it + (repo.id to Running(repo.id, step)) }
+        val started = jobs.submit(GitJobs.Spec(id + "@" + repo.id, id, id, listOf(GitJobs.Target(File(repo.path).absolutePath, repo.name)), workers = 1, exclusive = false) { _ ->
+            val result = try { withContext(Dispatchers.IO) { body() } } finally { running.update { it - repo.id } }
+            opResults.update { it + (repo.id to result) }
+            reread(repo)
+            GitJobs.Outcome(if (result.ok) GitJobs.Status.OK else GitJobs.Status.FAIL, result.summary, result.details)
+        })
+        if (started == null) running.update { it - repo.id }
+    }
 
     /** Goto > Checkout Main, through the terminal-root wire; the answer lands in the repo's result line. */
-    fun checkoutMain(repo: ManagedRepo) {
-        if (running.value.containsKey(repo.id)) return
-        running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
-        scope.launch {
-            val result = withContext(Dispatchers.IO) { record(repo, "checkout_main", runCatching { RepoCompound.checkoutMain(ctx, repo, authFor(repo)) }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }, SyncHistory.TRIGGER_MANUAL) }
-            opResults.update { it + (repo.id to result) }
-            running.update { it - repo.id }
-            reread(repo)
-        }
+    fun checkoutMain(repo: ManagedRepo) = single(repo, "checkout_main", Step.PULLING) {
+        record(repo, "checkout_main", runCatching { RepoCompound.checkoutMain(ctx, repo, authFor(repo)) }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }, SyncHistory.TRIGGER_MANUAL)
     }
 
     /** Workflow > PRs: the open pull requests as display lines. */
@@ -743,14 +755,14 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      */
     fun cloneInto(name: String, url: String, authKind: String, username: String, token: String, sshKeyPath: String = "") {
         if (name.isBlank() || url.isBlank() || cloning.value.contains(name)) return
+        val dir = SharedStore.repoDir(name)
         cloning.update { it + name }
-        scope.launch {
-            val dir = SharedStore.repoDir(name)
+        val started = jobs.submit(GitJobs.Spec("clone@" + name, Declarations.GIT_OP_CLONE, Declarations.GIT_OP_CLONE, listOf(GitJobs.Target(dir.absolutePath, name)), workers = 1, exclusive = false) { _ ->
             // The clone's decision point, on the device: the URL's HOST and the destination —
             // never the full URL (a listing URL could carry a credential in its userinfo) and
             // never the token, which travels only through GitCredentialStore.
             DriveDebugLog.i(ctx, TAG, "clone start: host=${hostOf(url)} dest=${dir.name} auth=$authKind")
-            val result = withContext(Dispatchers.IO) { cloneBlocking(name, url, authKind, username, token, sshKeyPath, cloneDepth.value.takeIf { it > 0 }) }
+            val result = try { withContext(Dispatchers.IO) { cloneBlocking(name, url, authKind, username, token, sshKeyPath, cloneDepth.value.takeIf { it > 0 }) } } finally { cloning.update { it - name } }
             val now = System.currentTimeMillis() / 1000
             withContext(Dispatchers.IO) {
                 history.append(SyncEvent(now, RepoRegistry.idFor(dir.absolutePath), name, SyncHistory.TRIGGER_MANUAL, result.ok, "clone: ${result.summary}", result.details))
@@ -758,9 +770,10 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 else DriveDebugLog.e(ctx, TAG, "clone $name FAILED: host=${hostOf(url)} dest=${dir.name} ${result.summary} ${result.details}".trim())
             }
             opResults.update { it + (RepoRegistry.idFor(dir.absolutePath) to result) }
-            cloning.update { it - name }
             refresh()
-        }
+            GitJobs.Outcome(if (result.ok) GitJobs.Status.OK else GitJobs.Status.FAIL, result.summary, result.details)
+        })
+        if (started == null) cloning.update { it - name }
     }
 
 
@@ -796,7 +809,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     /** The depth command in flight or last finished (progress, and every repository's outcome for the status window). */
     val depthRun = MutableStateFlow<BulkDepth.Run?>(null)
-    private var depthJob: kotlinx.coroutines.Job? = null
+        .also { f -> scope.launch { jobs.jobs.collect { f.value = jobs.latest(*DEPTH_JOB_KINDS)?.let { s -> BulkDepth.Run(s.id, s.kind, s.total, s.done, s.ok, s.skipped, s.failed, s.cancelled, s.finished) } } } }
 
     /**
      * Every clone on the device the page can see: #1315 THE ONE INVENTORY's clones (every tree the pass found, whatever its class),
@@ -816,22 +829,20 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * is skipped and reported, never cloned a second time. At most the declared workers at once; [cancelDepthRun] stops the
      * ones not started yet (a clone in flight finishes); the status cache is re-read after.
      */
-    fun cloneMissing(action: Declarations.GitDepthActionDecl, targets: List<CloneTarget>): kotlinx.coroutines.Job? = startDepth(action) {
-        val list = withContext(Dispatchers.IO) { registry.load() }
-        val plan = withContext(Dispatchers.IO) {
-            BulkDepth.planClones(targets.map { BulkDepth.Target(it.name, it.url) }, existingClones(list)) { Declarations.repoSot.canonical(it) }
-        }
-        val todo = targets.filter { t -> plan.toClone.any { it.name == t.name } && t.name !in cloning.value }
-        depthRun.update { it?.copy(total = todo.size + plan.held.size, done = plan.held.size, skipped = plan.held.mapValues { (_, p) -> "already cloned at $p" }) }
-        bounded(action, todo) { t ->
-            if (withContext(Dispatchers.IO) { StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, SharedStore.repoDir(t.name)) || GitEngine.isRepository(SharedStore.repoDir(t.name)) }) {
-                t.name to Outcome.SKIP to "already cloned at ${SharedStore.repoDir(t.name).absolutePath}"
-            } else {
-                cloning.update { it + t.name }
-                val r = try { withContext(Dispatchers.IO) { cloneBlocking(t.name, t.url, t.authKind, t.username, t.token, "", action.depth) } } finally { cloning.update { it - t.name } }
-                withContext(Dispatchers.IO) { history.append(SyncEvent(System.currentTimeMillis() / 1000, RepoRegistry.idFor(SharedStore.repoDir(t.name).absolutePath), t.name, SyncHistory.TRIGGER_MANUAL, r.ok, "${action.id}: ${r.summary}", r.details)) }
-                t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to r.summary
-            }
+    fun cloneMissing(action: Declarations.GitDepthActionDecl, targets: List<CloneTarget>) = depth(action, plan = {
+        val list = registry.load()
+        val plan = BulkDepth.planClones(targets.map { BulkDepth.Target(it.name, it.url) }, existingClones(list)) { Declarations.repoSot.canonical(it) }
+        targets.filter { t -> t.name !in cloning.value && (plan.toClone.any { it.name == t.name } || t.name in plan.held) }.map { t -> DepthItem(SharedStore.repoDir(t.name).absolutePath, t.name, plan.held[t.name]) to t }
+    }) { (item, t) ->
+        val held = item.held
+        if (held != null) t.name to Outcome.SKIP to "already cloned at $held"
+        else if (withContext(Dispatchers.IO) { StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, SharedStore.repoDir(t.name)) || GitEngine.isRepository(SharedStore.repoDir(t.name)) }) {
+            t.name to Outcome.SKIP to "already cloned at ${SharedStore.repoDir(t.name).absolutePath}"
+        } else {
+            cloning.update { it + t.name }
+            val r = try { withContext(Dispatchers.IO) { cloneBlocking(t.name, t.url, t.authKind, t.username, t.token, "", action.depth) } } finally { cloning.update { it - t.name } }
+            withContext(Dispatchers.IO) { history.append(SyncEvent(System.currentTimeMillis() / 1000, RepoRegistry.idFor(SharedStore.repoDir(t.name).absolutePath), t.name, SyncHistory.TRIGGER_MANUAL, r.ok, "${action.id}: ${r.summary}", r.details)) }
+            t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to r.summary
         }
     }
 
@@ -840,29 +851,27 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * clone itself first — dirty, conflicted, mid-merge, no upstream or ahead is SKIPPED and reported; the rest are shrunk by the
      * terminal-root wire's `keep_depth` (which checks the gate again). Same single clone, nothing re-cloned.
      */
-    fun keepDepth(action: Declarations.GitDepthActionDecl, only: ManagedRepo? = null): kotlinx.coroutines.Job? = startDepth(action) {
-        val list = only?.let { listOf(it) } ?: withContext(Dispatchers.IO) { registry.load() }
-        depthRun.update { it?.copy(total = list.size) }
+    fun keepDepth(action: Declarations.GitDepthActionDecl, only: ManagedRepo? = null) = depth(action, plan = {
+        (only?.let { listOf(it) } ?: registry.load()).map { DepthItem(File(it.path).absolutePath, it.name) to it }
+    }) { (_, repo) ->
         val token = lazy { declaredToken() }
-        bounded(action, list) { repo ->
-            if (running.value.containsKey(repo.id)) return@bounded repo.name to Outcome.SKIP to "an operation is already running"
-            running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
-            try {
-                withContext(Dispatchers.IO) {
-                    val dir = File(repo.path)
-                    val cloned = runCatching { GitEngine.isRepository(dir) || (StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, dir)) }.getOrDefault(false)
-                    val skip = if (!cloned) BulkDepth.SKIP_NOT_CLONED else runCatching {
-                        GitEngine(ctx, dir).use { e -> val st = e.status(); BulkDepth.keepSkip(true, st.files.size - st.conflicts.size, st.conflicts.size, st.ahead, st.upstream, st.repositoryState) }
-                    }.getOrElse { "unreadable: ${it.message}" }
-                    if (skip != null) return@withContext repo.name to Outcome.SKIP to skip
-                    val r = RepoCompound.raw(ctx, dir, "keep_depth", org.json.JSONObject().put("depth", action.depth), authFor(repo) { token.value })
-                    record(repo, action.id, r, SyncHistory.TRIGGER_MANUAL)
-                    statusReader.invalidate(statusKey(repo))
-                    val why = r.details.ifBlank { r.summary }
-                    repo.name to (if (r.ok) Outcome.OK else if (why.contains("skipped:")) Outcome.SKIP else Outcome.FAIL) to (if (r.ok) "kept depth ${action.depth}" else why.take(300))
-                }
-            } finally { running.update { it - repo.id } }
-        }
+        if (running.value.containsKey(repo.id)) return@depth repo.name to Outcome.SKIP to "an operation is already running"
+        running.update { it + (repo.id to Running(repo.id, Step.PULLING)) }
+        try {
+            withContext(Dispatchers.IO) {
+                val dir = File(repo.path)
+                val cloned = runCatching { GitEngine.isRepository(dir) || (StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, dir)) }.getOrDefault(false)
+                val skip = if (!cloned) BulkDepth.SKIP_NOT_CLONED else runCatching {
+                    GitEngine(ctx, dir).use { e -> val st = e.status(); BulkDepth.keepSkip(true, st.files.size - st.conflicts.size, st.conflicts.size, st.ahead, st.upstream, st.repositoryState) }
+                }.getOrElse { "unreadable: ${it.message}" }
+                if (skip != null) return@withContext repo.name to Outcome.SKIP to skip
+                val r = RepoCompound.raw(ctx, dir, "keep_depth", org.json.JSONObject().put("depth", action.depth), authFor(repo) { token.value })
+                record(repo, action.id, r, SyncHistory.TRIGGER_MANUAL)
+                statusReader.invalidate(statusKey(repo))
+                val why = r.details.ifBlank { r.summary }
+                repo.name to (if (r.ok) Outcome.OK else if (why.contains("skipped:")) Outcome.SKIP else Outcome.FAIL) to (if (r.ok) "kept depth ${action.depth}" else why.take(300))
+            }
+        } finally { running.update { it - repo.id } }
     }
 
     private enum class Outcome { OK, SKIP, FAIL }
@@ -884,72 +893,68 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      * `git clone --mirror` at <store git>/<bare_root>/<owner>/<repo>.git. Bounded workers, cancel-safe, each outcome in the
      * status window and Activity Logs. git runs in cld.termux; without it the run says so and changes nothing.
      */
-    fun cloneBare(action: Declarations.GitDepthActionDecl, targets: List<CloneTarget>): kotlinx.coroutines.Job? = startDepth(action) {
+    fun cloneBare(action: Declarations.GitDepthActionDecl, targets: List<CloneTarget>) {
         val canonical: (String) -> String = { Declarations.repoSot.canonical(it) }
-        if (!withContext(Dispatchers.IO) { StoreGit.useExec(ctx) }) {
-            depthRun.update { it?.copy(total = targets.size, done = targets.size, failed = targets.associate { t -> t.name to "bare clones run git in cld.termux, which is not answering; nothing changed" }) }
-            return@startDepth
-        }
-        val plan = withContext(Dispatchers.IO) { BareClones.plan(targets.map { BareClones.Target(it.name, it.url) }, listMirrors(), canonical) }
-        val gitGuest = withContext(Dispatchers.IO) { shell.route.guest(SharedStore.gitRoot().absolutePath) }
-        val work = targets.filter { t -> t.name in plan.toUpdate || plan.toClone.any { it.name == t.name } }
-        depthRun.update { it?.copy(total = work.size) }
-        val fallbackToken = lazy { runCatching { declaredToken() }.getOrDefault("") }
-        bounded(action, work) { t0 ->
-            val t = if (t0.token.isBlank()) t0.copy(token = fallbackToken.value) else t0
-            // #1314 never while another git job runs on this repository (its working clone's operation).
-            if (repos.value.any { it.name == t.name && running.value.containsKey(it.id) }) return@bounded t.name to Outcome.SKIP to "an operation is already running"
-            val r = withContext(Dispatchers.IO) {
-                val at = plan.toUpdate[t.name]
-                if (at != null) StoreGit.bareUpdate(ctx, at, t.token, action.depth)
-                else {
-                    val dest = gitGuest?.let { BareClones.path(it, Declarations.sync.git.bareRoot, t.url, t.name, canonical) }
-                    if (dest == null) GitOpResult(false, "no safe bare path for ${t.name}")
-                    else StoreGit.bareClone(ctx, t.url, dest, t.token, action.depth)
+        depth(action, plan = {
+            if (!StoreGit.useExec(ctx)) targets.map { DepthItem("", it.name, null, BARE_NO_TERMUX) to it }
+            else {
+                val plan = BareClones.plan(targets.map { BareClones.Target(it.name, it.url) }, listMirrors(), canonical)
+                val gitGuest = shell.route.guest(SharedStore.gitRoot().absolutePath)
+                targets.filter { t -> t.name in plan.toUpdate || plan.toClone.any { it.name == t.name } }.map { t ->
+                    val at = plan.toUpdate[t.name]
+                    val dest = at ?: gitGuest?.let { BareClones.path(it, Declarations.sync.git.bareRoot, t.url, t.name, canonical) }
+                    DepthItem(dest?.let { shell.route.host(it) } ?: "", t.name, at, if (dest == null) "no safe bare path for ${t.name}" else null) to t
                 }
+            }
+        }, onEnd = { withContext(Dispatchers.IO) { bareMirrors.value = BareClones.index(listMirrors(), canonical) } }) { (item, t0) ->
+            item.refusal?.let { return@depth t0.name to Outcome.FAIL to it }
+            val t = if (t0.token.isBlank()) t0.copy(token = runCatching { declaredToken() }.getOrDefault("")) else t0
+            // #1314 never while another git job runs on this repository (its working clone's operation).
+            if (repos.value.any { it.name == t.name && running.value.containsKey(it.id) }) return@depth t.name to Outcome.SKIP to "an operation is already running"
+            val r = withContext(Dispatchers.IO) {
+                val at = item.held
+                if (at != null) StoreGit.bareUpdate(ctx, at, t.token, action.depth)
+                else StoreGit.bareClone(ctx, t.url, shell.route.guestOrThrow(item.path), t.token, action.depth)
             }
             withContext(Dispatchers.IO) { history.append(SyncEvent(System.currentTimeMillis() / 1000, "bare:" + t.name, t.name, SyncHistory.TRIGGER_MANUAL, r.ok, "${action.id}: ${r.summary}", r.details)) }
             t.name to (if (r.ok) Outcome.OK else Outcome.FAIL) to r.summary
         }
-        withContext(Dispatchers.IO) { bareMirrors.value = BareClones.index(listMirrors(), canonical) }
     }
 
     /** One depth command at a time; the run state and the job are the coordinator's, so a page close does not lose them. */
-    private fun startDepth(action: Declarations.GitDepthActionDecl, body: suspend kotlinx.coroutines.CoroutineScope.() -> Unit): kotlinx.coroutines.Job? {
-        if (depthRun.value?.finished == false) return null
-        depthRun.value = BulkDepth.Run(action.id, action.kind, total = 0)
-        return scope.launch {
-            try { body() }
-            finally {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
-                    depthRun.update { it?.copy(ended = true) }
-                    DriveDebugLog.i(ctx, TAG, "${action.id}: " + (depthRun.value?.let { "${it.ok.size} ok, ${it.skipped.size} skipped, ${it.failed.size} failed" + if (it.cancelled) ", cancelled" else "" } ?: ""))
+    /** One planned item of a depth / folder command: the path it locks (host form; "" = none), the name the report shows, what already holds it, or why it cannot run. */
+    private data class DepthItem(val path: String, val name: String, val held: String? = null, val refusal: String? = null)
+
+    /**
+     * #1315 ONE depth / folder command through the ONE executor: [plan] (IO) names the items first, then one job runs [one] over
+     * them at most [action.workers] at a time, one job per path, exclusive with every other writing job ([cancelDepthRun] stops
+     * the items not started yet); every outcome lands in the report and, through [depthRun], in the status window; the registry
+     * and the status cache are re-read when it ended. Refused (nothing runs, nothing changes) while another command runs.
+     */
+    private fun <T> depth(action: Declarations.GitDepthActionDecl, plan: suspend () -> List<Pair<DepthItem, T>>, onEnd: suspend () -> Unit = {}, one: suspend (Pair<DepthItem, T>) -> Pair<Pair<String, Outcome>, String>) {
+        val probe = GitJobs.Spec(action.id, action.kind, action.label, emptyList()) { GitJobs.Outcome(GitJobs.Status.SKIP, "") }
+        jobs.refusal(probe)?.let { DriveDebugLog.i(ctx, TAG, "${action.id}: refused: $it"); return }
+        scope.launch {
+            val items = runCatching { withContext(Dispatchers.IO) { plan() } }.getOrElse { e -> DriveDebugLog.e(ctx, TAG, "${action.id}: planning failed: ${e.message}"); emptyList() }
+            val byKey = items.associateBy { it.first.path.ifBlank { it.first.name } }
+            jobs.submit(GitJobs.Spec(action.id, action.kind, action.label, items.map { GitJobs.Target(it.first.path, it.first.name) }, workers = action.workers, exclusive = true,
+                onEnd = { s ->
+                    DriveDebugLog.i(ctx, TAG, "${action.id}: ${s.ok.size} ok, ${s.skipped.size} skipped, ${s.failed.size} failed" + if (s.cancelled) ", cancelled" else "")
+                    runCatching { onEnd() }
                     refresh(force = true).join()
                     refreshLastCommits()
-                }
-            }
-        }.also { depthJob = it }
+                }) { t ->
+                val item = byKey[t.path.ifBlank { t.name }] ?: return@Spec GitJobs.Outcome(GitJobs.Status.FAIL, "not planned")
+                val (head, msg) = one(item); val (_, o) = head
+                GitJobs.Outcome(when (o) { Outcome.OK -> GitJobs.Status.OK; Outcome.SKIP -> GitJobs.Status.SKIP; Outcome.FAIL -> GitJobs.Status.FAIL }, msg)
+            })
+        }
     }
 
     /** At most the declared workers at once; each item's outcome lands in [depthRun] as it ends. */
-    private suspend fun <T> kotlinx.coroutines.CoroutineScope.bounded(action: Declarations.GitDepthActionDecl, items: List<T>, one: suspend (T) -> Pair<Pair<String, Outcome>, String>) {
-        val gate = kotlinx.coroutines.sync.Semaphore(action.workers)
-        items.map { item ->
-            launch {
-                gate.acquire()
-                try {
-                    val (head, msg) = one(item); val (name, o) = head
-                    depthRun.update { r -> r?.copy(done = r.done + 1,
-                        ok = if (o == Outcome.OK) r.ok + (name to msg) else r.ok,
-                        skipped = if (o == Outcome.SKIP) r.skipped + (name to msg) else r.skipped,
-                        failed = if (o == Outcome.FAIL) r.failed + (name to msg) else r.failed) }
-                } finally { gate.release() }
-            }
-        }.joinAll()
-    }
 
     /** Stop the depth command: nothing new starts; an operation already running ends on its own. */
-    fun cancelDepthRun() { depthRun.update { it?.copy(cancelled = true) }; depthJob?.cancel() }
+    fun cancelDepthRun() { jobs.latest(*DEPTH_JOB_KINDS)?.takeIf { !it.finished }?.let { jobs.cancel(it.id) } }
 
     // ── #1288 the per-folder commands of the Parentless and Unlisted tables (ui.sync.git.folder_actions): Rename, Archive, Delete ──
 
@@ -1070,31 +1075,14 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     }
 
     /**
-     * #1288 RUN ONE DECLARED FOLDER COMMAND over [targets] through the depth runner ([startDepth] + [bounded]): one run at a time,
+     * #1288 RUN ONE DECLARED FOLDER COMMAND over [targets] through the ONE executor ([depth] -> GitJobs): one command at a time,
      * at most the declared workers, Cancel stops what has not started, each outcome in the depth report and Activity Logs.
      * [typed] = the paths whose strict Delete the owner confirmed by typing the name; [repoint] re-points saved paths after a rename.
      */
-    fun runFolderAction(action: Declarations.GitFolderActionDecl, targets: List<FolderActions.Target>, typed: Set<String> = emptySet(), repoint: (File, File) -> String = { _, _ -> "" }): kotlinx.coroutines.Job? {
+    fun runFolderAction(action: Declarations.GitFolderActionDecl, targets: List<FolderActions.Target>, typed: Set<String> = emptySet(), repoint: (File, File) -> String = { _, _ -> "" }) {
         val run = action.asRun()
         val moved = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
-        return startDepth(run) {
-            depthRun.update { it?.copy(total = targets.size) }
-            bounded(run, targets) { t ->
-                withContext(Dispatchers.IO) {
-                    val (o, msg) = runCatching {
-                        when (action.kind) {
-                            Declarations.FOLDER_RENAME -> renameFolder(t, repoint)
-                            Declarations.FOLDER_ARCHIVE -> archiveFolder(t)
-                            Declarations.FOLDER_DELETE -> deleteFolder(t, typed)
-                            Declarations.FOLDER_REPOINT -> repointOrigin(t)
-                            else -> Outcome.FAIL to "unknown folder command ${action.kind}"
-                        }
-                    }.getOrElse { Outcome.FAIL to (it.message ?: it.toString()) }
-                    if (o == Outcome.OK && action.kind != Declarations.FOLDER_REPOINT) moved.add(t.path)
-                    history.append(SyncEvent(System.currentTimeMillis() / 1000, "folder:" + t.path, t.name, SyncHistory.TRIGGER_MANUAL, o != Outcome.FAIL, "${action.id}: $msg", t.path))
-                    t.name to o to msg
-                }
-            }
+        depth(run, plan = { targets.map { DepthItem(it.path, it.name) to it } }, onEnd = {
             withContext(Dispatchers.IO) { events.value = history.load() }
             // #1317 the lists refresh after a run: rows that moved or were deleted go at once (list, persisted copy, status cache), then a rescan.
             val gone = moved.toSet()
@@ -1107,6 +1095,21 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 }
             }
             scanUnlisted()
+        }) { (_, t) ->
+            withContext(Dispatchers.IO) {
+                val (o, msg) = runCatching {
+                    when (action.kind) {
+                        Declarations.FOLDER_RENAME -> renameFolder(t, repoint)
+                        Declarations.FOLDER_ARCHIVE -> archiveFolder(t)
+                        Declarations.FOLDER_DELETE -> deleteFolder(t, typed)
+                        Declarations.FOLDER_REPOINT -> repointOrigin(t)
+                        else -> Outcome.FAIL to "unknown folder command ${action.kind}"
+                    }
+                }.getOrElse { Outcome.FAIL to (it.message ?: it.toString()) }
+                if (o == Outcome.OK && action.kind != Declarations.FOLDER_REPOINT) moved.add(t.path)
+                history.append(SyncEvent(System.currentTimeMillis() / 1000, "folder:" + t.path, t.name, SyncHistory.TRIGGER_MANUAL, o != Outcome.FAIL, "${action.id}: $msg", t.path))
+                t.name to o to msg
+            }
         }
     }
 
@@ -1263,6 +1266,9 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         const val KEY_UNLISTED = "git.unlisted"
         /** #1315 the last inventory pass's entries (InventoryScript.encode), re-classified at start. */
         const val KEY_INVENTORY = "git.inventory"
+        /** #1315 the job kinds the depth report, the depth progress line and the status window follow (depth commands and folder commands). */
+        val DEPTH_JOB_KINDS: Array<String> = arrayOf(Declarations.DEPTH_CLONE_MISSING, Declarations.DEPTH_KEEP, Declarations.DEPTH_CLONE_BARE, Declarations.FOLDER_RENAME, Declarations.FOLDER_ARCHIVE, Declarations.FOLDER_DELETE, Declarations.FOLDER_REPOINT)
+        const val BARE_NO_TERMUX = "bare clones run git in cld.termux, which is not answering; nothing changed"
         const val KEY_LAST_COMMITS = "git.last_commits"
         const val KEY_FILTERS = "git.filters"
         const val KEY_SORT = "git.sort"

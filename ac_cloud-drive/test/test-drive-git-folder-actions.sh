@@ -54,7 +54,8 @@ if not root or root.startswith("/") or ".." in root.split("/"): print("    archi
 sys.exit(bad)
 PY
 }
-r1() { for t in 'return startDepth(run)' 'bounded(run, targets)' 'history.append(SyncEvent(' 'fun asRun()'; do grep -qF "$t" "$1" "$2" || { echo "    lacks $t"; return 1; }; done
+# #1315 the folder commands run through the depth path onto the ONE executor (depth(run, ...) -> GitJobs), one item per target.
+r1() { for t in 'depth(run, plan = { targets.map' 'history.append(SyncEvent(' 'fun asRun()'; do grep -qF "$t" "$1" "$2" || { echo "    lacks $t"; return 1; }; done
     python3 - "$1" "$3" <<'PY' || return 1
 import re, sys
 c = open(sys.argv[1]).read(); r = open(sys.argv[2]).read()

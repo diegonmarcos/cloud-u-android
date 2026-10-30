@@ -34,7 +34,7 @@ sys.exit(bad)
 PY
 }
 s2() { for t in '!name.startsWith(PACK_PREFIX)' 'Files.isSymbolicLink(p)' 'LinkOption.NOFOLLOW_LINKS' 'f.lastModified() >= cutoff' 'if (jobRunning) return' "-type f ! -name 'pack-*'" '-mmin +' 'safePattern(it)'; do grep -qF -- "$t" "$1" || { echo "    cleaner lacks $t"; return 1; }; done; }
-s3() { for t in 'Dispatchers.IO' 'StalePackCleaner.busy(' 'depthRun.value?.finished == false' 'bulkRunning.get()' 'sweepStalePacks(ownBulk = true)' 'cloning.value.size'; do grep -qF -- "$t" "$1" || { echo "    coordinator lacks $t"; return 1; }; done
+s3() { for t in 'Dispatchers.IO' 'StalePackCleaner.busy(' 'depthRun.value?.finished == false' 'bulkRunning()' 'sweepStalePacks(ownBulk = true)' 'cloning.value.size'; do grep -qF -- "$t" "$1" || { echo "    coordinator lacks $t"; return 1; }; done
     grep -qF 'made.sweepStalePacks()' "$2" || { echo "    app start does not sweep"; return 1; }
     grep -qF 'StalePackCleaner.sweep(' "$3" || { echo "    the worker cycle does not sweep"; return 1; }
     grep -qF 'if (line.isNotEmpty())' "$1" || { echo "    the coordinator reports even when nothing was cleaned"; return 1; }
