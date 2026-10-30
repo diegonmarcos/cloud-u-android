@@ -50,6 +50,17 @@ class CalcState(private val prefs: SharedPreferences?, private val now: () -> Lo
             tab = c.id
         }
     }
+    /** #1329 the LaTeX modes' shared state: saved formulas, favourites, the Library -> Editor draft. */
+    val latex = LatexModel(prefs, now)
+
+    /** Open the LaTeX Editor on [draft] (the Library's Edit, a LaTeX History entry's tap). */
+    fun openLatexEditor(draft: LatexModel.Draft) {
+        val m = Declarations.modes.firstOrNull { it.kind == KIND_LATEX_EDITOR } ?: return
+        latex.draft = draft
+        modeByTab[m.tab] = m.id
+        tab = m.tab
+    }
+
     val history = mutableStateListOf<Logic.Entry>().apply { addAll(Logic.decode(prefs?.getString(KEY, null))) }
 
     /** Text a history tap sends to an expression mode: (mode id, text). */
@@ -106,6 +117,7 @@ class CalcState(private val prefs: SharedPreferences?, private val now: () -> Lo
     companion object {
         const val KEY = "history"
         const val KIND_EXPRESSION = "expression"
+        const val KIND_LATEX_EDITOR = "latex_editor"
     }
 }
 

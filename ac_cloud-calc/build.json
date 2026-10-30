@@ -1642,6 +1642,411 @@
       }
     ]
   },
+  "latex": {
+    "_doc": "#1329 the LaTeX page (Calculator > LaTeX, between Calc and Convert): ui.modes latex_library (the formula library: search + category chips, a list rendered with KaTeX, a detail view with Copy LaTeX / Edit / Share / Favourite) and latex_editor (monospace input, symbol palette, debounced live preview with the parse error inline, Copy / Share image / Save to Mine / Evaluate). Everything it shows is declared here or in the catalog file; Kotlin only dispatches on the mode kinds. Renderer: KaTeX 0.19.1 (MIT), bundled OFFLINE in the APK assets (data/assets/latex, wired by app/build.gradle's assets srcDir) and drawn in a WebView with network loads blocked. The catalog is GENERATED from the owner's markdown (data/latex/100-formulas.md via data/latex/gen-formulas.mjs).",
+    "renderer": {
+      "engine": "KaTeX",
+      "version": "0.19.1",
+      "license": "MIT",
+      "viewer": "latex/viewer.html",
+      "script": "latex/katex/katex.min.js",
+      "auto_render": "latex/katex/auto-render.min.js",
+      "style": "latex/katex/katex.min.css",
+      "fonts_dir": "latex/katex/fonts",
+      "license_file": "latex/katex/LICENSE",
+      "bridge": "CalcTex"
+    },
+    "catalog": "latex/formulas.json",
+    "mine_category": {
+      "id": "mine",
+      "label": "Mine"
+    },
+    "favourites_category": {
+      "id": "favourites",
+      "label": "Favourites"
+    },
+    "all_label": "All",
+    "preview_debounce_ms": 250,
+    "history_kind": "latex",
+    "share": {
+      "cache_dir": "latex",
+      "image_name": "formula.png",
+      "mime": "image/png",
+      "image_theme": {
+        "bg": "#ffffff",
+        "fg": "#111111",
+        "muted": "#555555",
+        "accent": "#1a56c4",
+        "err": "#b00020",
+        "line": "#dddddd"
+      }
+    },
+    "palette": [
+      {
+        "id": "structure",
+        "label": "Structure",
+        "symbols": [
+          {
+            "label": "a/b",
+            "insert": "\\frac{$0}{}"
+          },
+          {
+            "label": "√",
+            "insert": "\\sqrt{$0}"
+          },
+          {
+            "label": "ⁿ√",
+            "insert": "\\sqrt[]{$0}"
+          },
+          {
+            "label": "x^n",
+            "insert": "^{$0}"
+          },
+          {
+            "label": "x_n",
+            "insert": "_{$0}"
+          },
+          {
+            "label": "( )",
+            "insert": "\\left($0\\right)"
+          },
+          {
+            "label": "[ ]",
+            "insert": "\\left[$0\\right]"
+          },
+          {
+            "label": "{ }",
+            "insert": "\\{$0\\}"
+          },
+          {
+            "label": "|x|",
+            "insert": "\\left|$0\\right|"
+          },
+          {
+            "label": "binom",
+            "insert": "\\binom{$0}{}"
+          },
+          {
+            "label": "text",
+            "insert": "\\text{$0}"
+          },
+          {
+            "label": "vec",
+            "insert": "\\vec{$0}"
+          },
+          {
+            "label": "hat",
+            "insert": "\\hat{$0}"
+          },
+          {
+            "label": "bar",
+            "insert": "\\overline{$0}"
+          },
+          {
+            "label": "dot",
+            "insert": "\\dot{$0}"
+          },
+          {
+            "label": "matrix",
+            "insert": "\\begin{pmatrix} $0 & \\\\ & \\end{pmatrix}"
+          }
+        ]
+      },
+      {
+        "id": "calculus",
+        "label": "Calculus",
+        "symbols": [
+          {
+            "label": "∫",
+            "insert": "\\int_{$0}^{} "
+          },
+          {
+            "label": "∬",
+            "insert": "\\iint "
+          },
+          {
+            "label": "∮",
+            "insert": "\\oint "
+          },
+          {
+            "label": "Σ",
+            "insert": "\\sum_{$0}^{} "
+          },
+          {
+            "label": "Π",
+            "insert": "\\prod_{$0}^{} "
+          },
+          {
+            "label": "lim",
+            "insert": "\\lim_{$0 \\to } "
+          },
+          {
+            "label": "d/dx",
+            "insert": "\\frac{d}{d$0}"
+          },
+          {
+            "label": "∂",
+            "insert": "\\frac{\\partial }{\\partial $0}"
+          },
+          {
+            "label": "∇",
+            "insert": "\\nabla "
+          },
+          {
+            "label": "∞",
+            "insert": "\\infty"
+          },
+          {
+            "label": "Δ",
+            "insert": "\\Delta "
+          },
+          {
+            "label": "sin",
+            "insert": "\\sin "
+          },
+          {
+            "label": "cos",
+            "insert": "\\cos "
+          },
+          {
+            "label": "tan",
+            "insert": "\\tan "
+          },
+          {
+            "label": "ln",
+            "insert": "\\ln "
+          },
+          {
+            "label": "log",
+            "insert": "\\log_{$0} "
+          },
+          {
+            "label": "exp",
+            "insert": "e^{$0}"
+          }
+        ]
+      },
+      {
+        "id": "operators",
+        "label": "Operators",
+        "symbols": [
+          {
+            "label": "±",
+            "insert": "\\pm "
+          },
+          {
+            "label": "×",
+            "insert": "\\times "
+          },
+          {
+            "label": "·",
+            "insert": "\\cdot "
+          },
+          {
+            "label": "÷",
+            "insert": "\\div "
+          },
+          {
+            "label": "≤",
+            "insert": "\\le "
+          },
+          {
+            "label": "≥",
+            "insert": "\\ge "
+          },
+          {
+            "label": "≠",
+            "insert": "\\ne "
+          },
+          {
+            "label": "≈",
+            "insert": "\\approx "
+          },
+          {
+            "label": "≡",
+            "insert": "\\equiv "
+          },
+          {
+            "label": "∝",
+            "insert": "\\propto "
+          },
+          {
+            "label": "→",
+            "insert": "\\to "
+          },
+          {
+            "label": "⇒",
+            "insert": "\\Rightarrow "
+          },
+          {
+            "label": "⇔",
+            "insert": "\\iff "
+          },
+          {
+            "label": "∈",
+            "insert": "\\in "
+          },
+          {
+            "label": "⊂",
+            "insert": "\\subset "
+          },
+          {
+            "label": "∀",
+            "insert": "\\forall "
+          },
+          {
+            "label": "∃",
+            "insert": "\\exists "
+          },
+          {
+            "label": "ℝ",
+            "insert": "\\mathbb{R}"
+          },
+          {
+            "label": "ℕ",
+            "insert": "\\mathbb{N}"
+          },
+          {
+            "label": "ℂ",
+            "insert": "\\mathbb{C}"
+          }
+        ]
+      },
+      {
+        "id": "greek",
+        "label": "Greek",
+        "symbols": [
+          {
+            "label": "α",
+            "insert": "\\alpha "
+          },
+          {
+            "label": "β",
+            "insert": "\\beta "
+          },
+          {
+            "label": "γ",
+            "insert": "\\gamma "
+          },
+          {
+            "label": "δ",
+            "insert": "\\delta "
+          },
+          {
+            "label": "ε",
+            "insert": "\\varepsilon "
+          },
+          {
+            "label": "θ",
+            "insert": "\\theta "
+          },
+          {
+            "label": "λ",
+            "insert": "\\lambda "
+          },
+          {
+            "label": "μ",
+            "insert": "\\mu "
+          },
+          {
+            "label": "π",
+            "insert": "\\pi "
+          },
+          {
+            "label": "ρ",
+            "insert": "\\rho "
+          },
+          {
+            "label": "σ",
+            "insert": "\\sigma "
+          },
+          {
+            "label": "τ",
+            "insert": "\\tau "
+          },
+          {
+            "label": "φ",
+            "insert": "\\varphi "
+          },
+          {
+            "label": "ψ",
+            "insert": "\\psi "
+          },
+          {
+            "label": "ω",
+            "insert": "\\omega "
+          },
+          {
+            "label": "Γ",
+            "insert": "\\Gamma "
+          },
+          {
+            "label": "Θ",
+            "insert": "\\Theta "
+          },
+          {
+            "label": "Λ",
+            "insert": "\\Lambda "
+          },
+          {
+            "label": "Σ",
+            "insert": "\\Sigma "
+          },
+          {
+            "label": "Φ",
+            "insert": "\\Phi "
+          },
+          {
+            "label": "Ψ",
+            "insert": "\\Psi "
+          },
+          {
+            "label": "Ω",
+            "insert": "\\Omega "
+          }
+        ]
+      }
+    ],
+    "eval": {
+      "_doc": "Evaluate: simple LaTeX becomes the engine's expression syntax (Latex.toExpression) and is computed by the bound libqalculate engine, the same contract the Calc page uses. `commands` maps a LaTeX command to the engine text it becomes; `ignored` commands are dropped; `constants` are the only bare letters allowed. \\frac, \\sqrt, ^{}, {} groups and \\left/\\right are structural. Anything else (variables, subscripts, sums, relations) is reported as not convertible, never guessed.",
+      "commands": {
+        "\\pi": "pi",
+        "\\varphi": "phi",
+        "\\phi": "phi",
+        "\\cdot": "*",
+        "\\times": "*",
+        "\\div": "/",
+        "\\sin": "sin",
+        "\\cos": "cos",
+        "\\tan": "tan",
+        "\\arcsin": "asin",
+        "\\arccos": "acos",
+        "\\arctan": "atan",
+        "\\sinh": "sinh",
+        "\\cosh": "cosh",
+        "\\tanh": "tanh",
+        "\\ln": "ln",
+        "\\log": "log10",
+        "\\exp": "exp",
+        "\\%": "%"
+      },
+      "ignored": [
+        "\\left",
+        "\\right",
+        "\\,",
+        "\\;",
+        "\\:",
+        "\\!",
+        "\\ ",
+        "\\quad",
+        "\\qquad",
+        "\\displaystyle"
+      ],
+      "constants": [
+        "e"
+      ]
+    }
+  },
   "ui": {
     "_doc": "EVERY list this app renders. app/build.gradle bakes ui.* into BuildConfig as base64 JSON and Declarations.kt decodes it once; no tab id, mode id, key or form is spelled in Kotlin.",
     "_doc_sections": "#868 THE ONE navigation declaration (libs:bottomnav's NavDecl), INVERTED from #770: ui.bottom_nav is the island's section ids in display order, ui.sections[] are Calculator, Measure and Jev, each with `pages` - the ten tabs (what #770 called ui.tabs), drawn as the section's top PageTabs strip - and ui.default_section is where the app opens (its first page). Calculator = the traditional calculators (#767), Measure = sensors and the clock & timers (#768), Jev = natural-language requests routed by a decision model, and its Configs. A page shows the modes whose `tab` is its id, in ui.modes order, as the sub-strip under the page strip. test/test-calc-shell.sh fails on a section with no page, a page with no mode and a mode naming no page.",
@@ -1657,6 +2062,11 @@
             "id": "calc",
             "label": "Calc",
             "icon": "calculate"
+          },
+          {
+            "id": "latex",
+            "label": "LaTeX",
+            "icon": "functions"
           },
           {
             "id": "convert",
@@ -2219,6 +2629,27 @@
             "category": "Particle Mass in kg"
           }
         ]
+      },
+      {
+        "id": "latex_library",
+        "label": "Library",
+        "icon": "apps",
+        "short": "Library",
+        "tab": "latex",
+        "kind": "latex_library",
+        "_doc": "The formula library: the catalog file named by build.json::latex.catalog (the owner's 100 formulas in 9 categories, in his order), a search field, category chips (All, Favourites, the 9, then Mine = the user's saved formulas), a list of 'N. Title' with the rendered formula, and a detail view with the description, the LaTeX source, Copy LaTeX, Edit (opens the Editor), Share (PNG and text) and Favourite."
+      },
+      {
+        "id": "latex_editor",
+        "label": "Editor",
+        "icon": "edit",
+        "short": "Editor",
+        "tab": "latex",
+        "kind": "latex_editor",
+        "options": {
+          "approx": 2
+        },
+        "_doc": "The LaTeX editor: a monospace input, the symbol palette (build.json::latex.palette), a live preview re-rendered after build.json::latex.preview_debounce_ms with the parse error shown inline, Copy LaTeX, Share image, Save to Mine (persisted locally, editable and deletable from the Library) and Evaluate (numeric LaTeX converted by build.json::latex.eval and computed by the bound engine with these options). Copy, Share, Save and Evaluate land in History as kind latex."
       },
       {
         "id": "unit_length",

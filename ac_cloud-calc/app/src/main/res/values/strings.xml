@@ -374,4 +374,27 @@
     <string name="radio_wifi_why">Wi-Fi scans need location (nearby Wi-Fi devices on Android 13+). Nothing is asked until you tap Grant; Android limits apps to four scans every two minutes.</string>
     <string name="radio_nfc_title">NFC</string>
     <string name="radio_nfc_why">NFC reads tags only while this page is open. Tag reads stay on the phone; the history leaves it only when you export it.</string>
+
+    <!-- #1329 the LaTeX page -->
+    <string name="cancel">Cancel</string>
+    <string name="latex_search">Search formulas</string>
+    <string name="latex_empty">No formula matches.</string>
+    <string name="latex_catalog_missing">The formula library is missing from this build.</string>
+    <string name="latex_back">Back</string>
+    <string name="latex_source">LaTeX source</string>
+    <string name="latex_copy">Copy LaTeX</string>
+    <string name="latex_edit">Edit</string>
+    <string name="latex_share">Share</string>
+    <string name="latex_share_image">Share image</string>
+    <string name="latex_share_text">Share LaTeX text</string>
+    <string name="latex_share_title">Share formula</string>
+    <string name="latex_favourite">Favourite</string>
+    <string name="latex_unfavourite">Unfavourite</string>
+    <string name="latex_input">LaTeX</string>
+    <string name="latex_save">Save</string>
+    <string name="latex_save_title">Save to %1$s</string>
+    <string name="latex_name">Name</string>
+    <string name="latex_evaluate">Evaluate</string>
+    <string name="latex_not_convertible">Cannot evaluate: %1$s</string>
+    <string name="latex_eval_failed">The engine could not compute it: %1$s</string>
 </resources>

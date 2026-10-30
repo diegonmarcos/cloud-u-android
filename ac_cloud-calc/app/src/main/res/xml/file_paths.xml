@@ -2,4 +2,6 @@
 <paths>
     <!-- Toolkit > Voice Recorder: only the recordings directory (build.json::ui.modes[recorder].spec.dir) can be shared. -->
     <files-path name="recordings" path="recordings/" />
+    <!-- LaTeX page: the formula image Share hands out (build.json::latex.share.cache_dir under the cache). -->
+    <cache-path name="latex" path="latex/" />
 </paths>

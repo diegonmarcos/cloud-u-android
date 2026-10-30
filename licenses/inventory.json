@@ -3,7 +3,7 @@
  "summary": {
   "asset": {
    "Apache-2.0": 83,
-   "MIT": 65,
+   "MIT": 78,
    "NOASSERTION": 34,
    "GPL-3.0-only": 9,
    "OFL-1.1": 5,
@@ -68,7 +68,8 @@
    "0BSD": 1
   },
   "vendored": {
-   "LicenseRef-NoLicenseGranted": 2
+   "LicenseRef-NoLicenseGranted": 2,
+   "MIT": 1
   }
  },
  "upstream_modules": {
@@ -1227,6 +1228,110 @@
    ],
    "licence": "Apache-2.0",
    "licence_source": "Gradle wrapper (build tool, not packaged in an APK)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_AMS-Regular.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_AMS-Regular.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Caligraphic-Bold.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Caligraphic-Bold.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Caligraphic-Regular.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Caligraphic-Regular.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Main-Bold.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Main-Bold.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Main-BoldItalic.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Main-BoldItalic.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Main-Italic.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Main-Italic.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Main-Regular.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Main-Regular.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Math-BoldItalic.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Math-BoldItalic.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Math-Italic.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Math-Italic.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size1-Regular.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size1-Regular.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size2-Regular.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size2-Regular.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size3-Regular.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size3-Regular.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
+  },
+  "asset:ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size4-Regular.woff2": {
+   "kind": "asset",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/fonts/KaTeX_Size4-Regular.woff2"
+   ],
+   "licence": "MIT",
+   "licence_source": "KaTeX font from the katex 0.19.1 npm package (MIT, see ac_cloud-calc/data/assets/latex/katex/LICENSE); glyph designs derive from the AMS Computer Modern fonts, SIL OFL 1.1 (#1329)"
   },
   "asset:ac_cloud-calc/web/gradle/wrapper/gradle-wrapper.jar": {
    "kind": "asset",
@@ -15919,6 +16024,14 @@
     "ac_cloud-calc/NOTICE.md"
    ],
    "licence": "LicenseRef-NoLicenseGranted",
+   "licence_source": "licenses/curated.json"
+  },
+  "vendored:ac_cloud-calc/data/assets/latex/katex": {
+   "kind": "vendored",
+   "declared_in": [
+    "ac_cloud-calc/data/assets/latex/katex/LICENSE"
+   ],
+   "licence": "MIT",
    "licence_source": "licenses/curated.json"
   },
   "vendored:ac_cloud-search": {

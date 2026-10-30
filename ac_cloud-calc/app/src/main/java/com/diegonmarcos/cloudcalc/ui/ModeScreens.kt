@@ -62,6 +62,7 @@ import com.diegonmarcos.cloudcalc.Declarations
 import com.diegonmarcos.cloudcalc.Edit
 import com.diegonmarcos.cloudcalc.Editor
 import com.diegonmarcos.cloudcalc.Fx
+import com.diegonmarcos.cloudcalc.Latex
 import com.diegonmarcos.cloudcalc.Logic
 import com.diegonmarcos.cloudcalc.R
 import com.diegonmarcos.cloudcalc.decide.JevFlow
@@ -105,6 +106,8 @@ fun ModeScreen(mode: Declarations.Mode) {
             "camera_text" -> CameraTextMode(mode)
             "image_route" -> ImageRouteMode(mode)
             "history" -> HistoryMode(mode)
+            "latex_library" -> LatexLibraryMode(mode)
+            "latex_editor" -> LatexEditorMode(mode)
             "worldclock" -> WorldClockMode(mode)
             "alarms" -> AlarmsMode(mode)
             "timers" -> TimersMode(mode)
@@ -594,9 +597,10 @@ private fun HistoryMode(mode: Declarations.Mode) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(vertical = CalcMetrics.gap)) {
                     // Tap the expression to reuse it, the result to reuse that.
-                    Text(e.expr, Modifier.fillMaxWidth().clickable { state.send(e.mode, e.expr) }.testTag(CalcTags.historyExpr(i)),
+                    val isLatex = Latex.isLatexEntry(e, Latex.config)
+                    Text(e.expr, Modifier.fillMaxWidth().clickable { if (isLatex) state.openLatexEditor(LatexModel.Draft(e.expr, null, "")) else state.send(e.mode, e.expr) }.testTag(CalcTags.historyExpr(i)),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("= " + Logic.shown(e.result), Modifier.fillMaxWidth().clickable { state.send(e.mode, e.result) }.testTag(CalcTags.historyResult(i)),
+                    if (!isLatex || e.result.isNotEmpty()) Text("= " + Logic.shown(e.result), Modifier.fillMaxWidth().clickable { state.send(e.mode, e.result) }.testTag(CalcTags.historyResult(i)),
                         style = MaterialTheme.typography.titleMedium)
                     if (e.ts != 0L) Text(DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.MEDIUM).format(Date(e.ts)),
                         style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

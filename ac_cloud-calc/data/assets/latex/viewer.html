@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<!-- Cloud Calc LaTeX viewer (build.json::latex.renderer). Everything it loads sits beside it in the APK's
+     assets: KaTeX (MIT) and its fonts. No network: the WebView blocks it and nothing here names an address. -->
+<link rel="stylesheet" href="katex/katex.min.css">
+<style>
+  :root { --bg: #121212; --fg: #e8e8e8; --muted: #9aa0a6; --accent: #8ab4f8; --err: #f28b82; --line: #2a2a2a; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg); font-family: sans-serif; }
+  body { padding: 6px 8px; -webkit-user-select: none; user-select: none; }
+  .item { padding: 10px 4px; border-bottom: 1px solid var(--line); }
+  .item .name { font-size: 15px; color: var(--accent); margin-bottom: 2px; }
+  .item .cat { font-size: 11px; color: var(--muted); }
+  .item .tex { overflow-x: auto; overflow-y: hidden; font-size: 1.05em; padding: 4px 0; }
+  .one { overflow-x: auto; overflow-y: hidden; padding: 6px 0; }
+  .desc { font-size: 14px; line-height: 1.5; color: var(--fg); padding: 6px 0; -webkit-user-select: text; user-select: text; }
+  .err { color: var(--err); font-family: monospace; font-size: 13px; white-space: pre-wrap; padding: 4px 0; }
+  .empty { color: var(--muted); font-size: 14px; padding: 16px 4px; }
+  .katex { color: var(--fg); }
+  .katex-display { margin: 0.4em 0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="katex/katex.min.js"></script>
+<script src="katex/auto-render.min.js"></script>
+<script src="viewer.js"></script>
+</body>
+</html>

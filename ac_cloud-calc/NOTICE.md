@@ -30,6 +30,7 @@ are its own data, compiled in.
 | Fleet libraries (libs:core, libs:devtools, libs:bottomnav, libs:decisions, libs:ml-l-image) | this repository |
 | AndroidX CameraX (camera-camera2, camera-lifecycle, camera-view) 1.4.2 | Apache-2.0 |
 | ARCore SDK for Android (`com.google.ar:core`) 1.48.0 | Google APIs Terms of Service and the ARCore Additional Terms of Service |
+| KaTeX 0.19.1 (`katex.min.js`, `auto-render.min.js`, `katex.min.css` and 13 woff2 fonts; Khan Academy and contributors) | MIT |
 
 The sound meter's signal processing (radix-2 FFT, Hann window, IEC 61672-1 A-weighting, dBFS)
 is written in `sound/src/main/kotlin/com/diegonmarcos/cloudcalc/sound/Dsp.kt` (#772: with C-weighting, YIN pitch, onset and event detection beside it) from the published
@@ -94,3 +95,15 @@ ZXing (Apache-2.0); this app compiles only the engine's thin client.
 AR measuring runs on Google Play Services for AR (ARCore), which is provided by Google LLC and
 governed by the Google Privacy Policy. It is optional: the app declares ARCore `optional`, never
 installs it unasked, and falls back to measuring against a reference object of known size.
+
+## The LaTeX tab (#1329)
+
+The LaTeX tab (Calculator > LaTeX: a formula library and an editor) draws TeX with **KaTeX 0.19.1**, MIT-licensed
+(https://katex.org, licence text in `data/assets/latex/katex/LICENSE`). It is bundled whole in the APK assets
+(`data/assets/latex/katex/`, wired by `app/build.gradle`'s `assets.srcDirs`) and rendered in a WebView with network loads
+blocked, so nothing is downloaded. MIT is compatible with this app's licence; KaTeX is MIT where JLaTeXMath for Android
+(GPL-2.0 with a classpath exception) would have added a copyleft dependency. The stylesheet is KaTeX's own with
+the legacy woff/ttf sources removed, and Fraktur, Script, SansSerif and Typewriter fonts are left out (their commands
+fall back to the Main font); the 13 woff2 fonts that remain are the KaTeX package's, designed from the AMS Computer Modern
+fonts (SIL OFL 1.1). The formula library is the owner's list "The 100 Most Important Formulas in Mathematics and Science"
+(`data/latex/100-formulas.md`), turned into `formulas.json` by `data/latex/gen-formulas.mjs`.
