@@ -5,7 +5,7 @@
 #       and identical to the libs:repos copy
 #   R2  data/drive-git-repos.json is exactly what tools/gen-drive-git-repos.js makes from
 #       drive-git-family.json + the copy (no hand edit, no second list)
-#   R3  the reorganisations reached the list: cloud-h-webapps + z-archived_cloud-me-pvt-containers (was cloud-me-pvt-containers) are registered
+#   R3  the reorganisations reached the list: cloudy-h-webapps-mob + z-archived_cloud-me-pvt-containers (was cloud-me-pvt-containers) are registered
 #       (created, so NOT pending_creation) and absent from the family, no cloud-mobile repo, the cloud-superapp rename declared
 #   R4  app/build.gradle bakes the copy (REPOS_SOT_B64) and fails the build on drift; Declarations.kt filters
 #       gitFamily through the registry
