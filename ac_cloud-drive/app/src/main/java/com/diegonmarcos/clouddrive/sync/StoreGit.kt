@@ -64,6 +64,12 @@ object StoreGit {
         return GitOpResult(r.ok, if (r.ok) "bare mirror updated at $guestDir" else "bare update in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
+    /** #1313 the stale temp pack pass inside cld.termux (StalePackCleaner.script); null when the guest could not run it. */
+    fun sweepStalePacks(ctx: Context, gitRoot: File, bareRoot: String, patterns: List<String>, minAgeHours: Int): StalePackCleaner.Result? = runCatching {
+        val r = StoreExec(ctx).run(StalePackCleaner.script(guest(gitRoot), bareRoot, patterns, minAgeHours) { q(it) }, timeoutMs = 120_000)
+        if (r.ok) StalePackCleaner.parse(r.out) else null
+    }.getOrNull()
+
     /** #1282 every mirror under the bare root (two levels: <owner>/<repo>.git) with its origin, read in the guest. */
     fun listBare(ctx: Context, bareRoot: File): List<BareClones.Mirror> = runCatching {
         val g = guest(bareRoot)

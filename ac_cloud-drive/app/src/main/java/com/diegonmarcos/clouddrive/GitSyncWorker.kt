@@ -45,6 +45,18 @@ class GitSyncWorker(context: Context, params: WorkerParameters) : Worker(context
         val history = SyncHistory(File(applicationContext.filesDir, SyncHistory.FILE))
         val unmetered = networkUnmetered(applicationContext)
         val now = System.currentTimeMillis() / 1000
+        // #1313 before the cycle: abandoned incoming_* / tmp_pack* files out of objects/pack (the age gate protects a live download;
+        // the worker has no view of the foreground coordinator's jobs).
+        runCatching {
+            val d = com.diegonmarcos.clouddrive.Declarations.sync.git.stalePackCleanup
+            if (d.enabled) {
+                val git = SharedStore.gitRoot(); val bare = com.diegonmarcos.clouddrive.Declarations.sync.git.bareRoot
+                val r = if (com.diegonmarcos.clouddrive.sync.StoreGit.useExec(applicationContext)) com.diegonmarcos.clouddrive.sync.StoreGit.sweepStalePacks(applicationContext, git, bare, d.patterns, d.minAgeHours)
+                    else com.diegonmarcos.clouddrive.sync.StalePackCleaner.sweep(com.diegonmarcos.clouddrive.sync.StalePackCleaner.packDirs(git, bare), d.patterns, d.minAgeHours, System.currentTimeMillis(), false)
+                val line = r?.let { com.diegonmarcos.clouddrive.sync.StalePackCleaner.message(it) }.orEmpty()
+                if (line.isNotEmpty()) history.append(SyncEvent(now, "stale-packs", "stale packs", SyncHistory.TRIGGER_SCHEDULED, true, "stale_pack_cleanup: $line"))
+            }
+        }
         registry.load().filter { it.autoSync }.forEach { repo ->
             if (isStopped) return Result.retry()
             val due = SyncSchedule.isDue(

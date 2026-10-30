@@ -79,6 +79,12 @@ object Declarations {
         /** The same runner as the depth commands: a folder command is a depth command of scope "folder". */
         fun asRun(): GitDepthActionDecl = GitDepthActionDecl(id, label, icon, kind, Declarations.DEPTH_SCOPE_FOLDER, 0, workers, confirm)
     }
+    /** #1313 abandoned Git temp packs (incoming_*.pack from JGit, tmp_pack_* from C git) older than [minAgeHours] are deleted from objects/pack; never pack-*. */
+    data class GitStalePackDecl(
+        val enabled: Boolean = true,
+        val minAgeHours: Int = 6,
+        val patterns: List<String> = com.diegonmarcos.clouddrive.sync.StalePackCleaner.DEFAULT_PATTERNS,
+    )
     /** #1255 the Unlisted git folders section (ui.sync.git.unlisted): root templates, walk bounds. */
     data class GitUnlistedDecl(val label: String = "", val roots: List<String> = emptyList(), val maxDepth: Int = 2, val maxDirs: Int = 2000, val timeoutSeconds: Int = 30)
     /** #1256 one declared filter of the Git page's filter row: its options, the first one is the "all" default. */
@@ -201,6 +207,8 @@ object Declarations {
         val archiveRoot: String = "z-archived",
         /** #1289 the per-repository menu: groups, items, order, labels (ui.sync.git.repo_menu). */
         val repoMenu: GitRepoMenuDecl = GitRepoMenuDecl(),
+        /** #1313 the stale temp pack cleanup (ui.sync.git.stale_pack_cleanup). */
+        val stalePackCleanup: GitStalePackDecl = GitStalePackDecl(),
     ) {
         fun folderAction(kind: String): GitFolderActionDecl? = folderActions.firstOrNull { it.kind == kind }
         fun depthActions(scope: String): List<GitDepthActionDecl> = depthActions.filter { it.scope == scope }
@@ -567,6 +575,13 @@ object Declarations {
             },
             archiveRoot = o.str("archive_root", "z-archived").takeIf { com.diegonmarcos.clouddrive.sync.BareClones.validRoot(it) } ?: "z-archived",
             repoMenu = parseRepoMenu(o["repo_menu"]),
+            stalePackCleanup = (o["stale_pack_cleanup"] as? JsonObject)?.let { c ->
+                GitStalePackDecl(
+                    enabled = c.bool("enabled", true),
+                    minAgeHours = (c.int("min_age_hours") ?: 6).coerceIn(1, 24 * 90),
+                    patterns = c.strings("patterns").filter { com.diegonmarcos.clouddrive.sync.StalePackCleaner.safePattern(it) }.ifEmpty { com.diegonmarcos.clouddrive.sync.StalePackCleaner.DEFAULT_PATTERNS },
+                )
+            } ?: GitStalePackDecl(),
             filters = objects(o["filters"]).mapNotNull { f ->
                 val id = f.str("id")
                 val opts = objects(f["options"]).mapNotNull { x -> x.str("id").takeIf { it.isNotBlank() }?.let { GitFilterOptionDecl(it, x.str("label", it)) } }
@@ -785,6 +800,7 @@ object Declarations {
     const val DEPTH_SCOPE_REPO = "repo"
     /** #1282 a bare mirror per repository under ui.sync.git.bare_root (BareClones). */
     const val DEPTH_CLONE_BARE = "clone_bare"
+
     val DEPTH_KINDS = setOf(DEPTH_CLONE_MISSING, DEPTH_KEEP, DEPTH_CLONE_BARE)
     val DEPTH_SCOPES = setOf(DEPTH_SCOPE_ALL, DEPTH_SCOPE_REPO)
     /** #1288 the per-folder command kinds the Parentless / Unlisted tables dispatch on (test-drive-git-folder-actions.sh diffs both ways). */

@@ -182,6 +182,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         bulk.value = BulkPull(force, trigger, total = Int.MAX_VALUE)
         return scope.launch {
           try {
+            sweepStalePacks(ownBulk = true)?.join()
             val list = withContext(Dispatchers.IO) {
                 registry.load().filter { only == null || it.name in only || it.id in only }
                     .filter { GitEngine.isRepository(File(it.path)) }
@@ -213,6 +214,39 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     }
 
     private val bulkRunning = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    // ── #1313 stale temp packs (ui.sync.git.stale_pack_cleanup): StalePackCleaner ──
+
+    private val staleSweeping = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    private fun gitJobRunning(ownBulk: Boolean): Boolean =
+        StalePackCleaner.busy(running.value.size, cloning.value.size, depthRun.value?.finished == false, !ownBulk && bulkRunning.get())
+
+    /**
+     * Delete the abandoned incoming_* / tmp_pack* files of every clone and bare mirror (declared patterns, older than the
+     * declared age, never pack-*), on IO, never while a git job runs ([ownBulk] = called by the bulk pull itself, whose own
+     * flag does not count). One line in Activity Logs when something was deleted, nothing otherwise. Returns null when it did not start.
+     */
+    fun sweepStalePacks(ownBulk: Boolean = false): kotlinx.coroutines.Job? {
+        val d = Declarations.sync.git.stalePackCleanup
+        if (!d.enabled || !staleSweeping.compareAndSet(false, true)) return null
+        return scope.launch(Dispatchers.IO) {
+            try {
+                if (gitJobRunning(ownBulk)) return@launch
+                val git = SharedStore.gitRoot()
+                val r = (if (StoreGit.useExec(ctx)) StoreGit.sweepStalePacks(ctx, git, Declarations.sync.git.bareRoot, d.patterns, d.minAgeHours)
+                    else StalePackCleaner.sweep(StalePackCleaner.packDirs(git, Declarations.sync.git.bareRoot), d.patterns, d.minAgeHours, System.currentTimeMillis(), false))
+                    ?: return@launch
+                val line = StalePackCleaner.message(r)
+                if (line.isNotEmpty()) {
+                    DriveDebugLog.i(ctx, TAG, line)
+                    events.value = history.append(SyncEvent(System.currentTimeMillis() / 1000, "stale-packs", "stale packs", SyncHistory.TRIGGER_SCHEDULED, true, "stale_pack_cleanup: $line"))
+                }
+            } catch (e: Exception) {
+                DriveDebugLog.e(ctx, TAG, "stale pack cleanup failed: ${e.message}")
+            } finally { staleSweeping.set(false) }
+        }
+    }
 
     private val pagePrefs by lazy { ctx.getSharedPreferences(PREFS_PAGE, Context.MODE_PRIVATE) }
 

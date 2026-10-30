@@ -223,6 +223,8 @@ class MainActivity : ComponentActivity(), DriveActions {
             }
             gitOrNull = made
             gitReset = reset
+            // #1313 app start, coordinator ready: stale temp packs out of every objects/pack (IO, silent when none).
+            made.sweepStalePacks()
         }
         val git = gitOrNull
         val rclone = remember { RcloneCoordinator(applicationContext, scope, prefs) }
