@@ -15,7 +15,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.viewinterop.AndroidView
 import org.json.JSONObject
 
@@ -45,11 +50,20 @@ import org.json.JSONObject
  * cloud-me-pvt-data, profiles/<id>.data.json) are handed to `window.CloudMeProfile.inject(...)`. The values
  * never ship in assets. `CloudMeBridge.importData()` lets the page ask for that import.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
+fun WebPage(block: JSONObject, modifier: Modifier = Modifier, pageId: String = block.optString("url")) {
     val url = block.optString("url")
     val inject = block.optString("inject")
     val ctx = LocalContext.current
+    // #1323 a remote Lnktree page is cached on disk (LnktreeCache), its WebView is kept alive across tab switches (LnktreeHolder)
+    // and a pull-down at its top is a HARD refresh. Asset pages and the Health/DD injectors keep the old behaviour.
+    val cfg = LnktreeCacheConfig.baked
+    val holder = LocalLnktreeHolder.current
+    val cached = holder != null && inject.isBlank() && url.startsWith("https://") && cfg.caches(pageId)
+    var refreshing by remember { mutableStateOf(false) }
+    var atTop by remember { mutableStateOf(true) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     /** The page's WebView state (history, scroll), refreshed whenever a page finishes loading. */
     val saved = rememberSaveable { Bundle() }
     // Back walks the page's own history before it leaves the section — the
@@ -77,32 +91,50 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
     // #1198 a remote page (Lnktree) can lose its renderer process; an unhandled loss takes the whole app down
     // (WebViewClient.onRenderProcessGone returns false -> the process is killed). Handle it and build a fresh WebView.
     var generation by remember { mutableStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(refreshing) { if (refreshing) { kotlinx.coroutines.delay(20_000); refreshing = false } }
     androidx.compose.runtime.key(generation) {
+    val page: @Composable (Modifier) -> Unit = { mod ->
     AndroidView(
-        modifier = modifier.fillMaxSize(),
+        modifier = mod,
         update = { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(it, collapse) },
         factory = { ctx ->
-            WebView(ctx).apply {
-                settings.javaScriptEnabled = true          // the pages hydrate from PORTAL_DATA
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                // Same-origin file access, so a page in assets can pull its own
-                // stylesheets and data scripts. Nothing outside assets is reachable.
-                @Suppress("DEPRECATION")
-                settings.allowFileAccessFromFileURLs = true
+            var fresh = false
+            val make = {
+                fresh = true
+                WebView(ctx).apply {
+                    settings.javaScriptEnabled = true          // the pages hydrate from PORTAL_DATA
+                    settings.domStorageEnabled = true
+                    settings.allowFileAccess = true
+                    settings.loadWithOverviewMode = true
+                    settings.useWideViewPort = true
+                    settings.mediaPlaybackRequiresUserGesture = false
+                    // Same-origin file access, so a page in assets can pull its own
+                    // stylesheets and data scripts. Nothing outside assets is reachable.
+                    @Suppress("DEPRECATION")
+                    settings.allowFileAccessFromFileURLs = true
+                    setBackgroundColor(0xFF0B0414.toInt())
+                }
+            }
+            // A kept WebView comes back as it was left (page, scroll, history): no reload, so switching is instant.
+            val view = if (cached) holder!!.web(url, make) else make()
+            (view.parent as? android.view.ViewGroup)?.removeView(view)
+            view.apply {
+                // The client is rebuilt on every attach: it closes over THIS composition's state.
                 webViewClient = object : WebViewClient() {
                     override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
                         saved.clear()
                         canGoBack = false
                         web.value = null
+                        if (cached) holder!!.forget(url)
                         generation++   // drops this WebView (onRelease destroys it) and creates a new one
                         return true
                     }
 
+                    override fun shouldInterceptRequest(view: WebView?, request: android.webkit.WebResourceRequest?): android.webkit.WebResourceResponse? =
+                        if (cached && request != null) LnktreeCache.intercept(ctx, pageId, url, request) else null
+
                     override fun onPageFinished(view: WebView?, url: String?) {
+                        refreshing = false
                         view?.let { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(it) }
                         view?.let { if (inject.isNotBlank()) pushProfile(it, ctx, inject) }
                         view?.saveState(saved)
@@ -116,15 +148,44 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier) {
                 if (inject.isNotBlank()) addJavascriptInterface(object {
                     @JavascriptInterface fun importData() { post { picker.launch(arrayOf("application/json", "text/plain", "*/*")) } }
                 }, "CloudMeBridge")
-                setBackgroundColor(0xFF0B0414.toInt())
                 web.value = this
                 // the scroll bridge must exist BEFORE the first load: a JavaScript interface added later only reaches pages loaded after it
                 com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(this, collapse)
-                if (!saved.isEmpty) restoreState(saved) else loadUrl(if (url.startsWith("https://")) url else "file:///android_asset/$url")
+                canGoBack = canGoBack()
+                if (!fresh) onResume()
+                else if (!saved.isEmpty) restoreState(saved) else loadUrl(if (url.startsWith("https://")) url else "file:///android_asset/$url")
             }
         },
-        onRelease = { it.stopLoading(); it.destroy() },
+        onRelease = {
+            (it.parent as? android.view.ViewGroup)?.removeView(it)
+            if (cached && holder!!.peek(url) === it) it.onPause() else { it.stopLoading(); it.destroy() }
+        },
     )
+    }
+    if (cached) {
+        // #1323 pull-down = HARD refresh. Only armed when the finger lands with the page scrolled to its top, so it never
+        // fights the WebView's own scrolling. Deletes the page's cache files (scope: build.json), empties the WebView cache, reloads.
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = {
+                refreshing = true
+                scope.launch {
+                    withContext(Dispatchers.IO) { LnktreeCache.hardRefresh(ctx, pageId) }
+                    val w = web.value
+                    if (w == null) refreshing = false else { w.clearCache(true); w.reload() }
+                }
+            },
+            enabled = atTop,
+            modifier = modifier.fillMaxSize().pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                        if (e.changes.any { it.pressed && !it.previousPressed }) atTop = web.value?.let { !it.canScrollVertically(-1) } ?: true
+                    }
+                }
+            },
+        ) { page(Modifier.fillMaxSize()) }
+    } else page(modifier.fillMaxSize())
     }
 }
 

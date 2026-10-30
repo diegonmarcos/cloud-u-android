@@ -72,6 +72,8 @@ fun RepoTreeScreen(areaCode: String?, modifier: Modifier = Modifier, config: Rep
         if (areaCode == null) config.shown(outline) else config.area(outline, areaCode)?.children.orEmpty()
     }
     val store = remember { RepoTreeStore(ctx) }
+    // #1323 the scroll position outlives a tab switch: the activity-scoped holder keeps it per area page.
+    val listState = LocalLnktreeHolder.current?.list("repo-tree:${areaCode.orEmpty()}") ?: androidx.compose.foundation.lazy.rememberLazyListState()
     val model = remember(store) { RepoTreeModel(store.load()) }
     // The model is plain; this counter is what recomposes the list after a toggle.
     var version by remember { mutableStateOf(0) }
@@ -93,7 +95,7 @@ fun RepoTreeScreen(areaCode: String?, modifier: Modifier = Modifier, config: Rep
         }
         // Bottom clearance: the shell already ends the page above the island; the extra pad keeps the last leaf
         // clear of the island's shadow and the gesture bar when the list is scrolled to the end.
-        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag(RepoTreeTags.LIST), contentPadding = PaddingValues(bottom = 96.dp)) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth().testTag(RepoTreeTags.LIST), state = listState, contentPadding = PaddingValues(bottom = 96.dp)) {
             items(rows) { row ->
                 RepoTreeRow(row, onClick = {
                     val leaf = row.node.repo

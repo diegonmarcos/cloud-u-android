@@ -132,6 +132,16 @@ def uiSectionsB64 = b64((buildJson.ui.sections ?: []).collect { s -> new LinkedH
 def fleetRepoApps = new groovy.json.JsonSlurper().parse(new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')).apps
     .findAll { it.repo_url && it.package }.collect { [url: it.repo_url.toString(), package: it.package.toString()] }
 def uiRepoTreeB64 = b64(repoTreeDecl + [fleet_apps: fleetRepoApps])
+// #1323 Lnktree page cache (TTL, prefetch, concurrency, size cap, hard-refresh scope, opt-outs): build.json::ui.lnktree_cache, parsed by
+// LnktreeCacheConfig. A declared cache that cannot work fails the build instead of silently caching nothing.
+def lnktreeCacheDecl = buildJson.ui.lnktree_cache ?: [:]
+if (lnktreeCacheDecl.enabled) {
+    if (!((lnktreeCacheDecl.ttl_days ?: 0) > 0)) throw new GradleException("ui.lnktree_cache.ttl_days must be > 0")
+    if (!(lnktreeCacheDecl.hard_refresh_scope in ['page', 'all'])) throw new GradleException("ui.lnktree_cache.hard_refresh_scope must be page or all")
+    if (!(lnktreeCacheDecl.prefetch?.network in ['unmetered', 'connected'])) throw new GradleException("ui.lnktree_cache.prefetch.network must be unmetered or connected")
+    if (!(buildJson.ui.sections ?: []).any { it.id == lnktreeCacheDecl.section }) throw new GradleException("ui.lnktree_cache.section '${lnktreeCacheDecl.section}' is not a ui.sections id")
+}
+def uiLnktreeCacheB64 = b64(lnktreeCacheDecl)
 def calEngineFleet = new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.find { it.id == calEngineDecl.fleet }
 if (calEngineFleet == null) {
     throw new GradleException(
@@ -178,6 +188,7 @@ android {
         buildConfigField "String", "UI_EXTERNAL_APPS_B64", "\"${uiExternalAppsB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermsRuntimeB64}\""
         buildConfigField "String", "UI_REPO_TREE_B64",     "\"${uiRepoTreeB64}\""
+        buildConfigField "String", "UI_LNKTREE_CACHE_B64", "\"${uiLnktreeCacheB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",  "\"${profile.name ?: ''}\""
         buildConfigField "String", "UI_PROFILE_EMAIL", "\"${profile.email ?: ''}\""
         buildConfigField "String", "CAL_ENGINE_PACKAGE",      "\"${calEnginePackage}\""
@@ -288,6 +299,7 @@ dependencies {
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
     implementation 'androidx.activity:activity-ktx:1.9.3'
     implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.work:work-runtime-ktx:2.9.1'   // #1323 Lnktree prefetch (the version libs:updater pins)
     // Health trackers read Health Connect live (libs:health keeps the SDK private).
     implementation 'androidx.health.connect:connect-client:1.1.0-alpha10'
 

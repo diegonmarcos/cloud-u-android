@@ -105,7 +105,12 @@ class MainActivity : AppCompatActivity() {
                     openSettings = { Permissions.openSettings(this@MainActivity) },
                     tick = permTick,
                 )
-                CompositionLocalProvider(LocalMeTarget provides { onTarget(it) }, LocalMePermissions provides hooks) { Shell() }
+                // #1323 the Lnktree pages' WebViews and scroll states, alive as long as this activity's composition (build.json::ui.lnktree_cache).
+                val lnktree = remember { LnktreeCacheConfig.baked.takeIf { it.enabled }?.let { LnktreeHolder(it.holderMaxWebViews) } }
+                androidx.compose.runtime.DisposableEffect(lnktree) { onDispose { lnktree?.destroy() } }
+                CompositionLocalProvider(
+                    LocalMeTarget provides { onTarget(it) }, LocalMePermissions provides hooks, LocalLnktreeHolder provides lnktree,
+                ) { Shell() }
             }
         }
 
@@ -119,6 +124,8 @@ class MainActivity : AppCompatActivity() {
         // after launch, because periodic alone defers the first pass by a full
         // interval on a fresh install.
         Updater.start(this)
+        // #1323 pages with no valid cache entry are downloaded in the background (WorkManager, off the UI thread).
+        LnktreePrefetchScheduler.schedule(this)
         UpdateProgress.setListener { state -> runOnUiThread { handleUpdateState(state) } }
     }
 
