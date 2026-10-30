@@ -59,6 +59,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.cloudcalc.Declarations
+import com.diegonmarcos.cloudcalc.DateForms
+import com.diegonmarcos.cloudcalc.WorkingDays
 import com.diegonmarcos.cloudcalc.Edit
 import com.diegonmarcos.cloudcalc.Editor
 import com.diegonmarcos.cloudcalc.Fx
@@ -463,6 +465,13 @@ internal fun UnitPicker(
     }
 }
 
+/** The holiday rules the mode's spec names (an asset), or an empty book. */
+private fun holidayBook(ctx: android.content.Context, mode: Declarations.Mode): WorkingDays.Book {
+    val path = runCatching { org.json.JSONObject(mode.spec).optString("holidays") }.getOrDefault("")
+    if (path.isEmpty()) return WorkingDays.Book(emptyList())
+    return runCatching { WorkingDays.parse(ctx.assets.open(path).bufferedReader().use { it.readText() }) }.getOrElse { WorkingDays.Book(emptyList()) }
+}
+
 // ── form: Date & Time, Finance, Acoustics ───────────────────────────────────────────────────
 
 @Composable
@@ -482,21 +491,54 @@ private fun FormMode(mode: Declarations.Mode) {
 private fun FormBody(mode: Declarations.Mode, form: Declarations.Form) {
     val api = LocalCalcApi.current
     val state = LocalCalcState.current
-    val values = remember(form.id) { mutableStateMapOf<String, String>().apply { form.fields.forEach { put(it.id, it.default) } } }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    // #1329 the declared holiday rules (an asset the mode's spec names); none when the mode declares none or the asset is missing.
+    val book = remember(mode.id) { holidayBook(ctx, mode) }
+    val regionOptions = remember(book) {
+        listOf(Declarations.Option(WorkingDays.NONE, "None (weekends only)")) + book.regions.map { Declarations.Option(it.id, it.label) }
+    }
+    val values = remember(form.id) {
+        mutableStateMapOf<String, String>().apply {
+            form.fields.forEach { put(it.id, if (it.default.isEmpty() && it.defaultFrom == "locale_country") book.forCountry(java.util.Locale.getDefault().country) else it.default) }
+        }
+    }
     var outputs by remember(form.id) { mutableStateOf(listOf<Pair<String, Logic.Result>>()) }
     val snapshot = values.toMap()
     LaunchedEffect(snapshot) {
-        delay(DEBOUNCE_MS)
-        outputs = form.outputs.map { o -> o.label to Logic.result(io { api.eval(Logic.fill(o.expr, snapshot), mode.options) }) }
+        // The counted outputs are instant; the engine's wait for the typing to pause.
+        if (form.outputs.any { it.calc.isEmpty() }) delay(DEBOUNCE_MS)
+        outputs = form.outputs.map { o ->
+            DateForms.label(o, snapshot, form.bind) to
+                if (o.calc.isNotEmpty()) DateForms.result(book, o, form.bind, snapshot)
+                else Logic.result(io { api.eval(Logic.fill(o.expr, snapshot), mode.options) })
+        }
     }
-    form.fields.forEach { f ->
-        OutlinedTextField(
-            value = values[f.id].orEmpty(),
-            onValueChange = { values[f.id] = it },
-            label = { Text(f.label) },
-            modifier = Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small).testTag(CalcTags.INPUT + "_" + f.id),
-            singleLine = true,
-        )
+    // The tint of a calendar day: the form's own weekend and region fields, else Sat + Sun and no holidays.
+    val cal = remember(book, snapshot) { book.calendar(snapshot[form.bind["region"].orEmpty()] ?: WorkingDays.NONE, weekendFor(form.bind, snapshot)) }
+    val tint: (java.time.LocalDate) -> Pair<Boolean, String?> = { d -> cal.isWeekend(d) to cal.holidayName(d) }
+    val ends = form.fields.mapNotNull { it.rangeEnd.ifEmpty { null } }.toSet()
+    form.fields.filter { it.id !in ends }.forEach { f ->
+        when (f.type) {
+            "date" -> {
+                val end = form.fields.firstOrNull { it.id == f.rangeEnd }
+                DateField(
+                    label = f.label, text = values[f.id].orEmpty(), onText = { values[f.id] = it }, tag = CalcTags.INPUT + "_" + f.id,
+                    rangeEnd = end?.let { values[it.id].orEmpty() to it.label }, onEndText = { end?.let { e -> values[e.id] = it } },
+                    endTag = CalcTags.INPUT + "_" + f.rangeEnd, open = f.calendarOpen, calendar = tint,
+                )
+            }
+            "toggle" -> ToggleField(f.label, values[f.id] == "true", DateTags.toggle(f.id)) { values[f.id] = it.toString() }
+            "choice" -> ChoiceField(
+                f.label, if (f.optionsFrom == "holiday_regions") regionOptions else f.options, values[f.id].orEmpty(), DateTags.choice(f.id),
+            ) { values[f.id] = it }
+            else -> OutlinedTextField(
+                value = values[f.id].orEmpty(),
+                onValueChange = { values[f.id] = it },
+                label = { Text(f.label) },
+                modifier = Modifier.fillMaxWidth().padding(vertical = CalcMetrics.small).testTag(CalcTags.INPUT + "_" + f.id),
+                singleLine = true,
+            )
+        }
     }
     outputs.forEach { (label, r) ->
         Row(

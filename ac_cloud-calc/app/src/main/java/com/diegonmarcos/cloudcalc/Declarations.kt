@@ -28,9 +28,24 @@ object Declarations {
     }
     enum class Action { CLEAR, DELETE, EVALUATE }
 
-    data class Field(val id: String, val label: String, val default: String)
-    data class Output(val label: String, val expr: String)
-    data class Form(val id: String, val label: String, val fields: List<Field>, val outputs: List<Output>)
+    /** A choice field's option: [value] is what the form holds (and an expression sees), [label] what the menu shows. */
+    data class Option(val value: String, val label: String)
+    /**
+     * A form field. [type] picks its widget: text (default), date (a tappable calendar; [rangeEnd] names the field that ends a RANGE
+     * started here, [calendarOpen] opens the calendar at once), toggle ("true"/"false"), choice ([options], or [optionsFrom] a
+     * data source the screen resolves; [defaultFrom] a device value the default comes from).
+     */
+    data class Field(
+        val id: String, val label: String, val default: String,
+        val type: String = "text", val options: List<Option> = emptyList(), val optionsFrom: String = "",
+        val defaultFrom: String = "", val rangeEnd: String = "", val calendarOpen: Boolean = false,
+    )
+    /** An engine output has an [expr]; one the app counts has a [calc] (and a [metric]); [labelOn]/[labelOff] follow the form's end toggle. */
+    data class Output(
+        val label: String, val expr: String,
+        val calc: String = "", val metric: String = "", val labelOn: String = "", val labelOff: String = "",
+    )
+    data class Form(val id: String, val label: String, val fields: List<Field>, val outputs: List<Output>, val bind: Map<String, String> = emptyMap())
 
     /** One chip of a choice row: picking it sets eval option [key] to [value]. */
     data class Choice(val label: String, val key: String, val value: Int)
@@ -129,8 +144,19 @@ object Declarations {
             forms = (m.optJSONArray("forms") ?: JSONArray()).objects().map { f ->
                 Form(
                     f.getString("id"), f.getString("label"),
-                    f.getJSONArray("fields").objects().map { Field(it.getString("id"), it.getString("label"), it.optString("default")) },
-                    f.getJSONArray("outputs").objects().map { Output(it.getString("label"), it.getString("expr")) },
+                    f.getJSONArray("fields").objects().map { fld ->
+                        Field(
+                            fld.getString("id"), fld.getString("label"), fld.optString("default"),
+                            type = fld.optString("type", "text"),
+                            options = (fld.optJSONArray("options") ?: JSONArray()).objects().map { Option(it.getString("value"), it.getString("label")) },
+                            optionsFrom = fld.optString("options_from"), defaultFrom = fld.optString("default_from"),
+                            rangeEnd = fld.optString("range_end"), calendarOpen = fld.optBoolean("calendar_open", false),
+                        )
+                    },
+                    f.getJSONArray("outputs").objects().map {
+                        Output(it.getString("label"), it.optString("expr"), it.optString("calc"), it.optString("metric"), it.optString("label_on"), it.optString("label_off"))
+                    },
+                    (f.optJSONObject("bind") ?: JSONObject()).let { b -> b.keys().asSequence().associateWith { k -> b.getString(k) } },
                 )
             },
             categories = (m.optJSONArray("categories") ?: JSONArray()).strings(),

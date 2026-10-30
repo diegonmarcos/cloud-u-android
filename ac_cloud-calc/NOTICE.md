@@ -107,3 +107,15 @@ the legacy woff/ttf sources removed, and Fraktur, Script, SansSerif and Typewrit
 fall back to the Main font); the 13 woff2 fonts that remain are the KaTeX package's, designed from the AMS Computer Modern
 fonts (SIL OFL 1.1). The formula library is the owner's list "The 100 Most Important Formulas in Mathematics and Science"
 (`data/latex/100-formulas.md`), turned into `formulas.json` by `data/latex/gen-formulas.mjs`.
+
+## Date & Time: working days and holidays (#1329)
+
+The holiday data (`data/assets/datetime/holidays.json`) is declared in this repository as RULES (a fixed date, an offset from
+Western Easter Sunday, or the nth weekday of a month) for Spain (national plus six autonomous communities), the United Kingdom
+(England), the United States (federal), Germany, France, Italy and Portugal. Public-holiday dates are facts, not copyrightable
+expression; each rule was written from the countries' official calendars, and Easter is the anonymous Gregorian computus
+(Meeus/Jones/Butcher), a published algorithm. No holiday library is used: Jollyday (Apache-2.0) was evaluated and not taken
+because its release loads holiday definitions through JAXB/Jackson and reflection, which Android's R8 and the app's offline,
+no-reflection rules make a liability for a handful of regions (see the datetime `spec` in build.json). The working-day counting is
+`WorkingDays.kt`, plain JVM, and the calendar widget is a small Compose grid (`ui/DateFields.kt`); nothing is added to the APK
+beyond this repository's code and one 8 KB asset.

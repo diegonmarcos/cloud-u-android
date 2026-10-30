@@ -3562,20 +3562,76 @@
         "options": {
           "approx": 1
         },
+        "spec": {
+          "_doc": "#1329 working days: the holidays are declared RULES per region (data/assets/datetime/holidays.json, offline, no library), the weekend a field's options; a field type date renders a tappable calendar (a range when it names range_end), toggle a switch, choice a menu.",
+          "holidays": "datetime/holidays.json"
+        },
         "forms": [
           {
             "id": "between",
             "label": "Days between",
+            "bind": {
+              "from": "from",
+              "to": "to",
+              "end": "inclusive",
+              "weekend": "weekend",
+              "region": "region"
+            },
             "fields": [
               {
                 "id": "from",
                 "label": "From",
-                "default": "2026-01-01"
+                "type": "date",
+                "default": "2026-01-01",
+                "range_end": "to",
+                "calendar_open": true
               },
               {
                 "id": "to",
                 "label": "To",
+                "type": "date",
                 "default": "2026-12-25"
+              },
+              {
+                "id": "inclusive",
+                "label": "Count the end date too",
+                "type": "toggle",
+                "default": "false"
+              },
+              {
+                "id": "weekend",
+                "label": "Weekend",
+                "type": "choice",
+                "default": "SAT,SUN",
+                "options": [
+                  {
+                    "value": "SAT,SUN",
+                    "label": "Sat + Sun"
+                  },
+                  {
+                    "value": "FRI,SAT",
+                    "label": "Fri + Sat"
+                  },
+                  {
+                    "value": "SUN",
+                    "label": "Sun only"
+                  },
+                  {
+                    "value": "SAT",
+                    "label": "Sat only"
+                  },
+                  {
+                    "value": "NONE",
+                    "label": "No weekend"
+                  }
+                ]
+              },
+              {
+                "id": "region",
+                "label": "Holidays (region)",
+                "type": "choice",
+                "options_from": "holiday_regions",
+                "default_from": "locale_country"
               }
             ],
             "outputs": [
@@ -3586,6 +3642,27 @@
               {
                 "label": "Weeks",
                 "expr": "days(\"{from}\", \"{to}\") / 7"
+              },
+              {
+                "label": "Working days",
+                "calc": "span",
+                "metric": "working",
+                "label_off": "Working days (end excluded)",
+                "label_on": "Working days (end included)"
+              },
+              {
+                "label": "Weekend days",
+                "calc": "span",
+                "metric": "weekend",
+                "label_off": "Weekend days (end excluded)",
+                "label_on": "Weekend days (end included)"
+              },
+              {
+                "label": "Holidays",
+                "calc": "span",
+                "metric": "holidays",
+                "label_off": "Holidays on working weekdays (end excluded)",
+                "label_on": "Holidays on working weekdays (end included)"
               }
             ]
           },
@@ -3596,6 +3673,7 @@
               {
                 "id": "date",
                 "label": "Date",
+                "type": "date",
                 "default": "2026-10-02"
               },
               {
@@ -3608,6 +3686,70 @@
               {
                 "label": "Date",
                 "expr": "addDays(\"{date}\"; {days})"
+              }
+            ]
+          },
+          {
+            "id": "add_working",
+            "label": "Add working days",
+            "bind": {
+              "date": "date",
+              "count": "days",
+              "weekend": "weekend",
+              "region": "region"
+            },
+            "fields": [
+              {
+                "id": "date",
+                "label": "Date",
+                "type": "date",
+                "default": "2026-10-02"
+              },
+              {
+                "id": "days",
+                "label": "Working days (negative = back)",
+                "default": "10"
+              },
+              {
+                "id": "weekend",
+                "label": "Weekend",
+                "type": "choice",
+                "default": "SAT,SUN",
+                "options": [
+                  {
+                    "value": "SAT,SUN",
+                    "label": "Sat + Sun"
+                  },
+                  {
+                    "value": "FRI,SAT",
+                    "label": "Fri + Sat"
+                  },
+                  {
+                    "value": "SUN",
+                    "label": "Sun only"
+                  },
+                  {
+                    "value": "SAT",
+                    "label": "Sat only"
+                  },
+                  {
+                    "value": "NONE",
+                    "label": "No weekend"
+                  }
+                ]
+              },
+              {
+                "id": "region",
+                "label": "Holidays (region)",
+                "type": "choice",
+                "options_from": "holiday_regions",
+                "default_from": "locale_country"
+              }
+            ],
+            "outputs": [
+              {
+                "label": "Date",
+                "calc": "add_working"
               }
             ]
           },

@@ -39,7 +39,7 @@ class LogicTest {
         val modes = Declarations.parseModes(JSONObject(File("../build.json").readText()).getJSONObject("ui").getJSONArray("modes").toString())
         modes.flatMap { it.forms }.forEach { f ->
             val values = f.fields.associate { it.id to it.default }
-            f.outputs.forEach { o ->
+            f.outputs.filter { it.calc.isEmpty() }.forEach { o ->
                 val e = Logic.fill(o.expr, values)
                 assertFalse("${f.id}/${o.label}: $e", e.contains('{') || e.contains('}'))
             }

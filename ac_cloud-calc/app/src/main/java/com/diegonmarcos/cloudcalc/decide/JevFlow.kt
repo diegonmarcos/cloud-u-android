@@ -78,7 +78,8 @@ object JevFlow {
             val form = mode?.forms?.firstOrNull { it.id == plan.form }
             if (mode == null || form == null) Run(plan.mode, plan.form, emptyList(), "no form ${plan.form} in mode ${plan.mode}", plan.slots)
             else {
-                val lines = form.outputs.map { o ->
+                // #1329 an output the app counts (calc, no expr) is the form screen's; Ask shows the engine's.
+                val lines = form.outputs.filter { it.expr.isNotEmpty() }.map { o ->
                     val r = Logic.result(api.eval(Logic.fill(o.expr, plan.values), mode.options))
                     o.label to (if (r.ok) r.text else "— " + r.error.ifBlank { r.messages.joinToString() })
                 }

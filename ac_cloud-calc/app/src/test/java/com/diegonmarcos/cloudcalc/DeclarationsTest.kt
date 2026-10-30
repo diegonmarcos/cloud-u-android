@@ -175,7 +175,7 @@ class DeclarationsTest {
     @Test fun `every form expression names only its own fields`() {
         modes.flatMap { it.forms }.forEach { f ->
             val ids = f.fields.map { it.id }.toSet()
-            f.outputs.forEach { o ->
+            f.outputs.filter { it.calc.isEmpty() }.forEach { o ->
                 val named = Logic.placeholders(o.expr)
                 assertFalse("${f.id}/${o.label} names nothing", named.isEmpty())
                 assertTrue("${f.id}/${o.label} names ${named - ids}", ids.containsAll(named))
