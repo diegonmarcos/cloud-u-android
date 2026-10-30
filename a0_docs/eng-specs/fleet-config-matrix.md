@@ -15,7 +15,7 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 50 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 51 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 2 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 2 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 2 | 0 | 100% |
@@ -52,7 +52,7 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 4 | 2 | 66% |
 | cloud-kg-store | `com.diegonmarcos.cloudkgstore` | 4 | 2 | 66% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 10 | 2 | 83% |
-| **fleet** | | **310** | **54** | **85%** |
+| **fleet** | | **311** | **54** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -125,6 +125,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `search_scope_prefs` | prefs | config | yes | The SuperApp search's scope chips as each entry point was last left (scopes_home_star, scopes_home_sheet, scopes_cloud_apps_page: the build.json::ui.search_scopes ids that are on). Absent until the owner taps a chip there, so an entry never touched starts on its defaults. |
 | `stack_filters` | prefs | config (keys: */read_keys→device, */seen_at→device) | yes | Chosen filter option per stack page ('<page>/<filterId>'); dynamic keys '<page>/seen_at' and the reads string-set are device state (cannot be keyed statically). |
+| `status_bar_prefs` | prefs | config | yes | Home status bar overrides (#1332): a visibility switch per declared element and an order per cluster, laid over build.json::home_status_bar. |
 | `store_auto` | prefs | device | no | #804 the auto-update chain's persisted state: phase, queue, per-package result, current package, last error. Lets a chain killed mid-download or mid-install resume on THIS phone; a new phone runs its own. |
 | `store_batch` | prefs | device | no | #804 the last Download all / Update all report served at /api/store/batch, kept across the SuperApp restarting itself. |
 | `store_declared_edits` | prefs | config | yes | Cloud Store: the user's edits to the Declared list over the built-in source map — apps declared from Search or Installed (with the rungs they install from) and declared apps removed. The user's app list, so it moves with the phone. |
@@ -160,7 +161,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 50 covered, 0 gaps.
+Coverage: 51 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 

@@ -1587,6 +1587,14 @@
         "spurious_nones_pruned_v1": "device"
       }
     },
+    "status_bar_prefs": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "Home status bar overrides (#1332): a visibility switch per declared element and an order per cluster, laid over build.json::home_status_bar.",
+      "used_by": [
+        "aa_cloud-superapp"
+      ]
+    },
     "perm_ask_tracker": {
       "kind": "prefs",
       "class": "device",

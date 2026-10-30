@@ -39,6 +39,9 @@ FEED=ab_cloud-libs-shared/libs/feed
 SABJ=aa_cloud-superapp/build.json
 SAMF=aa_cloud-superapp/app/src/main/AndroidManifest.xml
 SAFEED=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/rss/RemoteFeed.kt
+# #1332: the SuperApp also binds the cal engine (the Tasks popup), through cal/TasksFeed.kt
+CAL=ab_cloud-libs-shared/libs/cal
+SACAL=aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/cal/TasksFeed.kt
 SAGH=ab_cloud-libs-shared/libs/account/src/main/java/com/diegonmarcos/superapp/profile/GhEngine.kt
 SAWF=.github/workflows/ship-cloud-superapp.yml
 # Cloud News binds the news engine and names its methods as string literals
@@ -103,7 +106,7 @@ for f in "$ROOT/$AN/engine-client.json" "$ROOT/$ANCLIENT" "$ROOT/$SINKSVC"; do
 done
 for f in "$GUARD" "$ROOT/$FLEET" "$ROOT/$LIBBJ" "$ROOT/$DRIVEBJ" "$ROOT/$CLIENT" "$ROOT/$SVC" "$ROOT/$MF" "$ROOT/$WF" \
          "$ROOT/$DRIVEMF" "$ROOT/$DRIVEGRADLE" "$ROOT/$FEED/src/main/AndroidManifest.xml" "$ROOT/$SABJ" "$ROOT/$SAMF" \
-         "$ROOT/$SAFEED" "$ROOT/$SAGH" "$ROOT/$SAWF" "$ROOT/$NEWS/src/main/AndroidManifest.xml" "$ROOT/$NEWSBJ" \
+         "$ROOT/$SAFEED" "$ROOT/$SACAL" "$ROOT/$CAL/src/main/AndroidManifest.xml" "$ROOT/$SAGH" "$ROOT/$SAWF" "$ROOT/$NEWS/src/main/AndroidManifest.xml" "$ROOT/$NEWSBJ" \
          "$ROOT/$NEWSCLIENT" "$ROOT/$NEWSMF" "$ROOT/$NEWSGRADLE" "$ROOT/$NEWSWF" "$ROOT/$IMG/engine-client.json" \
          "$ROOT/$IMGCLIENT" "$ROOT/$IMGSVC"; do
     [ -f "$f" ] || { echo "ERROR missing source: $f — this test is unrun, not passing"; exit 1; }
@@ -115,10 +118,10 @@ stage() {
         "$WORK/t/ab_cloud-libs-shared/lib-apks" "$(dirname "$WORK/t/$CLIENT")" "$WORK/t/.github/workflows"
     cp "$ROOT/$FLEET" "$WORK/t/$FLEET"; cp "$ROOT/$LIBBJ" "$WORK/t/$LIBBJ"; cp "$ROOT/$WF" "$WORK/t/$WF"
     cp -r "$ROOT/$GH" "$WORK/t/$GH"; cp "$ROOT/$DRIVEBJ" "$WORK/t/$DRIVEBJ"; cp "$ROOT/$CLIENT" "$WORK/t/$CLIENT"
-    local f; for f in "$DRIVEMF" "$DRIVEGRADLE" "$SABJ" "$SAMF" "$SAFEED" "$SAGH" "$SAWF" \
+    local f; for f in "$DRIVEMF" "$DRIVEGRADLE" "$SABJ" "$SAMF" "$SAFEED" "$SACAL" "$SAGH" "$SAWF" \
                       "$NEWSBJ" "$NEWSCLIENT" "$NEWSMF" "$NEWSGRADLE" "$NEWSWF"; do
         mkdir -p "$(dirname "$WORK/t/$f")"; cp "$ROOT/$f" "$WORK/t/$f"; done
-    cp -r "$ROOT/$FEED" "$WORK/t/$FEED"; cp -r "$ROOT/$NEWS" "$WORK/t/$NEWS"
+    cp -r "$ROOT/$FEED" "$WORK/t/$FEED"; cp -r "$ROOT/$CAL" "$WORK/t/$CAL"; cp -r "$ROOT/$NEWS" "$WORK/t/$NEWS"
     cp -r "$ROOT/$IMG" "$WORK/t/$IMG"; cp -r "$ROOT/$IMGENGINE" "$WORK/t/$IMGENGINE"
     cp -r "$ROOT/$AN" "$WORK/t/$AN"; cp -r "$ROOT/$SINK" "$WORK/t/$SINK"
     cp -r "$ROOT/$OPS" "$WORK/t/$OPS"; cp -r "$ROOT/$OPSENGINE" "$WORK/t/$OPSENGINE"
