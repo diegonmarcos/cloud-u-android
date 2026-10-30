@@ -38,7 +38,8 @@ s3() { for t in 'Dispatchers.IO' 'StalePackCleaner.busy(' 'depthRun.value?.finis
     grep -qF 'made.sweepStalePacks()' "$2" || { echo "    app start does not sweep"; return 1; }
     grep -qF 'StalePackCleaner.sweep(' "$3" || { echo "    the worker cycle does not sweep"; return 1; }
     grep -qF 'if (line.isNotEmpty())' "$1" || { echo "    the coordinator reports even when nothing was cleaned"; return 1; }
-    ! grep -n 'Dispatchers.Main' "$1" | grep -qi 'stale' || { echo "    a sweep touches Main"; return 1; }; }
+    local body; body="$(sed -n '/fun sweepStalePacks(/,/^    }$/p' "$1")"
+    case "$body" in *Dispatchers.Main*) echo "    a sweep touches Main"; return 1;; esac; }
 
 echo "── S1 declared ──"; s1 "$BJ" && pass "block declared, patterns safe, documented" || fail "declaration"
 echo "── S2 safe ──";     s2 "$CLEAN" && pass "pack-* excluded, regular non-symlink, age gate, job gate, find rails" || fail "safety rails"
