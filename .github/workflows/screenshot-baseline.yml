@@ -81,7 +81,10 @@ jobs:
         include:
           - device: phone
             profile: pixel_7
-          - device: tablet
+          # one emulator per tablet orientation: the swiftshader tablet emulator tends to die after ~10 shots
+          - device: tablet-port
+            profile: pixel_tablet
+          - device: tablet-land
             profile: pixel_tablet
     steps:
       - name: Fetch the published SuperApp (x86_64)
@@ -135,7 +138,7 @@ jobs:
             echo "captured $1 ($3)"
           }
           T="home=section:home notify=section:communication boards=section:boards cloud-apps=page:cloud/apps cloud-lnktree=page:cloud/lnktree cloud-configs=page:cloud/configs phone=section:phone mail=section:mail feed=section:feed cal=section:cal c3=section:c3 config=section:config vault=section:vault chat=section:chat"
-          if [ "$DEVICE" = tablet ]; then runs="tablet-port:0 tablet-land:1"; else runs="phone:0"; fi
+          case "$DEVICE" in tablet-port) runs="tablet-port:0";; tablet-land) runs="tablet-land:1";; *) runs="phone:0";; esac
           for r in $runs; do
             dir=${r%%:*}; mkdir -p "out/$dir"
             for t in $T; do shot "$dir/launcher-${t%%=*}" "${r##*:}" "${t#*=}"; done
@@ -152,6 +155,7 @@ jobs:
           arch: x86_64
           target: google_apis
           profile: ${{ matrix.profile }}
+          ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
           script: ./capture.sh
