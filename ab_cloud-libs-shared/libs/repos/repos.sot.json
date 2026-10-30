@@ -9,6 +9,15 @@
   "_renames_doc": "`renames` records an old name -> new name for things that are not (or not only) repos, so a path that still says the old name is findable and a guard can flag it. `kind: repo` = a repository rename (the entry also carries `renamed_from`); `kind: app-folder` = a folder/app inside a repo. Farmers never create the old name.",
   "renames": [
     {
+      "from": "Projects-labtools",
+      "to": "z-archived_Projects-labtools",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1311",
+      "status": "pending owner GitHub rename",
+      "doc": "Emptied (its four projects moved to Fin-CM-Blmbrg, Fin-CM-mqpm, CG-circus, CAD-Simulators on 2026-10-29; only pointer READMEs remain); archived. The GitHub rename is the owner's step; the old name keeps working through the GitHub redirect."
+    },
+    {
       "from": "DeepSc-Tools",
       "to": "CAD-Simulators",
       "kind": "repo",
@@ -1793,18 +1802,6 @@
       "doc": "Sources of the a_Companies group, split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
-      "name": "Projects-labtools",
-      "farm": "6.Projects",
-      "group": "b_projects",
-      "hub": "Projects-___",
-      "url": "git@github.com:diegonmarcos/Projects-labtools.git",
-      "private": false,
-      "renamed_from": [
-        "front-labtools"
-      ],
-      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Fin-CM-mqpm, Fin-CM-Blmbrg, CAD-Simulators (labtools 741bb8b, 2026-10-28)."
-    },
-    {
       "name": "DuckPeng-___",
       "farm": "6.Projects/DuckPeng",
       "group": "b_projects",
@@ -2112,6 +2109,19 @@
       "url": "git@github.com:diegonmarcos/z-archived_My-ai-memory.git",
       "private": true,
       "doc": "Archived AI memory repo. Registered 2026-10-29 (#1291) so 09.Archived holds every z-archived_*."
+    },
+    {
+      "name": "z-archived_Projects-labtools",
+      "farm": "8.Archived",
+      "group": "b_projects",
+      "hub": "z-archived-___",
+      "url": "git@github.com:diegonmarcos/z-archived_Projects-labtools.git",
+      "private": false,
+      "renamed_from": [
+        "Projects-labtools",
+        "front-labtools"
+      ],
+      "doc": "Sources of the former c_LabTools group, split from front-projects (#1072); since #1218 laid out as a-Lfy_C3 only; a-Lfy_CG-Zirkus, b-Nxs_PA, b-Nxs_Blmmbrg, c-Stk_DsX were moved with history to CG-circus, Fin-CM-mqpm, Fin-CM-Blmbrg, CAD-Simulators (labtools 741bb8b, 2026-10-28). Archived 2026-10-30: empty except pointer READMEs; renamed z-archived_Projects-labtools, to be archived on GitHub (owner click)."
     }
   ]
 }

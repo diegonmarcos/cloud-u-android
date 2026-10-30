@@ -1096,24 +1096,6 @@
       "description": "Front group a_Companies (split from front-projects, #1072)"
     },
     {
-      "family": "Labtools",
-      "name": "Projects-labtools",
-      "url": "https://github.com/diegonmarcos/Projects-labtools",
-      "role": "",
-      "visibility": "public",
-      "project": "Labtools",
-      "field": "Projects",
-      "developer": "Projects",
-      "code": "6.2.1.1",
-      "area_code": "6",
-      "project_code": "6.2",
-      "family_code": "6.2.1",
-      "registry_name": "Projects-labtools",
-      "hub": "Projects-___",
-      "farm": "6.Projects",
-      "description": "Front group c_LabTools (split from front-projects, #1072)"
-    },
-    {
       "family": "Hub",
       "name": "DuckPeng-___",
       "url": "https://github.com/diegonmarcos/DuckPeng-___",
@@ -1122,9 +1104,9 @@
       "project": "DuckPeng",
       "field": "Projects",
       "developer": "Leaf.y",
-      "code": "6.3.0",
+      "code": "6.2.0",
       "area_code": "6",
-      "project_code": "6.3",
+      "project_code": "6.2",
       "family_code": null,
       "registry_name": "DuckPeng-___",
       "hub": "Projects-___",
@@ -1418,6 +1400,24 @@
       "hub": "z-archived-___",
       "farm": "8.Archived",
       "description": ""
+    },
+    {
+      "family": "Projects",
+      "name": "z-archived_Projects-labtools",
+      "url": "https://github.com/diegonmarcos/z-archived_Projects-labtools",
+      "role": "",
+      "visibility": "public",
+      "project": "Z-archived",
+      "field": "Archived",
+      "developer": "Z-archived",
+      "code": "8.1.4.1",
+      "area_code": "8",
+      "project_code": "8.1",
+      "family_code": "8.1.4",
+      "registry_name": "z-archived_Projects-labtools",
+      "hub": "z-archived-___",
+      "farm": "8.Archived",
+      "description": "Front group c_LabTools (split from front-projects, #1072)"
     }
   ],
   "field_order": [
@@ -2454,7 +2454,7 @@
       "description": "Projects (formerly Front): endeavours, lab tools and DuckPeng.",
       "hub": "Projects-___",
       "farm": "6.Projects",
-      "repos_count": 4,
+      "repos_count": 3,
       "children": [
         {
           "code": "6.1",
@@ -2486,34 +2486,6 @@
         },
         {
           "code": "6.2",
-          "kind": "project",
-          "name": "Labtools",
-          "label": "Labtools",
-          "icon": "🧪",
-          "developer": "Projects",
-          "description": "Lab tools.",
-          "hub": null,
-          "farm": "6.Projects",
-          "repos_count": 1,
-          "children": [
-            {
-              "code": "6.2.1",
-              "kind": "family",
-              "name": "Labtools",
-              "label": "Labtools",
-              "developer": "Projects",
-              "description": "",
-              "hub": null,
-              "farm": "6.Projects",
-              "repos_count": 1,
-              "repos": [
-                "Projects-labtools"
-              ]
-            }
-          ]
-        },
-        {
-          "code": "6.3",
           "kind": "project",
           "name": "DuckPeng",
           "label": "DuckPeng",
@@ -2609,7 +2581,7 @@
       "description": "Every z-archived_* repo, under the hub z-archived-___.",
       "hub": "z-archived-___",
       "farm": "8.Archived",
-      "repos_count": 14,
+      "repos_count": 15,
       "children": [
         {
           "code": "8.1",
@@ -2621,7 +2593,7 @@
           "description": "Archived repos, grouped by where they came from.",
           "hub": null,
           "farm": "8.Archived",
-          "repos_count": 13,
+          "repos_count": 14,
           "children": [
             {
               "code": "8.1.1",
@@ -2673,6 +2645,20 @@
               "repos": [
                 "z-archived_c3-infra-plugin",
                 "z-archived_My-ai-memory"
+              ]
+            },
+            {
+              "code": "8.1.4",
+              "kind": "family",
+              "name": "Projects",
+              "label": "Projects",
+              "developer": "Z-archived",
+              "description": "",
+              "hub": null,
+              "farm": "8.Archived",
+              "repos_count": 1,
+              "repos": [
+                "z-archived_Projects-labtools"
               ]
             }
           ]

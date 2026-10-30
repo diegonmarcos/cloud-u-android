@@ -1077,34 +1077,6 @@
     {
      "code": "6.2",
      "kind": "project",
-     "name": "Labtools",
-     "label": "Labtools",
-     "icon": "🧪",
-     "description": "Lab tools.",
-     "children": [
-      {
-       "code": "6.2.1",
-       "kind": "family",
-       "name": "Labtools",
-       "label": "Labtools",
-       "icon": "",
-       "description": "",
-       "repos": [
-        {
-         "code": "6.2.1.1",
-         "name": "Projects-labtools",
-         "registry_name": "Projects-labtools",
-         "url": "https://github.com/diegonmarcos/Projects-labtools",
-         "private": false,
-         "description": "Front group c_LabTools (split from front-projects, #1072)"
-        }
-       ]
-      }
-     ]
-    },
-    {
-     "code": "6.3",
-     "kind": "project",
      "name": "DuckPeng",
      "label": "DuckPeng",
      "icon": "🦆",
@@ -1325,6 +1297,24 @@
          "url": "https://github.com/diegonmarcos/z-archived_My-ai-memory",
          "private": true,
          "description": ""
+        }
+       ]
+      },
+      {
+       "code": "8.1.4",
+       "kind": "family",
+       "name": "Projects",
+       "label": "Projects",
+       "icon": "",
+       "description": "",
+       "repos": [
+        {
+         "code": "8.1.4.1",
+         "name": "z-archived_Projects-labtools",
+         "registry_name": "z-archived_Projects-labtools",
+         "url": "https://github.com/diegonmarcos/z-archived_Projects-labtools",
+         "private": false,
+         "description": "Front group c_LabTools (split from front-projects, #1072)"
         }
        ]
       }
