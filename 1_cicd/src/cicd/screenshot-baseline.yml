@@ -55,6 +55,7 @@ jobs:
             ac_cloud-tasks/build.json
             ac_cloud-c3/build.json
             1_cicd/src/data
+            .github/actions
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: gradle/actions/setup-gradle@v4
@@ -176,8 +177,11 @@ jobs:
     if: always() && needs.roborazzi.result == 'success'
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # gh release upload
+      contents: write   # the release upload (publish-ghcr)
     steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/actions
       - uses: actions/download-artifact@v4
         with: { pattern: 'baseline-*', path: dl }
       - name: Assemble Cloud-UI-Baseline.zip
@@ -194,6 +198,8 @@ jobs:
           (cd z && zip -qr ../Cloud-UI-Baseline.zip .)
           sha256sum Cloud-UI-Baseline.zip | cut -d' ' -f1 > Cloud-UI-Baseline.zip.sha256
       - name: Upload to the rolling release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload latest Cloud-UI-Baseline.zip Cloud-UI-Baseline.zip.sha256 --clobber -R "$GITHUB_REPOSITORY"
+        uses: ./.github/actions/publish-ghcr
+        with:
+          kind: release
+          tag: latest
+          file: Cloud-UI-Baseline.zip Cloud-UI-Baseline.zip.sha256
