@@ -798,13 +798,16 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
     val depthRun = MutableStateFlow<BulkDepth.Run?>(null)
     private var depthJob: kotlinx.coroutines.Job? = null
 
-    /** Every clone on the device the page can see: the registry's clones, the store's git folder and the registry folders' parents (one level), and the unlisted scan. */
+    /**
+     * Every clone on the device the page can see: #1315 THE ONE INVENTORY's clones (every tree the pass found, whatever its class),
+     * read fresh when no pass ran yet, plus the registry's own rows. No java.io scan of its own (blocking: IO).
+     */
     private fun existingClones(list: List<ManagedRepo>): List<BulkDepth.Existing> {
-        val roots = (listOf(SharedStore.gitRoot()) + list.mapNotNull { File(it.path).parentFile }).distinctBy { it.absolutePath }
-        val reg = list.filter { File(it.path).exists() || runCatching { StoreGit.useExec(ctx) && StoreGit.isRepository(ctx, File(it.path)) }.getOrDefault(false) }
-            .map { BulkDepth.Existing(it.path, it.remoteUrl.ifBlank { LocalRepos.originOf(File(it.path)) }) }
-        val scanned = runCatching { LocalRepos.scan(roots) }.getOrDefault(emptyList()).map { BulkDepth.Existing(it.dir.absolutePath, it.origin) }
-        return reg + scanned + unlisted.value.map { BulkDepth.Existing(it.path, it.origin) }
+        val inv = inventory.value ?: discover(list).first.let { RepoInventory.classify(it, RegistryNames.live(), Declarations.repoSot, list.map { r -> File(r.path).absolutePath }.toSet()) }
+        // A managed row whose folder the pass did not see is gone (its parent is always a root): it holds nothing.
+        val present = inv.rows.map { it.path }.toSet()
+        val reg = list.filter { File(it.path).absolutePath in present }.map { BulkDepth.Existing(it.path, it.remoteUrl) }
+        return reg + inv.rows.filter { it.isClone }.map { BulkDepth.Existing(it.path, it.origin) }
     }
 
     /**
@@ -1025,15 +1028,6 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         return if (LocalRepos.setOrigin(dir, fixed)) Outcome.OK to note else Outcome.FAIL to "could not rewrite the origin in ${dir.name}/.git/config"
     }
 
-    /** #1317 the origins as the actions see them: through cld.termux when the store needs it (one batched `remote get-url`), else as read by java.io. */
-    fun reconcileOrigins(found: List<LocalRepos.Found>): List<LocalRepos.Found> {
-        if (found.isEmpty()) return found
-        val guests = found.associateBy { f -> execGuest(f.dir) }.filterKeys { it != null }
-        if (guests.isEmpty()) return found
-        val seen = runCatching { FolderActions.parseOrigins(shell.run(FolderActions.originsScript(guests.keys.filterNotNull()) { StoreShell.q(it) }, timeoutMs = 60_000).out) }.getOrDefault(emptyMap())
-        return found.map { f -> val g = execGuest(f.dir); if (g != null && g in seen) LocalRepos.found(f.dir, seen.getValue(g), RegistryNames.live()) else f }
-    }
-
     /** #1317 ui.sync.git.stale_origin.auto_fix: re-point every clone of [found] whose origin names a retired name; one Activity Logs line each. Returns the number fixed (blocking: call on IO). */
     fun autoFixOrigins(found: List<LocalRepos.Found>): Int {
         if (!Declarations.sync.git.staleOriginAutoFix) return 0
@@ -1201,8 +1195,14 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             try {
                 val (inv, found) = withContext(Dispatchers.IO) {
                     val list = registry.load()
-                    val (entries, via, malformed) = discover(list)
+                    var (entries, via, malformed) = discover(list)
                     var inv = RepoInventory.classify(entries, RegistryNames.live(), Declarations.repoSot, list.map { File(it.path).absolutePath }.toSet(), System.currentTimeMillis(), via, malformed = malformed)
+                    // #1317 stale_origin.auto_fix on the inventory's rows: a clone whose origin names a retired name is re-pointed, then the pass reads again.
+                    val stale = inv.rows.filter { it.staleOrigin && it.isClone }.map { LocalRepos.found(File(it.path), it.origin, RegistryNames.live()) }
+                    if (stale.isNotEmpty() && autoFixOrigins(stale) > 0) {
+                        discover(list).let { (e, v, m) -> entries = e; via = v; malformed = m }
+                        inv = RepoInventory.classify(entries, RegistryNames.live(), Declarations.repoSot, list.map { File(it.path).absolutePath }.toSet(), System.currentTimeMillis(), via, malformed = malformed)
+                    }
                     if (autoRegister(inv, list) > 0) inv = RepoInventory.classify(entries, RegistryNames.live(), Declarations.repoSot, registry.load().map { File(it.path).absolutePath }.toSet(), System.currentTimeMillis(), via, malformed = malformed)
                     pagePrefs.edit().putString(KEY_INVENTORY, InventoryScript.encode(entries)).apply()
                     val unlistedRows = inv.of(RepoInventory.RepoClass.UNLISTED).map { UnlistedRepos.Folder(it.path, it.origin) }

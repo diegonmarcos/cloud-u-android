@@ -64,7 +64,8 @@ if re.search(r'"(clone_all_depth1|keep_depth1_all|clone_repo_depth1|keep_repo_de
 sys.exit(bad)
 PY
 }
-d2() { for t in 'BulkDepth.planClones(' 'existingClones(list)' 'Declarations.repoSot.canonical(it)' 'LocalRepos.scan(roots)' 'unlisted.value.map' 'already cloned at'; do grep -qF "$t" "$1" || { echo "    coordinator lacks $t"; return 1; }; done; }
+# #1315 the existing clones come from THE ONE INVENTORY (every tree the pass found, whatever its class), never a scan of their own.
+d2() { for t in 'BulkDepth.planClones(' 'existingClones(list)' 'Declarations.repoSot.canonical(it)' 'inv.rows.filter { it.isClone }' 'already cloned at'; do grep -qF "$t" "$1" || { echo "    coordinator lacks $t"; return 1; }; done; grep -qF 'LocalRepos.scan(' "$1" && { echo "    coordinator still scans with LocalRepos.scan"; return 1; }; return 0; }
 d3() {
     python3 - "$1" <<'PY' || return 1
 import re, sys

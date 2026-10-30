@@ -88,7 +88,9 @@ coord, lr, panel, bj = (open(x).read() for x in sys.argv[1:5])
 bad = 0
 if "names: RegistryNames" not in lr or "names.currentName(raw)" not in lr or "names.carries(" not in lr: print("    LocalRepos does not fold origin names through the registry"); bad = 1
 if "RegistryNames.live()" not in coord or "FolderActions.renamePlan(" not in coord or "renameName(originName, names)" not in open(sys.argv[1].replace("GitSyncCoordinator.kt", "FolderActions.kt")).read(): print("    rename target is not the resolved current name"); bad = 1
-if "LocalRepos.scan(roots, names)" not in panel or "autoFixOrigins(" not in panel or "reconcileOrigins(" not in panel or "originLabel(" not in panel: print("    Parentless does not resolve/fix/show old origins"); bad = 1
+# #1315 Parentless reads THE ONE INVENTORY (misnamed + stale-origin rows), the auto-fix runs inside the inventory pass.
+if "coordinator.inventory" not in panel or "RepoClass.MISNAMED" not in panel or "RepoClass.STALE_ORIGIN" not in panel or "originLabel(" not in panel or "LocalRepos.scan(" in panel: print("    Parentless does not read the inventory / show old origins"); bad = 1
+if "autoFixOrigins(stale)" not in coord or "staleOrigin && it.isClone" not in coord: print("    the inventory pass does not auto-fix stale origins"); bad = 1
 g = json.loads(bj)["ui"]["sync"]["git"]
 if not g.get("stale_origin", {}).get("auto_fix") or "_doc_stale_origin" not in g: print("    stale_origin.auto_fix or its _doc missing"); bad = 1
 if "UnlistedRepos.without(" not in coord: print("    lists are not refreshed after a run"); bad = 1
@@ -125,9 +127,9 @@ echo "── N registry names (#1317) ──"
 n1 "$COORD" "$SRC/sync/LocalRepos.kt" "$SRC/sync/ParentlessPanel.kt" "$BJ" && pass "origin names fold through renamed_from; Fix origin + auto_fix declared; lists refresh" || fail "registry names"
 echo "── I self entry and .incoming (#1317) ──"
 SYNC="$SRC/sync"
-i1() { grep -qF 'rm -rf ${q(into)}; {' "$1" && grep -qF 'rc=\$?; rm -rf ${q(into)}' "$1" && grep -qF '!isIncoming(it)' "$2" && grep -qF 'LocalRepos.isIncoming(d)' "$3" && grep -qF 'sot.listed' "$4" && grep -qF 'x.strings("renamed_from")' "$5" || { echo "    self entry / .incoming guards missing"; return 1; }; }
+i1() { grep -qF 'rm -rf ${q(into)}; {' "$1" && grep -qF 'rc=\$?; rm -rf ${q(into)}' "$1" && grep -qF '!isIncoming(it)' "$2" && grep -qF 'Kind.DEBRIS' "$3" && grep -qF 'sot.listed' "$4" && grep -qF 'x.strings("renamed_from")' "$5" || { echo "    self entry / .incoming guards missing"; return 1; }; }
 # #1315 the listed set (repos + self) is consumed by the ONE inventory classification (sync/inventory/RepoInventory), not the coordinator.
-I_ARGS=("$SYNC/ExecCopier.kt" "$SYNC/LocalRepos.kt" "$SYNC/UnlistedRepos.kt" "$SYNC/inventory/RepoInventory.kt" "$DECL")
+I_ARGS=("$SYNC/ExecCopier.kt" "$SYNC/LocalRepos.kt" "$SYNC/inventory/InventoryScript.kt" "$SYNC/inventory/RepoInventory.kt" "$DECL")
 i1 "${I_ARGS[@]}" && pass "stale .incoming cleared first and on failure, never listed; self entry folded into listed" || fail "self/.incoming"
 echo "── H header parity ──"
 h1 && pass "Parentless/Unlisted use the main header, cells and status icons" || fail "header parity"

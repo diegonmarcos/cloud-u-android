@@ -206,6 +206,8 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // #1254 the declared depth command in flight or last finished; #1255 the unlisted git folders.
     val depthRun by coordinator.depthRun.collectAsState()
     val unlistedFolders by coordinator.unlisted.collectAsState()
+    // #1315 the ONE inventory (every folder classified once): the Parentless rows and the duplicate / bare / debris sections read it.
+    val inventoryState by coordinator.inventory.collectAsState()
     var depthConfirm by remember { mutableStateOf<Declarations.GitDepthActionDecl?>(null) }
     var showDepthReport by remember { mutableStateOf(false) }
     val tableScroll = rememberScrollState()
@@ -283,8 +285,6 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     // A clone folder under an OLD name (cloud-infra) is the same repository as its renamed row (cloudy-t-infra): keyed by the current name, never listed twice.
     val clonedByName = repos.associateBy { Declarations.repoSot.canonical(File(it.path).name) }
     var showArchived by remember { mutableStateOf(false) }
-    // #1149 where Parentless looks: the store's git folder and the folder every registered clone sits in.
-    val parentRoots = remember(repos) { (listOf(SharedStore.gitRoot()) + repos.mapNotNull { File(it.path).parentFile }).distinctBy { it.absolutePath } }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
 
     // #1138 one table row of one repository: the cached remote facts and the local glance, no network here.
@@ -1039,11 +1039,13 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     // #1149 ONE TABLE for every listing above: the sticky header, the bulk bar, the rows.
                     if (!setup) tableBlock()
                     // #1149 LOCAL REPOS PARENTLESS: folders holding a .git that are not named like their origin.
-                    if (!setup && prefs != null) item(key = "parentless") { ParentlessPanel(parentRoots, prefs, coordinator, glances, lastCommits, depthRun, onOpenReport = { showDepthReport = true }) { coordinator.refresh(force = true) } }
+                    if (!setup && prefs != null) item(key = "parentless") { ParentlessPanel(prefs, coordinator, glances, lastCommits, depthRun, onOpenReport = { showDepthReport = true }) { coordinator.refresh(force = true) } }
                     // #1255 UNLISTED GIT FOLDERS: git folders under the declared roots that no registry repository matches (or with no remote).
                     if (!setup && RepoFilters.showUnlisted(filterSel)) item(key = "unlisted") {
                         UnlistedPanel(page.unlisted.label, unlistedFolders, glances, lastCommits, depthRun, coordinator, onOpenReport = { showDepthReport = true })
                     }
+                    // #1315 THE ONE INVENTORY's other sections: duplicate clones, bare mirrors, leftover folders (drawn only when they have rows).
+                    if (!setup) item(key = "inventory") { InventorySections(inventoryState, page.inventory, glances, lastCommits, depthRun, coordinator, onOpenReport = { showDepthReport = true }) }
                 }
                 else -> item { EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "") }
             }

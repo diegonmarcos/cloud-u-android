@@ -205,10 +205,12 @@ class FolderOriginsTest {
     private val sot2 = Declarations.parseRepoSot("""{"self":{"name":"_git-repos-master","url":"git@github.com:diegonmarcos/_git-repos-master.git","private":false,"renamed_from":["git-repos-master"]},
         "repos":[{"name":"z-archived_My-ai-memory","url":"git@github.com:diegonmarcos/z-archived_My-ai-memory.git","private":true,"renamed_from":["My-ai-memory"]}]}""")
     private val names2 = RegistryNames(sot2)
-    private fun unlistedOf(origin: String): Boolean {
-        val ids = sot2.listed.map { BulkDepth.identity(it.github, sot2::canonical) }.toSet()
-        return UnlistedRepos.unlisted(listOf(UnlistedRepos.Folder("/s/x", origin)), ids, sot2::canonical).isNotEmpty()
-    }
+    // #1315 "unlisted" is THE ONE INVENTORY's verdict (RepoInventory.classify), never a second matcher.
+    private fun unlistedOf(origin: String, sot: Declarations.RepoSotDecl = sot2): Boolean =
+        com.diegonmarcos.clouddrive.sync.inventory.RepoInventory.classify(
+            listOf(com.diegonmarcos.clouddrive.sync.inventory.InventoryScript.Entry("/s/x", com.diegonmarcos.clouddrive.sync.inventory.InventoryScript.Kind.TREE, origin)),
+            RegistryNames(sot), sot, emptySet(),
+        ).rows.any { it.path == "/s/x" && it.cls == com.diegonmarcos.clouddrive.sync.inventory.RepoInventory.RepoClass.UNLISTED }
 
     @Test fun `the index repo's own clones are listed through the registry self entry, under either name`() {
         assertEquals("self is not a repos row (no self-symlink)", 1, sot2.repos.size)
@@ -222,8 +224,7 @@ class FolderOriginsTest {
 
     @Test fun `without a self entry the index repo clones were unlisted (the bug)`() {
         val noSelf = Declarations.parseRepoSot("""{"repos":[]}""")
-        val ids = noSelf.listed.map { BulkDepth.identity(it.github, noSelf::canonical) }.toSet()
-        assertEquals(1, UnlistedRepos.unlisted(listOf(UnlistedRepos.Folder("/s/x", "https://github.com/o/_git-repos-master.git")), ids, noSelf::canonical).size)
+        assertTrue(unlistedOf("https://github.com/o/_git-repos-master.git", noSelf))
     }
 
     @Test fun `index repo folders resolve to the registry name, the old folder is parentless and renames to it`() {
@@ -249,7 +250,9 @@ class FolderOriginsTest {
         File(base, "cloud-infra.incoming/sub").mkdirs()
         File(base, "keep/.git").mkdirs()
         File(base, "cloud-infra.incoming/.git").mkdirs()
-        assertEquals(listOf("keep"), UnlistedRepos.walk(listOf(base), 3, 100, Long.MAX_VALUE).map { File(it.path).name })
+        val walked = com.diegonmarcos.clouddrive.sync.inventory.InventoryScript.walkIo(listOf(base), 3, 100, Long.MAX_VALUE, listOf("*.incoming"))
+        assertEquals(listOf("keep"), walked.filter { it.kind == com.diegonmarcos.clouddrive.sync.inventory.InventoryScript.Kind.TREE }.map { File(it.path).name })
+        assertEquals("the leftover is DEBRIS, never a repository", listOf("cloud-infra.incoming"), walked.filter { it.kind == com.diegonmarcos.clouddrive.sync.inventory.InventoryScript.Kind.DEBRIS }.map { File(it.path).name })
         assertEquals(listOf("keep"), LocalRepos.scan(listOf(base), names2).map { it.dir.name })
         base.deleteRecursively()
     }

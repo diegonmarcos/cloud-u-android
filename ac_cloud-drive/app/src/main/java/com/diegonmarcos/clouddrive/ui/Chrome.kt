@@ -178,6 +178,8 @@ object DriveTags {
     const val SYNC_GIT_DEPTH_REPORT = "sync_git_depth_report"
     const val SYNC_GIT_FILTER_ROW = "sync_git_filter_row"
     const val SYNC_GIT_UNLISTED = "sync_git_unlisted"
+    /** #1315 the inventory's own sections (suffixed _duplicates / _bare / _debris). */
+    const val SYNC_GIT_INVENTORY = "sync_git_inventory"
     const val SYNC_GIT_ACTIVITY_BUTTON = "sync_git_activity_button"
     const val SYNC_GIT_ACTIVITY_WINDOW = "sync_git_activity_window"
     const val SYNC_GIT_UNPUSHED = "sync_git_unpushed"

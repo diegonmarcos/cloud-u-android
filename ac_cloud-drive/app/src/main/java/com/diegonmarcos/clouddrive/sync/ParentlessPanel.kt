@@ -2,10 +2,8 @@ package com.diegonmarcos.clouddrive.sync
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -13,21 +11,19 @@ import androidx.compose.ui.res.stringResource
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.clouddrive.sync.inventory.RepoInventory
 import com.diegonmarcos.clouddrive.ui.DriveTags
-import java.io.File
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
- * #1149 Sync ▸ Git ▸ Me ▸ Local Repos Parentless: the local folders that hold a `.git` whose name is not their origin's
- * repository name ([LocalRepos]). #1288 drawn by the ONE folder table ([FolderRepoTable]: the main table's columns and
- * header), each row with the declared folder commands Rename / Archive / Delete, and "Rename all". A rename whose target
- * exists goes to <name>___CONFLICT[n] (nothing overwritten or merged); a rename that happened re-points every saved path
- * and bookmark at the new folder ([LocalRepoRefs]). [onChanged] lets the page re-read its registry.
+ * #1149 Sync ▸ Git ▸ Me ▸ Local Repos Parentless: the clones that need a folder fix. #1315 drawn FROM THE ONE INVENTORY
+ * (no scan of its own): a MISNAMED row (the folder does not carry its repository's registry name: Rename) and a STALE_ORIGIN
+ * row (named right, origin naming a retired name: Fix origin). #1288 the ONE folder table ([FolderRepoTable]) with the declared
+ * folder commands and "Rename all" / "Fix all origins"; a rename whose target exists goes to <name>___CONFLICT[n]; a rename
+ * re-points every saved path and bookmark ([LocalRepoRefs]). When a command ends the inventory is read again and [onChanged]
+ * lets the page re-read its registry.
  */
 @Composable
 fun ParentlessPanel(
-    roots: List<File>,
     prefs: DrivePrefs,
     coordinator: GitSyncCoordinator,
     glances: Map<String, GitSyncCoordinator.Glance>,
@@ -37,20 +33,14 @@ fun ParentlessPanel(
     onChanged: () -> Unit,
 ) {
     val ctx = LocalContext.current
-    var rows by remember { mutableStateOf<List<FolderActions.Target>?>(null) }
-    val key = roots.map { it.absolutePath }
-    // Rescan on open and whenever a folder command ends.
-    LaunchedEffect(key, run?.actionId, run?.ended) {
-        val names = RegistryNames.live()
-        val found = withContext(Dispatchers.IO) {
-            // #1317 origins are read the way the actions reach the store; stale ones (a retired name) are fixed first, then the list is read again.
-            var all = coordinator.reconcileOrigins(LocalRepos.scan(roots, names))
-            if (coordinator.autoFixOrigins(all) > 0) all = coordinator.reconcileOrigins(LocalRepos.scan(roots, names))
-            LocalRepos.parentless(all, names).map { FolderActions.Target(it.dir.absolutePath, it.origin, it.repoName) }
-        }
-        rows = found
-        coordinator.requestFolderStatus(found.map { it.path })
-        if (run != null && run.ended && run.kind in Declarations.FOLDER_KINDS) onChanged()
+    val inventory by coordinator.inventory.collectAsState()
+    val names = RegistryNames.live()
+    val rows = inventory?.rows?.filter { it.cls == RepoInventory.RepoClass.MISNAMED || it.cls == RepoInventory.RepoClass.STALE_ORIGIN }
+        ?.map { FolderActions.Target(it.path, it.origin, it.registryName) }
+    // The statuses of these rows ride the ONE reader; a finished folder command re-reads the inventory and the registry.
+    LaunchedEffect(rows?.map { it.path }) { rows?.let { coordinator.requestFolderStatus(it.map { t -> t.path }) } }
+    LaunchedEffect(run?.actionId, run?.ended) {
+        if (run != null && run.ended && run.kind in Declarations.FOLDER_KINDS) { coordinator.scanUnlisted(); onChanged() }
     }
     FolderRepoTable(
         tableId = "parentless",
@@ -60,7 +50,7 @@ fun ParentlessPanel(
         rows = rows, glances = glances, lastCommits = lastCommits, run = run,
         kinds = listOf(Declarations.FOLDER_RENAME, Declarations.FOLDER_ARCHIVE, Declarations.FOLDER_DELETE, Declarations.FOLDER_REPOINT),
         coordinator = coordinator,
-        subtitle = { stringResource(R.string.parentless_row, FolderActions.originLabel(LocalRepos.repoNameOf(it.origin), RegistryNames.live())) },
+        subtitle = { stringResource(R.string.parentless_row, FolderActions.originLabel(LocalRepos.repoNameOf(it.origin), names)) },
         bulk = listOf(Declarations.FOLDER_RENAME to stringResource(R.string.parentless_rename_all), Declarations.FOLDER_REPOINT to stringResource(R.string.parentless_fix_all)),
         repoint = { from, to ->
             val r = LocalRepoRefs.repoint(ctx.applicationContext, prefs, from, to)

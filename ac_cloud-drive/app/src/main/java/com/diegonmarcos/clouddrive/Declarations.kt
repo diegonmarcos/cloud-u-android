@@ -88,7 +88,10 @@ object Declarations {
     /** #1255 the Unlisted git folders section (ui.sync.git.unlisted): root templates, walk bounds. */
     data class GitUnlistedDecl(val label: String = "", val roots: List<String> = emptyList(), val maxDepth: Int = 2, val maxDirs: Int = 2000, val timeoutSeconds: Int = 30)
     /** #1315 the one inventory pass (ui.sync.git.inventory): the folder-name globs that are leftovers, never repositories; whether a clone the pass finds under a registry name is registered for the scheduler. */
-    data class GitInventoryDecl(val debris: List<String> = listOf("*.incoming"), val autoRegister: Boolean = true)
+    data class GitInventoryDecl(val debris: List<String> = listOf("*.incoming"), val autoRegister: Boolean = true, /** the section titles and lines of the inventory's own sections (duplicates, bare, debris, ...), by key. */ val labels: Map<String, String> = emptyMap()) {
+        /** The declared label for [key], else the key itself spelled out (a missing label is visible, never a crash). */
+        fun label(key: String): String = labels[key] ?: key.replace('_', ' ')
+    }
     /** #1256 one declared filter of the Git page's filter row: its options, the first one is the "all" default. */
     data class GitFilterOptionDecl(val id: String, val label: String)
     data class GitFilterDecl(val id: String, val label: String, val options: List<GitFilterOptionDecl>)
@@ -584,7 +587,11 @@ object Declarations {
             archiveRoot = o.str("archive_root", "z-archived").takeIf { com.diegonmarcos.clouddrive.sync.BareClones.validRoot(it) } ?: "z-archived",
             staleOriginAutoFix = (o["stale_origin"] as? JsonObject)?.bool("auto_fix", true) ?: true,
             inventory = (o["inventory"] as? JsonObject)?.let { i ->
-                GitInventoryDecl(i.strings("debris").filter { com.diegonmarcos.clouddrive.sync.inventory.InventoryScript.safeGlob(it) }.ifEmpty { GitInventoryDecl().debris }, i.bool("auto_register", true))
+                GitInventoryDecl(
+                    i.strings("debris").filter { com.diegonmarcos.clouddrive.sync.inventory.InventoryScript.safeGlob(it) }.ifEmpty { GitInventoryDecl().debris },
+                    i.bool("auto_register", true),
+                    (i["labels"] as? JsonObject)?.entries?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k to it } }?.toMap().orEmpty(),
+                )
             } ?: GitInventoryDecl(),
             repoMenu = parseRepoMenu(o["repo_menu"]),
             stalePackCleanup = (o["stale_pack_cleanup"] as? JsonObject)?.let { c ->

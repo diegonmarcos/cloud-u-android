@@ -20,26 +20,7 @@ object UnlistedRepos {
             if (ph == null) listOf(t) else vars[ph].orEmpty().map { v -> t.replace("{$ph}", v) }
         }.filter { it.isNotBlank() }.map { File(it) }.distinctBy { it.absolutePath }
 
-    /** Breadth-first, bounded: every git working folder under [roots] (a root that is itself a repository counts). */
-    fun walk(roots: List<File>, maxDepth: Int, maxDirs: Int, deadlineMs: Long, now: () -> Long = System::currentTimeMillis, skip: (File) -> Boolean = { false }): List<Folder> {
-        val out = LinkedHashMap<String, Folder>()
-        var seen = 0
-        val queue = ArrayDeque<Pair<File, Int>>()
-        roots.filter { it.isDirectory }.forEach { queue.add(it to 0) }
-        while (queue.isNotEmpty() && seen < maxDirs && now() < deadlineMs) {
-            val (d, depth) = queue.removeFirst(); seen++
-            if (skip(d) || LocalRepos.isIncoming(d)) continue
-            if (File(d, ".git").exists()) { out.putIfAbsent(d.absolutePath, Folder(d.absolutePath, LocalRepos.originOf(d))); continue }
-            if (depth >= maxDepth) continue
-            d.listFiles().orEmpty().filter { it.isDirectory && !it.name.startsWith(".") && it.name != "Android" }.sortedBy { it.name.lowercase() }
-                .forEach { queue.add(it to depth + 1) }
-        }
-        return out.values.toList()
-    }
-
-    /** The folders whose origin names no registry repository ([registry] = identities); no origin = unlisted. */
-    fun unlisted(found: List<Folder>, registry: Set<String>, canonical: (String) -> String): List<Folder> =
-        found.filter { f -> f.origin.isBlank() || BulkDepth.identity(f.origin, canonical) !in registry }
+    // #1315 the walk and the registry match moved to the ONE inventory (sync/inventory: InventoryScript.walkIo + RepoInventory.classify).
 
     /** #1317 the list without the folders a command just moved, archived or deleted (their rows must vanish at once, the rest stay). */
     fun without(l: List<Folder>, gone: Set<String>): List<Folder> = l.filter { it.path !in gone }
