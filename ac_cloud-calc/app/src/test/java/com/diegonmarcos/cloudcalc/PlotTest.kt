@@ -172,7 +172,7 @@ class PlotTest {
         assertEquals(28, listed.size)
         assertTrue(listed.any { it.number == 15 })
         // the owner's list is not copied: Chudnovsky is still ONE formula
-        assertEquals(1, catalog.formulas.count { it.latex.contains("640320") })
+        assertEquals(1, catalog.formulas.count { it.tex.contains("640320") })
         listOf("Leibniz", "Nilakantha", "Wallis", "Viète", "Machin", "Bailey", "Ramanujan", "Gauss–Legendre", "Gaussian integral", "Buffon", "Monte Carlo", "Stirling", "arctangent", "arcsine", "Lambert", "Madhava").forEach { name ->
             assertTrue(name, own.any { it.title.contains(name) })
         }
