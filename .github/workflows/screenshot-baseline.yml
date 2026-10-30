@@ -110,7 +110,12 @@ jobs:
           adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0
           # an awake, unlocked screen for the whole run (the first run captured the lock screen)
           adb shell settings put system screen_off_timeout 2147483647; adb shell svc power stayon true
-          awake() { adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard; adb shell input keyevent 82; }
+          # no lock screen at all (swipe-to-unlock only, no PIN on the emulator): disable it, then wake + dismiss + swipe up
+          adb shell locksettings set-disabled true || true
+          adb shell settings put secure lockscreen.disabled 1 || true
+          awake() { adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard; adb shell input keyevent 82
+            sz=$(adb shell wm size | tr -d '\r' | sed -n 's/.*: \([0-9]*\)x\([0-9]*\)$/\1 \2/p' | tail -1); w=${sz% *}; h=${sz#* }
+            [ -n "$w" ] && adb shell dumpsys window | grep -q 'mKeyguardShowing=true\|isKeyguardShowing=true\|mShowingLockscreen=true' && adb shell input swipe $((w/2)) $((h*8/10)) $((w/2)) $((h/5)) 200 || true; }
           awake
           adb shell am start -W -n "$ACT" >/dev/null; sleep 8
           shot() { # name orientation(0 portrait / 1 landscape) target
