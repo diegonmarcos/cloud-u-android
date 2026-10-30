@@ -127,6 +127,7 @@ jobs:
           awake
           adb shell am start -W -n "$ACT" >/dev/null; sleep 8
           shot() { # name orientation(0 portrait / 1 landscape) target
+            [ "$(timeout 10 adb get-state 2>/dev/null)" = device ] || { echo "skipped $1: emulator gone"; return 0; }
             adb shell settings put system accelerometer_rotation 0; adb shell settings put system user_rotation "$2"; sleep 2
             if [ -n "$3" ]; then adb shell am start -n "$ACT" --es shortcut_action "$3" >/dev/null; fi
             awake; sleep 5
@@ -139,7 +140,8 @@ jobs:
             dir=${r%%:*}; mkdir -p "out/$dir"
             for t in $T; do shot "$dir/launcher-${t%%=*}" "${r##*:}" "${t#*=}"; done
           done
-          adb logcat -d > out/logcat-$DEVICE.txt || true
+          # the swiftshader emulator can die mid-run (tablet landscape did): never wait for a gone device
+          timeout 60 adb logcat -d > out/logcat-$DEVICE.txt || true
           ls -R out
           EOF
           chmod +x capture.sh
