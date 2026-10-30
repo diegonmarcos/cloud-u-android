@@ -107,13 +107,16 @@ jobs:
           aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
           PKG=$("$aapt2" dump packagename apk/Cloud-SuperApp-x86_64.apk)
           ACT=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
+          # the SuperApp's own idle Screensaver (a black overlay with an Unlock button, floatingnav/ScreensaverService) covered
+          # every capture: no overlay permission for it, and stop it before each shot
+          adb shell appops set "$PKG" SYSTEM_ALERT_WINDOW deny || true
           adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0
-          # an awake, unlocked screen for the whole run (the first run captured the lock screen)
+          # an awake, unlocked screen for the whole run
           adb shell settings put system screen_off_timeout 2147483647; adb shell svc power stayon true
           # no lock screen at all (swipe-to-unlock only, no PIN on the emulator): disable it, then wake + dismiss + swipe up
           adb shell locksettings set-disabled true || true
           adb shell settings put secure lockscreen.disabled 1 || true
-          awake() { adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard; adb shell input keyevent 82
+          awake() { adb shell am stopservice -n "$PKG/.floatingnav.ScreensaverService" >/dev/null 2>&1 || true; adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard; adb shell input keyevent 82
             sz=$(adb shell wm size | tr -d '\r' | sed -n 's/.*: \([0-9]*\)x\([0-9]*\)$/\1 \2/p' | tail -1); w=${sz% *}; h=${sz#* }
             [ -n "$w" ] && adb shell dumpsys window | grep -q 'mKeyguardShowing=true\|isKeyguardShowing=true\|mShowingLockscreen=true' && adb shell input swipe $((w/2)) $((h*8/10)) $((w/2)) $((h/5)) 200 || true; }
           awake
