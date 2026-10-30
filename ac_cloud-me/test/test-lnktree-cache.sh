@@ -31,7 +31,7 @@ done
 grep -q 'UI_LNKTREE_CACHE_B64' app/build.gradle || bad "app/build.gradle does not bake ui.lnktree_cache"
 grep -q 'androidx.work:work-runtime' app/build.gradle || bad "app/build.gradle lacks WorkManager (the prefetch)"
 grep -q 'LnktreePrefetchScheduler.schedule' "$K/MainActivity.kt" || bad "MainActivity does not schedule the prefetch at start"
-grep -q 'PullToRefreshBox' "$K/WebPage.kt" || bad "WebPage has no pull-to-refresh"
+grep -q 'pullToRefresh(' "$K/WebPage.kt" || bad "WebPage has no pull-to-refresh"
 # nothing hard-coded: no TTL, concurrency, size or day literal in the cache Kotlin
 if grep -nE '604800|TimeUnit\.DAYS|\b7 \* |\b7L\b|ttlMs = [0-9]|newFixedThreadPool\([0-9]|Semaphore\([0-9]' "$K/LnktreeCache.kt" "$K/LnktreeWeb.kt" | grep -vE '^\S+:\s*[0-9]+:\s*(//|\*)'; then
   bad "a cache number is hard-coded in Kotlin (it belongs in build.json::ui.lnktree_cache)"

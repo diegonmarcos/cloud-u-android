@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.material3.pulltorefresh.pullToRefresh
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -165,26 +166,38 @@ fun WebPage(block: JSONObject, modifier: Modifier = Modifier, pageId: String = b
     if (cached) {
         // #1323 pull-down = HARD refresh. Only armed when the finger lands with the page scrolled to its top, so it never
         // fights the WebView's own scrolling. Deletes the page's cache files (scope: build.json), empties the WebView cache, reloads.
-        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-            isRefreshing = refreshing,
-            onRefresh = {
-                refreshing = true
-                scope.launch {
-                    withContext(Dispatchers.IO) { LnktreeCache.hardRefresh(ctx, pageId) }
-                    val w = web.value
-                    if (w == null) refreshing = false else { w.clearCache(true); w.reload() }
-                }
-            },
-            enabled = atTop,
-            modifier = modifier.fillMaxSize().pointerInput(Unit) {
-                awaitPointerEventScope {
-                    while (true) {
-                        val e = awaitPointerEvent(PointerEventPass.Initial)
-                        if (e.changes.any { it.pressed && !it.previousPressed }) atTop = web.value?.let { !it.canScrollVertically(-1) } ?: true
+        // Material3's pull-to-refresh building block: PullToRefreshBox is this modifier plus the indicator, without the `enabled` switch.
+        val ptr = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
+        androidx.compose.foundation.layout.Box(
+            modifier = modifier.fillMaxSize()
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val e = awaitPointerEvent(PointerEventPass.Initial)
+                            if (e.changes.any { it.pressed && !it.previousPressed }) atTop = web.value?.let { !it.canScrollVertically(-1) } ?: true
+                        }
                     }
                 }
-            },
-        ) { page(Modifier.fillMaxSize()) }
+                .pullToRefresh(
+                    isRefreshing = refreshing,
+                    state = ptr,
+                    enabled = atTop,
+                    onRefresh = {
+                        refreshing = true
+                        scope.launch {
+                            withContext(Dispatchers.IO) { LnktreeCache.hardRefresh(ctx, pageId) }
+                            val w = web.value
+                            if (w == null) refreshing = false else { w.clearCache(true); w.reload() }
+                        }
+                    },
+                ),
+        ) {
+            page(Modifier.fillMaxSize())
+            androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator(
+                state = ptr, isRefreshing = refreshing,
+                modifier = Modifier.align(androidx.compose.ui.Alignment.TopCenter),
+            )
+        }
     } else page(modifier.fillMaxSize())
     }
 }
