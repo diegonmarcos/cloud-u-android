@@ -155,7 +155,7 @@ private class TableEntry(
 /** #1149 Cloud's live public list: loading, the filtered repositories, or why there are none (the declared set then stands in). */
 private data class CloudPublic(val loading: Boolean = false, val loaded: Boolean = false, val repos: List<GitHubRepos.Repo> = emptyList(), val error: String = "")
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextRunMinutes: Long?, modifier: Modifier = Modifier, view: GitView = GitView.ME, prefs: DrivePrefs? = null, part: GitPart = GitPart.TABLE) {
     val setup = view == GitView.ME && part == GitPart.SETUP
