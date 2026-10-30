@@ -70,20 +70,44 @@ class UrlHttp(
     }
 }
 
-/** Remembers an answer for [ttlMs], so two panels reading the same series (or a re-opened dashboard) cost one request. */
-class CachedHttp(private val inner: Http, private val ttlMs: Long = 60_000L, private val clock: () -> Long = System::currentTimeMillis) : Http {
+/**
+ * Remembers an answer for [ttlMs], or for [ttlFor] of its address when that names a longer one (a source's declared schedule.ttl_s), so two panels
+ * reading the same series (or a re-opened dashboard) cost one request and a rate-limited source is never asked more often than declared.
+ */
+class CachedHttp(
+    private val inner: Http,
+    private val ttlMs: Long = 60_000L,
+    @Volatile var ttlFor: (String) -> Long? = { null },
+    private val clock: () -> Long = System::currentTimeMillis,
+) : Http {
     private val seen = ConcurrentHashMap<String, Pair<Long, String>>()
 
-    /** Forgets every answer, so a refresh asks the sources again. */
-    fun clear() = seen.clear()
+    private fun ttl(url: String): Long = maxOf(ttlMs, ttlFor(url) ?: 0L)
+
+    /** Forgets the answers kept for the default time, so a refresh asks those sources again; one kept longer (a declared schedule) stays. */
+    fun clear() {
+        seen.keys.filter { ttl(it) <= ttlMs }.forEach { seen.remove(it) }
+    }
 
     override fun get(url: String): String {
         val now = clock()
-        seen[url]?.let { (at, body) -> if (now - at < ttlMs) return body }
+        seen[url]?.let { (at, body) -> if (now - at < ttl(url)) return body }
         val body = inner.get(url)
         seen[url] = now to body
         return body
     }
 
     override fun post(url: String): String = inner.post(url).also { seen.clear() }
+}
+
+/** Answers `asset:<name>` from [read] (a file declared in the app's data/ folder, e.g. the central bank calendar); anything else goes to [inner]. */
+class AssetHttp(private val inner: Http, private val read: (String) -> String) : Http {
+    override fun get(url: String): String =
+        if (url.startsWith(ASSET)) try { read(url.removePrefix(ASSET)) } catch (e: Exception) { throw IOException("asset ${url.removePrefix(ASSET)}") } else inner.get(url)
+
+    override fun post(url: String): String = inner.post(url)
+
+    companion object {
+        const val ASSET = "asset:"
+    }
 }

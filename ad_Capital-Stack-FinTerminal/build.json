@@ -244,6 +244,12 @@
       "fi": [
         {
           "kind": "dashboard",
+          "title": "Market Monitor",
+          "subtitle": "Cross-asset tiles (rates, funding, indices, FX, crypto) and the next 48 hours of high-importance events",
+          "dashboard": "market_monitor"
+        },
+        {
+          "kind": "dashboard",
           "title": "Yield Curves",
           "subtitle": "Spot, forward and zero curves, US and major sovereigns",
           "dashboard": "yield_curves"
@@ -265,6 +271,18 @@
           "title": "World Bonds",
           "subtitle": "Sovereign bond yields and spreads by country",
           "dashboard": "world_bonds"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Credit",
+          "subtitle": "Corporate spreads (ICE BofA OAS), corporate yields and curve slopes",
+          "dashboard": "credit"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Macro",
+          "subtitle": "Latest official prints: US (BLS), euro area (Eurostat), G7 inflation (OECD)",
+          "dashboard": "macro"
         }
       ],
       "eq": [
@@ -273,6 +291,30 @@
           "title": "World Equity Indices",
           "subtitle": "Major equity index levels and moves worldwide",
           "dashboard": "world_equity_indices"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Quotes & Charts",
+          "subtitle": "Delayed quotes and daily charts for stocks, ETFs and indices",
+          "dashboard": "equity_quote"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Fundamentals",
+          "subtitle": "SEC EDGAR company profile, reported financials and filings",
+          "dashboard": "equity_fundamentals"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Earnings Calendar",
+          "subtitle": "Earnings this week with EPS consensus and last year's EPS",
+          "dashboard": "earnings_calendar"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Watchlist & Alerts",
+          "subtitle": "Your symbols, price alerts and event alerts, kept on this device",
+          "dashboard": "watchlist"
         }
       ],
       "ex": [
@@ -287,14 +329,38 @@
           "title": "Onshore USD Rates",
           "subtitle": "Onshore USD rate benchmarks and curves",
           "dashboard": "onshore_usd_rates"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Crypto",
+          "subtitle": "Crypto spot, 24h change and daily candles",
+          "dashboard": "crypto"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Commodities",
+          "subtitle": "Energy spot prices; EIA with your key",
+          "dashboard": "commodities"
         }
       ],
       "nw": [
         {
           "kind": "dashboard",
+          "title": "Economic Calendar",
+          "subtitle": "Economic events by day: time, country, importance, consensus, actual, previous",
+          "dashboard": "economic_calendar"
+        },
+        {
+          "kind": "dashboard",
           "title": "News",
           "subtitle": "Global news from the GDELT feed",
           "dashboard": "news"
+        },
+        {
+          "kind": "dashboard",
+          "title": "Central Bank Calendar",
+          "subtitle": "Next policy decisions, current policy rates and market-implied odds",
+          "dashboard": "central_bank_calendar"
         }
       ],
       "pm": [

@@ -32,6 +32,10 @@ data class Source(
     /** The source's declared API paths under its address (health, info, topics, peek, ...). */
     val paths: Map<String, String>,
     val attribution: String,
+    /** false when the source sends no CORS header (the web skips it; the APK is not a browser and reads it). */
+    val cors: Boolean = true,
+    /** How long an answer is kept (schedule.ttl_s, at least 60 s): the phone never asks a source more often than its declared schedule. */
+    val ttlS: Int = 60,
 ) {
     val needsKey: Boolean get() = authType != Catalog.AUTH_NONE
     val hasConnector: Boolean get() = connector.isNotEmpty()
@@ -60,6 +64,7 @@ object Catalog {
                 connector = str(o, "connector"), feeds = feedsOf(o.optJSONArray("feeds")),
                 priority = o.optInt("priority", 20), primary = o.optBoolean("primary", false), fleetEndpoint = str(o, "fleet_endpoint"),
                 paths = pathsOf(o.optJSONObject("paths")), attribution = str(o, "attribution"),
+                cors = o.optBoolean("cors", true), ttlS = maxOf(60, o.optJSONObject("schedule")?.optInt("ttl_s", 60) ?: 60),
             )
         }
     }

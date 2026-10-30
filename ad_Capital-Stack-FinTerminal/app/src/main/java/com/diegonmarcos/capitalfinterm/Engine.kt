@@ -21,6 +21,17 @@ data class PanelData(
     val note: String,
     /** The name of the source that served it when that is not the panel's own (the primary), else empty. */
     val servedBy: String = "",
+    /** The user's alert rules that hold on this panel's data (Watchlist & Alerts), one line each. */
+    val alerts: List<String> = emptyList(),
+)
+
+/** What a model panel (Feeds.kt) needs besides its own source: the catalog (fallback routes), its dashboard, the container route, the user's lists and now (UTC). */
+data class ModelCtx(
+    val sources: List<Source>,
+    val dash: Dashboard?,
+    val api: ApiRoute? = null,
+    val user: UserLists = UserLists(),
+    val nowUtc: String = "",
 )
 
 /**
@@ -29,9 +40,10 @@ data class PanelData(
  */
 object Engine {
     /** Fetches and derives [panel] from [source]. Throws IOException when nothing came back. */
-    fun load(panel: Panel, source: Source, http: Http, today: LocalDate, route: PrimaryRoute? = null, fallback: Source? = null): PanelData {
+    fun load(panel: Panel, source: Source, http: Http, today: LocalDate, route: PrimaryRoute? = null, fallback: Source? = null, model: ModelCtx? = null): PanelData {
         val f = panel.fetch ?: throw IOException("panel ${panel.id} has no fetch")
         val data = when (panel.derive) {
+            in MODEL_DERIVES -> model(panel, source, f, http, today, model ?: ModelCtx(emptyList(), null))
             "latest_curve", "forward_grid", "level_change", "fx_spot", "fx_cross" -> fredPanel(panel, source, f, http, today, route, fallback)
             "latest_per_series" -> perSeries(panel, source, f, http)
             "imf_latest" -> imf(panel, source, f, http)
@@ -39,7 +51,7 @@ object Engine {
             "articles" -> articles(panel, source, f, http)
             else -> throw IOException("unknown derive ${panel.derive}")
         }
-        if (data.rows.isEmpty() && data.chart.isEmpty()) throw IOException("no data")
+        if (data.rows.isEmpty() && data.chart.isEmpty() && data.note.isEmpty()) throw IOException("no data")
         return data
     }
 
@@ -48,6 +60,181 @@ object Engine {
         panel.columns, legs.map { listOf(it.first, "${it.second}%") }, emptyList(),
         legs.mapIndexed { i, l -> ChartPoint(l.first, i.toDouble(), l.second.toDouble()) }, "", "",
     )
+
+    /** The derives of the normalised model (Feeds.kt): points, events, candles, kv, filings. */
+    val MODEL_DERIVES: Set<String> = setOf("points", "events", "candles", "kv", "filings")
+
+    // ------------------------------------------------------------------ model panels
+
+    /**
+     * A model panel: the container's /v1 answer first (fetch.primary.api, when the mesh answers); else the panel's own source, then each declared
+     * fallback in order (a fallback must feed the entry). merge = every route that answers is combined (calendars); else the first that answers wins.
+     */
+    private fun model(panel: Panel, source: Source, f: JSONObject, http: Http, today: LocalDate, c: ModelCtx): PanelData {
+        var got = Got()
+        var by = ""
+        var answered = false
+        val p = f.optJSONObject("primary")
+        if (c.api != null && p != null && Catalog.str(p, "api").isNotEmpty()) {
+            try {
+                val items = eachOf(f, today, c.user)
+                val sl = slots(f, today, items)
+                val url = Requests.url(c.api.base, Catalog.str(p, "api").let { a -> sl.entries.fold(a) { s, (k, v) -> s.replace("{$k}", v) } }, params(p).map { it.first to fill(it.second, sl) })
+                val g = Feeds.parse(Catalog.str(p, "parse").ifEmpty { "finterm_v1" }, http.get(url), Feeds.Opt(f))
+                if (!g.isEmpty) {
+                    got = g
+                    by = c.api.source.name
+                }
+            } catch (e: IOException) {
+                got = Got()
+            }
+        }
+        if (got.isEmpty) {
+            val merge = f.optBoolean("merge", false)
+            val routes = ArrayList<Pair<Source, JSONObject>>()
+            routes += source to f
+            val fbs = f.optJSONArray("fallbacks")
+            if (fbs != null) for (i in 0 until fbs.length()) {
+                val fb = fbs.optJSONObject(i) ?: continue
+                val s = Catalog.byId(c.sources, Catalog.str(fb, "source")) ?: continue
+                if (c.dash != null && !s.feeds(c.dash.tab, c.dash.entry)) continue
+                routes += s to route(f, fb)
+            }
+            val names = ArrayList<String>()
+            for ((s, spec) in routes) {
+                val g = try {
+                    fetchRoute(s, spec, http, today, c.user).also { answered = true }
+                } catch (e: IOException) {
+                    Got()
+                }
+                if (g.isEmpty) continue
+                got += g
+                names += s.name
+                if (!merge) break
+            }
+            by = if (names.distinct() == listOf(source.name)) "" else names.distinct().joinToString(" + ")
+        }
+        // a calendar whose sources answered with nothing in this window is an empty window, not a failure
+        if (got.isEmpty && !(answered && panel.derive == "events")) throw IOException("no data")
+        return render(panel, f, got, today, c).copy(servedBy = by)
+    }
+
+    /** A fallback route's spec: the panel's options (labels, years, key_dim, filter) with the route's own path, params, each and provider. */
+    fun route(f: JSONObject, fb: JSONObject): JSONObject {
+        val o = JSONObject(f.toString())
+        listOf("path", "params", "provider", "fallbacks", "primary", "each", "each_days", "each_user").forEach { o.remove(it) }
+        fb.keys().forEach { o.put(it, fb.get(it)) }
+        return o
+    }
+
+    /** One route: one request, or one per item when the path or a parameter carries {each}; an item that fails is skipped, all failing is an error. */
+    private fun fetchRoute(s: Source, spec: JSONObject, http: Http, today: LocalDate, user: UserLists): Got {
+        val items = eachOf(spec, today, user)
+        val path = Catalog.str(spec, "path")
+        val ps = params(spec)
+        val perItem = items.isNotEmpty() && (path.contains("{each}") || ps.any { it.second.contains("{each}") })
+        val list = if (perItem) items else listOf("")
+        val conn = Catalog.str(spec, "provider").ifEmpty { s.connector }
+        var got = Got()
+        var failed = 0
+        for (item in list) {
+            val sl = slots(spec, today, items) + ("each" to item)
+            try {
+                got += Feeds.parse(conn, http.get(Requests.url(s.endpoint, path, ps.map { it.first to fill(it.second, sl) }, sl)), Feeds.Opt(spec, item, s.paths))
+            } catch (e: IOException) {
+                failed++
+            }
+        }
+        if (failed == list.size) throw IOException("${s.name}: no answer")
+        return got
+    }
+
+    /** The items of a per-item fetch: the user's list when the panel takes one (each_user) and it is set, else the next each_days dates, else each. */
+    fun eachOf(f: JSONObject, today: LocalDate, user: UserLists): List<String> {
+        if (Catalog.str(f, "each_user") == "watchlist" && user.watchlist.isNotEmpty()) return user.watchlist
+        val days = f.optInt("each_days", 0)
+        if (days > 0) return (0 until days).map { today.plusDays(it.toLong()).toString() }
+        return strings(f.optJSONArray("each"))
+    }
+
+    /** The slots a path or parameter may carry: {today} {from} (today - lookback_days, default 7) {yyyymm} {prev_yyyymm} {cik} {each_csv}. */
+    fun slots(f: JSONObject, today: LocalDate, items: List<String>): Map<String, String> = mapOf(
+        "today" to today.toString(),
+        "from" to today.minusDays(f.optInt("lookback_days", 7).toLong()).toString(),
+        "yyyymm" to String.format(Locale.ROOT, "%04d%02d", today.year, today.monthValue),
+        "prev_yyyymm" to today.minusMonths(1).let { String.format(Locale.ROOT, "%04d%02d", it.year, it.monthValue) },
+        "cik" to Catalog.str(f, "cik"),
+        "each_csv" to items.joinToString(","),
+    )
+
+    private fun fill(v: String, slots: Map<String, String>): String = slots.entries.fold(v) { s, (k, x) -> s.replace("{$k}", x) }
+
+    /** The model rendered by the panel's derive and view. */
+    private fun render(panel: Panel, f: JSONObject, got: Got, today: LocalDate, c: ModelCtx): PanelData = when (panel.derive) {
+        "events" -> {
+            val ev = events(got.events, f.optJSONObject("filter"), today)
+            val rows = ev.map { listOf(it.ts.replace('T', ' ').removeSuffix("Z"), it.country, it.title, dots(it.importance), it.consensus, it.actual, it.previous) }
+            val alerts = if (panel.raw.optString("alerts") == "event") Alerts.eventHits(c.user.alerts, ev, c.nowUtc) else emptyList()
+            PanelData(panel.columns, rows, emptyList(), emptyList(), today.toString(), if (ev.isEmpty()) "No event in this window." else "", alerts = alerts)
+        }
+        "candles" -> {
+            val bars = got.bars.distinctBy { it.date }.sortedBy { it.date }
+            val chart = bars.mapIndexed { i, b -> ChartPoint(b.date, i.toDouble(), b.c) }
+            val rows = bars.takeLast(5).reversed().map { listOf(it.date, sig(it.o), sig(it.h), sig(it.l), sig(it.c)) }
+            PanelData(panel.columns, rows, emptyList(), chart, bars.lastOrNull()?.date.orEmpty(), "")
+        }
+        "kv" -> PanelData(panel.columns, got.kv.map { listOf(it.first, it.second) }, emptyList(), emptyList(), "", "")
+        "filings" -> PanelData(panel.columns, got.rows, got.links, emptyList(), got.rows.maxOfOrNull { it.getOrElse(2) { "" } }.orEmpty(), "")
+        else -> points(panel, f, got.points, c)
+    }
+
+    /** Points: labels rename and select (in the answer's order), years place them on a curve (sorted), then rows and a chart per view. */
+    private fun points(panel: Panel, f: JSONObject, all: List<Pt>, c: ModelCtx): PanelData {
+        val labels = f.optJSONObject("labels")
+        val years = f.optJSONObject("years")
+        fun keyIn(o: JSONObject, k: String): String? = if (o.has(k)) k else k.substringAfterLast(':').takeIf { o.has(it) }
+        var pts = all.distinctBy { it.key }
+        if (labels != null && labels.length() > 0) pts = pts.mapNotNull { p -> keyIn(labels, p.key)?.let { p.copy(label = labels.getString(it)) } }
+        if (years != null && years.length() > 0) pts = pts.mapNotNull { p -> keyIn(years, p.key)?.let { p.copy(x = years.getDouble(it)) } }.sortedBy { it.x }
+        val bp = panel.raw.optString("change_unit") == "bp"
+        val pctUnit = panel.unit == "%"
+        fun v(x: Double) = if (pctUnit) num(x, 2) else if (Math.abs(x) >= 1000.0) group(x) else sig(x)
+        fun plain(x: Double) = if (pctUnit) num(x, 2) else if (Math.abs(x) >= 10000.0) String.format(Locale.ROOT, "%,.0f", x)
+            else java.math.BigDecimal(String.format(Locale.ROOT, "%.4f", x)).stripTrailingZeros().toPlainString()
+        fun chg(p: Pt): String = p.prev?.let { if (bp) String.format(Locale.ROOT, "%+.1f", (p.value - it) * 100.0) else signedSig(p.value - it) } ?: "-"
+        fun pct(p: Pt): Double? = p.prev?.takeIf { it != 0.0 }?.let { (p.value / it - 1.0) * 100.0 }
+        fun pctText(p: Pt): String = pct(p)?.let { String.format(Locale.ROOT, "%+.2f", it) } ?: "-"
+        val rows = pts.map { p ->
+            when {
+                panel.raw.optString("value_columns") == "actual_previous" -> listOf(p.label, plain(p.value), p.prev?.let { plain(it) } ?: "-", p.date)
+                panel.view == Dashboards.VIEW_QUOTES -> listOf(p.label, v(p.value), chg(p), if (bp) "-" else pctText(p), p.date)
+                else -> listOf(p.label, v(p.value), if (bp) chg(p) else pctText(p), p.date)
+            }
+        }
+        val chart = when (panel.view) {
+            Dashboards.VIEW_CURVE -> pts.map { ChartPoint(it.label, it.x, it.value) }
+            Dashboards.VIEW_BARS -> pts.mapIndexed { i, p -> ChartPoint(p.label, i.toDouble(), if (panel.raw.optString("chart_value") == "change_pct") pct(p) ?: 0.0 else p.value) }
+            Dashboards.VIEW_QUOTES -> pts.mapIndexed { i, p -> ChartPoint(p.label, i.toDouble(), if (bp) (p.prev?.let { (p.value - it) * 100.0 } ?: 0.0) else pct(p) ?: 0.0) }
+            else -> emptyList()
+        }
+        val alerts = if (panel.raw.optString("alerts") == "price") Alerts.priceHits(c.user.alerts, pts) else emptyList()
+        return PanelData(panel.columns, rows, emptyList(), chart, pts.maxOfOrNull { it.date }.orEmpty(), "", alerts = alerts)
+    }
+
+    /** Events in the declared window (days_back before today to days_ahead after), at or above importance_min, once each, in time order. */
+    fun events(all: List<Ev>, filter: JSONObject?, today: LocalDate): List<Ev> {
+        val from = today.minusDays(filter?.optLong("days_back", 1) ?: 1).toString()
+        val to = today.plusDays(filter?.optLong("days_ahead", 7) ?: 7).toString()
+        val min = filter?.optInt("importance_min", 0) ?: 0
+        return all.filter { it.ts.length >= 10 && it.ts.take(10) in from..to && it.importance >= min }
+            .distinctBy { it.ts.take(13) + "|" + it.country + "|" + it.title.lowercase(Locale.ROOT) }
+            .sortedWith(compareBy({ it.ts.take(10) }, { if (it.ts.length == 10) "" else it.ts }, { -it.importance }))
+    }
+
+    /** Importance as three dots: 0 to 3 filled. */
+    fun dots(n: Int): String = "\u25CF".repeat(n.coerceIn(0, 3)) + "\u25CB".repeat(3 - n.coerceIn(0, 3))
+
+    private fun signedSig(d: Double): String = (if (d >= 0) "+" else "-") + sig(Math.abs(d))
 
     // ------------------------------------------------------------------ FRED
 
@@ -215,7 +402,12 @@ object Engine {
     /** The declared `params` as ordered pairs; an object or array value is sent as its JSON text. */
     fun params(f: JSONObject): List<Pair<String, String>> {
         val p = f.optJSONObject("params") ?: return emptyList()
-        return p.keys().asSequence().map { k -> k to p.opt(k)?.toString().orEmpty() }.toList()
+        return p.keys().asSequence().flatMap { k ->
+            when (val v = p.opt(k)) {
+                is JSONArray -> (0 until v.length()).map { k to v.optString(it) }.asSequence()
+                else -> sequenceOf(k to v?.toString().orEmpty())
+            }
+        }.toList()
     }
 
     private fun strings(a: JSONArray?): List<String> = if (a == null) emptyList() else (0 until a.length()).map { a.optString(it) }

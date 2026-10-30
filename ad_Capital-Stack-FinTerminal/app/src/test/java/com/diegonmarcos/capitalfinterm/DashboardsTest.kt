@@ -26,7 +26,7 @@ class DashboardsTest {
                 assertEquals(tab, d.tab)
             }
         }
-        assertEquals(17, count)
+        assertEquals(28, count)
         assertEquals(count, dashboards.size)
     }
 

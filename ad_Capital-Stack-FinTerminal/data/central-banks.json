@@ -1,0 +1,314 @@
+{
+  "_doc": "THE CENTRAL BANK CALENDAR of Capital-Stack-FinTerminal (design 2.2): the policy decision day of each bank, from the bank's own published schedule (source_url). time + tz = the announcement in the bank's local time ('' = no fixed hour: an all-day event); ts = that instant in UTC (YYYY-MM-DDTHH:MMZ, or the date when all-day), which the guard test/test-finterm-sources.sh S8 recomputes from date + time + tz. Read by the declared_events connector (APK assets, web finterm.json) and by the container's calendar job. Refresh: when a bank publishes the next year (the guard turns red when the last event of a bank is less than 60 days away).",
+  "banks": [
+    {
+      "id": "fed",
+      "name": "Federal Reserve (FOMC)",
+      "country": "US",
+      "currency": "USD",
+      "tz": "America/New_York",
+      "time": "14:00",
+      "source_url": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+      "events": [
+        {
+          "date": "2026-01-28",
+          "ts": "2026-01-28T19:00Z",
+          "title": "Federal Reserve (FOMC): rate decision"
+        },
+        {
+          "date": "2026-03-18",
+          "ts": "2026-03-18T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision + projections"
+        },
+        {
+          "date": "2026-04-29",
+          "ts": "2026-04-29T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision"
+        },
+        {
+          "date": "2026-06-17",
+          "ts": "2026-06-17T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision + projections"
+        },
+        {
+          "date": "2026-07-29",
+          "ts": "2026-07-29T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision"
+        },
+        {
+          "date": "2026-09-16",
+          "ts": "2026-09-16T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision + projections"
+        },
+        {
+          "date": "2026-10-28",
+          "ts": "2026-10-28T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision"
+        },
+        {
+          "date": "2026-12-09",
+          "ts": "2026-12-09T19:00Z",
+          "title": "Federal Reserve (FOMC): rate decision + projections"
+        },
+        {
+          "date": "2027-01-27",
+          "ts": "2027-01-27T19:00Z",
+          "title": "Federal Reserve (FOMC): rate decision"
+        },
+        {
+          "date": "2027-03-17",
+          "ts": "2027-03-17T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision + projections"
+        },
+        {
+          "date": "2027-04-28",
+          "ts": "2027-04-28T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision"
+        },
+        {
+          "date": "2027-06-09",
+          "ts": "2027-06-09T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision + projections"
+        },
+        {
+          "date": "2027-07-28",
+          "ts": "2027-07-28T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision"
+        },
+        {
+          "date": "2027-09-15",
+          "ts": "2027-09-15T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision + projections"
+        },
+        {
+          "date": "2027-10-27",
+          "ts": "2027-10-27T18:00Z",
+          "title": "Federal Reserve (FOMC): rate decision"
+        },
+        {
+          "date": "2027-12-08",
+          "ts": "2027-12-08T19:00Z",
+          "title": "Federal Reserve (FOMC): rate decision + projections"
+        }
+      ]
+    },
+    {
+      "id": "ecb",
+      "name": "European Central Bank",
+      "country": "EA",
+      "currency": "EUR",
+      "tz": "Europe/Berlin",
+      "time": "14:15",
+      "source_url": "https://www.ecb.europa.eu/press/calendars/mgcgc/html/index.en.html",
+      "events": [
+        {
+          "date": "2026-10-29",
+          "ts": "2026-10-29T13:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2026-12-17",
+          "ts": "2026-12-17T13:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2027-02-04",
+          "ts": "2027-02-04T13:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2027-03-18",
+          "ts": "2027-03-18T13:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2027-04-29",
+          "ts": "2027-04-29T12:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2027-06-10",
+          "ts": "2027-06-10T12:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2027-07-22",
+          "ts": "2027-07-22T12:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2027-09-09",
+          "ts": "2027-09-09T12:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2027-10-28",
+          "ts": "2027-10-28T12:15Z",
+          "title": "European Central Bank: rate decision"
+        },
+        {
+          "date": "2027-12-16",
+          "ts": "2027-12-16T13:15Z",
+          "title": "European Central Bank: rate decision"
+        }
+      ]
+    },
+    {
+      "id": "boe",
+      "name": "Bank of England (MPC)",
+      "country": "GB",
+      "currency": "GBP",
+      "tz": "Europe/London",
+      "time": "12:00",
+      "source_url": "https://www.bankofengland.co.uk/monetary-policy/upcoming-mpc-dates",
+      "events": [
+        {
+          "date": "2026-02-05",
+          "ts": "2026-02-05T12:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2026-03-19",
+          "ts": "2026-03-19T12:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2026-04-30",
+          "ts": "2026-04-30T11:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2026-06-18",
+          "ts": "2026-06-18T11:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2026-07-30",
+          "ts": "2026-07-30T11:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2026-09-17",
+          "ts": "2026-09-17T11:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2026-11-05",
+          "ts": "2026-11-05T12:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2026-12-17",
+          "ts": "2026-12-17T12:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2027-02-04",
+          "ts": "2027-02-04T12:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2027-03-18",
+          "ts": "2027-03-18T12:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        },
+        {
+          "date": "2027-04-29",
+          "ts": "2027-04-29T11:00Z",
+          "title": "Bank of England (MPC): rate decision"
+        }
+      ]
+    },
+    {
+      "id": "boj",
+      "name": "Bank of Japan (MPM)",
+      "country": "JP",
+      "currency": "JPY",
+      "tz": "Asia/Tokyo",
+      "time": "",
+      "source_url": "https://www.boj.or.jp/en/mopo/mpmsche_minu/index.htm",
+      "events": [
+        {
+          "date": "2026-01-23",
+          "ts": "2026-01-23",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2026-03-19",
+          "ts": "2026-03-19",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2026-04-28",
+          "ts": "2026-04-28",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2026-06-16",
+          "ts": "2026-06-16",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2026-07-31",
+          "ts": "2026-07-31",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2026-09-18",
+          "ts": "2026-09-18",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2026-10-30",
+          "ts": "2026-10-30",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2026-12-18",
+          "ts": "2026-12-18",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2027-01-22",
+          "ts": "2027-01-22",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2027-03-18",
+          "ts": "2027-03-18",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2027-04-28",
+          "ts": "2027-04-28",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2027-06-11",
+          "ts": "2027-06-11",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2027-07-22",
+          "ts": "2027-07-22",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2027-09-22",
+          "ts": "2027-09-22",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2027-10-29",
+          "ts": "2027-10-29",
+          "title": "Bank of Japan (MPM): rate decision"
+        },
+        {
+          "date": "2027-12-17",
+          "ts": "2027-12-17",
+          "title": "Bank of Japan (MPM): rate decision"
+        }
+      ]
+    }
+  ]
+}

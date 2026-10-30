@@ -10,7 +10,7 @@ object Requests {
         var p = path
         slots.forEach { (k, v) -> p = p.replace("{$k}", v) }
         val q = params.joinToString("&") { (k, v) -> enc(k) + "=" + enc(v) }
-        return endpoint.trimEnd('/') + p + (if (q.isEmpty()) "" else "?$q")
+        return endpoint.trimEnd('/') + p + (if (q.isEmpty()) "" else (if (p.contains('?')) "&" else "?") + q)
     }
 
     /** One FRED series, from [lookbackDays] before [today]: the public graph endpoint honours the window for a single series only. */

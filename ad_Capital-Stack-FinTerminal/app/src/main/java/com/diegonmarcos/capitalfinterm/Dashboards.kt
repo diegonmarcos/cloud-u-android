@@ -33,7 +33,15 @@ object Dashboards {
     const val VIEW_TABLE = "table"
     const val VIEW_NEWS = "news"
     const val VIEW_ALLOC = "alloc"
-    val VIEWS: Set<String> = setOf(VIEW_CURVE, VIEW_BARS, VIEW_TABLE, VIEW_NEWS, VIEW_ALLOC)
+    /** A grid of quote tiles (last, change, change %), design 1. */
+    const val VIEW_QUOTES = "quotes"
+    /** Events grouped by day: time, country, event, importance, consensus, actual, previous. */
+    const val VIEW_CALENDAR = "calendar"
+    /** Daily bars: the close as a line with each day's high-low range. */
+    const val VIEW_CANDLES = "candles"
+    /** Key / value rows. */
+    const val VIEW_KV = "kv"
+    val VIEWS: Set<String> = setOf(VIEW_CURVE, VIEW_BARS, VIEW_TABLE, VIEW_NEWS, VIEW_ALLOC, VIEW_QUOTES, VIEW_CALENDAR, VIEW_CANDLES, VIEW_KV)
 
     fun parse(json: String): List<Dashboard> {
         val arr = runCatching { JSONObject(json).optJSONArray("dashboards") }.getOrNull() ?: return emptyList()

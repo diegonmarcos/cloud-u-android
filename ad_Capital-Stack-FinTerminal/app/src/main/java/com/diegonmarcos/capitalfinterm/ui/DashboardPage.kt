@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,7 +39,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.diegonmarcos.capitalfinterm.Alerts
 import com.diegonmarcos.capitalfinterm.AssetData
+import com.diegonmarcos.capitalfinterm.AssetHttp
+import com.diegonmarcos.capitalfinterm.ModelCtx
+import com.diegonmarcos.capitalfinterm.UserLists
 import com.diegonmarcos.capitalfinterm.CachedHttp
 import com.diegonmarcos.capitalfinterm.ChartPoint
 import com.diegonmarcos.capitalfinterm.Catalog
@@ -76,7 +81,19 @@ import java.util.Locale
 object Net {
     private val cleartext: Set<String> by lazy { Decl.fleetMesh.values.map { Mesh.hostOf(it) }.toSet() }
     val cache: CachedHttp by lazy { CachedHttp(UrlHttp(cleartextHosts = cleartext)) }
-    val http: Http get() = cache
+
+    @Volatile private var assets: ((String) -> String)? = null
+
+    /** The network seam of the panels: `asset:` names a declared data file (the central bank calendar); every other address goes through the cache. */
+    val http: Http by lazy { AssetHttp(cache) { name -> assets?.invoke(name) ?: throw java.io.IOException("no assets") } }
+
+    /** Wires the declared data files and each source's declared schedule.ttl_s (a rate-limited feed is never asked more often than declared). */
+    fun configure(ctx: android.content.Context, sources: List<Source>) {
+        val app = ctx.applicationContext
+        assets = { name -> AssetData.read(app, name) }
+        val timed = sources.filter { it.endpoint.isNotEmpty() && !it.endpoint.startsWith(AssetHttp.ASSET) }
+        cache.ttlFor = { url -> timed.firstOrNull { url.startsWith(it.endpoint) }?.let { it.ttlS * 1000L } }
+    }
 
     /** Short timeouts: off the mesh the question must fail fast. */
     val probe: Http by lazy { UrlHttp(connectMs = 3_000, readMs = 4_000, cleartextHosts = cleartext) }
@@ -116,8 +133,11 @@ fun DashboardPage(dashboardId: String, onBack: () -> Unit, onOpenSources: () -> 
     val ctx = LocalContext.current
     val sources = remember { AssetData.sources(ctx) }
     val dash = remember(dashboardId) { Dashboards.byId(AssetData.dashboards(ctx), dashboardId) }
-    val keys = remember { SourceKeys(EncryptedSecretBox(ctx)) }
+    val box = remember { EncryptedSecretBox(ctx) }
+    val keys = remember { SourceKeys(box) }
     var refresh by remember { mutableIntStateOf(0) }
+    var user by remember { mutableStateOf(UserLists(Alerts.watchlist(box.get(KEY_WATCHLIST)), Alerts.rules(box.get(KEY_ALERTS)))) }
+    remember(sources) { Net.configure(ctx, sources); true }
     BackHandler(onBack = onBack)
     val p = LocalKitPalette.current
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -133,8 +153,51 @@ fun DashboardPage(dashboardId: String, onBack: () -> Unit, onOpenSources: () -> 
         Text(stringResource(R.string.dash_missing), color = p.textSecondary)
         return
     }
+    if (dash.panels.any { it.fetch?.has("each_user") == true || it.raw.has("alerts") }) {
+        UserListsCard(user) { next ->
+            user = next
+            box.put(KEY_WATCHLIST, Alerts.watchlistText(next.watchlist))
+            box.put(KEY_ALERTS, Alerts.rulesText(next.alerts))
+        }
+    }
     dash.panels.forEach { panel ->
-        PanelCard(dash, panel, sources, Catalog.byId(sources, panel.source), panel.source.isNotEmpty() && keys.has(panel.source), refresh, onOpenSources)
+        PanelCard(dash, panel, sources, Catalog.byId(sources, panel.source), panel.source.isNotEmpty() && keys.has(panel.source), refresh, user, onOpenSources)
+    }
+}
+
+/** The device-only slots of the watchlist and the alert rules (EncryptedSecretBox; no source id starts with "_"). */
+private const val KEY_WATCHLIST = "_watchlist"
+private const val KEY_ALERTS = "_alerts"
+
+/** Watchlist & Alerts: one field takes a symbol (added to the watchlist) or a rule (AAPL > 230, AAPL < 200, events >= 3); a tap removes one. */
+@Composable
+private fun UserListsCard(user: UserLists, onChange: (UserLists) -> Unit) {
+    val p = LocalKitPalette.current
+    var text by remember { mutableStateOf("") }
+    var bad by remember { mutableStateOf(false) }
+    KitCard {
+        Text(stringResource(R.string.watch_title), color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.watch_hint), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(value = text, onValueChange = { text = it; bad = false }, singleLine = true, modifier = Modifier.weight(1f),
+                label = { Text(stringResource(R.string.watch_field)) })
+            KitTextButton(onClick = {
+                val rule = Alerts.rule(text)
+                val sym = if (rule == null) Alerts.symbol(text) else null
+                when {
+                    rule != null -> { onChange(user.copy(alerts = (user.alerts + rule).distinct())); text = "" }
+                    sym != null -> { onChange(user.copy(watchlist = (user.watchlist + sym).distinct())); text = "" }
+                    else -> bad = true
+                }
+            }) { Text(stringResource(R.string.watch_add)) }
+        }
+        if (bad) Text(stringResource(R.string.watch_bad), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            user.watchlist.forEach { s -> KitTextButton(onClick = { onChange(user.copy(watchlist = user.watchlist - s)) }) { Text("$s \u00D7") } }
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            user.alerts.forEach { r -> KitTextButton(onClick = { onChange(user.copy(alerts = user.alerts - r)) }) { Text(r.text() + " \u00D7") } }
+        }
     }
 }
 
@@ -145,14 +208,14 @@ private sealed interface Load {
 }
 
 @Composable
-private fun PanelCard(dash: Dashboard, panel: Panel, all: List<Source>, source: Source?, hasKey: Boolean, refresh: Int, onOpenSources: () -> Unit) {
+private fun PanelCard(dash: Dashboard, panel: Panel, all: List<Source>, source: Source?, hasKey: Boolean, refresh: Int, user: UserLists, onOpenSources: () -> Unit) {
     val ctx = LocalContext.current
     val p = LocalKitPalette.current
     KitCard(Modifier.testTag(Tags.panel(panel.id))) {
         Text(panel.title, color = p.textPrimary, style = MaterialTheme.typography.titleSmall)
         when {
             panel.isStatic -> PanelContent(panel, Engine.alloc(panel, dash.legs))
-            panel.isLive && source != null -> LiveBody(dash, panel, all, source, refresh)
+            panel.isLive && source != null -> LiveBody(dash, panel, all, source, refresh, user)
             else -> PlaceholderBody(panel, source, hasKey, onOpenSources)
         }
         if (source != null) {
@@ -164,16 +227,21 @@ private fun PanelCard(dash: Dashboard, panel: Panel, all: List<Source>, source: 
 }
 
 @Composable
-private fun LiveBody(dash: Dashboard, panel: Panel, all: List<Source>, source: Source, refresh: Int) {
+private fun LiveBody(dash: Dashboard, panel: Panel, all: List<Source>, source: Source, refresh: Int, user: UserLists) {
     val p = LocalKitPalette.current
-    var state by remember(panel.id, refresh) { mutableStateOf<Load>(Load.Loading) }
-    LaunchedEffect(panel.id, refresh) {
+    var state by remember(panel.id, refresh, user) { mutableStateOf<Load>(Load.Loading) }
+    LaunchedEffect(panel.id, refresh, user) {
         state = Load.Loading
         state = withContext(Dispatchers.IO) {
             runCatching {
                 val route = Priority.route(panel, dash, all, Decl.fleetMesh) { url -> Net.reachable(url) }
                 val fallback = Catalog.byId(all, panel.fetch?.optJSONObject("fallback")?.optString("source").orEmpty())?.takeIf { it.feeds(dash.tab, dash.entry) }
-                Engine.load(panel, source, Net.http, LocalDate.now(ZoneOffset.UTC), route, fallback)
+                val model = if (panel.derive in Engine.MODEL_DERIVES) {
+                    val api = Priority.api(panel, dash, all, Decl.fleetMesh) { url -> Net.reachable(url) }
+                    val now = java.time.LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MINUTES).toString() + "Z"
+                    ModelCtx(all, dash, api, user, now)
+                } else null
+                Engine.load(panel, source, Net.http, LocalDate.now(ZoneOffset.UTC), route, fallback, model)
             }
                 .fold({ Load.Ok(it, LocalTime.now().truncatedTo(ChronoUnit.MINUTES).toString()) }, { Load.Failed })
         }
@@ -182,6 +250,7 @@ private fun LiveBody(dash: Dashboard, panel: Panel, all: List<Source>, source: S
         Load.Loading -> Text(stringResource(R.string.panel_loading), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
         Load.Failed -> Text(stringResource(R.string.panel_failed, source.name), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         is Load.Ok -> {
+            s.data.alerts.forEach { a -> Text(a, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
             PanelContent(panel, s.data)
             val asOf = if (s.data.asOf.isBlank()) "" else stringResource(R.string.panel_updated, s.data.asOf) + " - "
             Text(asOf + stringResource(R.string.panel_fetched, s.fetchedAt) + if (s.data.servedBy.isEmpty()) "" else " - " + stringResource(R.string.panel_served, s.data.servedBy),
@@ -197,6 +266,9 @@ private fun PanelContent(panel: Panel, data: PanelData) {
     when (panel.view) {
         Dashboards.VIEW_CURVE -> LineChart(data.chart, panel.unit)
         Dashboards.VIEW_BARS, Dashboards.VIEW_ALLOC -> BarChart(data.chart, panel.unit)
+        Dashboards.VIEW_CANDLES -> LineChart(data.chart, "")
+        Dashboards.VIEW_QUOTES -> { QuoteTiles(data); return }
+        Dashboards.VIEW_CALENDAR -> { CalendarList(data); return }
     }
     if (data.rows.isNotEmpty()) {
         DataTable(data.columns, data.rows, data.links, wideFirst = panel.view == Dashboards.VIEW_NEWS) { url -> openUrl(ctx, url) }
@@ -313,3 +385,48 @@ private fun Modifier.dashed(color: Color): Modifier = this.drawBehind {
 }
 
 private fun fmt(v: Double): String = if (Math.abs(v) >= 1000.0) String.format(Locale.ROOT, "%,.0f", v) else String.format(Locale.ROOT, "%.2f", v)
+
+/** Quote tiles, two a row: name, last, change (and change %), green up / red down by the chart value (the change). */
+@Composable
+private fun QuoteTiles(data: PanelData) {
+    val p = LocalKitPalette.current
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        data.rows.chunked(2).forEachIndexed { r, pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                pair.forEachIndexed { c, row ->
+                    val up = (data.chart.getOrNull(r * 2 + c)?.y ?: 0.0) >= 0.0
+                    Column(Modifier.weight(1f).dashed(p.hairline).padding(6.dp)) {
+                        Text(row.getOrElse(0) { "" }, color = p.textSecondary, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(row.getOrElse(1) { "" }, color = p.textPrimary, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                        val pct = row.getOrElse(3) { "-" }
+                        Text(row.getOrElse(2) { "" } + if (pct != "-") " ($pct%)" else "", color = if (up) p.accent else p.bad, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                        Text(row.getOrElse(4) { "" }, color = p.textSecondary, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+                    }
+                }
+                if (pair.size == 1) Box(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+/** Events grouped by day (UTC): time, country, event, importance; consensus, actual and previous under it when published. */
+@Composable
+private fun CalendarList(data: PanelData) {
+    val p = LocalKitPalette.current
+    if (data.rows.isEmpty() && data.note.isNotBlank()) Text(data.note, color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+    data.rows.groupBy { it.getOrElse(0) { "" }.take(10) }.forEach { (day, rows) ->
+        val head = runCatching { LocalDate.parse(day).let { d -> d.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ROOT) + " " + d } }.getOrDefault(day)
+        Text(head, color = p.accent, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(top = 6.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(p.hairline))
+        rows.forEach { r ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(r.getOrElse(0) { "" }.drop(11).ifEmpty { stringResource(R.string.cal_all_day) }, Modifier.width(52.dp), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(r.getOrElse(1) { "" }, Modifier.width(30.dp), color = p.textSecondary, style = MaterialTheme.typography.bodySmall)
+                Text(r.getOrElse(2) { "" }, Modifier.weight(1f), color = p.textPrimary, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(r.getOrElse(3) { "" }, color = p.accent, style = MaterialTheme.typography.bodySmall)
+            }
+            val vals = (4..6).mapNotNull { i -> r.getOrElse(i) { "" }.takeIf { it.isNotBlank() }?.let { data.columns.getOrElse(i) { "" } + " " + it } }
+            if (vals.isNotEmpty()) Text(vals.joinToString("  \u00B7  "), Modifier.padding(start = 82.dp), color = p.textSecondary, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}

@@ -15,7 +15,7 @@
       "category": "Equity-Exchange",
       "primary": true,
       "priority": 0,
-      "coverage": "The FinceptTerminal backend (fin-api) running on oci-apps: 35 data connectors (FRED, DBnomics, IMF, World Bank, Polygon, Yahoo, Kraken, ...), 7 analytics modules, 17 brokers, 6 investor personas, MCP tools, behind one DataHub. PRIMARY source of every FinTerm entry while the phone is on the mesh.",
+      "coverage": "The FinceptTerminal backend (fin-api) running on oci-apps: 35 data connectors (FRED, DBnomics, IMF, World Bank, Polygon, Yahoo, Kraken, ...), 7 analytics modules, 17 brokers, 6 investor personas, MCP tools, behind one DataHub. PRIMARY source of every FinTerm entry while the phone is on the mesh. The /v1 surface (design 3.2: series, curves, quotes, calendars, fundamentals, normalised) is the declared first source of every panel that names it as fetch.primary.api.",
       "endpoint": "",
       "fleet_endpoint": "fin-api",
       "container": "cloud_fincept",
@@ -27,7 +27,8 @@
         "peek": "/api/v1/topics/{topic}/peek",
         "personas": "/api/v1/personas",
         "mcp_tools": "/api/v1/mcp/tools",
-        "ws": "/api/v1/ws"
+        "ws": "/api/v1/ws",
+        "v1": "/v1"
       },
       "auth": {
         "type": "none",
@@ -106,6 +107,18 @@
             "FX",
             "Onshore USD Rates"
           ]
+        },
+        {
+          "tab": "fi",
+          "entries": [
+            "Credit"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "Commodities"
+          ]
         }
       ],
       "priority": 5,
@@ -144,6 +157,12 @@
           "entries": [
             "FX",
             "Onshore USD Rates"
+          ]
+        },
+        {
+          "tab": "nw",
+          "entries": [
+            "Central Bank Calendar"
           ]
         }
       ],
@@ -265,6 +284,12 @@
           "tab": "ex",
           "entries": [
             "Onshore USD Rates"
+          ]
+        },
+        {
+          "tab": "fi",
+          "entries": [
+            "Credit"
           ]
         }
       ],
@@ -533,8 +558,619 @@
         }
       ],
       "priority": 20
+    },
+    {
+      "id": "nyfed",
+      "name": "NY Fed Markets API",
+      "category": "FI-Macro",
+      "coverage": "Reference rates published by the New York Fed: SOFR, EFFR, OBFR, TGCR, BGCR and the SOFR 30/90/180-day averages and index, with percentiles and volumes",
+      "endpoint": "https://markets.newyorkfed.org",
+      "docs": "https://markets.newyorkfed.org/static/docs/markets-api.html",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key."
+      },
+      "connector": "nyfed_rates",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Market Monitor"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "Onshore USD Rates"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "NY Fed terms of use, attribution",
+      "schedule": {
+        "ttl_s": 900
+      },
+      "rate_limit": {
+        "per_min": 30
+      }
+    },
+    {
+      "id": "treasury_xml",
+      "name": "US Treasury par yield curve (XML)",
+      "category": "FI-Macro",
+      "coverage": "The official daily Treasury par yield curve 1M-30Y, same day 15:30 ET (also real yields and bill rates)",
+      "endpoint": "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/pages",
+      "docs": "https://home.treasury.gov/treasury-daily-interest-rate-xml-feed",
+      "auth": {
+        "type": "none",
+        "note": "Public XML feed, no key."
+      },
+      "connector": "treasury_xml",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Market Monitor",
+            "Yield Curves"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "US government work, public domain",
+      "schedule": {
+        "ttl_s": 1800
+      },
+      "rate_limit": {
+        "per_min": 30
+      }
+    },
+    {
+      "id": "ecb_data",
+      "name": "ECB Data Portal",
+      "category": "FI-Macro",
+      "coverage": "Euro area AAA government yield curve (YC), ECB policy rates (FM), euro reference exchange rates (EXR)",
+      "endpoint": "https://data-api.ecb.europa.eu/service/data",
+      "docs": "https://data.ecb.europa.eu/help/api/overview",
+      "auth": {
+        "type": "none",
+        "note": "Public SDMX API, no key."
+      },
+      "connector": "sdmx_json",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Yield Curves"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "ECB data reuse policy, attribution",
+      "schedule": {
+        "ttl_s": 3600
+      },
+      "rate_limit": {
+        "per_min": 30
+      }
+    },
+    {
+      "id": "oecd",
+      "name": "OECD Data Explorer (SDMX)",
+      "category": "FI-Macro",
+      "coverage": "G7/G20 consumer prices, unemployment and key economic indicators",
+      "endpoint": "https://sdmx.oecd.org/public/rest/data",
+      "docs": "https://gitlab.algobank.oecd.org/public-documentation/dotstat-migration/-/raw/main/OECD_Data_API_documentation.pdf",
+      "auth": {
+        "type": "none",
+        "note": "Public SDMX API, no key; under 60 requests a minute."
+      },
+      "connector": "sdmx_json",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Macro"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "OECD terms, attribution",
+      "schedule": {
+        "ttl_s": 21600
+      },
+      "rate_limit": {
+        "per_min": 20
+      }
+    },
+    {
+      "id": "eurostat",
+      "name": "Eurostat",
+      "category": "FI-Macro",
+      "coverage": "Euro area and EU member HICP inflation, unemployment, GDP (JSON-stat)",
+      "endpoint": "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data",
+      "docs": "https://wikis.ec.europa.eu/display/EUROSTATHELP/API+Statistics+-+data+query",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key."
+      },
+      "connector": "jsonstat",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Macro"
+          ]
+        },
+        {
+          "tab": "nw",
+          "entries": [
+            "Economic Calendar"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "CC BY 4.0",
+      "schedule": {
+        "ttl_s": 21600
+      },
+      "rate_limit": {
+        "per_min": 20
+      }
+    },
+    {
+      "id": "bls",
+      "name": "BLS Public Data API v2",
+      "category": "FI-Macro",
+      "coverage": "US CPI, core CPI, nonfarm payrolls, unemployment rate: the official print, the morning of the release",
+      "endpoint": "https://api.bls.gov/publicAPI/v2",
+      "docs": "https://www.bls.gov/developers/api_signature_v2.htm",
+      "auth": {
+        "type": "none",
+        "note": "No key: 25 requests a day per address (a free key raises it to 500; the container holds it)."
+      },
+      "connector": "bls_series",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Macro"
+          ]
+        },
+        {
+          "tab": "nw",
+          "entries": [
+            "Economic Calendar"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "US government work, public domain",
+      "schedule": {
+        "ttl_s": 21600
+      },
+      "rate_limit": {
+        "per_day": 25
+      }
+    },
+    {
+      "id": "bls_schedule",
+      "name": "BLS release schedule (iCalendar)",
+      "category": "FI-Macro",
+      "coverage": "The scheduled date and time of every BLS news release (CPI, Employment Situation, PPI, JOLTS, ...)",
+      "endpoint": "https://www.bls.gov/schedule/news_release",
+      "docs": "https://www.bls.gov/schedule/",
+      "auth": {
+        "type": "none",
+        "note": "Public calendar file, no key."
+      },
+      "connector": "ics_calendar",
+      "feeds": [
+        {
+          "tab": "nw",
+          "entries": [
+            "Economic Calendar"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": false,
+      "licence": "US government work, public domain",
+      "schedule": {
+        "ttl_s": 86400
+      },
+      "rate_limit": {
+        "per_min": 2
+      }
+    },
+    {
+      "id": "forexfactory",
+      "name": "Forex Factory weekly calendar (Fair Economy)",
+      "category": "News-Alt",
+      "coverage": "This week's G10 + China economic events: time, country, impact, forecast (consensus), previous",
+      "endpoint": "https://nfs.faireconomy.media",
+      "docs": "https://www.forexfactory.com/calendar",
+      "auth": {
+        "type": "none",
+        "note": "Public feed, no key; it answers 429 to a second request within a minute: read at most every 15 minutes (the container's job; the phone keeps the answer 15 minutes)."
+      },
+      "connector": "ff_calendar",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Market Monitor"
+          ]
+        },
+        {
+          "tab": "nw",
+          "entries": [
+            "Economic Calendar"
+          ]
+        },
+        {
+          "tab": "eq",
+          "entries": [
+            "Watchlist & Alerts"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": false,
+      "licence": "Forex Factory terms: personal use, attribution shown",
+      "attribution": "Calendar data: Forex Factory (Fair Economy)",
+      "schedule": {
+        "ttl_s": 900
+      },
+      "rate_limit": {
+        "per_min": 1
+      }
+    },
+    {
+      "id": "central_banks",
+      "name": "Central bank meeting calendar (declared)",
+      "category": "FI-Macro",
+      "coverage": "Policy decision days of the Fed, ECB, BoE and BoJ, from each bank's published schedule (data/central-banks.json)",
+      "endpoint": "asset:",
+      "docs": "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+      "auth": {
+        "type": "none",
+        "note": "Declared in this app; nothing is fetched."
+      },
+      "connector": "declared_events",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Market Monitor"
+          ]
+        },
+        {
+          "tab": "nw",
+          "entries": [
+            "Economic Calendar",
+            "Central Bank Calendar"
+          ]
+        },
+        {
+          "tab": "eq",
+          "entries": [
+            "Watchlist & Alerts"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "Public schedules of each bank",
+      "schedule": {
+        "ttl_s": 86400
+      },
+      "rate_limit": {}
+    },
+    {
+      "id": "polymarket",
+      "name": "Polymarket (Gamma API)",
+      "category": "News-Alt",
+      "coverage": "Market-implied probabilities: Fed decision by meeting, number of cuts this year",
+      "endpoint": "https://gamma-api.polymarket.com",
+      "docs": "https://docs.polymarket.com/developers/gamma-markets-api/overview",
+      "auth": {
+        "type": "none",
+        "note": "Public read API, no key."
+      },
+      "connector": "polymarket_events",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "World Interest Rate Probabilities"
+          ]
+        },
+        {
+          "tab": "nw",
+          "entries": [
+            "Central Bank Calendar"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "Polymarket API terms (public read)",
+      "schedule": {
+        "ttl_s": 900
+      },
+      "rate_limit": {
+        "per_min": 60
+      }
+    },
+    {
+      "id": "frankfurter",
+      "name": "Frankfurter (ECB reference rates)",
+      "category": "FI-Macro",
+      "coverage": "ECB euro foreign exchange reference rates, daily around 16:00 CET, any base currency, with history",
+      "endpoint": "https://api.frankfurter.dev",
+      "docs": "https://frankfurter.dev",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key."
+      },
+      "connector": "frankfurter_rates",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Market Monitor"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "FX"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "ECB reference rates, attribution",
+      "schedule": {
+        "ttl_s": 900
+      },
+      "rate_limit": {
+        "per_min": 30
+      }
+    },
+    {
+      "id": "coinbase",
+      "name": "Coinbase Exchange public market data",
+      "category": "Equity-Exchange",
+      "coverage": "Crypto spot: 24h open/high/low/last and daily candles for BTC, ETH, SOL and every listed pair",
+      "endpoint": "https://api.exchange.coinbase.com",
+      "docs": "https://docs.cdp.coinbase.com/exchange/reference/exchangerestapi_getproductstats",
+      "auth": {
+        "type": "none",
+        "note": "Public market data, no key."
+      },
+      "connector": "coinbase_exchange",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Market Monitor"
+          ]
+        },
+        {
+          "tab": "ex",
+          "entries": [
+            "Crypto"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "Coinbase market data terms, attribution",
+      "schedule": {
+        "ttl_s": 60
+      },
+      "rate_limit": {
+        "per_min": 60
+      }
+    },
+    {
+      "id": "cboe",
+      "name": "Cboe delayed quotes",
+      "category": "Equity-Exchange",
+      "coverage": "15-minute delayed quotes for US indices (SPX, NDX, DJX, RUT, VIX) and any listed stock or ETF, with daily history",
+      "endpoint": "https://cdn-api.cboe.com/api/global/delayed_quotes",
+      "docs": "https://www.cboe.com/delayed_quotes/",
+      "auth": {
+        "type": "none",
+        "note": "Public delayed data, no key; sends no CORS header (the APK reads it, the web through the container)."
+      },
+      "connector": "cboe_quotes",
+      "feeds": [
+        {
+          "tab": "fi",
+          "entries": [
+            "Market Monitor"
+          ]
+        },
+        {
+          "tab": "eq",
+          "entries": [
+            "World Equity Indices",
+            "Quotes & Charts",
+            "Watchlist & Alerts"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": false,
+      "licence": "Cboe delayed data: personal display, 15-minute delay stated",
+      "attribution": "Delayed 15 minutes. Data: Cboe",
+      "schedule": {
+        "ttl_s": 60
+      },
+      "rate_limit": {
+        "per_min": 30
+      }
+    },
+    {
+      "id": "sec_edgar",
+      "name": "SEC EDGAR submissions",
+      "category": "Equity-Exchange",
+      "coverage": "Company profile (name, tickers, exchange, industry, fiscal year end) and every filing (10-K, 10-Q, 8-K, ...) with its link",
+      "endpoint": "https://data.sec.gov",
+      "docs": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key; at most 10 requests a second."
+      },
+      "connector": "sec_submissions",
+      "paths": {
+        "filing": "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{document}"
+      },
+      "feeds": [
+        {
+          "tab": "eq",
+          "entries": [
+            "Fundamentals"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": true,
+      "licence": "US government work, public domain",
+      "schedule": {
+        "ttl_s": 86400
+      },
+      "rate_limit": {
+        "per_min": 600
+      }
+    },
+    {
+      "id": "sec_xbrl",
+      "name": "SEC EDGAR XBRL facts",
+      "category": "Equity-Exchange",
+      "coverage": "Reported financial facts per company and concept (revenue, net income, EPS, cash flow) by fiscal year",
+      "endpoint": "https://data.sec.gov/api/xbrl",
+      "docs": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "auth": {
+        "type": "none",
+        "note": "Public API, no key; sends no CORS header (the APK reads it, the web through the container)."
+      },
+      "connector": "sec_concept",
+      "feeds": [
+        {
+          "tab": "eq",
+          "entries": [
+            "Fundamentals"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": false,
+      "licence": "US government work, public domain",
+      "schedule": {
+        "ttl_s": 86400
+      },
+      "rate_limit": {
+        "per_min": 600
+      }
+    },
+    {
+      "id": "nasdaq_calendar",
+      "name": "Nasdaq earnings calendar",
+      "category": "Equity-Exchange",
+      "coverage": "Earnings reports by day: company, time (before open / after close), EPS consensus, last year's EPS, market cap",
+      "endpoint": "https://api.nasdaq.com/api/calendar",
+      "docs": "https://www.nasdaq.com/market-activity/earnings",
+      "auth": {
+        "type": "none",
+        "note": "Public site API, no key; best effort (no CORS header: the APK reads it, the web through the container)."
+      },
+      "connector": "nasdaq_earnings",
+      "feeds": [
+        {
+          "tab": "eq",
+          "entries": [
+            "Earnings Calendar"
+          ]
+        }
+      ],
+      "priority": 10,
+      "cors": false,
+      "licence": "Nasdaq site terms: personal use",
+      "schedule": {
+        "ttl_s": 3600
+      },
+      "rate_limit": {
+        "per_min": 10
+      }
+    },
+    {
+      "id": "finnhub",
+      "name": "Finnhub",
+      "category": "Equity-Exchange",
+      "coverage": "Real-time US quotes, company metrics, earnings calendar with EPS estimate and actual",
+      "endpoint": "https://finnhub.io/api/v1",
+      "docs": "https://finnhub.io/docs/api",
+      "auth": {
+        "type": "free_key",
+        "key_in": {
+          "where": "query",
+          "name": "token"
+        },
+        "signup": "https://finnhub.io/register",
+        "note": "Free key, 60 requests a minute, personal use."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "eq",
+          "entries": [
+            "Earnings Calendar",
+            "Quotes & Charts"
+          ]
+        }
+      ],
+      "priority": 20,
+      "cors": true
+    },
+    {
+      "id": "eia",
+      "name": "EIA Open Data v2",
+      "category": "FI-Macro",
+      "coverage": "WTI, Brent, Henry Hub spot and futures, inventories",
+      "endpoint": "https://api.eia.gov/v2",
+      "docs": "https://www.eia.gov/opendata/",
+      "auth": {
+        "type": "free_key",
+        "key_in": {
+          "where": "query",
+          "name": "api_key"
+        },
+        "signup": "https://www.eia.gov/opendata/register.php",
+        "note": "Free key."
+      },
+      "connector": null,
+      "feeds": [
+        {
+          "tab": "ex",
+          "entries": [
+            "Commodities"
+          ]
+        }
+      ],
+      "priority": 20,
+      "cors": true
     }
   ],
   "_doc_priority": "Cloud-Fincept (0) first when the phone reaches the mesh; the key-free public sources (10) next; the keyed ones (20) last. A panel falls back series by series: a topic the container has not published (404) is read from the public source.",
-  "_doc_fin_api": "Cloud-Fincept and the owner's `fin_api` are ONE service: the FinceptTerminal Rust backend declared in cloud-u-containers/user-fin_fin-api (build.json name fin-api, 'Fincept Terminal backend'). Its retired public host answers 302 to sign-in (#1104); the declared private forms are the mesh name (fin-api.mesh.diegonmarcos.com:8340, 10.0.0.6) and the c3-pvt path; the app uses the mesh only. Own-fleet sources (priority 0) are tried before the public ones (10) and the keyed ones (20): what each serves decides it, and fin_api serves every connector the public ones do plus the analytics."
+  "_doc_fin_api": "Cloud-Fincept and the owner's `fin_api` are ONE service: the FinceptTerminal Rust backend declared in cloud-u-containers/user-fin_fin-api (build.json name fin-api, 'Fincept Terminal backend'). Its retired public host answers 302 to sign-in (#1104); the declared private forms are the mesh name (fin-api.mesh.diegonmarcos.com:8340, 10.0.0.6) and the c3-pvt path; the app uses the mesh only. Own-fleet sources (priority 0) are tried before the public ones (10) and the keyed ones (20): what each serves decides it, and fin_api serves every connector the public ones do plus the analytics.",
+  "_doc_v1": "New connectors (design 2, M0-M3): every one parses its answer into the normalised model of Feeds.kt / engine.ts (points, events, bars, rows) and the panel's derive (points | events | candles | kv | filings) renders it. cors false = no Access-Control-Allow-Origin: the web never asks it (container or the next route). schedule.ttl_s = how long an answer is kept (the phone's cache, the container's refresh); rate_limit = the provider's stated limit. endpoint 'asset:' = a file declared in this app's data/ folder."
 }

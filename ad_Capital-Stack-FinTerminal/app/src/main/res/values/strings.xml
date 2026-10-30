@@ -67,4 +67,10 @@
     <string name="holdings_empty">No holdings yet. Add one above.</string>
     <string name="holdings_line">%1$s units at %2$s</string>
     <string name="holdings_total">Cost basis: %1$s (in the currency you entered)</string>
+    <string name="watch_title">Watchlist &amp; alerts (kept on this phone)</string>
+    <string name="watch_hint">Type a symbol to watch (AAPL, _SPX for the S&amp;P 500 index), or a rule: AAPL &gt; 230, AAPL &lt; 200, events &gt;= 3. Tap an item to remove it.</string>
+    <string name="watch_field">Symbol or rule</string>
+    <string name="watch_add">Add</string>
+    <string name="watch_bad">Not a symbol or a rule.</string>
+    <string name="cal_all_day">all day</string>
 </resources>

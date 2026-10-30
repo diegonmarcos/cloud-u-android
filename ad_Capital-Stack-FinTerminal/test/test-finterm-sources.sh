@@ -14,6 +14,11 @@
 #   S5  CONTROL: Stop and Restart ask first (data and UI), the control is MESH ONLY (enabled() needs onMesh, the endpoint is a declared fleet
 #       mesh endpoint), the UI gates every button on it
 #   S6  NO HARD-CODED URL: no address and no mesh host in the Kotlin, none in dashboards/control data; the mesh address is baked from the fleet declaration
+#   S7  MODEL PANELS (Feeds.kt): every model source declares cors, schedule.ttl_s >= 60 and a numeric rate_limit and has a parser; every model panel
+#       routes the container's /v1 surface first, its provider is its source's connector, its view draws its derive, its fallbacks are key-free
+#       connectors that feed the entry, its slots are known and a per-item path has items
+#   S8  CENTRAL BANKS (data/central-banks.json): every bank names its source page, every ts is date + time in the bank's zone as UTC, and the
+#       last declared decision is at least 60 days ahead (FINTERM_TODAY overrides today)
 # then plants a mutation per rule in a scratch copy and requires RED for each.
 set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -156,6 +161,61 @@ gr = code(read(os.path.join(app, "app/build.gradle")))
 if "fleetMeshUrl(" not in gr or "FLEET_MESH_B64" not in gr: bad.append("S6 build.gradle does not bake the mesh addresses from the fleet declaration")
 man = read(os.path.join(app, "app/src/main/AndroidManifest.xml"))
 if "android.permission.INTERNET" not in man or "networkSecurityConfig" not in man: bad.append("S6 the manifest lacks INTERNET or the network security config for the mesh")
+# S7 model panels (Feeds.kt): sources declare cors / schedule / rate_limit; panels route container first, then key-free fallbacks that feed the entry
+LEGACY = {"fred_series", "dbnomics_series", "imf_datamapper", "worldbank_indicator", "gdelt_artlist", "fincept_topic"}
+VIEWS_OF = {"points": {"quotes", "curve", "bars", "table"}, "events": {"calendar"}, "candles": {"candles"}, "kv": {"kv"}, "filings": {"news", "table"}}
+SLOTS = {"each", "each_csv", "today", "from", "yyyymm", "prev_yyyymm", "cik"}
+feeds_kt = ktf("Feeds.kt")
+for s in S:
+    c = s.get("connector")
+    if not c or c in LEGACY: continue
+    if not isinstance(s.get("cors"), bool): bad.append("S7 source %s does not declare cors true/false" % s["id"])
+    if not isinstance((s.get("schedule") or {}).get("ttl_s"), int) or s["schedule"]["ttl_s"] < 60: bad.append("S7 source %s schedule.ttl_s is missing or under 60" % s["id"])
+    rl = s.get("rate_limit")
+    if not isinstance(rl, dict) or any(not isinstance(v, (int, float)) or v <= 0 for v in rl.values()): bad.append("S7 source %s rate_limit is not numeric" % s["id"])
+    if '"%s" ->' % c not in feeds_kt: bad.append("S7 connector %s has no parser in Feeds.parse" % c)
+p0id = prim[0]["id"] if prim else ""
+v1 = (prim[0].get("paths") or {}).get("v1", "") if prim else ""
+for d in dash["dashboards"]:
+    for p in d["panels"]:
+        f = p.get("fetch")
+        if not f or p.get("derive") not in VIEWS_OF: continue
+        where = "%s/%s" % (d["id"], p["id"])
+        own = byid.get(p["source"], {})
+        if f.get("provider") != own.get("connector"): bad.append("S7 panel %s provider %s is not its source's connector" % (where, f.get("provider")))
+        if p.get("view") not in VIEWS_OF[p["derive"]]: bad.append("S7 panel %s view %s does not draw derive %s" % (where, p.get("view"), p["derive"]))
+        pr = f.get("primary") or {}
+        if pr.get("source") != p0id or not v1 or not str(pr.get("api", "")).startswith(v1 + "/"): bad.append("S7 panel %s does not route the container's %s surface first" % (where, v1 or "/v1"))
+        for fb in f.get("fallbacks", []):
+            fs = byid.get(fb.get("source"))
+            if not fs: bad.append("S7 panel %s fallback %s is not declared" % (where, fb.get("source"))); continue
+            if not feeds(fs, d["tab"], d["entry"]): bad.append("S7 panel %s fallback %s does not feed %s/%s" % (where, fs["id"], d["tab"], d["entry"]))
+            if (fs.get("auth") or {}).get("type") != "none" or not fs.get("connector"): bad.append("S7 panel %s fallback %s is keyed or has no connector" % (where, fs["id"]))
+            if fb.get("provider", fs.get("connector")) != fs.get("connector"): bad.append("S7 panel %s fallback %s provider is not its connector" % (where, fs["id"]))
+        for route in [f] + list(f.get("fallbacks", [])):
+            text = json.dumps({k: route.get(k) for k in ("path", "params")})
+            for slot in re.findall(r"\{(\w+)\}", text):
+                if slot not in SLOTS: bad.append("S7 panel %s uses the unknown slot {%s}" % (where, slot))
+            if "{each}" in text and not (f.get("each") or f.get("each_days") or f.get("each_user") or route.get("each")): bad.append("S7 panel %s asks per {each} with no items" % where)
+        web = [own] + [byid.get(fb.get("source"), {}) for fb in f.get("fallbacks", [])]
+        if p.get("alerts") not in (None, "price", "event"): bad.append("S7 panel %s alerts %r is not price or event" % (where, p.get("alerts")))
+
+# S8 central bank calendar: every bank has its source page; each ts is date + time in tz, as UTC; the last decision is far enough ahead
+cbp = os.path.join(app, "data/central-banks.json")
+if not os.path.isfile(cbp): bad.append("S8 data/central-banks.json is missing")
+else:
+    from datetime import datetime, date, timedelta
+    from zoneinfo import ZoneInfo
+    cb = json.loads(read(cbp))
+    today = date.fromisoformat(os.environ.get("FINTERM_TODAY", date.today().isoformat()))
+    for b in cb.get("banks", []):
+        if not str(b.get("source_url", "")).startswith("https://"): bad.append("S8 bank %s has no source_url" % b.get("id"))
+        evs = b.get("events", [])
+        if not evs: bad.append("S8 bank %s declares no decision" % b.get("id")); continue
+        for e in evs:
+            want = e["date"] if not b.get("time") else datetime.fromisoformat("%sT%s" % (e["date"], b["time"])).replace(tzinfo=ZoneInfo(b["tz"])).astimezone(ZoneInfo("UTC")).strftime("%Y-%m-%dT%H:%MZ")
+            if e.get("ts") != want: bad.append("S8 bank %s %s ts %s is not %s" % (b["id"], e["date"], e.get("ts"), want))
+        if date.fromisoformat(max(e["date"] for e in evs)) < today + timedelta(days=60): bad.append("S8 bank %s: the last declared decision is under 60 days away, add the next year" % b["id"])
 for b in bad: print("FAIL " + b)
 sys.exit(1 if bad else 0)
 PY
@@ -201,5 +261,21 @@ mutant "an address is typed in Kotlin"     "open('$KT/Engine.kt','a').write('\nv
 mutant "a mesh host is typed in Kotlin"    "open('$KT/Mesh.kt','a').write('\nval h = \"fin-api.mesh.diegonmarcos.com\"\n')" "S6 .*spells the host"
 mutant "an address is typed in the dashboards" "$JE;d=L('data/dashboards.json');d['dashboards'][0]['panels'][0]['title']='see https://example.org';D('data/dashboards.json',d)" "S6 data/dashboards.json spells an address"
 mutant "the build stops baking the mesh"   "$SUB;S('app/build.gradle','fleetMeshUrl(','fleetMeshUr(')" "S6 build.gradle does not bake"
+
+mutant "a model source drops cors"         "$JE;d=L('data/sources.json');[s.pop('cors') for s in d['sources'] if s['id']=='nyfed'];D('data/sources.json',d)" "S7 source nyfed does not declare cors"
+mutant "a rate-limited feed is asked every second" "$JE;d=L('data/sources.json');[s['schedule'].__setitem__('ttl_s',1) for s in d['sources'] if s['id']=='forexfactory'];D('data/sources.json',d)" "S7 source forexfactory schedule.ttl_s"
+mutant "a rate limit is not a number"      "$JE;d=L('data/sources.json');[s['rate_limit'].__setitem__('per_day','lots') for s in d['sources'] if s['id']=='bls'];D('data/sources.json',d)" "S7 source bls rate_limit"
+mutant "a connector loses its parser"      "$SUB;S('$KT/Feeds.kt','\"ff_calendar\" -> ff(body)','\"ff_cal\" -> ff(body)')" "S7 connector ff_calendar has no parser"
+mutant "a model panel skips the container" "$JE;d=L('data/dashboards.json');[p['fetch'].pop('primary') for x in d['dashboards'] if x['id']=='economic_calendar' for p in x['panels'] if p['id']=='week'];D('data/dashboards.json',d)" "S7 panel economic_calendar/week does not route the container"
+mutant "the container path leaves /v1"     "$JE;d=L('data/dashboards.json');[p['fetch']['primary'].__setitem__('api','/api/v1/x') for x in d['dashboards'] if x['id']=='market_monitor' for p in x['panels'] if p['id']=='fx'];D('data/dashboards.json',d)" "S7 panel market_monitor/fx does not route"
+mutant "a fallback does not feed the entry" "$JE;d=L('data/sources.json');[s.__setitem__('feeds',[f for f in s['feeds'] if f['tab']!='nw']) for s in d['sources'] if s['id']=='central_banks'];D('data/sources.json',d)" "S7 panel economic_calendar/week fallback central_banks does not feed"
+mutant "a keyed fallback"                  "$JE;d=L('data/dashboards.json');[p['fetch'].setdefault('fallbacks',[]).append({'source':'finnhub'}) for x in d['dashboards'] if x['id']=='earnings_calendar' for p in x['panels'] if p['id']=='week'];D('data/dashboards.json',d)" "S7 panel earnings_calendar/week fallback finnhub"
+mutant "a view that cannot draw the derive" "$JE;d=L('data/dashboards.json');[p.__setitem__('view','curve') for x in d['dashboards'] if x['id']=='economic_calendar' for p in x['panels'] if p['id']=='week'];D('data/dashboards.json',d)" "S7 panel economic_calendar/week view curve"
+mutant "an unknown slot"                   "$JE;d=L('data/dashboards.json');[p['fetch'].__setitem__('path','/x/{ticker}') for x in d['dashboards'] if x['id']=='crypto' for p in x['panels'] if p['id']=='btc'];D('data/dashboards.json',d)" "S7 panel crypto/btc uses the unknown slot"
+mutant "per-item path with no items"       "$JE;d=L('data/dashboards.json');[p['fetch'].pop('each') for x in d['dashboards'] if x['id']=='crypto' for p in x['panels'] if p['id']=='spot'];D('data/dashboards.json',d)" "S7 panel crypto/spot asks per"
+mutant "a provider that is not the source's" "$JE;d=L('data/dashboards.json');[p['fetch'].__setitem__('provider','jsonstat') for x in d['dashboards'] if x['id']=='macro' for p in x['panels'] if p['id']=='us'];D('data/dashboards.json',d)" "S7 panel macro/us provider jsonstat"
+mutant "a decision time drifts from its zone" "$JE;d=L('data/central-banks.json');d['banks'][0]['events'][-1]['ts']='2027-12-08T18:00Z';D('data/central-banks.json',d)" "S8 bank fed 2027-12-08 ts"
+mutant "a bank loses its source page"      "$JE;d=L('data/central-banks.json');d['banks'][1].pop('source_url');D('data/central-banks.json',d)" "S8 bank ecb has no source_url"
+mutant "the calendar runs out"             "$JE;d=L('data/central-banks.json');d['banks'][2]['events']=d['banks'][2]['events'][:2];D('data/central-banks.json',d)" "S8 bank boe: the last declared decision"
 
 [ "$FAILS" -eq 0 ] && echo "ALL GREEN" || { echo "$FAILS FAILED"; exit 1; }
