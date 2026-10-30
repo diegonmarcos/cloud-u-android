@@ -139,7 +139,7 @@ class RepoTreeTest {
         assertEquals(listOf("1", "2", "3", "4", "5", "6"), config.areas.map { it.second })
         val baked = Sections.byId("lnktree")!!
         for ((page, code) in config.areas) {
-            assertEquals("chip $page reads its area's registry name", outline.first { it.code == code }.name, baked.page(page)!!.label)
+            assertEquals("chip $page reads its area's registry name", outline.first { it.code == code }.label, baked.page(page)!!.label)
             val block = JSONArray(BuroLlcTestData.text("data/ui/lnktree/$page.json")).getJSONObject(0)
             assertEquals("fragment", block.getString("kind")); assertEquals("repo_tree", block.getString("id"))
             assertEquals(code, block.getString("area"))
@@ -157,8 +157,7 @@ class RepoTreeTest {
         val baked = Sections.byId("lnktree")!!
         for ((page, code) in config.areas) {
             val area = outline.first { it.code == code }
-            assertEquals("chip $page == registry area $code name", area.name, baked.page(page)!!.label)
-            assertEquals(area.name, area.label)
+            assertEquals("chip $page == registry area $code name", area.label, baked.page(page)!!.label)
         }
     }
 
