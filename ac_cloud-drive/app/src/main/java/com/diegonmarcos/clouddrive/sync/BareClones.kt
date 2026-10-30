@@ -10,7 +10,7 @@ package com.diegonmarcos.clouddrive.sync
  *    never cloned twice; two targets naming the same repository yield one action.
  *  - The working clone is never touched: the bare root is its own tree and only `clone --mirror` / `remote update` run there.
  *  - Depth (#1314): bare mirrors are depth 1 (no working tree, only the latest commit per ref); 0 still means full history.
- *  - UPDATE at depth > 0 is `fetch --prune --depth N origin` (the mirror's +refs/*:refs/* refspec): `remote update` keeps every
+ *  - UPDATE at depth > 0 is `fetch --prune --depth N origin` (the mirror refspec, all refs): `remote update` keeps every
  *    new commit and a shallow mirror would grow back to full history. A mirror that is not shallow, or deeper than N, is SHRUNK in
  *    place by the same script: the depth fetch, `reflog expire --expire=now --all`, `gc --prune=now`; the bytes freed come back
  *    on the script's output ([parseUpdate]).
