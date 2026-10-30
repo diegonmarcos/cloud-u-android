@@ -170,7 +170,9 @@
           ]
         }
       ],
-      "priority": 10
+      "priority": 10,
+      "cors": false,
+      "cors_note": "www.imf.org sends no Access-Control-Allow-Origin header: a browser cannot read it, so the web terminal shows the panel as a placeholder without asking. The APK is not a browser and reads it."
     },
     {
       "id": "worldbank",
