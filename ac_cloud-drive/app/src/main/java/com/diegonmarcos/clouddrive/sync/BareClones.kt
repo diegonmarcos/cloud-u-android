@@ -9,7 +9,11 @@ package com.diegonmarcos.clouddrive.sync
  *    so a mirror made under an old name still counts. A target already mirrored is UPDATED (git remote update --prune),
  *    never cloned twice; two targets naming the same repository yield one action.
  *  - The working clone is never touched: the bare root is its own tree and only `clone --mirror` / `remote update` run there.
- *  - Depth: the declared depth, 0 = full history (the declared default for the bare backup form).
+ *  - Depth (#1314): bare mirrors are depth 1 (no working tree, only the latest commit per ref); 0 still means full history.
+ *  - UPDATE at depth > 0 is `fetch --prune --depth N origin` (the mirror's +refs/*:refs/* refspec): `remote update` keeps every
+ *    new commit and a shallow mirror would grow back to full history. A mirror that is not shallow, or deeper than N, is SHRUNK in
+ *    place by the same script: the depth fetch, `reflog expire --expire=now --all`, `gc --prune=now`; the bytes freed come back
+ *    on the script's output ([parseUpdate]).
  */
 object BareClones {
 
@@ -71,7 +75,37 @@ object BareClones {
     fun cloneArgs(url: String, guestDir: String, depth: Int, q: (String) -> String): String =
         "clone --mirror " + (if (depth > 0) "--depth $depth " else "") + q(url) + " " + q(guestDir)
 
-    fun updateArgs(guestDir: String, q: (String) -> String): String = "-C " + q(guestDir) + " remote update --prune"
+    /** The git arguments of a plain update: depth 0 = `remote update --prune`, depth > 0 = `fetch --prune --depth N origin`. */
+    fun updateArgs(guestDir: String, q: (String) -> String, depth: Int = 0): String =
+        "-C " + q(guestDir) + (if (depth > 0) " fetch --prune --depth $depth origin" else " remote update --prune")
+
+    /**
+     * #1314 the whole update script of one mirror (run in cld.termux; [authed] wraps `git <args>` with the token on stdin).
+     * Depth 0: the plain `remote update --prune`. Depth > 0: the depth fetch, then, when the mirror was not shallow or holds more
+     * than [depth] commits per ref tip (total commits > distinct tips * depth), `reflog expire --expire=now --all` and
+     * `gc --prune=now` to free the old packs. Prints `shrunk=0|1` and `freed_kb=<n>` (du before - after).
+     */
+    fun updateScript(guestDir: String, depth: Int, q: (String) -> String, authed: (String) -> String): String {
+        if (depth <= 0) return "set -e; " + authed(updateArgs(guestDir, q))
+        val d = q(guestDir)
+        return "set -e; d=$d; b=\$(du -sk \"\$d\" | cut -f1); need=0; " +
+            "if [ ! -f \"\$d/shallow\" ]; then need=1; else " +
+            "tips=\$(git -C \"\$d\" for-each-ref --format='%(objectname)' | sort -u | wc -l); " +
+            "total=\$(git -C \"\$d\" rev-list --all --count 2>/dev/null || echo 0); " +
+            "[ \"\$total\" -gt \$((tips * $depth)) ] && need=1 || true; fi; " +
+            authed("-C \"\$d\" fetch --prune --depth $depth origin") + "; " +
+            "if [ \"\$need\" = 1 ]; then git -C \"\$d\" reflog expire --expire=now --all; git -C \"\$d\" gc --prune=now; fi; " +
+            "a=\$(du -sk \"\$d\" | cut -f1); echo \"shrunk=\$need\"; echo \"freed_kb=\$((b - a))\""
+    }
+
+    /** What [updateScript] printed: whether the mirror was shrunk and the bytes freed (0 when it did not shrink or grew). */
+    data class UpdateOutcome(val shrunk: Boolean = false, val freedBytes: Long = 0)
+
+    fun parseUpdate(out: String): UpdateOutcome {
+        val kv = out.lineSequence().mapNotNull { l -> l.trim().takeIf { '=' in it }?.let { it.substringBefore('=') to it.substringAfter('=') } }.toMap()
+        val shrunk = kv["shrunk"] == "1"
+        return UpdateOutcome(shrunk, if (shrunk) ((kv["freed_kb"]?.toLongOrNull() ?: 0L).coerceAtLeast(0L)) * 1024 else 0)
+    }
 
     /** Identity -> mirror path, for the page's "bare ✓" indicator. */
     fun index(mirrors: List<Mirror>, canonical: (String) -> String): Map<String, String> =

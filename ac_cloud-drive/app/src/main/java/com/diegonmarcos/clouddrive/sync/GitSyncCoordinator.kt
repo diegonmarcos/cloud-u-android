@@ -891,9 +891,11 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         val fallbackToken = lazy { runCatching { declaredToken() }.getOrDefault("") }
         bounded(action, work) { t0 ->
             val t = if (t0.token.isBlank()) t0.copy(token = fallbackToken.value) else t0
+            // #1314 never while another git job runs on this repository (its working clone's operation).
+            if (repos.value.any { it.name == t.name && running.value.containsKey(it.id) }) return@bounded t.name to Outcome.SKIP to "an operation is already running"
             val r = withContext(Dispatchers.IO) {
                 val at = plan.toUpdate[t.name]
-                if (at != null) StoreGit.bareUpdate(ctx, at, t.token)
+                if (at != null) StoreGit.bareUpdate(ctx, at, t.token, action.depth)
                 else {
                     val dest = gitGuest?.let { BareClones.path(it, Declarations.sync.git.bareRoot, t.url, t.name, canonical) }
                     if (dest == null) GitOpResult(false, "no safe bare path for ${t.name}")

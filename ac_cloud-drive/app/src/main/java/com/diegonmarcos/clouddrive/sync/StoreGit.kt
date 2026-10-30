@@ -58,10 +58,12 @@ object StoreGit {
         return GitOpResult(r.ok, if (r.ok) "bare mirror at $guestDir" else "bare clone in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
-    /** #1282 `git remote update --prune` of an existing mirror: the one-bare rule's update instead of a second clone. */
-    fun bareUpdate(ctx: Context, guestDir: String, token: String): GitOpResult {
-        val r = StoreExec(ctx).job("set -e; " + authed(BareClones.updateArgs(guestDir) { q(it) }), stdin = token)
-        return GitOpResult(r.ok, if (r.ok) "bare mirror updated at $guestDir" else "bare update in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
+    /** #1282 / #1314 update of an existing mirror (the one-bare rule: no second clone): at [depth] > 0 a depth fetch that also shrinks a full or deeper mirror (BareClones.updateScript), else `remote update --prune`. The summary names the bytes freed. */
+    fun bareUpdate(ctx: Context, guestDir: String, token: String, depth: Int = 0): GitOpResult {
+        val r = StoreExec(ctx).job(BareClones.updateScript(guestDir, depth, { q(it) }, ::authed), stdin = token)
+        val o = BareClones.parseUpdate(r.out)
+        val note = if (o.shrunk) ", shrunk to depth $depth, freed ${StalePackCleaner.humanBytes(o.freedBytes)}" else ""
+        return GitOpResult(r.ok, if (r.ok) "bare mirror updated at $guestDir$note" else "bare update in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
     /** #1313 the stale temp pack pass inside cld.termux (StalePackCleaner.script); null when the guest could not run it. */

@@ -561,8 +561,8 @@ object Declarations {
             depthActions = objects(o["depth_actions"]).mapNotNull { a ->
                 val id = a.str("id"); val kind = a.str("kind"); val scope = a.str("scope")
                 if (id.isBlank() || kind !in DEPTH_KINDS || scope !in DEPTH_SCOPES) null
-                // #1282 a bare mirror's depth 0 = full history (its declared default: the bare copy is the backup form).
-                else GitDepthActionDecl(id, a.str("label", id), a.str("icon"), kind, scope, if (kind == DEPTH_CLONE_BARE) (a.int("depth") ?: 0).coerceIn(0, 1000) else (a.int("depth") ?: 1).coerceIn(1, 1000), (a.int("workers") ?: 1).coerceIn(1, 4), a.bool("confirm"))
+                // #1314 a bare mirror is depth 1 by default (no working tree, the latest commit per ref); a declared 0 still means full history.
+                else GitDepthActionDecl(id, a.str("label", id), a.str("icon"), kind, scope, if (kind == DEPTH_CLONE_BARE) (a.int("depth") ?: 1).coerceIn(0, 1000) else (a.int("depth") ?: 1).coerceIn(1, 1000), (a.int("workers") ?: 1).coerceIn(1, 4), a.bool("confirm"))
             },
             unlisted = (o["unlisted"] as? JsonObject)?.let { u ->
                 GitUnlistedDecl(u.str("label"), u.strings("roots"), (u.int("max_depth") ?: 2).coerceIn(0, 6), (u.int("max_dirs") ?: 2000).coerceIn(1, 100_000), (u.int("timeout_seconds") ?: 30).coerceIn(1, 600))
