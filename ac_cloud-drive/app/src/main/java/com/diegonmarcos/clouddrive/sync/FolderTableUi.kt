@@ -61,7 +61,7 @@ internal fun FolderRepoTable(
     kinds: List<String>,
     coordinator: GitSyncCoordinator,
     subtitle: @Composable (FolderActions.Target) -> String,
-    bulk: Pair<String, String>? = null,
+    bulk: List<Pair<String, String>> = emptyList(),
     repoint: (java.io.File, java.io.File) -> String = { _, _ -> "" },
     onOpenReport: () -> Unit = {},
     modifier: Modifier = Modifier,
@@ -79,10 +79,12 @@ internal fun FolderRepoTable(
         if (hint.isNotBlank()) Text(hint, Modifier.padding(horizontal = DriveMetrics.sectionInset), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (list != null && list.isEmpty()) Text(empty, Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall)
         if (!list.isNullOrEmpty()) {
-            bulk?.let { (kind, label) ->
+            bulk.forEach { (kind, label) ->
                 Declarations.sync.git.folderAction(kind)?.let { a ->
-                    Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), horizontalArrangement = Arrangement.End) {
-                        Pill(label, { confirm = FolderConfirm(a, list) }, filled = true, enabled = !busy, modifier = Modifier.testTag(DriveTags.PARENTLESS_ALL + "_" + tableId))
+                    // #1317 Fix all origins lists only the clones whose origin names a retired name.
+                    val targets = if (kind == Declarations.FOLDER_REPOINT) list.filter { FolderActions.fixedOrigin(it.origin, RegistryNames.live()) != null } else list
+                    if (targets.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap), horizontalArrangement = Arrangement.End) {
+                        Pill(label, { confirm = FolderConfirm(a, targets) }, filled = true, enabled = !busy, modifier = Modifier.testTag(DriveTags.PARENTLESS_ALL + "_" + tableId + (if (kind == Declarations.FOLDER_REPOINT) "_fix" else "")))
                     }
                 }
             }
@@ -98,7 +100,7 @@ internal fun FolderRepoTable(
                         RepoStatusCell(RepoStatus.icons(true, g, false, emptyList(), ""), t.name, { open = if (open == t.path) "" else t.path }, RepoStatus.levelCaption(g, System.currentTimeMillis()))
                         Column(Modifier.width(DriveMetrics.tableName).clickable { open = if (open == t.path) "" else t.path }) {
                             Text(t.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(subtitle(t), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(subtitle(t) + "\n" + t.path, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
                         }
                         RepoCells(row)
                     }
@@ -108,7 +110,7 @@ internal fun FolderRepoTable(
                     style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.tight), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide, Alignment.End)) {
-                    actions.forEach { a ->
+                    actions.filter { a -> a.kind != Declarations.FOLDER_REPOINT || FolderActions.fixedOrigin(t.origin, RegistryNames.live()) != null }.forEach { a ->
                         Pill(a.label, { confirm = FolderConfirm(a, listOf(t)) }, enabled = !busy, danger = a.kind == Declarations.FOLDER_DELETE,
                             modifier = Modifier.testTag(DriveTags.folderAction(a.kind, t.name)))
                     }
@@ -147,11 +149,12 @@ internal fun FolderConfirmDialog(c: FolderConfirm, coordinator: GitSyncCoordinat
             Column(verticalArrangement = Arrangement.spacedBy(DriveMetrics.gap)) {
                 Text(stringResource(when (c.action.kind) {
                     Declarations.FOLDER_RENAME -> R.string.folder_confirm_rename
+                    Declarations.FOLDER_REPOINT -> R.string.folder_confirm_repoint
                     Declarations.FOLDER_ARCHIVE -> R.string.folder_confirm_archive
                     else -> R.string.folder_confirm_delete
                 }, Declarations.sync.git.archiveRoot))
                 c.targets.take(PREVIEW).forEach { t ->
-                    Text(t.name + if (c.action.kind == Declarations.FOLDER_RENAME) " → " + t.repoName else "", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelSmall)
+                    Text(t.name + when (c.action.kind) { Declarations.FOLDER_RENAME -> " → " + t.repoName; Declarations.FOLDER_REPOINT -> " → " + (FolderActions.fixedOrigin(t.origin, RegistryNames.live()) ?: t.origin); else -> "" }, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelSmall)
                     guards?.get(t.path)?.takeIf { it.strict }?.let { g ->
                         g.reasons().forEach { Text("  ! $it", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error) }
                         g.changed.take(PREVIEW).forEach { Text("    $it", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelSmall) }

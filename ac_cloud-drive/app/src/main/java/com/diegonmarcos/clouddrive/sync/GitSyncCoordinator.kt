@@ -970,8 +970,9 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     /** Move one folder; refuses when the destination exists (cld.termux checks again, so a race never merges two folders). */
     private fun moveFolder(from: File, to: File): GitOpResult {
-        if (to.exists()) return GitOpResult(false, "refused: ${to.name} already exists")
         val gf = execGuest(from); val gt = execGuest(to)
+        // #1317 through cld.termux java.io cannot see the store: only the script (exit 17) decides an existing destination.
+        if (gf == null && to.exists()) return GitOpResult(false, "refused: ${to.name} already exists")
         if (gf != null && gt != null) {
             val r = StoreExec(ctx).run(FolderActions.moveScript(gf, gt) { StoreExec.q(it) }, timeoutMs = 120_000)
             return GitOpResult(r.ok, when (r.exit) { 0 -> "moved"; 16 -> "the folder is gone"; 17 -> "refused: ${to.name} already exists"; else -> "move in cld.termux failed (exit ${r.exit})" }, (r.out + "\n" + r.err).trim().takeLast(2000))
@@ -980,26 +981,79 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         return if (from.renameTo(to)) GitOpResult(true, "moved") else GitOpResult(false, "the move failed (nothing changed)")
     }
 
+    /** #1317 which of [candidates] exist under [parent] in cld.termux (ONE probe); null = the probe failed. */
+    private fun takenInExec(parent: File, candidates: List<String>): Set<String>? = runCatching {
+        val r = StoreExec(ctx).run(FolderActions.takenScript(StoreGit.guestOf(parent), candidates) { StoreExec.q(it) }, timeoutMs = 60_000)
+        if (r.exit == 0) r.out.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toSet() else null
+    }.getOrNull()
+
     private fun renameFolder(t: FolderActions.Target, repoint: (File, File) -> String): Pair<Outcome, String> {
         val dir = File(t.path); val parent = dir.parentFile
-        if (parent == null || !dir.isDirectory) return Outcome.FAIL to "the folder is gone"
-        if (!FolderActions.usableName(t.repoName)) return Outcome.SKIP to "no usable repository name in its origin"
-        if (dir.name.equals(t.repoName, ignoreCase = true)) return Outcome.SKIP to "already named ${t.repoName}"
-        val name = FolderActions.renameTarget(t.repoName) { File(parent, it).exists() } ?: return Outcome.FAIL to "every ${t.repoName}${FolderActions.CONFLICT} name is taken; nothing changed"
+        val g = execGuest(dir)
+        // #1317 java.io is asked only when the store is read directly; through cld.termux the move script says "gone" (exit 16).
+        if (parent == null || FolderActions.goneByIo(g != null) { dir.isDirectory }) return Outcome.FAIL to "the folder is gone"
+        val plan = FolderActions.renamePlan(dir.name, t.repoName, RegistryNames.live(), g != null, { takenInExec(parent, it) }) { File(parent, it).exists() }
+        val name = when (plan) {
+            is FolderActions.RenamePlan.Skip -> return Outcome.SKIP to plan.why
+            is FolderActions.RenamePlan.Fail -> return Outcome.FAIL to plan.why
+            is FolderActions.RenamePlan.Go -> plan.name
+        }
+        val want = FolderActions.renameName(t.repoName, RegistryNames.live()) ?: t.repoName
         val to = File(parent, name)
         val r = moveFolder(dir, to)
         if (!r.ok) return Outcome.FAIL to r.summary
         val refs = runCatching { repoint(dir, to) }.getOrDefault("")
-        val head = if (name != t.repoName) "${t.repoName} already exists: renamed to $name (nothing overwritten or merged)" else "renamed to $name"
+        val head = if (name != want) "$want already exists: renamed to $name (nothing overwritten or merged)" else "renamed to $name"
         return Outcome.OK to (head + if (refs.isNotBlank()) "; $refs" else "")
+    }
+
+    /** #1317 Fix origin: the clone's origin URL gets the CURRENT repository name (same scheme, host, owner); never for a name that is not a renamed_from, never while a git job runs on that clone. */
+    private fun repointOrigin(t: FolderActions.Target): Pair<Outcome, String> {
+        val names = RegistryNames.live()
+        val fixed = FolderActions.fixedOrigin(t.origin, names) ?: return Outcome.SKIP to "origin already current"
+        val dir = File(t.path)
+        if (repos.value.any { File(it.path).absolutePath == dir.absolutePath && running.value.containsKey(it.id) }) return Outcome.SKIP to "an operation is already running"
+        val note = FolderActions.fixNote(t.origin, names)
+        val g = execGuest(dir)
+        if (g != null) {
+            val r = StoreExec(ctx).run(FolderActions.setOriginScript(g, fixed) { StoreExec.q(it) }, timeoutMs = 60_000)
+            return when (r.exit) { 0 -> Outcome.OK to note; 16 -> Outcome.FAIL to "the folder is gone"; 19 -> Outcome.FAIL to "no origin remote to fix"; else -> Outcome.FAIL to "set-url in cld.termux failed (exit ${r.exit})" }
+        }
+        return if (LocalRepos.setOrigin(dir, fixed)) Outcome.OK to note else Outcome.FAIL to "could not rewrite the origin in ${dir.name}/.git/config"
+    }
+
+    /** #1317 the origins as the actions see them: through cld.termux when the store needs it (one batched `remote get-url`), else as read by java.io. */
+    fun reconcileOrigins(found: List<LocalRepos.Found>): List<LocalRepos.Found> {
+        if (found.isEmpty()) return found
+        val guests = found.associateBy { f -> execGuest(f.dir) }.filterKeys { it != null }
+        if (guests.isEmpty()) return found
+        val seen = runCatching { FolderActions.parseOrigins(StoreExec(ctx).run(FolderActions.originsScript(guests.keys.filterNotNull()) { StoreExec.q(it) }, timeoutMs = 60_000).out) }.getOrDefault(emptyMap())
+        return found.map { f -> val g = execGuest(f.dir); if (g != null && g in seen) LocalRepos.found(f.dir, seen.getValue(g), RegistryNames.live()) else f }
+    }
+
+    /** #1317 ui.sync.git.stale_origin.auto_fix: re-point every clone of [found] whose origin names a retired name; one Activity Logs line each. Returns the number fixed (blocking: call on IO). */
+    fun autoFixOrigins(found: List<LocalRepos.Found>): Int {
+        if (!Declarations.sync.git.staleOriginAutoFix) return 0
+        var n = 0
+        found.filter { it.stale && FolderActions.fixedOrigin(it.origin, RegistryNames.live()) != null }.forEach { f ->
+            val (o, msg) = runCatching { repointOrigin(FolderActions.Target(f.dir.absolutePath, f.origin, f.repoName)) }.getOrElse { Outcome.FAIL to (it.message ?: it.toString()) }
+            if (o == Outcome.SKIP) return@forEach
+            history.append(SyncEvent(System.currentTimeMillis() / 1000, "folder:" + f.dir.absolutePath, f.dir.name, SyncHistory.TRIGGER_SCHEDULED, o == Outcome.OK, "stale_origin: $msg", f.dir.absolutePath))
+            if (o == Outcome.OK) n++
+        }
+        if (n > 0) events.value = history.load()
+        return n
     }
 
     private fun archiveFolder(t: FolderActions.Target): Pair<Outcome, String> {
         val dir = File(t.path)
         val root = archiveDir() ?: return Outcome.FAIL to "the declared archive_root is not a safe path"
-        if (!dir.isDirectory) return Outcome.FAIL to "the folder is gone"
+        val g = execGuest(dir)
+        if (FolderActions.goneByIo(g != null) { dir.isDirectory }) return Outcome.FAIL to "the folder is gone"
         if (FolderActions.insideArchive(dir, root)) return Outcome.SKIP to "already in ${root.name}"
-        val name = FolderActions.archiveName(dir.name, System.currentTimeMillis()) { File(root, it).exists() } ?: return Outcome.FAIL to "no free name in ${root.name}"
+        val now = System.currentTimeMillis()
+        val takenSet = if (g != null) (takenInExec(root, FolderActions.archiveCandidates(dir.name, now)) ?: return Outcome.FAIL to "could not check the names in cld.termux; nothing changed") else null
+        val name = FolderActions.archiveName(dir.name, now) { if (takenSet != null) it in takenSet else File(root, it).exists() } ?: return Outcome.FAIL to "no free name in ${root.name}"
         val to = File(root, name)
         val r = moveFolder(dir, to)
         return if (r.ok) Outcome.OK to "archived to ${root.name}/$name" else Outcome.FAIL to r.summary
@@ -1007,7 +1061,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
 
     private fun deleteFolder(t: FolderActions.Target, typed: Set<String>): Pair<Outcome, String> {
         val dir = File(t.path)
-        if (!dir.isDirectory) return Outcome.SKIP to "the folder is gone"
+        if (FolderActions.goneByIo(execGuest(dir) != null) { dir.isDirectory }) return Outcome.SKIP to "the folder is gone"
         if (dir.absolutePath == SharedStore.gitRoot().absolutePath || dir.parentFile == null) return Outcome.FAIL to "refused: not a single repository folder"
         val guard = deleteGuard(t.path)
         if (guard.strict && t.path !in typed) return Outcome.SKIP to "not deleted, needs the typed confirm: " + guard.reasons().joinToString("; ")
@@ -1025,6 +1079,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
      */
     fun runFolderAction(action: Declarations.GitFolderActionDecl, targets: List<FolderActions.Target>, typed: Set<String> = emptySet(), repoint: (File, File) -> String = { _, _ -> "" }): kotlinx.coroutines.Job? {
         val run = action.asRun()
+        val moved = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
         return startDepth(run) {
             depthRun.update { it?.copy(total = targets.size) }
             bounded(run, targets) { t ->
@@ -1034,14 +1089,26 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                             Declarations.FOLDER_RENAME -> renameFolder(t, repoint)
                             Declarations.FOLDER_ARCHIVE -> archiveFolder(t)
                             Declarations.FOLDER_DELETE -> deleteFolder(t, typed)
+                            Declarations.FOLDER_REPOINT -> repointOrigin(t)
                             else -> Outcome.FAIL to "unknown folder command ${action.kind}"
                         }
                     }.getOrElse { Outcome.FAIL to (it.message ?: it.toString()) }
+                    if (o == Outcome.OK && action.kind != Declarations.FOLDER_REPOINT) moved.add(t.path)
                     history.append(SyncEvent(System.currentTimeMillis() / 1000, "folder:" + t.path, t.name, SyncHistory.TRIGGER_MANUAL, o != Outcome.FAIL, "${action.id}: $msg", t.path))
                     t.name to o to msg
                 }
             }
             withContext(Dispatchers.IO) { events.value = history.load() }
+            // #1317 the lists refresh after a run: rows that moved or were deleted go at once (list, persisted copy, status cache), then a rescan.
+            val gone = moved.toSet()
+            if (gone.isNotEmpty()) {
+                withContext(Dispatchers.IO) {
+                    gone.forEach { statusReader.invalidate(UnlistedRepos.statusKey(it)) }
+                    val kept = UnlistedRepos.without(unlisted.value, gone)
+                    unlisted.value = kept
+                    pagePrefs.edit().putString(KEY_UNLISTED, UnlistedRepos.encode(kept)).apply()
+                }
+            }
             scanUnlisted()
         }
     }

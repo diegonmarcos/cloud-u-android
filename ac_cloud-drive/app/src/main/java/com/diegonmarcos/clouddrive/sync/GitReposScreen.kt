@@ -1539,7 +1539,7 @@ private fun GitRepoOpsBox(
                     return
                 }
                 // #1289 Others: the declared folder commands on this clone's folder (each asks first, Delete strictly when dirty).
-                page.folderActions.firstOrNull { it.id == id }?.let { folderAsk = FolderConfirm(it, listOf(FolderActions.Target(repo.path, repo.remoteUrl, repoName))); return }
+                page.folderActions.firstOrNull { it.id == id }?.let { folderAsk = FolderConfirm(it, listOf(FolderActions.Target(repo.path, repo.remoteUrl, RegistryNames.live().currentName(repoName)))); return }
                 page.op(id)?.let { declared(it) }
             }
         }

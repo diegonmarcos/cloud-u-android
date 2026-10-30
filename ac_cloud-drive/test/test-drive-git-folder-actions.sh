@@ -68,7 +68,33 @@ for fn in ("moveScript", "deleteScript"):
 if "] || exit 17;" not in r: print("    the move does not refuse an existing destination"); sys.exit(1)
 PY
 }
-c1() { grep -qF 'FolderActions.renameTarget(' "$1" && grep -qF 'FolderActions.renameTarget(' "$2" && grep -qF 'if (to.exists()) return GitOpResult(false' "$1" || { echo "    rename does not name through renameTarget / refuse an existing destination"; return 1; }; }
+c1() { grep -qF 'FolderActions.renamePlan(' "$1" && grep -qF 'renameTarget(want, taken)' "$3" && grep -qF 'FolderActions.renameTarget(' "$2" && grep -qF 'if (gf == null && to.exists()) return GitOpResult(false' "$1" || { echo "    rename does not name through renamePlan/renameTarget / refuse an existing destination"; return 1; }; }
+# #1317 E1: java.io is asked about a folder only through goneByIo (never when the store is reached through cld.termux); the conflict probe is the termux one.
+e1() { python3 - "$1" <<'PY'
+import re, sys
+c = open(sys.argv[1]).read()
+a = c.find("// ── #1288"); b = c.find("fun requestFolderStatus", a); seg = c[a:b]
+bad = [l.strip() for l in seg.splitlines() if "isDirectory" in l and "goneByIo" not in l and "fun deleteGuard" not in l and "val dir" not in l and "GitEngine" not in l]
+bad = [l for l in bad if "File(dir, \".git\")" not in l]
+if bad: print("    java.io pre-check outside goneByIo:", bad); sys.exit(1)
+if seg.count("goneByIo(") < 3: print("    rename/archive/delete must all use goneByIo"); sys.exit(1)
+if "takenInExec(" not in seg or "FolderActions.takenScript(" not in seg: print("    the conflict probe does not go through cld.termux"); sys.exit(1)
+PY
+}
+# #1317 N1: names fold through the registry before any matching; the rows show the old name as old; stale origins are fixed (manual kind + auto_fix).
+n1() { python3 - "$1" "$2" "$3" "$4" <<'PY'
+import json, re, sys
+coord, lr, panel, bj = (open(x).read() for x in sys.argv[1:5])
+bad = 0
+if "names: RegistryNames" not in lr or "names.currentName(raw)" not in lr or "names.carries(" not in lr: print("    LocalRepos does not fold origin names through the registry"); bad = 1
+if "RegistryNames.live()" not in coord or "FolderActions.renamePlan(" not in coord or "renameName(originName, names)" not in open(sys.argv[1].replace("GitSyncCoordinator.kt", "FolderActions.kt")).read(): print("    rename target is not the resolved current name"); bad = 1
+if "LocalRepos.scan(roots, names)" not in panel or "autoFixOrigins(" not in panel or "reconcileOrigins(" not in panel or "originLabel(" not in panel: print("    Parentless does not resolve/fix/show old origins"); bad = 1
+g = json.loads(bj)["ui"]["sync"]["git"]
+if not g.get("stale_origin", {}).get("auto_fix") or "_doc_stale_origin" not in g: print("    stale_origin.auto_fix or its _doc missing"); bad = 1
+if "UnlistedRepos.without(" not in coord: print("    lists are not refreshed after a run"); bad = 1
+sys.exit(bad)
+PY
+}
 h1() { python3 - "$SRC/sync" <<'PY'
 import os, re, sys
 d = sys.argv[1]; rd = lambda f: open(os.path.join(d, f)).read()
@@ -92,11 +118,15 @@ k1 "$BJ" "$COORD" "$DECL" && pass "declared folder kinds == FOLDER_KINDS == hand
 echo "── R runner ──"
 r1 "$COORD" "$DECL" "$RULES" && pass "depth runner, Activity Logs, no remote, no glob, refusing move" || fail "runner"
 echo "── C rename ──"
-c1 "$COORD" "$SRC/sync/LocalRepos.kt" && pass "rename names via ___CONFLICT and never overwrites" || fail "rename conflict"
+c1 "$COORD" "$SRC/sync/LocalRepos.kt" "$RULES" && pass "rename names via ___CONFLICT and never overwrites" || fail "rename conflict"
+echo "── E exec path (#1317) ──"
+e1 "$COORD" && pass "no java.io pre-check on the cld.termux path; the conflict probe is the termux one" || fail "exec path"
+echo "── N registry names (#1317) ──"
+n1 "$COORD" "$SRC/sync/LocalRepos.kt" "$SRC/sync/ParentlessPanel.kt" "$BJ" && pass "origin names fold through renamed_from; Fix origin + auto_fix declared; lists refresh" || fail "registry names"
 echo "── H header parity ──"
 h1 && pass "Parentless/Unlisted use the main header, cells and status icons" || fail "header parity"
 echo "── JVM ──"
-grep -q 'header' "$TESTS/sync/FolderActionsTest.kt" && grep -q '___CONFLICT3' "$TESTS/sync/FolderActionsTest.kt" && pass "JVM FolderActionsTest (conflict, archive, guard, parity)" || fail "missing FolderActionsTest"
+grep -q 'header' "$TESTS/sync/FolderActionsTest.kt" && grep -q '___CONFLICT3' "$TESTS/sync/FolderActionsTest.kt" && grep -q 'the exec path never pre-checks' "$TESTS/sync/FolderOriginsTest.kt" && pass "JVM FolderActionsTest (conflict, archive, guard, parity)" || fail "missing FolderActionsTest"
 
 echo "── M mutation-proof ──"
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
@@ -104,7 +134,14 @@ python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["gi
 k1 "$TMP/b.json" "$COORD" "$DECL" >/dev/null && fail "K1 passed an undeclared kind (vacuous)" || pass "bogus kind → K1 RED"
 sed 's/Declarations.FOLDER_ARCHIVE -> archiveFolder(t)//' "$COORD" > "$TMP/c.kt"; k1 "$BJ" "$TMP/c.kt" "$DECL" >/dev/null && fail "K1 passed a missing handler (vacuous)" || pass "handler removed → K1 RED"
 sed 's/|| exit 17//' "$RULES" > "$TMP/r.kt"; r1 "$COORD" "$DECL" "$TMP/r.kt" >/dev/null && fail "R1 passed a merging move (vacuous)" || pass "refusal removed → R1 RED"
-k1 "$BJ" "$COORD" "$DECL" >/dev/null && r1 "$COORD" "$DECL" "$RULES" >/dev/null && h1 >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"
+sed 's/FolderActions.renamePlan(/FolderActions.renameTargetX(/' "$COORD" > "$TMP/p.kt"; c1 "$TMP/p.kt" "$SRC/sync/LocalRepos.kt" "$RULES" >/dev/null && fail "C1 passed a coordinator without the plan (vacuous)" || pass "plan removed → C1 RED"
+sed 's/FolderActions.goneByIo(g != null) { dir.isDirectory }/!dir.isDirectory/' "$COORD" > "$TMP/e.kt"; e1 "$TMP/e.kt" >/dev/null && fail "E1 passed a java.io pre-check (vacuous)" || pass "java.io pre-check back → E1 RED"
+sed 's/FolderActions.takenScript(/io.takenScript(/' "$COORD" > "$TMP/e2.kt"; e1 "$TMP/e2.kt" >/dev/null && fail "E1 passed a conflict check without termux (vacuous)" || pass "termux probe removed → E1 RED"
+sed 's/names.currentName(raw)/raw/' "$SRC/sync/LocalRepos.kt" > "$TMP/l.kt"; n1 "$COORD" "$TMP/l.kt" "$SRC/sync/ParentlessPanel.kt" "$BJ" >/dev/null && fail "N1 passed an origin taken as-is (vacuous)" || pass "origin not folded → N1 RED"
+sed 's/UnlistedRepos.without(/UnlistedRepos.keepAll(/' "$COORD" > "$TMP/n.kt"; n1 "$TMP/n.kt" "$SRC/sync/LocalRepos.kt" "$SRC/sync/ParentlessPanel.kt" "$BJ" >/dev/null && fail "N1 passed a list that never refreshes (vacuous)" || pass "refresh removed → N1 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); del b["ui"]["sync"]["git"]["stale_origin"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/b2.json"
+n1 "$COORD" "$SRC/sync/LocalRepos.kt" "$SRC/sync/ParentlessPanel.kt" "$TMP/b2.json" >/dev/null && fail "N1 passed without stale_origin (vacuous)" || pass "stale_origin removed → N1 RED"
+k1 "$BJ" "$COORD" "$DECL" >/dev/null && r1 "$COORD" "$DECL" "$RULES" >/dev/null && h1 >/dev/null && e1 "$COORD" >/dev/null && n1 "$COORD" "$SRC/sync/LocalRepos.kt" "$SRC/sync/ParentlessPanel.kt" "$BJ" >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "test-drive-git-folder-actions: all checks passed"; else echo "test-drive-git-folder-actions: $FAILURES check(s) FAILED"; exit 1; fi

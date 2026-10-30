@@ -789,6 +789,8 @@
     <string name="parentless_empty">None: every local repository folder is named like its origin.</string>
     <string name="parentless_row">origin: %1$s</string>
     <string name="parentless_rename_all">Rename all</string>
+    <string name="parentless_fix_all">Fix all origins</string>
+    <string name="folder_confirm_repoint">Each clone\'s origin URL gets the current repository name (same scheme, host and owner). GitHub redirects the old name, so nothing is lost; only the stored URL changes.</string>
     <string name="parentless_confirm_more">… and %1$d more</string>
     <string name="folder_confirm_title">%1$s %2$d folder(s)?</string>
     <string name="folder_confirm_rename">Each folder takes its repository name. When a folder of that name exists, it becomes NAME___CONFLICT (then ___CONFLICT2, ___CONFLICT3…). Nothing is overwritten or merged; saved paths and bookmarks follow.</string>

@@ -16,10 +16,13 @@ import java.io.File
 object LocalRepos {
 
     /** A folder that holds a repository. [origin] is the URL of remote `origin` ("" = none), [repoName] its basename ("" = none). */
-    data class Found(val dir: File, val origin: String, val repoName: String)
+    data class Found(val dir: File, val origin: String, val repoName: String, /** #1317 the name the origin URL literally ends in (an OLD name when [stale]). */ val originName: String = repoName) {
+        /** #1317 the origin names the repository by a retired name (GitHub redirects it): the clone is fixable with `remote set-url`. */
+        val stale: Boolean get() = originName.isNotBlank() && !originName.equals(repoName, true) && !repoName.equals(originName, true)
+    }
 
     /** A [Found] whose folder name is not [Found.repoName]; [target] is the folder name the rename would give it. */
-    data class Parentless(val dir: File, val origin: String, val repoName: String) {
+    data class Parentless(val dir: File, val origin: String, val repoName: String, val originName: String = repoName) {
         val target: File get() = File(dir.parentFile, repoName)
     }
 
@@ -89,17 +92,40 @@ object LocalRepos {
         return if (config.isFile) runCatching { originFromConfig(config.readText()) }.getOrDefault("") else ""
     }
 
-    /** Every direct child of each of [roots] that holds a `.git`, name order, each folder once. */
-    fun scan(roots: List<File>): List<Found> =
-        roots.distinctBy { it.absolutePath }
-            .flatMap { root -> root.listFiles().orEmpty().filter { it.isDirectory && File(it, ".git").exists() } }
-            .distinctBy { it.absolutePath }
-            .sortedBy { it.name.lowercase() }
-            .map { d -> originOf(d).let { Found(d, it, repoNameOf(it)) } }
+    /** #1317 a folder that is a symlink (a farm link into another clone) is not a clone of its own. */
+    fun isSymlink(f: File): Boolean = runCatching { java.nio.file.Files.isSymbolicLink(f.toPath()) }.getOrDefault(false)
 
-    /** The folders whose name is not their origin's repository name. */
-    fun parentless(found: List<Found>): List<Parentless> =
-        found.filter { isParentless(it.dir.name, it.repoName) }.map { Parentless(it.dir, it.origin, it.repoName) }
+    /** #1317 the folder's `.git` is its OWN: a directory, or a file whose gitdir sits inside the folder (a worktree or submodule points at another repo's config, so it is not read as this folder's). */
+    fun ownGit(dir: File): Boolean {
+        val dot = File(dir, ".git")
+        if (dot.isDirectory) return true
+        if (!dot.isFile) return false
+        val target = runCatching { dot.readText().lineSequence().firstOrNull { it.startsWith("gitdir:") } }.getOrNull()?.removePrefix("gitdir:")?.trim() ?: return false
+        val f = File(target).let { if (it.isAbsolute) it else File(dir, target) }
+        return runCatching { f.canonicalPath.startsWith(dir.canonicalPath + File.separator) }.getOrDefault(false)
+    }
+
+    /**
+     * Every direct child of each of [roots] that holds its own `.git`, name order, each CLONE once (#1317: a symlinked folder and a
+     * `.git` file pointing outside are skipped; the same clone reached from two roots counts once, by canonical path).
+     * [names] folds `renamed_from`: [Found.repoName] is the CURRENT registry name, [Found.originName] what the URL says.
+     */
+    fun scan(roots: List<File>, names: RegistryNames = RegistryNames.NONE): List<Found> =
+        roots.distinctBy { it.absolutePath }
+            .flatMap { root -> root.listFiles().orEmpty().filter { it.isDirectory && !isSymlink(it) && ownGit(it) } }
+            .distinctBy { runCatching { it.canonicalPath }.getOrDefault(it.absolutePath) }
+            .sortedBy { it.name.lowercase() }
+            .map { d -> originOf(d).let { found(d, it, names) } }
+
+    /** A [Found] for [dir] whose origin is [origin], names folded through the registry. */
+    fun found(dir: File, origin: String, names: RegistryNames = RegistryNames.NONE): Found {
+        val raw = repoNameOf(origin)
+        return Found(dir, origin, if (raw.isBlank()) "" else names.currentName(raw), raw)
+    }
+
+    /** The folders whose name is not their origin's repository name (registry name or GitHub name both count, old names resolve first). */
+    fun parentless(found: List<Found>, names: RegistryNames = RegistryNames.NONE): List<Parentless> =
+        found.filter { it.repoName.isNotBlank() && !names.carries(it.dir.name, it.repoName) }.map { Parentless(it.dir, it.origin, it.repoName, it.originName) }
 
     private fun usable(name: String): Boolean = name.isNotBlank() && name != "." && name != ".." && '/' !in name && '\u0000' !in name
 
@@ -131,5 +157,26 @@ object LocalRepos {
             path.startsWith("$o/") -> n + path.substring(o.length)
             else -> null
         }
+    }
+
+    /** #1317 [config] with `remote "origin"`'s url replaced by [url]; null when the section or its url line is absent. Nothing else changes. */
+    fun withOrigin(config: String, url: String): String? {
+        var inOrigin = false; var done = false
+        val out = config.lines().map { raw ->
+            val line = raw.trim()
+            if (line.startsWith("[")) { inOrigin = Regex("""^\[\s*remote\s+"origin"\s*]""", RegexOption.IGNORE_CASE).containsMatchIn(line); raw }
+            else if (inOrigin && !done && line.startsWith("url", ignoreCase = true) && line.substringBefore('=').trim().equals("url", true) && '=' in line) {
+                done = true; raw.substringBefore('=') + "= " + url
+            } else raw
+        }
+        return if (done) out.joinToString("\n") else null
+    }
+
+    /** #1317 rewrite the origin url of [dir] (its own `.git/config`) in place; true when written. */
+    fun setOrigin(dir: File, url: String): Boolean {
+        if (!File(dir, ".git").isDirectory) return false
+        val c = File(dir, ".git/config")
+        val next = runCatching { withOrigin(c.readText(), url) }.getOrNull() ?: return false
+        return runCatching { c.writeText(next); true }.getOrDefault(false)
     }
 }

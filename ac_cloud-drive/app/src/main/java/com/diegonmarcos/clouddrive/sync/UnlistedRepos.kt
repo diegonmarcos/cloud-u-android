@@ -41,6 +41,9 @@ object UnlistedRepos {
     fun unlisted(found: List<Folder>, registry: Set<String>, canonical: (String) -> String): List<Folder> =
         found.filter { f -> f.origin.isBlank() || BulkDepth.identity(f.origin, canonical) !in registry }
 
+    /** #1317 the list without the folders a command just moved, archived or deleted (their rows must vanish at once, the rest stay). */
+    fun without(l: List<Folder>, gone: Set<String>): List<Folder> = l.filter { it.path !in gone }
+
     /** The status key of an unlisted folder in the ONE status reader (and so in StatusCache). */
     fun statusKey(path: String): String = KEY_PREFIX + path
     const val KEY_PREFIX = "unlisted:"

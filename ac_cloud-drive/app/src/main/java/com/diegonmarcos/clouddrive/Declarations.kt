@@ -205,6 +205,8 @@ object Declarations {
         val folderActions: List<GitFolderActionDecl> = emptyList(),
         /** #1288 where Archive moves a folder, relative to the store's git folder. */
         val archiveRoot: String = "z-archived",
+        /** #1317 ui.sync.git.stale_origin.auto_fix: a clone whose origin names a retired repository name is re-pointed at the current one on scan. */
+        val staleOriginAutoFix: Boolean = true,
         /** #1289 the per-repository menu: groups, items, order, labels (ui.sync.git.repo_menu). */
         val repoMenu: GitRepoMenuDecl = GitRepoMenuDecl(),
         /** #1313 the stale temp pack cleanup (ui.sync.git.stale_pack_cleanup). */
@@ -574,6 +576,7 @@ object Declarations {
                 if (id.isBlank() || kind !in FOLDER_KINDS) null else GitFolderActionDecl(id, a.str("label", id), a.str("icon"), kind, (a.int("workers") ?: 1).coerceIn(1, 4), a.bool("confirm", true))
             },
             archiveRoot = o.str("archive_root", "z-archived").takeIf { com.diegonmarcos.clouddrive.sync.BareClones.validRoot(it) } ?: "z-archived",
+            staleOriginAutoFix = (o["stale_origin"] as? JsonObject)?.bool("auto_fix", true) ?: true,
             repoMenu = parseRepoMenu(o["repo_menu"]),
             stalePackCleanup = (o["stale_pack_cleanup"] as? JsonObject)?.let { c ->
                 GitStalePackDecl(
@@ -807,7 +810,9 @@ object Declarations {
     const val FOLDER_RENAME = "rename_to_repo"
     const val FOLDER_ARCHIVE = "archive"
     const val FOLDER_DELETE = "delete_local"
-    val FOLDER_KINDS = setOf(FOLDER_RENAME, FOLDER_ARCHIVE, FOLDER_DELETE)
+    /** #1317 Fix origin: `remote set-url origin` swaps a retired repository name (a renamed_from) for the current one. */
+    const val FOLDER_REPOINT = "repoint_origin"
+    val FOLDER_KINDS = setOf(FOLDER_RENAME, FOLDER_ARCHIVE, FOLDER_DELETE, FOLDER_REPOINT)
     /** #1288 the runner's scope of a folder command (never declared in depth_actions). */
     const val DEPTH_SCOPE_FOLDER = "folder"
     const val REMOTE_READONLY = "readonly"

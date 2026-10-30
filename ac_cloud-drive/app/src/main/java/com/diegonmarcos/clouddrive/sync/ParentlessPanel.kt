@@ -41,7 +41,13 @@ fun ParentlessPanel(
     val key = roots.map { it.absolutePath }
     // Rescan on open and whenever a folder command ends.
     LaunchedEffect(key, run?.actionId, run?.ended) {
-        val found = withContext(Dispatchers.IO) { LocalRepos.parentless(LocalRepos.scan(roots)).map { FolderActions.Target(it.dir.absolutePath, it.origin, it.repoName) } }
+        val names = RegistryNames.live()
+        val found = withContext(Dispatchers.IO) {
+            // #1317 origins are read the way the actions reach the store; stale ones (a retired name) are fixed first, then the list is read again.
+            var all = coordinator.reconcileOrigins(LocalRepos.scan(roots, names))
+            if (coordinator.autoFixOrigins(all) > 0) all = coordinator.reconcileOrigins(LocalRepos.scan(roots, names))
+            LocalRepos.parentless(all, names).map { FolderActions.Target(it.dir.absolutePath, it.origin, it.repoName) }
+        }
         rows = found
         coordinator.requestFolderStatus(found.map { it.path })
         if (run != null && run.ended && run.kind in Declarations.FOLDER_KINDS) onChanged()
@@ -52,10 +58,10 @@ fun ParentlessPanel(
         hint = stringResource(R.string.parentless_hint),
         empty = stringResource(R.string.parentless_empty),
         rows = rows, glances = glances, lastCommits = lastCommits, run = run,
-        kinds = listOf(Declarations.FOLDER_RENAME, Declarations.FOLDER_ARCHIVE, Declarations.FOLDER_DELETE),
+        kinds = listOf(Declarations.FOLDER_RENAME, Declarations.FOLDER_ARCHIVE, Declarations.FOLDER_DELETE, Declarations.FOLDER_REPOINT),
         coordinator = coordinator,
-        subtitle = { stringResource(R.string.parentless_row, it.repoName) },
-        bulk = Declarations.FOLDER_RENAME to stringResource(R.string.parentless_rename_all),
+        subtitle = { stringResource(R.string.parentless_row, FolderActions.originLabel(LocalRepos.repoNameOf(it.origin), RegistryNames.live())) },
+        bulk = listOf(Declarations.FOLDER_RENAME to stringResource(R.string.parentless_rename_all), Declarations.FOLDER_REPOINT to stringResource(R.string.parentless_fix_all)),
         repoint = { from, to ->
             val r = LocalRepoRefs.repoint(ctx.applicationContext, prefs, from, to)
             ctx.getString(R.string.parentless_refs, r.repos, r.jobs, r.bookmarks)
