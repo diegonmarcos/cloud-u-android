@@ -2,6 +2,15 @@
   "_doc": "Registry of every repository owned by this account. clone.sh reads this and nothing else — adding a repo here is the only edit needed for it to show up in `./clone.sh --list`, be clonable, and get a symlink. Deliberately NOT submodules: a submodule pins a commit, and this is an index of working clones, not a pinned build input. GENERATED from projects-repos.json by gen-registry.js: edit projects-repos.json, never this file. cloud-master carries a SUBSET of these entries — the cloud project — with identical name/url/private fields; this file is the superset and the two must not disagree.",
   "_schema": "cloud-repos/v1",
   "_self_doc": "_git-repos-master is the only repo of the account with no entry here. It is the index; an entry would give it a symlink to its own parent directory, which is a loop, not information.",
+  "self": {
+    "name": "_git-repos-master",
+    "url": "git@github.com:diegonmarcos/_git-repos-master.git",
+    "private": false,
+    "renamed_from": [
+      "git-repos-master"
+    ],
+    "doc": "The index repo itself, declared for READERS (Cloud Drive treats a clone of it as listed, and an origin naming git-repos-master as its old name). It is NOT in repos[]: the farm gets no self-symlink (see _self_doc)."
+  },
   "_visibility_doc": "`private` mirrors GitHub visibility as of 2026-08-20 and only drives the \"(private)\" hint in `--list` plus a clearer message when a clone fails for lack of credentials. It grants nothing.",
   "_lfs_doc": "`lfs` is optional. `true` = the repository stores its large files in git-lfs, so a plain clone fetches pointers until `git lfs pull`; absent = a normal repository. Declarative: the libs:repos mirror and the cloud-drive repos table (LFS | Normal column) read this field, nothing hardcodes which repo is LFS.",
   "_hub_submodule_doc": "Hub hierarchy (declarative, #3ff19f58). A hub entry carries `parent_hub`, a member entry carries `hub`; z-archived_* entries are members of the hub z-archived-___ (#1291); 7.Others entries (farm 7.Others) carry neither and have no hub submodule. Every repo except the top (_git-repos-master) gets its hub (member) or its parent hub (hub) as a git submodule at the one fixed path `0_hub/<hub-name>`, URL https://github.com/diegonmarcos/<hub>.git, pinned to the hub main. Only the upward link is a submodule; hubs keep symlinks to members (no cycles). A public repo never gets a private hub (would leak its name/URL): repos-sot.js reports such cases and they are skipped. Guard: `node repos-sot.js check-hubs [--remote]`.",

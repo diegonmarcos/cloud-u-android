@@ -13,8 +13,8 @@ class RegistryNames(private val sot: Declarations.RepoSotDecl) {
     private val index: Map<String, Declarations.RepoSotEntry> by lazy {
         val m = LinkedHashMap<String, Declarations.RepoSotEntry>()
         // current names first, so an old name never shadows a live repository
-        sot.repos.forEach { e -> m.putIfAbsent(e.name.lowercase(), e); m.putIfAbsent(e.github.lowercase(), e) }
-        sot.repos.forEach { e -> e.renamedFrom.forEach { o -> m.putIfAbsent(o.lowercase(), e) } }
+        sot.listed.forEach { e -> m.putIfAbsent(e.name.lowercase(), e); m.putIfAbsent(e.github.lowercase(), e) }
+        sot.listed.forEach { e -> e.renamedFrom.forEach { o -> m.putIfAbsent(o.lowercase(), e) } }
         sot.renameMap.forEach { (o, n) -> m[n.lowercase()]?.let { m.putIfAbsent(o.lowercase(), it) } }
         m
     }

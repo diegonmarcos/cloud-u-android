@@ -92,6 +92,10 @@ object LocalRepos {
         return if (config.isFile) runCatching { originFromConfig(config.readText()) }.getOrDefault("") else ""
     }
 
+    /** #1317 `<name>.incoming` is a copy in flight or the leftover of an interrupted one (ExecCopier / FileCopier): never a clone to list. */
+    fun isIncoming(f: File): Boolean = f.name.endsWith(INCOMING)
+    const val INCOMING = ".incoming"
+
     /** #1317 a folder that is a symlink (a farm link into another clone) is not a clone of its own. */
     fun isSymlink(f: File): Boolean = runCatching { java.nio.file.Files.isSymbolicLink(f.toPath()) }.getOrDefault(false)
 
@@ -112,7 +116,7 @@ object LocalRepos {
      */
     fun scan(roots: List<File>, names: RegistryNames = RegistryNames.NONE): List<Found> =
         roots.distinctBy { it.absolutePath }
-            .flatMap { root -> root.listFiles().orEmpty().filter { it.isDirectory && !isSymlink(it) && ownGit(it) } }
+            .flatMap { root -> root.listFiles().orEmpty().filter { it.isDirectory && !isIncoming(it) && !isSymlink(it) && ownGit(it) } }
             .distinctBy { runCatching { it.canonicalPath }.getOrDefault(it.absolutePath) }
             .sortedBy { it.name.lowercase() }
             .map { d -> originOf(d).let { found(d, it, names) } }

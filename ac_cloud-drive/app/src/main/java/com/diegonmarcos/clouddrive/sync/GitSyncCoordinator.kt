@@ -1143,7 +1143,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                     // #1288 the archive root is not walked: an archived folder is not unlisted.
                     val archive = archiveDir()
                     val walked = UnlistedRepos.walk(roots, d.maxDepth, d.maxDirs, System.currentTimeMillis() + d.timeoutSeconds * 1000L) { f -> archive != null && FolderActions.insideArchive(f, archive) }
-                    val ids = Declarations.repoSot.repos.map { BulkDepth.identity(it.github, Declarations.repoSot::canonical) }.toSet()
+                    val ids = Declarations.repoSot.listed.map { BulkDepth.identity(it.github, Declarations.repoSot::canonical) }.toSet()
                     UnlistedRepos.unlisted(walked, ids, Declarations.repoSot::canonical).also { pagePrefs.edit().putString(KEY_UNLISTED, UnlistedRepos.encode(it)).apply() }
                 }
                 unlisted.value = found

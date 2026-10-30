@@ -28,7 +28,7 @@ object UnlistedRepos {
         roots.filter { it.isDirectory }.forEach { queue.add(it to 0) }
         while (queue.isNotEmpty() && seen < maxDirs && now() < deadlineMs) {
             val (d, depth) = queue.removeFirst(); seen++
-            if (skip(d)) continue
+            if (skip(d) || LocalRepos.isIncoming(d)) continue
             if (File(d, ".git").exists()) { out.putIfAbsent(d.absolutePath, Folder(d.absolutePath, LocalRepos.originOf(d))); continue }
             if (depth >= maxDepth) continue
             d.listFiles().orEmpty().filter { it.isDirectory && !it.name.startsWith(".") && it.name != "Android" }.sortedBy { it.name.lowercase() }

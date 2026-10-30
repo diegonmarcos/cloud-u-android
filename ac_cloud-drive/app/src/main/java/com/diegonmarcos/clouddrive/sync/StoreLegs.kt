@@ -67,8 +67,12 @@ class StoreLegs(private val paths: StorePaths, private val userId: Int, private 
             val f = File(from); val t = File(to)
             if (!f.exists()) return@runCatching null
             val dst = if (replace) File(to + ".incoming") else t
-            if (f.isDirectory) { dst.mkdirs(); f.copyRecursively(dst, overwrite = true) } else { dst.parentFile?.mkdirs(); f.copyTo(dst, overwrite = true) }
-            if (replace) { t.deleteRecursively(); check(dst.renameTo(t)) { "rename failed" } }
+            // #1317 no stale <to>.incoming from an interrupted run, and none left behind by a failed one.
+            if (replace) dst.deleteRecursively()
+            try {
+                if (f.isDirectory) { dst.mkdirs(); f.copyRecursively(dst, overwrite = true) } else { dst.parentFile?.mkdirs(); f.copyTo(dst, overwrite = true) }
+                if (replace) { t.deleteRecursively(); check(dst.renameTo(t)) { "rename failed" } }
+            } catch (e: Throwable) { if (replace) dst.deleteRecursively(); throw e }
             null
         }.getOrElse { it.message ?: it.toString() }
         override fun remove(path: String): String? = if (File(path).deleteRecursively() || !File(path).exists()) null else "could not delete $path"

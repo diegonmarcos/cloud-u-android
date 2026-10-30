@@ -198,4 +198,80 @@ class FolderOriginsTest {
         val bj = File(root, "build.json").readText()
         assertTrue(bj.contains("\"kind\": \"repoint_origin\"") && bj.contains("\"stale_origin\": { \"auto_fix\": true }") && bj.contains("_doc_stale_origin"))
     }
+
+    // ── the Unlisted rows of the phone: the index repo's own clones, My-ai-memory, a .incoming leftover ──
+
+    private val sot2 = Declarations.parseRepoSot("""{"self":{"name":"_git-repos-master","url":"git@github.com:diegonmarcos/_git-repos-master.git","private":false,"renamed_from":["git-repos-master"]},
+        "repos":[{"name":"z-archived_My-ai-memory","url":"git@github.com:diegonmarcos/z-archived_My-ai-memory.git","private":true,"renamed_from":["My-ai-memory"]}]}""")
+    private val names2 = RegistryNames(sot2)
+    private fun unlistedOf(origin: String): Boolean {
+        val ids = sot2.listed.map { BulkDepth.identity(it.github, sot2::canonical) }.toSet()
+        return UnlistedRepos.unlisted(listOf(UnlistedRepos.Folder("/s/x", origin)), ids, sot2::canonical).isNotEmpty()
+    }
+
+    @Test fun `the index repo's own clones are listed through the registry self entry, under either name`() {
+        assertEquals("self is not a repos row (no self-symlink)", 1, sot2.repos.size)
+        assertEquals("_git-repos-master", sot2.self!!.name)
+        assertFalse("row 1: _git-repos-master, origin git-repos-master", unlistedOf("https://github.com/diegonmarcos/git-repos-master.git"))
+        assertFalse("row 2: _git-repos-master, origin _git-repos-master", unlistedOf("https://github.com/diegonmarcos/_git-repos-master.git"))
+        assertFalse("row 3: git-repos-master", unlistedOf("https://github.com/diegonmarcos/git-repos-master"))
+        assertTrue("an unrelated origin stays unlisted", unlistedOf("https://github.com/diegonmarcos/other.git"))
+        assertTrue("no remote stays unlisted", unlistedOf(""))
+    }
+
+    @Test fun `without a self entry the index repo clones were unlisted (the bug)`() {
+        val noSelf = Declarations.parseRepoSot("""{"repos":[]}""")
+        val ids = noSelf.listed.map { BulkDepth.identity(it.github, noSelf::canonical) }.toSet()
+        assertEquals(1, UnlistedRepos.unlisted(listOf(UnlistedRepos.Folder("/s/x", "https://github.com/o/_git-repos-master.git")), ids, noSelf::canonical).size)
+    }
+
+    @Test fun `index repo folders resolve to the registry name, the old folder is parentless and renames to it`() {
+        assertEquals("_git-repos-master", names2.currentName("git-repos-master"))
+        assertTrue(names2.isOld("git-repos-master"))
+        val ok = LocalRepos.found(File("/s/git/_git-repos-master"), "https://github.com/o/git-repos-master.git", names2)
+        assertTrue(ok.stale); assertTrue(LocalRepos.parentless(listOf(ok), names2).isEmpty())
+        val old = LocalRepos.found(File("/s/git/git-repos-master"), "https://github.com/o/_git-repos-master.git", names2)
+        assertEquals(1, LocalRepos.parentless(listOf(old), names2).size)
+        assertEquals(FolderActions.RenamePlan.Go("_git-repos-master"), FolderActions.renamePlan("git-repos-master", old.originName, names2, false, { null }) { false })
+        assertEquals("https://github.com/o/_git-repos-master.git", FolderActions.fixedOrigin("https://github.com/o/git-repos-master.git", names2))
+    }
+
+    @Test fun `My-ai-memory is z-archived_My-ai-memory through renamed_from, not unlisted`() {
+        assertFalse(unlistedOf("https://github.com/diegonmarcos/My-ai-memory.git"))
+        val f = LocalRepos.found(File("/s/git/My-ai-memory"), "https://github.com/diegonmarcos/My-ai-memory.git", names2)
+        assertEquals("z-archived_My-ai-memory", f.repoName)
+        assertEquals(FolderActions.RenamePlan.Go("z-archived_My-ai-memory"), FolderActions.renamePlan("My-ai-memory", f.originName, names2, false, { null }) { false })
+    }
+
+    @Test fun `a dot-incoming folder is never a row of Unlisted or Parentless`() {
+        val base = Files.createTempDirectory("inc").toFile()
+        File(base, "cloud-infra.incoming/sub").mkdirs()
+        File(base, "keep/.git").mkdirs()
+        File(base, "cloud-infra.incoming/.git").mkdirs()
+        assertEquals(listOf("keep"), UnlistedRepos.walk(listOf(base), 3, 100, Long.MAX_VALUE).map { File(it.path).name })
+        assertEquals(listOf("keep"), LocalRepos.scan(listOf(base), names2).map { it.dir.name })
+        base.deleteRecursively()
+    }
+
+    @Test fun `the exec replace copy clears a stale incoming first and removes its own on failure`() {
+        val s = ExecCopier.copyScript("/a", "/b", true)
+        assertTrue(s.startsWith("rm -rf '/b.incoming';"))
+        assertTrue(s.contains("|| { rc=\$?; rm -rf '/b.incoming'; exit \$rc; }"))
+        assertFalse("a plain copy never removes the destination", ExecCopier.copyScript("/a", "/b", false).contains("rm -rf"))
+    }
+
+    @Test fun `the file copier ignores a stale incoming and leaves none after a failure`() {
+        val base = Files.createTempDirectory("fc").toFile()
+        val from = File(base, "from").apply { mkdirs(); File(this, "f").writeText("new") }
+        val to = File(base, "to").apply { mkdirs(); File(this, "old").writeText("old") }
+        File(base, "to.incoming").apply { mkdirs(); File(this, "stale").writeText("x") }
+        assertNull(StoreLegs.FileCopier().copy(from.path, to.path, true))
+        assertEquals(listOf("f"), to.list()!!.toList())
+        assertFalse(File(base, "to.incoming").exists())
+        // a failing copy (source dir is replaced by an unreadable target: parent of dst is a file) leaves no .incoming
+        val blocker = File(base, "blocked").apply { writeText("file") }
+        assertTrue(StoreLegs.FileCopier().copy(from.path, File(blocker, "x").path, true) != null)
+        assertFalse(File(blocker, "x.incoming").exists())
+        base.deleteRecursively()
+    }
 }

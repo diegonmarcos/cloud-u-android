@@ -361,12 +361,14 @@ object Declarations {
         val archived: Boolean get() = github.startsWith("z-archived") || name.startsWith("z-archived")
     }
     /** The registry, the ONE list of repositories; the Sync > Git family is held to it. */
-    data class RepoSotDecl(val repos: List<RepoSotEntry>, /** the registry's own rename records, old -> new (one hop each) */ val renameRecords: Map<String, String> = emptyMap()) {
+    data class RepoSotDecl(val repos: List<RepoSotEntry>, /** the registry's own rename records, old -> new (one hop each) */ val renameRecords: Map<String, String> = emptyMap(), /** #1317 the index repo itself (registry `self`): listed for readers, never a repos[] row. */ val self: RepoSotEntry? = null) {
+        /** The registry's repositories plus the index repo itself: what "listed" means for the Unlisted and Parentless folders. */
+        val listed: List<RepoSotEntry> get() = repos + listOfNotNull(self)
         /** Every historical name -> the current github name (entries' renamed_from, then the records, chains followed). */
         val renameMap: Map<String, String> by lazy {
             val direct = LinkedHashMap<String, String>()
             renameRecords.forEach { (o, n) -> direct[o] = n }
-            repos.forEach { r -> r.renamedFrom.forEach { o -> if (o != r.github) direct[o] = r.github } }
+            listed.forEach { r -> r.renamedFrom.forEach { o -> if (o != r.github) direct[o] = r.github } }
             direct.keys.associateWith { k -> var cur = direct[k]!!; var hops = 0; while (hops++ < 10) cur = direct[cur] ?: break; cur }
         }
         /** The current name of a clone folder or repository name: itself when never renamed. */
@@ -717,7 +719,11 @@ object Declarations {
             RepoSotEntry(name, github, r.bool("private"), r.bool("pending") || r.str("status") == "pending_creation", r.strings("renamed_from"), r.bool("lfs"), r.bool("is_hub") || r.str("parent_hub").isNotBlank())
         }
         val records = o?.let { objects(it["renames"]) }.orEmpty().mapNotNull { x -> x.str("from").takeIf { it.isNotBlank() }?.let { f -> x.str("to").takeIf { it.isNotBlank() }?.let { t -> f to t } } }.toMap()
-        return RepoSotDecl(repos, records)
+        val self = (o?.get("self") as? JsonObject)?.let { x ->
+            val name = x.str("name"); if (name.isBlank()) null
+            else RepoSotEntry(name, x.str("github").ifBlank { x.str("url").substringAfterLast('/').substringAfterLast(':').removeSuffix(".git").ifBlank { name } }, x.bool("private"), false, x.strings("renamed_from"))
+        }
+        return RepoSotDecl(repos, records, self)
     }
 
     /** #1073 a family repository survives only when the registry lists it and it exists: a pending_creation repo is never offered for clone or seed. */
