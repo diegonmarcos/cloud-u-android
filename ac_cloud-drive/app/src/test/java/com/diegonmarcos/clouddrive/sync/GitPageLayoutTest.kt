@@ -81,7 +81,9 @@ class GitPageLayoutTest {
     }
 
     @Test fun `#1195 git fsync and mounts share one actions bar with the settings sheet and one tap-to-open row`() {
-        assertTrue(tableUi.contains("PageActionsBar("))
+        // #1315 the Git bar is the declared GitTopBar (sync/GitTopBar.kt); Fsync and Mounts keep the shared PageActionsBar of TablePage.kt.
+        assertTrue(File(dir, "TablePage.kt").readText().contains("fun PageActionsBar(") && src.contains("GitTopBar(page.topBar"))
+        assertFalse("the Git table has no second, enum-driven bar", tableUi.contains("PageActionsBar("))
         assertEquals("one Fsync bar (#1216: folders only)", 1, Regex("PageActionsBar\\(").findAll(fsync).count())
         assertEquals("two Mounts bars (rclone, fuse)", 2, Regex("PageActionsBar\\(").findAll(mounts).count())
         assertTrue(File(dir, "TablePage.kt").readText().contains("AutoSettingsSheet(page, prefs)"))
@@ -94,8 +96,9 @@ class GitPageLayoutTest {
 
     @Test fun `#1195 a repository that is not cloned opens its panel on a tap`() {
         assertFalse("the row is clickable whether or not it is cloned", src.contains(".clickable(enabled = repo != null"))
-        assertTrue(src.contains("expanded == e.key && cloned == null"))
-        assertTrue(src.contains("GitRepoNotClonedBox("))
+        // #1315 the not-cloned panel lives in the detail sheet, behind the one `e.cloned == null` branch.
+        val sheet = src.substring(src.indexOf("DriveTags.SYNC_GIT_DETAIL_SHEET"))
+        assertTrue(sheet.contains("if (e.cloned == null) {") && sheet.contains("GitRepoNotClonedBox("))
         for (needle in listOf("R.string.repo_act_open_web", "R.string.sync_clone_into_store", "R.string.repo_act_copy_url", "RepoActions.PRS", "RepoActions.needsClone(id)", "R.string.repo_not_cloned_why")) assertTrue(needle, src.contains(needle))
     }
 

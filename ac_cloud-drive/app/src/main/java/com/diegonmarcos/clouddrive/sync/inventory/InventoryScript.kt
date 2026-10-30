@@ -64,7 +64,7 @@ object InventoryScript {
         var malformed = 0
         var outside = 0
         for (raw in out.lineSequence()) {
-            if (raw.isBlank()) continue
+            if (raw.isEmpty()) continue // a whitespace-only line is a malformed record, counted below
             val f = raw.split('\t')
             val kind = when (f[0]) { "tree" -> Kind.TREE; "bare" -> Kind.BARE; "gitfile" -> Kind.GITFILE; "debris" -> Kind.DEBRIS; else -> null }
             val path = f.getOrNull(1)?.trim().orEmpty()

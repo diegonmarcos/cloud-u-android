@@ -62,8 +62,8 @@ class GitJobs(private val scope: CoroutineScope, private val clock: () -> Long =
         val finished: Boolean get() = endedMs != null
         /** The outcome line of one target, or null when this job did not touch it. */
         fun outcomeOf(name: String): String? = ok[name]?.let { "ok: $it" } ?: skipped[name]?.let { "skipped: $it" } ?: failed[name]?.let { "failed: $it" }
-        /** The report lines, skipped and failed first (what needs the owner), then ok. */
-        fun lines(): List<String> = skipped.map { "skipped ${it.key}: ${it.value}" } + failed.map { "failed ${it.key}: ${it.value}" } + ok.map { "ok ${it.key}: ${it.value}" }
+        /** The report lines, skipped and failed first (what needs the owner), then ok; by name inside each group, so parallel workers give one order. */
+        fun lines(): List<String> = skipped.toSortedMap().map { "skipped ${it.key}: ${it.value}" } + failed.toSortedMap().map { "failed ${it.key}: ${it.value}" } + ok.toSortedMap().map { "ok ${it.key}: ${it.value}" }
     }
 
     private val _jobs = MutableStateFlow<List<State>>(emptyList())
