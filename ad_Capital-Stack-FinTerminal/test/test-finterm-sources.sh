@@ -258,7 +258,7 @@ mutant "the buttons ignore the mesh"       "$SUB;S('$KT/ui/ContainerControl.kt',
 mutant "the control api is not mesh only"  "$JE;d=L('data/control.json');d['api']['mesh_only']=False;D('data/control.json',d)" "S5 the control api is not declared mesh_only"
 mutant "the control sends a bearer"        "$SUB;S('$KT/Control.kt','http.post(actionUrl(d, base, actionId))','http.post(actionUrl(d, base, actionId) + \"\\\"Authorization\\\"\")')" "S5 the mesh control sends a bearer"
 mutant "an address is typed in Kotlin"     "open('$KT/Engine.kt','a').write('\nval x = \"https://example.org/a\"\n')" "S6 .*spells the address"
-mutant "a mesh host is typed in Kotlin"    "open('$KT/Mesh.kt','a').write('\nval h = \"fin-api.mesh.diegonmarcos.com\"\n')" "S6 .*spells the host"
+mutant "a mesh host is typed in Kotlin"    "open('$KT/Mesh.kt','a').write('\nval h = \"capital-stack-finterminal-api.mesh.diegonmarcos.com\"\n')" "S6 .*spells the host"
 mutant "an address is typed in the dashboards" "$JE;d=L('data/dashboards.json');d['dashboards'][0]['panels'][0]['title']='see https://example.org';D('data/dashboards.json',d)" "S6 data/dashboards.json spells an address"
 mutant "the build stops baking the mesh"   "$SUB;S('app/build.gradle','fleetMeshUrl(','fleetMeshUr(')" "S6 build.gradle does not bake"
 

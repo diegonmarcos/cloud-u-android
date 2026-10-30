@@ -3,9 +3,9 @@
   "container": {
     "id": "cloud_fincept",
     "vm": "oci-apps",
-    "name": "fin-api",
+    "name": "capital-stack-finterminal-api",
     "source": "cloud_fincept",
-    "label": "FinceptTerminal (fin-api)"
+    "label": "FinceptTerminal (capital-stack-finterminal-api)"
   },
   "api": {
     "fleet_endpoint": "c3-infra-api",
