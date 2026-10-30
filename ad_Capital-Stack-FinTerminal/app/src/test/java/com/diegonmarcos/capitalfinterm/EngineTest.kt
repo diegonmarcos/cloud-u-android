@@ -17,7 +17,7 @@ class EngineTest {
 
     /** A fake network answering by a predicate on the address, recording every address asked. */
     private class Fake(val answer: (String) -> String?) : Http {
-        val asked = ArrayList<String>()
+        val asked: MutableList<String> = java.util.Collections.synchronizedList(ArrayList<String>())
         override fun get(url: String): String {
             asked += url
             return answer(url) ?: throw IOException("no route")

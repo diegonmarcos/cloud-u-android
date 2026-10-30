@@ -19,7 +19,7 @@ class PriorityTest {
     private val ust = dashboards.first { it.id == "yield_curves" }
 
     private class Net(val answer: (String) -> String?) : Http {
-        val asked = ArrayList<String>()
+        val asked: MutableList<String> = java.util.Collections.synchronizedList(ArrayList<String>())
         override fun get(url: String): String { asked += url; return answer(url) ?: throw IOException("no route") }
         override fun post(url: String): String = throw IOException("no post")
     }
