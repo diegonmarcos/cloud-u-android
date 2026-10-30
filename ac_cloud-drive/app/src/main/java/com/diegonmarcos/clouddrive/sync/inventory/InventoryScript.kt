@@ -116,6 +116,14 @@ object InventoryScript {
         return out.values.toList()
     }
 
+    /** #1315 the sizes on disk of many folders in ONE script (`du -sk`): `<guest dir> TAB <kbytes>` per line; a gone folder prints nothing. */
+    fun sizesScript(guestDirs: List<String>, q: (String) -> String): String =
+        "for d in ${guestDirs.joinToString(" ") { q(it) }}; do [ -d \"\$d\" ] || continue; printf '%s\\t%s\\n' \"\$d\" \"\$(du -sk \"\$d\" 2>/dev/null | cut -f1)\"; done; true"
+
+    /** [sizesScript]'s lines as bytes by guest path (a line without a number is skipped). */
+    fun parseSizes(out: String): Map<String, Long> =
+        out.lineSequence().filter { '\t' in it }.mapNotNull { l -> l.substringAfter('\t').trim().toLongOrNull()?.let { kb -> l.substringBefore('\t') to kb * 1024L } }.toMap()
+
     private fun bareOrigin(gitDir: File): String = runCatching { File(gitDir, "config").takeIf { it.isFile }?.readText()?.let { LocalRepos.originFromConfig(it) } }.getOrNull().orEmpty()
 
     private fun globRegex(glob: String): Regex = Regex(glob.map { c -> when (c) { '*' -> ".*"; '?' -> "."; else -> Regex.escape(c.toString()) } }.joinToString(""))

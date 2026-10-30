@@ -148,6 +148,7 @@ enum class GitPart { TABLE, SETUP }
 /** One row of THE table, whatever listing it came from; [onClone] clones it from the leg that listed it, [note] is a line under it. */
 private class TableEntry(
     val key: String, val label: String, val name: String, val owner: String, val isPrivate: Boolean?, val fork: Boolean, val source: String,
+    /** #1315 how many folders hold this repository (the inventory's count; 1 = one clone, the rule). */ val copies: Int = 1,
     val row: RepoTableRow, val cloned: ManagedRepo?, val onClone: () -> Unit, val note: String, val cloneUrl: String = "",
 )
 
@@ -846,7 +847,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         items(sortedEntries, key = { it.key }) { e ->
             val cloned = e.cloned
             GitRepoRow(
-                name = e.label, repoName = e.name, cells = e.row, scroll = tableScroll, fork = e.fork,
+                name = e.label, repoName = e.name, cells = e.row, scroll = tableScroll, fork = e.fork, copies = inventoryState?.cloneOf(e.name)?.copies ?: 1, copiesLabel = page.inventory.label("copies_badge"),
                 repo = cloned, glance = cloned?.let { GitSyncCoordinator.glanceFor(it, glances) }, running = cloned?.let { running[it.id] },
                 icons = RepoStatus.icons(cloned != null, cloned?.let { GitSyncCoordinator.glanceFor(it, glances) }, cloned?.let { running.containsKey(it.id) } == true, events, cloned?.id.orEmpty()),
                 cloning = e.name in cloning, expanded = expanded == e.key,
@@ -1321,6 +1322,8 @@ private fun GitRepoRow(
     cells: RepoTableRow,
     scroll: ScrollState,
     fork: Boolean,
+    copies: Int = 1,
+    copiesLabel: String = "",
     repo: ManagedRepo?,
     glance: GitSyncCoordinator.Glance?,
     running: GitSyncCoordinator.Running?,
@@ -1345,6 +1348,8 @@ private fun GitRepoRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(name, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (fork) CapsuleBadge(stringResource(R.string.git_fork))
+                    // #1315 ONE CLONE PER REPOSITORY: a second folder holding it is a DUPLICATE (the Duplicate clones section offers Archive / Delete on the extra copies only).
+                    if (copies > 1) CapsuleBadge("$copies$copiesLabel")
                 }
                 // What the cells cannot say: the clone folder is gone, a conflict, or an unfinished merge / rebase.
                 // #1238 no "GitHub" (the listing's label) and no "Not Cloned" text under a repo that is not cloned: the status window says it.

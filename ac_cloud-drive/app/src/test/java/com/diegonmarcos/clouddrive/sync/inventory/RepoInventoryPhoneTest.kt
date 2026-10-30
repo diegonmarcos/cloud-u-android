@@ -85,7 +85,7 @@ class RepoInventoryPhoneTest {
         assertNull("never a NOT_CLONED row for a repository that has a clone", inv.rows.firstOrNull { it.identity == "_git-repos-master" && it.cls == RepoClass.NOT_CLONED })
     }
 
-    @Test fun `a clone the pass found through cld.termux is registered even though java io sees nothing`() {
+    @Test fun `a clone the pass found through cld termux is registered even though java io sees nothing`() {
         val r = row("cloudy-u-android")
         assertEquals(RepoClass.REGISTERED, r.cls)
         assertTrue(r.managed)

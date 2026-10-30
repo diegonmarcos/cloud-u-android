@@ -83,6 +83,16 @@ object FolderActions {
     fun moveScript(from: String, to: String, q: (String) -> String): String =
         "set -e; [ -d ${q(from)} ] || exit 16; [ ! -e ${q(to)} ] || exit 17; mkdir -p \"\$(dirname ${q(to)})\"; mv -- ${q(from)} ${q(to)}"
 
+    /**
+     * #1315 the cld.termux delete of one LEFTOVER folder (a declared debris name, e.g. <name>.incoming): refused when it is
+     * younger than [minAgeMinutes] (exit 20: a copy may still be writing it), gone (exit 16), or not a plain folder.
+     */
+    fun debrisScript(dir: String, minAgeMinutes: Int, q: (String) -> String): String =
+        "set -e; [ -d ${q(dir)} ] || exit 16; [ -n \"\$(find ${q(dir)} -maxdepth 0 -mmin +${minAgeMinutes.coerceAtLeast(1)} 2>/dev/null)\" ] || exit 20; rm -rf -- ${q(dir)}"
+
+    /** The java.io twin of [debrisScript]'s age rule: true when [modifiedMs] is at least [minAgeMinutes] before [nowMs]. */
+    fun debrisOldEnough(modifiedMs: Long, nowMs: Long, minAgeMinutes: Int): Boolean = modifiedMs > 0 && nowMs - modifiedMs >= minAgeMinutes.coerceAtLeast(1) * 60_000L
+
     /** The cld.termux delete of one folder (never a glob, never the store root itself). */
     fun deleteScript(dir: String, q: (String) -> String): String = "set -e; [ -d ${q(dir)}/.git ] || [ -f ${q(dir)}/.git ] || exit 18; rm -rf -- ${q(dir)}"
 

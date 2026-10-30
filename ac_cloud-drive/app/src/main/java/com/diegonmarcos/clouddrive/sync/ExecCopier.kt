@@ -17,7 +17,8 @@ class ExecCopier(ctx: Context) : StoreLegs.Copier {
     private fun guest(p: String) = shell.route.guest(p) ?: p
 
     override fun copy(from: String, to: String, replace: Boolean): String? {
-        val r = shell.run(copyScript(guest(from), guest(to), replace), timeoutMs = 110_000)
+        // #1315 the copy's deadline is declared (ui.sync.git.copy_timeout_seconds).
+        val r = shell.run(copyScript(guest(from), guest(to), replace), timeoutMs = com.diegonmarcos.clouddrive.Declarations.sync.git.copyTimeoutSeconds * 1000)
         return if (r.ok) null else (r.err.ifBlank { r.out }.ifBlank { "exit ${r.exit}" })
     }
 

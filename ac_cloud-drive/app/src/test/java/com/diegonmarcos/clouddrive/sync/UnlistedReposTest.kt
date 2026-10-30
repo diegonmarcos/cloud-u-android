@@ -33,5 +33,6 @@ class UnlistedReposTest {
         assertTrue(page.unlisted.roots.all { Regex("""\{(store_git|repo_parents|external|files)}.*""").matches(it) })
         assertTrue(page.unlisted.maxDepth in 1..6 && page.unlisted.timeoutSeconds > 0 && page.unlisted.label.isNotBlank())
         assertTrue("#1315 the inventory is declared with it", page.inventory.debris.contains("*.incoming"))
+        assertTrue("#1315 the cleanup age and the copy timeout are declared", page.inventory.cleanupMinAgeHours >= 1 && page.copyTimeoutSeconds in 10..120)
     }
 }

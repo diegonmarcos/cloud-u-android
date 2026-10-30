@@ -90,7 +90,7 @@ object Declarations {
     /** #1315 the one inventory pass (ui.sync.git.inventory): the folder-name globs that are leftovers, never repositories; whether a clone the pass finds under a registry name is registered for the scheduler. */
     /** #1315 the one executor's declared bounds (ui.sync.git.jobs): how many clones a bulk verb (sync all, fetch all, stash & push all) works on at once. */
     data class GitJobsDecl(val workers: Int = 2)
-    data class GitInventoryDecl(val debris: List<String> = listOf("*.incoming"), val autoRegister: Boolean = true, /** the section titles and lines of the inventory's own sections (duplicates, bare, debris, ...), by key. */ val labels: Map<String, String> = emptyMap()) {
+    data class GitInventoryDecl(val debris: List<String> = listOf("*.incoming"), val autoRegister: Boolean = true, /** #1315 leftovers older than this are deleted by the cleanup job (auto after a pass when cleanupAuto). */ val cleanupMinAgeHours: Int = 6, val cleanupAuto: Boolean = true, /** the section titles and lines of the inventory's own sections (duplicates, bare, debris, ...), by key. */ val labels: Map<String, String> = emptyMap()) {
         /** The declared label for [key], else the key itself spelled out (a missing label is visible, never a crash). */
         fun label(key: String): String = labels[key] ?: key.replace('_', ' ')
     }
@@ -218,6 +218,8 @@ object Declarations {
         val inventory: GitInventoryDecl = GitInventoryDecl(),
         /** #1315 the one executor's bounds (ui.sync.git.jobs). */
         val jobs: GitJobsDecl = GitJobsDecl(),
+        /** #1315 how long one store copy (a replace copy through cld.termux, ExecCopier) may take (ui.sync.git.copy_timeout_seconds, bounded by CLOUD_EXEC's own cap). */
+        val copyTimeoutSeconds: Int = 110,
         /** #1289 the per-repository menu: groups, items, order, labels (ui.sync.git.repo_menu). */
         val repoMenu: GitRepoMenuDecl = GitRepoMenuDecl(),
         /** #1313 the stale temp pack cleanup (ui.sync.git.stale_pack_cleanup). */
@@ -594,10 +596,13 @@ object Declarations {
                 GitInventoryDecl(
                     i.strings("debris").filter { com.diegonmarcos.clouddrive.sync.inventory.InventoryScript.safeGlob(it) }.ifEmpty { GitInventoryDecl().debris },
                     i.bool("auto_register", true),
+                    ((i["cleanup"] as? JsonObject)?.int("min_age_hours") ?: 6).coerceIn(1, 24 * 90),
+                    (i["cleanup"] as? JsonObject)?.bool("auto", true) ?: true,
                     (i["labels"] as? JsonObject)?.entries?.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.contentOrNull?.let { k to it } }?.toMap().orEmpty(),
                 )
             } ?: GitInventoryDecl(),
             jobs = GitJobsDecl(((o["jobs"] as? JsonObject)?.int("workers") ?: 2).coerceIn(1, 4)),
+            copyTimeoutSeconds = (o.int("copy_timeout_seconds") ?: 110).coerceIn(10, 120),
             repoMenu = parseRepoMenu(o["repo_menu"]),
             stalePackCleanup = (o["stale_pack_cleanup"] as? JsonObject)?.let { c ->
                 GitStalePackDecl(

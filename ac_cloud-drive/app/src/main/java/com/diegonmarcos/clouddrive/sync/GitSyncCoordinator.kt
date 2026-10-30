@@ -381,7 +381,14 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
             try {
                 val next = withContext(Dispatchers.IO) {
                     val dirs = registry.load().map { File(it.path) }
-                    val out = RepoDiskSize.refresh(diskSizes.value, dirs, force)
+                    val route = shell.route
+                    // #1315 a store clone is invisible to java.io through cld.termux: its size comes from ONE du script on the shell.
+                    val (viaShell, viaIo) = if (route.viaTermux) dirs.partition { route.inStore(it.absolutePath) && !it.isDirectory } else emptyList<File>() to dirs
+                    val out = LinkedHashMap(RepoDiskSize.refresh(diskSizes.value, viaIo, force))
+                    if (viaShell.isNotEmpty() && (force || viaShell.any { diskSizes.value[it.absolutePath] == null })) {
+                        val sizes = InventoryScript.parseSizes(shell.run(InventoryScript.sizesScript(viaShell.mapNotNull { route.guest(it.absolutePath) }) { StoreShell.q(it) }, timeoutMs = 110_000).out)
+                        viaShell.forEach { d -> (route.guest(d.absolutePath)?.let { sizes[it] })?.let { out[d.absolutePath] = RepoDiskSize.Entry("shell", it) } ?: diskSizes.value[d.absolutePath]?.let { out[d.absolutePath] = it } }
+                    } else viaShell.forEach { d -> diskSizes.value[d.absolutePath]?.let { out[d.absolutePath] = it } }
                     RepoDiskSize.save(pagePrefs, out)
                     out
                 }
@@ -1191,6 +1198,33 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         return n
     }
 
+    /**
+     * #1315 THE LEFTOVER CLEANUP, one job through the executor: every DEBRIS row (a declared debris name) older than
+     * ui.sync.git.inventory.cleanup.min_age_hours is deleted (cld.termux decides the age for a store folder: exit 20 = too young,
+     * 16 = gone), a younger one is skipped and stays listed; one Activity Logs line per deletion; the inventory is read again after.
+     */
+    fun cleanupDebris(rows: List<RepoInventory.Row>): kotlinx.coroutines.Job? {
+        val d = Declarations.sync.git.inventory
+        val minutes = d.cleanupMinAgeHours * 60
+        val targets = rows.filter { it.cls == RepoInventory.RepoClass.DEBRIS && it.path.isNotBlank() }
+        if (targets.isEmpty()) return null
+        return jobs.submit(GitJobs.Spec(CLEANUP_DEBRIS, CLEANUP_DEBRIS, CLEANUP_DEBRIS, targets.map { GitJobs.Target(it.path, it.name) }, workers = 1, exclusive = false,
+            onEnd = { s -> if (s.ok.isNotEmpty()) { DriveDebugLog.i(ctx, TAG, "cleanup: ${s.ok.size} leftover folder(s) deleted"); scanUnlisted() } }) { t ->
+            val (status, msg) = withContext(Dispatchers.IO) {
+                val dir = File(t.path)
+                val g = execGuest(dir)
+                if (g != null) {
+                    val r = shell.run(FolderActions.debrisScript(g, minutes) { StoreShell.q(it) }, timeoutMs = 120_000)
+                    when (r.exit) { 0 -> GitJobs.Status.OK to "deleted"; 16 -> GitJobs.Status.SKIP to "already gone"; 20 -> GitJobs.Status.SKIP to "younger than ${d.cleanupMinAgeHours}h, kept"; else -> GitJobs.Status.FAIL to "delete in cld.termux failed (exit ${r.exit}) ${r.err.trim().takeLast(200)}".trim() }
+                } else if (!dir.isDirectory) GitJobs.Status.SKIP to "already gone"
+                else if (!FolderActions.debrisOldEnough(dir.lastModified(), System.currentTimeMillis(), minutes)) GitJobs.Status.SKIP to "younger than ${d.cleanupMinAgeHours}h, kept"
+                else if (dir.deleteRecursively()) GitJobs.Status.OK to "deleted" else GitJobs.Status.FAIL to "could not delete"
+            }
+            if (status != GitJobs.Status.SKIP) withContext(Dispatchers.IO) { events.value = history.append(SyncEvent(System.currentTimeMillis() / 1000, "folder:" + t.path, t.name, SyncHistory.TRIGGER_SCHEDULED, status == GitJobs.Status.OK, "$CLEANUP_DEBRIS: $msg", t.path)) }
+            GitJobs.Outcome(status, msg)
+        })
+    }
+
     /** The pass, published: the inventory, the Unlisted section's rows (derived), the managed list (after auto_register), and the statuses of the new rows. */
     fun scanUnlisted(level: GitStatusReader.Level = GitStatusReader.Level.LIGHT) {
         if (!scanningUnlisted.compareAndSet(false, true)) return
@@ -1216,6 +1250,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
                 inventory.value = inv
                 unlisted.value = found
                 loadRegistry()
+                if (Declarations.sync.git.inventory.cleanupAuto) cleanupDebris(inv.of(RepoInventory.RepoClass.DEBRIS))
                 statusReader.request(found.map { GitStatusReader.Target(UnlistedRepos.statusKey(it.path), File(it.path)) }, force = true, level = level)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -1268,6 +1303,7 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         const val KEY_INVENTORY = "git.inventory"
         /** #1315 the job kinds the depth report, the depth progress line and the status window follow (depth commands and folder commands). */
         val DEPTH_JOB_KINDS: Array<String> = arrayOf(Declarations.DEPTH_CLONE_MISSING, Declarations.DEPTH_KEEP, Declarations.DEPTH_CLONE_BARE, Declarations.FOLDER_RENAME, Declarations.FOLDER_ARCHIVE, Declarations.FOLDER_DELETE, Declarations.FOLDER_REPOINT)
+        const val CLEANUP_DEBRIS = "cleanup_debris"
         const val BARE_NO_TERMUX = "bare clones run git in cld.termux, which is not answering; nothing changed"
         const val KEY_LAST_COMMITS = "git.last_commits"
         const val KEY_FILTERS = "git.filters"
