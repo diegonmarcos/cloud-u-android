@@ -60,7 +60,7 @@ class NetworkSectionsTest {
         assertEquals(NetworkSections.ORDER.size, l.count { it == NetworkSections.Item.Divider })
     }
 
-    @Test fun `the popup lays out via NetworkSections layout, the strip via inOrder`() {
+    @Test fun `the popup lays out via NetworkSections layout, the strip via the declared status bar`() {
         val src = generateSequence(File("").absoluteFile) { it.parentFile }
             .map { File(it, "src/main/java/com/diegonmarcos/superapp") }.first { it.isDirectory }
         val popup = File(src, "network/NetworkInfoPopup.kt").readText()
@@ -68,6 +68,10 @@ class NetworkSectionsTest {
         assertTrue("the popup draws the divider item", popup.contains("is NetworkSections.Item.Divider -> PopDivider()"))
         assertTrue("every header carries its settings link", popup.contains("NetworkSections.SETTINGS.getValue(key)"))
         val strip = File(src, "launcher/LauncherStatusStrip.kt").readText()
-        assertTrue("the strip must lay out via NetworkSections.inOrder", strip.contains("NetworkSections.inOrder("))
+        // #1332: the strip draws build.json::home_status_bar; its network elements are exactly NetworkSections.ORDER, in that order.
+        assertTrue("the strip must lay out via the declared status bar", strip.contains("StatusBarPrefs.layout(ctx)"))
+        val declared = com.diegonmarcos.superapp.launcher.StatusBarDecl.declared.elements
+            .filter { it.position == "left" && it.kind == "network" }.sortedBy { it.order }.map { it.id }
+        assertEquals("the declared network elements are the popup's section order", NetworkSections.ORDER, declared)
     }
 }

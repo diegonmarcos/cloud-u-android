@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.diegonmarcos.superapp.cal.TaskEvent
 import com.diegonmarcos.superapp.cal.TaskTodo
 import com.diegonmarcos.superapp.cal.TasksPopup
@@ -67,7 +68,7 @@ class TasksPopupComposeTest : KitPageHarness() {
         for (m in listOf("2026-09", "2026-10", "2026-11")) compose.onNodeWithTag("cal:month:$m").assertExists()
         compose.onNodeWithTag("cal:month:2026-08").assertDoesNotExist()
         compose.onNodeWithTag("cal:month:2026-12").assertDoesNotExist()
-        compose.onNodeWithTag("cal:today").assertExists()
+        compose.onNodeWithTag("cal:today", useUnmergedTree = true).assertExists()
     }
 
     @Test
@@ -78,15 +79,15 @@ class TasksPopupComposeTest : KitPageHarness() {
         waitFor("cal:todo:row:0")
         compose.onNodeWithText("Buy milk").assertExists()
         compose.onNodeWithText("Done thing").assertDoesNotExist()
-        compose.onNodeWithTag("cal:dot:$today").assertExists()
-        compose.onNodeWithTag("cal:dot:${today.plusDays(6)}").assertExists()
+        compose.onNodeWithTag("cal:dot:$today", useUnmergedTree = true).assertExists()
+        compose.onNodeWithTag("cal:dot:${today.plusDays(6)}", useUnmergedTree = true).assertExists()
     }
 
     @Test
     fun `C4 a day tap filters the agenda to that day`() {
         show()
         waitFor("cal:agenda:row:1")
-        compose.onNodeWithTag("cal:day:${today.plusDays(6)}").performClick()
+        compose.onNodeWithTag("cal:day:${today.plusDays(6)}").performScrollTo().performClick()
         compose.onNodeWithTag("cal:agenda:row:0").assertExists()
         compose.onNodeWithTag("cal:agenda:row:1").assertDoesNotExist()
         compose.onNodeWithText("Rent").assertExists()
