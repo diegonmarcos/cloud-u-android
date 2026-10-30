@@ -13,6 +13,8 @@
     "cloud-comms-matrix-x86_64.apk": "Published every run by ship-cloud-matrix.yml for da_waydroid-container, which pins the x86_64 build; the matrix fleet row has no assets{} map to name it.",
     "Cloud-Agenda.apk": "Pre-rename name of Cloud-Tasks (cloud-agenda -> cloud-tasks; last upload 2026-10-13). Kept so SuperApps built before the rename can still fetch it until they update. Deletion awaits the owner.",
     "Cloud-UI-Baseline.zip": "The CI screenshot baseline (#1320 M4): published every run by screenshot-baseline.yml (+ .sha256) so the next run can diff against it. Not an app, so no fleet row can name it; owner-approved and kept.",
-    "Cloud-Agenda-x86_64.apk": "Pre-rename name of Cloud-Tasks-x86_64 (cloud-agenda -> cloud-tasks; last upload 2026-10-13). Kept so SuperApps built before the rename can still fetch it until they update. Deletion awaits the owner."
+    "Cloud-Agenda-x86_64.apk": "Pre-rename name of Cloud-Tasks-x86_64 (cloud-agenda -> cloud-tasks; last upload 2026-10-13). Kept so SuperApps built before the rename can still fetch it until they update. Deletion awaits the owner.",
+    "Capital-FinTerm.apk": "Pre-rename name of Capital-Stack-FinTerminal.apk (ad_Capital-FinTerm -> ad_Capital-Stack-FinTerminal, 2026-10-30; same package id, so the phone updates in place). Kept so SuperApps built before the rename can still fetch it until they update. Deletion awaits the owner.",
+    "Capital-FinTerm-x86_64.apk": "Pre-rename name of Capital-Stack-FinTerminal-x86_64.apk (see Capital-FinTerm.apk). Deletion awaits the owner."
   }
 }
