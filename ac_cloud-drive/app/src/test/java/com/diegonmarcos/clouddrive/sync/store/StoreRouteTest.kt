@@ -43,9 +43,9 @@ class StoreRouteTest {
     }
 
     @Test fun `outside the store is outside`() {
-        assertFalse(exec.inStore("/storage/emulated/0/CloudDrive/git/x"))
-        assertNull(exec.guest("/storage/emulated/0/CloudDrive/git/x"))
-        assertNull(exec.host("/storage/emulated/0/CloudDrive"))
+        assertFalse(exec.inStore("/data/user/0/other.app/files/git/x"))
+        assertNull(exec.guest("/data/user/0/other.app/files/git/x"))
+        assertNull(exec.host("/data/user/0/other.app/files"))
         assertNull(exec.host("/root/other"))
         val thrown = runCatching { exec.guestOrThrow("/sdcard/x") }.exceptionOrNull()
         assertTrue("the error names the path", thrown?.message?.contains("/sdcard/x") == true)
