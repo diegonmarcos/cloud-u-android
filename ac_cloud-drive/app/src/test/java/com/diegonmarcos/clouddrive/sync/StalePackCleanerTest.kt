@@ -112,7 +112,7 @@ class StalePackCleanerTest {
         val d = Declarations.parseGitPage(g).stalePackCleanup
         assertTrue(d.enabled); assertEquals(6, d.minAgeHours)
         assertEquals(listOf("incoming_*.pack", "incoming_*.idx", "tmp_pack_*", "tmp_idx_*", "tmp_rev_*"), d.patterns)
-        assertTrue(g.jsonObject["_doc_stale_pack_cleanup"].toString().length > 100)
+        assertTrue(g!!.jsonObject["_doc_stale_pack_cleanup"].toString().length > 100)
         fun parse(block: String) = Declarations.parseGitPage(Json.parseToJsonElement("""{"stale_pack_cleanup": $block}""")).stalePackCleanup
         assertEquals(Declarations.GitStalePackDecl(), Declarations.parseGitPage(Json.parseToJsonElement("{}")).stalePackCleanup)
         assertEquals(1, parse("""{"min_age_hours": 0}""").minAgeHours); assertEquals(24 * 90, parse("""{"min_age_hours": 999999}""").minAgeHours)

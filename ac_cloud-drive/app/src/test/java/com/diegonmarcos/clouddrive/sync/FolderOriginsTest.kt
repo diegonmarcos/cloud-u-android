@@ -142,7 +142,7 @@ class FolderOriginsTest {
         assertEquals(FolderActions.RenamePlan.Go("cloudy-u-linux"), plan)
     }
 
-    @Test fun `the conflict check goes through cld.termux and a taken name becomes CONFLICT`() {
+    @Test fun `the conflict check goes through cld-termux and a taken name becomes CONFLICT`() {
         var asked: List<String>? = null
         val plan = FolderActions.renamePlan("old", "cloud-u-linux", names, true, { asked = it; setOf("cloudy-u-linux", "cloudy-u-linux___CONFLICT") }) { error("java.io") }
         assertEquals(FolderActions.RenamePlan.Go("cloudy-u-linux___CONFLICT2"), plan)
