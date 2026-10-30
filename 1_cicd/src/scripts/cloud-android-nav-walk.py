@@ -237,6 +237,7 @@ class Walk:
         ui = json.load(open(a.build_json, encoding="utf-8"))["ui"]
         self.bottom = list(ui.get("bottom_nav") or [])
         self.sections = {s["id"]: s for s in ui.get("sections", [])}
+        self.fill_registry_labels(a.build_json, ui)
         self.w, self.h = screen_size()
         self.results = []
         here = os.path.dirname(os.path.abspath(__file__))
@@ -531,6 +532,26 @@ class Walk:
                       and not n.rid.startswith(("bottomnav_", "pagetabs_", "navtop", "topbar")))
 
     # ── one page ─────────────────────────────────────────────────────────────
+    def fill_registry_labels(self, build_json, ui):
+        """A page whose label is data, not typed in build.json (Cloud Me Lnktree > Proj: ui.repo_tree.areas maps each page to a registry
+        area code, the chip label is the area's label in the shipped outline) gets that label, so P4 compares against what is on screen."""
+        rt = ui.get("repo_tree") or {}
+        if not rt.get("areas"):
+            return
+        try:
+            outline = json.load(open(os.path.join(os.path.dirname(os.path.abspath(build_json)), "data", "repos", rt.get("outline_asset", "repos.outline.json")), encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        names = {x.get("code"): x.get("label") or x.get("name") for x in outline.get("areas", [])}
+        by_page = {x["page"]: names.get(x["code"]) for x in rt["areas"] if x.get("page")}
+        def fill(pages):
+            for p in pages or []:
+                if not p.get("label") and by_page.get(p.get("id")):
+                    p["label"] = by_page[p["id"]]
+                fill(p.get("pages"))
+        for sec in self.sections.values():
+            fill(sec.get("pages"))
+
     def has_pages(self, section):
         return bool((self.sections.get(section) or {}).get("pages"))
 
