@@ -177,9 +177,12 @@ fun TexView(
     val cfg = Latex.config
     val theme = themeJson()
     val bg = MaterialTheme.colorScheme.surface.toArgb()
+    // #1335 the formula list scrolls inside the page: its scroll feeds the shell's ONE chrome collapse (the nav walk's calculator/latex P3)
+    val collapse = com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse.current
     AndroidView(
         modifier = modifier,
-        factory = { ctx: Context -> buildWebView(ctx, handle, bg, cfg, onPick, onStatus, onSize) },
+        update = { v -> if (v is WebView) com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(v, collapse) },
+        factory = { ctx: Context -> buildWebView(ctx, handle, bg, cfg, onPick, onStatus, onSize).also { v -> if (v is WebView) com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.attach(v, collapse) } },
         onRelease = { v -> if (v is WebView) { v.stopLoading(); v.destroy() }; if (handle.web === v) handle.web = null },
     )
     // The theme is pushed on every change; the page applies it before the content arrives.
@@ -214,7 +217,10 @@ private fun configured(
     made.settings.textZoom = 100
     made.addJavascriptInterface(TexBridge(Handler(Looper.getMainLooper()), onPick, onStatus, onSize), cfg.bridge)
     made.webViewClient = object : WebViewClient() {
-        override fun onPageFinished(view: WebView?, url: String?) { handle.pageLoaded() }
+        override fun onPageFinished(view: WebView?, url: String?) {
+            view?.let { com.diegonmarcos.superapp.bottomnav.ChromeWebScroll.inject(it) }
+            handle.pageLoaded()
+        }
     }
     handle.web = made
     made.loadUrl("file:///android_asset/" + cfg.viewer)
