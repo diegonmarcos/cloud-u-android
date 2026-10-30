@@ -13,7 +13,7 @@
       "to": "Capital-___",
       "kind": "repo",
       "since": "2026-10-30",
-      "ticket": "#1313",
+      "ticket": "#1316",
       "doc": "Area 3 hub renamed after the area (Capital)."
     },
     {
@@ -21,7 +21,7 @@
       "to": "Capital-Macro-Central-Bank",
       "kind": "repo",
       "since": "2026-10-30",
-      "ticket": "#1313",
+      "ticket": "#1316",
       "doc": "Member 3.1 renamed to the registry project name, prefixed with the area."
     },
     {
@@ -29,7 +29,7 @@
       "to": "Capital-Micro-Asset-Management",
       "kind": "repo",
       "since": "2026-10-30",
-      "ticket": "#1313",
+      "ticket": "#1316",
       "doc": "Member 3.2 renamed to the registry project name, prefixed with the area."
     },
     {
@@ -37,7 +37,7 @@
       "to": "Capital-Stack-Fin-Terminal",
       "kind": "repo",
       "since": "2026-10-30",
-      "ticket": "#1313",
+      "ticket": "#1316",
       "doc": "Member 3.3 renamed to the registry project name, prefixed with the area."
     },
     {
@@ -45,7 +45,7 @@
       "to": "HardTech-___",
       "kind": "repo",
       "since": "2026-10-30",
-      "ticket": "#1313",
+      "ticket": "#1316",
       "doc": "Area 4 hub renamed after the area (HardTech)."
     },
     {
@@ -53,7 +53,7 @@
       "to": "HardTech-DeepXTech",
       "kind": "repo",
       "since": "2026-10-30",
-      "ticket": "#1313",
+      "ticket": "#1316",
       "doc": "Member 4.2 renamed to the registry project name, prefixed with the area."
     },
     {
@@ -61,7 +61,7 @@
       "to": "HardTech-Stack-CAD-Simulators",
       "kind": "repo",
       "since": "2026-10-30",
-      "ticket": "#1313",
+      "ticket": "#1316",
       "doc": "Member 4.3 renamed to the registry project name, prefixed with the area."
     },
     {
