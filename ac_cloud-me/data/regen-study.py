@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""data/web/mysocials/data-linkedin.json.js -> data/ui/study/{cv,roadmap}.json + data/ui/llc/{employed,side-hustles}.json
+"""data/web/mysocials/data-linkedin.json.js -> data/ui/experiences/study/{cv,roadmap}.json + data/ui/experiences/work.json
+   + data/ui/llc/{employed,side-hustles}.json
 
-Study (CV, Roadmap) and the history half of LLC (Employed, Side hustles; the former Work
+Experiences > Study (CV, Roadmap), Experiences > Work (#1350: a Done and To do ledger whose Done list is seeded with
+every role) and the history half of LLC (Employed, Side hustles; the former Work
 section) are the owner's public LinkedIn profile, already bundled for Profile > Professional. There is no LinkedIn API, so
 the bundle is the one source: when the profile changes, refresh that bundle, then
 run this. Nothing is typed twice.
@@ -118,7 +120,22 @@ def build(d):
          "body": f"{len(own)} own ventures, newest first."},
         {"kind": "cards", "items": [job_card(e, body=True) for e in own]},
     ]
-    return {"study/cv.json": cv, "study/roadmap.json": roadmap, "llc/employed.json": work, "llc/side-hustles.json": endeavours}
+    # #1350 Experiences > Work: the owner's own Done / To do career items (experiences_user, like every Achieves tab);
+    # Done is seeded with the profile's roles, newest first, as read-only rows. "Career and Finance" goals stay in
+    # Personal Growth; this page is the work record itself.
+    cats = ["💼 Employment", "🚀 Own venture", "🏆 Milestone", "🎯 Career goal"]
+    fields = [{"id": "title", "label": "Item", "type": "text", "required": True},
+              {"id": "category", "label": "Category", "type": "choice", "options": cats, "required": True},
+              {"id": "date", "label": "Date", "type": "date"},
+              {"id": "note", "label": "Note", "type": "text"}]
+    roles = [{"title": f'{e["title"]} · {e["company"]}', "category": cats[1] if e in own else cats[0],
+              "note": e["dates"].split(" · ")[0] + (f' · {e["location"]}' if e.get("location", "").strip() else "")} for e in jobs]
+    work_page = [{"kind": "ledger", "store": "experiences_user", "currency": "", "reports": [], "title": "💼 Work", "ledgers": [
+        {"collection": "work_done", "title": "✅ Done", "empty": "Nothing done recorded yet.", "fields": fields,
+         "builtin": roles, "move_to": "work_todo", "move_label": "Mark undone"},
+        {"collection": "work_todo", "title": "🎯 To do", "empty": "Nothing planned yet. Add a career goal.", "fields": fields,
+         "move_to": "work_done", "move_label": "Mark done", "move_stamp": "date"}]}]
+    return {"experiences/work.json": work_page, "experiences/study/cv.json": cv, "experiences/study/roadmap.json": roadmap, "llc/employed.json": work, "llc/side-hustles.json": endeavours}
 
 
 def main(argv):

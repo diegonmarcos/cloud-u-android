@@ -153,6 +153,8 @@ private fun PageContent(section: Section, page: Page, modifier: Modifier) {
             "web" -> WebPage(single, modifier, pageId = page.id)
             // #1298 Lnktree > Proj > <area>: that registry area's tree (repos.outline.json, libs:repos).
             "repo_tree" -> RepoTreeScreen(single.optString("area"), modifier)
+            // #1350 RoadMap > Folders: the notes vault's folder tree (data/repos/roadmap-tree.json).
+            "folder_tree" -> FolderTreeScreen(single.optString("asset"), modifier)
             else -> StackScreen(stack, modifier)
         }
     } else {

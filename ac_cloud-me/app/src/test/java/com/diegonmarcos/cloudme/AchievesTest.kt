@@ -16,9 +16,14 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34], application = Application::class)
 class AchievesTest {
     private val tabs = listOf("geo", "endurance", "growth", "community", "by30", "by40", "by50")
-    private val section = JSONObject(BuroLlcTestData.text("build.json")).getJSONObject("ui").getJSONArray("sections")
-        .let { a -> (0 until a.length()).map { a.getJSONObject(it) }.first { it.getString("id") == "achieves" } }
-    private fun page(p: String) = JSONArray(BuroLlcTestData.text("data/ui/achieves/$p.json"))
+    private val ui = JSONObject(BuroLlcTestData.text("build.json")).getJSONObject("ui")
+    private val sections = ui.getJSONArray("sections").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
+    private val experiences = sections.first { it.getString("id") == "experiences" }
+    private fun sub(o: JSONObject) = o.getJSONArray("pages").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
+    private val section = sub(experiences).first { it.getString("id") == "achieves" }
+    /** Every page id of a section, at every depth (a deep link names any of them). */
+    private fun flat(o: JSONObject): List<String> = if (!o.has("pages")) emptyList() else sub(o).flatMap { listOf(it.getString("id")) + flat(it) }
+    private fun page(p: String) = JSONArray(BuroLlcTestData.text("data/ui/experiences/achieves/$p.json"))
     private fun ledger(p: String) = page(p).let { a -> (0 until a.length()).map { a.getJSONObject(it) }.single { it.optString("kind") == "ledger" } }
     private fun defs(p: String) = ledger(p).getJSONArray("ledgers").let { a -> (0 until a.length()).map { LedgerDef.parse(a.getJSONObject(it)) } }
     private val allSections = JSONObject(BuroLlcTestData.text("build.json")).getJSONObject("ui").getJSONArray("sections")
@@ -128,16 +133,45 @@ class AchievesTest {
     }
 
     @Test fun `the owner's old Achieves text moved into the new tabs`() {
-        val all = tabs.joinToString("") { BuroLlcTestData.text("data/ui/achieves/$it.json") }
+        val all = tabs.joinToString("") { BuroLlcTestData.text("data/ui/experiences/achieves/$it.json") }
         for (w in listOf("B1) Personal", "B2) Personal Pursuits", "B3) International Experience", "https://nomadmania.com/profile/73889",
                 "Trip management", "Before you go", "My Bucket 50 (things before 50)", "Oceans Seven endurance swims", "🪂 Skydiving"))
             assertTrue(w, all.contains(w))
-        assertTrue(BuroLlcTestData.text("data/ui/achieves/geo.json").contains("B3) International Experience"))
+        assertTrue(BuroLlcTestData.text("data/ui/experiences/achieves/geo.json").contains("B3) International Experience"))
     }
 
-    @Test fun `old Achieves page ids open their new tab`() {
-        for ((old, new) in mapOf("personal" to "growth", "pursuits" to "endurance", "international" to "geo", "trips" to "geo", "experiences" to "endurance"))
-            assertEquals("achieves" to new, LegacyRoutes.resolve("achieves", old))
-        assertEquals("achieves" to "by30", LegacyRoutes.resolve("achieves", "by30"))
+    @Test fun `the bar is Health Experiences RoadMap Lnktree Duties then the rest, and Experiences is Work Study Personal Achieves`() {
+        val bar = ui.getJSONArray("bottom_nav").let { a -> (0 until a.length()).map { a.getString(it) } }
+        assertEquals(listOf("health", "experiences", "roadmap", "lnktree", "duties", "buro", "llc"), bar)
+        assertTrue(sections.none { it.getString("id") in setOf("study", "achieves") })
+        assertEquals(listOf("work", "study", "achieves"), sub(experiences).map { it.getString("id") })
+        assertEquals(listOf("Work", "Study", "Personal Achieves"), sub(experiences).map { it.getString("label") })
+        assertEquals(listOf("cv", "roadmap"), sub(sub(experiences)[1]).map { it.getString("id") })
+        val ids = flat(experiences)
+        assertEquals("page ids are unique in Experiences, so page:experiences/<id> is never ambiguous", ids.size, ids.toSet().size)
+    }
+
+    @Test fun `Work is a Done and To do ledger seeded with the profile roles`() {
+        val w = JSONArray(BuroLlcTestData.text("data/ui/experiences/work.json")).getJSONObject(0)
+        assertEquals(LedgerStore.EXP, w.getString("store"))
+        val (done, todo) = w.getJSONArray("ledgers").let { a -> (0 until a.length()).map { LedgerDef.parse(a.getJSONObject(it)) } }
+        assertEquals(listOf("work_done", "work_todo"), listOf(done.collection, todo.collection))
+        assertEquals("work_todo", done.moveTo); assertEquals("work_done", todo.moveTo); assertEquals("date", todo.moveStamp)
+        assertTrue(done.builtin.size >= 5)
+        for (r in done.builtin) assertTrue("$r", LedgerModel.validate(done, r).isEmpty())
+        assertTrue("Career and Finance stays in Personal Growth", done.fields[1].options.none { it.contains("Career and Finance") })
+    }
+
+    @Test fun `old Study and Achieves routes redirect to a declared Experiences page`() {
+        val ids = flat(experiences).toSet()
+        val want = mapOf(("study" to null) to "cv", ("study" to "cv") to "cv", ("study" to "roadmap") to "roadmap",
+            ("achieves" to null) to "geo", ("achieves" to "personal") to "growth", ("achieves" to "pursuits") to "endurance",
+            ("achieves" to "international") to "geo", ("achieves" to "trips") to "geo", ("achieves" to "experiences") to "endurance",
+            ("achieves" to "geo") to "geo", ("achieves" to "by30") to "by30", ("achieves" to "by50") to "by50")
+        for ((old, page) in want) {
+            assertEquals("$old", "experiences" to page, LegacyRoutes.resolve(old.first, old.second))
+            assertTrue(page in ids)
+        }
+        for (p in ids) assertEquals("experiences" to p, LegacyRoutes.resolve("experiences", p))
     }
 }

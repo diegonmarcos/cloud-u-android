@@ -27,12 +27,14 @@ object LegacyRoutes {
         "buro/acct" to "buro/cashflow",
         "buro/budget" to "buro/budgeting",
         "buro/portfolio" to "llc/portfolio",
-        // #1350 Achieves is one tab per kind of experience; the old pages' content moved with it.
-        "achieves/personal" to "achieves/growth",
-        "achieves/pursuits" to "achieves/endurance",
-        "achieves/international" to "achieves/geo",
-        "achieves/trips" to "achieves/geo",
-        "achieves/experiences" to "achieves/endurance",
+        // #1350 Study and Achieves are subpages of Experiences; the old Achieves pages' content moved to its tabs.
+        "study" to "experiences/cv",
+        "achieves" to "experiences/geo",
+        "achieves/personal" to "experiences/growth",
+        "achieves/pursuits" to "experiences/endurance",
+        "achieves/international" to "experiences/geo",
+        "achieves/trips" to "experiences/geo",
+        "achieves/experiences" to "experiences/endurance",
     )
 
     /** The new (section, page) for an old one; the arguments come back unchanged when nothing moved. */
@@ -49,5 +51,10 @@ object LegacyRoutes {
     private val RETIRED_SECTIONS = setOf("work", "house")
 
     /** #1299 Profile (`me`) is now Lnktree: old deep links, shortcuts and saved state name `me`. */
-    private val RENAMED_SECTIONS: Map<String, String> = mapOf("me" to "lnktree")
+    private val RENAMED_SECTIONS: Map<String, String> = mapOf(
+        "me" to "lnktree",
+        // #1350 every other page of Study (cv, roadmap) and Achieves (geo ... by50) keeps its id inside Experiences.
+        "study" to "experiences",
+        "achieves" to "experiences",
+    )
 }
