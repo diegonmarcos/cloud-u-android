@@ -108,11 +108,15 @@ jobs:
           PKG=$("$aapt2" dump packagename apk/Cloud-SuperApp-x86_64.apk)
           ACT=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
           adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0
+          # an awake, unlocked screen for the whole run (the first run captured the lock screen)
+          adb shell settings put system screen_off_timeout 2147483647; adb shell svc power stayon true
+          awake() { adb shell input keyevent KEYCODE_WAKEUP; adb shell wm dismiss-keyguard; adb shell input keyevent 82; }
+          awake
           adb shell am start -W -n "$ACT" >/dev/null; sleep 8
           shot() { # name orientation(0 portrait / 1 landscape) target
             adb shell settings put system accelerometer_rotation 0; adb shell settings put system user_rotation "$2"; sleep 2
             if [ -n "$3" ]; then adb shell am start -n "$ACT" --es shortcut_action "$3" >/dev/null; fi
-            sleep 5
+            awake; sleep 5
             adb exec-out screencap -p > "out/$1.png"
             echo "captured $1 ($3)"
           }
