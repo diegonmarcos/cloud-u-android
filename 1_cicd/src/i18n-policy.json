@@ -42,6 +42,18 @@
     "ac_cloud-superintel/app": {
       "base_language": "en"
     },
+    "ad_CG-Omniverse/app": {
+      "base_language": "en"
+    },
+    "ad_Capital-FinTerm/app": {
+      "base_language": "en"
+    },
+    "ad_Hardtech-CAD/app": {
+      "base_language": "en"
+    },
+    "ad_Hardtech-Sim2Real/app": {
+      "base_language": "en"
+    },
     "ac_cloud-kg-store/app": {
       "base_language": "en"
     },

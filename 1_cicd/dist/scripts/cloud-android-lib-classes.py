@@ -67,7 +67,7 @@ def main(argv):
             bad.append(f"L1 {m}: class {spec.get('class')!r} is not one of {', '.join(sorted(CLASSES))}")
 
     users = {}
-    for bj in sorted(glob.glob(os.path.join(root, "a[ac]_*", "build.json"))):
+    for bj in sorted(glob.glob(os.path.join(root, "a[acd]_*", "build.json"))):
         app = os.path.basename(os.path.dirname(bj))
         for m in inputs(root, app, edges, libs):
             users.setdefault(m, []).append(app)

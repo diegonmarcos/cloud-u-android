@@ -38,7 +38,7 @@ else fail "the real tree is red (rc=$rc)"; printf '%s\n' "$out" | grep FAIL; fi
 
 # the real tree with an unmigrated app's exemption dropped: it is held to N1-N5 and fails
 rm -rf "$T"; mkdir -p "$T"
-(cd "$ROOT" && git ls-files -z | grep -zE '^a[ac]_[^/]+/(build\.json|build\.gradle(\.kts)?|app/build\.gradle(\.kts)?)$' \
+(cd "$ROOT" && git ls-files -z | grep -zE '^a[acd]_[^/]+/(build\.json|build\.gradle(\.kts)?|app/build\.gradle(\.kts)?)$' \
     | xargs -0 cp --parents -t "$T")
 mkdir -p "$T/1_cicd/src/data" "$T/$LIB"; cp "$ROOT/$DATA" "$T/$DATA"; cp -r "$ROOT/$LIB/src" "$T/$LIB/src"
 UIBARS=ab_cloud-libs-shared/libs/ui-nav-bars

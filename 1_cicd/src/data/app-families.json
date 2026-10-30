@@ -1,0 +1,31 @@
+{
+  "_doc": "THE app families of the fleet, declared once (#1335). A family is a folder prefix, the pattern its applications are NAMED by (build.json::name, the fleet label), the pattern of the launcher label (build.json::display_name), the pattern its folder names follow, and how the fleet id is derived from the folder. Read by aa_cloud-superapp/test/test-app-names-pattern.sh (T1 names), aa_cloud-superapp/data/regen.sh (the fleet id), 1_cicd/src/scripts/cloud-android-launcher-icons.py (fleet member to folder) and the family tester aa_cloud-superapp/test/test-app-families.sh. The folder prefix order is the repo's: aa_ the SuperApp, ab_ the shared libs, ac_ the Cloud app family (ac_cloud-<x>, ac_c3-<x>), ad_ the Lnktree app family (the apps behind Cloud > Lnktree). ADDING A FAMILY IS ONE ENTRY HERE; the patterns that used to say a[abc]_ (compose ratchet, wasm purity, ipc mesh) read `folder_prefixes` below.",
+  "folder_prefixes": ["aa_", "ab_", "ac_", "ad_"],
+  "families": [
+    {
+      "id": "cloud",
+      "folder_prefix": "ac_",
+      "folder_pattern": "^ac_(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$",
+      "name_pattern": "^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$",
+      "display_pattern": "^Cloud( [A-Z][A-Za-z0-9]*)+$",
+      "id_strip": ["ac_cloud-", "ac_c3-"],
+      "lowercase_id": false,
+      "_doc": "The Cloud family: cloud-<x>, and c3-<x> for the c3 apps. Fleet id = folder without ac_cloud- / ac_c3-."
+    },
+    {
+      "id": "lnktree",
+      "folder_prefix": "ad_",
+      "folder_pattern": "^ad_(CG|Capital|Hardtech)-[A-Za-z0-9]+(-[A-Za-z0-9]+)*$",
+      "name_pattern": "^(cg|capital|hardtech)-[a-z0-9]+(-[a-z0-9]+)*$",
+      "display_pattern": "^(CG|Capital|Hardtech)-[A-Za-z0-9]+(-[A-Za-z0-9]+)*$",
+      "id_strip": ["ad_"],
+      "lowercase_id": true,
+      "_doc": "The Lnktree family (owner 2026-10-30): the apps behind the SuperApp's Cloud > Lnktree row, NOT cloud-<x>. The owner spells the folders and the apps CG-Omniverse, Capital-FinTerm, Hardtech-CAD, Hardtech-Sim2Real; build.json::name is the lower-case slug (GHCR image names, workflow file names and fleet labels are lower-case) and build.json::display_name is the owner's spelling. The three leading words are the registry areas (0_registry/projects-repos.json): CG, Capital, HardTech (the registry spells the area HardTech, the owner's folders Hardtech). Fleet id = the folder without ad_, lower-cased.",
+      "areas": {
+        "cg": {"registry_area": "CG", "registry_code": "2"},
+        "capital": {"registry_area": "Capital", "registry_code": "3"},
+        "hardtech": {"registry_area": "HardTech", "registry_code": "4"}
+      }
+    }
+  ]
+}

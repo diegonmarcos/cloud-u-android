@@ -54,7 +54,7 @@ def main():
         bad.append("ac_cloud-c3-webserver: the local crash sink route /__app__/api/crashes is not served")
 
     seen = set()
-    for bj in sorted(glob.glob(os.path.join(ROOT, "a[ac]_*/build.json"))):
+    for bj in sorted(glob.glob(os.path.join(ROOT, "a[acd]_*/build.json"))):
         app = os.path.basename(os.path.dirname(bj))
         if app in seen or app.startswith("ab_"):
             continue

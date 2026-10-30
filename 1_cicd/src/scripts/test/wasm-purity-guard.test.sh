@@ -38,7 +38,7 @@ else fail "the real tree is red (rc=$rc)"; printf '%s\n' "$out" | grep FAIL; fi
 # ── (2) the synthetic fleet ─────────────────────────────────────────────────
 stage() {
     rm -rf "$T"; mkdir -p "$T/1_cicd/src/data" "$T/$LIB" "$T/ab_cloud-libs-shared/web" "$T/ac_cloud-fix/web/src/wasmJsMain/kotlin" "$T/ab_cloud-libs-shared/libs/other"
-    cp "$ROOT/$DATA" "$T/$DATA"
+    cp "$ROOT/$DATA" "$T/$DATA"; cp "$ROOT/1_cicd/src/data/app-families.json" "$T/1_cicd/src/data/"
     cp -r "$ROOT/$LIB/src" "$ROOT/$LIB/build.gradle" "$T/$LIB/"
     mkdir -p "$T/$LIB2/src"; cp -r "$ROOT/$LIB2/src/commonMain" "$T/$LIB2/src/"; cp "$ROOT/$LIB2/build.gradle" "$T/$LIB2/"
     printf '{"libs": ["ui-kit", "bottomnav"]}\n' > "$T/ab_cloud-libs-shared/web/web.json"

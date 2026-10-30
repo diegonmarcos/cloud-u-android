@@ -157,7 +157,7 @@ regen_constellation() {
     # cloud-infra-desktop-termux-boot - named for the host it targets - was invisible to
     # the store no matter what its build.json said. This predicate admits exactly
     # the same repos the glob did, plus any correctly-declared one.
-    # id = dir basename sans an ac_cloud- or ac_c3- prefix if it has one.
+    # id = dir basename sans its family's strip prefix (app-families.json: ac_cloud- / ac_c3- / ad_) if it has one.
     # The c3- rebrand renames apps out of the ac_cloud- namespace; without the
     # second strip an app's fleet id changes shape the moment it is renamed
     # (watchdog -> ac_c3-watchdog), which is a gratuitous id change for what is
@@ -174,7 +174,15 @@ regen_constellation() {
         jq -e '(.lib_apks != null) or (.forks != null)
                or (.android.application_id != null and .release.ghcr != null)' \
            "$bj" >/dev/null 2>&1 || continue
-        dir="$(basename "$(dirname "$bj")")"; id="${dir#ac_cloud-}"; id="${id#ac_c3-}"
+        dir="$(basename "$(dirname "$bj")")"
+        # The fleet id is the folder without its family's strip prefix (1_cicd/src/data/app-families.json: ac_cloud- / ac_c3- for
+        # the Cloud family, ad_ lower-cased for the Lnktree family); a folder of no family keeps its name.
+        id="$(jq -r --arg d "$dir" '
+            ((.families | map(select(. as $fam | $d | startswith($fam.folder_prefix))) | first) // null) as $f
+            | if $f == null then $d else
+                (($f.id_strip | map(select(. as $s | $d | startswith($s))) | first) // "") as $s
+                | ($d | ltrimstr($s)) | if $f.lowercase_id then ascii_downcase else . end end' \
+            "$UNIX/1_cicd/src/data/app-families.json")"
         # repo_url must survive nesting. The glob reaches two levels, so a
         # dir can be a_solutions/ae-tool_termux-boot - basename alone built
         # .../tree/main/ae-tool_termux-boot, a 404. Identical to $dir for

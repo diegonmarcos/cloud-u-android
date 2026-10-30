@@ -2692,30 +2692,6 @@
             "icon": "ic_solutions",
             "hidden": true,
             "placeholder": true
-          },
-          {
-            "id": "omniverse",
-            "label": "Omniverse",
-            "icon": "ic_world",
-            "facet": true,
-            "hidden": true,
-            "_doc": "Lnktree tile page (owner 2026-10-30): routable as page:cloud/omniverse, drawn from stack_omniverse below (kind=entry panels). Hidden: it is reached from the Lnktree row, not from the Cloud tab strip."
-          },
-          {
-            "id": "cad",
-            "label": "CAD",
-            "icon": "ic_p_c3_stack",
-            "facet": true,
-            "hidden": true,
-            "_doc": "Lnktree tile page (owner 2026-10-30): routable as page:cloud/cad, drawn from stack_cad below (kind=entry panels). Hidden: it is reached from the Lnktree row, not from the Cloud tab strip."
-          },
-          {
-            "id": "sim2real",
-            "label": "Sim2Real",
-            "icon": "ic_robot",
-            "facet": true,
-            "hidden": true,
-            "_doc": "Lnktree tile page (owner 2026-10-30): routable as page:cloud/sim2real, drawn from stack_sim2real below (kind=entry panels). Hidden: it is reached from the Lnktree row, not from the Cloud tab strip."
           }
         ],
         "_doc_stack_apps": "Labs/Apps tab — themed placeholder panels (Data & ML, Engineering, Quant & Markets, Aero & Space, Circus). kind=link_grid with empty links renders the title as a collapsable header until per-section content lands. Suite was removed (the Suite slide now lives only on the bottom-nav Suite section, not here).",
@@ -3110,7 +3086,7 @@
             ]
           },
           {
-            "_doc": "Lnktree (was 'Projects W'; owner 2026-10-30): four tiles, each an in-app page declared as data. Omniverse, CAD and Sim2Real are hidden pages of this section (page:cloud/<id>, stack_<id> below); FinTerm is its own section with a six-tab strip (section:finterm). Every entry on those pages is a kind=entry panel whose target is read from a declared source (linktree.json label, ui.app_urls registry_sites or repo_base) or is `planned` and greyed. The two '|' rules are the owner's grouping: Omniverse | FinTerm | CAD Sim2Real. The row id stays 'Lnktree' = the title; the old project tiles (Lf.y/Nx.z/St.x repos) are gone.",
+            "_doc": "Lnktree (was 'Projects W'; owner 2026-10-30): four tiles, each LAUNCHING a real app of the Lnktree family (#1335, extapp:cg-omniverse, capital-finterm, hardtech-cad, hardtech-sim2real; folders ad_*, 1_cicd/src/data/app-families.json). The pages live in the apps (their build.json::ui), no in-app page is left here. The two '|' rules are the owner's grouping: Omniverse | FinTerm | CAD Sim2Real. The row id stays 'Lnktree' = the title; the old project tiles (Lf.y/Nx.z/St.x repos) are gone.",
             "title": "Lnktree",
             "tiles": [
               {
@@ -3118,7 +3094,7 @@
                 "id": "omniverse",
                 "label": "Omniverse",
                 "icon": "ic_p_sol_other",
-                "target": "page:cloud/omniverse"
+                "target": "extapp:cg-omniverse"
               },
               {
                 "_doc": "Group divider (owner: Omniverse | FinTerm | CAD Sim2Real): a bare character, not a control.",
@@ -3131,7 +3107,7 @@
                 "id": "finterm",
                 "label": "FinTerm",
                 "icon": "ic_p_markets_terminal",
-                "target": "section:finterm"
+                "target": "extapp:capital-finterm"
               },
               {
                 "_doc": "Group divider (owner: Omniverse | FinTerm | CAD Sim2Real): a bare character, not a control.",
@@ -3144,14 +3120,14 @@
                 "id": "cad",
                 "label": "CAD",
                 "icon": "ic_p_sol_pro",
-                "target": "page:cloud/cad"
+                "target": "extapp:hardtech-cad"
               },
               {
                 "_doc": "Sim2Real: page:cloud/sim2real (SAP2000, MATLAB, Ansys).",
                 "id": "sim2real",
                 "label": "Sim2Real",
                 "icon": "ic_p_sol_tools",
-                "target": "page:cloud/sim2real"
+                "target": "extapp:hardtech-sim2real"
               }
             ]
           },
@@ -3261,77 +3237,6 @@
             "kind": "link_grid",
             "title": "Circus",
             "subtitle": "Misc experiments and side quests"
-          }
-        ],
-        "stack_omniverse": [
-          {
-            "_doc": "Omniverse (Lnktree row, owner 2026-10-30): three entries. Each is a `kind: entry` panel (AggregatorPanels.PageEntry): title, one-line description, and a target read from a DECLARED source through LnktreeTargets (never typed here): Galaxy by registry code 2.1.1 (the CG Galaxy web app, ui.app_urls.registry_sites), the two stores are `planned` (no store exists) and are drawn greyed with their note.",
-            "kind": "entry",
-            "title": "Galaxy",
-            "subtitle": "CG Galaxy: the 3D galaxy worlds web app",
-            "registry": "2.1.1"
-          },
-          {
-            "kind": "entry",
-            "title": "Game Store",
-            "subtitle": "Games in one place",
-            "planned": true,
-            "note": "Planned: no game store yet"
-          },
-          {
-            "kind": "entry",
-            "title": "VR Store",
-            "subtitle": "VR experiences in one place",
-            "planned": true,
-            "note": "Planned: no VR store yet"
-          }
-        ],
-        "stack_cad": [
-          {
-            "_doc": "CAD (Lnktree row). MCAD and BIM lead to their folders of the HardTech-Stack-CAD-Simulators repo (registry 4.3.1.1; `repo` under ui.app_urls.repo_base, `path` inside it): OpenCAD (FreeCAD and AutoCAD MCP servers) and OpenBIM (Bonsai/IFC MCP). SolWrk (SolidWorks) has no tool in the repo, so it is planned.",
-            "kind": "entry",
-            "title": "MCAD",
-            "subtitle": "Mechanical CAD: FreeCAD and AutoCAD agents (MCP)",
-            "repo": "HardTech-Stack-CAD-Simulators",
-            "path": "Structural-Designer/OpenCAD"
-          },
-          {
-            "kind": "entry",
-            "title": "BIM",
-            "subtitle": "Building information models: IFC and Bonsai agents (MCP)",
-            "repo": "HardTech-Stack-CAD-Simulators",
-            "path": "Structural-Designer/OpenBIM"
-          },
-          {
-            "kind": "entry",
-            "title": "SolWrk",
-            "subtitle": "SolidWorks",
-            "planned": true,
-            "note": "Planned: coming"
-          }
-        ],
-        "stack_sim2real": [
-          {
-            "_doc": "Sim2Real (Lnktree row). SAP2000, MATLAB and Ansys have no tool in HardTech-Stack-CAD-Simulators yet (its Simulators folder holds blender-mcp and sailytics), so all three are planned.",
-            "kind": "entry",
-            "title": "SAP2000",
-            "subtitle": "Structural analysis",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "entry",
-            "title": "MATLAB",
-            "subtitle": "Numerical computing and simulation",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "entry",
-            "title": "Ansys",
-            "subtitle": "Finite-element and multiphysics simulation",
-            "planned": true,
-            "note": "Planned: coming"
           }
         ],
         "_doc_c3_gone": "tiles_c3 and stack_c3 are GONE from this section, not renamed. Cloud ▸ C3 mirrors the `c3` section now, so C3 is declared exactly once, where its pages already lived. The ten tiles that used to be here were never once drawn anyway — a facet that declares a stack renders the stack and its tiles are unreachable, and stack_c3 sat beside them the whole time; they are alive again as the leading tile_row of sections[c3].stack_observability / stack_topology, split by which half they belong to, with every target byte-identical."
@@ -4718,200 +4623,6 @@
                 "target": "page:c3/vms"
               }
             ]
-          }
-        ]
-      },
-      {
-        "_doc": "FinTerm (Lnktree row, owner 2026-10-30): the capital-markets terminal as a six-tab strip, FI | EQ | EX | NW | PM | MY-PM, drawn by the SectionTabsFragment every tabbed section uses. Every tab is a facet page rendering its stack_<tab> of kind=entry panels. Entries open the Capital-Stack-Fin-Terminal web apps through declared sources, or are planned and greyed; no price, rate or chart is drawn that is not real.",
-        "id": "finterm",
-        "label": "FinTerm",
-        "parent": "cloud",
-        "_doc_parent": "Back from the strip root lands on Cloud (the Lnktree row lives there), not Home.",
-        "icon": "ic_fin",
-        "module": null,
-        "supports_accounts": false,
-        "tabs": true,
-        "pages": [
-          {
-            "id": "fi",
-            "label": "FI",
-            "icon": "ic_p_accounts",
-            "facet": true
-          },
-          {
-            "id": "eq",
-            "label": "EQ",
-            "icon": "ic_p_c3_workflows",
-            "facet": true
-          },
-          {
-            "id": "ex",
-            "label": "EX",
-            "icon": "ic_wg",
-            "facet": true
-          },
-          {
-            "id": "nw",
-            "label": "NW",
-            "icon": "ic_rss",
-            "facet": true
-          },
-          {
-            "id": "pm",
-            "label": "PM",
-            "icon": "ic_p_folder",
-            "facet": true
-          },
-          {
-            "id": "my-portfolio",
-            "label": "MY-PM",
-            "icon": "ic_wallet",
-            "facet": true
-          }
-        ],
-        "stack_fi": [
-          {
-            "_doc": "FinTerm > FI. `site` is the label of a data/linktree.json link, the portal snapshot that already holds the address (the same declaration as ui.app_urls site): the Capital-Stack-Fin-Terminal web app for the curve and bond screens (its group B0 'Yield curves & bonds'), CentralBank for the rate-probability work. Fin Terminal is one single-page app without deep links, so these entries open the terminal, not a sub-screen.",
-            "kind": "entry",
-            "title": "Yield Curves",
-            "subtitle": "Spot, forward and zero curves, US and major sovereigns",
-            "site": "Fin Terminal"
-          },
-          {
-            "kind": "entry",
-            "title": "Forward Rates",
-            "subtitle": "Forward rate curves and the paths they imply",
-            "site": "Fin Terminal"
-          },
-          {
-            "kind": "entry",
-            "title": "World Interest Rate Probabilities",
-            "subtitle": "Market-implied central bank rate paths",
-            "site": "CentralBank"
-          },
-          {
-            "kind": "entry",
-            "title": "World Bonds",
-            "subtitle": "Sovereign bond yields and spreads by country",
-            "site": "Fin Terminal"
-          }
-        ],
-        "stack_eq": [
-          {
-            "_doc": "FinTerm > EQ. MarketWatch is the Capital-Stack-Fin-Terminal prices page (linktree label MarketWatch).",
-            "kind": "entry",
-            "title": "World Equity Indices",
-            "subtitle": "Major equity index levels and moves worldwide",
-            "site": "MarketWatch"
-          }
-        ],
-        "stack_ex": [
-          {
-            "_doc": "FinTerm > EX. FX opens the Fin Terminal (its group B1 'FX'); Onshore USD Rates has no page anywhere yet, so it is planned.",
-            "kind": "entry",
-            "title": "FX",
-            "subtitle": "Comprehensive real-time currency pricing, matrix crosses, spot rates, and forwards",
-            "site": "Fin Terminal"
-          },
-          {
-            "kind": "entry",
-            "title": "Onshore USD Rates",
-            "subtitle": "Onshore USD rate benchmarks and curves",
-            "planned": true,
-            "note": "Planned: coming"
-          }
-        ],
-        "stack_nw": [
-          {
-            "_doc": "FinTerm > NW. The GDELT news dashboard (linktree label GDELT News).",
-            "kind": "entry",
-            "title": "News",
-            "subtitle": "Global news from the GDELT feed",
-            "site": "GDELT News"
-          }
-        ],
-        "stack_pm": [
-          {
-            "_doc": "FinTerm > PM. Portfolio & Risk Analytics and every model portfolio are `planned`: nothing computes them yet, so no figure is drawn. The model portfolios are two families, bonds/equity splits and Developed/Emerging Markets splits, each named by its split.",
-            "kind": "entry",
-            "title": "Portfolio & Risk Analytics",
-            "subtitle": "Portfolio tracking, attribution analysis, factor exposures and scenario stress testing for well-known portfolios",
-            "planned": true,
-            "note": "Planned: analytics coming"
-          },
-          {
-            "kind": "section_title",
-            "title": "Model portfolios: bonds / equity"
-          },
-          {
-            "kind": "entry",
-            "title": "40/60",
-            "subtitle": "40% bonds, 60% equity",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "entry",
-            "title": "70/30",
-            "subtitle": "70% bonds, 30% equity",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "entry",
-            "title": "60/40",
-            "subtitle": "60% bonds, 40% equity",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "entry",
-            "title": "30/70",
-            "subtitle": "30% bonds, 70% equity",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "section_title",
-            "title": "Model portfolios: DM / EM"
-          },
-          {
-            "kind": "entry",
-            "title": "70/30 DM/EM",
-            "subtitle": "70% Developed Markets, 30% Emerging Markets",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "entry",
-            "title": "60/40 DM/EM",
-            "subtitle": "60% Developed Markets, 40% Emerging Markets",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "entry",
-            "title": "40/60 DM/EM",
-            "subtitle": "40% Developed Markets, 60% Emerging Markets",
-            "planned": true,
-            "note": "Planned: coming"
-          },
-          {
-            "kind": "entry",
-            "title": "30/70 DM/EM",
-            "subtitle": "30% Developed Markets, 70% Emerging Markets",
-            "planned": true,
-            "note": "Planned: coming"
-          }
-        ],
-        "stack_my-portfolio": [
-          {
-            "_doc": "FinTerm > MY-PM. A personal portfolio is a local, editable holdings list (ticker, quantity, cost). The SuperApp has no editable-list renderer declared as data, and the owner asked for no new big renderer, so it is a planned entry for now.",
-            "kind": "entry",
-            "title": "Personal portfolio",
-            "subtitle": "Your holdings: ticker, quantity, cost, kept on this phone",
-            "planned": true,
-            "note": "Planned: needs an editable list, coming"
           }
         ]
       },
@@ -8952,6 +8663,42 @@
         "hub_package": "com.diegonmarcos.clouddrive",
         "install_package": "com.diegonmarcos.clouddrive",
         "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Cloud-Drive.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#1335 CG-Omniverse (ad_CG-Omniverse, published by ship-cg-omniverse.yml): the Lnktree family app (1_cicd/src/data/app-families.json) behind the Cloud > Lnktree tile of the same name; every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ad_CG-Omniverse/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map.",
+        "id": "cg-omniverse",
+        "folder": "prod_utils",
+        "hub_package": "com.diegonmarcos.cgomniverse",
+        "install_package": "com.diegonmarcos.cgomniverse",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/CG-Omniverse.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#1335 Capital-FinTerm (ad_Capital-FinTerm, published by ship-capital-finterm.yml): the Lnktree family app (1_cicd/src/data/app-families.json) behind the Cloud > Lnktree tile of the same name; every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ad_Capital-FinTerm/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map.",
+        "id": "capital-finterm",
+        "folder": "prod_utils",
+        "hub_package": "com.diegonmarcos.capitalfinterm",
+        "install_package": "com.diegonmarcos.capitalfinterm",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Capital-FinTerm.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#1335 Hardtech-CAD (ad_Hardtech-CAD, published by ship-hardtech-cad.yml): the Lnktree family app (1_cicd/src/data/app-families.json) behind the Cloud > Lnktree tile of the same name; every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ad_Hardtech-CAD/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map.",
+        "id": "hardtech-cad",
+        "folder": "prod_utils",
+        "hub_package": "com.diegonmarcos.hardtechcad",
+        "install_package": "com.diegonmarcos.hardtechcad",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Hardtech-CAD.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#1335 Hardtech-Sim2Real (ad_Hardtech-Sim2Real, published by ship-hardtech-sim2real.yml): the Lnktree family app (1_cicd/src/data/app-families.json) behind the Cloud > Lnktree tile of the same name; every extapp:<id> must resolve here (test-app-identity-resolves.sh T1). package read from ad_Hardtech-Sim2Real/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors its arm64 release asset; x86_64 devices are resolved through the fleet assets map.",
+        "id": "hardtech-sim2real",
+        "folder": "prod_utils",
+        "hub_package": "com.diegonmarcos.hardtechsim2real",
+        "install_package": "com.diegonmarcos.hardtechsim2real",
+        "install_apk_url": "https://github.com/diegonmarcos/cloudy-u-android/releases/download/latest/Hardtech-Sim2Real.apk",
         "forks": {}
       }
     ],

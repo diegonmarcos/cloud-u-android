@@ -28,7 +28,8 @@ bad() { printf 'FAIL  %s\n' "$1"; fail=1; }
 FX="$W/fx"
 mkdir -p "$FX/1_cicd/src/data" "$FX/1_cicd/src/scripts"
 cp "$ALLOW" "$FX/1_cicd/src/data/"
-cp "$ROOT"/1_cicd/src/scripts/cloud-android-ipc-mesh.py "$ROOT"/1_cicd/src/scripts/cloud_android_lib_closure.py "$FX/1_cicd/src/scripts/"
+cp "$ROOT"/1_cicd/src/scripts/cloud-android-ipc-mesh.py "$ROOT"/1_cicd/src/scripts/cloud_android_lib_closure.py "$ROOT"/1_cicd/src/scripts/cloud_android_app_families.py "$FX/1_cicd/src/scripts/"
+cp "$ROOT"/1_cicd/src/data/app-families.json "$FX/1_cicd/src/data/"
 python3 - "$ALLOW" "$ROOT" "$FX" <<'PY'
 import json, os, shutil, sys
 allow, root, fx = sys.argv[1:4]

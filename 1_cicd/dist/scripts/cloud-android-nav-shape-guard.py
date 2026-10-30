@@ -273,7 +273,7 @@ def check_variants(root, apps, uis, spec, exempt, bad):
                            f"{', '.join(sorted(variants))} — every other app wears the fleet island")
     for app, v in sorted(variants.items()):
         if app not in apps:
-            bad.append(f"N8 {app}: a variant in {DATA} but there is no such app (a[ac]_*/build.json)")
+            bad.append(f"N8 {app}: a variant in {DATA} but there is no such app (a[acd]_*/build.json)")
             continue
         if app in exempt:
             bad.append(f"N8 {app}: a variant but also exempt — a variant app is held to N1-N7")
@@ -645,7 +645,7 @@ def main(argv):
         for retired in ui_lib["retired"]:
             if os.path.isdir(os.path.join(root, "ab_cloud-libs-shared", "libs", retired)):
                 bad.append(f"N11 ab_cloud-libs-shared/libs/{retired} is back — its code lives in {ui_lib['dir']}")
-        for b in sorted(glob.glob(os.path.join(root, "a[ac]_*", "build.json"))):
+        for b in sorted(glob.glob(os.path.join(root, "a[acd]_*", "build.json"))):
             try:
                 mods = json.load(open(b)).get("modules") or {}
             except (OSError, ValueError):
@@ -654,7 +654,7 @@ def main(argv):
                 if f"libs:{retired}" in mods:
                     bad.append(f"N11 {os.path.basename(os.path.dirname(b))}: build.json modules name the retired libs:{retired}; use libs:ui-nav-bars")
 
-    apps = sorted(os.path.basename(os.path.dirname(b)) for b in glob.glob(os.path.join(root, "a[ac]_*", "build.json")))
+    apps = sorted(os.path.basename(os.path.dirname(b)) for b in glob.glob(os.path.join(root, "a[acd]_*", "build.json")))
     checked = 0
     for app in apps:
         try:
@@ -687,7 +687,7 @@ def main(argv):
 
     for app, cfg in sorted(web_apps.items()):
         if app not in apps:
-            bad.append(f"N6 {app}: a web app in {DATA} but there is no such app (a[ac]_*/build.json)")
+            bad.append(f"N6 {app}: a web app in {DATA} but there is no such app (a[acd]_*/build.json)")
         if app in exempt:
             bad.append(f"N6 {app}: a web app but also exempt — a web app is held to N1 + W1-W4")
         if len(str(cfg.get("reason", "")).strip()) < spec["min_reason_chars"]:
@@ -695,7 +695,7 @@ def main(argv):
 
     for app, why in sorted(exempt.items()):
         if app not in apps:
-            bad.append(f"N6 {app}: exempt in {DATA} but there is no such app (a[ac]_*/build.json)")
+            bad.append(f"N6 {app}: exempt in {DATA} but there is no such app (a[acd]_*/build.json)")
         if not isinstance(why, str) or len(why.strip()) < spec["min_reason_chars"]:
             bad.append(f"N6 {app}: exemption needs a reason of at least {spec['min_reason_chars']} characters")
 
@@ -715,7 +715,7 @@ def main(argv):
             bad.append(f"N12 {app}: duplicate_page_ids entry needs a reason of at least {spec['min_reason_chars']} characters")
     for app in sorted(known):
         if app not in apps:
-            bad.append(f"N12 {app}: in {DATA}::duplicate_page_ids but there is no such app (a[ac]_*/build.json)")
+            bad.append(f"N12 {app}: in {DATA}::duplicate_page_ids but there is no such app (a[acd]_*/build.json)")
 
     for b in bad:
         print("FAIL     " + b)

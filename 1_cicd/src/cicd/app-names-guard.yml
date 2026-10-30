@@ -64,3 +64,18 @@ jobs:
           fi
           echo "$out" | grep -F "gh_release.asset_name = 'Cloud-IDE-Hub.apk' spells a retired brand"
           echo "T9 went red on the retired brand, as it must"
+      - name: A name outside every declared app family is red, a name of the Lnktree family is green (#1335)
+        run: |
+          set -eu
+          # The pattern is DECLARED (1_cicd/src/data/app-families.json), not spelled in the tester: undo the previous mutation,
+          # prove the Lnktree family's names pass, then put a name that no family accepts and require T1 to go red.
+          git checkout -- .
+          bash aa_cloud-superapp/test/test-app-names-pattern.sh >/dev/null
+          jq '(.apps[] | select(.id == "cg-omniverse") | .label) = "acme-omniverse"' aa_cloud-superapp/data/constellation-fleet.json > /tmp/fleet.json
+          mv /tmp/fleet.json aa_cloud-superapp/data/constellation-fleet.json
+          if out="$(bash aa_cloud-superapp/test/test-app-names-pattern.sh)"; then
+            echo "::error::test-app-names-pattern.sh passed with cg-omniverse labelled 'acme-omniverse' - T1 does not read the declared families"
+            exit 1
+          fi
+          echo "$out" | grep -F "no declared app family accepts"
+          echo "T1 went red on a name outside every family, as it must"

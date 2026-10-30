@@ -9,7 +9,8 @@
         "ac_cloud-",
         "ab_cloud-",
         "aa_cloud-",
-        "ac_c3-"
+        "ac_c3-",
+        "ad_"
     ],
     "_doc_app_prefixes": "A top-level directory starting with any of these is an app/solution tree and is scanned. Adding a new app family = a data edit. ac_cloud-drive is always excluded because it OWNS the engine. These prefixes deliberately do NOT cover 1_cicd, a_solutions, c_devices, 9_others, 2_configs -- a renderer copy that ever lands there is not an app consuming it, and scanning 1_cicd would let the guard's own source trip it. The realistic duplicate is another APP (mail above all) or a shared lib (ab_cloud-libs-shared), all covered here.",
     "prune_dirs": [

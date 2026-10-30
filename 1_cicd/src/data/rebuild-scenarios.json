@@ -714,10 +714,10 @@
         "ab_cloud-libs-shared/libs/ui-kit/src/commonMain/kotlin/com/diegonmarcos/superapp/uikit/CloudKit.kt"
       ],
       "expect": {
-        "apps": 35,
+        "apps": 39,
         "libs": 0,
         "rootfs": 0,
-        "ship": 36,
+        "ship": 40,
         "refresh": 0
       }
     }

@@ -30,6 +30,12 @@ import xml.etree.ElementTree as ET
 
 root = sys.argv[1]
 TITLE = re.compile(r"^Cloud( [A-Z][A-Za-z0-9]*)+$")
+# #1335 the launcher label of an app is its FAMILY's pattern (1_cicd/src/data/app-families.json::display_pattern): the Cloud family's
+# "Cloud " + Title Case words, the Lnktree family's CG-Omniverse / Capital-FinTerm / Hardtech-CAD / Hardtech-Sim2Real.
+FAMILIES = json.load(open(os.path.join(root, "1_cicd/src/data/app-families.json")))["families"]
+def label_pattern(d):
+    fam = next((f for f in FAMILIES if d.startswith(f["folder_prefix"])), None)
+    return re.compile(fam["display_pattern"]) if fam and d.startswith("ad_") else TITLE
 A = "{http://schemas.android.com/apk/res/android}"
 passed = failed = 0
 def check(cond, msg):
@@ -39,7 +45,7 @@ def check(cond, msg):
         failed += 1; print("  FAIL: " + msg)
 
 apps = {}
-for path in sorted(glob.glob(os.path.join(root, "aa_*", "build.json")) + glob.glob(os.path.join(root, "ac_*", "build.json"))):
+for path in sorted(glob.glob(os.path.join(root, "aa_*", "build.json")) + glob.glob(os.path.join(root, "ac_*", "build.json")) + glob.glob(os.path.join(root, "ad_*", "build.json"))):
     apps[os.path.basename(os.path.dirname(path))] = json.load(open(path))
 check(len(apps) >= 30, "found only %d apps - the detection matched too little" % len(apps))
 
@@ -59,7 +65,7 @@ print("== L1: display_name is Cloud + Title Case words ==")
 shown = {}
 for d, bj in apps.items():
     dn = bj.get("display_name")
-    check(isinstance(dn, str) and TITLE.match(dn) is not None and "-" not in dn and "cloud-" not in dn.lower(),
+    check(isinstance(dn, str) and label_pattern(d).match(dn) is not None and ("-" not in dn or d.startswith("ad_")) and "cloud-" not in dn.lower(),
           "%s/build.json::display_name = %r is not 'Cloud ' + Title Case words with spaces" % (d, dn))
     if isinstance(dn, str): shown[d] = dn
 

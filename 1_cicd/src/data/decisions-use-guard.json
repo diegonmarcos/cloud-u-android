@@ -7,7 +7,7 @@
   "credential_words": ["token", "apikey", "api_key", "secret", "credential", "bearer", "authorization", "password", "passwd", "privatekey"],
   "credential_identifier": "(?i)(token|api_?key|\\bkey\\b|secret|credential|bearer|authoriz|passw|private_?key)",
   "link_forbidden_dependencies": ["libs:text-tools", "libs:account", "libs:keyboard"],
-  "app_roots": "a[ac]_*",
+  "app_roots": "a[acd]_*",
   "lib_root": "ab_cloud-libs-shared/libs",
   "skip_dirs": ["build", "node_modules", ".git", "z_archive", "test", "androidTest"],
   "key_call": "revealAiKey(",

@@ -41,6 +41,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.dont_write_bytecode = True
 from cloud_android_lib_closure import SHARED_LIBS, inputs, lib_edges, shared_libs  # noqa: E402
+import cloud_android_app_families as families  # noqa: E402  (#1335: the declared app families)
 
 REGISTRY = "aa_cloud-superapp/data/ipc-mesh.json"
 FLEET = "aa_cloud-superapp/data/constellation-fleet.json"
@@ -259,7 +260,7 @@ def routes_in(root, files, app_dir, const_files=()):
 
 def aidl_index(root):
     out = {}
-    for p in glob.glob(os.path.join(root, "a[abc]_*", "**", "*.aidl"), recursive=True):
+    for p in glob.glob(os.path.join(root, families.prefix_class(root) + "*", "**", "*.aidl"), recursive=True):
         if any(x in p.split(os.sep) for x in SKIP):
             continue
         s = strip_comments(read(p))
@@ -457,7 +458,7 @@ LOOPBACK_CLIENT = re.compile(
 
 def http_hits(root):
     hits = {}
-    for top in sorted(glob.glob(os.path.join(root, "a[abc]_*"))):
+    for top in sorted(glob.glob(os.path.join(root, families.prefix_class(root) + "*"))):
         for p in walk(top, (".kt", ".java")):
             n = len(LOOPBACK_CLIENT.findall(strip_comments(read(p))))
             if n:

@@ -2247,6 +2247,17 @@
       "used_by": [
         "lib-ai"
       ]
+    },
+    "holdings": {
+      "kind": "prefs",
+      "class": "content",
+      "doc": "The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-FinTerm's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content.",
+      "used_by": [
+        "ad_CG-Omniverse",
+        "ad_Capital-FinTerm",
+        "ad_Hardtech-CAD",
+        "ad_Hardtech-Sim2Real"
+      ]
     }
   },
   "bundle": {
@@ -3984,6 +3995,74 @@
           "store": "ai_sessions"
         }
       ]
+    },
+    "cg-omniverse": {
+      "package": "com.diegonmarcos.cgomniverse",
+      "module": "ad_CG-Omniverse",
+      "schema_version": 1,
+      "libs": [
+        "lib-bottomnav",
+        "lib-core",
+        "lib-crash",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-theme-background",
+        "lib-ui-icons",
+        "lib-ui-kit",
+        "lib-ui-nav-bars"
+      ],
+      "items": []
+    },
+    "capital-finterm": {
+      "package": "com.diegonmarcos.capitalfinterm",
+      "module": "ad_Capital-FinTerm",
+      "schema_version": 1,
+      "libs": [
+        "lib-bottomnav",
+        "lib-core",
+        "lib-crash",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-theme-background",
+        "lib-ui-icons",
+        "lib-ui-kit",
+        "lib-ui-nav-bars"
+      ],
+      "items": []
+    },
+    "hardtech-cad": {
+      "package": "com.diegonmarcos.hardtechcad",
+      "module": "ad_Hardtech-CAD",
+      "schema_version": 1,
+      "libs": [
+        "lib-bottomnav",
+        "lib-core",
+        "lib-crash",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-theme-background",
+        "lib-ui-icons",
+        "lib-ui-kit",
+        "lib-ui-nav-bars"
+      ],
+      "items": []
+    },
+    "hardtech-sim2real": {
+      "package": "com.diegonmarcos.hardtechsim2real",
+      "module": "ad_Hardtech-Sim2Real",
+      "schema_version": 1,
+      "libs": [
+        "lib-bottomnav",
+        "lib-core",
+        "lib-crash",
+        "lib-devtools",
+        "lib-fleetconfig-model",
+        "lib-theme-background",
+        "lib-ui-icons",
+        "lib-ui-kit",
+        "lib-ui-nav-bars"
+      ],
+      "items": []
     }
   },
   "libs": {

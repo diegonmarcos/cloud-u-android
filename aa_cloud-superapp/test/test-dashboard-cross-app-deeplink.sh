@@ -167,11 +167,11 @@ TARGETS = {
     # tile from this row, so its deep link is no longer pinned here.
     "tools-account": "page:config/profile",
     "me":        "extapp:cloud-me",
-    # #1331: the Lnktree row's tiles open in-app pages (test-lnktree-row.sh pins their contents).
-    "omniverse": "page:cloud/omniverse",
-    "finterm": "section:finterm",
-    "cad": "page:cloud/cad",
-    "sim2real": "page:cloud/sim2real",
+    # #1335: the Lnktree row's tiles LAUNCH the Lnktree family apps (test-lnktree-row.sh pins the row, ad_*/test/test-lnktree-app.sh the pages).
+    "omniverse": "extapp:cg-omniverse",
+    "finterm": "extapp:capital-finterm",
+    "cad": "extapp:hardtech-cad",
+    "sim2real": "extapp:hardtech-sim2real",
     "myhealth":    "extapp:cloud-me#page:health/home",
     "mystudy":     "extapp:cloud-me#page:study/cv",
     "myachieves":  "extapp:cloud-me#page:achieves/personal",

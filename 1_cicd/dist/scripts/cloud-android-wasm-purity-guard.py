@@ -25,6 +25,10 @@ EXIT   0 pure and ratcheted - 1 failure(s)
 """
 import json, os, re, sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.dont_write_bytecode = True
+import cloud_android_app_families as families  # noqa: E402  (#1335: the declared app families)
+
 DATA = "1_cicd/src/data/wasm-migration.json"
 LIBS = "ab_cloud-libs-shared/libs"
 SHARED_BUILD = "ab_cloud-libs-shared/web/web.json"
@@ -59,7 +63,7 @@ def web_roots(root):
         out.append(shared)
     for d in sorted(os.listdir(root)):
         w = os.path.join(root, d, "web")
-        if re.match(r"^a[abc]_", d) and os.path.isdir(w) and os.path.isfile(os.path.join(w, "settings.gradle.kts")):
+        if re.match(r"^" + families.prefix_class(root), d) and os.path.isdir(w) and os.path.isfile(os.path.join(w, "settings.gradle.kts")):
             out.append(w)
     return out
 

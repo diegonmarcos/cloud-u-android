@@ -44,7 +44,7 @@ SUPERAPP = "aa_cloud-superapp/build.json"
 LIB_APKS = "ab_cloud-libs-shared/lib-apks/build.json"
 PRIMARY = "1_cicd/src/data/lib-primary-consumers.json"
 LIBS = "ab_cloud-libs-shared/libs"
-# a companion APK that compiles shared libs like an app does, though it is not under a[ac]_*
+# a companion APK that compiles shared libs like an app does, though it is not under a[acd]_*
 EXTRA_APPS = ["ab_cloud-libs-shared/keyboard-engines"]
 A = "{http://schemas.android.com/apk/res/android}"
 # an ML lib states its application in its own id: ml-{t|l}-{domain}-{name} (the rule libs:appstore reads too)
@@ -71,7 +71,7 @@ def jload(path, default=None):
 
 
 def apps_of(root):
-    found = sorted(os.path.basename(os.path.dirname(b)) for b in glob.glob(os.path.join(root, "a[ac]_*", "build.json")))
+    found = sorted(os.path.basename(os.path.dirname(b)) for b in glob.glob(os.path.join(root, "a[acd]_*", "build.json")))
     return found + [a for a in EXTRA_APPS if os.path.isfile(os.path.join(root, a, "build.json"))]
 
 

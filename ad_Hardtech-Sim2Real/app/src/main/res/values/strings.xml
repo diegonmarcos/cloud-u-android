@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- English is the fleet's base language (#299). app_name comes from build.json::display_name. -->
+    <string name="entry_open">Open</string>
+    <string name="entry_planned">Planned</string>
+    <string name="about_body">A Lnktree app of the Cloud constellation. Its pages are declared in build.json and drawn by declared kinds; a greyed entry is planned and has no target yet. Version %1$s, build %2$s.</string>
+    <string name="holdings_title">Personal portfolio</string>
+    <string name="holdings_sub">A simple list kept on this phone: ticker, quantity and unit cost. Nothing is fetched or priced.</string>
+    <string name="holdings_ticker">Ticker</string>
+    <string name="holdings_quantity">Quantity</string>
+    <string name="holdings_cost">Unit cost</string>
+    <string name="holdings_add">Add</string>
+    <string name="holdings_remove">Remove</string>
+    <string name="holdings_rejected">Enter a ticker, a quantity above zero and a cost of zero or more.</string>
+    <string name="holdings_empty">No holdings yet. Add one above.</string>
+    <string name="holdings_line">%1$s units at %2$s</string>
+    <string name="holdings_total">Cost basis: %1$s (in the currency you entered)</string>
+</resources>

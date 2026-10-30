@@ -7,7 +7,8 @@
   "app_prefixes": [
     "aa_cloud-superapp",
     "ac_c3-",
-    "ac_cloud-"
+    "ac_cloud-",
+    "ad_"
   ],
   "skip_dirs": [
     "aa_cloud-superapp-mcp",

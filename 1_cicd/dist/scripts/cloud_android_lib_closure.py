@@ -188,7 +188,7 @@ def inputs(root, app, edges=None, libs=None):
 
 def main(argv):
     root = os.path.abspath(argv[0] if argv else ".")
-    apps = argv[1:] or sorted(os.path.basename(os.path.dirname(b)) for b in glob.glob(os.path.join(root, "a[ac]_*", "build.json")))
+    apps = argv[1:] or sorted(os.path.basename(os.path.dirname(b)) for b in glob.glob(os.path.join(root, "a[acd]_*", "build.json")))
     edges, libs = lib_edges(root), shared_libs(root)
     for app in apps:
         got = inputs(root, app, edges, libs)

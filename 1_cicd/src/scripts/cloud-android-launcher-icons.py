@@ -23,6 +23,9 @@ import os
 import re
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import cloud_android_app_families as families  # noqa: E402  (#1335: the declared app families)
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", ".."))
 if not os.path.isfile(os.path.join(ROOT, "1_cicd/src/data/launcher-icons.json")):
     ROOT = os.getcwd()
@@ -47,12 +50,10 @@ def fleet_apps():
     members = next(g for g in fleet["groups"] if g["id"] == "apps")["members"]
     out = []
     for m in members:
-        for d in (m, "ac_cloud-" + m, "ac_c3-" + m):
-            if os.path.isfile(os.path.join(ROOT, d, "build.json")):
-                out.append(d)
-                break
-        else:
+        d = m if os.path.isfile(os.path.join(ROOT, m, "build.json")) else families.folder_of(ROOT, m)
+        if d is None:
             raise SystemExit("fleet member %r has no app directory" % m)
+        out.append(d)
     return out
 
 
@@ -258,9 +259,9 @@ def cloud_page_checks(cfg):
                 if prev and prev[1] != tgt:
                     errors.append("Cloud page: %r (%s) and %r (%s) share the plain icon %s" % (prev[0], prev[2], t.get("label"), g["title"], icon))
                 icons.setdefault(icon, (t.get("label"), tgt, g["title"]))
-            m = re.match(r"^extapp:(cloud-[\w-]+)$", tgt)
-            if m and g["title"] in by_title and os.path.isfile(os.path.join(ROOT, "ac_" + m.group(1), "build.json")):
-                app = "ac_" + m.group(1)
+            m = re.match(r"^extapp:([\w-]+)$", tgt)
+            app = families.folder_of_name(ROOT, m.group(1)) if m else None
+            if app and g["title"] in by_title:
                 if app in cfg.get("exempt", {}):
                     continue
                 li = load(app + "/build.json").get("launcher_icon") or {}
@@ -305,7 +306,7 @@ def sheet(cfg, out):
             parts.append('<g transform="translate(%d,%d)"><g clip-path="url(#c%s)"><rect width="108" height="108" fill="url(#%s)"/>' % (x, y, gid, gid))
             parts.append('<g transform="translate(%s,%s) scale(%s)"><path fill="#fff" fill-rule="%s" d="%s"/></g>' % (g["translate_x"], g["translate_y"], g["scale"], "evenodd" if gfill(cfg, li["glyph"]) else "nonzero", gpath(cfg, li["glyph"])))
             parts.append('<g transform="translate(%s,%s) scale(%s)"><path fill="#fff" fill-opacity="0.95" d="%s"/></g></g>' % (b["translate_x"], b["translate_y"], b["scale"], b["path"]))
-            parts.append('<text x="54" y="128" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#E5E7EB">%s</text></g>' % re.sub(r"^a[ac]_(cloud-|c3-)?", "", app))
+            parts.append('<text x="54" y="128" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#E5E7EB">%s</text></g>' % re.sub(r"^a[acd]_(cloud-|c3-)?", "", app))
         y += cell
     parts.append("</svg>")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)

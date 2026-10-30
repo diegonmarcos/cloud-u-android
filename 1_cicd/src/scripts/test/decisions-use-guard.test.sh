@@ -32,8 +32,8 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 
 stage() {
     rm -rf "$WORK/t"; mkdir -p "$WORK/t"
-    (cd "$ROOT" && { printf '%s\n' "$DATA" "$DECL" "$FLEET"; ls a[ac]_*/build.json; find "$LINK" -type f -not -path '*/build/*';
-        grep -rl 'revealAiKey(' --include=*.kt --include=*.java a[ac]_* ab_cloud-libs-shared/libs 2>/dev/null | grep -v '/build/'; } | sort -u | xargs -d '\n' cp --parents -t "$WORK/t")
+    (cd "$ROOT" && { printf '%s\n' "$DATA" "$DECL" "$FLEET"; ls a[acd]_*/build.json; find "$LINK" -type f -not -path '*/build/*';
+        grep -rl 'revealAiKey(' --include=*.kt --include=*.java a[acd]_* ab_cloud-libs-shared/libs 2>/dev/null | grep -v '/build/'; } | sort -u | xargs -d '\n' cp --parents -t "$WORK/t")
 }
 guard() { python3 "$GUARD" "$WORK/t" >"$WORK/out" 2>&1; }
 sub() { python3 -c "import sys; p=sys.argv[1]; s=open(p).read(); assert sys.argv[2] in s, 'anchor not found'; open(p,'w').write(s.replace(sys.argv[2], sys.argv[3], 1))" "$WORK/t/$1" "$2" "$3"; }

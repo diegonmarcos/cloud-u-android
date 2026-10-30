@@ -134,7 +134,7 @@ _stage() {
     cp "$ROOT/aa_cloud-superapp/data/constellation-fleet.json" "$W/t/aa_cloud-superapp/data/"
     cp "$ROOT/1_cicd/src/scripts/cloud-android-publish-gate.sh" "$W/t/1_cicd/src/scripts/"
     local f rel c d
-    for d in "$ROOT"/a[ac]_*/; do
+    for d in "$ROOT"/a[acd]_*/; do
         for c in $CANDIDATES build.json build.sh; do
             f="$d$c"; [ -f "$f" ] || continue
             rel="${f#"$ROOT"/}"; mkdir -p "$W/t/$(dirname "$rel")"; cp "$f" "$W/t/$rel"

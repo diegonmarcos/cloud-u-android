@@ -37,10 +37,10 @@ WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 stage() {
     rm -rf "$WORK/t"; mkdir -p "$WORK/t"
     (cd "$ROOT" && cp --parents -t "$WORK/t" $(printf '%s\n' 1_cicd/src/scripts/cloud-android-debug-ports-guard.py "$FLEET" "$PORTS" "$GRADLE" "$SERVER" "$PROBE" "$FLEETIPC" "$DEVCONTROL" "$GATEWAY" "$GEN" "$CLOSURE" \
-        $(ls -d a[ac]_*/build.json ab_cloud-libs-shared/*/build.json a_solutions/*/build.json \
-                a[ac]_*/debug-api.json ab_cloud-libs-shared/*/debug-api.json 2>/dev/null) \
+        $(ls -d a[acd]_*/build.json ab_cloud-libs-shared/*/build.json a_solutions/*/build.json \
+                a[acd]_*/debug-api.json ab_cloud-libs-shared/*/debug-api.json 2>/dev/null) \
         $(ls ab_cloud-libs-shared/libs/*/build.gradle) \
-        $(find a[ac]_* ab_cloud-libs-shared/lib-apks ab_cloud-libs-shared/keyboard-engines a_solutions -maxdepth 3 \
+        $(find a[acd]_* ab_cloud-libs-shared/lib-apks ab_cloud-libs-shared/keyboard-engines a_solutions -maxdepth 3 \
                \( -name 'settings.gradle' -o -name 'settings.gradle.kts' -o -name 'build.gradle' -o -name 'build.gradle.kts' \) \
                -not -path '*/build/*' 2>/dev/null) | sort -u))
 }

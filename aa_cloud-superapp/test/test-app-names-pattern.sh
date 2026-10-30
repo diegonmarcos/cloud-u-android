@@ -28,6 +28,11 @@
 #       fleet name the old way ("Cloud Chat (Mattermost)", "Cloud-IDE",
 #       "C3-Watchdog") — the regression a new hand-written roster would bring back
 #
+# #1335 THE PATTERN IS DECLARED, NOT SPELLED HERE. Every application is named by the pattern of its FAMILY, declared once in
+# 1_cicd/src/data/app-families.json (the Cloud family: cloud-<x> / c3-<x>; the Lnktree family, folders ad_*: cg-<x>,
+# capital-<x>, hardtech-<x>). T1 reads that file, so a new family is one declared entry and not a bypass: a name that matches
+# NO declared family still fails, and so does a name in a family other than the one its folder belongs to.
+#
 # Scope: kind "app". Library APKs ("Lib: <module>") are a separate naming family
 # and are not applications. Captions that name a FUNCTION rather than an app
 # (tiles "Notes", "Mail", the "Messenger" inbox class) do not spell an app name
@@ -42,11 +47,17 @@ for f in "$FLEET" "$APP/build.json"; do
 done
 command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 required" >&2; exit 2; }
 
-python3 - "$ROOT" "$FLEET" "$APP/build.json" <<'PY'
+python3 - "$ROOT" "$FLEET" "$APP/build.json" "${FAMILIES:-$ROOT/1_cicd/src/data/app-families.json}" <<'PY'
 import glob, json, os, re, sys
 
-root, fleet_path, superapp_path = sys.argv[1:4]
-PATTERN = re.compile(r"^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$")
+root, fleet_path, superapp_path, families_path = sys.argv[1:5]
+FAMILIES = json.load(open(families_path))["families"]
+FAMILY_PATTERNS = [re.compile(f["name_pattern"]) for f in FAMILIES]
+class _AnyFamily:
+    """The name pattern of every declared family: a name is well formed when ONE family's pattern accepts it."""
+    def match(self, text):
+        return next((m for m in (p.match(text) for p in FAMILY_PATTERNS) if m), None)
+PATTERN = _AnyFamily()
 passed, failed = 0, 0
 def check(condition, message):
     global passed, failed
@@ -65,10 +76,10 @@ for entry in fleet:
         if package:
             by_package[package] = entry["label"]
 
-print("== T1: every application is named cloud-<x> or c3-<x> ==")
+print("== T1: every application is named by its family's pattern (cloud-<x> / c3-<x>, or the Lnktree family's) ==")
 for entry in fleet:
     check(PATTERN.match(entry["label"]) is not None,
-          "fleet entry %s is labelled %r" % (entry["id"], entry["label"]))
+          "fleet entry %s is labelled %r, which no declared app family accepts (1_cicd/src/data/app-families.json)" % (entry["id"], entry["label"]))
 check(len(names) == len(set(names)), "two applications share a name: %s"
       % sorted({n for n in names if names.count(n) > 1}))
 

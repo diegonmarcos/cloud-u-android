@@ -3,7 +3,7 @@
   "_doc_units": "A unit is a top-level directory matching unit_dir_pattern, or one lib under shared_libs_dir (id libs:<dir>). scope=out excludes a vendored or web-wrapper tree from counting, and must say why in `reason`. `roots` (unit-relative, files or directories) narrows a fork to OUR additions; a root that stops existing fails the guard, because counting nothing looks exactly like having migrated everything. `screen_bases` adds a fork's upstream screen base classes, which sit outside its roots. wave = migration order (0 already Compose, 1 shared kit + SuperApp-hosted libs, 2 SuperApp, 3 small View apps, 4 apps that reuse SuperApp pages or are map-centric, 5 IME surfaces). size: S < 1 agent-day, M 1-3, L 3-7, XL > 7.",
   "_doc_metrics": "view_screens: classes extending a screen base (directly or through a class in the same unit) whose file still builds Views, or that set a content view and host no Compose. layout_xml: res/layout*/*.xml. view_ui_files: source files that build or inflate Views. custom_views: classes extending a View type (AbstractComposeView excluded). Tests, build output and declared upstream trees never count.",
   "_doc_rules": "view_builder_marker_ambiguous names widgets that are ALSO Compose functions (Button, Switch, Chip); they count only in a file with no @Composable in it. There is deliberately no list of Compose base classes: a screen counts only when its own file builds Views or sets a content view, so a KitComposeFragment subclass (whose file holds nothing but composables) never counts without being named anywhere.",
-  "unit_dir_pattern": "^a[abc]_[a-z0-9-]+$",
+  "unit_dir_pattern": "^a[abcd]_[A-Za-z0-9-]+$",
   "shared_libs_dir": "ab_cloud-libs-shared/libs",
   "rules": {
     "screen_bases": [

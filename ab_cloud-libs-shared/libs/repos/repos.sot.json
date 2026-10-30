@@ -1248,7 +1248,7 @@
       "renamed_from": [
         "cloud-u-android"
       ],
-      "doc": "Android client."
+      "doc": "Android client. #1335: the Lnktree app family (folders ad_*, not the Cloud family ac_cloud-*) is listed in `apps`."
     },
     {
       "name": "cloudy-t-infra",

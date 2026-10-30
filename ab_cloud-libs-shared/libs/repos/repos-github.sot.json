@@ -57,7 +57,29 @@
       "registry_name": "cloudy-u-android",
       "hub": "cloudy-___",
       "farm": "1.1.Cloudy",
-      "description": "Android Parallel Space / Virtual Engine — data-ownership workspace built on the cloud/ declarative framework"
+      "description": "Android Parallel Space / Virtual Engine — data-ownership workspace built on the cloud/ declarative framework",
+      "apps": [
+        {
+          "name": "CG-Omniverse",
+          "path": "ad_CG-Omniverse",
+          "description": "CG area app (Galaxy, Game Store, VR Store) behind the SuperApp's Cloud > Lnktree row."
+        },
+        {
+          "name": "Capital-FinTerm",
+          "path": "ad_Capital-FinTerm",
+          "description": "Capital area app: the FI | EQ | EX | NW | PM | MY-PM terminal tabs behind the SuperApp's Cloud > Lnktree row."
+        },
+        {
+          "name": "Hardtech-CAD",
+          "path": "ad_Hardtech-CAD",
+          "description": "HardTech area app (MCAD, BIM, SolidWorks) behind the SuperApp's Cloud > Lnktree row."
+        },
+        {
+          "name": "Hardtech-Sim2Real",
+          "path": "ad_Hardtech-Sim2Real",
+          "description": "HardTech area app (SAP2000, MATLAB, Ansys) behind the SuperApp's Cloud > Lnktree row."
+        }
+      ]
     },
     {
       "family": "C3",

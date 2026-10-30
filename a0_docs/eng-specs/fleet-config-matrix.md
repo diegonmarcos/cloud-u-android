@@ -52,7 +52,11 @@ DataStore / Room stores and declared files it cannot move yet.
 | cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 4 | 2 | 66% |
 | cloud-kg-store | `com.diegonmarcos.cloudkgstore` | 4 | 2 | 66% |
 | cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 10 | 2 | 83% |
-| **fleet** | | **311** | **54** | **85%** |
+| cg-omniverse | `com.diegonmarcos.cgomniverse` | 3 | 0 | 100% |
+| capital-finterm | `com.diegonmarcos.capitalfinterm` | 3 | 0 | 100% |
+| hardtech-cad | `com.diegonmarcos.hardtechcad` | 3 | 0 | 100% |
+| hardtech-sim2real | `com.diegonmarcos.hardtechsim2real` | 3 | 0 | 100% |
+| **fleet** | | **323** | **54** | **85%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -1179,4 +1183,68 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-c
 | `filesDir/ai-sessions.json` | config | AI tab chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 
 Coverage: 10 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
+
+## cg-omniverse — `com.diegonmarcos.cgomniverse`
+
+Module `ad_CG-Omniverse`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-FinTerm's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
+
+Coverage: 3 covered, 0 gaps.
+
+## capital-finterm — `com.diegonmarcos.capitalfinterm`
+
+Module `ad_Capital-FinTerm`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-FinTerm's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
+
+Coverage: 3 covered, 0 gaps.
+
+## hardtech-cad — `com.diegonmarcos.hardtechcad`
+
+Module `ad_Hardtech-CAD`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-FinTerm's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
+
+Coverage: 3 covered, 0 gaps.
+
+## hardtech-sim2real — `com.diegonmarcos.hardtechsim2real`
+
+Module `ad_Hardtech-Sim2Real`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools, lib-fleetconfig-model, lib-theme-background, lib-ui-icons, lib-ui-kit, lib-ui-nav-bars.
+
+| store | kind | class | migrates | doc |
+|---|---|---|---|---|
+| `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
+| `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
+| `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-FinTerm's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
+| `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
+| `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
+| `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
+
+Coverage: 3 covered, 0 gaps.
 

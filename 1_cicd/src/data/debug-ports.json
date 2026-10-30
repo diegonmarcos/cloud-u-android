@@ -114,6 +114,10 @@
     "com.diegonmarcos.cloudlib.gitsyncengine": 38234,
     "com.diegonmarcos.cloudlib.mountsengine": 38235,
     "com.diegonmarcos.cloudsuperintel": 38236,
-    "com.diegonmarcos.cloudkgstore": 38237
+    "com.diegonmarcos.cloudkgstore": 38237,
+    "com.diegonmarcos.cgomniverse": 38238,
+    "com.diegonmarcos.capitalfinterm": 38239,
+    "com.diegonmarcos.hardtechcad": 38240,
+    "com.diegonmarcos.hardtechsim2real": 38241
   }
 }

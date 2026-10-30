@@ -69,7 +69,8 @@ for s_ in d["ui"]["sections"]:
                     if e.get("site"): found[s_["id"]+"/"+e["title"]]="https://linktree-label"
                     elif e.get("registry"): found[s_["id"]+"/"+e["title"]]=d["ui"]["app_urls"]["registry_sites"][e["registry"]]
                     elif e.get("repo"): found[s_["id"]+"/"+e["title"]]=d["ui"]["app_urls"]["repo_base"]+e["repo"]
-assert found, "no live Lnktree entry left in the SuperApp to exercise the dispatcher"
+# #1335: the Lnktree tiles now launch the Lnktree family apps (extapp:), whose entries open their own links; no entry is left in the SuperApp,
+# so the loop below is vacuous until a page declares one again (the generic kind=entry renderer and LnktreeTargets stay).
 for i,t in found.items():
     assert " " not in t and "#Intent" not in t, (i,t)
 PY
