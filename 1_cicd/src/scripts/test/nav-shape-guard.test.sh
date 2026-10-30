@@ -29,6 +29,7 @@ fail() { printf 'FAIL   %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
 WORK="$(mktemp -d)"; trap 'rm -rf "$WORK"' EXIT
 T="$WORK/t"
 FIX=ac_cloud-fix
+NOTES_SHELL=ac_cloud-notes/packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/NotesShell.kt
 KT=$FIX/app/src/main/kotlin/Main.kt
 
 # ── (1) the real tree ───────────────────────────────────────────────────────
@@ -70,6 +71,7 @@ stage() {
     rm -rf "$T"; mkdir -p "$T/$FIX/app/src/main/res/layout" "$T/$FIX/app/src/main/kotlin" "$T/ac_cloud-old" "$T/1_cicd/src/data" "$T/$LIB"
     cp -r "$ROOT/$LIB/src" "$T/$LIB/src"
     mkdir -p "$T/$UIBARS"; cp -r "$ROOT/$UIBARS/src" "$ROOT/$UIBARS/build.gradle" "$T/$UIBARS/"
+    mkdir -p "$T/$(dirname "$NOTES_SHELL")"; cp "$ROOT/$NOTES_SHELL" "$T/$NOTES_SHELL"
     python3 - "$ROOT/$DATA" "$T/$DATA" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -330,5 +332,18 @@ mutate "the Clean bottom nav loses its size token"            "$TOKENS" "s=s.rep
 mutate "the shared Configs card is gone"                      "$CARD" "s=s.replace('fun NavUiConfigCard(','fun Gone(')" "no longer declares \`fun NavUiConfigCard(\`"
 mutate "the first row loses its Configs > UI entry"           "$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt" "s=s.replace('NavUiConfigDialog(','NavGone(')" "no longer carries \`NavUiConfigDialog(\`"
 mutate "an exempt-style pending entry without a reason"       "$DATA" "$(J "d['nav_ui']['pending']['ac_cloud-old']='tbd'")" "N13 ac_cloud-old: in"
+
+# N13 must_hold: every behaviour the tests above describe is still in the lib's source (a mutation of each is red)
+mapfile -t HOLDS < <(python3 - "$ROOT/$DATA" <<'PY'
+import json, sys
+for h in json.load(open(sys.argv[1]))["nav_ui"]["must_hold"]:
+    print(h["file"] + "\t" + repr(h["needle"]) + "\t" + h["needle"])
+PY
+)
+[ "${#HOLDS[@]}" -ge 10 ] || fail "nav_ui.must_hold lists only ${#HOLDS[@]} entries"
+for line in "${HOLDS[@]}"; do
+    IFS=$'\t' read -r hf hneedle hraw <<<"$line"
+    mutate "the source loses \`$hraw\`" "$hf" "s=s.replace($hneedle,'XXGONE')" "no longer carries \`$hraw\`"
+done
 
 [ "$FAILURES" -eq 0 ] && echo "nav-shape-guard.test: OK" || { echo "nav-shape-guard.test: $FAILURES FAILED"; exit 1; }

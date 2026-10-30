@@ -57,6 +57,78 @@
     },
     "card_call": "NavUiConfigCard(",
     "scaffold_call": "NavBarTopFirstRowScaffold(",
+    "must_hold": [
+        {
+            "file": "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavUi.kt",
+            "needle": "delta > 0f -> ChromeScrollState.Hidden",
+            "why": "scroll-hide: a downward scroll hides ALL bars"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavUi.kt",
+            "needle": "delta < 0f -> ChromeScrollState.Default",
+            "why": "scroll-hide: an upward scroll reveals them again"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavUi.kt",
+            "needle": "ChromeScrollPolicy.Hide -> state",
+            "why": "scroll-hide: lifting the finger does not bring the bars back"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/bottomnav/src/main/kotlin/com/diegonmarcos/superapp/bottomnav/NavChromeScroll.kt",
+            "needle": "own.policy = currentScrollPolicy()",
+            "why": "the shared scroll connection follows the settings' scroll policy"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt",
+            "needle": "own.policy = currentScrollPolicy()",
+            "why": "the bottom host's own connection follows the settings' scroll policy"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt",
+            "needle": "!NavUiDecl.plan(currentNavUi().mode).bottomLabels",
+            "why": "Clean's bottom nav is icons only"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbarbottom/NavBarBottom.kt",
+            "needle": "tokens.cleanBarHeight",
+            "why": "Clean's bottom nav has the smaller height"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+            "needle": "drawerOverride = if (plan.hamburger) cleanDrawerBody else null",
+            "why": "Clean's hamburger opens the drawer with the three rows"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+            "needle": ".background(navTopRowFill(), shape)",
+            "why": "the first row's title box has no grey fill in any mode"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+            "needle": ".background(navTopRowFill())",
+            "why": "Clean's first row is transparent"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRow.kt",
+            "needle": "NavUiDecl.plan(currentNavUi().mode).secondRow",
+            "why": "Clean removes the second row"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavBarTopSecondRows.kt",
+            "needle": "NavUiDecl.plan(currentNavUi().mode).secondRow",
+            "why": "Clean removes the two-rows second row"
+        },
+        {
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavSideMenu.kt",
+            "needle": "NavUiDecl.plan(currentNavUi().mode).secondRow",
+            "why": "Clean removes the side menu layout"
+        },
+        {
+            "file": "ac_cloud-notes/packages/frontend/apps/android/App/app/src/main/java/app/cloudnotes/pro/NotesShell.kt",
+            "needle": "LocalNavUiDefault provides NavUiDecl.fromBuildConfig(BuildConfig.UI_NAV_UI_B64)",
+            "why": "Cloud Notes' declared default (build.json ui.nav_ui) reaches the scaffold"
+        }
+    ],
     "app_defaults": {
       "_doc": "Apps whose declared default mode is not classic (build.json::ui.nav_ui.mode must equal it).",
       "ac_cloud-notes": "clean"

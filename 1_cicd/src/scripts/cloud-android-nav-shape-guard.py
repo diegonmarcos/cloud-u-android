@@ -666,6 +666,10 @@ def check_nav_ui(root, apps, uis, exempt, spec, bad):
     scaffold = os.path.join(root, nu["scaffold"]["file"])
     if not os.path.isfile(scaffold) or nu["scaffold"]["needle"] not in read(scaffold):
         bad.append(f"N13 {nu['scaffold']['file']} no longer carries `{nu['scaffold']['needle']}` — the first row's Configs > UI entry")
+    for hold in nu.get("must_hold") or []:
+        hf = os.path.join(root, hold["file"])
+        if not os.path.isfile(hf) or hold["needle"] not in blank_comments(read(hf)):
+            bad.append(f"N13 {hold['file']} no longer carries `{hold['needle']}` — {hold['why']}")
     pending = {k: v for k, v in (nu.get("pending") or {}).items() if not k.startswith("_")}
     defaults = {k: v for k, v in (nu.get("app_defaults") or {}).items() if not k.startswith("_")}
     for app in apps:
