@@ -180,11 +180,12 @@ class FolderOriginsTest {
         val real = clone(a, "real", "https://github.com/o/real.git")
         Files.createSymbolicLink(File(b, "real-link").toPath(), real.toPath())
         Files.createSymbolicLink(File(b, "alias").toPath(), a.toPath())
-        val sub = File(a, "sub").apply { mkdirs() }; File(sub, ".git").writeText("gitdir: ${File(real, ".git").absolutePath}\n")
+        val wtGit = File(real, ".git/worktrees/sub").apply { mkdirs(); File(this, "commondir").writeText("../..\n") }
+        val sub = File(a, "sub").apply { mkdirs() }; File(sub, ".git").writeText("gitdir: ${wtGit.absolutePath}\n")
         val inside = File(a, "inside").apply { mkdirs() }; File(inside, ".gitdata").mkdirs(); File(inside, ".git").writeText("gitdir: .gitdata\n")
         val found = LocalRepos.scan(listOf(a, b, File(base, "a/../a")), names)
         assertEquals(listOf("inside", "real"), found.map { it.dir.name }.sorted().filter { it != "alias" })
-        assertTrue("sub (gitdir elsewhere) is not read as its own", found.none { it.dir.name == "sub" })
+        assertTrue("a worktree (gitdir with commondir) is not read as its own", found.none { it.dir.name == "sub" })
         assertTrue("the symlink is not a second row", found.none { it.dir.name == "real-link" })
         base.deleteRecursively()
     }

@@ -99,14 +99,17 @@ object LocalRepos {
     /** #1317 a folder that is a symlink (a farm link into another clone) is not a clone of its own. */
     fun isSymlink(f: File): Boolean = runCatching { java.nio.file.Files.isSymbolicLink(f.toPath()) }.getOrDefault(false)
 
-    /** #1317 the folder's `.git` is its OWN: a directory, or a file whose gitdir sits inside the folder (a worktree or submodule points at another repo's config, so it is not read as this folder's). */
+    /**
+     * #1317 the folder's `.git` is its OWN: a directory, or a file whose gitdir holds its own config (a separated git dir).
+     * A worktree's gitdir has a `commondir` file: its config is ANOTHER repository's, so it is not read as this folder's.
+     */
     fun ownGit(dir: File): Boolean {
         val dot = File(dir, ".git")
         if (dot.isDirectory) return true
         if (!dot.isFile) return false
         val target = runCatching { dot.readText().lineSequence().firstOrNull { it.startsWith("gitdir:") } }.getOrNull()?.removePrefix("gitdir:")?.trim() ?: return false
         val f = File(target).let { if (it.isAbsolute) it else File(dir, target) }
-        return runCatching { f.canonicalPath.startsWith(dir.canonicalPath + File.separator) }.getOrDefault(false)
+        return f.isDirectory && !File(f, "commondir").exists()
     }
 
     /**

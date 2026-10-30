@@ -35,8 +35,8 @@ class RegistryNames(private val sot: Declarations.RepoSotDecl) {
 
     /** A folder called [folder] already carries the right name for a repository called [repoName] (the registry name or the GitHub name, either case). */
     fun carries(folder: String, repoName: String): Boolean {
-        if (folder.equals(repoName, true)) return true
-        val e = entryOf(repoName) ?: return false
+        // a retired name never counts as carrying, even when the folder is spelled the same: the folder must hold the CURRENT name
+        val e = entryOf(repoName) ?: return folder.equals(repoName, true)
         return folder.equals(e.name, true) || folder.equals(e.github, true)
     }
 
