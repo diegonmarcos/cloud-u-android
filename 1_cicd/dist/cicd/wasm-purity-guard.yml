@@ -22,8 +22,10 @@ on:
     paths:
       - "*/web/**"
       - "1_cicd/src/cicd/wasm-purity-guard.yml"
+      - "1_cicd/src/data/app-families.json"
       - "1_cicd/src/data/wasm-migration.json"
       - "1_cicd/src/scripts/cloud-android-wasm-purity-guard.py"
+      - "1_cicd/src/scripts/cloud_android_app_families.py"
       - "1_cicd/src/scripts/test/wasm-purity-guard.test.sh"
       - "ab_cloud-libs-shared/libs/*/build.gradle"
       - "ab_cloud-libs-shared/libs/*/src/commonMain/**"
