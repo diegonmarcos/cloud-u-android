@@ -173,8 +173,8 @@ private fun buildWebView(
     ctx: Context, handle: TexHandle, bg: Int, cfg: Latex.Config,
     onPick: (String) -> Unit, onStatus: (Boolean, String) -> Unit, onSize: (Int) -> Unit,
 ): android.view.View {
-    // A device (or a test host) without a WebView draws the source as text instead of crashing the page.
-    return runCatching { configured(ctx, handle, bg, cfg, onPick, onStatus, onSize) }.getOrElse { android.widget.TextView(ctx) }
+    // A device (or a test host) without a WebView draws nothing instead of crashing the page.
+    return runCatching { configured(ctx, handle, bg, cfg, onPick, onStatus, onSize) }.getOrElse { android.view.View(ctx) }
 }
 
 @SuppressLint("SetJavaScriptEnabled")

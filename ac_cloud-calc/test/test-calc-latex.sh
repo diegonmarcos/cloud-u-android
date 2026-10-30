@@ -212,7 +212,7 @@ PY
 L='data/assets/latex'
 mutate page-id-renamed build.json 's.replace("\"id\": \"latex\",\n            \"label\": \"LaTeX\"", "\"id\": \"latexx\",\n            \"label\": \"LaTeX\"")' "T1 the Calculator pages must read calc, latex, convert"
 mutate editor-mode-gone build.json 's.replace("\"kind\": \"latex_editor\"", "\"kind\": \"expression\"")' "T1 tab latex must hold"
-mutate page-icon-misspelt build.json 's.replace("\"icon\": \"functions\"\n          },\n          {\n            \"id\": \"convert\"", "\"icon\": \"funktions\"\n          },\n          {\n            \"id\": \"convert\"")' "T1 the latex page icon"
+mutate page-icon-misspelt build.json 's.replace("\"icon\": \"edit\"\n          },\n          {\n            \"id\": \"convert\"", "\"icon\": \"edt\"\n          },\n          {\n            \"id\": \"convert\"")' "T1 the latex page icon"
 mutate palette-emptied build.json 's.replace("\"palette\": [", "\"palettes\": [")' "T1 build.json::latex.palette"
 mutate dispatch-dropped "$J/ui/ModeScreens.kt" 's.replace("\"latex_editor\" -> LatexEditorMode(mode)", "")' "T2 ModeScreen does not dispatch kind latex_editor"
 mutate config-not-baked app/build.gradle 's.replace("def latexConfigB64 = b64(buildJson.latex)", "def latexConfigB64 = \"\"")' "T2 app/build.gradle does not bake"

@@ -2066,7 +2066,7 @@
           {
             "id": "latex",
             "label": "LaTeX",
-            "icon": "functions"
+            "icon": "edit"
           },
           {
             "id": "convert",
@@ -2633,7 +2633,7 @@
       {
         "id": "latex_library",
         "label": "Library",
-        "icon": "apps",
+        "icon": "functions",
         "short": "Library",
         "tab": "latex",
         "kind": "latex_library",
