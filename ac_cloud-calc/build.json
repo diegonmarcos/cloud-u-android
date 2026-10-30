@@ -4083,6 +4083,8 @@
     }
   },
   "web": {
+    "kind": "retired",
+    "_doc_retired": "#1320 retired: the web edition of this app is now the SvelteKit mimic in diegonmarcos/cloudy-h-webapps (https://diegonmarcos.github.io/cloud-webapps/cloud-calc/), so ship-cloud-calc-wasm.yml is no longer rendered (the workflow engine renders kind wasm only). The last Kotlin/Wasm zip stays on the rolling release until the /cloud-web/ cut-over.",
     "_doc": "#876 the calculator as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-calc-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-calc-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`, then diegonmarcos.github.io is told (repository_dispatch cloud-web-refresh). The page is a mocked shell: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, Calculator > Calc is a working keypad, every other page says it lives in the Android app (no libqalculate engine on the web). The APK's own ship ignores this directory.",
     "dir": "web",
     "host": "ubuntu-latest",
