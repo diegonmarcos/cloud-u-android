@@ -739,6 +739,30 @@
       "doc": "The SuperApp web replica folder (front/a-Portals/cloud-mobile) is now cloud-superapp, matching the APK folder aa_cloud-superapp. The deployed page URL https://diegonmarcos.github.io/cloud-mobile/ is a SITE path owned by #1062/#1072 and moves with that deploy split, not here."
     },
     {
+      "from": "front-diegonmarcos a_Portals/cloud",
+      "to": "cloudy-h-webapps-2 a_Portals/cloud",
+      "kind": "app-folder",
+      "since": "2026-10-30",
+      "ticket": "#1319",
+      "doc": "Portal folder moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-2; the Pages workflow overlays it at the same path. Published URL /cloud/ unchanged."
+    },
+    {
+      "from": "front-diegonmarcos a_Portals/cloud-superapp",
+      "to": "cloudy-h-webapps-2 a_Portals/cloud-superapp",
+      "kind": "app-folder",
+      "since": "2026-10-30",
+      "ticket": "#1319",
+      "doc": "Portal folder (formerly cloud-mobile, #1073) moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-2; the Pages workflow overlays it at the same path. Published URL /cloud-superapp/ (and /cloud-mobile/ redirect) unchanged."
+    },
+    {
+      "from": "front-diegonmarcos a_Portals/cloud-web",
+      "to": "cloudy-h-webapps-2 a_Portals/cloud-web",
+      "kind": "app-folder",
+      "since": "2026-10-30",
+      "ticket": "#1319",
+      "doc": "Portal folder moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-2; the Pages workflow overlays it at the same path. Published URL /cloud-web/ unchanged."
+    },
+    {
       "from": "ffront",
       "to": "front",
       "kind": "repo",
@@ -1340,7 +1364,7 @@
         "cloud-webapps-2",
         "cloud-h-webapps-2"
       ],
-      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204; and the portals a_Portals/{cloud,cloud-superapp,cloud-web}, #1319), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "cloud-me-___",
@@ -1929,6 +1953,13 @@
           "status": "split",
           "ticket": "#1072",
           "doc": "Split out 2026-10-24 from front-projects into front-endeavours; the Pages workflow overlays it."
+        },
+        {
+          "name": "a_Portals",
+          "path": "cloudy-h-webapps-2",
+          "status": "split",
+          "ticket": "#1319",
+          "doc": "Moved 2026-10-30 (cloud, cloud-superapp, cloud-web) into cloudy-h-webapps-2 with history; the Pages workflow overlays it. Linktree went earlier (#1217)."
         },
         {
           "name": "a_Individual",
