@@ -110,6 +110,11 @@ jobs:
           # the SuperApp's own idle Screensaver (a black overlay with an Unlock button, floatingnav/ScreensaverService) covered
           # every capture: no overlay permission for it, and stop it before each shot
           adb shell appops set "$PKG" SYSTEM_ALERT_WINDOW deny || true
+          # the emulator's Pixel Launcher ANRs under load and its dialog covered the shots: the SuperApp is the home app,
+          # the stock launcher is off, and system error/ANR dialogs are not shown
+          adb shell cmd package set-home-activity "$PKG/.HomeActivity" || true
+          adb shell pm disable-user --user 0 com.google.android.apps.nexuslauncher >/dev/null 2>&1 || true
+          adb shell settings put global hide_error_dialogs 1 || true
           adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0
           # an awake, unlocked screen for the whole run
           adb shell settings put system screen_off_timeout 2147483647; adb shell svc power stayon true
