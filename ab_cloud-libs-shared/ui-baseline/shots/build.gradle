@@ -1,0 +1,54 @@
+// The baseline renders: Robolectric (native graphics) + Roborazzi capture to build/outputs/roborazzi/*.png.
+// The SuperApp drawables the island and the strips draw are copied from aa_cloud-superapp at build time (no second copy in git).
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+def superappRes = file('../../../aa_cloud-superapp/app/src/main/res')
+def shotsRes = layout.buildDirectory.dir('generated/superapp-res')
+tasks.register('copySuperappDrawables', Copy) {
+    from(new File(superappRes, 'drawable')) { include 'ic_*.xml' }
+    into shotsRes.map { it.dir('drawable') }
+}
+android {
+    namespace 'com.diegonmarcos.uibaseline'
+    compileSdk 36
+    defaultConfig { minSdk 26 }
+    buildFeatures { compose = true }
+    sourceSets.test.res.srcDirs += shotsRes
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                systemProperty 'roborazzi.test.record', 'true'
+                systemProperty 'robolectric.graphicsMode', 'NATIVE'
+                systemProperty 'baseline.repo', file('../../..').absolutePath
+                testLogging { events 'failed', 'standardOut'; exceptionFormat 'full' }
+            }
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    kotlinOptions { jvmTarget = '17' }
+}
+preBuild.dependsOn 'copySuperappDrawables'
+tasks.matching { it.name.startsWith('generate') && it.name.endsWith('UnitTestResValues') || it.name.contains('UnitTestResources') }.configureEach { dependsOn 'copySuperappDrawables' }
+dependencies {
+    testImplementation project(':libs:bottomnav')
+    testImplementation project(':libs:ui-nav-bars')
+    testImplementation project(':libs:ui-kit')
+    testImplementation project(':libs:ui-icons')
+    testImplementation project(':libs:theme-background')
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
+    testImplementation 'androidx.compose.ui:ui'
+    testImplementation 'androidx.compose.foundation:foundation'
+    testImplementation 'androidx.compose.material3:material3'
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
+    testImplementation 'androidx.compose.ui:ui-test-manifest'
+    testImplementation 'androidx.activity:activity-compose:1.9.3'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation 'io.github.takahirom.roborazzi:roborazzi:1.43.0'
+    testImplementation 'io.github.takahirom.roborazzi:roborazzi-compose:1.43.0'
+    testImplementation 'io.github.takahirom.roborazzi:roborazzi-junit-rule:1.43.0'
+}

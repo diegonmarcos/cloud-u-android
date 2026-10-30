@@ -1,0 +1,171 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ UI screenshot baseline (#1320 M4) — the reference the web mimic       ║
+# ║ (diegonmarcos/cloudy-h-webapps) compares itself against. CI only.     ║
+# ║                                                                       ║
+# ║  roborazzi : ab_cloud-libs-shared/ui-baseline renders the SHARED libs ║
+# ║              (the SuperApp island + page tabs, KitSamples.All in both ║
+# ║              launcher palettes, the fleet chrome of cloud-calc /      ║
+# ║              cloud-tasks / cloud-c3 from their build.json) under      ║
+# ║              Robolectric at phone 412x915@420dpi and Pixel Tablet     ║
+# ║              1280x800 / 800x1280 @xhdpi.                              ║
+# ║  emulator  : the published Cloud-SuperApp-x86_64.apk (a Views         ║
+# ║              launcher Robolectric draws only roughly) on a Pixel 7    ║
+# ║              and a Pixel Tablet AVD; each section/page is opened with ║
+# ║              the launcher's own `shortcut_action` extra (the target   ║
+# ║              grammar onTileClicked takes) and `screencap`ped.         ║
+# ║  publish   : Cloud-UI-Baseline.zip (+ .sha256) on the rolling         ║
+# ║              `latest` release, same mechanism as Cloud-<App>.wasm.zip ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → UI screenshot baseline (Roborazzi + emulator)"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 3 * * 1'
+  push:
+    branches: [main]
+    paths:
+      - 'ab_cloud-libs-shared/ui-baseline/**'
+      - 'ab_cloud-libs-shared/libs/bottomnav/**'
+      - 'ab_cloud-libs-shared/libs/ui-kit/**'
+      - 'ab_cloud-libs-shared/libs/ui-nav-bars/**'
+      - 'ab_cloud-libs-shared/libs/ui-icons/**'
+      - 'ab_cloud-libs-shared/libs/theme-background/**'
+      - '.github/workflows/screenshot-baseline.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: screenshot-baseline
+  cancel-in-progress: false
+
+jobs:
+  roborazzi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            ab_cloud-libs-shared
+            aa_cloud-superapp/build.json
+            aa_cloud-superapp/app/src/main/res
+            ac_cloud-calc/build.json
+            ac_cloud-tasks/build.json
+            ac_cloud-c3/build.json
+            1_cicd/src/data
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: '8.11.1' }
+      - name: Render the baseline (Robolectric native graphics + Roborazzi)
+        working-directory: ab_cloud-libs-shared/ui-baseline
+        run: gradle --no-daemon :shots:testDebugUnitTest
+      - name: List
+        if: always()
+        run: find ab_cloud-libs-shared/ui-baseline/shots/build/outputs/roborazzi -name '*.png' | sort
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: baseline-roborazzi
+          path: ab_cloud-libs-shared/ui-baseline/shots/build/outputs/roborazzi
+          if-no-files-found: warn
+
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - device: phone
+            profile: pixel_7
+          - device: tablet
+            profile: pixel_tablet
+    steps:
+      - name: Fetch the published SuperApp (x86_64)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release download latest -R "$GITHUB_REPOSITORY" -p 'Cloud-SuperApp-x86_64.apk' -D apk
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Write the capture script
+        env:
+          DEVICE: ${{ matrix.device }}
+        run: |
+          cat > capture.sh <<EOF
+          DEVICE='$DEVICE'
+          EOF
+          cat >> capture.sh <<'EOF'
+          set -u
+          mkdir -p out
+          adb install -r -g apk/Cloud-SuperApp-x86_64.apk || exit 2
+          aapt2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          PKG=$("$aapt2" dump packagename apk/Cloud-SuperApp-x86_64.apk)
+          ACT=$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)
+          adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0
+          adb shell am start -W -n "$ACT" >/dev/null; sleep 8
+          shot() { # name orientation(0 portrait / 1 landscape) target
+            adb shell settings put system accelerometer_rotation 0; adb shell settings put system user_rotation "$2"; sleep 2
+            if [ -n "$3" ]; then adb shell am start -n "$ACT" --es shortcut_action "$3" >/dev/null; fi
+            sleep 5
+            adb exec-out screencap -p > "out/$1.png"
+            echo "captured $1 ($3)"
+          }
+          T="home=section:home notify=section:communication boards=section:boards cloud-apps=page:cloud/apps cloud-lnktree=page:cloud/lnktree cloud-configs=page:cloud/configs phone=section:phone mail=section:mail feed=section:feed cal=section:cal c3=section:c3 config=section:config vault=section:vault chat=section:chat"
+          if [ "$DEVICE" = tablet ]; then runs="tablet-port:0 tablet-land:1"; else runs="phone:0"; fi
+          for r in $runs; do
+            dir=${r%%:*}; mkdir -p "out/$dir"
+            for t in $T; do shot "$dir/launcher-${t%%=*}" "${r##*:}" "${t#*=}"; done
+          done
+          adb logcat -d > out/logcat-$DEVICE.txt || true
+          ls -R out
+          EOF
+          chmod +x capture.sh
+      - name: Boot ${{ matrix.profile }} and capture
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: ${{ matrix.profile }}
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: ./capture.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: baseline-emulator-${{ matrix.device }}
+          path: out
+          if-no-files-found: warn
+
+  publish:
+    needs: [roborazzi, emulator]
+    if: always() && needs.roborazzi.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # gh release upload
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: 'baseline-*', path: dl }
+      - name: Assemble Cloud-UI-Baseline.zip
+        run: |
+          set -eu
+          mkdir -p z
+          cp -r dl/baseline-roborazzi/. z/
+          for d in dl/baseline-emulator-*; do [ -d "$d" ] && cp -r "$d"/. z/ || true; done
+          find z -name '*.txt' -delete
+          n=$(find z -name '*.png' | wc -l)
+          echo "{\"generated\":\"$(date -u +%FT%TZ)\",\"source\":\"$GITHUB_REPOSITORY@$GITHUB_SHA\",\"run\":\"$GITHUB_RUN_ID\",\"pngs\":$n}" > z/manifest.json
+          find z -name '*.png' | sed 's|^z/||' | sort > z/files.txt
+          echo "PNGs: $n"; cat z/files.txt
+          (cd z && zip -qr ../Cloud-UI-Baseline.zip .)
+          sha256sum Cloud-UI-Baseline.zip | cut -d' ' -f1 > Cloud-UI-Baseline.zip.sha256
+      - name: Upload to the rolling release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload latest Cloud-UI-Baseline.zip Cloud-UI-Baseline.zip.sha256 --clobber -R "$GITHUB_REPOSITORY"
