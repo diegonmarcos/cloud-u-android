@@ -56,6 +56,10 @@ class GitPageLayoutTest {
     @Test fun `a tap toggles the menu through the pure rule and the menu has a close control`() {
         assertTrue(src.contains("expanded = RepoTable.toggle(expanded, e.key)"))
         assertTrue(src.contains("onClose = { expanded = \"\" }"))
+        // #1315 the detail is a bottom sheet: the row items carry no GitRepoOpsBox / GitRepoNotClonedBox, so a tap never changes the list's height.
+        val items = src.substring(src.indexOf("items(sortedEntries, key = { it.key })"), src.indexOf("Hairline()", src.indexOf("items(sortedEntries, key = { it.key })")))
+        assertFalse(items.contains("GitRepoOpsBox(") || items.contains("GitRepoNotClonedBox("))
+        assertTrue(src.contains("DriveTags.SYNC_GIT_DETAIL_SHEET"))
     }
 
     private val dir = File(root, "app/src/main/java/com/diegonmarcos/clouddrive/sync")

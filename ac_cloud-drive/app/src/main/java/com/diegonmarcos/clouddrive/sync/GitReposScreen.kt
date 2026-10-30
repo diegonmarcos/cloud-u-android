@@ -879,25 +879,6 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 e.note, Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
                 style = MaterialTheme.typography.labelSmall, color = colorResource(R.color.status_light_off),
             )
-            if (expanded == e.key && cloned == null) {
-                GitRepoNotClonedBox(
-                    page = page, repoName = e.name, owner = e.owner, row = e.row, isPrivate = e.isPrivate,
-                    remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)], cloneUrl = e.cloneUrl,
-                    cloning = e.name in cloning, coordinator = coordinator, actions = actions,
-                    onClone = e.onClone, onClose = { expanded = "" },
-                )
-            }
-            if (expanded == e.key && cloned != null) {
-                GitRepoOpsBox(
-                    repo = cloned, page = page, details = details[cloned.id], result = opResults[cloned.id],
-                    running = running[cloned.id], glance = GitSyncCoordinator.glanceFor(cloned, glances), fmt = fmt,
-                    coordinator = coordinator, actions = actions,
-                    repoName = e.name, owner = e.owner, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
-                    cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = cloned }, onClose = { expanded = "" },
-                    row = e.row, isPrivate = e.isPrivate, nextRunMinutes = nextRunMinutes,
-                    repoint = { from, to -> prefs?.let { p -> LocalRepoRefs.repoint(ctx.applicationContext, p, from, to).let { r -> ctx.getString(R.string.parentless_refs, r.repos, r.jobs, r.bookmarks) } }.orEmpty() },
-                )
-            }
             Hairline()
         }
     }
@@ -1084,6 +1065,32 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             cloneUrl = e.cloneUrl.ifBlank { page.cloneUrl(e.name, Declarations.REMOTE_HTTPS) }, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
             cloning = e.name in cloning, fmt = fmt, onClone = e.onClone, depthOutcome = depthRun?.outcomeOf(e.name), onCheckWorktree = { e.cloned?.let { coordinator.checkWorktree(it) } }, onClose = { statusFor = "" },
         )
+    }
+    // #1315 THE DETAIL IS A SHEET: a tap on a row opens its actions over the table (the list never changes height); a second tap or a swipe closes it.
+    sortedEntries.firstOrNull { it.key == expanded }?.let { e ->
+        ModalBottomSheet(onDismissRequest = { expanded = "" }, modifier = Modifier.testTag(DriveTags.SYNC_GIT_DETAIL_SHEET)) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = DriveMetrics.padWide)) {
+            if (e.cloned == null) {
+                GitRepoNotClonedBox(
+                    page = page, repoName = e.name, owner = e.owner, row = e.row, isPrivate = e.isPrivate,
+                    remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)], cloneUrl = e.cloneUrl,
+                    cloning = e.name in cloning, coordinator = coordinator, actions = actions,
+                    onClone = e.onClone, onClose = { expanded = "" },
+                )
+            }
+            if (e.cloned != null) {
+                GitRepoOpsBox(
+                    repo = e.cloned, page = page, details = details[e.cloned.id], result = opResults[e.cloned.id],
+                    running = running[e.cloned.id], glance = GitSyncCoordinator.glanceFor(e.cloned, glances), fmt = fmt,
+                    coordinator = coordinator, actions = actions,
+                    repoName = e.name, owner = e.owner, remote = remoteStats[RepoRemoteStats.keyOf(e.owner, e.name)],
+                    cloneDepth = cloneDepth, cloneSsh = cloneSsh, onSettings = { settingsFor = e.cloned }, onClose = { expanded = "" },
+                    row = e.row, isPrivate = e.isPrivate, nextRunMinutes = nextRunMinutes,
+                    repoint = { from, to -> prefs?.let { p -> LocalRepoRefs.repoint(ctx.applicationContext, p, from, to).let { r -> ctx.getString(R.string.parentless_refs, r.repos, r.jobs, r.bookmarks) } }.orEmpty() },
+                )
+            }
+            }
+        }
     }
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
     // #1258 ACTIVITY LOGS: the one sync / operation history, opened from the top button, full screen.

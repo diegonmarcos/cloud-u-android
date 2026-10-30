@@ -189,6 +189,8 @@ object DriveTags {
     const val SYNC_GIT_FILTERS_BUTTON = "sync_git_filters_button"
     const val SYNC_GIT_QUICK_FILTERS = "sync_git_quick_filters"
     const val SYNC_GIT_FILTER_SHEET = "sync_git_filter_sheet"
+    /** #1315 the repository detail (the row's menu) as a bottom sheet over the table. */
+    const val SYNC_GIT_DETAIL_SHEET = "sync_git_detail_sheet"
     const val SYNC_GIT_ACTIVITY_BUTTON = "sync_git_activity_button"
     const val SYNC_GIT_ACTIVITY_WINDOW = "sync_git_activity_window"
     const val SYNC_GIT_UNPUSHED = "sync_git_unpushed"

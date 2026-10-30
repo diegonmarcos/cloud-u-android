@@ -151,6 +151,6 @@ class RepoSchedulerTest {
         File(d, ".git/HEAD").writeText("0123456789abcdef0123456789abcdef01234567\n")
         assertEquals("detached", RepoCheap.Head(null, null), RepoCheap.head(d))
         assertNull(RepoCheap.upstreamOf("", "main"))
-        assertTrue(RepoCheap.isClone(d)); assertFalse(RepoCheap.isClone(File(tmp, "nope")))
+        assertTrue(File(d, ".git").exists()); assertFalse(RepoCheap.isClone(File(tmp, "nope")))
     }
 }

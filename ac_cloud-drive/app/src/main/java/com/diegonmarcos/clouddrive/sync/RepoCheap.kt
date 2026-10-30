@@ -11,8 +11,6 @@ import java.io.File
 object RepoCheap {
     data class Head(val branch: String?, val upstream: String?)
 
-    fun isClone(dir: File): Boolean = File(dir, ".git").exists()
-
     /** HEAD's branch (null = detached / unreadable) and the configured upstream `<remote>/<branch>` (null = none). */
     fun head(dir: File): Head {
         val gitDir = File(dir, ".git").takeIf { it.isDirectory } ?: return Head(null, null)

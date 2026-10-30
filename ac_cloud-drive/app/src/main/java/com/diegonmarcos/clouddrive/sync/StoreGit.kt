@@ -50,9 +50,6 @@ object StoreGit {
         return GitOpResult(r.ok, if (r.ok) "synced (in cld.termux)" else "sync in cld.termux failed (exit ${r.exit})", (r.out + "\n" + r.err).trim().takeLast(4000))
     }
 
-    /** #1282 the guest path of a store folder (the bare root), for scripts that build paths under it. */
-    fun guestOf(ctx: Context, dir: File): String = guest(ctx, dir)
-
     /** #1282 a bare mirror at [guestDir] (BareClones.path in guest form); [depth] 0 = full history. Never touches a working clone. */
     fun bareClone(ctx: Context, url: String, guestDir: String, token: String, depth: Int): GitOpResult {
         val r = shell(ctx).job("set -e; mkdir -p \"\$(dirname ${q(guestDir)})\"; " + authed(BareClones.cloneArgs(url, guestDir, depth) { q(it) }), stdin = token)

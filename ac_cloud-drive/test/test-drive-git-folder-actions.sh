@@ -69,7 +69,8 @@ for fn in ("moveScript", "deleteScript"):
 if "] || exit 17;" not in r: print("    the move does not refuse an existing destination"); sys.exit(1)
 PY
 }
-c1() { grep -qF 'FolderActions.renamePlan(' "$1" && grep -qF 'renameTarget(want, taken)' "$3" && grep -qF 'FolderActions.renameTarget(' "$2" && grep -qF 'if (gf == null && to.exists()) return GitOpResult(false' "$1" || { echo "    rename does not name through renamePlan/renameTarget / refuse an existing destination"; return 1; }; }
+# #1315 the only rename is the coordinator's (through FolderActions.renamePlan -> renameTarget); LocalRepos carries no java.io rename.
+c1() { grep -qF 'FolderActions.renamePlan(' "$1" && grep -qF 'renameTarget(want, taken)' "$3" && ! grep -qF 'fun rename(' "$2" && grep -qF 'if (gf == null && to.exists()) return GitOpResult(false' "$1" || { echo "    rename does not name through renamePlan/renameTarget / refuse an existing destination"; return 1; }; }
 # #1317 E1: java.io is asked about a folder only through goneByIo (never when the store is reached through cld.termux); the conflict probe is the termux one.
 e1() { python3 - "$1" <<'PY'
 import re, sys
