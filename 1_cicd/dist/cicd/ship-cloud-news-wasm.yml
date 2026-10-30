@@ -97,6 +97,21 @@ jobs:
           YARN_IGNORE_PATH: "1"
         run: cd "$WORK_DIR" && ./gradlew wasmJsBrowserDistribution --no-daemon --console=plain
 
+      # The app's testers run in full here (test-engine shell), and one of them can
+      # drive headless Chromium (cloud-code's page-bleed tester, #1193). That tester
+      # FAILS when the browser is missing, it never skips, so a page whose test
+      # directory names Playwright gets the same pinned install its APK workflow has.
+      - name: Install Playwright Chromium (only when a tester of this app drives it)
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+          grep -rqi playwright "$APP_DIR/test" 2>/dev/null || { echo "no tester of $APP_DIR uses Playwright"; exit 0; }
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw"
+          npm init -y >/dev/null
+          npm install playwright@1.48.2
+          npx playwright install --with-deps chromium
+          echo "PLAYWRIGHT_PATH=$RUNNER_TEMP/pw/node_modules/playwright" >> "$GITHUB_ENV"
+
       # The web tester asserts the dist, so it runs AFTER the build and is told
       # to treat an absent dist as a failure (locally it skips, with a reason).
       - name: "Test → the page's dist (contents, size budget, no android in the glue)"
