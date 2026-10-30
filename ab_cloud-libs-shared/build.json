@@ -3139,7 +3139,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-29",
+        "pricing_as_of": "2026-10-30",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -3166,7 +3166,7 @@
             "open": true,
             "params_b": 26,
             "quant": ["bf16", "fp4", "fp8"],
-            "trained_for": ["academia", "marketing", "roleplay", "translation"],
+            "trained_for": ["marketing", "roleplay", "translation"],
             "prompt": 0.09, "completion": 0.3,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
@@ -3186,7 +3186,7 @@
             "open": true,
             "params_b": 31,
             "quant": ["bf16", "fp4", "fp8"],
-            "trained_for": ["marketing", "roleplay", "translation", "trivia"],
+            "trained_for": ["marketing", "roleplay", "translation"],
             "prompt": 0.2, "completion": 0.4,
             "note": "Translation-ranked, served at four precisions; more headroom than the 26B."
           },
@@ -3214,7 +3214,7 @@
             "open": true,
             "quant": ["fp4", "fp8"],
             "trained_for": ["roleplay"],
-            "prompt": 0.28, "completion": 0.42,
+            "prompt": 0.26, "completion": 0.38,
             "note": "Translation and roleplay ranked; mid-price open weights."
           },
           {
@@ -3241,7 +3241,7 @@
             "open": true,
             "quant": ["fp4", "fp8", "nvfp4"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.0457, "completion": 0.0742,
+            "prompt": 0.15, "completion": 0.5,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {

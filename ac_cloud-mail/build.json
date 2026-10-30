@@ -370,7 +370,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-10-29",
+        "pricing_as_of": "2026-10-30",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -410,7 +410,6 @@
               "fp8"
             ],
             "trained_for": [
-              "academia",
               "marketing",
               "roleplay",
               "translation"
@@ -446,8 +445,7 @@
             "trained_for": [
               "marketing",
               "roleplay",
-              "translation",
-              "trivia"
+              "translation"
             ],
             "prompt": 0.2,
             "completion": 0.4,
@@ -490,8 +488,8 @@
             "trained_for": [
               "roleplay"
             ],
-            "prompt": 0.28,
-            "completion": 0.42,
+            "prompt": 0.26,
+            "completion": 0.38,
             "note": "Translation and roleplay ranked; mid-price open weights."
           },
           {
@@ -566,8 +564,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.0457,
-            "completion": 0.0742,
+            "prompt": 0.15,
+            "completion": 0.5,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {
