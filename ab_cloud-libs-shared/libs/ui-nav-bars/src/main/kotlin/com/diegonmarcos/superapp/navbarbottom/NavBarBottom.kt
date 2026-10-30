@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
+import com.diegonmarcos.superapp.bottomnav.ChromeScrollPolicy
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.LocalNavBottomClearance
 import com.diegonmarcos.superapp.bottomnav.LocalNavTokens
@@ -230,7 +231,9 @@ public fun NavBarBottomHost(
     val density = androidx.compose.ui.platform.LocalDensity.current
     var expandedPx by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val ime = navHiddenByIme()
-    val slot = if (ime) 0.dp else with(density) { expandedPx.toDp() }
+    // scroll-hide (the Hide policy): a hidden bar gives its room back, the page reads over it; every other policy keeps the slot (#1257)
+    val slotGivenBack = collapse.policy == ChromeScrollPolicy.Hide && collapse.hidden
+    val slot = if (ime || slotGivenBack) 0.dp else with(density) { expandedPx.toDp() }
     androidx.compose.runtime.CompositionLocalProvider(LocalNavChromeCollapse provides collapse, LocalNavBottomClearance provides slot) {
     Column(modifier.fillMaxSize().themeBackground(dark)) {
         // The bar clears the bottom system bar itself, so the content must not clear it a second time (consumed for the content ONLY).

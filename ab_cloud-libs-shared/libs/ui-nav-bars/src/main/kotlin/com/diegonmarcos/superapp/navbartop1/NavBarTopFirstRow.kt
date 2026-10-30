@@ -21,7 +21,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Surface
@@ -436,7 +435,7 @@ public fun NavBarTopFirstRowScaffold(
             barVisible = barVisible && !collapse.collapsed,
             topRow = { c ->
                 val slot = c.drawerContent
-                if (plan.hamburger) NavBarTopCleanRow(ThemeBackground.colors(dark), labels, onMenu = c::openDrawer) else NavBarTopFirstRow(
+                if (plan.hamburger) NavBarTopCleanRow(ThemeBackground.colors(dark), labels, c) else NavBarTopFirstRow(
                     title, ThemeBackground.colors(dark), labels, followed, navigate,
                     onAi = { if (onAi != null) onAi() else c.toggleAi() },
                     onProfile = onAccount, onConfigs = onConfigs, avatar = avatar, onTitleClick = onTitleClick,
@@ -448,20 +447,6 @@ public fun NavBarTopFirstRowScaffold(
             content = { CompositionLocalProvider(LocalSubPageRequests provides requests, LocalBreadcrumbLeaf provides leafState, content = content) },
         )
     }
-    }
-}
-
-/**
- * Clean mode's first row: TRANSPARENT (the app's background shows through, [navTopRowFill]) and nothing but the top-left hamburger, which
- * opens the left drawer that holds the page dropdown, the AI / Profile / Settings icons and the child-page dropdown ([CleanDrawerContent]).
- */
-@Composable
-public fun NavBarTopCleanRow(colors: ThemeColors, labels: AppTopBarLabels, onMenu: () -> Unit, modifier: Modifier = Modifier) {
-    Row(
-        modifier.semantics { testTagsAsResourceId = true }.fillMaxWidth().height(TopFirstRowSpec.HEIGHT).background(navTopRowFill()).testTag(TopFirstRowTags.ROW),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        PlainIcon(Icons.Filled.Menu, labels.menu, CleanDrawerTags.MENU, colors, onMenu)
     }
 }
 

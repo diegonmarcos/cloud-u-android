@@ -104,7 +104,8 @@ class NavBarBottomTest {
     }
 
     @Test fun `the host ends the page where the bar begins and scrolling collapses the bar to icons`() {
-        compose.setContent {
+        // the older shrink machine is what this test describes; scroll-hide (the default policy) hides the bar outright
+        compose.setContent { androidx.compose.runtime.CompositionLocalProvider(com.diegonmarcos.superapp.bottomnav.LocalChromeScrollPolicy provides com.diegonmarcos.superapp.bottomnav.ChromeScrollPolicy.Shrink) {
             val entries = listOf(
                 BottomNavEntry("home", "Home", rememberVectorPainter(Icons.Filled.Home)),
                 BottomNavEntry("mail", "Mail", rememberVectorPainter(Icons.Filled.Mail)),
@@ -112,7 +113,7 @@ class NavBarBottomTest {
             NavBarBottomHost(entries, "home", {}) {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).testTag("page")) { Spacer(Modifier.height(6000.dp)) }
             }
-        }
+        } }
         compose.waitForIdle()
         val content = compose.onNodeWithTag(NAV_BAR_BOTTOM_CONTENT_TAG).fetchSemanticsNode().boundsInRoot
         val bar = compose.onNodeWithTag(BottomTags.BAR).fetchSemanticsNode().boundsInRoot
@@ -132,7 +133,8 @@ class NavBarBottomTest {
     }
 
     @Test fun `the page keeps its size while the bar collapses and hides, so its last row stays reachable (#1257)`() {
-        compose.setContent {
+        // the older shrink machine is what this test describes; scroll-hide (the default policy) hides the bar outright
+        compose.setContent { androidx.compose.runtime.CompositionLocalProvider(com.diegonmarcos.superapp.bottomnav.LocalChromeScrollPolicy provides com.diegonmarcos.superapp.bottomnav.ChromeScrollPolicy.Shrink) {
             val entries = listOf(
                 BottomNavEntry("home", "Home", rememberVectorPainter(Icons.Filled.Home)),
                 BottomNavEntry("mail", "Mail", rememberVectorPainter(Icons.Filled.Mail)),
@@ -140,7 +142,7 @@ class NavBarBottomTest {
             NavBarBottomHost(entries, "home", {}) {
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).testTag("page")) { Spacer(Modifier.height(6000.dp)) }
             }
-        }
+        } }
         compose.waitForIdle()
         val expanded = compose.onNodeWithTag(NAV_BAR_BOTTOM_CONTENT_TAG).fetchSemanticsNode().boundsInRoot
         val slot = compose.onNodeWithTag(NAV_BAR_BOTTOM_SLOT_TAG).fetchSemanticsNode().boundsInRoot

@@ -104,7 +104,7 @@
             "why": "the first row's title box has no grey fill in any mode"
         },
         {
-            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+            "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopCleanRow.kt",
             "needle": ".background(navTopRowFill())",
             "why": "Clean's first row is transparent"
         },

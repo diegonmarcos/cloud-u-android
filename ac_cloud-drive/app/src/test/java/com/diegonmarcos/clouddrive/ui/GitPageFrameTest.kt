@@ -58,7 +58,7 @@ class GitPageFrameTest {
     private val rows = (1..120).map { "repo-$it" }
 
     private fun open(rowCount: Int) {
-        compose.setContent {
+        compose.setContent { androidx.compose.runtime.CompositionLocalProvider(com.diegonmarcos.superapp.bottomnav.LocalChromeScrollPolicy provides com.diegonmarcos.superapp.bottomnav.ChromeScrollPolicy.Shrink) {
             DriveTheme {
                 DriveShell(select = "git") { _, _ ->
                     GitPageFrame(refreshing = false, onRefresh = {}) {
@@ -67,7 +67,7 @@ class GitPageFrameTest {
                     }
                 }
             }
-        }
+        } }
         compose.waitForIdle()
     }
 

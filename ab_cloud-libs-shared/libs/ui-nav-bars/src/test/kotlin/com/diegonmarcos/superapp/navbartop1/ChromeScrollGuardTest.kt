@@ -44,9 +44,12 @@ class ChromeScrollGuardTest {
         var dir: File? = File("").absoluteFile
         while (dir != null && !File(dir, "ab_cloud-libs-shared/libs/ui-nav-bars/src/main").isDirectory) dir = dir.parentFile
         val row = File(dir ?: throw AssertionError("first-row lib not found"), "ab_cloud-libs-shared/libs/ui-nav-bars/src/main").walkTopDown()
-            .filter { it.isFile && it.extension == "kt" }.joinToString("\n") { it.readText() }
+            // Clean mode (NavUiMode) brings the hamburger back ON PURPOSE, in ONE file: NavBarTopCleanRow.kt. Everywhere else the first row has none.
+            .filter { it.isFile && it.extension == "kt" && it.name != "NavBarTopCleanRow.kt" }.joinToString("\n") { it.readText() }
         assertTrue("the first row draws a Menu icon again", !Regex("""Icons\.\w+\.Menu\b""").containsMatchIn(row))
         assertTrue("the first row takes an onMenu again", "onMenu" !in row)
+        val clean = File(dir, "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopCleanRow.kt")
+        assertTrue("Clean mode's hamburger lives in NavBarTopCleanRow.kt", clean.isFile && Regex("""Icons\.\w+\.Menu\b""").containsMatchIn(clean.readText()))
     }
 
     @Test fun `no app hides the first row from its own state`() {
