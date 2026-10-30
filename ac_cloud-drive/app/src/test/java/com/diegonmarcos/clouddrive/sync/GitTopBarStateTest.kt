@@ -22,7 +22,7 @@ class GitTopBarStateTest {
     private val bar get() = page.topBar
     private val labels: (String) -> String = { bar.label(it) }
 
-    @Test fun `the bar is declared: groups, known kinds, the audit's verbs, depth actions that exist`() {
+    @Test fun `the bar is declared with groups, known kinds, the audit verbs and depth actions that exist`() {
         assertEquals(listOf("check", "sync", "clone", "more"), bar.groups.map { it.id })
         val items = bar.groups.flatMap { it.items }
         assertTrue(items.isNotEmpty() && items.all { it.kind in Declarations.TOP_KINDS })
