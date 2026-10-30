@@ -187,19 +187,19 @@
        "repos": [
         {
          "code": "1.1.4.1",
-         "name": "cloudy-h-webapps",
-         "registry_name": "cloudy-h-webapps",
-         "url": "https://github.com/diegonmarcos/cloudy-h-webapps",
+         "name": "cloudy-h-webapps-mob",
+         "registry_name": "cloudy-h-webapps-mob",
+         "url": "https://github.com/diegonmarcos/cloudy-h-webapps-mob",
          "private": false,
          "description": "Cloud web apps: the SuperApp + fleet mimic (/cloud-webapps/) and the C3 console (/cloudy-c3/), one SvelteKit workspace"
         },
         {
          "code": "1.1.4.2",
-         "name": "cloudy-h-webapps-2",
-         "registry_name": "cloudy-h-webapps-2",
-         "url": "https://github.com/diegonmarcos/cloudy-h-webapps-2",
+         "name": "cloudy-h-webapps-desk",
+         "registry_name": "cloudy-h-webapps-desk",
+         "url": "https://github.com/diegonmarcos/cloudy-h-webapps-desk",
          "private": false,
-         "description": "Front group c_Suite (split from front-projects, #1072)"
+         "description": "Cloud web apps, desktop: the cloudy-webdesktop site at /cloud-desktop/, plus the c_Suite sources (split from front-projects, #1072)"
         }
        ]
       }

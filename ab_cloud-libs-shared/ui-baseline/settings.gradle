@@ -1,6 +1,6 @@
 // #1320 M4: the fleet's UI screenshot baseline, a standalone Gradle build over the SHARED libs (by reference, as every app
 // pulls them) plus one test module that renders them under Robolectric + Roborazzi. CI only (screenshot-baseline.yml);
-// it ships nothing and no app depends on it. The web mimic (cloudy-h-webapps) compares its own screenshots against these.
+// it ships nothing and no app depends on it. The web mimic (cloudy-h-webapps-mob) compares its own screenshots against these.
 pluginManagement {
     repositories {
         google()

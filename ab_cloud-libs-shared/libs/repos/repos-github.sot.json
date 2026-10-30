@@ -239,8 +239,8 @@
     },
     {
       "family": "WebApps",
-      "name": "cloudy-h-webapps",
-      "url": "https://github.com/diegonmarcos/cloudy-h-webapps",
+      "name": "cloudy-h-webapps-mob",
+      "url": "https://github.com/diegonmarcos/cloudy-h-webapps-mob",
       "role": "",
       "visibility": "public",
       "project": "Cloudy",
@@ -250,15 +250,15 @@
       "area_code": "1",
       "project_code": "1.1",
       "family_code": "1.1.4",
-      "registry_name": "cloudy-h-webapps",
+      "registry_name": "cloudy-h-webapps-mob",
       "hub": "cloudy-___",
       "farm": "1.1.Cloudy",
       "description": "Cloud web apps: the SuperApp + fleet mimic (/cloud-webapps/) and the C3 console (/cloudy-c3/), one SvelteKit workspace"
     },
     {
       "family": "WebApps",
-      "name": "cloudy-h-webapps-2",
-      "url": "https://github.com/diegonmarcos/cloudy-h-webapps-2",
+      "name": "cloudy-h-webapps-desk",
+      "url": "https://github.com/diegonmarcos/cloudy-h-webapps-desk",
       "role": "",
       "visibility": "public",
       "project": "Cloudy",
@@ -268,10 +268,10 @@
       "area_code": "1",
       "project_code": "1.1",
       "family_code": "1.1.4",
-      "registry_name": "cloudy-h-webapps-2",
+      "registry_name": "cloudy-h-webapps-desk",
       "hub": "cloudy-___",
       "farm": "1.1.Cloudy",
-      "description": "Front group c_Suite (split from front-projects, #1072)"
+      "description": "Cloud web apps, desktop: the cloudy-webdesktop site at /cloud-desktop/, plus the c_Suite sources (split from front-projects, #1072)"
     },
     {
       "family": "Hub",
@@ -1463,6 +1463,7 @@
           "name": "Cloudy",
           "label": "Cloudy",
           "icon": "☁️",
+          "landing": "https://diegonmarcos.github.io/cloud-webapps/",
           "developer": "Leaf.y",
           "description": "The cloudy project: fleet infrastructure, services, devices, data and docs.",
           "hub": "cloudy-___",
@@ -1474,6 +1475,7 @@
               "kind": "family",
               "name": "Android",
               "label": "Android",
+              "webapp": "https://diegonmarcos.github.io/cloud-webapps/",
               "developer": "Leaf.y",
               "description": "",
               "hub": null,
@@ -1488,6 +1490,7 @@
               "kind": "family",
               "name": "C3",
               "label": "C3",
+              "webapp": "https://diegonmarcos.github.io/cloudy-c3/",
               "developer": "Leaf.y",
               "description": "Fleet infra, data and docs.",
               "hub": null,
@@ -1583,8 +1586,8 @@
               "farm": "1.1.Cloudy",
               "repos_count": 2,
               "repos": [
-                "cloudy-h-webapps",
-                "cloudy-h-webapps-2"
+                "cloudy-h-webapps-mob",
+                "cloudy-h-webapps-desk"
               ]
             }
           ]
@@ -1595,6 +1598,7 @@
           "name": "Cloud-Me",
           "label": "Cloud-Me",
           "icon": "🙋",
+          "landing": "https://diegonmarcos.com/",
           "developer": "Leaf.y",
           "description": "The owner's personal cloud: public profiles and shared data, private configs, data and secrets.",
           "hub": "cloud-me-___",
@@ -1780,6 +1784,7 @@
               "kind": "family",
               "name": "Threlte",
               "label": "Threlte",
+              "webapp": "https://diegonmarcos.github.io/galaxy/",
               "developer": "Leaf.y",
               "description": "",
               "hub": null,
@@ -1961,6 +1966,7 @@
               "kind": "family",
               "name": "MQPM",
               "label": "MQPM",
+              "webapp": "https://diegonmarcos.github.io/central_bank/",
               "developer": "Nexus.z",
               "description": "",
               "hub": null,
@@ -2017,6 +2023,7 @@
               "kind": "family",
               "name": "Terminal",
               "label": "Terminal",
+              "webapp": "https://diegonmarcos.github.io/fin-terminal/",
               "developer": "Nexus.z",
               "description": "",
               "hub": null,
@@ -2076,6 +2083,7 @@
               "kind": "family",
               "name": "Sailytics",
               "label": "Sailytics",
+              "webapp": "https://diegonmarcos.github.io/sailytics/",
               "developer": "Stark.x",
               "description": "",
               "hub": null,

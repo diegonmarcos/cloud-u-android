@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# #1320 the web mimic's tokens (cloudy-h-webapps scripts/gen-tokens.mjs) are GENERATED from these Android sources. This
+# #1320 the web mimic's tokens (cloudy-h-webapps-mob scripts/gen-tokens.mjs) are GENERATED from these Android sources. This
 # tester fails HERE when a field the generator reads is renamed or moved, so the Android change is the one that goes red
 # (the web side's --check only sees it a day later). One line per source the generator cites.
 #   T1 launcher theme palettes: every role of every ui.launcher_themes[] resolves to a colors.xml colour or a drawable

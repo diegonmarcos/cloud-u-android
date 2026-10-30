@@ -45,7 +45,7 @@ import org.robolectric.shadows.ShadowLog
 import java.io.File
 
 /**
- * #1320 M4: the reference screenshots of the web mimic (cloudy-h-webapps), rendered from the SAME shared libs and the SAME
+ * #1320 M4: the reference screenshots of the web mimic (cloudy-h-webapps-mob), rendered from the SAME shared libs and the SAME
  * build.json declarations the apps draw, at the web's Playwright sizes: phone 412x915 @2.625 (Pixel 7) and the Pixel Tablet
  * 1280x800 / 800x1280 @2. Files: build/outputs/roborazzi/<device>/<name>.png, zipped by screenshot-baseline.yml as
  * Cloud-UI-Baseline.zip on the rolling release. No assertion: the web repo's compare-baseline.mjs is the judge.

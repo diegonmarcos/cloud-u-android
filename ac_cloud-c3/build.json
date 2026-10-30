@@ -1136,7 +1136,7 @@
   },
   "web": {
     "kind": "retired",
-    "_doc_retired": "#1320 retired: the web edition of this app is now the SvelteKit mimic in diegonmarcos/cloudy-h-webapps (https://diegonmarcos.github.io/cloud-webapps/cloud-c3/), so ship-cloud-c3-wasm.yml is no longer rendered (the workflow engine renders kind wasm only). The last Kotlin/Wasm zip stays on the rolling release until the /cloud-web/ cut-over.",
+    "_doc_retired": "#1320 retired: the web edition of this app is now the SvelteKit mimic in diegonmarcos/cloudy-h-webapps-mob (https://diegonmarcos.github.io/cloud-webapps/cloud-c3/), so ship-cloud-c3-wasm.yml is no longer rendered (the workflow engine renders kind wasm only). The last Kotlin/Wasm zip stays on the rolling release until the /cloud-web/ cut-over.",
     "_doc": "#876 Cloud C3 as a Kotlin/Wasm page (web/ is its own gradle root; the shared libs' pure-Compose sources arrive through the ab_cloud-libs-shared/web composite). Rendered into 1_cicd/src/cicd/ship-cloud-c3-wasm.yml by the workflow generator: `./gradlew wasmJsBrowserDistribution` in `dir`, tested by test/test-c3-web.sh, `build/dist/wasmJs/productionExecutable` zipped to `artifact` and attached to the rolling release as `gh_asset`. A mocked page: the island and tab strips are ui.bottom_nav / ui.sections as the Android shell reads them, the first section shows mock data and the rest say they live in the Android app. The APK's own ship ignores this directory.",
     "dir": "web",
     "host": "ubuntu-latest",

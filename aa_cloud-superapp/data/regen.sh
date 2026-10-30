@@ -94,7 +94,7 @@ regen_constellation() {
     # also ships its Kotlin/Wasm page, and `assets.wasm` names that release asset
     # (web.gh_asset). The updater matches Build.SUPPORTED_ABIS against these keys,
     # so a key that is no ABI is never picked for an install; the cloud-web portal
-    # (diegonmarcos.github.io Pages deploy; sources: cloudy-h-webapps-2 a_Portals/cloud-web) lists exactly the rows that
+    # (diegonmarcos.github.io Pages deploy; sources: cloudy-h-webapps-desk a_Portals/cloud-web) lists exactly the rows that
     # carry it and fetches that zip.
     local variant_assets='
         (. as $bj

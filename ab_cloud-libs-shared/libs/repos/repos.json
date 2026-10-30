@@ -24,7 +24,7 @@
       "name": "CG-circus",
       "repo": "diegonmarcos/CG-circus",
       "private": false,
-      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloudy-h-webapps-2 #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloudy-h-webapps-desk #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "CG-galaxy",
@@ -213,16 +213,16 @@
       "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-pvt-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester."
     },
     {
-      "name": "cloudy-h-webapps",
-      "repo": "diegonmarcos/cloudy-h-webapps",
-      "private": false,
-      "doc": "The Cloud web apps (#1320): one npm workspace with @cloudy/ui (tokens, icons and nav GENERATED from cloudy-u-android), @cloudy/c3-data, and two SvelteKit static sites: cloudy-webapps at /cloud-webapps/ (the SuperApp shell and every fleet app, embedded by the APK with ?embed=1) and cloudy-c3 at /cloudy-c3/ (the Cloud C3 console; the old /cloud/ portal redirects there). Also the 89 service fallback pages at /cloud-webapps/<slug>/. Created 2026-10-21 out of front-diegonmarcos (c__Cloud)."
-    },
-    {
-      "name": "cloudy-h-webapps-2",
-      "repo": "diegonmarcos/cloudy-h-webapps-2",
+      "name": "cloudy-h-webapps-desk",
+      "repo": "diegonmarcos/cloudy-h-webapps-desk",
       "private": false,
       "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204; and the portals a_Portals/{cloud,cloud-superapp,cloud-web}, #1319), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+    },
+    {
+      "name": "cloudy-h-webapps-mob",
+      "repo": "diegonmarcos/cloudy-h-webapps-mob",
+      "private": false,
+      "doc": "The Cloud web apps (#1320): one npm workspace with @cloudy/ui (tokens, icons and nav GENERATED from cloudy-u-android), @cloudy/c3-data, and two SvelteKit static sites: cloudy-webapps at /cloud-webapps/ (the SuperApp shell and every fleet app, embedded by the APK with ?embed=1) and cloudy-c3 at /cloudy-c3/ (the Cloud C3 console; the old /cloud/ portal redirects there). Also the 89 service fallback pages at /cloud-webapps/<slug>/. Created 2026-10-21 out of front-diegonmarcos (c__Cloud)."
     },
     {
       "name": "cloudy-t-infra",

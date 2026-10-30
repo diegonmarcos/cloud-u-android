@@ -1,6 +1,6 @@
 # ╔═══════════════════════════════════════════════════════════════════════╗
 # ║ UI screenshot baseline (#1320 M4) — the reference the web mimic       ║
-# ║ (diegonmarcos/cloudy-h-webapps) compares itself against. CI only.     ║
+# ║ (diegonmarcos/cloudy-h-webapps-mob) compares itself against. CI only. ║
 # ║                                                                       ║
 # ║  roborazzi : ab_cloud-libs-shared/ui-baseline renders the SHARED libs ║
 # ║              (the SuperApp island + page tabs, KitSamples.All in both ║

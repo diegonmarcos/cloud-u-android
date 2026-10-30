@@ -26,6 +26,22 @@
       "doc": "Content merged into cloud-me-pvt-configs Linux-Containers/ (#1310); archived. The old name keeps working through the GitHub redirect."
     },
     {
+      "from": "cloudy-h-webapps",
+      "to": "cloudy-h-webapps-mob",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1327",
+      "doc": "GitHub repo renamed: the mobile/tablet web repo (cloudy-webapps at /cloud-webapps/ and cloudy-c3 at /cloudy-c3/). Published Pages paths unchanged."
+    },
+    {
+      "from": "cloudy-h-webapps-2",
+      "to": "cloudy-h-webapps-desk",
+      "kind": "repo",
+      "since": "2026-10-30",
+      "ticket": "#1327",
+      "doc": "GitHub repo renamed: the desktop web repo (cloudy-webdesktop at /cloud-desktop/). Published Pages paths unchanged."
+    },
+    {
       "from": "My-ai-memory",
       "to": "z-archived_My-ai-memory",
       "kind": "repo",
@@ -748,27 +764,27 @@
     },
     {
       "from": "front-diegonmarcos a_Portals/cloud",
-      "to": "cloudy-h-webapps-2 a_Portals/cloud",
+      "to": "cloudy-h-webapps-desk a_Portals/cloud",
       "kind": "app-folder",
       "since": "2026-10-30",
       "ticket": "#1319",
-      "doc": "Portal folder moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-2; the Pages workflow overlays it at the same path. Published URL /cloud/ unchanged."
+      "doc": "Portal folder moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-desk; the Pages workflow overlays it at the same path. Published URL /cloud/ unchanged."
     },
     {
       "from": "front-diegonmarcos a_Portals/cloud-superapp",
-      "to": "cloudy-h-webapps-2 a_Portals/cloud-superapp",
+      "to": "cloudy-h-webapps-desk a_Portals/cloud-superapp",
       "kind": "app-folder",
       "since": "2026-10-30",
       "ticket": "#1319",
-      "doc": "Portal folder (formerly cloud-mobile, #1073) moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-2; the Pages workflow overlays it at the same path. Published URL /cloud-superapp/ (and /cloud-mobile/ redirect) unchanged."
+      "doc": "Portal folder (formerly cloud-mobile, #1073) moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-desk; the Pages workflow overlays it at the same path. Published URL /cloud-superapp/ (and /cloud-mobile/ redirect) unchanged."
     },
     {
       "from": "front-diegonmarcos a_Portals/cloud-web",
-      "to": "cloudy-h-webapps-2 a_Portals/cloud-web",
+      "to": "cloudy-h-webapps-desk a_Portals/cloud-web",
       "kind": "app-folder",
       "since": "2026-10-30",
       "ticket": "#1319",
-      "doc": "Portal folder moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-2; the Pages workflow overlays it at the same path. Published URL /cloud-web/ unchanged."
+      "doc": "Portal folder moved with history from diegonmarcos.github.io (front-diegonmarcos) into cloudy-h-webapps-desk; the Pages workflow overlays it at the same path. Published URL /cloud-web/ unchanged."
     },
     {
       "from": "ffront",
@@ -1348,29 +1364,31 @@
       "doc": "The d* unix apps split out of cloud-unix, which was renamed cloud-infra-desktop (now cloudy-u-desktop) in the same move. The desktop flakes reference them as home-directory paths, never as flake inputs."
     },
     {
-      "name": "cloudy-h-webapps",
+      "name": "cloudy-h-webapps-mob",
       "farm": "1.1.Cloudy",
       "group": "a_cloud",
       "hub": "cloudy-___",
-      "url": "git@github.com:diegonmarcos/cloudy-h-webapps.git",
+      "url": "git@github.com:diegonmarcos/cloudy-h-webapps-mob.git",
       "private": false,
       "renamed_from": [
         "cloud-webapps",
-        "cloud-h-webapps"
+        "cloud-h-webapps",
+        "cloudy-h-webapps"
       ],
       "doc": "The Cloud web apps (#1320): one npm workspace with @cloudy/ui (tokens, icons and nav GENERATED from cloudy-u-android), @cloudy/c3-data, and two SvelteKit static sites: cloudy-webapps at /cloud-webapps/ (the SuperApp shell and every fleet app, embedded by the APK with ?embed=1) and cloudy-c3 at /cloudy-c3/ (the Cloud C3 console; the old /cloud/ portal redirects there). Also the 89 service fallback pages at /cloud-webapps/<slug>/. Created 2026-10-21 out of front-diegonmarcos (c__Cloud)."
     },
     {
-      "name": "cloudy-h-webapps-2",
+      "name": "cloudy-h-webapps-desk",
       "farm": "1.1.Cloudy",
       "group": "b_projects",
       "hub": "cloudy-___",
-      "url": "git@github.com:diegonmarcos/cloudy-h-webapps-2.git",
+      "url": "git@github.com:diegonmarcos/cloudy-h-webapps-desk.git",
       "private": false,
       "renamed_from": [
         "front-suite",
         "cloud-webapps-2",
-        "cloud-h-webapps-2"
+        "cloud-h-webapps-2",
+        "cloudy-h-webapps-2"
       ],
       "doc": "Sources of the c_Suite group (now also movies, music, myfeed, #1204; and the portals a_Portals/{cloud,cloud-superapp,cloud-web}, #1319), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
@@ -1645,7 +1663,7 @@
       "renamed_from": [
         "front-circus"
       ],
-      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloudy-h-webapps-2 #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
+      "doc": "Sources of the c_Circus group (movies, music, myfeed moved to cloudy-h-webapps-desk #1204; myAstro moved to cloud-me-pub-profiles-prf-prs #1218), split from front-projects (#1072); snapshot copy, paths mirror the original layout."
     },
     {
       "name": "Capital-___",
@@ -1952,10 +1970,10 @@
         },
         {
           "name": "a_Portals",
-          "path": "cloudy-h-webapps-2",
+          "path": "cloudy-h-webapps-desk",
           "status": "split",
           "ticket": "#1319",
-          "doc": "Moved 2026-10-30 (cloud, cloud-superapp, cloud-web) into cloudy-h-webapps-2 with history; the Pages workflow overlays it. Linktree went earlier (#1217)."
+          "doc": "Moved 2026-10-30 (cloud, cloud-superapp, cloud-web) into cloudy-h-webapps-desk with history; the Pages workflow overlays it. Linktree went earlier (#1217)."
         },
         {
           "name": "a_Individual",
@@ -2050,7 +2068,7 @@
         },
         {
           "name": "c_Suite",
-          "path": "cloudy-h-webapps-2",
+          "path": "cloudy-h-webapps-desk",
           "status": "split",
           "ticket": "#1072",
           "doc": "Split out 2026-10-24 from front-projects into cloud-webapps-2; the Pages workflow overlays it."
