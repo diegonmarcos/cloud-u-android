@@ -7,8 +7,12 @@ plugins {
 }
 def superappRes = file('../../../aa_cloud-superapp/app/src/main/res')
 def shotsRes = layout.buildDirectory.dir('generated/superapp-res')
+// Only the glyphs the island draws (ui.bottom_nav sections' icons): the full drawable set references app-only resources.
+def islandIcons = new groovy.json.JsonSlurper().parse(file('../../../aa_cloud-superapp/build.json')).ui.with { ui ->
+    ui.bottom_nav.collect { id -> ui.sections.find { it.id == id }?.icon }.findAll { it }
+}
 tasks.register('copySuperappDrawables', Copy) {
-    from(new File(superappRes, 'drawable')) { include 'ic_*.xml' }
+    from(new File(superappRes, 'drawable')) { include islandIcons.collect { "${it}.xml" } }
     into shotsRes.map { it.dir('drawable') }
 }
 android {
@@ -46,6 +50,7 @@ dependencies {
     testImplementation 'androidx.compose.ui:ui-test-junit4'
     testImplementation 'androidx.compose.ui:ui-test-manifest'
     testImplementation 'androidx.activity:activity-compose:1.9.3'
+    testImplementation 'com.google.android.material:material:1.12.0'   // ?attr/colorOnSurface in the SuperApp glyphs
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.16.1'
     testImplementation 'io.github.takahirom.roborazzi:roborazzi:1.43.0'
