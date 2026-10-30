@@ -30,13 +30,13 @@
   {
    "id": "desktop-home-manager",
    "repo": "cloud-me_configs",
-   "path": "Desktop-GUI/a1-diego-user/nix-hm-flakes/ba_flakes_desktop/src/app_especific/unison-pin.json",
+   "path": "Linux-Desktop/a1-diego-user/nix-hm-flakes/ba_flakes_desktop/src/app_especific/unison-pin.json",
    "key": "version"
   },
   {
    "id": "termux-flake",
    "repo": "cloud-me_configs",
-   "path": "Desktop-GUI/_shared/nix-os-flakes/bb_flakes_termux/src/modules/unison-pin.json",
+   "path": "Linux-Desktop/_shared/nix-os-flakes/bb_flakes_termux/src/modules/unison-pin.json",
    "key": "version"
   }
  ],
