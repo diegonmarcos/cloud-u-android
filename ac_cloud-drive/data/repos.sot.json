@@ -1135,30 +1135,6 @@
       "doc": "Fleet: services, infra, the derive engine (1_cloud-configs). Renamed from cloud-infra 2026-10-23 (#1136)."
     },
     {
-      "name": "cloudy-u-containers",
-      "farm": "1.1.Cloudy",
-      "group": "a_cloud",
-      "hub": "cloudy-___",
-      "url": "git@github.com:diegonmarcos/cloudy-u-containers.git",
-      "private": false,
-      "renamed_from": [
-        "cloud-u-containers"
-      ],
-      "doc": "The containerised services a_solutions ships: one dir per service, each with build.json. Mounted back into cloud-infra as a submodule at a_solutions/ so the ship engine keeps globbing a_solutions/*/build.json."
-    },
-    {
-      "name": "cloudy-u-containers_cgc",
-      "farm": "1.1.Cloudy",
-      "group": "a_cloud",
-      "hub": "cloudy-___",
-      "url": "git@github.com:diegonmarcos/cloudy-u-containers_cgc.git",
-      "private": false,
-      "renamed_from": [
-        "cloud-u-containers_cgc"
-      ],
-      "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloudy-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha."
-    },
-    {
       "name": "cloudy_db_assets-cdn",
       "farm": "1.1.Cloudy",
       "group": "b_projects",
@@ -1198,6 +1174,42 @@
       "doc": "Large binary artefacts (git-lfs) for cloud-me-pvt-data (was cloud-data)."
     },
     {
+      "name": "cloudy-a-docs",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-a-docs.git",
+      "private": true,
+      "renamed_from": [
+        "cloud-a-docs"
+      ],
+      "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-pvt-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester."
+    },
+    {
+      "name": "cloudy-u-containers",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-u-containers.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-u-containers"
+      ],
+      "doc": "The containerised services a_solutions ships: one dir per service, each with build.json. Mounted back into cloud-infra as a submodule at a_solutions/ so the ship engine keeps globbing a_solutions/*/build.json."
+    },
+    {
+      "name": "cloudy-u-containers_cgc",
+      "farm": "1.1.Cloudy",
+      "group": "a_cloud",
+      "hub": "cloudy-___",
+      "url": "git@github.com:diegonmarcos/cloudy-u-containers_cgc.git",
+      "private": false,
+      "renamed_from": [
+        "cloud-u-containers_cgc"
+      ],
+      "doc": "The PUBLIC cgc code-knowledge-graph pipeline (pub surface: octocode indexes of the public repos -> GHCR -> cloud-cgc-pub-mcp), split out of cloudy-u-containers / cloud-infra; split-outs are named <parent>_<name>. Holds the pipeline code and the reusable cgc-db-index.yml the private half calls by sha."
+    },
+    {
       "name": "cloudy-u-desktop",
       "farm": "1.1.Cloudy",
       "group": "a_cloud",
@@ -1209,18 +1221,6 @@
         "cloud-u-desktop"
       ],
       "doc": "Workstation + device configuration, nix flakes, the superapp. Holds the Claude SoT (da_my-ai/src/data/claude)."
-    },
-    {
-      "name": "cloudy-a-docs",
-      "farm": "1.1.Cloudy",
-      "group": "a_cloud",
-      "hub": "cloudy-___",
-      "url": "git@github.com:diegonmarcos/cloudy-a-docs.git",
-      "private": true,
-      "renamed_from": [
-        "cloud-a-docs"
-      ],
-      "doc": "RoadMap, Backlog and Architecture store, split out of cloud-me-pvt-my-ai on 2026-10-28: 1___BACKLOG___ (tickets under 1.1.Product-Backlog/tasks), 2___WORK___, 3___ARCHIVE___ and the backlog tester."
     },
     {
       "name": "cloudy-u-linux",
