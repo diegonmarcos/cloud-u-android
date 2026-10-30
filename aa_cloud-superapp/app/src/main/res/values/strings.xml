@@ -608,4 +608,5 @@
     <string name="mesh_opt_warn">Warnings</string>
     <string name="mesh_opt_error">Errors</string>
     <string name="mesh_ctl_log_level">Level</string>
+    <string name="tasks_label">Tasks</string>
 </resources>

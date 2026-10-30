@@ -2,7 +2,7 @@
 "runtime":{
 "keyboard-engines":["ac_cloud-keyboard","ac_cloud-writer"],
 "lib-analytics-sink":["aa_cloud-superapp","ab_cloud-libs-shared/keyboard-engines","ac_cloud-browser","ac_cloud-c3","ac_cloud-chat","ac_cloud-contacts","ac_cloud-dialer","ac_cloud-drive","ac_cloud-gallery","ac_cloud-keyboard","ac_cloud-me","ac_cloud-myterminal","ac_cloud-nav","ac_cloud-news","ac_cloud-tasks","ac_cloud-wallet"],
-"lib-cal":["ac_cloud-mail","ac_cloud-me","ac_cloud-tasks"],
+"lib-cal":["aa_cloud-superapp","ac_cloud-mail","ac_cloud-me","ac_cloud-tasks"],
 "lib-calc":["ac_cloud-calc"],
 "lib-decisions-engine":["aa_cloud-superapp","ac_cloud-account","ac_cloud-browser","ac_cloud-c3","ac_cloud-contacts","ac_cloud-drive","ac_cloud-keyboard","ac_cloud-mail","ac_cloud-me","ac_cloud-nav","ac_cloud-news","ac_cloud-store","ac_cloud-tasks","ac_cloud-wallet","ac_cloud-writer"],
 "lib-feed":["aa_cloud-superapp"],

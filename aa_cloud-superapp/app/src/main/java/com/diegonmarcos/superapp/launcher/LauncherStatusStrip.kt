@@ -53,6 +53,9 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,9 +66,10 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.battery.BatteryEstimatePopup
 import com.diegonmarcos.superapp.battery.BatteryIconView
-import com.diegonmarcos.superapp.cal.CalendarAgendaPopup
+import com.diegonmarcos.superapp.cal.TasksPopup
 import com.diegonmarcos.superapp.network.BtLinks
 import com.diegonmarcos.superapp.network.GpsProbe
 import com.diegonmarcos.superapp.network.MobileLink
@@ -96,7 +100,8 @@ import kotlin.math.roundToInt
  *   │ ──────────────────────────────────────────────────────────────── │  hairline
  *   └──────────────────────────────────────────────────────────────────┘
  *
- *   LEFT   network labels in NetworkSections.ORDER (the popup's section order too), each over a 4-dot row (mobile / WiFi /
+ *   (WHICH elements sit in which cluster, in which order, is build.json::home_status_bar: StatusBarDecl / StatusBarPrefs.)
+ *   LEFT   network labels (declared order; NetworkSections.ORDER is the popup's), each over a 4-dot row (mobile / WiFi /
  *          WG carry a signal level, GPS the fix quality, BT the count of connected devices, 4 = four or more; KDE / ADB /
  *          Data / HS keep the same empty footprint so every icon stays aligned). Tinted by state, all event-driven:
  *          ConnectivityManager callback (5G / WiFi / WG), RSSI_CHANGED + the data SIM's signal callback (dots), a
@@ -167,6 +172,13 @@ class StatusStripModel(private val context: Context) {
         private set
     var cpu by mutableStateOf("C 0s")
         private set
+    /** The clock's pattern, declared on the clock element (build.json::home_status_bar). */
+    internal val clockFormat: String by lazy {
+        StatusBarDecl.declared.elements.firstOrNull { it.kind == "clock" }?.format ?: "dd-MM-yyyy HH:mm EEE"
+    }
+
+    /** The reading a declared `metric` element shows. */
+    internal fun metricText(id: String): String = when (id) { "ram" -> ram; "storage" -> storage; "cpu" -> cpu; else -> "" }
     var batteryPct by mutableIntStateOf(-1)
         private set
     var batteryCharging by mutableStateOf(false)
@@ -424,7 +436,7 @@ class StatusStripModel(private val context: Context) {
 
     // ── Readings ──
     internal fun refreshTime() {
-        clock = SimpleDateFormat("dd-MM-yyyy HH:mm EEE", Locale.US).format(Date())
+        clock = SimpleDateFormat(clockFormat, Locale.US).format(Date())
     }
 
     private fun refreshBattery(intent: Intent) {
@@ -732,13 +744,9 @@ private fun LauncherStripContent(model: StatusStripModel) {
 internal fun StatusStripBody(model: StatusStripModel, ctx: Context) {
     val host = LocalView.current
     val density = LocalDensity.current
-    // The tool each Network key rides: the pet above it and the popup section it opens.
-    val toolOf = mapOf(
-        NetworkSections.CELLULAR to "cellular", NetworkSections.WIFI to "wifi", NetworkSections.BLUETOOTH to "bluetooth",
-        NetworkSections.MESH to "vpn", NetworkSections.KDE to "kde", NetworkSections.ADB to "adb",
-        NetworkSections.DATA to "usb",  // the old USB pet now rides Data
-        NetworkSections.HOTSPOT to "hotspot", NetworkSections.GPS to "gps",
-    )
+    // THE DECLARATION DRAWS THE BAR (build.json::home_status_bar): which elements, in which cluster, in which order, and
+    // whether each shows, come from StatusBarPrefs.layout (the declaration plus the owner's overrides), never from a list here.
+    val layout = StatusBarPrefs.layout(ctx)
     Column(Modifier.fillMaxWidth()) {
         // The clock sits at TRUE screen centre, aligned with the island below. Inside the safe area: 10 dp, and clear of a
         // cutout at the screen's side. The three clusters SHARE that width (StripRow): they never overlap and never leave it.
@@ -751,67 +759,76 @@ internal fun StatusStripBody(model: StatusStripModel, ctx: Context) {
             gapPx = gapPx,
             modifier = Modifier.fillMaxWidth().padding(start = padStart, end = padEnd, top = with(density) { model.innerRowTopPadPx.toDp() },
                 bottom = with(density) { model.innerRowTopPadPx.toDp() }).testTag("strip:row"),
-            left = {
-                // ── LEFT: mobile . WiFi . BT . WG . KDE . ADB . Data . HS . GPS (in NetworkSections.ORDER) ──
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    for (key in NetworkSections.inOrder(NetworkSections.ORDER.associateWith { it })) {
-                        val chip = model.chips[key] ?: continue
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            PetAbove(model, toolOf.getValue(key))
-                            Tappable("strip:$key", onTap = { r -> NetworkInfoPopup.show(ctx, host, r, key) }) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    IconLabel(chip.label, chip.tint)
-                                    if (chip.peerDots != null) PeerDots(chip.peerDots, chip.peerDescription)
-                                    else SignalDots(chip.dots, chip.dotsTint)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
+            left = { StripCluster(layout.getValue(StatusBarDecl.LEFT), model, ctx, host) },
             reserve = { h -> Spacer(Modifier.testTag("strip:reserve").height(with(density) { h.toDp() })) },
-            clock = {
-                // ── CENTRE: date + time, below the camera punch-hole / pet row. ──
-                Tappable("strip:clock", onTap = { r -> CalendarAgendaPopup.show(host, r) }) {
-                    Text(
-                        model.clock, color = Color.White, fontSize = 12.sp, fontFamily = MONO_BOLD, fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
-                        style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color(0xCC000000), Offset(0f, 1f), 4f)),
-                    )
-                }
-            },
-            right = {
-                // ── RIGHT: RAM% . Storage% . CPU . Battery ──
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    for ((tool, text) in listOf("ram" to model.ram, "storage" to model.storage, "cpu" to model.cpu)) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            PetAbove(model, tool)
-                            Tappable("strip:$tool", onTap = { r -> SystemInfoPopup.show(ctx, host, r) }) {
-                                IconLabel(text, 0xFFFFFFFF.toInt())
-                            }
-                        }
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        PetAbove(model, "battery")
-                        AndroidView(
-                            factory = { c ->
-                                BatteryIconView(c).apply {
-                                    // Tap -> the "Estimated battery last" popup + session metrics, one glance from the strip.
-                                    isClickable = true
-                                    setOnClickListener {
-                                        BatteryEstimatePopup.show(c, this) { com.diegonmarcos.superapp.batterystats.BatteryStatsPage.open(c) }
-                                    }
-                                }
-                            },
-                            update = { it.setBattery(model.batteryPct, model.batteryCharging) },
-                            modifier = Modifier.padding(start = 4.dp).testTag("strip:battery"),
-                        )
-                    }
-                }
-            },
+            // CENTRE: the clock, below the camera punch-hole / pet row.
+            clock = { StripCluster(layout.getValue(StatusBarDecl.CENTRE), model, ctx, host) },
+            right = { StripCluster(layout.getValue(StatusBarDecl.RIGHT), model, ctx, host) },
         )
         // ── Bottom hairline: faint white separator. ShellActivity nudges the toolbar island 6 dp below it. ──
         Spacer(Modifier.fillMaxWidth().height(with(density) { maxOf(1, (density.density * 0.75f).toInt()).toDp() }).background(Color(0x33FFFFFF)))
+    }
+}
+
+/** One cluster: its declared elements, left to right in the order [StatusBarDecl.layout] gave them. */
+@Composable
+private fun StripCluster(elements: List<StatusElement>, model: StatusStripModel, ctx: Context, host: View) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        for (el in elements) StripElementView(el, model, ctx, host)
+    }
+}
+
+/** One declared element: its pet row, then the drawing its `kind` names, whose tap opens what its `opens` names. */
+@Composable
+private fun StripElementView(el: StatusElement, model: StatusStripModel, ctx: Context, host: View) {
+    val tasksLabel = stringResource(R.string.tasks_label)
+    val open: (IntRect) -> Unit = { r ->
+        when (el.opens) {
+            "network_popup" -> NetworkInfoPopup.show(ctx, host, r, el.id)
+            "system_popup" -> SystemInfoPopup.show(ctx, host, r)
+            "tasks_popup" -> TasksPopup.show(host, r)
+            else -> Unit
+        }
+    }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        el.pet?.let { PetAbove(model, it) }
+        when (el.kind) {
+            "network" -> {
+                val chip = model.chips[el.id] ?: return@Column
+                Tappable("strip:${el.id}", onTap = open) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        IconLabel(chip.label, chip.tint)
+                        if (chip.peerDots != null) PeerDots(chip.peerDots, chip.peerDescription)
+                        else SignalDots(chip.dots, chip.dotsTint)
+                    }
+                }
+            }
+            "clock" -> Tappable("strip:${el.id}", onTap = open, modifier = Modifier.semantics {
+                contentDescription = "${tasksLabel}, ${model.clock}"
+            }) {
+                Text(
+                    model.clock, color = Color.White, fontSize = 12.sp, fontFamily = MONO_BOLD, fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
+                    style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color(0xCC000000), Offset(0f, 1f), 4f)),
+                )
+            }
+            "metric" -> Tappable("strip:${el.id}", onTap = open) {
+                IconLabel(model.metricText(el.id), 0xFFFFFFFF.toInt())
+            }
+            "battery" -> AndroidView(
+                factory = { c ->
+                    BatteryIconView(c).apply {
+                        // Tap -> the "Estimated battery last" popup + session metrics, one glance from the strip.
+                        isClickable = true
+                        setOnClickListener {
+                            if (el.opens == "battery_popup") BatteryEstimatePopup.show(c, this) { com.diegonmarcos.superapp.batterystats.BatteryStatsPage.open(c) }
+                        }
+                    }
+                },
+                update = { it.setBattery(model.batteryPct, model.batteryCharging) },
+                modifier = Modifier.padding(start = 4.dp).testTag("strip:${el.id}"),
+            )
+        }
     }
 }
 

@@ -3,6 +3,8 @@ package com.diegonmarcos.superapp.configs
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -18,12 +21,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -34,6 +41,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.launcher.StatusBarDecl
+import com.diegonmarcos.superapp.launcher.StatusBarPrefs
+import com.diegonmarcos.superapp.uiicons.UiIcons
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import com.diegonmarcos.superapp.launcher.SectionPages
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.onehand.ArcMenu
@@ -89,33 +101,59 @@ class OneHandFragment : KitComposeFragment() {
 
     override fun palette() = LauncherPalette.kit(requireContext())
 
+    /** Where each section starts inside the scrolling column (px), recorded by [infoSection]; the index scrolls to it. */
+    private val sectionTops = mutableStateMapOf<String, Int>()
+
     @Composable
     override fun Content() {
         val ctx = requireContext()
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Text("One-Hand", color = LocalKitPalette.current.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 4.dp).testTag(TAG_TITLE))
-            caption(
-                "Everything reachable with the thumb alone: the three Home-screen " +
-                "stars, the edge menu that works on top of any app, and the four " +
-                "Home swipes. Content and defaults are data-driven from " +
-                "build.json::onehand — the switches and pickers below are runtime " +
-                "overrides kept in the onehand_prefs store, and each one says which " +
-                "it is.")
+        val scroll = rememberScrollState()
+        val scope = rememberCoroutineScope()
+        Column(Modifier.fillMaxSize()) {
+            // The sticky index: icon anchors declared in build.json::onehand_page, one per section, in the page's order.
+            IndexRow(OneHandPageDecl.sections) { id -> sectionTops[id]?.let { y -> scope.launch { scroll.animateScrollTo(y) } } }
+            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(scroll).padding(16.dp)) {
+                Text("One-Hand", color = LocalKitPalette.current.textPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 4.dp).testTag(TAG_TITLE))
+                caption(
+                    "Everything reachable with the thumb alone: the three Home-screen " +
+                    "stars, the edge menu that works on top of any app, and the four " +
+                    "Home swipes, then the status bar those sit under. Content and defaults are data-driven from " +
+                    "build.json::onehand — the switches and pickers below are runtime " +
+                    "overrides kept in the onehand_prefs store, and each one says which " +
+                    "it is.")
 
-            infoSection("Home-Screen Stars")
-            addStars(ctx)
-
-            infoSection("Edge Menu")
-            addEdgeMenu(ctx)
-
-            infoSection("Floating menu")
-            addFloatingMenu(ctx)
-
-            infoSection("Home-Screen Gestures")
-            addHomeGestures(ctx)
+                // One `when` per declared section id: the order and the headings are the declaration's, the bodies are here.
+                for (sec in OneHandPageDecl.sections) {
+                    infoSection(sec)
+                    when (sec.id) {
+                        OneHandPageDecl.STARS -> addStars(ctx)
+                        OneHandPageDecl.EDGE_MENU -> addEdgeMenu(ctx)
+                        OneHandPageDecl.FLOATING_MENU -> addFloatingMenu(ctx)
+                        OneHandPageDecl.HOME_GESTURES -> addHomeGestures(ctx)
+                        OneHandPageDecl.STATUS_BAR -> addStatusBar(ctx)
+                    }
+                }
+            }
         }
         if (showResetConfirm) ResetConfirm(ctx)
+    }
+
+    /** The sticky row of icon anchors; scrolls sideways if the captions outgrow a narrow screen. */
+    @Composable
+    private fun IndexRow(sections: List<OneHandPageDecl.Section>, onPick: (String) -> Unit) {
+        val p = LocalKitPalette.current
+        Row(Modifier.fillMaxWidth().background(p.surface).horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp)
+            .testTag(TAG_INDEX), horizontalArrangement = Arrangement.SpaceEvenly) {
+            for (sec in sections) {
+                Column(Modifier.clickable { onPick(sec.id) }.padding(horizontal = 10.dp, vertical = 4.dp).testTag("onehand:index:${sec.id}"),
+                    horizontalAlignment = Alignment.CenterHorizontally) {
+                    androidx.compose.material3.Icon(UiIcons.painter(sec.icon), contentDescription = sec.label, tint = p.textPrimary,
+                        modifier = Modifier.size(22.dp))
+                    Text(sec.label, color = p.textSecondary, fontSize = 10.sp, maxLines = 1)
+                }
+            }
+        }
     }
 
     // ────────────────────────────── 1. Stars ──────────────────────────────
@@ -518,15 +556,58 @@ class OneHandFragment : KitComposeFragment() {
             "into BuildConfig at build time.")
     }
 
+    // ─────────────────────────── 5. Status bar ───────────────────────────
+
+    /**
+     * The home status bar, read from the SAME declaration the strip draws (build.json::home_status_bar), cluster by cluster
+     * in the order it is drawn: a switch per element, and up / down within its cluster. Both write status_bar_prefs, which
+     * the strip observes, so the bar changes while this page is open. The toolbar island's two pills are listed read-only.
+     */
+    @Composable
+    private fun addStatusBar(ctx: Context) {
+        val decl = StatusBarDecl.declared
+        @Suppress("UNUSED_VARIABLE") val redraw = StatusBarPrefs.version
+        val hidden = StatusBarPrefs.hidden(ctx)
+        val orders = StatusBarPrefs.orders(ctx)
+        caption("The top row of the Home screen, ${decl.rowHeightDp} dp tall: three clusters, left, centre and right. Every " +
+            "element is declared in build.json::home_status_bar with its cluster, order and visibility, and the bar is drawn from " +
+            "that list. The switches and arrows below are your overrides, kept in status_bar_prefs.")
+        for (pos in StatusBarDecl.POSITIONS) {
+            val els = StatusBarDecl.ordered(decl, pos, orders)
+            if (els.isEmpty()) continue
+            subhead(pos.replaceFirstChar { it.uppercase() })
+            els.forEachIndexed { i, el ->
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        ConfigSwitchRow(el.label, !(hidden[el.id] ?: !el.visible), tag = "sb:${el.id}") { on -> StatusBarPrefs.setVisible(ctx, el.id, on) }
+                    }
+                    val ids = els.map { it.id }
+                    Text("▲", color = LocalKitPalette.current.textPrimary, fontSize = 16.sp,
+                        modifier = Modifier.clickable(enabled = i > 0) { StatusBarPrefs.setOrder(ctx, pos, StatusBarDecl.move(ids, i, -1)) }
+                            .padding(horizontal = 10.dp, vertical = 6.dp).testTag("sb:up:${el.id}"))
+                    Text("▼", color = LocalKitPalette.current.textPrimary, fontSize = 16.sp,
+                        modifier = Modifier.clickable(enabled = i < els.lastIndex) { StatusBarPrefs.setOrder(ctx, pos, StatusBarDecl.move(ids, i, 1)) }
+                            .padding(horizontal = 10.dp, vertical = 6.dp).testTag("sb:down:${el.id}"))
+                }
+            }
+        }
+        if (decl.toolbarRow.isNotEmpty()) {
+            subhead("Toolbar island (read-only)")
+            caption("Drawn by the shell right under the status bar, not by it.")
+            for (el in decl.toolbarRow.sortedBy { it.order }) caption("${el.order}. ${el.label}")
+        }
+        ConfigButton("Reset the status bar to the declaration") { StatusBarPrefs.reset(ctx) }
+    }
+
     // ──────────────────────────── small builders ────────────────────────────
 
-    /** Section rule + heading — the top-level parts of this page. */
+    /** Section rule + heading — the top-level parts of this page. Records where it starts, for the index to scroll to. */
     @Composable
-    private fun infoSection(t: String) {
-        Column(Modifier.fillMaxWidth().padding(top = 20.dp)) {
+    private fun infoSection(sec: OneHandPageDecl.Section) {
+        Column(Modifier.fillMaxWidth().padding(top = 20.dp).onPlaced { sectionTops[sec.id] = it.positionInParent().y.roundToInt() }) {
             Column(Modifier.fillMaxWidth().height(1.dp).background(Color(0x33FFFFFF))) {}
-            Text(t, color = LocalKitPalette.current.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(top = 12.dp, bottom = 6.dp).testTag("onehand:section:$t"))
+            Text(sec.heading, color = LocalKitPalette.current.textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 12.dp, bottom = 6.dp).testTag("onehand:section:${sec.id}"))
         }
     }
 
@@ -653,6 +734,7 @@ class OneHandFragment : KitComposeFragment() {
 
     companion object {
         const val TAG_TITLE = "onehand:title"
+        const val TAG_INDEX = "onehand:index"
         fun newInstance() = OneHandFragment()
     }
 }
