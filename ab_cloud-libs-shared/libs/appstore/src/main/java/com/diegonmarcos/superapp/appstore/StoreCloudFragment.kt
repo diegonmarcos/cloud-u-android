@@ -115,23 +115,12 @@ class StoreCloudFragment : KitComposeFragment() {
     private fun applicationOf(id: String): String? =
         mlApplication.find(id)?.groupValues?.get(1)
 
-    // #563: every other row is grouped by the host's CENTRAL classification -
-    // the section and folder the launcher's All Apps files the same package
-    // under (cloud-drive -> "Tools · Data Apps / Storage"). Asked once, as one
-    // batch, of the host; this page holds no taxonomy of its own, because
-    // #170/#102/#405 each deleted a second copy of exactly that.
-    private val shelves by lazy {
-        AppStoreHost.classify(requireContext(),
-            fleet.filter { it.pkg.isNotEmpty() }.associate { it.pkg to it.label })
-    }
-
     // #642: THE LIBS TAB'S TABLES, and not a second grouping mechanism.
     //
-    // An APP is filed by [shelves] above — the launcher's central
-    // classification — which is why Cloud ▸ Apps has always drawn headed
-    // tables. A LIB has no launcher entry, so that classifier returns nothing
-    // for every one of them and all 46 rows fell into ONE unnamed run: the
-    // flat list. So the fleet data declares each lib's category as the SAME
+    // An APP is filed by `app_categories` (below), derived from the SuperApp's Cloud > Apps tile
+    // groups. A LIB has no tile there, and the launcher classifier (the old
+    // app grouping) returned nothing for every one of them, so all 46 rows fell
+    // into ONE unnamed run: the flat list. So the fleet data declares each lib's category as the SAME
     // (heading, order) pair, and [shelfOf] hands it to the code that already
     // draws the Apps tables. Nothing below this line knows a lib from an app.
     //
@@ -155,20 +144,34 @@ class StoreCloudFragment : KitComposeFragment() {
         filed
     }
 
-    /** The shelf a row is filed on — its declared lib category, else the host's
-     *  classification of its package. ONE lookup, so the heading drawn over a
-     *  run and the key that orders it cannot read different answers. */
-    private fun shelfOf(app: Fleet.App): AppStoreHost.Shelf? =
-        libShelves[app.id] ?: shelves[app.pkg] ?: jevShelf(app)
+    /** The shelf a row is filed on: its declared lib category, else its declared app
+     *  category (`app_categories`, DERIVED by regen.sh from the SuperApp's Cloud > Apps
+     *  tile groups: same titles, same order, each app in the group that opens it, the rest
+     *  in a declared "Other"). ONE lookup, so the heading drawn over a run and the key that
+     *  orders it cannot read different answers. The launcher's classification is NOT
+     *  consulted: that was a second category assignment, and it filed apps elsewhere. */
+    private fun shelfOf(app: Fleet.App): AppStoreHost.Shelf? = libShelves[app.id] ?: appShelves[app.id]
 
-    // #882 Jev may suggest an existing shelf for a row nothing filed; no suggestion = none (drawn as "Other"), as before
-    private val jevAsked = HashSet<String>()
-    private fun jevShelf(app: Fleet.App): AppStoreHost.Shelf? {
-        if (app.pkg.isEmpty()) return null
-        val known = (libShelves.values + shelves.values)
-        StoreJev.shelfFor(app.id, known)?.let { return it }
-        if (jevAsked.add(app.id)) StoreJev.ask(requireContext(), listOf(app.id to app.label), known)
-        return null
+    /** Position of an app inside its category = its tile's position on the SuperApp page. */
+    private val appRank: Map<String, Int> by lazy {
+        val rank = HashMap<String, Int>()
+        fleetObjects("app_categories").forEach { category ->
+            val members = category.optJSONArray("members")
+            for (i in 0 until (members?.length() ?: 0)) members?.optString(i)?.takeIf { it.isNotEmpty() }?.let { rank[it] = i }
+        }
+        rank
+    }
+
+    private val appShelves: Map<String, AppStoreHost.Shelf> by lazy {
+        val filed = HashMap<String, AppStoreHost.Shelf>()
+        fleetObjects("app_categories").forEachIndexed { index, category ->
+            val shelf = AppStoreHost.Shelf(
+                category.optString("label", category.getString("id")), "%03d".format(index))
+            val members = category.optJSONArray("members")
+            for (i in 0 until (members?.length() ?: 0))
+                members?.optString(i)?.takeIf { it.isNotEmpty() }?.let { filed[it] = shelf }
+        }
+        filed
     }
 
     /** The heading a row is drawn under: its ML application (#405) when its
@@ -193,6 +196,7 @@ class StoreCloudFragment : KitComposeFragment() {
             Tab(group.getString("id"), group.optString("label", group.getString("id")), group.optString("blurb"),
                 rows.sortedWith(compareBy(
                     { applicationOf(it.id) ?: shelfOf(it)?.order ?: UNSHELVED },
+                    { appRank[it.id] ?: 0 },
                     { it.label.lowercase() })))
         }.filter { it.rows.isNotEmpty() }
     }

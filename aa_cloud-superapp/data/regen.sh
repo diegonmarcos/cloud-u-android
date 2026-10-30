@@ -544,6 +544,16 @@ regen_constellation() {
         return 1
     fi
 
+    # ── App categories: the tables INSIDE the Cloud ▸ Apps tab ───────────────
+    # DERIVED from the SuperApp's Cloud ▸ Apps page (build.json ui.sections[id=cloud]
+    # .tile_groups) by app-categories.py: same titles, same order, each app under the
+    # group whose tile opens it, the rest under a declared last "Other". Never typed;
+    # test-store-cloud-categories.sh re-derives it independently and compares.
+    local appcats
+    appcats="$(printf '%s' "$apps" > "$HERE/.apps.tmp.json" \
+        && python3 "$HERE/app-categories.py" "$selfbj" "$HERE/.apps.tmp.json"; rc=$?; rm -f "$HERE/.apps.tmp.json"; exit $rc)" \
+        || { echo "ERROR: app-categories.py failed" >&2; return 1; }
+
     # Reference rows go OUT of `apps` on purpose: Fleet.parse reads only `apps`,
     # so the updater, both auto-update workers, PrivilegedGrants and the recovery
     # screens can never be handed an entry with no package. installable:false is
@@ -556,7 +566,7 @@ regen_constellation() {
     # fleet already baked to 61,368 base64 bytes before the groups existed, so
     # the indentation alone was about to break every build that links the
     # updater. One entry per line keeps a diff readable per entry at compact size.
-    jq -r --argjson apps "$apps" --argjson catalogue "$catalogue" --argjson libcats "$libcats" '
+    jq -r --argjson apps "$apps" --argjson catalogue "$catalogue" --argjson libcats "$libcats" --argjson appcats "$appcats" '
         # members is the same group stamp read from the tab side, so the page
         # builds its tabs without reading any entry field Fleet.parse owns.
         [ (.constellation.groups // [])[] | .id as $id
@@ -565,6 +575,7 @@ regen_constellation() {
         | "{\"version\":1,",
           "\"groups\":[", ($groups | map(tojson) | join(",\n")), "],",
           "\"lib_categories\":[", ($libcats | map(tojson) | join(",\n")), "],",
+          "\"app_categories\":[", ($appcats | map(tojson) | join(",\n")), "],",
           "\"apps\":[", ($apps | map(tojson) | join(",\n")), "],",
           "\"catalogue\":[", ($catalogue | map(tojson) | join(",\n")), "]}"
         ' "$selfbj" > "$HERE/constellation-fleet.json"

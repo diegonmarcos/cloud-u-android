@@ -57,9 +57,13 @@ if not leak: ok("the store library reads no taxonomy data of its own")
 else: bad("the store library reads taxonomy data directly: %s" % leak)
 
 print("== T2: both tabs group through ONE host classifier, and it is the central one ==")
-for name, text in (("StoreCloudFragment", cloud), ("StorePhoneFragment", phone)):
-    if "AppStoreHost.classify(" in text: ok(name + " groups by AppStoreHost.classify")
-    else: bad(name + " does not ask the host classifier — it is grouping by something else")
+# Cloud > Apps is NOT grouped by the launcher classifier any more: its categories are the
+# SuperApp's Cloud > Apps tile groups (fleet app_categories, test-store-cloud-categories.sh).
+if "AppStoreHost.classify(" not in cloud and 'fleetObjects("app_categories")' in cloud:
+    ok("StoreCloudFragment groups by the derived app_categories, not by a second classifier")
+else: bad("StoreCloudFragment must read app_categories and must not call AppStoreHost.classify")
+if "AppStoreHost.classify(" in phone: ok("StorePhoneFragment groups by AppStoreHost.classify")
+else: bad("StorePhoneFragment does not ask the host classifier — it is grouping by something else")
 app_kt = code(os.path.join(kt_dir, "App.kt"))
 if re.search(r"\bclassify\s*=\s*com\.diegonmarcos\.superapp\.apps\.StoreShelves::of\b", app_kt):
     ok("the host wires classify to StoreShelves.of")

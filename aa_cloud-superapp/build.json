@@ -2941,7 +2941,8 @@
                 "id": "tools-account",
                 "label": "Account",
                 "icon": "ic_p_accounts",
-                "target": "page:config/profile"
+                "target": "page:config/profile",
+                "fleet_app": "account"
               },
               {
                 "id": "me",

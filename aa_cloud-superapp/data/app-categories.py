@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Store > Cloud > Apps categories, DERIVED from the SuperApp's Cloud > Apps page.
+
+Reads aa_cloud-superapp/build.json::ui.sections[id=cloud].tile_groups (the one
+declaration) and the fleet apps JSON, prints the app_categories array that
+regen.sh writes into constellation-fleet.json: one category per tile group
+(same title, same order), the fleet apps its tiles open as members (first tile
+wins), then a declared last category "Other" holding every app of the `apps`
+group no tile opens.
+
+A tile opens a fleet app by extapp:<id> (ui.external_apps[].install_package),
+app://<package>, or an explicit `fleet_app` on the tile. Nothing is typed here.
+
+usage: app-categories.py <superapp build.json> <apps.json>
+"""
+import json, re, sys
+
+OTHER = {"id": "other", "label": "Other"}
+
+
+def derive(bj, apps):
+    by_pkg = {a["package"]: a["id"] for a in apps if a.get("package")}
+    ext = {e["id"]: e.get("install_package") for e in bj["ui"].get("external_apps", [])}
+    tab = [a["id"] for a in apps if a.get("group") == "apps"]
+
+    def fleet_of(tile):
+        if tile.get("fleet_app"):
+            return tile["fleet_app"]
+        t = tile.get("target") or ""
+        if t.startswith("extapp:"):
+            return by_pkg.get(ext.get(re.sub(r"#.*$", "", t[len("extapp:"):])) or "")
+        if t.startswith("app://"):
+            return by_pkg.get(t[len("app://"):])
+        return None
+
+    section = next(s for s in bj["ui"]["sections"] if s["id"] == "cloud")
+    seen, out = set(), []
+    for g in section["tile_groups"]:
+        members = []
+        for tile in g["tiles"]:
+            f = fleet_of(tile)
+            if f and f in tab and f not in seen:
+                seen.add(f)
+                members.append(f)
+        cid = re.sub(r"[^a-z0-9]+", "-", g["title"].lower()).strip("-")
+        out.append({"id": cid, "label": g["title"], "members": members})
+    out = [c for c in out if c["members"]]
+    out.append({**OTHER, "members": [i for i in tab if i not in seen]})
+    return out
+
+
+if __name__ == "__main__":
+    bj = json.load(open(sys.argv[1]))
+    apps = json.loads(open(sys.argv[2]).read())
+    print(json.dumps(derive(bj, apps), separators=(",", ":"), ensure_ascii=False))
