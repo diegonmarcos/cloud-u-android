@@ -253,7 +253,7 @@
       "registry_name": "cloudy-h-webapps",
       "hub": "cloudy-___",
       "farm": "1.1.Cloudy",
-      "description": "Cloud web apps: per-app independent sites with a shared top nav"
+      "description": "Cloud web apps: the SuperApp + fleet mimic (/cloud-webapps/) and the C3 console (/cloudy-c3/), one SvelteKit workspace"
     },
     {
       "family": "WebApps",

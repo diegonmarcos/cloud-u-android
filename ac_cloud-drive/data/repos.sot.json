@@ -1350,7 +1350,7 @@
         "cloud-webapps",
         "cloud-h-webapps"
       ],
-      "doc": "The Cloud web apps: one independent site per Cloud APK (cloud-mail, cloud-drive, ...) sharing one generated top nav. Moved out of front-diegonmarcos (c__Cloud). Created 2026-10-21; tree imported from front-diegonmarcos/cloud-webapps."
+      "doc": "The Cloud web apps (#1320): one npm workspace with @cloudy/ui (tokens, icons and nav GENERATED from cloudy-u-android), @cloudy/c3-data, and two SvelteKit static sites: cloudy-webapps at /cloud-webapps/ (the SuperApp shell and every fleet app, embedded by the APK with ?embed=1) and cloudy-c3 at /cloudy-c3/ (the Cloud C3 console; the old /cloud/ portal redirects there). Also the 89 service fallback pages at /cloud-webapps/<slug>/. Created 2026-10-21 out of front-diegonmarcos (c__Cloud)."
     },
     {
       "name": "cloudy-h-webapps-2",

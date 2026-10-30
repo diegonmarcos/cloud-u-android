@@ -191,7 +191,7 @@
          "registry_name": "cloudy-h-webapps",
          "url": "https://github.com/diegonmarcos/cloudy-h-webapps",
          "private": false,
-         "description": "Cloud web apps: per-app independent sites with a shared top nav"
+         "description": "Cloud web apps: the SuperApp + fleet mimic (/cloud-webapps/) and the C3 console (/cloudy-c3/), one SvelteKit workspace"
         },
         {
          "code": "1.1.4.2",
