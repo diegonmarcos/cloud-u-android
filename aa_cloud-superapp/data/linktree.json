@@ -749,7 +749,7 @@
           "row": 0,
           "group": 0,
           "header": "SECURITY",
-          "header_url": "https://diegonmarcos.github.io/cloud",
+          "header_url": "https://diegonmarcos.github.io/cloudy-c3/",
           "links": [
             {
               "label": "Authelia",
@@ -1085,7 +1085,7 @@
           "row": 2,
           "group": 10,
           "header": "VPS",
-          "header_url": "https://diegonmarcos.github.io/cloud",
+          "header_url": "https://diegonmarcos.github.io/cloudy-c3/",
           "links": [
             {
               "label": "Oracle",
@@ -1155,13 +1155,13 @@
       "extras": {
         "primary_link": {
           "label": "Cloud Portal",
-          "url": "https://diegonmarcos.github.io/cloud",
+          "url": "https://diegonmarcos.github.io/cloudy-c3/",
           "icon": "settings.svg"
         },
         "primary_links": [
           {
             "label": "Cloud Mobile",
-            "url": "https://diegonmarcos.github.io/cloud-superapp",
+            "url": "https://diegonmarcos.github.io/cloud-webapps/",
             "icon": "device-mobile.svg"
           }
         ],
