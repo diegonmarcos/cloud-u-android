@@ -423,7 +423,7 @@ internal class AggregatorState(
 
     /** The bottom-nav re-tap: collapse every panel if any is open, expand every panel if all are closed. */
     fun toggleAllCollapsed(): Boolean {
-        val real = panels.withIndex().filter { it.value.kind != "section_title" }
+        val real = panels.withIndex().filter { it.value.kind != "section_title" && it.value.kind != "entry" }
         if (real.isEmpty()) return false
         val anyOpen = real.any { isOpen(it.index, it.value) }
         for ((i, _) in real) panelOpen[i] = !anyOpen

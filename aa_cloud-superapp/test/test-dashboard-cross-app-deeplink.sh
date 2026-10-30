@@ -141,7 +141,7 @@ groups = {g["title"]: g for g in cloud["tile_groups"]}
 
 # The product decision each row exists to express, pinned. Nothing about a JSON
 # array's order fails on its own when someone appends to it, which is exactly
-# why it is written out here. Me is the personal row, Projects W the
+# why it is written out here. Me is the personal row, Lnktree the
 # work half; the split is what tells the next editor which row a new tile joins.
 ROWS = {
     # #1092: the row is "Me" (was "Projects Me"), placed right after Data Apps. The Me app leads, one rule,
@@ -149,12 +149,12 @@ ROWS = {
     # reachable inside the Me app); the old rules projects-me-sep-0/1/2 went with the old layout.
     # Owner order (Cloud Me restructure): Account Me | Me-Health Me-Study Me-Achieves | Me-Duties Me-Buro Me-LLC.
     "Me": ["tools-account", "me", "me-sep-1", "myhealth", "mystudy", "myachieves", "me-sep-2", "myduties", "myburo", "myllc"],
-    # Seven named boards (#1212), two group dividers (owner names) and formerly no rule — task 311 removed PM Boards, PM C3 and the
+    # (#1331: the row is now Lnktree; before it held seven named boards (#1212), and task 311 had removed PM Boards, PM C3 and the
     # "|" between them. The rule had marked the board LIST off from the named
     # boards; with the list gone there are no longer two kinds of destination in
     # the row for it to divide, so it went with them rather than floating at the
     # head of a row whose every tile is now the same kind of tile.
-    "Projects W":  ["lf-dp-cloud-apk", "lf-dp-cloud-c3", "lf-cg-galaxy", "lf-cg-zirkus", "projects-w-sep-1", "nx-cm-mqpm", "nx-cm-blmbrg", "projects-w-sep-2", "st-deepsc-x"],  # #1212 owner order and names (Lf.y | Nx.z | St.x groups)
+    "Lnktree":  ["omniverse", "lnktree-sep-1", "finterm", "lnktree-sep-2", "cad", "sim2real"],  # #1331 owner order: Omniverse | FinTerm | CAD Sim2Real (was Projects W, #1212)
 }
 
 # Every target, spelled the way the ROUTER resolves it and not the way the tile
@@ -167,20 +167,11 @@ TARGETS = {
     # tile from this row, so its deep link is no longer pinned here.
     "tools-account": "page:config/profile",
     "me":        "extapp:cloud-me",
-    # A board uuid, baked in at build time because paca's projects table has no
-    # slug column and its router only declares /projects/$projectId — there is
-    # no name-based route to prefer. Recreating the paca database reissues the
-    # id and silently breaks this tile; see its _doc in build.json. Task 311
-    # removed the PM C3 tile that pinned the other uuid here; the board itself
-    # still exists in paca, so restoring it is a tile, not a board.
-    "lf-dp-cloud-c3": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
-    # Paca was dropped (#361): the six tiles without a board open their project's GitHub repo.
-    "lf-dp-cloud-apk": "https://github.com/diegonmarcos/cloudy-u-android",
-    "nx-cm-mqpm": "https://github.com/diegonmarcos/Capital-Macro-Central-Bank",
-    "lf-cg-zirkus": "https://github.com/diegonmarcos/CG-circus",
-    "lf-cg-galaxy": "https://github.com/diegonmarcos/CG-galaxy",
-    "nx-cm-blmbrg": "https://github.com/diegonmarcos/Capital-Stack-Fin-Terminal",
-    "st-deepsc-x": "https://github.com/diegonmarcos/HardTech-DeepXTech",
+    # #1331: the Lnktree row's tiles open in-app pages (test-lnktree-row.sh pins their contents).
+    "omniverse": "page:cloud/omniverse",
+    "finterm": "section:finterm",
+    "cad": "page:cloud/cad",
+    "sim2real": "page:cloud/sim2real",
     "myhealth":    "extapp:cloud-me#page:health/home",
     "mystudy":     "extapp:cloud-me#page:study/cv",
     "myachieves":  "extapp:cloud-me#page:achieves/personal",
@@ -273,12 +264,12 @@ for gone in ("myprojects", "myfin"):
 PY
 
 echo "== T6 (#1092): Cloud ▸ Apps row order, Vault and Account in Tools Primary =="
-python3 - "$BJ" <<'PY' && ok "rows Inboxes, Tools Primary, Data Apps, Me, AGI, Projects W, Configs; Vault in Tools Primary; Account leads Me, before the Me tile; Account kept in Configs" || bad "Cloud ▸ Apps row order or the Vault/Account placement drifted"
+python3 - "$BJ" <<'PY' && ok "rows Inboxes, Tools Primary, Data Apps, Me, AGI, Lnktree, Configs; Vault in Tools Primary; Account leads Me, before the Me tile; Account kept in Configs" || bad "Cloud ▸ Apps row order or the Vault/Account placement drifted"
 import json, sys
 d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
 titles = [g["title"] for g in cloud["tile_groups"]]
-want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Projects W", "Configs"]
+want = ["Inboxes", "Tools Primary", "Data Apps", "Me", "AGI", "Lnktree", "Configs"]
 assert titles == want, (titles, "!=", want)
 g = {x["title"]: [t.get("label") for t in x["tiles"]] for x in cloud["tile_groups"]}
 assert g["Me"] == ["Account", "Me", "|", "Me-Health", "Me-Study", "Me-Achieves", "|", "Me-Duties", "Me-Buro", "Me-LLC"], g["Me"]

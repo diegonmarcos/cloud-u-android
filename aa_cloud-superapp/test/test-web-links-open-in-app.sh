@@ -54,13 +54,22 @@ has 'R.string.action_back'    "$WEB_KT" "the control carries a contentDescriptio
 echo "== T4: the reported page is a plain URL — engine-routed, not special-cased =="
 # MySocials left the Me row (owner order, Cloud Me restructure); the rule is about the dispatcher branch, which
 # every https tile of Cloud > Apps exercises, so the check now holds each of them to a plain http(s) URL.
-python3 - "$BJ" <<'PY' && ok "web tiles of Cloud > Apps have plain http(s) URL targets" || bad "no web tile is left, or one is not a plain URL target"
+python3 - "$BJ" <<'PY' && ok "web links of the Lnktree pages have plain http(s) URL targets" || bad "no web tile is left, or one is not a plain URL target"
 import json,sys
 d=json.load(open(sys.argv[1]))
-cloud=next(s for s in d["ui"]["sections"] if s["id"]=="cloud")
-found={t["id"]:t["target"] for g in cloud["tile_groups"] for t in g["tiles"]
-       if isinstance(t.get("target"),str) and t["target"].startswith(("http://","https://"))}
-assert found, "no https tile left in Cloud > Apps to exercise the dispatcher"
+# #1331: the Lnktree row (was Projects W, the last group of https repo tiles) became in-app pages. What exercises the dispatcher's
+# https branch now is a Lnktree page ENTRY: kind=entry panels with a declared source resolve (LnktreeTargets) to an http(s)
+# URL and are opened through the same onOpen. So the check holds every such entry to a source that yields a plain http(s) URL.
+found={}
+for s_ in d["ui"]["sections"]:
+    for k,stack in s_.items():
+        if k.startswith("stack_") and isinstance(stack,list):
+            for e in stack:
+                if e.get("kind")=="entry" and not e.get("planned"):
+                    if e.get("site"): found[s_["id"]+"/"+e["title"]]="https://linktree-label"
+                    elif e.get("registry"): found[s_["id"]+"/"+e["title"]]=d["ui"]["app_urls"]["registry_sites"][e["registry"]]
+                    elif e.get("repo"): found[s_["id"]+"/"+e["title"]]=d["ui"]["app_urls"]["repo_base"]+e["repo"]
+assert found, "no live Lnktree entry left in the SuperApp to exercise the dispatcher"
 for i,t in found.items():
     assert " " not in t and "#Intent" not in t, (i,t)
 PY

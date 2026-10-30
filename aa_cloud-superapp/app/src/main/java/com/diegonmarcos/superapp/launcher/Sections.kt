@@ -224,6 +224,15 @@ object Sections {
         /** Draw this panel in the page's collapsed SETTINGS section at the very bottom, below every card, the Archive
          *  and the page actions (#1068: Notify is a page to look at, its controls come last). */
         val bottom: Boolean = false,
+        /** Used by kind=entry (Cloud > Lnktree pages) - WHERE the entry leads, exactly one of: [site] (the label of a
+         *  data/linktree.json link), [registry] (a code of ui.app_urls.registry_sites) or [repo] (+ optional [path]
+         *  under ui.app_urls.repo_base). None resolved, or [planned], and the entry is drawn greyed with its [note]. */
+        val site: String = "",
+        val registry: String = "",
+        val repo: String = "",
+        val path: String = "",
+        val planned: Boolean = false,
+        val note: String = "",
     )
 
     /** One declared in-panel anchor: the [id] tiles point at, plus the header
@@ -929,6 +938,12 @@ object Sections {
                         limit           = p.optInt("limit", 0),
                         aboveFilters    = p.optBoolean("above_filters", false),
                         bottom          = p.optBoolean("bottom", false),
+                        site            = p.optString("site", ""),
+                        registry        = p.optString("registry", ""),
+                        repo            = p.optString("repo", ""),
+                        path            = p.optString("path", ""),
+                        planned         = p.optBoolean("planned", false),
+                        note            = p.optString("note", ""),
                     ))
                 }
                 return out

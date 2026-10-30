@@ -2635,6 +2635,30 @@
             "icon": "ic_solutions",
             "hidden": true,
             "placeholder": true
+          },
+          {
+            "id": "omniverse",
+            "label": "Omniverse",
+            "icon": "ic_world",
+            "facet": true,
+            "hidden": true,
+            "_doc": "Lnktree tile page (owner 2026-10-30): routable as page:cloud/omniverse, drawn from stack_omniverse below (kind=entry panels). Hidden: it is reached from the Lnktree row, not from the Cloud tab strip."
+          },
+          {
+            "id": "cad",
+            "label": "CAD",
+            "icon": "ic_p_c3_stack",
+            "facet": true,
+            "hidden": true,
+            "_doc": "Lnktree tile page (owner 2026-10-30): routable as page:cloud/cad, drawn from stack_cad below (kind=entry panels). Hidden: it is reached from the Lnktree row, not from the Cloud tab strip."
+          },
+          {
+            "id": "sim2real",
+            "label": "Sim2Real",
+            "icon": "ic_robot",
+            "facet": true,
+            "hidden": true,
+            "_doc": "Lnktree tile page (owner 2026-10-30): routable as page:cloud/sim2real, drawn from stack_sim2real below (kind=entry panels). Hidden: it is reached from the Lnktree row, not from the Cloud tab strip."
           }
         ],
         "_doc_stack_apps": "Labs/Apps tab — themed placeholder panels (Data & ML, Engineering, Quant & Markets, Aero & Space, Circus). kind=link_grid with empty links renders the title as a collapsable header until per-section content lands. Suite was removed (the Suite slide now lives only on the bottom-nav Suite section, not here).",
@@ -2702,7 +2726,7 @@
             "target": "section:cloud"
           },
           {
-            "_doc": "Index icon for the tile_groups row that is now called 'Me' — the label was 'Tools Dashboard' and named a group that no longer exists, which makes the Home index point at nothing a user can find on the Cloud page. Every entry in tiles_shared targets section:cloud, so this is a category label rather than per-group navigation. There is deliberately NO sixth entry for the new 'Projects W' row: a second icon leading to the identical destination adds a tap target and no way to get anywhere new, and the owner asked for a row, not an index entry. Add one here if the index is ever wired to open its own group.",
+            "_doc": "Index icon for the tile_groups row that is now called 'Me' — the label was 'Tools Dashboard' and named a group that no longer exists, which makes the Home index point at nothing a user can find on the Cloud page. Every entry in tiles_shared targets section:cloud, so this is a category label rather than per-group navigation. There is deliberately NO sixth entry for the 'Lnktree' row (was 'Projects W'): a second icon leading to the identical destination adds a tap target and no way to get anywhere new, and the owner asked for a row, not an index entry. Add one here if the index is ever wired to open its own group.",
             "id": "suite-dash",
             "label": "Me",
             "icon": "ic_p_c3_workflows",
@@ -3029,74 +3053,53 @@
             ]
           },
           {
-            "_doc": "Projects W — the work half of the two project rows, opposite Projects Me. Every tile is a named paca board and there is no rule in the row: the owner removed PM Boards, PM C3 and the '|' between them, and with the board LIST gone there are no longer two kinds of tap to divide. The C3 board itself still exists in paca (uuid 91d8fa68-ce83-463d-af00-af632cf26ab7, created through POST /api/v1/projects so it carries its 4 task_statuses, 4 task_types, 3 project_roles and the owner's project_members entry); only the tile that opened it is gone, so restoring it means bringing the tile back, not recreating the board. The board list is still reachable through the three index-target tiles below.",
-            "title": "Projects W",
+            "_doc": "Lnktree (was 'Projects W'; owner 2026-10-30): four tiles, each an in-app page declared as data. Omniverse, CAD and Sim2Real are hidden pages of this section (page:cloud/<id>, stack_<id> below); FinTerm is its own section with a six-tab strip (section:finterm). Every entry on those pages is a kind=entry panel whose target is read from a declared source (linktree.json label, ui.app_urls registry_sites or repo_base) or is `planned` and greyed. The two '|' rules are the owner's grouping: Omniverse | FinTerm | CAD Sim2Real. The row id stays 'Lnktree' = the title; the old project tiles (Lf.y/Nx.z/St.x repos) are gone.",
+            "title": "Lnktree",
             "tiles": [
               {
-                "_doc": "Lf.y-D&P-Cloud-apk (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
-                "id": "lf-dp-cloud-apk",
-                "label": "Lf.y-D&P-Cloud-apk",
-                "icon": "ic_p_sol_other",
-                "target": "https://github.com/diegonmarcos/cloudy-u-android"
+                "_doc": "Omniverse: page:cloud/omniverse (Galaxy, Game Store, VR Store).",
+                "id": "omniverse",
+                "label": "Omniverse",
+                "icon": "ic_world",
+                "target": "page:cloud/omniverse"
               },
               {
-                "_doc": "Lf.y-D&P-Cloud-C3 (was Lf-C3-D&P-7321): the paca board of the C3 D&P project; the uuid is unchanged because the board is unchanged (#1212, owner names).",
-                "id": "lf-dp-cloud-c3",
-                "label": "Lf.y-D&P-Cloud-C3",
-                "icon": "ic_p_c3_reports",
-                "target": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d"
-              },
-              {
-                "_doc": "Lf.y-CG-Galaxy (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
-                "id": "lf-cg-galaxy",
-                "label": "Lf.y-CG-Galaxy",
-                "icon": "ic_pm_boards",
-                "target": "https://github.com/diegonmarcos/CG-galaxy"
-              },
-              {
-                "_doc": "Lf.y-CG-Zirkus (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
-                "id": "lf-cg-zirkus",
-                "label": "Lf.y-CG-Zirkus",
-                "icon": "ic_p_sol_pro",
-                "target": "https://github.com/diegonmarcos/CG-circus"
-              },
-              {
-                "_doc": "Owner-ordered group divider in Projects W (#1212): a bare character, not a control; Sections.TileGroup.destinations drops it.",
-                "id": "projects-w-sep-1",
+                "_doc": "Group divider (owner: Omniverse | FinTerm | CAD Sim2Real): a bare character, not a control.",
+                "id": "lnktree-sep-1",
                 "label": "|",
                 "separator": true
               },
               {
-                "_doc": "Nx.z-CM-MQPM (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
-                "id": "nx-cm-mqpm",
-                "label": "Nx.z-CM-MQPM",
-                "icon": "ic_p_markets_prices",
-                "target": "https://github.com/diegonmarcos/Capital-Macro-Central-Bank"
+                "_doc": "FinTerm: section:finterm, the FI | EQ | EX | NW | PM | MY-PM tab strip.",
+                "id": "finterm",
+                "label": "FinTerm",
+                "icon": "ic_fin",
+                "target": "section:finterm"
               },
               {
-                "_doc": "Nx.z-CM-Blmbrg (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
-                "id": "nx-cm-blmbrg",
-                "label": "Nx.z-CM-Blmbrg",
-                "icon": "ic_p_markets_terminal",
-                "target": "https://github.com/diegonmarcos/Capital-Stack-Fin-Terminal"
-              },
-              {
-                "_doc": "Owner-ordered group divider in Projects W (#1212): a bare character, not a control; Sections.TileGroup.destinations drops it.",
-                "id": "projects-w-sep-2",
+                "_doc": "Group divider (owner: Omniverse | FinTerm | CAD Sim2Real): a bare character, not a control.",
+                "id": "lnktree-sep-2",
                 "label": "|",
                 "separator": true
               },
               {
-                "_doc": "St.x-DeepSc-X (#1212, owner names). Paca dropped per #361 (owner: forget Paca); the tile opens the project GitHub repo instead (task 182).",
-                "id": "st-deepsc-x",
-                "label": "St.x-DeepSc-X",
-                "icon": "ic_p_sol_tools",
-                "target": "https://github.com/diegonmarcos/HardTech-DeepXTech"
+                "_doc": "CAD: page:cloud/cad (MCAD, BIM, SolWrk).",
+                "id": "cad",
+                "label": "CAD",
+                "icon": "ic_p_c3_stack",
+                "target": "page:cloud/cad"
+              },
+              {
+                "_doc": "Sim2Real: page:cloud/sim2real (SAP2000, MATLAB, Ansys).",
+                "id": "sim2real",
+                "label": "Sim2Real",
+                "icon": "ic_robot",
+                "target": "page:cloud/sim2real"
               }
             ]
           },
           {
-            "_doc": "Configs (#324) — the surfaces that configure the fleet rather than being part of it (#803: led by SuperApp, the launcher itself, moved here from AGI), pulled out of Tools Primary so a config errand is one recognisable row instead of a hunt through the tool tiles. It sits LAST among the declared groups on purpose: GroupedTilesFragment appends a synthetic 'Actions' header after every data group it renders (see LauncherNavController.GROUP_ACTIONS), so 'after Projects W and before Actions' is exactly this position and there is no Actions group in this array to sit before.",
+            "_doc": "Configs (#324) — the surfaces that configure the fleet rather than being part of it (#803: led by SuperApp, the launcher itself, moved here from AGI), pulled out of Tools Primary so a config errand is one recognisable row instead of a hunt through the tool tiles. It sits LAST among the declared groups on purpose: GroupedTilesFragment appends a synthetic 'Actions' header after every data group it renders (see LauncherNavController.GROUP_ACTIONS), so 'after Lnktree and before Actions' is exactly this position and there is no Actions group in this array to sit before.",
             "title": "Configs",
             "tiles": [
               {
@@ -3201,6 +3204,77 @@
             "kind": "link_grid",
             "title": "Circus",
             "subtitle": "Misc experiments and side quests"
+          }
+        ],
+        "stack_omniverse": [
+          {
+            "_doc": "Omniverse (Lnktree row, owner 2026-10-30): three entries. Each is a `kind: entry` panel (AggregatorPanels.PageEntry): title, one-line description, and a target read from a DECLARED source through LnktreeTargets (never typed here): Galaxy by registry code 2.1.1 (the CG Galaxy web app, ui.app_urls.registry_sites), the two stores are `planned` (no store exists) and are drawn greyed with their note.",
+            "kind": "entry",
+            "title": "Galaxy",
+            "subtitle": "CG Galaxy: the 3D galaxy worlds web app",
+            "registry": "2.1.1"
+          },
+          {
+            "kind": "entry",
+            "title": "Game Store",
+            "subtitle": "Games in one place",
+            "planned": true,
+            "note": "Planned: no game store yet"
+          },
+          {
+            "kind": "entry",
+            "title": "VR Store",
+            "subtitle": "VR experiences in one place",
+            "planned": true,
+            "note": "Planned: no VR store yet"
+          }
+        ],
+        "stack_cad": [
+          {
+            "_doc": "CAD (Lnktree row). MCAD and BIM lead to their folders of the HardTech-Stack-CAD-Simulators repo (registry 4.3.1.1; `repo` under ui.app_urls.repo_base, `path` inside it): OpenCAD (FreeCAD and AutoCAD MCP servers) and OpenBIM (Bonsai/IFC MCP). SolWrk (SolidWorks) has no tool in the repo, so it is planned.",
+            "kind": "entry",
+            "title": "MCAD",
+            "subtitle": "Mechanical CAD: FreeCAD and AutoCAD agents (MCP)",
+            "repo": "HardTech-Stack-CAD-Simulators",
+            "path": "Structural-Designer/OpenCAD"
+          },
+          {
+            "kind": "entry",
+            "title": "BIM",
+            "subtitle": "Building information models: IFC and Bonsai agents (MCP)",
+            "repo": "HardTech-Stack-CAD-Simulators",
+            "path": "Structural-Designer/OpenBIM"
+          },
+          {
+            "kind": "entry",
+            "title": "SolWrk",
+            "subtitle": "SolidWorks",
+            "planned": true,
+            "note": "Planned: coming"
+          }
+        ],
+        "stack_sim2real": [
+          {
+            "_doc": "Sim2Real (Lnktree row). SAP2000, MATLAB and Ansys have no tool in HardTech-Stack-CAD-Simulators yet (its Simulators folder holds blender-mcp and sailytics), so all three are planned.",
+            "kind": "entry",
+            "title": "SAP2000",
+            "subtitle": "Structural analysis",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "entry",
+            "title": "MATLAB",
+            "subtitle": "Numerical computing and simulation",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "entry",
+            "title": "Ansys",
+            "subtitle": "Finite-element and multiphysics simulation",
+            "planned": true,
+            "note": "Planned: coming"
           }
         ],
         "_doc_c3_gone": "tiles_c3 and stack_c3 are GONE from this section, not renamed. Cloud ▸ C3 mirrors the `c3` section now, so C3 is declared exactly once, where its pages already lived. The ten tiles that used to be here were never once drawn anyway — a facet that declares a stack renders the stack and its tiles are unreachable, and stack_c3 sat beside them the whole time; they are alive again as the leading tile_row of sections[c3].stack_observability / stack_topology, split by which half they belong to, with every target byte-identical."
@@ -4587,6 +4661,200 @@
                 "target": "page:c3/vms"
               }
             ]
+          }
+        ]
+      },
+      {
+        "_doc": "FinTerm (Lnktree row, owner 2026-10-30): the capital-markets terminal as a six-tab strip, FI | EQ | EX | NW | PM | MY-PM, drawn by the SectionTabsFragment every tabbed section uses. Every tab is a facet page rendering its stack_<tab> of kind=entry panels. Entries open the Capital-Stack-Fin-Terminal web apps through declared sources, or are planned and greyed; no price, rate or chart is drawn that is not real.",
+        "id": "finterm",
+        "label": "FinTerm",
+        "parent": "cloud",
+        "_doc_parent": "Back from the strip root lands on Cloud (the Lnktree row lives there), not Home.",
+        "icon": "ic_fin",
+        "module": null,
+        "supports_accounts": false,
+        "tabs": true,
+        "pages": [
+          {
+            "id": "fi",
+            "label": "FI",
+            "icon": "ic_p_accounts",
+            "facet": true
+          },
+          {
+            "id": "eq",
+            "label": "EQ",
+            "icon": "ic_p_c3_workflows",
+            "facet": true
+          },
+          {
+            "id": "ex",
+            "label": "EX",
+            "icon": "ic_wg",
+            "facet": true
+          },
+          {
+            "id": "nw",
+            "label": "NW",
+            "icon": "ic_rss",
+            "facet": true
+          },
+          {
+            "id": "pm",
+            "label": "PM",
+            "icon": "ic_p_folder",
+            "facet": true
+          },
+          {
+            "id": "my-portfolio",
+            "label": "MY-PM",
+            "icon": "ic_wallet",
+            "facet": true
+          }
+        ],
+        "stack_fi": [
+          {
+            "_doc": "FinTerm > FI. `site` is the label of a data/linktree.json link, the portal snapshot that already holds the address (the same declaration as ui.app_urls site): the Capital-Stack-Fin-Terminal web app for the curve and bond screens (its group B0 'Yield curves & bonds'), CentralBank for the rate-probability work. Fin Terminal is one single-page app without deep links, so these entries open the terminal, not a sub-screen.",
+            "kind": "entry",
+            "title": "Yield Curves",
+            "subtitle": "Spot, forward and zero curves, US and major sovereigns",
+            "site": "Fin Terminal"
+          },
+          {
+            "kind": "entry",
+            "title": "Forward Rates",
+            "subtitle": "Forward rate curves and the paths they imply",
+            "site": "Fin Terminal"
+          },
+          {
+            "kind": "entry",
+            "title": "World Interest Rate Probabilities",
+            "subtitle": "Market-implied central bank rate paths",
+            "site": "CentralBank"
+          },
+          {
+            "kind": "entry",
+            "title": "World Bonds",
+            "subtitle": "Sovereign bond yields and spreads by country",
+            "site": "Fin Terminal"
+          }
+        ],
+        "stack_eq": [
+          {
+            "_doc": "FinTerm > EQ. MarketWatch is the Capital-Stack-Fin-Terminal prices page (linktree label MarketWatch).",
+            "kind": "entry",
+            "title": "World Equity Indices",
+            "subtitle": "Major equity index levels and moves worldwide",
+            "site": "MarketWatch"
+          }
+        ],
+        "stack_ex": [
+          {
+            "_doc": "FinTerm > EX. FX opens the Fin Terminal (its group B1 'FX'); Onshore USD Rates has no page anywhere yet, so it is planned.",
+            "kind": "entry",
+            "title": "FX",
+            "subtitle": "Comprehensive real-time currency pricing, matrix crosses, spot rates, and forwards",
+            "site": "Fin Terminal"
+          },
+          {
+            "kind": "entry",
+            "title": "Onshore USD Rates",
+            "subtitle": "Onshore USD rate benchmarks and curves",
+            "planned": true,
+            "note": "Planned: coming"
+          }
+        ],
+        "stack_nw": [
+          {
+            "_doc": "FinTerm > NW. The GDELT news dashboard (linktree label GDELT News).",
+            "kind": "entry",
+            "title": "News",
+            "subtitle": "Global news from the GDELT feed",
+            "site": "GDELT News"
+          }
+        ],
+        "stack_pm": [
+          {
+            "_doc": "FinTerm > PM. Portfolio & Risk Analytics and every model portfolio are `planned`: nothing computes them yet, so no figure is drawn. The model portfolios are two families, bonds/equity splits and Developed/Emerging Markets splits, each named by its split.",
+            "kind": "entry",
+            "title": "Portfolio & Risk Analytics",
+            "subtitle": "Portfolio tracking, attribution analysis, factor exposures and scenario stress testing for well-known portfolios",
+            "planned": true,
+            "note": "Planned: analytics coming"
+          },
+          {
+            "kind": "section_title",
+            "title": "Model portfolios: bonds / equity"
+          },
+          {
+            "kind": "entry",
+            "title": "40/60",
+            "subtitle": "40% bonds, 60% equity",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "entry",
+            "title": "70/30",
+            "subtitle": "70% bonds, 30% equity",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "entry",
+            "title": "60/40",
+            "subtitle": "60% bonds, 40% equity",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "entry",
+            "title": "30/70",
+            "subtitle": "30% bonds, 70% equity",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "section_title",
+            "title": "Model portfolios: DM / EM"
+          },
+          {
+            "kind": "entry",
+            "title": "70/30 DM/EM",
+            "subtitle": "70% Developed Markets, 30% Emerging Markets",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "entry",
+            "title": "60/40 DM/EM",
+            "subtitle": "60% Developed Markets, 40% Emerging Markets",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "entry",
+            "title": "40/60 DM/EM",
+            "subtitle": "40% Developed Markets, 60% Emerging Markets",
+            "planned": true,
+            "note": "Planned: coming"
+          },
+          {
+            "kind": "entry",
+            "title": "30/70 DM/EM",
+            "subtitle": "30% Developed Markets, 70% Emerging Markets",
+            "planned": true,
+            "note": "Planned: coming"
+          }
+        ],
+        "stack_my-portfolio": [
+          {
+            "_doc": "FinTerm > MY-PM. A personal portfolio is a local, editable holdings list (ticker, quantity, cost). The SuperApp has no editable-list renderer declared as data, and the owner asked for no new big renderer, so it is a planned entry for now.",
+            "kind": "entry",
+            "title": "Personal portfolio",
+            "subtitle": "Your holdings: ticker, quantity, cost, kept on this phone",
+            "planned": true,
+            "note": "Planned: needs an editable list, coming"
           }
         ]
       },
@@ -8278,11 +8546,13 @@
         }
       ]
     },
-    "_doc_app_urls": "#572 THE ONE DECLARATION behind the long-press menu's URLs section (AppUrls.kt derives, AppLongPressMenu.kt draws; neither holds a URL). OUR apps: an external_apps entry names the backend service it talks to in `service` — a `name` in data/services_public.json (public_url + private_dns) or data/services_private.json (private_dns only) — and the menu shows that row's public URL and private (mesh) URL, read from the snapshot regen.sh already keeps. The endpoints are never restated here, so they cannot drift from the infra; an app with no `service` (or one the snapshot no longer lists) gets no URL rows. `public_scheme` / `private_scheme` prefix the two: the snapshot stores hosts without a scheme, and the mesh's Caddy upstreams are plain HTTP on the WireGuard interface. PHONE apps: ONE derivation, first hit wins — (1) the app's own manifest <meta-data>, the first of `website_meta_keys` it declares that holds an http(s) URL; (2) the page of the store that really installed it (getInstallSourceInfo), from `installer_pages` — {pkg} is substituted, and its `label` names the row so a store page is never passed off as the vendor's website. Nothing found = the row is not drawn, never guessed. Not derived: F-Droid's index `homepage` (needs the repo index, which is a network fetch per long-press) — its store page in (2) links to it. PUBLISHED SITES (#677): a static site (GitHub Pages) is neither a mesh service nor an installed package, so an external_apps entry names it in `site` — the LABEL of a link in data/linktree.json, the portal snapshot that already holds every github.io URL. The URL is read from there, never restated and never built from a repo name (mymaps-navigation and mymaps-mytrips do not follow <owner>.github.io/<repo>); a label that matches no link, or two links with different URLs, yields no row. NOT SILENT: when nothing is drawn the section says why, and says it two different ways — `URL missing:` for a declared service/site that does not resolve, `No URL kind for this app:` when nothing is declared or found at all. test-menu-urls-declarative.sh fails on any literal http(s) URL in the menu code, on a `service` that names no snapshot row, and on a `site` that names no single linktree link.",
+    "_doc_app_urls": "#572 THE ONE DECLARATION behind the long-press menu's URLs section (AppUrls.kt derives, AppLongPressMenu.kt draws; neither holds a URL). OUR apps: an external_apps entry names the backend service it talks to in `service` — a `name` in data/services_public.json (public_url + private_dns) or data/services_private.json (private_dns only) — and the menu shows that row's public URL and private (mesh) URL, read from the snapshot regen.sh already keeps. The endpoints are never restated here, so they cannot drift from the infra; an app with no `service` (or one the snapshot no longer lists) gets no URL rows. `public_scheme` / `private_scheme` prefix the two: the snapshot stores hosts without a scheme, and the mesh's Caddy upstreams are plain HTTP on the WireGuard interface. PHONE apps: ONE derivation, first hit wins — (1) the app's own manifest <meta-data>, the first of `website_meta_keys` it declares that holds an http(s) URL; (2) the page of the store that really installed it (getInstallSourceInfo), from `installer_pages` — {pkg} is substituted, and its `label` names the row so a store page is never passed off as the vendor's website. Nothing found = the row is not drawn, never guessed. Not derived: F-Droid's index `homepage` (needs the repo index, which is a network fetch per long-press) — its store page in (2) links to it. PUBLISHED SITES (#677): a static site (GitHub Pages) is neither a mesh service nor an installed package, so an external_apps entry names it in `site` — the LABEL of a link in data/linktree.json, the portal snapshot that already holds every github.io URL. The URL is read from there, never restated and never built from a repo name (mymaps-navigation and mymaps-mytrips do not follow <owner>.github.io/<repo>); a label that matches no link, or two links with different URLs, yields no row. NOT SILENT: when nothing is drawn the section says why, and says it two different ways — `URL missing:` for a declared service/site that does not resolve, `No URL kind for this app:` when nothing is declared or found at all. test-menu-urls-declarative.sh fails on any literal http(s) URL in the menu code, on a `service` that names no snapshot row, and on a `site` that names no single linktree link. LNKTREE PAGES: a kind=entry panel (Cloud ▸ Lnktree pages) reads its target through LnktreeTargets from `site` (a linktree.json label, as above), `registry` (a key of `registry_sites`: the `webapp` URL of that code in 0_registry/projects-repos.json, copied by key and checked against it by test-lnktree-row.sh) or `repo` + `path` under `repo_base`. An entry with none is `planned` and drawn greyed.",
     "app_urls": {
       "public_scheme": "https://",
       "private_scheme": "http://",
       "website_meta_keys": ["website", "homepage"],
+      "repo_base": "https://github.com/diegonmarcos/",
+      "registry_sites": { "2.1.1": "https://diegonmarcos.github.io/galaxy/" },
       "installer_pages": {
         "com.android.vending": { "label": "Play page", "url": "https://play.google.com/store/apps/details?id={pkg}" },
         "org.fdroid.fdroid": { "label": "F-Droid page", "url": "https://f-droid.org/packages/{pkg}" },

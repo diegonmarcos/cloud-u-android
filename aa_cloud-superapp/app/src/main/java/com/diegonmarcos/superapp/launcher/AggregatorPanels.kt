@@ -139,6 +139,11 @@ internal fun PagePanel(
 ) {
     val p = LocalKitPalette.current
     val ctx = LocalContext.current
+    if (panel.kind == "entry") {
+        // kind=entry - one titled line of a Cloud > Lnktree page: a card that opens its target, or a greyed "planned" one.
+        PageEntry(panel, index, anchors, actions.open)
+        return
+    }
     if (panel.kind == "section_title") {
         // kind=section_title — a plain heading between cards (NOT a card).
         Text(panelTitle(ctx, panel), color = p.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold,
@@ -193,6 +198,33 @@ internal fun PagePanel(
                     .testTag(AggTags.panelBody(index)),
             ) { PanelBody(state, index, panel, actions) }
         }
+    }
+}
+
+/**
+ * kind=entry: the title, a one-line description and where it leads. The target is resolved from a DECLARED source
+ * ([LnktreeTargets]); an entry with none, or one marked `planned`, is drawn greyed with its short note and does nothing
+ * when tapped. No numbers, no chart: nothing is shown that the entry does not really have.
+ */
+@Composable
+private fun PageEntry(panel: Sections.StackPanel, index: Int, anchors: PageAnchors, onOpen: (String) -> Unit) {
+    val p = LocalKitPalette.current
+    val ctx = LocalContext.current
+    val url = remember(panel) { LnktreeTargets.of(panel) }
+    Column(
+        Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(14.dp)).background(p.surface)
+            .alpha(if (url != null) 1f else 0.45f)
+            .then(if (url != null) Modifier.clickable { onOpen(url) } else Modifier)
+            .anchorTarget(anchors, panel.anchor).testTag(AggTags.panel(index)).padding(14.dp),
+    ) {
+        Text(panelTitle(ctx, panel), color = p.textPrimary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        if (panel.subtitle.isNotBlank()) {
+            Text(panel.subtitle, color = p.textPrimary, style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.alpha(0.65f).padding(top = 2.dp))
+        }
+        Text(if (url != null) "Open" else panel.note.ifBlank { "Planned" },
+            color = if (url != null) p.accent else p.textPrimary, style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(top = 6.dp).testTag(if (url != null) "agg:entry:open" else "agg:entry:planned"))
     }
 }
 
