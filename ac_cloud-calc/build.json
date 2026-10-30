@@ -180,7 +180,7 @@
       "type": "library"
     },
     "libs:nfc": {
-      "_doc": "#1264 Measure > NFC: libs:nfc's NfcPanel, the standard tag analyzer (reader mode for NfcA/B/F/V, IsoDep, NDEF, NdefFormatable, MIFARE Ultralight page read; NDEF parse / write / format; scan history export). The NFC permission is install-time, merged from the lib's manifest. A `gui` lib.",
+      "_doc": "#1264 Measure > NFC: libs:nfc's NfcPanel, the standard tag analyzer (reader mode for NfcA/B/F/V, IsoDep, NDEF, NdefFormatable, MIFARE Ultralight page read, #1322 MIFARE Classic with public default keys only (hotel cards show locked sectors, not an error) and DESFire GetVersion; NDEF parse / write / format; scan history export). The NFC permission is install-time, merged from the lib's manifest. A `gui` lib.",
       "dir": "../ab_cloud-libs-shared/libs/nfc",
       "type": "library"
     },
@@ -3687,7 +3687,7 @@
         "spec": {
           "tab": "scan"
         },
-        "_doc": "#1264 libs:nfc's NfcPanel tab scan: Tap a tag: UID, ATQA / SAK, ATS, technologies, max size, writable / read-only, MIFARE Ultralight pages, and every NDEF record decoded with its hex / ASCII dump."
+        "_doc": "#1264 libs:nfc's NfcPanel tab scan: Tap a tag: UID, ATQA / SAK, ATS, technologies, max size, writable / read-only, MIFARE Ultralight pages, MIFARE Classic sectors (public keys only) with the decoded MAD, DESFire version, and every NDEF record decoded with its hex / ASCII dump."
       },
       {
         "id": "nfc_write",
@@ -3720,7 +3720,7 @@
         "spec": {
           "tab": "status"
         },
-        "_doc": "#1264 libs:nfc's NfcPanel tab status: NFC on / off with the system settings link (apps cannot switch NFC), reader mode, card emulation support."
+        "_doc": "#1264 libs:nfc's NfcPanel tab status: NFC on / off with the system settings link (apps cannot switch NFC), reader mode, card emulation support, MIFARE Classic support (needs an NXP NFC chip)."
       },
       {
         "id": "world",

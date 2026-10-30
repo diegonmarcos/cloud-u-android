@@ -31,6 +31,9 @@ class NfcController(private val app: Context, private val catalog: NfcCatalog) {
     private val _state = MutableStateFlow(NfcState(history = NfcHistory.parse(prefs.getString("entries", "[]") ?: "[]")))
     val state: StateFlow<NfcState> = _state
 
+    /** True on phones with an NXP NFC controller, the only ones where android.nfc.tech.MifareClassic works. */
+    fun phoneHasMifareClassic(): Boolean = app.packageManager.hasSystemFeature(MifareLayout.FEATURE_NXP_MIFARE)
+
     fun refresh() {
         val a = NfcAdapter.getDefaultAdapter(app)
         _state.update { it.copy(available = a != null, enabled = a?.isEnabled == true) }
@@ -58,7 +61,7 @@ class NfcController(private val app: Context, private val catalog: NfcCatalog) {
             val result = runCatching { NfcReader.write(tag, p.message, p.format) }.getOrElse { "Write failed: ${it.javaClass.simpleName} ${it.message.orEmpty()}" }
             _state.update { it.copy(pending = null, status = result) }
         }
-        val info = runCatching { NfcReader.read(tag, catalog) }.getOrElse { TagInfo(System.currentTimeMillis(), Bytes.hex(tag.id ?: ByteArray(0)), tag.techList.map { t -> t.substringAfterLast('.') }, "Unknown", error = it.message.orEmpty()) }
+        val info = runCatching { NfcReader.read(tag, catalog, phoneHasNxp = phoneHasMifareClassic()) }.getOrElse { TagInfo(System.currentTimeMillis(), Bytes.hex(tag.id ?: ByteArray(0)), tag.techList.map { t -> t.substringAfterLast('.') }, "Unknown", error = it.message.orEmpty()) }
         val hist = (listOf(NfcHistory.entry(info)) + _state.value.history).take(NfcHistory.MAX)
         prefs.edit().putString("entries", NfcHistory.json(hist)).apply()
         _state.update { it.copy(last = info, history = hist, status = if (p == null) "Read ${info.type}" else it.status) }

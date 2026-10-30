@@ -1,5 +1,5 @@
 {
- "_doc": "#1264 THE declared NFC vocabulary of libs:nfc (NfcCatalog.parse): IC manufacturers by UID byte 0 (ISO/IEC 7816-6), SAK meanings, NXP GET_VERSION products of the Type 2 family with their user memory, ISO 15693 manufacturers. Data only, no keys: adding a product is a row here, no Kotlin.",
+ "_doc": "#1264 / #1322 THE declared NFC vocabulary of libs:nfc (NfcCatalog.parse): IC manufacturers by UID byte 0 (ISO/IEC 7816-6), SAK meanings, NXP GET_VERSION products of the Type 2 family with their user memory, ISO 15693 manufacturers. Data only, no keys: adding a product is a row here, no Kotlin.",
  "ic_manufacturers": {
   "01": "Motorola",
   "02": "STMicroelectronics",
@@ -31,15 +31,18 @@
  },
  "sak": {
   "00": "MIFARE Ultralight / NTAG (NFC Forum Type 2)",
+  "01": "MIFARE Classic 1K (TagnFC)",
   "08": "MIFARE Classic 1K",
   "09": "MIFARE Mini",
   "10": "MIFARE Plus 2K (SL2)",
   "11": "MIFARE Plus 4K (SL2)",
   "18": "MIFARE Classic 4K",
+  "19": "MIFARE Classic 2K",
   "20": "ISO 14443-4 (DESFire, Plus SL3, JCOP, payment card)",
   "28": "MIFARE Classic 1K emulation + ISO 14443-4 (SmartMX / JCOP)",
   "38": "MIFARE Classic 4K emulation + ISO 14443-4 (SmartMX / JCOP)",
-  "88": "MIFARE Classic 1K (Infineon)"
+  "88": "MIFARE Classic 1K (Infineon)",
+  "98": "MIFARE Pro 4K"
  },
  "nxp_versions": [
   {
@@ -109,5 +112,35 @@
   "05": "Infineon Technologies",
   "07": "Texas Instruments",
   "16": "EM Microelectronic"
+ },
+ "mifare_classic": {
+  "_doc": "#1322 MIFARE Classic read with PUBLIC default keys only (the transport, blank, MAD and NFC Forum NDEF keys). Hotel key cards are almost always keyed with a private key, so 'locked (private key)' is the expected result and not an error. NO key recovery, NO leaked or vendor key lists, NO writing: this list must stay these four public keys (test-nfc-mifare.sh and MifareTest guard it).",
+  "saks": ["01", "08", "09", "10", "11", "18", "19", "28", "38", "88", "98"],
+  "public_keys": [
+   {"name": "transport (FF)", "hex": "FFFFFFFFFFFF"},
+   {"name": "blank (00)", "hex": "000000000000"},
+   {"name": "MAD key A", "hex": "A0A1A2A3A4A5"},
+   {"name": "NFC Forum NDEF", "hex": "D3F7D3F7D3F7"}
+  ],
+  "time_budget_ms": 20000,
+  "mad_aids": {
+   "0000": "free sector",
+   "0001": "defective sector",
+   "0002": "reserved",
+   "0003": "directory continuation / additional info",
+   "0004": "card holder information",
+   "0005": "not applicable (sector belongs to the next directory)",
+   "E103": "NFC Forum NDEF"
+  }
+ },
+ "desfire": {
+  "_doc": "#1322 MIFARE DESFire identified over IsoDep with the unauthenticated native GetVersion (0x60, 0xAF continuations) and GetApplicationIDs (0x6A). Named by hardware type (and major version when given). Identification only: no authentication.",
+  "saks": ["20"],
+  "versions": [
+   {"hw_type": "01", "hw_major": "01", "name": "MIFARE DESFire EV1"},
+   {"hw_type": "01", "hw_major": "12", "name": "MIFARE DESFire EV2"},
+   {"hw_type": "01", "hw_major": "33", "name": "MIFARE DESFire EV3"},
+   {"hw_type": "08", "name": "MIFARE DESFire Light"}
+  ]
  }
 }

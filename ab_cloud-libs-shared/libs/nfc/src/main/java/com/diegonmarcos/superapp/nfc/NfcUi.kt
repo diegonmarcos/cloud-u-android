@@ -175,7 +175,7 @@ private fun NfcGate(s: NfcState) {
 
 private fun LazyListScope.scanTab(s: NfcState) {
     val t = s.last
-    if (t == null) { item("none") { Card { Title("No tag yet"); Muted("Tap a tag: UID, ATQA / SAK, ATS, technologies, memory and its NDEF records appear here.") } }; return }
+    if (t == null) { item("none") { Card { Title("No tag yet"); Muted("Tap a tag: UID, ATQA / SAK, ATS, technologies, memory, MIFARE Classic sectors (public keys only) and its NDEF records appear here.") } }; return }
     item("head") {
         Card {
             Title(t.type)
@@ -301,6 +301,7 @@ private fun StatusCard(controller: NfcController, s: NfcState) {
         KeyValue("NFC", if (s.enabled) "on" else "off")
         KeyValue("Reader mode", if (s.listening) "listening" else "stopped")
         KeyValue("Card emulation (HCE)", if (ctx.packageManager.hasSystemFeature("android.hardware.nfc.hce")) "supported" else "not supported")
+        KeyValue("MIFARE Classic (hotel cards)", if (controller.phoneHasMifareClassic()) "supported (NXP chip)" else "not supported (UID/SAK only)")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Btn("Open NFC settings", primary = true) { openNfcSettings(ctx) }
             Btn("Refresh") { controller.refresh() }

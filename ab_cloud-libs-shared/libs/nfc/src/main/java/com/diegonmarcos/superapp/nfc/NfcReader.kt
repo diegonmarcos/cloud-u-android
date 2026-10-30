@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.nfc
 import android.nfc.FormatException
 import android.nfc.Tag
 import android.nfc.tech.IsoDep
+import android.nfc.tech.MifareClassic
 import android.nfc.tech.MifareUltralight
 import android.nfc.tech.NdefFormatable
 import android.nfc.tech.NfcA
@@ -13,13 +14,15 @@ import java.io.IOException
 
 /**
  * The Android half of the standard tag analyzer (#1264): what one tapped [Tag] says through the public tech classes (NfcA / B / F / V,
- * IsoDep, NDEF, NdefFormatable, MIFARE Ultralight page read) and the NDEF write / format of the user's own tags. Reads only public
- * identification data and the tag's user memory; no authentication, no keys. Runs on the reader-mode binder thread, never the UI.
+ * IsoDep, NDEF, NdefFormatable, MIFARE Ultralight page read, MIFARE Classic with the PUBLIC default keys, DESFire GetVersion) and the NDEF
+ * write / format of the user's own tags. Reads only public identification data and the tag's user memory; the only keys ever tried are the
+ * four public ones declared in the catalog (see [MifareClassicProbe]); no key recovery, no hotel-key lists, no cloning. Runs on the
+ * reader-mode binder thread, never the UI.
  */
 object NfcReader {
     private fun techName(full: String) = full.substringAfterLast('.')
 
-    fun read(tag: Tag, catalog: NfcCatalog, now: Long = System.currentTimeMillis()): TagInfo {
+    fun read(tag: Tag, catalog: NfcCatalog, now: Long = System.currentTimeMillis(), phoneHasNxp: Boolean = false): TagInfo {
         val uid = tag.id ?: ByteArray(0)
         val techs = tag.techList.map(::techName)
         val sections = ArrayList<InfoSection>()
@@ -27,6 +30,7 @@ object NfcReader {
         identity += "UID" to Bytes.hex(uid, ":")
         identity += "UID length" to "${uid.size} bytes"
         identity += "Technologies" to techs.joinToString(", ")
+        var sakValue = -1
         var type = techs.firstOrNull { it != "Ndef" && it != "NdefFormatable" } ?: "Unknown"
         val errors = ArrayList<String>()
         fun guard(what: String, block: () -> Unit) {
@@ -34,7 +38,8 @@ object NfcReader {
         }
 
         NfcA.get(tag)?.let { a ->
-            val sak = a.sak.toInt()
+            val sak = a.sak.toInt() and 0xFF
+            sakValue = sak
             if (uid.isNotEmpty()) identity += "Manufacturer" to catalog.manufacturer(uid[0].toInt() and 0xFF)
             type = catalog.sakName(sak)
             sections += InfoSection("NfcA (ISO 14443-3A)", listOf(
@@ -80,6 +85,15 @@ object NfcReader {
             rows += "Max transceive" to "${d.maxTransceiveLength} bytes"
             sections += InfoSection("IsoDep (ISO 14443-4)", rows)
         }
+        val classic = MifareClassic.get(tag)
+        MifareLayout.unsupportedLine(catalog.isClassicSak(sakValue), classic != null, phoneHasNxp)?.let {
+            // Not an error: the card is fine, this phone's chip just cannot open the tech.
+            sections += InfoSection("MIFARE Classic", listOf("Support" to it, "Phone MIFARE Classic support (com.nxp.mifare)" to if (phoneHasNxp) "yes" else "no"))
+        }
+        classic?.let { mc -> guard("MIFARE Classic") { sections += classicSection(mc, catalog) } }
+        if (catalog.isDesfireSak(sakValue)) IsoDep.get(tag)?.let { d ->
+            guard("DESFire") { desfire(d, catalog)?.let { info -> sections += Desfire.section(info); type = info.name } }
+        }
         MifareUltralight.get(tag)?.let { ul -> guard("MIFARE Ultralight") { sections += ultralight(ul, catalog).also { s -> s.rows.firstOrNull { it.first == "Product" }?.let { type = it.second } } } }
 
         var records: List<NdefRecord> = emptyList()
@@ -107,6 +121,29 @@ object NfcReader {
         if (NdefFormatable.get(tag) != null) sections += InfoSection("NdefFormatable", listOf("State" to "Blank: can be formatted to NDEF (Write tab)"))
 
         return TagInfo(now, Bytes.hex(uid), techs, type, listOf(InfoSection("Identity", identity)) + sections, records, raw, writable, capacity, errors.joinToString("; "))
+    }
+
+    private fun classicSection(mc: MifareClassic, catalog: NfcCatalog): InfoSection {
+        mc.connect()
+        try {
+            val io = object : ClassicIo {
+                override fun auth(sector: Int, key: ByteArray, keyB: Boolean): Boolean = try {
+                    if (keyB) mc.authenticateSectorWithKeyB(sector, key) else mc.authenticateSectorWithKeyA(sector, key)
+                } catch (e: IOException) {
+                    // A wrong key can leave the tag deselected: re-select once; a second failure is a lost tag and propagates.
+                    runCatching { mc.close() }; mc.connect(); false
+                }
+                override fun read(block: Int): ByteArray? = try { mc.readBlock(block) } catch (e: IOException) { null }
+            }
+            val scan = MifareClassicProbe.scan(io, mc.size, catalog.classicKeys, catalog.classicBudgetMs)
+            val kind = when (mc.type) { MifareClassic.TYPE_CLASSIC -> "Classic"; MifareClassic.TYPE_PLUS -> "Plus (SL1)"; MifareClassic.TYPE_PRO -> "Pro"; else -> "Unknown" }
+            return ClassicReport.section("MIFARE $kind ${MifareLayout.sizeName(mc.size)}", mc.size, kind, scan, catalog)
+        } finally { runCatching { mc.close() } }
+    }
+
+    private fun desfire(d: IsoDep, catalog: NfcCatalog): DesfireInfo? {
+        d.connect()
+        try { return Desfire.probe({ d.transceive(it) }, catalog) } finally { runCatching { d.close() } }
     }
 
     /** GET_VERSION (0x60) names an NTAG / Ultralight EV1 from the catalog; the pages are read 4 at a time until the tag refuses. */

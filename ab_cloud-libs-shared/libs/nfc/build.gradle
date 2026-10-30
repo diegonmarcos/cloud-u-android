@@ -3,9 +3,9 @@
 // libs:nfc (#1264): the phone's NFC as one shared lib, a standard tag analyzer. The rules are plain Kotlin over bytes (Bytes: hex and
 // the hex / ASCII dump; Ndef: the NDEF parser and builder for every TNF, well-known Text / URI / Smart Poster, MIME, External, AAR,
 // Wi-Fi WSC and Bluetooth handover; NfcCatalog: the declared data; NfcHistory: the scan log and its JSON / CSV export), the Android
-// half (NfcReader: tag info over NfcA / B / F / V, IsoDep, NDEF, NdefFormatable and MIFARE Ultralight page read, plus NDEF write /
+// half (NfcReader: tag info over NfcA / B / F / V, IsoDep, NDEF, NdefFormatable, MIFARE Ultralight page read, MIFARE Classic with the four PUBLIC default keys and DESFire GetVersion (#1322, Mifare.kt), plus NDEF write /
 // format on the user's own tags; NfcController: reader mode, the pending write, the history) and the Compose page (NfcPanel: Scan,
-// Write, History, Status). No keys, no authentication, no payment cards: IC manufacturers, SAK meanings and NXP products are DATA
+// Write, History, Status). No key recovery, no leaked / hotel key lists, no cloning, no payment cards: IC manufacturers, SAK meanings and NXP products are DATA
 // (assets/nfc/nfc-catalog.json). Cloud Calc draws NfcPanel in Measure > NFC. The NFC permission is in this lib's manifest.
 plugins {
     id 'com.android.library'
