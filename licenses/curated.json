@@ -376,6 +376,30 @@
    "what": "Cloud KG Store app (knowledge-graph store and browser: fleet API, MCP and code-graph services, installed apps index, web sources of Cloud Search)",
    "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
   },
+  "ad_CG-Omniverse": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "CG-Omniverse app (Galaxy, Game Store, VR Store pages behind Cloud > Lnktree)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ad_Capital-FinTerm": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Capital-FinTerm app (FI | EQ | EX | NW | PM | MY-PM terminal pages behind Cloud > Lnktree)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ad_Hardtech-CAD": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Hardtech-CAD app (MCAD, BIM, SolidWorks pages behind Cloud > Lnktree)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
+  "ad_Hardtech-Sim2Real": {
+   "licence": "LicenseRef-NoLicenseGranted",
+   "kind": "own",
+   "what": "Hardtech-Sim2Real app (SAP2000, MATLAB, Ansys pages behind Cloud > Lnktree)",
+   "proposed": "PROPOSED (owner decides): PolyForm-Noncommercial-1.0.0"
+  },
   "ac_cloud-superintel": {
    "licence": "LicenseRef-NoLicenseGranted",
    "kind": "own",
