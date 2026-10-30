@@ -28,6 +28,8 @@ data class LedgerDef(
     val suggestions: List<Rec> = emptyList(),
     /** Non-blank: collection a record can be moved to ("Mark done"), with [moveLabel] on the button. */
     val moveTo: String = "", val moveLabel: String = "",
+    /** Non-blank: field set to today's date by the move when the record has none ("Mark done" stamps the done date). */
+    val moveStamp: String = "",
 ) {
     companion object {
         fun parse(o: JSONObject): LedgerDef = LedgerDef(
@@ -41,7 +43,7 @@ data class LedgerDef(
             },
             o.optString("empty", "Nothing here yet."),
             recs(o.optJSONArray("builtin")), recs(o.optJSONArray("suggestions")),
-            o.optString("move_to"), o.optString("move_label", "Move"),
+            o.optString("move_to"), o.optString("move_label", "Move"), o.optString("move_stamp"),
         )
 
         private fun recs(a: JSONArray?): List<Rec> =
@@ -69,11 +71,16 @@ class LedgerData(private val data: Map<String, List<Rec>> = emptyMap()) {
     fun replaced(collection: String, id: String, values: Rec): LedgerData =
         LedgerData(data + (collection to rows(collection).map { if (it["id"] == id) values + ("id" to id) else it }))
 
-    /** Moves the record [id] from [from] to the end of [to] (new id there). */
-    fun moved(from: String, id: String, to: String): LedgerData {
+    /** Moves the record [id] from [from] to the end of [to] (new id there). A non-blank [stampField] that the record
+     *  leaves blank gets [today]: marking an item done records when. */
+    fun moved(from: String, id: String, to: String, stampField: String = "", today: String = ""): LedgerData {
         val rec = rows(from).firstOrNull { it["id"] == id } ?: return this
-        return removed(from, id).added(to, rec - "id")
+        val stamped = if (stampField.isNotBlank() && today.isNotBlank() && rec[stampField].isNullOrBlank()) rec + (stampField to today) else rec
+        return removed(from, id).added(to, stamped - "id")
     }
+
+    /** Every collection but [collection]. */
+    fun without(collection: String): LedgerData = LedgerData(data - collection)
 
     fun toJson(): String = JSONObject().put("v", 1).put("collections", JSONObject().apply {
         data.forEach { (name, rows) -> put(name, JSONArray().apply { rows.forEach { r -> put(JSONObject(r)) } }) }

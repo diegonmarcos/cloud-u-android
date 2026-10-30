@@ -560,35 +560,63 @@
         ]
       },
       {
-        "_doc": "Achieves \u2014 the owner's own text, three pages: Personal (B1), Personal Pursuits (B2), International Experience (B3). Each is a declared data file under data/ui/achieves/, rendered by the stack renderer (bullets, quote, table and link blocks); test-me-redesign.sh holds the text byte for byte.",
+        "_doc": "Achieves (#1350): each tab is one kind of experience, holding a Done and a To do list of the owner's own records (add, edit, mark done with today's date, mark undone), all in the declared config store experiences_user so the backup and the new-phone migration carry them. Geo is first: every place visited with live stats (cities, countries, continents, % of world, grouped by continent and country, first and last visit) and a wishlist; the International Experience text and the old Trips tools moved into it. Endurance holds Travel & Adventure (the old Experiences rows and the Personal Pursuits text), Personal Growth holds Personal Growth, Health & Wellness, Creativity & Fun and Career and Finance (with the B1 Personal text), Community holds Relationship & Community, By 30 / By 40 / By 50 hold the Bucket 50 age goals. ui.sections[achieves].migration moves the old done/todo records into the matching tab on first load; LegacyRoutes sends the old page ids to their new tab.",
+        "migration": {
+          "_doc": "Achieves migration (store experiences_user): the old Experiences page kept its records in the collections done and todo. On load, each record moves to <tab>_done or <tab>_todo by its category; a category this map does not name goes to the default tab, so nothing is dropped. The old collections are then removed, which makes the migration run once.",
+          "store": "experiences_user",
+          "legacy": {
+            "done": "_done",
+            "todo": "_todo"
+          },
+          "field": "category",
+          "by_value": {
+            "\ud83c\udf10 Travel": "geo"
+          },
+          "default": "endurance",
+          "rename": {
+            "geo": {
+              "place": "country"
+            }
+          }
+        },
         "id": "achieves",
         "label": "Achieves",
         "icon": "ic_nav_achieves",
         "pages": [
           {
-            "id": "personal",
-            "label": "Personal",
-            "icon": "ic_nav_me"
-          },
-          {
-            "id": "pursuits",
-            "label": "Personal Pursuits",
-            "icon": "ic_p_pursuits"
-          },
-          {
-            "id": "international",
-            "label": "International Experience",
+            "id": "geo",
+            "label": "Geo",
             "icon": "ic_world"
           },
           {
-            "id": "trips",
-            "label": "Trips",
+            "id": "endurance",
+            "label": "Endurance",
             "icon": "ic_nav_trips"
           },
           {
-            "id": "experiences",
-            "label": "Experiences",
-            "icon": "ic_nav_trips"
+            "id": "growth",
+            "label": "Personal Growth",
+            "icon": "ic_p_pursuits"
+          },
+          {
+            "id": "community",
+            "label": "Community",
+            "icon": "ic_nav_me"
+          },
+          {
+            "id": "by30",
+            "label": "By 30",
+            "icon": "ic_p_pursuits"
+          },
+          {
+            "id": "by40",
+            "label": "By 40",
+            "icon": "ic_p_pursuits"
+          },
+          {
+            "id": "by50",
+            "label": "By 50",
+            "icon": "ic_p_pursuits"
           }
         ]
       },

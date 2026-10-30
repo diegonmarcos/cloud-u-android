@@ -27,6 +27,12 @@ object LegacyRoutes {
         "buro/acct" to "buro/cashflow",
         "buro/budget" to "buro/budgeting",
         "buro/portfolio" to "llc/portfolio",
+        // #1350 Achieves is one tab per kind of experience; the old pages' content moved with it.
+        "achieves/personal" to "achieves/growth",
+        "achieves/pursuits" to "achieves/endurance",
+        "achieves/international" to "achieves/geo",
+        "achieves/trips" to "achieves/geo",
+        "achieves/experiences" to "achieves/endurance",
     )
 
     /** The new (section, page) for an old one; the arguments come back unchanged when nothing moved. */

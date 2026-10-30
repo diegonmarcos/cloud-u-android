@@ -30,7 +30,7 @@ Almost nothing. That is the design.
 | Me | `libs:wallet` — the same Me tab Cloud Wallet shows |
 | Health | `libs:health` — Health Connect, on-device only |
 | Study, LLC history | `data/regen-study.py` from the bundled LinkedIn profile data (no LinkedIn API) |
-| Achieves | `data/ui/achieves/*.json` — the owner's own text |
+| Achieves | `data/ui/achieves/<tab>.json` — Geo, Endurance, Personal Growth, Community, By 30/40/50: Done and To do ledgers over experiences_user (Geo with live stats), plus the owner's own text |
 
 A second copy of a card, a password or a health record would be a second thing
 to keep correct. Cloud Me indexes; the app that owns the data keeps it.

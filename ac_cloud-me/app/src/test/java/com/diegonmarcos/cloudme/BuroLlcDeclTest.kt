@@ -141,15 +141,8 @@ class BuroLlcDeclTest {
         }
     }
 
-    @Test fun `Experiences is a done and to-do ledger over the declared experiences_user store`() {
-        val b = page("achieves", "experiences").getJSONObject(0)
-        assertEquals("ledger", b.getString("kind")); assertEquals(LedgerStore.EXP, b.getString("store"))
-        val defs = (0 until b.getJSONArray("ledgers").length()).map { LedgerDef.parse(b.getJSONArray("ledgers").getJSONObject(it)) }
-        assertEquals(listOf("done", "todo"), defs.map { it.collection })
-        assertTrue("done is seeded from the owner's pursuits", defs[0].builtin.size >= 10)
-        assertTrue(defs[1].suggestions.isNotEmpty()); assertEquals("done", defs[1].moveTo)
-        for (d in defs) for (r in d.builtin + d.suggestions) assertTrue(LedgerModel.validate(d, r).isEmpty())
+    @Test fun `the Achieves store experiences_user is a declared config store, so the backup carries every tab`() {
         val fc = JSONObject(BuroLlcTestData.text("../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"))
-        assertEquals("config", fc.getJSONObject("stores").getJSONObject("experiences_user").getString("class"))
+        assertEquals("config", fc.getJSONObject("stores").getJSONObject(LedgerStore.EXP).getString("class"))
     }
 }

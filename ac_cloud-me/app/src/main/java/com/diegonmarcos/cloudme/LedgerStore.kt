@@ -1,6 +1,8 @@
 package com.diegonmarcos.cloudme
 
 import android.content.Context
+import android.util.Base64
+import org.json.JSONArray
 
 /**
  * The one place a section's user data touches disk: one JSON string under `data` in the SharedPreferences file named
@@ -21,8 +23,16 @@ object LedgerStore {
         else -> throw IllegalArgumentException("not a ledger store: $store")
     }
 
-    fun load(ctx: Context, store: String): LedgerData =
-        LedgerData.fromJson(prefs(ctx, store).getString(KEY, null))
+    fun load(ctx: Context, store: String): LedgerData {
+        val d = LedgerData.fromJson(prefs(ctx, store).getString(KEY, null))
+        if (store != EXP) return d
+        // #1350 the old Experiences records move to their Achieves tab once; saved at once so the move is not redone.
+        val spec = runCatching {
+            AchievesMigration.declared(JSONArray(String(Base64.decode(BuildConfig.UI_SECTIONS_B64, Base64.DEFAULT))), store)
+        }.getOrNull() ?: return d
+        if (spec.legacy.keys.none { it in d.collections() }) return d
+        return AchievesMigration.migrate(d, spec).also { save(ctx, store, it) }
+    }
 
     fun save(ctx: Context, store: String, d: LedgerData) {
         prefs(ctx, store).edit().putString(KEY, d.toJson()).apply()

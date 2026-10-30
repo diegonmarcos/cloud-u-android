@@ -1,0 +1,80 @@
+[
+  {
+    "kind": "ledger",
+    "store": "experiences_user",
+    "currency": "",
+    "reports": [],
+    "title": "❤️ Relationship & Community",
+    "ledgers": [
+      {
+        "collection": "community_done",
+        "title": "✅ Done",
+        "empty": "Nothing done recorded yet.",
+        "fields": [
+          {
+            "id": "title",
+            "label": "Item",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "❤️ Relationship & Community"
+            ],
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "move_to": "community_todo",
+        "move_label": "Mark undone"
+      },
+      {
+        "collection": "community_todo",
+        "title": "🎯 To do",
+        "empty": "Nothing planned yet. Add a goal.",
+        "fields": [
+          {
+            "id": "title",
+            "label": "Item",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "❤️ Relationship & Community"
+            ],
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "move_to": "community_done",
+        "move_label": "Mark done",
+        "move_stamp": "date"
+      }
+    ]
+  }
+]

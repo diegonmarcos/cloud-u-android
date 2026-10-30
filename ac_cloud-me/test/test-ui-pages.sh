@@ -270,7 +270,7 @@ def strings(o):
 routes = {s.split("#", 1)[1] for s in strings(json.load(open(SUPERAPP)))
           if s.startswith("extapp:cloud-me#") and "#" in s}
 routes.add("page:duties/tasks")
-routes.add("page:achieves/trips")
+routes.add("page:achieves/geo")
 
 bad = [why for _, why in map(resolve, sorted(routes)) if why]
 for b in bad:

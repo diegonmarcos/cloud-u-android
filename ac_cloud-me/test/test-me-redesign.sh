@@ -103,16 +103,18 @@ if "NavBarTopFirstRowScaffold(" not in code(os.path.join(MAIN, "java/com/diegonm
 if "MeShell(" not in code(os.path.join(MAIN, "java/com/diegonmarcos/cloudme/MainActivity.kt")):
     bad("settings", "MainActivity does not draw MeShell")
 
-# ---- N4 achieves: the owner's text, byte for byte
+# ---- N4 achieves: the owner's text, byte for byte, now inside the #1350 tabs (B1 in Personal Growth, B2 in Endurance, B3 in Geo)
 ach = {}
+ACH_FILE = {"personal": "growth", "pursuits": "endurance", "international": "geo"}
 for pid in ("personal", "pursuits", "international"):
-    f = os.path.join(app, f"data/ui/achieves/{pid}.json")
+    f = os.path.join(app, f"data/ui/achieves/{ACH_FILE[pid]}.json")
     ach[pid] = json.load(open(f, encoding="utf-8")) if os.path.exists(f) else []
     if not ach[pid]:
         bad("achieves", f"data/ui/achieves/{pid}.json is missing or empty")
-if [p["id"] for p in secs.get("achieves", {}).get("pages", [])] != ["personal", "pursuits", "international", "trips", "experiences"] or \
-   [p["label"] for p in secs.get("achieves", {}).get("pages", [])] != ["Personal", "Personal Pursuits", "International Experience", "Trips", "Experiences"]:
-    bad("achieves", "Achieves pages are not Personal, Personal Pursuits, International Experience, Trips, Experiences")
+ACH_TABS = ["geo", "endurance", "growth", "community", "by30", "by40", "by50"]
+if [p["id"] for p in secs.get("achieves", {}).get("pages", [])] != ACH_TABS or \
+   [p["label"] for p in secs.get("achieves", {}).get("pages", [])] != ["Geo", "Endurance", "Personal Growth", "Community", "By 30", "By 40", "By 50"]:
+    bad("achieves", "Achieves pages are not Geo, Endurance, Personal Growth, Community, By 30, By 40, By 50")
 EXPECT = {
  "personal": [
   "B1) Personal",
@@ -216,10 +218,20 @@ for _pid, _u in (("leafy", "https://diegonmarcos.github.io/leafy/"), ("nexus", "
     _b = json.load(open(_f, encoding="utf-8")) if os.path.exists(_f) else []
     if len(_b) != 1 or _b[0].get("id") != "web" or _b[0].get("url") != _u:
         bad("pages", f"Lnktree > {_pid} is not the embedded page {_u}")
-_ex = os.path.join(app, "data/ui/achieves/experiences.json")
-_eb = json.load(open(_ex, encoding="utf-8")) if os.path.exists(_ex) else []
-if len(_eb) != 1 or _eb[0].get("kind") != "ledger" or _eb[0].get("store") != "experiences_user" or [l["collection"] for l in _eb[0].get("ledgers", [])] != ["done", "todo"]:
-    bad("pages", "Achieves > Experiences is not the ledger over experiences_user with done and todo")
+for _t in ACH_TABS:
+    _ex = os.path.join(app, f"data/ui/achieves/{_t}.json")
+    _eb = [b for b in (json.load(open(_ex, encoding="utf-8")) if os.path.exists(_ex) else []) if b.get("kind") == "ledger"]
+    _ls = _eb[0].get("ledgers", []) if len(_eb) == 1 else []
+    if len(_eb) != 1 or _eb[0].get("store") != "experiences_user" or [l["collection"] for l in _ls] != [f"{_t}_done", f"{_t}_todo"] \
+       or [l.get("move_to") for l in _ls] != [f"{_t}_todo", f"{_t}_done"] or _ls[1].get("move_stamp") != "date":
+        bad("pages", f"Achieves > {_t} is not one Done/To do ledger over experiences_user that toggles both ways and stamps the date")
+_geo = [b for b in json.load(open(os.path.join(app, "data/ui/achieves/geo.json"), encoding="utf-8")) if b.get("kind") == "ledger"]
+if not _geo or (_geo[0].get("geo") or {}).get("visited") != "geo_done" or (_geo[0].get("geo") or {}).get("wishlist") != "geo_todo":
+    bad("pages", "Achieves > Geo has no live stats over geo_done and its geo_todo wishlist")
+_m = secs.get("achieves", {}).get("migration") or {}
+if _m.get("store") != "experiences_user" or set(_m.get("legacy", {})) != {"done", "todo"} or \
+   any(t not in ACH_TABS for t in list(_m.get("by_value", {}).values()) + [_m.get("default")]):
+    bad("pages", "ui.sections[achieves].migration does not move the old done/todo records to declared tabs")
 _fc = json.load(open(os.path.join(libs, "fleetconfig-model/src/main/assets/fleet-config.json"), encoding="utf-8"))
 _st = _fc.get("stores", {}).get("experiences_user")
 if not _st or "ac_cloud-me" not in _st.get("used_by", []) or _st.get("class") != "config":
@@ -331,7 +343,7 @@ want_pages = {
 for sid, labels in want_pages.items():
     if [p["label"] for p in secs.get(sid, {}).get("pages", [])] != labels:
         bad("pages", f"{sid} pages are not {labels}")
-for sid, pg in (("study", "cv"), ("study", "roadmap"), ("llc", "employed"), ("llc", "side-hustles"), ("duties", "tasks"), ("achieves", "trips")):
+for sid, pg in (("study", "cv"), ("study", "roadmap"), ("llc", "employed"), ("llc", "side-hustles"), ("duties", "tasks"), ("achieves", "geo")):
     f = os.path.join(app, f"data/ui/{sid}/{pg}.json")
     if not os.path.exists(f) or not json.load(open(f, encoding="utf-8")):
         bad("pages", f"data/ui/{sid}/{pg}.json is missing or empty")
@@ -351,11 +363,11 @@ only() { # <check id>: nothing but that id is red in the real tree
 for t in "nav-order|the bar reads Health, Study, Achieves, Lnktree, Duties, Buro, LLC" \
          "tab-style|page tabs show every name at rest and only the selected name when scrolled down (#1159)" \
          "settings|the top bar is the fleet AppTopBar: hamburger, AI, Profile, Configs, no dropdown" \
-         "achieves|Achieves renders the owner's text (B1, B2, B3, region table with its link)" \
+         "achieves|Achieves is Geo first then Endurance, Personal Growth, Community, By 30/40/50, keeping the owner's text (B1, B2, B3, region table with its link)" \
          "no-drawer|no swipe-to-open drawer handler anywhere (shell, the lib top bar, Profile page, resources)" \
          "account|Buro > Account launches Cloud Account through extapp, Vault is gone" \
          "no-wallet|the Wallet link is gone" \
-         "pages|Health, Study, LLC, Buro, Duties and Trips pages are declared with their data, House and Work are gone"; do
+         "pages|Health, Study, LLC, Buro, Duties and Achieves tab pages are declared with their data, House and Work are gone"; do
   id="${t%%|*}"; name="${t#*|}"
   if only "$id"; then ok "$name"; else bad "$name"; check_tree "$APP" "$APP/../ab_cloud-libs-shared/libs" | grep "^$id" | sed 's/^/        /'; fi
 done
@@ -392,8 +404,14 @@ mutant pages "an LLC group icon is not a ui-icons name" "sed -i 's/\"icon\": \"p
 mutant pages "a Buro ledger names the wrong store" "sed -i 's/\"store\": \"buro_user\"/\"store\": \"llc_user\"/' data/ui/buro/assets.json"
 mutant pages "a ledger names an unknown report" "sed -i 's/budget_vs_actual/made_up_report/' data/ui/buro/budgeting.json"
 mutant pages "the llc store is undeclared in fleet-config" "sed -i 's/\"llc_user\"/\"llc_gone\"/' ../ab_cloud-libs-shared/libs/fleetconfig-model/src/main/assets/fleet-config.json"
-mutant achieves "one owner sentence altered" "sed -i 's/Aikido, Yoga and Meditation\\./Aikido and Yoga./' data/ui/achieves/personal.json"
-mutant achieves "NomadMania link dropped" "sed -i 's#https://nomadmania.com/profile/73889#https://example.com#' data/ui/achieves/international.json"
+mutant achieves "one owner sentence altered" "sed -i 's/Aikido, Yoga and Meditation\\./Aikido and Yoga./' data/ui/achieves/growth.json"
+mutant achieves "NomadMania link dropped" "sed -i 's#https://nomadmania.com/profile/73889#https://example.com#' data/ui/achieves/geo.json"
+mutant achieves "Trips tab comes back" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].append({'id':'trips','label':'Trips'}) for s in d['ui']['sections'] if s['id']=='achieves'];json.dump(d,open('build.json','w'))\""
+mutant achieves "Geo is not the first tab" "python3 -c \"import json;d=json.load(open('build.json'));[s['pages'].insert(1,s['pages'].pop(0)) for s in d['ui']['sections'] if s['id']=='achieves'];json.dump(d,open('build.json','w'))\""
+mutant pages "a tab loses Mark undone" "sed -i 's/\"move_label\": \"Mark undone\"/\"x\": 1/;0,/\"move_to\": \"by40_todo\"/s//\"move_to\": \"\"/' data/ui/achieves/by40.json"
+mutant pages "the done date is no longer stamped" "sed -i 's/\"move_stamp\": \"date\"/\"move_stamp\": \"\"/' data/ui/achieves/community.json"
+mutant pages "Geo loses its stats" "sed -i 's/\"visited\": \"geo_done\"/\"visited\": \"nope\"/' data/ui/achieves/geo.json"
+mutant pages "migration sends records to an undeclared tab" "sed -i 's/\"default\": \"endurance\"/\"default\": \"trips\"/' build.json"
 mutant no-drawer "the drawer is back in the shell" "echo 'val d = ModalNavigationDrawer' >> app/src/main/java/com/diegonmarcos/cloudme/MainActivity.kt"
 mutant no-drawer "a drag handler is back in the shell" "echo 'val d = detectHorizontalDragGestures' >> app/src/main/java/com/diegonmarcos/cloudme/StackScreen.kt"
 mutant no-drawer "Profile page gains a swipe handler" "echo '<script>document.addEventListener(\"touchstart\",function(){})</script>' >> data/web/mysocials/linkedin.html"

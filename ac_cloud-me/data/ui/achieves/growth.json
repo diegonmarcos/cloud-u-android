@@ -1,0 +1,116 @@
+[
+  {
+    "kind": "ledger",
+    "store": "experiences_user",
+    "currency": "",
+    "reports": [],
+    "title": "🌿 Personal Growth · 🌍 Health & Wellness · ✨ Creativity & Fun · 💼 Career and Finance",
+    "ledgers": [
+      {
+        "collection": "growth_done",
+        "title": "✅ Done",
+        "empty": "Nothing done recorded yet.",
+        "fields": [
+          {
+            "id": "title",
+            "label": "Item",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "🌿 Personal Growth",
+              "🌍 Health & Wellness",
+              "✨ Creativity & Fun",
+              "💼 Career and Finance"
+            ],
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "move_to": "growth_todo",
+        "move_label": "Mark undone"
+      },
+      {
+        "collection": "growth_todo",
+        "title": "🎯 To do",
+        "empty": "Nothing planned yet. Add a goal.",
+        "fields": [
+          {
+            "id": "title",
+            "label": "Item",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Category",
+            "type": "choice",
+            "options": [
+              "🌿 Personal Growth",
+              "🌍 Health & Wellness",
+              "✨ Creativity & Fun",
+              "💼 Career and Finance"
+            ],
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "move_to": "growth_done",
+        "move_label": "Mark done",
+        "move_stamp": "date"
+      }
+    ]
+  },
+  {
+    "kind": "section_title",
+    "title": "B1) Personal"
+  },
+  {
+    "kind": "bullets",
+    "title": "",
+    "items": [
+      {
+        "label": "INTERESTS",
+        "text": "Modern Physics (Quantum and Particle), Global Macro, Mediterranean and Vegetarian Cooking, Backpacking, Jazzy Music."
+      },
+      {
+        "label": "ENDURANCE",
+        "text": "Hiking, Rock Climbing, Cycling, Skydiving and Bungee Jump."
+      },
+      {
+        "label": "COMPETING",
+        "text": "Tennis (5y), Handball (3y), Rugby (1y) and Waterpolo (1y)."
+      },
+      {
+        "label": "MINDFULNESS",
+        "text": "Aikido, Yoga and Meditation."
+      },
+      {
+        "label": "PURSUITS",
+        "text": "Oceans Seven Endurance, pre-Tour de France cycling and Seven Summits hike."
+      }
+    ]
+  }
+]

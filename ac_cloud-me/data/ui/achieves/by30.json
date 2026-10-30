@@ -1,0 +1,90 @@
+[
+  {
+    "kind": "ledger",
+    "store": "experiences_user",
+    "currency": "",
+    "reports": [],
+    "title": "🌱 (By 30) Foundational goals",
+    "ledgers": [
+      {
+        "collection": "by30_done",
+        "title": "✅ Done",
+        "empty": "Nothing done recorded yet.",
+        "fields": [
+          {
+            "id": "title",
+            "label": "Item",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Topic",
+            "type": "choice",
+            "options": [
+              "🌿 Personal Growth",
+              "🌐 Travel & Adventure",
+              "🌍 Health & Wellness",
+              "💼 Career and Finance",
+              "❤️ Relationship & Community",
+              "✨ Creativity & Fun"
+            ],
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "move_to": "by30_todo",
+        "move_label": "Mark undone"
+      },
+      {
+        "collection": "by30_todo",
+        "title": "🎯 To do",
+        "empty": "Nothing planned yet. Add a goal.",
+        "fields": [
+          {
+            "id": "title",
+            "label": "Item",
+            "type": "text",
+            "required": true
+          },
+          {
+            "id": "category",
+            "label": "Topic",
+            "type": "choice",
+            "options": [
+              "🌿 Personal Growth",
+              "🌐 Travel & Adventure",
+              "🌍 Health & Wellness",
+              "💼 Career and Finance",
+              "❤️ Relationship & Community",
+              "✨ Creativity & Fun"
+            ],
+            "required": true
+          },
+          {
+            "id": "date",
+            "label": "Date",
+            "type": "date"
+          },
+          {
+            "id": "note",
+            "label": "Note",
+            "type": "text"
+          }
+        ],
+        "move_to": "by30_done",
+        "move_label": "Mark done",
+        "move_stamp": "date"
+      }
+    ]
+  }
+]

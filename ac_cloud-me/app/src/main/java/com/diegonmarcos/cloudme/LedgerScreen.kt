@@ -68,12 +68,34 @@ fun LedgerBlock(o: JSONObject) {
     val today = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date()) }
     fun commit(d: LedgerData) { data = d; LedgerStore.save(ctx, store, d) }
 
+    o.optString("title").takeIf { it.isNotBlank() }?.let { HCard { HHead(it) } }
+    o.optJSONObject("geo")?.let { g -> GeoCard(GeoStats.compute(g, defs, data)) }
     for (r in reports) LedgerReports.build(r, data, today, currency)?.let { ReportCard(it) }
     for (def in defs) CollectionCard(def, data.rows(def.collection), currency,
         onAdd = { values -> commit(data.added(def.collection, values)) },
         onRemove = { id -> commit(data.removed(def.collection, id)) },
         onEdit = { id, values -> commit(data.replaced(def.collection, id, values)) },
-        onMove = if (def.moveTo.isBlank()) null else { id -> commit(data.moved(def.collection, id, def.moveTo)) })
+        onMove = if (def.moveTo.isBlank()) null else { id -> commit(data.moved(def.collection, id, def.moveTo, def.moveStamp, today)) })
+}
+
+/** Achieves > Geo: the counts, the share of the world, first and last visit, then every place by continent and country. */
+@Composable
+private fun GeoCard(g: GeoSummary) {
+    HCard {
+        HHead("🌍 Geo stats")
+        HRow("Cities", g.cities.toString())
+        HRow("Countries", g.countries.toString())
+        HRow("Continents", "${g.continents} of ${g.worldContinents}")
+        HRow("% of world", "${g.pctWorld} of ${g.worldCountries} countries")
+        g.first?.let { HRow("First visit", it) }
+        g.last?.let { HRow("Last visit", it) }
+        HRow("Wishlist", g.wishlist.toString())
+        g.declared?.let { HText(it) }
+        g.byContinent.forEach { (continent, countries) ->
+            Text("$continent · ${countries.size} countries", color = ink(), fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 10.dp))
+            countries.forEach { (country, cities) -> HRow(country, cities.joinToString(", ")) }
+        }
+    }
 }
 
 @Composable
