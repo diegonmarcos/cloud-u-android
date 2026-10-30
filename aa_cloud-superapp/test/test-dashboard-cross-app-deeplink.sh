@@ -154,7 +154,7 @@ ROWS = {
     # boards; with the list gone there are no longer two kinds of destination in
     # the row for it to divide, so it went with them rather than floating at the
     # head of a row whose every tile is now the same kind of tile.
-    "Lnktree":  ["omniverse", "lnktree-sep-1", "finterm", "lnktree-sep-2", "cad", "sim2real"],  # #1331 owner order: Omniverse | FinTerm | CAD Sim2Real (was Projects W, #1212)
+    "Lnktree":  ["cloud-superapp", "lnktree-sep-0", "omniverse", "lnktree-sep-1", "finterm", "lnktree-sep-2", "cad", "sim2real"],  # owner 2026-10-30: SuperApp leads (moved from Configs); #1331 owner order: Omniverse | FinTerm | CAD Sim2Real (was Projects W, #1212)
 }
 
 # Every target, spelled the way the ROUTER resolves it and not the way the tile
@@ -168,6 +168,8 @@ TARGETS = {
     "tools-account": "page:config/profile",
     "me":        "extapp:cloud-me",
     # #1335: the Lnktree row's tiles LAUNCH the Lnktree family apps (test-lnktree-row.sh pins the row, ad_*/test/test-lnktree-app.sh the pages).
+    # owner 2026-10-30: SuperApp leads Lnktree (moved from Configs); #1153 app:// own-task launch, T7 pins the mechanics.
+    "cloud-superapp": "app://com.diegonmarcos.superapp",
     "omniverse": "extapp:cg-omniverse",
     "finterm": "extapp:capital-stack-finterminal",
     "cad": "extapp:hardtech-cad",
@@ -252,7 +254,7 @@ for title, want_order in ROWS.items():
             app = target.removeprefix("extapp:").split("#", 1)[0]
             assert app in apps, f"{title}: tile {tid} → no such ui.external_apps id '{app}'"
         else:
-            assert target.startswith(("page:", "section:", "action:", "http")), \
+            assert target.startswith(("page:", "section:", "action:", "http", "app://")), \
                 f"{title}: tile {tid} target '{target}' — unknown grammar"
 
 # MyProjects was REMOVED from the row by the owner. Asserting its absence keeps
@@ -281,13 +283,14 @@ assert len(ids) == len(set(ids)), "tile ids must stay unique"
 assert "Me" in [t["label"] for t in cloud["tiles_shared"]], "the Home index label follows the row name"
 PY
 
-echo "== T7 (#1153, supersedes #1095): the Configs-row SuperApp tile launches the app as its own task =="
-python3 - "$BJ" "$APP" <<'PY' && ok "Cloud ▸ Apps ▸ Configs ▸ SuperApp → app://<package>, launched NEW_TASK | LAUNCH_ADJACENT onto a resizeable MainActivity" || bad "the Configs-row SuperApp tile does not launch the app as its own task"
+echo "== T7 (#1153, supersedes #1095): the Lnktree-row SuperApp tile launches the app as its own task (moved from Configs 2026-10-30) =="
+python3 - "$BJ" "$APP" <<'PY' && ok "Cloud ▸ Apps ▸ Lnktree ▸ SuperApp → app://<package>, launched NEW_TASK | LAUNCH_ADJACENT onto a resizeable MainActivity" || bad "the Lnktree-row SuperApp tile does not launch the app as its own task"
 import json, os, re, sys
 d = json.load(open(sys.argv[1]))
 app = sys.argv[2]
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
-row = next(g for g in cloud["tile_groups"] if g["title"] == "Configs")
+row = next(g for g in cloud["tile_groups"] if g["title"] == "Lnktree")
+assert row["tiles"][0].get("id") == "cloud-superapp", "SuperApp must LEAD the Lnktree row"
 tile = next(t for t in row["tiles"] if t.get("id") == "cloud-superapp")
 assert tile["label"] == "SuperApp", tile
 own = "app://" + d["android"]["application_id"]

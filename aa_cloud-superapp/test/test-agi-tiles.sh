@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tester (#571, #779, #803, #1162, #1207): Cloud ▸ Apps ▸ AGI is exactly SI AI | Search Code | KG Store Tools |
-# MyTerminal | Terminal, SuperApp sits in Configs right before Store, and each launching tile
+# MyTerminal | Terminal, SuperApp leads Cloud > Apps > Lnktree (owner 2026-10-30, was in Configs since #803), and each launching tile
 # LANDS on the app it is named for. (2026-10-13: the B-LLM and S-LLM folders are gone; Tools, the
 # Cloud Tools Small LLMs app, took S-LLM's place. test-agi-llm-folders.sh, which pinned the two
 # folders, went with them; its A1, AGI right after the row before it, is T0 here; #1092: that row is now Me.)
@@ -26,7 +26,7 @@
 #       is a folder any more
 #   T4  a not-installed extapp tile draws the #249 placeholder, with strings in
 #       every locale, and the install snack is a string resource
-#   T5  (#803) the Configs group starts SuperApp | Store — SuperApp immediately before Store —
+#   T5  the Configs group starts Account | Store (owner 2026-10-30: the SuperApp tile moved to lead Lnktree; #803 had put it here) —
 #       and SuperApp is declared in exactly one tile group under ui.sections
 #   T6  (#803) the Search tile declares tint:false (its glyph is the mockup's gradient), the
 #       tile parser reads `tint`, and tileCell tints only a missing or tint:true tile
@@ -186,20 +186,22 @@ for d in locales:
               "phone_install_downloading", "phone_install_no_source"):
         check('name="%s"' % s in xml, "%s/strings.xml defines %s" % (d, s))
 
-print("== T5: the Configs row reads SuperApp │ Account │ Store, Controls, Firewall │ C3 │ About ==")
+print("== T5: the Configs row reads Account │ Store, Controls, Firewall │ C3 │ About ==")
 configs = [g for g in groups(bj["ui"]["sections"], "Configs")]
 check(len(configs) == 1, "exactly one Configs tile group under ui.sections (found %d)" % len(configs))
 if configs:
     row = [t.get("label") for t in configs[0]["tiles"]]
-    check(row == ["SuperApp", "|", "Account", "|", "Store", "Quick Actions", "Firewall", "|", "C3", "|", "About"], "Configs row = SuperApp | Account | Store, Controls, Firewall | C3 | About (owner order 2026-10) (got %s)" % row)
-    sa = next((t for t in configs[0]["tiles"] if t.get("label") == "SuperApp"), {})
+    check(row == ["Account", "|", "Store", "Quick Actions", "Firewall", "|", "C3", "|", "About"], "Configs row = Account | Store, Controls, Firewall | C3 | About (owner order 2026-10) (got %s)" % row)
+lnk = [g for g in groups(bj["ui"]["sections"], "Lnktree")]
+if lnk:
+    sa = lnk[0]["tiles"][0] if lnk[0]["tiles"] else {}
     # #1153 (supersedes #1095): the tile launches the real app as its own task (app://<own package>,
-    # NEW_TASK | LAUNCH_ADJACENT in ShellActivity), so split screen keeps the Configs page open beside it.
+    # NEW_TASK | LAUNCH_ADJACENT in ShellActivity), so split screen keeps the Cloud > Apps page open beside it. It leads the Lnktree row.
     check(sa.get("id") == "cloud-superapp" and sa.get("target") == "app://" + bj["android"]["application_id"],
           "the moved SuperApp tile launches the app as its own task (%s)" % sa.get("target"))
 holders = [g.get("title") for g in groups(bj["ui"]["sections"], None)
            if any(t.get("id") == "cloud-superapp" for t in g["tiles"])]
-check(holders == ["Configs"], "the SuperApp tile is declared once, in Configs (found in %s)" % holders)
+check(holders == ["Lnktree"], "the SuperApp tile is declared once, in Lnktree (found in %s)" % holders)
 
 print("== T6: the Search tile keeps its gradient ==")
 check((by.get("Search") or {}).get("tint") is False, "the Search tile declares tint:false")

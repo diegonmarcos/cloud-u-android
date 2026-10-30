@@ -10,8 +10,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * #1153 (supersedes #1095) Cloud > Apps > Configs > SuperApp launches the real app as its own task, so
- * split screen can keep the Configs page open beside it. The tile's target is the `app://<package>` grammar
+ * #1153 (supersedes #1095) Cloud > Apps > Lnktree > SuperApp (moved from Configs, owner 2026-10-30, where it
+ * now LEADS the row) launches the real app as its own task, so split screen can keep the Cloud > Apps page open beside it. The tile's target is the `app://<package>` grammar
  * ShellActivity.handleTarget resolves to the package's launcher intent with NEW_TASK | LAUNCH_ADJACENT, and
  * the activity it lands on is resizeable.
  */
@@ -20,12 +20,13 @@ import org.robolectric.annotation.Config
 class ConfigsTileDeepLinkTest {
 
     private fun superAppTile(): Sections.AggTile {
-        val row = Sections.byId("cloud")!!.tileGroups.first { it.title == "Configs" }
+        val row = Sections.byId("cloud")!!.tileGroups.first { it.title == "Lnktree" }
+        assertEquals("SuperApp must lead the Lnktree row", "cloud-superapp", row.tiles.first().id)
         return row.tiles.first { it.id == "cloud-superapp" }
     }
 
     @Test
-    fun `C1 the SuperApp tile in the Configs row launches the app package as its own task`() {
+    fun `C1 the SuperApp tile leading the Lnktree row launches the app package as its own task`() {
         assertEquals("app://com.diegonmarcos.superapp", superAppTile().target)
     }
 
@@ -41,9 +42,9 @@ class ConfigsTileDeepLinkTest {
     }
 
     @Test
-    fun `C3 the Configs row has exactly one app launch tile, the other tiles open pages in the launcher`() {
+    fun `C3 the Configs row has no app launch tile any more, its tiles open pages or constellation apps`() {
         val row = Sections.byId("cloud")!!.tileGroups.first { it.title == "Configs" }.tiles.filter { !it.separator }
-        assertEquals(listOf("cloud-superapp"), row.filter { it.target.startsWith("app://") }.map { it.id })
+        assertEquals(emptyList<String>(), row.filter { it.target.startsWith("app://") }.map { it.id })
         assertTrue("a Configs tile has an empty target: ${row.filter { it.target.isBlank() }.map { it.id }}", row.none { it.target.isBlank() })
     }
 }

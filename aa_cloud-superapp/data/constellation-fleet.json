@@ -18,8 +18,8 @@
 {"id":"data-apps","label":"Data Apps","members":["drive","tasks","contacts","notes","office","gallery","media-center"]},
 {"id":"me","label":"Me","members":["account","me"]},
 {"id":"agi","label":"AGI","members":["superintel","search","code","kg-store","tools-small-llms","myterminal","nix-on-droid"]},
-{"id":"lnktree","label":"Lnktree","members":["cg-omniverse","capital-stack-finterminal","hardtech-cad","hardtech-sim2real"]},
-{"id":"configs","label":"Configs","members":["aa_cloud-superapp","store","c3"]},
+{"id":"lnktree","label":"Lnktree","members":["aa_cloud-superapp","cg-omniverse","capital-stack-finterminal","hardtech-cad","hardtech-sim2real"]},
+{"id":"configs","label":"Configs","members":["store","c3"]},
 {"id":"other","label":"Other","members":["morpheus","watchdog","watchtower","c3-webserver","termux"]}
 ],
 "apps":[
