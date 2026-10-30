@@ -225,6 +225,7 @@
       "calendar"
     ],
     "default_section": "tasks",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "tasks",

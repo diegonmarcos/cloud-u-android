@@ -195,6 +195,7 @@
       "cgcs"
     ],
     "default_section": "si",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "notebook",

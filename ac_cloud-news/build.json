@@ -203,6 +203,7 @@
       "configs"
     ],
     "default_section": "feed",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "media",

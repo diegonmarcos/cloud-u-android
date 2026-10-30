@@ -14,18 +14,23 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.viewinterop.AndroidView
 import com.diegonmarcos.superapp.ai.AiFleetChatPanel
 import com.diegonmarcos.superapp.bottomnav.ChromeWebScroll
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
+import com.diegonmarcos.superapp.bottomnav.LocalNavUiDefault
+import com.diegonmarcos.superapp.bottomnav.NavUiDecl
 import com.diegonmarcos.superapp.bottomnav.TopBarDrawer
 import com.diegonmarcos.superapp.bottomnav.navEntry
 import com.diegonmarcos.superapp.bottomnav.rememberAccountLauncher
@@ -33,6 +38,7 @@ import com.diegonmarcos.superapp.navbarbottom.NavBarBottomHost
 import com.diegonmarcos.superapp.navbartop1.NavBarTopFirstRowScaffold
 import com.diegonmarcos.superapp.navbartop1.titleHierarchy
 import com.diegonmarcos.superapp.navbartop2.NavBarTopSecondRow
+import com.diegonmarcos.superapp.navbartop2.NavUiConfigCard
 import org.json.JSONArray
 
 /** One page the editor reports for the drawer's tree: its id and title. */
@@ -68,6 +74,9 @@ internal class NotesShell(
     /** The editor's pages, newest first, as the web half last reported them. */
     private var docs by mutableStateOf(emptyList<DrawerDoc>())
 
+    /** Configs > UI (the shared nav UI card) is open; its "All settings" opens the web half's own settings. */
+    private var configsOpen by mutableStateOf(false)
+
     /** The object registered on the WebView as `CloudNotesHost`; the bridge thread may write the state. */
     inner class Host {
         @JavascriptInterface
@@ -83,14 +92,19 @@ internal class NotesShell(
         val dark = true
         val section = nav.decl.section(nav.sectionId)
         val entries = nav.decl.bottomSections().map { navEntry(it.id, it.label, it.icon) }
+        // The nav mode Cloud Notes starts in is build.json::ui.nav_ui (CLEAN); the user's own choice in Configs > UI wins.
+        CompositionLocalProvider(LocalNavUiDefault provides NavUiDecl.fromBuildConfig(BuildConfig.UI_NAV_UI_B64)) {
         MaterialTheme(colorScheme = darkColorScheme()) {
+            if (configsOpen) ConfigsUi(dark)
             NavBarTopFirstRowScaffold(
                 title = section?.label ?: nav.sectionId,
                 hierarchy = section?.let { titleHierarchy(it, nav.pageId) }.orEmpty(),
                 onNavigate = { e -> if (e.depth > 0) nav.openPage(e.sectionId, e.id) else nav.open(e.sectionId) },
                 onAccount = rememberAccountLauncher(),
-                onConfigs = { run(NativeNavScript.openSettings()) },
+                onConfigs = { configsOpen = true },
                 aiPanel = { AiFleetChatPanel(gatewayUrl) },
+                sections = nav.decl.bottomSections(),
+                configsUi = false, // Configs opens Configs > UI itself (ConfigsUi below)
                 modifier = Modifier.fillMaxSize().statusBarsPadding(),
                 dark = dark,
             ) {
@@ -123,6 +137,21 @@ internal class NotesShell(
                             }
                         }
                     }
+                }
+            }
+        }
+        }
+    }
+
+    /** Configs > UI: the shared nav card (mode Classic / Clean, scroll-hide), and the way on to the web half's own settings. */
+    @Composable
+    private fun ConfigsUi(dark: Boolean) {
+        Dialog(onDismissRequest = { configsOpen = false }) {
+            Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
+                Column(Modifier.padding(16.dp).testTag("notes_configs_ui")) {
+                    Text("Configs \u25B8 UI", color = MaterialTheme.colorScheme.onSurface)
+                    NavUiConfigCard(Modifier.padding(vertical = 12.dp), dark = dark)
+                    TextButton(onClick = { configsOpen = false; run(NativeNavScript.openSettings()) }) { Text("All settings") }
                 }
             }
         }

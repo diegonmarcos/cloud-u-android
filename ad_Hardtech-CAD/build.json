@@ -186,6 +186,7 @@
       "solidworks"
     ],
     "default_section": "mcad",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "mcad",

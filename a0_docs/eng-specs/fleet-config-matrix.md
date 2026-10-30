@@ -15,48 +15,48 @@ DataStore / Room stores and declared files it cannot move yet.
 
 | app | package | covered | gaps | coverage |
 |---|---|---:|---:|---:|
-| cloud-superapp | `com.diegonmarcos.superapp` | 51 | 0 | 100% |
+| cloud-superapp | `com.diegonmarcos.superapp` | 52 | 0 | 100% |
 | c3-morpheus | `com.diegonmarcos.morpheus` | 2 | 0 | 100% |
 | c3-watchdog | `com.diegonmarcos.watchdog` | 2 | 0 | 100% |
 | c3-watchtower | `com.diegonmarcos.watchtower` | 2 | 0 | 100% |
-| cloud-account | `com.diegonmarcos.cloudaccount` | 16 | 0 | 100% |
-| cloud-tasks | `com.diegonmarcos.cloudagenda` | 8 | 0 | 100% |
-| cloud-browser | `com.diegonmarcos.cloudbrowser` | 13 | 0 | 100% |
+| cloud-account | `com.diegonmarcos.cloudaccount` | 17 | 0 | 100% |
+| cloud-tasks | `com.diegonmarcos.cloudagenda` | 9 | 0 | 100% |
+| cloud-browser | `com.diegonmarcos.cloudbrowser` | 14 | 0 | 100% |
 | cloud-c3-webserver | `com.diegonmarcos.cloudwebserver` | 2 | 0 | 100% |
 | cloud-media-center | `com.diegonmarcos.cloudmediacenter` | 2 | 0 | 100% |
-| cloud-c3 | `com.diegonmarcos.cloudc3` | 10 | 0 | 100% |
-| cloud-calc | `com.diegonmarcos.cloudcalc` | 15 | 0 | 100% |
-| cloud-camera | `cld.camera` | 10 | 0 | 100% |
+| cloud-c3 | `com.diegonmarcos.cloudc3` | 11 | 0 | 100% |
+| cloud-calc | `com.diegonmarcos.cloudcalc` | 16 | 0 | 100% |
+| cloud-camera | `cld.camera` | 11 | 0 | 100% |
 | cloud-chat | `com.diegonmarcos.comms.chat` | 6 | 0 | 100% |
 | cloud-code | `com.diegonmarcos.code` | 9 | 5 | 64% |
-| cloud-contacts | `com.diegonmarcos.cloudcontacts` | 6 | 2 | 75% |
-| cloud-dialer | `com.diegonmarcos.comms.dialer` | 7 | 2 | 77% |
-| cloud-drive | `com.diegonmarcos.clouddrive` | 12 | 6 | 66% |
+| cloud-contacts | `com.diegonmarcos.cloudcontacts` | 7 | 2 | 77% |
+| cloud-dialer | `com.diegonmarcos.comms.dialer` | 8 | 2 | 80% |
+| cloud-drive | `com.diegonmarcos.clouddrive` | 13 | 6 | 68% |
 | cloud-keyboard | `com.diegonmarcos.cloudkeyboard` | 5 | 0 | 100% |
-| cloud-mail | `com.diegonmarcos.comms.mail` | 11 | 2 | 84% |
+| cloud-mail | `com.diegonmarcos.comms.mail` | 12 | 2 | 85% |
 | cloud-matrix | `com.diegonmarcos.comms.matrix` | 2 | 9 | 18% |
-| cloud-me | `com.diegonmarcos.cloudme` | 13 | 0 | 100% |
-| cloud-gallery | `com.diegonmarcos.mediacenter` | 6 | 1 | 85% |
+| cloud-me | `com.diegonmarcos.cloudme` | 14 | 0 | 100% |
+| cloud-gallery | `com.diegonmarcos.mediacenter` | 7 | 1 | 87% |
 | cloud-myterminal | `com.diegonmarcos.ide` | 7 | 0 | 100% |
-| cloud-nav | `com.diegonmarcos.cloudnav` | 13 | 0 | 100% |
-| cloud-news | `com.diegonmarcos.cloudnews` | 5 | 1 | 83% |
+| cloud-nav | `com.diegonmarcos.cloudnav` | 14 | 0 | 100% |
+| cloud-news | `com.diegonmarcos.cloudnews` | 6 | 1 | 85% |
 | cloud-terminal-nix | `cld.termux.nix` | 10 | 7 | 58% |
-| cloud-notes | `com.diegonmarcos.cloudnotes` | 4 | 1 | 80% |
+| cloud-notes | `com.diegonmarcos.cloudnotes` | 5 | 1 | 83% |
 | cloud-office | `com.diegonmarcos.cloudoffice` | 3 | 0 | 100% |
-| cloud-search | `com.diegonmarcos.cloudsearch` | 5 | 4 | 55% |
-| cloud-store | `com.diegonmarcos.cloudstore` | 11 | 0 | 100% |
+| cloud-search | `com.diegonmarcos.cloudsearch` | 6 | 4 | 60% |
+| cloud-store | `com.diegonmarcos.cloudstore` | 12 | 0 | 100% |
 | cloud-terminal-termux | `cld.termux` | 10 | 7 | 58% |
-| cloud-vault | `com.diegonmarcos.cloudvault` | 4 | 1 | 80% |
-| cloud-wallet | `com.diegonmarcos.cloudwallet` | 7 | 0 | 100% |
-| cloud-writer | `com.diegonmarcos.cloudwriter` | 4 | 0 | 100% |
-| cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 4 | 2 | 66% |
-| cloud-kg-store | `com.diegonmarcos.cloudkgstore` | 4 | 2 | 66% |
-| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 10 | 2 | 83% |
-| cg-omniverse | `com.diegonmarcos.cgomniverse` | 3 | 0 | 100% |
-| capital-stack-finterminal | `com.diegonmarcos.capitalfinterm` | 4 | 0 | 100% |
-| hardtech-cad | `com.diegonmarcos.hardtechcad` | 3 | 0 | 100% |
-| hardtech-sim2real | `com.diegonmarcos.hardtechsim2real` | 3 | 0 | 100% |
-| **fleet** | | **324** | **54** | **85%** |
+| cloud-vault | `com.diegonmarcos.cloudvault` | 5 | 1 | 83% |
+| cloud-wallet | `com.diegonmarcos.cloudwallet` | 8 | 0 | 100% |
+| cloud-writer | `com.diegonmarcos.cloudwriter` | 5 | 0 | 100% |
+| cloud-superintel | `com.diegonmarcos.cloudsuperintel` | 5 | 2 | 71% |
+| cloud-kg-store | `com.diegonmarcos.cloudkgstore` | 5 | 2 | 71% |
+| cloud-tools-small-llms | `com.diegonmarcos.cloudtoolssmallllms` | 11 | 2 | 84% |
+| cg-omniverse | `com.diegonmarcos.cgomniverse` | 4 | 0 | 100% |
+| capital-stack-finterminal | `com.diegonmarcos.capitalfinterm` | 5 | 0 | 100% |
+| hardtech-cad | `com.diegonmarcos.hardtechcad` | 4 | 0 | 100% |
+| hardtech-sim2real | `com.diegonmarcos.hardtechsim2real` | 4 | 0 | 100% |
+| **fleet** | | **352** | **54** | **86%** |
 
 ## cloud-superapp — `com.diegonmarcos.superapp`
 
@@ -118,6 +118,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `mode_prefs` | prefs | config | yes | Admin/apps mode toggle of the shell. |
 | `myhealth_card` | prefs | device | no | SuperApp MyHealth badge: the last face (km with steps, resting HR, sleep, or the named error) and when it was read, shown at once while the card refreshes; a cache re-derived from Health Connect on the new phone, never migrated (#1029). |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `notify_groups` | prefs | config | yes | Per-notification-group enabled flags and group order. |
 | `onehand_prefs` | prefs | config (keys: debug_visible→device, spurious_nones_pruned_v1→device) | yes | One-hand launcher enable, trigger and per-handle slot assignments. |
@@ -165,7 +166,7 @@ Module `aa_cloud-superapp`; libs: lib-account, lib-analytics, lib-appstore, lib-
 | `BuildConfig UI_* constants (UI_LAUNCHER_SETTINGS_B64, UI_PROFILE_*, UI_WG_*)` | config | Defaults baked into the APK from build.json; not device state but the fallback for unset prefs. |
 | `filesDir/<KEYSTORE_FILE>` | device | This device's KDE Connect TLS identity keystore; never migrate, re-pair |
 
-Coverage: 51 covered, 0 gaps.
+Coverage: 52 covered, 0 gaps.
 
 ## c3-morpheus — `com.diegonmarcos.morpheus`
 
@@ -237,6 +238,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `mail_auth_prefs` | encrypted | secret | yes | Cloud Mail's per-account gateway credentials (Authelia in front of the JMAP server): one encrypted JSON blob per account, key auth:<email>, holding the auth mode (none / bearer / authelia), the pasted bearer token and the captured authelia_session cookie. Credentials: shown masked, never logged, replayed only to the account's own domain. |
 | `mail_jmap_prefs` | encrypted | config (keys: password→secret) | yes | JMAP server and email are account links; password is a credential. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
@@ -260,7 +262,7 @@ Module `ac_cloud-account`; libs: lib-account, lib-appstore, lib-auth, lib-autofi
 | `user_registry` | prefs | config (keys: applied_at→device, peer_id→device) | yes | Registry JSON, identity_email and peer_id: user identity/peer registry applied on this device. |
 | `vault_cockpit` | prefs | device | no | Only holds this phone's device_id used in the vault cockpit. |
 
-Coverage: 16 covered, 0 gaps.
+Coverage: 17 covered, 0 gaps.
 
 ## cloud-tasks — `com.diegonmarcos.cloudagenda`
 
@@ -278,6 +280,7 @@ Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, l
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
@@ -292,7 +295,7 @@ Module `ac_cloud-tasks`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, l
 | `app assets data/calendars.json (bundled) and engine state in app storage` | content | Calendar and todo data synced from CalDAV; the CalDAV url/username/password is in caldav_secure_prefs. |
 | `databases/tasks.db` | content | The Tasks page's own data: projects, lists, tasks and subtasks, tags, attachment links, and the mail agent's declaration and proposals. SQLite with ordered, additive migrations; nothing ever wipes it. The JMAP / Authelia secret of the agent is in the Keystore-encrypted tasks_agent_secrets file, not here. |
 
-Coverage: 8 covered, 0 gaps.
+Coverage: 9 covered, 0 gaps.
 
 ## cloud-browser — `com.diegonmarcos.cloudbrowser`
 
@@ -314,6 +317,7 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-blueto
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
@@ -331,7 +335,7 @@ Module `ac_cloud-browser`; libs: lib-ai, lib-analytics, lib-autofill, lib-blueto
 |---|---|---|
 | `browser_settings` | config | #802 every user setting is a key of the declared browser_settings store (libs:browser BrowserSettings over build.json::ui.browser.settings); tabs and history are the lib's own declared stores. Nothing is kept outside them. |
 
-Coverage: 13 covered, 0 gaps.
+Coverage: 14 covered, 0 gaps.
 
 ## cloud-c3-webserver — `com.diegonmarcos.cloudwebserver`
 
@@ -385,6 +389,7 @@ Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `gh_feed_cache` | prefs | device | no | 15-minute TTL cache of GitHub commits/workflow-run feeds. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
@@ -393,7 +398,7 @@ Module `ac_cloud-c3`; libs: lib-ai, lib-analytics, lib-bottomnav, lib-core, lib-
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
-Coverage: 10 covered, 0 gaps.
+Coverage: 11 covered, 0 gaps.
 
 ## cloud-calc — `com.diegonmarcos.cloudcalc`
 
@@ -414,6 +419,7 @@ Module `ac_cloud-calc`; libs: lib-ai, lib-bluetooth, lib-bottomnav, lib-core, li
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `light_prefs` | prefs | config | yes | #1155 the Light tool's settings: default light (rear/front/both), mode (spotlight/flashing) and strobe rate (capped at 3 Hz), rear and front intensity, timer on/duration, keep-on. Preferences of the user, so they move with the phone. Kept by libs:light, so every app that compiles it (the SuperApp, Cloud Calc's Toolkit > Light) carries it. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `nfc_history` | prefs | content | no | #1264 libs:nfc's scan history: one JSON array (key entries, at most 500 rows) of tag scans - time, UID, type, technologies, the NDEF summary, a note. Never a Wi-Fi key or any tag secret. The user's own data, exported as JSON / CSV from Measure > NFC > History. Kept by libs:nfc, so every app that compiles it (Cloud Calc) carries it. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
@@ -429,7 +435,7 @@ Module `ac_cloud-calc`; libs: lib-ai, lib-bluetooth, lib-bottomnav, lib-core, li
 | `filesDir/sound/*.csv|*.wav` | content | Saved sound-measure sessions. |
 | `filesDir/camera/last.jpg` | device | Last captured measure photo. |
 
-Coverage: 15 covered, 0 gaps.
+Coverage: 16 covered, 0 gaps.
 
 ## cloud-camera — `cld.camera`
 
@@ -444,6 +450,7 @@ Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
@@ -455,7 +462,7 @@ Module `ac_cloud-camera`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools
 | `shared_prefs/{QR_SCAN,AUTO,FACE_RETOUCH,PORTRAIT,NIGHT,HDR,CAMERA,VIDEO}.xml` | config | Per-mode camera settings. |
 | `filesDir vosk-model-small-en-us-0.15 (not bundled)` | device | Optional offline voice model dir; engine not present, so nothing to move. |
 
-Coverage: 10 covered, 0 gaps.
+Coverage: 11 covered, 0 gaps.
 
 ## cloud-chat — `com.diegonmarcos.comms.chat`
 
@@ -524,6 +531,7 @@ Module `ac_cloud-contacts`; libs: lib-analytics, lib-bottomnav, lib-contacts, li
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
@@ -538,7 +546,7 @@ Module `ac_cloud-contacts`; libs: lib-analytics, lib-bottomnav, lib-contacts, li
 | `shared_prefs/<package>_preferences.xml (Fossify Config)` | config | Contacts display/sort/visible-sources settings; scanner found no named store. |
 | `-` | device | keeps no configuration of its own; uses libs:contacts, libs:core, libs:updater, libs:analytics (contacts are system data). |
 
-Coverage: 6 covered, 2 gaps — contacts_vcards, file:system ContactsContract provider, exported as vCard.
+Coverage: 7 covered, 2 gaps — contacts_vcards, file:system ContactsContract provider, exported as vCard.
 
 ## cloud-dialer — `com.diegonmarcos.comms.dialer`
 
@@ -552,6 +560,7 @@ Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cras
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
@@ -565,7 +574,7 @@ Module `ac_cloud-dialer`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cras
 | `system BlockedNumberContract provider and default-dialer role / call-screening role` | content | Blocked numbers and the default phone app role live in the system; the blocked numbers migrate through the call_history store. |
 | `assets/call_providers.json, assets/spam_patterns.json` | device | Read-only bundled assets. |
 
-Coverage: 7 covered, 2 gaps — call_history, file:system CallLog and BlockedNumberContract providers.
+Coverage: 8 covered, 2 gaps — call_history, file:system CallLog and BlockedNumberContract providers.
 
 ## cloud-drive — `com.diegonmarcos.clouddrive`
 
@@ -589,6 +598,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 | `mount-keeper` | prefs | device | no | Ids of the mounts the sticky foreground MountKeeperService keeps alive on this phone; live FUSE mounts are per-device, so the set is rebuilt on the new phone. |
 | `mounts-credentials` | encrypted | secret | yes | Encrypted mount passwords and key passphrases keyed by mount id. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
@@ -610,7 +620,7 @@ Module `ac_cloud-drive`; libs: lib-ai, lib-analytics, lib-auth, lib-bottomnav, l
 | `filesDir/rclone/rclone.conf` | secret | rclone remotes (with embedded tokens/passwords); remote definitions are the config, credentials inside are secret |
 | `filesDir/rclone/jobs.json` | config | Saved rclone sync/copy jobs |
 
-Coverage: 12 covered, 6 gaps — ai_sessions, file:filesDir/ai-sessions.json, file:filesDir/git-sync/repos.json, file:filesDir/mounts/mounts.json, file:filesDir/rclone/rclone.conf, file:filesDir/rclone/jobs.json.
+Coverage: 13 covered, 6 gaps — ai_sessions, file:filesDir/ai-sessions.json, file:filesDir/git-sync/repos.json, file:filesDir/mounts/mounts.json, file:filesDir/rclone/rclone.conf, file:filesDir/rclone/jobs.json.
 
 ## cloud-keyboard — `com.diegonmarcos.cloudkeyboard`
 
@@ -655,6 +665,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-crash, lib-databacken
 | `mail_signatures` | provider | config | GAP | Mail signatures, one per sending identity (named, HTML source plus derived plain text, and which one is the default), keyed by the identity's ADDRESS because account ids are minted per install. Not a file of its own: a view onto the identities in the accounts blob (sterna_account) that composing reads, served by Mail's registered SetupStores handler (SignaturesSetupHandler) so Cloud Account's bundle export captures them and its import hands them back. The key * addresses every identity (a bare .html file imported on Cloud Account's Connections page). |
 | `mail_tasks` | prefs | content | no | Mail's Assigned tasks (a task attached to a mail: deadline, target date, notes, links, location, priority, status, people, the mail's account/id and mid: link), as CalTodo JSON. Each is mirrored into the cal engine's task store, which Cloud Tasks shows under Tasks. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `push_baselines` | prefs | device | no | Sterna new-mail notification baselines (seen ids, last pass timestamp). |
@@ -675,7 +686,7 @@ Module `ac_cloud-mail`; libs: lib-bottomnav, lib-core, lib-crash, lib-databacken
 | `shared_prefs/sterna_account.xml accounts JSON` | secret | Mail account server/IMAP/SMTP/JMAP settings and credentials; account link is config but travels with the secret through the vault; passwords encrypted with a device Keystore key and cannot be copied raw. |
 | `Room SternaDatabase tables (mailboxes watched/muted/collapsed in account JSON)` | device | No settings tables in Room; per-account watched, muted (the Inbox's Notify about new mail, default on) and collapsed folders live in the account JSON. |
 
-Coverage: 11 covered, 2 gaps — datastore:settings, mail_signatures.
+Coverage: 12 covered, 2 gaps — datastore:settings, mail_signatures.
 
 ## cloud-matrix — `com.diegonmarcos.comms.matrix`
 
@@ -731,6 +742,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 | `health_user` | prefs | config | yes | #1180 Cloud Me > Health user data, one JSON string under 'data': saved body measurements, lab results, ticked plan events and shopping items, the workout log, chosen activity level, sleep target and dossier choices. Your own entries, so they move with the phone; Health Connect readings are never copied in (the trackers read them live). |
 | `llc_user` | prefs | config | yes | Cloud Me > LLC user data (the former Work section), one JSON string under 'data' (collections of typed records): employment contracts, side-hustle income, company assets and portfolio holdings. Your own entries, so they move with the phone; gain, allocation and income totals are derived and never stored. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `permissions_asked` | prefs | device | no | Cloud Me: one boolean per runtime permission, set once the system dialog has been shown for it, so the start-up prompt is never repeated; the new phone asks afresh, so it never migrates. |
@@ -746,7 +758,7 @@ Module `ac_cloud-me`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, l
 |---|---|---|
 | `assets/health_*.json (from ac_cloud-me/data/health)` | config | #1180 Cloud Me > Health declared content (plan, formulas, home clusters, workout programme) is baked from git into the build, so a new phone gets it by installing the same build; the user's own entries are the health_user store. |
 
-Coverage: 13 covered, 0 gaps.
+Coverage: 14 covered, 0 gaps.
 
 ## cloud-gallery — `com.diegonmarcos.mediacenter`
 
@@ -763,6 +775,7 @@ Module `ac_cloud-gallery`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cra
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `gallery_widget_prefs` | prefs | device | no | Per-appWidgetId widget media URI lists; widget ids and content URIs are tied to this install. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `room:InternalDatabase` | room | content | no | Gallery encrypted gallery database: media metadata, albums, favorites, vault index; user data and keyed to this device's Keystore. |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
@@ -776,7 +789,7 @@ Module `ac_cloud-gallery`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cra
 | `filesDir/<vault uuid>/{info file,<mediaId>.enc}` | content | Encrypted media vaults, Keystore-bound. They migrate through Cloud Drive: Backup & restore ▸ Sync to Cloud Drive writes them password-encrypted to <Cloud Drive shared store>/gallery/vaults.rfbk, Cloud Drive's Sync carries it, and Restore vaults from Cloud Drive re-encrypts them under the new phone's keystore. |
 | `filesDir/<modelsDir>/<group>/ {visual_quant,textual_quant,mobile_sam,version-RFB-320,arcface}.onnx, vocab.json, merges.txt` | device | Downloaded on-device ML models; re-downloadable, selection is implicit by feature. |
 
-Coverage: 6 covered, 1 gaps — datastore:settings.
+Coverage: 7 covered, 1 gaps — datastore:settings.
 
 ## cloud-myterminal — `com.diegonmarcos.ide`
 
@@ -822,6 +835,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, 
 | `maps_tracker_state` | prefs | device | no | Live tracker runtime state (last position, buffers, decision). |
 | `maps_tracking` | prefs | config | yes | Tracking thresholds and intervals the user tuned. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
@@ -841,7 +855,7 @@ Module `ac_cloud-nav`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash, 
 | `externalFilesDir/trace/trace.log, crashes/` | device | Debug trace and crash dumps. |
 | `databases/maps.db (timeline_segments), databases/tracker_engine.db` | device | THE timeline store (#1114): move / stop / sleep segments that Daily, Stops, Steps and the SuperApp's MyTrips read, plus the engine's step samples and fixes it is built from. Recorded data, not configuration: it is re-derived by recording on the new phone, never migrated. |
 
-Coverage: 13 covered, 0 gaps.
+Coverage: 14 covered, 0 gaps.
 
 ## cloud-news — `com.diegonmarcos.cloudnews`
 
@@ -854,6 +868,7 @@ Module `ac_cloud-news`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash,
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `news_bridge` | prefs | device | no | News one-time 'seeded' flag for legacy saved-articles import. |
 | `news_legacy_saved` | prefs | content | no | News legacy saved-articles JSON read once and seeded into the engine; saved items are user data. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
@@ -867,7 +882,7 @@ Module `ac_cloud-news`; libs: lib-analytics, lib-bottomnav, lib-core, lib-crash,
 |---|---|---|
 | `data/sources.json, topics.json (bundled) and engine-held user source/topic choices and saved articles` | config | Selected sources/topics are config, saved articles are content; the engine keeps them in its own storage which the scanner did not see. |
 
-Coverage: 5 covered, 1 gaps — file:data/sources.json, topics.json (bundled) and engine-held user source/topic choices and saved articles.
+Coverage: 6 covered, 1 gaps — file:data/sources.json, topics.json (bundled) and engine-held user source/topic choices and saved articles.
 
 ## cloud-terminal-nix — `cld.termux.nix`
 
@@ -915,6 +930,7 @@ Module `ac_cloud-notes`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-d
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
@@ -924,7 +940,7 @@ Module `ac_cloud-notes`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-d
 | `filesDir/ (NbStorePlugin appStoragePath, per-workspace sqlite)` | content | Cloud Notes local workspace docs; server is source of truth. |
 | `filesDir/logs/<date>.log` | device | Rotating logs. |
 
-Coverage: 4 covered, 1 gaps — datastore:auth-sessions.
+Coverage: 5 covered, 1 gaps — datastore:auth-sessions.
 
 ## cloud-office — `com.diegonmarcos.cloudoffice`
 
@@ -956,6 +972,7 @@ Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `search_agents_state` | file | config | GAP | Cloud Search Agents (#913): the run log and the reports (drafts and their review state, never a message body sent anywhere, never a key), carried whole so a new phone keeps them. The agent settings, profile and templates are keys of the cloud_search prefs store (agents_*). |
@@ -970,7 +987,7 @@ Module `ac_cloud-search`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, lib-
 | `filesDir/agents` | config | Agents run log and reports (runs.json, reports.json); carried to a new phone through the search_agents_state store |
 | `filesDir/things` | device | cached Things answers (OpenStreetMap stores per area, Open Prices, the store-site price service, geocoded cities), refetched from the sources |
 
-Coverage: 5 covered, 4 gaps — search_agents_state, search_chat_sessions, file:filesDir/chat-sessions.json, file:filesDir/agents.
+Coverage: 6 covered, 4 gaps — search_agents_state, search_chat_sessions, file:filesDir/chat-sessions.json, file:filesDir/agents.
 
 ## cloud-store — `com.diegonmarcos.cloudstore`
 
@@ -985,6 +1002,7 @@ Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, li
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `perm_ask_tracker` | prefs | device | no | Set of permissions already asked on this install; permission-asked tracker. #1274 libs:perms PermAskLog shares it with the app's PermAskTracker (one record of what was asked). |
@@ -1006,7 +1024,7 @@ Module `ac_cloud-store`; libs: lib-ai, lib-appstore, lib-bottomnav, lib-core, li
 | `updater_advisory` | prefs | device | no | Update advisory feed, snooze/shown/fail state per app. |
 | `updater_apk_cache_notes` | prefs | device | no | Notes about cached downloaded APKs. |
 
-Coverage: 11 covered, 0 gaps.
+Coverage: 12 covered, 0 gaps.
 
 ## cloud-terminal-termux — `cld.termux`
 
@@ -1054,6 +1072,7 @@ Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools,
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `room:AuthenticatorDatabase` | room | content | no | Bitwarden Authenticator TOTP items stored locally; user data (secrets inside), migrate only via the vault account, never the bytes. |
 | `room:PasswordHistoryDatabase` | room | content | no | Bitwarden generator password history; user data kept locally, not migrated. |
@@ -1070,7 +1089,7 @@ Module `ac_cloud-vault`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools,
 |---|---|---|
 | `encrypted prefs: bwCookieConfig:<hostname>` | device | Per-host cookie config inside Bitwarden's encrypted prefs (a device store): sessions are re-established by signing in. |
 
-Coverage: 4 covered, 1 gaps — room:PrivilegedAppDatabase.
+Coverage: 5 covered, 1 gaps — room:PrivilegedAppDatabase.
 
 ## cloud-wallet — `com.diegonmarcos.cloudwallet`
 
@@ -1083,6 +1102,7 @@ Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cras
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `pass_ledger` | prefs | device | no | #894 What the running fleet pass did per package (installed, needs a tap, failed), the summary signature last shown and the last failure reported per package: pass state, never a setting. |
 | `profile_prefs` | prefs | config (keys: banner_uri→device, install_id→device, install_secret→device, picture_uri→device, schema_version→device) | yes | Owner profile card fields (name, email, phone, birth, company, location, website, titles) plus install identity. |
@@ -1093,7 +1113,7 @@ Module `ac_cloud-wallet`; libs: lib-analytics, lib-bottomnav, lib-core, lib-cras
 | `wallet_mail_connector` | prefs | config (keys: password→secret) | yes | Mail connector host/email are account links; password is a credential. |
 | `wallet_store` | prefs | content (keys: seed_version→device) | no | Wallet items (cards/passes) the user stored; seed_version is a marker. |
 
-Coverage: 7 covered, 0 gaps.
+Coverage: 8 covered, 0 gaps.
 
 ## cloud-writer — `com.diegonmarcos.cloudwriter`
 
@@ -1104,12 +1124,13 @@ Module `ac_cloud-writer`; libs: lib-bottomnav, lib-core, lib-crash, lib-decision
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 | `text_tools` | prefs | config (keys: seeded_from_keyboard→device, seeded_from_serving_app→device) | yes | Mail AI text-tools choices: provider, per-provider model, enhance/summary style, translate target language (a language picker, default en), auto_translate_incoming and auto_summary_incoming switches (off by default), summary_language (default en), answer_prompt (the Answer Prediction prompt shared by the composer and the summary box suggested reply; empty means the built-in default). |
 
-Coverage: 4 covered, 0 gaps.
+Coverage: 5 covered, 0 gaps.
 
 ## cloud-superintel — `com.diegonmarcos.cloudsuperintel`
 
@@ -1122,6 +1143,7 @@ Module `ac_cloud-superintel`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, 
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
@@ -1130,7 +1152,7 @@ Module `ac_cloud-superintel`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, 
 |---|---|---|
 | `filesDir/ai-sessions.json` | config | The chat history of the sessions drawer (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 
-Coverage: 4 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
+Coverage: 5 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 
 ## cloud-kg-store — `com.diegonmarcos.cloudkgstore`
 
@@ -1143,6 +1165,7 @@ Module `ac_cloud-kg-store`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, li
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
@@ -1152,7 +1175,7 @@ Module `ac_cloud-kg-store`; libs: lib-ai, lib-bottomnav, lib-core, lib-crash, li
 | `filesDir/results` | device | cached answers of the Web pages' sources (Cloud Search's declared sources, read through its linked core), refetched from the sources |
 | `filesDir/ai-sessions.json` | config | The assistant's chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 
-Coverage: 4 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
+Coverage: 5 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 
 ## cloud-tools-small-llms — `com.diegonmarcos.cloudtoolssmallllms`
 
@@ -1167,6 +1190,7 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-c
 | `dev_control` | prefs | config (keys: token→device) | yes | Dev-control server enable and port; token is a credential. |
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
@@ -1182,7 +1206,7 @@ Module `ac_cloud-tools-small-llms`; libs: lib-ai, lib-bottomnav, lib-core, lib-c
 | `SharedPreferences cloud_tools_small_llms:local_usage` | content | Every chat call served by a local runtime (time, model, estimated tokens, duration; no cost): the Local usage section on Costs. |
 | `filesDir/ai-sessions.json` | config | AI tab chat history (libs:ai's file session store; never carries a token); carried to a new phone through the ai_sessions store |
 
-Coverage: 10 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
+Coverage: 11 covered, 2 gaps — ai_sessions, file:filesDir/ai-sessions.json.
 
 ## cg-omniverse — `com.diegonmarcos.cgomniverse`
 
@@ -1194,11 +1218,12 @@ Module `ad_CG-Omniverse`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-Stack-FinTerminal's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
-Coverage: 3 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 
 ## capital-stack-finterminal — `com.diegonmarcos.capitalfinterm`
 
@@ -1211,11 +1236,12 @@ Module `ad_Capital-Stack-FinTerminal`; libs: lib-bottomnav, lib-core, lib-crash,
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-Stack-FinTerminal's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
-Coverage: 4 covered, 0 gaps.
+Coverage: 5 covered, 0 gaps.
 
 ## hardtech-cad — `com.diegonmarcos.hardtechcad`
 
@@ -1227,11 +1253,12 @@ Module `ad_Hardtech-CAD`; libs: lib-bottomnav, lib-core, lib-crash, lib-devtools
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-Stack-FinTerminal's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
-Coverage: 3 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 
 ## hardtech-sim2real — `com.diegonmarcos.hardtechsim2real`
 
@@ -1243,9 +1270,10 @@ Module `ad_Hardtech-Sim2Real`; libs: lib-bottomnav, lib-core, lib-crash, lib-dev
 | `fleet_setup_status` | prefs | device | no | #873 the last `apply` the setup provider (`<package>.fleetsetup`) served: which store, when, whether it committed. It records this phone's progress, never configuration. |
 | `holdings` | prefs | content | no | The personal holdings list of the Lnktree apps (#1335, the `holdings` kind of Capital-Stack-FinTerminal's MY-PM page; the same renderer ships in all four): ticker, quantity and unit cost typed by the user, one JSON array under `rows`. Nothing is fetched or priced; it is the user's own data, so it is content. |
 | `nav_modes` | prefs | config | yes | #1189 the user's per-section choice of how child pages are navigated (one row, two rows, side menu; overrides the build.json declaration) and whether the side menu is expanded or the rail. Written by the shared nav bars (NavModePrefs) from each app's Configs; part of the app's settings, so it migrates and backs up with them. |
+| `nav_ui` | prefs | config | yes | The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui. |
 | `notification_store` | prefs | content | no | Stored in-app notification log (info/warn/error). |
 | `safe_encrypted_prefs_reset` | prefs | device | no | #1106 which encrypted prefs files SafeEncryptedPrefs had to reset (a Keystore master key that no longer matches the file, after a shared-uid migration or a restored backup), so the app can tell the user to sign in again until they acknowledge it. Describes this phone's Keystore, never configuration. |
 | `store_notify` | prefs | config | yes | Cloud Store > Configs > Notifications: which Store messages (update available, install done, failures) are posted on which channel (system notification, in-app feed); the owner's switches, everything on until turned off, so it moves with the phone. |
 
-Coverage: 3 covered, 0 gaps.
+Coverage: 4 covered, 0 gaps.
 

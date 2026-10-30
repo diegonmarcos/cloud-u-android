@@ -163,7 +163,8 @@
         "pages": []
       }
     ],
-    "default_section": "documents"
+    "default_section": "documents",
+    "configs_ui": ["nav_ui"]
   },
   "writer_ai": {
     "_doc": "cloud-writer's OWN text-tool registry: providers, model lists, Enhance prompts, Resume prompts, translation languages. app/build.gradle bakes this whole block into BuildConfig.WRITER_AI_ROUTING_B64 and WriterRegistry.kt reads it at run time. Started as a field-for-field copy of ac_cloud-mail/build.json::mail_ai, which is itself a copy of ab_cloud-libs-shared/build.json::keyboard_ai, and is free to diverge from this point on - that divergence is the whole reason each application carries its own copy rather than sharing one. Task 209 was 'WHY I CANT EDIT NOTHING': two screens over one store still edit each other, so a shared registry cannot give an application settings of its own no matter how the screens are arranged.",

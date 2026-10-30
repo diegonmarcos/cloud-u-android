@@ -1678,6 +1678,7 @@
       }
     ],
     "default_section": "browser",
+    "configs_ui": ["nav_ui"],
     "profile_default": {
       "name": "Diego Coelho Marcos",
       "email": "me@diegonmarcos.com",

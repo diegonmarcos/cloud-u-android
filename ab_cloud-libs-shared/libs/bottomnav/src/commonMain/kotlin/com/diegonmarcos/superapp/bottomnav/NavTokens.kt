@@ -69,6 +69,21 @@ public data class NavTokens(
     val pillFill: Color = Color(0xFFE6E0E9),
     val pillInk: Color = Color(0xFF322F35),
     val idleInk: Color = Color(0xFFCAC4D0),
+    // ── the nav UI modes ([NavUiMode], bottom_nav_clean_* / nav_top_row_fill) ──
+    /** The first row's fill in EVERY mode: fully transparent, so the app's own background shows through (no grey). */
+    val topRowFill: Color = Color(0x00000000),
+    /** Clean mode's bottom nav: the island's height (icons only, no label), well under the Classic island's. */
+    val cleanBarHeight: Dp = 44.dp,
+    /** Clean mode's bottom nav: one cell's height. */
+    val cleanCellHeight: Dp = 40.dp,
+    /** Clean mode's bottom nav: the icon. */
+    val cleanIconSize: Dp = 22.dp,
+    /** Clean mode's bottom nav: the gap under the bar. */
+    val cleanBottomMargin: Dp = 6.dp,
+    /** Clean mode's left drawer: its width (at most; narrower screens give it 82%). */
+    val cleanDrawerWidth: Dp = 320.dp,
+    /** Clean mode's left drawer: one row's height (a touch target). */
+    val cleanDrawerRowHeight: Dp = 48.dp,
     // ── the page-tab strip (page_tabs_*) ──
     val tabsStripPadding: Dp = 4.dp,
     val tabsTopInset: Dp = 10.dp,

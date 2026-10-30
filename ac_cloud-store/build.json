@@ -449,6 +449,7 @@
         ]
       }
     ],
-    "default_section": "search"
+    "default_section": "search",
+    "configs_ui": ["nav_ui"]
   }
 }

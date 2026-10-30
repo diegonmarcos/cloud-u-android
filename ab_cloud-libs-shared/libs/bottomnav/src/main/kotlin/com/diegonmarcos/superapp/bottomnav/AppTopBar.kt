@@ -107,6 +107,11 @@ public fun AppTopBarScaffold(
      * calls that lib's scaffold, never this parameter.
      */
     topRow: (@Composable (AppTopBarController) -> Unit)? = null,
+    /**
+     * Clean mode (NavUiMode): the left drawer's own content, drawn above whatever the page said through [TopBarDrawer]. libs:ui-nav-bars
+     * fills it with the page dropdown, the AI / Profile / Settings icons and the child-page dropdown; an app never passes it.
+     */
+    drawerOverride: TopBarDrawerContent? = null,
     content: @Composable () -> Unit,
 ) {
     CompositionLocalProvider(LocalAppTopBar provides controller) {
@@ -122,7 +127,7 @@ public fun AppTopBarScaffold(
                 }
                 Box(Modifier.weight(1f).fillMaxWidth()) { content() }
             }
-            if (decl.drawer && controller.drawerOpen) DrawerOverlay(controller, labels, colors)
+            if (decl.drawer && controller.drawerOpen) DrawerOverlay(controller, labels, colors, drawerOverride)
         }
     }
 }
@@ -354,7 +359,7 @@ private fun CircleButton(
 }
 
 @Composable
-private fun DrawerOverlay(controller: AppTopBarController, labels: AppTopBarLabels, colors: AppTopBarColors) {
+private fun DrawerOverlay(controller: AppTopBarController, labels: AppTopBarLabels, colors: AppTopBarColors, lead: TopBarDrawerContent? = null) {
     BackHandler { controller.closeDrawer() }
     Box(Modifier.fillMaxSize()) {
         Box(
@@ -370,6 +375,7 @@ private fun DrawerOverlay(controller: AppTopBarController, labels: AppTopBarLabe
             shadowElevation = 8.dp,
         ) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
+                if (lead != null) lead(this) { controller.closeDrawer() }
                 val slot = controller.drawerContent
                 if (slot != null) slot(this) { controller.closeDrawer() }
             }

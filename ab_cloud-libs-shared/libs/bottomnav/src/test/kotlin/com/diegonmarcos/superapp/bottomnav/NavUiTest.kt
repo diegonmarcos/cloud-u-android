@@ -1,0 +1,180 @@
+package com.diegonmarcos.superapp.bottomnav
+
+import java.util.Base64
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * The nav UI declaration (NavUi.kt): Classic / Clean, the Clean drawer's rows, the transparent first row, scroll-hide. Plain JVM, no
+ * device: the chrome follows [NavUiDecl.plan] and [chromeScrollStep], so these are the rules the bars obey.
+ */
+class NavUiTest {
+    private val d = ChromeScrollState.Default
+    private val h = ChromeScrollState.Hidden
+    private val s = ChromeScrollState.Shrunk
+
+    private fun section(id: String, vararg pages: NavPage) = NavSection(id, id.uppercase(), "home", pages.toList())
+
+    // ── Clean removes the second row and adds the drawer rows ──
+
+    @Test fun `Clean has no second row, a hamburger, a bottom nav without labels and the three drawer rows in order`() {
+        val p = NavUiDecl.plan(NavUiMode.Clean)
+        assertFalse("the second row is removed", p.secondRow)
+        assertTrue("the top-left hamburger", p.hamburger)
+        assertFalse("icons only", p.bottomLabels)
+        assertEquals(listOf(DrawerRow.PageDropdown, DrawerRow.Actions, DrawerRow.SubPageDropdown), p.drawerRows)
+        assertEquals(listOf(NavQuickAction.Ai, NavQuickAction.Profile, NavQuickAction.Settings), p.drawerActions)
+    }
+
+    @Test fun `Classic keeps the second row and the labels and has no drawer`() {
+        val p = NavUiDecl.plan(NavUiMode.Classic)
+        assertTrue(p.secondRow)
+        assertFalse(p.hamburger)
+        assertTrue(p.bottomLabels)
+        assertTrue(p.drawerRows.isEmpty())
+        assertTrue(p.drawerActions.isEmpty())
+    }
+
+    @Test fun `the Clean drawer lists the pages, the icons and the child pages of the open page`() {
+        val notes = section("pages", NavPage("all", "All", "description"), NavPage("tags", "Tags", "bookmark"), NavPage("new", "New page", "edit", action = "launch"))
+        val bottom = listOf(section("home"), notes, section("search"))
+        val m = cleanDrawerModel(bottom, notes, "tags")
+        assertEquals("row 1: the page name", "PAGES", m.pageName)
+        assertEquals(listOf("home", "pages", "search"), m.pages.map { it.id })
+        assertEquals(listOf(false, true, false), m.pages.map { it.selected })
+        assertEquals("row 2", listOf(NavQuickAction.Ai, NavQuickAction.Profile, NavQuickAction.Settings), m.actions)
+        assertEquals("row 3: a launch tab is not a destination", listOf("all", "tags"), m.subPages.map { it.id })
+        assertEquals("the face is the open child page", "Tags", m.subPageName)
+        assertEquals(NavUiDecl.CLEAN_DRAWER_ROWS, m.rows)
+    }
+
+    @Test fun `a page with no child pages has no third row`() {
+        val m = cleanDrawerModel(listOf(section("home"), section("mail")), section("home"), null)
+        assertTrue(m.subPages.isEmpty())
+        assertEquals(listOf(DrawerRow.PageDropdown, DrawerRow.Actions), m.rows)
+    }
+
+    @Test fun `nested child pages are indented by depth`() {
+        val s1 = section("me", NavPage("proj", "Proj", "folder", pages = listOf(NavPage("gym", "Gym", "fitness"))))
+        val m = cleanDrawerModel(listOf(s1), s1, "gym")
+        assertEquals(listOf(0, 1), m.subPages.map { it.depth })
+        assertEquals("Gym", m.subPageName)
+    }
+
+    // ── the first row is transparent in every mode ──
+
+    @Test fun `the first row has no fill in any mode`() {
+        for (mode in NavUiMode.entries) assertTrue("$mode", NavUiDecl.plan(mode).topRowTransparent)
+        assertEquals(0f, NavTokens().topRowFill.alpha, 0f)
+    }
+
+    @Test fun `a grey first row would be seen`() {
+        val grey = NavTokens(topRowFill = androidx.compose.ui.graphics.Color(0xFF303030))
+        for (mode in NavUiMode.entries) assertFalse("$mode", NavUiDecl.plan(mode, grey).topRowTransparent)
+    }
+
+    @Test fun `Clean's bottom nav is smaller than a Classic cell and its icon fits`() {
+        val t = NavTokens()
+        assertTrue(t.cleanBarHeight < androidx.compose.ui.unit.Dp(64f))
+        assertTrue(t.cleanCellHeight <= t.cleanBarHeight)
+        assertTrue(t.cleanIconSize <= t.cleanCellHeight)
+    }
+
+    // ── scroll-hide: down hides ALL bars, up restores ──
+
+    @Test fun `scroll-hide: a downward scroll or drag hides everything, from any state`() {
+        for (from in listOf(d, h, s)) for (drag in listOf(true, false)) assertEquals(h, chromeScrollStep(ChromeScrollPolicy.Hide, from, 10f, drag))
+    }
+
+    @Test fun `scroll-hide: the release and the fling do not bring the bars back`() {
+        assertEquals(h, chromeScrollReleaseStep(ChromeScrollPolicy.Hide, h))
+        assertEquals("the settle after the release", h, chromeScrollStep(ChromeScrollPolicy.Hide, h, 40f, dragging = false))
+        assertEquals("the older machine would shrink", s, chromeScrollReleaseStep(ChromeScrollPolicy.Shrink, h))
+    }
+
+    @Test fun `scroll-hide: any upward scroll restores everything`() {
+        for (from in listOf(d, h, s)) for (drag in listOf(true, false)) assertEquals(d, chromeScrollStep(ChromeScrollPolicy.Hide, from, -5f, drag))
+    }
+
+    @Test fun `scroll-hide: no movement changes nothing`() {
+        for (from in listOf(d, h, s)) assertEquals(from, chromeScrollStep(ChromeScrollPolicy.Hide, from, 0f, true))
+    }
+
+    @Test fun `scroll-hide off pins the bars`() {
+        for (from in listOf(d, h, s)) {
+            assertEquals(d, chromeScrollStep(ChromeScrollPolicy.Pinned, from, 10f, true))
+            assertEquals(d, chromeScrollReleaseStep(ChromeScrollPolicy.Pinned, from))
+        }
+    }
+
+    @Test fun `the connection follows its policy end to end`() {
+        val c = BottomNavCollapse()
+        c.policy = ChromeScrollPolicy.Hide
+        c.onDragDelta(12f)
+        assertEquals(h, c.state); assertTrue(c.hidden)
+        c.onRelease()
+        assertEquals("stays hidden after the finger lifts", h, c.state)
+        c.onScrollDelta(3f)
+        assertEquals(h, c.state)
+        c.onScrollDelta(-3f)
+        assertEquals("an upward scroll reveals", d, c.state); assertFalse(c.collapsed)
+        c.onDragDelta(5f); c.restore()
+        assertEquals(d, c.state)
+        c.policy = ChromeScrollPolicy.Pinned
+        c.onDragDelta(50f)
+        assertEquals("pinned never moves", d, c.state)
+    }
+
+    @Test fun `pinning a hidden chrome brings it back at once`() {
+        val c = BottomNavCollapse()
+        c.policy = ChromeScrollPolicy.Hide
+        c.onDragDelta(9f)
+        c.policy = ChromeScrollPolicy.Pinned
+        assertEquals(d, c.state)
+    }
+
+    @Test fun `a bare connection keeps the older shrink machine`() {
+        assertEquals(ChromeScrollPolicy.Shrink, BottomNavCollapse().policy)
+    }
+
+    // ── the settings: the declaration's default, the user's choice over it ──
+
+    @Test fun `scroll-hide maps to the hide policy and its absence to pinned`() {
+        assertEquals(ChromeScrollPolicy.Hide, NavUiSettings(scrollHide = true).scrollPolicy())
+        assertEquals(ChromeScrollPolicy.Pinned, NavUiSettings(scrollHide = false).scrollPolicy())
+    }
+
+    @Test fun `an app that declares nothing wears Classic with scroll-hide on`() {
+        assertEquals(NavUiSettings(NavUiMode.Classic, true), NavUiDecl.DEFAULT)
+        assertEquals(NavUiDecl.DEFAULT, NavUiDecl.parse("not json"))
+        assertEquals(NavUiDecl.DEFAULT, NavUiDecl.fromBuildConfig(""))
+    }
+
+    @Test fun `Cloud Notes' declaration, ui nav_ui, reads as Clean`() {
+        val json = """{"mode": "clean", "scroll_hide": true}"""
+        assertEquals(NavUiSettings(NavUiMode.Clean, true), NavUiDecl.parse(json))
+        val b64 = Base64.getEncoder().encodeToString(json.toByteArray())
+        assertEquals(NavUiMode.Clean, NavUiDecl.fromBuildConfig(b64).mode)
+    }
+
+    @Test fun `an unknown mode falls back to the default rather than crash`() {
+        assertEquals(NavUiMode.Classic, NavUiDecl.parse("""{"mode": "neon"}""").mode)
+        assertEquals(false, NavUiDecl.parse("""{"scroll_hide": false}""").scrollHide)
+        assertNull(NavUiMode.of("neon"))
+        assertEquals(NavUiMode.Classic, NavUiMode.of(""))
+    }
+
+    @Test fun `the user's choice wins over the declared default and clearing it restores the default`() {
+        val declared = NavUiSettings(NavUiMode.Clean, true)
+        val store = MemoryNavUiStore()
+        assertEquals(declared, resolveNavUi(declared, store))
+        store.setMode(NavUiMode.Classic); store.setScrollHide(false)
+        assertEquals(NavUiSettings(NavUiMode.Classic, false), resolveNavUi(declared, store))
+        store.setMode(null); store.setScrollHide(null)
+        assertEquals(declared, resolveNavUi(declared, store))
+        assertEquals(declared, resolveNavUi(declared, null))
+    }
+}

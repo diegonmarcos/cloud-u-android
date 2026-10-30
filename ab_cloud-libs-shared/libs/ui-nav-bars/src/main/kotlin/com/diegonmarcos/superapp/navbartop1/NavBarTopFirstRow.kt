@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.navbartop1
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
@@ -22,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Surface
@@ -66,6 +66,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.diegonmarcos.superapp.bottomnav.AppTopBarController
+import com.diegonmarcos.superapp.bottomnav.LocalNavUiSettings
+import com.diegonmarcos.superapp.bottomnav.NavUiDecl
+import com.diegonmarcos.superapp.bottomnav.cleanDrawerModel
+import com.diegonmarcos.superapp.bottomnav.currentNavUi
+import com.diegonmarcos.superapp.bottomnav.navTopRowFill
 import com.diegonmarcos.superapp.bottomnav.AppTopBarLabels
 import com.diegonmarcos.superapp.bottomnav.NavChromeScroll
 import com.diegonmarcos.superapp.bottomnav.AppTopBarScaffold
@@ -77,6 +82,7 @@ import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
 import com.diegonmarcos.superapp.navbartop2.LocalSubPageRequests
+import com.diegonmarcos.superapp.navbartop2.NavUiConfigDialog
 import com.diegonmarcos.superapp.navbartop2.SubPageRequests
 import com.diegonmarcos.superapp.themebg.ThemeBackground
 import com.diegonmarcos.superapp.themebg.ThemeColors
@@ -119,6 +125,8 @@ public object TopFirstRowTags {
     public const val SEPARATOR_PAGES: String = "navtop1_sep_pages"
     public const val SEPARATOR_ACTIONS: String = "navtop1_sep_actions"
     public const val ACTIONS: String = "navtop1_actions"
+    /** The shared "Configs > UI" entry at the end of the dropdown. */
+    public const val CONFIGS_UI: String = "navtop1_configs_ui"
     public fun crumb(index: Int): String = "navtop1_crumb_$index"
     public fun entry(id: String): String = "navtop1_entry_$id"
 }
@@ -205,6 +213,8 @@ public fun NavBarTopFirstRow(
     leaf: String? = null,
     /** Non-navigation actions of the app, listed under the dropdown's second separator. */
     extra: (@Composable ColumnScope.(close: () -> Unit) -> Unit)? = null,
+    /** Non-null: the dropdown ends with the shared "Configs > UI" entry (nav mode, scroll-hide), which calls this. */
+    onConfigsUi: (() -> Unit)? = null,
 ) {
     var open by remember { mutableStateOf(false) }
     val nav = remember(appName, title, hierarchy, sections, leaf) { titleNav(appName, title, hierarchy, sections, leaf) }
@@ -215,8 +225,9 @@ public fun NavBarTopFirstRow(
         Box(Modifier.weight(1f).padding(start = TopFirstRowSpec.ISLAND_PAD_H / 2), contentAlignment = Alignment.CenterStart) {
             val shape = RoundedCornerShape(TopFirstRowSpec.ISLAND_RADIUS)
             Box {
+                // The title box has NO fill and NO outline (NavTokens.topRowFill, transparent): the app's own background shows through.
                 Row(
-                    Modifier.clip(shape).background(colors.island, shape).border(1.dp, colors.islandBorder, shape)
+                    Modifier.clip(shape).background(navTopRowFill(), shape)
                         .clickable(role = Role.Button) { if (onTitleClick != null) onTitleClick() else open = true }
                         .padding(horizontal = TopFirstRowSpec.ISLAND_PAD_H, vertical = TopFirstRowSpec.ISLAND_PAD_V)
                         .testTag(TopFirstRowTags.ISLAND)
@@ -283,6 +294,14 @@ public fun NavBarTopFirstRow(
                         // The popup's column scrolls (infinite height), so a page's actions get a FINITE bound: its own verticalScroll /
                         // LazyColumn then measures instead of crashing, and the popup's scroll reaches all of it.
                         Column(Modifier.heightIn(max = TopFirstRowSpec.ACTIONS_MAX_HEIGHT).testTag(TopFirstRowTags.ACTIONS)) { extra { open = false } }
+                    }
+                    if (onConfigsUi != null) {
+                        HorizontalDivider(color = colors.islandBorder)
+                        DropdownMenuItem(
+                            text = { Text(NavUiDecl.CONFIGS_UI_LABEL, color = colors.onIsland) },
+                            onClick = { open = false; onConfigsUi() },
+                            modifier = Modifier.testTag(TopFirstRowTags.CONFIGS_UI),
+                        )
                     }
                   }
                   }
@@ -368,18 +387,43 @@ public fun NavBarTopFirstRowScaffold(
     sections: List<NavSection> = emptyList(),
     /** A last path segment that is not a page; a page may also set it with [BreadcrumbLeaf]. */
     leaf: String? = null,
+    /** False: this app draws the Configs > UI card in its own Configs page and the first row carries no entry for it. */
+    configsUi: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    var uiOpen by remember { mutableStateOf(false) }
+    if (uiOpen) NavUiConfigDialog(dark) { uiOpen = false }
+    // Classic or Clean (NavUiMode): the user's choice in this app's Configs > UI over the app's declared default; every bar below reads the same.
+    val ui = currentNavUi()
+    val plan = NavUiDecl.plan(ui.mode)
     val requests = remember { SubPageRequests() }
     val leafState = remember { BreadcrumbLeafState() }
     // A pick below the bottom page asks the strips of the page it opens to select it (the app only switches the page).
     val navigate: (HierarchyEntry) -> Unit = { e -> if (e.depth > 0) requests.request(e.id); onNavigate(e) }
     // The title path follows the page the strips show (a pick from a strip or the dropdown), not only the app's own state.
     val followed = hierarchyWithShown(hierarchy, requests.shownIds())
+    // The Clean drawer: the page dropdown, the AI / Profile / Settings icons and the child-page dropdown (cleanDrawerModel).
+    val here = followed.firstOrNull { it.depth == 0 }
+    val bottom = sections.ifEmpty { listOfNotNull(here?.let { NavSection(it.sectionId, it.label, "") }) }
+    val current = sections.firstOrNull { it.id == here?.sectionId }
+    val cleanModel = cleanDrawerModel(bottom, current, followed.lastOrNull { it.depth > 0 && it.selected }?.id)
+    val cleanDrawerBody: @Composable ColumnScope.(close: () -> Unit) -> Unit = { close ->
+        CleanDrawerContent(
+            model = cleanModel, labels = labels,
+            onPage = { e -> navigate(HierarchyEntry(e.id, e.label, 0, e.id, selected = e.selected)) },
+            onSubPage = { e -> navigate(HierarchyEntry(e.id, e.label, e.depth + 1, here?.sectionId ?: "", selected = e.selected)) },
+            onAi = { if (onAi != null) onAi() else controller.toggleAi() },
+            onProfile = onAccount, onConfigs = onConfigs, close = close,
+            onConfigsUi = if (configsUi) ({ uiOpen = true }) else null,
+        )
+    }
     // #1157 scrolling the page down hides this row and compacts the second row and the bottom nav; up restores all three.
+    // Scroll-hide (Configs > UI, on by default): a downward scroll hides ALL of them until an upward scroll reveals them again.
+    CompositionLocalProvider(LocalNavUiSettings provides ui) {
     NavChromeScroll { collapse ->
         AppTopBarScaffold(
-            decl = TopBarDecl(drawer = false, settings = TopBarSettings.KNOWN, inlineActions = true),
+            decl = TopBarDecl(drawer = plan.hamburger, settings = TopBarSettings.KNOWN, inlineActions = true),
+            drawerOverride = if (plan.hamburger) cleanDrawerBody else null,
             title = title,
             onAccount = onAccount,
             onConfigs = onConfigs,
@@ -392,16 +436,32 @@ public fun NavBarTopFirstRowScaffold(
             barVisible = barVisible && !collapse.collapsed,
             topRow = { c ->
                 val slot = c.drawerContent
-                NavBarTopFirstRow(
+                if (plan.hamburger) NavBarTopCleanRow(ThemeBackground.colors(dark), labels, onMenu = c::openDrawer) else NavBarTopFirstRow(
                     title, ThemeBackground.colors(dark), labels, followed, navigate,
                     onAi = { if (onAi != null) onAi() else c.toggleAi() },
                     onProfile = onAccount, onConfigs = onConfigs, avatar = avatar, onTitleClick = onTitleClick,
                     appName = appName, sections = sections, leaf = leaf ?: leafState.text,
                     extra = if (slot != null) ({ close -> slot(close) }) else null,
+                    onConfigsUi = if (configsUi) ({ uiOpen = true }) else null,
                 )
             },
             content = { CompositionLocalProvider(LocalSubPageRequests provides requests, LocalBreadcrumbLeaf provides leafState, content = content) },
         )
+    }
+    }
+}
+
+/**
+ * Clean mode's first row: TRANSPARENT (the app's background shows through, [navTopRowFill]) and nothing but the top-left hamburger, which
+ * opens the left drawer that holds the page dropdown, the AI / Profile / Settings icons and the child-page dropdown ([CleanDrawerContent]).
+ */
+@Composable
+public fun NavBarTopCleanRow(colors: ThemeColors, labels: AppTopBarLabels, onMenu: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier.semantics { testTagsAsResourceId = true }.fillMaxWidth().height(TopFirstRowSpec.HEIGHT).background(navTopRowFill()).testTag(TopFirstRowTags.ROW),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PlainIcon(Icons.Filled.Menu, labels.menu, CleanDrawerTags.MENU, colors, onMenu)
     }
 }
 

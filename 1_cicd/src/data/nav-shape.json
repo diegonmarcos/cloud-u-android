@@ -9,7 +9,8 @@
     "BottomNavSearchHtml.kt": "fun SearchHtmlIsland(",
     "BottomNavBar.kt": "enum class ChromeScrollState",
     "NavChromeScroll.kt": "fun Modifier.chromeScroll(",
-    "NavModes.kt": "interface NavModeStore"
+    "NavModes.kt": "interface NavModeStore",
+    "NavUi.kt": "enum class NavUiMode"
   },
   "ui_nav_bars": {
     "_doc": "N11 (#1189): ONE shared nav-bars lib holds the first row, the second row (one row, two rows, the vertical side menu with its rail), the bottom nav and the Configs card for the per-section navigation mode. The three per-bar libs it replaced (retired) are gone and no app's build.json names them; the symbols are what the apps and the scroll machine are held to.",
@@ -21,7 +22,52 @@
       "NavBarTopSecondRow.kt": "fun NavBarTopSecondRow(",
       "NavBarTopSecondRows.kt": "fun NavBarTopSecondRows(",
       "NavSideMenu.kt": "fun NavSectionLayout(",
-      "NavModeConfigCard.kt": "fun NavModeConfigCard("
+      "NavModeConfigCard.kt": "fun NavModeConfigCard(",
+      "NavUiConfigCard.kt": "fun NavUiConfigCard("
+    }
+  },
+  "nav_ui": {
+    "_doc": "N13 THE nav UI setting, declared once for the whole fleet (the owner asked for a Clean nav and a scroll-hide, with the choice under every app's Configs > UI). Modes: classic = the first row (breadcrumb title + AI/Profile/Configs), the second row (sub-page strip) and the labelled bottom nav; clean = a first row that is ONLY the top-left hamburger, NO second row, a compact icons-only bottom nav, and a LEFT drawer holding the page name as a dropdown (row 1, a URL bar), the AI/Profile/Settings icons (row 2) and a dropdown of the child pages (row 3). The first row is transparent in EVERY mode (NavTokens.topRowFill alpha 00). scroll-hide: a downward scroll hides ALL bars until an upward scroll reveals them. The setting is persisted per app (NavUiPrefs, the nav_ui store of the fleet manifest). An app lists `nav_ui` in build.json::ui.configs_ui; the lib draws the card (NavUiConfigCard) behind the first row's 'Configs > UI' entry, or the app draws it in its own Configs. The Kotlin file named here and this block are held equal by the guard; the web shell's generated tokens (cloudy-h-webapps-mob) carry the same sizes.",
+    "kotlin": "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavUi.kt",
+    "tokens": "ab_cloud-libs-shared/libs/bottomnav/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavTokens.kt",
+    "modes": [
+      "classic",
+      "clean"
+    ],
+    "clean_drawer_rows": [
+      "page_dropdown",
+      "actions",
+      "sub_page_dropdown"
+    ],
+    "clean_drawer_actions": [
+      "ai",
+      "profile",
+      "settings"
+    ],
+    "settings_mode": "nav_mode",
+    "settings_scroll_hide": "scroll_hide",
+    "configs_ui_id": "nav_ui",
+    "card": {
+      "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavUiConfigCard.kt",
+      "symbol": "fun NavUiConfigCard("
+    },
+    "scaffold": {
+      "file": "ab_cloud-libs-shared/libs/ui-nav-bars/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt",
+      "needle": "NavUiConfigDialog("
+    },
+    "card_call": "NavUiConfigCard(",
+    "scaffold_call": "NavBarTopFirstRowScaffold(",
+    "app_defaults": {
+      "_doc": "Apps whose declared default mode is not classic (build.json::ui.nav_ui.mode must equal it).",
+      "ac_cloud-notes": "clean"
+    },
+    "pending": {
+      "_doc": "Held apps that do not expose Configs > UI yet, each with the reason; the entry is deleted when the app does (a stale entry fails).",
+      "aa_cloud-superapp": "SuperApp's chrome is View/Fragment based (BottomNavIslandView, PageTabsView, ConfigsFragment), not the Compose first-row scaffold: the Classic/Clean card needs a Compose host inside its Configs fragment, tracked with the Clean-mode ticket.",
+      "ac_cloud-camera": "Draws the older island and PageTabs (ModeNav), not the shared first-row scaffold: the card goes into its settings sheet in a follow-up once the app is on NavBarTopFirstRowScaffold.",
+      "ac_cloud-code": "Cordova WebView nav drawn in the page from src/cloud/nav.json (nav-shape.json::web): the Classic/Clean card needs the JS bars to learn the two modes, tracked with the Clean-mode ticket.",
+      "ac_cloud-vault": "Bitwarden fork: its own Settings screens, nav through FleetNavScaffold with the older island; the card goes into its settings in a follow-up.",
+      "ac_cloud-wallet": "Draws the older island and PageTabs from its MainActivity, not the shared first-row scaffold: the card goes into its settings in a follow-up."
     }
   },
   "max_bottom": 8,

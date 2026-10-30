@@ -186,6 +186,7 @@
       "vr-store"
     ],
     "default_section": "galaxy",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "galaxy",

@@ -342,6 +342,7 @@
       "about"
     ],
     "default_section": "people",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "people",

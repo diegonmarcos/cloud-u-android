@@ -2240,6 +2240,14 @@
         "lib-bottomnav"
       ]
     },
+    "nav_ui": {
+      "kind": "prefs",
+      "class": "config",
+      "doc": "The user's nav UI choice for this app (Configs > UI): the nav mode, Classic or Clean, and the scroll-hide toggle (a downward scroll hides every bar until an upward one). Written by the shared Configs card (NavUiPrefs, libs:ui-nav-bars NavUiConfigCard); part of the app's settings, so it migrates and backs up with them. The app's declared default is build.json::ui.nav_ui.",
+      "used_by": [
+        "lib-bottomnav"
+      ]
+    },
     "ai_composer": {
       "kind": "prefs",
       "class": "config",

@@ -5,6 +5,8 @@
          now makes up the whole island. The 1dp #33FFFFFF stroke that the XML stacked on
          top is gone, so the island's visible boundary IS the edge of this fill. -->
     <color name="bottom_nav_island_fill">#FF140B26</color>
+    <!-- the first row's fill in every nav UI mode: transparent, the app's background shows through -->
+    <color name="nav_top_row_fill">#00000000</color>
 
     <!-- The island's pill and ink, the static Material 3 dark palette SuperApp's launcher theme
          resolves to (colorSurfaceInverse / colorOnSurfaceInverse / colorOnSurfaceVariant); on

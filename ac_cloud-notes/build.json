@@ -90,6 +90,9 @@
       "search"
     ],
     "default_section": "home",
+    "_doc_nav_ui": "The nav mode Cloud Notes starts in: CLEAN (a transparent first row with only the hamburger, no second row, a compact icons-only bottom nav; the left drawer holds the page dropdown, the AI / Profile / Settings icons and the child-page dropdown). Declared once here, baked as UI_NAV_UI_B64, read by NavUiDecl.fromBuildConfig; the user can switch to Classic in Configs > UI (the choice is persisted per app). scroll_hide: a downward scroll hides every bar until an upward one.",
+    "nav_ui": {"mode": "clean", "scroll_hide": true},
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "home",

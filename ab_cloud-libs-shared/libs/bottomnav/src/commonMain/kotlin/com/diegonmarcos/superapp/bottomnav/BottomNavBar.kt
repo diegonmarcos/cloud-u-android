@@ -474,6 +474,13 @@ internal fun collapseFor(collapsed: Boolean, delta: Float): Boolean = when {
  * uses [BottomNavIslandView.collapseOnScrollIn] instead. Both apply [collapseFor].
  */
 public class BottomNavCollapse : NestedScrollConnection {
+    /**
+     * How a scroll moves [state] ([ChromeScrollPolicy]): the shared scaffolds set it from the nav UI settings in force (scroll-hide on =
+     * [ChromeScrollPolicy.Hide], off = [ChromeScrollPolicy.Pinned]); a bare connection keeps the older [ChromeScrollPolicy.Shrink].
+     */
+    public var policy: ChromeScrollPolicy = ChromeScrollPolicy.Shrink
+        set(value) { field = value; if (value == ChromeScrollPolicy.Pinned) state = ChromeScrollState.Default }
+
     /** The chrome's three-state scroll machine ([ChromeScrollState]); [collapsed] and the other views derive from it. */
     public var state: ChromeScrollState by mutableStateOf(ChromeScrollState.Default)
         private set
@@ -488,12 +495,12 @@ public class BottomNavCollapse : NestedScrollConnection {
     public val firstRowVisible: Boolean get() = state == ChromeScrollState.Default
 
     /** A host that measures its own scroll (a WebView's scroll-change listener): [delta] > 0 is the content travelling UP the screen (reading down). With the touch watched ([onFinger]) a finger-down read is a drag (HIDDEN), else it settles to SHRUNK. */
-    public fun onScrollDelta(delta: Float) { state = chromeScrollOnDelta(state, delta, dragging = fingerTracked && fingerDown) }
+    public fun onScrollDelta(delta: Float) { state = chromeScrollStep(policy, state, delta, dragging = fingerTracked && fingerDown) }
 
     /** A host that knows its finger state (a View shell with a touch listener) feeds the drag and the release itself. */
-    public fun onDragDelta(delta: Float) { state = chromeScrollOnDelta(state, delta, dragging = true) }
+    public fun onDragDelta(delta: Float) { state = chromeScrollStep(policy, state, delta, dragging = true) }
 
-    public fun onRelease() { state = chromeScrollOnRelease(state) }
+    public fun onRelease() { state = chromeScrollReleaseStep(policy, state) }
 
     // Once a host watches the raw touch ([onFinger]), a scroll counts as a DRAG only while the finger is down: a scroll a service
     // injects (an accessibility action, a test's semantics scroll) arrives as "user input" with no finger and must not hide the bars for good.
@@ -510,13 +517,13 @@ public class BottomNavCollapse : NestedScrollConnection {
         // Negated: a nested-scroll y goes negative as the content travels down, which is the same
         // gesture a View shell measures as a RISING scroll offset. One rule, [chromeScrollOnDelta], so the
         // Compose and View hosts cannot collapse on different definitions (#673). A finger-driven scroll is a drag; a fling/settle is not.
-        state = chromeScrollOnDelta(state, -available.y, dragging = source == NestedScrollSource.UserInput && (!fingerTracked || fingerDown))
+        state = chromeScrollStep(policy, state, -available.y, dragging = source == NestedScrollSource.UserInput && (!fingerTracked || fingerDown))
         return Offset.Zero
     }
 
     override suspend fun onPreFling(available: Velocity): Velocity {
         // The finger is up: HIDDEN settles to SHRUNK (the fling then keeps it there), DEFAULT stays DEFAULT.
-        state = chromeScrollOnRelease(state)
+        state = chromeScrollReleaseStep(policy, state)
         return Velocity.Zero
     }
 }

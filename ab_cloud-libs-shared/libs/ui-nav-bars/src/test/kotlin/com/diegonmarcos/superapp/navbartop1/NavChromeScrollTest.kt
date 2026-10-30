@@ -11,17 +11,25 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Mail
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.ChromeScrollPolicy
+import com.diegonmarcos.superapp.bottomnav.LocalChromeScrollPolicy
+import com.diegonmarcos.superapp.bottomnav.LocalNavUiStore
+import com.diegonmarcos.superapp.bottomnav.MemoryNavUiStore
+import com.diegonmarcos.superapp.bottomnav.NavQuickAction
+import com.diegonmarcos.superapp.bottomnav.NavUiMode
 import com.diegonmarcos.superapp.bottomnav.NavPage
 import com.diegonmarcos.superapp.bottomnav.TopBarTags
 import com.diegonmarcos.superapp.navbarbottom.BottomTags
@@ -64,11 +72,20 @@ class NavChromeScrollTest {
         }
     }).around(compose)
 
-    private fun show() = compose.setContent {
+    /**
+     * [policy] Shrink = the older three-state machine (hidden while dragging, compact bars after the finger lifts), which the first two
+     * tests describe; null = the policy of the nav UI settings in force, which is scroll-hide ON by default (every bar hides and stays hidden).
+     * [ui] seeds the user's choice (Classic / Clean) the way the Configs > UI card persists it.
+     */
+    private fun show(
+        policy: ChromeScrollPolicy? = ChromeScrollPolicy.Shrink,
+        ui: MemoryNavUiStore = MemoryNavUiStore(),
+    ) = compose.setContent {
         val entries = listOf(
             BottomNavEntry("home", "Home", rememberVectorPainter(Icons.Outlined.Home)),
             BottomNavEntry("mail", "Mail", rememberVectorPainter(Icons.Outlined.Mail)),
         )
+        CompositionLocalProvider(LocalChromeScrollPolicy provides policy, LocalNavUiStore provides ui) {
         NavBarTopFirstRowScaffold(title = "Title", hierarchy = emptyList(), onNavigate = {}, onAccount = {}, onConfigs = {}) {
             NavBarBottomHost(entries, "home", {}) {
                 Column(Modifier.fillMaxSize()) {
@@ -79,6 +96,7 @@ class NavChromeScrollTest {
                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).testTag("page")) { Spacer(Modifier.height(6000.dp)) }
                 }
             }
+        }
         }
     }
 
@@ -137,5 +155,59 @@ class NavChromeScrollTest {
         assertEquals("DEFAULT: first row back", 1, count(TopBarTags.BAR_SLOT))
         assertEquals(1, count(SecondRowTags.label("p2")))
         assertEquals(1, count(BottomTags.label("mail")))
+    }
+
+    @Test fun `scroll-hide on: a downward drag hides every bar and they STAY hidden after the finger lifts, an upward swipe restores all`() {
+        show(policy = null)
+        compose.waitForIdle()
+        assertEquals(1, count(TopBarTags.BAR_SLOT)); assertEquals(1, count(SecondRowTags.STRIP)); assertEquals(1, count(BottomTags.BAR))
+        compose.onNodeWithTag("page").performTouchInput {
+            down(center)
+            repeat(8) { moveBy(androidx.compose.ui.geometry.Offset(0f, -60f)) }
+            up()
+        }
+        compose.waitForIdle()
+        assertEquals("first row away after release", 0, count(TopBarTags.BAR_SLOT))
+        assertEquals("second row away after release", 0, count(SecondRowTags.STRIP))
+        assertEquals("bottom nav away after release", 0, count(BottomTags.BAR))
+
+        compose.onNodeWithTag("page").performTouchInput { swipeDown() }
+        compose.waitForIdle()
+        assertEquals(1, count(TopBarTags.BAR_SLOT)); assertEquals(1, count(SecondRowTags.STRIP)); assertEquals(1, count(BottomTags.BAR))
+        for (id in listOf("p1", "p2", "p3")) assertEquals("label $id back at full size", 1, count(SecondRowTags.label(id)))
+    }
+
+    @Test fun `scroll-hide off pins every bar while the page scrolls`() {
+        show(policy = null, ui = MemoryNavUiStore(scrollHide = false))
+        compose.waitForIdle()
+        compose.onNodeWithTag("page").performTouchInput { swipeUp() }
+        compose.waitForIdle()
+        assertEquals(1, count(TopBarTags.BAR_SLOT)); assertEquals(1, count(SecondRowTags.STRIP)); assertEquals(1, count(BottomTags.BAR))
+        for (id in listOf("p1", "p2", "p3")) assertEquals(1, count(SecondRowTags.label(id)))
+    }
+
+    @Test fun `Clean mode: the second row is gone, the first row is only the hamburger, the bottom nav is icons only and the drawer holds the three rows`() {
+        show(policy = null, ui = MemoryNavUiStore(mode = NavUiMode.Clean))
+        compose.waitForIdle()
+        assertEquals("no second row", 0, count(SecondRowTags.STRIP))
+        assertEquals("the hamburger", 1, count(TopBarTags.MENU))
+        assertEquals("no AI icon in the row (it moved into the drawer)", 0, count(TopBarTags.AI))
+        assertEquals("the bottom nav is there", 1, count(BottomTags.BAR))
+        for (id in listOf("home", "mail")) assertEquals("no bottom label $id", 0, count(BottomTags.label(id)))
+        compose.onNodeWithTag(TopBarTags.MENU).performClick()
+        compose.waitForIdle()
+        assertEquals("drawer", 1, count(TopBarTags.DRAWER))
+        assertEquals("row 1: the page dropdown", 1, count(CleanDrawerTags.PAGE_DROPDOWN))
+        assertEquals("row 2: the icons", 1, count(CleanDrawerTags.ACTIONS))
+        for (a in NavQuickAction.entries) assertEquals("icon ${a.declared}", 1, count(CleanDrawerTags.action(a)))
+        assertEquals("the Configs > UI entry", 1, count(CleanDrawerTags.CONFIGS_UI))
+    }
+
+    @Test fun `Classic mode keeps the second row and the labelled bottom nav, and has no hamburger`() {
+        show(policy = null)
+        compose.waitForIdle()
+        assertEquals(1, count(SecondRowTags.STRIP))
+        assertEquals(0, count(TopBarTags.MENU))
+        for (id in listOf("home", "mail")) assertEquals(1, count(BottomTags.label(id)))
     }
 }

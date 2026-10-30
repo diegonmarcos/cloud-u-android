@@ -53,6 +53,13 @@
     <dimen name="bottom_nav_fit_label_min_text_size">8sp</dimen>
     <dimen name="bottom_nav_focus_ring_width">2dp</dimen>
 
+    <!-- the nav UI modes (NavUiMode): Clean's compact icons-only bottom nav and left drawer -->
+    <dimen name="bottom_nav_clean_bar_height">44dp</dimen>
+    <dimen name="bottom_nav_clean_cell_height">40dp</dimen>
+    <dimen name="bottom_nav_clean_icon_size">22dp</dimen>
+    <dimen name="bottom_nav_clean_bottom_margin">6dp</dimen>
+    <dimen name="nav_clean_drawer_width">320dp</dimen>
+    <dimen name="nav_clean_drawer_row_height">48dp</dimen>
     <dimen name="bottom_nav_icon_size">24dp</dimen>
     <dimen name="bottom_nav_label_text_size">12sp</dimen>
 

@@ -212,6 +212,7 @@
       "llc"
     ],
     "default_section": "lnktree",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "_doc": "Health \u2014 a bar section of its own (it was a shortcut into Projects > Health). Two page groups (Plan: index and 12 plan pages; Trackers: 5) on the many_rows nav mode, the groups referencing the flat pages list by id. Every page is drawn by the app's own Compose HealthPage from data/health/*.json (the declared plan, formulas and workout) and the user's entries (SharedPreferences health_user, a declared fleet-config store); the trackers read Health Connect live and say so when it is empty. The metric taxonomy stays here because libs:health's build.gradle looks it up by SECTION ID (`ui.sections[id=health].metrics`).",

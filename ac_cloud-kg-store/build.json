@@ -201,6 +201,7 @@
       "web"
     ],
     "default_section": "cloud",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "cloud",

@@ -77,10 +77,12 @@ d["exempt"] = {"ac_cloud-old": "Batch Z (synthetic): this fixture app has not mi
 d["variants"] = {"_doc": "synthetic: no app is a declared exception until a test makes it one"}
 d["duplicate_page_ids"] = {"_doc": "synthetic: the fixture fleet has no app with duplicate page ids (the real ledger names real apps, N12 rejects names the tree lacks)"}
 d["web"] = dict(d["web"], apps={})
+d["nav_ui"]["app_defaults"] = {"_doc": "synthetic: no fixture app starts in a non-classic mode until a test says so"}
+d["nav_ui"]["pending"] = {"_doc": "synthetic: the fixture exposes Configs > UI"}
 json.dump(d, open(sys.argv[2], "w"))
 PY
     cat > "$T/$FIX/build.json" <<'J'
-{"ui": {"bottom_nav": ["a", "b"], "default_section": "a",
+{"ui": {"bottom_nav": ["a", "b"], "default_section": "a", "configs_ui": ["nav_ui"],
         "sections": [{"id": "a", "label": "A", "icon": "x", "pages": [{"id": "p1", "label": "P1"}, {"id": "p2", "label": "P2", "pages": [{"id": "q1", "label": "Q1"}]}]},
                      {"id": "b", "label": "B", "icon": "y"}]}}
 J
@@ -95,7 +97,7 @@ G
     cat > "$T/$KT" <<'K'
 package fix
 // A comment may talk about BottomNavigationView and TabLayout and TabRow( freely.
-fun go() { PageTabs(pages, null, {}); Sections.byId("a"); open("page:a/q1"); FleetChrome.apply(this)
+fun go() { PageTabs(pages, null, {}); Sections.byId("a"); open("page:a/q1"); FleetChrome.apply(this); NavUiConfigCard()
     BottomNavIsland(entries, null, onSelect = { height = 4 }) }
 K
     echo '<LinearLayout/>' > "$T/$FIX/app/src/main/res/layout/main.xml"
@@ -259,7 +261,7 @@ web_stage() {   # the synthetic fleet plus the REAL Cloud Code declaration, its 
 import json, os, shutil, sys
 root, t, data = sys.argv[1:4]
 real = json.load(open(os.path.join(root, data)))
-p = os.path.join(t, data); d = json.load(open(p)); d["web"] = real["web"]; json.dump(d, open(p, "w"))
+p = os.path.join(t, data); d = json.load(open(p)); d["web"] = real["web"]; d["nav_ui"]["pending"]["ac_cloud-code"] = real["nav_ui"]["pending"]["ac_cloud-code"]; json.dump(d, open(p, "w"))
 w = real["web"]
 files = [w["apps"]["ac_cloud-code"]["nav"], "ac_cloud-code/build.json", *w["sources"], w["theme_file"], w["bottom_colors_file"], *[e["file"] for e in w["parity"].values()]]
 for f in files:
@@ -299,4 +301,34 @@ mutate "a web app that is also exempt"                          "$DATA" "$(J "d[
 unset STAGE
 
 echo
+
+# N13: the nav UI setting (Classic / Clean, scroll-hide) is declared once, held equal to the lib, and every held app exposes it
+NAVUI="$LIB/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavUi.kt"
+TOKENS="$LIB/src/commonMain/kotlin/com/diegonmarcos/superapp/bottomnav/NavTokens.kt"
+CARD="$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop2/NavUiConfigCard.kt"
+mutate "an app that does not list nav_ui in configs_ui"       "$FIX/build.json" "$(J "del d['ui']['configs_ui']")" "N13 $FIX: build.json ui.configs_ui must list 'nav_ui'"
+mutate "an app that lists another id only"                    "$FIX/build.json" "$(J "d['ui']['configs_ui']=['other']")" "N13 $FIX: build.json ui.configs_ui must list 'nav_ui'"
+mutate "an app that draws no Configs > UI card"               "$KT" "s=s.replace('NavUiConfigCard()','')" "N13 $FIX: no source draws the Configs > UI card"
+mutate "a scaffold with the card switched off and no own card" "$KT" "s=s.replace('NavUiConfigCard()','NavBarTopFirstRowScaffold(configsUi = false) { }')" "N13 $FIX: no source draws the Configs > UI card"
+green  "the lib's first-row scaffold is the card's host (its Configs > UI entry)" "$KT" "s=s.replace('NavUiConfigCard()','NavBarTopFirstRowScaffold(title = t) { }')"
+mutate "a nav_ui mode that is no mode"                        "$FIX/build.json" "$(J "d['ui']['nav_ui']={'mode':'neon'}")" "N13 $FIX: ui.nav_ui must be an object with mode one of"
+mutate "a scroll_hide that is no boolean"                     "$FIX/build.json" "$(J "d['ui']['nav_ui']={'mode':'clean','scroll_hide':'yes'}")" "N13 $FIX: ui.nav_ui must be an object with mode one of"
+mutate "a Clean default the ledger does not know"             "$FIX/build.json" "$(J "d['ui']['nav_ui']={'mode':'clean'}")" "N13 $FIX: ui.nav_ui.mode is 'clean' but"
+green  "a Clean default the ledger names"                     "$FIX/build.json" "$(J "d['ui']['nav_ui']={'mode':'clean','scroll_hide':True}")" \
+    "$DATA" "$(J "d['nav_ui']['app_defaults']['ac_cloud-fix']='clean'")"
+mutate "a Classic default but the ledger says Clean"          "$DATA" "$(J "d['nav_ui']['app_defaults']['ac_cloud-fix']='clean'")" "N13 $FIX: ui.nav_ui.mode is 'classic' but"
+mutate "a pending entry for an app that exposes the card"     "$DATA" "$(J "d['nav_ui']['pending']['ac_cloud-fix']='the fixture says it does not expose the card yet, long enough'")" "N13 $FIX: exposes Configs > UI now"
+mutate "the lib's mode names drift from the ledger"           "$NAVUI" "s=s.replace('Clean(\"clean\")','Clean(\"cleaner\")')" "NavUiMode declares ['classic', 'cleaner']"
+mutate "the Clean drawer loses its icons row"                 "$NAVUI" "s=s.replace('listOf(DrawerRow.PageDropdown, DrawerRow.Actions, DrawerRow.SubPageDropdown)','listOf(DrawerRow.PageDropdown, DrawerRow.SubPageDropdown)')" "CLEAN_DRAWER_ROWS is"
+mutate "the Clean drawer's icons drift"                       "$NAVUI" "s=s.replace('NavQuickAction(public val declared: String) {\n    Ai(\"ai\"),','NavQuickAction(public val declared: String) {\n    Ai(\"assistant\"),')" "NavQuickAction declares"
+mutate "Clean keeps the second row"                           "$NAVUI" "s=s.replace('secondRow = !clean','secondRow = true')" "plan(): Clean must have the hamburger, no second row and no bottom labels"
+mutate "Clean loses the hamburger"                            "$NAVUI" "s=s.replace('hamburger = clean','hamburger = false')" "plan(): Clean must have the hamburger"
+mutate "Clean keeps the bottom labels"                        "$NAVUI" "s=s.replace('bottomLabels = !clean','bottomLabels = true')" "plan(): Clean must have the hamburger"
+mutate "scroll-hide loses its policy"                         "$NAVUI" "s=s.replace('ChromeScrollPolicy.Hide','ChromeScrollPolicy.Gone')" "no longer declares the scroll-hide policy"
+mutate "the first row gets a grey fill"                       "$TOKENS" "s=s.replace('val topRowFill: Color = Color(0x00000000)','val topRowFill: Color = Color(0xFF303030)')" "topRowFill must be a fully transparent colour"
+mutate "the Clean bottom nav loses its size token"            "$TOKENS" "s=s.replace('val cleanBarHeight: Dp = 44.dp,','')" "no longer declares the Clean size token cleanBarHeight"
+mutate "the shared Configs card is gone"                      "$CARD" "s=s.replace('fun NavUiConfigCard(','fun Gone(')" "no longer declares \`fun NavUiConfigCard(\`"
+mutate "the first row loses its Configs > UI entry"           "$UIBARS/src/main/kotlin/com/diegonmarcos/superapp/navbartop1/NavBarTopFirstRow.kt" "s=s.replace('NavUiConfigDialog(','NavGone(')" "no longer carries \`NavUiConfigDialog(\`"
+mutate "an exempt-style pending entry without a reason"       "$DATA" "$(J "d['nav_ui']['pending']['ac_cloud-old']='tbd'")" "N13 ac_cloud-old: in"
+
 [ "$FAILURES" -eq 0 ] && echo "nav-shape-guard.test: OK" || { echo "nav-shape-guard.test: $FAILURES FAILED"; exit 1; }

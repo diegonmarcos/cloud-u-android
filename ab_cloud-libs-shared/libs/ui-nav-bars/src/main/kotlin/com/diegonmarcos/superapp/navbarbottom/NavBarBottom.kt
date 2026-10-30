@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.collectionInfo
 import androidx.compose.ui.semantics.collectionItemInfo
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -58,6 +59,11 @@ import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.LocalNavBottomClearance
+import com.diegonmarcos.superapp.bottomnav.LocalNavTokens
+import com.diegonmarcos.superapp.bottomnav.NavTokens
+import com.diegonmarcos.superapp.bottomnav.NavUiDecl
+import com.diegonmarcos.superapp.bottomnav.currentNavUi
+import com.diegonmarcos.superapp.bottomnav.currentScrollPolicy
 import com.diegonmarcos.superapp.bottomnav.SearchHtmlTokens
 import com.diegonmarcos.superapp.bottomnav.bottomNavInsets
 import com.diegonmarcos.superapp.bottomnav.chromeScroll
@@ -126,19 +132,24 @@ public fun NavBarBottom(
 ) {
     // #1160 the keyboard HIDES the bar (it used to be lifted above it); the host gives the room back to the content.
     if (navHiddenByIme()) return
+    // Clean mode (NavUiMode): compact and icons only, a smaller bar, so the reading area gets the room (sizes: NavTokens.clean*).
+    val clean = !NavUiDecl.plan(currentNavUi().mode).bottomLabels
+    val tokens = LocalNavTokens.current ?: NavTokens()
     ChromeBarVisibility(hidden = hidden) {
     Box(
         // the bar exposes its tags as resource ids wherever it is hosted (the runtime nav walk, cloud-android-nav-walk.py, reads them)
         modifier.semantics { testTagsAsResourceId = true }.fillMaxWidth()
             .windowInsetsPadding(bottomNavInsets().only(WindowInsetsSides.Bottom))
-            .padding(bottom = BottomSpec.BOTTOM_MARGIN, start = BottomSpec.SIDE_GUTTER, end = BottomSpec.SIDE_GUTTER),
+            .padding(bottom = if (clean) tokens.cleanBottomMargin else BottomSpec.BOTTOM_MARGIN, start = BottomSpec.SIDE_GUTTER, end = BottomSpec.SIDE_GUTTER),
         contentAlignment = Alignment.BottomCenter,
     ) {
         val shape = RoundedCornerShape(BottomSpec.RADIUS)
         BoxWithConstraints(Modifier.widthIn(max = BottomSpec.MAX_WIDTH).fillMaxWidth()) {
             val cell = BottomSpec.cellWidth(maxWidth, entries.size)
-            val barHeight by animateDpAsState(if (collapsed) BottomSpec.COLLAPSED_HEIGHT else BottomSpec.HEIGHT, label = "navbottom_height")
-            val cellHeight = if (collapsed) BottomSpec.COLLAPSED_CELL else BottomSpec.CELL
+            val barHeight by animateDpAsState(
+                if (clean) tokens.cleanBarHeight else if (collapsed) BottomSpec.COLLAPSED_HEIGHT else BottomSpec.HEIGHT, label = "navbottom_height",
+            )
+            val cellHeight = if (clean) tokens.cleanCellHeight else if (collapsed) BottomSpec.COLLAPSED_CELL else BottomSpec.CELL
             Row(
                 Modifier.fillMaxWidth().height(barHeight).testTag(BottomTags.BAR)
                     .clip(shape).background(BottomSpec.fill(dark)).border(1.dp, BottomSpec.border(dark), shape)
@@ -152,17 +163,17 @@ public fun NavBarBottom(
                     val on = e.id == selectedId
                     val ink = if (on) BottomSpec.selectedInk(dark) else BottomSpec.idleInk(dark)
                     // #1159 at rest EVERY item shows its label; scrolled down only the selected one does.
-                    val labelled = !collapsed || on
+                    val labelled = !clean && (!collapsed || on)
                     val lift by animateDpAsState(if (labelled) -BottomSpec.LIFT else 0.dp, label = "navbottom_lift")
                     val show by animateFloatAsState(if (labelled) 1f else 0f, label = "navbottom_label")
                     Box(
                         Modifier.size(cell, cellHeight).clip(CircleShape).testTag(BottomTags.item(e.id))
                             .selectable(selected = on, role = Role.Tab, onClick = { onSelect(e) })
-                            .semantics { collectionItemInfo = CollectionItemInfo(0, 1, index, 1) },
+                            .semantics { collectionItemInfo = CollectionItemInfo(0, 1, index, 1); if (clean) contentDescription = e.label },
                         contentAlignment = Alignment.Center,
                     ) {
                         Box(Modifier.offset(y = lift)) {
-                            Icon(e.icon, contentDescription = null, tint = if (e.tinted) ink else Color.Unspecified, modifier = Modifier.size(BottomSpec.ICON).testTag(BottomTags.icon(e.id)))
+                            Icon(e.icon, contentDescription = null, tint = if (e.tinted) ink else Color.Unspecified, modifier = Modifier.size(if (clean) tokens.cleanIconSize else BottomSpec.ICON).testTag(BottomTags.icon(e.id)))
                         }
                         // The label fades with the state and leaves the tree once faded out (a hidden label is not a node).
                         if (show > 0f) Text(
@@ -207,6 +218,8 @@ public fun NavBarBottomHost(
     // #1157 one connection for the whole chrome: an outer scaffold's, else this host's own (provided to everything inside).
     val inherited = LocalNavChromeCollapse.current
     val own = rememberBottomNavCollapse()
+    // scroll-hide on (the default) hides EVERY bar on a downward scroll until an upward one; off pins them.
+    own.policy = currentScrollPolicy()
     val collapse = inherited ?: own
     val insets = bottomNavInsets()
     // #1257 THE BAR'S SLOT KEEPS THE BAR'S EXPANDED HEIGHT (its own measure: cell height + margin + the bottom system-bar inset).

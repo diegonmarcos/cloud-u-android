@@ -41,6 +41,8 @@ public fun NavChromeScroll(modifier: Modifier = Modifier, content: @Composable (
     val inherited = LocalNavChromeCollapse.current
     if (inherited != null) { content(inherited); return }
     val own = rememberBottomNavCollapse()
+    // scroll-hide on (the default) hides EVERY bar on a downward scroll until an upward one; off pins them.
+    own.policy = currentScrollPolicy()
     // A Fragment's ComposeView is its own composition and the View-parent nested-scroll hand-off did not reach this one on the
     // emulator, so the connection is ALSO published on the window's root View under CHROME_SINK_TAG; ui-kit's KitPage (which
     // cannot depend on this lib) reads it from there and reports its scrolls straight to it.
@@ -50,7 +52,7 @@ public fun NavChromeScroll(modifier: Modifier = Modifier, content: @Composable (
         onDispose { if (root.getTag(CHROME_SINK_TAG) === own) root.setTag(CHROME_SINK_TAG, null) }
     }
     CompositionLocalProvider(LocalNavChromeCollapse provides own) {
-        Box(modifier.fillMaxSize().chromeScroll(own)) { content(own) }
+        ProvideNavUi { Box(modifier.fillMaxSize().chromeScroll(own)) { content(own) } }
     }
 }
 

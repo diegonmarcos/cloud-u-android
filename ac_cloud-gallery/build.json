@@ -170,6 +170,7 @@
       "objects"
     ],
     "default_section": "home",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "screenshots",

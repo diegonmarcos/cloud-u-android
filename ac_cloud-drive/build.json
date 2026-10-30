@@ -91,6 +91,7 @@
     "bottom_nav": ["explorer", "manage", "agents", "home", "git", "fsync", "mounts"],
     "_doc_default_section": "Owner order (#1300): the app opens on the Git page (the git section, GitReposScreen) on every cold start. ui.default_section is the ONLY declaration of it: DriveShell seeds its selection from it, nothing persists a last page between launches (rememberSaveable survives only a config change or process death inside one session), and a deep link or Home route still reaches any other page through the shell select request. test-drive-shell.sh and DeclarationsTest hold it at git.",
     "default_section": "git",
+    "configs_ui": ["nav_ui"],
     "top_bar": {"drawer": true, "inline_actions": true, "settings": ["account", "configs"]},
     "webserver": {
       "_doc": "Configs ▸ Webserver opens cloud-c3-webserver's own page (the Tauri app's MainActivity) through an explicit component intent: `fleet` is the app's id in the constellation fleet manifest (the package is resolved there, never typed), `activity` its launcher activity, `fallback_url` where its server answers when the app is not installed. The port is ac_cloud-c3-webserver/build.json::runtime.port; test-drive-webserver-section.sh fails when the two differ.",

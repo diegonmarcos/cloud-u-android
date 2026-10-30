@@ -54,6 +54,14 @@ DECLARATION  1_cicd/src/data/nav-shape.json (the rules, the forbidden widgets, a
       or not; nav-shape.json::duplicate_page_ids is the ledger of apps that still have duplicates (each with its reason and
       the duplicated ids), and an entry that no longer matches fails, so the ledger can only shrink.
 
+  N13 the NAV UI setting (Classic / Clean + scroll-hide), declared ONCE in nav-shape.json::nav_ui and held equal to the lib's
+      NavUi.kt: the modes, the Clean drawer's rows and icons and the setting ids are the same strings in both; the first row's
+      fill token (NavTokens.topRowFill) is fully transparent; the shared Configs > UI card exists. Every held app lists
+      `nav_ui` in build.json::ui.configs_ui AND exposes the card: it draws the lib's NavBarTopFirstRowScaffold (whose "Configs > UI"
+      entry opens the card) without `configsUi = false`, or calls NavUiConfigCard( itself; an app that does neither is named in
+      nav_ui.pending with a reason (and is stale once it passes). ui.nav_ui.mode is one of the modes, and an app whose default is
+      not classic is named in nav_ui.app_defaults with that mode (Cloud Notes: clean), so a default cannot change silently.
+
 Rules N1-N5, N7 and N9 hold for every app that is NOT exempt. The baseline is all-exempt, so
 this is green today; each migration batch deletes its apps' entries.
 
@@ -611,6 +619,88 @@ def check_backgrounds(app, sections, spec, code, rel, bad):
                    f"the declaration reaches no strip")
 
 
+def kotlin_strings(text, enum):
+    """The declared strings of `enum class <enum>(... val declared: String) { A("a"), B("b") }`, in order."""
+    m = re.search(r"enum class %s\([^)]*\)\s*\{(.*?)\n\}" % re.escape(enum), text, re.S)
+    return re.findall(r'^\s*\w+\("([^"]+)"\)', m.group(1), re.M) if m else []
+
+
+def check_nav_ui(root, apps, uis, exempt, spec, bad):
+    """N13: the nav UI setting (Classic / Clean, scroll-hide) is declared once, held equal to the lib, and every held app exposes it."""
+    nu = spec.get("nav_ui")
+    if not nu:
+        bad.append(f"N13 {DATA}: the nav_ui declaration is missing")
+        return
+    rel = lambda p: os.path.relpath(p, root)
+    ktf = os.path.join(root, nu["kotlin"])
+    kt = blank_comments(read(ktf)) if os.path.isfile(ktf) else ""
+    if not kt:
+        bad.append(f"N13 {nu['kotlin']} is gone — the nav UI declaration (modes, drawer rows, scroll policy) lives there")
+    else:
+        for enum, key in (("NavUiMode", "modes"), ("DrawerRow", "clean_drawer_rows"), ("NavQuickAction", "clean_drawer_actions")):
+            if kotlin_strings(kt, enum) != nu.get(key):
+                bad.append(f"N13 {nu['kotlin']} {enum} declares {kotlin_strings(kt, enum)} but {DATA}::nav_ui.{key} is {nu.get(key)}")
+        for const, key in (("SETTING_MODE", "settings_mode"), ("SETTING_SCROLL_HIDE", "settings_scroll_hide"), ("CONFIGS_UI_ID", "configs_ui_id")):
+            m = re.search(r'const val %s: String = "([^"]*)"' % const, kt)
+            if not m or m.group(1) != nu.get(key):
+                bad.append(f"N13 {nu['kotlin']} {const} is {m.group(1) if m else None!r} but {DATA}::nav_ui.{key} is {nu.get(key)!r}")
+        m = re.search(r"val CLEAN_DRAWER_ROWS[^=]*=\s*listOf\(([^)]*)\)", kt)
+        rows = [x.strip().split(".")[-1] for x in m.group(1).split(",")] if m else []
+        want = ["".join(w.capitalize() for w in r.split("_")) for r in nu["clean_drawer_rows"]]
+        if rows != want:
+            bad.append(f"N13 {nu['kotlin']} CLEAN_DRAWER_ROWS is {rows} but the declared rows are {want}")
+        if "ChromeScrollPolicy.Hide" not in kt or "Hidden" not in kt:
+            bad.append(f"N13 {nu['kotlin']} no longer declares the scroll-hide policy (a downward scroll hides ALL bars)")
+        if not re.search(r"secondRow\s*=\s*!clean", kt) or not re.search(r"hamburger\s*=\s*clean", kt) or not re.search(r"bottomLabels\s*=\s*!clean", kt):
+            bad.append(f"N13 {nu['kotlin']} plan(): Clean must have the hamburger, no second row and no bottom labels")
+    tok = os.path.join(root, nu["tokens"])
+    m = re.search(r"val topRowFill: Color = Color\(0x([0-9A-Fa-f]{8})\)", read(tok)) if os.path.isfile(tok) else None
+    if not m or m.group(1)[:2] != "00":
+        bad.append(f"N13 {nu['tokens']} topRowFill must be a fully transparent colour (alpha 00) — the first row has no grey in any mode; found {m.group(1) if m else None}")
+    for key in ("cleanBarHeight", "cleanCellHeight", "cleanIconSize"):
+        if not os.path.isfile(tok) or not re.search(r"val %s: Dp = [\d.]+\.dp" % key, read(tok)):
+            bad.append(f"N13 {nu['tokens']} no longer declares the Clean size token {key}")
+    card = os.path.join(root, nu["card"]["file"])
+    if not os.path.isfile(card) or nu["card"]["symbol"] not in read(card):
+        bad.append(f"N13 {nu['card']['file']} no longer declares `{nu['card']['symbol']}` — the shared Configs > UI card")
+    scaffold = os.path.join(root, nu["scaffold"]["file"])
+    if not os.path.isfile(scaffold) or nu["scaffold"]["needle"] not in read(scaffold):
+        bad.append(f"N13 {nu['scaffold']['file']} no longer carries `{nu['scaffold']['needle']}` — the first row's Configs > UI entry")
+    pending = {k: v for k, v in (nu.get("pending") or {}).items() if not k.startswith("_")}
+    defaults = {k: v for k, v in (nu.get("app_defaults") or {}).items() if not k.startswith("_")}
+    for app in apps:
+        if app in exempt:
+            continue
+        ui = uis.get(app) or {}
+        decl = ui.get("nav_ui")
+        mode = (decl or {}).get("mode", "classic") if isinstance(decl, dict) or decl is None else None
+        if decl is not None and (not isinstance(decl, dict) or mode not in nu["modes"] or not isinstance(decl.get("scroll_hide", True), bool)):
+            bad.append(f"N13 {app}: ui.nav_ui must be an object with mode one of {nu['modes']} and a boolean scroll_hide")
+            continue
+        if mode != defaults.get(app, "classic"):
+            bad.append(f"N13 {app}: ui.nav_ui.mode is {mode!r} but {DATA}::nav_ui.app_defaults says {defaults.get(app, 'classic')!r} — a default is declared in both places")
+        code = "\n".join(app_code(root, app).values())
+        calls_card = nu["card_call"] in code
+        scaffold_ok = nu["scaffold_call"] in code and not re.search(r"\bconfigsUi\s*=\s*false\b", code)
+        exposed = calls_card or scaffold_ok
+        listed = nu["configs_ui_id"] in (ui.get("configs_ui") or [])
+        if app in pending:
+            if exposed and listed:
+                bad.append(f"N13 {app}: exposes Configs > UI now — delete its entry in {DATA}::nav_ui.pending")
+            if len(str(pending[app]).strip()) < spec["min_reason_chars"]:
+                bad.append(f"N13 {app}: nav_ui.pending needs a reason of at least {spec['min_reason_chars']} characters")
+            continue
+        if not listed:
+            bad.append(f"N13 {app}: build.json ui.configs_ui must list {nu['configs_ui_id']!r} — every app with the shared nav offers Configs > UI (nav mode, scroll-hide)")
+        if not exposed:
+            bad.append(f"N13 {app}: no source draws the Configs > UI card — use libs:ui-nav-bars NavBarTopFirstRowScaffold (its Configs > UI entry) or call {nu['card_call']}…) in the app's Configs")
+    for app in sorted(set(pending) | set(defaults)):
+        if app not in apps:
+            bad.append(f"N13 {app}: in {DATA}::nav_ui but there is no such app (a[acd]_*/build.json)")
+        elif app in exempt:
+            bad.append(f"N13 {app}: in {DATA}::nav_ui but exempt — exempt apps draw no shared nav")
+
+
 def main(argv):
     root = os.path.abspath(argv[0] if argv else ".")
     spec = json.load(open(os.path.join(root, DATA)))
@@ -715,6 +805,8 @@ def main(argv):
     for app in sorted(known):
         if app not in apps:
             bad.append(f"N12 {app}: in {DATA}::duplicate_page_ids but there is no such app (a[acd]_*/build.json)")
+
+    check_nav_ui(root, apps, uis, exempt, spec, bad)
 
     for b in bad:
         print("FAIL     " + b)

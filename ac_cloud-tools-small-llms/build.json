@@ -523,6 +523,7 @@
       "costs"
     ],
     "default_section": "models",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "apps",

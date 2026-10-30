@@ -186,6 +186,7 @@
       "ansys"
     ],
     "default_section": "sap2000",
+    "configs_ui": ["nav_ui"],
     "sections": [
       {
         "id": "sap2000",

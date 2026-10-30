@@ -242,6 +242,7 @@
       }
     ],
     "default_section": "routes",
+    "configs_ui": ["nav_ui"],
     "_doc_search_islands": "Small round 'island' shortcut chips rendered in a row beneath the top search bar (Google-Maps style). action is parsed by the active fragment.",
     "search_islands": [
       {

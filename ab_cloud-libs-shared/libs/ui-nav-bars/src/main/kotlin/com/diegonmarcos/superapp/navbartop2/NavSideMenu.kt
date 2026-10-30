@@ -60,6 +60,8 @@ import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.LocalNavModeStore
 import com.diegonmarcos.superapp.bottomnav.NavModeStore
 import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.NavUiDecl
+import com.diegonmarcos.superapp.bottomnav.currentNavUi
 import com.diegonmarcos.superapp.bottomnav.NavSection
 import com.diegonmarcos.superapp.bottomnav.SecondRowMode
 import com.diegonmarcos.superapp.bottomnav.SideMenuItem
@@ -226,7 +228,8 @@ public fun NavSectionLayout(
     content: @Composable () -> Unit,
 ) {
     val shown = section.effective(store)
-    if (section.allPages().size <= 1) { Box(modifier) { content() }; return }
+    // Clean mode (NavUiMode): no second row and no side menu; the pages are in the left drawer.
+    if (section.allPages().size <= 1 || !NavUiDecl.plan(currentNavUi().mode).secondRow) { Box(modifier) { content() }; return }
     if (shown.rows != SecondRowMode.SideMenu) {
         Column(modifier) {
             NavBarTopSecondRows(shown, selectedId, onSelect, Modifier, dark, onReselect, underTopChrome, flushTop, surface, iconFor)

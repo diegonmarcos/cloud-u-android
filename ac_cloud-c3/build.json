@@ -186,6 +186,7 @@
       "observ"
     ],
     "default_section": "home",
+    "configs_ui": ["nav_ui"],
     "top_bar": {
       "_doc": "THE first row of the app (libs:bottomnav AppTopBar, declared once for the fleet): a hamburger at the left that opens a side drawer (here: the full tree of every declared section and its pages, tappable), the app's name as the title, and two circular buttons at the right: AI (libs:ai's chat in an anchored panel over the fleet gateway - the same shared chat Cloud Code has) and Settings (a dropdown: Account launches Cloud Account, Configs opens the Configs section). No app draws its own copy of this row (cloud-android-top-bar-guard).",
       "drawer": true,

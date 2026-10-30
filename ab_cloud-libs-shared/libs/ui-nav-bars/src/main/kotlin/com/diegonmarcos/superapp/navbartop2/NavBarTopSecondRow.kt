@@ -62,6 +62,8 @@ import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.diegonmarcos.superapp.bottomnav.ChromeBarVisibility
 import com.diegonmarcos.superapp.bottomnav.LocalNavChromeCollapse
 import com.diegonmarcos.superapp.bottomnav.NavPage
+import com.diegonmarcos.superapp.bottomnav.NavUiDecl
+import com.diegonmarcos.superapp.bottomnav.currentNavUi
 import com.diegonmarcos.superapp.bottomnav.PageTabsTags
 import com.diegonmarcos.superapp.bottomnav.TabSurface
 import com.diegonmarcos.superapp.themebg.ThemeBackground
@@ -185,6 +187,8 @@ public fun NavBarTopSecondRow(
         if (target.id == want) { requests?.consume(); if (target.id != selectedId) onSelect(target) }
         else if (target.id != selectedId) onSelect(target)
     }
+    // Clean mode (NavUiMode): the second row is GONE, its pages live in the left drawer; the pick above is still answered.
+    if (NavUiDecl.plan(currentNavUi().mode).secondRow.not()) return
     val palette = when (surface) {
         TabSurface.Light -> ThemeBackground.colors(false)
         TabSurface.Dark -> ThemeBackground.colors(true)

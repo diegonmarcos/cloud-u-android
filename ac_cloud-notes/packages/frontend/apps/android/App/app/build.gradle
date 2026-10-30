@@ -41,6 +41,9 @@ def uiDecl = buildJson.ui ?: [:]
 def uiBottomNav = (uiDecl.bottom_nav ?: []).join(',')
 def uiSectionsB64 = groovy.json.JsonOutput.toJson(uiDecl.sections ?: []).bytes.encodeBase64().toString()
 def uiDefaultSection = uiDecl.default_section ?: ''
+// The nav UI mode this app starts in (Classic / Clean) and its scroll-hide default: ui.nav_ui, base64 of its JSON
+// (NavUiDecl.fromBuildConfig). Cloud Notes declares Clean.
+def uiNavUiB64 = groovy.json.JsonOutput.toJson(uiDecl.nav_ui ?: [:]).bytes.encodeBase64().toString()
 // The top bar's AI panel gateway (libs:ai's contract names the service, the fleet catalogue its mesh address).
 // This gradle root is nested five levels below the repository root, which the script cannot guess.
 ext.aiFleetRoot = file('../../../../../../..').canonicalPath
@@ -79,6 +82,7 @@ android {
         buildConfigField "String", "UI_BOTTOM_NAV", "\"${uiBottomNav}\""
         buildConfigField "String", "UI_SECTIONS_B64", "\"${uiSectionsB64}\""
         buildConfigField "String", "UI_DEFAULT_SECTION", "\"${uiDefaultSection}\""
+        buildConfigField "String", "UI_NAV_UI_B64", "\"${uiNavUiB64}\""
         buildConfigField "String", "AI_GATEWAY_URL", "\"${aiGatewayUrl}\""
         // #522: the LAUNCHER LABEL. It lived in res/values/strings.xml as the
         // literal copy of the label, rendered as this
