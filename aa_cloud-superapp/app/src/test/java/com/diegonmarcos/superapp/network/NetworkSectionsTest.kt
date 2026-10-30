@@ -70,8 +70,10 @@ class NetworkSectionsTest {
         val strip = File(src, "launcher/LauncherStatusStrip.kt").readText()
         // #1332: the strip draws build.json::home_status_bar; its network elements are exactly NetworkSections.ORDER, in that order.
         assertTrue("the strip must lay out via the declared status bar", strip.contains("StatusBarPrefs.layout(ctx)"))
-        val declared = com.diegonmarcos.superapp.launcher.StatusBarDecl.declared.elements
-            .filter { it.position == "left" && it.kind == "network" }.sortedBy { it.order }.map { it.id }
+        val buildJson = generateSequence(src) { it.parentFile }.map { File(it, "build.json") }.first { it.isFile }.readText()
+        val bar = buildJson.substring(buildJson.indexOf("\"home_status_bar\""), buildJson.indexOf("\"toolbar_row\""))
+        val declared = Regex("""\{"id": "([a-z]+)"[^}]*"kind": "network", "position": "left", "order": (\d+)""").findAll(bar)
+            .map { it.groupValues[2].toInt() to it.groupValues[1] }.sortedBy { it.first }.map { it.second }.toList()
         assertEquals("the declared network elements are the popup's section order", NetworkSections.ORDER, declared)
     }
 }

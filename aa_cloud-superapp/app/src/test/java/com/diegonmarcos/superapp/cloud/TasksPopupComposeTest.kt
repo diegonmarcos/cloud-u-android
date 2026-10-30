@@ -91,7 +91,7 @@ class TasksPopupComposeTest : KitPageHarness() {
         compose.onNodeWithTag("cal:agenda:row:0").assertExists()
         compose.onNodeWithTag("cal:agenda:row:1").assertDoesNotExist()
         compose.onNodeWithText("Rent").assertExists()
-        compose.onNodeWithTag("cal:filter").performClick()
+        compose.onNodeWithTag("cal:filter").performScrollTo().performClick()
         compose.onNodeWithTag("cal:agenda:row:1").assertExists()
     }
 
